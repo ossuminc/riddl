@@ -22,15 +22,20 @@ class TranslatingStateTest extends AbstractTestingBasis {
     projectName: Option[String] = None
   ) extends TranslatingOptions
 
-  case class TestTranslatingState(options: TestTranslatingOptions) extends TranslatingState[OutputFile]
+  case class TestTranslatingState(options: TestTranslatingOptions)
+      extends TranslatingState[OutputFile]
 
   "TranslatingState" should {
     "have defaulted list of generatedFiles" in {
-      val tto = TestTranslatingOptions(Some(Path.of("")), Some(Files.createTempDirectory("test")), Some("test"))
+      val tto = TestTranslatingOptions(
+        Some(Path.of("")),
+        Some(Files.createTempDirectory("test")),
+        Some("test")
+      )
       val ts = TestTranslatingState(tto)
       val gf = ts.generatedFiles
       gf must be(empty)
-      val path: Seq[String] = ts.makeDefPath(Domain(At(), Identifier(At(), "domain")),Seq.empty)
+      val path: Seq[String] = ts.makeDefPath(Domain(At(), Identifier(At(), "domain")), Seq.empty)
       path.mkString(".") must be("domain")
     }
   }

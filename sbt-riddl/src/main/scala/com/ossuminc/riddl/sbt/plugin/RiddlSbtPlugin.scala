@@ -15,9 +15,8 @@ import java.io.File
 import scala.sys.process._
 import scala.util.matching.Regex
 
-/** An sbt plugin that provides riddlc commands with
-  * auto-acquisition from GitHub releases, batch operations
-  * over multiple .conf files, and pre-compile validation.
+/** An sbt plugin that provides riddlc commands with auto-acquisition from GitHub releases, batch
+  * operations over multiple .conf files, and pre-compile validation.
   */
 object RiddlSbtPlugin extends AutoPlugin {
   override def requires: AutoPlugin = JvmPlugin
@@ -84,8 +83,8 @@ object RiddlSbtPlugin extends AutoPlugin {
       "Display riddlc version string"
     )
 
-    /** Curried configuration function for convenient plugin
-      * setup. Use with `.configure(riddlc())` on a Project.
+    /** Curried configuration function for convenient plugin setup. Use with `.configure(riddlc())`
+      * on a Project.
       */
     def riddlc(
       version: String = SbtRiddlPluginBuildInfo.version,
@@ -137,13 +136,17 @@ object RiddlSbtPlugin extends AutoPlugin {
   private[plugin] def platformAssetName: String = {
     val osName = sys.props.getOrElse("os.name", "").toLowerCase
     val osArch = sys.props.getOrElse("os.arch", "").toLowerCase
-    if (osName.contains("mac") &&
-        (osArch.contains("aarch64") ||
-         osArch.contains("arm64"))) {
+    if (
+      osName.contains("mac") &&
+      (osArch.contains("aarch64") ||
+        osArch.contains("arm64"))
+    ) {
       "riddlc-macos-arm64.zip"
-    } else if (osName.contains("linux") &&
-               (osArch.contains("amd64") ||
-                osArch.contains("x86_64"))) {
+    } else if (
+      osName.contains("linux") &&
+      (osArch.contains("amd64") ||
+        osArch.contains("x86_64"))
+    ) {
       "riddlc-linux-x86_64.zip"
     } else {
       "riddlc.zip" // JVM universal fallback
@@ -167,22 +170,27 @@ object RiddlSbtPlugin extends AutoPlugin {
       val zipFile = versionDir / assetName
       val url =
         "https://github.com/ossuminc/riddl/releases/" +
-        s"download/$version/$assetName"
-      Process(Seq(
-        "curl", "-fSL", "-o",
-        zipFile.getAbsolutePath, url
-      )).!!
+          s"download/$version/$assetName"
+      Process(
+        Seq(
+          "curl",
+          "-fSL",
+          "-o",
+          zipFile.getAbsolutePath,
+          url
+        )
+      ).!!
       IO.unzip(zipFile, versionDir)
       binary.setExecutable(true)
       IO.delete(zipFile)
       log.info(
         s"riddlc $version cached at " +
-        binary.getAbsolutePath
+          binary.getAbsolutePath
       )
     } else {
       log.debug(
         s"Using cached riddlc $version at " +
-        binary.getAbsolutePath
+          binary.getAbsolutePath
       )
     }
 
@@ -193,20 +201,26 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   private[plugin] def findOnPath: Option[File] = {
     // Check RIDDLC_PATH env var first
-    Option(System.getenv("RIDDLC_PATH")).flatMap { p =>
-      val f = new File(p)
-      if (f.exists() && f.canExecute) Some(f) else None
-    }.orElse {
-      // Search PATH for riddlc
-      val pathDirs = sys.env.getOrElse("PATH", "").split(
-        File.pathSeparatorChar
-      )
-      pathDirs.iterator.map { dir =>
-        new File(dir, "riddlc")
-      }.find { f =>
-        f.exists() && f.canExecute
+    Option(System.getenv("RIDDLC_PATH"))
+      .flatMap { p =>
+        val f = new File(p)
+        if (f.exists() && f.canExecute) Some(f) else None
       }
-    }
+      .orElse {
+        // Search PATH for riddlc
+        val pathDirs = sys.env
+          .getOrElse("PATH", "")
+          .split(
+            File.pathSeparatorChar
+          )
+        pathDirs.iterator
+          .map { dir =>
+            new File(dir, "riddlc")
+          }
+          .find { f =>
+            f.exists() && f.canExecute
+          }
+      }
   }
 
   private[plugin] def findOnPathOrFail(log: Logger): File = {
@@ -215,8 +229,8 @@ object RiddlSbtPlugin extends AutoPlugin {
       case None =>
         sys.error(
           "riddlc not found. Set riddlcVersion to enable " +
-          "auto-download, set riddlcPath to an explicit " +
-          "binary, or install riddlc on your PATH."
+            "auto-download, set riddlcPath to an explicit " +
+            "binary, or install riddlc on your PATH."
         )
     }
   }
@@ -228,13 +242,13 @@ object RiddlSbtPlugin extends AutoPlugin {
   ): (Int, Int, Int) = {
     val trimmed = version.indexOf('-') match {
       case x: Int if x < 0 => version
-      case y: Int           => version.take(y)
+      case y: Int          => version.take(y)
     }
     val parts = trimmed.split('.')
     if (parts.length < 3) {
       throw new IllegalArgumentException(
         s"riddlc version ($version) has insufficient " +
-        "semantic versioning parts."
+          "semantic versioning parts."
       )
     } else {
       (parts(0).toInt, parts(1).toInt, parts(2).toInt)
@@ -249,8 +263,8 @@ object RiddlSbtPlugin extends AutoPlugin {
       val (aJ, aN, aP) = versionTriple(actualVersion)
       val (mJ, mN, mP) = versionTriple(minVersion)
       aJ > mJ ||
-        ((aJ == mJ) &&
-         ((aN > mN) || ((aN == mN) && (aP >= mP))))
+      ((aJ == mJ) &&
+        ((aN > mN) || ((aN == mN) && (aP >= mP))))
     } else { true }
   }
 
@@ -264,17 +278,20 @@ object RiddlSbtPlugin extends AutoPlugin {
   ): Unit = {
     val check = Seq(
       binary.getAbsolutePath,
-      "--no-ansi-messages", "version"
+      "--no-ansi-messages",
+      "version"
     )
     val raw = check.!!<.trim
     // Strip any residual ANSI codes and [info] prefix
-    val actualVersion = AnsiPattern.replaceAllIn(raw, "")
-      .replaceAll("(?i)\\[info]\\s*", "").trim
+    val actualVersion = AnsiPattern
+      .replaceAllIn(raw, "")
+      .replaceAll("(?i)\\[info]\\s*", "")
+      .trim
     val minVersion = minimumVersion.trim
     if (!versionSameOrLater(actualVersion, minVersion)) {
       throw new IllegalArgumentException(
         s"riddlc version $actualVersion is below minimum " +
-        s"required: $minVersion"
+          s"required: $minVersion"
       )
     }
   }
@@ -314,15 +331,17 @@ object RiddlSbtPlugin extends AutoPlugin {
     val proc = Process(
       binary.getAbsolutePath +: (globalOptions ++ args),
       workDir
-    ).run(new ProcessIO(
-      _.close(),
-      BasicIO.processFully { out =>
-        outOutput.append(out).append("\n"); ()
-      },
-      BasicIO.processFully { err =>
-        errOutput.append(err).append("\n"); ()
-      }
-    ))
+    ).run(
+      new ProcessIO(
+        _.close(),
+        BasicIO.processFully { out =>
+          outOutput.append(out).append("\n"); ()
+        },
+        BasicIO.processFully { err =>
+          errOutput.append(err).append("\n"); ()
+        }
+      )
+    )
     val exitCode = proc.exitValue()
 
     // Log output
@@ -337,8 +356,7 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   // --- Batch operations ---
 
-  /** Run an operation on each .conf file, collecting
-    * failures. Fails the build if any model fails.
+  /** Run an operation on each .conf file, collecting failures. Fails the build if any model fails.
     */
   private[plugin] def batchConfOperation(
     binary: File,
@@ -352,7 +370,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   ): Unit = {
     log.info(
       s"Running $operationName on ${confFiles.size} " +
-      s"model(s)..."
+        s"model(s)..."
     )
 
     var failures = List.empty[(String, String)]
@@ -360,22 +378,25 @@ object RiddlSbtPlugin extends AutoPlugin {
 
     confFiles.foreach { conf =>
       val relPath = srcDir.toPath
-        .relativize(conf.toPath).toString
+        .relativize(conf.toPath)
+        .toString
       val args = argsBuilder(conf)
       val errBuf = new StringBuilder
       val outBuf = new StringBuilder
       val proc = Process(
         binary.getAbsolutePath +: (globalOptions ++ args),
         conf.getParentFile
-      ).run(new ProcessIO(
-        _.close(),
-        BasicIO.processFully { out =>
-          outBuf.append(out).append("\n"); ()
-        },
-        BasicIO.processFully { err =>
-          errBuf.append(err).append("\n"); ()
-        }
-      ))
+      ).run(
+        new ProcessIO(
+          _.close(),
+          BasicIO.processFully { out =>
+            outBuf.append(out).append("\n"); ()
+          },
+          BasicIO.processFully { err =>
+            errBuf.append(err).append("\n"); ()
+          }
+        )
+      )
       val exitCode = proc.exitValue()
 
       if (exitCode != 0) {
@@ -401,18 +422,18 @@ object RiddlSbtPlugin extends AutoPlugin {
       }
       sys.error(
         s"${failures.size} of ${confFiles.size} models " +
-        s"failed riddlc $operationName"
+          s"failed riddlc $operationName"
       )
     } else {
       log.info(
         s"All ${confFiles.size} models passed " +
-        s"$operationName ($successes succeeded)."
+          s"$operationName ($successes succeeded)."
       )
     }
   }
 
-  /** Resolve conf files: multi-conf from sourceDir, or
-    * single-conf fallback. Returns empty if nothing found.
+  /** Resolve conf files: multi-conf from sourceDir, or single-conf fallback. Returns empty if
+    * nothing found.
     */
   private[plugin] def resolveConfs(
     srcDir: File,
@@ -428,8 +449,8 @@ object RiddlSbtPlugin extends AutoPlugin {
     } else {
       log.warn(
         "No .conf files found in " +
-        s"${srcDir.getAbsolutePath} and riddlcConf " +
-        s"${singleConf.getAbsolutePath} does not exist"
+          s"${srcDir.getAbsolutePath} and riddlcConf " +
+          s"${singleConf.getAbsolutePath} does not exist"
       )
       Seq.empty
     }
@@ -446,8 +467,11 @@ object RiddlSbtPlugin extends AutoPlugin {
     val options: Seq[String] = project.get(riddlcOptions)
     val log = project.get(sLog)
     val exitCode = runRiddlcProcess(
-      binary, options, args,
-      project.get(baseDirectory), log
+      binary,
+      options,
+      args,
+      project.get(baseDirectory),
+      log
     )
     if (exitCode != 0) {
       log.error(s"riddlc exited with code $exitCode")
@@ -492,7 +516,7 @@ object RiddlSbtPlugin extends AutoPlugin {
           if (!path.exists() || !path.canExecute) {
             sys.error(
               s"riddlcPath $path does not exist or " +
-              "is not executable"
+                "is not executable"
             )
           }
           path
@@ -507,27 +531,30 @@ object RiddlSbtPlugin extends AutoPlugin {
       checkVersion(binary, riddlcMinVersion.value)
       binary
     },
-
     riddlcInfo := {
       val binary = riddlcBinary.value
       val log = streams.value.log
       runRiddlcProcess(
-        binary, riddlcOptions.value, Seq("info"),
-        baseDirectory.value, log
+        binary,
+        riddlcOptions.value,
+        Seq("info"),
+        baseDirectory.value,
+        log
       )
       ()
     },
-
     riddlcShowVersion := {
       val binary = riddlcBinary.value
       val log = streams.value.log
       runRiddlcProcess(
-        binary, Seq.empty, Seq("version"),
-        baseDirectory.value, log
+        binary,
+        Seq.empty,
+        Seq("version"),
+        baseDirectory.value,
+        log
       )
       ()
     },
-
     riddlcValidate := {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
@@ -537,11 +564,19 @@ object RiddlSbtPlugin extends AutoPlugin {
       val log = streams.value.log
 
       val confs = resolveConfs(
-        srcDir, exclusions, singleConf, log
+        srcDir,
+        exclusions,
+        singleConf,
+        log
       )
       if (confs.nonEmpty) {
         batchConfOperation(
-          binary, srcDir, confs, options, "validate", log
+          binary,
+          srcDir,
+          confs,
+          options,
+          "validate",
+          log
         ) { conf =>
           extractInputFile(conf) match {
             case Some(inputFile) =>
@@ -551,13 +586,12 @@ object RiddlSbtPlugin extends AutoPlugin {
             case None =>
               sys.error(
                 "Could not extract input-file from " +
-                conf.getAbsolutePath
+                  conf.getAbsolutePath
               )
           }
         }
       }
     },
-
     riddlcParse := {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
@@ -567,11 +601,19 @@ object RiddlSbtPlugin extends AutoPlugin {
       val log = streams.value.log
 
       val confs = resolveConfs(
-        srcDir, exclusions, singleConf, log
+        srcDir,
+        exclusions,
+        singleConf,
+        log
       )
       if (confs.nonEmpty) {
         batchConfOperation(
-          binary, srcDir, confs, options, "parse", log
+          binary,
+          srcDir,
+          confs,
+          options,
+          "parse",
+          log
         ) { conf =>
           extractInputFile(conf) match {
             case Some(inputFile) =>
@@ -581,13 +623,12 @@ object RiddlSbtPlugin extends AutoPlugin {
             case None =>
               sys.error(
                 "Could not extract input-file from " +
-                conf.getAbsolutePath
+                  conf.getAbsolutePath
               )
           }
         }
       }
     },
-
     riddlcBastify := {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
@@ -597,11 +638,19 @@ object RiddlSbtPlugin extends AutoPlugin {
       val log = streams.value.log
 
       val confs = resolveConfs(
-        srcDir, exclusions, singleConf, log
+        srcDir,
+        exclusions,
+        singleConf,
+        log
       )
       if (confs.nonEmpty) {
         batchConfOperation(
-          binary, srcDir, confs, options, "bastify", log
+          binary,
+          srcDir,
+          confs,
+          options,
+          "bastify",
+          log
         ) { conf =>
           extractInputFile(conf) match {
             case Some(inputFile) =>
@@ -611,13 +660,12 @@ object RiddlSbtPlugin extends AutoPlugin {
             case None =>
               sys.error(
                 "Could not extract input-file from " +
-                conf.getAbsolutePath
+                  conf.getAbsolutePath
               )
           }
         }
       }
     },
-
     riddlcPrettify := {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
@@ -627,11 +675,19 @@ object RiddlSbtPlugin extends AutoPlugin {
       val log = streams.value.log
 
       val confs = resolveConfs(
-        srcDir, exclusions, singleConf, log
+        srcDir,
+        exclusions,
+        singleConf,
+        log
       )
       if (confs.nonEmpty) {
         batchConfOperation(
-          binary, srcDir, confs, options, "prettify", log
+          binary,
+          srcDir,
+          confs,
+          options,
+          "prettify",
+          log
         ) { conf =>
           extractInputFile(conf) match {
             case Some(inputFile) =>
@@ -640,12 +696,13 @@ object RiddlSbtPlugin extends AutoPlugin {
               Seq(
                 "prettify",
                 riddlFile.getAbsolutePath,
-                "-o", modelDir.getAbsolutePath
+                "-o",
+                modelDir.getAbsolutePath
               )
             case None =>
               sys.error(
                 "Could not extract input-file from " +
-                conf.getAbsolutePath
+                  conf.getAbsolutePath
               )
           }
         }
@@ -669,8 +726,8 @@ object RiddlSbtPlugin extends AutoPlugin {
       Command.command("info") { s =>
         "riddlcInfo" :: s
       },
-      Command.args("riddlc", "<args>") {
-        (state, args) => runRiddlcAction(state, args)
+      Command.args("riddlc", "<args>") { (state, args) =>
+        runRiddlcAction(state, args)
       }
     )
   )

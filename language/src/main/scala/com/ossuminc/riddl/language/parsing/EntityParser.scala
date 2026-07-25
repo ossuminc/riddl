@@ -29,9 +29,13 @@ private[parsing] trait EntityParser {
       Index ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/
         stateBody.? ~ withMetaData ~ Index
     )./.map { case (start, id, typRef, body, descriptives, end) =>
-      State(at(start, end), id, typRef,
+      State(
+        at(start, end),
+        id,
+        typRef,
         body.getOrElse(Seq.empty).toContents,
-        descriptives.toContents)
+        descriptives.toContents
+      )
     }
   }
 
@@ -56,7 +60,7 @@ private[parsing] trait EntityParser {
       Index ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ withMetaData ~ Index
     )./ map { case (start, id, contents, meta, end) =>
       checkForDuplicateIncludes(contents)
-      Entity(at(start,end), id, contents.toContents, meta.toContents)
+      Entity(at(start, end), id, contents.toContents, meta.toContents)
     }
   }
 }

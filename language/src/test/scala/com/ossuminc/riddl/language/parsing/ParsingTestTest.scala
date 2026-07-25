@@ -17,7 +17,8 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
   "ParsingTest" should {
 
     "parse[Connector]" in { (td: TestData) =>
-      val rpi = RiddlParserInput("""connector foo is from outlet Foo.Outlet to inlet Foo.Inlet """, td)
+      val rpi =
+        RiddlParserInput("""connector foo is from outlet Foo.Outlet to inlet Foo.Inlet """, td)
       parseDefinition[Connector](rpi) match {
         case Right((pipe, _)) =>
           val expected = Connector(
@@ -90,7 +91,8 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
 
     "parseTopLevelDomain[Adaptor]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { context C is { adaptor X to context C is { ??? } } }", td)
+      val input =
+        RiddlParserInput("domain foo is { context C is { adaptor X to context C is { ??? } } }", td)
       parseTopLevelDomain[Adaptor](input, _.domains.head.contexts.head.adaptors.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -159,7 +161,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
         td
       )
       parseDefinition[Domain, Term](input, _.terms.head) match {
-        case Left(messages)  => fail(messages.format)
+        case Left(messages)   => fail(messages.format)
         case Right((term, _)) => term.id.value must be("X")
       }
     }

@@ -30,11 +30,11 @@ class SnippetsFileTest extends ParsingTest {
     FileUtils.listFiles(topDir.toFile, Array("riddl"), true).asScala.map(_.toPath)
 
   "Snippet Files" should {
-    "parse correctly" in {  (td:TestData) =>
+    "parse correctly" in { (td: TestData) =>
 
       var failures = 0
 
-      for { file <- paths} do
+      for { file <- paths } do
         val url = PathUtils.urlFromCwdPath(file)
         implicit val ec: ExecutionContext = pc.ec
         val future = RiddlParserInput.fromURL(url, td).map { rpi =>

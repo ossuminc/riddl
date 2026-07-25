@@ -117,7 +117,8 @@ trait BasicValidation(using pc: PlatformContext) {
       messages.addError(
         ref.pathId.loc,
         s"${ref.identify} is empty",
-        suggestion = s"Name a message type here, e.g. '${kinds.headOption.map(_.useCase).getOrElse("command")} DoSomething'."
+        suggestion =
+          s"Name a message type here, e.g. '${kinds.headOption.map(_.useCase).getOrElse("command")} DoSomething'."
       )
       this
     } else {
@@ -132,22 +133,25 @@ trait BasicValidation(using pc: PlatformContext) {
                     s" but is ${article(mk.useCase)} type instead",
                   Error,
                   ref.pathId.loc,
-                  suggestion = s"Reference a type declared as one of: ${kinds.map(_.useCase).mkString(", ")}; " +
-                    s"or redeclare the target type with one of those aggregate use cases."
+                  suggestion =
+                    s"Reference a type declared as one of: ${kinds.map(_.useCase).mkString(", ")}; " +
+                      s"or redeclare the target type with one of those aggregate use cases."
                 )
               case te: TypeExpression =>
                 messages.addError(
                   ref.pathId.loc,
                   s"'${ref.identify} should reference one of these types: ${kinds.mkString(",")} but is a ${errorDescription(te)} type " + s"instead",
-                  suggestion = s"Point the reference at a type declared as one of: ${kinds.map(_.useCase).mkString(", ")} " +
-                    s"(e.g. 'type X = ${kinds.headOption.map(_.useCase).getOrElse("command")} { ??? }')."
+                  suggestion =
+                    s"Point the reference at a type declared as one of: ${kinds.map(_.useCase).mkString(", ")} " +
+                      s"(e.g. 'type X = ${kinds.headOption.map(_.useCase).getOrElse("command")} { ??? }')."
                 )
             }
           case _ =>
             messages.addError(
               ref.pathId.loc,
               s"${ref.identify} was expected to be one of these types; ${kinds.mkString(",")}, but is ${article(definition.kind)} instead",
-              suggestion = s"Reference a message type (${kinds.map(_.useCase).mkString(", ")}) rather than ${article(definition.kind)}."
+              suggestion =
+                s"Reference a message type (${kinds.map(_.useCase).mkString(", ")}) rather than ${article(definition.kind)}."
             )
         }
       }
@@ -194,7 +198,8 @@ trait BasicValidation(using pc: PlatformContext) {
         messages.addWarning(
           defList.head.loc,
           message,
-          suggestion = "Give the same-named fields a single consistent type, or rename them so each name maps to one type."
+          suggestion =
+            "Give the same-named fields a single consistent type, or rename them so each name maps to one type."
         )
       end if
 
@@ -216,7 +221,8 @@ trait BasicValidation(using pc: PlatformContext) {
           messages.addWarning(
             defList.head.errorLoc,
             s"${defList.head.identify} is overloaded with ${map.size} kinds:\n  $tailStr",
-            suggestion = "Rename one of the definitions so the same name does not refer to different kinds of definition."
+            suggestion =
+              "Rename one of the definitions so the same name does not refer to different kinds of definition."
           )
         else if map.size == 1 then
           map.head._1 match {
@@ -240,7 +246,8 @@ trait BasicValidation(using pc: PlatformContext) {
               messages.addError(
                 defList.head.errorLoc,
                 message,
-                suggestion = s"Rename or merge the duplicate $name definitions so each name is unique within its scope."
+                suggestion =
+                  s"Rename or merge the duplicate $name definitions so each name is unique within its scope."
               )
             case _ => ()
           }
@@ -262,7 +269,8 @@ trait BasicValidation(using pc: PlatformContext) {
       messages.addStyle(
         d.id.loc,
         s"${d.kind} identifier '${d.id.value}' is too short. The minimum length is $min",
-        suggestion = s"Rename '${d.id.value}' to a more descriptive identifier of at least $min characters."
+        suggestion =
+          s"Rename '${d.id.value}' to a more descriptive identifier of at least $min characters."
       )
     }
     this
@@ -280,7 +288,8 @@ trait BasicValidation(using pc: PlatformContext) {
       message = s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
       kind,
       thing.errorLoc,
-      suggestion = s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration."
+      suggestion =
+        s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration."
     )
   }
 
@@ -298,7 +307,8 @@ trait BasicValidation(using pc: PlatformContext) {
         s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
       kind,
       thing.errorLoc,
-      suggestion = s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration."
+      suggestion =
+        s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration."
     )
   }
 
@@ -358,9 +368,10 @@ trait BasicValidation(using pc: PlatformContext) {
                     " model confusion. Instead, use an Adaptor to translate message types between contexts" +
                     " or a Streamlet pipeline (Source/Sink/Flow) to decouple the communication",
                   ref.loc.extend(formatted.length),
-                  suggestion = s"Add an Adaptor in ${containerContext.identify} to translate messages from " +
-                    s"${definitionContext.identify}, or connect the contexts with a Streamlet (Source/Sink/Flow) " +
-                    "instead of referencing across the context boundary directly."
+                  suggestion =
+                    s"Add an Adaptor in ${containerContext.identify} to translate messages from " +
+                      s"${definitionContext.identify}, or connect the contexts with a Streamlet (Source/Sink/Flow) " +
+                      "instead of referencing across the context boundary directly."
                 )
               )
             else ()

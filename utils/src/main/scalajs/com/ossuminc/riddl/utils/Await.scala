@@ -23,13 +23,13 @@ object Await {
       future.value match
         case Some(Success(value)) => value
         case Some(Failure(xcptn)) => throw xcptn
-        case None                 => throw new IllegalStateException("No value for completed future")
+        case None => throw new IllegalStateException("No value for completed future")
     else throw new IllegalStateException("Awaitable has not yet completed")
     end if
   }
 
   def result[T](awaitable: Future[T], duration: FiniteDuration): T = {
-    this.result(awaitable,duration.toSeconds)
+    this.result(awaitable, duration.toSeconds)
   }
 
 }

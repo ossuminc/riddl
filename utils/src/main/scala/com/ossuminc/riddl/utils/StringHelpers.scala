@@ -15,7 +15,7 @@ object StringHelpers {
     def dropUntil(f: Char => Boolean): String =
       s.indexWhere(f) match {
         case i: Int if i < 0 => ""
-        case i: Int => s.drop(i)
+        case i: Int          => s.drop(i)
       }
     def dropRightWhile(f: Char => Boolean): String =
       var result = s
@@ -47,7 +47,7 @@ object StringHelpers {
       buf.append(s"$indent$prettyName$ptype$nl")
 
       obj match {
-        case null => // Don't iterate over null
+        case null               => // Don't iterate over null
         case seq: Iterable[Any] => seq.foreach(doIt(_, depth + 1, None))
         case obj: Product =>
           obj.productIterator

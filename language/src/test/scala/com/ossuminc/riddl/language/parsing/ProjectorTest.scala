@@ -15,8 +15,9 @@ import org.scalatest.TestData
 abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest {
 
   "Projector" should {
-    "use a Repository" in { (td:TestData) =>
-      val rpi = RiddlParserInput("""domain ignore {
+    "use a Repository" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
+        """domain ignore {
         |  context ignore {
         |    repository storage is {
         |       ???
@@ -26,7 +27,9 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
         |    }
         |  }
         |}
-        |""".stripMargin,td)
+        |""".stripMargin,
+        td
+      )
       parseTopLevelDomain[Projector](rpi, _.domains.head.contexts.head.projectors.head) match
         case Left(messages) =>
           if messages.justErrors.nonEmpty then fail(messages.format)
@@ -38,7 +41,7 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
           rr.pathId mustBe PathIdentifier(At(7, 27, input), Seq("storage"))
 
     }
-    "does not use data statements" in { (td:TestData) =>
+    "does not use data statements" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
           |  context ignore {
@@ -63,7 +66,7 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
           fail("Should have failed")
       }
     }
-    "can have a relationship with a repository" in {  (td:TestData) =>
+    "can have a relationship with a repository" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
           |  context ignore {
@@ -78,7 +81,9 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
           |    }
           |  }
           |}
-          |""".stripMargin, td)
+          |""".stripMargin,
+        td
+      )
       parseTopLevelDomain[Projector](rpi, _.domains.head.contexts.head.projectors.head) match
         case Left(messages) =>
           val errors = messages.justErrors

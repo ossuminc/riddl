@@ -10,17 +10,16 @@ import scala.collection.mutable
 
 /** Path interning table for BAST serialization (Phase 8 optimization)
   *
-  * Provides efficient path storage by deduplicating repeated path patterns.
-  * PathIdentifiers often repeat the same sequences (e.g., "Domain.Context.Entity"),
-  * and this table allows them to be referenced by a single index instead of
-  * repeating the full sequence.
+  * Provides efficient path storage by deduplicating repeated path patterns. PathIdentifiers often
+  * repeat the same sequences (e.g., "Domain.Context.Entity"), and this table allows them to be
+  * referenced by a single index instead of repeating the full sequence.
   *
-  * The table stores paths as sequences of string table indices for maximum
-  * compression (avoiding string duplication between tables).
+  * The table stores paths as sequences of string table indices for maximum compression (avoiding
+  * string duplication between tables).
   *
   * Encoding in BAST:
-  * - If count > 0: inline path follows (count string indices)
-  * - If count == 0: next varint is path table index
+  *   - If count > 0: inline path follows (count string indices)
+  *   - If count == 0: next varint is path table index
   */
 class PathTable(stringTable: StringTable) {
   // Store paths as sequences of string indices (not strings) for efficiency
@@ -29,11 +28,13 @@ class PathTable(stringTable: StringTable) {
 
   /** Intern a path and return its index
     *
-    * If the path already exists in the table, returns the existing index.
-    * Otherwise, adds the path to the table and returns the new index.
+    * If the path already exists in the table, returns the existing index. Otherwise, adds the path
+    * to the table and returns the new index.
     *
-    * @param pathValues The path components (strings)
-    * @return The index of the path in the table, or -1 if path is empty or single-element
+    * @param pathValues
+    *   The path components (strings)
+    * @return
+    *   The index of the path in the table, or -1 if path is empty or single-element
     */
   def intern(pathValues: Seq[String]): Int = {
     // Don't intern empty or single-element paths - no savings
@@ -54,8 +55,10 @@ class PathTable(stringTable: StringTable) {
 
   /** Check if a path has been interned and return its index
     *
-    * @param pathValues The path components (strings)
-    * @return Some(index) if the path is interned, None otherwise
+    * @param pathValues
+    *   The path components (strings)
+    * @return
+    *   Some(index) if the path is interned, None otherwise
     */
   def indexOf(pathValues: Seq[String]): Option[Int] = {
     if pathValues.length <= 1 then None
@@ -68,13 +71,18 @@ class PathTable(stringTable: StringTable) {
 
   /** Get a path by its index
     *
-    * @param index The index to lookup
-    * @return The path components as strings
-    * @throws IndexOutOfBoundsException if index is invalid
+    * @param index
+    *   The index to lookup
+    * @return
+    *   The path components as strings
+    * @throws IndexOutOfBoundsException
+    *   if index is invalid
     */
   def lookup(index: Int): Seq[String] = {
-    require(index >= 0 && index < paths.length,
-      s"Invalid path table index: $index (table size: ${paths.length})")
+    require(
+      index >= 0 && index < paths.length,
+      s"Invalid path table index: $index (table size: ${paths.length})"
+    )
     paths(index).map(stringTable.lookup)
   }
 
@@ -87,10 +95,10 @@ class PathTable(stringTable: StringTable) {
   /** Serialize the path table to a byte buffer
     *
     * Format:
-    * - Count: varint (number of paths)
-    * - For each path:
-    *   - Length: varint (number of path components)
-    *   - For each component: varint (string table index)
+    *   - Count: varint (number of paths)
+    *   - For each path:
+    *     - Length: varint (number of path components)
+    *     - For each component: varint (string table index)
     */
   def writeTo(writer: ByteBufferWriter): Unit = {
     writer.writeVarInt(paths.length)
@@ -141,15 +149,19 @@ object PathTable {
 
   /** Create a new empty path table
     *
-    * @param stringTable The string table to use for string indices
+    * @param stringTable
+    *   The string table to use for string indices
     */
   def apply(stringTable: StringTable): PathTable = new PathTable(stringTable)
 
   /** Deserialize a path table from a byte buffer
     *
-    * @param reader The byte buffer to read from
-    * @param stringTable The string table for looking up strings
-    * @return A populated path table
+    * @param reader
+    *   The byte buffer to read from
+    * @param stringTable
+    *   The string table for looking up strings
+    * @return
+    *   A populated path table
     */
   def readFrom(reader: ByteBufferReader, stringTable: StringTable): PathTable = {
     val table = new PathTable(stringTable)

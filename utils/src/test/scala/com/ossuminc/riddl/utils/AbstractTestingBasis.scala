@@ -13,7 +13,10 @@ import org.scalatest.wordspec.{FixtureAnyWordSpec, AnyWordSpec}
 
 trait AbstractTestingBasis extends AnyWordSpec with Matchers
 
-trait AbstractTestingBasisWithTestData extends FixtureAnyWordSpec with Matchers with fixture.TestDataFixture {
+trait AbstractTestingBasisWithTestData
+    extends FixtureAnyWordSpec
+    with Matchers
+    with fixture.TestDataFixture {
 
   import scala.language.implicitConversions
 

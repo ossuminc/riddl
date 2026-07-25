@@ -16,8 +16,8 @@ object OutlinePass extends PassInfo[PassOptions] {
   val name: String = "Outline"
   def creator(
     options: PassOptions = PassOptions.empty
-  )(using PlatformContext): PassCreator = {
-    (in: PassInput, out: PassesOutput) => OutlinePass(in, out)
+  )(using PlatformContext): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    OutlinePass(in, out)
   }
 }
 
@@ -97,4 +97,3 @@ case class OutlinePass(
     OutlineOutput(root, Messages.empty, buffer.toSeq)
   }
 }
-

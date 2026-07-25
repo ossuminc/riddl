@@ -43,15 +43,18 @@ class ReadRiddlOptionsTest extends CommandTestBase("commands/input/") {
     "make sure onchange doesn't accept empty strings" in {
       val expected = OnChangeCommand.Options()
       intercept[TestFailedException] {
-        check[OnChangeCommand.Options](new OnChangeCommand, expected, Path.of(s"$inputDir/onchangevalidation.conf")) {
-          (opts: OnChangeCommand.Options) =>
-            opts.check must be(empty)
-            opts.refreshRate must be(10.seconds)
-            opts.maxCycles must be(OnChangeCommand.defaultMaxLoops)
-            opts.configFile must not(be(Path.of("")))
-            opts.watchDirectory must not(be(Path.of("")))
-            opts.targetCommand must not(be(empty))
-            opts.interactive must be(true)
+        check[OnChangeCommand.Options](
+          new OnChangeCommand,
+          expected,
+          Path.of(s"$inputDir/onchangevalidation.conf")
+        ) { (opts: OnChangeCommand.Options) =>
+          opts.check must be(empty)
+          opts.refreshRate must be(10.seconds)
+          opts.maxCycles must be(OnChangeCommand.defaultMaxLoops)
+          opts.configFile must not(be(Path.of("")))
+          opts.watchDirectory must not(be(Path.of("")))
+          opts.targetCommand must not(be(empty))
+          opts.interactive must be(true)
         }
       }
     }

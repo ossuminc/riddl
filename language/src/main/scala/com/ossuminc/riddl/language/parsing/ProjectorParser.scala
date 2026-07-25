@@ -20,7 +20,7 @@ private[parsing] trait ProjectorParser {
   }
 
   private def updates[u: P]: P[RepositoryRef] =
-    P( Keywords.updates ~ repositoryRef )
+    P(Keywords.updates ~ repositoryRef)
 
   private def projectorDefinitions[u: P]: P[Seq[ProjectorContents]] = {
     P(
@@ -48,7 +48,7 @@ private[parsing] trait ProjectorParser {
       Index ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ withMetaData ~ Index
     )./.map { case (start, id, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Projector(at(start,end), id, contents.toContents, descriptives.toContents)
+      Projector(at(start, end), id, contents.toContents, descriptives.toContents)
     }
   }
 }

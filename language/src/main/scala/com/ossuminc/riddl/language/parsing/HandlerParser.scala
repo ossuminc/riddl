@@ -11,7 +11,10 @@ import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-private[parsing] trait HandlerParser extends CommonParser with ReferenceParser with StatementParser {
+private[parsing] trait HandlerParser
+    extends CommonParser
+    with ReferenceParser
+    with StatementParser {
 
   private def onOtherClause[u: P](set: StatementsSet): P[OnOtherClause] = {
     P(
@@ -49,7 +52,13 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
     Index ~ Keywords.on ~ messageRef ~
       (from ~ maybeName ~~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
   }.map { case (start, msgRef, msgOrigins, statements, descriptives, end) =>
-    OnMessageClause(at(start, end), msgRef, msgOrigins, statements.toContents, descriptives.toContents)
+    OnMessageClause(
+      at(start, end),
+      msgRef,
+      msgOrigins,
+      statements.toContents,
+      descriptives.toContents
+    )
   }
 
   def onClause[u: P](set: StatementsSet): P[OnClause] = {
@@ -66,7 +75,9 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
 
   def handler[u: P](set: StatementsSet): P[Handler] = {
     P(
-      Index ~ Keywords.handler ~/ identifier ~ is ~ open ~ handlerBody(set) ~ close ~ withMetaData ~/ Index
+      Index ~ Keywords.handler ~/ identifier ~ is ~ open ~ handlerBody(
+        set
+      ) ~ close ~ withMetaData ~/ Index
     )./.map { case (start, id, clauses, descriptives, end) =>
       Handler(at(start, end), id, clauses.toContents, descriptives.toContents)
     }

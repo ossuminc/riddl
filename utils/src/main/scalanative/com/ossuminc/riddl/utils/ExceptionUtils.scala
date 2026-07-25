@@ -11,9 +11,9 @@ import scala.collection.mutable.ListBuffer
 
 object ExceptionUtils {
   private val NOT_FOUND = -1
-  private val WRAPPED_MARKER  = " [wrapped] "
+  private val WRAPPED_MARKER = " [wrapped] "
 
-  private def getThrowableList(aThrowable: Throwable): List[Throwable] =  {
+  private def getThrowableList(aThrowable: Throwable): List[Throwable] = {
     val list = ListBuffer.empty[Throwable]
     var throwable = aThrowable
     while throwable != null && !list.contains(throwable) do
@@ -22,9 +22,9 @@ object ExceptionUtils {
     list.toList
   }
 
-  private def getStackTrace(throwable: Throwable): String =  {
+  private def getStackTrace(throwable: Throwable): String = {
     if throwable == null then return ""
-    val sw  = new StringWriter
+    val sw = new StringWriter
     throwable.printStackTrace(new PrintWriter(sw, true))
     sw.toString
   }
@@ -32,26 +32,25 @@ object ExceptionUtils {
   private def getStackFrameList(throwable: Throwable): List[String] = {
     val stackTrace = getStackTrace(throwable)
     val linebreak = System.lineSeparator
-    val frames  = new StringTokenizer(stackTrace, linebreak)
-    val list  = ListBuffer.empty[String]
-    var traceStarted  = false
+    val frames = new StringTokenizer(stackTrace, linebreak)
+    val list = ListBuffer.empty[String]
+    var traceStarted = false
     var keepGoing = true
     while frames.hasMoreTokens && keepGoing do
-      val token  = frames.nextToken
+      val token = frames.nextToken
       // Determine if the line starts with <whitespace>at
-      val at  = token.indexOf("at")
+      val at = token.indexOf("at")
       if at != NOT_FOUND && token.substring(0, at).trim.isEmpty then
         traceStarted = true
         list.append(token)
-      else
-        if traceStarted then keepGoing = false
+      else if traceStarted then keepGoing = false
     end while
     list.toList
   }
   private def removeCommonFrames(
     causeFrames: ListBuffer[String],
     wrapperFrames: List[String]
-  ): Unit =  {
+  ): Unit = {
     Objects.requireNonNull(causeFrames, "causeFrames")
     Objects.requireNonNull(wrapperFrames, "wrapperFrames")
     var causeFrameIndex: Int = causeFrames.size - 1
@@ -61,7 +60,7 @@ object ExceptionUtils {
       // as in the wrapper trace
       val causeFrame: String = causeFrames(causeFrameIndex)
       val wrapperFrame: String = wrapperFrames(wrapperFrameIndex)
-      if causeFrame == wrapperFrame then  causeFrames.remove(causeFrameIndex)
+      if causeFrame == wrapperFrame then causeFrames.remove(causeFrameIndex)
       causeFrameIndex -= 1
       wrapperFrameIndex -= 1
     end while

@@ -74,8 +74,9 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               messages.addCompleteness(
                 streamlet.errorLoc,
                 s"${streamlet.identify} has no connections to any connector",
-                suggestion = s"Connect ${streamlet.identify} to another streamlet with a connector, " +
-                  "e.g. 'connector c is { from outlet ThisOutlet to inlet ThatInlet }'."
+                suggestion =
+                  s"Connect ${streamlet.identify} to another streamlet with a connector, " +
+                    "e.g. 'connector c is { from outlet ThisOutlet to inlet ThatInlet }'."
               )
         }
       }
@@ -95,8 +96,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
           while queue.nonEmpty && !reachesSink do
             val current = queue.dequeue()
-            if sinks.contains(current) && current != source then
-              reachesSink = true
+            if sinks.contains(current) && current != source then reachesSink = true
             else
               adjacency.getOrElse(current, mutable.Set.empty).foreach { neighbor =>
                 if !visited.contains(neighbor) then
@@ -109,7 +109,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             messages.addCompleteness(
               source.errorLoc,
               s"${source.identify} is a source but has no downstream path to any sink",
-              suggestion = "Add connectors routing this source's outlet through to a sink so the data it produces is consumed."
+              suggestion =
+                "Add connectors routing this source's outlet through to a sink so the data it produces is consumed."
             )
         }
       }
@@ -133,8 +134,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
           while queue.nonEmpty && !reachedBySource do
             val current = queue.dequeue()
-            if sourceSet.contains(current) then
-              reachedBySource = true
+            if sourceSet.contains(current) then reachedBySource = true
             else
               reverseAdjacency.getOrElse(current, mutable.Set.empty).foreach { neighbor =>
                 if !visited.contains(neighbor) then
@@ -147,7 +147,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             messages.addCompleteness(
               sink.errorLoc,
               s"${sink.identify} is a sink but has no upstream path from any source",
-              suggestion = "Add connectors routing a source's output into this sink so it receives data."
+              suggestion =
+                "Add connectors routing a source's output into this sink so it receives data."
             )
         }
       }
@@ -178,7 +179,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               messages.addWarning(
                 option.loc,
                 message,
-                suggestion = s"Remove the 'persistent' option from ${connector.identify}; both ends are in the same context."
+                suggestion =
+                  s"Remove the 'persistent' option from ${connector.identify}; both ends are in the same context."
               )
             }
           } else {
@@ -190,7 +192,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               messages.addWarning(
                 connector.errorLoc,
                 message,
-                suggestion = s"Add the 'persistent' option to ${connector.identify} since it spans a context boundary."
+                suggestion =
+                  s"Add the 'persistent' option to ${connector.identify} since it spans a context boundary."
               )
             }
           }
@@ -216,7 +219,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
         messages.addCompleteness(
           portlet.errorLoc,
           message,
-          suggestion = s"Connect ${portlet.identify} with a connector, or remove it if it is unused."
+          suggestion =
+            s"Connect ${portlet.identify} with a connector, or remove it if it is unused."
         )
       }
     }

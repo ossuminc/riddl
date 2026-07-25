@@ -21,7 +21,8 @@ import scala.reflect.*
 /** A helper class for testing the parser */
 trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWithTestData {
 
-  case class StringParser(content: String, testCase: String = "unknown test case") extends ExtensibleTopLevelParser():
+  case class StringParser(content: String, testCase: String = "unknown test case")
+      extends ExtensibleTopLevelParser():
     val input: RiddlParserInput = RiddlParserInput(content, testCase)
     val withVerboseFailures: Boolean = true
   end StringParser

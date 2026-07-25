@@ -18,7 +18,12 @@ class JVMNativeASTTest extends AbstractTestingBasis {
   "RiddlValue" must {
     "allow attachments to be added programmatically" in {
       val container = Entity(At.empty, Identifier.empty)
-      val a = StringAttachment(At.empty, Identifier(At.empty, "foo"), "application/json", LiteralString(At.empty, "{}"))
+      val a = StringAttachment(
+        At.empty,
+        Identifier(At.empty, "foo"),
+        "application/json",
+        LiteralString(At.empty, "{}")
+      )
       container.metadata.append(a)
       container.metadata.filter[StringAttachment] match
         case Seq(value) if value == a => succeed

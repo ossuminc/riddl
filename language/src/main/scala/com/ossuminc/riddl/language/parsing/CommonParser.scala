@@ -73,9 +73,23 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     P(
       Keywords.keywords(
         StringIn(
-          "domain", "context", "entity", "type", "epic", "saga",
-          "adaptor", "function", "projector", "repository", "streamlet",
-          "author", "module", "user", "connector", "constant", "invariant"
+          "domain",
+          "context",
+          "entity",
+          "type",
+          "epic",
+          "saga",
+          "adaptor",
+          "function",
+          "projector",
+          "repository",
+          "streamlet",
+          "author",
+          "module",
+          "user",
+          "connector",
+          "constant",
+          "invariant"
         ).!
       )
     )
@@ -96,9 +110,8 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
 
   /** Parse a full BAST import: `import "path/to/file.bast"` */
   private def fullBastImport[u: P]: P[BASTImport] = {
-    P(Index ~ Keywords.import_ ~ literalString ~ Index).map {
-      case (start, path, end) =>
-        doBASTImport(at(start, end), path)
+    P(Index ~ Keywords.import_ ~ literalString ~ Index).map { case (start, path, end) =>
+      doBASTImport(at(start, end), path)
     }
   }
 
@@ -214,10 +227,10 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   }
 
-  /** A whole path wrapped in a single pair of quotes with `.` separating the
-    * components, e.g. `'a.CI/CD Pipeline.c'`. This lets an emitter quote a path
-    * containing special-character components without quoting each component.
-    * The character class is `quotedIdentifier`'s set plus `.`.
+  /** A whole path wrapped in a single pair of quotes with `.` separating the components, e.g.
+    * `'a.CI/CD Pipeline.c'`. This lets an emitter quote a path containing special-character
+    * components without quoting each component. The character class is `quotedIdentifier`'s set
+    * plus `.`.
     */
   private def quotedPathIdentifier[u: P]: P[Seq[String]] = {
     P("'" ~~ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :.", 1).! ~~ "'").map { s =>
@@ -229,8 +242,9 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     // Try the dotted form first so existing inputs (including per-component
     // quoted parts like `a.'x'.b`) parse unchanged; fall back to the
     // whole-path quoted form only when a `.` appears inside the quotes.
-    P(Index ~ (dottedPathIdentifier | quotedPathIdentifier) ~~ Index).map { case (off1, parts, off2) =>
-      PathIdentifier(at(off1, off2), parts)
+    P(Index ~ (dottedPathIdentifier | quotedPathIdentifier) ~~ Index).map {
+      case (off1, parts, off2) =>
+        PathIdentifier(at(off1, off2), parts)
     }
   }
 
@@ -278,7 +292,7 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     P(
       Index ~ Keywords.option ~/ is.? ~ CharsWhile(ch =>
         ch.isLower | ch.isDigit | ch == '_' | ch == '-'
-       ).! ~
+      ).! ~
         (Punctuation.roundOpen ~ literalString.rep(
           0,
           Punctuation.comma

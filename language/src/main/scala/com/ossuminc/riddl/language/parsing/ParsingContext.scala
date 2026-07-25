@@ -35,7 +35,7 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     rpi: RiddlParserInput,
     rule: P[?] => P[RESULT],
     withVerboseFailures: Boolean = false
-  ): Either[(Messages,Int), (RESULT,Int)] = {
+  ): Either[(Messages, Int), (RESULT, Int)] = {
     try {
       fastparse.parse[RESULT](rpi, rule, withVerboseFailures) match {
         case fastparse.Parsed.Success(list, index) =>
@@ -60,8 +60,9 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
       result: Either[Messages, RESULT] @unused,
       input: RiddlParserInput @unused,
       index: Int @unused
-    ) => Either[Messages, RESULT] = { (result: Either[Messages, RESULT], _: RiddlParserInput, _: Int) =>
-      result
+    ) => Either[Messages, RESULT] = {
+      (result: Either[Messages, RESULT], _: RiddlParserInput, _: Int) =>
+        result
     }
   ): Either[Messages, RESULT] = {
     parse[RESULT](rpi, rule(_), withVerboseFailures) match
@@ -91,16 +92,22 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
 
   /** Parse a BAST import statement.
     *
-    * This creates a BASTImport node with the path, optional selector, and optional alias.
-    * The actual BAST file loading happens later during a loading pass, avoiding circular
-    * dependencies between language and bast modules.
+    * This creates a BASTImport node with the path, optional selector, and optional alias. The
+    * actual BAST file loading happens later during a loading pass, avoiding circular dependencies
+    * between language and bast modules.
     *
-    * @param loc The location of the import statement
-    * @param path The path to the .bast file
-    * @param kind Optional: the kind of definition to import ("domain", "context", etc.)
-    * @param selector Optional: the name of the specific definition to import
-    * @param alias Optional: an alternate name for the imported definition
-    * @return A BASTImport node (contents populated later by BASTLoader)
+    * @param loc
+    *   The location of the import statement
+    * @param path
+    *   The path to the .bast file
+    * @param kind
+    *   Optional: the kind of definition to import ("domain", "context", etc.)
+    * @param selector
+    *   Optional: the name of the specific definition to import
+    * @param alias
+    *   Optional: an alternate name for the imported definition
+    * @return
+    *   A BASTImport node (contents populated later by BASTLoader)
     */
   def doBASTImport(
     loc: At,
@@ -128,12 +135,12 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
       val name: String = if path.endsWith(".riddl") then {
         path
       } else {
-        val sb = new StringBuilder(path.length + 6)  // ".riddl" = 6 chars
+        val sb = new StringBuilder(path.length + 6) // ".riddl" = 6 chars
         sb.append(path).append(".riddl").toString
       }
       ctx.input.asInstanceOf[RiddlParserInput].root.parent.resolve(name)
     }
-    urlSeen += newURL  // O(1) add to HashSet
+    urlSeen += newURL // O(1) add to HashSet
     try {
       import com.ossuminc.riddl.utils.Await
       implicit val ec: ExecutionContext = pc.ec
@@ -150,7 +157,12 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     }
   }
 
-  private def doParse[CT <: RiddlValue](loc: At, rpi: RiddlParserInput, url: URL, rule: P[?] => P[Seq[CT]])(implicit
+  private def doParse[CT <: RiddlValue](
+    loc: At,
+    rpi: RiddlParserInput,
+    url: URL,
+    rule: P[?] => P[Seq[CT]]
+  )(implicit
     ctx: P[?]
   ): Seq[CT] = {
     fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {

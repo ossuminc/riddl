@@ -11,9 +11,8 @@ import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{AbstractTestingBasis, SeqHelpers, pc}
 
 /** Performance benchmark tests to measure the impact of Phase 1 optimizations:
-  * 1. Line number lookup caching in RiddlParserInput
-  * 2. allUnique() optimization with capacity hints in SeqHelpers
-  * 3. findByType() result caching in Finder
+  *   1. Line number lookup caching in RiddlParserInput 2. allUnique() optimization with capacity
+  *      hints in SeqHelpers 3. findByType() result caching in Finder
   *
   * These benchmarks provide concrete measurements of performance improvements.
   */
@@ -61,7 +60,9 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
 
       info(f"Random access: ${lines * 20} lineOf() calls in ${randomTime * 1000}%.2f ms")
       info(f"Average per call: ${(randomTime * 1000000) / (lines * 20)}%.3f µs")
-      info(f"Cache benefit: ${((randomTime - sequentialTime) / randomTime * 100)}%.1f%% faster for sequential")
+      info(
+        f"Cache benefit: ${((randomTime - sequentialTime) / randomTime * 100)}%.1f%% faster for sequential"
+      )
 
       // Performance target: Sequential should be reasonably fast
       // Note: Due to JIT and CPU caching, random may sometimes be faster in micro-benchmarks
@@ -72,7 +73,9 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
 
     "measure location() performance on large files" in {
       val lines = 5000
-      val content = (1 to lines).map(i => s"type Type$i is String with { described as \"Type $i\" }").mkString("\n")
+      val content = (1 to lines)
+        .map(i => s"type Type$i is String with { described as \"Type $i\" }")
+        .mkString("\n")
       val rpi = RiddlParserInput(content, "location-test")
 
       // Warmup
@@ -124,7 +127,9 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
           }
         }
 
-        info(f"Size $size%4d unique: ${uniqueTime * 1000000}%7.2f µs/call, with duplicate: ${duplicateTime * 1000000}%7.2f µs/call")
+        info(
+          f"Size $size%4d unique: ${uniqueTime * 1000000}%7.2f µs/call, with duplicate: ${duplicateTime * 1000000}%7.2f µs/call"
+        )
       }
 
       succeed
@@ -232,7 +237,10 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
           assert(result2.size == result3.size)
 
           // Cache hits should be much faster
-          assert(secondTime < firstTime / 10, s"Cache should provide 10x+ speedup (${firstTime/secondTime}x)")
+          assert(
+            secondTime < firstTime / 10,
+            s"Cache should provide 10x+ speedup (${firstTime / secondTime}x)"
+          )
           assert(thirdTime < firstTime / 10, "Cache should remain effective")
 
         case Left(errors) =>
@@ -301,7 +309,9 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
 
   "Overall Parse + Validate Benchmark" should {
     "measure performance on dokn.riddl" in {
-      val url = com.ossuminc.riddl.utils.URL("https://raw.githubusercontent.com/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl")
+      val url = com.ossuminc.riddl.utils.URL(
+        "https://raw.githubusercontent.com/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl"
+      )
 
       // Parse
       val rpi = com.ossuminc.riddl.utils.Await.result(
@@ -319,8 +329,10 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
         case Right(root) =>
           info(f"Successfully parsed ${root.contents.size} root-level definitions")
           // Performance target: Should meet IDE single parse timeout
-          assert(parseTime < SINGLE_PARSE_TIMEOUT_MS / 1000.0,
-            f"Parse too slow: ${parseTime * 1000}%.2f ms > ${SINGLE_PARSE_TIMEOUT_MS} ms target")
+          assert(
+            parseTime < SINGLE_PARSE_TIMEOUT_MS / 1000.0,
+            f"Parse too slow: ${parseTime * 1000}%.2f ms > ${SINGLE_PARSE_TIMEOUT_MS} ms target"
+          )
 
         case Left(errors) =>
           fail(s"Parse failed: ${errors.map(_.format).mkString("\n")}")
@@ -329,8 +341,11 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
 
     "measure performance on large generated file" in {
       val typeCount = VERY_LARGE_FILE_TYPE_COUNT
-      val content = s"""domain VeryLarge is {
-        |${(1 to typeCount).map(i => s"  type Type$i is String with { described as \"Type number $i\" }").mkString("\n")}
+      val content =
+        s"""domain VeryLarge is {
+        |${(1 to typeCount)
+            .map(i => s"  type Type$i is String with { described as \"Type number $i\" }")
+            .mkString("\n")}
         |}
         |""".stripMargin
 
@@ -365,18 +380,26 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
 
           // Verify results
           assert(types1.size == typeCount, s"Expected $typeCount types, got ${types1.size}")
-          assert(types2.size == typeCount, s"Expected $typeCount types in cached call, got ${types2.size}")
+          assert(
+            types2.size == typeCount,
+            s"Expected $typeCount types in cached call, got ${types2.size}"
+          )
 
           // Verify cache effectiveness
-          assert(cachedFindTime < findTime / 100, s"Cache should provide 100x+ speedup (got ${findTime/cachedFindTime}x)")
+          assert(
+            cachedFindTime < findTime / 100,
+            s"Cache should provide 100x+ speedup (got ${findTime / cachedFindTime}x)"
+          )
 
         case Left(errors) =>
           fail(s"Parse failed: ${errors.map(_.format).mkString("\n")}")
       }
 
       // Performance target: Should complete in reasonable time
-      assert(parseTime < LARGE_FILE_PARSE_TIMEOUT_MS / 1000.0,
-        f"Parse too slow: ${parseTime * 1000}%.2f ms > ${LARGE_FILE_PARSE_TIMEOUT_MS} ms timeout")
+      assert(
+        parseTime < LARGE_FILE_PARSE_TIMEOUT_MS / 1000.0,
+        f"Parse too slow: ${parseTime * 1000}%.2f ms > ${LARGE_FILE_PARSE_TIMEOUT_MS} ms timeout"
+      )
     }
   }
 

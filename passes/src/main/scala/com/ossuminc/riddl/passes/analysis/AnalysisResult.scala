@@ -23,8 +23,8 @@ import com.ossuminc.riddl.passes.validate.{HandlerCompleteness, ValidationOutput
 
 /** Unique token identifying a cached AnalysisResult.
   *
-  * Tokens are opaque handles used by MCP tools to reference previously
-  * analyzed models without re-parsing.
+  * Tokens are opaque handles used by MCP tools to reference previously analyzed models without
+  * re-parsing.
   */
 opaque type AnalysisToken = String
 
@@ -85,8 +85,7 @@ object AnalysisMetadata:
         )
 end AnalysisMetadata
 
-/** Pre-computed information about a DDD message type
-  * (Command, Event, Query, Result).
+/** Pre-computed information about a DDD message type (Command, Event, Query, Result).
   */
 case class MessageTypeInfo(
   typ: Type,
@@ -127,9 +126,8 @@ case class IncompleteItem(
   *   - EntityLifecyclePass: Entity state machines
   *   - DependencyAnalysisPass: Cross-context/entity/type dependencies
   *
-  * All data is collected once during analysis and cached. Generators
-  * only need ValidationPass + AnalysisPass — no additional tree
-  * traversals.
+  * All data is collected once during analysis and cached. Generators only need ValidationPass +
+  * AnalysisPass — no additional tree traversals.
   */
 case class AnalysisResult(
   token: AnalysisToken,
@@ -385,8 +383,7 @@ end AnalysisResult
 object AnalysisResult:
   /** Create an AnalysisResult from a PassesResult.
     *
-    * Extracts outputs from the standard passes. Throws if required
-    * passes haven't been run.
+    * Extracts outputs from the standard passes. Throws if required passes haven't been run.
     */
   def fromPassesResult(passesResult: PassesResult): AnalysisResult =
     val symbols = passesResult

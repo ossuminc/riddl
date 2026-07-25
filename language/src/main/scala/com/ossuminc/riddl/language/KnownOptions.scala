@@ -41,7 +41,13 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.css,
     KnownOption.kind,
-    KnownOption.faicon
+    KnownOption.faicon,
+    KnownOption.protocol,
+    KnownOption.event_catalog_version,
+    KnownOption.sql_dialect,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type
   )
 
   final val domain: Seq[String] = Seq(
@@ -51,7 +57,14 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.css,
     KnownOption.kind,
-    KnownOption.faicon
+    KnownOption.faicon,
+    KnownOption.event_catalog_version,
+    KnownOption.sql_dialect,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type,
+    KnownOption.confluence_space,
+    KnownOption.confluence_parent
   )
 
   final val entity: Seq[String] = Seq(
@@ -66,7 +79,12 @@ object KnownOptions {
     KnownOption.message_queue,
     KnownOption.technology,
     KnownOption.css,
-    KnownOption.faicon
+    KnownOption.faicon,
+    KnownOption.sql_dialect,
+    KnownOption.sql_table,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type
   )
 
   final val epic: Seq[String] = Seq(
@@ -81,14 +99,22 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.css,
     KnownOption.faicon,
-    KnownOption.kind
+    KnownOption.kind,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type
   )
 
   final val repository: Seq[String] = Seq(
     KnownOption.technology,
     KnownOption.kind,
     KnownOption.css,
-    KnownOption.faicon
+    KnownOption.faicon,
+    KnownOption.sql_dialect,
+    KnownOption.sql_table,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type
   )
 
   final val saga: Seq[String] = Seq(
@@ -103,7 +129,8 @@ object KnownOptions {
   final val streamlet: Seq[String] = Seq(
     KnownOption.technology,
     KnownOption.css,
-    KnownOption.kind
+    KnownOption.kind,
+    KnownOption.protocol
   )
 }
 
@@ -111,11 +138,17 @@ object KnownOption {
   final val aggregate = "aggregate"
   final val async = "async"
   final val available = "available"
+  final val backstage_lifecycle = "backstage_lifecycle"
+  final val backstage_owner = "backstage_owner"
+  final val backstage_type = "backstage_type"
   final val concept = "concept"
+  final val confluence_parent = "confluence_parent"
+  final val confluence_space = "confluence_space"
   final val consistent = "consistent"
   final val css = "css"
   final val device = "device"
   final val external = "external"
+  final val event_catalog_version = "event_catalog_version"
   final val event_sourced = "event-sourced"
   final val faicon = "faicon"
   final val finite_state_machine = "finite-state-machine"
@@ -126,9 +159,12 @@ object KnownOption {
   final val package_ = "package"
   final val parallel = "parallel"
   final val persistent = "persistent"
+  final val protocol = "protocol"
   final val reply = "reply"
   final val sequential = "sequential"
   final val service = "service"
+  final val sql_dialect = "sql_dialect"
+  final val sql_table = "sql_table"
   final val sync = "sync"
   final val tail_recursive = "tail-recursive"
   final val value = "final value"

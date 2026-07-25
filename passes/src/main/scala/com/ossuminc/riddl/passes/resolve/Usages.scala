@@ -11,8 +11,8 @@ import com.ossuminc.riddl.utils
 
 import scala.collection.mutable
 
-/** The data generated from the [[ResolutionPass]] that provides usage information about which definitions use others
-  * and vice versa. The data collected
+/** The data generated from the [[ResolutionPass]] that provides usage information about which
+  * definitions use others and vice versa. The data collected
   *
   * @param uses
   *   A hashmap with a [[com.ossuminc.riddl.language.AST.Definition]] as the key and the list of
@@ -36,15 +36,14 @@ case class Usages(
     uses.contains(definition)
   }
 
-  /** True iff `definition` appears as an anchor or intermediate
-    * component in at least one path identifier.
+  /** True iff `definition` appears as an anchor or intermediate component in at least one path
+    * identifier.
     */
   def isUsedInPath(definition: Definition): Boolean =
     usedInPathBy.get(definition).exists(_.nonEmpty)
 
-  /** Definitions whose body contains a path identifier that references
-    * `used` as an anchor or intermediate component (not as a final
-    * resolved target).
+  /** Definitions whose body contains a path identifier that references `used` as an anchor or
+    * intermediate component (not as a final resolved target).
     */
   def getPathUsers(used: Definition): Seq[Definition] =
     usedInPathBy.getOrElse(used, mutable.Set.empty).toSeq

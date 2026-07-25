@@ -19,9 +19,17 @@ private[parsing] trait SagaParser {
   def sagaStep[u: P]: P[SagaStep] = {
     P(
       Index ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
-        Keywords.reverted ~ by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~ withMetaData ~ Index
+        Keywords.reverted ~ by.? ~ pseudoCodeBlock(
+          StatementsSet.SagaStatements
+        ) ~ withMetaData ~ Index
     )./.map { case (start, id, doStatements, undoStatements, descriptives, end) =>
-      SagaStep(at(start, end), id, doStatements.toContents, undoStatements.toContents, descriptives.toContents)
+      SagaStep(
+        at(start, end),
+        id,
+        doStatements.toContents,
+        undoStatements.toContents,
+        descriptives.toContents
+      )
     }
   }
 
@@ -53,7 +61,7 @@ private[parsing] trait SagaParser {
       Index ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~ withMetaData ~ Index
     ).map { case (start, identifier, (input, output, contents), descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Saga(at(start,end), identifier, input, output, contents.toContents, descriptives.toContents)
+      Saga(at(start, end), identifier, input, output, contents.toContents, descriptives.toContents)
     }
   }
 }

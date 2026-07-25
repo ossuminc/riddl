@@ -218,7 +218,7 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         td
       )
       parseInContext[Type](input, _.types.last) match {
-        case Left(messages)        => fail(messages.format)
+        case Left(messages)    => fail(messages.format)
         case Right(_: Type, _) => succeed
       }
     }
@@ -238,7 +238,8 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     }
     "allow rename of Abstract" in { (td: TestData) =>
       val rpi = RiddlParserInput("type abs = Abstract", td)
-      val expected = Type(At(rpi, 0, 18), Identifier(At(rpi, 5, 9), "abs"), Abstract(At(rpi, 11, 18)))
+      val expected =
+        Type(At(rpi, 0, 18), Identifier(At(rpi, 5, 9), "abs"), Abstract(At(rpi, 11, 18)))
       checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Boolean" in { (td: TestData) =>
@@ -248,7 +249,8 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     }
     "allow rename of Current" in { (td: TestData) =>
       val rpi = RiddlParserInput("type cur = Current", td)
-      val expected = Type(At(rpi, 0, 18), Identifier(At(rpi, 5, 9), "cur"), Current(At(rpi, 11, 18)))
+      val expected =
+        Type(At(rpi, 0, 18), Identifier(At(rpi, 5, 9), "cur"), Current(At(rpi, 11, 18)))
       checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Currency(USD)" in { (td: TestData) =>
@@ -280,7 +282,8 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     }
     "allow rename of Temperature" in { (td: TestData) =>
       val rpi = RiddlParserInput("type tmp = Temperature", td)
-      val expected = Type(At(rpi, 0, 22), Identifier(At(rpi, 5, 9), "tmp"), Temperature(At(rpi, 11, 12)))
+      val expected =
+        Type(At(rpi, 0, 22), Identifier(At(rpi, 5, 9), "tmp"), Temperature(At(rpi, 11, 12)))
       checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow renames of Id(path)" in { (td: TestData) =>
@@ -346,7 +349,11 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
               "type",
               PathIdentifier(At(rpi, 38, 44), Seq("stamp"))
             ),
-            AliasedTypeExpression(At(rpi, 47, 56), "type", PathIdentifier(At(rpi, 52, 56), Seq("url")))
+            AliasedTypeExpression(
+              At(rpi, 47, 56),
+              "type",
+              PathIdentifier(At(rpi, 52, 56), Seq("url"))
+            )
           )
         )
       )
@@ -464,10 +471,10 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         )
         val l = mk.length
         val expected = Type(
-          At(rpi, 0, 71+l),
+          At(rpi, 0, 71 + l),
           Identifier(At(rpi, 5, 9), "mkt"),
           AggregateUseCaseTypeExpression(
-            At(rpi, 11, 71+l),
+            At(rpi, 11, 71 + l),
             mk match {
               case "command" => AggregateUseCase.CommandCase
               case "event"   => AggregateUseCase.EventCase
@@ -476,22 +483,22 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
             },
             Contents(
               Field(
-                At(rpi, 16+l, 27+l),
-                Identifier(At(rpi, 16+l, 19+l), "key"),
-                Number(At(rpi, 21+l, 27+l))
+                At(rpi, 16 + l, 27 + l),
+                Identifier(At(rpi, 16 + l, 19 + l), "key"),
+                Number(At(rpi, 21 + l, 27 + l))
               ),
               Field(
-                At(rpi, 31+l, 49+l),
-                Identifier(At(rpi, 31+l, 33+l), "id"),
+                At(rpi, 31 + l, 49 + l),
+                Identifier(At(rpi, 31 + l, 33 + l), "id"),
                 UniqueId(
-                  At(rpi, 35+l, 49+l),
-                  PathIdentifier(At(rpi, 45+l, 49+l), Seq("foo"))
+                  At(rpi, 35 + l, 49 + l),
+                  PathIdentifier(At(rpi, 45 + l, 49 + l), Seq("foo"))
                 )
               ),
               Field(
-                At(rpi, 53+l, 69+l),
-                Identifier(At(rpi, 53+l, 57+l), "time"),
-                TimeStamp(At(rpi, 59+l, 69+l))
+                At(rpi, 53 + l, 69 + l),
+                Identifier(At(rpi, 53 + l, 57 + l), "time"),
+                TimeStamp(At(rpi, 59 + l, 69 + l))
               )
             )
           )

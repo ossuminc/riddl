@@ -17,7 +17,8 @@ class CommandOptionsTest extends AbstractTestingBasis {
 
   "CommandOptions" must {
     "check inputFile validity" in {
-      case class FakeCommandOptions(command: String, inputFile: Option[Path], test: Boolean) extends CommandOptions
+      case class FakeCommandOptions(command: String, inputFile: Option[Path], test: Boolean)
+          extends CommandOptions
       val fco = FakeCommandOptions("doit", None, false)
       val messages = fco.check
       messages.justErrors.head.message must be("An input path was not provided.")
@@ -40,7 +41,7 @@ class CommandOptionsTest extends AbstractTestingBasis {
       CommandOptions.withInputFile[Assertion](Some(Path.of(".")), "unspecified") { (path: Path) =>
         Right(Files.exists(path) must be(true))
       } match {
-        case Left(messages) => fail(s"Unexpected: ${messages.format}")
+        case Left(messages)   => fail(s"Unexpected: ${messages.format}")
         case Right(assertion) => assertion
       }
     }

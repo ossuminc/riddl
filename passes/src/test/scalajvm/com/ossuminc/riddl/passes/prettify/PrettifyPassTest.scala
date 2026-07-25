@@ -53,13 +53,16 @@ abstract class PrettifyPassTest extends RiddlFilesTestBase {
     val url = PathUtils.urlFromCwdPath(file.toPath)
     val future = RiddlParserInput.fromURL(url).map { input1 =>
       val output1 = runPrettify(input1, "first")
-      FileUtils.writeStringToFile(new File("target/prettify-1.txt"), output1, StandardCharsets.UTF_8)
+      FileUtils
+        .writeStringToFile(new File("target/prettify-1.txt"), output1, StandardCharsets.UTF_8)
       val input2 = RiddlParserInput(output1, "firstGeneration")
       val output2 = runPrettify(input2, "second")
-      FileUtils.writeStringToFile(new File("target/prettify-2.txt"), output2, StandardCharsets.UTF_8)
+      FileUtils
+        .writeStringToFile(new File("target/prettify-2.txt"), output2, StandardCharsets.UTF_8)
       val input3 = RiddlParserInput(output2, "secondGeneration")
       val output3 = runPrettify(input3, "third")
-      FileUtils.writeStringToFile(new File("target/prettify-3.txt"), output3, StandardCharsets.UTF_8)
+      FileUtils
+        .writeStringToFile(new File("target/prettify-3.txt"), output3, StandardCharsets.UTF_8)
       output1 mustEqual output2
       output2 mustEqual output3
       output3 mustEqual output1

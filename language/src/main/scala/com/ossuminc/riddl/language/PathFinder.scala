@@ -11,4 +11,3 @@ import com.ossuminc.riddl.language.AST.*
 import scala.collection.immutable.HashMap
 import scala.collection.mutable
 // import scala.math.Ordered.orderingToOrdered
-

@@ -17,8 +17,7 @@ import java.nio.file.Path
 
 /** Implementation of the */
 object AboutCommand {
-  case class Options(command: String = "about")
-      extends CommandOptions {
+  case class Options(command: String = "about") extends CommandOptions {
     override def inputFile: Option[Path] = None
   }
 }

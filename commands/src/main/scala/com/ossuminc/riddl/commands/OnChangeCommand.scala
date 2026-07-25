@@ -36,7 +36,8 @@ object OnChangeCommand {
   }
 }
 
-class OnChangeCommand(using pc: PlatformContext) extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
+class OnChangeCommand(using pc: PlatformContext)
+    extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
   import OnChangeCommand.Options
 
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
@@ -103,8 +104,14 @@ class OnChangeCommand(using pc: PlatformContext) extends Command[OnChangeCommand
     require(targetCommand.nonEmpty, "'target-command' requires a non-empty value")
     val refreshRate: FiniteDuration =
       FiniteDuration(obj.getDuration("refresh-rate", TimeUnit.SECONDS), TimeUnit.SECONDS)
-    val maxCycles = obj.getInt("max_cycles")  
-    OnChangeCommand.Options(Path.of(configFile), Path.of(watchDirectory), targetCommand, refreshRate, maxCycles)
+    val maxCycles = obj.getInt("max_cycles")
+    OnChangeCommand.Options(
+      Path.of(configFile),
+      Path.of(watchDirectory),
+      targetCommand,
+      refreshRate,
+      maxCycles
+    )
   end interpretConfig
 
   override def replaceInputFile(
@@ -120,8 +127,8 @@ class OnChangeCommand(using pc: PlatformContext) extends Command[OnChangeCommand
     }
   }
 
-  /** Execute the command given the options. Error should be returned as Left(messages) and not directly logged. The log
-    * is for verbose or debug output
+  /** Execute the command given the options. Error should be returned as Left(messages) and not
+    * directly logged. The log is for verbose or debug output
     *
     * @param options
     *   The command specific options

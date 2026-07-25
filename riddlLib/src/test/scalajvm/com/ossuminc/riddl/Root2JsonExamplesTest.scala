@@ -13,9 +13,9 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.io.File
 import scala.io.Source
 
-/** The committed example models under `riddlLib/json-examples` must survive
-  * `parseJson -> root2Json -> parseJson` with the same validation profile and a
-  * stable serialization. JVM-only (reads the example files from the build root).
+/** The committed example models under `riddlLib/json-examples` must survive `parseJson -> root2Json
+  * -> parseJson` with the same validation profile and a stable serialization. JVM-only (reads the
+  * example files from the build root).
   */
 class Root2JsonExamplesTest extends AnyWordSpec with Matchers {
 
@@ -45,7 +45,11 @@ class Root2JsonExamplesTest extends AnyWordSpec with Matchers {
                   RiddlLib.root2Json(root2) mustBe json2
                 }
               case RiddlResult.Failure(errors) =>
-                fail(s"$name root2Json did not re-parse:\n$json2\n" + errors.map(_.format).mkString("\n"))
+                fail(
+                  s"$name root2Json did not re-parse:\n$json2\n" + errors
+                    .map(_.format)
+                    .mkString("\n")
+                )
             end match
           case RiddlResult.Failure(errors) =>
             fail(s"$name parseJson failed: " + errors.map(_.format).mkString("\n"))

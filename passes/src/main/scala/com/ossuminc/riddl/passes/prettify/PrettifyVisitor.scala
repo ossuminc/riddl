@@ -192,11 +192,11 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   // LeafDefinitions
   def doField(field: Field): Unit = ()
-    // NOTE: Fields are handled by their type
+  // NOTE: Fields are handled by their type
   end doField
 
   def doMethod(method: Method): Unit = ()
-    // NOTE: Methods are handled by their type
+  // NOTE: Methods are handled by their type
   end doMethod
 
   def doAuthor(author: Author): Unit =
@@ -311,11 +311,15 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def openState(riddl_state: State, parents: Parents): Unit =
     state.withCurrent { rfe =>
       if riddl_state.contents.isEmpty then
-        rfe.addLine(s"${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}")
-      else {
         rfe.addLine(
-          s"${keyword(riddl_state)} ${riddl_state.id.format} is ${riddl_state.typ.format} {"
-        ).incr
+          s"${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}"
+        )
+      else {
+        rfe
+          .addLine(
+            s"${keyword(riddl_state)} ${riddl_state.id.format} is ${riddl_state.typ.format} {"
+          )
+          .incr
       }
       end if
     }
@@ -323,8 +327,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   def closeState(riddl_state: State, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      if riddl_state.contents.nonEmpty then
-        rfe.closeDef(riddl_state)
+      if riddl_state.contents.nonEmpty then rfe.closeDef(riddl_state)
       end if
     }
   end closeState
@@ -397,7 +400,9 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         case vi: VagueInteraction =>
           rfe.addIndent(s"step is ${vi.from.format} ${vi.relationship.format} ${vi.to.format}")
         case smi: SendMessageInteraction =>
-          rfe.addIndent(s"step send ${smi.message.format} from ${smi.from.format} to ${smi.to.format}")
+          rfe.addIndent(
+            s"step send ${smi.message.format} from ${smi.from.format} to ${smi.to.format}"
+          )
         case ai: ArbitraryInteraction =>
           rfe.addIndent(s"step from ${ai.from.format} ${ai.relationship.format} to ${ai.to.format}")
         case si: SelfInteraction =>
@@ -443,8 +448,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
           case i  => rfe.url.path.substring(0, i)
         val relativePath =
           if currentDir.isEmpty then url.path
-          else if url.path.startsWith(currentDir + "/") then
-            url.path.drop(currentDir.length + 1)
+          else if url.path.startsWith(currentDir + "/") then url.path.drop(currentDir.length + 1)
           else url.path
         rfe.addLine(s"""include "$relativePath"""")
         // Resolve the relative path from the current file's output

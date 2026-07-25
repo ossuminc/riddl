@@ -83,7 +83,11 @@ class ASTTest extends AbstractTestingBasis {
       Domain((0, 0), Identifier((1, 1), "foo"))
     }
     "support all type constructs" in {
-      AliasedTypeExpression(0 -> 0, "record", PathIdentifier(0 -> 0, Seq("Foo"))).format mustBe "record Foo"
+      AliasedTypeExpression(
+        0 -> 0,
+        "record",
+        PathIdentifier(0 -> 0, Seq("Foo"))
+      ).format mustBe "record Foo"
       Enumeration((0, 0), Contents.empty[Enumerator]()).format mustBe "{  }"
       Alternation((0, 0), Contents.empty[AliasedTypeExpression]()).format mustBe "one of {  }"
       Aggregation((0, 0), Contents.empty[AggregateContents]()).format mustBe "{  }"
@@ -157,9 +161,13 @@ class ASTTest extends AbstractTestingBasis {
     LiteralString.empty,
     LiteralString.empty
   )
-  val brief: Option[BriefDescription] = Some(BriefDescription(At.empty, LiteralString(At.empty, "brief")))
+  val brief: Option[BriefDescription] = Some(
+    BriefDescription(At.empty, LiteralString(At.empty, "brief"))
+  )
   val briefs: Seq[BriefDescription] = Seq(brief.get)
-  val description: Option[Description] = Some(BlockDescription(At.empty, Seq(LiteralString(At.empty, "Description"))))
+  val description: Option[Description] = Some(
+    BlockDescription(At.empty, Seq(LiteralString(At.empty, "Description")))
+  )
   val descriptions: Seq[Description] = Seq(description.get)
   val entityRef: EntityRef = EntityRef(At.empty, PathIdentifier(At.empty, Seq("Entity")))
   val aggregate: AggregateUseCaseTypeExpression = AggregateUseCaseTypeExpression(
@@ -180,11 +188,25 @@ class ASTTest extends AbstractTestingBasis {
   val statements: Contents[Statements] = Contents(
     PromptStatement(At.empty, LiteralString(At.empty, "prompt")),
     BecomeStatement(At.empty, entityRef, HandlerRef(At(), PathIdentifier(At(), Seq("Entity")))),
-    CodeStatement(At.empty, language = LiteralString(At.empty, "scala"), body = "def f[A](x: A): A"),
+    CodeStatement(
+      At.empty,
+      language = LiteralString(At.empty, "scala"),
+      body = "def f[A](x: A): A"
+    ),
     ErrorStatement(At.empty, LiteralString(At.empty, "error message")),
     LetStatement(At.empty, Identifier(At.empty, "varName"), None, LiteralString(At.empty, "value")),
-    MatchStatement(At.empty, LiteralString(At.empty, "expr"), Seq(MatchCase(At.empty, LiteralString(At.empty, "pattern"), Contents.empty())), Contents.empty()),
-    MorphStatement(At.empty, entityRef, StateRef(At.empty, PathIdentifier(At(), Seq("state"))), messageRef),
+    MatchStatement(
+      At.empty,
+      LiteralString(At.empty, "expr"),
+      Seq(MatchCase(At.empty, LiteralString(At.empty, "pattern"), Contents.empty())),
+      Contents.empty()
+    ),
+    MorphStatement(
+      At.empty,
+      entityRef,
+      StateRef(At.empty, PathIdentifier(At(), Seq("state"))),
+      messageRef
+    ),
     SendStatement(At.empty, messageRef, InletRef(At.empty, PathIdentifier(At.empty, Seq("inlet")))),
     SetStatement(At.empty, fieldRef, LiteralString(At.empty, "value")),
     TellStatement(At.empty, messageRef, entityRef),
@@ -207,13 +229,18 @@ class ASTTest extends AbstractTestingBasis {
     OnTerminationClause(At.empty, statements)
   )
   val handler: Handler =
-    Handler(At.empty, Identifier(At(), "handler"), onClauses.asInstanceOf[Contents[HandlerContents]])
+    Handler(
+      At.empty,
+      Identifier(At(), "handler"),
+      onClauses.asInstanceOf[Contents[HandlerContents]]
+    )
   val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), Contents(handler))
   val handlerRef: HandlerRef = HandlerRef(At.empty, PathIdentifier(At(), Seq("handler")))
   val sagaStep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagaStep"))
   val state: State = State(At.empty, Identifier(At.empty, "state"), TypeRef())
   val stateRef: StateRef = StateRef(At.empty, PathIdentifier(At(), Seq("state")))
-  val user: User = User(At.empty, Identifier(At.empty, "john"), LiteralString(At.empty, "GenericUser"))
+  val user: User =
+    User(At.empty, Identifier(At.empty, "john"), LiteralString(At.empty, "GenericUser"))
   val userStory: UserStory = UserStory(
     At.empty,
     UserRef(At.empty, PathIdentifier(At.empty, Seq("user"))),
@@ -222,7 +249,8 @@ class ASTTest extends AbstractTestingBasis {
   )
   val storyCase: UseCase = UseCase(At.empty, Identifier(At.empty, "story-case"), userStory)
   val epic: Epic = Epic(At.empty, Identifier(At.empty, "epic"), userStory)
-  val term: Term = Term(At.empty, Identifier(At.empty, "term"), Seq(LiteralString(At.empty, "definition")))
+  val term: Term =
+    Term(At.empty, Identifier(At.empty, "term"), Seq(LiteralString(At.empty, "definition")))
 
   val relationship: Relationship = Relationship(
     At.empty,
@@ -239,7 +267,8 @@ class ASTTest extends AbstractTestingBasis {
   }
   val domain: AST.Domain =
     Domain(At(), Identifier(At(), "test"), contents = Contents(author))
-  val context: AST.Context = Context(At(), Identifier(At(), "test"), Contents(relationship), Contents(authorRef))
+  val context: AST.Context =
+    Context(At(), Identifier(At(), "test"), Contents(relationship), Contents(authorRef))
 
   "Adaptor" should {
     "pass simple tests" in {
@@ -270,7 +299,8 @@ class ASTTest extends AbstractTestingBasis {
       Context(At(), Identifier(At(), "empty")).contents must be(empty)
     }
     "correctly identify non-emptiness" in {
-      val types = Contents(Type(At(), Identifier(At(), "A"), Bool(At()))).asInstanceOf[Contents[ContextContents]]
+      val types = Contents(Type(At(), Identifier(At(), "A"), Bool(At())))
+        .asInstanceOf[Contents[ContextContents]]
       Context(At(), Identifier(At(), "test"), contents = types).contents must be(types)
     }
     "have a relationship" in {
@@ -293,7 +323,8 @@ class ASTTest extends AbstractTestingBasis {
       domain.contents mustNot be(empty)
     }
     "non-empty domain should have non-empty contents" in {
-      val types = Contents(Type(At(), Identifier(At(), "A"), Bool(At()))).asInstanceOf[Contents[DomainContents]]
+      val types = Contents(Type(At(), Identifier(At(), "A"), Bool(At())))
+        .asInstanceOf[Contents[DomainContents]]
       Domain(At(), Identifier(At(), "test"), contents = types).contents mustBe
         types
     }
@@ -335,7 +366,10 @@ class ASTTest extends AbstractTestingBasis {
         )
 
         val entityContents: Contents[EntityContents] =
-          Contents.empty[EntityContents](states.size + types.size + handlers.size + functions.size + invariants.size)
+          Contents
+            .empty[EntityContents](
+              states.size + types.size + handlers.size + functions.size + invariants.size
+            )
             .merge(options)
             .merge(states)
             .merge(types)

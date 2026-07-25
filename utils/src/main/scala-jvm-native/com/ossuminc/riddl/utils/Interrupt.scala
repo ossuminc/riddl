@@ -24,8 +24,8 @@ final class Interrupt extends (() => Boolean) {
 
   private var state: AnyRef = NotStarted
 
-  /** This is the signal to cancel the execution of the logic. Returns whether the cancellation signal was successfully
-    * issued or not.
+  /** This is the signal to cancel the execution of the logic. Returns whether the cancellation
+    * signal was successfully issued or not.
     */
   override def apply(): Boolean = this.synchronized {
     state match {
@@ -73,8 +73,8 @@ final class Interrupt extends (() => Boolean) {
     }
   }
 
-  /** Executes the supplied block of code and returns the result. Throws CancellationException if the block was
-    * interrupted.
+  /** Executes the supplied block of code and returns the result. Throws CancellationException if
+    * the block was interrupted.
     */
   def interruptibly[T](block: => T): T = {
     if enter() then {

@@ -19,7 +19,8 @@ import scala.util.control.NonFatal
 object Commands:
 
   /** Convert a string and some [[com.ossuminc.riddl.utils.CommonOptions]] into either a
-    * [[com.ossuminc.riddl.command.Command]] or some [[com.ossuminc.riddl.language.Messages.Messages]] Note that the
+    * [[com.ossuminc.riddl.command.Command]] or some
+    * [[com.ossuminc.riddl.language.Messages.Messages]] Note that the
     * [[com.ossuminc.riddl.command.CommandOptions]] will be passed to the command when you run it.
     *
     * @param name
@@ -51,20 +52,23 @@ object Commands:
     end match
   end loadCommandNamed
 
-  /** Probably the easiest way to run a command if you're familiar with the command line options and still get the
-    * [[com.ossuminc.riddl.language.Messages.Messages]] or [[com.ossuminc.riddl.passes.PassesResult]] objects out of it.
+  /** Probably the easiest way to run a command if you're familiar with the command line options and
+    * still get the [[com.ossuminc.riddl.language.Messages.Messages]] or
+    * [[com.ossuminc.riddl.passes.PassesResult]] objects out of it.
     *
     * @param args
-    *   An [[Array[String]] of arguments, one argument per array element. This should follow the same pattern as by the
-    *   `riddlc` command line options (run `riddlc help` to discover that syntax). Unlike `riddlc`, the first argument
-    *   must be the name of the command to run. The common options cannot occur ahead of it and are provided by the
-    *   `commonOptions` argument to this function.
+    *   An [[Array[String]] of arguments, one argument per array element. This should follow the
+    *   same pattern as by the `riddlc` command line options (run `riddlc help` to discover that
+    *   syntax). Unlike `riddlc`, the first argument must be the name of the command to run. The
+    *   common options cannot occur ahead of it and are provided by the `commonOptions` argument to
+    *   this function.
     * @return
     *   One of two things:
-    *   - [[scala.util.Left]] of [[com.ossuminc.riddl.language.Messages.Messages]] if the command fails and the
-    *     contained messages, a [[List]] of [[com.ossuminc.riddl.language.Messages.Messages]], that explain the errors
-    *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details of what the
-    *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
+    *   - [[scala.util.Left]] of [[com.ossuminc.riddl.language.Messages.Messages]] if the command
+    *     fails and the contained messages, a [[List]] of
+    *     [[com.ossuminc.riddl.language.Messages.Messages]], that explain the errors
+    *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details
+    *     of what the [[com.ossuminc.riddl.passes.Pass]]es that run produced.
     */
   def runCommandWithArgs(
     args: Array[String]
@@ -109,7 +113,8 @@ object Commands:
     try
       val config = ConfigFactory.parseFile(configFile.toFile)
       val names = config.root.keySet().asScala.toSeq
-      if io.options.verbose then io.log.info(s"Found candidate commands in $configFile: ${names.mkString(" ")}")
+      if io.options.verbose then
+        io.log.info(s"Found candidate commands in $configFile: ${names.mkString(" ")}")
       Right(names)
     catch
       case ce: ConfigException =>
@@ -119,23 +124,23 @@ object Commands:
     end try
   end loadCandidateCommands
 
-  /** An easy way to run the `from` command which loads commands and their options from a `.config` file and uses them
-    * as defaults. The [[com.ossuminc.riddl.utils.CommonOptions]] specification in the `.config` file can be overridden
-    * with the `commonOptions` argument.
+  /** An easy way to run the `from` command which loads commands and their options from a `.config`
+    * file and uses them as defaults. The [[com.ossuminc.riddl.utils.CommonOptions]] specification
+    * in the `.config` file can be overridden with the `commonOptions` argument.
     *
     * @param configFile
     *   An optional [[java.nio.file.Path]] for the config file. Relative or full paths are fine.
     * @param targetCommand
-    *   The command to run. This must match a config setting in the `configFile` that provides the arguments for that
-    *   command.
+    *   The command to run. This must match a config setting in the `configFile` that provides the
+    *   arguments for that command.
     * @param commandName
     *   The name of the command that is invoking this method, if it matters
     * @return
     *   One of two things:
-    *   - [[scala.util.Left]] of [[com.ossuminc.riddl.language.Messages.Messages]], which is a list of
-    *     [[com.ossuminc.riddl.language.Messages.Message]], that explain why it failed.
-    *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details of what the
-    *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
+    *   - [[scala.util.Left]] of [[com.ossuminc.riddl.language.Messages.Messages]], which is a list
+    *     of [[com.ossuminc.riddl.language.Messages.Message]], that explain why it failed.
+    *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details
+    *     of what the [[com.ossuminc.riddl.passes.Pass]]es that run produced.
     */
   def runFromConfig(
     configFile: Option[Path],
@@ -153,7 +158,8 @@ object Commands:
               Left(errors)
             case result: Right[Messages, PassesResult] => result
           end match
-        else Left[Messages, PassesResult](errors(s"Command '$targetCommand' is not defined in $path"))
+        else
+          Left[Messages, PassesResult](errors(s"Command '$targetCommand' is not defined in $path"))
         end if
       }
     }
@@ -190,7 +196,9 @@ object Commands:
       handleCommandResult(result)
   end handleCommandRun
 
-  def runMainForTest(args: Array[String])(using io: PlatformContext): Either[Messages, PassesResult] =
+  def runMainForTest(args: Array[String])(using
+    io: PlatformContext
+  ): Either[Messages, PassesResult] =
     try
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match

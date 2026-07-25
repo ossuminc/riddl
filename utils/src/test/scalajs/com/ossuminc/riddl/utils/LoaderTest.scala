@@ -23,29 +23,27 @@ private case class AwaitFuture[T](
   future: Future[T],
   duration: FiniteDuration,
   onSuccess: T => Unit,
-  onFailure: Throwable => Unit = (t: Throwable) => throw t,
+  onFailure: Throwable => Unit = (t: Throwable) => throw t
 ) {
 
   val start: Long = Clock.systemUTC().millis()
   var done: Boolean = false
   checkCompleteness
-  if !done then
-    setTimeout(0.1) { checkCompleteness }
+  if !done then setTimeout(0.1) { checkCompleteness }
   end if
   def checkCompleteness: Unit =
     future.value match
       case None =>
         val now: Long = Clock.systemUTC().millis()
         if duration.toMillis < now - start then
-          throw new TimeoutException(s"Timeout after ${now-start}ms")
-        else
-          setTimeout(0.1) { checkCompleteness }
+          throw new TimeoutException(s"Timeout after ${now - start}ms")
+        else setTimeout(0.1) { checkCompleteness }
         end if
       case Some(t: Try[T]) =>
         done = true
         t match
           case Success(result) => onSuccess(result)
-          case Failure(error) => onFailure(error)
+          case Failure(error)  => onFailure(error)
         end match
     end match
   end checkCompleteness

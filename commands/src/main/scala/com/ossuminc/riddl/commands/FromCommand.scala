@@ -19,12 +19,14 @@ import java.nio.file.Path
 /** Unit Tests For FromCommand */
 object FromCommand {
   final val cmdName = "from"
-  case class Options(inputFile: Option[Path] = None, targetCommand: String = "") extends CommandOptions {
+  case class Options(inputFile: Option[Path] = None, targetCommand: String = "")
+      extends CommandOptions {
     def command: String = cmdName
   }
 }
 
-class FromCommand(using val pc: PlatformContext) extends Command[FromCommand.Options](FromCommand.cmdName) {
+class FromCommand(using val pc: PlatformContext)
+    extends Command[FromCommand.Options](FromCommand.cmdName) {
   import FromCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
@@ -47,12 +49,10 @@ class FromCommand(using val pc: PlatformContext) extends Command[FromCommand.Opt
 
   override def interpretConfig(config: Config): FromCommand.Options =
     val rootObj = config.getObject(commandName)
-    val rootConfig = rootObj.toConfig 
-    val inputFile = 
-      if rootObj.containsKey("config-file") then
-        Some(Path.of(rootConfig.getString("config-file")))
-      else
-        None
+    val rootConfig = rootObj.toConfig
+    val inputFile =
+      if rootObj.containsKey("config-file") then Some(Path.of(rootConfig.getString("config-file")))
+      else None
     val targetCommand = rootConfig.getString("target-command")
     Options(inputFile, targetCommand)
   end interpretConfig
@@ -79,7 +79,7 @@ class FromCommand(using val pc: PlatformContext) extends Command[FromCommand.Opt
           end if
           pc.options
       end match
-      
+
     pc.withOptions(loadedCO) { _ =>
       Commands.runFromConfig(
         options.inputFile,

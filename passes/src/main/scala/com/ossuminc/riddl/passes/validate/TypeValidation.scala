@@ -36,7 +36,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           Message(
             p.loc,
             x.getMessage,
-            suggestion = "Correct the regular-expression syntax in this pattern (RIDDL uses Java regex syntax)."
+            suggestion =
+              "Correct the regular-expression syntax in this pattern (RIDDL uses Java regex syntax)."
           )
         )
     }
@@ -54,7 +55,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           s"Enumerator '${id.value}' must start with upper case",
           StyleWarning,
           id.loc,
-          suggestion = s"Start the enumerator name with an upper-case letter, e.g. '${id.value.capitalize}'."
+          suggestion =
+            s"Start the enumerator name with an upper-case letter, e.g. '${id.value.capitalize}'."
         )
     }
     this
@@ -77,14 +79,16 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
       "Minimum value might be too small to store in a Long",
       Warning,
       rt.loc,
-      suggestion = "Keep the minimum within the range of a 64-bit Long, or model the value with a different numeric type."
+      suggestion =
+        "Keep the minimum within the range of a 64-bit Long, or model the value with a different numeric type."
     )
       .check(
         rt.max <= BigInt.long2bigInt(Long.MaxValue),
         "Maximum value might be too large to store in a Long",
         Warning,
         rt.loc,
-        suggestion = "Keep the maximum within the range of a 64-bit Long, or model the value with a different numeric type."
+        suggestion =
+          "Keep the maximum within the range of a 64-bit Long, or model the value with a different numeric type."
       )
   }
 
@@ -96,7 +100,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           "Field names in aggregates should start with a lower case letter",
           StyleWarning,
           field.loc,
-          suggestion = s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'."
+          suggestion =
+            s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'."
         )
         .checkMetadata(field)
     }
@@ -115,7 +120,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           s"Field names in ${mt.usecase.useCase} should start with a lower case letter",
           StyleWarning,
           field.loc,
-          suggestion = s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'."
+          suggestion =
+            s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'."
         )
         .checkTypeExpression(field.typeEx, typeDef, parents)
         .checkMetadata(field)
@@ -169,13 +175,15 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
         messages.addError(
           replica.loc,
           s"Replica type expressions may not have cardinality",
-          suggestion = "Remove the cardinality from the replica's element type; a replica wraps a single replicable type."
+          suggestion =
+            "Remove the cardinality from the replica's element type; a replica wraps a single replicable type."
         )
       case _: TypeExpression =>
         messages.addError(
           replica.loc,
           s"Type expression in Replica is not a replicable type",
-          suggestion = "Use a replicable element type for the replica: a mapping, sequence, set, or integer type."
+          suggestion =
+            "Use a replicable element type for the replica: a mapping, sequence, set, or integer type."
         )
     }
   }
@@ -234,14 +242,16 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           "The whole number part must be positive",
           Error,
           loc,
-          suggestion = "Specify a whole-number part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'."
+          suggestion =
+            "Specify a whole-number part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'."
         )
         check(
           fractional >= 1,
           "The fractional part must be positive",
           Error,
           loc,
-          suggestion = "Specify a fractional part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'."
+          suggestion =
+            "Specify a fractional part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'."
         )
       case EntityReferenceTypeExpression(_, pid) =>
         checkPathRef[Entity](pid, parents)

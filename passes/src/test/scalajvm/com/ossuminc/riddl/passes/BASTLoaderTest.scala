@@ -71,17 +71,27 @@ class BASTLoaderTest extends AnyWordSpec {
                 val imports = BASTLoader.getImports(parsedRoot)
                 assert(imports.size == 1, s"Expected 1 import, got ${imports.size}")
                 val bastImport = imports.head
-                assert(bastImport.path.s.endsWith("imported.bast"),
-                  s"Expected path ending with 'imported.bast', got '${bastImport.path.s}'")
+                assert(
+                  bastImport.path.s.endsWith("imported.bast"),
+                  s"Expected path ending with 'imported.bast', got '${bastImport.path.s}'"
+                )
 
                 // With the new integration, contents should already be populated
-                assert(bastImport.contents.nonEmpty, "BASTImport contents should be populated after parsing")
+                assert(
+                  bastImport.contents.nonEmpty,
+                  "BASTImport contents should be populated after parsing"
+                )
 
                 // Verify we can find the imported domain in contents
                 val importedDomains = bastImport.contents.toSeq.collect { case d: Domain => d }
-                assert(importedDomains.size == 1, s"Expected 1 domain in import, got ${importedDomains.size}")
-                assert(importedDomains.head.id.value == "ImportedLib",
-                  s"Expected domain 'ImportedLib', got '${importedDomains.head.id.value}'")
+                assert(
+                  importedDomains.size == 1,
+                  s"Expected 1 domain in import, got ${importedDomains.size}"
+                )
+                assert(
+                  importedDomains.head.id.value == "ImportedLib",
+                  s"Expected domain 'ImportedLib', got '${importedDomains.head.id.value}'"
+                )
             }
           } finally {
             // Cleanup
@@ -114,8 +124,7 @@ class BASTLoaderTest extends AnyWordSpec {
           // If it somehow succeeds, check that the import is empty
           val imports = BASTLoader.getImports(parsedRoot)
           if imports.nonEmpty then
-            assert(imports.head.contents.isEmpty,
-              "BASTImport should be empty if file wasn't found")
+            assert(imports.head.contents.isEmpty, "BASTImport should be empty if file wasn't found")
           end if
       }
     }
@@ -180,7 +189,10 @@ class BASTLoaderTest extends AnyWordSpec {
 
                 // Verify both imports have contents (loaded automatically)
                 imports.foreach { bi =>
-                  assert(bi.contents.nonEmpty, s"Import ${bi.path.s} should have contents after loading")
+                  assert(
+                    bi.contents.nonEmpty,
+                    s"Import ${bi.path.s} should have contents after loading"
+                  )
                 }
 
                 // Verify we can find domains in the imports
@@ -254,12 +266,17 @@ class BASTLoaderTest extends AnyWordSpec {
                 val bastImport = imports.head
 
                 // Contents should be populated after parsing
-                assert(bastImport.contents.nonEmpty, "BASTImport should have contents after loading")
+                assert(
+                  bastImport.contents.nonEmpty,
+                  "BASTImport should have contents after loading"
+                )
 
                 // Verify the SharedTypes domain was loaded
                 val loadedDomains = bastImport.contents.toSeq.collect { case d: Domain => d }
-                assert(loadedDomains.exists(_.id.value == "SharedTypes"),
-                  "Should find SharedTypes domain in loaded contents")
+                assert(
+                  loadedDomains.exists(_.id.value == "SharedTypes"),
+                  "Should find SharedTypes domain in loaded contents"
+                )
             }
           } finally {
             Files.deleteIfExists(bastFile)

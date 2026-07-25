@@ -15,9 +15,9 @@ import com.ossuminc.riddl.utils.{AbstractTestingBasis, pc}
 
 /** Cross-platform BAST tests that run on JVM, JS, and Native.
   *
-  * These tests verify BAST serialization and deserialization work correctly
-  * across all supported platforms by building AST programmatically (avoiding
-  * the parser's BAST import loading which uses blocking I/O).
+  * These tests verify BAST serialization and deserialization work correctly across all supported
+  * platforms by building AST programmatically (avoiding the parser's BAST import loading which uses
+  * blocking I/O).
   */
 class SharedBASTTest extends AbstractTestingBasis {
 
@@ -100,15 +100,27 @@ class SharedBASTTest extends AbstractTestingBasis {
 
     "handle multiple domains" in {
       // Build AST with multiple domains
-      val domain1 = Domain(At(), Identifier(At(), "First"), Contents(
-        Type(At(), Identifier(At(), "A"), String_(At()))
-      ))
-      val domain2 = Domain(At(), Identifier(At(), "Second"), Contents(
-        Type(At(), Identifier(At(), "B"), Number(At()))
-      ))
-      val domain3 = Domain(At(), Identifier(At(), "Third"), Contents(
-        Type(At(), Identifier(At(), "C"), Bool(At()))
-      ))
+      val domain1 = Domain(
+        At(),
+        Identifier(At(), "First"),
+        Contents(
+          Type(At(), Identifier(At(), "A"), String_(At()))
+        )
+      )
+      val domain2 = Domain(
+        At(),
+        Identifier(At(), "Second"),
+        Contents(
+          Type(At(), Identifier(At(), "B"), Number(At()))
+        )
+      )
+      val domain3 = Domain(
+        At(),
+        Identifier(At(), "Third"),
+        Contents(
+          Type(At(), Identifier(At(), "C"), Bool(At()))
+        )
+      )
       val root = Root(At(), Contents(domain1, domain2, domain3))
 
       val passInput = PassInput(root)
@@ -153,10 +165,13 @@ class SharedBASTTest extends AbstractTestingBasis {
 
     "handle alternation types" in {
       // Build AST with alternation (union) type
-      val altExpr = Alternation(At(), Contents(
-        AliasedTypeExpression(At(), "type", PathIdentifier(At(), Seq("String"))),
-        AliasedTypeExpression(At(), "type", PathIdentifier(At(), Seq("Number")))
-      ))
+      val altExpr = Alternation(
+        At(),
+        Contents(
+          AliasedTypeExpression(At(), "type", PathIdentifier(At(), Seq("String"))),
+          AliasedTypeExpression(At(), "type", PathIdentifier(At(), Seq("Number")))
+        )
+      )
       val altType = Type(At(), Identifier(At(), "StringOrNumber"), altExpr)
       val domain = Domain(At(), Identifier(At(), "AltDomain"), Contents(altType))
       val root = Root(At(), Contents(domain))
@@ -179,9 +194,13 @@ class SharedBASTTest extends AbstractTestingBasis {
       import com.ossuminc.riddl.language.bast.{BinaryFormat, FORMAT_REVISION, HEADER_SIZE}
 
       // First, produce valid BAST bytes via a round-trip
-      val domain = Domain(At(), Identifier(At(), "RevTest"), Contents(
-        Type(At(), Identifier(At(), "X"), String_(At()))
-      ))
+      val domain = Domain(
+        At(),
+        Identifier(At(), "RevTest"),
+        Contents(
+          Type(At(), Identifier(At(), "X"), String_(At()))
+        )
+      )
       val root = Root(At(), Contents(domain))
       val passInput = PassInput(root)
       val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
@@ -205,9 +224,13 @@ class SharedBASTTest extends AbstractTestingBasis {
 
     "accept BAST with current format revision" in {
       // Simple round-trip proves current revision is accepted
-      val domain = Domain(At(), Identifier(At(), "RevOK"), Contents(
-        Type(At(), Identifier(At(), "Y"), Bool(At()))
-      ))
+      val domain = Domain(
+        At(),
+        Identifier(At(), "RevOK"),
+        Contents(
+          Type(At(), Identifier(At(), "Y"), Bool(At()))
+        )
+      )
       val root = Root(At(), Contents(domain))
       val passInput = PassInput(root)
       val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))

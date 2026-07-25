@@ -10,29 +10,32 @@ import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.annotation.*
 
-/** A RIDDL version of a URL since the JVM version isn't useful to Javascript. This just allows a simplified URL that
-  * has a scheme, authority, basis and path part.
+/** A RIDDL version of a URL since the JVM version isn't useful to Javascript. This just allows a
+  * simplified URL that has a scheme, authority, basis and path part.
   *
   * @param scheme
   *   The URL's scheme, either `file`, `http`, or `https`
   * @param authority
-  *   The authority part providing the basic location and credentials of the resource. The full syntax should be
-  *   `user@host:port`. This field must not contain a /
+  *   The authority part providing the basic location and credentials of the resource. The full
+  *   syntax should be `user@host:port`. This field must not contain a /
   * @param basis
-  *   The "root" path or basis of the URL. This is for compatibility with "file" scheme as taken from
-  *   java.nio.file.Path's functionality that the current working directory will be presumed as the root of the
-  *   [[path]]. You can use the [[toBasisString]] method to get the URL without the [[path]] part. [[basis]] should not
-  *   start with a /
+  *   The "root" path or basis of the URL. This is for compatibility with "file" scheme as taken
+  *   from java.nio.file.Path's functionality that the current working directory will be presumed as
+  *   the root of the [[path]]. You can use the [[toBasisString]] method to get the URL without the
+  *   [[path]] part. [[basis]] should not start with a /
   * @param path
-  *   The path of the resource. Fragments (part after #) can be included in the path if necessary. This [[URL]]
-  *   implementation doesn't check the validity or existence of the fragment. [[path]] should not start with a /
+  *   The path of the resource. Fragments (part after #) can be included in the path if necessary.
+  *   This [[URL]] implementation doesn't check the validity or existence of the fragment. [[path]]
+  *   should not start with a /
   */
 @JSExportTopLevel("URL")
-case class URL(scheme: String = "", authority: String = "", basis: String = "", path: String = "") extends AnyRef {
+case class URL(scheme: String = "", authority: String = "", basis: String = "", path: String = "")
+    extends AnyRef {
   require(isValid, s"Invalid URL syntax: $toString")
 
   /** Determine if the URL is empty. Empty URLs are valid */
-  @JSExport def isEmpty: Boolean = scheme.isEmpty && authority.isEmpty && basis.isEmpty && path.isEmpty
+  @JSExport def isEmpty: Boolean =
+    scheme.isEmpty && authority.isEmpty && basis.isEmpty && path.isEmpty
 
   /** Determine if the URL is not empty */
   @JSExport def nonEmpty: Boolean = !isEmpty
@@ -42,8 +45,8 @@ case class URL(scheme: String = "", authority: String = "", basis: String = "", 
 
   @JSExport def isHttpScheme: Boolean = scheme == URL.httpsScheme || scheme == URL.httpScheme
 
-  /** Determine if the URL is valid. URLs are valid if they are empty, or they have a valid scheme name and the path is
-    * not empty
+  /** Determine if the URL is valid. URLs are valid if they are empty, or they have a valid scheme
+    * name and the path is not empty
     */
   @JSExport def isValid: Boolean = {
     isEmpty | (
@@ -56,7 +59,8 @@ case class URL(scheme: String = "", authority: String = "", basis: String = "", 
   /** Drop the path part of the URL and return it in classic URL String format */
   @JSExport
   def toBasisString: String =
-    if isEmpty then "" else scheme + "://" + authority + { if basis.isEmpty then "" else "/" + basis }
+    if isEmpty then ""
+    else scheme + "://" + authority + { if basis.isEmpty then "" else "/" + basis }
 
   /** Return the URL in classic string format */
   @JSExport
@@ -117,8 +121,8 @@ object URL {
   def isValid(url: String): Boolean =
     filePattern.matches(url) | httpPattern.matches(url)
 
-  /** Create a URL from a string, ensuring validity first. This URL constructor parses an url string for validity and
-    * then constructs the URL. In no case will it construct a URL with a basis.
+  /** Create a URL from a string, ensuring validity first. This URL constructor parses an url string
+    * for validity and then constructs the URL. In no case will it construct a URL with a basis.
     * @constructor
     * @param url
     *   The string to parse into a URL. Only supports file: http: and https: schemes
@@ -146,11 +150,12 @@ object URL {
     }
   }
 
-  /** Construct a URL from a partial path that is interpreted as the suffix to the current working directory (cwd).
+  /** Construct a URL from a partial path that is interpreted as the suffix to the current working
+    * directory (cwd).
     *
     * @param path
-    *   The trailing path to add to the current working directory. This must not start with a '/' or an exception will
-    *   be thrown.
+    *   The trailing path to add to the current working directory. This must not start with a '/' or
+    *   an exception will be thrown.
     * @return
     *   The corresponding URL
     */
@@ -160,11 +165,13 @@ object URL {
     URL(fileScheme, "", cwd, path)
   }
 
-  /** Construct a URL from a path string. The entire path is taken as the basis of the URL so relative paths can be
-    * constructed from it. Generally only directory paths should be used with this constructor.
+  /** Construct a URL from a path string. The entire path is taken as the basis of the URL so
+    * relative paths can be constructed from it. Generally only directory paths should be used with
+    * this constructor.
     *
     * @param path
-    *   The full path of the intended URL. This *must* start with a / or an exception will be thrown.
+    *   The full path of the intended URL. This *must* start with a / or an exception will be
+    *   thrown.
     * @return
     *   The corresponding URL
     */

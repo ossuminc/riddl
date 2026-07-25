@@ -8,4 +8,3 @@ package com.ossuminc.riddl.passes.diagrams
 import com.ossuminc.riddl.utils.{ec, pc}
 
 class JVMDiagramsPassTest extends SharedDiagramsPassTest
-

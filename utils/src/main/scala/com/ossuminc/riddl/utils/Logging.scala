@@ -91,8 +91,8 @@ trait Logger(using pc: PlatformContext) {
     if pc.options.noANSIMessages then s"[$level] $s"
     else
       val prefix = level match {
-        case Logging.Severe  => s"$RED_B$BLACK"
-        case Logging.Error   => s"$RED"
+        case Logging.Severe       => s"$RED_B$BLACK"
+        case Logging.Error        => s"$RED"
         case Logging.Completeness => s"$YELLOW"
         case Logging.Warning      => s"$YELLOW"
         case Logging.Usage        => s"$GREEN"

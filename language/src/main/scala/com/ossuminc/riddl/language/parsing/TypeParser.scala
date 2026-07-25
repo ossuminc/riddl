@@ -275,8 +275,7 @@ private[parsing] trait TypeParser {
   }
 
   private def zone[u: P]: P[Option[LiteralString]] = {
-    P(Index ~ CharsWhileIn("A-Z0-9:.+\\-",2).!.? ~ Index).map { case (start, str,
-    end) =>
+    P(Index ~ CharsWhileIn("A-Z0-9:.+\\-", 2).!.? ~ Index).map { case (start, str, end) =>
       str.map(s => LiteralString(at(start, end), s))
     }
   }
@@ -319,12 +318,12 @@ private[parsing] trait TypeParser {
     P(
       // GROUP 1: Most common primitive types (70-80%)
       stringType | integerPredefTypes | realPredefTypes |
-      // GROUP 2: Common temporal types (10-15%)
-      timePredefTypes |
-      // GROUP 3: Less common types (5-10%)
-      otherPredefTypes | decimalType |
-      // GROUP 4: Rare specialized types (1-5%)
-      currencyType | urlType | zonedPredefTypes
+        // GROUP 2: Common temporal types (10-15%)
+        timePredefTypes |
+        // GROUP 3: Less common types (5-10%)
+        otherPredefTypes | decimalType |
+        // GROUP 4: Rare specialized types (1-5%)
+        currencyType | urlType | zonedPredefTypes
     )./
   }
 
@@ -405,18 +404,18 @@ private[parsing] trait TypeParser {
       cardinality(
         // GROUP 1: Most common in field definitions (60-70%)
         predefinedTypes |
-        // GROUP 2: Keyword-based constructs MUST come before aliasedTypeExpression
-        // (otherwise keywords like "any", "one", "mapping", "set", "sequence", "graph", "table", "range", "replica"
-        // get matched as type names)
-        enumeration | alternation | sequenceType | aSetType | mappingFromTo | graphType | tableType | rangeType | replicaType |
-        // GROUP 3: Specific patterns must come before general aliasedTypeExpression
-        uniqueIdType | entityReferenceType | patternType |
-        // GROUP 4: Very common - general type references (30-40%)
-        aliasedTypeExpression |
-        // GROUP 5: Common structured types (20-25%)
-        aggregation |
-        // GROUP 6: Less common - decimal type (3-5%)
-        decimalType
+          // GROUP 2: Keyword-based constructs MUST come before aliasedTypeExpression
+          // (otherwise keywords like "any", "one", "mapping", "set", "sequence", "graph", "table", "range", "replica"
+          // get matched as type names)
+          enumeration | alternation | sequenceType | aSetType | mappingFromTo | graphType | tableType | rangeType | replicaType |
+          // GROUP 3: Specific patterns must come before general aliasedTypeExpression
+          uniqueIdType | entityReferenceType | patternType |
+          // GROUP 4: Very common - general type references (30-40%)
+          aliasedTypeExpression |
+          // GROUP 5: Common structured types (20-25%)
+          aggregation |
+          // GROUP 6: Less common - decimal type (3-5%)
+          decimalType
       )
     )
   }
@@ -584,17 +583,21 @@ private[parsing] trait TypeParser {
       // Prefix only (no suffix)
       case (start, Some("many"), None, typ, None, end)     => OneOrMore(at(start, end), typ)
       case (start, None, Some("optional"), typ, None, end) => Optional(at(start, end), typ)
-      case (start, Some("many"), Some("optional"), typ, None, end) => ZeroOrMore(at(start, end), typ)
+      case (start, Some("many"), Some("optional"), typ, None, end) =>
+        ZeroOrMore(at(start, end), typ)
       // No cardinality modifier
       case (_, None, None, typ, None, _) => typ
       // Invalid: prefix and suffix together
       case (start, prefix, optPrefix, typ, Some(suffix), end) =>
         val prefixStr = (prefix, optPrefix) match
           case (Some("many"), Some("optional")) => "many optional"
-          case (Some("many"), None) => "many"
-          case (None, Some("optional")) => "optional"
-          case _ => ""
-        error(at(start, end), s"Cannot combine cardinality prefix '$prefixStr' with suffix '$suffix' for $typ; use one or the other")
+          case (Some("many"), None)             => "many"
+          case (None, Some("optional"))         => "optional"
+          case _                                => ""
+        error(
+          at(start, end),
+          s"Cannot combine cardinality prefix '$prefixStr' with suffix '$suffix' for $typ; use one or the other"
+        )
         typ
     }
   }
@@ -604,16 +607,16 @@ private[parsing] trait TypeParser {
       cardinality(
         // GROUP 1: Most common - cheap predefined types (40-50% of cases)
         predefinedTypes |
-        // GROUP 2: Keyword-based constructs MUST come before aliasedTypeExpression
-        // (otherwise keywords like "any", "one", "mapping", "set", "sequence", "graph", "table", "range", "replica"
-        // get matched as type names)
-        enumeration | alternation | sequenceType | aSetType | mappingFromTo | graphType | tableType | rangeType | replicaType |
-        // GROUP 3: Other specific patterns before general type references
-        uniqueIdType | entityReferenceType | patternType |
-        // GROUP 4: Very common - general type references and aggregations (30-40%)
-        aliasedTypeExpression | aggregation | aggregateUseCaseTypeExpression |
-        // GROUP 5: Less common - decimal type (5-10%)
-        decimalType
+          // GROUP 2: Keyword-based constructs MUST come before aliasedTypeExpression
+          // (otherwise keywords like "any", "one", "mapping", "set", "sequence", "graph", "table", "range", "replica"
+          // get matched as type names)
+          enumeration | alternation | sequenceType | aSetType | mappingFromTo | graphType | tableType | rangeType | replicaType |
+          // GROUP 3: Other specific patterns before general type references
+          uniqueIdType | entityReferenceType | patternType |
+          // GROUP 4: Very common - general type references and aggregations (30-40%)
+          aliasedTypeExpression | aggregation | aggregateUseCaseTypeExpression |
+          // GROUP 5: Less common - decimal type (5-10%)
+          decimalType
       )
     )
   }

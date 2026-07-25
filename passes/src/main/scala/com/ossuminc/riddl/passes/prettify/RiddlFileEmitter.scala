@@ -142,7 +142,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
 
   def trimTrailingNewline(): this.type =
     if sb.length >= new_line.length &&
-       sb.substring(sb.length - new_line.length) == new_line
+      sb.substring(sb.length - new_line.length) == new_line
     then sb.setLength(sb.length - new_line.length)
     this
   end trimTrailingNewline
@@ -328,7 +328,8 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           case id: Identifier    => if negated then s"!${id.format}" else id.format
         }
         addIndent(s"when $condStr then").nl.incr
-        if thenStatements.isEmpty then addLine("???") else thenStatements.toSeq.foreach(emitStatement)
+        if thenStatements.isEmpty then addLine("???")
+        else thenStatements.toSeq.foreach(emitStatement)
         if elseStatements.nonEmpty then
           decr.addLine("else").incr
           elseStatements.toSeq.foreach(emitStatement)

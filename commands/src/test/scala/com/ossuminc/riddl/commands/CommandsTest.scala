@@ -22,7 +22,7 @@ class CommandsTest extends CommandTestBase("commands/input/") {
       val args = common ++ Seq("from", validateConfig, "validate")
       runCommand(args)
     }
-    
+
     "handle from with wrong file as input" in {
       val args = Array(
         "--verbose",

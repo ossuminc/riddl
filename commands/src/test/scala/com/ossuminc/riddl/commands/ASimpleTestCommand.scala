@@ -22,7 +22,8 @@ object ASimpleTestCommand {
 }
 
 /** A pluggable command for testing plugin commands! */
-class ASimpleTestCommand(using io: PlatformContext) extends Command[ASimpleTestCommand.Options]("test") {
+class ASimpleTestCommand(using io: PlatformContext)
+    extends Command[ASimpleTestCommand.Options]("test") {
   import ASimpleTestCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
@@ -38,8 +39,8 @@ class ASimpleTestCommand(using io: PlatformContext) extends Command[ASimpleTestC
     ) -> Options()
   }
 
-  override def interpretConfig(config: Config): Options = 
-    val obj = config.getObject(commandName).toConfig 
+  override def interpretConfig(config: Config): Options =
+    val obj = config.getObject(commandName).toConfig
     val inputFile = obj.getString("input-file")
     val arg1 = obj.getString("arg1")
     Options(Some(Path.of(inputFile)), arg1)

@@ -63,7 +63,8 @@ private[parsing] trait RepositoryParser {
         data.rep(1) ~ link.rep(0) ~ index.rep(0) ~ withMetaData ~ Index
     )./.map { case (start, id, kind, data, links, indices, descriptives, end) =>
       val dataMap = Map.from[Identifier, TypeRef](data)
-      val linkMap = Map.from[Identifier, (FieldRef, FieldRef)](links.map(i => i._1 -> (i._2 -> i._3)))
+      val linkMap =
+        Map.from[Identifier, (FieldRef, FieldRef)](links.map(i => i._1 -> (i._2 -> i._3)))
       Schema(at(start, end), id, kind, dataMap, linkMap, indices, descriptives.toContents)
     }
   }

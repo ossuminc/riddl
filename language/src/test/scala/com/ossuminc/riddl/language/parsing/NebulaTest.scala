@@ -17,13 +17,13 @@ abstract class NebulaTest(using PlatformContext) extends AbstractParsingTest {
         """
           | domain blah is { ??? }
           | entity foo is { ??? }
-          |""".stripMargin, td
+          |""".stripMargin,
+        td
       )
       parseNebula(input) match
         case Left(messages) => fail(messages.justErrors.format)
-        case Right(root) => succeed
+        case Right(root)    => succeed
     }
   }
 
 }
-

@@ -87,18 +87,19 @@ class FoldingTest extends AbstractParsingTest {
         case Left(errors) => fail(errors.format)
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
-          val result = Folding.foldLeftWithStack(empty, content, ParentStack.empty) { case (track, definition, stack) =>
-            val previous: Seq[String] = stack
-              .map {
-                case nv: WithIdentifier => nv.identify
-                case rv: RiddlValue     => rv.format
+          val result = Folding.foldLeftWithStack(empty, content, ParentStack.empty) {
+            case (track, definition, stack) =>
+              val previous: Seq[String] = stack
+                .map {
+                  case nv: WithIdentifier => nv.identify
+                  case rv: RiddlValue     => rv.format
+                }
+                .reverse
+                .toSeq
+              definition match {
+                case nv: WithIdentifier => track :+ (previous :+ nv.identify)
+                case rv: RiddlValue     => track :+ (previous :+ rv.format)
               }
-              .reverse
-              .toSeq
-            definition match {
-              case nv: WithIdentifier => track :+ (previous :+ nv.identify)
-              case rv: RiddlValue     => track :+ (previous :+ rv.format)
-            }
           }
           val expectedCount = 23
           result.length must be(expectedCount)

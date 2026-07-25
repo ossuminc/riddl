@@ -14,13 +14,13 @@ import org.scalatest.TestData
 /** Comprehensive edge case tests for RIDDL parsers
   *
   * Tests edge cases including:
-  * - Empty inputs
-  * - Whitespace-only inputs
-  * - Very long identifiers and strings
-  * - Unicode characters
-  * - Boundary values for numbers
-  * - Deeply nested structures
-  * - Maximum/minimum length inputs
+  *   - Empty inputs
+  *   - Whitespace-only inputs
+  *   - Very long identifiers and strings
+  *   - Unicode characters
+  *   - Boundary values for numbers
+  *   - Deeply nested structures
+  *   - Maximum/minimum length inputs
   *
   * Priority 5: Edge Case Tests from test-coverage-analysis.md
   */
@@ -258,9 +258,11 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle very large model (1000+ lines)" in { (_: TestData) =>
       // Generate a large model with many types
-      val types = (1 to LARGE_MODEL_TYPE_COUNT).map { i =>
-        s"  type Type$i is String"
-      }.mkString("\n")
+      val types = (1 to LARGE_MODEL_TYPE_COUNT)
+        .map { i =>
+          s"  type Type$i is String"
+        }
+        .mkString("\n")
       val input = s"domain Large is {\n$types\n}"
       val parser = StringParser(input)
       parser.parseRoot match {

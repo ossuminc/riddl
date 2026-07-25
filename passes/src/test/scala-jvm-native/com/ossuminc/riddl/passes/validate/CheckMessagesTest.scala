@@ -19,9 +19,10 @@ import scala.collection.mutable
 import scala.jdk.StreamConverters.StreamHasToScala
 import scala.concurrent.duration.DurationInt
 
-/** CheckMessage This test suite runs through the files in input/check directory and validates them each as their own
-  * test case. Each .riddl file can have a .check file that lists the expected messages. If there is no .check file the
-  * .riddl file is expected to validate completely with no messages.
+/** CheckMessage This test suite runs through the files in input/check directory and validates them
+  * each as their own test case. Each .riddl file can have a .check file that lists the expected
+  * messages. If there is no .check file the .riddl file is expected to validate completely with no
+  * messages.
   */
 class CheckMessagesTest extends AbstractValidatingTest {
 
@@ -86,8 +87,10 @@ class CheckMessagesTest extends AbstractValidatingTest {
     pc.withOptions(CommonOptions.default.copy(noANSIMessages = true)) { _ =>
       val dir = checkPath.resolve(dirName)
       val dirContents: List[Path] = Files.list(dir).toScala(List)
-      val checkFiles = dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".check"))
-      val riddlFiles = dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".riddl"))
+      val checkFiles =
+        dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".check"))
+      val riddlFiles =
+        dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".riddl"))
 
       if riddlFiles.isEmpty then {
         fail(s"No riddl files in directory $dirName.")

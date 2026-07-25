@@ -14,12 +14,12 @@ import org.scalatest.TestData
 /** Error path and recovery tests for RIDDL parsers
   *
   * Tests error handling and recovery scenarios:
-  * - Malformed input handling
-  * - Syntax error recovery
-  * - Invalid token sequences
-  * - Unclosed delimiters
-  * - Invalid escape sequences
-  * - Premature end of input
+  *   - Malformed input handling
+  *   - Syntax error recovery
+  *   - Invalid token sequences
+  *   - Unclosed delimiters
+  *   - Invalid escape sequences
+  *   - Premature end of input
   *
   * Priority 6: Error Path Tests from test-coverage-analysis.md
   */
@@ -397,7 +397,9 @@ class ParserErrorRecoveryTest(using PlatformContext) extends ParsingTest {
           messages.nonEmpty mustBe true
           val errorMsg = messages.head.message.toLowerCase
           // Should mention what's expected
-          (errorMsg.contains("identifier") || errorMsg.contains("name") || errorMsg.contains("expected")) mustBe true
+          (errorMsg.contains("identifier") || errorMsg.contains("name") || errorMsg.contains(
+            "expected"
+          )) mustBe true
         case Right(_) =>
           fail("Should provide error for missing name")
       }
@@ -411,7 +413,9 @@ class ParserErrorRecoveryTest(using PlatformContext) extends ParsingTest {
           messages.nonEmpty mustBe true
           val errorMsg = messages.head.message.toLowerCase
           // Should mention closing brace or end of input
-          (errorMsg.contains("}") || errorMsg.contains("end") || errorMsg.contains("expected")) mustBe true
+          (errorMsg.contains("}") || errorMsg.contains("end") || errorMsg.contains(
+            "expected"
+          )) mustBe true
         case Right(_) =>
           fail("Should provide error for unclosed brace")
       }

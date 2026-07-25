@@ -40,7 +40,9 @@ trait CommandTestBase(val inputDir: String = "commands/input/") extends AnyWordS
     cmd: Command[OPTS],
     expected: OPTS,
     file: Path = Path.of(confFile)
-  )(checker: (opts: OPTS) => Assertion = { (opts: OPTS) => opts.check must be(empty) }): Assertion = {
+  )(
+    checker: (opts: OPTS) => Assertion = { (opts: OPTS) => opts.check must be(empty) }
+  ): Assertion = {
     cmd.loadOptionsFrom(file) match {
       case Left(errors) =>
         fail(errors.format)

@@ -23,18 +23,19 @@ object SymbolsPass extends PassInfo[PassOptions] {
   }
 }
 
-/** Symbol Table for Validation and other purposes. This symbol table is built from the AST model after syntactic
-  * parsing is complete. It will also work for any sub-tree of the model that is rooted by a ParentDefOf[Definition]
-  * node.
+/** Symbol Table for Validation and other purposes. This symbol table is built from the AST model
+  * after syntactic parsing is complete. It will also work for any sub-tree of the model that is
+  * rooted by a ParentDefOf[Definition] node.
   *
-  * The symbol tree contains a mapping from leaf name to the entire list of parent definitions (symbols) as well as a
-  * mapping from definitions to their parents (parentage). Bot maps are built during a single pass of the AST.
+  * The symbol tree contains a mapping from leaf name to the entire list of parent definitions
+  * (symbols) as well as a mapping from definitions to their parents (parentage). Bot maps are built
+  * during a single pass of the AST.
   *
   * @param input
   *   The output of the parser pass is the input to SymbolPass
   */
-case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: PlatformContext) extends Pass(input,
-  outputs) {
+case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: PlatformContext)
+    extends Pass(input, outputs) {
 
   override def name: String = SymbolsPass.name
 
@@ -78,7 +79,8 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: Platfo
           messages.addError(
             namedValue.loc,
             "Non implicit value with empty name should not happen",
-            suggestion = "This is an internal RIDDL symbol-table error; please report it with the model that triggered it."
+            suggestion =
+              "This is an internal RIDDL symbol-table error; please report it with the model that triggered it."
           )
         }
       // case rv: RiddlValue => // everything should be handled above
@@ -87,8 +89,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: Platfo
   }
 
   override def result(root: PassRoot): SymbolsOutput = {
-    if pc.options.debug then
-      println(symTab.toPrettyString)
+    if pc.options.debug then println(symTab.toPrettyString)
     end if
     SymbolsOutput(root, Messages.empty, symTab, parentage)
   }

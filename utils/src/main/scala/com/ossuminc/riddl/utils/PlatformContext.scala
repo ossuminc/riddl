@@ -9,10 +9,11 @@ package com.ossuminc.riddl.utils
 import scala.collection.convert.StreamExtensions
 import scala.concurrent.{ExecutionContext, Future}
 
-/** This trait allows RIDDL to abstract away its IO operations. Several places in RIDDL declare a `using` clause with
-  * this trait in order to allow RIDDL to invoke synchronous and asynchronous I/O operations. This allows RIDDL's
-  * pure-scala implementation to be used with: JVM, scala-native, scala-js for Browser, scala-js for Node, or any other
-  * environment that supports simple input/output operations on files.
+/** This trait allows RIDDL to abstract away its IO operations. Several places in RIDDL declare a
+  * `using` clause with this trait in order to allow RIDDL to invoke synchronous and asynchronous
+  * I/O operations. This allows RIDDL's pure-scala implementation to be used with: JVM,
+  * scala-native, scala-js for Browser, scala-js for Node, or any other environment that supports
+  * simple input/output operations on files.
   */
 trait PlatformContext {
 
@@ -21,7 +22,7 @@ trait PlatformContext {
   /** The Logger instance to use on this platform. */
   protected var logger: Logger = SysLogger()
   def log: Logger = logger
-  def withLogger[T,L <: Logger](newLogger: L)(doIt: (L) => T): T = synchronized {
+  def withLogger[T, L <: Logger](newLogger: L)(doIt: (L) => T): T = synchronized {
     val save = logger
     logger = newLogger
     val result = doIt(newLogger)
@@ -49,8 +50,8 @@ trait PlatformContext {
   /** The ExecutionContext that will be used for Futures and Promises */
   def ec: ExecutionContext
 
-  /** Load the content of a text file asynchronously and return it as a string. THe content, typically a RIDDL or
-    * Markdown file, is expected to be encoded in UTF-8
+  /** Load the content of a text file asynchronously and return it as a string. THe content,
+    * typically a RIDDL or Markdown file, is expected to be encoded in UTF-8
     * @param url
     *   The URL to specify the file to load. This should specify the `file://` protocol.
     * @return

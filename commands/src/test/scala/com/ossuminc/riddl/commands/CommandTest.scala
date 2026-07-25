@@ -44,7 +44,7 @@ class CommandTest extends AbstractTestingBasis {
       val options: ConfigParseOptions =
         ConfigParseOptions.defaults
           .setAllowMissing(true)
-           .setOriginDescription(path.getFileName.toString)
+          .setOriginDescription(path.getFileName.toString)
       val config = ConfigFactory.parseFile(path.toFile, options)
       val loadedOptions = cmd.interpretConfig(config)
       loadedOptions.arg1 mustBe "Success!"

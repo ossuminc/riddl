@@ -30,4 +30,3 @@ abstract class AbstractRunPassTest(using PlatformContext) extends AbstractValida
     }
   }
 }
-

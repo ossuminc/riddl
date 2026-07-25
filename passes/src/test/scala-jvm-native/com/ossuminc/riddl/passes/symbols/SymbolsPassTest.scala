@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.ParsingTest
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
-import com.ossuminc.riddl.utils.{CommonOptions,PlatformContext}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 import com.ossuminc.riddl.utils.{pc}
 import org.scalatest.Assertion
 
@@ -20,7 +20,7 @@ import scala.reflect.ClassTag
 class SymbolsPassTest extends ParsingTest {
 
   val (root: Root, st: SymbolsOutput) = {
-    val (root,rpi) = checkFile("everything", "everything.riddl")
+    val (root, rpi) = checkFile("everything", "everything.riddl")
     val input: PassInput = PassInput(root)
     val outputs = PassesOutput()
     root -> Pass.runSymbols(input, outputs)
@@ -44,16 +44,18 @@ class SymbolsPassTest extends ParsingTest {
   "SymbolsOutput" must {
     import org.scalatest.TestData
     "return empty list for non-existent namedValue" in { (td: TestData) =>
-    val d: Domain = Domain(At(), Identifier(At(), "not-in-root"))
+      val d: Domain = Domain(At(), Identifier(At(), "not-in-root"))
       st.parentsOf(d) must be(Parents.empty)
     }
     "lookupSymbol(id: PathNames) should fail if no names" in { (td: TestData) =>
-      val xcption = intercept[IllegalArgumentException] { st.lookupSymbol[Context](Seq.empty[String]) }
+      val xcption = intercept[IllegalArgumentException] {
+        st.lookupSymbol[Context](Seq.empty[String])
+      }
       xcption.isInstanceOf[IllegalArgumentException] must be(true)
     }
     "lookupSymbol() should return None for non-matching type" in { (td: TestData) =>
       val list = st.lookupSymbol[Context](Seq("Everything"))
-      list must not be(empty)
+      list must not be (empty)
       list.head._1.isInstanceOf[Domain] must be(true)
       list.head._2 must be(None)
     }
@@ -93,7 +95,7 @@ class SymbolsPassTest extends ParsingTest {
       assertRefWithParent[Adaptor, Context](Seq("fromAPlant"), "full")
       assertRefWithParent[Function, Entity](Seq("whenUnderTheInfluence"), "Something")
       assertRefWithParent[Handler, Entity](Seq("foo"), "Something")
-      assertRefWithParent[State,Entity](Seq("someState"),"Something")
+      assertRefWithParent[State, Entity](Seq("someState"), "Something")
       assertRefWithParent[Type, Entity](Seq("somethingDate"), "Something")
     }
 

@@ -8,9 +8,9 @@ package com.ossuminc.riddl.utils
 
 import scala.collection.mutable
 
-/** A trait to build a string up for writing to a file. This provides the platform specific definition of newline, an nl
-  * function to insert a newline, and other functions for putting changes into the file content. The file is assumed to
-  * have a UTF-8 content type.
+/** A trait to build a string up for writing to a file. This provides the platform specific
+  * definition of newline, an nl function to insert a newline, and other functions for putting
+  * changes into the file content. The file is assumed to have a UTF-8 content type.
   */
 trait FileBuilder(using pc: PlatformContext) {
 
@@ -27,8 +27,7 @@ trait FileBuilder(using pc: PlatformContext) {
     " ".repeat(indent_level * spaces_per_level)
   }
 
-  /**
-    * Increment the indent by one level
+  /** Increment the indent by one level
     * @return
     */
   def incr: this.type = {
@@ -36,8 +35,7 @@ trait FileBuilder(using pc: PlatformContext) {
     this
   }
 
-  /**
-    * Decrement the indent by one level
+  /** Decrement the indent by one level
     * @return
     */
   def decr: this.type = {
@@ -45,7 +43,6 @@ trait FileBuilder(using pc: PlatformContext) {
     indent_level -= 1
     this
   }
-
 
   /** Append a newline character
     * @return
@@ -56,9 +53,9 @@ trait FileBuilder(using pc: PlatformContext) {
   /** Append a string without indent or suffix
     *
     * @param str
-    * The string to append
+    *   The string to append
     * @return
-    * This object for call chaining
+    *   This object for call chaining
     */
   def add(str: String): this.type = {
     sb.append(str)
@@ -84,10 +81,9 @@ trait FileBuilder(using pc: PlatformContext) {
       .append(line)
       .append(new_line)
     this
-  end addLine  
+  end addLine
 
-  /**
-    * Add just the indent spaces
+  /** Add just the indent spaces
     * @return
     *   This object for call chaining
     */
@@ -96,8 +92,8 @@ trait FileBuilder(using pc: PlatformContext) {
     this
   }
 
-  /** Append an indented line with newline at the end and a `level` width indent prefix. The indent will be done with
-    * `level` * `spaces-per-level` space characters.
+  /** Append an indented line with newline at the end and a `level` width indent prefix. The indent
+    * will be done with `level` * `spaces-per-level` space characters.
     * @param line
     *   The text of the line to be indented
     * @return

@@ -91,9 +91,12 @@ class SharedFinderTest extends AbstractTestingBasis {
       names must contain("DomainCmd")
       // Verify parents: EntCmd's parents should be
       // [Context, Domain, Root] (Entity's parents)
-      val entCmdParents = found.find(
-        _._1.id.value == "EntCmd"
-      ).get._2
+      val entCmdParents = found
+        .find(
+          _._1.id.value == "EntCmd"
+        )
+        .get
+        ._2
       entCmdParents must be(Parents(ctx, dom, root2))
     }
     "build path map correctly" in {

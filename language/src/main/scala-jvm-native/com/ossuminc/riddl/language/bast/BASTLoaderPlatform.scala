@@ -19,12 +19,18 @@ private[bast] object BASTLoaderPlatform {
 
   /** Load a single BAST import using blocking I/O.
     *
-    * @param bi The BASTImport to load
-    * @param baseURL The base URL for resolving relative paths
-    * @param pc The platform context
-    * @return Either an error message or the loaded Nebula
+    * @param bi
+    *   The BASTImport to load
+    * @param baseURL
+    *   The base URL for resolving relative paths
+    * @param pc
+    *   The platform context
+    * @return
+    *   Either an error message or the loaded Nebula
     */
-  def loadSingleImport(bi: BASTImport, baseURL: URL)(using pc: PlatformContext): Either[String, Nebula] = {
+  def loadSingleImport(bi: BASTImport, baseURL: URL)(using
+    pc: PlatformContext
+  ): Either[String, Nebula] = {
     Try {
       // Resolve the path relative to the base URL
       val bastURL = if URL.isValid(bi.path.s) then {
@@ -46,8 +52,8 @@ private[bast] object BASTLoaderPlatform {
       Await.result(future, 30.seconds)
     } match {
       case Success(Right(nebula)) => Right(nebula)
-      case Success(Left(msgs)) => Left(msgs.map(_.format).mkString("; "))
-      case Failure(ex) => Left(ex.getMessage)
+      case Success(Left(msgs))    => Left(msgs.map(_.format).mkString("; "))
+      case Failure(ex)            => Left(ex.getMessage)
     }
   }
 }

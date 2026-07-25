@@ -6,16 +6,16 @@
 
 package com.ossuminc.riddl.utils
 
-/** Utility for formatting RIDDL build information.
-  * This provides a consistent way to display version and build info
-  * across different tools (riddlc, IDE plugins, etc.)
+/** Utility for formatting RIDDL build information. This provides a consistent way to display
+  * version and build info across different tools (riddlc, IDE plugins, etc.)
   */
 object InfoFormatter {
 
-  /** Format build information as a human-readable string.
-    * This method provides the same output as the `riddlc info` command.
+  /** Format build information as a human-readable string. This method provides the same output as
+    * the `riddlc info` command.
     *
-    * @return Formatted build information string
+    * @return
+    *   Formatted build information string
     */
   def formatInfo: String = {
     val lines = Seq(

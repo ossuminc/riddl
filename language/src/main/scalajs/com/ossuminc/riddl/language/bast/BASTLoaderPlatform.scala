@@ -14,13 +14,18 @@ private[bast] object BASTLoaderPlatform {
 
   /** BAST import loading is not supported on JavaScript platform.
     *
-    * The browser environment cannot perform local file I/O operations required
-    * to load BAST files. This is an inherent platform limitation.
+    * The browser environment cannot perform local file I/O operations required to load BAST files.
+    * This is an inherent platform limitation.
     *
-    * @throws UnsupportedOperationException always
+    * @throws UnsupportedOperationException
+    *   always
     */
-  def loadSingleImport(bi: BASTImport, baseURL: URL)(using pc: PlatformContext): Either[String, Nebula] = {
-    Left("BAST import loading is not supported on JavaScript platform. " +
-         "The browser cannot perform local file I/O operations.")
+  def loadSingleImport(bi: BASTImport, baseURL: URL)(using
+    pc: PlatformContext
+  ): Either[String, Nebula] = {
+    Left(
+      "BAST import loading is not supported on JavaScript platform. " +
+        "The browser cannot perform local file I/O operations."
+    )
   }
 }

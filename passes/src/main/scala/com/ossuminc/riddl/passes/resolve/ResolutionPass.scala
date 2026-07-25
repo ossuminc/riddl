@@ -73,7 +73,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   val symbols: SymbolsOutput = outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
   override def result(root: PassRoot): ResolutionOutput =
-    ResolutionOutput(root, messages.toMessages, refMap, Usages(uses, usedBy, usesInPath, usedInPathBy))
+    ResolutionOutput(
+      root,
+      messages.toMessages,
+      refMap,
+      Usages(uses, usedBy, usesInPath, usedInPathBy)
+    )
 
   override def close(): Unit = ()
 
@@ -131,7 +136,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         p.repositories.foreach { ref => associateUsage(p, resolveARef[Repository](ref, parents)) }
       case r: Repository =>
         addRepository(r)
-      case s: Saga       =>
+      case s: Saga =>
       case r: Relationship =>
         resolveARef[Processor[?]](r.withProcessor, parents)
       case m: Module  =>
@@ -154,8 +159,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         }
       case cg: ContainedGroup =>
         associateUsage(cg, resolveARef[Group](cg.group, parents))
-      case _: BASTImport                 => () // BAST imports are resolved in BASTLoadingPass
-      case _: MatchCase                  => () // MatchCase statements contain references handled in resolveStatement
+      case _: BASTImport => () // BAST imports are resolved in BASTLoadingPass
+      case _: MatchCase => () // MatchCase statements contain references handled in resolveStatement
       case _: NonReferencableDefinitions => () // These can't be referenced
       case _: NonDefinitionValues        => () // Neither can these values
       case _: Definition                 => () // abstract definition, can't be referenced
@@ -251,8 +256,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case TellStatement(_, msg, processorRef) =>
         associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
         associateUsage(parents.head, resolveARef[Processor[?]](processorRef, parents))
-      case _: PromptStatement  => () // no references
-      case _: ErrorStatement   => () // no references
+      case _: PromptStatement => () // no references
+      case _: ErrorStatement  => () // no references
       case rs: RequireStatement =>
         rs.condition match {
           case _: LiteralString => () // no references
@@ -260,11 +265,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         }
       case ReplyStatement(_, msg) =>
         associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
-      case _: WhenStatement   => () // no references (condition is a literal string)
-      case _: MatchStatement  => () // no references (expression/patterns are literal strings)
+      case _: WhenStatement  => () // no references (condition is a literal string)
+      case _: MatchStatement => () // no references (expression/patterns are literal strings)
       case ls: LetStatement =>
         ls.typeRef.foreach(tr => resolveARef[Type](tr, parents))
-      case _: CodeStatement   => () // no references (code body is a string)
+      case _: CodeStatement => () // no references (code body is a string)
     }
   }
 
@@ -423,9 +428,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     }
   }
 
-  private val internalErrorSuggestion = 
+  private val internalErrorSuggestion =
     "This is an internal RIDDL resolver error; please report it with the model that triggered it."
-    
+
   private def findAnchor[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Parents
@@ -488,9 +493,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     // in which case the reference is internal to the definition itself
     // and should not count as external usage.
     if pathIdStart.nonEmpty && parents.nonEmpty &&
-       !parents.exists(_ eq anchor)
-    then
-      associatePathUsage(parents.head, anchor)
+      !parents.exists(_ eq anchor)
+    then associatePathUsage(parents.head, anchor)
     var continue: Boolean = true
     var resolution: Resolution[T] = None
     var elementCounter: Int = pathIdStart.length
@@ -581,8 +585,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     messages.addError(
       pathId.loc,
       message,
-      suggestion = s"'${pathId.value.mkString(".")}' points at the wrong kind of definition. Point it at ${article(referTo)} " +
-        s"instead, or rename the reference to match the intended $referTo."
+      suggestion =
+        s"'${pathId.value.mkString(".")}' points at the wrong kind of definition. Point it at ${article(referTo)} " +
+          s"instead, or rename the reference to match the intended $referTo."
     )
     if io.options.debug then
       println(
@@ -614,8 +619,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         if referTo.nonEmpty then s"and it should refer to ${article(referTo)}"
         else ""
       },
-      suggestion = s"Define ${article(referTo)} named by '${pathId.value.mkString(".")}', or correct the path so it names " +
-        s"an existing $referTo reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
+      suggestion =
+        s"Define ${article(referTo)} named by '${pathId.value.mkString(".")}', or correct the path so it names " +
+          s"an existing $referTo reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
     )
     if io.options.debug then println(s"Unresolved: ${pathId.format} ==> ???")
   end notResolved
@@ -710,16 +716,18 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             messages.addError(
               loc,
               s"All alternates of `${typeEx.format}` must be ${kind.useCase.dropRight(4)} aggregates",
-              suggestion = s"Declare every alternative as ${article(kind.useCase.dropRight(4))} aggregate, " +
-                s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'."
+              suggestion =
+                s"Declare every alternative as ${article(kind.useCase.dropRight(4))} aggregate, " +
+                  s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'."
             )
             None
           case typeEx: TypeExpression =>
             messages.addError(
               loc,
               s"Type expression `${typeEx.format}` needs to be an aggregate for `${kind.useCase.dropRight(4)}`",
-              suggestion = s"Declare the referenced type as ${article(kind.useCase.dropRight(4))} aggregate, " +
-                s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'."
+              suggestion =
+                s"Declare the referenced type as ${article(kind.useCase.dropRight(4))} aggregate, " +
+                  s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'."
             )
             None
         end match
@@ -750,8 +758,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         messages.addError(
           typ.loc,
           s"Type expression `${typEx.format}` is not compatible with keyword `$useCase`",
-          suggestion = s"Declare the type with the matching aggregate use case so it is compatible with " +
-            s"`$useCase`, e.g. 'type X = ${useCase.useCase} { ??? }'."
+          suggestion =
+            s"Declare the type with the matching aggregate use case so it is compatible with " +
+              s"`$useCase`, e.g. 'type X = ${useCase.useCase} { ??? }'."
         )
         None
       case typEx: TypeExpression =>
@@ -790,7 +799,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                   messages.addError(
                     typeEx.loc,
                     s"Type expression `${typeEx.format}` needs all elements to be a graph type for keyword `graph` at $loc",
-                    suggestion = "Make every alternative a graph type, e.g. 'type X = graph of NodeType'."
+                    suggestion =
+                      "Make every alternative a graph type, e.g. 'type X = graph of NodeType'."
                   )
                   None
                 end if
@@ -807,7 +817,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                   messages.addError(
                     typ.typEx.loc,
                     s"Type expression `${typ.typEx.format}` needs to be a table for keyword `table` at $loc",
-                    suggestion = "Declare the referenced type as a table, e.g. 'type X = table of RowType'."
+                    suggestion =
+                      "Declare the referenced type as a table, e.g. 'type X = table of RowType'."
                   )
                   None
                 end if
@@ -909,13 +920,15 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               definition.id.value + " (" + definition.loc + ")"
           }
           .mkString("\n")
-        val message = s"Path reference '${pid.value.mkString(".")}' is ambiguous. Definitions are:\n$ambiguity" +
-          context.map(_ + "\n").getOrElse("")
+        val message =
+          s"Path reference '${pid.value.mkString(".")}' is ambiguous. Definitions are:\n$ambiguity" +
+            context.map(_ + "\n").getOrElse("")
         messages.addError(
           pid.loc,
           message,
-          suggestion = s"Disambiguate '${pid.value.mkString(".")}' with a more specific, fully-qualified path " +
-            "(e.g. 'Domain.Context.Entity.Name') so it matches exactly one definition."
+          suggestion =
+            s"Disambiguate '${pid.value.mkString(".")}' with a more specific, fully-qualified path " +
+              "(e.g. 'Domain.Context.Entity.Name') so it matches exactly one definition."
         )
         Seq.empty[WithIdentifier]
     }

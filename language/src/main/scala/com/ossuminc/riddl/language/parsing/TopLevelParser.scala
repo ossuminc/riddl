@@ -47,14 +47,15 @@ object TopLevelParser:
 
   /** Convert a Nebula to a Root.
     *
-    * BAST files contain Nebula, but top-level parsing expects Root.
-    * This converts the Nebula contents to Root contents, filtering
-    * to only include valid RootContents types.
+    * BAST files contain Nebula, but top-level parsing expects Root. This converts the Nebula
+    * contents to Root contents, filtering to only include valid RootContents types.
     *
     * Valid at both Nebula and Root level: Domain, Module, Author
     *
-    * @param nebula The Nebula to convert
-    * @return A Root containing the Nebula's contents
+    * @param nebula
+    *   The Nebula to convert
+    * @return
+    *   A Root containing the Nebula's contents
     */
   private def nebulaToRoot(nebula: Nebula): Root = {
     // Filter to only items that are valid in RootContents
@@ -63,23 +64,28 @@ object TopLevelParser:
       case d: Domain => Some(d: RootContents)
       case m: Module => Some(m: RootContents)
       case a: Author => Some(a: RootContents)
-      case _ => None // Skip other NebulaContents not valid at Root level
+      case _         => None // Skip other NebulaContents not valid at Root level
     }
     Root(nebula.loc, rootItems.toContents)
   }
 
   /** Load BAST imports for a parsed Root.
     *
-    * After parsing, any BASTImport nodes will have empty contents.
-    * This method calls BASTLoader to populate them with the imported
-    * Nebula contents from the referenced .bast files.
+    * After parsing, any BASTImport nodes will have empty contents. This method calls BASTLoader to
+    * populate them with the imported Nebula contents from the referenced .bast files.
     *
-    * @param root The parsed Root containing potential BASTImport nodes
-    * @param baseURL The base URL for resolving relative import paths
-    * @param pc The platform context
-    * @return The root (with populated imports) and any error messages
+    * @param root
+    *   The parsed Root containing potential BASTImport nodes
+    * @param baseURL
+    *   The base URL for resolving relative import paths
+    * @param pc
+    *   The platform context
+    * @return
+    *   The root (with populated imports) and any error messages
     */
-  private def loadBASTImports(root: Root, baseURL: URL)(using pc: PlatformContext): (Root, Messages) = {
+  private def loadBASTImports(root: Root, baseURL: URL)(using
+    pc: PlatformContext
+  ): (Root, Messages) = {
     if BASTLoader.hasUnloadedImports(root) then
       val result = BASTLoader.loadImports(root, baseURL)
       // NOTE: avoid "import(" in string literals — ESM shim plugins
@@ -87,21 +93,18 @@ object TopLevelParser:
       if result.failedCount > 0 then
         pc.log.warn(s"Failed to load ${result.failedCount} BAST file(s)")
       end if
-      if result.loadedCount > 0 then
-        pc.log.info(s"Loaded ${result.loadedCount} BAST file(s)")
+      if result.loadedCount > 0 then pc.log.info(s"Loaded ${result.loadedCount} BAST file(s)")
       end if
       (root, result.messages)
-    else
-      (root, Messages.empty)
+    else (root, Messages.empty)
     end if
   }
 
   /** Main entry point into parsing. This sets up the asynchronous (but maybe not parallel) parsing
     * of the input to the parser.
     *
-    * This method first checks if a .bast file exists for the given URL and is newer.
-    * If so, it loads from the BAST file for faster startup. Otherwise, it parses
-    * the RIDDL file normally.
+    * This method first checks if a .bast file exists for the given URL and is newer. If so, it
+    * loads from the BAST file for faster startup. Otherwise, it parses the RIDDL file normally.
     *
     * @param url
     *   A `file://` or `https://` based url to specify the source of the parser input
@@ -121,10 +124,8 @@ object TopLevelParser:
         val root = nebulaToRoot(nebula)
         // Load any nested BAST imports
         val (loadedRoot, importMsgs) = loadBASTImports(root, url)
-        if importMsgs.hasErrors then
-          Future.successful(Left(importMsgs))
-        else
-          Future.successful(Right(loadedRoot))
+        if importMsgs.hasErrors then Future.successful(Left(importMsgs))
+        else Future.successful(Right(loadedRoot))
         end if
       case None =>
         // No BAST or load failed, parse RIDDL
@@ -133,13 +134,11 @@ object TopLevelParser:
           val tlp = new TopLevelParser(rpi, withVerboseFailures)
           tlp.parseRoot match {
             case Left(parseErrors) => Left(parseErrors)
-            case Right(root) =>
+            case Right(root)       =>
               // Load any BAST imports referenced in the parsed file
               val (loadedRoot, importMsgs) = loadBASTImports(root, url)
-              if importMsgs.hasErrors then
-                Left(importMsgs)
-              else
-                Right(loadedRoot)
+              if importMsgs.hasErrors then Left(importMsgs)
+              else Right(loadedRoot)
               end if
           }
         }
@@ -163,13 +162,11 @@ object TopLevelParser:
       val tlp = new TopLevelParser(input, withVerboseFailures)
       tlp.parseRoot match {
         case Left(parseErrors) => Left(parseErrors)
-        case Right(root) =>
+        case Right(root)       =>
           // Load any BAST imports referenced in the parsed file
           val (loadedRoot, importMsgs) = loadBASTImports(root, input.root)
-          if importMsgs.hasErrors then
-            Left(importMsgs)
-          else
-            Right(loadedRoot)
+          if importMsgs.hasErrors then Left(importMsgs)
+          else Right(loadedRoot)
           end if
       }
     }
@@ -233,7 +230,7 @@ object TopLevelParser:
   def mapTextAndToken[T](
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
-  )(f: (IndexedSeqView[Char],Token) => T)(using PlatformContext): Either[Messages, List[T]] =
+  )(f: (IndexedSeqView[Char], Token) => T)(using PlatformContext): Either[Messages, List[T]] =
     val tlp = new TopLevelParser(input, withVerboseFailures)
     tlp.parseTokens match
       case Left(messages) => Left(messages)
@@ -241,7 +238,7 @@ object TopLevelParser:
         val view = StringView(input.data)
         val mapped = tokens.map { token =>
           val slice = view.slice(token.loc.offset, token.loc.endOffset)
-          f(slice,token)
+          f(slice, token)
         }
         Right(mapped)
     end match
@@ -249,12 +246,15 @@ object TopLevelParser:
 
   /** Parse content as if it were inside a Domain body.
     *
-    * Wraps the input in a synthetic `domain SyntheticScope is { ... }`
-    * declaration, parses it, and returns the resulting Domain.
+    * Wraps the input in a synthetic `domain SyntheticScope is { ... }` declaration, parses it, and
+    * returns the resulting Domain.
     *
-    * @param input The RiddlParserInput containing domain-level content
-    * @param withVerboseFailures Enable verbose parse failure messages
-    * @return Either error messages or the parsed Domain
+    * @param input
+    *   The RiddlParserInput containing domain-level content
+    * @param withVerboseFailures
+    *   Enable verbose parse failure messages
+    * @return
+    *   Either error messages or the parsed Domain
     */
   def parseAsDomain(
     input: RiddlParserInput,
@@ -270,12 +270,15 @@ object TopLevelParser:
 
   /** Parse content as if it were inside a Context body.
     *
-    * Wraps the input in a synthetic `context SyntheticScope is { ... }`
-    * declaration, parses it, and returns the resulting Context.
+    * Wraps the input in a synthetic `context SyntheticScope is { ... }` declaration, parses it, and
+    * returns the resulting Context.
     *
-    * @param input The RiddlParserInput containing context-level content
-    * @param withVerboseFailures Enable verbose parse failure messages
-    * @return Either error messages or the parsed Context
+    * @param input
+    *   The RiddlParserInput containing context-level content
+    * @param withVerboseFailures
+    *   Enable verbose parse failure messages
+    * @return
+    *   Either error messages or the parsed Context
     */
   def parseAsContext(
     input: RiddlParserInput,
@@ -291,12 +294,15 @@ object TopLevelParser:
 
   /** Parse content as if it were inside an Entity body.
     *
-    * Wraps the input in a synthetic `entity SyntheticScope is { ... }`
-    * declaration, parses it, and returns the resulting Entity.
+    * Wraps the input in a synthetic `entity SyntheticScope is { ... }` declaration, parses it, and
+    * returns the resulting Entity.
     *
-    * @param input The RiddlParserInput containing entity-level content
-    * @param withVerboseFailures Enable verbose parse failure messages
-    * @return Either error messages or the parsed Entity
+    * @param input
+    *   The RiddlParserInput containing entity-level content
+    * @param withVerboseFailures
+    *   Enable verbose parse failure messages
+    * @return
+    *   Either error messages or the parsed Entity
     */
   def parseAsEntity(
     input: RiddlParserInput,
@@ -312,8 +318,8 @@ object TopLevelParser:
 
   /** Parse content as if it were inside a Module body.
     *
-    * Wraps the input in a synthetic `module SyntheticScope is { ... }`
-    * declaration, parses it, and returns the resulting Module.
+    * Wraps the input in a synthetic `module SyntheticScope is { ... }` declaration, parses it, and
+    * returns the resulting Module.
     */
   def parseAsModule(
     input: RiddlParserInput,
@@ -329,15 +335,19 @@ object TopLevelParser:
 
   /** Parse content as if it were inside an Adaptor body.
     *
-    * Wraps the input in a synthetic adaptor declaration using
-    * the caller-provided direction and context reference, then
-    * parses it and returns the resulting Adaptor.
+    * Wraps the input in a synthetic adaptor declaration using the caller-provided direction and
+    * context reference, then parses it and returns the resulting Adaptor.
     *
-    * @param input The RiddlParserInput containing adaptor body content
-    * @param direction The AdaptorDirection (InboundAdaptor or OutboundAdaptor)
-    * @param contextRef The ContextRef the adaptor adapts from/to
-    * @param withVerboseFailures Enable verbose parse failure messages
-    * @return Either error messages or the parsed Adaptor
+    * @param input
+    *   The RiddlParserInput containing adaptor body content
+    * @param direction
+    *   The AdaptorDirection (InboundAdaptor or OutboundAdaptor)
+    * @param contextRef
+    *   The ContextRef the adaptor adapts from/to
+    * @param withVerboseFailures
+    *   Enable verbose parse failure messages
+    * @return
+    *   Either error messages or the parsed Adaptor
     */
   def parseAsAdaptor(
     input: RiddlParserInput,
@@ -359,8 +369,8 @@ object TopLevelParser:
 
   /** Parse content as if it were inside a Projector body.
     *
-    * Wraps the input in a synthetic `projector SyntheticScope is { ... }`
-    * declaration, parses it, and returns the resulting Projector.
+    * Wraps the input in a synthetic `projector SyntheticScope is { ... }` declaration, parses it,
+    * and returns the resulting Projector.
     */
   def parseAsProjector(
     input: RiddlParserInput,
@@ -376,8 +386,8 @@ object TopLevelParser:
 
   /** Parse content as if it were inside a Repository body.
     *
-    * Wraps the input in a synthetic `repository SyntheticScope is { ... }`
-    * declaration, parses it, and returns the resulting Repository.
+    * Wraps the input in a synthetic `repository SyntheticScope is { ... }` declaration, parses it,
+    * and returns the resulting Repository.
     */
   def parseAsRepository(
     input: RiddlParserInput,
@@ -393,15 +403,19 @@ object TopLevelParser:
 
   /** Parse content as if it were inside a Saga body.
     *
-    * Parses the input for saga body content (saga steps,
-    * functions, inlets, outlets) and assembles a Saga using
-    * the caller-provided input/output aggregations.
+    * Parses the input for saga body content (saga steps, functions, inlets, outlets) and assembles
+    * a Saga using the caller-provided input/output aggregations.
     *
-    * @param input The RiddlParserInput containing saga body content
-    * @param sagaInput Optional input aggregation from the parent Saga
-    * @param sagaOutput Optional output aggregation from the parent Saga
-    * @param withVerboseFailures Enable verbose parse failure messages
-    * @return Either error messages or the parsed Saga
+    * @param input
+    *   The RiddlParserInput containing saga body content
+    * @param sagaInput
+    *   Optional input aggregation from the parent Saga
+    * @param sagaOutput
+    *   Optional output aggregation from the parent Saga
+    * @param withVerboseFailures
+    *   Enable verbose parse failure messages
+    * @return
+    *   Either error messages or the parsed Saga
     */
   def parseAsSaga(
     input: RiddlParserInput,
@@ -414,21 +428,23 @@ object TopLevelParser:
       val loc =
         if contents.nonEmpty then contents.head.loc
         else At.empty
-      Saga(loc, Identifier.empty, sagaInput, sagaOutput,
-        contents.toContents)
+      Saga(loc, Identifier.empty, sagaInput, sagaOutput, contents.toContents)
     }
   end parseAsSaga
 
   /** Parse content as if it were inside an Epic body.
     *
-    * Parses the input for epic body content (use cases, types,
-    * etc.) and assembles an Epic using the caller-provided
-    * UserStory.
+    * Parses the input for epic body content (use cases, types, etc.) and assembles an Epic using
+    * the caller-provided UserStory.
     *
-    * @param input The RiddlParserInput containing epic-level content
-    * @param userStory The UserStory from the parent Epic definition
-    * @param withVerboseFailures Enable verbose parse failure messages
-    * @return Either error messages or the parsed Epic
+    * @param input
+    *   The RiddlParserInput containing epic-level content
+    * @param userStory
+    *   The UserStory from the parent Epic definition
+    * @param withVerboseFailures
+    *   Enable verbose parse failure messages
+    * @return
+    *   Either error messages or the parsed Epic
     */
   def parseAsEpic(
     input: RiddlParserInput,
@@ -446,16 +462,21 @@ object TopLevelParser:
 
   /** Parse content as if it were inside a Streamlet body.
     *
-    * Parses the input for processor content (handlers, types,
-    * functions, etc.) and assembles a Streamlet using the
-    * caller-provided shape, inlets, and outlets.
+    * Parses the input for processor content (handlers, types, functions, etc.) and assembles a
+    * Streamlet using the caller-provided shape, inlets, and outlets.
     *
-    * @param input The RiddlParserInput containing streamlet body content
-    * @param shape The StreamletShape from the parent Streamlet definition
-    * @param inlets The Inlet definitions from the parent Streamlet
-    * @param outlets The Outlet definitions from the parent Streamlet
-    * @param withVerboseFailures Enable verbose parse failure messages
-    * @return Either error messages or the parsed Streamlet
+    * @param input
+    *   The RiddlParserInput containing streamlet body content
+    * @param shape
+    *   The StreamletShape from the parent Streamlet definition
+    * @param inlets
+    *   The Inlet definitions from the parent Streamlet
+    * @param outlets
+    *   The Outlet definitions from the parent Streamlet
+    * @param withVerboseFailures
+    *   Enable verbose parse failure messages
+    * @return
+    *   Either error messages or the parsed Streamlet
     */
   def parseAsStreamlet(
     input: RiddlParserInput,

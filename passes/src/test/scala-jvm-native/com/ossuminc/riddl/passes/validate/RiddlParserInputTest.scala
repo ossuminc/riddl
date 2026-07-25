@@ -31,7 +31,7 @@ class RiddlParserInputTest extends AbstractTestingBasisWithTestData {
 
         for {
           input <- inputs
-          rpi:RiddlParserInput = RiddlParserInput(input, td)
+          rpi: RiddlParserInput = RiddlParserInput(input, td)
         } do {
           rpi.length.mustBe(input.length)
           rpi.innerLength.mustBe(input.length)
@@ -51,7 +51,7 @@ class RiddlParserInputTest extends AbstractTestingBasisWithTestData {
           td
         )
         Map((1 -> 4) -> (0, 6), (4 -> 3) -> (13, 18)).foreach { case (loc, offset) =>
-          rpi.lineRangeOf(At(loc,rpi)).mustBe(offset)
+          rpi.lineRangeOf(At(loc, rpi)).mustBe(offset)
         }
 
       }

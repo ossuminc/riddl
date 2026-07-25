@@ -9,7 +9,6 @@ package com.ossuminc.riddl.utils
 import scala.concurrent.Awaitable
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
-
 object Await {
 
   def result[T](awaitable: Awaitable[T], secondsToWait: Int): T = {

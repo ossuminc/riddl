@@ -68,11 +68,11 @@ and the EBNF/GBNF validators all pass. Not yet merged.
   from 3.0.0 already fixed on the branch; build loads clean.
 
 ### Known non-blockers (deferred)
-- **scalafmt**: `scalafmtCheck` flags ~327 files. This is **pre-existing
-  drift** — the branch is based on `development`, which is *behind*
-  `main`'s "Rectify code format style" commits (unrelated to the
-  migration). Formatting will be fixed before the 2.0 release; do NOT
-  reformat now.
+- **scalafmt**: earlier `scalafmtCheck` flagged ~327 files — pre-existing
+  drift because this branch was based on `development`, *behind* `main`'s
+  "Rectify code format style" commits. **Resolved** by merging `main` into
+  this branch (2026-07-24) to pick up the rectification, then running
+  `sbt scalafmt` / `sbt test:scalafmt` for the migration's own new files.
 - **scaladoc**: `Compile/doc` fails on `@JSExport*`-annotated modules
   (`provided` scalajs-stubs isn't on the doc classpath). Non-fatal —
   `publishLocal` published every artifact anyway, and the release CI
@@ -95,37 +95,39 @@ Move `~/.sbt/1.0/github.sbt` → `~/.sbt/2/github.sbt` before building.
 
 ## Current Status
 
-**Last Updated**: 2026-07-17
+**Last Updated**: 2026-07-24
 
-`development` is **ahead of tag 1.23.4** (on `main`) by one
-feature: per-message remediation **suggestions** + the
-`CommonOptions.provideTips` option, which retires `AIHelperPass`.
-Targeted for **1.24.0**. Summary:
+`main` is at **1.31.0**, clean and pushed. All work now lands
+directly on `main` (no `development` branch — see CLAUDE.md
+"Branch Strategy"). The 1.24.0 provide-tips work described in
+earlier notebook revisions shipped long ago; see CLAUDE.md
+"Validation Specifics" for its durable design notes.
 
-- Every `Messages.Message` now carries a `suggestion: String`;
-  `Message.format` renders a `Suggestion:` line, and
-  `Accumulator.add` strips it unless `provideTips` is on (one
-  chokepoint → no default-output / `.check` churn).
-- Suggestions authored for **all ~155** validation + resolution
-  messages. Catalog: `MESSAGE_SUGGESTIONS.md` (repo root).
-- `AIHelperPass` + its two test files **deleted**; `Tip` kind,
-  the `advise` command, and `RiddlLib`/`RiddlAPI`
-  `analyzeForTips`/`analyzeSourceForTips` kept but re-implemented
-  off `provideTips` (`advise` == `validate --provide-tips`;
-  analyze* are `@deprecated` for 1.24.0).
-- New `--provide-tips` CLI flag + HOCON `provide-tips`.
-- New always-on completeness check: a context with entities but
-  no repository. Three entity tip-checks (no command/event types,
-  unhandled command) are advisory (provideTips-gated).
-- Verified: JVM/JS/Native compile; passes 350, language 314,
-  commands 232, riddlLib JVM 26 / JS 25 — 0 failures.
+**Two releases shipped this session:**
 
-Four bug-fix releases preceded this since the May notebook
-update: 1.23.1 (path-identifier usage tracking +
-duplicate-logging fix), 1.23.3 (EOF-brace crash + EBNF skip
-for malformed fixtures; 1.23.2 was a failed partial publish
-that never made it to a GitHub release), and 1.23.4 (Prettify
-state brace + Native scaladoc disable).
+- **1.30.0** — registered `protocol`, `event_catalog_version`,
+  `sql_dialect`, `sql_table` as recognized options, plus a
+  repo-wide formatting rectification (below).
+- **1.31.0** — registered `backstage_owner`,
+  `backstage_lifecycle`, `backstage_type`, `confluence_space`,
+  `confluence_parent`.
+
+Nine generator-metadata options are now registered in total.
+The pattern, and how to pick `validParents`, is documented in
+CLAUDE.md under "Validation Specifics" — read that before adding
+the next one. The recurring gotcha: `KnownOptions.*` lists have
+**no consumers**; only `RecognizedOptions.registry` affects
+validation.
+
+**Formatting baseline is now clean.** `sbt scalafmt` +
+`sbt test:scalafmt` were run across every module (227 files:
+123 main, 104 test) and both `scalafmtCheck` and
+`test:scalafmtCheck` now pass. Before this, ~227 files were
+out of conformance, which meant a real formatting regression
+was invisible in the noise. **Keep it clean** — if a diff
+starts showing dozens of unrelated reformatted files again,
+something has drifted. Note `sbt scalafmt` formats *main*
+sources only; test sources need `sbt test:scalafmt`.
 
 ## JSON Input Method — phased roadmap
 
@@ -176,9 +178,17 @@ named `Record` maps to a RecordCase aggregate (a real RIDDL
 
 ## Open Tasks in `task/`
 
-- `upgrade-sbt-riddl-1.15.4.md` — downstream task for
-  riddl-models; sbt-riddl in this repo is already past 1.15.4
-  via the normal release cadence
+**(none)** — queue is empty as of 2026-07-21.
+
+Five riddl-generator option-registration tasks were closed out
+this session and moved to `task/done/`: `register-protocol-option`
+(completed in a prior session), `register-event-catalog-version-
+option`, `register-sql-options`, `register-backstage-options`,
+`register-confluence-options`. Each has its results appended,
+including the reasoning behind any judgment call.
+
+More of these are likely as riddl-generator grows generators.
+They are near-mechanical; follow the CLAUDE.md recipe.
 
 Completed task files live in `task/done/` (gitignored, local
 hygiene only).
@@ -197,6 +207,27 @@ hygiene only).
    hierarchy (Domain, Context, Entity, …) remains opaque on the
    JS side. Public RiddlAPI methods are declared. JS consumers
    are expected to use the facade, not the raw AST.
+3. **Housekeeping** (low priority, none blocking):
+   - **Delete the `development` branch** (local + remote) and
+     `old-development`. `development` is fully contained in
+     `main` (0 ahead, 39 behind as of 1.31.0), so nothing is
+     lost. Deferred pending an explicit go-ahead.
+   - **Fix `.claude/skills/ship/SKILL.md`** — it still prescribes
+     the GitFlow pre-flight (fast-forward `main` from
+     `development`) and post-release merge-back. Both contradict
+     current policy; they were skipped for 1.30.0 and 1.31.0.
+   - **Delete the stray `help` git tag.** Almost certainly a
+     typo'd `git tag help`. Harmless, but it sorts to the top of
+     `git tag --sort=-v:refname` and so leads the tag list when
+     working out the latest release.
+   - **Verify the `unset GITHUB_TOKEN` guidance for `gh`.** Both
+     CLAUDE.md files and the ship skill say to unset the token so
+     `gh` falls back to keychain credentials. In the 1.30.0 /
+     1.31.0 sessions that produced "please run gh auth login" —
+     the keychain was not reachable — and `gh` worked only with
+     `GITHUB_TOKEN` **set**. May be specific to a sandboxed tool
+     environment rather than the interactive shell; worth
+     confirming which before trusting the documented advice.
 
 ## Blocked
 

@@ -10,11 +10,11 @@ import com.ossuminc.riddl.language.Messages.Messages
 
 /** Cross-platform result type for RiddlLib operations.
   *
-  * Provides a structured result that works natively on all
-  * platforms (JVM, JS, Native) and maps cleanly to TypeScript's
-  * `RiddlResult<T>` interface.
+  * Provides a structured result that works natively on all platforms (JVM, JS, Native) and maps
+  * cleanly to TypeScript's `RiddlResult<T>` interface.
   *
-  * @tparam T The type of the success value
+  * @tparam T
+  *   The type of the success value
   */
 sealed trait RiddlResult[+T]:
 
@@ -51,8 +51,7 @@ object RiddlResult:
     ): RiddlResult[U] = f(result)
   end Success
 
-  case class Failure(errors: Messages)
-    extends RiddlResult[Nothing]:
+  case class Failure(errors: Messages) extends RiddlResult[Nothing]:
     def succeeded: Boolean = false
     def value: Option[Nothing] = None
     def toEither: Either[Messages, Nothing] = Left(errors)

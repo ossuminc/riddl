@@ -38,7 +38,8 @@ case class PrettifyOutput(
   state: PrettifyState // Ideally: = PrettifyState(), but Scala 3.7.4 can't resolve the
   // given PlatformContext from the second parameter list when evaluating default expressions
   // in the generated companion apply method. May be fixed in 3.9.x LTS.
-)(using PlatformContext) extends PassOutput
+)(using PlatformContext)
+    extends PassOutput
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 @JSExportTopLevel("PrettifyPass")
@@ -50,9 +51,8 @@ class PrettifyPass(
     extends VisitingPass[PrettifyVisitor](input, outputs, new PrettifyVisitor(options)):
   def name: String = PrettifyPass.name
 
-  /** In non-flatten mode, BASTImport contents are re-serialized
-    * to BAST files separately, so we skip inline traversal.
-    * In flatten mode, contents are inlined as RIDDL text.
+  /** In non-flatten mode, BASTImport contents are re-serialized to BAST files separately, so we
+    * skip inline traversal. In flatten mode, contents are inlined as RIDDL text.
     */
   override protected def traverseBASTImportContents(bi: BASTImport): Boolean = options.flatten
 
@@ -60,7 +60,8 @@ class PrettifyPass(
 //  requires(ResolutionPass)
 //  requires(ValidationPass)
 
-  /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
+  /** Generate the output of this Pass. This will only be called after all the calls to process have
+    * completed.
     *
     * @return
     *   an instance of the output type

@@ -204,7 +204,7 @@ class RiddlTest extends AbstractTestingBasis {
         case Left(messages) => fail(messages.format)
         case Right(root) =>
           val output = Riddl.toRiddlText(root)
-          output must include ("} with {")
+          output must include("} with {")
           output must not include ("}\n with {")
     }
 
@@ -218,9 +218,11 @@ class RiddlTest extends AbstractTestingBasis {
           case Right(root) =>
             val input = PassInput(root)
             val outputs = PassesOutput()
-            val options = PrettifyPass.Options(flatten = false, inputDir = "language/input/includes")
+            val options =
+              PrettifyPass.Options(flatten = false, inputDir = "language/input/includes")
             val result = Pass.runPass[PrettifyOutput](
-              input, outputs,
+              input,
+              outputs,
               PrettifyPass(input, outputs, options)
             )
             val state = result.state
@@ -246,7 +248,8 @@ class RiddlTest extends AbstractTestingBasis {
             val outputs = PassesOutput()
             val options = PrettifyPass.Options(flatten = true, inputDir = "")
             val result = Pass.runPass[PrettifyOutput](
-              input, outputs,
+              input,
+              outputs,
               PrettifyPass(input, outputs, options)
             )
             val state = result.state

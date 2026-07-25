@@ -7,22 +7,18 @@
 package com.ossuminc.riddl.passes.analysis
 
 import com.ossuminc.riddl.language.AST.Root
-import com.ossuminc.riddl.passes.{
-  OutlineEntry, OutlineOutput, OutlinePass, Pass, PassInput
-}
+import com.ossuminc.riddl.passes.{OutlineEntry, OutlineOutput, OutlinePass, Pass, PassInput}
 import com.ossuminc.riddl.passes.stats.{StatsOutput, StatsPass}
 import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.collection.mutable
 
-/** The per-kind portion of a [[RootSimilarity]]: how the definitions of one
-  * `kind` (e.g. `Context`, `Entity`, `Command`) in root `a` compare with those
-  * in root `b`.
+/** The per-kind portion of a [[RootSimilarity]]: how the definitions of one `kind` (e.g. `Context`,
+  * `Entity`, `Command`) in root `a` compare with those in root `b`.
   *
   * @param kind
-  *   The definition kind string (`Definition.kind`), which already separates
-  *   the message taxonomy (Command/Event/Query/Result/Record) via the `Type`
-  *   kind override.
+  *   The definition kind string (`Definition.kind`), which already separates the message taxonomy
+  *   (Command/Event/Query/Result/Record) via the `Type` kind override.
   * @param countA
   *   Number of definitions of this kind in root `a`.
   * @param countB
@@ -34,8 +30,7 @@ import scala.collection.mutable
   * @param unmatchedB
   *   Names of this kind in `b` with no fuzzy counterpart in `a`.
   * @param score
-  *   Per-kind similarity in `[0.0, 1.0]` blending count comparability and name
-  *   overlap.
+  *   Per-kind similarity in `[0.0, 1.0]` blending count comparability and name overlap.
   */
 case class KindComparison(
   kind: String,
@@ -47,17 +42,15 @@ case class KindComparison(
   score: Double
 )
 
-/** A deterministic, model-free structural similarity between two RIDDL `Root`
-  * ASTs. Produced by [[RootComparison.compareRoots]].
+/** A deterministic, model-free structural similarity between two RIDDL `Root` ASTs. Produced by
+  * [[RootComparison.compareRoots]].
   *
   * This is a pure-AST heuristic: it matches on `kind` + fuzzy name, never on
-  * `Definition.equals`/`hashCode` (which include `loc` and therefore compare
-  * structurally-identical definitions at different source locations as
-  * unequal). No inference/embedding is involved.
+  * `Definition.equals`/`hashCode` (which include `loc` and therefore compare structurally-identical
+  * definitions at different source locations as unequal). No inference/embedding is involved.
   *
   * @param perKind
-  *   One [[KindComparison]] per definition kind present in either root, sorted
-  *   by kind name.
+  *   One [[KindComparison]] per definition kind present in either root, sorted by kind name.
   * @param depthA
   *   Maximum nesting depth of root `a` (from `StatsPass.maximum_depth`).
   * @param depthB
@@ -85,30 +78,26 @@ case class RootSimilarity(
 
 /** Computes a structural similarity / diff between two RIDDL `Root` ASTs.
   *
-  * Native-safe (pure Scala; no reflection, regex, or java formatting) and
-  * deterministic. The count/name features are extracted with [[OutlinePass]]
-  * (which records both container and leaf definitions, so leaf kinds such as
-  * `Invariant` and `Constant` are included — unlike `StatsPass`, which only
-  * tallies `Branch` definitions); the depth metric is taken from
+  * Native-safe (pure Scala; no reflection, regex, or java formatting) and deterministic. The
+  * count/name features are extracted with [[OutlinePass]] (which records both container and leaf
+  * definitions, so leaf kinds such as `Invariant` and `Constant` are included — unlike `StatsPass`,
+  * which only tallies `Branch` definitions); the depth metric is taken from
   * `StatsPass.maximum_depth`.
   *
   * ==Scoring==
-  * Per kind: `0.6 * countComparability + 0.4 * nameOverlap`, where
-  * `countComparability = min(cA,cB)/max(cA,cB)` and
-  * `nameOverlap = 2*matched/(cA+cB)` (Dice over fuzzy-matched names).
+  * Per kind: `0.6 * countComparability + 0.4 * nameOverlap`, where `countComparability =
+  * min(cA,cB)/max(cA,cB)` and `nameOverlap = 2*matched/(cA+cB)` (Dice over fuzzy-matched names).
   *
-  * Overall: `0.7 * weightedMean(perKind) + 0.3 * countVectorCosine`. The
-  * weighted mean weights DDD-structural kinds above incidental ones
-  * (Context/Entity = 3, message types = 2, other vital definitions = 1.5,
-  * everything else = 1). The cosine term rewards two models with the same
-  * count "shape" even when every name was changed, so a renamed-but-
-  * structurally-equal model still scores high on structure. Identical roots
-  * score exactly `1.0`.
+  * Overall: `0.7 * weightedMean(perKind) + 0.3 * countVectorCosine`. The weighted mean weights
+  * DDD-structural kinds above incidental ones (Context/Entity = 3, message types = 2, other vital
+  * definitions = 1.5, everything else = 1). The cosine term rewards two models with the same count
+  * "shape" even when every name was changed, so a renamed-but- structurally-equal model still
+  * scores high on structure. Identical roots score exactly `1.0`.
   */
 object RootComparison {
 
-  /** Similarity weights per definition kind for the overall weighted mean.
-    * DDD-structural kinds dominate; unlisted kinds use [[defaultWeight]].
+  /** Similarity weights per definition kind for the overall weighted mean. DDD-structural kinds
+    * dominate; unlisted kinds use [[defaultWeight]].
     */
   private val weights: Map[String, Double] = Map(
     "Context" -> 3.0,
@@ -134,9 +123,9 @@ object RootComparison {
   /** Minimum normalized name similarity for two names to be a fuzzy match. */
   private val nameMatchThreshold: Double = 0.6
 
-  /** Top-level AST wrapper kinds that carry no discriminating signal (always
-    * present exactly once) and would otherwise pollute the counts, name lists,
-    * and breadth metric. Excluded from the comparison.
+  /** Top-level AST wrapper kinds that carry no discriminating signal (always present exactly once)
+    * and would otherwise pollute the counts, name lists, and breadth metric. Excluded from the
+    * comparison.
     */
   private val structuralWrapperKinds: Set[String] = Set("Root", "Nebula")
 
@@ -209,9 +198,9 @@ object RootComparison {
     KindComparison(kind, cA, cB, matched, unmatchedA, unmatchedB, score)
   }
 
-  /** Greedily pair names from `a` to names from `b` by best normalized
-    * similarity above [[nameMatchThreshold]]. Deterministic: candidates are
-    * ordered by descending score with index tie-breaks.
+  /** Greedily pair names from `a` to names from `b` by best normalized similarity above
+    * [[nameMatchThreshold]]. Deterministic: candidates are ordered by descending score with index
+    * tie-breaks.
     */
   private def fuzzyMatch(
     aNames: Seq[String],
@@ -242,8 +231,8 @@ object RootComparison {
     (matched.toSeq, unmatchedA, unmatchedB)
   }
 
-  /** Location- and case-independent name similarity in `[0.0, 1.0]`, computed
-    * on names normalized to lowercase alphanumerics via Levenshtein ratio.
+  /** Location- and case-independent name similarity in `[0.0, 1.0]`, computed on names normalized
+    * to lowercase alphanumerics via Levenshtein ratio.
     */
   private def nameSimilarity(a: String, b: String): Double = {
     val na = normalize(a)
@@ -350,8 +339,8 @@ object RootComparison {
     sb.toString
   }
 
-  /** Format a `[0,1]` score to 3 decimals without java.util.Formatter
-    * (Native-safe). Scores are non-negative.
+  /** Format a `[0,1]` score to 3 decimals without java.util.Formatter (Native-safe). Scores are
+    * non-negative.
     */
   private def fmt3(d: Double): String = {
     val scaled = math.round(d * 1000.0)

@@ -22,15 +22,16 @@ class LoadingURLTests extends ParsingTest {
       val nonExistentURL =
         "https://raw.githubusercontent.com/ossuminc/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
       intercept[java.io.FileNotFoundException] {
-        val future = RiddlParserInput.fromURL(URL(nonExistentURL), td).map { (rpi: RiddlParserInput) =>
-          parseDomainDefinition(rpi, identity) match {
-            case Right(_) =>
-              fail("Should have gotten 'port out of range' error")
-            case Left(errors) =>
-              errors.size must be(1)
-              errors.exists(_.format.contains("port out of range: 8900000"))
+        val future =
+          RiddlParserInput.fromURL(URL(nonExistentURL), td).map { (rpi: RiddlParserInput) =>
+            parseDomainDefinition(rpi, identity) match {
+              case Right(_) =>
+                fail("Should have gotten 'port out of range' error")
+              case Left(errors) =>
+                errors.size must be(1)
+                errors.exists(_.format.contains("port out of range: 8900000"))
+            }
           }
-        }
         Await.result(future, 10.seconds)
       }
     }

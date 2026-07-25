@@ -20,7 +20,6 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 
-
 /** Handle processing of Language module's CommonOptions */
 object CommonOptionsHelper:
 
@@ -208,50 +207,59 @@ object CommonOptionsHelper:
   private def commonOptionsReader(config: Config): CommonOptions =
     val default = CommonOptions()
     val obj = config.getObject("common").toConfig
-    val showTimes = if obj.hasPath(show_times) then obj.getBoolean(show_times) else default.showTimes
+    val showTimes =
+      if obj.hasPath(show_times) then obj.getBoolean(show_times) else default.showTimes
     val showIncludeTimes =
-      if obj.hasPath(show_include_times) then obj.getBoolean(show_include_times) else default.showIncludeTimes
+      if obj.hasPath(show_include_times) then obj.getBoolean(show_include_times)
+      else default.showIncludeTimes
     val verboseV = if obj.hasPath(verbose) then obj.getBoolean(verbose) else default.verbose
     val dryRunV = if obj.hasPath(dry_run) then obj.getBoolean(dry_run) else default.dryRun
     val quietV = if obj.hasPath(quiet) then obj.getBoolean(quiet) else default.quiet
     val debugV = if obj.hasPath(debug) then obj.getBoolean(debug) else default.debug
     val noANSIMessages =
-      if obj.hasPath(no_ansi_messages) then obj.getBoolean(no_ansi_messages) else default.noANSIMessages
+      if obj.hasPath(no_ansi_messages) then obj.getBoolean(no_ansi_messages)
+      else default.noANSIMessages
     val sortMessagesByLocation =
-      if obj.hasPath(sort_messages_by_location) then
-        obj.getBoolean(sort_messages_by_location)
+      if obj.hasPath(sort_messages_by_location) then obj.getBoolean(sort_messages_by_location)
       else default.sortMessagesByLocation
     val groupMessagesByKind =
-      if obj.hasPath(group_messages_by_kind) then
-        obj.getBoolean(group_messages_by_kind)
-      else
-        default.groupMessagesByKind
-    val showWarnings = if obj.hasPath(show_warnings) then obj.getBoolean(show_warnings) else default.showWarnings
+      if obj.hasPath(group_messages_by_kind) then obj.getBoolean(group_messages_by_kind)
+      else default.groupMessagesByKind
+    val showWarnings =
+      if obj.hasPath(show_warnings) then obj.getBoolean(show_warnings) else default.showWarnings
     val showStyleWarnings =
-      if obj.hasPath(show_style_warnings) then obj.getBoolean(show_style_warnings) else default.showStyleWarnings
+      if obj.hasPath(show_style_warnings) then obj.getBoolean(show_style_warnings)
+      else default.showStyleWarnings
     val showMissingWarnings =
-      if obj.hasPath(show_missing_warnings) then obj.getBoolean(show_missing_warnings) else default.showMissingWarnings
+      if obj.hasPath(show_missing_warnings) then obj.getBoolean(show_missing_warnings)
+      else default.showMissingWarnings
     val showUsageWarnings =
-      if obj.hasPath(show_usage_warnings) then obj.getBoolean(show_usage_warnings) else default.showUsageWarnings
+      if obj.hasPath(show_usage_warnings) then obj.getBoolean(show_usage_warnings)
+      else default.showUsageWarnings
     val showCompletenessWarnings =
       if obj.hasPath(show_completeness_warnings) then obj.getBoolean(show_completeness_warnings)
       else default.showCompletenessWarnings
     val showTipMessages =
-      if obj.hasPath("show-tip-messages") then obj.getBoolean("show-tip-messages") else default.showTipMessages
+      if obj.hasPath("show-tip-messages") then obj.getBoolean("show-tip-messages")
+      else default.showTipMessages
     val showInfoMessages =
-      if obj.hasPath(show_info_messages) then obj.getBoolean(show_info_messages) else default.showInfoMessages
+      if obj.hasPath(show_info_messages) then obj.getBoolean(show_info_messages)
+      else default.showInfoMessages
     val maxParallelParsing =
-      if obj.hasPath(max_parallel_parsing) then obj.getInt(max_parallel_parsing) else default.maxParallelParsing
+      if obj.hasPath(max_parallel_parsing) then obj.getInt(max_parallel_parsing)
+      else default.maxParallelParsing
     val maxIncludeWait =
       if obj.hasPath(max_include_wait) then
         val duration = obj.getDuration(max_include_wait)
         val seconds = duration.toMillis
-        FiniteDuration(seconds,TimeUnit.MILLISECONDS)
+        FiniteDuration(seconds, TimeUnit.MILLISECONDS)
       else default.maxIncludeWait
     val warningsAreFatal =
-      if obj.hasPath(warnings_are_fatal) then obj.getBoolean(warnings_are_fatal) else default.warningsAreFatal
+      if obj.hasPath(warnings_are_fatal) then obj.getBoolean(warnings_are_fatal)
+      else default.warningsAreFatal
     val autoGenerateBAST =
-      if obj.hasPath(auto_generate_bast) then obj.getBoolean(auto_generate_bast) else default.autoGenerateBAST
+      if obj.hasPath(auto_generate_bast) then obj.getBoolean(auto_generate_bast)
+      else default.autoGenerateBAST
     val provideTips =
       if obj.hasPath(provide_tips) then obj.getBoolean(provide_tips) else default.provideTips
 
@@ -280,7 +288,9 @@ object CommonOptionsHelper:
     )
   end commonOptionsReader
 
-  def loadCommonOptions(configFile: Path)(using pc: PlatformContext): Either[Messages, CommonOptions] =
+  def loadCommonOptions(configFile: Path)(using
+    pc: PlatformContext
+  ): Either[Messages, CommonOptions] =
     val options: ConfigParseOptions = ConfigParseOptions.defaults
       .setAllowMissing(true)
       .setOriginDescription(configFile.getFileName.toString)
@@ -297,11 +307,11 @@ object CommonOptionsHelper:
     } catch {
       case NonFatal(xcptn) =>
         Left(
-          errors(s"Failed to load options from $configFile because:\n" +
-            xcptn.getClass.getSimpleName + ": " + xcptn.getMessage
+          errors(
+            s"Failed to load options from $configFile because:\n" +
+              xcptn.getClass.getSimpleName + ": " + xcptn.getMessage
           )
         )
     }
   end loadCommonOptions
 end CommonOptionsHelper
-

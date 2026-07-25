@@ -10,16 +10,14 @@ import com.ossuminc.riddl.utils.{pc, PlatformContext}
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
 
-/** Cross-platform JSON round-trip fidelity: parse RIDDL -> AST -> JSON (json1)
-  * -> AST -> JSON (json2) and require `json1 == json2`. A stable fixed point
-  * proves the AST<->JSON mapping is lossless and deterministic; any dropped or
-  * reordered construct makes the second JSON diverge.
+/** Cross-platform JSON round-trip fidelity: parse RIDDL -> AST -> JSON (json1) -> AST -> JSON
+  * (json2) and require `json1 == json2`. A stable fixed point proves the AST<->JSON mapping is
+  * lossless and deterministic; any dropped or reordered construct makes the second JSON diverge.
   *
-  * Runs on JVM, JS, and Native (unlike `Root2JsonCorpusTest`, which walks the
-  * `../riddl-models` directory and is JVM-only). The inline model exercises the
-  * constructs the fidelity work fixed: a multi-state entity with nested init
-  * handlers, entity-level messages, and a repository/projector that define and
-  * reference their own messages.
+  * Runs on JVM, JS, and Native (unlike `Root2JsonCorpusTest`, which walks the `../riddl-models`
+  * directory and is JVM-only). The inline model exercises the constructs the fidelity work fixed: a
+  * multi-state entity with nested init handlers, entity-level messages, and a repository/projector
+  * that define and reference their own messages.
   */
 class JsonRoundTripTest extends AnyWordSpec with Matchers {
 

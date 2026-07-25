@@ -110,7 +110,9 @@ abstract class RiddlFileEmitterTest extends AbstractTestingBasis {
       rfe.clear()
       rfe.emitTypeExpression(Abstract(At.empty)).toString mustBe "Abstract"
       rfe.clear()
-      rfe.emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42)).toString mustBe "Integer{24,42}"
+      rfe
+        .emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42))
+        .toString mustBe "Integer{24,42}"
     }
   }
 }

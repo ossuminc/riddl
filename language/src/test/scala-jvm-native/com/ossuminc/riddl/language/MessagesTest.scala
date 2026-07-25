@@ -13,7 +13,6 @@ import com.ossuminc.riddl.utils.{AbstractTestingBasis, CommonOptions, StringLogg
 
 import scala.io.AnsiColor.*
 
-
 class MessagesTest extends AbstractTestingBasis {
 
   "MessageKinds" must {

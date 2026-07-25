@@ -18,7 +18,7 @@ class KeywordsTest extends AbstractTestingBasis {
 
   "Punctuation" should {
     "produce all punctuation marks" in {
-      Punctuation.allPunctuation.size must be (17)
+      Punctuation.allPunctuation.size must be(17)
     }
   }
 

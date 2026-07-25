@@ -41,12 +41,11 @@ class BASTWriterSpec extends AbstractRunPassTest {
             val bastWriter = BASTWriterPass.creator()
             val result = Pass.runThesePasses(passInput, Seq(bastWriter))
 
-            if result.messages.hasErrors then
-              fail(s"BASTWriter failed:\n${result.messages.format}")
+            if result.messages.hasErrors then fail(s"BASTWriter failed:\n${result.messages.format}")
 
             // Get the BAST output
             val bastOutput = result.outputOf[BASTOutput](BASTWriterPass.name)
-            bastOutput must be (defined)
+            bastOutput must be(defined)
 
             val output = bastOutput.get
             val bytes = output.bytes
@@ -82,11 +81,11 @@ class BASTWriterSpec extends AbstractRunPassTest {
 
             // Magic bytes
             val magic = reader.readRawBytes(4)
-            magic must equal (MAGIC_BYTES)
+            magic must equal(MAGIC_BYTES)
 
             // Version (single 32-bit integer)
             val version = reader.readInt()
-            version must equal (VERSION)
+            version must equal(VERSION)
 
             // Flags
             val flags = reader.readShort()
@@ -100,7 +99,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
 
             stringTableOffset must be > HEADER_SIZE
             rootOffset must be > stringTableOffset
-            fileSize must equal (bytes.length)
+            fileSize must equal(bytes.length)
 
             info(s"Header validated: v$version, ${bytes.length} bytes")
             succeed
@@ -142,11 +141,11 @@ class BASTWriterSpec extends AbstractRunPassTest {
               val length = reader.readVarInt()
               val strBytes = reader.readRawBytes(length)
               val str = new String(strBytes, "UTF-8")
-              str.nonEmpty must be (true)
+              str.nonEmpty must be(true)
               readStrings += 1
             end while
 
-            readStrings must equal (stringCount)
+            readStrings must equal(stringCount)
             succeed
 
           case Left(messages) =>
@@ -173,7 +172,6 @@ class BASTWriterSpec extends AbstractRunPassTest {
               val passInput = PassInput(root)
               Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
             end for
-
             // Measure
             var lastResult: PassesResult = null
             for i <- 0 until iterations do
@@ -184,8 +182,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
               times(i) = end - start
               lastResult = result
 
-              if result.messages.hasErrors then
-                fail(s"BASTWriter failed on iteration $i")
+              if result.messages.hasErrors then fail(s"BASTWriter failed on iteration $i")
             end for
 
             val avgNanos = times.sum / iterations
@@ -250,7 +247,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
 
     // Magic bytes must be correct
     val magic = bytes.slice(0, 4)
-    magic must equal (MAGIC_BYTES)
+    magic must equal(MAGIC_BYTES)
 
     val reader = ByteBufferReader(bytes)
 
@@ -268,9 +265,9 @@ class BASTWriterSpec extends AbstractRunPassTest {
     stringTableOffset must be < bytes.length
     rootOffset must be > stringTableOffset
     rootOffset must be < bytes.length
-    fileSize must equal (bytes.length)
+    fileSize must equal(bytes.length)
 
     // Validate version
-    version must equal (VERSION)
+    version must equal(VERSION)
   }
 }

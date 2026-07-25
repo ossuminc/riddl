@@ -35,28 +35,28 @@ package com.ossuminc.riddl.language.bast
   * }}}
   *
   * Variable-length integers (varint) use LEB128 encoding:
-  * - Values 0-127: 1 byte
-  * - Values 128-16383: 2 bytes
-  * - Etc.
+  *   - Values 0-127: 1 byte
+  *   - Values 128-16383: 2 bytes
+  *   - Etc.
   *
   * Location encoding (zigzag delta-compressed):
-  * - Source path: string table index
-  * - Offset delta: zigzag varint (difference from previous offset)
-  * - EndOffset delta: zigzag varint (difference from previous endOffset)
+  *   - Source path: string table index
+  *   - Offset delta: zigzag varint (difference from previous offset)
+  *   - EndOffset delta: zigzag varint (difference from previous endOffset)
   */
 object BinaryFormat {
 
   /** BAST file header structure */
   case class Header(
-    magic: Array[Byte],           // Must equal MAGIC_BYTES
-    version: Int,                 // Single monotonically incrementing version
+    magic: Array[Byte], // Must equal MAGIC_BYTES
+    version: Int, // Single monotonically incrementing version
     flags: Short,
-    formatRevision: Short,        // Internal serialization revision
+    formatRevision: Short, // Internal serialization revision
     stringTableOffset: Int,
     rootOffset: Int,
     fileSize: Int,
     checksum: Int,
-    reserved: Array[Byte]         // 4 bytes reserved for future use
+    reserved: Array[Byte] // 4 bytes reserved for future use
   ) {
     def isValid: Boolean = {
       magic.sameElements(MAGIC_BYTES) &&
@@ -68,17 +68,15 @@ object BinaryFormat {
 
     /** Return a human-readable reason why the header is invalid */
     def invalidReason: String = {
-      if !magic.sameElements(MAGIC_BYTES) then
-        "Not a BAST file (invalid magic bytes)"
+      if !magic.sameElements(MAGIC_BYTES) then "Not a BAST file (invalid magic bytes)"
       else if version != VERSION then
         s"BAST format version $version does not match " +
-        s"expected version $VERSION"
+          s"expected version $VERSION"
       else if formatRevision != FORMAT_REVISION then
         s"BAST format revision $formatRevision does not " +
-        s"match expected revision $FORMAT_REVISION; " +
-        s"regenerate .bast files with the current riddlc"
-      else if fileSize <= 0 || fileSize > MAX_BAST_SIZE then
-        s"Invalid file size: $fileSize"
+          s"match expected revision $FORMAT_REVISION; " +
+          s"regenerate .bast files with the current riddlc"
+      else if fileSize <= 0 || fileSize > MAX_BAST_SIZE then s"Invalid file size: $fileSize"
       else "Unknown"
     }
 
@@ -116,7 +114,7 @@ object BinaryFormat {
     var i = start
     val end = start + length
     while i < end do
-      checksum = ((checksum << 5) - checksum) + (bytes(i) & 0xFF)
+      checksum = ((checksum << 5) - checksum) + (bytes(i) & 0xff)
       i += 1
     end while
     checksum
@@ -124,20 +122,22 @@ object BinaryFormat {
 
   /** Serialize a header to bytes
     *
-    * @param header The header to serialize
-    * @return 32-byte array containing the serialized header
+    * @param header
+    *   The header to serialize
+    * @return
+    *   32-byte array containing the serialized header
     */
   def serializeHeader(header: Header): Array[Byte] = {
     val writer = new ByteBufferWriter()
-    writer.writeRawBytes(header.magic)       // 4 bytes
-    writer.writeInt(header.version)           // 4 bytes
-    writer.writeShort(header.flags)           // 2 bytes
-    writer.writeShort(header.formatRevision)  // 2 bytes format revision
+    writer.writeRawBytes(header.magic) // 4 bytes
+    writer.writeInt(header.version) // 4 bytes
+    writer.writeShort(header.flags) // 2 bytes
+    writer.writeShort(header.formatRevision) // 2 bytes format revision
     writer.writeInt(header.stringTableOffset) // 4 bytes
-    writer.writeInt(header.rootOffset)        // 4 bytes
-    writer.writeInt(header.fileSize)          // 4 bytes
-    writer.writeInt(header.checksum)          // 4 bytes
-    writer.writeRawBytes(header.reserved)     // 4 bytes reserved
+    writer.writeInt(header.rootOffset) // 4 bytes
+    writer.writeInt(header.fileSize) // 4 bytes
+    writer.writeInt(header.checksum) // 4 bytes
+    writer.writeRawBytes(header.reserved) // 4 bytes reserved
     writer.toByteArray
   }
 }

@@ -12,15 +12,15 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.io.File
 import scala.io.Source
 
-/** Phase 9 coverage guard: every AST *construct* (a definition, type
-  * expression, statement, or interaction case class) must have an entry in
-  * `JSON_COVERAGE.md`. When RIDDL gains a new construct, this test fails until
-  * the ledger records its JSON-input status (supported / phase-N / deferred).
+/** Phase 9 coverage guard: every AST *construct* (a definition, type expression, statement, or
+  * interaction case class) must have an entry in `JSON_COVERAGE.md`. When RIDDL gains a new
+  * construct, this test fails until the ledger records its JSON-input status (supported / phase-N /
+  * deferred).
   *
-  * It scans the AST source directly (JVM-only, repo-root relative) and detects
-  * constructs by the base traits in their `extends` clause. Metadata nodes
-  * (descriptions, terms, options, attachments, comments) are tracked manually
-  * in the ledger's Metadata section and are intentionally out of this scan.
+  * It scans the AST source directly (JVM-only, repo-root relative) and detects constructs by the
+  * base traits in their `extends` clause. Metadata nodes (descriptions, terms, options,
+  * attachments, comments) are tracked manually in the ledger's Metadata section and are
+  * intentionally out of this scan.
   */
 class JsonCoverageGuardTest extends AnyWordSpec with Matchers {
 
@@ -34,8 +34,19 @@ class JsonCoverageGuardTest extends AnyWordSpec with Matchers {
 
   /** Base traits whose presence in an `extends` clause marks a "construct". */
   private val constructMarkers = Seq(
-    "Definition", "Processor", "Branch", "Leaf", "AggregateValue", "OnClause", "Portlet",
-    "Interaction", "TypeExpression", "PredefinedType", "Cardinality", "TimeType", "NumericType",
+    "Definition",
+    "Processor",
+    "Branch",
+    "Leaf",
+    "AggregateValue",
+    "OnClause",
+    "Portlet",
+    "Interaction",
+    "TypeExpression",
+    "PredefinedType",
+    "Cardinality",
+    "TimeType",
+    "NumericType",
     "Statement"
   )
 
@@ -75,7 +86,8 @@ class JsonCoverageGuardTest extends AnyWordSpec with Matchers {
             if isCandidate && extendsIdx >= 0 then
               val afterExtends = block.substring(extendsIdx)
               val stops = Seq(afterExtends.indexOf(":"), afterExtends.indexOf("{")).filter(_ >= 0)
-              val clause = afterExtends.substring(0, if stops.isEmpty then afterExtends.length else stops.min)
+              val clause =
+                afterExtends.substring(0, if stops.isEmpty then afterExtends.length else stops.min)
               if constructMarkers.exists(clause.contains) && !ledgerNames.contains(name) then
                 missing += name
           end for
@@ -87,7 +99,9 @@ class JsonCoverageGuardTest extends AnyWordSpec with Matchers {
           }
 
         case _ =>
-          cancel("JSON_COVERAGE.md or AST.scala not found relative to the build root; guard skipped")
+          cancel(
+            "JSON_COVERAGE.md or AST.scala not found relative to the build root; guard skipped"
+          )
       end match
     }
   }

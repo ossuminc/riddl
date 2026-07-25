@@ -30,17 +30,18 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
         val outputs = pr.outputs
         val pass = EntityLifecyclePass(passInput, outputs)
         val elo = Pass.runPass[EntityLifecycleOutput](
-          passInput, outputs, pass
+          passInput,
+          outputs,
+          pass
         )
         check(elo, msgs)
     }
   end runLifecyclePass
 
   "EntityLifecyclePass" should {
-    "detect transitions from entity-level handlers" in {
-      (td: TestData) =>
-        runLifecyclePass(
-          """domain D is {
+    "detect transitions from entity-level handlers" in { (td: TestData) =>
+      runLifecyclePass(
+        """domain D is {
             |  context C is {
             |    command GoBar is { ??? }
             |    command GoFoo is { ??? }
@@ -65,22 +66,21 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |  }
             |}
             |""".stripMargin
-        ) { (elo, _) =>
-          elo.lifecycles must not be empty
-          val lc = elo.lifecycles.values.head
-          lc.states.size mustBe 2
-          // Entity-level handler transitions expand to all states
-          // GoBar: Foo->Bar and Bar->Bar; GoFoo: Foo->Foo and Bar->Foo
-          lc.transitions.size mustBe 4
-          // Every transition must have a fromState
-          lc.transitions.forall(_.fromState.isDefined) mustBe true
-        }
+      ) { (elo, _) =>
+        elo.lifecycles must not be empty
+        val lc = elo.lifecycles.values.head
+        lc.states.size mustBe 2
+        // Entity-level handler transitions expand to all states
+        // GoBar: Foo->Bar and Bar->Bar; GoFoo: Foo->Foo and Bar->Foo
+        lc.transitions.size mustBe 4
+        // Every transition must have a fromState
+        lc.transitions.forall(_.fromState.isDefined) mustBe true
+      }
     }
 
-    "detect transitions from state-level handlers" in {
-      (td: TestData) =>
-        runLifecyclePass(
-          """domain D is {
+    "detect transitions from state-level handlers" in { (td: TestData) =>
+      runLifecyclePass(
+        """domain D is {
             |  context C is {
             |    command Activate is { ??? }
             |    command Deactivate is { ??? }
@@ -107,32 +107,31 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |  }
             |}
             |""".stripMargin
-        ) { (elo, _) =>
-          elo.lifecycles must not be empty
-          val lc = elo.lifecycles.values.head
-          lc.states.size mustBe 2
-          lc.transitions.size mustBe 2
-          // Active -> Inactive
-          val t1 = lc.transitions.find(t =>
-            t.fromState.exists(_.id.value == "Active") &&
-              t.toState.id.value == "Inactive"
-          )
-          t1 mustBe defined
-          // Inactive -> Active
-          val t2 = lc.transitions.find(t =>
-            t.fromState.exists(_.id.value == "Inactive") &&
-              t.toState.id.value == "Active"
-          )
-          t2 mustBe defined
-          // No terminal states — both have outgoing
-          lc.terminalStates mustBe empty
-        }
+      ) { (elo, _) =>
+        elo.lifecycles must not be empty
+        val lc = elo.lifecycles.values.head
+        lc.states.size mustBe 2
+        lc.transitions.size mustBe 2
+        // Active -> Inactive
+        val t1 = lc.transitions.find(t =>
+          t.fromState.exists(_.id.value == "Active") &&
+            t.toState.id.value == "Inactive"
+        )
+        t1 mustBe defined
+        // Inactive -> Active
+        val t2 = lc.transitions.find(t =>
+          t.fromState.exists(_.id.value == "Inactive") &&
+            t.toState.id.value == "Active"
+        )
+        t2 mustBe defined
+        // No terminal states — both have outgoing
+        lc.terminalStates mustBe empty
+      }
     }
 
-    "detect initial state from on init with set state" in {
-      (td: TestData) =>
-        runLifecyclePass(
-          """domain D is {
+    "detect initial state from on init with set state" in { (td: TestData) =>
+      runLifecyclePass(
+        """domain D is {
             |  context C is {
             |    command GoBar is { ??? }
             |    entity E is {
@@ -153,20 +152,19 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |  }
             |}
             |""".stripMargin
-        ) { (elo, _) =>
-          elo.lifecycles must not be empty
-          val lc = elo.lifecycles.values.head
-          lc.states.size mustBe 2
-          // Initial state should be Foo (from on init + set state)
-          lc.initialState mustBe defined
-          lc.initialState.get.id.value mustBe "Foo"
-        }
+      ) { (elo, _) =>
+        elo.lifecycles must not be empty
+        val lc = elo.lifecycles.values.head
+        lc.states.size mustBe 2
+        // Initial state should be Foo (from on init + set state)
+        lc.initialState mustBe defined
+        lc.initialState.get.id.value mustBe "Foo"
+      }
     }
 
-    "identify terminal states" in {
-      (td: TestData) =>
-        runLifecyclePass(
-          """domain D is {
+    "identify terminal states" in { (td: TestData) =>
+      runLifecyclePass(
+        """domain D is {
             |  context C is {
             |    command GoMiddle is { ??? }
             |    command GoEnd is { ??? }
@@ -195,21 +193,20 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |  }
             |}
             |""".stripMargin
-        ) { (elo, _) =>
-          elo.lifecycles must not be empty
-          val lc = elo.lifecycles.values.head
-          lc.states.size mustBe 3
-          lc.transitions.size mustBe 2
-          // End is terminal (no outgoing transitions)
-          lc.terminalStates.size mustBe 1
-          lc.terminalStates.head.id.value mustBe "End"
-        }
+      ) { (elo, _) =>
+        elo.lifecycles must not be empty
+        val lc = elo.lifecycles.values.head
+        lc.states.size mustBe 3
+        lc.transitions.size mustBe 2
+        // End is terminal (no outgoing transitions)
+        lc.terminalStates.size mustBe 1
+        lc.terminalStates.head.id.value mustBe "End"
+      }
     }
 
-    "skip entities with fewer than 2 states" in {
-      (td: TestData) =>
-        runLifecyclePass(
-          """domain D is {
+    "skip entities with fewer than 2 states" in { (td: TestData) =>
+      runLifecyclePass(
+        """domain D is {
             |  context C is {
             |    entity E is {
             |      record Fields is { f: String }
@@ -219,15 +216,14 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |  }
             |}
             |""".stripMargin
-        ) { (elo, _) =>
-          elo.lifecycles mustBe empty
-        }
+      ) { (elo, _) =>
+        elo.lifecycles mustBe empty
+      }
     }
 
-    "combine entity-level and state-level transitions" in {
-      (td: TestData) =>
-        runLifecyclePass(
-          """domain D is {
+    "combine entity-level and state-level transitions" in { (td: TestData) =>
+      runLifecyclePass(
+        """domain D is {
             |  context C is {
             |    command Reset is { ??? }
             |    command Advance is { ??? }
@@ -253,18 +249,18 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |  }
             |}
             |""".stripMargin
-        ) { (elo, _) =>
-          elo.lifecycles must not be empty
-          val lc = elo.lifecycles.values.head
-          lc.states.size mustBe 2
-          // State-level: Idle -> Running (1 transition)
-          // Entity-level Reset: expanded to Idle->Idle, Running->Idle (2)
-          lc.transitions.size mustBe 3
-          // Running has outgoing (Reset -> Idle from entity-level)
-          // Idle has outgoing (Advance -> Running from state-level,
-          //   plus Reset -> Idle from entity-level)
-          lc.terminalStates mustBe empty
-        }
+      ) { (elo, _) =>
+        elo.lifecycles must not be empty
+        val lc = elo.lifecycles.values.head
+        lc.states.size mustBe 2
+        // State-level: Idle -> Running (1 transition)
+        // Entity-level Reset: expanded to Idle->Idle, Running->Idle (2)
+        lc.transitions.size mustBe 3
+        // Running has outgoing (Reset -> Idle from entity-level)
+        // Idle has outgoing (Advance -> Running from state-level,
+        //   plus Reset -> Idle from entity-level)
+        lc.terminalStates mustBe empty
+      }
     }
   }
 }

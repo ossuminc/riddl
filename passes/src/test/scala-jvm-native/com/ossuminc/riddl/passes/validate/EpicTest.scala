@@ -26,24 +26,28 @@ class EpicTest extends AbstractValidatingTest {
           |    case perfection is { user foo.Author wants "to open a document" so that "it can be edited" ???  }
           |  } with { described as "A simple authoring story" }
           |} with { described as "a parsing convenience" }
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
-      parseAndValidateDomain(rpi) { case (domain: Domain, rpi: RiddlParserInput, messages: Messages.Messages) =>
-        domain.epics mustNot be(empty)
-        messages.isOnlyIgnorable mustBe true
-        val epic: Epic = domain.epics.head
-        epic.id.format mustBe "WritingABook"
-        epic.userStory mustNot be(empty)
-        val us = epic.userStory
-        us mustNot be(empty)
-        us.user.pathId.value mustBe Seq("foo", "Author")
-        us.capability mustBe LiteralString((4, 30, rpi), "edit on the screen")
-        us.benefit mustBe LiteralString((4, 59, rpi), "he can revise content more easily")
-        epic.shownBy mustNot be(empty)
-        epic.shownBy.head must be(ShownBy((5,5,rpi),List(URL("http://example.com:80/path/to/WritingABook"))))
-        epic.cases mustNot be(empty)
-        val uc = epic.cases.head
-        uc.id.value mustBe "perfection"
+      parseAndValidateDomain(rpi) {
+        case (domain: Domain, rpi: RiddlParserInput, messages: Messages.Messages) =>
+          domain.epics mustNot be(empty)
+          messages.isOnlyIgnorable mustBe true
+          val epic: Epic = domain.epics.head
+          epic.id.format mustBe "WritingABook"
+          epic.userStory mustNot be(empty)
+          val us = epic.userStory
+          us mustNot be(empty)
+          us.user.pathId.value mustBe Seq("foo", "Author")
+          us.capability mustBe LiteralString((4, 30, rpi), "edit on the screen")
+          us.benefit mustBe LiteralString((4, 59, rpi), "he can revise content more easily")
+          epic.shownBy mustNot be(empty)
+          epic.shownBy.head must be(
+            ShownBy((5, 5, rpi), List(URL("http://example.com:80/path/to/WritingABook")))
+          )
+          epic.cases mustNot be(empty)
+          val uc = epic.cases.head
+          uc.id.value mustBe "perfection"
       }
     }
 
@@ -110,7 +114,8 @@ class EpicTest extends AbstractValidatingTest {
           |  term 'conduct business' is "Any legal business activity supported by the terms of use."
           |}
           |}
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
@@ -180,7 +185,8 @@ class EpicTest extends AbstractValidatingTest {
           | by author reid
           |}
           |} with { briefly "A placeholder" described by "Not important" }
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = true) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
@@ -249,7 +255,8 @@ class EpicTest extends AbstractValidatingTest {
           |  term 'conduct business' "Any legal business activity supported by the terms of use."
           |}
           |} with { briefly "A placeholder" described by "Not important" }
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = true) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>

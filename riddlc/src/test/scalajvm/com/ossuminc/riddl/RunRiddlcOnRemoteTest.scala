@@ -37,14 +37,15 @@ class RunRiddlcOnRemoteTest extends RunCommandSpecBase {
   }
 
   def runOnGitHubProject(
-                          organization: String,
-                          repository: String,
-                          branch: String,
-                          pathToSrcDir: String,
-                          confFile: String,
-                          cmd: String
-                        ): Assertion = {
-    val repo: String = s"https://github.com/$organization/$repository/archive/refs/heads/$branch.zip"
+    organization: String,
+    repository: String,
+    branch: String,
+    pathToSrcDir: String,
+    confFile: String,
+    cmd: String
+  ): Assertion = {
+    val repo: String =
+      s"https://github.com/$organization/$repository/archive/refs/heads/$branch.zip"
     val url: URL = java.net.URI.create(repo).toURL
     val tmpDir: Path = Files.createTempDirectory(repository)
     val srcDir: Path = tmpDir.resolve(repository + "-" + branch).resolve(pathToSrcDir)
@@ -70,6 +71,3 @@ class RunRiddlcOnRemoteTest extends RunCommandSpecBase {
     }
   }
 }
-
-
-

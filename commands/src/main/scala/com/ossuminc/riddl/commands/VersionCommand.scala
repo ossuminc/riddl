@@ -35,7 +35,6 @@ class VersionCommand(using pc: PlatformContext) extends Command[VersionCommand.O
     Options(commandName)
   end interpretConfig
 
-
   override def run(
     options: VersionCommand.Options,
     outputDirOverride: Option[Path]

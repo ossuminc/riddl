@@ -10,9 +10,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, StandardOpenOption}
 import scala.scalajs.js.annotation.JSExportTopLevel
 
-/** This is the JVM version of the Loader utility. It is used to load file content in UTF-8 via a URL as a String and
-  * returning the Future that will obtain it. Further processing can be chained onto the future. This handles the I/O
-  * part of parsing in a platform specific way.
+/** This is the JVM version of the Loader utility. It is used to load file content in UTF-8 via a
+  * URL as a String and returning the Future that will obtain it. Further processing can be chained
+  * onto the future. This handles the I/O part of parsing in a platform specific way.
   */
 @JSExportTopLevel("JVMPlatformContext")
 class JVMPlatformContext extends PlatformContext {
@@ -35,7 +35,8 @@ class JVMPlatformContext extends PlatformContext {
           import java.io.FileNotFoundException
           import java.nio.file.{Files, Path}
           val path: Path =
-            if url.basis.nonEmpty && url.path.nonEmpty then Path.of("/" + url.basis + "/" + url.path)
+            if url.basis.nonEmpty && url.path.nonEmpty then
+              Path.of("/" + url.basis + "/" + url.path)
             else if url.basis.isEmpty && url.path.nonEmpty then Path.of(url.path)
             else if url.basis.nonEmpty && url.path.isEmpty then Path.of("/" + url.basis)
             else throw new IllegalStateException("URL is invalid!")

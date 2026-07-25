@@ -12,8 +12,7 @@ import com.ossuminc.riddl.utils.{pc, PlatformContext}
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
 
-/** Cross-platform tests for the shared RiddlLib API.
-  * Runs on JVM, JS, and Native.
+/** Cross-platform tests for the shared RiddlLib API. Runs on JVM, JS, and Native.
   */
 class RiddlLibTest extends AnyWordSpec with Matchers {
 
@@ -112,8 +111,7 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
               RiddlLib.bast2FlatAST(bastBytes) match
                 case RiddlResult.Success(flatRoot) =>
                   flatRoot.domains must not be empty
-                  flatRoot.domains.head.id
-                    .value mustBe "TestDomain"
+                  flatRoot.domains.head.id.value mustBe "TestDomain"
                 case RiddlResult.Failure(errors) =>
                   fail(s"bast2FlatAST failed: $errors")
               end match
@@ -204,21 +202,25 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
 
     "parseAsStreamlet parses body with provided ports" in {
       val shape = Flow(At.empty)
-      val inlets = Seq(Inlet(
-        At.empty,
-        Identifier(At.empty, "in"),
-        TypeRef(At.empty, "type",
-          PathIdentifier(At.empty, Seq("String")))
-      ))
-      val outlets = Seq(Outlet(
-        At.empty,
-        Identifier(At.empty, "out"),
-        TypeRef(At.empty, "type",
-          PathIdentifier(At.empty, Seq("String")))
-      ))
+      val inlets = Seq(
+        Inlet(
+          At.empty,
+          Identifier(At.empty, "in"),
+          TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("String")))
+        )
+      )
+      val outlets = Seq(
+        Outlet(
+          At.empty,
+          Identifier(At.empty, "out"),
+          TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("String")))
+        )
+      )
       RiddlLib.parseAsStreamlet(
         "handler input is { ??? }",
-        shape, inlets, outlets
+        shape,
+        inlets,
+        outlets
       ) match
         case RiddlResult.Success(streamlet) =>
           streamlet.shape mustBe a[Flow]
@@ -243,9 +245,7 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
     }
 
     "parseAsAdaptor parses adaptor body content" in {
-      import com.ossuminc.riddl.language.AST.{
-        InboundAdaptor, ContextRef, PathIdentifier
-      }
+      import com.ossuminc.riddl.language.AST.{InboundAdaptor, ContextRef, PathIdentifier}
       val direction = InboundAdaptor(At.empty)
       val ctxRef = ContextRef(
         At.empty,
@@ -253,7 +253,8 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
       )
       RiddlLib.parseAsAdaptor(
         "handler input is { ??? }",
-        direction, ctxRef
+        direction,
+        ctxRef
       ) match
         case RiddlResult.Success(adaptor) =>
           adaptor.handlers must not be empty

@@ -19,7 +19,9 @@ class TopLevelParserTest extends AsyncFunSpec with Matchers:
     scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
   describe("TopLevelParser") {
     it("do some parsing") {
-      val url = URL("https://raw.githubusercontent.com/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl")
+      val url = URL(
+        "https://raw.githubusercontent.com/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl"
+      )
       val future = pc.load(url)
       future.map { data =>
         val input = RiddlParserInput(data, "parsing")

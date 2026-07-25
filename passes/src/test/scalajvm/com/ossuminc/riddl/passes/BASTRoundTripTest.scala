@@ -56,8 +56,7 @@ class BASTRoundTripTest extends AnyWordSpec {
 
               if areEqual then
                 println("[OK] Round trip successful: Original AST == Reconstructed AST")
-              else
-                println("[FAIL] Round trip FAILED: ASTs differ")
+              else println("[FAIL] Round trip FAILED: ASTs differ")
               end if
 
               assert(areEqual, "Round trip test failed: ASTs are not equivalent")
@@ -75,33 +74,40 @@ class BASTRoundTripTest extends AnyWordSpec {
       val url = URL.fromCwdPath("language/input/dokn.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "dokn-test")
 
-      val result = Await.result(inputFuture.map { input =>
-        val parseResult = TopLevelParser.parseInput(input, true)
-        parseResult match {
-          case Right(originalRoot: Root) =>
-            println(s"\n=== Round Trip Test: dokn.riddl ===")
-            println(s"Original AST with ${originalRoot.contents.toSeq.size} items")
+      val result = Await.result(
+        inputFuture.map { input =>
+          val parseResult = TopLevelParser.parseInput(input, true)
+          parseResult match {
+            case Right(originalRoot: Root) =>
+              println(s"\n=== Round Trip Test: dokn.riddl ===")
+              println(s"Original AST with ${originalRoot.contents.toSeq.size} items")
 
-            val passInput = PassInput(originalRoot)
-            val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
-            val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+              val passInput = PassInput(originalRoot)
+              val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
+              val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
 
-            println(f"BAST written: ${output.bytes.length}%,d bytes (${output.nodeCount}%,d nodes)")
+              println(
+                f"BAST written: ${output.bytes.length}%,d bytes (${output.nodeCount}%,d nodes)"
+              )
 
-            BASTReader.read(output.bytes) match {
-              case Right(reconstructedNebula) =>
-                println(s"BAST read: Nebula with ${reconstructedNebula.contents.toSeq.size} items")
-                true
-              case Left(errors) =>
-                println(s"[FAIL] Deserialization failed: ${errors.format}")
-                false
-            }
+              BASTReader.read(output.bytes) match {
+                case Right(reconstructedNebula) =>
+                  println(
+                    s"BAST read: Nebula with ${reconstructedNebula.contents.toSeq.size} items"
+                  )
+                  true
+                case Left(errors) =>
+                  println(s"[FAIL] Deserialization failed: ${errors.format}")
+                  false
+              }
 
-          case Left(messages) =>
-            println(s"Parse failed: ${messages.format}")
-            false
-        }
-      }, 30.seconds)
+            case Left(messages) =>
+              println(s"Parse failed: ${messages.format}")
+              false
+          }
+        },
+        30.seconds
+      )
 
       assert(result, "Round trip test failed for dokn.riddl")
     }
@@ -110,49 +116,53 @@ class BASTRoundTripTest extends AnyWordSpec {
       val url = URL.fromCwdPath("language/input/everything.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "everything-test")
 
-      val result = Await.result(inputFuture.map { input =>
-        // Step 1: Parse RIDDL text -> AST
-        val parseResult = TopLevelParser.parseInput(input, true)
-        parseResult match {
-          case Right(originalRoot: Root) =>
-            println(s"\n=== Round Trip Test: everything.riddl ===")
-            println(s"Original AST parsed successfully")
+      val result = Await.result(
+        inputFuture.map { input =>
+          // Step 1: Parse RIDDL text -> AST
+          val parseResult = TopLevelParser.parseInput(input, true)
+          parseResult match {
+            case Right(originalRoot: Root) =>
+              println(s"\n=== Round Trip Test: everything.riddl ===")
+              println(s"Original AST parsed successfully")
 
-            // Step 2: Serialize AST -> BAST binary
-            val passInput = PassInput(originalRoot)
-            val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
-            val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+              // Step 2: Serialize AST -> BAST binary
+              val passInput = PassInput(originalRoot)
+              val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
+              val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
 
-            println(f"BAST written: ${output.bytes.length}%,d bytes (${output.nodeCount}%,d nodes)")
+              println(
+                f"BAST written: ${output.bytes.length}%,d bytes (${output.nodeCount}%,d nodes)"
+              )
 
-            // Step 3: Deserialize BAST binary -> AST
-            val bastReader = BASTReader(output.bytes)
-            bastReader.enableDebugTracking()
-            bastReader.read() match {
-              case Right(reconstructedNebula) =>
-                println(s"BAST read: Nebula reconstructed")
+              // Step 3: Deserialize BAST binary -> AST
+              val bastReader = BASTReader(output.bytes)
+              bastReader.enableDebugTracking()
+              bastReader.read() match {
+                case Right(reconstructedNebula) =>
+                  println(s"BAST read: Nebula reconstructed")
 
-                // Step 4: Compare original and reconstructed
-                val areEqual = compareRoots(originalRoot, reconstructedNebula)
+                  // Step 4: Compare original and reconstructed
+                  val areEqual = compareRoots(originalRoot, reconstructedNebula)
 
-                if areEqual then
-                  println("[OK] Round trip successful: Original AST == Reconstructed AST")
-                else
-                  println("[FAIL] Round trip FAILED: ASTs differ")
-                end if
+                  if areEqual then
+                    println("[OK] Round trip successful: Original AST == Reconstructed AST")
+                  else println("[FAIL] Round trip FAILED: ASTs differ")
+                  end if
 
-                areEqual
+                  areEqual
 
-              case Left(errors) =>
-                println(s"[FAIL] Deserialization failed: ${errors.format}")
-                false
-            }
+                case Left(errors) =>
+                  println(s"[FAIL] Deserialization failed: ${errors.format}")
+                  false
+              }
 
-          case Left(messages) =>
-            println(s"Parse failed: ${messages.format}")
-            false
-        }
-      }, 30.seconds)
+            case Left(messages) =>
+              println(s"Parse failed: ${messages.format}")
+              false
+          }
+        },
+        30.seconds
+      )
 
       assert(result, "Round trip test failed: ASTs are not equivalent")
     }
@@ -160,10 +170,11 @@ class BASTRoundTripTest extends AnyWordSpec {
 
   /** Compare Root (original) with Nebula (reconstructed) for deep structural equality
     *
-    * Note: BASTWriter writes Root using NODE_NEBULA tag, so deserialization produces Nebula.
-    * This is expected - we're comparing the CONTENT, not the container type.
+    * Note: BASTWriter writes Root using NODE_NEBULA tag, so deserialization produces Nebula. This
+    * is expected - we're comparing the CONTENT, not the container type.
     *
-    * Uses DeepASTComparison to recursively verify all fields, identifiers, locations, and nested content.
+    * Uses DeepASTComparison to recursively verify all fields, identifiers, locations, and nested
+    * content.
     */
   private def compareRoots(original: Root, reconstructed: Nebula): Boolean = {
     println(s"\n=== Deep Structural Comparison ===")
@@ -181,9 +192,10 @@ class BASTRoundTripTest extends AnyWordSpec {
     val allSucceeded = results.forall(_.isSuccess)
 
     if allSucceeded then
-      println("[OK] Complete structural reflectivity verified: AST -> BAST -> AST preserves all data")
-    else
-      println("[FAIL] Structural differences detected - see failures above")
+      println(
+        "[OK] Complete structural reflectivity verified: AST -> BAST -> AST preserves all data"
+      )
+    else println("[FAIL] Structural differences detected - see failures above")
     end if
 
     allSucceeded

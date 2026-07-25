@@ -20,12 +20,10 @@ abstract class RiddlFilesTestBase extends ParsingTest {
   def checkAFile(rootDir: Path, file: Path): Assertion
 
   def findRiddlFiles(dirFile: Path, recurse: Boolean = false): List[Path] = {
-    val dirKids = Files.list(dirFile).toList.asScala.toList 
+    val dirKids = Files.list(dirFile).toList.asScala.toList
     val (files, dir) = dirKids.partition(Files.isRegularFile(_))
-    if !recurse then 
-      files.filter(_.toString.endsWith(".riddl")) 
-    else
-      files.filter(_.toString.endsWith(".riddl")) ++ dir.flatMap(f => findRiddlFiles(f))
+    if !recurse then files.filter(_.toString.endsWith(".riddl"))
+    else files.filter(_.toString.endsWith(".riddl")) ++ dir.flatMap(f => findRiddlFiles(f))
     end if
   }
 
@@ -43,8 +41,7 @@ abstract class RiddlFilesTestBase extends ParsingTest {
     if Files.isDirectory(dirPath) then
       val files = findRiddlFiles(dirPath, true)
       files.foreach(file => checkAFile(dirPath, file))
-    else
-      checkAFile(dirPath.getParent, dirPath)
-    end if  
+    else checkAFile(dirPath.getParent, dirPath)
+    end if
   }
 }
