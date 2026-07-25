@@ -162,8 +162,9 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     *     failure); terminal — no further placement/persistence checks.
     *   - Rule 2: a domain-scoped connector whose ends share ONE context is over-scoped -> ERROR.
     *   - Rule 3: a context-scoped connector whose ends cross contexts is under-scoped -> ERROR.
-    *   - Rule 4: a correctly domain-scoped (cross-context) connector lacking `persistent` -> WARNING
-    *     (lose-nothing durability across a context boundary can be required for model correctness).
+    *   - Rule 4: a correctly domain-scoped (cross-context) connector lacking `persistent` ->
+    *     WARNING (lose-nothing durability across a context boundary can be required for model
+    *     correctness).
     *   - A same-context connector that nonetheless declares `persistent` -> WARNING (not needed).
     */
   private def checkConnectorPlacement(): Unit = {
