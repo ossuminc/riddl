@@ -44,7 +44,12 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case omc: OnMessageClause => omc.msg.format
       case oec: OnEventClause   => oec.msg.format
       case _                    => definition.id.format
-    addIndent(s"${keyword(definition)} $name is ")
+    // A handler marked (or defaulted to) the initial/live one emits the `initial` keyword so the
+    // choice survives round-trip and is refactor-safe. (State's `initial` is emitted in openState.)
+    val prefix = definition match
+      case h: Handler if h.isInitial => s"${Keyword.initial} "
+      case _                         => ""
+    addIndent(s"$prefix${keyword(definition)} $name is ")
     if withBrace then
       if definition.isEmpty then add("{ ??? }").nl
       else add("{").nl.incr

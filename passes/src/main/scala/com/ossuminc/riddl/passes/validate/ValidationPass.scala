@@ -749,6 +749,16 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, s)
     checkMetadata(s)
+    // At most one handler in a state may be the initial (live-after-morph) one.
+    val initialHandlers = s.handlers.filter(_.isInitial)
+    if initialHandlers.sizeIs > 1 then
+      messages.addError(
+        initialHandlers(1).loc,
+        s"${s.identify} marks ${initialHandlers.size} handlers 'initial'; a state has exactly one " +
+          s"initial (live) handler",
+        suggestion =
+          "Mark only one handler in this state 'initial' (or none, to default to the first)."
+      )
     checkRefAndExamine[Type](s.typ, parents) { (typ: Type) =>
       typ.typEx match {
         case agg: AggregateTypeExpression =>
@@ -1002,6 +1012,26 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, entity)
+    // At most one state may be the entity's initial (starting) state.
+    val initialStates = entity.states.filter(_.isInitial)
+    if initialStates.sizeIs > 1 then
+      messages.addError(
+        initialStates(1).loc,
+        s"${entity.identify} marks ${initialStates.size} states 'initial'; an entity has exactly " +
+          s"one initial (starting) state",
+        suggestion = "Mark only one state 'initial' (or none, to default to the first declared)."
+      )
+    // When the entity has a single state, its entity-scope handlers follow the same rule.
+    if entity.states.sizeIs <= 1 then
+      val initialHandlers = entity.handlers.filter(_.isInitial)
+      if initialHandlers.sizeIs > 1 then
+        messages.addError(
+          initialHandlers(1).loc,
+          s"${entity.identify} marks ${initialHandlers.size} handlers 'initial'; only one handler " +
+            s"may be the initial (live) one",
+          suggestion =
+            "Mark only one entity-scope handler 'initial' (or none, to default to the first)."
+        )
     if entity.states.isEmpty && !entity.isEmpty then {
       messages.add(
         Message(

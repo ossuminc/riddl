@@ -170,6 +170,14 @@ object Keywords {
 
   def init[u: P]: P[Unit] = keyword(Keyword.init)
 
+  def initial[u: P]: P[Unit] = keyword(Keyword.initial)
+
+  /** Optional `initial` marker returning whether it was present. MUST NOT cut (unlike `keyword`):
+    * it precedes alternatives that both allow it (state vs handler), so a mismatch has to backtrack
+    * to try the other alternative. */
+  def maybeInitial[u: P]: P[Boolean] =
+    P((Keyword.initial ~~ &(isNotKeywordChar)).!.?).map(_.isDefined)
+
   def inlet[u: P]: P[Unit] = keyword(Keyword.inlet)
 
   def inlets[u: P]: P[Unit] = keyword(Keyword.inlets)
@@ -408,6 +416,7 @@ object Keywords {
           Keyword.include,
           Keyword.index,
           Keyword.init,
+          Keyword.initial,
           Keyword.inlet,
           Keyword.inlets,
           Keyword.input,
@@ -556,6 +565,7 @@ object Keyword {
   final val include = "include"
   final val index = "index"
   final val init = "init"
+  final val initial = "initial"
   final val inlet = "inlet"
   final val inlets = "inlets"
   final val input = "input"
@@ -703,6 +713,7 @@ object Keyword {
     include,
     index,
     init,
+    initial,
     inlet,
     inlets,
     input,

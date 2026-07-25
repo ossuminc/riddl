@@ -66,7 +66,7 @@ entity = "entity" identifier is "{" entity_body "}" [with_metadata] ;
 entity_body = entity_definitions | "???" ;
 entity_definitions = {entity_content}+ ;
 entity_content = processor_definition_contents | state | entity_include ;
-state = "state" identifier ("of" | is) type_ref [state_body] [with_metadata] ;
+state = ["initial"] "state" identifier ("of" | is) type_ref [state_body] [with_metadata] ;
 state_body = is "{" ({state_content}+ | "???") "}" ;
 state_content = handler | comment ;
 entity_include = "include" literal_string ;
@@ -179,7 +179,7 @@ processor_ref = adaptor_ref | context_ref | entity_ref | projector_ref | reposit
 any_interaction_ref = processor_ref | saga_ref | input_ref | output_ref | group_ref | user_ref ;
 
 (* Handlers *)
-handler = "handler" identifier is "{" handler_body "}" [with_metadata] ;
+handler = ["initial"] "handler" identifier is "{" handler_body "}" [with_metadata] ;
 handler_body = {"???" | handler_contents} ;
 handler_contents = {on_clause | comment} ;
 on_clause = on_init_clause | on_other_clause | on_term_clause | on_activate_clause | on_passivate_clause | on_event_clause | on_message_clause ;

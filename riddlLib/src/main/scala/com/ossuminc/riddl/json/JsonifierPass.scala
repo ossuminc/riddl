@@ -145,9 +145,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           )
         )
       case s: State =>
-        Some(StateDto(s.id.value, path(s.typ.pathId), col[HandlerDto], briefOf(s.metadata)))
+        Some(StateDto(s.id.value, path(s.typ.pathId), col[HandlerDto], briefOf(s.metadata), s.isInitial))
       case h: Handler =>
-        Some(HandlerDto(h.id.value, briefOf(h.metadata), col[OnClauseDto]))
+        Some(HandlerDto(h.id.value, briefOf(h.metadata), col[OnClauseDto], h.isInitial))
       case oc: OnClause =>
         val statements = serializeStatements(oc.contents)
         oc match

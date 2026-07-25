@@ -217,13 +217,15 @@ object JsonModel:
     name: String,
     recordType: String,
     handlers: Seq[HandlerDto] = Nil,
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    isInitial: Boolean = false
   )
 
   case class HandlerDto(
     name: String,
     brief: Option[String] = None,
-    onClauses: Seq[OnClauseDto] = Nil
+    onClauses: Seq[OnClauseDto] = Nil,
+    isInitial: Boolean = false
   )
 
   /** `kind`: "message" | "init" | "other" | "term". For "message", `message` carries the message

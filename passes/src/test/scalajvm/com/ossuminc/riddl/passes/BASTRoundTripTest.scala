@@ -126,6 +126,40 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize the `initial` marker on states and handlers" in {
+      val riddlSource =
+        """domain d is { context c is { entity e is {
+          |  type Data is { x: Integer }
+          |  state First of type d.c.e.Data is { handler H is { on other is { prompt "a" } } }
+          |  initial state Second of type d.c.e.Data is {
+          |    handler H1 is { on other is { prompt "b" } }
+          |    initial handler H2 is { on other is { prompt "c" } }
+          |  }
+          |}}}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-initial")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(compareRoots(originalRoot, nebula), "initial-marker round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.Entity
+              val e = Finder(nebula.contents).recursiveFindByType[Entity].head
+              assert(e.states.find(_.id.value == "Second").get.isInitial, "state initial lost in BAST")
+              assert(!e.states.find(_.id.value == "First").get.isInitial, "non-initial state flipped")
+              val second = e.states.find(_.id.value == "Second").get
+              assert(second.handlers.find(_.id.value == "H2").get.isInitial, "handler initial lost in BAST")
+              assert(!second.handlers.find(_.id.value == "H1").get.isInitial, "non-initial handler flipped")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize a domain-scoped connector" in {
       // Reflective across BAST: a connector defined directly in a domain (cross-context)
       // must survive AST -> BAST -> AST at the same scope.

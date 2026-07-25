@@ -588,6 +588,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_HANDLER, h.metadata.nonEmpty)
     writeLocation(h.loc)
     writeIdentifierInline(h.id) // Inline - no tag needed
+    writer.writeU8(if h.isInitial then 1 else 0)
     writeContents(h.contents)
   }
 
@@ -596,6 +597,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeIdentifierInline(s.id) // Inline - no tag needed
     writeTypeRefInline(s.typ) // Inline - position known
+    writer.writeU8(if s.isInitial then 1 else 0)
     writeContents(s.contents)
   }
 

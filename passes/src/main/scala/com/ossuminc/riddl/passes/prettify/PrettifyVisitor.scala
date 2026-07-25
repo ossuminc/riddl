@@ -310,14 +310,15 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   def openState(riddl_state: State, parents: Parents): Unit =
     state.withCurrent { rfe =>
+      val prefix = if riddl_state.isInitial then s"${Keyword.initial} " else ""
       if riddl_state.contents.isEmpty then
         rfe.addLine(
-          s"${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}"
+          s"$prefix${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}"
         )
       else {
         rfe
           .addLine(
-            s"${keyword(riddl_state)} ${riddl_state.id.format} is ${riddl_state.typ.format} {"
+            s"$prefix${keyword(riddl_state)} ${riddl_state.id.format} is ${riddl_state.typ.format} {"
           )
           .incr
       }

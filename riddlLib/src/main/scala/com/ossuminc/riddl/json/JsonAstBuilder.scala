@@ -236,12 +236,13 @@ object JsonAstBuilder:
       ident(s.name),
       TypeRef(At(), "record", pathId(s.recordType)),
       contentsOf[StateContents](s.handlers.map(buildHandler)),
-      meta(s.brief)
+      meta(s.brief),
+      s.isInitial
     )
 
   private def buildHandler(h: HandlerDto)(using Ctx): Handler =
     val clauses = h.onClauses.map(buildOnClause)
-    Handler(At(), ident(h.name), contentsOf[HandlerContents](clauses), meta(h.brief))
+    Handler(At(), ident(h.name), contentsOf[HandlerContents](clauses), meta(h.brief), h.isInitial)
 
   private def buildOnClause(oc: OnClauseDto)(using ctx: Ctx): OnClause =
     val statements = buildStatements(oc.statements)

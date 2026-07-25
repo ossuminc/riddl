@@ -154,11 +154,17 @@ private[parsing] trait HandlerParser
 
   def handler[u: P](set: StatementsSet): P[Handler] = {
     P(
-      Index ~ Keywords.handler ~/ identifier ~ is ~ open ~ handlerBody(
+      Index ~ Keywords.maybeInitial ~ Keywords.handler ~/ identifier ~ is ~ open ~ handlerBody(
         set
       ) ~ close ~ withMetaData ~/ Index
-    )./.map { case (start, id, clauses, descriptives, end) =>
-      Handler(at(start, end), id, clauses.toContents, descriptives.toContents)
+    )./.map { case (start, isInitial, id, clauses, descriptives, end) =>
+      Handler(
+        at(start, end),
+        id,
+        clauses.toContents,
+        descriptives.toContents,
+        isInitial = isInitial
+      )
     }
   }
 

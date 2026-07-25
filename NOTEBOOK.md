@@ -15,6 +15,38 @@ to the task file and note the disposition below.
 
 ---
 
+## Deferred — blocked on prerequisites (do NOT start yet)
+
+### #45 — `put`/`get` UI-boundary statements — DEFERRED (out of order)
+Prereqs first: the UI / application (output-input-triplet) model must land
+before this makes sense. Design as discussed, for when it's unblocked:
+- `put <value> to output <outputRef>` (push to a UI Output from an on-clause);
+  `get`: `let <id> = get from input <inputRef>` (pull, its own statement kind,
+  not an extension of LetStatement). Revive `put`/`get` keywords (they were
+  storage statements long ago, removed when repository sufficed).
+- Completes the boundary-statement census: send/tell = streaming, call =
+  function, put/get = UI.
+- **can-fail**: both can fail (put when UI absent/headless, get when input
+  unset). Model via a `def canFail: Boolean` on `Statement` (default false;
+  true for Send/Tell/Put/Get) — one source of truth shared with #12.
+- **Witnessing** (greenfield — no existing use-case-realization validation):
+  a `ShowOutputInteraction` witnessed by a `put` to that output; a
+  `TakeInputInteraction` by a handler on the input's message type OR a `get`
+  referencing it. Emit CompletenessWarning for an unwitnessed step.
+- Open question for when unblocked: which handler statement-sets may contain
+  put/get.
+
+### #12 — Single failure point per saga do-block — DEFERRED
+Blocked on the **complete can-fail census**. A saga step's do-block is
+all-or-nothing (undo assumes all-or-none happened); warn when it contains > 1
+potential failure point — a statement-kind count. Census: send, tell, call,
+yield, put, get CAN fail; let, set, when, match, foreach CANNOT.
+**Why deferred, not done-partial:** `call` doesn't exist, `yield` (≈ reply) is
+TBD, `foreach` is new, and put/get are behind #45. Shipping with only
+send/tell would give false "single failure point" passes that flip to warnings
+later — worse than waiting. Build once, correctly, after the census statements
+exist (via the shared `Statement.canFail`).
+
 ## Connectors at Domain scope (2.0) — DONE, internal green
 
 Branch `release/2`. Mirrors the Repository-at-Domain-scope feature.
@@ -43,10 +75,51 @@ Branch `release/2`. Mirrors the Repository-at-Domain-scope feature.
 - **Tests**: 5 rule cases in `StreamValidatorTest` + 2 round-trips + EBNF↔
   fastparse parity (`language/input/domain-connector.riddl` +
   `ConnectorScopeFileTest` + TatSu). **Internal suite: 0 failures.**
-- **External**: riddl-models `reactive-bbq` has 3 cross-context connectors at
-  context scope → correctly caught as under-scoped ERRORs (feature working on
-  real data). Conformance tasks dropped in `../riddl-models/task` +
-  `../riddl-examples/task`.
+- **External**: riddl-models has cross-context connectors at context scope
+  (`reactive-bbq`'s 3, plus more) → correctly caught as under-scoped ERRORs
+  (feature working on real data). Committed `90fdae10`, pushed; CI run
+  30176269811 is red **only externally** (JS green; JVM/Native red with **0
+  non-external failures**, 46 connector-scope errors across riddl-models).
+  Goes green once riddl-models `main` is conformed — tasks dropped in
+  `../riddl-models/task` + `../riddl-examples/task`.
+
+## Explicit `initial` marker on states & handlers (2.0) — DONE, tri-platform green
+
+Branch `release/2`. Roadmap item #14. An optional `initial` keyword before
+`state`/`handler` makes the starting state (and the live-after-morph handler)
+explicit and refactor-safe under reordering; unmarked models keep the
+first-declared semantics.
+
+- **AST**: `isInitial: Boolean = false` added (last field, after metadata) to
+  both `State` and `Handler`. Defaulted + last → `@JSExportTopLevel` safe.
+- **Parser**: the marker is discovered *after* the full set is parsed so the
+  "first one is initial" default is position-based, not lexical. `EntityParser`
+  helpers `markFirstHandlerInitial` (per-state) and `defaultEntityInitials`
+  (marks first State if none marked; if a single state, marks the first
+  entity-scope Handler) rebuild the first-of-type via `.copy(isInitial=true)`
+  when none is explicitly marked. **Cut-collision trap** (same shape as the
+  handler-kinds `on` cut): `Keywords.initial` cuts, so a plain `initial`
+  alternative can't backtrack into `state`/`handler`. Fixed with the
+  non-cutting `Keywords.maybeInitial: P[Boolean]` (`(kw ~~ &(isNotKeywordChar))
+  .!.?` — the `.!` is required; `.?` on a Unit parser yields Unit, not Option).
+- **Validation** (`ValidationPass`): >1 `initial` handler in a state → ERROR;
+  >1 `initial` state in an entity → ERROR; if the entity has ≤1 state, >1
+  `initial` entity-scope handler → ERROR. Each with a `suggestion`.
+- **Reflection (all 3 surfaces)**: BAST writer/reader U8 flag on State+Handler,
+  `FORMAT_REVISION` 7→8; Prettify emits `initial ` prefix (`PrettifyVisitor`
+  openState, `RiddlFileEmitter.openDef` for Handler) — emitted even on the
+  defaulted-first so the round-trip is AST-preserving; JSON `StateDto`/
+  `HandlerDto` gained `isInitial`, wired in `JsonifierPass` + `JsonAstBuilder`.
+- **EBNF↔fastparse parity**: `["initial"]` on the `state`/`handler` rules; GBNF
+  regenerated (263 rules, validator PASS); fixture
+  `language/input/initial-marker.riddl` parsed by both fastparse
+  (`InitialMarkerFileTest`) and TatSu.
+- **Tests**: `InitialMarkerTest` (4 validation cases), `InitialMarkerRoundTripTest`
+  (prettify RT), BAST + JSON round-trip cases extended, `InitialMarkerFileTest`
+  (parity). `KeywordsTest` 144→145. **Tri-platform: JVM 1067 pass / 0 internal
+  failures; tJS + tNative green.** (The lone JVM external failure is the
+  pre-existing connector-scope conformance in riddl-models' `reactive-bbq`,
+  documented above — unrelated to this feature.)
 
 ## In-flight: Handler kinds per processor (2.0) — DESIGN LOCKED, WIP
 

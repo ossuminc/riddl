@@ -795,9 +795,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readHandlerNode(): Handler = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
+    val isInitial = reader.readU8() != 0
     val contents = readContentsDeferred[HandlerContents]()
     val metadata = readMetadataDeferred()
-    Handler(loc, id, contents, metadata)
+    Handler(loc, id, contents, metadata, isInitial)
   }
 
   /** Read a Statement node (Phase 7: statements have dedicated NODE_STATEMENT tag) */
@@ -942,9 +943,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
     val typ = readTypeRefInline() // Inline - position known
+    val isInitial = reader.readU8() != 0
     val contents = readContentsDeferred[StateContents]()
     val metadata = readMetadataDeferred()
-    State(loc, id, typ, contents, metadata)
+    State(loc, id, typ, contents, metadata, isInitial)
   }
 
   private def readInvariantNode(): Invariant = {

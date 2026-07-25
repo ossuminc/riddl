@@ -2960,7 +2960,11 @@ object AST:
     loc: At,
     id: Identifier,
     contents: Contents[HandlerContents] = Contents.empty[HandlerContents](),
-    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+    metadata: Contents[MetaData] = Contents.empty[MetaData](),
+    // Marks this as the initial/live handler (after a morph, the target state's first handler, or
+    // the marked one). Set by the parser: explicit `initial` keyword, or defaulted onto the first
+    // handler of a state (or of the entity when it has a single state) when none is marked.
+    isInitial: Boolean = false
   ) extends Branch[HandlerContents] {
     override def isEmpty: Boolean = clauses.isEmpty
 
@@ -3005,7 +3009,10 @@ object AST:
     id: Identifier,
     typ: TypeRef,
     contents: Contents[StateContents] = Contents.empty[StateContents](),
-    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+    metadata: Contents[MetaData] = Contents.empty[MetaData](),
+    // Marks this as the entity's starting state. Set by the parser: from an explicit `initial`
+    // keyword, or defaulted onto the first state when none is marked (refactor-safe under reorder).
+    isInitial: Boolean = false
   ) extends Branch[StateContents]
       with WithHandlers[StateContents]:
     def format: String = Keyword.state + " " + id.format

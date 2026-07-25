@@ -102,6 +102,30 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip the `initial` marker on states/handlers losslessly" in {
+      val initModel =
+        """domain d is { context c is { entity e is {
+          |  type Data is { x: Integer }
+          |  state First of type d.c.e.Data is { handler H is { on other is { prompt "a" } } }
+          |  initial state Second of type d.c.e.Data is {
+          |    initial handler H2 is { on other is { prompt "b" } }
+          |  }
+          |}}}
+          |""".stripMargin
+      RiddlLib.parseString(initModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"isInitial\"")
+          // fixed point proves JsonAstBuilder rebuilds isInitial (else json2 would lose the flag)
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the initial-marker JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) => fail(s"parse of the initial-marker model failed: $errors")
+      end match
+    }
+
     "round-trip the 2.0 handler-kind clauses (on event / on activate / on passivate) losslessly" in {
       val hkModel =
         """domain HK is {

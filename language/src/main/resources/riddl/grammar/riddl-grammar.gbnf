@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-25 20:32 UTC
+# Generated: 2026-07-25 22:14 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -74,7 +74,7 @@ entity ::= "entity" ws1 identifier ws1 is ws "{" ws entity-body ws "}" ws (with-
 entity-body ::= entity-definitions | "???"
 entity-definitions ::= (entity-content)+
 entity-content ::= processor-definition-contents | state | entity-include
-state ::= "state" ws1 identifier ws ("of" | is) ws type-ref ws (state-body)? ws (with-metadata)?
+state ::= ("initial")? ws "state" ws1 identifier ws ("of" | is) ws type-ref ws (state-body)? ws (with-metadata)?
 state-body ::= is ws "{" ws ((state-content)+ | "???") ws "}"
 state-content ::= handler | comment
 entity-include ::= "include" ws1 literal-string
@@ -179,7 +179,7 @@ processor-ref ::= adaptor-ref | context-ref | entity-ref | projector-ref | repos
 any-interaction-ref ::= processor-ref | saga-ref | input-ref | output-ref | group-ref | user-ref
 
 # Handlers
-handler ::= "handler" ws1 identifier ws1 is ws "{" ws handler-body ws "}" ws (with-metadata)?
+handler ::= ("initial")? ws "handler" ws1 identifier ws1 is ws "{" ws handler-body ws "}" ws (with-metadata)?
 handler-body ::= ("???" | handler-contents)*
 handler-contents ::= (on-clause | comment)*
 on-clause ::= on-init-clause | on-other-clause | on-term-clause | on-activate-clause | on-passivate-clause | on-event-clause | on-message-clause
