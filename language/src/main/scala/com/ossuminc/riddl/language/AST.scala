@@ -2783,6 +2783,16 @@ object AST:
     */
   sealed trait OnClause extends Branch[Statements] with WithStatements[Statements]
 
+  /** Common supertype of the two on-clauses that carry a message reference: [[OnMessageClause]]
+    * (command/query/result/record) and [[OnEventClause]] (event). Event handling was split into
+    * its own node so the parser can forbid `require`/`error` in event bodies, but for resolution,
+    * message-flow, dependency and diagram purposes both are "a clause that reacts to a message" —
+    * those passes match on this trait to treat them uniformly by `msg`/`from`. */
+  sealed trait OnMessageLikeClause extends OnClause {
+    def msg: MessageRef
+    def from: Option[(Option[Identifier], Reference[Definition])]
+  }
+
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses.
     * OnOtherClause corresponds to the "other" case of an [[Handler]].
     *
@@ -2844,7 +2854,7 @@ object AST:
     from: Option[(Option[Identifier], Reference[Definition])],
     contents: Contents[Statements] = Contents.empty[Statements](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends OnClause {
+  ) extends OnMessageLikeClause {
     def id: Identifier = Identifier(msg.loc, msg.format)
     def format: String = ""
   }
@@ -2865,6 +2875,66 @@ object AST:
     def id: Identifier = Identifier(loc, s"term")
 
     override def kind: String = "On Term"
+
+    override def format: String = ""
+  }
+
+  /** Defines the actions taken when a specific event is received. Distinct from
+    * [[OnMessageClause]] (which handles command/query/result) because events must ALWAYS be
+    * accepted: an event clause may not use `require` or `error` statements — the only ways to
+    * circumvent normal flow control — and that restriction is enforced at parse time. Used in
+    * every kind of handler.
+    *
+    * @param msg
+    *   A reference to the event type that is handled
+    */
+  @JSExportTopLevel("OnEventClause")
+  case class OnEventClause(
+    loc: At,
+    msg: MessageRef,
+    from: Option[(Option[Identifier], Reference[Definition])],
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends OnMessageLikeClause {
+    def id: Identifier = Identifier(msg.loc, msg.format)
+
+    override def kind: String = "On Event"
+
+    def format: String = ""
+  }
+
+  /** Defines the actions taken each time an entity is activated (rehydrated into memory).
+    * Distinct from [[OnInitializationClause]], which happens once ever at creation. Entity
+    * handlers only. Activation must be transparent to the rest of the system, so outbound
+    * messaging (`send`/`tell`/`reply`/`morph`/`become`) is not permitted (enforced at parse
+    * time).
+    */
+  @JSExportTopLevel("OnActivationClause")
+  case class OnActivationClause(
+    loc: At,
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends OnClause {
+    def id: Identifier = Identifier(loc, s"activate")
+
+    override def kind: String = "On Activate"
+
+    override def format: String = ""
+  }
+
+  /** Defines the actions taken each time an entity is passivated (evicted from memory).
+    * Distinct from [[OnTerminationClause]], which happens once ever at destruction. Entity
+    * handlers only. Same side-effect-free restriction as [[OnActivationClause]].
+    */
+  @JSExportTopLevel("OnPassivationClause")
+  case class OnPassivationClause(
+    loc: At,
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends OnClause {
+    def id: Identifier = Identifier(loc, s"passivate")
+
+    override def kind: String = "On Passivate"
 
     override def format: String = ""
   }

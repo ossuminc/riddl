@@ -73,16 +73,41 @@ private[parsing] trait StatementParser {
     )./.map { (start, msg, proc, end) => TellStatement(at(start, end), msg, proc) }
   }
 
-  enum StatementsSet:
-    case AllStatements,
-      AdaptorStatements,
-      ContextStatements,
-      EntityStatements,
-      FunctionStatements,
-      ProjectorStatements,
-      RepositoryStatements,
-      SagaStatements,
-      StreamStatements
+  /** The processor context a statement occurs in — drives which extra statements are added
+    * (Entity adds morph/become/reply; Context/Repository add reply). */
+  enum ProcessorKind:
+    case Any, Adaptor, Context, Entity, Function, Projector, Repository, Saga, Stream
+  end ProcessorKind
+
+  /** A per-clause restriction that composes with the processor context by *subtracting*
+    * statements. Threads through nested blocks (when/match) via the same [[StatementsSet]]. */
+  enum ClauseRestriction:
+    case Unrestricted
+    case EventClause // events must always be accepted -> no require/error
+    case ActivationClause // activate/passivate must be side-effect-free -> no send/tell/reply/morph/become
+  end ClauseRestriction
+
+  /** What statements are legal in a clause body: the processor context combined with an optional
+    * per-clause restriction. Convenience vals on the companion preserve the old `StatementsSet.X`
+    * call sites (now `Unrestricted`); `.forEvent`/`.forActivation` layer a restriction on. */
+  case class StatementsSet(
+    processor: ProcessorKind,
+    clause: ClauseRestriction = ClauseRestriction.Unrestricted
+  ):
+    def forEvent: StatementsSet = copy(clause = ClauseRestriction.EventClause)
+    def forActivation: StatementsSet = copy(clause = ClauseRestriction.ActivationClause)
+  end StatementsSet
+
+  object StatementsSet:
+    val AllStatements: StatementsSet = StatementsSet(ProcessorKind.Any)
+    val AdaptorStatements: StatementsSet = StatementsSet(ProcessorKind.Adaptor)
+    val ContextStatements: StatementsSet = StatementsSet(ProcessorKind.Context)
+    val EntityStatements: StatementsSet = StatementsSet(ProcessorKind.Entity)
+    val FunctionStatements: StatementsSet = StatementsSet(ProcessorKind.Function)
+    val ProjectorStatements: StatementsSet = StatementsSet(ProcessorKind.Projector)
+    val RepositoryStatements: StatementsSet = StatementsSet(ProcessorKind.Repository)
+    val SagaStatements: StatementsSet = StatementsSet(ProcessorKind.Saga)
+    val StreamStatements: StatementsSet = StatementsSet(ProcessorKind.Stream)
   end StatementsSet
 
   private def morphStatement[u: P]: P[MorphStatement] = {
@@ -159,34 +184,59 @@ private[parsing] trait StatementParser {
     }
   }
 
+  // Per-clause subtractions compose with the processor context (added in `statement`). These MUST
+  // be `def`s (not vals) — a fastparse `P[T]` is a parsing run, not a reusable parser, so a val
+  // would execute at its definition position and corrupt the alternation. A banned statement is
+  // rejected by matching its keyword and cutting, so the error is reported at the offending keyword
+  // with a clear message rather than as a downstream "expected }".
+  private def messagingStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.clause == ClauseRestriction.ActivationClause then
+      // Ban ALL outbound/identity messaging uniformly so each gives the same clear message
+      // (send/tell live here; reply/morph/become are otherwise added by `statement` for entities).
+      (P(
+        Keywords.send | Keywords.tell | Keywords.reply | Keywords.morph | Keywords.become
+      ) ~/ Fail.opaque(
+        "'send'/'tell'/'reply'/'morph'/'become' are not allowed in an 'on activate'/'on passivate' " +
+          "clause; activation and passivation must be side-effect-free"
+      )).asInstanceOf[P[Statements]]
+    else (sendStatement | tellStatement).asInstanceOf[P[Statements]]
+
+  private def guardStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.clause == ClauseRestriction.EventClause then
+      (P(Keywords.error | Keywords.require) ~/ Fail.opaque(
+        "'require'/'error' are not allowed in an 'on event' clause; events must always be accepted"
+      )).asInstanceOf[P[Statements]]
+    else (errorStatement | requireStatement).asInstanceOf[P[Statements]]
+
   private def anyDefStatements[u: P](set: StatementsSet): P[Statements] = {
     P(
       // GROUP 1: Control flow statements
       whenStatement(set) | matchStatement(set) |
-        // GROUP 2: Common message operations
-        sendStatement | tellStatement |
+        // GROUP 2: Common message operations (suppressed under ActivationClause)
+        messagingStatements(set) |
         // GROUP 3: Variable operations
         theSetStatement | letStatement |
         // GROUP 4: General statements
         promptStatement | codeStatement |
-        // GROUP 5: Error handling and preconditions
-        errorStatement | requireStatement | comment
+        // GROUP 5: Error handling and preconditions (suppressed under EventClause)
+        guardStatements(set) | comment
     ).asInstanceOf[P[Statements]]
   }
 
   def statement[u: P](set: StatementsSet): P[Statements] = {
-    set match {
-      case StatementsSet.AdaptorStatements => anyDefStatements(set)
-      case StatementsSet.ContextStatements => anyDefStatements(set) | replyStatement
-      case StatementsSet.EntityStatements =>
-        anyDefStatements(set) |
-          morphStatement | becomeStatement | replyStatement
-      case StatementsSet.FunctionStatements   => anyDefStatements(set)
-      case StatementsSet.ProjectorStatements  => anyDefStatements(set)
-      case StatementsSet.RepositoryStatements => anyDefStatements(set) | replyStatement
-      case StatementsSet.SagaStatements       => anyDefStatements(set)
-      case StatementsSet.StreamStatements     => anyDefStatements(set)
-    }
+    val base = anyDefStatements(set)
+    // Under an ActivationClause the outbound/identity statements (reply/morph/become) are
+    // suppressed too (send/tell are already suppressed in anyDefStatements) — activation and
+    // passivation must be side-effect-free. Otherwise add the processor's extras as before.
+    if set.clause == ClauseRestriction.ActivationClause then base
+    else
+      set.processor match {
+        case ProcessorKind.Entity =>
+          base | morphStatement | becomeStatement | replyStatement
+        case ProcessorKind.Context    => base | replyStatement
+        case ProcessorKind.Repository => base | replyStatement
+        case _                        => base
+      }
   }
 
   private def setOfStatements[u: P](set: StatementsSet): P[Seq[Statements]] = {

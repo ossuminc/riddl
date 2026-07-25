@@ -18,15 +18,15 @@ domain HandlerTypes is {
       explained as "Repository that handles events"
     }
 
-    projector CmdProjector is {
+    projector EventProjector is {
       type ProjRecord is record { field1: String }
-      handler CmdHandler is {
-        on command SomeCommand {
-          prompt "handling command in projector"
+      handler EventProjHandler is {
+        on event SomeEvent {
+          prompt "handling event in projector"
         }
       }
     } with {
-      explained as "Projector that handles commands"
+      explained as "Projector that handles events"
     }
   } with {
     explained as "Context for handler type tests"

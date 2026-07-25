@@ -6,7 +6,14 @@
 
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.language.AST.{Root, Nebula}
+import com.ossuminc.riddl.language.AST.{
+  Nebula,
+  OnActivationClause,
+  OnEventClause,
+  OnMessageClause,
+  OnPassivationClause,
+  Root
+}
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
@@ -110,6 +117,64 @@ class BASTRoundTripTest extends AnyWordSpec {
               assert(
                 domain.contexts.forall(_.repositories.isEmpty),
                 "repository leaked into a context after BAST round trip"
+              )
+            case Left(errors) =>
+              fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) =>
+          fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
+    "serialize and deserialize the 2.0 handler-kind clauses" in {
+      // Reflective across BAST too: on event / on activate / on passivate must survive
+      // AST -> BAST -> AST as the same node kinds (new node tags 4/5/6, FORMAT_REVISION 7).
+      val riddlSource =
+        """domain d is {
+          |  context c is {
+          |    entity e is {
+          |      command Cmd is { g: Integer }
+          |      event Evt is { h: Integer }
+          |      handler hh is {
+          |        on command Cmd { prompt "handle" }
+          |        on event Evt { prompt "note" }
+          |        on activate { prompt "rehydrate" }
+          |        on passivate { prompt "evict" }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-handler-kinds")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(
+                compareRoots(originalRoot, nebula),
+                "handler-kinds round trip failed: ASTs are not equivalent"
+              )
+              // And specifically: each new clause kind survives, not collapsed/dropped.
+              import com.ossuminc.riddl.language.Finder
+              val f = Finder(nebula.contents)
+              assert(
+                f.recursiveFindByType[OnEventClause].size == 1,
+                "OnEventClause did not survive BAST round trip"
+              )
+              assert(
+                f.recursiveFindByType[OnActivationClause].size == 1,
+                "OnActivationClause did not survive BAST round trip"
+              )
+              assert(
+                f.recursiveFindByType[OnPassivationClause].size == 1,
+                "OnPassivationClause did not survive BAST round trip"
+              )
+              assert(
+                f.recursiveFindByType[OnMessageClause].size == 1,
+                "OnMessageClause (on command) did not survive BAST round trip"
               )
             case Left(errors) =>
               fail(s"Deserialization failed: ${errors.format}")

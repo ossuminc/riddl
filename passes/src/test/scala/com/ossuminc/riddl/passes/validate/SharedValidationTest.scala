@@ -92,8 +92,8 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |    event event is { at: TimeStamp }
           |    handler handler is {
           |      on event event {
-          |        when "there is an error" then
-          |          error "This is an error"
+          |        when "there is a condition" then
+          |          prompt "handle the event"
           |        end
           |      }
           |    }

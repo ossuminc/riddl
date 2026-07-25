@@ -182,10 +182,13 @@ any_interaction_ref = processor_ref | saga_ref | input_ref | output_ref | group_
 handler = "handler" identifier is "{" handler_body "}" [with_metadata] ;
 handler_body = {"???" | handler_contents} ;
 handler_contents = {on_clause | comment} ;
-on_clause = on_init_clause | on_other_clause | on_term_clause | on_message_clause ;
+on_clause = on_init_clause | on_other_clause | on_term_clause | on_activate_clause | on_passivate_clause | on_event_clause | on_message_clause ;
 on_init_clause = "on" "init" is pseudo_code_block [with_metadata] ;
 on_other_clause = "on" "other" is pseudo_code_block [with_metadata] ;
 on_term_clause = "on" "term" is pseudo_code_block [with_metadata] ;
+on_activate_clause = "on" "activate" is pseudo_code_block [with_metadata] ;
+on_passivate_clause = "on" "passivate" is pseudo_code_block [with_metadata] ;
+on_event_clause = "on" event_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;
 on_message_clause = "on" message_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;
 message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 

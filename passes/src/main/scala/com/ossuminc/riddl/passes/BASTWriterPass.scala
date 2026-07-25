@@ -88,6 +88,9 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
       case oc: OnInitializationClause => traverseOnClause(oc, oc.contents, parents)
       case oc: OnTerminationClause    => traverseOnClause(oc, oc.contents, parents)
       case oc: OnMessageClause        => traverseOnClause(oc, oc.contents, parents)
+      case oc: OnEventClause          => traverseOnClause(oc, oc.contents, parents)
+      case oc: OnActivationClause     => traverseOnClause(oc, oc.contents, parents)
+      case oc: OnPassivationClause    => traverseOnClause(oc, oc.contents, parents)
       case oc: OnOtherClause          => traverseOnClause(oc, oc.contents, parents)
 
       // Other Branch types with metadata

@@ -15,6 +15,191 @@ to the task file and note the disposition below.
 
 ---
 
+## In-flight: Handler kinds per processor (2.0) — DESIGN LOCKED, WIP
+
+**Branch**: `release/2`. One combined change (user's choice). Uncommitted
+WIP. **STATUS (this session): feature BUILT + verified; JVM suite 35→5
+failures, all understood as test-expectation updates (not logic bugs).**
+
+### Done + verified
+- **AST** (#12): `OnEventClause`, `OnActivationClause`, `OnPassivationClause`
+  added; both event/message nodes now share a new sealed trait
+  `OnMessageLikeClause` (has `msg`/`from`) so resolution/flow/dep/diagram/
+  validation treat them uniformly. `StatementsSet` record refactor
+  (`ProcessorKind` × `ClauseRestriction`). **Fastparse trap fixed**: the
+  ban parsers MUST be `def`s not `val`s (a `P[T]` is a parsing *run*; a
+  val executes at its definition position and corrupts the alternation —
+  caught by verification, 14 failures → 0).
+- **Parser** (#13): `HandlerParser` dispatches on `set.processor` — no
+  ProcessorParser changes needed (processors already pass the right set).
+  `on event` and `on <msg>` are ONE parser (`onMessageOrEventClause`) that
+  branches on the parsed ref type via `flatMap` (needed because
+  `Keywords.on` cuts, so two `on …` alternatives can't backtrack); event
+  bodies parse under `forEvent` (bans require/error). Projector ref set
+  rejects command/query/record; non-entity rejects activate/passivate;
+  activation bodies ban send/tell/reply/morph/become. `eventRef`/
+  `resultRef` de-privatized. Keywords `activate`/`passivate` +
+  `on activate`/`on passivate`. **EBNF updated. GBNF NOT yet regenerated.**
+- **BAST** (#14): writer/reader sub-kinds 4=Event,5=Activate,6=Passivate;
+  `FORMAT_REVISION` 6→7; `BASTWriterPass` traversal cases added (the
+  explicit per-subtype match would else silently drop them).
+- **Prettify** (#14): `OnEventClause` added to `RiddlFileEmitter.openDef`
+  msg-format special case; activate/passivate/init/term/other all emit via
+  `id.format`.
+- **JSON** (riddlLib, a 3rd serialization surface): JsonifierPass +
+  JsonAstBuilder handle event/activate/passivate.
+- **Validator** (#15): removed the now-dead projector command/query
+  WARNING (parse error supersedes); added adaptor "missing `on other`" →
+  ERROR (generalizable later). All `OnMessageClause` collect-sites that
+  should count events broadened to `OnMessageLikeClause` (restores
+  pre-change behavior — events *were* OnMessageClause); kind-filtered
+  (command/query) sites left precise.
+- **Reflection tests** (#16): 6 new HandlerTest parse/parse-error cases
+  (JVM+JS); `HandlerKindsRoundTripTest` (prettify, JVM+Native);
+  `BASTRoundTripTest` handler-kinds case. **All green** (12 + 6).
+- **Corpus fixes so far**: context.riddl, SharedValidationTest,
+  SharedAdaptorTest (×2), everything_full.riddl, adaptor-direction.riddl,
+  commands/adaptors.riddl (error→prompt in on-event; add on-other).
+
+### DONE since (all green)
+- **5 JVM expectation updates** applied: PassTest opens 57→58 + values
+  25→26; StatsPass categories 23→25 (new "On Event" + "On Other"), All.count
+  22→24, numStatements 7→8; HandlerValidatorTest string "OnMessageClause"→
+  "On Event" (OnEventClause renders via its `kind` override);
+  KeywordsTest 142→144. Both `.check` files regenerated (handler-types
+  projector converted command→event + repurposed; adaptor-direction down to
+  the 2 direction errors — my `error` in on-other counts as executable so the
+  "only prompt" warnings correctly vanished).
+- **EBNF** updated (`ebnf-grammar.ebnf`): `on_clause` now includes
+  `on_activate_clause` / `on_passivate_clause` / `on_event_clause` (the last
+  reuses the existing `event_ref`; `on_message_clause` stays a superset since
+  EBNF is context-free and can't express the projector/statement bans).
+  **GBNF** regenerated (263 rules) from it + `gbnf_validator.py` PASSED.
+- **EBNF↔fastparse parity PROVEN** (not just asserted): added corpus fixture
+  `language/input/handler-kinds.riddl` exercising `on activate`/`on passivate`/
+  `on event`/`on other`. It parses under BOTH the TatSu EBNF validator
+  (`ebnf_tatsu_validator.py`, run locally in a venv — 67/87, 0 unexpected
+  failures) AND fastparse (new `HandlerKindsFileTest`). Before this, no
+  input-dir file used `on activate`/`on passivate`, so those new EBNF rules
+  were unexercised.
+- **tJVM: green** except the 16 external `RiddlModelsRoundTripTest` cases
+  (see below). **tJS: green (63/63).** **tNative: green** (one further count
+  shift, `VisitingPassTest` values 24→25 — same `on other` node; fixed and
+  confirmed on both Native and JVM).
+- **Cross-repo tasks dropped**: `../riddl-models/task/` and
+  `../riddl-examples/task/` (`2026-07-25-handler-kinds-2.0-conformance.md`).
+
+### The only remaining red is EXTERNAL (expected, coordinated)
+`commands/…/RiddlModelsRoundTripTest` round-trips the **external**
+`../riddl-models` checkout. 16 models fail: **48** adaptor handlers lack
+`on other`; **6** `on event` clauses use `require`/`error`. Per the "fix
+internal, drop tasks external" directive these are fixed in riddl-models
+(task dropped), NOT here. This test goes green once riddl-models `main` is
+updated. JVM-only test (scalajvm), so it does not affect tJS/tNative.
+
+### Clean-from-scratch certification (the incremental runs were NOT enough)
+sbt 2's action cache (`~/Library/Caches/sbt/v2/ac`) keys test results on the
+compiled classpath but is BLIND to fixtures a test READS AT RUNTIME — so the
+`tJVM`/`tJS`/`tNative` aliases served stale passes for fixture-reading tests
+after I edited `.riddl`/`.check` files, and only ran ~30 of ~125 suites.
+`clean` does NOT fix this (global cache). Forcing a real run
+(`rm -rf ~/Library/Caches/sbt/v2/ac`, keep `cas`) surfaced two INTERNAL
+failures the incremental runs had masked — both now fixed:
+  - `TokenParserTest` everything_full token count 401→407 (my `on other`).
+  - `JsonCoverageGuardTest` — added `OnEventClause`/`OnActivationClause`/
+    `OnPassivationClause` rows to `JSON_COVERAGE.md`.
+Full fresh results: **JVM 1031+ / 0 internal fail, JS 409 / 0, Native 370 /
+0 + nativeLink OK.** (See memory `sbt2-action-cache-fixture-blindspot`.)
+
+### External corpus (was a moving target — now fixed)
+`RiddlModelsRoundTripTest` (commands) + `Root2JsonCorpusTest` (riddlLib) read
+the LIVE `../riddl-models` checkout. A concurrent instance completed the
+dropped task (58 `on other` added, 4 `require`/`error` removed; 187/187
+validate clean, all `.bast` regenerated), so those tests now PASS
+locally: `RiddlModelsRoundTripTest` 0 fail (was 16); `Root2JsonCorpusTest`
+181/181 reparsed, 96.8% byte-identical (over the 95% bar).
+
+### Regression tests (comprehensive — added so we never revisit)
+- **Parse matrix** (`HandlerTest`, 16 cases): parse `on activate`/`on
+  passivate`/`on event`; reject `on command`/`on query`/`on record` in a
+  projector; ACCEPT `on event`/`on result` in a projector; reject
+  `require` AND `error` in `on event`; reject `on activate` AND
+  `on passivate` outside an entity; reject ALL of send/tell/reply/morph/
+  become in `on activate` (parser now bans all five uniformly with the
+  "side-effect-free" message).
+- **Validation** (`SharedAdaptorTest` +2, `HandlerValidatorTest` +1):
+  adaptor handler missing `on other` → ERROR; with `on other` → clean;
+  entity `on activate`/`on passivate`/`on event` validate with no
+  spurious errors.
+- **Reflection**: prettify RT (`HandlerKindsRoundTripTest`), BAST RT
+  (`BASTRoundTripTest` case), JSON RT (`JsonRoundTripTest` case), JSON
+  ledger (`JsonCoverageGuardTest`), EBNF↔fastparse parity
+  (`HandlerKindsFileTest` + `language/input/handler-kinds.riddl` +
+  TatSu validator).
+
+### Truly remaining
+1. **Commit** as one cohesive handler-kinds change — awaiting user go-ahead.
+2. Once riddl-models `main` is pushed, riddl CI's external tests go green too.
+
+**Goal**: `HandlerParser` stops assuming one handler grammar and offers a
+family of handler kinds per processor. Three features on that spine:
+- **Projector = event-only**: `projectorHandler` offers event + result
+  clauses only; `on command`/`on query` in a projector is a **parse
+  error**. Remove the existing ValidationPass projector command/query
+  warning.
+- **Entity `on activate` / `on passivate`**: new per-rehydration /
+  per-eviction lifecycle clauses, entity-only, distinct from once-ever
+  init/term. Statements banned: outbound messaging (send/tell/reply/
+  morph/become) — activation must be side-effect-free.
+- **Adaptor `on other` completeness**: an adaptor handler with no
+  `on other` clause is a validation **ERROR** (adaptors only for now;
+  bring the user a proposed generalization list before extending to other
+  processor kinds).
+
+**Locked design decisions** (from the interview):
+- **`on event` becomes its own node `OnEventClause` EVERYWHERE** (not just
+  projectors). Its statement set bans `require`/`error` at parse time —
+  "events must always be accepted" is structural. `on event` moves OUT of
+  `OnMessageClause` (which now covers command/query/result/record only).
+- New AST nodes: **`OnEventClause`** (has a `msg` ref like OnMessageClause),
+  **`OnActivationClause`**, **`OnPassivationClause`** (lifecycle, no ref,
+  like OnInit/OnTerm). All extend `OnClause`. **DONE.**
+- **`StatementsSet` is now a record** `(processor: ProcessorKind, clause:
+  ClauseRestriction = Unrestricted)` with companion vals preserving the old
+  `StatementsSet.X` call sites, and `.forEvent`/`.forActivation`.
+  `ClauseRestriction`: `Unrestricted | EventClause (bans require/error) |
+  ActivationClause (bans send/tell/reply/morph/become)`. Composition lives
+  in `anyDefStatements`/`statement`. **DONE + compiles.**
+- **Message-kind restriction stays STRUCTURAL, not in the record**: distinct
+  `onEventClause` (uses `eventRef`) vs `onMessageClause` (non-event refs);
+  the projector's result-only need is a local `allowedKinds` param on
+  `onMessageClause`. (User agreed after discussion.)
+- Reflection: 3 new nodes ⇒ BAST tags + **`FORMAT_REVISION` 6→7**, prettify
+  emission, EBNF/GBNF, and per-node parse+validate+prettify-RT+BAST-RT
+  tests. Plus parse-error tests (command/query-in-projector; require/error-
+  in-event; activate/passivate-outside-entity; outbound-msg-in-activate).
+  Fix internal corpus; **drop correction tasks in `../riddl-models/task`
+  and `../riddl-examples/task`**.
+
+**Ripple finding (good news)**: `passes` compiles clean adding the nodes —
+the `VisitingPass` dispatch handles `OnClause` **generically** via
+`openOnClause`/`closeOnClause`, so NO per-pass hooks are needed. But a clean
+compile does NOT mean BAST/prettify handle the new nodes (fallthroughs) —
+those need explicit emission, proven by round-trip tests, not the compiler.
+
+**Remaining (concrete)**:
+1. Parser: `onEventClause`; split `onMessageClause` (non-event refs +
+   `allowedKinds`); `onActivationClause`/`onPassivationClause` + `activate`/
+   `passivate` keywords; `projectorHandler`/`entityHandler`/`defaultHandler`;
+   wire `ProcessorParser` per processor. EBNF + regen GBNF.
+2. BAST: 3 node tags, `FORMAT_REVISION` 6→7, writer + reader.
+3. Prettify: emit the 3 clauses (per-node keyword in `PrettifyVisitor`).
+4. Validator: remove projector warning; add adaptor on-other ERROR.
+5. Tests (full reflection matrix + parse-error cases); corpus fixes;
+   cross-repo task drops. Full tri-platform + EBNF/GBNF green.
+
+---
+
 ## sbt 2.0 / sbt-ossuminc 3.0 / Scala 3.9 — the riddl 2.0 baseline
 
 **Branch**: `release/2` (created from `feature/sbt2-migration`, which

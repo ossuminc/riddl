@@ -138,7 +138,7 @@ case class DependencyAnalysisPass(
         // Collect bridged types
         val bridgedTypes = adaptor.handlers.flatMap { handler =>
           handler.clauses.flatMap {
-            case omc: OnMessageClause =>
+            case omc: OnMessageLikeClause =>
               refMap.definitionOf[Type](omc.msg, omc).toSeq
             case _ => Seq.empty
           }
@@ -168,8 +168,8 @@ case class DependencyAnalysisPass(
       e
     }
 
-    // Find the OnMessageClause or handler containing this
-    val parentClause = parents.collectFirst { case omc: OnMessageClause =>
+    // Find the OnMessageClause or OnEventClause containing this
+    val parentClause = parents.collectFirst { case omc: OnMessageLikeClause =>
       omc
     }
 
@@ -223,7 +223,7 @@ case class DependencyAnalysisPass(
     val sourceEntity = parents.collectFirst { case e: Entity =>
       e
     }
-    val parentClause = parents.collectFirst { case omc: OnMessageClause =>
+    val parentClause = parents.collectFirst { case omc: OnMessageLikeClause =>
       omc
     }
 

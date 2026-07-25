@@ -259,11 +259,28 @@ object JsonAstBuilder:
               statements,
               Contents.empty[MetaData]()
             )
-      case "init"  => OnInitializationClause(At(), statements, Contents.empty[MetaData]())
-      case "other" => OnOtherClause(At(), statements, Contents.empty[MetaData]())
-      case "term"  => OnTerminationClause(At(), statements, Contents.empty[MetaData]())
+      case "event" =>
+        oc.message match
+          case Some(mr) =>
+            OnEventClause(At(), messageRef(mr), None, statements, Contents.empty[MetaData]())
+          case None =>
+            ctx.err("on-clause of kind 'event' requires a 'message' reference")
+            OnEventClause(
+              At(),
+              EventRef(At(), PathIdentifier.empty),
+              None,
+              statements,
+              Contents.empty[MetaData]()
+            )
+      case "init"      => OnInitializationClause(At(), statements, Contents.empty[MetaData]())
+      case "other"     => OnOtherClause(At(), statements, Contents.empty[MetaData]())
+      case "term"      => OnTerminationClause(At(), statements, Contents.empty[MetaData]())
+      case "activate"  => OnActivationClause(At(), statements, Contents.empty[MetaData]())
+      case "passivate" => OnPassivationClause(At(), statements, Contents.empty[MetaData]())
       case other =>
-        ctx.err(s"unknown on-clause kind '$other' (expected message|init|other|term)")
+        ctx.err(
+          s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate)"
+        )
         OnOtherClause(At(), statements, Contents.empty[MetaData]())
     end match
   end buildOnClause

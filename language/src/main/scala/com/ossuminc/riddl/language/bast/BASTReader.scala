@@ -986,6 +986,27 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val metadata = readMetadataDeferred()
         OnOtherClause(loc, contents, metadata)
 
+      case 4 => // Event — like Message but its own node
+        val msg = readMessageRef()
+        val from = readOption {
+          val optId = readOption(readIdentifier())
+          val ref = readReference()
+          (optId, ref)
+        }
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnEventClause(loc, msg, from, contents, metadata)
+
+      case 5 => // Activation — entity lifecycle, no message ref
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnActivationClause(loc, contents, metadata)
+
+      case 6 => // Passivation — entity lifecycle, no message ref
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnPassivationClause(loc, contents, metadata)
+
       case _ =>
         OnOtherClause(loc, Contents.empty[Statements](), Contents.empty[MetaData]())
     }

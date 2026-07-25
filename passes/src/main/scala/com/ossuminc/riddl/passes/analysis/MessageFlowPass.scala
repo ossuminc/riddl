@@ -127,7 +127,7 @@ case class MessageFlowPass(
         }
         processorParent.foreach { processor =>
           handler.clauses.foreach {
-            case omc: OnMessageClause =>
+            case omc: OnMessageLikeClause => // message and event clauses both drive flow edges
               processOnMessageClause(omc, processor, parentsSeq)
             case _ => ()
           }
@@ -140,7 +140,7 @@ case class MessageFlowPass(
   }
 
   private def processOnMessageClause(
-    omc: OnMessageClause,
+    omc: OnMessageLikeClause,
     processor: Processor[?],
     parents: Parents
   ): Unit = {
@@ -241,7 +241,7 @@ case class MessageFlowPass(
         // Create additional typed edges from handler clauses
         adaptor.handlers.foreach { handler =>
           handler.clauses.foreach {
-            case omc: OnMessageClause =>
+            case omc: OnMessageLikeClause =>
               val maybeType =
                 refMap.definitionOf[Type](omc.msg, omc)
               maybeType.foreach { msgType =>

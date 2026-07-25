@@ -636,7 +636,7 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
         case Left(messages) =>
           fail(messages.format)
         case Right(tokens) =>
-          tokens.length must be(401)
+          tokens.length must be(407)
           val tasStr = tokens.toString
           tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
           tasStr must include("LiteralCode")

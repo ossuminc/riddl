@@ -211,6 +211,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case oc: OnInitializationClause => writeOnInitializationClause(oc)
       case oc: OnTerminationClause    => writeOnTerminationClause(oc)
       case oc: OnMessageClause        => writeOnMessageClause(oc)
+      case oc: OnEventClause          => writeOnEventClause(oc)
+      case oc: OnActivationClause     => writeOnActivationClause(oc)
+      case oc: OnPassivationClause    => writeOnPassivationClause(oc)
       case oc: OnOtherClause          => writeOnOtherClause(oc)
 
       // Streamlet components
@@ -635,6 +638,33 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeOnOtherClause(oc: OnOtherClause): Unit = {
     writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(3) // Other clause type
+    writeLocation(oc.loc)
+    writeContents(oc.contents)
+  }
+
+  def writeOnEventClause(oc: OnEventClause): Unit = {
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
+    writer.writeU8(4) // Event clause type — like Message but its own AST node
+    writeLocation(oc.loc)
+    writeMessageRef(oc.msg)
+    // Write from field: Option[(Option[Identifier], Reference[Definition])]
+    writeOption(oc.from) { case (optId, ref) =>
+      writeOption(optId)(writeIdentifier)
+      writeReference(ref)
+    }
+    writeContents(oc.contents)
+  }
+
+  def writeOnActivationClause(oc: OnActivationClause): Unit = {
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
+    writer.writeU8(5) // Activation clause type — entity lifecycle, no message ref
+    writeLocation(oc.loc)
+    writeContents(oc.contents)
+  }
+
+  def writeOnPassivationClause(oc: OnPassivationClause): Unit = {
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
+    writer.writeU8(6) // Passivation clause type — entity lifecycle, no message ref
     writeLocation(oc.loc)
     writeContents(oc.contents)
   }

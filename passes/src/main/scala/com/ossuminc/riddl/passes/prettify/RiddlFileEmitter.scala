@@ -42,6 +42,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     // round-trippable source form, rather than quoting it as an identifier.
     val name = definition match
       case omc: OnMessageClause => omc.msg.format
+      case oec: OnEventClause   => oec.msg.format
       case _                    => definition.id.format
     addIndent(s"${keyword(definition)} $name is ")
     if withBrace then

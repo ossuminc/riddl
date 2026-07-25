@@ -52,7 +52,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
               assertValidationMessage(
                 msgs,
                 Error,
-                """Path 'EntityEvent' was not resolved, in OnMessageClause 'event EntityEvent'
+                """Path 'EntityEvent' was not resolved, in On Event 'event EntityEvent'
               |because the sought name, 'EntityEvent', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
               )
@@ -148,6 +148,34 @@ class HandlerValidatorTest extends AbstractValidatingTest {
             warnings must include("should result in sending an event")
         }
       }
+    }
+
+    "validate entity 'on activate'/'on passivate'/'on event' clauses without spurious errors" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain d is {
+            |  context c is {
+            |    command Cmd is { g: Integer }
+            |    event Evt is { h: Integer }
+            |    entity e is {
+            |      record F is { count: Integer }
+            |      state S of e.F
+            |      handler h is {
+            |        on command Cmd { prompt "handle" }
+            |        on event Evt { prompt "note" }
+            |        on activate { prompt "rehydrate" }
+            |        on passivate { prompt "persist" }
+            |        on other { error "unexpected" }
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+          msgs.justErrors mustBe empty
+        }
     }
   }
 }

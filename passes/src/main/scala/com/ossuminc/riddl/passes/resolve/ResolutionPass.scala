@@ -106,12 +106,14 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage[Type](av, resolution)
       case t: Type =>
         associateUsage[Type](t, resolveType(t, parents))
-      case mc: OnMessageClause =>
+      case mc: OnMessageLikeClause => // OnMessageClause and OnEventClause both carry a msg ref
         resolveOnMessageClause(mc, parents)
       case statement: Statement =>
         resolveStatement(statement, parents)
       case _: OnInitializationClause => ()
       case _: OnTerminationClause    => ()
+      case _: OnActivationClause     => ()
+      case _: OnPassivationClause    => ()
       case _: OnOtherClause          => ()
       case e: Entity =>
         addEntity(e)
@@ -227,7 +229,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     }
   }
 
-  private def resolveOnMessageClause(mc: OnMessageClause, parents: Parents): Unit = {
+  private def resolveOnMessageClause(mc: OnMessageLikeClause, parents: Parents): Unit = {
     val resolution = resolveARef[Type](mc.msg, parents)
     associateUsage[Type](mc, resolution)
     mc.from match
@@ -665,8 +667,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               // We found a state so the fields of the state
               // the contained handlers and the fields of the state's data
               candidatesFromPathIdentifier[Type](st.typ.pathId, defStack)
-            case omc: OnMessageClause if omc.msg.id.nonEmpty =>
-              // we found an onClause that references a named message
+            case omc: OnMessageLikeClause if omc.msg.id.nonEmpty =>
+              // we found an onClause (message or event) that references a named message
               // need to push that message's path on the name stack
               candidatesFromPathIdentifier[Type](omc.msg.pathId, defStack)
             case field: Field =>

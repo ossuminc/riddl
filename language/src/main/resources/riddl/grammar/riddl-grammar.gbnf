@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-25 03:09 UTC
+# Generated: 2026-07-25 15:04 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -182,10 +182,13 @@ any-interaction-ref ::= processor-ref | saga-ref | input-ref | output-ref | grou
 handler ::= "handler" ws1 identifier ws1 is ws "{" ws handler-body ws "}" ws (with-metadata)?
 handler-body ::= ("???" | handler-contents)*
 handler-contents ::= (on-clause | comment)*
-on-clause ::= on-init-clause | on-other-clause | on-term-clause | on-message-clause
+on-clause ::= on-init-clause | on-other-clause | on-term-clause | on-activate-clause | on-passivate-clause | on-event-clause | on-message-clause
 on-init-clause ::= "on" ws "init" ws1 is ws1 pseudo-code-block ws (with-metadata)?
 on-other-clause ::= "on" ws "other" ws1 is ws1 pseudo-code-block ws (with-metadata)?
 on-term-clause ::= "on" ws "term" ws1 is ws1 pseudo-code-block ws (with-metadata)?
+on-activate-clause ::= "on" ws "activate" ws1 is ws1 pseudo-code-block ws (with-metadata)?
+on-passivate-clause ::= "on" ws "passivate" ws1 is ws1 pseudo-code-block ws (with-metadata)?
+on-event-clause ::= "on" ws1 event-ref ws ("from" (identifier ":")? message-origins)? ws is ws1 pseudo-code-block ws (with-metadata)?
 on-message-clause ::= "on" ws1 message-ref ws ("from" (identifier ":")? message-origins)? ws is ws1 pseudo-code-block ws (with-metadata)?
 message-origins ::= inlet-ref | processor-ref | user-ref | epic-ref
 

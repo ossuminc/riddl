@@ -26,7 +26,8 @@ private[parsing] trait ReferenceParser {
     }
   }
 
-  private def eventRef[u: P]: P[EventRef] = {
+  // Non-private so HandlerParser can build kind-specific on-clauses (event-only projectors, etc.)
+  def eventRef[u: P]: P[EventRef] = {
     P(Index ~ Keywords.event ~ pathIdentifier ~~ Index).map { case (start, pid, end) =>
       EventRef(at(start, end), pid)
     }
@@ -38,7 +39,8 @@ private[parsing] trait ReferenceParser {
     }
   }
 
-  private def resultRef[u: P]: P[ResultRef] = {
+  // Non-private so HandlerParser can allow projectors 'on result' while banning command/query.
+  def resultRef[u: P]: P[ResultRef] = {
     P(Index ~ Keywords.result ~ pathIdentifier ~~ Index).map { case (start, pid, end) =>
       ResultRef(at(start, end), pid)
     }

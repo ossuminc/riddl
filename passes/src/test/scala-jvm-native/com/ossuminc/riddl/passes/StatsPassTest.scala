@@ -64,11 +64,11 @@ class StatsPassTest extends AbstractValidatingTest {
               statsOutput.categories.toSeq.foreach { pair =>
                 println(pair._1 + s" => ${pair._2.count}")
               }
-              statsOutput.categories.size must be(23)
+              statsOutput.categories.size must be(25)
               val ksAll: KindStats = statsOutput.categories("All")
-              ksAll.count must be(22)
+              ksAll.count must be(24)
               ksAll.numEmpty must be(23)
-              ksAll.numStatements must be(7)
+              ksAll.numStatements must be(8)
               succeed
         }
       }

@@ -101,5 +101,42 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           fail(s"parse of the RIDDL model failed: $errors")
       end match
     }
+
+    "round-trip the 2.0 handler-kind clauses (on event / on activate / on passivate) losslessly" in {
+      val hkModel =
+        """domain HK is {
+          |  context c is {
+          |    command Cmd is { g: Integer }
+          |    event Evt is { h: Integer }
+          |    entity e is {
+          |      handler h is {
+          |        on command Cmd is { prompt "c" }
+          |        on event Evt is { prompt "e" }
+          |        on activate is { prompt "a" }
+          |        on passivate is { prompt "p" }
+          |        on other is { error "u" }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(hkModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // The new clause kinds must appear (JsonifierPass emits them)...
+          json1 must include("\"event\"")
+          json1 must include("\"activate\"")
+          json1 must include("\"passivate\"")
+          // ...and JsonAstBuilder must rebuild them so the JSON is a fixed point.
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the handler-kinds JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the handler-kinds model failed: $errors")
+      end match
+    }
   }
 }

@@ -6,7 +6,16 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{Context, Entity, LiteralString, RequireStatement}
+import com.ossuminc.riddl.language.AST.{
+  Context,
+  Entity,
+  LiteralString,
+  OnActivationClause,
+  OnEventClause,
+  OnMessageClause,
+  OnPassivationClause,
+  RequireStatement
+}
 import com.ossuminc.riddl.language.Finder
 import com.ossuminc.riddl.language.parsing.AbstractParsingTest
 import com.ossuminc.riddl.utils.PlatformContext
@@ -268,5 +277,209 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           succeed
       }
     }
+
+    // ---- Handler kinds (2.0): event-only projectors, entity lifecycle clauses,
+    // and the parse-time statement bans that make those distinctions structural. ----
+
+    "parse entity 'on activate' / 'on passivate' lifecycle clauses" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """context c is {
+          |  entity e is {
+          |    command Cmd is { g: Integer }
+          |    handler h is {
+          |      on command Cmd { prompt "handle" }
+          |      on activate { prompt "rehydrate" }
+          |      on passivate { prompt "evict" }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Context](input) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right((context, _)) =>
+          val finder = Finder(context)
+          finder.recursiveFindByType[OnActivationClause].size must be(1)
+          finder.recursiveFindByType[OnPassivationClause].size must be(1)
+          succeed
+      }
+    }
+
+    "parse 'on event' as an OnEventClause, distinct from OnMessageClause" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """context c is {
+          |  entity e is {
+          |    event Evt is { g: Integer }
+          |    handler h is {
+          |      on event Evt { prompt "note" }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Context](input) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right((context, _)) =>
+          val finder = Finder(context)
+          finder.recursiveFindByType[OnEventClause].size must be(1)
+          finder.recursiveFindByType[OnMessageClause] mustBe empty
+          succeed
+      }
+    }
+
+    "reject 'on command' in a projector at parse time (projectors are event-only)" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """context c is {
+            |  projector p is {
+            |    command Cmd is { g: Integer }
+            |    handler h is {
+            |      on command Cmd { prompt "x" }
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        parseDefinition[Context](input) match {
+          case Left(errors) => errors.map(_.format).mkString must include("event-only")
+          case Right(_)     => fail("projector accepted an 'on command' clause")
+        }
+    }
+
+    "reject 'require' in an 'on event' clause at parse time (events must be accepted)" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """context c is {
+            |  entity e is {
+            |    event Evt is { g: Integer }
+            |    handler h is {
+            |      on event Evt { require "g > 0" }
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        parseDefinition[Context](input) match {
+          case Left(errors) => errors.map(_.format).mkString must include("always be accepted")
+          case Right(_)     => fail("'on event' accepted a 'require' statement")
+        }
+    }
+
+    "reject 'on activate' outside an entity at parse time" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """context c is {
+          |  handler h is {
+          |    on activate { prompt "x" }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Context](input) match {
+        case Left(errors) => errors.map(_.format).mkString must include("only allowed in entity")
+        case Right(_)     => fail("context accepted an 'on activate' clause")
+      }
+    }
+
+    "reject 'on query' and 'on record' in a projector at parse time" in { (td: TestData) =>
+      rejectsParse(
+        """context c is {
+          |  projector p is {
+          |    query Q is { g: Integer }
+          |    handler h is { on query Q { prompt "x" } }
+          |  }
+          |}""".stripMargin,
+        "event-only",
+        "projector accepted an 'on query' clause"
+      )(td)
+      rejectsParse(
+        """context c is {
+          |  projector p is {
+          |    record R is { g: Integer }
+          |    handler h is { on record R { prompt "x" } }
+          |  }
+          |}""".stripMargin,
+        "event-only",
+        "projector accepted an 'on record' clause"
+      )(td)
+    }
+
+    "accept 'on event' and 'on result' in a projector at parse time" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """context c is {
+          |  projector p is {
+          |    event Evt is { g: Integer }
+          |    result Res is { h: Integer }
+          |    handler hh is {
+          |      on event Evt { prompt "e" }
+          |      on result Res { prompt "r" }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Context](input) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right((context, _)) =>
+          val finder = Finder(context)
+          finder.recursiveFindByType[OnEventClause].size must be(1)
+          finder.recursiveFindByType[OnMessageClause].size must be(1) // the 'on result Res'
+          succeed
+      }
+    }
+
+    "reject 'on passivate' outside an entity at parse time" in { (td: TestData) =>
+      rejectsParse(
+        """context c is {
+          |  handler h is { on passivate { prompt "x" } }
+          |}""".stripMargin,
+        "only allowed in entity",
+        "context accepted an 'on passivate' clause"
+      )(td)
+    }
+
+    "reject 'error' in an 'on event' clause at parse time" in { (td: TestData) =>
+      rejectsParse(
+        """context c is {
+          |  entity e is {
+          |    event Evt is { g: Integer }
+          |    handler h is { on event Evt { error "bad" } }
+          |  }
+          |}""".stripMargin,
+        "always be accepted",
+        "'on event' accepted an 'error' statement"
+      )(td)
+    }
+
+    "reject all outbound messaging (send/tell/reply/morph/become) in an 'on activate' clause" in {
+      (td: TestData) =>
+        def onActivate(stmt: String): String =
+          s"""context c is {
+             |  entity e is {
+             |    event Evt is { g: Integer }
+             |    handler h is { on activate { $stmt } }
+             |  }
+             |}""".stripMargin
+        // The rejecter fires on the leading keyword, so partial statement syntax is fine.
+        rejectsParse(onActivate("send event Evt to inlet c.p.in"), "side-effect-free", "activate: send")(td)
+        rejectsParse(onActivate("tell event Evt to entity e"), "side-effect-free", "activate: tell")(td)
+        rejectsParse(onActivate("reply event Evt"), "side-effect-free", "activate: reply")(td)
+        rejectsParse(onActivate("morph entity e to state e.s with event Evt"), "side-effect-free", "activate: morph")(td)
+        rejectsParse(onActivate("become entity e to handler h"), "side-effect-free", "activate: become")(td)
+    }
   }
+
+  /** Assert that parsing `src` as a Context fails and its error mentions `substring`. */
+  private def rejectsParse(src: String, substring: String, whatIfAccepted: String)(
+    td: TestData
+  ): org.scalatest.Assertion =
+    parseDefinition[Context](RiddlParserInput(src, td)) match {
+      case Left(errors) => errors.map(_.format).mkString must include(substring)
+      case Right(_)     => fail(whatIfAccepted)
+    }
 }

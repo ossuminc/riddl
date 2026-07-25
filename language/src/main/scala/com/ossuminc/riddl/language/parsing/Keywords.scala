@@ -58,6 +58,8 @@ object Keywords {
 
   def acquires[u: P]: P[Unit] = keyword(Keyword.acquires)
 
+  def activate[u: P]: P[Unit] = keyword(Keyword.activate)
+
   def adaptor[u: P]: P[Unit] = keyword(Keyword.adaptor)
 
   def all[u: P]: P[Unit] = keyword(Keyword.all)
@@ -204,9 +206,13 @@ object Keywords {
 
   def on[u: P]: P[Unit] = keyword(Keyword.on)
 
+  def onActivate[u: P]: P[Unit] = keyword("on activate")
+
   def onInit[u: P]: P[Unit] = keyword("on init")
 
   def onOther[u: P]: P[Unit] = keyword("on other")
+
+  def onPassivate[u: P]: P[Unit] = keyword("on passivate")
 
   def onTerm[u: P]: P[Unit] = keyword("on term")
 
@@ -231,6 +237,8 @@ object Keywords {
   def output[u: P]: P[Unit] = keyword(Keyword.output)
 
   def parallel[u: P]: P[Unit] = keyword(Keyword.parallel)
+
+  def passivate[u: P]: P[Unit] = keyword(Keyword.passivate)
 
   def pipe[u: P]: P[Unit] = keyword(Keyword.pipe)
 
@@ -345,6 +353,7 @@ object Keywords {
       keywords(
         StringIn(
           Keyword.acquires,
+          Keyword.activate,
           Keyword.adaptor,
           Keyword.all,
           Keyword.any,
@@ -425,6 +434,7 @@ object Keywords {
           Keyword.outlets,
           Keyword.output,
           Keyword.parallel,
+          Keyword.passivate,
           Keyword.pipe,
           Keyword.plant,
           Keyword.projector,
@@ -485,6 +495,7 @@ object Keywords {
 
 object Keyword {
   final val acquires = "acquires"
+  final val activate = "activate"
   final val adaptor = "adaptor"
   final val all = "all"
   final val any = "any"
@@ -574,6 +585,7 @@ object Keyword {
   final val outlets = "outlets"
   final val output = "output"
   final val parallel = "parallel"
+  final val passivate = "passivate"
   final val pipe = "pipe"
   final val plant = "plant"
   final val projector = "projector"
@@ -630,6 +642,7 @@ object Keyword {
 
   def allKeywords: Seq[String] = Seq(
     acquires,
+    activate,
     adaptor,
     all,
     any,
@@ -719,6 +732,7 @@ object Keyword {
     outlets,
     output,
     parallel,
+    passivate,
     pipe,
     plant,
     projector,

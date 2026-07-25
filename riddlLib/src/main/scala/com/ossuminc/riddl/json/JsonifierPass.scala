@@ -153,8 +153,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         oc match
           case omc: OnMessageClause =>
             Some(OnClauseDto("message", Some(messageRefDto(omc.msg)), statements))
+          case oec: OnEventClause =>
+            Some(OnClauseDto("event", Some(messageRefDto(oec.msg)), statements))
           case _: OnInitializationClause => Some(OnClauseDto("init", None, statements))
           case _: OnTerminationClause    => Some(OnClauseDto("term", None, statements))
+          case _: OnActivationClause     => Some(OnClauseDto("activate", None, statements))
+          case _: OnPassivationClause    => Some(OnClauseDto("passivate", None, statements))
           case _                         => Some(OnClauseDto("other", None, statements))
       case t: Type =>
         t.typEx match

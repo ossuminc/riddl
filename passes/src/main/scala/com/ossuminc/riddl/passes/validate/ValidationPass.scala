@@ -271,12 +271,16 @@ case class ValidationPass(
         validateTerm(t)
       case sa: User =>
         validateUser(sa, parentsAsSeq)
-      case omc: OnMessageClause =>
+      case omc: OnMessageLikeClause => // OnMessageClause and OnEventClause
         validateOnMessageClause(omc, parentsAsSeq)
       case oic: OnInitializationClause =>
         checkDefinition(parentsAsSeq, oic)
       case otc: OnTerminationClause =>
         checkDefinition(parentsAsSeq, otc)
+      case oac: OnActivationClause =>
+        checkDefinition(parentsAsSeq, oac)
+      case opc: OnPassivationClause =>
+        checkDefinition(parentsAsSeq, opc)
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
         if ooc.statements.isEmpty then {
@@ -368,7 +372,7 @@ case class ValidationPass(
       )
   end validateOnClause
 
-  private def validateOnMessageClause(omc: OnMessageClause, parents: Parents): Unit = {
+  private def validateOnMessageClause(omc: OnMessageLikeClause, parents: Parents): Unit = {
     checkDefinition(parents, omc)
     validateOnClause(omc)
     val maybeEntity: Option[Entity] = parents.collectFirst { case e: Entity => e }
@@ -797,7 +801,9 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, h)
-    val messageClauses = h.clauses.collect { case omc: OnMessageClause => omc }
+    // OnMessageLikeClause covers both OnMessageClause (command/query/result/record) and
+    // OnEventClause (event); the kind checks below stay precise via `msg.messageKind`.
+    val messageClauses = h.clauses.collect { case omc: OnMessageLikeClause => omc }
     parents.headOption match {
       case Some(entity: Entity) =>
         if messageClauses.nonEmpty then {
@@ -825,20 +831,9 @@ case class ValidationPass(
                 "Move event handling to a projector; have the repository handle commands (writes) and queries (reads) instead."
             )
         }
-      case Some(proj: Projector) =>
-        if messageClauses.nonEmpty then {
-          val handlesCommandsOrQueries = messageClauses.exists { omc =>
-            omc.msg.messageKind == AggregateUseCase.CommandCase ||
-            omc.msg.messageKind == AggregateUseCase.QueryCase
-          }
-          if handlesCommandsOrQueries then
-            messages.addWarning(
-              h.errorLoc,
-              s"${h.identify} in ${proj.identify} handles commands or queries; projectors typically handle events to build read models",
-              suggestion =
-                "Have the projector handle events ('on event ...') to build its read model instead of commands or queries."
-            )
-        }
+      // NOTE: A projector handling commands or queries is now rejected at PARSE time
+      // (projectorHandler is event-only), so the former command/query warning here is dead
+      // code and has been removed — the parse error supersedes it.
       case _ => ()
     }
   }
@@ -1317,8 +1312,8 @@ case class ValidationPass(
           s"Reference a repository from ${projector.identify}, e.g. 'updates repository SomeRepository'."
       )
     if projector.handlers.nonEmpty then {
-      val allClauses = projector.handlers.flatMap(_.clauses).collect { case omc: OnMessageClause =>
-        omc
+      val allClauses = projector.handlers.flatMap(_.clauses).collect {
+        case omc: OnMessageLikeClause => omc
       }
       if allClauses.nonEmpty then {
         val handlesEvents = allClauses.exists { omc =>
@@ -1385,8 +1380,8 @@ case class ValidationPass(
           s"Add a handler to ${repository.identify} to process commands (writes) and queries (reads)."
       )
     if repository.handlers.nonEmpty then {
-      val allClauses = repository.handlers.flatMap(_.clauses).collect { case omc: OnMessageClause =>
-        omc
+      val allClauses = repository.handlers.flatMap(_.clauses).collect {
+        case omc: OnMessageLikeClause => omc
       }
       if allClauses.nonEmpty then {
         val handlesCommandOrQuery = allClauses.exists { omc =>
@@ -1420,7 +1415,7 @@ case class ValidationPass(
     val reachedContexts =
       repository.handlers.iterator
         .flatMap(_.clauses)
-        .collect { case omc: OnMessageClause if omc.msg.nonEmpty => omc.msg.pathId }
+        .collect { case omc: OnMessageLikeClause if omc.msg.nonEmpty => omc.msg.pathId }
         .flatMap(pid => resolution.refMap.definitionOf[Type](pid).toList)
         .flatMap(msgType => symbols.contextOf(msgType).toList)
         .toSet
@@ -1494,6 +1489,19 @@ case class ValidationPass(
             suggestion =
               "Add on-clauses to the adaptor's handlers to translate messages between contexts."
           )
+        // Completeness (adaptors): every non-empty handler must include an 'on other' clause so
+        // that messages it does not explicitly translate are handled deliberately rather than
+        // silently dropped. This is an ERROR (a translation gap is a modeling defect). This
+        // presence/completeness check is intended to generalize to other processor kinds later.
+        adaptor.handlers.filter(_.clauses.nonEmpty).foreach { handler =>
+          if !handler.clauses.exists(_.isInstanceOf[OnOtherClause]) then
+            messages.addError(
+              handler.errorLoc,
+              s"${handler.identify} in ${adaptor.identify} has no 'on other' clause; an adaptor must handle unmatched messages explicitly",
+              suggestion =
+                "Add an 'on other' clause to the adaptor's handler to handle messages it does not explicitly translate."
+            )
+        }
         // Check if adaptor handlers reference message types from the adapted context
         resolvePath[Context](adaptor.referent.pathId, parents).foreach { targetContext =>
           val targetMessageTypes = targetContext.types.filter { t =>
@@ -1508,13 +1516,13 @@ case class ValidationPass(
           }
           if targetMessageTypes.nonEmpty && adaptor.handlers.nonEmpty then {
             val allClauses = adaptor.handlers.flatMap(_.clauses).collect {
-              case omc: OnMessageClause => omc
+              case omc: OnMessageLikeClause => omc
             }
             if allClauses.nonEmpty then {
               // Use parent-independent lookup since the resolution
-              // pass keyed refs under the OnMessageClause's parent,
+              // pass keyed refs under the on-clause's parent,
               // not the Adaptor's parent
-              def resolveClauseType(omc: OnMessageClause): Option[Type] =
+              def resolveClauseType(omc: OnMessageLikeClause): Option[Type] =
                 resolution.refMap.definitionOf[Type](omc.msg.pathId)
 
               val referencesTargetType = allClauses.exists { omc =>
@@ -1853,7 +1861,7 @@ case class ValidationPass(
       c.streamlets.foreach { streamlet =>
         if streamlet.inlets.nonEmpty && streamlet.handlers.nonEmpty then {
           streamlet.handlers.foreach { handler =>
-            val messageClauses = handler.clauses.collect { case omc: OnMessageClause => omc }
+            val messageClauses = handler.clauses.collect { case omc: OnMessageLikeClause => omc }
             if messageClauses.nonEmpty then {
               val finder = Finder(handler)
               val tells = finder.recursiveFindByType[TellStatement]

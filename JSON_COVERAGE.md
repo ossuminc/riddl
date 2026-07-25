@@ -38,8 +38,11 @@ is covered in that construct's phase. The builder emits references as
 | Field | ✅ Phase 1 | inside records/messages |
 | State | ✅ Phase 1 | record reference only (RIDDL holds no fields in a state) |
 | Handler | ✅ Phase 1 | on-clauses |
-| OnMessageClause | ✅ Phase 1 | command/event/query/result refs |
+| OnMessageClause | ✅ Phase 1 | command/query/result/record refs |
+| OnEventClause | ✅ 2.0 | `kind: "event"`, event ref |
 | OnInitializationClause | ✅ Phase 1 | `kind: "init"` |
+| OnActivationClause | ✅ 2.0 | `kind: "activate"` |
+| OnPassivationClause | ✅ 2.0 | `kind: "passivate"` |
 | OnOtherClause | ✅ Phase 1 | `kind: "other"` |
 | OnTerminationClause | ✅ Phase 1 | `kind: "term"` |
 | Invariant | ✅ Phase 1 | string condition |

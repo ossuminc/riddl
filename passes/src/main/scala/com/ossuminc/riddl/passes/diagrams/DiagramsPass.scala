@@ -271,8 +271,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   ): Seq[ContextRelationship] = {
     for {
       h <- handlers
-      oc: OnClause <- h.clauses if oc.isInstanceOf[OnMessageClause]
-      omc: OnMessageClause = oc.asInstanceOf[OnMessageClause]
+      oc: OnClause <- h.clauses if oc.isInstanceOf[OnMessageLikeClause]
+      omc: OnMessageLikeClause = oc.asInstanceOf[OnMessageLikeClause]
       relationship <- makeStatementRelationships(context, omc, omc.contents.toSeq)
     } yield {
       relationship
@@ -281,7 +281,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
 
   private def makeStatementRelationships(
     context: Context,
-    parent: OnMessageClause,
+    parent: OnMessageLikeClause,
     statements: Seq[Statements]
   ): Seq[ContextRelationship] = {
     for {

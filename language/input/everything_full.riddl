@@ -63,6 +63,7 @@ context full is {
       on command ACommand {
         send command DoAThing to outlet APlant.Source.OutCommands
       }
+      on other { error "unexpected message" }
     }
   }
 

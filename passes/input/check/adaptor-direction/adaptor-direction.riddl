@@ -12,6 +12,7 @@ domain AdaptorDir is {
         on command SourceCtx.DoIt {
           prompt "handling command in inbound adaptor"
         }
+        on other { error "unexpected message" }
       }
     } with {
       explained as "Inbound adaptor that incorrectly handles commands"
@@ -22,6 +23,7 @@ domain AdaptorDir is {
         on event SourceCtx.ItDone {
           prompt "handling event in outbound adaptor"
         }
+        on other { error "unexpected message" }
       }
     } with {
       explained as "Outbound adaptor that incorrectly handles events"
