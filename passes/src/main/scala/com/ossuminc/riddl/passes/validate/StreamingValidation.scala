@@ -23,7 +23,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
   def checkStreaming(root: PassRoot): Unit = {
     checkStreamingUsage(root)
-    checkConnectorPersistence()
+    checkConnectorPlacement()
     checkUnattachedOutlets()
   }
 
@@ -155,49 +155,95 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     }
   }
 
-  private def checkConnectorPersistence(): Unit = {
+  /** Validate connector placement (scope) and persistence. Each end is resolved to its containing
+    * context and domain, and the connector's own scope (context vs domain) is taken from whether it
+    * has a containing context. From that:
+    *   - Rule 1: ends in different domains -> ERROR (a cross-domain edge is a domain-analysis
+    *     failure); terminal — no further placement/persistence checks.
+    *   - Rule 2: a domain-scoped connector whose ends share ONE context is over-scoped -> ERROR.
+    *   - Rule 3: a context-scoped connector whose ends cross contexts is under-scoped -> ERROR.
+    *   - Rule 4: a correctly domain-scoped (cross-context) connector lacking `persistent` -> WARNING
+    *     (lose-nothing durability across a context boundary can be required for model correctness).
+    *   - A same-context connector that nonetheless declares `persistent` -> WARNING (not needed).
+    */
+  private def checkConnectorPlacement(): Unit = {
+    def domainOf(d: Definition): Option[Domain] =
+      symbols.parentsOf(d).collectFirst { case dom: Domain => dom }
+
     connectors.filterNot(_.isEmpty).foreach { connector =>
       val connParents = symbols.parentsOf(connector)
-      symbols.contextOf(connector) match {
-        case None => require(false, "Connector with no Context")
-        case Some(pipeContext) =>
-          val maybeToInlet = resolvePath[Inlet](connector.to.pathId, connParents)
-          val maybeFromOutlet = resolvePath[Outlet](connector.from.pathId, connParents)
-          val maybeInletContext = maybeToInlet.flatMap(inlet => symbols.contextOf(inlet))
-          val maybeOutletContext = maybeFromOutlet.flatMap(outlet => symbols.contextOf(outlet))
-          val inletIsSameContext = maybeInletContext.nonEmpty &&
-            (pipeContext == maybeInletContext.fold(Context.empty)(identity))
-          val outletIsSameContext = maybeOutletContext.nonEmpty &&
-            (pipeContext == maybeOutletContext.fold(Context.empty)(identity))
+      // No containing context => the connector sits directly in a domain (or higher).
+      val connectorInDomain = symbols.contextOf(connector).isEmpty
+      val maybeToInlet = resolvePath[Inlet](connector.to.pathId, connParents)
+      val maybeFromOutlet = resolvePath[Outlet](connector.from.pathId, connParents)
+      val outletCtx = maybeFromOutlet.flatMap(symbols.contextOf)
+      val inletCtx = maybeToInlet.flatMap(symbols.contextOf)
+      val outletDom = maybeFromOutlet.flatMap(domainOf)
+      val inletDom = maybeToInlet.flatMap(domainOf)
 
-          if connector.hasOption("persistent") then {
-            if outletIsSameContext && inletIsSameContext then {
-              val message =
-                s"The persistence option on ${connector.identify} is not needed " +
-                  s"since both ends of the connector connect within the same context"
-              val option = connector.options.find(_.name == "persistent").get
-              messages.addWarning(
-                option.loc,
-                message,
-                suggestion =
-                  s"Remove the 'persistent' option from ${connector.identify}; both ends are in the same context."
-              )
-            }
-          } else {
-            if !outletIsSameContext || !inletIsSameContext then {
-              val message =
-                s"The persistence option on ${connector.identify} should be " +
-                  s"specified because an end of the connector is not connected " +
-                  s"within the same context"
-              messages.addWarning(
-                connector.errorLoc,
-                message,
-                suggestion =
-                  s"Add the 'persistent' option to ${connector.identify} since it spans a context boundary."
-              )
-            }
-          }
-      }
+      val sameContext = (outletCtx, inletCtx) match
+        case (Some(a), Some(b)) => a eq b
+        case _                  => false
+      val crossContext = (outletCtx, inletCtx) match
+        case (Some(a), Some(b)) => !(a eq b)
+        case _                  => false
+      val crossDomain = (outletDom, inletDom) match
+        case (Some(a), Some(b)) => !(a eq b)
+        case _                  => false
+
+      if crossDomain then
+        messages.addError(
+          connector.errorLoc,
+          s"${connector.identify} connects across domains (${outletDom.get.identify} and " +
+            s"${inletDom.get.identify}); a connector that crosses a domain boundary indicates a " +
+            s"failure of domain analysis and is not allowed",
+          suggestion =
+            "Keep the connector within one domain; if two domains must communicate, model it with " +
+              "an adaptor and messaging rather than a direct stream connector."
+        )
+      else if connectorInDomain then
+        if sameContext then
+          messages.addError(
+            connector.errorLoc,
+            s"${connector.identify} is defined at domain scope but both ends are within " +
+              s"${outletCtx.get.identify}; the connector is over-scoped",
+            suggestion =
+              s"Move ${connector.identify} into ${outletCtx.get.identify}; a connector whose ends " +
+                s"are in the same context belongs in that context, not the domain."
+          )
+        else if crossContext && !connector.hasOption("persistent") then
+          // CompletenessWarning (not a plain Warning) so AI/tooling can adapt: durability across a
+          // context boundary can be required for model correctness, not merely a deployment concern.
+          messages.addCompleteness(
+            connector.errorLoc,
+            s"${connector.identify} spans a context boundary but is not 'persistent'; durability " +
+              s"across a context boundary can be required for model correctness, not merely a " +
+              s"deployment concern",
+            suggestion =
+              s"Add the 'persistent' option to ${connector.identify} so data is not lost across " +
+                s"faults at the context boundary."
+          )
+        end if
+      else // connector is at context scope
+        if crossContext then
+          messages.addError(
+            connector.errorLoc,
+            s"${connector.identify} connects across contexts (${outletCtx.get.identify} and " +
+              s"${inletCtx.get.identify}) but is defined at context scope; it is under-scoped",
+            suggestion =
+              "Move the connector up to the domain that contains both contexts; a connector that " +
+                "crosses contexts must be defined at domain scope."
+          )
+        else if sameContext && connector.hasOption("persistent") then
+          val option = connector.options.find(_.name == "persistent").get
+          messages.addWarning(
+            option.loc,
+            s"The persistence option on ${connector.identify} is not needed " +
+              s"since both ends of the connector connect within the same context",
+            suggestion =
+              s"Remove the 'persistent' option from ${connector.identify}; both ends are in the same context."
+          )
+        end if
     }
   }
 

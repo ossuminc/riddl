@@ -126,6 +126,47 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize a domain-scoped connector" in {
+      // Reflective across BAST: a connector defined directly in a domain (cross-context)
+      // must survive AST -> BAST -> AST at the same scope.
+      val riddlSource =
+        """domain d is {
+          |  type T is { x: Integer }
+          |  context a is { source src is { outlet out is type d.T } }
+          |  context b is { sink snk is { inlet in is type d.T } }
+          |  connector c is {
+          |    from outlet d.a.src.out to inlet d.b.snk.in
+          |  } with { option persistent }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-domain-connector")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(
+                compareRoots(originalRoot, nebula),
+                "domain-scoped connector round trip failed: ASTs are not equivalent"
+              )
+              val domain =
+                nebula.domains.find(_.id.value == "d").getOrElse(fail("domain d missing after BAST"))
+              assert(
+                domain.connectors.map(_.id.value) == Seq("c"),
+                "connector is not at domain scope after BAST round trip"
+              )
+              assert(
+                domain.contexts.forall(_.connectors.isEmpty),
+                "connector leaked into a context after BAST round trip"
+              )
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize the 2.0 handler-kind clauses" in {
       // Reflective across BAST too: on event / on activate / on passivate must survive
       // AST -> BAST -> AST as the same node kinds (new node tags 4/5/6, FORMAT_REVISION 7).

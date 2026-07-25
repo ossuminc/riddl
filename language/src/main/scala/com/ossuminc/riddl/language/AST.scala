@@ -742,7 +742,8 @@ object AST:
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain =
-    OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga | Repository
+    OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga | Repository |
+      Connector
 
   /** Type of definitions that occur in a [[Domain]] with [[Include]] and [[BASTImport]] */
   type DomainContents = OccursInDomain | Include[OccursInDomain] | BASTImport
@@ -4122,6 +4123,7 @@ object AST:
       with WithEpics[DomainContents]
       with WithSagas[DomainContents]
       with WithRepositories[DomainContents]
+      with WithConnectors[DomainContents]
       with WithDomains[DomainContents] {
     override def format: String = Keyword.domain + " " + id.format
   }

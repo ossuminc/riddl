@@ -95,31 +95,87 @@ class StreamValidatorTest extends AbstractValidatingTest {
       }
     }
 
-    "warn about needed persistence option" in { (td: TestData) =>
+    // ---- Connectors at Domain scope: placement rules + persistence (2.0) ----
+
+    "completeness-warn a domain-scoped cross-context connector lacking persistence" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain uno is {
+            | type T = Integer
+            | context a is { source src is { outlet out is type uno.T } }
+            | context b is { sink snk is { inlet in is type uno.T } }
+            | connector c1 is { from outlet uno.a.src.out to inlet uno.b.snk.in }
+            |}""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          messages.hasErrors mustBe false // domain-scoped cross-context is CORRECT placement
+          messages
+            .filter(_.kind == Messages.CompletenessWarning)
+            .exists(_.message.contains("spans a context boundary but is not 'persistent'")) mustBe true
+        }
+    }
+
+    "accept a domain-scoped cross-context connector that is persistent" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """domain uno {
+        """domain uno is {
           | type T = Integer
-          | context a {
-          |  source from is { outlet out is type T }
-          |  connector c1 {
-          |    from outlet a.from.out to inlet uno.b.to.in
-          |  }
-          | }
-          | context b {
-          |   sink to  is { inlet in is type T }
-          | }
-          |} """.stripMargin,
+          | context a is { source src is { outlet out is type uno.T } }
+          | context b is { sink snk is { inlet in is type uno.T } }
+          | connector c1 is { from outlet uno.a.src.out to inlet uno.b.snk.in } with { option persistent }
+          |}""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
-        domain.isEmpty mustBe false
-        messages.isEmpty mustBe false
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
         messages.hasErrors mustBe false
-        messages.exists(_.message.contains("is not connected")) mustBe
-          true
-        messages.exists(
-          _.message.startsWith("The persistence option on Connector 'c1'")
-        ) mustBe true
+        messages.exists(_.message.contains("spans a context boundary")) mustBe false
+      }
+    }
+
+    "error on a context-scoped connector that crosses contexts (under-scoped)" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain uno is {
+            | type T = Integer
+            | context a is {
+            |   source src is { outlet out is type uno.T }
+            |   connector c1 is { from outlet uno.a.src.out to inlet uno.b.snk.in }
+            | }
+            | context b is { sink snk is { inlet in is type uno.T } }
+            |}""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          messages.justErrors.exists(_.message.contains("under-scoped")) mustBe true
+        }
+    }
+
+    "error on a domain-scoped connector whose ends are in the same context (over-scoped)" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain uno is {
+            | type T = Integer
+            | context a is { flow f is { inlet in is type uno.T outlet out is type uno.T } }
+            | connector c1 is { from outlet uno.a.f.out to inlet uno.a.f.in }
+            |}""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          messages.justErrors.exists(_.message.contains("over-scoped")) mustBe true
+        }
+    }
+
+    "error on a cross-domain connector" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain parent is {
+          | domain d1 is { type T = Integer context a is { source src is { outlet out is type parent.d1.T } } }
+          | domain d2 is { type U = Integer context b is { sink snk is { inlet in is type parent.d2.U } } }
+          | connector c1 is { from outlet parent.d1.a.src.out to inlet parent.d2.b.snk.in }
+          |}""".stripMargin,
+        td
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+        messages.justErrors.exists(_.message.contains("crosses a domain boundary")) mustBe true
       }
     }
     "warn about useless persistence option" in { (td: TestData) =>

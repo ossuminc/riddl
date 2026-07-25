@@ -1,0 +1,11 @@
+// Corpus fixture exercising a Connector at DOMAIN scope (cross-context) so that both the fastparse
+// parser (ConnectorScopeFileTest) and the EBNF/TatSu grammar accept the same input — domains may
+// now contain connectors, and a cross-context edge belongs at domain scope.
+domain Shipping is {
+  type Pkg is { id: String }
+  context Warehouse is { source picked is { outlet out is type Shipping.Pkg } }
+  context Dock is { sink loaded is { inlet in is type Shipping.Pkg } }
+  connector handoff is {
+    from outlet Shipping.Warehouse.picked.out to inlet Shipping.Dock.loaded.in
+  } with { option persistent }
+}

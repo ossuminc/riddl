@@ -15,6 +15,39 @@ to the task file and note the disposition below.
 
 ---
 
+## Connectors at Domain scope (2.0) — DONE, internal green
+
+Branch `release/2`. Mirrors the Repository-at-Domain-scope feature.
+- **AST**: `OccursInDomain += Connector`; `Domain extends
+  WithConnectors[DomainContents]`.
+- **Parser**: `DomainParser.domainDefinitions += connector` (StreamingParser
+  already mixed in). EBNF `domain_content += connector`; GBNF regenerated.
+- **Validation** (reworked `StreamingValidation.checkConnectorPersistence` →
+  `checkConnectorPlacement`; the old version `require(false)`-crashed on a
+  connector with no context — would have crashed on domain-scoped ones):
+  resolve each end's context AND domain (`domainOf` = first Domain in
+  `parentsOf`), take the connector's own scope from
+  `symbols.contextOf(connector).isEmpty`, then:
+  1. ends in different domains → ERROR (domain-analysis failure; terminal).
+  2. domain-scoped + ends in same context → ERROR (over-scoped).
+  3. context-scoped + ends cross contexts → ERROR (under-scoped).
+  4. domain-scoped + cross-context + not `persistent` → **CompletenessWarning**
+     (so AI can adapt) — durability at a context boundary can be model
+     correctness, not just deployment.
+  Existing "remove persistent when same-context" warning preserved verbatim.
+  Rules are conservative: only fire when BOTH ends resolve (no false positives
+  on unresolved refs).
+- **Reflection**: prettify (`doConnector`) + BAST (`writeConnector`/
+  `readConnectorNode`) already generic; proven by `ConnectorDomainScopeRoundTripTest`
+  (prettify) + a `BASTRoundTripTest` case.
+- **Tests**: 5 rule cases in `StreamValidatorTest` + 2 round-trips + EBNF↔
+  fastparse parity (`language/input/domain-connector.riddl` +
+  `ConnectorScopeFileTest` + TatSu). **Internal suite: 0 failures.**
+- **External**: riddl-models `reactive-bbq` has 3 cross-context connectors at
+  context scope → correctly caught as under-scoped ERRORs (feature working on
+  real data). Conformance tasks dropped in `../riddl-models/task` +
+  `../riddl-examples/task`.
+
 ## In-flight: Handler kinds per processor (2.0) — DESIGN LOCKED, WIP
 
 **Branch**: `release/2`. One combined change (user's choice). Uncommitted
@@ -137,9 +170,31 @@ locally: `RiddlModelsRoundTripTest` 0 fail (was 16); `Root2JsonCorpusTest`
   (`HandlerKindsFileTest` + `language/input/handler-kinds.riddl` +
   TatSu validator).
 
-### Truly remaining
-1. **Commit** as one cohesive handler-kinds change — awaiting user go-ahead.
-2. Once riddl-models `main` is pushed, riddl CI's external tests go green too.
+### DONE — committed + CI green on all platforms
+Handler-kinds landed as one commit (`66af0752`). `release/2` pushed; `scala.yml`
+(workflow_dispatch) is **green on JVM + JS + Native** (run 30172643158), which
+also confirms the external riddl-models/riddl-examples fixes in a clean CI env
+(RiddlModelsRoundTripTest / Root2JsonCorpusTest download the pushed `main`).
+
+### CI / sbt 2 fixes required on release/2 (were pre-existing, cache-masked)
+Dispatching `scala.yml` on release/2 surfaced three sbt-2 CI issues that
+`main` never hit (main restores plugins/deps from cache and hadn't re-fetched
+in ~18 months). Fixed in commits after the feature commit:
+1. **Plugin-resolution 401** — under sbt 2 the global `~/.sbt/2/github.sbt`
+   credential is NOT applied to meta-build (plugin) resolution, so fetching
+   sbt-ossuminc 3.0.3 from GitHub Packages returned 401. **NOT** a permission
+   gap: the automatic `GITHUB_TOKEN` reads the public package fine (direct
+   `curl -u x-access-token:$TOKEN` → 302). Fix: restore
+   `credentials += Credentials("GitHub Package Registry","maven.pkg.github.com",
+   "x-access-token", sys.env.getOrElse("GITHUB_TOKEN",""))` in
+   **`project/plugins.sbt`** (the meta-build) — as pre-1.4 revisions had.
+   GitHub Packages Maven requires auth even for PUBLIC packages (401 to
+   anonymous); only the Container registry allows anonymous.
+2. **sbt-2 CLI** — a single quoted multi-command arg is parsed as ONE command
+   line; the old `sbt clean cJVM tJVM` fails ("Expected whitespace"). Use the
+   `;`-list form: `sbt "; clean; cJVM; tJVM"`. Fixed in scala.yml + coverage.yml.
+3. **dynver** — shallow `actions/checkout` breaks `git describe` ("No names
+   found"). Add `fetch-depth: 0` + `fetch-tags: true`.
 
 **Goal**: `HandlerParser` stops assuming one handler grammar and offers a
 family of handler kinds per processor. Three features on that spine:
