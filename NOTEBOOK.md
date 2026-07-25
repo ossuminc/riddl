@@ -26,10 +26,11 @@ the sbt-riddl scripted test, and the EBNF/GBNF validators all pass.
 `main` has been merged in (format rectification + 1.30/1.31 option
 registrations). Not yet merged back to `main`.
 
-### Scala 3.9.0-RC1 (adopted 2026-07-24)
-riddl 2.0 now targets **Scala 3.9.0-RC1** (was 3.8.4). Verified: all
-three platforms compile and **2127 tests pass, 0 failures** on the RC —
-scala-js and scala-native both publish 3.9.0-RC1 toolchains. Findings:
+### Scala 3.9.0-RC4 (adopted 2026-07-24)
+riddl 2.0 now targets **Scala 3.9.0-RC4** (was 3.8.4; RC1 verified
+first, then bumped to RC4). Verified: all three platforms compile and
+**all tests pass, 0 failures** on the RC — scala-js and scala-native
+both publish 3.9.0-RC4 toolchains. Findings:
 - **The lever is `With.Scala3.configure(version = Some(V.scala))` per
   module**, NOT `V.scala` / `scalaVersion :=` alone (sbt-ossuminc's
   `With.typical` pins its 3.8.4 default and is applied *after* the
@@ -37,12 +38,12 @@ scala-js and scala-native both publish 3.9.0-RC1 toolchains. Findings:
   README's `With.Scala3(version=…)` shorthand does not exist.
 - **One code change needed**: `DefinitionValidatorTest` passed a
   `Seq[Message]` where `Messages` (= `List[Message]`) is required;
-  3.9.0-RC1's stricter implicit search (scala/scala3#25910/#26210) no
+  3.9.0-RC4's stricter implicit search (scala/scala3#25910/#26210) no
   longer accepts it (3.9 is *correct* — Seq ⊅ List; 3.8.4 was lenient).
   Fixed with `.toList` (valid on both versions) — **not** a Scala bug,
   so no Scala Center report warranted.
-- **When 3.9.0 final ships**: bump `V.scala` 3.9.0-RC1 → 3.9.0 and
-  re-grep the `scala-3.9.0-RC1` path segments in CI/sonar/Dockerfile/
+- **When 3.9.0 final ships**: bump `V.scala` 3.9.0-RC4 → 3.9.0 and
+  re-grep the `scala-3.9.0-RC4` path segments in CI/sonar/Dockerfile/
   CLAUDE.md.
 
 ### What shipped (committed on the branch)
