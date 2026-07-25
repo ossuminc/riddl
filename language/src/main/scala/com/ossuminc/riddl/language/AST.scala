@@ -741,7 +741,8 @@ object AST:
     Streamlet | Connector | Relationship
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
-  type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga
+  type OccursInDomain =
+    OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga | Repository
 
   /** Type of definitions that occur in a [[Domain]] with [[Include]] and [[BASTImport]] */
   type DomainContents = OccursInDomain | Include[OccursInDomain] | BASTImport
@@ -4050,6 +4051,7 @@ object AST:
       with WithUsers[DomainContents]
       with WithEpics[DomainContents]
       with WithSagas[DomainContents]
+      with WithRepositories[DomainContents]
       with WithDomains[DomainContents] {
     override def format: String = Keyword.domain + " " + id.format
   }

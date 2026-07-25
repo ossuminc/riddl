@@ -18,7 +18,8 @@ import scala.concurrent.Future
 
 /** Parsing rules for domains. */
 private[parsing] trait DomainParser {
-  this: VitalDefinitionParser & ContextParser & EpicParser & SagaParser & StreamingParser =>
+  this: VitalDefinitionParser & ContextParser & EpicParser & SagaParser & StreamingParser &
+    RepositoryParser =>
 
   def user[u: P]: P[User] = {
     P(
@@ -35,7 +36,8 @@ private[parsing] trait DomainParser {
   private def domainDefinitions[u: P]: P[Seq[DomainContents]] = {
     P(
       vitalDefinitionContents |
-        author | context | domain | user | epic | saga | importDef | bastImport | domainInclude | comment
+        author | context | domain | user | epic | saga | repository |
+        importDef | bastImport | domainInclude | comment
     ).asInstanceOf[P[DomainContents]]./.rep(1)
   }
 

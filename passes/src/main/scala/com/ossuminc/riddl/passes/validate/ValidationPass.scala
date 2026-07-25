@@ -1402,6 +1402,62 @@ case class ValidationPass(
           )
       }
     }
+    checkRepositoryScopePlacement(repository, parents)
+  }
+
+  /** Repository scope placement (domain vs context). A repository whose handlers synthesize
+    * messages from multiple contexts belongs at domain scope; one confined to a single context
+    * belongs at context scope. "Reach" is approximated by resolving each on-clause's handled
+    * message to its owning context. (In 2.0, once `tell` becomes a stream send, this can switch to
+    * a MessageFlow signal.)
+    *
+    *   - context-scoped repo reaching another context -> CompletenessWarning (promote)
+    *   - domain-scoped repo reaching only one context -> Error (demote; unnecessary)
+    */
+  private def checkRepositoryScopePlacement(repository: Repository, parents: Parents): Unit = {
+    // NOTE: no `Set[Context]` annotation — AST.Set shadows scala.Set; `.toSet`
+    // already yields a scala immutable Set.
+    val reachedContexts =
+      repository.handlers.iterator
+        .flatMap(_.clauses)
+        .collect { case omc: OnMessageClause if omc.msg.nonEmpty => omc.msg.pathId }
+        .flatMap(pid => resolution.refMap.definitionOf[Type](pid).toList)
+        .flatMap(msgType => symbols.contextOf(msgType).toList)
+        .toSet
+    parents.headOption match {
+      case Some(_: Domain) =>
+        // Verify a domain-scoped repository is actually necessary. If its handlers
+        // demonstrably reach only one context it should be at context scope. Zero
+        // resolvable contexts means an incomplete/unresolvable model, not proof of
+        // single-context reach, so we do not error in that case.
+        if reachedContexts.size == 1 then {
+          val only = reachedContexts.head
+          messages.addError(
+            repository.errorLoc,
+            s"${repository.identify} is at domain scope but its handlers only reach ${only.identify}; " +
+              "a domain-scoped repository must synthesize messages across multiple contexts",
+            suggestion =
+              s"Move ${repository.identify} into ${only.identify}, or add handlers that " +
+                "reference messages from other contexts."
+          )
+        }
+      case Some(enclosing: Context) =>
+        // A context-scoped repository whose handlers reach a different context crosses
+        // context boundaries and typically belongs at domain scope.
+        val foreign = reachedContexts.filterNot(_ == enclosing)
+        if foreign.nonEmpty then {
+          messages.addCompleteness(
+            repository.errorLoc,
+            s"${repository.identify} handles messages from other contexts " +
+              s"(${foreign.map(_.id.value).mkString(", ")}); a repository whose handlers cross " +
+              "context boundaries typically belongs at domain scope",
+            suggestion =
+              s"Consider moving ${repository.identify} up to the enclosing domain so it " +
+                "can synthesize across contexts."
+          )
+        }
+      case _ => ()
+    }
   }
 
   private def validateAdaptor(

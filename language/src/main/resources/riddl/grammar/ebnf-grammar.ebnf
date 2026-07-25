@@ -50,7 +50,7 @@ module_include = "include" literal_string ;
 domain = "domain" identifier is "{" domain_body "}" [with_metadata] ;
 domain_body = domain_definitions | "???" ;
 domain_definitions = {domain_content}+ ;
-domain_content = vital_definition_contents | author | context | domain | user | epic | saga | import_def | bast_import | domain_include | comment ;
+domain_content = vital_definition_contents | author | context | domain | user | epic | saga | repository | import_def | bast_import | domain_include | comment ;
 import_def = "import" "domain" identifier "from" literal_string ;
 domain_include = "include" literal_string ;
 

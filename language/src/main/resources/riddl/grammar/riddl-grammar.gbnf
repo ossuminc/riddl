@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-10 19:08 UTC
+# Generated: 2026-07-25 03:09 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -58,7 +58,7 @@ module-include ::= "include" ws1 literal-string
 domain ::= "domain" ws1 identifier ws1 is ws "{" ws domain-body ws "}" ws (with-metadata)?
 domain-body ::= domain-definitions | "???"
 domain-definitions ::= (domain-content)+
-domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | import-def | bast-import | domain-include | comment
+domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | repository | import-def | bast-import | domain-include | comment
 import-def ::= "import" ws "domain" ws1 identifier ws "from" ws1 literal-string
 domain-include ::= "include" ws1 literal-string
 

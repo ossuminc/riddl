@@ -59,5 +59,73 @@ class RepositoryTest extends AbstractValidatingTest {
         }
       }
     }
+
+    "allow a repository at domain scope that synthesizes across contexts" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          |  context a is { event AEvent is { x: String } }
+          |  context b is { event BEvent is { y: String } }
+          |  repository synth is {
+          |    handler h is {
+          |      on event a.AEvent { prompt "record from a" }
+          |      on event b.BEvent { prompt "record from b" }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain: Domain, _, msgs) =>
+        domain.repositories mustNot be(empty) // repository is at domain scope
+        // Reaches two contexts, so domain scope is justified: no demote error.
+        msgs.justErrors.exists(
+          _.message.contains("domain scope but its handlers only reach")
+        ) mustBe false
+      }
+    }
+
+    "warn that a context repository crossing context bounds belongs at domain scope" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain d is {
+            |  context a is { event AEvent is { x: String } }
+            |  context b is {
+            |    event BEvent is { y: String }
+            |    repository r is {
+            |      handler h is {
+            |        on event a.AEvent { prompt "from a" }
+            |        on event BEvent { prompt "from b" }
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
+          val cw = msgs.filter(_.kind == Messages.CompletenessWarning)
+          cw.exists(_.message.contains("cross context boundaries")) mustBe true
+        }
+    }
+
+    "error when a domain-scoped repository reaches only one context" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          |  context a is { event AEvent is { x: String } }
+          |  repository r is {
+          |    handler h is {
+          |      on event a.AEvent { prompt "only from a" }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
+        msgs.justErrors.exists(
+          _.message.contains("domain scope but its handlers only reach")
+        ) mustBe true
+      }
+    }
   }
 }
