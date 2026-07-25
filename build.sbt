@@ -58,7 +58,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear, spdx = "Apache-2.0"
 
 lazy val Utils = config("utils")
 lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native)
-  .configure(With.typical, With.GithubPublishing)
+  .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     scalacOptions += "-explain-cyclic",
@@ -124,7 +124,7 @@ lazy val utilsNative = utils_cp.native
 
 val Language = config("language")
 lazy val language_cp = CrossModule("language", "riddl-language", V.scala)(JVM, JS, Native)
-  .configure(With.typical, With.GithubPublishing)
+  .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     description := "Abstract Syntax Tree and basic RIDDL language parser",
@@ -176,7 +176,7 @@ lazy val languageNative = language_cp.native.dependsOn(pDep(utilsNative))
 
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes", V.scala)(JVM, JS, Native)
-  .configure(With.typical, With.GithubPublishing)
+  .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     Test / parallelExecution := false,
@@ -209,7 +209,7 @@ val passesJS = passes_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS))
 val passesNative = passes_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative))
 
 lazy val testkit_cp = CrossModule("testkit", "riddl-testkit", V.scala)(JVM, JS, Native)
-  .configure(With.typical, With.GithubPublishing)
+  .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     description := "Testing kit for RIDDL language and passes"
@@ -244,7 +244,7 @@ val testkitNative =
   testkit_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
 
 lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Native)
-  .configure(With.typical, With.GithubPublishing)
+  .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     description := "Bundling of essential RIDDL libraries"
@@ -299,7 +299,7 @@ val riddlLibNative =
 
 val Commands = config("commands")
 lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, Native)
-  .configure(With.typical, With.GithubPublishing)
+  .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
@@ -324,7 +324,7 @@ val commandsNative =
 
 val Riddlc = config("riddlc")
 lazy val riddlc_cp = CrossModule("riddlc", "riddlc", V.scala)(JVM, Native)
-  .configure(With.typical, With.GithubPublishing)
+  .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .configure(With.noMiMa)
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason

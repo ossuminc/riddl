@@ -30,7 +30,7 @@ class DefinitionValidatorTest extends AbstractValidatingTest {
               "Identifiers with less than 3 characters should generate a warning"
             )
           } else {
-            val styleWarnings = msgs.filter(_.isStyle)
+            val styleWarnings = msgs.filter(_.isStyle).toList
             styleWarnings.size mustEqual 2
             assertValidationMessage(
               styleWarnings,
