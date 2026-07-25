@@ -342,6 +342,34 @@ When modifying the fastparse parser:
 
 This ensures the documented grammar stays in sync with the actual implementation.
 
+### Reflection / Round-Trip Requirement
+
+**RIDDL is fully reflective by design and necessity: anything that can be
+parsed MUST also be emitted.** So a change to the AST or parser is only
+half done until PrettifyPass emits the new/changed construct AND a
+parse → prettify → re-parse round-trip preserves it. "Parses and
+validates" is half the contract; **emit + round-trip is the other half.**
+
+When you add or move a construct (e.g. allowing a definition under a new
+container):
+
+1. Confirm `PrettifyVisitor` / `RiddlFileEmitter` emit it. Traversal
+   (`HierarchyPass`) and dispatch (`VisitingPass`, `Pass.scala`) are
+   generic and type-based, so it often "just works" — but **prove it,
+   don't assume it.**
+2. **Add a round-trip test** — parse → `PrettifyPass(flatten=true)` →
+   re-parse — asserting the construct survives at the SAME place (not
+   dropped, not relocated). Template:
+   `passes/.../prettify/RepositoryDomainScopeRoundTripTest.scala` (and
+   `IdentifierQuotingRoundTripTest.scala`).
+3. **Run the FULL suite on all platforms** (`tJVM tJS tNative`), not just
+   the module you touched. A green partial suite proves nothing when no
+   existing test exercises the new shape.
+
+Also remember BAST (binary AST) is a second serialization surface: a new
+AST node generally needs BASTWriter/BASTReader support and a
+`FORMAT_REVISION` bump (see the BAST section).
+
 ### Compilation After Every Change
 When implementing new code:
 1. Write the code
