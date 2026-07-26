@@ -26,6 +26,11 @@ object Logging {
   case object Severe extends Lvl
   case object Error extends Lvl
   case object Warning extends Lvl
+  case object Deprecation extends Lvl {
+    // Rendered label is `[deprecated]` (distinct from `[warning]`) so downstream
+    // consumers can categorize deprecations separately from warnings.
+    override def toString: String = "deprecated"
+  }
   case object Completeness extends Lvl
   case object Usage extends Lvl
   case object Style extends Lvl
@@ -59,6 +64,9 @@ trait Logger(using pc: PlatformContext) {
   /** Syntactic sugar for write(Warning, s) */
   final def warn(s: => String): Unit = { write(Warning, s) }
 
+  /** Syntactic sugar for write(Deprecation, s) */
+  final def deprecate(s: => String): Unit = { write(Deprecation, s) }
+
   /** Syntactic sugar for write(Completeness, s) */
   final def completeness(s: => String): Unit = { write(Completeness, s) }
 
@@ -84,6 +92,7 @@ trait Logger(using pc: PlatformContext) {
   private var nUsage = 0
   private var nCompleteness = 0
   private var nWarning = 0
+  private var nDeprecation = 0
   private var nTip = 0
   private var nInfo = 0
 
@@ -95,6 +104,7 @@ trait Logger(using pc: PlatformContext) {
         case Logging.Error        => s"$RED"
         case Logging.Completeness => s"$YELLOW"
         case Logging.Warning      => s"$YELLOW"
+        case Logging.Deprecation  => s"$MAGENTA"
         case Logging.Usage        => s"$GREEN"
         case Logging.Style        => s"$GREEN"
         case Logging.Missing      => s"$GREEN"
@@ -117,6 +127,7 @@ trait Logger(using pc: PlatformContext) {
       case Error        => nError += 1
       case Completeness => nCompleteness += 1
       case Warning      => nWarning += 1
+      case Deprecation  => nDeprecation += 1
       case Style        => nStyle += 1
       case Usage        => nUsage += 1
       case Missing      => nMissing += 1
@@ -130,6 +141,7 @@ trait Logger(using pc: PlatformContext) {
     s"""Severe Errors: $nSevere
        |Normal Errors: $nError
        |     Warnings: $nWarning
+       | Deprecations: $nDeprecation
        |Completeness: $nCompleteness
        |        Usage: $nUsage
        |        Style: $nStyle

@@ -387,7 +387,7 @@ object Messages {
       case MissingWarning      => io.log.missing(message.format)
       case UsageWarning        => io.log.usage(message.format)
       case CompletenessWarning => io.log.completeness(message.format)
-      case Deprecation         => io.log.warn(message.format)
+      case Deprecation         => io.log.deprecate(message.format)
       case Warning             => io.log.warn(message.format)
       case Error               => io.log.error(message.format)
       case SevereError         => io.log.severe(message.format)
@@ -424,7 +424,7 @@ object Messages {
           case Info =>
             io.log.info(s"""$kind Message Count: ${messages.length}""")
           case Deprecation =>
-            io.log.warn(s"""$kind Message Count: ${messages.length}""")
+            io.log.deprecate(s"""$kind Message Count: ${messages.length}""")
         }
         messages.foreach { (msg: Message) => logMessage(msg) }
       }

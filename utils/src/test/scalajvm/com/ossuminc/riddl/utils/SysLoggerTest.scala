@@ -94,6 +94,27 @@ class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecu
   //   Thread.`yield`()
   // }
 
+  "Logger for deprecation" should {
+    "render a distinct [deprecated] label" in {
+      pc.withOptions(CommonOptions.noANSIMessages) { _ =>
+        val logger = StringLogger()
+        logger.deprecate("asdf")
+        logger.toString mustBe "[deprecated] asdf\n"
+      }
+    }
+    "keep deprecations distinct from warnings in mixed output" in {
+      pc.withOptions(CommonOptions.noANSIMessages) { _ =>
+        val logger = StringLogger()
+        logger.warn("w")
+        logger.deprecate("d")
+        logger.toString mustBe
+          """[warning] w
+            |[deprecated] d
+            |""".stripMargin
+      }
+    }
+  }
+
   "SysLogger for many" should {
     "print many message" in {
       pc.withLogger(SysLogger()) { (sl: SysLogger) =>
