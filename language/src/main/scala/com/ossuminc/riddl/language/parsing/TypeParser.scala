@@ -631,15 +631,20 @@ private[parsing] trait TypeParser {
 
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
-      Index ~ aggregateUseCase ~/ identifier ~
+      Index ~ aggregateUseCase ~/ identifier ~ (Keywords.yields ~ messageRef).? ~
         (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withMetaData ~/ Index
-    )./.map { case (start, useCase, id, ateOrAgg, descriptives, end) =>
+    )./.map { case (start, useCase, id, yields, ateOrAgg, descriptives, end) =>
       val loc = at(start, end)
       ateOrAgg match {
         case agg: Aggregation =>
-          val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.contents)
+          val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.contents, yields)
           Type(loc, id, mt, descriptives.toContents)
         case ate: AliasedTypeExpression =>
+          if yields.nonEmpty then
+            error(
+              loc,
+              "`yields` requires an aggregate command/query body, not a type alias"
+            )
           Type(loc, id, ate, descriptives.toContents)
         case _ =>
           require(false, "Oops! Impossible case")

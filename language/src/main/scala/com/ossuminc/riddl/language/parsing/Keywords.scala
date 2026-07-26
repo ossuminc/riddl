@@ -359,6 +359,8 @@ object Keywords {
 
   def `with`[u: P]: P[Unit] = keyword(Keyword.with_)
 
+  def yields[u: P]: P[Unit] = keyword(Keyword.yields)
+
   def anyKeyword[u: P]: P[Unit] = {
     P(
       keywords(
@@ -499,7 +501,8 @@ object Keywords {
           Keyword.void,
           Keyword.when,
           Keyword.where,
-          Keyword.with_
+          Keyword.with_,
+          Keyword.yields
         )
       )
     )
@@ -654,6 +657,7 @@ object Keyword {
   final val when = "when"
   final val where = "where"
   final val with_ = "with"
+  final val yields = "yields"
 
   def allKeywords: Seq[String] = Seq(
     acquires,
@@ -801,7 +805,8 @@ object Keyword {
     void,
     when,
     where,
-    with_
+    with_,
+    yields
   )
 
 }

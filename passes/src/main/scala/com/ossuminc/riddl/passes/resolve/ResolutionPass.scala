@@ -733,8 +733,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     result match
       case Some((typ: Type, _)) =>
         typ.typEx match
-          case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == kind => result // success
-          case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind))   => result // success
+          case AggregateUseCaseTypeExpression(_, usecase, _, _) if usecase == kind =>
+            result // success
+          case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind)) => result // success
           case typeEx: Alternation =>
             messages.addError(
               loc,

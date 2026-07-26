@@ -689,4 +689,50 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
       }
     }
   }
+
+  "Yields Clause (A19)" should {
+    "parse a command with a yields event clause" in { (td: TestData) =>
+      val rpi = RiddlParserInput("command C yields event E is { id: Integer }", td)
+      parseDefinition[Type](rpi) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right((typ, _)) =>
+          typ.typEx match {
+            case a: AggregateUseCaseTypeExpression =>
+              a.usecase mustBe AggregateUseCase.CommandCase
+              a.yields match {
+                case Some(EventRef(_, pid)) => pid.value mustBe Seq("E")
+                case other                  => fail(s"Expected Some(EventRef ... E), got $other")
+              }
+            case other => fail(s"Expected AggregateUseCaseTypeExpression, got $other")
+          }
+      }
+    }
+    "parse a query with a yields result clause" in { (td: TestData) =>
+      val rpi = RiddlParserInput("query Q yields result R is { id: Integer }", td)
+      parseDefinition[Type](rpi) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right((typ, _)) =>
+          typ.typEx match {
+            case a: AggregateUseCaseTypeExpression =>
+              a.usecase mustBe AggregateUseCase.QueryCase
+              a.yields match {
+                case Some(ResultRef(_, pid)) => pid.value mustBe Seq("R")
+                case other                   => fail(s"Expected Some(ResultRef ... R), got $other")
+              }
+            case other => fail(s"Expected AggregateUseCaseTypeExpression, got $other")
+          }
+      }
+    }
+    "leave yields as None for a plain command" in { (td: TestData) =>
+      val rpi = RiddlParserInput("command C is { id: Integer }", td)
+      parseDefinition[Type](rpi) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right((typ, _)) =>
+          typ.typEx match {
+            case a: AggregateUseCaseTypeExpression => a.yields mustBe None
+            case other => fail(s"Expected AggregateUseCaseTypeExpression, got $other")
+          }
+      }
+    }
+  }
 }

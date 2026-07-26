@@ -527,7 +527,7 @@ def keyword(definition: Definition): String =
     case _: Term        => Keyword.term
     case typ: Type =>
       typ.typEx match
-        case AggregateUseCaseTypeExpression(_, useCase, _) =>
+        case AggregateUseCaseTypeExpression(_, useCase, _, _) =>
           useCase match
             case AggregateUseCase.CommandCase => Keyword.command
             case AggregateUseCase.EventCase   => Keyword.event

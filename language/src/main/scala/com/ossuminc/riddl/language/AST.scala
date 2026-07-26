@@ -1403,8 +1403,8 @@ object AST:
         case AliasedTypeExpression(_, keyword, _)
             if keyword.compareToIgnoreCase(useCase.useCase) == 0 =>
           true
-        case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == useCase => true
-        case _                                                                   => false
+        case AggregateUseCaseTypeExpression(_, usecase, _, _) if usecase == useCase => true
+        case _                                                                      => false
       end match
     end isAggregateOf
   end TypeExpression
@@ -1787,14 +1787,20 @@ object AST:
     *   The kind of message defined
     * @param contents
     *   The contents of the message's aggregation
+    * @param yields
+    *   For a command/query use case, an optional reference to the message it produces in response
+    *   (a command yields an event; a query yields a result). None for other use cases.
     */
   @JSExportTopLevel("AggregateUseCaseTypeExpression")
   case class AggregateUseCaseTypeExpression(
     loc: At,
     usecase: AggregateUseCase,
-    contents: Contents[AggregateContents] = Contents.empty[AggregateContents]()
+    contents: Contents[AggregateContents] = Contents.empty[AggregateContents](),
+    yields: Option[MessageRef] = None
   ) extends AggregateTypeExpression(contents):
-    override def format: String = usecase.useCase.toLowerCase() + " " + super.format
+    override def format: String =
+      usecase.useCase.toLowerCase() +
+        yields.map(y => " yields " + y.format).getOrElse("") + " " + super.format
   end AggregateUseCaseTypeExpression
 
   /** A type expression whose value is a reference to an instance of an entity.
@@ -2311,8 +2317,8 @@ object AST:
 
     final override def kind: String = {
       typEx match {
-        case AggregateUseCaseTypeExpression(_, useCase, _) => useCase.useCase
-        case _                                             => "Type"
+        case AggregateUseCaseTypeExpression(_, useCase, _, _) => useCase.useCase
+        case _                                                => "Type"
       }
     }
 
@@ -4386,7 +4392,7 @@ object AST:
       case Decimal(_, whl, frac)   => s"Decimal($whl,$frac)"
       case RangeType(_, min, max)  => s"Range($min,$max)"
       case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
-      case m @ AggregateUseCaseTypeExpression(_, messageKind, _) =>
+      case m @ AggregateUseCaseTypeExpression(_, messageKind, _, _) =>
         s"${messageKind.useCase} of ${m.fields.size} fields and ${m.methods.size} methods"
       case pt: PredefinedType => pt.kind
     end match

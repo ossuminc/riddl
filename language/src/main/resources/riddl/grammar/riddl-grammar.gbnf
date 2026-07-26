@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-26 14:53 UTC
+# Generated: 2026-07-26 18:30 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -87,7 +87,7 @@ vital-definition-contents ::= type-def | comment
 # Type Definition
 type-def ::= def-of-type | def-of-type-kind-type
 def-of-type ::= "type" ws1 identifier ws1 is ws1 type-expression ws (with-metadata)?
-def-of-type-kind-type ::= aggregate-use-case ws1 identifier ws (scala-aggregate-definition | (is (aliased-type-expression | aggregation))) ws (with-metadata)?
+def-of-type-kind-type ::= aggregate-use-case ws1 identifier ws ("yields" message-ref)? ws (scala-aggregate-definition | (is (aliased-type-expression | aggregation))) ws (with-metadata)?
 aggregate-use-case ::= "type" | "command" | "query" | "event" | "result" | "record" | "graph" | "table"
 
 # Type Expressions

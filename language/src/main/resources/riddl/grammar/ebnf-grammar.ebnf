@@ -79,7 +79,7 @@ vital_definition_contents = type_def | comment ;
 (* Type Definition *)
 type_def = def_of_type | def_of_type_kind_type ;
 def_of_type = "type" identifier is type_expression [with_metadata] ;
-def_of_type_kind_type = aggregate_use_case identifier (scala_aggregate_definition | (is (aliased_type_expression | aggregation))) [with_metadata] ;
+def_of_type_kind_type = aggregate_use_case identifier ["yields" message_ref] (scala_aggregate_definition | (is (aliased_type_expression | aggregation))) [with_metadata] ;
 aggregate_use_case = "type" | "command" | "query" | "event" | "result" | "record" | "graph" | "table" ;
 
 (* Type Expressions *)

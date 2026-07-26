@@ -126,7 +126,7 @@ trait BasicValidation(using pc: PlatformContext) {
         definition match {
           case Type(_, _, typ, _) =>
             typ match {
-              case AggregateUseCaseTypeExpression(_, mk, _) =>
+              case AggregateUseCaseTypeExpression(_, mk, _, _) =>
                 check(
                   kinds.contains(mk),
                   s"'${ref.identify} should be one of these message types: ${kinds.mkString(",")}" +
