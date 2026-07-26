@@ -3234,7 +3234,6 @@ object AST:
     * @param contents
     *   The definitional content for this Context
     */
-  @JSExportTopLevel("Context")
   /** The intent of a [[Context]] — what kind of subsystem it is. Drives code
     * generation and architectural validation (A37). Optional; a context without
     * an intention is generic. Declared as an optional keyword prefix before
@@ -3259,6 +3258,7 @@ object AST:
       case _             => None
   end Intention
 
+  @JSExportTopLevel("Context")
   case class Context(
     loc: At,
     id: Identifier,
