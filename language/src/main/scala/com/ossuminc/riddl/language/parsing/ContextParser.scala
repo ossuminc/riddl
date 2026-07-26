@@ -45,17 +45,27 @@ private[parsing] trait ContextParser {
     )
   }
 
+  /** An optional intention keyword (`application | external | gateway | service`) immediately
+    * before `context`. Consumes nothing unless one of the four words is present; because the
+    * enclosing `context` rule cuts only after `Keywords.context`, a prefix that is not actually
+    * followed by `context` backtracks cleanly, so no lookahead is needed.
+    */
+  private def intentionPrefix[u: P]: P[Option[Intention]] =
+    P(StringIn("application", "external", "gateway", "service").!.?)
+      .map(_.flatMap(Intention.fromKeyword))
+
   def context[u: P]: P[Context] = {
     P(
-      Index ~ Keywords.context ~/ identifier ~ asShape ~ is ~ open ~ contextBody ~ close ~
-        withMetaData ~ Index
-    )./.map { case (start, id, ascribed, contents, descriptives, end) =>
+      Index ~ intentionPrefix ~ Keywords.context ~/ identifier ~ asShape ~ is ~ open ~
+        contextBody ~ close ~ withMetaData ~ Index
+    )./.map { case (start, intention, id, ascribed, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
       Context(
         at(start, end),
         id,
         contents.toContents,
         ascribedShape = ascribed,
+        intention = intention,
         metadata = descriptives.toContents
       )
     }

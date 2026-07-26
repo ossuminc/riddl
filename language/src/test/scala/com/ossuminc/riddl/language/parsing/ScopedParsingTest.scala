@@ -345,4 +345,50 @@ trait ScopedParsingTest(using PlatformContext) extends AbstractTestingBasisWithT
       }
     }
   }
+
+  "Context intention prefix" should {
+    "parse an `application context`" in { (td: TestData) =>
+      val input = RiddlParserInput("application context Orders is { ??? }", td)
+      TopLevelParser.parseAsDomain(input) match {
+        case Left(errors) => fail(errors.format)
+        case Right(domain) =>
+          val context = AST.getContexts(domain).head
+          context.id.value mustBe "Orders"
+          context.intention mustBe Some(Intention.Application)
+      }
+    }
+
+    "parse a `gateway context` with an ascribed shape and ports" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """gateway context Edge as merge is {
+          |  inlet a is command C
+          |  inlet b is command C
+          |  outlet o is command C
+          |  command C is { x: Integer }
+          |}""".stripMargin,
+        td
+      )
+      TopLevelParser.parseAsDomain(input) match {
+        case Left(errors) => fail(errors.format)
+        case Right(domain) =>
+          val context = AST.getContexts(domain).head
+          context.id.value mustBe "Edge"
+          context.intention mustBe Some(Intention.Gateway)
+          context.ascribedShape.map(_.keyword) mustBe Some("merge")
+          context.inlets.map(_.id.value) mustBe Seq("a", "b")
+          context.outlets.map(_.id.value) mustBe Seq("o")
+      }
+    }
+
+    "parse a bare `context` with no intention prefix" in { (td: TestData) =>
+      val input = RiddlParserInput("context Plain is { ??? }", td)
+      TopLevelParser.parseAsDomain(input) match {
+        case Left(errors) => fail(errors.format)
+        case Right(domain) =>
+          val context = AST.getContexts(domain).head
+          context.id.value mustBe "Plain"
+          context.intention mustBe None
+      }
+    }
+  }
 }
