@@ -149,11 +149,68 @@ class BASTRoundTripTest extends AnyWordSpec {
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.Entity
               val e = Finder(nebula.contents).recursiveFindByType[Entity].head
-              assert(e.states.find(_.id.value == "Second").get.isInitial, "state initial lost in BAST")
-              assert(!e.states.find(_.id.value == "First").get.isInitial, "non-initial state flipped")
+              assert(
+                e.states.find(_.id.value == "Second").get.isInitial,
+                "state initial lost in BAST"
+              )
+              assert(
+                !e.states.find(_.id.value == "First").get.isInitial,
+                "non-initial state flipped"
+              )
               val second = e.states.find(_.id.value == "Second").get
-              assert(second.handlers.find(_.id.value == "H2").get.isInitial, "handler initial lost in BAST")
-              assert(!second.handlers.find(_.id.value == "H1").get.isInitial, "non-initial handler flipped")
+              assert(
+                second.handlers.find(_.id.value == "H2").get.isInitial,
+                "handler initial lost in BAST"
+              )
+              assert(
+                !second.handlers.find(_.id.value == "H1").get.isInitial,
+                "non-initial handler flipped"
+              )
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
+    "serialize and deserialize named-type requires/returns on a function and saga (A9)" in {
+      val riddlSource =
+        """domain d is { context c is {
+          |  record Args is { a: Integer }
+          |  result Res is { ok: Boolean }
+          |  command Go is { x: Integer }
+          |  command UndoGo is { x: Integer }
+          |  entity e is { sink t is { inlet in is command Go } }
+          |  function f is { requires record Args returns result Res ??? }
+          |  function g is { requires { b: Boolean } returns { r: Integer } ??? }
+          |  saga s is {
+          |    requires record Args
+          |    returns result Res
+          |    step One is { send command Go to inlet d.c.e.t.in }
+          |      reverted by { send command UndoGo to inlet d.c.e.t.in }
+          |    step Two is { prompt "do" } reverted by { prompt "undo" }
+          |  }
+          |}}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-requires-returns")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(compareRoots(originalRoot, nebula), "requires/returns round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.{Aggregation, Function, TypeRef}
+              val funcs = Finder(nebula.contents).recursiveFindByType[Function]
+              val f = funcs.find(_.id.value == "f").get
+              assert(f.input.get.isInstanceOf[TypeRef], "function ref requires lost in BAST")
+              assert(
+                f.input.get.asInstanceOf[TypeRef].keyword == "record",
+                "ref keyword lost in BAST"
+              )
+              val g = funcs.find(_.id.value == "g").get
+              assert(g.input.get.isInstanceOf[Aggregation], "inline requires flipped in BAST")
             case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
           }
         case Left(messages) => fail(s"Parse failed: ${messages.format}")
@@ -186,7 +243,9 @@ class BASTRoundTripTest extends AnyWordSpec {
                 "domain-scoped connector round trip failed: ASTs are not equivalent"
               )
               val domain =
-                nebula.domains.find(_.id.value == "d").getOrElse(fail("domain d missing after BAST"))
+                nebula.domains
+                  .find(_.id.value == "d")
+                  .getOrElse(fail("domain d missing after BAST"))
               assert(
                 domain.connectors.map(_.id.value) == Seq("c"),
                 "connector is not at domain scope after BAST round trip"

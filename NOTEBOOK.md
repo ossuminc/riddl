@@ -121,6 +121,44 @@ first-declared semantics.
   pre-existing connector-scope conformance in riddl-models' `reactive-bbq`,
   documented above — unrelated to this feature.)
 
+## A9 — Function/Saga `requires`/`returns` as named type refs — DONE
+
+Branch `release/2`. Roadmap item **A9** (first of the 37-task release/2 queue,
+see the To-Do list). `requires`/`returns` on `Function` and `Saga` now take a
+**named `TypeRef`** (any type — so `type Age = Integer; function F is { requires
+Age returns Age }` works for unary/nullary fns) instead of only an inline
+aggregation. Field type is the union `Option[TypeRef | Aggregation]`.
+
+- **Not aggregate-restricted** (user ruling): `TypeRef`, not a
+  Message/Record-only ref. The `AggregateRef` hierarchy cleanup the user also
+  wants (make `MessageRef` = the 4 real messages, reparent `RecordRef` under a
+  new `AggregateRef`) is a **separate, filed task** (queue item **A9b**, #54) —
+  A9 uses `TypeRef` and doesn't touch the ref hierarchy. Audit finding for A9b:
+  no abstract `case _: MessageRef` matches exist, but records DO flow through
+  `MessageRef` via the `messageRef` parser (feeds send/tell/on/morph/reply) +
+  BAST/JSON, so the reparent changes those statements' semantics — hence its own
+  task.
+- **Non-breaking**: inline `requires { … }` still parses/validates but emits a
+  **new `Messages.Deprecation` kind** (severity 3, shown with warnings, never
+  blocks; `addDeprecation` helper; `justDeprecations` filter). External corpus
+  does NOT break (deprecation is a Warning). Advisory migration tasks can be
+  dropped in riddl-models/riddl-examples later.
+- **Gap closed**: `validateSaga` and the resolution pass's Saga case never
+  touched input/output before — A9 wires both (new `SagaValidatorTest`).
+- **Reflection (all surfaces)**: parser `funcInput`/`funcOutput` →
+  `(aggregation | typeRef)` (widen each branch to the union — fastparse `|`
+  otherwise infers the LUB `RiddlValue`); resolve via `resolveATypeRef`;
+  validate via `checkTypeRef` (+ deprecation on inline); Prettify emits
+  `ref.format`; **BAST** discriminator byte (0=ref,1=agg) + `FORMAT_REVISION`
+  **8→9**; **JSON** new `ArgDto(ref, fields)`. EBNF `func_input`/`func_output`
+  → `( aggregation | type_ref )`, GBNF regen (263 rules), TatSu ✓ on new fixture
+  `language/input/requires-returns-ref.riddl`.
+- **Tests**: `FunctionValidatorTest` (+2), `SagaValidatorTest` (new),
+  `RequiresReturnsRefFileTest` (parity), `RequiresReturnsRoundTripTest`
+  (prettify), BAST + JSON round-trip cases. `everything.check` / `saga.check`
+  regenerated (saga validation gap now fires field warnings on the inline form).
+  Ledgers updated: `MESSAGE_SUGGESTIONS.md`, `JSON_COVERAGE.md`.
+
 ## In-flight: Handler kinds per processor (2.0) — DESIGN LOCKED, WIP
 
 **Branch**: `release/2`. One combined change (user's choice). Uncommitted

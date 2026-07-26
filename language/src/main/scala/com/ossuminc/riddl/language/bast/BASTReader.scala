@@ -636,31 +636,32 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     Adaptor(loc, id, direction, referent, contents, metadata)
   }
 
+  // A9: `requires`/`returns` hold a TypeRef (preferred) or a deprecated inline Aggregation.
+  // A discriminator byte (0=ref, 1=aggregation) written by BASTWriter.writeRequiresReturns
+  // selects which payload follows.
+  private def readRequiresReturns(): TypeRef | Aggregation = {
+    reader.readU8() match {
+      case 0 => readTypeRefInline()
+      case 1 =>
+        readTypeExpression() match {
+          case agg: Aggregation => agg
+          case other =>
+            throw new RuntimeException(
+              s"requires/returns expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
+            )
+        }
+      case tag =>
+        throw new RuntimeException(
+          s"Invalid requires/returns discriminator $tag at byte pos ${reader.position}"
+        )
+    }
+  }
+
   private def readFunctionNode(): Function = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    // Debug: Read input with type checking
-    val inputRaw = readOption(readTypeExpression())
-    val input = inputRaw.map { te =>
-      te match {
-        case agg: Aggregation => agg
-        case other =>
-          throw new RuntimeException(
-            s"Function ${id.value} input expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
-          )
-      }
-    }
-    // Debug: Read output with type checking
-    val outputRaw = readOption(readTypeExpression())
-    val output = outputRaw.map { te =>
-      te match {
-        case agg: Aggregation => agg
-        case other =>
-          throw new RuntimeException(
-            s"Function ${id.value} output expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
-          )
-      }
-    }
+    val input = readOption(readRequiresReturns())
+    val output = readOption(readRequiresReturns())
     val contents = readContentsDeferred[OccursInVitalDefinition | Statement | Function]()
       .asInstanceOf[Contents[FunctionContents]]
     val metadata = readMetadataDeferred()
@@ -670,28 +671,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readSagaNode(): Saga = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    // Debug: Read input with type checking
-    val inputRaw = readOption(readTypeExpression())
-    val input = inputRaw.map { te =>
-      te match {
-        case agg: Aggregation => agg
-        case other =>
-          throw new RuntimeException(
-            s"Saga ${id.value} input expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
-          )
-      }
-    }
-    // Debug: Read output with type checking
-    val outputRaw = readOption(readTypeExpression())
-    val output = outputRaw.map { te =>
-      te match {
-        case agg: Aggregation => agg
-        case other =>
-          throw new RuntimeException(
-            s"Saga ${id.value} output expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
-          )
-      }
-    }
+    val input = readOption(readRequiresReturns())
+    val output = readOption(readRequiresReturns())
     val contents = readContentsDeferred[OccursInVitalDefinition | SagaStep]()
       .asInstanceOf[Contents[SagaContents]]
     val metadata = readMetadataDeferred()

@@ -243,14 +243,20 @@ object JsonModel:
 
   case class FieldDto(name: String, `type`: TypeExprDto, brief: Option[String] = None)
 
-  /** A function: `input`/`output` are field lists (aggregations), `statements` is the body,
-    * `functions` are nested. (Phase 3)
+  /** A9: a Function/Saga `requires`/`returns` value — either a named type reference (`ref` =
+    * "keyword path", e.g. "record Args", the preferred form) or a deprecated inline field list
+    * (`fields`). Exactly one is populated.
+    */
+  case class ArgDto(ref: Option[String] = None, fields: Seq[FieldDto] = Nil)
+
+  /** A function: `input`/`output` are `requires`/`returns` args (a type ref or, deprecated, an
+    * inline field list), `statements` is the body, `functions` are nested. (Phase 3)
     */
   case class FunctionDto(
     name: String,
     brief: Option[String] = None,
-    input: Seq[FieldDto] = Nil,
-    output: Seq[FieldDto] = Nil,
+    input: Option[ArgDto] = None,
+    output: Option[ArgDto] = None,
     types: Seq[TypeDefDto] = Nil,
     statements: Seq[StatementDto] = Nil,
     functions: Seq[FunctionDto] = Nil
@@ -431,8 +437,8 @@ object JsonModel:
   case class SagaDto(
     name: String,
     brief: Option[String] = None,
-    input: Seq[FieldDto] = Nil,
-    output: Seq[FieldDto] = Nil,
+    input: Option[ArgDto] = None,
+    output: Option[ArgDto] = None,
     types: Seq[TypeDefDto] = Nil,
     steps: Seq[SagaStepDto] = Nil
   )
@@ -1026,6 +1032,7 @@ object JsonModel:
   given userStoryRW: ReadWriter[UserStoryDto] = macroRW
   given useCaseRW: ReadWriter[UseCaseDto] = macroRW
   given epicRW: ReadWriter[EpicDto] = macroRW
+  given argRW: ReadWriter[ArgDto] = macroRW
   given functionRW: ReadWriter[FunctionDto] = macroRW
   given portletRW: ReadWriter[PortletDto] = macroRW
   given connectorDtoRW: ReadWriter[ConnectorDto] = macroRW

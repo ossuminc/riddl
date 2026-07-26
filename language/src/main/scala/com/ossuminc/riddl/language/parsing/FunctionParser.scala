@@ -15,12 +15,18 @@ import fastparse.MultiLineWhitespace.*
 private[parsing] trait FunctionParser {
   this: VitalDefinitionParser & StatementParser =>
 
-  def funcInput[u: P]: P[Aggregation] = {
-    P(Keywords.requires ~ aggregation)./
+  // A9: `requires`/`returns` name a Type (preferred) or, deprecated, an inline Aggregation.
+  // The two forms are disjoint by their leading token (`{` for aggregation, an identifier or
+  // type keyword for typeRef), so a plain alternation suffices.
+  private def requiresReturnsValue[u: P]: P[TypeRef | Aggregation] =
+    P(aggregation.map(a => a: TypeRef | Aggregation) | typeRef.map(t => t: TypeRef | Aggregation))
+
+  def funcInput[u: P]: P[TypeRef | Aggregation] = {
+    P(Keywords.requires ~ requiresReturnsValue)./
   }
 
-  def funcOutput[u: P]: P[Aggregation] = {
-    P(Keywords.returns ~ aggregation)./
+  def funcOutput[u: P]: P[TypeRef | Aggregation] = {
+    P(Keywords.returns ~ requiresReturnsValue)./
   }
 
   private def functionDefinitions[u: P]: P[Seq[FunctionContents]] = {
@@ -33,7 +39,8 @@ private[parsing] trait FunctionParser {
     )
   }
 
-  private type BodyType = (Option[Aggregation], Option[Aggregation], Seq[FunctionContents])
+  private type BodyType =
+    (Option[TypeRef | Aggregation], Option[TypeRef | Aggregation], Seq[FunctionContents])
 
   private def functionBody[u: P]: P[BodyType] =
     P(funcInput.? ~ funcOutput.? ~ functionDefinitions)

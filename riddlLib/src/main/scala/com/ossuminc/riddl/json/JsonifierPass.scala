@@ -145,7 +145,15 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           )
         )
       case s: State =>
-        Some(StateDto(s.id.value, path(s.typ.pathId), col[HandlerDto], briefOf(s.metadata), s.isInitial))
+        Some(
+          StateDto(
+            s.id.value,
+            path(s.typ.pathId),
+            col[HandlerDto],
+            briefOf(s.metadata),
+            s.isInitial
+          )
+        )
       case h: Handler =>
         Some(HandlerDto(h.id.value, briefOf(h.metadata), col[OnClauseDto], h.isInitial))
       case oc: OnClause =>
@@ -259,8 +267,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           SagaDto(
             s.id.value,
             briefOf(s.metadata),
-            aggFields(s.input),
-            aggFields(s.output),
+            argDto(s.input),
+            argDto(s.output),
             col[TypeDefDto],
             col[SagaStepDto]
           )
@@ -270,8 +278,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           FunctionDto(
             f.id.value,
             briefOf(f.metadata),
-            aggFields(f.input),
-            aggFields(f.output),
+            argDto(f.input),
+            argDto(f.output),
             col[TypeDefDto],
             f.contents.toSeq.collect { case st: Statement => serializeStatement(st) },
             col[FunctionDto]
@@ -431,8 +439,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       briefOf(m.metadata)
     )
 
-  private def aggFields(agg: Option[Aggregation]): Seq[FieldDto] =
-    agg.toSeq.flatMap(_.fields.map(serializeField))
+  // A9: a Function/Saga `requires`/`returns` value becomes an ArgDto — a type ref (preferred) or
+  // a deprecated inline field list.
+  private def argDto(value: Option[TypeRef | Aggregation]): Option[ArgDto] = value.map {
+    case tr: TypeRef      => ArgDto(ref = Some(tr.format))
+    case agg: Aggregation => ArgDto(fields = agg.fields.map(serializeField))
+  }
 
   private def serializeTypeExpr(te: TypeExpression): TypeExprDto = te match
     // Emit the canonical String(0,255) bounds explicitly (mirroring the defaults

@@ -35,6 +35,8 @@ object Messages {
 
     def isCompleteness: Boolean = false
 
+    def isDeprecation: Boolean = false
+
     def isTip: Boolean = false
 
     def isInfo: Boolean = false
@@ -112,6 +114,20 @@ object Messages {
     def severity = 4
   }
 
+  /** A case object for the Deprecation kind of warning message. Flags a language construct that
+    * still works but is slated for removal in a future major release; the message's `suggestion`
+    * (when tips are enabled) names the replacement. Advisory — shown with warnings but never blocks
+    * generation. (A9)
+    */
+  case object Deprecation extends KindOfMessage {
+    override def isWarning: Boolean = true
+
+    override def isDeprecation: Boolean = true
+
+    override def toString: String = "Deprecation"
+    def severity = 3
+  }
+
   /** A case object for the generic kind of warning message */
   case object Warning extends KindOfMessage {
     override def isWarning: Boolean = true
@@ -176,6 +192,7 @@ object Messages {
     def isStyle: Boolean = kind.isStyle
     def isUsage: Boolean = kind.isUsage
     def isCompleteness: Boolean = kind.isCompleteness
+    def isDeprecation: Boolean = kind.isDeprecation
     def isError: Boolean = kind.isError
     def isSevere: Boolean = kind.isSevereError
 
@@ -328,6 +345,9 @@ object Messages {
     /** Return a filtered list of just the [[UsageWarning]] messages. */
     @JSExport def justUsage: Messages = msgs.filter(_.isUsage)
 
+    /** Return a filtered list of just the [[Deprecation]] messages. */
+    @JSExport def justDeprecations: Messages = msgs.filter(_.isDeprecation)
+
     /** Return a filtered list of just the [[Warning]] messages. */
     @JSExport def justWarnings: Messages = msgs.filter(m => m.kind < Error && m.kind > Info)
 
@@ -367,6 +387,7 @@ object Messages {
       case MissingWarning      => io.log.missing(message.format)
       case UsageWarning        => io.log.usage(message.format)
       case CompletenessWarning => io.log.completeness(message.format)
+      case Deprecation         => io.log.warn(message.format)
       case Warning             => io.log.warn(message.format)
       case Error               => io.log.error(message.format)
       case SevereError         => io.log.severe(message.format)
@@ -402,6 +423,8 @@ object Messages {
             io.log.severe(s"""$kind Message Count: ${messages.length}""")
           case Info =>
             io.log.info(s"""$kind Message Count: ${messages.length}""")
+          case Deprecation =>
+            io.log.warn(s"""$kind Message Count: ${messages.length}""")
         }
         messages.foreach { (msg: Message) => logMessage(msg) }
       }
@@ -462,7 +485,8 @@ object Messages {
       val message = if pc.options.provideTips then message0 else message0.copy(suggestion = "")
       val o = pc.options
       message.kind match {
-        case Warning if o.showWarnings => msgs.append(message)
+        case Warning if o.showWarnings     => msgs.append(message)
+        case Deprecation if o.showWarnings => msgs.append(message)
         case CompletenessWarning if o.showWarnings && o.showCompletenessWarnings =>
           msgs.append(message)
         case StyleWarning if o.showWarnings && o.showStyleWarnings     => msgs.append(message)
@@ -585,6 +609,21 @@ object Messages {
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, CompletenessWarning, suggestion = suggestion))
+    }
+
+    /** Add a [[Deprecation]] warning to the accumulated [[Messages]]
+      *
+      * @param loc
+      *   The location in the source related to the message.
+      * @param msg
+      *   The text of the message to add
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
+    @inline def addDeprecation(loc: At, msg: String, suggestion: String = "")(using
+      pc: PlatformContext
+    ): this.type = {
+      add(Message(loc, msg, Deprecation, suggestion = suggestion))
     }
 
     /** Add a [[Tip]] message to the accumulated [[Messages]]

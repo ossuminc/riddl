@@ -135,6 +135,7 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${context} defines results but no query types` (Completeness) | `Add a query type to ${context}, e.g. 'type XQuery = query { ??? }'.` |
 | `${inv} is defined but not referenced by any 'require invariant' statement` (Usage) | `Reference ${inv} from a handler with 'require invariant ${inv.id}', or remove it if unused.` |
 | `Empty 'on other' clause will silently discard unhandled messages` (Completeness) | Add statements to the 'on other' clause (e.g. log or error), or remove it if discarding is intentional. |
+| `Inline aggregation on 'requires'/'returns' of ${definition} is deprecated` (Deprecation) | Define a named type (e.g. 'record Args is { ... }') and reference it instead. |
 | `${onClause} should have statements` (Missing) | `Add one or more statements to ${onClause} (use '???' as a placeholder if needed).` |
 | `Command processing in ${entity} should result in sending an event` (Completeness) | Send or tell an event from this command handler, e.g. 'send event SomethingHappened to outlet …'. |
 | `Query processing in ${entity} should result in a reply or sending a result` (Completeness) | Reply with a result or send a result type from this query handler, e.g. 'reply result QueryResult'. |

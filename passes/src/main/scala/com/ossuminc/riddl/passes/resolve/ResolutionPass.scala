@@ -139,6 +139,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case r: Repository =>
         addRepository(r)
       case s: Saga =>
+        // A9: resolve saga requires/returns (previously unresolved).
+        s.input.foreach(resolveRequiresReturns(s, _, parents))
+        s.output.foreach(resolveRequiresReturns(s, _, parents))
       case r: Relationship =>
         resolveARef[Processor[?]](r.withProcessor, parents)
       case m: Module  =>
@@ -179,8 +182,19 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private def resolveFunction(f: Function, parents: Parents): Unit = {
     addFunction(f)
     f.authorRefs.foreach { item => associateUsage[Author](f, resolveARef[Author](item, parents)) }
-    f.input.foreach(resolveTypeExpression(f, _, parents))
-    f.output.foreach(resolveTypeExpression(f, _, parents))
+    f.input.foreach(resolveRequiresReturns(f, _, parents))
+    f.output.foreach(resolveRequiresReturns(f, _, parents))
+  }
+
+  // A9: `requires`/`returns` name a Type (resolve the ref and record usage) or, deprecated,
+  // carry an inline Aggregation (resolve it as a type expression).
+  private def resolveRequiresReturns(
+    user: Definition,
+    value: TypeRef | Aggregation,
+    parents: Parents
+  ): Unit = value match {
+    case tr: TypeRef      => associateUsage[Type](user, resolveATypeRef(tr, parents))
+    case agg: Aggregation => resolveTypeExpression(user, agg, parents)
   }
 
   private def resolveType(typ: Type, parents: Parents): Resolution[Type] = {
@@ -685,8 +699,14 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               candidatesFromContents(include.contents.definitions.toContents)
                 .asInstanceOf[Definitions]
             case function: Function =>
-              function.input.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
-                function.output.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
+              // A9: only the deprecated inline Aggregation form contributes inline Field candidates;
+              // a TypeRef's fields live in the referenced type, resolved separately.
+              function.input
+                .collect { case agg: Aggregation => agg.contents.filter[Field] }
+                .asInstanceOf[Definitions] ++
+                function.output
+                  .collect { case agg: Aggregation => agg.contents.filter[Field] }
+                  .asInstanceOf[Definitions] ++
                 function.contents.definitions
             case vital: VitalDefinition[?] =>
               vital.contents.toSeq.flatMap {

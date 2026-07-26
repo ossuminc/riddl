@@ -440,9 +440,16 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_FUNCTION, f.metadata.nonEmpty)
     writeLocation(f.loc)
     writeIdentifierInline(f.id) // Inline - no tag needed
-    writeOption(f.input)((agg: Aggregation) => writeTypeExpression(agg))
-    writeOption(f.output)((agg: Aggregation) => writeTypeExpression(agg))
+    writeOption(f.input)(writeRequiresReturns)
+    writeOption(f.output)(writeRequiresReturns)
     writeContents(f.contents)
+  }
+
+  // A9: `requires`/`returns` hold a TypeRef (preferred) or a deprecated inline Aggregation.
+  // A discriminator byte (0=ref, 1=aggregation) precedes the payload.
+  private def writeRequiresReturns(value: TypeRef | Aggregation): Unit = value match {
+    case tr: TypeRef      => writer.writeU8(0); writeTypeRefInline(tr)
+    case agg: Aggregation => writer.writeU8(1); writeTypeExpression(agg)
   }
 
   def writeAdaptor(a: Adaptor): Unit = {
@@ -461,8 +468,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_SAGA, s.metadata.nonEmpty)
     writeLocation(s.loc)
     writeIdentifierInline(s.id) // Inline - no tag needed
-    writeOption(s.input)((agg: Aggregation) => writeTypeExpression(agg))
-    writeOption(s.output)((agg: Aggregation) => writeTypeExpression(agg))
+    writeOption(s.input)(writeRequiresReturns)
+    writeOption(s.output)(writeRequiresReturns)
     writeContents(s.contents)
   }
 

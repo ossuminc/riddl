@@ -99,10 +99,20 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def openFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
       rfe.addIndent(s"${keyword(function)} ${function.id.format} is { ").nl.incr
-      function.input.foreach(te => rfe.addIndent("requires ").emitAggregation(te))
-      function.output.foreach(te => rfe.addIndent("returns  ").emitAggregation(te))
+      function.input.foreach(emitRequiresReturns(rfe, "requires ", _))
+      function.output.foreach(emitRequiresReturns(rfe, "returns  ", _))
     }
   end openFunction
+
+  // A9: `requires`/`returns` emit a TypeRef (preferred) or a deprecated inline Aggregation.
+  private def emitRequiresReturns(
+    rfe: RiddlFileEmitter,
+    kw: String,
+    value: TypeRef | Aggregation
+  ): Unit = value match {
+    case tr: TypeRef      => rfe.addIndent(kw).add(tr.format).nl
+    case agg: Aggregation => rfe.addIndent(kw).emitAggregation(agg)
+  }
   def closeFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
       rfe.decr.addIndent("}")
@@ -114,8 +124,8 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def openSaga(saga: Saga, parents: Parents): Unit =
     state.withCurrent { rfe =>
       rfe.openDef(saga)
-      saga.input.foreach(te => rfe.addIndent("requires ").emitAggregation(te))
-      saga.output.foreach(te => rfe.addIndent("returns  ").emitAggregation(te))
+      saga.input.foreach(emitRequiresReturns(rfe, "requires ", _))
+      saga.output.foreach(emitRequiresReturns(rfe, "returns  ", _))
     }
   def closeSaga(saga: Saga, parents: Parents): Unit = close(saga)
 

@@ -2730,8 +2730,9 @@ object AST:
   case class Function(
     loc: At,
     id: Identifier,
-    input: Option[Aggregation] = None,
-    output: Option[Aggregation] = None,
+    // A9: `requires`/`returns` name a Type (preferred) or, deprecated, an inline Aggregation.
+    input: Option[TypeRef | Aggregation] = None,
+    output: Option[TypeRef | Aggregation] = None,
     contents: Contents[FunctionContents] = Contents.empty[FunctionContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[FunctionContents]
@@ -2785,10 +2786,11 @@ object AST:
   sealed trait OnClause extends Branch[Statements] with WithStatements[Statements]
 
   /** Common supertype of the two on-clauses that carry a message reference: [[OnMessageClause]]
-    * (command/query/result/record) and [[OnEventClause]] (event). Event handling was split into
-    * its own node so the parser can forbid `require`/`error` in event bodies, but for resolution,
+    * (command/query/result/record) and [[OnEventClause]] (event). Event handling was split into its
+    * own node so the parser can forbid `require`/`error` in event bodies, but for resolution,
     * message-flow, dependency and diagram purposes both are "a clause that reacts to a message" —
-    * those passes match on this trait to treat them uniformly by `msg`/`from`. */
+    * those passes match on this trait to treat them uniformly by `msg`/`from`.
+    */
   sealed trait OnMessageLikeClause extends OnClause {
     def msg: MessageRef
     def from: Option[(Option[Identifier], Reference[Definition])]
@@ -2880,11 +2882,10 @@ object AST:
     override def format: String = ""
   }
 
-  /** Defines the actions taken when a specific event is received. Distinct from
-    * [[OnMessageClause]] (which handles command/query/result) because events must ALWAYS be
-    * accepted: an event clause may not use `require` or `error` statements — the only ways to
-    * circumvent normal flow control — and that restriction is enforced at parse time. Used in
-    * every kind of handler.
+  /** Defines the actions taken when a specific event is received. Distinct from [[OnMessageClause]]
+    * (which handles command/query/result) because events must ALWAYS be accepted: an event clause
+    * may not use `require` or `error` statements — the only ways to circumvent normal flow control
+    * — and that restriction is enforced at parse time. Used in every kind of handler.
     *
     * @param msg
     *   A reference to the event type that is handled
@@ -2904,11 +2905,10 @@ object AST:
     def format: String = ""
   }
 
-  /** Defines the actions taken each time an entity is activated (rehydrated into memory).
-    * Distinct from [[OnInitializationClause]], which happens once ever at creation. Entity
-    * handlers only. Activation must be transparent to the rest of the system, so outbound
-    * messaging (`send`/`tell`/`reply`/`morph`/`become`) is not permitted (enforced at parse
-    * time).
+  /** Defines the actions taken each time an entity is activated (rehydrated into memory). Distinct
+    * from [[OnInitializationClause]], which happens once ever at creation. Entity handlers only.
+    * Activation must be transparent to the rest of the system, so outbound messaging
+    * (`send`/`tell`/`reply`/`morph`/`become`) is not permitted (enforced at parse time).
     */
   @JSExportTopLevel("OnActivationClause")
   case class OnActivationClause(
@@ -2923,9 +2923,9 @@ object AST:
     override def format: String = ""
   }
 
-  /** Defines the actions taken each time an entity is passivated (evicted from memory).
-    * Distinct from [[OnTerminationClause]], which happens once ever at destruction. Entity
-    * handlers only. Same side-effect-free restriction as [[OnActivationClause]].
+  /** Defines the actions taken each time an entity is passivated (evicted from memory). Distinct
+    * from [[OnTerminationClause]], which happens once ever at destruction. Entity handlers only.
+    * Same side-effect-free restriction as [[OnActivationClause]].
     */
   @JSExportTopLevel("OnPassivationClause")
   case class OnPassivationClause(
@@ -3519,8 +3519,9 @@ object AST:
   case class Saga(
     loc: At,
     id: Identifier,
-    input: Option[Aggregation] = None,
-    output: Option[Aggregation] = None,
+    // A9: `requires`/`returns` name a Type (preferred) or, deprecated, an inline Aggregation.
+    input: Option[TypeRef | Aggregation] = None,
+    output: Option[TypeRef | Aggregation] = None,
     contents: Contents[SagaContents] = Contents.empty[SagaContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[SagaContents]

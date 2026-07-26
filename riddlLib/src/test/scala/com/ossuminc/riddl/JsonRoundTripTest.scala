@@ -122,7 +122,44 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
             case RiddlResult.Failure(errors) =>
               fail(s"parseJson of the initial-marker JSON failed: $errors")
           end match
-        case RiddlResult.Failure(errors) => fail(s"parse of the initial-marker model failed: $errors")
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the initial-marker model failed: $errors")
+      end match
+    }
+
+    "round-trip named-type requires/returns on a function and saga (A9) losslessly" in {
+      val rrModel =
+        """domain d is { context c is {
+          |  record Args is { a: Integer }
+          |  result Res is { ok: Boolean }
+          |  command Go is { x: Integer }
+          |  command UndoGo is { x: Integer }
+          |  entity e is { sink t is { inlet in is command Go } }
+          |  function f is { requires record Args returns result Res ??? }
+          |  saga s is {
+          |    requires record Args
+          |    returns result Res
+          |    step One is { send command Go to inlet d.c.e.t.in }
+          |      reverted by { send command UndoGo to inlet d.c.e.t.in }
+          |    step Two is { prompt "do" } reverted by { prompt "undo" }
+          |  }
+          |}}
+          |""".stripMargin
+      RiddlLib.parseString(rrModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // The named references survive as ref strings (not inline field lists)...
+          json1 must include("\"ref\"")
+          json1 must include("record Args")
+          json1 must include("result Res")
+          // ...and JsonAstBuilder rebuilds them so the JSON is a fixed point.
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the requires/returns JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the requires/returns model failed: $errors")
       end match
     }
 

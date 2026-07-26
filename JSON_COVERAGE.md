@@ -52,7 +52,7 @@ is covered in that construct's phase. The builder emits references as
 | User | ✅ Phase 2 | at domain level |
 | Term | ✅ Phase 9 | glossary entry (metadata; see Metadata section) |
 | Method | ✅ Phase 3 | aggregate method with args |
-| Function | ✅ Phase 3 | input/output aggregation + statement body + nested |
+| Function | ✅ Phase 3 | requires/returns as `ArgDto` (type ref or deprecated inline agg) + body + nested |
 | Adaptor | ✅ Phase 4 | direction + ContextRef |
 | Projector | ✅ Phase 4 | RepositoryRef |
 | Repository | ✅ Phase 4 | Schema |
@@ -62,7 +62,7 @@ is covered in that construct's phase. The builder emits references as
 | Outlet | ✅ Phase 4 | |
 | Connector | ✅ Phase 4 | OutletRef → InletRef |
 | Relationship | ✅ Phase 4 | ProcessorRef + cardinality |
-| Saga | ✅ Phase 5 | input/output + steps |
+| Saga | ✅ Phase 5 | requires/returns as `ArgDto` (type ref or deprecated inline agg) + steps |
 | SagaStep | ✅ Phase 5 | do/undo statements |
 | Module | ✅ Phase 6 | nested modules/domains |
 | Epic | ✅ Phase 7 | user story + use cases + shownBy |

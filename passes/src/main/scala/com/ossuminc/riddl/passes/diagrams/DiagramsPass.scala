@@ -227,8 +227,10 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   ): Seq[ContextRelationship] = {
     for {
       f <- functions
-      inputFields = f.input.map(_.fields).getOrElse(Seq.empty)
-      outputFields = f.output.map(_.fields).getOrElse(Seq.empty)
+      // A9: only the deprecated inline Aggregation form carries inline fields for field-level
+      // relationships; a TypeRef's fields live in the referenced type.
+      inputFields = f.input.collect { case agg: Aggregation => agg.fields }.getOrElse(Seq.empty)
+      outputFields = f.output.collect { case agg: Aggregation => agg.fields }.getOrElse(Seq.empty)
       relationship <- makeFieldRelationships(context, inputFields ++ outputFields, f)
     } yield {
       relationship

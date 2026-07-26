@@ -142,8 +142,8 @@ field_type_alternatives = predefined_types | pattern_type | unique_id_type | enu
 (* Functions *)
 function = "function" identifier is "{" function_body "}" [with_metadata] ;
 function_body = [func_input] [func_output] function_definitions ;
-func_input = "requires" aggregation ;
-func_output = "returns" aggregation ;
+func_input = "requires" ( aggregation | type_ref ) ;
+func_output = "returns" ( aggregation | type_ref ) ;
 function_definitions = {"???" | (vital_definition_contents | function | function_include | statement)} ;
 function_include = "include" literal_string ;
 

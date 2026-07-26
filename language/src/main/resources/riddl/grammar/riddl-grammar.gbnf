@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-25 22:14 UTC
+# Generated: 2026-07-25 23:51 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -142,8 +142,8 @@ field-type-alternatives ::= predefined-types | pattern-type | unique-id-type | e
 # Functions
 function ::= "function" ws1 identifier ws1 is ws "{" ws function-body ws "}" ws (with-metadata)?
 function-body ::= (func-input)? ws (func-output)? ws function-definitions
-func-input ::= "requires" ws1 aggregation
-func-output ::= "returns" ws1 aggregation
+func-input ::= "requires" ws (aggregation | type-ref)
+func-output ::= "returns" ws (aggregation | type-ref)
 function-definitions ::= ("???" | (vital-definition-contents | function | function-include | statement))*
 function-include ::= "include" ws1 literal-string
 

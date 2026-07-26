@@ -193,6 +193,23 @@ object JsonAstBuilder:
     if fields.isEmpty then None
     else Some(Aggregation(At(), Contents[AggregateContents](fields.map(buildField)*)))
 
+  /** A9: rebuild a Function/Saga `requires`/`returns` value from its ArgDto — a `TypeRef` from the
+    * "keyword path" string (preferred), or a deprecated inline `Aggregation` from a field list.
+    */
+  private def argOf(arg: Option[ArgDto])(using Ctx): Option[TypeRef | Aggregation] =
+    arg.flatMap { a =>
+      a.ref match
+        case Some(s) =>
+          val trimmed = s.trim
+          val spaceIdx = trimmed.indexOf(' ')
+          val (kw, p) =
+            if spaceIdx > 0 then
+              (trimmed.substring(0, spaceIdx), trimmed.substring(spaceIdx + 1).trim)
+            else ("type", trimmed)
+          Some(TypeRef(At(), kw, pathId(p)))
+        case None => aggregationOf(a.fields)
+    }
+
   private def buildMethod(m: MethodDto)(using Ctx): Method =
     val args = m.args.map(a => MethodArgument(At(), a.name, buildTypeExpr(a.`type`)))
     Method(At(), ident(m.name), buildTypeExpr(m.`type`), args, meta(m.brief))
@@ -311,8 +328,8 @@ object JsonAstBuilder:
     Function(
       At(),
       ident(f.name),
-      aggregationOf(f.input),
-      aggregationOf(f.output),
+      argOf(f.input),
+      argOf(f.output),
       contentsOf[FunctionContents](types, statements, functions),
       meta(f.brief)
     )
@@ -332,8 +349,8 @@ object JsonAstBuilder:
     Saga(
       At(),
       ident(s.name),
-      aggregationOf(s.input),
-      aggregationOf(s.output),
+      argOf(s.input),
+      argOf(s.output),
       contentsOf[SagaContents](types, steps),
       meta(s.brief)
     )

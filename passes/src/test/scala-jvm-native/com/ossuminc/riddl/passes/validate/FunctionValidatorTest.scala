@@ -84,5 +84,38 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
           text must include("Function 'AnAspect' is unused")
       }
     }
+    "accept a named type reference on requires/returns (A9)" in { (td: TestData) =>
+      val input =
+        """type Age is Integer
+          |record Args is { a: Integer }
+          |function f is {
+          |  requires Age
+          |  returns record Args
+          |  ???
+          |}
+          |""".stripMargin
+      parseAndValidateInContext[Function](input, shouldFailOnErrors = false) {
+        case (function, _, msgs) =>
+          function.input.get mustBe a[TypeRef]
+          function.output.get mustBe a[TypeRef]
+          msgs.justErrors mustBe empty
+          msgs.justDeprecations mustBe empty
+      }
+    }
+    "warn (deprecation) on inline aggregation for requires/returns (A9)" in { (td: TestData) =>
+      val input =
+        """function f is {
+          |  requires { b: Boolean }
+          |  returns { r: Integer }
+          |  ???
+          |}
+          |""".stripMargin
+      parseAndValidateInContext[Function](input, shouldFailOnErrors = false) {
+        case (function, _, msgs) =>
+          function.input.get mustBe a[Aggregation]
+          msgs.justErrors mustBe empty
+          msgs.justDeprecations.exists(_.message.contains("deprecated")) mustBe true
+      }
+    }
   }
 }

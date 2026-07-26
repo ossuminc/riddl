@@ -419,8 +419,8 @@ object TopLevelParser:
     */
   def parseAsSaga(
     input: RiddlParserInput,
-    sagaInput: Option[Aggregation] = None,
-    sagaOutput: Option[Aggregation] = None,
+    sagaInput: Option[TypeRef | Aggregation] = None,
+    sagaOutput: Option[TypeRef | Aggregation] = None,
     withVerboseFailures: Boolean = false
   )(using PlatformContext): Either[Messages, Saga] =
     val tlp = new TopLevelParser(input, withVerboseFailures)

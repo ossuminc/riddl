@@ -798,12 +798,26 @@ case class ValidationPass(
       suggestion =
         s"Add statements to the body of ${f.identify} (use '???' as a placeholder if needed)."
     )
-    f.input.foreach { agg =>
-      checkTypeExpression(agg, f, parents)
-    }
-    f.output.foreach { agg =>
-      checkTypeExpression(agg, f, parents)
-    }
+    f.input.foreach(validateRequiresReturns(_, f, parents))
+    f.output.foreach(validateRequiresReturns(_, f, parents))
+  }
+
+  // A9: `requires`/`returns` reference any named Type (resolved by checkTypeRef — no aggregate
+  // restriction), or carry a deprecated inline Aggregation (still validated, plus a Deprecation
+  // warning nudging migration to a named type).
+  private def validateRequiresReturns(
+    value: TypeRef | Aggregation,
+    definition: Definition,
+    parents: Parents
+  ): Unit = value match {
+    case tr: TypeRef => checkTypeRef(tr, parents)
+    case agg: Aggregation =>
+      checkTypeExpression(agg, definition, parents)
+      messages.addDeprecation(
+        agg.loc,
+        s"Inline aggregation on 'requires'/'returns' of ${definition.identify} is deprecated",
+        suggestion = "Define a named type (e.g. 'record Args is { ... }') and reference it instead."
+      )
   }
 
   private def validateHandler(
@@ -1791,6 +1805,9 @@ case class ValidationPass(
       saga.errorLoc,
       suggestion = "Give each saga step a unique name."
     )
+    // A9: validate saga requires/returns (previously unvalidated).
+    saga.input.foreach(validateRequiresReturns(_, saga, parents))
+    saga.output.foreach(validateRequiresReturns(_, saga, parents))
   }
 
   private def validateSagaStep(

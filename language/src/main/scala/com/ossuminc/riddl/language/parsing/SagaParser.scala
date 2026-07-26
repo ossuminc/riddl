@@ -44,8 +44,8 @@ private[parsing] trait SagaParser {
   }
 
   private type SagaBodyType = (
-    Option[Aggregation],
-    Option[Aggregation],
+    Option[TypeRef | Aggregation],
+    Option[TypeRef | Aggregation],
     Seq[SagaContents]
   )
 
