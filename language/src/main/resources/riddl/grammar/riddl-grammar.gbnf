@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-26 20:36 UTC
+# Generated: 2026-07-26 21:50 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -194,7 +194,7 @@ on-message-clause ::= "on" ws1 message-ref ws ("from" (identifier ":")? message-
 message-origins ::= inlet-ref | processor-ref | user-ref | epic-ref
 
 # Core statements available in all contexts
-statement ::= when-statement | match-statement | foreach-statement | send-statement | tell-statement | yield-statement | reply-statement | the-set-statement | let-statement | prompt-statement | code-statement | error-statement | require-statement | morph-statement | become-statement | comment
+statement ::= when-statement | match-statement | foreach-statement | send-statement | tell-statement | yield-statement | reply-statement | the-set-statement | let-statement | put-statement | return-statement | prompt-statement | code-statement | error-statement | require-statement | morph-statement | become-statement | comment
 
 # Control flow
 when-statement ::= "when" ws1 literal-string ws "then" ws1 pseudo-code-block ws ("else" pseudo-code-block)? ws "end"
@@ -213,6 +213,13 @@ reply-statement ::= "reply" ws1 message-ref
 # Variable operations
 the-set-statement ::= "set" ws (field-ref | state-ref) ws "to" ws1 literal-string
 let-statement ::= "let" ws1 identifier ws (":" type-ref)? ws "=" ws literal-string
+value ::= literal-string | constructor | get-value | value-ref
+constructor ::= (message-ref | record-ref) ws "(" ws (constructor-arg ("," constructor-arg)*)? ws ")"
+constructor-arg ::= (identifier "=" value) | value
+get-value ::= "get" ws "from" ws (input-ref | state-ref)
+value-ref ::= path-identifier
+put-statement ::= "put" ws1 value ws "to" ws1 output-ref
+return-statement ::= "return" ws1 value
 
 # General statements
 prompt-statement ::= ("prompt" | "do") ws literal-string

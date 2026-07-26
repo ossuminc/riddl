@@ -606,7 +606,40 @@ object JsonAstBuilder:
             ctx.err("foreach statement needs a 'field' or a 'local' collection")
             FieldRef(At(), PathIdentifier.empty)
         ForeachStatement(At(), ident(element), collection, buildStatements(doStatements))
+      case PutStmtDto(value, output) =>
+        PutStatement(At(), buildValue(value), OutputRef(At(), "output", pathId(output)))
+      case ReturnStmtDto(value) =>
+        ReturnStatement(At(), buildValue(value))
   end buildStatement
+
+  // A54: ValueDto -> AST Value.
+  private def buildValue(v: ValueDto)(using ctx: Ctx): Value =
+    v match
+      case LiteralValueDto(text) => LiteralString(At(), text)
+      case ValueRefDto(p)        => ValueRef(At(), pathId(p))
+      case GetValueDto(source, ref) =>
+        val src: InputRef | StateRef = source match
+          case "input" => InputRef(At(), "input", pathId(ref))
+          case "state" => StateRef(At(), pathId(ref))
+          case other =>
+            ctx.err(s"unknown get-value source '$other' (expected input|state)")
+            StateRef(At(), pathId(ref))
+        GetValue(At(), src)
+      case ConstructorValueDto(refKind, ref, args) =>
+        val cref: MessageRef | RecordRef = refKind match
+          case "command" => CommandRef(At(), pathId(ref))
+          case "event"   => EventRef(At(), pathId(ref))
+          case "query"   => QueryRef(At(), pathId(ref))
+          case "result"  => ResultRef(At(), pathId(ref))
+          case "record"  => RecordRef(At(), pathId(ref))
+          case other =>
+            ctx.err(s"unknown constructor refKind '$other'")
+            RecordRef(At(), pathId(ref))
+        Constructor(
+          At(),
+          cref,
+          args.map(a => ConstructorArg(At(), a.name.map(ident), buildValue(a.value)))
+        )
 
   private def buildMatchCase(c: MatchCaseDto)(using Ctx): MatchCase =
     MatchCase(At(), LiteralString(At(), c.pattern), buildStatements(c.statements))

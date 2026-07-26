@@ -145,6 +145,20 @@ is covered in that construct's phase. The builder emits references as
 | WhenStatement | ✅ Phase 3 | nested statements |
 | MatchStatement / MatchCase | ✅ Phase 3 | nested statements |
 | ForeachStatement | ✅ A25 | field-ref or local collection; nested body statements |
+| PutStatement | ✅ A45 | value + OutputRef; value via ValueDto |
+| ReturnStatement | ✅ A57 | value via ValueDto |
+
+## Values (A54)
+
+Value expressions serialized inline within `put`/`return` (and constructor args)
+via `ValueDto` (`readValue`/`writeValue`).
+
+| Construct | Status | Notes |
+|---|---|---|
+| LiteralString (value) | ✅ A54 | `{ "value": "literal", "text": ... }` |
+| Constructor / ConstructorArg | ✅ A54 | refKind command/event/query/result/record; positional + named args |
+| ValueRef | ✅ A54 | `{ "value": "valueRef", "path": ... }` |
+| GetValue | ✅ A54 | `{ "value": "get", "source": "input"\|"state", "ref": ... }` |
 
 ## Metadata
 

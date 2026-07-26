@@ -352,6 +352,33 @@ object JsonModel:
   /** `{ "pattern": "...", "statements": [<stmt>] }` */
   case class MatchCaseDto(pattern: String, statements: Seq[StatementDto])
 
+  // A54: value-expression DTOs. Serialized inline within put/return via readValue/writeValue.
+  sealed trait ValueDto
+
+  /** `{ "value": "literal", "text": "..." }` */
+  case class LiteralValueDto(text: String) extends ValueDto
+
+  /** `{ "value": "constructor", "refKind": "command"|"event"|"query"|"result"|"record", "ref":
+    * "<path>", "args": [<constructorArg>] }`
+    */
+  case class ConstructorValueDto(refKind: String, ref: String, args: Seq[ConstructorArgDto])
+      extends ValueDto
+
+  /** `{ "value": "valueRef", "path": "<path>" }` */
+  case class ValueRefDto(path: String) extends ValueDto
+
+  /** `{ "value": "get", "source": "input"|"state", "ref": "<path>" }` */
+  case class GetValueDto(source: String, ref: String) extends ValueDto
+
+  /** `{ "name"?: "<field>", "value": <value> }` — a positional or named constructor argument. */
+  case class ConstructorArgDto(name: Option[String], value: ValueDto)
+
+  /** `{ "kind": "put", "value": <value>, "output": "<path>" }` (A45) */
+  case class PutStmtDto(value: ValueDto, output: String) extends StatementDto
+
+  /** `{ "kind": "return", "value": <value> }` (A57) */
+  case class ReturnStmtDto(value: ValueDto) extends StatementDto
+
   // ---------------------------------------------------------------------------
   // Streaming & integration (Phase 4)
   // ---------------------------------------------------------------------------
@@ -832,6 +859,52 @@ object JsonModel:
   private def readStmts(o: Option[ujson.Value]): Seq[StatementDto] =
     o.map(_.arr.map(readStatement).toSeq).getOrElse(Nil)
 
+  // A54: ujson <-> ValueDto.
+  private def readValue(v: ujson.Value): ValueDto =
+    val m = v.obj
+    m("value").str match
+      case "literal"  => LiteralValueDto(m("text").str)
+      case "valueRef" => ValueRefDto(m("path").str)
+      case "get"      => GetValueDto(m("source").str, m("ref").str)
+      case "constructor" =>
+        val args = m
+          .get("args")
+          .map(
+            _.arr
+              .map(a => ConstructorArgDto(a.obj.get("name").map(_.str), readValue(a.obj("value"))))
+              .toSeq
+          )
+          .getOrElse(Nil)
+        ConstructorValueDto(m("refKind").str, m("ref").str, args)
+      case other => throw new IllegalArgumentException(s"Unknown value kind: '$other'")
+  end readValue
+
+  private def writeValue(dto: ValueDto): ujson.Value =
+    dto match
+      case LiteralValueDto(text) =>
+        ujson.Obj("value" -> ujson.Str("literal"), "text" -> ujson.Str(text))
+      case ValueRefDto(path) =>
+        ujson.Obj("value" -> ujson.Str("valueRef"), "path" -> ujson.Str(path))
+      case GetValueDto(source, ref) =>
+        ujson.Obj(
+          "value" -> ujson.Str("get"),
+          "source" -> ujson.Str(source),
+          "ref" -> ujson.Str(ref)
+        )
+      case ConstructorValueDto(refKind, ref, args) =>
+        ujson.Obj(
+          "value" -> ujson.Str("constructor"),
+          "refKind" -> ujson.Str(refKind),
+          "ref" -> ujson.Str(ref),
+          "args" -> ujson.Arr.from(args.map { a =>
+            ujson.Obj.from(
+              a.name.map(n => "name" -> (ujson.Str(n): ujson.Value)).toSeq
+                ++ Seq("value" -> (writeValue(a.value): ujson.Value))
+            )
+          })
+        )
+  end writeValue
+
   private def readStatement(v: ujson.Value): StatementDto =
     v match
       case ujson.Str(s) => PromptStmtDto(s)
@@ -876,7 +949,9 @@ object JsonModel:
               m.get("local").map(_.str),
               readStmts(m.get("do"))
             )
-          case other => throw new IllegalArgumentException(s"Unknown statement kind: '$other'")
+          case "put"    => PutStmtDto(readValue(m("value")), m("output").str)
+          case "return" => ReturnStmtDto(readValue(m("value")))
+          case other    => throw new IllegalArgumentException(s"Unknown statement kind: '$other'")
     end match
   end readStatement
 
@@ -975,6 +1050,14 @@ object JsonModel:
             ++ local.map(x => "local" -> (ujson.Str(x): ujson.Value))
             ++ Seq("do" -> (stmtArr(doStatements): ujson.Value))
         )
+      case PutStmtDto(value, output) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("put"),
+          "value" -> writeValue(value),
+          "output" -> ujson.Str(output)
+        )
+      case ReturnStmtDto(value) =>
+        ujson.Obj("kind" -> ujson.Str("return"), "value" -> writeValue(value))
   end writeStatement
 
   // Given ReadWriters. These are lazy (Scala 3 parameterless givens), so the

@@ -79,6 +79,25 @@ class ContextIntentionTest extends AbstractValidatingTest {
       }
     }
 
+    // A41: a context with NO declared intention is no longer grandfathered — UI groups require an
+    // explicit 'application' intention.
+    "error when an intention-less context contains a UI group (rule 3, A41)" in { (td: TestData) =>
+      val input =
+        """domain d is {
+          |  context c is {
+          |    group grp is { ??? }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(input, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(
+          msgs,
+          Error,
+          "Only application-intended contexts may contain UI groups"
+        )
+      }
+    }
+
     "accept an application context that contains a UI group (rule 3 positive)" in {
       (td: TestData) =>
         val input =

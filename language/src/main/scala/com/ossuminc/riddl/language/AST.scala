@@ -717,7 +717,8 @@ object AST:
     Interaction | Include[?] | TypeExpression | Comment | Reference[?] | OptionValue |
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
-    StringAttachment | ULIDAttachment | Meta | Statement
+    StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
+    GetValue
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInModule = Domain | Author | Comment
@@ -2397,6 +2398,94 @@ object AST:
     override def format: String = s"constant ${pathId.format}"
   }
 
+  ////////////////////////////////////////////////////////////////////////////////////////// VALUES
+
+  /** A54: the union of value expressions usable as a statement operand. Today a value is a
+    * pseudo-code [[LiteralString]], a [[Constructor]] of a message/record, a [[ValueRef]] to a
+    * named value in scope, or a [[GetValue]] that reads a UI input or entity state. Designed to be
+    * extended: A28 adds a `BooleanExpression` arm. All arms are [[RiddlValue]]s so `.format` and
+    * `.loc` are available on the union directly.
+    */
+  type Value = LiteralString | Constructor | ValueRef | GetValue
+
+  /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
+    * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
+    * named ones and matches names/arity/types against the target aggregate's fields.
+    *
+    * @param loc
+    *   The location of the argument in the source
+    * @param name
+    *   The field name for a named argument, or `None` for a positional argument
+    * @param value
+    *   The [[Value]] supplied for this argument
+    */
+  @JSExportTopLevel("ConstructorArg")
+  case class ConstructorArg(
+    loc: At,
+    name: Option[Identifier],
+    value: Value
+  ) extends RiddlValue:
+    override def kind: String = "Constructor Argument"
+    def format: String = name match
+      case Some(id) => s"${id.format} = ${value.format}"
+      case None     => value.format
+  end ConstructorArg
+
+  /** A54: constructs a message or record value by supplying arguments for its aggregate fields.
+    *
+    * @param loc
+    *   The location of the constructor in the source
+    * @param ref
+    *   The reference to the message ([[MessageRef]]) or record ([[RecordRef]]) type to construct
+    * @param args
+    *   The arguments supplied to the constructor
+    */
+  @JSExportTopLevel("Constructor")
+  case class Constructor(
+    loc: At,
+    ref: MessageRef | RecordRef,
+    args: Seq[ConstructorArg]
+  ) extends RiddlValue:
+    override def kind: String = "Constructor"
+    def format: String = s"${ref.format}(${args.map(_.format).mkString(", ")})"
+  end Constructor
+
+  /** A54: a reference to a named value in scope. Resolved (at validation time) from one of four
+    * sources: a `let`-bound local, a field of the handled on-clause message, a field of the
+    * enclosing entity's state, or — only within a function `return` — a field of the function's
+    * `requires` input.
+    *
+    * @param loc
+    *   The location of the reference in the source
+    * @param path
+    *   The path identifier naming the value
+    */
+  @JSExportTopLevel("ValueRef")
+  case class ValueRef(
+    loc: At,
+    path: PathIdentifier
+  ) extends RiddlValue:
+    override def kind: String = "Value Reference"
+    def format: String = path.format
+  end ValueRef
+
+  /** A45/A45b: reads a value from a UI [[Input]] (`get from input <ref>`) or an entity [[State]]
+    * (`get from state <ref>`). A general value expression usable anywhere a [[Value]] is expected.
+    *
+    * @param loc
+    *   The location of the get expression in the source
+    * @param source
+    *   The [[InputRef]] or [[StateRef]] to read from
+    */
+  @JSExportTopLevel("GetValue")
+  case class GetValue(
+    loc: At,
+    source: InputRef | StateRef
+  ) extends RiddlValue:
+    override def kind: String = "Get Value"
+    def format: String = s"get from ${source.format}"
+  end GetValue
+
   ////////////////////////////////////////////////////////////////////////////////////// STATEMENTS
 
   /** Base trait of all Statements that can occur in [[OnClause]]s */
@@ -2729,6 +2818,44 @@ object AST:
         case fr: FieldRef   => fr.format
         case id: Identifier => id.format
       s"foreach ${element.format} in $collectionStr { … }"
+  }
+
+  /** A45: a statement that publishes a [[Value]] to a UI [[Output]] (`put <value> to output
+    * <ref>`). Allowed only in a Context (application) handler. The value's type is checked against
+    * the resolved `Output.putOut`.
+    *
+    * @param loc
+    *   The location of the statement in the model
+    * @param value
+    *   The value to publish
+    * @param output
+    *   The output to publish the value to
+    */
+  @JSExportTopLevel("PutStatement")
+  case class PutStatement(
+    loc: At,
+    value: Value,
+    output: OutputRef
+  ) extends Statement {
+    override def kind: String = "Put Statement"
+    def format: String = s"put ${value.format} to ${output.format}"
+  }
+
+  /** A57: a statement that returns a [[Value]] from a [[Function]] (`return <value>`). Allowed only
+    * in a function body. The value's type is checked against the enclosing `Function.output`.
+    *
+    * @param loc
+    *   The location of the statement in the model
+    * @param value
+    *   The value to return
+    */
+  @JSExportTopLevel("ReturnStatement")
+  case class ReturnStatement(
+    loc: At,
+    value: Value
+  ) extends Statement {
+    override def kind: String = "Return Statement"
+    def format: String = s"return ${value.format}"
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////// ADAPTOR

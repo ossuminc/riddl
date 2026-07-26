@@ -17,7 +17,7 @@ trait SharedApplicationTest extends AbstractValidatingTest {
     "parse a simple case " in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain foo is {
-          |  context Test is {
+          |  application context Test is {
           |    result Title { content: String }
           |    command Name { content: String }
           |    group Together is {

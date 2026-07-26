@@ -311,9 +311,33 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveForeachFieldRefs(fs.doStatements, parents)
       case ls: LetStatement =>
         ls.typeRef.foreach(tr => resolveARef[Type](tr, parents))
+      case PutStatement(_, v, output) =>
+        // A45: resolve the value expression and the output target.
+        resolveValue(v, parents)
+        associateUsage[Output](parents.head, resolveARef[Output](output, parents))
+      case ReturnStatement(_, v) =>
+        // A57: resolve the value expression (typed against Function.output at validation time).
+        resolveValue(v, parents)
       case _: CodeStatement => () // no references (code body is a string)
     }
   }
+
+  /** A54: resolve the references inside a [[Value]] so validation can find them in the refMap.
+    * Constructor refs (message/record Types) and GetValue sources (Input/State) resolve here; a
+    * [[ValueRef]]'s four-source resolution is deferred to validation (like a foreach local).
+    * Recurses into constructor arguments.
+    */
+  private def resolveValue(v: Value, parents: Parents): Unit =
+    v match
+      case _: LiteralString => () // no references
+      case c: Constructor =>
+        associateUsage[Type](parents.head, resolveARef[Type](c.ref, parents))
+        c.args.foreach(arg => resolveValue(arg.value, parents))
+      case _: ValueRef => () // four-source resolution happens at validation time
+      case gv: GetValue =>
+        gv.source match
+          case ir: InputRef => associateUsage[Input](parents.head, resolveARef[Input](ir, parents))
+          case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
 
   /** Resolve the collection FieldRefs of every [[ForeachStatement]] nested anywhere within `stmts`.
     * `parents` is held constant (its head is the enclosing on-clause/function) so the refMap keys
@@ -332,6 +356,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case ms: MatchStatement =>
         ms.cases.foreach(mc => resolveForeachFieldRefs(mc.statements, parents))
         resolveForeachFieldRefs(ms.default, parents)
+      // A45/A57: put/return may nest under a foreach/when/match — resolve their value refs too.
+      case PutStatement(_, v, output) =>
+        resolveValue(v, parents)
+        associateUsage[Output](parents.head, resolveARef[Output](output, parents))
+      case ReturnStatement(_, v) =>
+        resolveValue(v, parents)
       case _ => ()
     }
 

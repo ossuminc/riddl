@@ -196,9 +196,9 @@ message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 (* Statements *)
 (* Core statements available in all contexts *)
 statement = when_statement | match_statement | foreach_statement | send_statement | tell_statement |
-    yield_statement | reply_statement | the_set_statement | let_statement | prompt_statement |
-    code_statement | error_statement | require_statement | morph_statement | become_statement |
-    comment ;
+    yield_statement | reply_statement | the_set_statement | let_statement | put_statement |
+    return_statement | prompt_statement | code_statement | error_statement | require_statement |
+    morph_statement | become_statement | comment ;
 
 (* Control flow *)
 when_statement = "when" literal_string "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
@@ -218,6 +218,19 @@ reply_statement = "reply" message_ref ;
 (* Variable operations *)
 the_set_statement = "set" (field_ref | state_ref) "to" literal_string ;
 let_statement = "let" identifier [":" type_ref] "=" literal_string ;
+
+(* A54: value expressions. A value is pseudo-code text, a message/record constructor, a `get from`
+   read of a UI input or entity state, or a bare-path reference to a value in scope. *)
+value = literal_string | constructor | get_value | value_ref ;
+constructor = (message_ref | record_ref) "(" [constructor_arg {"," constructor_arg}] ")" ;
+constructor_arg = (identifier "=" value) | value ;
+get_value = "get" "from" (input_ref | state_ref) ;
+value_ref = path_identifier ;
+
+(* A45/A57: boundary value operations. `put` (application/context handlers only) publishes a value
+   to a UI output; `return` (function bodies only) returns the function's result value. *)
+put_statement = "put" value "to" output_ref ;
+return_statement = "return" value ;
 
 (* General statements *)
 prompt_statement = ("prompt" | "do") literal_string ;

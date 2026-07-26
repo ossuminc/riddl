@@ -265,6 +265,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: LetStatement     => writeLetStatement(s)
       case s: CodeStatement    => writeCodeStatement(s)
       case s: ForeachStatement => writeForeachStatement(s)
+      case s: PutStatement     => writePutStatement(s)
+      case s: ReturnStatement  => writeReturnStatement(s)
 
       // References
       case r: AuthorRef     => writeAuthorRef(r)
@@ -1074,6 +1076,77 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeLiteralString(s.language)
     writeString(s.body)
+  }
+
+  def writePutStatement(s: PutStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(17) // Put statement (A45)
+    writeLocation(s.loc)
+    writeValue(s.value)
+    writeOutputRef(s.output)
+  }
+
+  def writeReturnStatement(s: ReturnStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(18) // Return statement (A57)
+    writeLocation(s.loc)
+    writeValue(s.value)
+  }
+
+  /** A54: self-contained value codec. A leading discriminator byte selects the arm
+    * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue); the reader mirrors this exactly.
+    */
+  def writeValue(v: Value): Unit = {
+    v match
+      case ls: LiteralString =>
+        writer.writeU8(0)
+        writeLocation(ls.loc)
+        writeString(ls.s)
+      case c: Constructor =>
+        writer.writeU8(1)
+        writeConstructor(c)
+      case vr: ValueRef =>
+        writer.writeU8(2)
+        writeLocation(vr.loc)
+        writePathIdentifierInline(vr.path)
+      case gv: GetValue =>
+        writer.writeU8(3)
+        writeLocation(gv.loc)
+        gv.source match
+          case ir: InputRef =>
+            writer.writeU8(0)
+            writeLocation(ir.loc)
+            writeString(ir.keyword)
+            writePathIdentifierInline(ir.pathId)
+          case sr: StateRef =>
+            writer.writeU8(1)
+            writeLocation(sr.loc)
+            writePathIdentifierInline(sr.pathId)
+  }
+
+  def writeConstructor(c: Constructor): Unit = {
+    writeLocation(c.loc)
+    // Ref kind: 0=command, 1=event, 2=query, 3=result, 4=record
+    val (kind, rLoc, pid) = c.ref match
+      case CommandRef(l, p) => (0, l, p)
+      case EventRef(l, p)   => (1, l, p)
+      case QueryRef(l, p)   => (2, l, p)
+      case ResultRef(l, p)  => (3, l, p)
+      case RecordRef(l, p)  => (4, l, p)
+    writer.writeU8(kind)
+    writeLocation(rLoc)
+    writePathIdentifierInline(pid)
+    writer.writeVarInt(c.args.size)
+    c.args.foreach { arg =>
+      writeLocation(arg.loc)
+      arg.name match
+        case Some(id) =>
+          writer.writeU8(1)
+          writeIdentifierInline(id)
+        case None =>
+          writer.writeU8(0)
+      writeValue(arg.value)
+    }
   }
 
   def writeForeachStatement(s: ForeachStatement): Unit = {

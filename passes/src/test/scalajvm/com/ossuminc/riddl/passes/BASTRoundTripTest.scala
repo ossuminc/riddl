@@ -254,6 +254,67 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize `put` and `return` with value expressions (A45/A54/A57)" in {
+      // A45/A57 use BAST subtags 17/18 (FORMAT_REVISION 14). Verify a return with a record
+      // constructor and a put reading from a UI input round-trip losslessly.
+      val riddlSource =
+        """domain d is {
+          |  context Calc is {
+          |    type Sum is record { total: Integer }
+          |    function Add is {
+          |      returns record Sum
+          |      return record Sum(total = "the total")
+          |    }
+          |  }
+          |  application context UI is {
+          |    type Greeting is record { text: String }
+          |    command Refresh is { ??? }
+          |    group Main is {
+          |      form Entry acquires type Greeting
+          |      output Panel presents type Greeting
+          |    }
+          |    handler Screen is {
+          |      on command Refresh {
+          |        put get from input Entry to output Panel
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-put-return")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(compareRoots(originalRoot, nebula), "put/return round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.*
+              val rets = Finder(nebula.contents).recursiveFindByType[ReturnStatement]
+              assert(rets.size == 1, s"expected one ReturnStatement, found ${rets.size}")
+              rets.head.value match
+                case c: Constructor =>
+                  assert(c.ref.isInstanceOf[RecordRef])
+                  assert(c.args.size == 1)
+                  assert(c.args.head.name.map(_.value) == Some("total"))
+                case other => fail(s"expected Constructor, got $other")
+              val puts = Finder(nebula.contents).recursiveFindByType[PutStatement]
+              assert(puts.size == 1, s"expected one PutStatement, found ${puts.size}")
+              assert(puts.head.output.pathId.value == Seq("Panel"))
+              puts.head.value match
+                case gv: GetValue =>
+                  gv.source match
+                    case ir: InputRef => assert(ir.pathId.value == Seq("Entry"))
+                    case other        => fail(s"expected InputRef, got $other")
+                case other => fail(s"expected GetValue, got $other")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize named-type requires/returns on a function and saga (A9)" in {
       val riddlSource =
         """domain d is { context c is {

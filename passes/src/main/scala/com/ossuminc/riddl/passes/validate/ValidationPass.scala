@@ -295,14 +295,15 @@ case class ValidationPass(
       case p: Processor[?] => validateProcessorShape(p)
       case _               => ()
     }
-    // A25: validate `foreach` collection scoping once per statement-bearing container (on-clause or
-    // function). checkForeachScopes recurses through nested statement bodies threading `let` scope,
-    // so invoking it at the container root covers every foreach at any depth exactly once.
+    // A25/A54: validate `foreach` collection scoping and value expressions once per statement-bearing
+    // container (on-clause or function). checkStatementScopes recurses through nested statement
+    // bodies threading `let` scope, so invoking it at the container root covers every statement at
+    // any depth exactly once.
     value match {
       case oc: OnClause =>
-        checkForeachScopes(oc.statements, Seq.empty[LetStatement], oc +: parentsAsSeq)
+        checkStatementScopes(oc.statements, Seq.empty[LetStatement], oc +: parentsAsSeq)
       case fn: Function =>
-        checkForeachScopes(fn.statements, Seq.empty[LetStatement], fn +: parentsAsSeq)
+        checkStatementScopes(fn.statements, Seq.empty[LetStatement], fn +: parentsAsSeq)
       case _ => ()
     }
     value match {
@@ -597,8 +598,12 @@ case class ValidationPass(
         }
       case YieldStatement(_, msg) =>
         checkRef[Type](msg, parents)
+      case _: PutStatement | _: ReturnStatement =>
+        // A45/A57: value/type/scope validation runs in checkStatementScopes (which threads in-scope
+        // `let` locals and reaches nested statements). Nothing to check per-statement here.
+        ()
       case ForeachStatement(loc, element, _, doStatements) =>
-        // Collection scoping/collection-type checks run in checkForeachScopes (which threads
+        // Collection scoping/collection-type checks run in checkStatementScopes (which threads
         // in-scope `let` locals). Here we only enforce the local structural checks.
         check(
           element.value.length >= 1,
@@ -2071,10 +2076,10 @@ case class ValidationPass(
         )
       case _ => ()
     end match
-    // Only flag a context that has EXPLICITLY declared a non-application intention. A context with
-    // no declared intention is grandfathered: the intention prefix is not yet expressible in the
-    // EBNF-validated corpus, so existing group-bearing contexts must remain valid.
-    if c.groups.nonEmpty && c.intention.exists(_ != Intention.Application) then
+    // A41: UI groups (and, transitively, the Inputs/Outputs inside them) require an application
+    // intention. This is a hard error for ANY non-application context, including one with no
+    // declared intention — a group-bearing context must opt in with 'application context'.
+    if c.groups.nonEmpty && !c.intention.contains(Intention.Application) then
       val intentionStr = c.intention.map(_.keyword).getOrElse("none")
       messages.addError(
         c.errorLoc,
@@ -2526,12 +2531,227 @@ case class ValidationPass(
           case None => () // unresolved field — ResolutionPass already reported it
   end validateForeachCollection
 
-  /** A25: recursively walk `stmts` in lexical order, threading the set of in-scope `let` locals and
-    * enclosing `foreach` element names, validating each `foreach` collection as it is reached. A
-    * `let` is visible to later siblings and to statements nested under them; a `foreach` element is
-    * visible only within that loop's body.
+  /** A54: the fields a [[ValueRef]] may name — the fields of the enclosing entity's state
+    * record(s), of the handled on-clause message, and of the enclosing function's `requires` input.
+    * This is the same four-source machinery as [[foreachAllowedFields]] (function fields are only
+    * present when a Function is an ancestor, so the function-input source is naturally limited to
+    * function/return scope).
     */
-  private def checkForeachScopes(
+  private def valueAllowedFields(parents: Parents): Seq[Field] = foreachAllowedFields(parents)
+
+  /** A54: the named [[Type]] a [[Value]] denotes, or `None` when it is untyped (a pseudo-code
+    * [[LiteralString]]) or cannot be determined. Used for best-effort type-compatibility checks;
+    * `None` means "skip the check", so type errors are only raised when both sides resolve.
+    */
+  private def valueType(v: Value, parents: Parents, lets: Seq[LetStatement]): Option[Type] =
+    v match
+      case _: LiteralString => None // pseudo-code, untyped
+      case c: Constructor   => resolution.refMap.definitionOf[Type](c.ref.pathId)
+      case vr: ValueRef     => valueRefType(vr, parents, lets)
+      case gv: GetValue =>
+        gv.source match
+          case ir: InputRef =>
+            resolution.refMap
+              .definitionOf[Input](ir.pathId)
+              .flatMap(in => resolution.refMap.definitionOf[Type](in.takeIn.pathId))
+          case sr: StateRef =>
+            resolution.refMap
+              .definitionOf[State](sr.pathId)
+              .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
+
+  /** A54: the named [[Type]] a [[ValueRef]] resolves to, if determinable — from a `let`-local (a
+    * single-component path), or a field of the message/state/function-input scope (by the path's
+    * last component).
+    */
+  private def valueRefType(
+    vr: ValueRef,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Option[Type] =
+    val name = vr.path.value.lastOption.getOrElse("")
+    val fromLet: Option[Type] =
+      if vr.path.value.sizeIs == 1 then
+        lets.reverse
+          .find(_.identifier.value == name)
+          .flatMap(_.typeRef)
+          .flatMap(tr => resolution.refMap.definitionOf[Type](tr.pathId))
+      else None
+    def fromField: Option[Type] =
+      valueAllowedFields(parents).find(_.id.value == name).flatMap { f =>
+        f.typeEx match
+          case ate: AliasedTypeExpression => resolution.refMap.definitionOf[Type](ate.pathId)
+          case _                          => None
+      }
+    fromLet.orElse(fromField)
+
+  /** A54: whether a [[ValueRef]] resolves to something in scope (a `let`-local or a
+    * message/state/function-input field). Used to report out-of-scope references.
+    */
+  private def valueRefResolves(
+    vr: ValueRef,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Boolean =
+    val name = vr.path.value.lastOption.getOrElse("")
+    val isLet = vr.path.value.sizeIs == 1 && lets.exists(_.identifier.value == name)
+    val isField = valueAllowedFields(parents).exists(_.id.value == name)
+    isLet || isField
+
+  /** A54: validate a [[Value]] — recurse constructors, and confirm value references resolve. Get
+    * sources are checked for existence via [[checkRef]].
+    */
+  private def validateValue(v: Value, parents: Parents, lets: Seq[LetStatement]): Unit =
+    v match
+      case _: LiteralString => ()
+      case c: Constructor   => validateConstructor(c, parents, lets)
+      case vr: ValueRef =>
+        if !valueRefResolves(vr, parents, lets) then
+          messages.addError(
+            vr.loc,
+            s"Value reference '${vr.path.format}' is not a 'let'-local, a field of the handled " +
+              "message or entity state, or a function input in scope",
+            suggestion =
+              "Bind it with a 'let', or reference a field of the on-clause message, entity state, " +
+                "or the function's 'requires' input."
+          )
+      case gv: GetValue =>
+        gv.source match
+          case ir: InputRef => checkRef[Input](ir, parents)
+          case sr: StateRef => checkRef[State](sr, parents)
+
+  /** A54: validate a [[Constructor]] — arg ordering (positional before named), named-arg field
+    * existence, arity, and best-effort per-argument type compatibility against the target
+    * aggregate's fields. Recurses into argument values.
+    */
+  private def validateConstructor(
+    c: Constructor,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Unit =
+    resolution.refMap.definitionOf[Type](c.ref.pathId) match
+      case Some(typ) =>
+        val fields: Seq[Field] = typ.typEx match
+          case ate: AggregateTypeExpression => ate.fields
+          case _                            => Seq.empty[Field]
+        // Ordering: positional args must precede named args.
+        val firstNamed = c.args.indexWhere(_.name.isDefined)
+        if firstNamed >= 0 && c.args.drop(firstNamed).exists(_.name.isEmpty) then
+          messages.addError(
+            c.loc,
+            s"In constructor of ${typ.identify}, positional arguments must precede named arguments",
+            suggestion =
+              "Reorder so all positional arguments come before any 'name = value' argument."
+          )
+        // Named args must reference real fields.
+        c.args.foreach { arg =>
+          arg.name.foreach { id =>
+            if !fields.exists(_.id.value == id.value) then
+              messages.addError(
+                arg.loc,
+                s"'${id.value}' is not a field of ${typ.identify}",
+                suggestion =
+                  s"Use one of the fields of ${typ.identify}: ${fields.map(_.id.value).mkString(", ")}."
+              )
+          }
+        }
+        // Arity.
+        if c.args.sizeIs > fields.size then
+          messages.addError(
+            c.loc,
+            s"Constructor of ${typ.identify} has ${c.args.size} arguments but the type has only " +
+              s"${fields.size} fields",
+            suggestion = s"Supply at most ${fields.size} arguments."
+          )
+        else if c.args.nonEmpty && c.args.forall(_.name.isEmpty) && c.args.sizeIs != fields.size
+        then
+          messages.addError(
+            c.loc,
+            s"Constructor of ${typ.identify} has ${c.args.size} positional arguments but the type " +
+              s"has ${fields.size} fields",
+            suggestion =
+              s"Supply exactly ${fields.size} positional arguments, or use named arguments for a subset."
+          )
+        // Best-effort per-argument type compatibility (only when both sides resolve to a Type).
+        c.args.zipWithIndex.foreach { case (arg, idx) =>
+          val fieldOpt: Option[Field] = arg.name match
+            case Some(id) => fields.find(_.id.value == id.value)
+            case None     => if idx < fields.size then Some(fields(idx)) else None
+          fieldOpt.foreach { field =>
+            field.typeEx match
+              case ate: AliasedTypeExpression =>
+                val expected = resolution.refMap.definitionOf[Type](ate.pathId)
+                val actual = valueType(arg.value, parents, lets)
+                (expected, actual) match
+                  case (Some(e), Some(a)) if !(e eq a) =>
+                    messages.addError(
+                      arg.loc,
+                      s"Argument for field '${field.id.value}' has type ${a.identify} but " +
+                        s"${field.id.value} expects ${e.identify}",
+                      suggestion = s"Supply a value of type ${e.identify} for '${field.id.value}'."
+                    )
+                  case _ => ()
+              case _ => () // primitive/other field type — literals accepted, no check
+          }
+        }
+        // Recurse into argument values (nested constructors, value refs).
+        c.args.foreach(arg => validateValue(arg.value, parents, lets))
+      case None => () // unresolved constructor ref reported by ResolutionPass
+  end validateConstructor
+
+  /** A45: validate a `put` — the value, the output target's existence, and best-effort type
+    * compatibility of the value against the resolved [[Output.putOut]].
+    */
+  private def validatePut(ps: PutStatement, parents: Parents, lets: Seq[LetStatement]): Unit =
+    validateValue(ps.value, parents, lets)
+    checkRef[Output](ps.output, parents).foreach { output =>
+      val expected: Option[Type] = output.putOut match
+        case tr: TypeRef      => resolution.refMap.definitionOf[Type](tr.pathId)
+        case _: ConstantRef   => None
+        case _: LiteralString => None
+      val actual = valueType(ps.value, parents, lets)
+      (expected, actual) match
+        case (Some(e), Some(a)) if !(e eq a) =>
+          messages.addError(
+            ps.loc,
+            s"'put' value has type ${a.identify} but ${output.identify} expects ${e.identify}",
+            suggestion = s"Publish a value of type ${e.identify} to ${output.identify}."
+          )
+        case _ => ()
+    }
+  end validatePut
+
+  /** A57: validate a `return` — the value and best-effort type compatibility against the enclosing
+    * [[Function.output]].
+    */
+  private def validateReturn(rs: ReturnStatement, parents: Parents, lets: Seq[LetStatement]): Unit =
+    validateValue(rs.value, parents, lets)
+    parents.collectFirst { case f: Function => f }.foreach { fn =>
+      val expected: Option[Type] = fn.output match
+        case Some(tr: TypeRef) => resolution.refMap.definitionOf[Type](tr.pathId)
+        case _                 => None
+      val actual = valueType(rs.value, parents, lets)
+      (expected, actual) match
+        case (Some(e), Some(a)) if !(e eq a) =>
+          messages.addError(
+            rs.loc,
+            s"'return' value has type ${a.identify} but function '${fn.id.value}' returns ${e.identify}",
+            suggestion =
+              s"Return a value of type ${e.identify}, or change the function's 'returns'."
+          )
+        case _ => ()
+    }
+  end validateReturn
+
+  /** A25/A54: recursively walk `stmts` in lexical order, threading the set of in-scope `let` locals
+    * and enclosing `foreach` element names, validating each `foreach` collection AND each value
+    * expression (`put`/`return`, and the values inside them) as it is reached. A `let` is visible
+    * to later siblings and to statements nested under them; a `foreach` element is visible only
+    * within that loop's body. Value validation (constructor arity/names/types, four-source value
+    * refs, and put/return type checks) is done here — not in [[validateStatement]] — because it
+    * needs the threaded `let` scope, and this walk reaches every statement (top-level and nested)
+    * exactly once.
+    */
+  private def checkStatementScopes(
     stmts: Seq[Statement],
     inScopeLets: Seq[LetStatement],
     parents: Parents,
@@ -2543,20 +2763,20 @@ case class ValidationPass(
       case ls: LetStatement => lets = lets :+ ls
       case fs: ForeachStatement =>
         validateForeachCollection(fs, lets, inScopeElements, parents)
-        checkForeachScopes(
+        checkStatementScopes(
           fs.doStatements.toSeq.collect { case s: Statement => s },
           lets,
           parents,
           inScopeElements + fs.element.value
         )
       case ws: WhenStatement =>
-        checkForeachScopes(
+        checkStatementScopes(
           ws.thenStatements.toSeq.collect { case s: Statement => s },
           lets,
           parents,
           inScopeElements
         )
-        checkForeachScopes(
+        checkStatementScopes(
           ws.elseStatements.toSeq.collect { case s: Statement => s },
           lets,
           parents,
@@ -2564,22 +2784,24 @@ case class ValidationPass(
         )
       case ms: MatchStatement =>
         ms.cases.foreach { mc =>
-          checkForeachScopes(
+          checkStatementScopes(
             mc.statements.toSeq.collect { case s: Statement => s },
             lets,
             parents,
             inScopeElements
           )
         }
-        checkForeachScopes(
+        checkStatementScopes(
           ms.default.toSeq.collect { case s: Statement => s },
           lets,
           parents,
           inScopeElements
         )
-      case _ => ()
+      case ps: PutStatement    => validatePut(ps, parents, lets)
+      case rs: ReturnStatement => validateReturn(rs, parents, lets)
+      case _                   => ()
     }
-  end checkForeachScopes
+  end checkStatementScopes
 
   /** Classify all collected handlers by behavioral completeness. A handler is:
     *   - Executable: has at least one executable statement (tell, send, morph, set, become, error,

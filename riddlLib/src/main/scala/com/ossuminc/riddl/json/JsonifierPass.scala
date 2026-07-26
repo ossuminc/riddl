@@ -557,6 +557,31 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           )
         case id: Identifier =>
           ForeachStmtDto(element.value, None, Some(id.value), serializeStatements(doStatements))
+    case PutStatement(_, value, output) =>
+      PutStmtDto(serializeValue(value), path(output.pathId))
+    case ReturnStatement(_, value) =>
+      ReturnStmtDto(serializeValue(value))
+
+  // A54: AST Value -> ValueDto.
+  private def serializeValue(v: Value): ValueDto = v match
+    case ls: LiteralString => LiteralValueDto(ls.s)
+    case vr: ValueRef      => ValueRefDto(path(vr.path))
+    case gv: GetValue =>
+      gv.source match
+        case ir: InputRef => GetValueDto("input", path(ir.pathId))
+        case sr: StateRef => GetValueDto("state", path(sr.pathId))
+    case c: Constructor =>
+      val refKind = c.ref match
+        case _: CommandRef => "command"
+        case _: EventRef   => "event"
+        case _: QueryRef   => "query"
+        case _: ResultRef  => "result"
+        case _: RecordRef  => "record"
+      ConstructorValueDto(
+        refKind,
+        path(c.ref.pathId),
+        c.args.map(a => ConstructorArgDto(a.name.map(_.value), serializeValue(a.value)))
+      )
 
   private def serializeInteraction(i: Interaction): InteractionDto = i match
     case VagueInteraction(_, from, rel, to, _) => VagueIxnDto(from.s, rel.s, to.s)

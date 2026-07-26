@@ -210,6 +210,74 @@ private[parsing] trait StatementParser {
     }
   }
 
+  // A54: a value expression. The alternation is ordered so the keyword-led forms (constructor via a
+  // message/record ref keyword, `get from`) are tried before the permissive bare-path `valueRef`.
+  // fastparse `|` unifies to the least upper bound (RiddlValue), so each branch is widened to the
+  // `Value` union explicitly (mirror foreachCollection).
+  def value[u: P]: P[Value] = {
+    P(
+      literalString.map(ls => ls: Value) |
+        constructor.map(c => c: Value) |
+        getValue.map(gv => gv: Value) |
+        valueRef.map(vr => vr: Value)
+    )
+  }
+
+  // A54: `(command|event|query|result|record <path>)(<args>)`. Positional args (a bare `value`) or
+  // named args (`id = value`); ordering (positional before named) is enforced at validation time.
+  private def constructorArg[u: P]: P[ConstructorArg] = {
+    P(
+      Index ~ (
+        (identifier ~ Punctuation.equalsSign ~/ value).map { case (id, v) =>
+          (Some(id): Option[Identifier], v)
+        } |
+          value.map(v => (None: Option[Identifier], v))
+      ) ~ Index
+    ).map { case (start, (name, v), end) => ConstructorArg(at(start, end), name, v) }
+  }
+
+  private def constructor[u: P]: P[Constructor] = {
+    P(
+      Index ~ (messageRef.map(mr => mr: MessageRef | RecordRef) |
+        recordRef.map(rr => rr: MessageRef | RecordRef)) ~
+        Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+        Punctuation.roundClose ~/ Index
+    )./.map { case (start, ref, args, end) =>
+      Constructor(at(start, end), ref, args.toSeq)
+    }
+  }
+
+  // A45/A45b: `get from (input <ref> | state <ref>)`. The ref parsers already consume their leading
+  // keyword (`input`/aliases, `state`).
+  private def getValue[u: P]: P[GetValue] = {
+    P(
+      Index ~ Keywords.get ~/ from ~/ (inputRef.map(ir => ir: InputRef | StateRef) |
+        stateRef.map(sr => sr: InputRef | StateRef)) ~/ Index
+    )./.map { case (start, source, end) => GetValue(at(start, end), source) }
+  }
+
+  // A54: a bare path identifier naming a value in scope. Resolved to a let-local, message field,
+  // state field, or (in a return) a function input at validation time.
+  private def valueRef[u: P]: P[ValueRef] = {
+    P(Index ~ pathIdentifier ~ Index).map { case (start, pid, end) =>
+      ValueRef(at(start, end), pid)
+    }
+  }
+
+  // A45: `put <value> to output <ref>`. Scope-gated to Context (application) handlers by putStatements.
+  private def putStatement[u: P]: P[PutStatement] = {
+    P(
+      Index ~ Keywords.put ~/ value ~ to ~/ outputRef ~/ Index
+    )./.map { case (start, v, out, end) => PutStatement(at(start, end), v, out) }
+  }
+
+  // A57: `return <value>`. Scope-gated to Function bodies by returnStatements.
+  private def returnStatement[u: P]: P[ReturnStatement] = {
+    P(
+      Index ~ Keywords.`return` ~/ value ~/ Index
+    )./.map { case (start, v, end) => ReturnStatement(at(start, end), v) }
+  }
+
   private def backTickEllipsis[u: P]: P[Unit] = { P("```") }
 
   private def codeStatement[u: P]: P[CodeStatement] = {
@@ -262,6 +330,24 @@ private[parsing] trait StatementParser {
       )).asInstanceOf[P[Statements]]
     else (errorStatement | requireStatement).asInstanceOf[P[Statements]]
 
+  // A45: `put ... to output ...` is allowed only in a Context (application) handler; banned
+  // elsewhere at the keyword with a clear message (inverse of A26's function bans).
+  private def putStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.processor == ProcessorKind.Context then putStatement.asInstanceOf[P[Statements]]
+    else
+      (P(Keywords.put) ~/ Fail.opaque(
+        "'put' is only allowed in an application (context) handler; it publishes a value to a UI " +
+          "output which only exists in an application context"
+      )).asInstanceOf[P[Statements]]
+
+  // A57: `return ...` is allowed only in a Function body; banned elsewhere at the keyword.
+  private def returnStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.processor == ProcessorKind.Function then returnStatement.asInstanceOf[P[Statements]]
+    else
+      (P(Keywords.`return`) ~/ Fail.opaque(
+        "'return' is only allowed in a function body; it returns the function's result value"
+      )).asInstanceOf[P[Statements]]
+
   private def anyDefStatements[u: P](set: StatementsSet): P[Statements] = {
     P(
       // GROUP 1: Control flow statements
@@ -270,6 +356,8 @@ private[parsing] trait StatementParser {
         messagingStatements(set) |
         // GROUP 3: Variable operations (set is banned in a pure Function body — see setStatements)
         setStatements(set) | letStatement |
+        // GROUP 3b: Boundary value operations, scope-gated (A45 put -> Context; A57 return -> Function)
+        putStatements(set) | returnStatements(set) |
         // GROUP 4: General statements
         promptStatement | codeStatement |
         // GROUP 5: Error handling and preconditions (suppressed under EventClause)

@@ -154,6 +154,8 @@ object Keywords {
 
   def function[u: P]: P[Unit] = keyword(Keyword.function)
 
+  def get[u: P]: P[Unit] = keyword(Keyword.get)
+
   def graph[u: P]: P[Unit] = keyword(Keyword.graph)
 
   def group[u: P]: P[Unit] = keyword(Keyword.group)
@@ -260,6 +262,8 @@ object Keywords {
   def projector[u: P]: P[Unit] = keyword(Keyword.projector)
 
   def prompt[u: P]: P[Unit] = keyword(Keyword.prompt)
+
+  def put[u: P]: P[Unit] = keyword(Keyword.put)
 
   def query[u: P]: P[Unit] = keyword(Keyword.query)
 
@@ -415,6 +419,7 @@ object Keywords {
           Keyword.foreach,
           Keyword.from,
           Keyword.function,
+          Keyword.get,
           Keyword.graph,
           Keyword.group,
           Keyword.handler,
@@ -455,6 +460,7 @@ object Keywords {
           Keyword.plant,
           Keyword.processor,
           Keyword.projector,
+          Keyword.put,
           Keyword.query,
           Keyword.range,
           Keyword.reference,
@@ -567,6 +573,7 @@ object Keyword {
   final val from = "from"
   final val fully = "fully"
   final val function = "function"
+  final val get = "get"
   final val graph = "graph"
   final val group = "group"
   final val handler = "handler"
@@ -611,6 +618,7 @@ object Keyword {
   final val processor = "processor"
   final val projector = "projector"
   final val prompt = "prompt"
+  final val put = "put"
   final val query = "query"
   final val range = "range"
   final val reference = "reference"

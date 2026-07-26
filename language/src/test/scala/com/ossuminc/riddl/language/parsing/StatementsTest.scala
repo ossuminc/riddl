@@ -291,5 +291,135 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           fs.collection.asInstanceOf[Identifier].value must be("batch")
     }
 
+    "check Constructor / ValueRef / GetValue formatting (A54)" in { td =>
+      val pathId = PathIdentifier(At.empty, Seq("Foo"))
+      val vr = ValueRef(At.empty, PathIdentifier(At.empty, Seq("x")))
+      vr.kind must be("Value Reference")
+      vr.format must be("x")
+      val gv = GetValue(At.empty, StateRef(At.empty, PathIdentifier(At.empty, Seq("S"))))
+      gv.kind must be("Get Value")
+      gv.format must be("get from state S")
+      val arg1 = ConstructorArg(At.empty, None, LiteralString(At.empty, "hi"))
+      val arg2 = ConstructorArg(At.empty, Some(Identifier(At.empty, "b")), vr)
+      arg1.format must be("\"hi\"")
+      arg2.format must be("b = x")
+      val c = Constructor(At.empty, CommandRef(At.empty, pathId), Seq(arg1, arg2))
+      c.kind must be("Constructor")
+      c.format must be("command Foo(\"hi\", b = x)")
+    }
+
+    "check Put / Return Statement formatting (A45/A57)" in { td =>
+      val out = OutputRef(At.empty, "output", PathIdentifier(At.empty, Seq("O")))
+      val v = LiteralString(At.empty, "hi")
+      val put = PutStatement(At.empty, v, out)
+      put.kind must be("Put Statement")
+      put.format must be("put \"hi\" to output O")
+      checkStatement(put)
+      val ret = ReturnStatement(At.empty, v)
+      ret.kind must be("Return Statement")
+      ret.format must be("return \"hi\"")
+      checkStatement(ret)
+    }
+
+    "parse a put statement with get-from-input in a context handler (A45)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain PutTest is {
+          |  application context UI is {
+          |    type Greeting is record { text: String }
+          |    command Refresh is { ??? }
+          |    group Main is {
+          |      form Entry acquires type Greeting
+          |      output Panel presents type Greeting
+          |    }
+          |    handler Screen is {
+          |      on command Refresh {
+          |        put get from input Entry to output Panel
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(input) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(root) =>
+          val clause = AST
+            .getContexts(AST.getTopLevelDomains(root).head)
+            .head
+            .handlers
+            .head
+            .clauses
+            .head
+          val s = clause.contents.filter[Statement].collectFirst { case p: PutStatement => p }
+          s must not be empty
+          s.get.output.pathId.value must be(Seq("Panel"))
+          s.get.value.isInstanceOf[GetValue] must be(true)
+    }
+
+    "parse a return statement with a record constructor in a function (A57)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain RetTest is {
+          |  context Calc is {
+          |    type Sum is record { total: Integer }
+          |    function Add is {
+          |      returns record Sum
+          |      return record Sum(total = "the total")
+          |    }
+          |  }
+          |}""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(input) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(root) =>
+          val fn = AST.getContexts(AST.getTopLevelDomains(root).head).head.functions.head
+          val s = fn.contents.filter[Statement].collectFirst { case r: ReturnStatement => r }
+          s must not be empty
+          val ctor = s.get.value
+          ctor.isInstanceOf[Constructor] must be(true)
+          val c = ctor.asInstanceOf[Constructor]
+          c.ref.isInstanceOf[RecordRef] must be(true)
+          c.args.size must be(1)
+          c.args.head.name.map(_.value) must be(Some("total"))
+    }
+
+    "ban a return statement outside a function (A57)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain RetBan is {
+          |  context c is {
+          |    handler h is {
+          |      on init {
+          |        return record Foo()
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(input) match
+        case Left(messages) => messages.hasErrors must be(true)
+        case Right(_)       => fail("expected a parse ban for 'return' outside a function")
+    }
+
+    "ban a put statement outside a context handler (A45)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain PutBan is {
+          |  context c is {
+          |    entity e is {
+          |      handler h is {
+          |        on init {
+          |          put get from state S to output O
+          |        }
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(input) match
+        case Left(messages) => messages.hasErrors must be(true)
+        case Right(_)       => fail("expected a parse ban for 'put' outside a context handler")
+    }
+
   }
 }

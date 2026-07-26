@@ -235,6 +235,48 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip `put`/`return` value expressions (A45/A54/A57) losslessly" in {
+      val vModel =
+        """domain VD is {
+          |  context Calc is {
+          |    type Sum is record { total: Integer }
+          |    function Add is {
+          |      returns record Sum
+          |      return record Sum(total = "the total")
+          |    }
+          |  }
+          |  application context UI is {
+          |    type Greeting is record { text: String }
+          |    command Refresh is { ??? }
+          |    group Main is {
+          |      form Entry acquires type Greeting
+          |      output Panel presents type Greeting
+          |    }
+          |    handler Screen is {
+          |      on command Refresh is {
+          |        put get from input Entry to output Panel
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(vModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"return\"")
+          json1 must include("\"put\"")
+          json1 must include("\"constructor\"")
+          json1 must include("\"get\"")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the value JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the value model failed: $errors")
+      end match
+    }
+
     "round-trip a command/query `yields` clause (A19) losslessly" in {
       val yModel =
         """domain YD is {

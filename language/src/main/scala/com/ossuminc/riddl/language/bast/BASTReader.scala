@@ -973,6 +973,15 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val doStatements = readContentsDeferred[Statements]()
         ForeachStatement(loc, element, collection, doStatements)
 
+      case 17 => // Put (A45)
+        val v = readValue()
+        val output = readOutputRef()
+        PutStatement(loc, v, output)
+
+      case 18 => // Return (A57)
+        val v = readValue()
+        ReturnStatement(loc, v)
+
       case _ =>
         PromptStatement(loc, LiteralString(loc, s"<unknown statement $stmtType>"))
     }
@@ -2208,6 +2217,62 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val loc = readLocation()
     val pathId = readPathIdentifierInline()
     DomainRef(loc, pathId)
+  }
+
+  /** A54: mirror of [[BASTWriter.writeValue]]. */
+  private def readValue(): Value = {
+    val disc = reader.readU8()
+    disc match
+      case 0 => // LiteralString
+        val loc = readLocation()
+        val s = readString()
+        LiteralString(loc, s)
+      case 1 => // Constructor
+        readConstructor()
+      case 2 => // ValueRef
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ValueRef(loc, pid)
+      case 3 => // GetValue
+        val loc = readLocation()
+        val srcType = reader.readU8()
+        val source: InputRef | StateRef = srcType match
+          case 0 =>
+            val irLoc = readLocation()
+            val keyword = readString()
+            val pid = readPathIdentifierInline()
+            InputRef(irLoc, keyword, pid)
+          case 1 =>
+            val srLoc = readLocation()
+            val pid = readPathIdentifierInline()
+            StateRef(srLoc, pid)
+          case _ => throw new RuntimeException(s"Invalid get-value source type: $srcType")
+        GetValue(loc, source)
+      case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
+  }
+
+  /** A54: mirror of [[BASTWriter.writeConstructor]]. */
+  private def readConstructor(): Constructor = {
+    val loc = readLocation()
+    val kind = reader.readU8()
+    val rLoc = readLocation()
+    val pid = readPathIdentifierInline()
+    val ref: MessageRef | RecordRef = kind match
+      case 0 => CommandRef(rLoc, pid)
+      case 1 => EventRef(rLoc, pid)
+      case 2 => QueryRef(rLoc, pid)
+      case 3 => ResultRef(rLoc, pid)
+      case 4 => RecordRef(rLoc, pid)
+      case _ => throw new RuntimeException(s"Invalid constructor ref kind: $kind")
+    val count = reader.readVarInt()
+    val args = (0 until count).map { _ =>
+      val argLoc = readLocation()
+      val hasName = reader.readU8() != 0
+      val name = if hasName then Some(readIdentifierInline()) else None
+      val v = readValue()
+      ConstructorArg(argLoc, name, v)
+    }.toSeq
+    Constructor(loc, ref, args)
   }
 
   private def readMessageRef(): MessageRef = {
