@@ -159,6 +159,35 @@ aggregation. Field type is the union `Option[TypeRef | Aggregation]`.
   regenerated (saga validation gap now fires field warnings on the inline form).
   Ledgers updated: `MESSAGE_SUGGESTIONS.md`, `JSON_COVERAGE.md`.
 
+## A26 — Pure-only functions — DONE
+
+Branch `release/2`. Roadmap item **A26** (2nd of the 37-task queue). A `Function`
+body must be pure: it may not write entity state (`set`/`morph`/`become`),
+`send`/`tell`, or `reply`. `require`/`error` (refusal) and pure computation
+(`let`/`when`/`match`/`prompt`/`code`) stay legal. Enforced at **parse time**
+(user's choice) so purity is structural — effect statements can't enter a
+function's AST (which A23 relies on).
+
+- **One-file change** in `StatementParser.scala`: `messagingStatements` and a new
+  `setStatements` helper reject `send`/`tell`/`set` for `ProcessorKind.Function`
+  with `Fail.opaque` messages; the `statement` dispatcher's new `Function` case
+  appends a `morph`/`become`/`reply` `Fail.opaque` after `base`.
+- **Parser gotcha (memory'd):** the ban must SUBTRACT inside `base` (mirror the
+  `ActivationClause` pattern) or APPEND after base. Do NOT prepend
+  `keywordAlt ~/ Fail | base` — it breaks `functionDefinitions`' `rep`
+  termination at `}` so even valid pure functions fail to parse. Cost me a few
+  iterations; see [[statement-restriction-parser-pattern]].
+- **Deferred:** "may not READ entity state" — structurally undetectable today
+  (function conditions/lets/expressions are opaque `LiteralString`s; no
+  structured field reads exist). Needs A17/A28 first. **`put`/`get`** join the
+  ban when A45 lands (flagged on task #47).
+- **No reflection changes** (parser restriction; no new AST/construct) — no
+  prettify/BAST/JSON/EBNF. **Impact nil:** 0 external and 0 internal `.riddl`
+  function bodies used effects; the only internal fix was
+  `FunctionValidatorTest`'s "simple function" (used `set` → made pure with `let`).
+- **Tests:** new `PureFunctionTest` (reject each of set/send/tell/morph/become/
+  reply; accept prompt/require/let/error; assert the pure-function message).
+
 ## In-flight: Handler kinds per processor (2.0) — DESIGN LOCKED, WIP
 
 **Branch**: `release/2`. One combined change (user's choice). Uncommitted

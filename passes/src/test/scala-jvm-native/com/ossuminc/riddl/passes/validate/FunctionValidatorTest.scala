@@ -48,11 +48,12 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
       }
     }
     "validate simple function" in { (td: TestData) =>
+      // A26: a function is pure — it computes a result rather than writing state (no `set`).
       val input =
         """function percent {
         |  requires { number: Number }
         |  returns { result: Number }
-        |  set field percent.result to "a percentage result"
+        |  let result = "a percentage of number"
         |}
         |""".stripMargin
       parseAndValidateInContext[Function](input, shouldFailOnErrors = false) {

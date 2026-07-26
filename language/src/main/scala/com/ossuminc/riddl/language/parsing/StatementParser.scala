@@ -202,7 +202,23 @@ private[parsing] trait StatementParser {
         "'send'/'tell'/'reply'/'morph'/'become' are not allowed in an 'on activate'/'on passivate' " +
           "clause; activation and passivation must be side-effect-free"
       )).asInstanceOf[P[Statements]]
+    else if set.processor == ProcessorKind.Function then
+      // A26: a Function is pure — no outbound messaging. (reply/morph/become are already not offered
+      // to a function by `statement`; set is banned in `setStatements`.)
+      (P(Keywords.send | Keywords.tell) ~/ Fail.opaque(
+        "'send'/'tell' are not allowed in a function body; a function is pure — messaging happens in " +
+          "the calling on-clause based on the function's result"
+      )).asInstanceOf[P[Statements]]
     else (sendStatement | tellStatement).asInstanceOf[P[Statements]]
+
+  // A26: a Function is pure — it may not write entity state, so `set` is rejected in a function body.
+  private def setStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.processor == ProcessorKind.Function then
+      (P(Keywords.set) ~/ Fail.opaque(
+        "'set' is not allowed in a function body; a function is pure — the on-clause effects state " +
+          "based on the function's returned result"
+      )).asInstanceOf[P[Statements]]
+    else theSetStatement.asInstanceOf[P[Statements]]
 
   private def guardStatements[u: P](set: StatementsSet): P[Statements] =
     if set.clause == ClauseRestriction.EventClause then
@@ -217,8 +233,8 @@ private[parsing] trait StatementParser {
       whenStatement(set) | matchStatement(set) |
         // GROUP 2: Common message operations (suppressed under ActivationClause)
         messagingStatements(set) |
-        // GROUP 3: Variable operations
-        theSetStatement | letStatement |
+        // GROUP 3: Variable operations (set is banned in a pure Function body — see setStatements)
+        setStatements(set) | letStatement |
         // GROUP 4: General statements
         promptStatement | codeStatement |
         // GROUP 5: Error handling and preconditions (suppressed under EventClause)
@@ -236,6 +252,13 @@ private[parsing] trait StatementParser {
       set.processor match {
         case ProcessorKind.Entity =>
           base | morphStatement | becomeStatement | replyStatement
+        // A26: a Function is pure. send/tell/set are banned inside `base`; morph/become/reply are
+        // caught here (appended after `base`, so valid statements match first) with a clear message.
+        case ProcessorKind.Function =>
+          base | (P(Keywords.morph | Keywords.become | Keywords.reply) ~/ Fail.opaque(
+            "'morph'/'become'/'reply' are not allowed in a function body; a function is pure and may " +
+              "not change entity state or reply"
+          )).asInstanceOf[P[Statements]]
         case ProcessorKind.Context    => base | replyStatement
         case ProcessorKind.Repository => base | replyStatement
         case _                        => base
