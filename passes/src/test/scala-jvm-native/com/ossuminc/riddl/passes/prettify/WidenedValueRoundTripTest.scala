@@ -16,8 +16,8 @@ import com.ossuminc.riddl.utils.pc
 import org.scalatest.*
 
 /** A54: operand widening — `send`/`tell`/`yield` (message ref | constructor), `morph` (record ref |
-  * constructor), `set`/`let` (any value), plus the `prompt(...)` value. RIDDL is reflective, so every
-  * widened form must emit (prettify) and re-parse to the same shape, in the same place.
+  * constructor), `set`/`let` (any value), plus the `prompt(...)` value. RIDDL is reflective, so
+  * every widened form must emit (prettify) and re-parse to the same shape, in the same place.
   */
 class WidenedValueRoundTripTest extends AbstractValidatingTest {
 
@@ -70,64 +70,65 @@ class WidenedValueRoundTripTest extends AbstractValidatingTest {
       |""".stripMargin
 
   "widened operands" should {
-    "round-trip send/morph/set/let(prompt)/yield constructors through prettify" in { (td: TestData) =>
-      val pretty = prettify(parse(src, "src"))
-      // The `prompt(...)` value survives emission verbatim.
-      pretty must include("prompt(\"summarize the addition\")")
+    "round-trip send/morph/set/let(prompt)/yield constructors through prettify" in {
+      (td: TestData) =>
+        val pretty = prettify(parse(src, "src"))
+        // The `prompt(...)` value survives emission verbatim.
+        pretty must include("prompt(\"summarize the addition\")")
 
-      val regen = parse(pretty, "regen")
+        val regen = parse(pretty, "regen")
 
-      // let bound to a PromptValue
-      val lets = Finder(regen).recursiveFindByType[LetStatement]
-      val promptLet = lets
-        .find(_.identifier.value == "note")
-        .getOrElse(fail("let 'note' lost through round-trip"))
-      promptLet.expression match
-        case pv: PromptValue => pv.prompt.s mustBe "summarize the addition"
-        case other           => fail(s"expected a PromptValue expression, got $other")
+        // let bound to a PromptValue
+        val lets = Finder(regen).recursiveFindByType[LetStatement]
+        val promptLet = lets
+          .find(_.identifier.value == "note")
+          .getOrElse(fail("let 'note' lost through round-trip"))
+        promptLet.expression match
+          case pv: PromptValue => pv.prompt.s mustBe "summarize the addition"
+          case other           => fail(s"expected a PromptValue expression, got $other")
 
-      // set field to a record constructor
-      val set = Finder(regen)
-        .recursiveFindByType[SetStatement]
-        .headOption
-        .getOrElse(fail("set statement lost"))
-      set.value match
-        case c: Constructor =>
-          c.ref.isInstanceOf[RecordRef] mustBe true
-          c.args.map(_.name.map(_.value)) mustBe Seq(Some("sku"), Some("qty"))
-        case other => fail(s"expected a Constructor set value, got $other")
+        // set field to a record constructor
+        val set = Finder(regen)
+          .recursiveFindByType[SetStatement]
+          .headOption
+          .getOrElse(fail("set statement lost"))
+        set.value match
+          case c: Constructor =>
+            c.ref.isInstanceOf[RecordRef] mustBe true
+            c.args.map(_.name.map(_.value)) mustBe Seq(Some("sku"), Some("qty"))
+          case other => fail(s"expected a Constructor set value, got $other")
 
-      // send an event built by a constructor
-      val send = Finder(regen)
-        .recursiveFindByType[SendStatement]
-        .headOption
-        .getOrElse(fail("send statement lost"))
-      send.msg match
-        case c: Constructor =>
-          c.ref.isInstanceOf[EventRef] mustBe true
-          c.ref.pathId.value.last mustBe "Added"
-        case other => fail(s"expected a Constructor send msg, got $other")
+        // send an event built by a constructor
+        val send = Finder(regen)
+          .recursiveFindByType[SendStatement]
+          .headOption
+          .getOrElse(fail("send statement lost"))
+        send.msg match
+          case c: Constructor =>
+            c.ref.isInstanceOf[EventRef] mustBe true
+            c.ref.pathId.value.last mustBe "Added"
+          case other => fail(s"expected a Constructor send msg, got $other")
 
-      // morph the entity state with a (nested) record constructor
-      val morph = Finder(regen)
-        .recursiveFindByType[MorphStatement]
-        .headOption
-        .getOrElse(fail("morph statement lost"))
-      morph.value match
-        case c: Constructor =>
-          c.ref.isInstanceOf[RecordRef] mustBe true
-          c.args.head.value.isInstanceOf[Constructor] mustBe true // nested Line(...)
-        case other => fail(s"expected a Constructor morph value, got $other")
+        // morph the entity state with a (nested) record constructor
+        val morph = Finder(regen)
+          .recursiveFindByType[MorphStatement]
+          .headOption
+          .getOrElse(fail("morph statement lost"))
+        morph.value match
+          case c: Constructor =>
+            c.ref.isInstanceOf[RecordRef] mustBe true
+            c.args.head.value.isInstanceOf[Constructor] mustBe true // nested Line(...)
+          case other => fail(s"expected a Constructor morph value, got $other")
 
-      // yield a result built by a constructor
-      val yld = Finder(regen)
-        .recursiveFindByType[YieldStatement]
-        .headOption
-        .getOrElse(fail("yield statement lost"))
-      yld.msg match
-        case c: Constructor =>
-          c.ref.isInstanceOf[ResultRef] mustBe true
-        case other => fail(s"expected a Constructor yield msg, got $other")
+        // yield a result built by a constructor
+        val yld = Finder(regen)
+          .recursiveFindByType[YieldStatement]
+          .headOption
+          .getOrElse(fail("yield statement lost"))
+        yld.msg match
+          case c: Constructor =>
+            c.ref.isInstanceOf[ResultRef] mustBe true
+          case other => fail(s"expected a Constructor yield msg, got $other")
     }
   }
 }
