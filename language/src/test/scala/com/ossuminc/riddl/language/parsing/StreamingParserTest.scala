@@ -33,7 +33,7 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
     Streamlet(
       (row + 1, col + 1, rpi),
       Identifier((row + 1, col + 8, rpi), "GetWeatherForecast"),
-      Source((row + 1, col + 1, rpi)),
+      Some(Source((row + 1, col + 1, rpi))),
       Contents(
         Outlet(
           (row + 2, 3, rpi),
@@ -134,7 +134,7 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
           Streamlet(
             (6, 3, rpi),
             Identifier((6, 10, rpi), "GetWeatherForecast"),
-            Source((6, 3, rpi)),
+            Some(Source((6, 3, rpi))),
             Contents(
               Outlet(
                 (7, 5, rpi),
@@ -161,7 +161,7 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
           Streamlet(
             (12, 3, rpi),
             Identifier((12, 8, rpi), "GetCurrentTemperature"),
-            Flow((12, 3, rpi)),
+            Some(Flow((12, 3, rpi))),
             Contents(
               Inlet(
                 (13, 5, rpi),
@@ -197,7 +197,7 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
           Streamlet(
             (19, 3, rpi),
             Identifier((19, 8, rpi), "AttenuateSensor"),
-            Sink((19, 3, rpi)),
+            Some(Sink((19, 3, rpi))),
             Contents(
               Inlet(
                 (20, 5, rpi),
@@ -222,7 +222,7 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
             )
           )
         ),
-        Contents(
+        metadata = Contents(
           BlockDescription(
             (25, 3, rpi),
             List(

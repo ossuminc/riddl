@@ -492,7 +492,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeIdentifierInline(s.id) // Inline - no tag needed
     // Write shape tag
-    s.shape match {
+    s.effectiveShape match {
       case _: Void   => writer.writeU8(STREAMLET_VOID)
       case _: Source => writer.writeU8(STREAMLET_SOURCE)
       case _: Sink   => writer.writeU8(STREAMLET_SINK)

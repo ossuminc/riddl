@@ -36,3 +36,6 @@ __pycache__/
 
 # Metals (regenerated locally)
 /project/metals.sbt
+
+# Subagent-driven-development scratch (briefs, reports, ledger)
+.superpowers/

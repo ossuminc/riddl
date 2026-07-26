@@ -120,7 +120,7 @@ private[parsing] trait StreamingParser {
       val loc = at(start, end)
       val shape = keywordToKind(keyword, loc)
       checkForDuplicateIncludes(contents)
-      Streamlet(loc, id, shape, contents.toContents, descriptives.toContents)
+      Streamlet(loc, id, Some(shape), contents.toContents, descriptives.toContents)
     }
   }
 

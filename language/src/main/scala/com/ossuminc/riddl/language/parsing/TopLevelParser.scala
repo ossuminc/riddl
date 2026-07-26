@@ -494,7 +494,7 @@ object TopLevelParser:
       val loc =
         if allContents.nonEmpty then allContents.head.loc
         else At.empty
-      Streamlet(loc, Identifier.empty, shape, allContents.toContents)
+      Streamlet(loc, Identifier.empty, Some(shape), allContents.toContents)
     }
   end parseAsStreamlet
 

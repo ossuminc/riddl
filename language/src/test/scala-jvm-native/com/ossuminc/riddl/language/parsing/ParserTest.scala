@@ -181,7 +181,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
               At(rpi, 0, 83),
               Identifier(At(rpi, 8, 11), "bar"),
               Contents(),
-              Contents(
+              metadata = Contents(
                 OptionValue(At(rpi, 32, 49), "service", Seq.empty),
                 OptionValue(At(rpi, 49, 66), "wrapper", Seq.empty),
                 OptionValue(At(rpi, 66, 81), "gateway", Seq.empty)
@@ -287,7 +287,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
                 isInitial = true
               )
             ),
-            Contents(
+            metadata = Contents(
               OptionValue(At(rpi, 134, 153), "transient", Seq.empty),
               OptionValue(At(rpi, 153, 170), "aggregate", Seq.empty)
             )

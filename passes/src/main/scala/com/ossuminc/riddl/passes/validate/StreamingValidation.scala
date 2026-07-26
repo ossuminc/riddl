@@ -67,7 +67,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
       // Check 1: Isolated streamlets (non-Void, not connected to any connector)
       streamlets.foreach { streamlet =>
-        streamlet.shape match {
+        streamlet.effectiveShape match {
           case _: Void => () // Void streamlets are excluded
           case _ =>
             if !connectedStreamlets.contains(streamlet) then
@@ -82,8 +82,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       }
 
       // Check 2: Source→Sink reachability via BFS
-      val sources = streamlets.filter(_.shape.isInstanceOf[Source])
-      val sinks = streamlets.filter(_.shape.isInstanceOf[Sink]).toSet
+      val sources = streamlets.filter(_.effectiveShape.isInstanceOf[Source])
+      val sinks = streamlets.filter(_.effectiveShape.isInstanceOf[Sink]).toSet
 
       sources.foreach { source =>
         if adjacency.contains(source) then {

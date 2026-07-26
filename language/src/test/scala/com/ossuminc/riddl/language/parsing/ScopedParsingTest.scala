@@ -315,7 +315,7 @@ trait ScopedParsingTest(using PlatformContext) extends AbstractTestingBasisWithT
       ) match {
         case Left(errors) => fail(errors.format)
         case Right(streamlet) =>
-          streamlet.shape mustBe a[Flow]
+          streamlet.effectiveShape mustBe a[Flow]
           // Inlets and outlets from caller
           streamlet.inlets.size mustBe 1
           streamlet.outlets.size mustBe 1
@@ -338,7 +338,7 @@ trait ScopedParsingTest(using PlatformContext) extends AbstractTestingBasisWithT
       ) match {
         case Left(errors) => fail(errors.format)
         case Right(streamlet) =>
-          streamlet.shape mustBe a[Void]
+          streamlet.effectiveShape mustBe a[Void]
           streamlet.inlets mustBe empty
           streamlet.outlets mustBe empty
           streamlet.types must not be empty

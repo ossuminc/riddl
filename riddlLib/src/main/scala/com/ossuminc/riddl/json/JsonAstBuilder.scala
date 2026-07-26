@@ -172,7 +172,7 @@ object JsonAstBuilder:
         groups,
         handlers
       ),
-      meta(c.brief, c.metadata)
+      metadata = meta(c.brief, c.metadata)
     )
 
   /** A message (command/event/query/result) is a `Type` whose expression is an aggregate tagged
@@ -241,7 +241,7 @@ object JsonAstBuilder:
         handlers,
         invariants
       ),
-      meta(e.brief, e.metadata)
+      metadata = meta(e.brief, e.metadata)
     )
 
   /** A state references a record type and may carry nested handlers (RIDDL entity state machines
@@ -644,7 +644,7 @@ object JsonAstBuilder:
         functions,
         handlers
       ),
-      meta(a.brief)
+      metadata = meta(a.brief)
     )
 
   private def streamletShape(s: String)(using ctx: Ctx): StreamletShape =
@@ -688,7 +688,7 @@ object JsonAstBuilder:
     Streamlet(
       At(),
       ident(s.name),
-      streamletShape(s.shape),
+      Some(streamletShape(s.shape)),
       contentsOf[StreamletContents](
         types,
         commands,
@@ -747,7 +747,7 @@ object JsonAstBuilder:
         handlers,
         repoRefs
       ),
-      meta(p.brief)
+      metadata = meta(p.brief)
     )
 
   private def schemaKind(s: Option[String])(using ctx: Ctx): RepositorySchemaKind =
@@ -788,7 +788,7 @@ object JsonAstBuilder:
       At(),
       ident(r.name),
       contentsOf[RepositoryContents](types, schemas, commands, events, queries, results, handlers),
-      meta(r.brief)
+      metadata = meta(r.brief)
     )
 
   // ---------------------------------------------------------------------------

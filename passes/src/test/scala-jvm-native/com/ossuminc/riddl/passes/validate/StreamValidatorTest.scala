@@ -244,121 +244,12 @@ class StreamValidatorTest extends AbstractValidatingTest {
     }
 
     "validate Streamlet types" in { _ =>
-      intercept[IllegalArgumentException] {
-        Riddl.validate(
-          root(
-            Seq(
-              Streamlet(
-                At(),
-                Identifier(At(), "source"),
-                Source(At()),
-                Contents(inlet("in1", "int"), inlet("in2", "int"))
-              )
-            )
-          )
-        )
-      }
-      intercept[IllegalArgumentException] {
-        Riddl.validate(
-          root(
-            Seq(
-              Streamlet(
-                At(),
-                Identifier(At(), "sink"),
-                Sink(At()),
-                Contents(
-                  inlet("in1", "int"),
-                  outlet("out1", "int")
-                )
-              )
-            )
-          )
-        )
-      }
-      intercept[IllegalArgumentException] {
-        Riddl.validate(
-          root(
-            Seq(
-              Streamlet(
-                At(),
-                Identifier(At(), "flow"),
-                Flow(At()),
-                Contents(
-                  outlet("out1", "int"),
-                  outlet("out2", "int")
-                )
-              )
-            )
-          )
-        )
-      }
-      intercept[IllegalArgumentException] {
-        Riddl.validate(
-          root(
-            Seq(
-              Streamlet(
-                At(),
-                Identifier(At(), "flow"),
-                Split(At()),
-                Contents(
-                  outlet("out1", "int"),
-                  outlet("out2", "int")
-                )
-              )
-            )
-          )
-        )
-      }
-      intercept[IllegalArgumentException] {
-        Riddl.validate(
-          root(
-            Seq(
-              Streamlet(
-                At(),
-                Identifier(At(), "flow"),
-                Merge(At()),
-                Contents(
-                  inlet("in1", "int"),
-                  inlet("in2", "int")
-                )
-              )
-            )
-          )
-        )
-      }
-      intercept[IllegalArgumentException] {
-        Riddl.validate(
-          root(
-            Seq(
-              Streamlet(
-                At(),
-                Identifier(At(), "flow"),
-                Router(At()),
-                Contents(
-                  outlet("out2", "int")
-                )
-              )
-            )
-          )
-        )
-      }
-      intercept[IllegalArgumentException] {
-        Riddl.validate(
-          root(
-            Seq(
-              Streamlet(
-                At(),
-                Identifier(At(), "flow"),
-                Void(At()),
-                Contents(
-                  inlet("in1", "int"),
-                  outlet("out2", "int")
-                )
-              )
-            )
-          )
-        )
-      }
+      // A32/Task 2: the AST no longer throws IllegalArgumentException on a
+      // shape/arity mismatch (crashing on user input is wrong). The arity-vs-
+      // ascribed-shape check moves to ValidationPass as an Error — Task 10
+      // restores these cases as assertions on validation messages (e.g. an
+      // Error for `as source` with 2 inlets). Pending until Task 10 lands.
+      pending
     }
   }
 }

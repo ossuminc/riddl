@@ -1633,7 +1633,7 @@ case class ValidationPass(
     if streamlet.nonEmpty then
       val numInlets = streamlet.inlets.size
       val numOutlets = streamlet.outlets.size
-      streamlet.shape match {
+      streamlet.effectiveShape match {
         case _: Source =>
           check(
             numInlets == 0,
@@ -1735,7 +1735,7 @@ case class ValidationPass(
       )
     // Completeness: Flow/Split/Router handlers should send to their outlets
     if streamlet.nonEmpty && streamlet.handlers.nonEmpty then {
-      streamlet.shape match {
+      streamlet.effectiveShape match {
         case _: Flow | _: Split | _: Router =>
           val allSends = streamlet.handlers.flatMap { handler =>
             val finder = Finder(handler)

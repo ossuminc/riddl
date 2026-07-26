@@ -104,7 +104,7 @@ private[parsing] trait EntityParser {
       Index ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ withMetaData ~ Index
     )./ map { case (start, id, contents, meta, end) =>
       checkForDuplicateIncludes(contents)
-      Entity(at(start, end), id, defaultEntityInitials(contents).toContents, meta.toContents)
+      Entity(at(start, end), id, defaultEntityInitials(contents).toContents, metadata = meta.toContents)
     }
   }
 }

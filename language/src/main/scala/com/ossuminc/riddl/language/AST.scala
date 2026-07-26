@@ -1033,6 +1033,29 @@ object AST:
       with WithInlets[CT]
       with WithOutlets[CT]:
     final override def isProcessor: Boolean = true
+
+    /** The shape explicitly ascribed by the author via `as <shape>`, if any. */
+    def ascribedShape: Option[StreamletShape]
+
+    /** The effective shape: the ascribed shape if present, otherwise derived from arity
+      * (the counts of inlets and outlets). Arity validation is performed by a later pass,
+      * so degenerate arities fall back to [[Void]] here rather than crashing.
+      */
+    def effectiveShape: StreamletShape = ascribedShape.getOrElse {
+      val out = outlets.size
+      val in = inlets.size
+      val loc = this.loc
+      (out, in) match
+        case (0, 0)                     => Void(loc)
+        case (1, 0)                     => Source(loc)
+        case (0, 1)                     => Sink(loc)
+        case (1, 1)                     => Flow(loc)
+        case (o, i) if o >= 2 && i >= 2 => Router(loc)
+        case (o, 1) if o >= 2           => Split(loc)
+        case (1, i) if i >= 2           => Merge(loc)
+        case _                          => Void(loc) // degenerate; validated later
+      end match
+    }
   end Processor
 
   ///////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
@@ -2709,6 +2732,7 @@ object AST:
     direction: AdaptorDirection,
     referent: ContextRef,
     contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents](),
+    ascribedShape: Option[StreamletShape] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[AdaptorContents]:
     def format: String = Keyword.adaptor + " " + id.format
@@ -3058,6 +3082,7 @@ object AST:
     loc: At,
     id: Identifier,
     contents: Contents[EntityContents] = Contents.empty[EntityContents](),
+    ascribedShape: Option[StreamletShape] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[EntityContents]
       with WithStates[EntityContents]:
@@ -3133,6 +3158,7 @@ object AST:
     loc: At,
     id: Identifier,
     contents: Contents[RepositoryContents] = Contents.empty[RepositoryContents](),
+    ascribedShape: Option[StreamletShape] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[RepositoryContents]:
     def format: String = Keyword.entity + " " + id.format
@@ -3175,6 +3201,7 @@ object AST:
     loc: At,
     id: Identifier,
     contents: Contents[ProjectorContents] = Contents.empty[ProjectorContents](),
+    ascribedShape: Option[StreamletShape] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[ProjectorContents]:
     def repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
@@ -3212,6 +3239,7 @@ object AST:
     loc: At,
     id: Identifier,
     contents: Contents[ContextContents] = Contents.empty[ContextContents](),
+    ascribedShape: Option[StreamletShape] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[ContextContents]
       with WithProjectors[ContextContents]
@@ -3369,6 +3397,27 @@ object AST:
     def keyword: String = "router"
   }
 
+  object StreamletShape {
+
+    /** Canonicalize a shape keyword (including synonyms) into a [[StreamletShape]].
+      * @param kw
+      *   The keyword as written by the author (e.g. "flow", "cascade", "fanout").
+      * @param loc
+      *   The source location to attach to the resulting shape.
+      * @return
+      *   Some(shape) for a recognized keyword or synonym, None otherwise.
+      */
+    def fromKeyword(kw: String, loc: At): Option[StreamletShape] = kw match
+      case "source"                         => Some(Source(loc))
+      case "sink"                           => Some(Sink(loc))
+      case "flow" | "cascade"               => Some(Flow(loc))
+      case "merge" | "fanin"                => Some(Merge(loc))
+      case "split" | "broadcast" | "fanout" => Some(Split(loc))
+      case "router"                         => Some(Router(loc))
+      case "void"                           => Some(Void(loc))
+      case _                                => None
+  }
+
   /** Definition of a Streamlet. A computing element for processing data from [[Inlet]]s to
     * [[Outlet]]s. A processor's processing is specified by free text statements in [[Handler]]s.
     * Streamlets come in various shapes: Source, Sink, Flow, Merge, Split, and Router depending on
@@ -3378,8 +3427,9 @@ object AST:
     *   The location of the Processor definition
     * @param id
     *   The name of the processor
-    * @param shape
-    *   The shape of the processor's inputs and outputs
+    * @param ascribedShape
+    *   The shape explicitly ascribed by the author, if any; otherwise the shape is derived from
+    *   arity via `effectiveShape`.
     * @param contents
     *   The definitional content for this Context
     */
@@ -3387,52 +3437,13 @@ object AST:
   case class Streamlet(
     loc: At,
     id: Identifier,
-    shape: StreamletShape,
+    ascribedShape: Option[StreamletShape] = None,
     contents: Contents[StreamletContents] = Contents.empty[StreamletContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[StreamletContents] {
     // WithInlets/WithOutlets are now inherited from Processor.
-    final override def kind: String = shape.getClass.getSimpleName
-    def format: String = shape.keyword + " " + id.format
-
-    shape match {
-      case Source(_) =>
-        require(
-          contents.isEmpty || (outlets.size == 1 && inlets.isEmpty),
-          s"Invalid Source Streamlet ins: ${outlets.size} == 1, ${inlets.size} == 0"
-        )
-      case Sink(_) =>
-        require(
-          contents.isEmpty || (outlets.isEmpty && inlets.size == 1),
-          "Invalid Sink Streamlet"
-        )
-      case Flow(_) =>
-        require(
-          contents.isEmpty || (outlets.size == 1 && inlets.size == 1),
-          "Invalid Flow Streamlet"
-        )
-      case Merge(_) =>
-        require(
-          contents.isEmpty || (outlets.size == 1 && inlets.size >= 2),
-          "Invalid Merge Streamlet"
-        )
-      case Split(_) =>
-        require(
-          contents.isEmpty || (outlets.size >= 2 && inlets.size == 1),
-          "Invalid Split Streamlet"
-        )
-      case Router(_) =>
-        require(
-          contents.isEmpty || (outlets.size >= 2 && inlets.size >= 2),
-          "Invalid Router Streamlet"
-        )
-      case Void(_) =>
-        require(
-          contents.isEmpty || (outlets.isEmpty && inlets.isEmpty),
-          "Invalid Void Stream"
-        )
-    }
-
+    final override def kind: String = effectiveShape.getClass.getSimpleName
+    def format: String = effectiveShape.keyword + " " + id.format
   }
 
   /** A reference to an referent's projector definition

@@ -207,7 +207,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           )
         )
       case s: Streamlet =>
-        val shape = s.shape match
+        val shape = s.effectiveShape match
           case _: Source => "source"
           case _: Sink   => "sink"
           case _: Flow   => "flow"

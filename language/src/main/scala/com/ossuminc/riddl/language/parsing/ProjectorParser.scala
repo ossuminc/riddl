@@ -48,7 +48,7 @@ private[parsing] trait ProjectorParser {
       Index ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ withMetaData ~ Index
     )./.map { case (start, id, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Projector(at(start, end), id, contents.toContents, descriptives.toContents)
+      Projector(at(start, end), id, contents.toContents, metadata = descriptives.toContents)
     }
   }
 }

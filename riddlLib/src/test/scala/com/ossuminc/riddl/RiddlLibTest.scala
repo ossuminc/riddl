@@ -223,7 +223,7 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
         outlets
       ) match
         case RiddlResult.Success(streamlet) =>
-          streamlet.shape mustBe a[Flow]
+          streamlet.effectiveShape mustBe a[Flow]
           streamlet.inlets.size mustBe 1
           streamlet.outlets.size mustBe 1
           streamlet.handlers must not be empty

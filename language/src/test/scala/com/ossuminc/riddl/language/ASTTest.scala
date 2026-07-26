@@ -269,7 +269,7 @@ class ASTTest extends AbstractTestingBasis {
   val domain: AST.Domain =
     Domain(At(), Identifier(At(), "test"), contents = Contents(author))
   val context: AST.Context =
-    Context(At(), Identifier(At(), "test"), Contents(relationship), Contents(authorRef))
+    Context(At(), Identifier(At(), "test"), Contents(relationship), metadata = Contents(authorRef))
 
   "Adaptor" should {
     "pass simple tests" in {
@@ -471,6 +471,23 @@ class ASTTest extends AbstractTestingBasis {
       val entity = Entity(At.empty, Identifier(At.empty, "E"), Contents(inlet, outlet))
       entity.inlets must be(Seq(inlet))
       entity.outlets must be(Seq(outlet))
+    }
+  }
+
+  "Streamlet shape" should {
+    "canonicalize synonyms and derive effectiveShape from arity" in {
+      StreamletShape.fromKeyword("cascade", At.empty).map(_.keyword) must be(Some("flow"))
+      StreamletShape.fromKeyword("fanout", At.empty).map(_.keyword) must be(Some("split"))
+      StreamletShape.fromKeyword("fanin", At.empty).map(_.keyword) must be(Some("merge"))
+      StreamletShape.fromKeyword("bogus", At.empty) must be(None)
+      val i = Inlet(At.empty, Identifier(At.empty, "i"),
+        TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("T"))))
+      val o = Outlet(At.empty, Identifier(At.empty, "o"),
+        TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("T"))))
+      val p = Streamlet(At.empty, Identifier(At.empty, "P"), None, Contents(i, o))
+      p.effectiveShape.keyword must be("flow") // 1 in + 1 out
+      val src = Streamlet(At.empty, Identifier(At.empty, "S"), None, Contents(o))
+      src.effectiveShape.keyword must be("source") // 1 out + 0 in
     }
   }
 }

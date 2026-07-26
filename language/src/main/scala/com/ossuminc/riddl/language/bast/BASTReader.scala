@@ -539,7 +539,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val id = readIdentifierInline() // Inline - no tag
     val contents = readContentsDeferred[OccursInContext]().asInstanceOf[Contents[ContextContents]]
     val metadata = readMetadataDeferred()
-    Context(loc, id, contents, metadata)
+    Context(loc, id, contents, metadata = metadata)
   }
 
   private def readEntityNode(): Entity = {
@@ -548,7 +548,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val contents =
       readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
     val metadata = readMetadataDeferred()
-    Entity(loc, id, contents, metadata)
+    Entity(loc, id, contents, metadata = metadata)
   }
 
   private def readModuleNode(): Module = {
@@ -633,7 +633,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val referent = readContextRef()
     val contents = readContentsDeferred[OccursInProcessor]().asInstanceOf[Contents[AdaptorContents]]
     val metadata = readMetadataDeferred()
-    Adaptor(loc, id, direction, referent, contents, metadata)
+    Adaptor(loc, id, direction, referent, contents, metadata = metadata)
   }
 
   // A9: `requires`/`returns` hold a TypeRef (preferred) or a deprecated inline Aggregation.
@@ -685,7 +685,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val contents = readContentsDeferred[OccursInProcessor | RepositoryRef]()
       .asInstanceOf[Contents[ProjectorContents]]
     val metadata = readMetadataDeferred()
-    Projector(loc, id, contents, metadata)
+    Projector(loc, id, contents, metadata = metadata)
   }
 
   private def readRepositoryNode(): Repository = {
@@ -694,7 +694,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val contents =
       readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
     val metadata = readMetadataDeferred()
-    Repository(loc, id, contents, metadata)
+    Repository(loc, id, contents, metadata = metadata)
   }
 
   private def readSchemaNode(): Schema = {
@@ -745,7 +745,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val contents = readContentsDeferred[OccursInProcessor | Inlet | Outlet | Connector]()
       .asInstanceOf[Contents[StreamletContents]]
     val metadata = readMetadataDeferred()
-    Streamlet(loc, id, shape, contents, metadata)
+    Streamlet(loc, id, Some(shape), contents, metadata)
   }
 
   // ========== Epic Definitions ==========

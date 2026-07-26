@@ -52,7 +52,7 @@ private[parsing] trait AdaptorParser(using PlatformContext) { this: ProcessorPar
         close ~ withMetaData ~ Index
     )./ map { (start, id, direction, cRef, contents, meta, end) =>
       checkForDuplicateIncludes(contents)
-      Adaptor(at(start, end), id, direction, cRef, contents.toContents, meta.toContents)
+      Adaptor(at(start, end), id, direction, cRef, contents.toContents, metadata = meta.toContents)
     }
   }
 }

@@ -143,7 +143,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
         val expected = Streamlet(
           (2, 2, rpi),
           Identifier((2, 9, rpi), "src"),
-          Source((2, 2, rpi))
+          Some(Source((2, 2, rpi)))
         )
         context.streamlets.size mustBe 1
         context.streamlets.head mustBe expected
