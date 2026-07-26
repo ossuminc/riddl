@@ -101,7 +101,7 @@ class YieldsRoundTripTest extends AbstractValidatingTest {
         pretty must not include "reply"
 
         val yields = Finder(parse(pretty, "regen2")).recursiveFindByType[YieldStatement]
-        yields.map(_.msg.pathId.value.last).toSet mustBe
+        yields.map(_.msg.operandPathId.value.last).toSet mustBe
           scala.collection.immutable.Set("OrderPlaced", "OrderFound")
     }
   }

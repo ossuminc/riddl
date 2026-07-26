@@ -40,7 +40,7 @@ class ForeachValidationTest extends AbstractValidatingTest {
 
     "accept a foreach over a collection field of the handled message" in { (td: TestData) =>
       parseAndValidate(
-        model("""foreach o in field Batch.orders { prompt "process" }"""),
+        model("""foreach o in field Batch.orders { do "process" }"""),
         td.name,
         shouldFailOnErrors = false
       ) { case (_, _, msgs: Messages) =>
@@ -50,7 +50,7 @@ class ForeachValidationTest extends AbstractValidatingTest {
 
     "reject a foreach over a non-collection field" in { (td: TestData) =>
       parseAndValidate(
-        model("""foreach o in field Single.count { prompt "process" }"""),
+        model("""foreach o in field Single.count { do "process" }"""),
         td.name,
         shouldFailOnErrors = false
       ) { case (_, _, msgs: Messages) =>
@@ -61,7 +61,7 @@ class ForeachValidationTest extends AbstractValidatingTest {
     "reject a foreach over a field outside the entity state, message, or function input" in {
       (td: TestData) =>
         parseAndValidate(
-          model("""foreach o in field Other.items { prompt "process" }"""),
+          model("""foreach o in field Other.items { do "process" }"""),
           td.name,
           shouldFailOnErrors = false
         ) { case (_, _, msgs: Messages) =>
@@ -77,7 +77,7 @@ class ForeachValidationTest extends AbstractValidatingTest {
       parseAndValidate(
         model(
           """let batch: OrderList = "orders"
-            |        foreach o in batch { prompt "process" }""".stripMargin
+            |        foreach o in batch { do "process" }""".stripMargin
         ),
         td.name,
         shouldFailOnErrors = false
@@ -90,7 +90,7 @@ class ForeachValidationTest extends AbstractValidatingTest {
       parseAndValidate(
         model(
           """let single: Single = "x"
-            |        foreach o in single { prompt "process" }""".stripMargin
+            |        foreach o in single { do "process" }""".stripMargin
         ),
         td.name,
         shouldFailOnErrors = false
@@ -101,7 +101,7 @@ class ForeachValidationTest extends AbstractValidatingTest {
 
     "reject a foreach over an identifier that is not a local in scope" in { (td: TestData) =>
       parseAndValidate(
-        model("""foreach o in nothere { prompt "process" }"""),
+        model("""foreach o in nothere { do "process" }"""),
         td.name,
         shouldFailOnErrors = false
       ) { case (_, _, msgs: Messages) =>
@@ -114,7 +114,7 @@ class ForeachValidationTest extends AbstractValidatingTest {
         model(
           """let batch: OrderList = "orders"
             |        when "cond" then
-            |          foreach o in batch { prompt "process" }
+            |          foreach o in batch { do "process" }
             |        end""".stripMargin
         ),
         td.name,
@@ -128,7 +128,7 @@ class ForeachValidationTest extends AbstractValidatingTest {
       parseAndValidate(
         model(
           """foreach o in field Batch.orders {
-            |          foreach x in o { prompt "process" }
+            |          foreach x in o { do "process" }
             |        }""".stripMargin
         ),
         td.name,

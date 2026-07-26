@@ -44,10 +44,10 @@ class HandlerKindsRoundTripTest extends AbstractValidatingTest {
       |      command Cmd is { g: Integer }
       |      event Evt is { h: Integer }
       |      handler hh is {
-      |        on command Cmd { prompt "handle" }
-      |        on event Evt { prompt "note" }
-      |        on activate { prompt "rehydrate" }
-      |        on passivate { prompt "evict" }
+      |        on command Cmd { do "handle" }
+      |        on event Evt { do "note" }
+      |        on activate { do "rehydrate" }
+      |        on passivate { do "evict" }
       |      }
       |    }
       |  }

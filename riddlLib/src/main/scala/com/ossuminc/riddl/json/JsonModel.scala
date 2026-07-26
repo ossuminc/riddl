@@ -292,8 +292,8 @@ object JsonModel:
   /** `{ "kind": "error", "message": "..." }` */
   case class ErrorStmtDto(message: String) extends StatementDto
 
-  /** `{ "kind": "let", "name": "x", "type"?: "<typePath>", "expression": "..." }` */
-  case class LetStmtDto(name: String, `type`: Option[String], expression: String)
+  /** `{ "kind": "let", "name": "x", "type"?: "<typePath>", "expression": <value> }` */
+  case class LetStmtDto(name: String, `type`: Option[String], expression: ValueDto)
       extends StatementDto
 
   /** `{ "kind": "code", "language": "scala", "body": "..." }` */
@@ -303,26 +303,32 @@ object JsonModel:
   case class RequireStmtDto(condition: Option[String], invariant: Option[String])
       extends StatementDto
 
-  /** `{ "kind": "set", "field"|"state": "<path>", "value": "..." }` */
-  case class SetStmtDto(field: Option[String], state: Option[String], value: String)
+  /** A54: a message operand — a bare message ref or an inline constructor value. */
+  type MsgOperandDto = MessageRefDto | ConstructorValueDto
+
+  /** `{ "kind": "set", "field"|"state": "<path>", "value": <value> }` */
+  case class SetStmtDto(field: Option[String], state: Option[String], value: ValueDto)
       extends StatementDto
 
-  /** `{ "kind": "send", "message": <msgRef>, "to": "<path>", "portlet": "inlet"|"outlet" }` */
-  case class SendStmtDto(message: MessageRefDto, to: String, portlet: String) extends StatementDto
+  /** `{ "kind": "send", "message": <msgRef|constructor>, "to": "<path>", "portlet":
+    * "inlet"|"outlet" }`
+    */
+  case class SendStmtDto(message: MsgOperandDto, to: String, portlet: String) extends StatementDto
 
-  /** `{ "kind": "morph", "entity": "<path>", "state": "<path>", "value": <msgRef> }` */
-  case class MorphStmtDto(entity: String, state: String, value: MessageRefDto) extends StatementDto
+  /** `{ "kind": "morph", "entity": "<path>", "state": "<path>", "value": <msgRef|constructor> }` */
+  case class MorphStmtDto(entity: String, state: String, value: MsgOperandDto) extends StatementDto
 
   /** `{ "kind": "become", "entity": "<path>", "handler": "<path>" }` */
   case class BecomeStmtDto(entity: String, handler: String) extends StatementDto
 
-  /** `{ "kind": "tell", "message": <msgRef>, "to": "<path>", "processor":
+  /** `{ "kind": "tell", "message": <msgRef|constructor>, "to": "<path>", "processor":
     * "entity"|"context"|"projector"|"repository"|"adaptor" }`
     */
-  case class TellStmtDto(message: MessageRefDto, to: String, processor: String) extends StatementDto
+  case class TellStmtDto(message: MsgOperandDto, to: String, processor: String) extends StatementDto
 
-  /** `{ "kind": "yield", "message": <msgRef> }` (also reads legacy `"kind": "reply"`) */
-  case class YieldStmtDto(message: MessageRefDto) extends StatementDto
+  /** `{ "kind": "yield", "message": <msgRef|constructor> }` (also reads legacy `"kind": "reply"`)
+    */
+  case class YieldStmtDto(message: MsgOperandDto) extends StatementDto
 
   /** `{ "kind": "when", "condition"|"conditionIdentifier": "...", "negated"?: bool, "then":
     * [<stmt>], "else"?: [<stmt>] }`
@@ -366,6 +372,9 @@ object JsonModel:
 
   /** `{ "value": "valueRef", "path": "<path>" }` */
   case class ValueRefDto(path: String) extends ValueDto
+
+  /** `{ "value": "prompt", "prompt": "..." }` — an AI-computed value (A54). */
+  case class PromptValueDto(prompt: String) extends ValueDto
 
   /** `{ "value": "get", "source": "input"|"state", "keyword": "<kw>", "ref": "<path>" }` — the
     * `keyword` preserves the InputRef alias (input/form/…) for reflection fidelity; a StateRef has
@@ -864,9 +873,15 @@ object JsonModel:
 
   // A54: ujson <-> ValueDto.
   private def readValue(v: ujson.Value): ValueDto =
+    v match
+      case ujson.Str(s) => LiteralValueDto(s) // backward compat: a bare string is a literal value
+      case _            => readValueObj(v)
+
+  private def readValueObj(v: ujson.Value): ValueDto =
     val m = v.obj
     m("value").str match
       case "literal"  => LiteralValueDto(m("text").str)
+      case "prompt"   => PromptValueDto(m("prompt").str)
       case "valueRef" => ValueRefDto(m("path").str)
       case "get"      => GetValueDto(m("source").str, m.get("keyword").map(_.str), m("ref").str)
       case "constructor" =>
@@ -880,12 +895,14 @@ object JsonModel:
           .getOrElse(Nil)
         ConstructorValueDto(m("refKind").str, m("ref").str, args)
       case other => throw new IllegalArgumentException(s"Unknown value kind: '$other'")
-  end readValue
+  end readValueObj
 
   private def writeValue(dto: ValueDto): ujson.Value =
     dto match
       case LiteralValueDto(text) =>
         ujson.Obj("value" -> ujson.Str("literal"), "text" -> ujson.Str(text))
+      case PromptValueDto(prompt) =>
+        ujson.Obj("value" -> ujson.Str("prompt"), "prompt" -> ujson.Str(prompt))
       case ValueRefDto(path) =>
         ujson.Obj("value" -> ujson.Str("valueRef"), "path" -> ujson.Str(path))
       case GetValueDto(source, keyword, ref) =>
@@ -911,6 +928,23 @@ object JsonModel:
         )
   end writeValue
 
+  // A54: ujson <-> a message operand (bare ref or inline constructor). A constructor object carries a
+  // `"value": "constructor"` key; a bare ref carries `ref`/`kind`.
+  private def readMsgOperand(v: ujson.Value): MsgOperandDto =
+    if v.obj.contains("value") then
+      readValue(v) match
+        case c: ConstructorValueDto => c
+        case other =>
+          throw new IllegalArgumentException(
+            s"message operand must be a ref or constructor, got $other"
+          )
+    else msgRef(v)
+
+  private def writeMsgOperand(dto: MsgOperandDto): ujson.Value =
+    dto match
+      case c: ConstructorValueDto => writeValue(c)
+      case mr: MessageRefDto      => msgRefJs(mr)
+
   private def readStatement(v: ujson.Value): StatementDto =
     v match
       case ujson.Str(s) => PromptStmtDto(s)
@@ -919,17 +953,20 @@ object JsonModel:
         m("kind").str match
           case "prompt" => PromptStmtDto(m("text").str)
           case "error"  => ErrorStmtDto(m("message").str)
-          case "let"    => LetStmtDto(m("name").str, m.get("type").map(_.str), m("expression").str)
-          case "code"   => CodeStmtDto(m("language").str, m("body").str)
+          case "let" =>
+            LetStmtDto(m("name").str, m.get("type").map(_.str), readValue(m("expression")))
+          case "code" => CodeStmtDto(m("language").str, m("body").str)
           case "require" =>
             RequireStmtDto(m.get("condition").map(_.str), m.get("invariant").map(_.str))
           case "set" =>
-            SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), m("value").str)
-          case "send"   => SendStmtDto(msgRef(m("message")), m("to").str, m("portlet").str)
-          case "morph"  => MorphStmtDto(m("entity").str, m("state").str, msgRef(m("value")))
+            SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), readValue(m("value")))
+          case "send" => SendStmtDto(readMsgOperand(m("message")), m("to").str, m("portlet").str)
+          case "morph" =>
+            MorphStmtDto(m("entity").str, m("state").str, readMsgOperand(m("value")))
           case "become" => BecomeStmtDto(m("entity").str, m("handler").str)
-          case "tell"   => TellStmtDto(msgRef(m("message")), m("to").str, m("processor").str)
-          case "yield" | "reply" => YieldStmtDto(msgRef(m("message")))
+          case "tell" =>
+            TellStmtDto(readMsgOperand(m("message")), m("to").str, m("processor").str)
+          case "yield" | "reply" => YieldStmtDto(readMsgOperand(m("message")))
           case "when" =>
             WhenStmtDto(
               m.get("condition").map(_.str),
@@ -974,7 +1011,7 @@ object JsonModel:
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("let"), "name" -> ujson.Str(name))
             ++ t.map(x => "type" -> (ujson.Str(x): ujson.Value))
-            ++ Seq("expression" -> (ujson.Str(e): ujson.Value))
+            ++ Seq("expression" -> (writeValue(e): ujson.Value))
         )
       case CodeStmtDto(language, body) =>
         ujson.Obj(
@@ -993,12 +1030,12 @@ object JsonModel:
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("set"))
             ++ field.map(x => "field" -> (ujson.Str(x): ujson.Value))
             ++ state.map(x => "state" -> (ujson.Str(x): ujson.Value))
-            ++ Seq("value" -> (ujson.Str(value): ujson.Value))
+            ++ Seq("value" -> (writeValue(value): ujson.Value))
         )
       case SendStmtDto(message, to, portlet) =>
         ujson.Obj(
           "kind" -> ujson.Str("send"),
-          "message" -> msgRefJs(message),
+          "message" -> writeMsgOperand(message),
           "to" -> ujson.Str(to),
           "portlet" -> ujson.Str(portlet)
         )
@@ -1007,7 +1044,7 @@ object JsonModel:
           "kind" -> ujson.Str("morph"),
           "entity" -> ujson.Str(entity),
           "state" -> ujson.Str(state),
-          "value" -> msgRefJs(value)
+          "value" -> writeMsgOperand(value)
         )
       case BecomeStmtDto(entity, handler) =>
         ujson.Obj(
@@ -1018,12 +1055,12 @@ object JsonModel:
       case TellStmtDto(message, to, processor) =>
         ujson.Obj(
           "kind" -> ujson.Str("tell"),
-          "message" -> msgRefJs(message),
+          "message" -> writeMsgOperand(message),
           "to" -> ujson.Str(to),
           "processor" -> ujson.Str(processor)
         )
       case YieldStmtDto(message) =>
-        ujson.Obj("kind" -> ujson.Str("yield"), "message" -> msgRefJs(message))
+        ujson.Obj("kind" -> ujson.Str("yield"), "message" -> writeMsgOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("when"))

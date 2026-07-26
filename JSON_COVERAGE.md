@@ -133,15 +133,15 @@ is covered in that construct's phase. The builder emits references as
 |---|---|---|
 | PromptStatement | ✅ Phase 1 | `do`/prompt text |
 | ErrorStatement | ✅ Phase 3 | |
-| LetStatement | ✅ Phase 3 | |
+| LetStatement | ✅ Phase 3 / A54 | expression widened to ValueDto |
 | CodeStatement | ✅ Phase 3 | |
 | RequireStatement | ✅ Phase 3 | |
-| SetStatement | ✅ Phase 3 | FieldRef/StateRef |
-| SendStatement | ✅ Phase 3 | MessageRef + PortletRef |
-| MorphStatement | ✅ Phase 3 | |
+| SetStatement | ✅ Phase 3 / A54 | FieldRef/StateRef; value widened to ValueDto |
+| SendStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; + PortletRef |
+| MorphStatement | ✅ Phase 3 / A54 | value = RecordRef or Constructor |
 | BecomeStatement | ✅ Phase 3 | |
-| TellStatement | ✅ Phase 3 | |
-| YieldStatement | ✅ Phase 3 | writes "yield"; reads "yield" and legacy "reply" |
+| TellStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor |
+| YieldStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; reads legacy "reply" |
 | WhenStatement | ✅ Phase 3 | nested statements |
 | MatchStatement / MatchCase | ✅ Phase 3 | nested statements |
 | ForeachStatement | ✅ A25 | field-ref or local collection; nested body statements |
@@ -150,12 +150,14 @@ is covered in that construct's phase. The builder emits references as
 
 ## Values (A54)
 
-Value expressions serialized inline within `put`/`return` (and constructor args)
-via `ValueDto` (`readValue`/`writeValue`).
+Value expressions serialized inline within `let`/`set`/`put`/`return`, the
+message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
+`ValueDto` (`readValue`/`writeValue`).
 
 | Construct | Status | Notes |
 |---|---|---|
 | LiteralString (value) | ✅ A54 | `{ "value": "literal", "text": ... }` |
+| PromptValue | ✅ A54 | `{ "value": "prompt", "prompt": ... }` — AI-computed value |
 | Constructor / ConstructorArg | ✅ A54 | refKind command/event/query/result/record; positional + named args |
 | ValueRef | ✅ A54 | `{ "value": "valueRef", "path": ... }` |
 | GetValue | ✅ A54 | `{ "value": "get", "source": "input"\|"state", "ref": ... }` |

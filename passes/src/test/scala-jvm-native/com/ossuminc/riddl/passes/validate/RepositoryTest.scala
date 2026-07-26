@@ -28,7 +28,7 @@ class RepositoryTest extends AbstractValidatingTest {
           |      command AddThis is { what: String }
           |      handler Only is {
           |        on command AddThis {
-          |          prompt "add 'what' to the list"
+          |          do "add 'what' to the list"
           |        }
           |        on query GetOne {
           |          send result fubar.Reply to outlet hereyougo
@@ -67,8 +67,8 @@ class RepositoryTest extends AbstractValidatingTest {
           |  context b is { event BEvent is { y: String } }
           |  repository synth is {
           |    handler h is {
-          |      on event a.AEvent { prompt "record from a" }
-          |      on event b.BEvent { prompt "record from b" }
+          |      on event a.AEvent { do "record from a" }
+          |      on event b.BEvent { do "record from b" }
           |    }
           |  }
           |}
@@ -93,8 +93,8 @@ class RepositoryTest extends AbstractValidatingTest {
             |    event BEvent is { y: String }
             |    repository r is {
             |      handler h is {
-            |        on event a.AEvent { prompt "from a" }
-            |        on event BEvent { prompt "from b" }
+            |        on event a.AEvent { do "from a" }
+            |        on event BEvent { do "from b" }
             |      }
             |    }
             |  }
@@ -114,7 +114,7 @@ class RepositoryTest extends AbstractValidatingTest {
           |  context a is { event AEvent is { x: String } }
           |  repository r is {
           |    handler h is {
-          |      on event a.AEvent { prompt "only from a" }
+          |      on event a.AEvent { do "only from a" }
           |    }
           |  }
           |}

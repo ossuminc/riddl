@@ -50,7 +50,7 @@ class ForeachRoundTripTest extends AbstractValidatingTest {
       |      let batch: OrderList = "orders"
       |      foreach o in field Batch.orders {
       |        foreach p in batch {
-      |          prompt "process"
+      |          do "process"
       |        }
       |      }
       |    }

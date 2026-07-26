@@ -64,7 +64,7 @@ class MessageFlowPassTest extends AbstractValidatingTest {
             |    adaptor ToTarget to context D.Target is {
             |      handler Routing is {
             |        on command D.Target.DoSomething is {
-            |          prompt "convert and forward"
+            |          do "convert and forward"
             |        }
             |      }
             |    }

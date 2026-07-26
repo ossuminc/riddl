@@ -266,22 +266,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
 
   private def resolveStatement(statement: Statement, parents: Parents): Unit = {
     statement match {
-      case SetStatement(_, field, _) =>
+      case SetStatement(_, field, value) =>
         field match
           case fr: FieldRef => associateUsage[Field](parents.head, resolveARef[Field](fr, parents))
           case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
+        // A54: resolve the value expression (constructor refs, get sources).
+        resolveValue(value, parents)
       case BecomeStatement(_, entity, handler) =>
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[Handler](parents.head, resolveARef[Handler](handler, parents))
       case SendStatement(_, msg, portlet) =>
-        associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
+        resolveMessageOperand(msg, parents)
         associateUsage[Portlet](parents.head, resolveARef[Portlet](portlet, parents))
       case MorphStatement(_, entity, state, message) =>
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[State](parents.head, resolveARef[State](state, parents))
-        associateUsage[Type](parents.head, resolveARef[Type](message, parents))
+        resolveMessageOperand(message, parents)
       case TellStatement(_, msg, processorRef) =>
-        associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
+        resolveMessageOperand(msg, parents)
         associateUsage(parents.head, resolveARef[Processor[?]](processorRef, parents))
       case _: PromptStatement => () // no references
       case _: ErrorStatement  => () // no references
@@ -291,7 +293,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           case ir: InvariantRef => resolveARef[Invariant](ir, parents)
         }
       case YieldStatement(_, msg) =>
-        associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
+        resolveMessageOperand(msg, parents)
       case ws: WhenStatement =>
         // The condition has no references, but a nested foreach's field ref must be resolved so
         // validation can find it in the refMap.
@@ -311,6 +313,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveForeachFieldRefs(fs.doStatements, parents)
       case ls: LetStatement =>
         ls.typeRef.foreach(tr => resolveARef[Type](tr, parents))
+        // A54: resolve the bound value expression (constructor refs, get sources).
+        resolveValue(ls.expression, parents)
       case PutStatement(_, v, output) =>
         // A45: resolve the value expression and the output target.
         resolveValue(v, parents)
@@ -330,6 +334,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private def resolveValue(v: Value, parents: Parents): Unit =
     v match
       case _: LiteralString => () // no references
+      case _: PromptValue   => () // AI-computed literal text, no references
       case c: Constructor =>
         associateUsage[Type](parents.head, resolveARef[Type](c.ref, parents))
         c.args.foreach(arg => resolveValue(arg.value, parents))
@@ -338,6 +343,18 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         gv.source match
           case ir: InputRef => associateUsage[Input](parents.head, resolveARef[Input](ir, parents))
           case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
+
+  /** A54: resolve a message/record operand — a bare ref (resolved as a Type) or a [[Constructor]]
+    * (resolved via [[resolveValue]]). Shared by send/tell/yield (message) and morph (record).
+    */
+  private def resolveMessageOperand(
+    m: MessageRef | RecordRef | Constructor,
+    parents: Parents
+  ): Unit =
+    m match
+      case ref: (MessageRef | RecordRef) =>
+        associateUsage[Type](parents.head, resolveARef[Type](ref, parents))
+      case c: Constructor => resolveValue(c, parents)
 
   /** Resolve the collection FieldRefs of every [[ForeachStatement]] nested anywhere within `stmts`.
     * `parents` is held constant (its head is the enclosing on-clause/function) so the refMap keys
@@ -362,6 +379,19 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage[Output](parents.head, resolveARef[Output](output, parents))
       case ReturnStatement(_, v) =>
         resolveValue(v, parents)
+      // A54: widened operands may nest too — resolve the constructor/value they carry. (Bare refs in
+      // nested messaging statements are intentionally left as-is; the framework never resolved them,
+      // and doing so here would introduce new errors the top-level path already covers.)
+      case SetStatement(_, _, v) => resolveValue(v, parents)
+      case ls: LetStatement      => resolveValue(ls.expression, parents)
+      case s: SendStatement =>
+        s.msg match { case c: Constructor => resolveValue(c, parents); case _ => () }
+      case s: TellStatement =>
+        s.msg match { case c: Constructor => resolveValue(c, parents); case _ => () }
+      case s: YieldStatement =>
+        s.msg match { case c: Constructor => resolveValue(c, parents); case _ => () }
+      case s: MorphStatement =>
+        s.value match { case c: Constructor => resolveValue(c, parents); case _ => () }
       case _ => ()
     }
 

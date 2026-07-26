@@ -856,18 +856,18 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val field: FieldRef | StateRef = reader.peekU8() match
           case tag if tag == NODE_FIELD_REF => readFieldRef()
           case tag if tag == NODE_STATE_REF => readStateRef()
-        val value = readLiteralString()
+        val value = readValue() // A54: value expression
         SetStatement(loc, field, value)
 
       case 5 => // Send
-        val msg = readMessageRef()
+        val msg = readMessageOperand() // A54: bare ref or constructor
         val portlet = readPortletRef()
         SendStatement(loc, msg, portlet)
 
       case 7 => // Morph
         val entity = readEntityRef()
         val state = readStateRef()
-        val value = readRecordRefInline() // A9b: morph value is a RecordRef
+        val value = readRecordOperand() // A9b/A54: RecordRef or Constructor
         MorphStatement(loc, entity, state, value)
 
       case 8 => // Become
@@ -876,7 +876,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         BecomeStatement(loc, entity, handler)
 
       case 9 => // Tell
-        val msg = readMessageRef()
+        val msg = readMessageOperand() // A54: bare ref or constructor
         val processorRef = readProcessorRef()
         TellStatement(loc, msg, processorRef)
 
@@ -933,7 +933,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           val pid = readPathIdentifierNode()
           Some(TypeRef(loc, "type", pid))
         else None
-        val expression = readLiteralString()
+        val expression = readValue() // A54: value expression
         LetStatement(loc, identifier, optTypeRef, expression)
 
       case 13 => // Code
@@ -956,7 +956,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         }
 
       case 15 => // Yield (formerly Reply — wire format unchanged)
-        val msg = readMessageRef()
+        val msg = readMessageOperand() // A54: bare ref or constructor
         YieldStatement(loc, msg)
 
       case 16 => // Foreach
@@ -2227,6 +2227,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val loc = readLocation()
         val s = readString()
         LiteralString(loc, s)
+      case 4 => // PromptValue
+        val loc = readLocation()
+        val what = readLiteralString()
+        PromptValue(loc, what)
       case 1 => // Constructor
         readConstructor()
       case 2 => // ValueRef
@@ -2250,6 +2254,20 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         GetValue(loc, source)
       case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
   }
+
+  /** A54: mirror of [[BASTWriter.writeMessageOperand]]. */
+  private def readMessageOperand(): MessageRef | Constructor =
+    reader.readU8() match
+      case 0     => readMessageRef()
+      case 1     => readConstructor()
+      case other => throw new RuntimeException(s"Invalid message operand discriminator: $other")
+
+  /** A54: mirror of [[BASTWriter.writeRecordOperand]]. */
+  private def readRecordOperand(): RecordRef | Constructor =
+    reader.readU8() match
+      case 0     => readRecordRefInline()
+      case 1     => readConstructor()
+      case other => throw new RuntimeException(s"Invalid record operand discriminator: $other")
 
   /** A54: mirror of [[BASTWriter.writeConstructor]]. */
   private def readConstructor(): Constructor = {

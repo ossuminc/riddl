@@ -197,7 +197,7 @@ case class DependencyAnalysisPass(
         }
 
         // Record type dependency for the message
-        val maybeType = refMap.definitionOf[Type](tell.msg, omc)
+        val maybeType = refMap.definitionOf[Type](tell.msg.operandPathId, omc)
         maybeType.foreach { msgType =>
           val sourceType = parents.collectFirst { case t: Type =>
             t

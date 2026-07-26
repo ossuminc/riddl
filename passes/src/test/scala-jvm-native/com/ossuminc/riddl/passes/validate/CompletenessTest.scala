@@ -33,7 +33,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |          send event D.C.Evt to outlet D.C.Events.out
           |        }
           |        on query D.C.GetData {
-          |          prompt "return data"
+          |          do "return data"
           |        }
           |      }
           |    }
@@ -62,13 +62,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |      state Main of record E.Fields
           |      handler H is {
           |        on init {
-          |          prompt "should set state here"
+          |          do "should set state here"
           |        }
           |        on command D.C.Cmd {
           |          send event D.C.Evt to outlet D.C.Events.out
           |        }
           |        on query D.C.GetData {
-          |          prompt "return data"
+          |          do "return data"
           |        }
           |      }
           |    }
@@ -103,7 +103,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |          send event D.C.Evt to outlet D.C.Events.out
           |        }
           |        on query D.C.GetData {
-          |          prompt "return data"
+          |          do "return data"
           |        }
           |      }
           |    }
@@ -135,7 +135,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |          set field E.Fields.data to "updated"
           |        }
           |        on query D.C.GetData {
-          |          prompt "return data"
+          |          do "return data"
           |        }
           |      }
           |    }
@@ -198,7 +198,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |      type ProjRecord is record { data: String }
           |      handler H is {
           |        on event D.C.Evt {
-          |          prompt "handle event"
+          |          do "handle event"
           |        }
           |      }
           |    }
@@ -226,7 +226,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |      schema S is flat of records as type D.C.RecType
           |      handler RH is {
           |        on command D.C.Store {
-          |          prompt "store it"
+          |          do "store it"
           |        }
           |      }
           |    }
@@ -237,7 +237,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |      updates repository Repo
           |      handler H is {
           |        on event D.C.Evt {
-          |          prompt "handle event but never tell repo"
+          |          do "handle event but never tell repo"
           |        }
           |      }
           |    }
@@ -293,7 +293,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |      state Main of record E.Fields
           |      handler PromptOnly is {
           |        on event D.C.Evt {
-          |          prompt "do something"
+          |          do "do something"
           |        }
           |      }
           |    }
@@ -357,10 +357,10 @@ class CompletenessTest extends AbstractValidatingTest {
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
-          |          prompt "handle command"
+          |          do "handle command"
           |        }
           |        on query D.C.GetData {
-          |          prompt "return data"
+          |          do "return data"
           |        }
           |      }
           |    }
@@ -396,7 +396,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |          send event D.C.Evt to outlet D.C.Events.out
           |        }
           |        on query D.C.GetData {
-          |          prompt "return data"
+          |          do "return data"
           |        }
           |      }
           |    }
@@ -612,14 +612,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |      requires { data: String }
           |      returns { result: String }
           |      step One is {
-          |        prompt "do something"
+          |        do "do something"
           |      } reverted by {
-          |        prompt "undo something"
+          |        do "undo something"
           |      }
           |      step Two is {
-          |        prompt "do more"
+          |        do "do more"
           |      } reverted by {
-          |        prompt "undo more"
+          |        do "undo more"
           |      }
           |    }
           |  }
@@ -669,7 +669,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |      outlet out is type T
           |      handler H is {
           |        on event D.C.SomeEvent {
-          |          prompt "transform but forget to send"
+          |          do "transform but forget to send"
           |        }
           |      }
           |    }
@@ -694,7 +694,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |      outlet out is type T
           |      handler H is {
           |        on event D.C.SomeEvent {
-          |          prompt "handle event"
+          |          do "handle event"
           |        }
           |      }
           |    }

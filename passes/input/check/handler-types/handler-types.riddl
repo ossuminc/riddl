@@ -11,7 +11,7 @@ domain HandlerTypes is {
 
       handler EventHandler is {
         on event SomeEvent {
-          prompt "handling event in repo"
+          do "handling event in repo"
         }
       }
     } with {
@@ -22,7 +22,7 @@ domain HandlerTypes is {
       type ProjRecord is record { field1: String }
       handler EventProjHandler is {
         on event SomeEvent {
-          prompt "handling event in projector"
+          do "handling event in projector"
         }
       }
     } with {

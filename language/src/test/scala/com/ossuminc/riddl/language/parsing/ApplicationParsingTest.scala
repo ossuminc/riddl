@@ -44,7 +44,7 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
           |  command GoHome {???} with { briefly as "Directive to navigate to the home page" }
           |  handler foo3 is {
           |    on command GoHome {
-          |      prompt "navigate to home page"
+          |      do "navigate to home page"
           |    }
           |  }
           |  group g2 is { ??? }

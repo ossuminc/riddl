@@ -551,7 +551,7 @@ object JsonAstBuilder:
           At(),
           ident(name),
           t.map(p => TypeRef(At(), "type", pathId(p))),
-          LiteralString(At(), expression)
+          buildValue(expression)
         )
       case CodeStmtDto(language, body) => CodeStatement(At(), LiteralString(At(), language), body)
       case RequireStmtDto(condition, invariant) =>
@@ -571,21 +571,21 @@ object JsonAstBuilder:
           case (None, None) =>
             ctx.err("set statement needs a 'field' or a 'state' target")
             FieldRef(At(), PathIdentifier.empty)
-        SetStatement(At(), target, LiteralString(At(), value))
+        SetStatement(At(), target, buildValue(value))
       case SendStmtDto(message, to, portlet) =>
-        SendStatement(At(), messageRef(message), portletRef(to, portlet))
+        SendStatement(At(), buildMsgOperand(message), portletRef(to, portlet))
       case MorphStmtDto(entity, state, value) =>
         MorphStatement(
           At(),
           EntityRef(At(), pathId(entity)),
           StateRef(At(), pathId(state)),
-          RecordRef(At(), pathId(value.ref)) // A9b: morph value is a RecordRef
+          buildRecordOperand(value) // A9b/A54: RecordRef or Constructor
         )
       case BecomeStmtDto(entity, handler) =>
         BecomeStatement(At(), EntityRef(At(), pathId(entity)), HandlerRef(At(), pathId(handler)))
       case TellStmtDto(message, to, processor) =>
-        TellStatement(At(), messageRef(message), processorRef(to, processor))
-      case YieldStmtDto(message) => YieldStatement(At(), messageRef(message))
+        TellStatement(At(), buildMsgOperand(message), processorRef(to, processor))
+      case YieldStmtDto(message) => YieldStatement(At(), buildMsgOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS) =>
         val cond: LiteralString | Identifier = conditionId match
           case Some(id) => ident(id)
@@ -615,8 +615,9 @@ object JsonAstBuilder:
   // A54: ValueDto -> AST Value.
   private def buildValue(v: ValueDto)(using ctx: Ctx): Value =
     v match
-      case LiteralValueDto(text) => LiteralString(At(), text)
-      case ValueRefDto(p)        => ValueRef(At(), pathId(p))
+      case LiteralValueDto(text)  => LiteralString(At(), text)
+      case PromptValueDto(prompt) => PromptValue(At(), LiteralString(At(), prompt))
+      case ValueRefDto(p)         => ValueRef(At(), pathId(p))
       case GetValueDto(source, keyword, ref) =>
         val src: InputRef | StateRef = source match
           case "input" => InputRef(At(), keyword.getOrElse("input"), pathId(ref))
@@ -625,21 +626,35 @@ object JsonAstBuilder:
             ctx.err(s"unknown get-value source '$other' (expected input|state)")
             StateRef(At(), pathId(ref))
         GetValue(At(), src)
-      case ConstructorValueDto(refKind, ref, args) =>
-        val cref: MessageRef | RecordRef = refKind match
-          case "command" => CommandRef(At(), pathId(ref))
-          case "event"   => EventRef(At(), pathId(ref))
-          case "query"   => QueryRef(At(), pathId(ref))
-          case "result"  => ResultRef(At(), pathId(ref))
-          case "record"  => RecordRef(At(), pathId(ref))
-          case other =>
-            ctx.err(s"unknown constructor refKind '$other'")
-            RecordRef(At(), pathId(ref))
-        Constructor(
-          At(),
-          cref,
-          args.map(a => ConstructorArg(At(), a.name.map(ident), buildValue(a.value)))
-        )
+      case c: ConstructorValueDto => buildConstructor(c)
+
+  // A54: ConstructorValueDto -> AST Constructor.
+  private def buildConstructor(c: ConstructorValueDto)(using ctx: Ctx): Constructor =
+    val cref: MessageRef | RecordRef = c.refKind match
+      case "command" => CommandRef(At(), pathId(c.ref))
+      case "event"   => EventRef(At(), pathId(c.ref))
+      case "query"   => QueryRef(At(), pathId(c.ref))
+      case "result"  => ResultRef(At(), pathId(c.ref))
+      case "record"  => RecordRef(At(), pathId(c.ref))
+      case other =>
+        ctx.err(s"unknown constructor refKind '$other'")
+        RecordRef(At(), pathId(c.ref))
+    Constructor(
+      At(),
+      cref,
+      c.args.map(a => ConstructorArg(At(), a.name.map(ident), buildValue(a.value)))
+    )
+
+  // A54: a message operand — a bare ref or an inline constructor.
+  private def buildMsgOperand(o: MsgOperandDto)(using ctx: Ctx): MessageRef | Constructor = o match
+    case c: ConstructorValueDto => buildConstructor(c)
+    case m: MessageRefDto       => messageRef(m)
+
+  // A54: a record operand for `morph … with` — a bare record ref or an inline constructor.
+  private def buildRecordOperand(o: MsgOperandDto)(using ctx: Ctx): RecordRef | Constructor =
+    o match
+      case c: ConstructorValueDto => buildConstructor(c)
+      case m: MessageRefDto       => RecordRef(At(), pathId(m.ref))
 
   private def buildMatchCase(c: MatchCaseDto)(using Ctx): MatchCase =
     MatchCase(At(), LiteralString(At(), c.pattern), buildStatements(c.statements))

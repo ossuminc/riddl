@@ -26,4 +26,29 @@ domain Values is {
       }
     }
   }
+  // A54: operand widening — send/morph/set/let/yield accept constructors, prompts and value refs.
+  context Ordering is {
+    type Qty is Integer
+    record Line is { sku: String, qty: Qty }
+    command AddLine is { sku: String }
+    event LineAdded is { sku: String }
+    result Ack is { ok: String }
+    outlet added is event LineAdded
+    entity Cart is {
+      record CartData is { line: Line }
+      state Open of record CartData
+      handler Ops is {
+        on command AddLine {
+          // A54: `let` bound to an AI-computed prompt value.
+          let note = prompt("summarize the addition")
+          // A54: `set` a record field via a constructor value.
+          set field Cart.Open.line to record Line(sku = "abc", qty = "1")
+          // A54: `send` an event built by a constructor to an outlet.
+          send event LineAdded(sku = "abc") to outlet Ordering.added
+          // A54: `morph` the entity state with a record constructor.
+          morph entity Cart to state Cart.Open with record CartData(line = record Line(sku = "x", qty = "2"))
+        }
+      }
+    }
+  }
 }

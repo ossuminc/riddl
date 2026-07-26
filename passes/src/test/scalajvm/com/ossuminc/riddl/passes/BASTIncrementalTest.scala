@@ -286,8 +286,8 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         """domain D is {
         context C is {
           saga S is {
-            step One is { prompt "do one" } reverted by { prompt "undo one" }
-            step Two is { prompt "do two" } reverted by { prompt "undo two" }
+            step One is { do "do one" } reverted by { do "undo one" }
+            step Two is { do "do two" } reverted by { do "undo two" }
           }
         }
       }"""

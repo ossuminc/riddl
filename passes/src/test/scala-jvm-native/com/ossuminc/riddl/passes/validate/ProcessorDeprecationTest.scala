@@ -76,6 +76,54 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
         }
     }
 
+    "emit a Deprecation for the `prompt` statement (A54: `do` is canonical)" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    command Cmd is { f: Boolean }
+          |    handler H is {
+          |      on command Cmd { prompt "do the thing" }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
+        case Left(errors) => fail(errors.format)
+        case Right(result) =>
+          val deprecations = result.messages.justDeprecations
+          info(deprecations.format)
+          deprecations.exists { (m: Messages.Message) =>
+            m.message.contains("`prompt` statement is deprecated") &&
+            m.message.contains("do")
+          } must be(true)
+      }
+    }
+
+    "not emit a Deprecation for the canonical `do` statement (A54)" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
+        """domain D is {
+        |  context C is {
+        |    command Cmd is { f: Boolean }
+        |    handler H is {
+        |      on command Cmd { do "the thing" }
+        |    }
+        |  }
+        |}
+        |""".stripMargin,
+        td
+      )
+      Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
+        case Left(errors) => fail(errors.format)
+        case Right(result) =>
+          val deprecations = result.messages.justDeprecations.filter { (m: Messages.Message) =>
+            m.message.contains("`prompt` statement is deprecated")
+          }
+          deprecations mustBe empty
+      }
+    }
+
     "not emit a Deprecation for the `processor F as flow` form" in { (td: TestData) =>
       val rpi = RiddlParserInput(flowModel("processor F as flow"), td)
       Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {

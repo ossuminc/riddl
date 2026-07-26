@@ -21,10 +21,10 @@ domain HandlerKinds is {
           set field Cart.Contents.count to "count + 1"
         }
         on activate {
-          prompt "rehydrate cart from storage"
+          do "rehydrate cart from storage"
         }
         on passivate {
-          prompt "persist cart to storage"
+          do "persist cart to storage"
         }
         on other {
           error "unexpected message for Cart"
@@ -38,7 +38,7 @@ domain HandlerKinds is {
       record Fields is { count: Integer }
       handler ProjHandler is {
         on event ItemAdded {
-          prompt "update the read model"
+          do "update the read model"
         }
       }
     }
@@ -46,7 +46,7 @@ domain HandlerKinds is {
     adaptor FromInventory from context Shopping is {
       handler InvHandler is {
         on event ItemAdded {
-          prompt "translate inventory event"
+          do "translate inventory event"
         }
         on other {
           error "unexpected message from inventory"

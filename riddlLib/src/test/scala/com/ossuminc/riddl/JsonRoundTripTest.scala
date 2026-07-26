@@ -108,9 +108,9 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       val initModel =
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state First of record d.c.e.Data is { handler H is { on other is { prompt "a" } } }
+          |  state First of record d.c.e.Data is { handler H is { on other is { do "a" } } }
           |  initial state Second of record d.c.e.Data is {
-          |    initial handler H2 is { on other is { prompt "b" } }
+          |    initial handler H2 is { on other is { do "b" } }
           |  }
           |}}}
           |""".stripMargin
@@ -143,7 +143,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |    returns result Res
           |    step One is { send command Go to inlet d.c.e.t.in }
           |      reverted by { send command UndoGo to inlet d.c.e.t.in }
-          |    step Two is { prompt "do" } reverted by { prompt "undo" }
+          |    step Two is { do "do" } reverted by { do "undo" }
           |  }
           |}}
           |""".stripMargin
@@ -173,10 +173,10 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |    event Evt is { h: Integer }
           |    entity e is {
           |      handler h is {
-          |        on command Cmd is { prompt "c" }
-          |        on event Evt is { prompt "e" }
-          |        on activate is { prompt "a" }
-          |        on passivate is { prompt "p" }
+          |        on command Cmd is { do "c" }
+          |        on event Evt is { do "e" }
+          |        on activate is { do "a" }
+          |        on passivate is { do "p" }
           |        on other is { error "u" }
           |      }
           |    }
@@ -212,7 +212,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |    on command Batch is {
           |      let batch: OrderList = "orders"
           |      foreach o in field Batch.orders {
-          |        foreach p in batch { prompt "process" }
+          |        foreach p in batch { do "process" }
           |      }
           |    }
           |  }
@@ -274,6 +274,50 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           end match
         case RiddlResult.Failure(errors) =>
           fail(s"parse of the value model failed: $errors")
+      end match
+    }
+
+    "round-trip widened operands: send/morph/set/let(prompt)/yield constructors (A54) losslessly" in {
+      val wModel =
+        """domain WD is {
+          |  context c is {
+          |    type Qty is Integer
+          |    record Line is { sku: String, qty: Qty }
+          |    command Add is { sku: String }
+          |    event Added is { sku: String }
+          |    result Res is { ok: String }
+          |    query Ask yields result Res is { q: String }
+          |    outlet outp is event Added
+          |    entity E is {
+          |      record Data is { line: Line }
+          |      state S of record Data
+          |      handler H is {
+          |        on command Add is {
+          |          let note = prompt("summarize the addition")
+          |          set field E.S.line to record Line(sku = "x", qty = "1")
+          |          send event Added(sku = "x") to outlet c.outp
+          |          morph entity E to state E.S with record Data(line = record Line(sku = "y", qty = "2"))
+          |        }
+          |        on query Ask is {
+          |          yield result Res(ok = "done")
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(wModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"prompt\"")
+          json1 must include("\"constructor\"")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the widened-operand JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the widened-operand model failed: $errors")
       end match
     }
 

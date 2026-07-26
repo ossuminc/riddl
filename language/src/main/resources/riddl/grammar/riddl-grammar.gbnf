@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-26 21:50 UTC
+# Generated: 2026-07-26 23:00 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -202,18 +202,20 @@ match-statement ::= "match" ws1 literal-string ws "{" ws (match-case)+ ws ("defa
 match-case ::= "case" ws1 literal-string ws "{" ws (statement)* ws "}"
 foreach-statement ::= "foreach" ws1 identifier ws "in" ws (field-ref | identifier) ws "{" ws (statement)* ws "}"
 
-# Message operations
-send-statement ::= "send" ws1 message-ref ws "to" ws (outlet-ref | inlet-ref)
-tell-statement ::= "tell" ws1 message-ref ws "to" ws1 processor-ref
-yield-statement ::= "yield" ws1 message-ref
+# Message operations. A54: the message operand is a bare ref or an inline constructor.
+message-value ::= constructor | message-ref
+send-statement ::= "send" ws1 message-value ws "to" ws (outlet-ref | inlet-ref)
+tell-statement ::= "tell" ws1 message-value ws "to" ws1 processor-ref
+yield-statement ::= "yield" ws1 message-value
 
 # `reply` is the deprecated synonym for `yield`; both parse to the same node
-reply-statement ::= "reply" ws1 message-ref
+reply-statement ::= "reply" ws1 message-value
 
-# Variable operations
-the-set-statement ::= "set" ws (field-ref | state-ref) ws "to" ws1 literal-string
-let-statement ::= "let" ws1 identifier ws (":" type-ref)? ws "=" ws literal-string
-value ::= literal-string | constructor | get-value | value-ref
+# Variable operations. A54: `set`/`let` operands are now full value expressions.
+the-set-statement ::= "set" ws (field-ref | state-ref) ws "to" ws1 value
+let-statement ::= "let" ws1 identifier ws (":" type-ref)? ws "=" ws value
+value ::= literal-string | prompt-value | constructor | get-value | value-ref
+prompt-value ::= "prompt" ws "(" ws literal-string ws ")"
 constructor ::= (message-ref | record-ref) ws "(" ws (constructor-arg ("," constructor-arg)*)? ws ")"
 constructor-arg ::= (identifier "=" value) | value
 get-value ::= "get" ws "from" ws (input-ref | state-ref)
@@ -221,16 +223,17 @@ value-ref ::= path-identifier
 put-statement ::= "put" ws1 value ws "to" ws1 output-ref
 return-statement ::= "return" ws1 value
 
-# General statements
-prompt-statement ::= ("prompt" | "do") ws literal-string
+# General statements. A54: `do` is canonical; the `prompt` statement is a deprecated synonym.
+prompt-statement ::= ("do" | "prompt") ws literal-string
 code-statement ::= "```" ("scala" | "java" | "python" | "mojo") code-contents "```"
 code-contents ::= (any-char-except-triple-backtick)*
 error-statement ::= "error" ws1 literal-string
 require-statement ::= "require" ws (literal-string | invariant-ref)
 invariant-ref ::= "invariant" ws1 path-identifier
 
-# Entity state transitions
-morph-statement ::= "morph" ws1 entity-ref ws "to" ws1 state-ref ws "with" ws1 record-ref
+# Entity state transitions. A54: the morph value is a bare record ref or an inline constructor.
+record-value ::= constructor | record-ref
+morph-statement ::= "morph" ws1 entity-ref ws "to" ws1 state-ref ws "with" ws1 record-value
 become-statement ::= "become" ws1 entity-ref ws "to" ws1 handler-ref
 
 # Pseudo Code Block

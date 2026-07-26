@@ -93,7 +93,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |    handler handler is {
           |      on event event {
           |        when "there is a condition" then
-          |          prompt "handle the event"
+          |          do "handle the event"
           |        end
           |      }
           |    }
@@ -105,14 +105,14 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |    split split is { ??? }
           |    saga saga is {
           |     step a is {
-          |       prompt "a.1"
+          |       do "a.1"
           |     } reverted by {
-          |       prompt "a_r.1"
+          |       do "a_r.1"
           |     }
           |     step b is {
-          |       prompt "b.1"
+          |       do "b.1"
           |     } reverted by {
-          |       prompt "b_r.1"
+          |       do "b_r.1"
           |     }
           |   }
           |  } with {

@@ -47,8 +47,8 @@ class RepositoryDomainScopeRoundTripTest extends AbstractValidatingTest {
           |  context b is { event BEvent is { y: String } }
           |  repository synth is {
           |    handler h is {
-          |      on event a.AEvent { prompt "record from a" }
-          |      on event b.BEvent { prompt "record from b" }
+          |      on event a.AEvent { do "record from a" }
+          |      on event b.BEvent { do "record from b" }
           |    }
           |  }
           |}

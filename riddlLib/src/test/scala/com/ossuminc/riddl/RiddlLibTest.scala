@@ -366,7 +366,7 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
           |      state TestState of record TestStateData is {
           |        handler TestHandler is {
           |          on command TestCmd {
-          |            prompt "handle"
+          |            do "handle"
           |          }
           |        }
           |      }

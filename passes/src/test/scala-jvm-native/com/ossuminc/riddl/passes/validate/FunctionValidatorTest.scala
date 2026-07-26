@@ -69,10 +69,10 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
         """
         |  function AnAspect is {
         |    when "and(everybody hates me, I'm depressed)" then
-        |      prompt "I go fishing"
-        |      prompt "I'll just eat worms"
+        |      do "I go fishing"
+        |      do "I'll just eat worms"
         |    end
-        |    prompt "I'm happy"
+        |    do "I'm happy"
         |  } with { described as "foo" }
         |""".stripMargin
 

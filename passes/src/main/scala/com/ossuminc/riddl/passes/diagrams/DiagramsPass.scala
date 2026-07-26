@@ -296,13 +296,22 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     }
   }
 
+  // A54: a widened message/record operand contributes its ref (bare ref, or the constructor's ref).
+  private def operandRef(m: MessageRef | RecordRef | Constructor): Reference[Definition] = m match
+    case ref: MessageRef => ref
+    case ref: RecordRef  => ref
+    case c: Constructor =>
+      c.ref match
+        case r: MessageRef => r
+        case r: RecordRef  => r
+
   private def getStatementReferences(statement: Statements): Seq[Reference[Definition]] = {
     statement match
-      case SendStatement(_, msg, portlet)          => Seq(msg, portlet)
-      case TellStatement(_, msg, processor)        => Seq(msg, processor)
-      case YieldStatement(_, msg)                  => Seq(msg)
+      case SendStatement(_, msg, portlet)          => Seq(operandRef(msg), portlet)
+      case TellStatement(_, msg, processor)        => Seq(operandRef(msg), processor)
+      case YieldStatement(_, msg)                  => Seq(operandRef(msg))
       case SetStatement(_, field, _)               => Seq(field)
-      case MorphStatement(_, entity, state, value) => Seq(entity, state, value)
+      case MorphStatement(_, entity, state, value) => Seq(entity, state, operandRef(value))
       case BecomeStatement(_, entity, handler)     => Seq(entity, handler)
       case _                                       => Seq.empty
   }

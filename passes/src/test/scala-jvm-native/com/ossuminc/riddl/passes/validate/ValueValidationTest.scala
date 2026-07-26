@@ -195,5 +195,52 @@ class ValueValidationTest extends AbstractValidatingTest {
         assertValidationMessage(msgs, Error, "'return' value has type")
       }
     }
+
+    // A54: operand widening — a Constructor in a send/morph is validated through checkStatementScopes.
+    "reject a send whose event constructor has the wrong arity" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    event Added is { sku: String }
+          |    command Add is { sku: String }
+          |    outlet outp is event Added
+          |    entity E is {
+          |      record Data is { n: Integer }
+          |      state S of record Data
+          |      handler H is {
+          |        on command Add {
+          |          send event Added(sku = "x", extra = "y") to outlet c.outp
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "is not a field of")
+      }
+    }
+
+    "accept a well-formed morph record constructor" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    command Add is { sku: String }
+          |    entity E is {
+          |      record Data is { n: Integer }
+          |      state S of record Data
+          |      handler H is {
+          |        on command Add {
+          |          morph entity E to state E.S with record Data(n = "1")
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        msgs.filter(m => m.kind == Error && m.message.contains("Constructor of")) mustBe empty
+      }
+    }
   }
 }

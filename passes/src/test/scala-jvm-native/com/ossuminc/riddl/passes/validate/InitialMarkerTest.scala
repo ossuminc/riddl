@@ -31,11 +31,11 @@ class InitialMarkerTest extends AbstractValidatingTest {
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
           |  state First of record d.c.e.Data is {
-          |    handler H1 is { on other is { prompt "a" } }
-          |    handler H2 is { on other is { prompt "b" } }
+          |    handler H1 is { on other is { do "a" } }
+          |    handler H2 is { on other is { do "b" } }
           |  }
           |  state Second of record d.c.e.Data is {
-          |    handler H3 is { on other is { prompt "c" } }
+          |    handler H3 is { on other is { do "c" } }
           |  }
           |}}}""".stripMargin,
         td
@@ -54,8 +54,8 @@ class InitialMarkerTest extends AbstractValidatingTest {
       entity(
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state First of record d.c.e.Data is { handler H is { on other is { prompt "a" } } }
-          |  initial state Second of record d.c.e.Data is { handler H2 is { on other is { prompt "b" } } }
+          |  state First of record d.c.e.Data is { handler H is { on other is { do "a" } } }
+          |  initial state Second of record d.c.e.Data is { handler H2 is { on other is { do "b" } } }
           |}}}""".stripMargin,
         td
       ) { (e, _) =>
@@ -68,8 +68,8 @@ class InitialMarkerTest extends AbstractValidatingTest {
       entity(
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  initial state First of record d.c.e.Data is { handler H is { on other is { prompt "a" } } }
-          |  initial state Second of record d.c.e.Data is { handler H2 is { on other is { prompt "b" } } }
+          |  initial state First of record d.c.e.Data is { handler H is { on other is { do "a" } } }
+          |  initial state Second of record d.c.e.Data is { handler H2 is { on other is { do "b" } } }
           |}}}""".stripMargin,
         td
       ) { (_, messages) =>
@@ -82,9 +82,9 @@ class InitialMarkerTest extends AbstractValidatingTest {
         entity(
           """domain d is { context c is { entity e is {
             |  type Data is { x: Integer }
-            |  state Only of record d.c.e.Data is { handler S is { on other is { prompt "s" } } }
-            |  handler E1 is { on other is { prompt "a" } }
-            |  handler E2 is { on other is { prompt "b" } }
+            |  state Only of record d.c.e.Data is { handler S is { on other is { do "s" } } }
+            |  handler E1 is { on other is { do "a" } }
+            |  handler E2 is { on other is { do "b" } }
             |}}}""".stripMargin,
           td
         ) { (e, _) =>
@@ -100,10 +100,10 @@ class InitialMarkerTest extends AbstractValidatingTest {
         entity(
           """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state First of record d.c.e.Data is { handler S1 is { on other is { prompt "a" } } }
-          |  state Second of record d.c.e.Data is { handler S2 is { on other is { prompt "b" } } }
-          |  handler E1 is { on other is { prompt "c" } }
-          |  handler E2 is { on other is { prompt "d" } }
+          |  state First of record d.c.e.Data is { handler S1 is { on other is { do "a" } } }
+          |  state Second of record d.c.e.Data is { handler S2 is { on other is { do "b" } } }
+          |  handler E1 is { on other is { do "c" } }
+          |  handler E2 is { on other is { do "d" } }
           |}}}""".stripMargin,
           td
         ) { (e, _) =>
@@ -116,8 +116,8 @@ class InitialMarkerTest extends AbstractValidatingTest {
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
           |  state Only of record d.c.e.Data is {
-          |    initial handler H1 is { on other is { prompt "a" } }
-          |    initial handler H2 is { on other is { prompt "b" } }
+          |    initial handler H1 is { on other is { do "a" } }
+          |    initial handler H2 is { on other is { do "b" } }
           |  }
           |}}}""".stripMargin,
         td

@@ -10,7 +10,7 @@ domain AdaptorDir is {
     adaptor BadInbound from context SourceCtx is {
       handler InHandler is {
         on command SourceCtx.DoIt {
-          prompt "handling command in inbound adaptor"
+          do "handling command in inbound adaptor"
         }
         on other { error "unexpected message" }
       }
@@ -21,7 +21,7 @@ domain AdaptorDir is {
     adaptor BadOutbound to context SourceCtx is {
       handler OutHandler is {
         on event SourceCtx.ItDone {
-          prompt "handling event in outbound adaptor"
+          do "handling event in outbound adaptor"
         }
         on other { error "unexpected message" }
       }

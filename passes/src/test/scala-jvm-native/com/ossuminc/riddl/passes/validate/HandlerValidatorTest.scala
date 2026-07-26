@@ -161,10 +161,10 @@ class HandlerValidatorTest extends AbstractValidatingTest {
             |      record F is { count: Integer }
             |      state S of record e.F
             |      handler h is {
-            |        on command Cmd { prompt "handle" }
-            |        on event Evt { prompt "note" }
-            |        on activate { prompt "rehydrate" }
-            |        on passivate { prompt "persist" }
+            |        on command Cmd { do "handle" }
+            |        on event Evt { do "note" }
+            |        on activate { do "rehydrate" }
+            |        on passivate { do "persist" }
             |        on other { error "unexpected" }
             |      }
             |    }

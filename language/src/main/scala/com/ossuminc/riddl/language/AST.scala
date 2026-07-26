@@ -718,7 +718,7 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue
+    GetValue | PromptValue
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInModule = Domain | Author | Comment
@@ -2406,7 +2406,7 @@ object AST:
     * extended: A28 adds a `BooleanExpression` arm. All arms are [[RiddlValue]]s so `.format` and
     * `.loc` are available on the union directly.
     */
-  type Value = LiteralString | Constructor | ValueRef | GetValue
+  type Value = LiteralString | PromptValue | Constructor | ValueRef | GetValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -2493,6 +2493,40 @@ object AST:
     def format: String = s"get from ${source.format}"
   end GetValue
 
+  /** A54: an AI-computed value expressed by a natural-language prompt (`prompt("…")`). Distinct
+    * from the deprecated `prompt` STATEMENT (`prompt "…"`, no parens) by the parenthesized form. A
+    * bare [[LiteralString]] in a value position is a literal constant; a `PromptValue` asks the
+    * backend to invoke AI codegen. No resolution needed — the prompt is literal text.
+    *
+    * @param loc
+    *   The location of the prompt value in the source
+    * @param prompt
+    *   The prompt text to provide to an AI code generator
+    */
+  // `loc` required (not defaulted): see the ConstructorArg note — @JSExportTopLevel forbids a
+  // non-trailing default and `prompt` has no empty default.
+  @JSExportTopLevel("PromptValue")
+  case class PromptValue(
+    loc: At,
+    prompt: LiteralString
+  ) extends RiddlValue:
+    override def kind: String = "Prompt Value"
+    def format: String = s"prompt(${prompt.format})"
+  end PromptValue
+
+  /** A54: accessors for a widened message/record operand (a bare ref, or a [[Constructor]] whose
+    * ref names the constructed message/record). Used by send/tell/yield (message) and morph
+    * (record).
+    */
+  extension (m: MessageRef | RecordRef | Constructor)
+    def operandPathId: PathIdentifier = m match
+      case ref: (MessageRef | RecordRef) => ref.pathId
+      case c: Constructor                => c.ref.pathId
+    def operandMessageKind: AggregateUseCase = m match
+      case ref: (MessageRef | RecordRef) => ref.messageKind
+      case c: Constructor                => c.ref.messageKind
+  end extension
+
   ////////////////////////////////////////////////////////////////////////////////////// STATEMENTS
 
   /** Base trait of all Statements that can occur in [[OnClause]]s */
@@ -2566,7 +2600,8 @@ object AST:
   case class SetStatement(
     loc: At,
     field: FieldRef | StateRef,
-    value: LiteralString
+    // A54: the value to set is now a full value expression (literal, constructor, ref, get, prompt).
+    value: Value
   ) extends Statement {
     override def kind: String = "Set Statement"
     def format: String = s"set ${field.format} to ${value.format}"
@@ -2584,7 +2619,8 @@ object AST:
   @JSExportTopLevel("SendStatement")
   case class SendStatement(
     loc: At,
-    msg: MessageRef,
+    // A54: the message operand is a bare ref or a constructor that builds the message value.
+    msg: MessageRef | Constructor,
     portlet: PortletRef[Portlet]
   ) extends Statement {
     override def kind: String = "Send Statement"
@@ -2606,8 +2642,8 @@ object AST:
     entity: EntityRef,
     state: StateRef,
     // A9b: the morph carries the RECORD that types the target state (its data), not a message.
-    // (Later, A24 upgrades this to a record constructor R("v1",…).)
-    value: RecordRef
+    // A54: a bare RecordRef names existing data; a Constructor R("v1",…) builds it inline.
+    value: RecordRef | Constructor
   ) extends Statement {
     override def kind: String = "Morph Statement"
     def format: String = s"morph ${entity.format} to ${state.format} with ${value.format}"
@@ -2649,7 +2685,8 @@ object AST:
   @JSExportTopLevel("TellStatement")
   case class TellStatement(
     loc: At,
-    msg: MessageRef,
+    // A54: the message operand is a bare ref or a constructor that builds the message value.
+    msg: MessageRef | Constructor,
     processorRef: ProcessorRef[Processor[?]]
   ) extends Statement {
     override def kind: String = "Tell Statement"
@@ -2667,7 +2704,8 @@ object AST:
   @JSExportTopLevel("YieldStatement")
   case class YieldStatement(
     loc: At,
-    msg: MessageRef
+    // A54: the message operand is a bare ref or a constructor that builds the message value.
+    msg: MessageRef | Constructor
   ) extends Statement {
     override def kind: String = "Yield Statement"
     def format: String = s"yield ${msg.format}"
@@ -2768,7 +2806,8 @@ object AST:
     loc: At,
     identifier: Identifier,
     typeRef: Option[TypeRef],
-    expression: LiteralString
+    // A54: the bound expression is now a full value expression (literal, constructor, ref, get, prompt).
+    expression: Value
   ) extends Statement {
     override def kind: String = "Let Statement"
     def format: String =

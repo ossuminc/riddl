@@ -496,9 +496,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     c.toSeq.collect { case s: Statement => serializeStatement(s) }
 
   private def serializeStatement(s: Statement): StatementDto = s match
-    case PromptStatement(_, what)     => PromptStmtDto(what.s)
-    case ErrorStatement(_, msg)       => ErrorStmtDto(msg.s)
-    case LetStatement(_, id, tr, e)   => LetStmtDto(id.value, tr.map(t => path(t.pathId)), e.s)
+    case PromptStatement(_, what) => PromptStmtDto(what.s)
+    case ErrorStatement(_, msg)   => ErrorStmtDto(msg.s)
+    case LetStatement(_, id, tr, e) =>
+      LetStmtDto(id.value, tr.map(t => path(t.pathId)), serializeValue(e))
     case CodeStatement(_, lang, body) => CodeStmtDto(lang.s, body)
     case RequireStatement(_, cond) =>
       cond match
@@ -506,22 +507,19 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         case ir: InvariantRef  => RequireStmtDto(None, Some(path(ir.pathId)))
     case SetStatement(_, field, value) =>
       field match
-        case fr: FieldRef => SetStmtDto(Some(path(fr.pathId)), None, value.s)
-        case sr: StateRef => SetStmtDto(None, Some(path(sr.pathId)), value.s)
+        case fr: FieldRef => SetStmtDto(Some(path(fr.pathId)), None, serializeValue(value))
+        case sr: StateRef => SetStmtDto(None, Some(path(sr.pathId)), serializeValue(value))
     case SendStatement(_, msg, portlet) =>
-      val (pp, pk) = portletRef(portlet); SendStmtDto(messageRefDto(msg), pp, pk)
+      val (pp, pk) = portletRef(portlet); SendStmtDto(serializeMsgOperand(msg), pp, pk)
     case MorphStatement(_, entity, state, value) =>
-      // A9b: morph value is a RecordRef, serialized as a record-kinded MessageRefDto.
-      MorphStmtDto(
-        path(entity.pathId),
-        path(state.pathId),
-        MessageRefDto(path(value.pathId), "record")
-      )
+      // A9b/A54: morph value is a RecordRef (serialized as a record-kinded MessageRefDto) or a
+      // Constructor.
+      MorphStmtDto(path(entity.pathId), path(state.pathId), serializeRecordOperand(value))
     case BecomeStatement(_, entity, handler) =>
       BecomeStmtDto(path(entity.pathId), path(handler.pathId))
     case TellStatement(_, msg, proc) =>
-      val (pp, pk) = processorRef(proc); TellStmtDto(messageRefDto(msg), pp, pk)
-    case YieldStatement(_, msg) => YieldStmtDto(messageRefDto(msg))
+      val (pp, pk) = processorRef(proc); TellStmtDto(serializeMsgOperand(msg), pp, pk)
+    case YieldStatement(_, msg) => YieldStmtDto(serializeMsgOperand(msg))
     case WhenStatement(_, cond, thenS, elseS, negated) =>
       cond match
         case ls: LiteralString =>
@@ -565,23 +563,37 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   // A54: AST Value -> ValueDto.
   private def serializeValue(v: Value): ValueDto = v match
     case ls: LiteralString => LiteralValueDto(ls.s)
+    case pv: PromptValue   => PromptValueDto(pv.prompt.s)
     case vr: ValueRef      => ValueRefDto(path(vr.path))
     case gv: GetValue =>
       gv.source match
         case ir: InputRef => GetValueDto("input", Some(ir.keyword), path(ir.pathId))
         case sr: StateRef => GetValueDto("state", None, path(sr.pathId))
-    case c: Constructor =>
-      val refKind = c.ref match
-        case _: CommandRef => "command"
-        case _: EventRef   => "event"
-        case _: QueryRef   => "query"
-        case _: ResultRef  => "result"
-        case _: RecordRef  => "record"
-      ConstructorValueDto(
-        refKind,
-        path(c.ref.pathId),
-        c.args.map(a => ConstructorArgDto(a.name.map(_.value), serializeValue(a.value)))
-      )
+    case c: Constructor => serializeConstructor(c)
+
+  // A54: AST Constructor -> ConstructorValueDto.
+  private def serializeConstructor(c: Constructor): ConstructorValueDto =
+    val refKind = c.ref match
+      case _: CommandRef => "command"
+      case _: EventRef   => "event"
+      case _: QueryRef   => "query"
+      case _: ResultRef  => "result"
+      case _: RecordRef  => "record"
+    ConstructorValueDto(
+      refKind,
+      path(c.ref.pathId),
+      c.args.map(a => ConstructorArgDto(a.name.map(_.value), serializeValue(a.value)))
+    )
+
+  // A54: a message operand — a bare ref or an inline constructor.
+  private def serializeMsgOperand(m: MessageRef | Constructor): MsgOperandDto = m match
+    case mr: MessageRef => messageRefDto(mr)
+    case c: Constructor => serializeConstructor(c)
+
+  // A54: a record operand for `morph … with` — a bare record ref or an inline constructor.
+  private def serializeRecordOperand(m: RecordRef | Constructor): MsgOperandDto = m match
+    case rr: RecordRef  => MessageRefDto(path(rr.pathId), "record")
+    case c: Constructor => serializeConstructor(c)
 
   private def serializeInteraction(i: Interaction): InteractionDto = i match
     case VagueInteraction(_, from, rel, to, _) => VagueIxnDto(from.s, rel.s, to.s)

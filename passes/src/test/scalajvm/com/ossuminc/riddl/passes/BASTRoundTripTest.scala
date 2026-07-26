@@ -85,8 +85,8 @@ class BASTRoundTripTest extends AnyWordSpec {
                           |  context b is { event BEvent is { y: String } }
                           |  repository synth is {
                           |    handler h is {
-                          |      on event a.AEvent { prompt "record from a" }
-                          |      on event b.BEvent { prompt "record from b" }
+                          |      on event a.AEvent { do "record from a" }
+                          |      on event b.BEvent { do "record from b" }
                           |    }
                           |  }
                           |}
@@ -130,10 +130,10 @@ class BASTRoundTripTest extends AnyWordSpec {
       val riddlSource =
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state First of record d.c.e.Data is { handler H is { on other is { prompt "a" } } }
+          |  state First of record d.c.e.Data is { handler H is { on other is { do "a" } } }
           |  initial state Second of record d.c.e.Data is {
-          |    handler H1 is { on other is { prompt "b" } }
-          |    initial handler H2 is { on other is { prompt "c" } }
+          |    handler H1 is { on other is { do "b" } }
+          |    initial handler H2 is { on other is { do "c" } }
           |  }
           |}}}
           |""".stripMargin
@@ -199,7 +199,7 @@ class BASTRoundTripTest extends AnyWordSpec {
               assert(compareRoots(originalRoot, nebula), "yield-statement round trip: ASTs differ")
               val ys = Finder(nebula.contents).recursiveFindByType[AST.YieldStatement]
               assert(ys.size == 1, s"expected one YieldStatement, found ${ys.size}")
-              assert(ys.head.msg.pathId.value.last == "Res", "yield target lost in BAST")
+              assert(ys.head.msg.operandPathId.value.last == "Res", "yield target lost in BAST")
             case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
           }
         case Left(messages) => fail(s"Parse failed: ${messages.format}")
@@ -218,7 +218,7 @@ class BASTRoundTripTest extends AnyWordSpec {
           |    on command Batch {
           |      let batch: OrderList = "orders"
           |      foreach o in field Batch.orders {
-          |        foreach p in batch { prompt "process" }
+          |        foreach p in batch { do "process" }
           |      }
           |    }
           |  }
@@ -315,6 +315,76 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize widened operands: send/morph/set/let(prompt)/yield (A54)" in {
+      // A54 widens set/let values, send/tell/yield messages, and morph values. Verify each widened
+      // form (including the `prompt(...)` value and inline constructors) round-trips at rev 14.
+      val riddlSource =
+        """domain d is {
+          |  context c is {
+          |    type Qty is Integer
+          |    record Line is { sku: String, qty: Qty }
+          |    command Add is { sku: String }
+          |    event Added is { sku: String }
+          |    result Res is { ok: String }
+          |    query Ask yields result Res is { q: String }
+          |    outlet outp is event Added
+          |    entity E is {
+          |      record Data is { line: Line }
+          |      state S of record Data
+          |      handler H is {
+          |        on command Add {
+          |          let note = prompt("summarize the addition")
+          |          set field E.S.line to record Line(sku = "x", qty = "1")
+          |          send event Added(sku = "x") to outlet c.outp
+          |          morph entity E to state E.S with record Data(line = record Line(sku = "y", qty = "2"))
+          |        }
+          |        on query Ask {
+          |          yield result Res(ok = "done")
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-widened-operands")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(compareRoots(originalRoot, nebula), "widened operands round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.*
+              val lets = Finder(nebula.contents).recursiveFindByType[LetStatement]
+              lets.find(_.identifier.value == "note").map(_.expression) match
+                case Some(pv: PromptValue) => assert(pv.prompt.s == "summarize the addition")
+                case other                 => fail(s"expected a PromptValue let, got $other")
+              val sets = Finder(nebula.contents).recursiveFindByType[SetStatement]
+              sets.head.value match
+                case c: Constructor => assert(c.ref.isInstanceOf[RecordRef])
+                case other          => fail(s"expected Constructor set value, got $other")
+              val sends = Finder(nebula.contents).recursiveFindByType[SendStatement]
+              sends.head.msg match
+                case c: Constructor => assert(c.ref.isInstanceOf[EventRef])
+                case other          => fail(s"expected Constructor send msg, got $other")
+              val morphs = Finder(nebula.contents).recursiveFindByType[MorphStatement]
+              morphs.head.value match
+                case c: Constructor =>
+                  assert(c.ref.isInstanceOf[RecordRef])
+                  assert(c.args.head.value.isInstanceOf[Constructor])
+                case other => fail(s"expected Constructor morph value, got $other")
+              val yields = Finder(nebula.contents).recursiveFindByType[YieldStatement]
+              yields.head.msg match
+                case c: Constructor => assert(c.ref.isInstanceOf[ResultRef])
+                case other          => fail(s"expected Constructor yield msg, got $other")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize named-type requires/returns on a function and saga (A9)" in {
       val riddlSource =
         """domain d is { context c is {
@@ -330,7 +400,7 @@ class BASTRoundTripTest extends AnyWordSpec {
           |    returns result Res
           |    step One is { send command Go to inlet d.c.e.t.in }
           |      reverted by { send command UndoGo to inlet d.c.e.t.in }
-          |    step Two is { prompt "do" } reverted by { prompt "undo" }
+          |    step Two is { do "do" } reverted by { do "undo" }
           |  }
           |}}
           |""".stripMargin
@@ -413,10 +483,10 @@ class BASTRoundTripTest extends AnyWordSpec {
           |      command Cmd is { g: Integer }
           |      event Evt is { h: Integer }
           |      handler hh is {
-          |        on command Cmd { prompt "handle" }
-          |        on event Evt { prompt "note" }
-          |        on activate { prompt "rehydrate" }
-          |        on passivate { prompt "evict" }
+          |        on command Cmd { do "handle" }
+          |        on event Evt { do "note" }
+          |        on activate { do "rehydrate" }
+          |        on passivate { do "evict" }
           |      }
           |    }
           |  }

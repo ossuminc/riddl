@@ -20,9 +20,21 @@ import fastparse.MultiLineWhitespace.*
 private[parsing] trait StatementParser {
   this: ReferenceParser & CommonParser =>
 
+  // `do "…"` is the canonical AI-action statement (A54). It builds a PromptStatement.
+  private def doStatement[u: P]: P[PromptStatement] = {
+    P(Index ~ Keywords.do_ ~ literalString ~/ Index)./ map { case (start, str, end) =>
+      PromptStatement(at(start, end), str)
+    }
+  }
+
+  // `prompt "…"` is the DEPRECATED synonym for `do "…"`; it still builds a PromptStatement but emits a
+  // deprecation at the keyword (pattern mirrors replyStatement's `reply` -> `yield`). Note: the
+  // parenthesized `prompt("…")` value form is handled by `promptValue`, not here.
   private def promptStatement[u: P]: P[PromptStatement] = {
-    P(Index ~ (Keywords.prompt | Keywords.do_) ~ literalString ~/ Index)./ map {
-      case (start, str, end) => PromptStatement(at(start, end), str)
+    P(Index ~ Keywords.prompt ~ literalString ~/ Index)./ map { case (start, str, end) =>
+      val kwLoc = at(start, start + Keyword.prompt.length)
+      deprecation(kwLoc, "The `prompt` statement is deprecated; use `do` instead")
+      PromptStatement(at(start, end), str)
     }
   }
 
@@ -44,9 +56,35 @@ private[parsing] trait StatementParser {
     }
   }
 
+  // A54: a message operand — a bare message ref `E` or a constructor `E(args)`. The ref is parsed
+  // ONCE, then an OPTIONAL parenthesized arg list decides ref-vs-constructor. (Trying `constructor`
+  // first would commit the ref parse via its internal cut and prevent the bare-ref fallback.)
+  private def messageValue[u: P]: P[MessageRef | Constructor] = {
+    P(
+      Index ~ messageRef ~
+        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~ Index
+    ).map {
+      case (_, ref, None, _)             => ref: MessageRef | Constructor
+      case (start, ref, Some(args), end) => Constructor(at(start, end), ref, args.toSeq)
+    }
+  }
+
+  // A54: a record operand for `morph … with` — a bare record ref `R` or a constructor `R(args)`.
+  private def recordValue[u: P]: P[RecordRef | Constructor] = {
+    P(
+      Index ~ recordRef ~
+        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~ Index
+    ).map {
+      case (_, ref, None, _)             => ref: RecordRef | Constructor
+      case (start, ref, Some(args), end) => Constructor(at(start, end), ref, args.toSeq)
+    }
+  }
+
   private def yieldStatement[u: P]: P[YieldStatement] = {
     P(
-      Index ~ Keywords.`yield` ~/ messageRef ~/ Index
+      Index ~ Keywords.`yield` ~/ messageValue ~/ Index
     )./.map { case (start, msg, end) => YieldStatement(at(start, end), msg) }
   }
 
@@ -54,7 +92,7 @@ private[parsing] trait StatementParser {
   // deprecation at the keyword (pattern mirrors StreamingParser's deprecated shape keywords).
   private def replyStatement[u: P]: P[YieldStatement] = {
     P(
-      Index ~ Keywords.reply ~/ messageRef ~/ Index
+      Index ~ Keywords.reply ~/ messageValue ~/ Index
     )./.map { case (start, msg, end) =>
       val kwLoc = at(start, start + Keyword.reply.length)
       deprecation(kwLoc, "The `reply` statement is deprecated; use `yield` instead")
@@ -64,24 +102,24 @@ private[parsing] trait StatementParser {
 
   private def theSetStatement[u: P]: P[SetStatement] = {
     P(
-      Index ~ Keywords.set ~/ (fieldRef | stateRef) ~ to ~/ literalString ~/ Index
+      Index ~ Keywords.set ~/ (fieldRef | stateRef) ~ to ~/ value ~/ Index
     )./.map {
-      case (start, ref: FieldRef, str, end) => SetStatement(at(start, end), ref, str)
-      case (start, ref: StateRef, str, end) => SetStatement(at(start, end), ref, str)
+      case (start, ref: FieldRef, v, end) => SetStatement(at(start, end), ref, v)
+      case (start, ref: StateRef, v, end) => SetStatement(at(start, end), ref, v)
     }
   }
 
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
-      Index ~ Keywords.send ~/ messageRef ~/ to ~ (outletRef | inletRef) ~/ Index
-    ).map { case (start, messageRef, portlet, end) =>
-      SendStatement(at(start, end), messageRef, portlet)
+      Index ~ Keywords.send ~/ messageValue ~/ to ~ (outletRef | inletRef) ~/ Index
+    ).map { case (start, msg, portlet, end) =>
+      SendStatement(at(start, end), msg, portlet)
     }
   }
 
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
-      Index ~ Keywords.tell ~/ messageRef ~/ to ~ processorRef ~/ Index
+      Index ~ Keywords.tell ~/ messageValue ~/ to ~ processorRef ~/ Index
     )./.map { (start, msg, proc, end) => TellStatement(at(start, end), msg, proc) }
   }
 
@@ -127,7 +165,7 @@ private[parsing] trait StatementParser {
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      Index ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ recordRef ~/ Index
+      Index ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ recordValue ~/ Index
     )./.map { case (start, eRef, sRef, mRef, end) =>
       MorphStatement(at(start, end), eRef, sRef, mRef)
     }
@@ -204,19 +242,28 @@ private[parsing] trait StatementParser {
   private def letStatement[u: P]: P[LetStatement] = {
     P(
       Index ~ Keywords.let ~/ identifier ~ (Punctuation.colon ~ typeRef).? ~
-        Punctuation.equalsSign ~/ literalString ~/ Index
+        Punctuation.equalsSign ~/ value ~/ Index
     )./.map { case (start, id, optTypeRef, expr, end) =>
       LetStatement(at(start, end), id, optTypeRef, expr)
     }
   }
 
-  // A54: a value expression. The alternation is ordered so the keyword-led forms (constructor via a
-  // message/record ref keyword, `get from`) are tried before the permissive bare-path `valueRef`.
-  // fastparse `|` unifies to the least upper bound (RiddlValue), so each branch is widened to the
-  // `Value` union explicitly (mirror foreachCollection).
+  // A54: `prompt("…")` — an AI-computed value. The parens distinguish it from the deprecated `prompt`
+  // STATEMENT (`prompt "…"`, no parens). Tried before the bare-path `valueRef` in `value`.
+  private def promptValue[u: P]: P[PromptValue] = {
+    P(
+      Index ~ Keywords.prompt ~ Punctuation.roundOpen ~/ literalString ~ Punctuation.roundClose ~/ Index
+    )./.map { case (start, str, end) => PromptValue(at(start, end), str) }
+  }
+
+  // A54: a value expression. The alternation is ordered so the keyword-led forms (`prompt(…)`,
+  // constructor via a message/record ref keyword, `get from`) are tried before the permissive
+  // bare-path `valueRef`. fastparse `|` unifies to the least upper bound (RiddlValue), so each branch
+  // is widened to the `Value` union explicitly (mirror foreachCollection).
   def value[u: P]: P[Value] = {
     P(
       literalString.map(ls => ls: Value) |
+        promptValue.map(pv => pv: Value) |
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
         valueRef.map(vr => vr: Value)
@@ -358,8 +405,8 @@ private[parsing] trait StatementParser {
         setStatements(set) | letStatement |
         // GROUP 3b: Boundary value operations, scope-gated (A45 put -> Context; A57 return -> Function)
         putStatements(set) | returnStatements(set) |
-        // GROUP 4: General statements
-        promptStatement | codeStatement |
+        // GROUP 4: General statements (`do` is canonical; `prompt` is a deprecated synonym)
+        doStatement | promptStatement | codeStatement |
         // GROUP 5: Error handling and preconditions (suppressed under EventClause)
         guardStatements(set) | comment
     ).asInstanceOf[P[Statements]]

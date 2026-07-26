@@ -37,7 +37,7 @@ context full is {
 
     handler Putter is {
       on command ACommand {
-        prompt "store something in agg"
+        do "store something in agg"
       }
     }
   } with {
@@ -96,7 +96,7 @@ context full is {
     function whenUnderTheInfluence is {
       requires { n: Nothing }
       returns  { b: Boolean }
-      prompt "aribtrary statement"
+      do "aribtrary statement"
       ```scala
         // Simulate a creative state
         val randomFactor = Math.random() // A random value between 0 and 1

@@ -40,7 +40,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
           |    adaptor PaymentAdapter to context Target is {
           |      handler sendAMessage is {
           |        on event ItHappened {
-          |          prompt "handle it"
+          |          do "handle it"
           |        } with { described as "?" }
           |        on other { error "unexpected message" }
           |      } with { explained as "?" }
@@ -106,7 +106,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
           |  context Src is {
           |    adaptor A to context Target is {
           |      handler H is {
-          |        on command Target.DoIt { prompt "translate" }
+          |        on command Target.DoIt { do "translate" }
           |      }
           |    }
           |  }
@@ -126,7 +126,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
           |  context Src is {
           |    adaptor A to context Target is {
           |      handler H is {
-          |        on command Target.DoIt { prompt "translate" }
+          |        on command Target.DoIt { do "translate" }
           |        on other { error "unexpected message" }
           |      }
           |    }

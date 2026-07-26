@@ -10,10 +10,10 @@ domain Foreach is {
       on command PlaceBatch {
         let localBatch: OrderList = "the orders to process"
         foreach anOrder in field PlaceBatch.orders {
-          prompt "process the order taken from the message field"
+          do "process the order taken from the message field"
         }
         foreach anOrder in localBatch {
-          prompt "process the order taken from the local"
+          do "process the order taken from the local"
         }
       }
     }

@@ -224,11 +224,15 @@ case class ValidationPass(
             val sends = finder.recursiveFindByType[SendStatement]
             val tells = finder.recursiveFindByType[TellStatement]
             sends
-              .filter(_.msg.messageKind == AggregateUseCase.EventCase)
-              .foreach(s => producedEventNames += s.msg.pathId.value.lastOption.getOrElse(""))
+              .filter(s => operandMessageKind(s.msg) == AggregateUseCase.EventCase)
+              .foreach(s =>
+                producedEventNames += operandPathId(s.msg).value.lastOption.getOrElse("")
+              )
             tells
-              .filter(_.msg.messageKind == AggregateUseCase.EventCase)
-              .foreach(t => producedEventNames += t.msg.pathId.value.lastOption.getOrElse(""))
+              .filter(t => operandMessageKind(t.msg) == AggregateUseCase.EventCase)
+              .foreach(t =>
+                producedEventNames += operandPathId(t.msg).value.lastOption.getOrElse("")
+              )
           }
         }
         events.foreach { evt =>
@@ -442,9 +446,9 @@ case class ValidationPass(
             val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
             val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
             val foundSend = sends.nonEmpty &&
-              sends.exists(_.msg.messageKind == AggregateUseCase.EventCase)
+              sends.exists(s => operandMessageKind(s.msg) == AggregateUseCase.EventCase)
             val foundTell = tells.nonEmpty &&
-              tells.exists(_.msg.messageKind == AggregateUseCase.EventCase)
+              tells.exists(t => operandMessageKind(t.msg) == AggregateUseCase.EventCase)
             if !(foundSend || foundTell) then
               messages.addCompleteness(
                 omc.errorLoc,
@@ -458,11 +462,11 @@ case class ValidationPass(
             val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
             val yields: Seq[YieldStatement] = finder.recursiveFindByType[YieldStatement]
             val foundSend = sends.nonEmpty &&
-              sends.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
+              sends.exists(s => operandMessageKind(s.msg) == AggregateUseCase.ResultCase)
             val foundTell = tells.nonEmpty &&
-              tells.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
+              tells.exists(t => operandMessageKind(t.msg) == AggregateUseCase.ResultCase)
             val foundYield = yields.nonEmpty &&
-              yields.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
+              yields.exists(y => operandMessageKind(y.msg) == AggregateUseCase.ResultCase)
             if !(foundSend || foundTell || foundYield) then
               messages.addCompleteness(
                 omc.errorLoc,
@@ -481,6 +485,20 @@ case class ValidationPass(
       checkRef[Definition](ref, parents)
     }
   }
+
+  /** A54: the [[AggregateUseCase]] of a widened message operand — a bare ref or a constructor whose
+    * ref names the constructed message/record.
+    */
+  private def operandMessageKind(m: MessageRef | Constructor): AggregateUseCase = m match
+    case mr: MessageRef => mr.messageKind
+    case c: Constructor => c.ref.messageKind
+
+  /** A54: the [[PathIdentifier]] of a widened message operand (the bare ref's, or the constructor
+    * ref's).
+    */
+  private def operandPathId(m: MessageRef | Constructor): PathIdentifier = m match
+    case mr: MessageRef => mr.pathId
+    case c: Constructor => c.ref.pathId
 
   private def validateStatement(
     statement: Statement,
@@ -512,12 +530,18 @@ case class ValidationPass(
           case sr: StateRef => checkRef[State](sr, parents)
         checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
       case SendStatement(_, msg, portlet) =>
-        checkRef[Type](msg, parents)
+        // A54: a bare ref is checked here; a Constructor is validated in checkStatementScopes (needs
+        // the threaded `let` scope for its args).
+        msg match
+          case ref: MessageRef => checkRef[Type](ref, parents)
+          case _: Constructor  => ()
         checkRef[Portlet](portlet, parents)
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
         checkRef[State](state, parents)
-        checkRef[Type](value, parents)
+        value match
+          case ref: RecordRef => checkRef[Type](ref, parents)
+          case _: Constructor => ()
       case BecomeStatement(_, entityRef, handlerRef) =>
         checkRef[Entity](entityRef, parents).foreach { entity =>
           checkCrossContextReference(entityRef.pathId, entity, onClause, parents)
@@ -531,10 +555,14 @@ case class ValidationPass(
           checkCrossContextReference(processorRef.pathId, entity, onClause, parents)
           collectedTells.addOne((ts, entity))
         }
-        val maybeType = checkRef[Type](msg, parents)
-        maybeType.foreach { typ =>
-          checkCrossContextReference(msg.pathId, typ, onClause, parents)
-        }
+        // A54: a bare ref is checked here; a Constructor is validated in checkStatementScopes.
+        msg match
+          case ref: MessageRef =>
+            val maybeType = checkRef[Type](ref, parents)
+            maybeType.foreach { typ =>
+              checkCrossContextReference(ref.pathId, typ, onClause, parents)
+            }
+          case _: Constructor => ()
       case WhenStatement(loc, condition, thenStatements, elseStatements, _) =>
         condition match {
           case ls: LiteralString =>
@@ -597,7 +625,10 @@ case class ValidationPass(
             checkRef[Invariant](ir, parents)
         }
       case YieldStatement(_, msg) =>
-        checkRef[Type](msg, parents)
+        // A54: a bare ref is checked here; a Constructor is validated in checkStatementScopes.
+        msg match
+          case ref: MessageRef => checkRef[Type](ref, parents)
+          case _: Constructor  => ()
       case _: PutStatement | _: ReturnStatement =>
         // A45/A57: value/type/scope validation runs in checkStatementScopes (which threads in-scope
         // `let` locals and reaches nested statements). Nothing to check per-statement here.
@@ -657,8 +688,8 @@ case class ValidationPass(
                 )
               else
                 yieldStmts.foreach { ys =>
-                  val kindOk = ys.msg.messageKind == declaredYield.messageKind
-                  val yieldedType = resolution.refMap.definitionOf[Type](ys.msg.pathId)
+                  val kindOk = operandMessageKind(ys.msg) == declaredYield.messageKind
+                  val yieldedType = resolution.refMap.definitionOf[Type](operandPathId(ys.msg))
                   val typeOk = (declaredType, yieldedType) match {
                     case (Some(dt), Some(yt)) => dt eq yt
                     case _                    => true // unresolved — reported by other checks
@@ -1402,8 +1433,12 @@ case class ValidationPass(
         val sends = finder.recursiveFindByType[SendStatement]
         val tells = finder.recursiveFindByType[TellStatement]
         val emitsEvent =
-          (sends.nonEmpty && sends.exists(_.msg.messageKind == AggregateUseCase.EventCase)) ||
-            (tells.nonEmpty && tells.exists(_.msg.messageKind == AggregateUseCase.EventCase))
+          (sends.nonEmpty && sends.exists(s =>
+            operandMessageKind(s.msg) == AggregateUseCase.EventCase
+          )) ||
+            (tells.nonEmpty && tells.exists(t =>
+              operandMessageKind(t.msg) == AggregateUseCase.EventCase
+            ))
         if !emitsEvent then {
           messages.addCompleteness(
             omc.errorLoc,
@@ -2033,7 +2068,7 @@ case class ValidationPass(
     if s.doStatements.nonEmpty then {
       var hasTellCommand = false
       walkStatements(s.doStatements) {
-        case t: TellStatement if t.msg.messageKind == AggregateUseCase.CommandCase =>
+        case t: TellStatement if operandMessageKind(t.msg) == AggregateUseCase.CommandCase =>
           hasTellCommand = true
         case _ => ()
       }
@@ -2546,6 +2581,7 @@ case class ValidationPass(
   private def valueType(v: Value, parents: Parents, lets: Seq[LetStatement]): Option[Type] =
     v match
       case _: LiteralString => None // pseudo-code, untyped
+      case _: PromptValue   => None // AI-computed, untyped
       case c: Constructor   => resolution.refMap.definitionOf[Type](c.ref.pathId)
       case vr: ValueRef     => valueRefType(vr, parents, lets)
       case gv: GetValue =>
@@ -2603,6 +2639,7 @@ case class ValidationPass(
   private def validateValue(v: Value, parents: Parents, lets: Seq[LetStatement]): Unit =
     v match
       case _: LiteralString => ()
+      case _: PromptValue   => () // literal AI prompt, nothing to resolve
       case c: Constructor   => validateConstructor(c, parents, lets)
       case vr: ValueRef =>
         if !valueRefResolves(vr, parents, lets) then
@@ -2618,6 +2655,29 @@ case class ValidationPass(
         gv.source match
           case ir: InputRef => checkRef[Input](ir, parents)
           case sr: StateRef => checkRef[State](sr, parents)
+
+  /** A54: best-effort type-compatibility check for a [[Value]] against an expected [[Type]]. Only
+    * fires when both the expected type and the value's type resolve; otherwise skipped (an
+    * unresolved side is reported elsewhere, and untyped values — literals/prompts — carry no type
+    * to check).
+    */
+  private def checkValueType(
+    expected: Option[Type],
+    v: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    loc: At,
+    what: String
+  ): Unit =
+    (expected, valueType(v, parents, lets)) match
+      case (Some(e), Some(a)) if !(e eq a) =>
+        messages.addError(
+          loc,
+          s"$what value has type ${a.identify} but ${e.identify} is expected",
+          suggestion = s"Supply a value of type ${e.identify}."
+        )
+      case _ => ()
+  end checkValueType
 
   /** A54: validate a [[Constructor]] — arg ordering (positional before named), named-arg field
     * existence, arity, and best-effort per-argument type compatibility against the target
@@ -2761,7 +2821,45 @@ case class ValidationPass(
   ): Unit =
     var lets = inScopeLets
     stmts.foreach {
-      case ls: LetStatement => lets = lets :+ ls
+      case ls: LetStatement =>
+        // A54: validate the bound expression with the scope BEFORE this let (a let can't see itself),
+        // then check its type against a declared `let x: T = …`.
+        validateValue(ls.expression, parents, lets)
+        ls.typeRef.foreach { tr =>
+          val expected = resolution.refMap.definitionOf[Type](tr.pathId)
+          checkValueType(
+            expected,
+            ls.expression,
+            parents,
+            lets,
+            ls.loc,
+            s"'let ${ls.identifier.value}'"
+          )
+        }
+        lets = lets :+ ls
+      case ss: SetStatement =>
+        // A54: validate the value expression, then check it against the target field/state type.
+        validateValue(ss.value, parents, lets)
+        val expected: Option[Type] = ss.field match
+          case fr: FieldRef =>
+            resolution.refMap.definitionOf[Field](fr.pathId).flatMap { f =>
+              f.typeEx match
+                case ate: AliasedTypeExpression => resolution.refMap.definitionOf[Type](ate.pathId)
+                case _                          => None
+            }
+          case sr: StateRef =>
+            resolution.refMap
+              .definitionOf[State](sr.pathId)
+              .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
+        checkValueType(expected, ss.value, parents, lets, ss.loc, s"'set ${ss.field.format}'")
+      case s: SendStatement =>
+        s.msg match { case c: Constructor => validateValue(c, parents, lets); case _ => () }
+      case s: TellStatement =>
+        s.msg match { case c: Constructor => validateValue(c, parents, lets); case _ => () }
+      case s: YieldStatement =>
+        s.msg match { case c: Constructor => validateValue(c, parents, lets); case _ => () }
+      case s: MorphStatement =>
+        s.value match { case c: Constructor => validateValue(c, parents, lets); case _ => () }
       case fs: ForeachStatement =>
         validateForeachCollection(fs, lets, inScopeElements, parents)
         checkStatementScopes(

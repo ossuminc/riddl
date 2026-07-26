@@ -132,7 +132,7 @@ passes/input/check/everything/everything.riddl(52:19->20):
 passes/input/check/everything/everything.riddl(52:17->53:9):
  Inline aggregation on 'requires'/'returns' of Function 'whenUnderTheInfluence' is deprecated:
          returns { b: Boolean }
-         prompt "some pseudo-code"
+         do "some pseudo-code"
 passes/input/check/everything/everything.riddl(66:5->26):
  Metadata in Entity 'SomeOtherThing' should not be empty:
      entity SomeOtherThing is {

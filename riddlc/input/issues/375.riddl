@@ -11,7 +11,7 @@ domain Example is {
       state FooExample of record FooExampleState
       handler HandleFoo is {
         on command ExampleContext.DooFoo {
-          prompt "do something"
+          do "do something"
         }
       }
     }

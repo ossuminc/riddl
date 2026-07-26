@@ -44,11 +44,11 @@ class InitialMarkerRoundTripTest extends AbstractValidatingTest {
     """domain d is { context c is { entity e is {
       |  type Data is { x: Integer }
       |  state First of record d.c.e.Data is {
-      |    handler H1 is { on other is { prompt "a" } }
-      |    initial handler H2 is { on other is { prompt "b" } }
+      |    handler H1 is { on other is { do "a" } }
+      |    initial handler H2 is { on other is { do "b" } }
       |  }
       |  initial state Second of record d.c.e.Data is {
-      |    handler H3 is { on other is { prompt "c" } }
+      |    handler H3 is { on other is { do "c" } }
       |  }
       |}}}
       |""".stripMargin

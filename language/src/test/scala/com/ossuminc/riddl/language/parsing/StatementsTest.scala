@@ -154,7 +154,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           letStmt.identifier.value must be("myVar")
           letStmt.typeRef must not be empty
           letStmt.typeRef.get.pathId.value must be(Seq("MyCommand"))
-          letStmt.expression.s must be("MyCommand(field = hello)")
+          letStmt.expression.asInstanceOf[LiteralString].s must be("MyCommand(field = hello)")
     }
     "parse Let Statement without type annotation" in { (td: TestData) =>
       val input = RiddlParserInput(
@@ -179,7 +179,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           val letStmt = s.asInstanceOf[LetStatement]
           letStmt.identifier.value must be("myVar")
           letStmt.typeRef must be(None)
-          letStmt.expression.s must be("some value")
+          letStmt.expression.asInstanceOf[LiteralString].s must be("some value")
     }
     "check Code Statement" in { td =>
       val language = LiteralString(At.empty, "scala")
@@ -235,7 +235,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           |    handler h is {
           |      on init {
           |        foreach o in field S.orders {
-          |          prompt "process order"
+          |          do "process order"
           |        }
           |      }
           |    }
@@ -267,7 +267,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           |      on init {
           |        let batch: OrderList = "orders"
           |        foreach o in batch {
-          |          prompt "process order"
+          |          do "process order"
           |        }
           |      }
           |    }

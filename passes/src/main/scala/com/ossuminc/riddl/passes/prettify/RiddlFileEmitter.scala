@@ -384,7 +384,8 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         val typeClause = optTypeRef.map(t => s": ${t.format}").getOrElse("")
         addLine(s"let ${id.format}$typeClause = ${expr.format}")
       case PromptStatement(_, what) =>
-        addLine(s"prompt ${what.format}")
+        // A54: `do` is canonical; the deprecated `prompt` statement normalizes to `do` on emit.
+        addLine(s"do ${what.format}")
       case SendStatement(_, msg, portlet) =>
         addLine(s"send ${msg.format} to ${portlet.format}")
       case TellStatement(_, msg, to) =>

@@ -974,7 +974,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(15) // Yield statement (formerly Reply — wire format unchanged)
     writeLocation(s.loc)
-    writeMessageRef(s.msg)
+    writeMessageOperand(s.msg) // A54: bare ref or constructor
   }
 
   def writeSetStatement(s: SetStatement): Unit = {
@@ -985,14 +985,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case fr: FieldRef => writeFieldRef(fr)
       case sr: StateRef => writeStateRef(sr)
     }
-    writeLiteralString(s.value)
+    writeValue(s.value) // A54: value expression
   }
 
   def writeSendStatement(s: SendStatement): Unit = {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(5) // Send statement
     writeLocation(s.loc)
-    writeMessageRef(s.msg)
+    writeMessageOperand(s.msg) // A54: bare ref or constructor
     writePortletRef(s.portlet)
   }
 
@@ -1002,7 +1002,27 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeEntityRef(s.entity)
     writeStateRef(s.state)
-    writeRecordRefInline(s.value) // A9b: morph value is a RecordRef; inline - position known
+    writeRecordOperand(s.value) // A9b/A54: morph value is a RecordRef or a Constructor
+  }
+
+  /** A54: a message operand — discriminator 0=MessageRef, 1=Constructor. Reader mirrors this. */
+  def writeMessageOperand(m: MessageRef | Constructor): Unit = m match {
+    case c: Constructor =>
+      writer.writeU8(1)
+      writeConstructor(c)
+    case mr: MessageRef =>
+      writer.writeU8(0)
+      writeMessageRef(mr)
+  }
+
+  /** A54: a record operand — discriminator 0=RecordRef, 1=Constructor. Reader mirrors this. */
+  def writeRecordOperand(m: RecordRef | Constructor): Unit = m match {
+    case c: Constructor =>
+      writer.writeU8(1)
+      writeConstructor(c)
+    case rr: RecordRef =>
+      writer.writeU8(0)
+      writeRecordRefInline(rr)
   }
 
   def writeBecomeStatement(s: BecomeStatement): Unit = {
@@ -1017,7 +1037,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(9) // Tell statement
     writeLocation(s.loc)
-    writeMessageRef(s.msg)
+    writeMessageOperand(s.msg) // A54: bare ref or constructor
     writeProcessorRef(s.processorRef)
   }
 
@@ -1067,7 +1087,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writePathIdentifier(tr.pathId)
       case None =>
         writer.writeU8(0)
-    writeLiteralString(s.expression)
+    writeValue(s.expression) // A54: value expression
   }
 
   def writeCodeStatement(s: CodeStatement): Unit = {
@@ -1094,7 +1114,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   /** A54: self-contained value codec. A leading discriminator byte selects the arm
-    * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue); the reader mirrors this exactly.
+    * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue); the reader mirrors
+    * this exactly.
     */
   def writeValue(v: Value): Unit = {
     v match
@@ -1102,6 +1123,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(0)
         writeLocation(ls.loc)
         writeString(ls.s)
+      case pv: PromptValue =>
+        writer.writeU8(4)
+        writeLocation(pv.loc)
+        writeLiteralString(pv.prompt)
       case c: Constructor =>
         writer.writeU8(1)
         writeConstructor(c)

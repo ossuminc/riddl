@@ -178,7 +178,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |      when "rue == empty(timeOfFirstScan())" then
           |        set field timeOfFirstScan to "field SortItem.originTimeStamp"
           |        set field journey to "field Sorted"
-          |        prompt "execute Unnest"
+          |        do "execute Unnest"
           |      end
           |    }
           |    on command RemoveItemFromContainer {
@@ -203,15 +203,15 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |      when "==(true,empty(timeOfFirstScan()))" then
           |         set field timeOfFirstScan to "field ReceiveItem.originTimeStamp"
           |         set field journey to "true"
-          |         prompt "execute Unnest"
+          |         do "execute Unnest"
           |      end
           |    }
           |    on command MarkItemOutForDelivery {
           |      set field journey to "field OutForDelivery"
           |    }
           |    on command DeliverItem {
-          |      prompt "set field journey to field Delivered"
-          |      prompt "execute Unnest"
+          |      do "set field journey to field Delivered"
+          |      do "execute Unnest"
           |    }
           |    on command MachineMissort {
           |      set field journey to "unknown()"
@@ -248,7 +248,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |    on command Transfer {
           |      require "balance >= amount"
           |      require "recipient != sender"
-          |      prompt "execute transfer"
+          |      do "execute transfer"
           |    }
           |  }
           |}
@@ -287,9 +287,9 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |  entity e is {
           |    command Cmd is { g: Integer }
           |    handler h is {
-          |      on command Cmd { prompt "handle" }
-          |      on activate { prompt "rehydrate" }
-          |      on passivate { prompt "evict" }
+          |      on command Cmd { do "handle" }
+          |      on activate { do "rehydrate" }
+          |      on passivate { do "evict" }
           |    }
           |  }
           |}
@@ -312,7 +312,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |  entity e is {
           |    event Evt is { g: Integer }
           |    handler h is {
-          |      on event Evt { prompt "note" }
+          |      on event Evt { do "note" }
           |    }
           |  }
           |}
@@ -336,7 +336,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
             |  projector p is {
             |    command Cmd is { g: Integer }
             |    handler h is {
-            |      on command Cmd { prompt "x" }
+            |      on command Cmd { do "x" }
             |    }
             |  }
             |}
@@ -373,7 +373,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
       val input = RiddlParserInput(
         """context c is {
           |  handler h is {
-          |    on activate { prompt "x" }
+          |    on activate { do "x" }
           |  }
           |}
           |""".stripMargin,
@@ -390,7 +390,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
         """context c is {
           |  projector p is {
           |    query Q is { g: Integer }
-          |    handler h is { on query Q { prompt "x" } }
+          |    handler h is { on query Q { do "x" } }
           |  }
           |}""".stripMargin,
         "event-only",
@@ -400,7 +400,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
         """context c is {
           |  projector p is {
           |    record R is { g: Integer }
-          |    handler h is { on record R { prompt "x" } }
+          |    handler h is { on record R { do "x" } }
           |  }
           |}""".stripMargin,
         "event-only",
@@ -415,8 +415,8 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |    event Evt is { g: Integer }
           |    result Res is { h: Integer }
           |    handler hh is {
-          |      on event Evt { prompt "e" }
-          |      on result Res { prompt "r" }
+          |      on event Evt { do "e" }
+          |      on result Res { do "r" }
           |    }
           |  }
           |}
@@ -436,7 +436,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
     "reject 'on passivate' outside an entity at parse time" in { (td: TestData) =>
       rejectsParse(
         """context c is {
-          |  handler h is { on passivate { prompt "x" } }
+          |  handler h is { on passivate { do "x" } }
           |}""".stripMargin,
         "only allowed in entity",
         "context accepted an 'on passivate' clause"
