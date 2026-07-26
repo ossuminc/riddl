@@ -46,10 +46,22 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case _                    => definition.id.format
     // A handler marked (or defaulted to) the initial/live one emits the `initial` keyword so the
     // choice survives round-trip and is refactor-safe. (State's `initial` is emitted in openState.)
+    // A Context with an intention emits it as a keyword prefix (e.g. `application context ...`).
     val prefix = definition match
       case h: Handler if h.isInitial => s"${Keyword.initial} "
+      case c: Context                => c.intention.map(i => s"${i.keyword} ").getOrElse("")
       case _                         => ""
-    addIndent(s"$prefix${keyword(definition)} $name is ")
+    // The generic streaming processor emits the canonical `processor` keyword; the deprecated
+    // shape keywords (source/sink/flow/…) are normalized away so prettified text re-parses cleanly.
+    val kw = definition match
+      case _: Streamlet => Keyword.processor
+      case _            => keyword(definition)
+    // Any Processor may carry an explicitly ascribed shape, emitted as ` as <shape>` between the
+    // identifier and `is`. When absent (None), the shape is derived from arity and nothing is emitted.
+    val ascription = definition match
+      case p: Processor[?] => p.ascribedShape.map(s => s" as ${s.keyword}").getOrElse("")
+      case _               => ""
+    addIndent(s"$prefix$kw $name$ascription is ")
     if withBrace then
       if definition.isEmpty then add("{ ??? }").nl
       else add("{").nl.incr

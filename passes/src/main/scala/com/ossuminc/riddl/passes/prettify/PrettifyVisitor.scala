@@ -62,6 +62,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         .add(adaptor.direction.format)
         .add(" ")
         .add(adaptor.referent.format)
+        .add(adaptor.ascribedShape.map(s => s" as ${s.keyword}").getOrElse(""))
         .add(" is { ")
       if adaptor.isEmpty then rfe.emitUndefined().add(" }").nl
       else rfe.nl.incr
