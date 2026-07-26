@@ -38,7 +38,11 @@ object DeprecatedOptions:
   )
 
   val registry: Map[String, Deprecation] = Map(
-    "package" -> Deprecation("namespace", "1.15.0")
+    "package" -> Deprecation("namespace", "1.15.0"),
+    "gateway" -> Deprecation("the `gateway` context intention prefix", "2.0.0"),
+    "service" -> Deprecation("the `service` context intention prefix", "2.0.0"),
+    "external" -> Deprecation("the `external` context intention prefix", "2.0.0"),
+    "wrapper" -> Deprecation("an adaptor", "2.0.0")
   )
 end DeprecatedOptions
 
@@ -325,12 +329,12 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     loc: At
   ): Unit =
     DeprecatedOptions.registry.get(option.name).foreach { dep =>
-      messages.addStyle(
+      messages.addDeprecation(
         option.loc,
         s"Option '${option.name}' in $identity is deprecated" +
           s" since ${dep.sinceVersion}." +
-          s" Use '${dep.replacement}' instead",
-        suggestion = s"Replace option '${option.name}' with '${dep.replacement}'."
+          s" Use ${dep.replacement} instead",
+        suggestion = s"Replace option '${option.name}' with ${dep.replacement}."
       )
     }
     RecognizedOptions.registry.get(option.name) match

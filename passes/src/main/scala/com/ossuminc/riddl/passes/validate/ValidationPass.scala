@@ -80,6 +80,12 @@ case class ValidationPass(
   private val collectedInvariants: mutable.ListBuffer[(Invariant, Parents)] =
     mutable.ListBuffer.empty
 
+  /** Accumulated `tell` statements paired with their resolved target processor, for the A6
+    * connector-reachability check performed after all connectors are accumulated.
+    */
+  private val collectedTells: mutable.ListBuffer[(TellStatement, Processor[?])] =
+    mutable.ListBuffer.empty
+
   /** Generate the output of this Pass. This will only be called after all the calls to process have
     * completed.
     *
@@ -105,9 +111,37 @@ case class ValidationPass(
     checkOverloads()
     if mode == ValidationMode.Full then
       checkStreaming(root)
+      checkTellReachability()
       computedHandlerCompleteness = classifyHandlers()
       checkCompletenessPostProcess()
     end if
+  }
+
+  /** A6: `tell <msg> to <procRef>` is sugar for a send on the outlet connected to the target's
+    * inlet. Warn when the resolved target processor has no inlet reached by any modeled connector.
+    * Direct-connector reachability only (transitive reachability is a later refinement). Targets
+    * that did not resolve are skipped — another check already reports the missing reference.
+    */
+  private def checkTellReachability(): Unit = {
+    val liveConnectors = connectors.filterNot(_.isEmpty).toSeq
+    collectedTells.foreach { case (ts, target) =>
+      val reachable = liveConnectors.exists { conn =>
+        val connParents = symbols.parentsOf(conn)
+        resolvePath[Inlet](conn.to.pathId, connParents).exists { inlet =>
+          symbols.parentOf(inlet).exists(_ eq target)
+        }
+      }
+      if !reachable then
+        messages.addWarning(
+          ts.loc,
+          s"'tell' target '${ts.processorRef.pathId.format}' is not reachable via any connector; " +
+            s"a connector to one of its inlets is required for delivery",
+          suggestion =
+            s"Add a connector whose 'to' inlet belongs to '${ts.processorRef.pathId.format}' so the " +
+              s"told message can be delivered."
+        )
+      end if
+    }
   }
 
   private def checkCompletenessPostProcess(): Unit = {
@@ -477,10 +511,11 @@ case class ValidationPass(
         checkRef[Handler](handlerRef, parents).foreach { handler =>
           checkCrossContextReference(handlerRef.pathId, handler, onClause, parents)
         }
-      case TellStatement(_, msg, processorRef) =>
+      case ts @ TellStatement(_, msg, processorRef) =>
         val maybeProc = checkRef[Processor[?]](processorRef, parents)
         maybeProc.foreach { entity =>
           checkCrossContextReference(processorRef.pathId, entity, onClause, parents)
+          collectedTells.addOne((ts, entity))
         }
         val maybeType = checkRef[Type](msg, parents)
         maybeType.foreach { typ =>
@@ -1918,11 +1953,52 @@ case class ValidationPass(
     checkMetadata(s)
   }
 
+  /** A37: enforce the intention rules that are local to a single context (shape ascription and the
+    * UI-group gate). The connector-dependent rules (external-context persistence and the adaptor
+    * advisory) live in [[StreamingValidation.checkExternalContextConnectors]] where connector
+    * endpoints are already resolved.
+    */
+  private def validateIntention(c: Context): Unit = {
+    c.intention match
+      case Some(Intention.Service) if c.effectiveShape.keyword != "flow" =>
+        messages.addError(
+          c.errorLoc,
+          s"Service context '${c.id.value}' must have a flow shape (1 inlet, 1 outlet) " +
+            s"but is ${c.effectiveShape.keyword}",
+          suggestion =
+            s"Give ${c.identify} exactly one inlet and one outlet (or ascribe 'as flow'); a " +
+              s"service exposes a single request/response flow."
+        )
+      case Some(Intention.Gateway) if c.effectiveShape.keyword != "merge" =>
+        messages.addError(
+          c.errorLoc,
+          s"Gateway context '${c.id.value}' must have a merge shape (>=2 inlets, 1 outlet) " +
+            s"but is ${c.effectiveShape.keyword}",
+          suggestion =
+            s"Give ${c.identify} two or more inlets and a single outlet (or ascribe 'as merge'); " +
+              s"a gateway funnels several inputs into one."
+        )
+      case _ => ()
+    end match
+    if c.groups.nonEmpty && !c.intention.contains(Intention.Application) then
+      val intentionStr = c.intention.map(_.keyword).getOrElse("none")
+      messages.addError(
+        c.errorLoc,
+        s"Only application-intended contexts may contain UI groups; context '${c.id.value}' " +
+          s"has intention $intentionStr",
+        suggestion =
+          s"Either mark ${c.identify} as an 'application context' or move its UI groups into an " +
+            s"application-intended context."
+      )
+    end if
+  }
+
   private def validateContext(
     c: Context,
     parents: Parents
   ): Unit = {
     checkContainer(parents, c)
+    validateIntention(c)
     val nonEmptyEntities = c.entities.filter(_.nonEmpty)
     if nonEmptyEntities.nonEmpty && c.nonEmpty then {
       // Completeness 4i: context with entities must have a Sink

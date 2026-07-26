@@ -26,6 +26,77 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     checkConnectorPlacement()
     checkPortletCardinality()
     checkUnattachedOutlets()
+    checkExternalContextConnectors()
+  }
+
+  /** A context is "external" if it carries the External intention or (during deprecation) the
+    * legacy `external` option.
+    */
+  private def isExternalContext(c: Context): Boolean =
+    c.intention.contains(Intention.External) || c.hasOption("external")
+
+  /** A37 (connector-dependent rules): for every connector touching a portlet owned by an external
+    * context, require the connector to carry `option persistent` (Error). Additionally, when a
+    * connector directly links an external context's port to a NON-`Adaptor` processor in another
+    * context, advise inserting an adaptor (suppressible StyleWarning). Endpoint resolution reuses
+    * the same `resolvePath`/`contextOf` machinery as the other connector checks; only direct
+    * connectors are considered (no transitive graph walk).
+    */
+  private def checkExternalContextConnectors(): Unit = {
+    def ownerProcessor(p: Portlet): Option[Processor[?]] =
+      symbols.parentOf(p).collect { case pr: Processor[?] => pr }
+
+    connectors.filterNot(_.isEmpty).foreach { connector =>
+      val connParents = symbols.parentsOf(connector)
+      val maybeOutlet = resolvePath[Outlet](connector.from.pathId, connParents)
+      val maybeInlet = resolvePath[Inlet](connector.to.pathId, connParents)
+      val outletCtx = maybeOutlet.flatMap(symbols.contextOf)
+      val inletCtx = maybeInlet.flatMap(symbols.contextOf)
+
+      // Rule 4: persistence requirement. Emit once per distinct external context touched.
+      val fromExt = outletCtx.filter(isExternalContext)
+      val toExt = inletCtx.filter(isExternalContext)
+      val externalTouched: Seq[Context] = (fromExt, toExt) match
+        case (Some(a), Some(b)) if a eq b => Seq(a)
+        case _                            => fromExt.toSeq ++ toExt.toSeq
+      if externalTouched.nonEmpty && !connector.hasOption("persistent") then
+        externalTouched.foreach { extCtx =>
+          messages.addError(
+            connector.errorLoc,
+            s"Connector '${connector.id.value}' touches external context '${extCtx.id.value}' " +
+              s"and must be 'persistent'",
+            suggestion =
+              s"Add the 'persistent' option to ${connector.identify}; connectors to an external " +
+                s"context must be durable so data is not lost at the trust boundary."
+          )
+        }
+      end if
+
+      // Rule 5: adaptor advisory. A direct external-port → non-adaptor processor link in another
+      // context should probably go through an adaptor. Best-effort, direct connectors only.
+      def advise(extCtx: Context, otherOwner: Processor[?]): Unit =
+        messages.addStyle(
+          connector.errorLoc,
+          s"Consider an adaptor between external context '${extCtx.id.value}' and " +
+            s"'${otherOwner.id.value}' so the external system stays plug-in replaceable",
+          suggestion =
+            s"Insert an adaptor between '${extCtx.id.value}' and '${otherOwner.id.value}' and " +
+              s"connect the external port to the adaptor instead of directly to ${otherOwner.identify}."
+        )
+
+      (outletCtx, inletCtx) match
+        case (Some(oc), Some(ic)) if isExternalContext(oc) && !(oc eq ic) =>
+          maybeInlet.flatMap(ownerProcessor).foreach { toOwner =>
+            if !toOwner.isInstanceOf[Adaptor] then advise(oc, toOwner)
+          }
+        case _ => ()
+      (outletCtx, inletCtx) match
+        case (Some(oc), Some(ic)) if isExternalContext(ic) && !(oc eq ic) =>
+          maybeOutlet.flatMap(ownerProcessor).foreach { fromOwner =>
+            if !fromOwner.isInstanceOf[Adaptor] then advise(ic, fromOwner)
+          }
+        case _ => ()
+    }
   }
 
   protected val inlets: mutable.ListBuffer[Inlet] = mutable.ListBuffer.empty
