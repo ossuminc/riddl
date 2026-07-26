@@ -202,6 +202,45 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip a command/query `yields` clause (A19) losslessly" in {
+      val yModel =
+        """domain YD is {
+          |  context c is {
+          |    event OrderPlaced is { id: Integer }
+          |    result Found is { id: Integer }
+          |    command PlaceOrder yields event OrderPlaced is { id: Integer }
+          |    query FindOrder yields result Found is { id: Integer }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(yModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // JsonifierPass emits the yields ref...
+          json1 must include("\"yields\"")
+          json1 must include("OrderPlaced")
+          json1 must include("Found")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              // Fixed point: JsonAstBuilder rebuilds yields, else json2 would drop it.
+              RiddlLib.root2Json(root1) mustBe json1
+              val f = Finder(root1.contents)
+              val types = f.recursiveFindByType[Type]
+              val cmd = types.find(_.id.value == "PlaceOrder").get
+              cmd.typEx match
+                case a: AggregateUseCaseTypeExpression =>
+                  a.yields match
+                    case Some(EventRef(_, pid)) => pid.value.last mustBe "OrderPlaced"
+                    case other                  => fail(s"Expected EventRef, got $other")
+                case other => fail(s"Expected AUCTE, got $other")
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the yields JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the yields model failed: $errors")
+      end match
+    }
+
     "round-trip context intention, ascribed shape (Some/None), and ports losslessly (Task 16)" in {
       val pmModel =
         """domain PM is {

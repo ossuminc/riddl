@@ -60,7 +60,13 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     // identifier and `is`. When absent (None), the shape is derived from arity and nothing is emitted.
     val ascription = definition match
       case p: Processor[?] => p.ascribedShape.map(s => s" as ${s.keyword}").getOrElse("")
-      case _               => ""
+      // A command/query type may declare a `yields <messageRef>` between the identifier and `is`.
+      case t: Type =>
+        t.typEx match
+          case a: AggregateUseCaseTypeExpression =>
+            a.yields.map(y => s" ${Keyword.yields} ${y.format}").getOrElse("")
+          case _ => ""
+      case _ => ""
     addIndent(s"$prefix$kw $name$ascription is ")
     if withBrace then
       if definition.isEmpty then add("{ ??? }").nl

@@ -186,7 +186,12 @@ object JsonAstBuilder:
     */
   private def buildMessage(m: MessageDto, useCase: AggregateUseCase)(using Ctx): Type =
     val fields = m.fields.map(buildField)
-    val typEx = AggregateUseCaseTypeExpression(At(), useCase, Contents[AggregateContents](fields*))
+    val typEx = AggregateUseCaseTypeExpression(
+      At(),
+      useCase,
+      Contents[AggregateContents](fields*),
+      m.yields.map(messageRef)
+    )
     Type(At(), ident(m.name), typEx, meta(m.brief))
 
   private def buildField(f: FieldDto)(using Ctx): Field =

@@ -130,6 +130,38 @@ class BASTSerializationTest extends AbstractTestingBasis {
       }
     }
 
+    "round-trip a command type with a yields clause (A19)" in { (_: TestData) =>
+      val yieldsRef = EventRef(At(), PathIdentifier(At(), Seq("E")))
+      val aucte = AggregateUseCaseTypeExpression(
+        At(),
+        AggregateUseCase.CommandCase,
+        Contents.empty[AggregateContents](),
+        Some(yieldsRef)
+      )
+      val typeDef = Type(At(), Identifier(At(), "C"), aucte)
+      val domain = Domain(At(), Identifier(At(), "YieldsDomain"), Contents(typeDef))
+      val root = Root(At(), Contents(domain))
+
+      val bytes = serializeToBASTBytes(root)
+
+      BASTReader.read(bytes) match {
+        case Right(nebula: Nebula) =>
+          val domainOut = nebula.contents.toSeq.collectFirst { case d: Domain => d }.get
+          val typOut = domainOut.contents.toSeq.collectFirst { case t: Type => t }.get
+          typOut.typEx match {
+            case a: AggregateUseCaseTypeExpression =>
+              a.usecase mustBe AggregateUseCase.CommandCase
+              a.yields match {
+                case Some(EventRef(_, pid)) => pid.value mustBe Seq("E")
+                case other                  => fail(s"Expected Some(EventRef ... E), got $other")
+              }
+            case other => fail(s"Expected AggregateUseCaseTypeExpression, got $other")
+          }
+        case Left(errors) =>
+          fail(s"BAST read failed: ${errors.format}")
+      }
+    }
+
     "round-trip various type expressions" in { (_: TestData) =>
       val types: Seq[Type] = Seq(
         Type(At(), Identifier(At(), "AString"), String_(At())),

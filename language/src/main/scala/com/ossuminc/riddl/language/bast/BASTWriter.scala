@@ -1486,6 +1486,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(TYPE_AGGREGATION)
         writer.writeU8(a.usecase.ordinal.toByte)
         writeLocation(a.loc)
+        // A19: optional `yields` message ref — presence flag (1/0) then the ref if present
+        a.yields match {
+          case Some(ref) =>
+            writer.writeU8(1)
+            writeMessageRef(ref)
+          case None =>
+            writer.writeU8(0)
+        }
         // Write count and items inline (TypeExpressions are not traversed)
         writer.writeVarInt(a.contents.length)
         a.contents.toSeq.foreach { item =>

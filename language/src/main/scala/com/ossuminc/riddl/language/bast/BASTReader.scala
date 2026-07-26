@@ -551,7 +551,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         case STREAMLET_MERGE  => Some(Merge(At.empty))
         case STREAMLET_SPLIT  => Some(Split(At.empty))
         case STREAMLET_ROUTER => Some(Router(At.empty))
-        case other            =>
+        case other =>
           addError(
             deserializationError(
               "Unknown ascribed-shape tag",
@@ -1469,8 +1469,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
           case _ => // AggregateUseCaseTypeExpression (usecase ordinals 0-12)
             val usecase = AggregateUseCase.fromOrdinal(subtype)
+            // A19: optional `yields` message ref — presence flag (1/0) then the ref if present
+            val yields = if reader.readU8() == 1 then Some(readMessageRef()) else None
             val contents = readContentsDeferred[AggregateContents]()
-            AggregateUseCaseTypeExpression(loc, usecase, contents)
+            AggregateUseCaseTypeExpression(loc, usecase, contents, yields)
         }
 
       case TYPE_ALTERNATION =>

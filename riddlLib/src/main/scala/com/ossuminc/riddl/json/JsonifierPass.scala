@@ -181,7 +181,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             Some(
               MsgChild(
                 a.usecase,
-                MessageDto(t.id.value, briefOf(t.metadata), a.fields.map(serializeField))
+                MessageDto(
+                  t.id.value,
+                  briefOf(t.metadata),
+                  a.fields.map(serializeField),
+                  a.yields.map(messageRefDto)
+                )
               )
             )
           case _ =>

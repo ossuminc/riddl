@@ -190,7 +190,14 @@ object JsonModel:
     outlets: Seq[PortletDto] = Nil
   )
 
-  case class MessageDto(name: String, brief: Option[String] = None, fields: Seq[FieldDto] = Nil)
+  case class MessageDto(
+    name: String,
+    brief: Option[String] = None,
+    fields: Seq[FieldDto] = Nil,
+    // A19: for a command/query, the optional message it yields (a command yields an event; a
+    // query yields a result).
+    yields: Option[MessageRefDto] = None
+  )
 
   case class EntityDto(
     name: String,
