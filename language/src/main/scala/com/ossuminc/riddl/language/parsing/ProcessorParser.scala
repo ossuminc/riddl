@@ -33,6 +33,12 @@ trait ProcessorParser
       ).!).?
     ).map(_.flatMap(kw => StreamletShape.fromKeyword(kw, At.empty)))
 
+  /** A shared inlet/outlet declaration. Ports were historically only parsed inside streamlet
+    * bodies; admitting `portlet` in `processorDefinitionContents` makes inlet/outlet declarations
+    * legal in every processor body (context, entity, projector, repository, adaptor, streamlet).
+    */
+  def portlet[u: P]: P[Inlet | Outlet] = P(inlet | outlet)
+
   private def relationshipCardinality[u: P]: P[RelationshipCardinality] =
     P(StringIn("1:1", "1:N", "N:1", "N:N").!).map {
       case s: String if s == "1:1" => RelationshipCardinality.OneToOne
@@ -52,6 +58,6 @@ trait ProcessorParser
   def processorDefinitionContents[u: P](statementsSet: StatementsSet): P[OccursInProcessor] =
     P(
       vitalDefinitionContents | constant | invariant | function | handler(statementsSet) |
-        streamlet | connector | relationship
+        portlet | streamlet | connector | relationship
     )./.asInstanceOf[P[OccursInProcessor]]
 }

@@ -276,5 +276,24 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
           context.projectors.head.ascribedShape.map(_.keyword) mustBe Some("merge")
       }
     }
+
+    "allow inlet/outlet declarations in every processor body" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """entity E is { inlet ei is command Cmd }
+          |projector Pr is { outlet po is event Evt }
+          |inlet ci is command Cmd
+          |outlet co is event Evt
+          |""".stripMargin,
+        td
+      )
+      TopLevelParser.parseAsContext(input) match {
+        case Left(errors) => fail(errors.format)
+        case Right(context) =>
+          context.inlets.map(_.id.value) mustBe Seq("ci")
+          context.outlets.map(_.id.value) mustBe Seq("co")
+          context.entities.head.inlets.map(_.id.value) mustBe Seq("ei")
+          context.projectors.head.outlets.map(_.id.value) mustBe Seq("po")
+      }
+    }
   }
 }
