@@ -38,9 +38,8 @@ class YieldConformanceTest extends AbstractValidatingTest {
     "accept a yield that matches the declared yields clause" in { (td: TestData) =>
       val input = RiddlParserInput(model("yield event E"), td)
       parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
-        val conformanceErrors = errors(msgs).filter(m =>
-          m.message.contains("yield") || m.message.contains("yields")
-        )
+        val conformanceErrors =
+          errors(msgs).filter(m => m.message.contains("yield") || m.message.contains("yields"))
         if conformanceErrors.nonEmpty then
           info(s"Unexpected conformance errors:\n${conformanceErrors.map(_.format).mkString("\n")}")
         conformanceErrors mustBe empty

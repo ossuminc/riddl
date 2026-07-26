@@ -32,7 +32,7 @@ object Riddl {
     */
   def parse(input: RiddlParserInput)(using io: PlatformContext): Either[Messages, Root] = {
     TopLevelParser.parseInputWithMessages(input) match {
-      case Left(errors)               => Left(errors)
+      case Left(errors)                 => Left(errors)
       case Right((root, parseMessages)) =>
         // This entry point returns only the Root, so there is no channel to thread
         // non-fatal parse-time messages (warnings/deprecations) into. Surface them
