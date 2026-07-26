@@ -447,6 +447,8 @@ object Messages {
         if io.options.showStyleWarnings then {
           logMsgs(StyleWarning, groups.get(StyleWarning))
         }
+        // A9: deprecations are warnings that must stay visible in grouped mode too.
+        logMsgs(Deprecation, groups.get(Deprecation))
       }
       if io.options.showTipMessages then {
         logMsgs(Tip, groups.get(Tip))

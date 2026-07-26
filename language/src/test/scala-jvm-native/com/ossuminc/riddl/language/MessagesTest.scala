@@ -101,6 +101,19 @@ class MessagesTest extends AbstractTestingBasis {
       SevereError.isMissing mustBe false
       SevereError.toString mustBe "Severe"
     }
+    "have Deprecation with correct queries (A9)" in {
+      Deprecation.isSevereError mustBe false
+      Deprecation.isError mustBe false
+      Deprecation.isWarning mustBe true
+      Deprecation.isInfo mustBe false
+      Deprecation.isActionable mustBe false
+      Deprecation.isIgnorable mustBe true
+      Deprecation.isUsage mustBe false
+      Deprecation.isStyle mustBe false
+      Deprecation.isMissing mustBe false
+      Deprecation.isDeprecation mustBe true
+      Deprecation.toString mustBe "Deprecation"
+    }
     "have Severities from lowest to highest" in {
       (Info.severity < StyleWarning.severity) mustBe true
       (StyleWarning.severity < MissingWarning.severity) mustBe true
@@ -128,6 +141,7 @@ class MessagesTest extends AbstractTestingBasis {
   private val w = Messages.warning("warning")
   private val e = Messages.error("error")
   private val s = Messages.severe("severe")
+  private val dep = Message(At.empty, "deprecated thing", Deprecation)
 
   "Message" should {
     "know their kind" in {
@@ -161,6 +175,9 @@ class MessagesTest extends AbstractTestingBasis {
     }
     "filter for InfoWarnings" in {
       mix.justInfo mustBe Seq(i)
+    }
+    "filter for Deprecations (A9)" in {
+      List(i, dep, w).justDeprecations mustBe Seq(dep)
     }
     "log with retained order" in {
       pc.withLogger(StringLogger()) { slog =>
@@ -286,6 +303,24 @@ class MessagesTest extends AbstractTestingBasis {
       msgs.justMissing.head.message must be("missing")
       msgs.justUsage.head.message must be("usage")
       msgs.justErrors.head.message must be("error")
+    }
+
+    // A9 regressions: logging a Deprecation message must not throw. A non-exhaustive
+    // `KindOfMessage` match in logMessage/logMessagesByGroup previously crashed only via
+    // Commands.runMain (caught -> exit 8), not through direct Messages inspection.
+    "log a Deprecation message (retained order) without crashing (A9 regression)" in {
+      pc.withLogger(StringLogger()) { slog =>
+        Messages.logMessages(List(i, dep, w))
+        slog.toString must include("deprecated thing")
+      }
+    }
+    "log a Deprecation message (grouped by kind) without crashing (A9 regression)" in {
+      pc.withLogger(StringLogger()) { _ =>
+        pc.withOptions(CommonOptions(groupMessagesByKind = true)) { _ =>
+          Messages.logMessages(List(i, dep, w))
+          pc.log.toString must include("deprecated thing")
+        }
+      }
     }
   }
 }

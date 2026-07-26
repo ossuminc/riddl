@@ -17,7 +17,9 @@ import org.scalatest.TestData
   */
 class SagaValidatorTest extends AbstractValidatingTest {
 
-  private def saga(src: String, td: TestData)(check: (Saga, Messages.Messages) => org.scalatest.Assertion) =
+  private def saga(src: String, td: TestData)(
+    check: (Saga, Messages.Messages) => org.scalatest.Assertion
+  ) =
     parseAndValidateDomain(RiddlParserInput(src, td), shouldFailOnErrors = false) {
       case (domain, _, messages) => check(Finder(domain).recursiveFindByType[Saga].head, messages)
     }
