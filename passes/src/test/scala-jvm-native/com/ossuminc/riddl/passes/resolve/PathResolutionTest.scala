@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{At, Messages}
-import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
 import com.ossuminc.riddl.utils.{ec, pc, Await, CommonOptions, PathUtils, PlatformContext}
 
 import java.nio.file.Path
@@ -23,6 +23,41 @@ import scala.concurrent.duration.DurationInt
 class PathResolutionTest extends SharedResolvingTest {
 
   "PathResolution" must {
+    // Task 8: portlets used to exist only on streamlets. Confirm a connector's endpoints resolve
+    // when the outlet/inlet live on non-streamlet processors (an outlet on an entity wired to an
+    // inlet on a projector).
+    "resolve inlets/outlets on non-streamlet processors" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          |  type T = Integer
+          |  context c is {
+          |    entity e is {
+          |      outlet out is type T
+          |      handler h is { ??? }
+          |    }
+          |    projector p is {
+          |      inlet in is type T
+          |      handler h is { ??? }
+          |    }
+          |    connector wire is { from outlet d.c.e.out to inlet d.c.p.in }
+          |  }
+          |}""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        Riddl.parseAndValidate(input, shouldFailOnError = false) match {
+          case Left(messages) => fail(messages.format)
+          case Right(result) =>
+            val refMap = result.refMap
+            refMap.definitionOf[Outlet]("d.c.e.out") must not be (empty)
+            refMap.definitionOf[Inlet]("d.c.p.in") must not be (empty)
+            // No resolution error should mention the portlet paths.
+            result.messages.justErrors.exists { m =>
+              m.message.contains("out") && m.message.contains("not resolved")
+            } must be(false)
+        }
+      }
+    }
     "resolve language / rbbq.riddl" in { (td: TestData) =>
       val url = PathUtils.urlFromCwdPath(Path.of("language/input/domains/rbbq.riddl"))
       val future = RiddlParserInput.fromURL(url, td).map { input =>
