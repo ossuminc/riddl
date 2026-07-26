@@ -41,7 +41,9 @@ class ContextIntentionTest extends AbstractValidatingTest {
           |}
           |""".stripMargin
       parseAndValidate(input, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-        msgs.filter(m => m.kind == Error && m.message.contains("must have a flow shape")) mustBe empty
+        msgs.filter(m =>
+          m.kind == Error && m.message.contains("must have a flow shape")
+        ) mustBe empty
       }
     }
 
@@ -77,19 +79,23 @@ class ContextIntentionTest extends AbstractValidatingTest {
       }
     }
 
-    "accept an application context that contains a UI group (rule 3 positive)" in { (td: TestData) =>
-      val input =
-        """domain d is {
+    "accept an application context that contains a UI group (rule 3 positive)" in {
+      (td: TestData) =>
+        val input =
+          """domain d is {
           |  application context a is {
           |    group grp is { ??? }
           |  }
           |}
           |""".stripMargin
-      parseAndValidate(input, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-        msgs.filter(m =>
-          m.kind == Error && m.message.contains("Only application-intended contexts may contain UI groups")
-        ) mustBe empty
-      }
+        parseAndValidate(input, td.name, shouldFailOnErrors = false) {
+          case (_, _, msgs: Messages) =>
+            msgs.filter(m =>
+              m.kind == Error && m.message.contains(
+                "Only application-intended contexts may contain UI groups"
+              )
+            ) mustBe empty
+        }
     }
 
     "error when a connector touches an external context but is not persistent (rule 4)" in {
@@ -102,12 +108,13 @@ class ContextIntentionTest extends AbstractValidatingTest {
             |  connector c is { from outlet d.ext.out to inlet d.b.snk.in }
             |}
             |""".stripMargin
-        parseAndValidate(input, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "touches external context 'ext' and must be 'persistent'"
-          )
+        parseAndValidate(input, td.name, shouldFailOnErrors = false) {
+          case (_, _, msgs: Messages) =>
+            assertValidationMessage(
+              msgs,
+              Error,
+              "touches external context 'ext' and must be 'persistent'"
+            )
         }
     }
 
@@ -121,8 +128,11 @@ class ContextIntentionTest extends AbstractValidatingTest {
             |  connector c is { from outlet d.ext.out to inlet d.b.snk.in } with { option persistent }
             |}
             |""".stripMargin
-        parseAndValidate(input, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-          msgs.filter(m => m.kind == Error && m.message.contains("must be 'persistent'")) mustBe empty
+        parseAndValidate(input, td.name, shouldFailOnErrors = false) {
+          case (_, _, msgs: Messages) =>
+            msgs.filter(m =>
+              m.kind == Error && m.message.contains("must be 'persistent'")
+            ) mustBe empty
         }
     }
 
@@ -136,12 +146,13 @@ class ContextIntentionTest extends AbstractValidatingTest {
             |  connector c is { from outlet d.ext.out to inlet d.b.snk.in } with { option persistent }
             |}
             |""".stripMargin
-        parseAndValidate(input, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            StyleWarning,
-            "Consider an adaptor between external context 'ext'"
-          )
+        parseAndValidate(input, td.name, shouldFailOnErrors = false) {
+          case (_, _, msgs: Messages) =>
+            assertValidationMessage(
+              msgs,
+              StyleWarning,
+              "Consider an adaptor between external context 'ext'"
+            )
         }
     }
   }

@@ -14,8 +14,8 @@ import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 /** Task 12: the legacy `gateway`/`service`/`external`/`wrapper` context options are deprecated in
-  * favor of the context-intention prefix (or an adaptor), and now surface as [[Messages.Deprecation]]
-  * messages rather than StyleWarnings.
+  * favor of the context-intention prefix (or an adaptor), and now surface as
+  * [[Messages.Deprecation]] messages rather than StyleWarnings.
   */
 class OptionDeprecationTest extends AbstractValidatingTest {
 
@@ -60,7 +60,9 @@ class OptionDeprecationTest extends AbstractValidatingTest {
         case Left(errors) => fail(errors.format)
         case Right(result) =>
           result.messages
-            .filter(m => m.kind == Messages.StyleWarning && m.message.contains("'service'")) mustBe empty
+            .filter(m =>
+              m.kind == Messages.StyleWarning && m.message.contains("'service'")
+            ) mustBe empty
           result.messages.justDeprecations.exists(_.message.contains("'service'")) must be(true)
       }
     }

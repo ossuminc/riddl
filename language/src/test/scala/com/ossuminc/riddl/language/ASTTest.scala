@@ -496,10 +496,16 @@ class ASTTest extends AbstractTestingBasis {
       StreamletShape.fromKeyword("fanout", At.empty).map(_.keyword) must be(Some("split"))
       StreamletShape.fromKeyword("fanin", At.empty).map(_.keyword) must be(Some("merge"))
       StreamletShape.fromKeyword("bogus", At.empty) must be(None)
-      val i = Inlet(At.empty, Identifier(At.empty, "i"),
-        TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("T"))))
-      val o = Outlet(At.empty, Identifier(At.empty, "o"),
-        TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("T"))))
+      val i = Inlet(
+        At.empty,
+        Identifier(At.empty, "i"),
+        TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("T")))
+      )
+      val o = Outlet(
+        At.empty,
+        Identifier(At.empty, "o"),
+        TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("T")))
+      )
       val p = Streamlet(At.empty, Identifier(At.empty, "P"), None, Contents(i, o))
       p.effectiveShape.keyword must be("flow") // 1 in + 1 out
       val src = Streamlet(At.empty, Identifier(At.empty, "S"), None, Contents(o))

@@ -53,7 +53,9 @@ class TellReachabilityTest extends AbstractValidatingTest {
       val connector = "connector Pipe is { from outlet c.Src.out to inlet c.E.ein }"
       parseAndValidate(model(connector), td.name, shouldFailOnErrors = false) {
         case (_, _, msgs: Messages) =>
-          msgs.filter(m => m.kind == Warning && m.message.contains("is not reachable via any connector")) mustBe empty
+          msgs.filter(m =>
+            m.kind == Warning && m.message.contains("is not reachable via any connector")
+          ) mustBe empty
       }
     }
   }

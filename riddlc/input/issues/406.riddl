@@ -7,14 +7,14 @@ domain Example is {
 	   }
     entity FooEntity is {
       record FooExampleState is { foo: Foo }
-	    state FooExample of FooExampleState
+	    state FooExample of record FooExampleState
       handler HandleFoo1 is {
         on command ToBar {
           morph entity FooEntity to state BarExample with record BarExampleState
         }
       }
       record BarExampleState is { bar: String }
-	    state BarExample of BarExampleState
+	    state BarExample of record BarExampleState
       handler HandleFoo2 is {
         on command ToFoo {
           morph entity FooEntity to state FooExample with record FooExampleState

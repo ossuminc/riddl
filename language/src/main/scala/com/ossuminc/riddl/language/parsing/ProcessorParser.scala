@@ -28,8 +28,17 @@ trait ProcessorParser
   def asShape[u: P]: P[Option[StreamletShape]] =
     P(
       (as ~ StringIn(
-        "void", "source", "sink", "flow", "cascade", "merge", "fanin",
-        "split", "broadcast", "fanout", "router"
+        "void",
+        "source",
+        "sink",
+        "flow",
+        "cascade",
+        "merge",
+        "fanin",
+        "split",
+        "broadcast",
+        "fanout",
+        "router"
       ).!).?
     ).map(_.flatMap(kw => StreamletShape.fromKeyword(kw, At.empty)))
 
