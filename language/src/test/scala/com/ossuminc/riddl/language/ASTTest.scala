@@ -454,4 +454,23 @@ class ASTTest extends AbstractTestingBasis {
       term.format mustBe s"${Keyword.term} ${term.id.format}"
     }
   }
+
+  "Processor ports" should {
+    "expose inlets and outlets on every processor kind (via the Processor base)" in {
+      val inlet = Inlet(
+        At.empty,
+        Identifier(At.empty, "in"),
+        TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("Cmd")))
+      )
+      val outlet = Outlet(
+        At.empty,
+        Identifier(At.empty, "out"),
+        TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("Evt")))
+      )
+      // Entity is a Processor but not a Streamlet; ports must still be accepted.
+      val entity = Entity(At.empty, Identifier(At.empty, "E"), Contents(inlet, outlet))
+      entity.inlets must be(Seq(inlet))
+      entity.outlets must be(Seq(outlet))
+    }
+  }
 }

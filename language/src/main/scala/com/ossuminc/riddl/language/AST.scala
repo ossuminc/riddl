@@ -738,7 +738,7 @@ object AST:
 
   /** Type of definitions that occur within all Processor types */
   type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | Handler |
-    Streamlet | Connector | Relationship
+    Streamlet | Connector | Relationship | Inlet | Outlet
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain =
@@ -791,7 +791,9 @@ object AST:
   type SagaContents = OccursInSaga | Include[OccursInSaga]
 
   /** Type of definitions that occur in a [[Streamlet]] without [[Include]] */
-  private type OccursInStreamlet = OccursInProcessor | Inlet | Outlet | Connector
+  // Inlet/Outlet/Connector are all members of OccursInProcessor now (ports are
+  // available on every processor kind), so OccursInStreamlet adds nothing extra.
+  private type OccursInStreamlet = OccursInProcessor
 
   /** Type of definitions that occur in a [[Streamlet]] with [[Include]] */
   type StreamletContents = OccursInStreamlet | Include[OccursInStreamlet]
@@ -1027,7 +1029,9 @@ object AST:
       with WithInvariants[CT]
       with WithFunctions[CT]
       with WithHandlers[CT]
-      with WithStreamlets[CT]:
+      with WithStreamlets[CT]
+      with WithInlets[CT]
+      with WithOutlets[CT]:
     final override def isProcessor: Boolean = true
   end Processor
 
@@ -3386,9 +3390,8 @@ object AST:
     shape: StreamletShape,
     contents: Contents[StreamletContents] = Contents.empty[StreamletContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Processor[StreamletContents]
-      with WithInlets[StreamletContents]
-      with WithOutlets[StreamletContents] {
+  ) extends Processor[StreamletContents] {
+    // WithInlets/WithOutlets are now inherited from Processor.
     final override def kind: String = shape.getClass.getSimpleName
     def format: String = shape.keyword + " " + id.format
 
