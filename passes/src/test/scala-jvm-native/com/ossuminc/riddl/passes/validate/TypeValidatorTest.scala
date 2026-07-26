@@ -256,5 +256,77 @@ class TypeValidatorTest extends AbstractValidatingTest {
         }
       }
     }
+
+    "accept a command that yields an event and a query that yields a result (A19)" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain foo is {
+            |  event E is { id: Integer }
+            |  result R is { id: Integer }
+            |  command C yields event E is { id: Integer }
+            |  query Q yields result R is { id: Integer }
+            |}
+            |""".stripMargin,
+          td
+        )
+        pc.withOptions(CommonOptions.default) { _ =>
+          parseAndValidateDomain(input, shouldFailOnErrors = false) {
+            case (_: Domain, _, msgs: Messages) =>
+              val errs = msgs.justErrors
+              assert(errs.isEmpty, s"Expected no errors, got:\n${errs.format}")
+          }
+        }
+    }
+
+    "reject a command that yields a result (A19)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo is {
+          |  result R is { id: Integer }
+          |  command C yields result R is { id: Integer }
+          |}
+          |""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) {
+          case (_: Domain, _, msgs: Messages) =>
+            assertValidationMessage(msgs, Error, "should be one of these message types")
+        }
+      }
+    }
+
+    "reject a query that yields an event (A19)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo is {
+          |  event E is { id: Integer }
+          |  query Q yields event E is { id: Integer }
+          |}
+          |""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) {
+          case (_: Domain, _, msgs: Messages) =>
+            assertValidationMessage(msgs, Error, "should be one of these message types")
+        }
+      }
+    }
+
+    "reject a yields clause on a non-command/query type (A19)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo is {
+          |  event E is { id: Integer }
+          |  record Rec yields event E is { id: Integer }
+          |}
+          |""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) {
+          case (_: Domain, _, msgs: Messages) =>
+            assertValidationMessage(msgs, Error, "Only command and query types may declare")
+        }
+      }
+    }
   }
 }

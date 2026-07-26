@@ -775,6 +775,11 @@ case class ValidationPass(
     if !t.typEx.isInstanceOf[AggregateTypeExpression] then {
       checkTypeExpression(t.typEx, t, parents)
     }
+    // A19: message types (AUCTE) skip checkTypeExpression above, so validate a `yields` clause here.
+    t.typEx match {
+      case auc: AggregateUseCaseTypeExpression => checkUseCaseYields(auc, parents)
+      case _                                   => ()
+    }
   }
 
   private def validateConstant(

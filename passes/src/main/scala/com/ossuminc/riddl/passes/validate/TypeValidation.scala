@@ -126,6 +126,32 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
         .checkTypeExpression(field.typeEx, typeDef, parents)
         .checkMetadata(field)
     }
+    checkUseCaseYields(mt, parents)
+  }
+
+  /** A19: a `yields` clause is only valid on a command (yielding an event) or a query (yielding a
+    * result). Anything else is an error. Invoked from `checkAggregateUseCase` (nested AUCTEs) and
+    * directly from `ValidationPass.validateType` (top-level message types, which skip
+    * `checkTypeExpression`).
+    */
+  protected def checkUseCaseYields(
+    mt: AggregateUseCaseTypeExpression,
+    parents: Parents
+  ): this.type = {
+    mt.yields.foreach { yieldRef =>
+      mt.usecase match {
+        case AggregateUseCase.CommandCase =>
+          checkMessageRef(yieldRef, parents, Seq(AggregateUseCase.EventCase))
+        case AggregateUseCase.QueryCase =>
+          checkMessageRef(yieldRef, parents, Seq(AggregateUseCase.ResultCase))
+        case other =>
+          messages.addError(
+            yieldRef.pathId.loc,
+            s"Only command and query types may declare `yields`, but ${other.useCase} does not",
+            suggestion = "Remove the `yields` clause, or declare the type as a command or query."
+          )
+      }
+    }
     this
   }
 
