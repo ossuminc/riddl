@@ -649,6 +649,19 @@ to the right group rather than appending to a list.
 
 ### AST / Language Internals
 
+- **Unified processor model (2026-07-26, release/2)** — every
+  `Processor` (Context/Entity/Projector/Repository/Adaptor + the
+  generic `processor` keyword) is port-bearing: `Inlet`/`Outlet` are in
+  `OccursInProcessor`, and `WithInlets`/`WithOutlets` are mixed into the
+  `Processor` base. Each carries `ascribedShape: Option[StreamletShape]`
+  (None ⇒ derived from arity via `Processor.arityShape`/`effectiveShape`).
+  Surface: `[<intention>] context <id> [as <shape>] is {…}` and
+  `processor <id> [as <shape>] is {…}`. The old streamlet shape keywords
+  are deprecated aliases; `StreamletShape.fromKeyword` canonicalizes
+  synonyms (cascade→Flow, fanin→Merge, broadcast/fanout→Split). `Context`
+  has `intention: Option[Intention]` (Application/External/Gateway/
+  Service). Shape/intention now participate in `Definition.equals`, so
+  keep their `loc` at `At.empty` on every surface (parser/BAST/JSON).
 - **AST.Set shadows scala.Set** — use selective imports or
   qualify as `scala.collection.immutable.Set`.
 - **Schema match ordering** — Schema extends `Leaf` (Definition)
@@ -832,6 +845,28 @@ to the right group rather than appending to a list.
 
 ### Build / CI / Tooling
 
+- **`test`/`tJVM` resolve to `testQuick`** — which incrementally
+  SKIPS test suites it judges unaffected, even after a source change
+  and even with `~/Library/Caches/sbt/v2/ac` cleared (a DIFFERENT cache
+  from testQuick's own succeeded-tests tracking). Symptom: "No tests to
+  run for language / Test / testQuick" and a false green. For a
+  guaranteed full run after edits, use `<module>/testOnly *` (e.g.
+  `language/testOnly * ; passes/testOnly *`), which ignores incremental
+  state. This is separate from — and additive to — the action-cache
+  fixture blindspot.
+- **`@JSExport*` annotation placement** — an `@JSExportTopLevel(...)`
+  binds to the very next definition. Inserting a new
+  `enum`/`object`/class between the annotation and its case class
+  silently reattaches it (breaks `cJS`, invisible to `cJVM`). Any AST
+  edit near an exported type MUST be checked with `cJS` (and `cNative`),
+  not `cJVM` alone.
+- **Parse-time messages now surface** — `warning()`/`deprecation()`
+  emitted during a *successful* parse used to be dropped (`parseRule`
+  returned the buffer only on fastparse failure). They now flow via
+  `TopLevelParser.parseInputWithMessages` → `PassInput.parseMessages` →
+  `PassesResult.additionalMessages`, so deprecations show under every
+  `riddlc` command, not just `validate`. New parse-time warnings
+  therefore appear in `.check` goldens.
 - **release.yml** — triggered by `gh release create`. Builds
   native riddlc (macOS ARM64, Linux x86_64) + JVM universal.
   Sends `repository_dispatch` to homebrew-tap with SHA256s.

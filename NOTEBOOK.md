@@ -15,6 +15,63 @@ to the task file and note the disposition below.
 
 ---
 
+## Session 2026-07-26 — Unified streaming processor model (A37/A31/A32/A6)
+
+Shipped a large release/2 change (27 commits, pushed to origin at
+`4af86d67`) unifying the processor model, plus the earlier A9b tail and
+a deprecation-logging fix.
+
+**What changed & why.** Every `Processor` (context/entity/projector/
+repository/adaptor + a new generic `processor` keyword) can now declare
+inlets/outlets and an optional `as <shape>` ascription; shape is
+otherwise derived from arity. The old `source/sink/flow/merge/split/
+router` keywords are deprecated aliases (synonyms: cascade/fanin/
+broadcast/fanout). Contexts gained an optional intention prefix
+(`application|external|gateway|service`). Validation added A31
+one-connector-per-port, `as`/arity check + omitted-shape nudge, A37
+intention rules, option deprecations, and A6 `tell` reachability. All
+reflection surfaces updated (Prettify, BAST `FORMAT_REVISION` 10→11,
+JSON, EBNF+GBNF). Executed as an 18-task plan via subagents + a
+whole-branch review. Design docs live in `docs/superpowers/{specs,plans}/
+2026-07-26-unified-streaming-processor-model-*`.
+
+**What went wrong (root causes worth remembering).**
+- I added the `Intention` enum *between* `@JSExportTopLevel("Context")`
+  and `case class Context`, orphaning the annotation onto the enum →
+  `cJS` broke. Root cause: I verified AST edits with `cJVM` only.
+  Lesson: AST/`@JSExport` edits need `cJS`+`cNative`, not just `cJVM`.
+- `test`/`tJVM` resolve to **`testQuick`**, which incrementally SKIPPED
+  language/passes after a fix (ran 0 tests) even with the `ac` cache
+  cleared — a false "green". Root cause: testQuick dependency tracking,
+  not the action-cache. Lesson: for a real full run use
+  `language/testOnly *` / `passes/testOnly *`, not `test`.
+- Parser `warning()`/`deprecation()` were silently dropped on a
+  *successful* parse (`parseRule` only returned the message buffer on
+  fastparse failure). Fixed by threading parse messages via
+  `PassInput.parseMessages` → `PassesResult.additionalMessages`; a
+  final review caught that the first fix only covered `parseAndValidate`
+  (not `parse`/`stats`/`bastify`) and it was extended.
+
+**Unfinished / awaiting others.**
+- **#56 corpus migration** (riddl-models, riddl-examples) to the new
+  syntax — the external worker is actively migrating (commands tests
+  went 51→232 passing during the session). Task drops filed this
+  session (see `../riddl-models/task/`, `../riddl-examples/task/`).
+- A37 **rule 3** (UI-groups-only-in-application) is scoped to
+  explicitly-declared non-application intention; tighten to also fire on
+  intention-less contexts AFTER the corpus is migrated to mark UI
+  contexts `application`.
+- A6 tell-reachability is direct-connector only (transitive deferred);
+  it will warn broadly on legacy connector-less `tell` — expected.
+
+**Method worth reusing.** Subagent-per-task with file-based briefs/
+reports (kept controller context lean across 18 tasks), a git-ignored
+ledger at `.superpowers/sdd/progress.md` for compaction recovery, and a
+final whole-branch review subagent → one fix pass. Each task verified
+green before commit.
+
+---
+
 ## Deferred — blocked on prerequisites (do NOT start yet)
 
 ### #45 — `put`/`get` UI-boundary statements — DEFERRED (out of order)
