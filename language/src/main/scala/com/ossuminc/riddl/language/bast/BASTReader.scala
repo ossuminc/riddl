@@ -537,20 +537,39 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   /** Mirror of BASTWriter.writeAscribedShape: presence byte then, when present, the shape tag. */
-  private def readAscribedShape(loc: At): Option[StreamletShape] = reader.readU8() match {
+  // The ascribed shape's location is normalized to At.empty so it matches the
+  // `as <shape>` parser path. `ascribedShape` participates in Definition.equals,
+  // so the shape loc must be surface-independent (parser/BAST/JSON all use At.empty).
+  private def readAscribedShape(): Option[StreamletShape] = reader.readU8() match {
     case 0 => None
     case 1 =>
-      Some(reader.readU8() match {
-        case STREAMLET_VOID   => Void(loc)
-        case STREAMLET_SOURCE => Source(loc)
-        case STREAMLET_SINK   => Sink(loc)
-        case STREAMLET_FLOW   => Flow(loc)
-        case STREAMLET_MERGE  => Merge(loc)
-        case STREAMLET_SPLIT  => Split(loc)
-        case STREAMLET_ROUTER => Router(loc)
-        case _                => Void(loc)
-      })
-    case _ => None
+      reader.readU8() match {
+        case STREAMLET_VOID   => Some(Void(At.empty))
+        case STREAMLET_SOURCE => Some(Source(At.empty))
+        case STREAMLET_SINK   => Some(Sink(At.empty))
+        case STREAMLET_FLOW   => Some(Flow(At.empty))
+        case STREAMLET_MERGE  => Some(Merge(At.empty))
+        case STREAMLET_SPLIT  => Some(Split(At.empty))
+        case STREAMLET_ROUTER => Some(Router(At.empty))
+        case other            =>
+          addError(
+            deserializationError(
+              "Unknown ascribed-shape tag",
+              expectedValue = Some("a valid STREAMLET_* shape tag"),
+              actualValue = Some(s"$other")
+            )
+          )
+          None
+      }
+    case other =>
+      addError(
+        deserializationError(
+          "Invalid ascribed-shape presence byte",
+          expectedValue = Some("0 (absent) or 1 (present)"),
+          actualValue = Some(s"$other")
+        )
+      )
+      None
   }
 
   /** Mirror of BASTWriter.writeIntention: 0 = None, else 1..4. */
@@ -566,7 +585,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
     val intention = readIntention()
-    val ascribedShape = readAscribedShape(loc)
+    val ascribedShape = readAscribedShape()
     val contents = readContentsDeferred[OccursInContext]().asInstanceOf[Contents[ContextContents]]
     val metadata = readMetadataDeferred()
     Context(loc, id, contents, ascribedShape, intention, metadata)
@@ -575,7 +594,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readEntityNode(): Entity = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val ascribedShape = readAscribedShape(loc)
+    val ascribedShape = readAscribedShape()
     val contents =
       readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
     val metadata = readMetadataDeferred()
@@ -662,7 +681,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case _                => InboundAdaptor(loc) // Default
     }
     val referent = readContextRef()
-    val ascribedShape = readAscribedShape(loc)
+    val ascribedShape = readAscribedShape()
     val contents = readContentsDeferred[OccursInProcessor]().asInstanceOf[Contents[AdaptorContents]]
     val metadata = readMetadataDeferred()
     Adaptor(loc, id, direction, referent, contents, ascribedShape, metadata)
@@ -714,7 +733,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readProjectorNode(): Projector = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val ascribedShape = readAscribedShape(loc)
+    val ascribedShape = readAscribedShape()
     val contents = readContentsDeferred[OccursInProcessor | RepositoryRef]()
       .asInstanceOf[Contents[ProjectorContents]]
     val metadata = readMetadataDeferred()
@@ -724,7 +743,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readRepositoryNode(): Repository = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val ascribedShape = readAscribedShape(loc)
+    val ascribedShape = readAscribedShape()
     val contents =
       readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
     val metadata = readMetadataDeferred()
@@ -766,7 +785,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readStreamletNode(): Streamlet = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val ascribedShape = readAscribedShape(loc)
+    val ascribedShape = readAscribedShape()
     val contents = readContentsDeferred[OccursInProcessor | Inlet | Outlet | Connector]()
       .asInstanceOf[Contents[StreamletContents]]
     val metadata = readMetadataDeferred()

@@ -140,10 +140,13 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
         val errors = msgs.justErrors
         // info(errors.format)
         errors must be(empty)
+        // The ascribed shape's loc is normalized to At.empty on every surface
+        // (parser/BAST/JSON) so that `ascribedShape` — which participates in
+        // Definition.equals — stays surface-independent.
         val expected = Streamlet(
           (2, 2, rpi),
           Identifier((2, 9, rpi), "src"),
-          Some(Source((2, 2, rpi)))
+          Some(Source(At.empty))
         )
         context.streamlets.size mustBe 1
         context.streamlets.head mustBe expected

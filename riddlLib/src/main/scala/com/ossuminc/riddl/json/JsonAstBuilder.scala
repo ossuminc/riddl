@@ -664,8 +664,10 @@ object JsonAstBuilder:
     )
 
   /** Rebuild a Processor's OPTIONAL ascribed shape from its keyword (absent = None). */
+  // ascribedShape participates in Definition.equals, so the shape loc must be
+  // surface-independent: normalize to At.empty like the parser/BAST paths.
   private def parseShape(s: Option[String]): Option[StreamletShape] =
-    s.flatMap(k => StreamletShape.fromKeyword(k, At()))
+    s.flatMap(k => StreamletShape.fromKeyword(k, At.empty))
 
   /** Rebuild a Context's optional intention from its keyword (absent/unknown = None). */
   private def parseIntention(s: Option[String]): Option[Intention] =

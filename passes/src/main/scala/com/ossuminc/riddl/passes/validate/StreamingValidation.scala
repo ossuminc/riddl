@@ -84,17 +84,20 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               s"connect the external port to the adaptor instead of directly to ${otherOwner.identify}."
         )
 
+      // A single connector between two *different* external contexts satisfies both
+      // perspectives; emit only ONE advisory. Prefer the outlet (producer) side when
+      // it is external, otherwise consider the inlet (consumer) side.
       (outletCtx, inletCtx) match
-        case (Some(oc), Some(ic)) if isExternalContext(oc) && !(oc eq ic) =>
-          maybeInlet.flatMap(ownerProcessor).foreach { toOwner =>
-            if !toOwner.isInstanceOf[Adaptor] then advise(oc, toOwner)
-          }
-        case _ => ()
-      (outletCtx, inletCtx) match
-        case (Some(oc), Some(ic)) if isExternalContext(ic) && !(oc eq ic) =>
-          maybeOutlet.flatMap(ownerProcessor).foreach { fromOwner =>
-            if !fromOwner.isInstanceOf[Adaptor] then advise(ic, fromOwner)
-          }
+        case (Some(oc), Some(ic)) if !(oc eq ic) =>
+          if isExternalContext(oc) then
+            maybeInlet.flatMap(ownerProcessor).foreach { toOwner =>
+              if !toOwner.isInstanceOf[Adaptor] then advise(oc, toOwner)
+            }
+          else if isExternalContext(ic) then
+            maybeOutlet.flatMap(ownerProcessor).foreach { fromOwner =>
+              if !fromOwner.isInstanceOf[Adaptor] then advise(ic, fromOwner)
+            }
+          end if
         case _ => ()
     }
   }

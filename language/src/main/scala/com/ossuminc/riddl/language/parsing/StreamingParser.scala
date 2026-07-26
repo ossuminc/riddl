@@ -118,7 +118,10 @@ private[parsing] trait StreamingParser {
         close ~ withMetaData ~ Index
     )./.map { case (start, id, contents, descriptives, end) =>
       val loc = at(start, end)
-      val shape = keywordToKind(keyword, loc)
+      // Normalize the ascribed-shape loc to At.empty so it matches the `as <shape>`
+      // parser path. `ascribedShape` participates in Definition.equals, so the shape
+      // loc must be surface-independent (parser/BAST/JSON all use At.empty).
+      val shape = keywordToKind(keyword, At.empty)
       // The dedicated shape keywords (source/sink/flow/merge/split/router) are
       // deprecated in favor of the generic `processor <id> as <shape>` form.
       // `void` has no `processor` equivalent, so it is not deprecated.

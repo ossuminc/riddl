@@ -3167,7 +3167,7 @@ object AST:
     ascribedShape: Option[StreamletShape] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[RepositoryContents]:
-    def format: String = Keyword.entity + " " + id.format
+    def format: String = Keyword.repository + " " + id.format
   end Repository
 
   /** A reference to a repository definition

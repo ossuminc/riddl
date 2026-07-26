@@ -81,9 +81,12 @@ object DeepASTComparison {
       case (t1: Type, t2: Type) => compareType(t1, t2, path)
 
       // Other definitions - add more as needed
-      case (a1: Adaptor, a2: Adaptor)   => compareAdaptor(a1, a2, path)
-      case (h1: Handler, h2: Handler)   => compareHandler(h1, h2, path)
-      case (f1: Function, f2: Function) => compareFunction(f1, f2, path)
+      case (a1: Adaptor, a2: Adaptor)       => compareAdaptor(a1, a2, path)
+      case (s1: Streamlet, s2: Streamlet)   => compareStreamlet(s1, s2, path)
+      case (p1: Projector, p2: Projector)   => compareProjector(p1, p2, path)
+      case (r1: Repository, r2: Repository) => compareRepository(r1, r2, path)
+      case (h1: Handler, h2: Handler)       => compareHandler(h1, h2, path)
+      case (f1: Function, f2: Function)     => compareFunction(f1, f2, path)
 
       // Comments and metadata
       case (c1: Comment, c2: Comment)         => compareComment(c1, c2, path)
@@ -158,6 +161,40 @@ object DeepASTComparison {
       .toList
   }
 
+  /** Compare the optional ascribed streamlet shape carried by every Processor.
+    *
+    * `ascribedShape` participates in `Definition.equals`, so BAST/JSON round-trips
+    * must preserve it. Compared by keyword (the loc is normalized to At.empty on
+    * every surface, so it is not a discriminator).
+    */
+  private def compareAscribedShape(
+    s1: Option[StreamletShape],
+    s2: Option[StreamletShape],
+    path: String
+  ): List[ComparisonResult] = {
+    (s1, s2) match
+      case (None, None) => List(Success(path + ".ascribedShape (absent)"))
+      case (Some(a), Some(b)) if a.keyword == b.keyword =>
+        List(Success(path + s".ascribedShape (${a.keyword})"))
+      case (Some(a), Some(b)) => List(Failure(path + ".ascribedShape", a.keyword, b.keyword))
+      case (Some(a), None)    => List(Failure(path + ".ascribedShape", a.keyword, "None"))
+      case (None, Some(b))    => List(Failure(path + ".ascribedShape", "None", b.keyword))
+  }
+
+  /** Compare a Context's optional intention, which also participates in equality. */
+  private def compareIntention(
+    i1: Option[Intention],
+    i2: Option[Intention],
+    path: String
+  ): List[ComparisonResult] = {
+    (i1, i2) match
+      case (None, None)                 => List(Success(path + ".intention (absent)"))
+      case (Some(a), Some(b)) if a == b => List(Success(path + s".intention (${a.keyword})"))
+      case (Some(a), Some(b))           => List(Failure(path + ".intention", a.keyword, b.keyword))
+      case (Some(a), None)              => List(Failure(path + ".intention", a.keyword, "None"))
+      case (None, Some(b))              => List(Failure(path + ".intention", "None", b.keyword))
+  }
+
   private def compareDomain(d1: Domain, d2: Domain, path: String): List[ComparisonResult] = {
     compareLocation(d1.loc, d2.loc, path) ++
       compareIdentifier(d1.id, d2.id, path) ++
@@ -170,6 +207,8 @@ object DeepASTComparison {
     compareLocation(c1.loc, c2.loc, path) ++
       compareIdentifier(c1.id, c2.id, path) ++
       compareContents(c1.contents, c2.contents, path) ++
+      compareAscribedShape(c1.ascribedShape, c2.ascribedShape, path) ++
+      compareIntention(c1.intention, c2.intention, path) ++
       compareContents(c1.metadata, c2.metadata, path + ".metadata") :+
       Success(path + " (Context)")
   }
@@ -178,8 +217,48 @@ object DeepASTComparison {
     compareLocation(e1.loc, e2.loc, path) ++
       compareIdentifier(e1.id, e2.id, path) ++
       compareContents(e1.contents, e2.contents, path) ++
+      compareAscribedShape(e1.ascribedShape, e2.ascribedShape, path) ++
       compareContents(e1.metadata, e2.metadata, path + ".metadata") :+
       Success(path + " (Entity)")
+  }
+
+  private def compareStreamlet(
+    s1: Streamlet,
+    s2: Streamlet,
+    path: String
+  ): List[ComparisonResult] = {
+    compareLocation(s1.loc, s2.loc, path) ++
+      compareIdentifier(s1.id, s2.id, path) ++
+      compareContents(s1.contents, s2.contents, path) ++
+      compareAscribedShape(s1.ascribedShape, s2.ascribedShape, path) ++
+      compareContents(s1.metadata, s2.metadata, path + ".metadata") :+
+      Success(path + " (Streamlet)")
+  }
+
+  private def compareProjector(
+    p1: Projector,
+    p2: Projector,
+    path: String
+  ): List[ComparisonResult] = {
+    compareLocation(p1.loc, p2.loc, path) ++
+      compareIdentifier(p1.id, p2.id, path) ++
+      compareContents(p1.contents, p2.contents, path) ++
+      compareAscribedShape(p1.ascribedShape, p2.ascribedShape, path) ++
+      compareContents(p1.metadata, p2.metadata, path + ".metadata") :+
+      Success(path + " (Projector)")
+  }
+
+  private def compareRepository(
+    r1: Repository,
+    r2: Repository,
+    path: String
+  ): List[ComparisonResult] = {
+    compareLocation(r1.loc, r2.loc, path) ++
+      compareIdentifier(r1.id, r2.id, path) ++
+      compareContents(r1.contents, r2.contents, path) ++
+      compareAscribedShape(r1.ascribedShape, r2.ascribedShape, path) ++
+      compareContents(r1.metadata, r2.metadata, path + ".metadata") :+
+      Success(path + " (Repository)")
   }
 
   private def compareModule(m1: Module, m2: Module, path: String): List[ComparisonResult] = {
@@ -202,6 +281,7 @@ object DeepASTComparison {
     compareLocation(a1.loc, a2.loc, path) ++
       compareIdentifier(a1.id, a2.id, path) ++
       compareContents(a1.contents, a2.contents, path) ++
+      compareAscribedShape(a1.ascribedShape, a2.ascribedShape, path) ++
       compareContents(a1.metadata, a2.metadata, path + ".metadata") :+
       Success(path + " (Adaptor)")
   }
