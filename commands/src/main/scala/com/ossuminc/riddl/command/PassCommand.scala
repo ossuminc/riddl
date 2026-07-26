@@ -67,11 +67,11 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(us
       val url = PathUtils.urlFromPath(inputPath)
       implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromURL(url).map { rpi =>
-        TopLevelParser.parseInput(rpi) match {
+        TopLevelParser.parseInputWithMessages(rpi) match {
           case Left(errors) =>
             Left[Messages, PassesResult](errors)
-          case Right(root) =>
-            val input: PassInput = PassInput(root)
+          case Right((root, parseMessages)) =>
+            val input: PassInput = PassInput(root, parseMessages)
             val passes = getPasses(options)
             val result = Pass.runThesePasses(input, passes)
             if result.messages.hasErrors then Left(result.messages)

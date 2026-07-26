@@ -31,9 +31,14 @@ object Riddl {
     * @return
     */
   def parse(input: RiddlParserInput)(using io: PlatformContext): Either[Messages, Root] = {
-    TopLevelParser.parseInput(input) match {
-      case Left(errors) => Left(errors)
-      case Right(root)  =>
+    TopLevelParser.parseInputWithMessages(input) match {
+      case Left(errors)               => Left(errors)
+      case Right((root, parseMessages)) =>
+        // This entry point returns only the Root, so there is no channel to thread
+        // non-fatal parse-time messages (warnings/deprecations) into. Surface them
+        // by logging so they are not silently dropped for callers of `parse`.
+        if parseMessages.nonEmpty then logMessages(parseMessages)
+        end if
         // Auto-generate BAST if option is set
         if io.options.autoGenerateBAST then maybeGenerateBAST(root, input.root)
         end if

@@ -79,10 +79,12 @@ object AnalysisPass:
   def analyzeInput(input: RiddlParserInput)(using
     PlatformContext
   ): Either[Messages.Messages, AnalysisResult] =
-    TopLevelParser.parseInput(input) match
+    TopLevelParser.parseInputWithMessages(input) match
       case Left(messages) => Left(messages)
-      case Right(root) =>
-        val result = analyze(root)
+      case Right((root, parseMessages)) =>
+        val passInput = PassInput(root, parseMessages)
+        val passesResult = Pass.runThesePasses(passInput, analysisPasses)
+        val result = AnalysisResult.fromPassesResult(passesResult)
         if result.messages.hasErrors then Left(result.messages)
         else Right(result)
 
