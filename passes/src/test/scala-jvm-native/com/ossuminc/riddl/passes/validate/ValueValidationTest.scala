@@ -132,9 +132,7 @@ class ValueValidationTest extends AbstractValidatingTest {
         td.name,
         shouldFailOnErrors = false
       ) { case (_, _, msgs: Messages) =>
-        msgs.filter(m =>
-          m.kind == Error && m.message.contains("is not a 'let'-local")
-        ) mustBe empty
+        msgs.filter(m => m.kind == Error && m.message.contains("is not a 'let'-local")) mustBe empty
       }
     }
 
@@ -153,6 +151,44 @@ class ValueValidationTest extends AbstractValidatingTest {
     "reject a return whose value type does not match the function output" in { (td: TestData) =>
       parseAndValidate(
         func("""return record Diff(d = "x")"""),
+        td.name,
+        shouldFailOnErrors = false
+      ) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "'return' value has type")
+      }
+    }
+
+    // I1: a handler whose only action is `put` is executable, not Empty — no spurious
+    // "has no executable statements" completeness warning.
+    "not flag a put-only handler as having no executable statements" in { (td: TestData) =>
+      parseAndValidate(
+        app("""put record Greeting(text = "hi") to output Panel"""),
+        td.name,
+        shouldFailOnErrors = false
+      ) { case (_, _, msgs: Messages) =>
+        msgs.filter(m => m.message.contains("has no executable statements")) mustBe empty
+      }
+    }
+
+    // M1: value validation must reach put/return nested under when/match/foreach — proven by the
+    // fact that a nested out-of-scope value-ref / type mismatch is still reported.
+    "reach a put nested inside a when clause (value-ref scope checked)" in { (td: TestData) =>
+      parseAndValidate(
+        app("""when "c" then
+              |          put nonexistent to output Panel
+              |        end""".stripMargin),
+        td.name,
+        shouldFailOnErrors = false
+      ) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "is not a 'let'-local")
+      }
+    }
+
+    "reach a return nested inside a when clause (type mismatch checked)" in { (td: TestData) =>
+      parseAndValidate(
+        func("""when "c" then
+              |        return record Diff(d = "x")
+              |      end""".stripMargin),
         td.name,
         shouldFailOnErrors = false
       ) { case (_, _, msgs: Messages) =>

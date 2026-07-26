@@ -568,8 +568,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case vr: ValueRef      => ValueRefDto(path(vr.path))
     case gv: GetValue =>
       gv.source match
-        case ir: InputRef => GetValueDto("input", path(ir.pathId))
-        case sr: StateRef => GetValueDto("state", path(sr.pathId))
+        case ir: InputRef => GetValueDto("input", Some(ir.keyword), path(ir.pathId))
+        case sr: StateRef => GetValueDto("state", None, path(sr.pathId))
     case c: Constructor =>
       val refKind = c.ref match
         case _: CommandRef => "command"

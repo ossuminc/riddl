@@ -71,7 +71,9 @@ class ValueRoundTripTest extends AbstractValidatingTest {
       pretty must include("put get from input Entry to output Panel")
 
       val regen = parse(pretty, "regen")
-      val ret = Finder(regen).recursiveFindByType[ReturnStatement].headOption
+      val ret = Finder(regen)
+        .recursiveFindByType[ReturnStatement]
+        .headOption
         .getOrElse(fail("return statement lost"))
       ret.value match
         case c: Constructor =>
@@ -80,7 +82,9 @@ class ValueRoundTripTest extends AbstractValidatingTest {
           c.args.head.name.map(_.value) mustBe Some("total")
         case other => fail(s"expected a Constructor return value, got $other")
 
-      val put = Finder(regen).recursiveFindByType[PutStatement].headOption
+      val put = Finder(regen)
+        .recursiveFindByType[PutStatement]
+        .headOption
         .getOrElse(fail("put statement lost"))
       put.output.pathId.value mustBe Seq("Panel")
       put.value match

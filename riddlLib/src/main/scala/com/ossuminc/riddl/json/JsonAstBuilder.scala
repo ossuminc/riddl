@@ -617,9 +617,9 @@ object JsonAstBuilder:
     v match
       case LiteralValueDto(text) => LiteralString(At(), text)
       case ValueRefDto(p)        => ValueRef(At(), pathId(p))
-      case GetValueDto(source, ref) =>
+      case GetValueDto(source, keyword, ref) =>
         val src: InputRef | StateRef = source match
-          case "input" => InputRef(At(), "input", pathId(ref))
+          case "input" => InputRef(At(), keyword.getOrElse("input"), pathId(ref))
           case "state" => StateRef(At(), pathId(ref))
           case other =>
             ctx.err(s"unknown get-value source '$other' (expected input|state)")

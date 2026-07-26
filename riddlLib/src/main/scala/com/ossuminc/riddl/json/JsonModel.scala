@@ -367,8 +367,11 @@ object JsonModel:
   /** `{ "value": "valueRef", "path": "<path>" }` */
   case class ValueRefDto(path: String) extends ValueDto
 
-  /** `{ "value": "get", "source": "input"|"state", "ref": "<path>" }` */
-  case class GetValueDto(source: String, ref: String) extends ValueDto
+  /** `{ "value": "get", "source": "input"|"state", "keyword": "<kw>", "ref": "<path>" }` — the
+    * `keyword` preserves the InputRef alias (input/form/…) for reflection fidelity; a StateRef has
+    * no keyword so it is omitted.
+    */
+  case class GetValueDto(source: String, keyword: Option[String], ref: String) extends ValueDto
 
   /** `{ "name"?: "<field>", "value": <value> }` — a positional or named constructor argument. */
   case class ConstructorArgDto(name: Option[String], value: ValueDto)
@@ -865,7 +868,7 @@ object JsonModel:
     m("value").str match
       case "literal"  => LiteralValueDto(m("text").str)
       case "valueRef" => ValueRefDto(m("path").str)
-      case "get"      => GetValueDto(m("source").str, m("ref").str)
+      case "get"      => GetValueDto(m("source").str, m.get("keyword").map(_.str), m("ref").str)
       case "constructor" =>
         val args = m
           .get("args")
@@ -885,11 +888,14 @@ object JsonModel:
         ujson.Obj("value" -> ujson.Str("literal"), "text" -> ujson.Str(text))
       case ValueRefDto(path) =>
         ujson.Obj("value" -> ujson.Str("valueRef"), "path" -> ujson.Str(path))
-      case GetValueDto(source, ref) =>
-        ujson.Obj(
-          "value" -> ujson.Str("get"),
-          "source" -> ujson.Str(source),
-          "ref" -> ujson.Str(ref)
+      case GetValueDto(source, keyword, ref) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "value" -> ujson.Str("get"),
+            "source" -> ujson.Str(source)
+          )
+            ++ keyword.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
+            ++ Seq("ref" -> (ujson.Str(ref): ujson.Value))
         )
       case ConstructorValueDto(refKind, ref, args) =>
         ujson.Obj(

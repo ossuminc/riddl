@@ -2419,6 +2419,9 @@ object AST:
     * @param value
     *   The [[Value]] supplied for this argument
     */
+  // NOTE: `loc` is NOT defaulted here (unlike the fully-defaultable refs / ValueRef): @JSExportTopLevel
+  // requires any defaulted parameter to be trailing, and `value`/`name` have no empty default. So
+  // `loc` stays required, matching every other exported statement/node with required trailing fields.
   @JSExportTopLevel("ConstructorArg")
   case class ConstructorArg(
     loc: At,
@@ -2440,6 +2443,8 @@ object AST:
     * @param args
     *   The arguments supplied to the constructor
     */
+  // `loc` required (not defaulted): see the ConstructorArg note — @JSExportTopLevel forbids a
+  // non-trailing default and `ref`/`args` have no empty default.
   @JSExportTopLevel("Constructor")
   case class Constructor(
     loc: At,
@@ -2462,8 +2467,8 @@ object AST:
     */
   @JSExportTopLevel("ValueRef")
   case class ValueRef(
-    loc: At,
-    path: PathIdentifier
+    loc: At = At.empty,
+    path: PathIdentifier = PathIdentifier.empty
   ) extends RiddlValue:
     override def kind: String = "Value Reference"
     def format: String = path.format
@@ -2477,6 +2482,8 @@ object AST:
     * @param source
     *   The [[InputRef]] or [[StateRef]] to read from
     */
+  // `loc` required (not defaulted): see the ConstructorArg note — @JSExportTopLevel forbids a
+  // non-trailing default and `source` has no empty default.
   @JSExportTopLevel("GetValue")
   case class GetValue(
     loc: At,

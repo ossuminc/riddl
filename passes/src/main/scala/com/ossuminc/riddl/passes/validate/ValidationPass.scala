@@ -2655,21 +2655,22 @@ case class ValidationPass(
           }
         }
         // Arity.
+        def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
         if c.args.sizeIs > fields.size then
           messages.addError(
             c.loc,
-            s"Constructor of ${typ.identify} has ${c.args.size} arguments but the type has only " +
-              s"${fields.size} fields",
-            suggestion = s"Supply at most ${fields.size} arguments."
+            s"Constructor of ${typ.identify} has ${count(c.args.size, "argument")} but the type " +
+              s"has only ${count(fields.size, "field")}",
+            suggestion = s"Supply at most ${count(fields.size, "argument")}."
           )
         else if c.args.nonEmpty && c.args.forall(_.name.isEmpty) && c.args.sizeIs != fields.size
         then
           messages.addError(
             c.loc,
-            s"Constructor of ${typ.identify} has ${c.args.size} positional arguments but the type " +
-              s"has ${fields.size} fields",
+            s"Constructor of ${typ.identify} has ${count(c.args.size, "positional argument")} but " +
+              s"the type has ${count(fields.size, "field")}",
             suggestion =
-              s"Supply exactly ${fields.size} positional arguments, or use named arguments for a subset."
+              s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset."
           )
         // Best-effort per-argument type compatibility (only when both sides resolve to a Type).
         c.args.zipWithIndex.foreach { case (arg, idx) =>
@@ -2817,7 +2818,11 @@ case class ValidationPass(
       handler.clauses.foreach { clause =>
         walkStatements(clause.contents) {
           case _: TellStatement | _: SendStatement | _: YieldStatement | _: MorphStatement |
-              _: SetStatement | _: BecomeStatement | _: ErrorStatement | _: CodeStatement =>
+              _: SetStatement | _: BecomeStatement | _: ErrorStatement | _: CodeStatement |
+              _: PutStatement =>
+            // A45: `put` publishes to a UI output — an executable effect. (ReturnStatement is not
+            // added here: it only occurs in function bodies, which are classified by
+            // validateFunction's statement-non-empty check, not classifyHandlers.)
             executableCount += 1
           case _: PromptStatement =>
             promptCount += 1
