@@ -244,12 +244,97 @@ class StreamValidatorTest extends AbstractValidatingTest {
     }
 
     "validate Streamlet types" in { _ =>
-      // A32/Task 2: the AST no longer throws IllegalArgumentException on a
-      // shape/arity mismatch (crashing on user input is wrong). The arity-vs-
-      // ascribed-shape check moves to ValidationPass as an Error - Task 10
-      // restores these cases as assertions on validation messages. Pending
-      // until Task 10 lands.
-      pending
+      // A32/Task 10: the AST no longer throws IllegalArgumentException on a shape/arity
+      // mismatch (crashing on user input is wrong). Instead ValidationPass emits an Error
+      // when the ascribed shape disagrees with the arity-derived shape. Each case below
+      // constructs a streamlet whose ascribed shape contradicts its ports and asserts a
+      // validation Error mentioning the ascription and the arity.
+      def mismatch(streamlet: Streamlet): Messages.Messages = {
+        pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+          Riddl.validate(root(Seq(streamlet)), shouldFailOnError = false) match {
+            case Left(messages)   => messages
+            case Right(passesRes) => passesRes.messages
+          }
+        }
+      }
+      def assertShapeError(streamlet: Streamlet, ascribed: String): Unit = {
+        val messages = mismatch(streamlet)
+        messages.hasErrors must be(true)
+        messages.justErrors.exists { (m: Messages.Message) =>
+          m.message.contains(s"is ascribed 'as $ascribed'") && m.message.contains("arity")
+        } must be(true)
+      }
+
+      // source with 2 inlets, 0 outlets -> arity is not a source
+      assertShapeError(
+        Streamlet(
+          At(),
+          Identifier(At(), "src"),
+          Some(Source(At())),
+          Contents[StreamletContents](inlet("in1", "Int"), inlet("in2", "Int"))
+        ),
+        "source"
+      )
+      // sink with 1 inlet + 1 outlet -> arity is a flow
+      assertShapeError(
+        Streamlet(
+          At(),
+          Identifier(At(), "snk"),
+          Some(Sink(At())),
+          Contents[StreamletContents](inlet("in1", "Int"), outlet("out1", "Int"))
+        ),
+        "sink"
+      )
+      // flow with 2 outlets, 0 inlets
+      assertShapeError(
+        Streamlet(
+          At(),
+          Identifier(At(), "flw"),
+          Some(Flow(At())),
+          Contents[StreamletContents](outlet("out1", "Int"), outlet("out2", "Int"))
+        ),
+        "flow"
+      )
+      // split with 2 outlets, 0 inlets
+      assertShapeError(
+        Streamlet(
+          At(),
+          Identifier(At(), "spl"),
+          Some(Split(At())),
+          Contents[StreamletContents](outlet("out1", "Int"), outlet("out2", "Int"))
+        ),
+        "split"
+      )
+      // merge with 2 inlets, 0 outlets
+      assertShapeError(
+        Streamlet(
+          At(),
+          Identifier(At(), "mrg"),
+          Some(Merge(At())),
+          Contents[StreamletContents](inlet("in1", "Int"), inlet("in2", "Int"))
+        ),
+        "merge"
+      )
+      // router with 1 outlet, 0 inlets
+      assertShapeError(
+        Streamlet(
+          At(),
+          Identifier(At(), "rtr"),
+          Some(Router(At())),
+          Contents[StreamletContents](outlet("out2", "Int"))
+        ),
+        "router"
+      )
+      // void with 1 inlet + 1 outlet -> arity is a flow
+      assertShapeError(
+        Streamlet(
+          At(),
+          Identifier(At(), "vd"),
+          Some(Void(At())),
+          Contents[StreamletContents](inlet("in1", "Int"), outlet("out2", "Int"))
+        ),
+        "void"
+      )
     }
 
     // ---- A31 (Task 9): exactly one connector per inlet and per outlet ----
@@ -290,6 +375,66 @@ class StreamValidatorTest extends AbstractValidatingTest {
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
         messages.justErrors.exists(_.message.contains("exactly one is allowed")) must be(false)
+      }
+    }
+
+    // ---- A32 (Task 10): as-shape vs arity ascription + omitted-shape nudge ----
+
+    "style-warn a ported processor with no 'as' ascription" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          | type T = Integer
+          | context c is {
+          |  processor P is { inlet i is type T outlet o is type T handler h is { ??? } }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          messages
+            .filter(_.kind == Messages.StyleWarning)
+            .exists(_.message.contains("has ports but no 'as <shape>' ascription")) must be(true)
+        }
+      }
+    }
+
+    "not style-warn a ported processor that ascribes a matching shape" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          | type T = Integer
+          | context c is {
+          |  processor P as flow is { inlet i is type T outlet o is type T handler h is { ??? } }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          messages.exists(_.message.contains("has ports but no 'as <shape>' ascription")) must be(
+            false
+          )
+          messages.justErrors.exists(_.message.contains("is ascribed 'as")) must be(false)
+        }
+      }
+    }
+
+    "error when a processor's 'as' ascription contradicts its arity" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          | type T = Integer
+          | context c is {
+          |  processor P as source is { inlet i is type T handler h is { ??? } }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          messages.justErrors.exists { m =>
+            m.message.contains("is ascribed 'as source'") && m.message.contains("arity")
+          } must be(true)
+        }
       }
     }
   }

@@ -254,6 +254,13 @@ case class ValidationPass(
 
   def process(value: RiddlValue, parents: ParentStack): Unit = {
     val parentsAsSeq: Parents = parents.toParents
+    // Task 10 (A32): shape/arity ascription check runs for EVERY processor kind
+    // (context/entity/projector/repository/adaptor/streamlet), so it is dispatched here
+    // rather than duplicated in each per-kind validate method.
+    value match {
+      case p: Processor[?] => validateProcessorShape(p)
+      case _               => ()
+    }
     value match {
       case f: AggregateValue =>
         f match {
@@ -1621,6 +1628,46 @@ case class ValidationPass(
           "Adaptor not contained within Context",
           suggestion = "Define the adaptor inside a context."
         )
+    }
+  }
+
+  /** Task 10 (A32): validate a processor's ascribed stream shape against its arity, and nudge when
+    * a ported processor omits an ascription. Runs for every processor kind via `process`.
+    *   - `ascribedShape` present but its canonical shape disagrees with the arity-derived shape ->
+    *     an Error naming the ascription, the arity, and the derived shape.
+    *   - `ascribedShape` absent and the processor declares at least one port -> a suppressible
+    *     StyleWarning (gated by `showStyleWarnings` in the message accumulator).
+    *   - A portless processor with no ascription emits nothing.
+    */
+  private def validateProcessorShape(processor: Processor[?]): Unit = {
+    val numOutlets = processor.outlets.size
+    val numInlets = processor.inlets.size
+    processor.ascribedShape match {
+      // A portless processor (0 inlets, 0 outlets) is an incomplete placeholder, not a
+      // contradiction: it is flagged elsewhere as "should have content". Only compare the
+      // ascription against the arity once at least one port is declared.
+      case Some(ascribed) if numOutlets + numInlets >= 1 =>
+        val derived = processor.arityShape
+        if ascribed.keyword != derived.keyword then
+          messages.addError(
+            processor.errorLoc,
+            s"${processor.identify} is ascribed 'as ${ascribed.keyword}' but its arity " +
+              s"($numOutlets outlets, $numInlets inlets) is ${derived.keyword}",
+            suggestion =
+              s"Change the ascription to 'as ${derived.keyword}', or adjust the inlets/outlets so the " +
+                s"arity matches 'as ${ascribed.keyword}'."
+          )
+      case Some(_) => () // ascribed shape but no ports yet: incomplete, handled elsewhere
+      case None =>
+        if numOutlets + numInlets >= 1 then
+          messages.addStyle(
+            processor.errorLoc,
+            s"${processor.identify} has ports but no 'as <shape>' ascription; consider adding one " +
+              "(it documents intent and is validated)",
+            suggestion =
+              s"Add 'as ${processor.arityShape.keyword}' to ${processor.identify} to document and " +
+                "validate its stream shape."
+          )
     }
   }
 

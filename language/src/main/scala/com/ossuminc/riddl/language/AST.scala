@@ -1037,11 +1037,11 @@ object AST:
     /** The shape explicitly ascribed by the author via `as <shape>`, if any. */
     def ascribedShape: Option[StreamletShape]
 
-    /** The effective shape: the ascribed shape if present, otherwise derived from arity
-      * (the counts of inlets and outlets). Arity validation is performed by a later pass,
-      * so degenerate arities fall back to [[Void]] here rather than crashing.
+    /** The shape derived purely from arity (the counts of inlets and outlets), ignoring any
+      * ascribed shape. Degenerate arities fall back to [[Void]] rather than crashing; arity
+      * validation is performed by a later pass.
       */
-    def effectiveShape: StreamletShape = ascribedShape.getOrElse {
+    def arityShape: StreamletShape = {
       val out = outlets.size
       val in = inlets.size
       val loc = this.loc
@@ -1056,6 +1056,12 @@ object AST:
         case _                          => Void(loc) // degenerate; validated later
       end match
     }
+
+    /** The effective shape: the ascribed shape if present, otherwise derived from arity (the counts
+      * of inlets and outlets). Arity validation is performed by a later pass, so degenerate arities
+      * fall back to [[Void]] here rather than crashing.
+      */
+    def effectiveShape: StreamletShape = ascribedShape.getOrElse(arityShape)
   end Processor
 
   ///////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
@@ -3234,10 +3240,9 @@ object AST:
     * @param contents
     *   The definitional content for this Context
     */
-  /** The intent of a [[Context]] — what kind of subsystem it is. Drives code
-    * generation and architectural validation (A37). Optional; a context without
-    * an intention is generic. Declared as an optional keyword prefix before
-    * `context` (e.g. `application context Orders is { … }`).
+  /** The intent of a [[Context]] — what kind of subsystem it is. Drives code generation and
+    * architectural validation (A37). Optional; a context without an intention is generic. Declared
+    * as an optional keyword prefix before `context` (e.g. `application context Orders is { … }`).
     */
   enum Intention:
     case Application, External, Gateway, Service
