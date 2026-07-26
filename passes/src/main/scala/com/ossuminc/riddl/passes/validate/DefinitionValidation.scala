@@ -117,6 +117,11 @@ object RecognizedOptions:
     "faicon" -> OptionSpec(Seq.empty, 1, 1),
     // Domain/Context structural options
     "external" -> OptionSpec(Seq("Domain", "Context"), 0, 0),
+    // Deprecated context-intention options (Task 12): recognized so they draw only the
+    // Deprecation message, not an additional "unrecognized option" StyleWarning.
+    "gateway" -> OptionSpec(Seq("Context"), 0, 0),
+    "service" -> OptionSpec(Seq("Context"), 0, 0),
+    "wrapper" -> OptionSpec(Seq("Context"), 0, 0),
     "microservice" -> OptionSpec(Seq("Context", "Entity", "Projector", "Repository", "Saga"), 0, 0),
     "namespace" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
     "package" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
