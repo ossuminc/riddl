@@ -32,8 +32,8 @@ is covered in that construct's phase. The builder emits references as
 |---|---|---|
 | Root | ✅ Phase 1 | JSON top level (`{ "domains": [...] }`) |
 | Domain | ✅ Phase 1 | contexts, types, authors; nested subdomains via recursion |
-| Context | ✅ Phase 1 | types, commands/events/queries/results, entities, handlers |
-| Entity | ✅ Phase 1 | state, handlers, invariants, types |
+| Context | ✅ Phase 1 | types, commands/events/queries/results, entities, handlers; opt. `intention`/`shape`/inlets/outlets (2.0) |
+| Entity | ✅ Phase 1 | state, handlers, invariants, types; opt. `shape`/inlets/outlets (2.0) |
 | Type | ✅ Phase 1 | named type with a type expression |
 | Field | ✅ Phase 1 | inside records/messages |
 | State | ✅ Phase 1 | record reference only (RIDDL holds no fields in a state) |
@@ -53,11 +53,11 @@ is covered in that construct's phase. The builder emits references as
 | Term | ✅ Phase 9 | glossary entry (metadata; see Metadata section) |
 | Method | ✅ Phase 3 | aggregate method with args |
 | Function | ✅ Phase 3 | requires/returns as `ArgDto` (type ref or deprecated inline agg) + body + nested |
-| Adaptor | ✅ Phase 4 | direction + ContextRef |
-| Projector | ✅ Phase 4 | RepositoryRef |
-| Repository | ✅ Phase 4 | Schema |
+| Adaptor | ✅ Phase 4 | direction + ContextRef; opt. `shape`/inlets/outlets (2.0) |
+| Projector | ✅ Phase 4 | RepositoryRef; opt. `shape`/inlets/outlets (2.0) |
+| Repository | ✅ Phase 4 | Schema; opt. `shape`/inlets/outlets (2.0) |
 | Schema | ✅ Phase 4 | Map-based data/links/indices |
-| Streamlet | ✅ Phase 4 | shape ↔ inlet/outlet cardinality |
+| Streamlet | ✅ Phase 4 | optional author-ascribed `shape` (None = derived from arity); inlets/outlets |
 | Inlet | ✅ Phase 4 | |
 | Outlet | ✅ Phase 4 | |
 | Connector | ✅ Phase 4 | OutletRef → InletRef |

@@ -150,6 +150,8 @@ object JsonAstBuilder:
     val sagas = c.sagas.map(buildSaga)
     val groups = c.groups.map(buildGroup)
     val handlers = c.handlers.map(buildHandler)
+    val inlets = c.inlets.map(buildInlet)
+    val outlets = c.outlets.map(buildOutlet)
     Context(
       At(),
       ident(c.name),
@@ -170,8 +172,12 @@ object JsonAstBuilder:
         relationships,
         sagas,
         groups,
-        handlers
+        handlers,
+        inlets,
+        outlets
       ),
+      ascribedShape = parseShape(c.shape),
+      intention = parseIntention(c.intention),
       metadata = meta(c.brief, c.metadata)
     )
 
@@ -226,6 +232,8 @@ object JsonAstBuilder:
     val functions = e.functions.map(buildFunction)
     val handlers = e.handlers.map(buildHandler)
     val invariants = e.invariants.map(buildInvariant)
+    val inlets = e.inlets.map(buildInlet)
+    val outlets = e.outlets.map(buildOutlet)
     Entity(
       At(),
       ident(e.name),
@@ -239,8 +247,11 @@ object JsonAstBuilder:
         states,
         functions,
         handlers,
-        invariants
+        invariants,
+        inlets,
+        outlets
       ),
+      ascribedShape = parseShape(e.shape),
       metadata = meta(e.brief, e.metadata)
     )
 
@@ -629,6 +640,8 @@ object JsonAstBuilder:
     val results = a.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val functions = a.functions.map(buildFunction)
     val handlers = a.handlers.map(buildHandler)
+    val inlets = a.inlets.map(buildInlet)
+    val outlets = a.outlets.map(buildOutlet)
     Adaptor(
       At(),
       ident(a.name),
@@ -642,23 +655,21 @@ object JsonAstBuilder:
         queries,
         results,
         functions,
-        handlers
+        handlers,
+        inlets,
+        outlets
       ),
+      ascribedShape = parseShape(a.shape),
       metadata = meta(a.brief)
     )
 
-  private def streamletShape(s: String)(using ctx: Ctx): StreamletShape =
-    s match
-      case "source" => Source(At())
-      case "sink"   => Sink(At())
-      case "flow"   => Flow(At())
-      case "merge"  => Merge(At())
-      case "split"  => Split(At())
-      case "router" => Router(At())
-      case "void"   => Void(At())
-      case other =>
-        ctx.err(s"unknown streamlet shape '$other' (source|sink|flow|merge|split|router|void)")
-        Void(At())
+  /** Rebuild a Processor's OPTIONAL ascribed shape from its keyword (absent = None). */
+  private def parseShape(s: Option[String]): Option[StreamletShape] =
+    s.flatMap(k => StreamletShape.fromKeyword(k, At()))
+
+  /** Rebuild a Context's optional intention from its keyword (absent/unknown = None). */
+  private def parseIntention(s: Option[String]): Option[Intention] =
+    s.flatMap(Intention.fromKeyword)
 
   private def buildInlet(p: PortletDto): Inlet =
     Inlet(At(), ident(p.name), TypeRef(At(), "type", pathId(p.`type`)), meta(p.brief))
@@ -688,7 +699,7 @@ object JsonAstBuilder:
     Streamlet(
       At(),
       ident(s.name),
-      Some(streamletShape(s.shape)),
+      parseShape(s.shape),
       contentsOf[StreamletContents](
         types,
         commands,

@@ -181,7 +181,13 @@ object JsonModel:
     sagas: Seq[SagaDto] = Nil,
     groups: Seq[GroupDto] = Nil,
     handlers: Seq[HandlerDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    // A Context is a Processor: it may carry an optional intention keyword prefix, an optional
+    // ascribed shape, and inlet/outlet ports declared directly in its body.
+    intention: Option[String] = None,
+    shape: Option[String] = None,
+    inlets: Seq[PortletDto] = Nil,
+    outlets: Seq[PortletDto] = Nil
   )
 
   case class MessageDto(name: String, brief: Option[String] = None, fields: Seq[FieldDto] = Nil)
@@ -202,7 +208,11 @@ object JsonModel:
     functions: Seq[FunctionDto] = Nil,
     handlers: Seq[HandlerDto] = Nil,
     invariants: Seq[InvariantDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    // A Processor may carry an optional ascribed shape and inlet/outlet ports.
+    shape: Option[String] = None,
+    inlets: Seq[PortletDto] = Nil,
+    outlets: Seq[PortletDto] = Nil
   )
 
   /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
@@ -342,7 +352,11 @@ object JsonModel:
     queries: Seq[MessageDto] = Nil,
     results: Seq[MessageDto] = Nil,
     functions: Seq[FunctionDto] = Nil,
-    handlers: Seq[HandlerDto] = Nil
+    handlers: Seq[HandlerDto] = Nil,
+    // A Processor may carry an optional ascribed shape and inlet/outlet ports.
+    shape: Option[String] = None,
+    inlets: Seq[PortletDto] = Nil,
+    outlets: Seq[PortletDto] = Nil
   )
 
   /** An inlet or outlet: `{ "name": "in", "type": "<typePath>", "brief"?: ... }` */
@@ -351,10 +365,12 @@ object JsonModel:
   /** `{ "name": "C", "from": "<outletPath>", "to": "<inletPath>", "brief"?: ... }` */
   case class ConnectorDto(name: String, from: String, to: String, brief: Option[String] = None)
 
-  /** `{ "name": "S", "shape": "source"|"sink"|"flow"|"merge"|"split"|"router"|"void", ... }` */
+  /** `{ "name": "S", "shape"?: "source"|"sink"|"flow"|"merge"|"split"|"router"|"void", ... }`.
+    * `shape` is the OPTIONAL author-ascribed shape (absent = derived from arity).
+    */
   case class StreamletDto(
     name: String,
-    shape: String,
+    shape: Option[String] = None,
     brief: Option[String] = None,
     inlets: Seq[PortletDto] = Nil,
     outlets: Seq[PortletDto] = Nil,
@@ -391,7 +407,11 @@ object JsonModel:
     queries: Seq[MessageDto] = Nil,
     results: Seq[MessageDto] = Nil,
     functions: Seq[FunctionDto] = Nil,
-    handlers: Seq[HandlerDto] = Nil
+    handlers: Seq[HandlerDto] = Nil,
+    // A Processor may carry an optional ascribed shape and inlet/outlet ports.
+    shape: Option[String] = None,
+    inlets: Seq[PortletDto] = Nil,
+    outlets: Seq[PortletDto] = Nil
   )
 
   /** A repository schema: `{ "name": "S", "kind"?: "Relational"|..., "data"?: {field->typePath},
@@ -416,7 +436,11 @@ object JsonModel:
     events: Seq[MessageDto] = Nil,
     queries: Seq[MessageDto] = Nil,
     results: Seq[MessageDto] = Nil,
-    handlers: Seq[HandlerDto] = Nil
+    handlers: Seq[HandlerDto] = Nil,
+    // A Processor may carry an optional ascribed shape and inlet/outlet ports.
+    shape: Option[String] = None,
+    inlets: Seq[PortletDto] = Nil,
+    outlets: Seq[PortletDto] = Nil
   )
 
   // ---------------------------------------------------------------------------

@@ -122,7 +122,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[SagaDto],
             col[GroupDto],
             col[HandlerDto],
-            metaOf(c.metadata)
+            metaOf(c.metadata),
+            c.intention.map(_.keyword),
+            c.ascribedShape.map(_.keyword),
+            col[InletChild].map(_.dto),
+            col[OutletChild].map(_.dto)
           )
         )
       case e: Entity =>
@@ -141,7 +145,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[FunctionDto],
             col[HandlerDto],
             col[InvariantDto],
-            metaOf(e.metadata)
+            metaOf(e.metadata),
+            e.ascribedShape.map(_.keyword),
+            col[InletChild].map(_.dto),
+            col[OutletChild].map(_.dto)
           )
         )
       case s: State =>
@@ -203,22 +210,17 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             msgs(AggregateUseCase.QueryCase),
             msgs(AggregateUseCase.ResultCase),
             col[FunctionDto],
-            col[HandlerDto]
+            col[HandlerDto],
+            a.ascribedShape.map(_.keyword),
+            col[InletChild].map(_.dto),
+            col[OutletChild].map(_.dto)
           )
         )
       case s: Streamlet =>
-        val shape = s.effectiveShape match
-          case _: Source => "source"
-          case _: Sink   => "sink"
-          case _: Flow   => "flow"
-          case _: Merge  => "merge"
-          case _: Split  => "split"
-          case _: Router => "router"
-          case _         => "void"
         Some(
           StreamletDto(
             s.id.value,
-            shape,
+            s.ascribedShape.map(_.keyword),
             briefOf(s.metadata),
             col[InletChild].map(_.dto),
             col[OutletChild].map(_.dto),
@@ -245,7 +247,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             msgs(AggregateUseCase.QueryCase),
             msgs(AggregateUseCase.ResultCase),
             col[FunctionDto],
-            col[HandlerDto]
+            col[HandlerDto],
+            p.ascribedShape.map(_.keyword),
+            col[InletChild].map(_.dto),
+            col[OutletChild].map(_.dto)
           )
         )
       case r: Repository =>
@@ -259,7 +264,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             msgs(AggregateUseCase.EventCase),
             msgs(AggregateUseCase.QueryCase),
             msgs(AggregateUseCase.ResultCase),
-            col[HandlerDto]
+            col[HandlerDto],
+            r.ascribedShape.map(_.keyword),
+            col[InletChild].map(_.dto),
+            col[OutletChild].map(_.dto)
           )
         )
       case s: Saga =>

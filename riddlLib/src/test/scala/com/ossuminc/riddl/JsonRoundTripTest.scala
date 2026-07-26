@@ -6,6 +6,8 @@
 
 package com.ossuminc.riddl
 
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.Finder
 import com.ossuminc.riddl.utils.{pc, PlatformContext}
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
@@ -197,6 +199,58 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           end match
         case RiddlResult.Failure(errors) =>
           fail(s"parse of the handler-kinds model failed: $errors")
+      end match
+    }
+
+    "round-trip context intention, ascribed shape (Some/None), and ports losslessly (Task 16)" in {
+      val pmModel =
+        """domain PM is {
+          |  type T is String
+          |  application context Orders as flow is {
+          |    processor P as split is {
+          |      inlet i is T
+          |      outlet o1 is T
+          |      outlet o2 is T
+          |    }
+          |    processor Q is {
+          |      inlet qi is T
+          |    }
+          |    entity E is {
+          |      inlet ei is T
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(pmModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"intention\"")
+          json1 must include("\"application\"")
+          json1 must include("\"flow\"")
+          json1 must include("\"split\"")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              // Fixed point: the AST<->JSON mapping is lossless for the new fields.
+              RiddlLib.root2Json(root1) mustBe json1
+              // And the rebuilt AST carries intention, shape (Some AND None), and ports.
+              val f = Finder(root1.contents)
+              val ctx = f.recursiveFindByType[Context].head
+              ctx.intention mustBe Some(Intention.Application)
+              ctx.ascribedShape.map(_.keyword) mustBe Some("flow")
+              val p = f.recursiveFindByType[Streamlet].find(_.id.value == "P").get
+              p.ascribedShape.map(_.keyword) mustBe Some("split")
+              p.inlets.map(_.id.value) mustBe Seq("i")
+              p.outlets.map(_.id.value) mustBe Seq("o1", "o2")
+              val q = f.recursiveFindByType[Streamlet].find(_.id.value == "Q").get
+              q.ascribedShape mustBe None
+              q.inlets.map(_.id.value) mustBe Seq("qi")
+              val e = f.recursiveFindByType[Entity].head
+              e.inlets.map(_.id.value) mustBe Seq("ei")
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the processor-model JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the processor-model model failed: $errors")
       end match
     }
   }
