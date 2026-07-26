@@ -17,6 +17,7 @@ class BuildInfoTest extends AbstractTestingBasis {
       println(td.name)
       RiddlBuildInfo.name must be("utils")
       RiddlBuildInfo.version must startWith regex """[0-9]+."""
+      RiddlBuildInfo.gitCommit must not be empty
       RiddlBuildInfo.scalaVersion must startWith("3")
       RiddlBuildInfo.sbtVersion must startWith("1.")
       RiddlBuildInfo.normalizedName must be("utils")
@@ -44,7 +45,7 @@ class BuildInfoTest extends AbstractTestingBasis {
     "has functioning toMap" in { (td: TestData) =>
       println(td.name)
       val map = RiddlBuildInfo.toMap
-      map.size must be(23)
+      map.size must be(24) // 23 + gitCommit
     }
     "has functioning toJson" in { (td: TestData) =>
       println(td.name)

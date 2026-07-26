@@ -15,6 +15,14 @@ enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
 
+// The full git commit SHA of the source tree, captured at build-definition load.
+// Exposed via RiddlBuildInfo.gitCommit so `riddlc info` can report the exact source
+// commit a binary was built from (lets downstream model repos locate the changes).
+// Falls back to "unknown" outside a git checkout (e.g. a source tarball).
+lazy val gitHeadCommit: String =
+  try scala.sys.process.Process(Seq("git", "rev-parse", "HEAD")).!!.trim
+  catch { case _: Throwable => "unknown" }
+
 // Per-platform dependency: a row Project depends on another row's compile AND
 // test code (the sbt 1.x CrossProject `cpDep` helper carried both).
 def pDep(p: Project): ClasspathDependency = p % "compile->compile;test->test"
@@ -66,7 +74,7 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
   )
   .jvmConfigure(jvmNativeSrc("utils"))
   .jvmConfigure(With.coverage(70))
-  .jvmConfigure(With.BuildInfo)
+  .jvmConfigure(With.BuildInfo.withKeys("gitCommit" -> gitHeadCommit))
   .jvmConfigure(With.MiMa(V.previous, Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
   .jvmSettings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
@@ -78,7 +86,8 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
   .jsConfigure(With.noMiMa)
   .jsConfigure(
     With.BuildInfo.withKeys(
-      "scalaJSVersion" -> org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.scalaJSVersion
+      "scalaJSVersion" -> org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.scalaJSVersion,
+      "gitCommit" -> gitHeadCommit
     )
   )
   .jsSettings(
@@ -103,7 +112,8 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
   )
   .nativeConfigure(
     With.BuildInfo.withKeys(
-      "scalaNativeVersion" -> scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeVersion
+      "scalaNativeVersion" -> scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeVersion,
+      "gitCommit" -> gitHeadCommit
     )
   )
   .nativeSettings(

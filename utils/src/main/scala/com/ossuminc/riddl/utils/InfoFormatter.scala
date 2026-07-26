@@ -21,6 +21,7 @@ object InfoFormatter {
     val lines = Seq(
       "Build information about RIDDL:",
       s"        version: ${RiddlBuildInfo.version}",
+      s"     git commit: ${RiddlBuildInfo.gitCommit}",
       s"  documentation: ${RiddlBuildInfo.projectHomepage}",
       s"      copyright: ${RiddlBuildInfo.copyright}",
       s"       built at: ${RiddlBuildInfo.builtAtString}",
