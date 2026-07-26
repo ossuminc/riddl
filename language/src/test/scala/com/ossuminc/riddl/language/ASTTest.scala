@@ -455,6 +455,22 @@ class ASTTest extends AbstractTestingBasis {
     }
   }
 
+  "Context intention" should {
+    "carry an optional intention and parse intention keywords" in {
+      val c = Context(
+        At.empty,
+        Identifier(At.empty, "C"),
+        Contents.empty(),
+        intention = Some(Intention.Application)
+      )
+      c.intention must be(Some(Intention.Application))
+      Context(At.empty, Identifier(At.empty, "P"), Contents.empty()).intention must be(None)
+      Intention.fromKeyword("gateway") must be(Some(Intention.Gateway))
+      Intention.fromKeyword("service").map(_.keyword) must be(Some("service"))
+      Intention.fromKeyword("bogus") must be(None)
+    }
+  }
+
   "Processor ports" should {
     "expose inlets and outlets on every processor kind (via the Processor base)" in {
       val inlet = Inlet(

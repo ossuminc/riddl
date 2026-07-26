@@ -3235,11 +3235,36 @@ object AST:
     *   The definitional content for this Context
     */
   @JSExportTopLevel("Context")
+  /** The intent of a [[Context]] — what kind of subsystem it is. Drives code
+    * generation and architectural validation (A37). Optional; a context without
+    * an intention is generic. Declared as an optional keyword prefix before
+    * `context` (e.g. `application context Orders is { … }`).
+    */
+  enum Intention:
+    case Application, External, Gateway, Service
+    def keyword: String = this match
+      case Application => "application"
+      case External    => "external"
+      case Gateway     => "gateway"
+      case Service     => "service"
+  end Intention
+
+  object Intention:
+    /** Parse an intention keyword; None if it is not one of the four. */
+    def fromKeyword(kw: String): Option[Intention] = kw match
+      case "application" => Some(Intention.Application)
+      case "external"    => Some(Intention.External)
+      case "gateway"     => Some(Intention.Gateway)
+      case "service"     => Some(Intention.Service)
+      case _             => None
+  end Intention
+
   case class Context(
     loc: At,
     id: Identifier,
     contents: Contents[ContextContents] = Contents.empty[ContextContents](),
     ascribedShape: Option[StreamletShape] = None,
+    intention: Option[Intention] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[ContextContents]
       with WithProjectors[ContextContents]
