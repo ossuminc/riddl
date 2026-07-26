@@ -445,23 +445,26 @@ case class ValidationPass(
             val finder = Finder(omc.contents)
             val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
             val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
-            val replies: Seq[ReplyStatement] = finder.recursiveFindByType[ReplyStatement]
+            val yields: Seq[YieldStatement] = finder.recursiveFindByType[YieldStatement]
             val foundSend = sends.nonEmpty &&
               sends.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
             val foundTell = tells.nonEmpty &&
               tells.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
-            val foundReply = replies.nonEmpty &&
-              replies.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
-            if !(foundSend || foundTell || foundReply) then
+            val foundYield = yields.nonEmpty &&
+              yields.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
+            if !(foundSend || foundTell || foundYield) then
               messages.addCompleteness(
                 omc.errorLoc,
                 s"Query processing in ${entity.identify} should result in a reply or sending a result",
                 suggestion =
-                  "Reply with a result or send a result type from this query handler, e.g. 'reply result QueryResult'."
+                  "Yield a result or send a result type from this query handler, e.g. 'yield result QueryResult'."
               )
           case _ =>
         }
       }
+      // A19↔A22 conformance applies to any context (not only entities) whose handled message is a
+      // command/query with a `yields` contract.
+      checkYieldConformance(omc)
     } else {}
     omc.from.foreach { (_: Option[Identifier], ref: Reference[Definition]) =>
       checkRef[Definition](ref, parents)
@@ -582,10 +585,72 @@ case class ValidationPass(
           case ir: InvariantRef =>
             checkRef[Invariant](ir, parents)
         }
-      case ReplyStatement(_, msg) =>
+      case YieldStatement(_, msg) =>
         checkRef[Type](msg, parents)
     end match
   end validateStatement
+
+  /** A19↔A22 conformance: a `yield`/`reply` statement is the runtime side of a command/query's
+    * declarative `yields` clause. Enforce that the two agree:
+    *   - a command/query that declares `yields M` must be handled by a clause that yields `M` (same
+    *     kind + same resolved Type);
+    *   - a yield whose message does not match the declared `yields` is an error;
+    *   - yielding in a handler whose command/query declares no `yields` is an error — `yields` is
+    *     the contract that authorizes a response.
+    *
+    * Skips cleanly when refs don't resolve (those are reported by other checks) and when the
+    * handled message is not a command/query (no `yields` contract applies).
+    */
+  private def checkYieldConformance(omc: OnMessageLikeClause): Unit = {
+    if omc.msg.isEmpty then return
+    resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach { handledType =>
+      handledType.typEx match {
+        case auc: AggregateUseCaseTypeExpression
+            if auc.usecase == AggregateUseCase.CommandCase ||
+              auc.usecase == AggregateUseCase.QueryCase =>
+          val yieldStmts = Finder(omc.contents).recursiveFindByType[YieldStatement]
+          auc.yields match {
+            case Some(declaredYield) =>
+              val declaredType = resolution.refMap.definitionOf[Type](declaredYield.pathId)
+              if yieldStmts.isEmpty then
+                messages.addError(
+                  omc.errorLoc,
+                  s"${handledType.identify} declares 'yields ${declaredYield.format}' but " +
+                    s"${omc.identify} never yields it",
+                  suggestion = s"Add a 'yield ${declaredYield.format}' statement to this handler."
+                )
+              else
+                yieldStmts.foreach { ys =>
+                  val kindOk = ys.msg.messageKind == declaredYield.messageKind
+                  val yieldedType = resolution.refMap.definitionOf[Type](ys.msg.pathId)
+                  val typeOk = (declaredType, yieldedType) match {
+                    case (Some(dt), Some(yt)) => dt eq yt
+                    case _                    => true // unresolved — reported by other checks
+                  }
+                  if !(kindOk && typeOk) then
+                    messages.addError(
+                      ys.loc,
+                      s"yielded '${ys.msg.format}' does not match declared 'yields " +
+                        s"${declaredYield.format}' of ${handledType.identify}",
+                      suggestion = s"Yield the declared response: 'yield ${declaredYield.format}'."
+                    )
+                }
+            case None =>
+              yieldStmts.foreach { ys =>
+                messages.addError(
+                  ys.loc,
+                  s"'yield ${ys.msg.format}' is not allowed: ${handledType.identify} does not " +
+                    "declare a 'yields' clause",
+                  suggestion =
+                    "Declare the response on the command/query type with a 'yields' clause, " +
+                      "or remove the yield."
+                )
+              }
+          }
+        case _ => () // not a command/query, or unresolved — no 'yields' contract to enforce
+      }
+    }
+  }
 
   private def validateTerm(
     t: Term
@@ -2340,7 +2405,7 @@ case class ValidationPass(
 
       handler.clauses.foreach { clause =>
         walkStatements(clause.contents) {
-          case _: TellStatement | _: SendStatement | _: ReplyStatement | _: MorphStatement |
+          case _: TellStatement | _: SendStatement | _: YieldStatement | _: MorphStatement |
               _: SetStatement | _: BecomeStatement | _: ErrorStatement | _: CodeStatement =>
             executableCount += 1
           case _: PromptStatement =>

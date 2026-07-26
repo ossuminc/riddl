@@ -456,7 +456,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
       )(td)
     }
 
-    "reject all outbound messaging (send/tell/reply/morph/become) in an 'on activate' clause" in {
+    "reject all outbound messaging (send/tell/yield/reply/morph/become) in an 'on activate' clause" in {
       (td: TestData) =>
         def onActivate(stmt: String): String =
           s"""context c is {
@@ -476,6 +476,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           "side-effect-free",
           "activate: tell"
         )(td)
+        rejectsParse(onActivate("yield event Evt"), "side-effect-free", "activate: yield")(td)
         rejectsParse(onActivate("reply event Evt"), "side-effect-free", "activate: reply")(td)
         rejectsParse(
           onActivate("morph entity e to state e.s with record Evt"),

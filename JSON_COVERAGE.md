@@ -141,7 +141,7 @@ is covered in that construct's phase. The builder emits references as
 | MorphStatement | ✅ Phase 3 | |
 | BecomeStatement | ✅ Phase 3 | |
 | TellStatement | ✅ Phase 3 | |
-| ReplyStatement | ✅ Phase 3 | |
+| YieldStatement | ✅ Phase 3 | writes "yield"; reads "yield" and legacy "reply" |
 | WhenStatement | ✅ Phase 3 | nested statements |
 | MatchStatement / MatchCase | ✅ Phase 3 | nested statements |
 

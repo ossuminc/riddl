@@ -521,7 +521,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       BecomeStmtDto(path(entity.pathId), path(handler.pathId))
     case TellStatement(_, msg, proc) =>
       val (pp, pk) = processorRef(proc); TellStmtDto(messageRefDto(msg), pp, pk)
-    case ReplyStatement(_, msg) => ReplyStmtDto(messageRefDto(msg))
+    case YieldStatement(_, msg) => YieldStmtDto(messageRefDto(msg))
     case WhenStatement(_, cond, thenS, elseS, negated) =>
       cond match
         case ls: LiteralString =>

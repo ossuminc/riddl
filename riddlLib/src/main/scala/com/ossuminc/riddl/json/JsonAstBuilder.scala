@@ -585,7 +585,7 @@ object JsonAstBuilder:
         BecomeStatement(At(), EntityRef(At(), pathId(entity)), HandlerRef(At(), pathId(handler)))
       case TellStmtDto(message, to, processor) =>
         TellStatement(At(), messageRef(message), processorRef(to, processor))
-      case ReplyStmtDto(message) => ReplyStatement(At(), messageRef(message))
+      case YieldStmtDto(message) => YieldStatement(At(), messageRef(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS) =>
         val cond: LiteralString | Identifier = conditionId match
           case Some(id) => ident(id)

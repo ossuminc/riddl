@@ -85,6 +85,18 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       s.format must be(s"tell ${value.format} to ${entityRef.format}")
       checkStatement(s)
     }
+    "check Yield Statement" in { td =>
+      val pathId = PathIdentifier(At.empty, Seq("foo"))
+      val value = EventRef(At.empty, pathId)
+      val s = YieldStatement(At.empty, value)
+      s.kind must be("Yield Statement")
+      s.format must be(s"yield ${value.format}")
+      checkStatement(s)
+      // Source-compat: the deprecated `ReplyStatement` alias resolves to `YieldStatement`.
+      @annotation.nowarn("cat=deprecation")
+      val alias: AST.ReplyStatement = s
+      alias.kind must be("Yield Statement")
+    }
     "check When Statement" in { td =>
       val condition = LiteralString(At.empty, "condition")
       val s = WhenStatement(At.empty, condition, Contents.empty())

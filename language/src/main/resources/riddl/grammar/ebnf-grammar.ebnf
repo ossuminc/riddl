@@ -196,8 +196,9 @@ message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 (* Statements *)
 (* Core statements available in all contexts *)
 statement = when_statement | match_statement | send_statement | tell_statement |
-    reply_statement | the_set_statement | let_statement | prompt_statement | code_statement |
-    error_statement | require_statement | morph_statement | become_statement | comment ;
+    yield_statement | reply_statement | the_set_statement | let_statement | prompt_statement |
+    code_statement | error_statement | require_statement | morph_statement | become_statement |
+    comment ;
 
 (* Control flow *)
 when_statement = "when" literal_string "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
@@ -207,6 +208,8 @@ match_case = "case" literal_string "{" {statement} "}" ;
 (* Message operations *)
 send_statement = "send" message_ref "to" (outlet_ref | inlet_ref) ;
 tell_statement = "tell" message_ref "to" processor_ref ;
+yield_statement = "yield" message_ref ;
+(* `reply` is the deprecated synonym for `yield`; both parse to the same node *)
 reply_statement = "reply" message_ref ;
 
 (* Variable operations *)

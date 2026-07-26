@@ -250,6 +250,19 @@ class JsonInputTest extends AnyWordSpec with Matchers {
           |  "types": [ { "name": "R", "typeExpression": { "kind": "Record", "fields": [ { "name": "count", "type": { "kind": "Integer" } } ] } } ] } ] } ] }""".stripMargin
       )
     }
+
+    "the canonical `yield` statement kind renders to valid RIDDL (A22)" in {
+      assertRendersAndReparses(
+        """{ "domains": [ { "name": "P3y", "contexts": [ { "name": "C",
+          |  "entities": [ { "name": "Thing", "state": { "name": "Active", "recordType": "R" },
+          |    "handlers": [ { "name": "H", "onClauses": [ { "kind": "message",
+          |      "message": { "ref": "Ask", "kind": "query" }, "statements": [
+          |        { "kind": "yield", "message": { "ref": "Done", "kind": "result" } }
+          |      ] } ] } ] } ],
+          |  "queries": [ { "name": "Ask" } ],
+          |  "types": [ { "name": "R", "typeExpression": { "kind": "Record", "fields": [ { "name": "count", "type": { "kind": "Integer" } } ] } } ] } ] } ] }""".stripMargin
+      )
+    }
   }
 
   "JSON round-trips (Phase 4)" should {

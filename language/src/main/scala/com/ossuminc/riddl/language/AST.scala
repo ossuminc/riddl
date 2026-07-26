@@ -2568,14 +2568,20 @@ object AST:
     * @param msg
     *   The result message to send back
     */
-  @JSExportTopLevel("ReplyStatement")
-  case class ReplyStatement(
+  @JSExportTopLevel("YieldStatement")
+  case class YieldStatement(
     loc: At,
     msg: MessageRef
   ) extends Statement {
-    override def kind: String = "Reply Statement"
-    def format: String = s"reply ${msg.format}"
+    override def kind: String = "Yield Statement"
+    def format: String = s"yield ${msg.format}"
   }
+
+  /** Deprecated synonym for [[YieldStatement]]. The `reply` statement was renamed to `yield` in the
+    * A22 work; source references to `ReplyStatement` continue to compile through the 2.x line.
+    */
+  @deprecated("use YieldStatement", "3.0.0")
+  type ReplyStatement = YieldStatement
 
   /** A conditional statement for branching logic
     *

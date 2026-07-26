@@ -44,10 +44,22 @@ private[parsing] trait StatementParser {
     }
   }
 
-  private def replyStatement[u: P]: P[ReplyStatement] = {
+  private def yieldStatement[u: P]: P[YieldStatement] = {
+    P(
+      Index ~ Keywords.`yield` ~/ messageRef ~/ Index
+    )./.map { case (start, msg, end) => YieldStatement(at(start, end), msg) }
+  }
+
+  // `reply` is the deprecated synonym for `yield`; it parses to the SAME YieldStatement and emits a
+  // deprecation at the keyword (pattern mirrors StreamingParser's deprecated shape keywords).
+  private def replyStatement[u: P]: P[YieldStatement] = {
     P(
       Index ~ Keywords.reply ~/ messageRef ~/ Index
-    )./.map { case (start, msg, end) => ReplyStatement(at(start, end), msg) }
+    )./.map { case (start, msg, end) =>
+      val kwLoc = at(start, start + Keyword.reply.length)
+      deprecation(kwLoc, "The `reply` statement is deprecated; use `yield` instead")
+      YieldStatement(at(start, end), msg)
+    }
   }
 
   private def theSetStatement[u: P]: P[SetStatement] = {
@@ -197,10 +209,11 @@ private[parsing] trait StatementParser {
       // Ban ALL outbound/identity messaging uniformly so each gives the same clear message
       // (send/tell live here; reply/morph/become are otherwise added by `statement` for entities).
       (P(
-        Keywords.send | Keywords.tell | Keywords.reply | Keywords.morph | Keywords.become
+        Keywords.send | Keywords.tell | Keywords.`yield` | Keywords.reply | Keywords.morph |
+          Keywords.become
       ) ~/ Fail.opaque(
-        "'send'/'tell'/'reply'/'morph'/'become' are not allowed in an 'on activate'/'on passivate' " +
-          "clause; activation and passivation must be side-effect-free"
+        "'send'/'tell'/'yield'/'reply'/'morph'/'become' are not allowed in an " +
+          "'on activate'/'on passivate' clause; activation and passivation must be side-effect-free"
       )).asInstanceOf[P[Statements]]
     else if set.processor == ProcessorKind.Function then
       // A26: a Function is pure — no outbound messaging. (reply/morph/become are already not offered
@@ -251,16 +264,19 @@ private[parsing] trait StatementParser {
     else
       set.processor match {
         case ProcessorKind.Entity =>
-          base | morphStatement | becomeStatement | replyStatement
-        // A26: a Function is pure. send/tell/set are banned inside `base`; morph/become/reply are
-        // caught here (appended after `base`, so valid statements match first) with a clear message.
+          base | morphStatement | becomeStatement | yieldStatement | replyStatement
+        // A26: a Function is pure. send/tell/set are banned inside `base`; morph/become/yield/reply
+        // are caught here (appended after `base`, so valid statements match first) with a clear
+        // message.
         case ProcessorKind.Function =>
-          base | (P(Keywords.morph | Keywords.become | Keywords.reply) ~/ Fail.opaque(
-            "'morph'/'become'/'reply' are not allowed in a function body; a function is pure and may " +
-              "not change entity state or reply"
+          base | (P(
+            Keywords.morph | Keywords.become | Keywords.`yield` | Keywords.reply
+          ) ~/ Fail.opaque(
+            "'morph'/'become'/'yield'/'reply' are not allowed in a function body; a function is " +
+              "pure and may not change entity state or yield"
           )).asInstanceOf[P[Statements]]
-        case ProcessorKind.Context    => base | replyStatement
-        case ProcessorKind.Repository => base | replyStatement
+        case ProcessorKind.Context    => base | yieldStatement | replyStatement
+        case ProcessorKind.Repository => base | yieldStatement | replyStatement
         case _                        => base
       }
   }

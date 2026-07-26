@@ -72,4 +72,37 @@ class YieldsRoundTripTest extends AbstractValidatingTest {
       plain.typEx.asInstanceOf[AggregateUseCaseTypeExpression].yields mustBe None
     }
   }
+
+  private val stmtSrc =
+    """domain d is { context c is {
+      |  event OrderPlaced is { id: Integer }
+      |  result OrderFound is { id: Integer }
+      |  command PlaceOrder yields event OrderPlaced is { id: Integer }
+      |  query FindOrder yields result OrderFound is { id: Integer }
+      |  entity Order is {
+      |    record F is { id: Integer }
+      |    state S of record Order.F
+      |    handler H is {
+      |      on init { set field Order.F.id to "0" }
+      |      on command PlaceOrder { yield event OrderPlaced }
+      |      on query FindOrder { reply result OrderFound }
+      |    }
+      |  }
+      |}}
+      |""".stripMargin
+
+  "yield statement" should {
+    "emit `yield` and normalize the deprecated `reply` to `yield` through prettify" in {
+      (td: TestData) =>
+        val pretty = prettify(parse(stmtSrc, "stmt"))
+        pretty must include("yield event OrderPlaced")
+        // `reply` is the deprecated synonym; prettify canonicalizes it to `yield`.
+        pretty must include("yield result OrderFound")
+        pretty must not include "reply"
+
+        val yields = Finder(parse(pretty, "regen2")).recursiveFindByType[YieldStatement]
+        yields.map(_.msg.pathId.value.last).toSet mustBe
+          scala.collection.immutable.Set("OrderPlaced", "OrderFound")
+    }
+  }
 }

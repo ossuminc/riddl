@@ -11,8 +11,8 @@ import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
 
 /** A26: a Function is pure — its body may not contain effect statements (`set`/`send`/`tell`/
-  * `morph`/`become`/`reply`). These are rejected at parse time (the ban cuts at the keyword), so
-  * the offending statement need not resolve.
+  * `morph`/`become`/`yield`/`reply`). These are rejected at parse time (the ban cuts at the
+  * keyword), so the offending statement need not resolve.
   */
 class PureFunctionTest extends AbstractParsingTest {
 
@@ -32,6 +32,7 @@ class PureFunctionTest extends AbstractParsingTest {
         "tell command Go to entity c.e",
         "morph entity c.e to state c.e.s with record Go",
         "become entity c.e to handler c.e.h",
+        "yield command Go",
         "reply command Go"
       )
     do

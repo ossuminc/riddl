@@ -321,8 +321,8 @@ object JsonModel:
     */
   case class TellStmtDto(message: MessageRefDto, to: String, processor: String) extends StatementDto
 
-  /** `{ "kind": "reply", "message": <msgRef> }` */
-  case class ReplyStmtDto(message: MessageRefDto) extends StatementDto
+  /** `{ "kind": "yield", "message": <msgRef> }` (also reads legacy `"kind": "reply"`) */
+  case class YieldStmtDto(message: MessageRefDto) extends StatementDto
 
   /** `{ "kind": "when", "condition"|"conditionIdentifier": "...", "negated"?: bool, "then":
     * [<stmt>], "else"?: [<stmt>] }`
@@ -840,7 +840,7 @@ object JsonModel:
           case "morph"  => MorphStmtDto(m("entity").str, m("state").str, msgRef(m("value")))
           case "become" => BecomeStmtDto(m("entity").str, m("handler").str)
           case "tell"   => TellStmtDto(msgRef(m("message")), m("to").str, m("processor").str)
-          case "reply"  => ReplyStmtDto(msgRef(m("message")))
+          case "yield" | "reply" => YieldStmtDto(msgRef(m("message")))
           case "when" =>
             WhenStmtDto(
               m.get("condition").map(_.str),
@@ -924,8 +924,8 @@ object JsonModel:
           "to" -> ujson.Str(to),
           "processor" -> ujson.Str(processor)
         )
-      case ReplyStmtDto(message) =>
-        ujson.Obj("kind" -> ujson.Str("reply"), "message" -> msgRefJs(message))
+      case YieldStmtDto(message) =>
+        ujson.Obj("kind" -> ujson.Str("yield"), "message" -> msgRefJs(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("when"))

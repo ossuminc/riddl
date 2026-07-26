@@ -163,9 +163,9 @@ object DeepASTComparison {
 
   /** Compare the optional ascribed streamlet shape carried by every Processor.
     *
-    * `ascribedShape` participates in `Definition.equals`, so BAST/JSON round-trips
-    * must preserve it. Compared by keyword (the loc is normalized to At.empty on
-    * every surface, so it is not a discriminator).
+    * `ascribedShape` participates in `Definition.equals`, so BAST/JSON round-trips must preserve
+    * it. Compared by keyword (the loc is normalized to At.empty on every surface, so it is not a
+    * discriminator).
     */
   private def compareAscribedShape(
     s1: Option[StreamletShape],

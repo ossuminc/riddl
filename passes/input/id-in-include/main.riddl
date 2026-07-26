@@ -12,7 +12,7 @@ domain Restaurant is {
             to outlet Restaurant.FrontOfHouse.Events.out
         }
         on query Restaurant.FrontOfHouse.GetReservation {
-          reply result Restaurant.FrontOfHouse.ReservationResult
+          yield result Restaurant.FrontOfHouse.ReservationResult
         }
       }
     }

@@ -172,6 +172,40 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize a `yield` statement (A22)" in {
+      // The `yield` statement reuses BAST subtag 15 (formerly `reply`); verify it round-trips.
+      val riddlSource =
+        """domain d is { context c is {
+          |  result Res is { ok: Boolean }
+          |  query Ask yields result Res is { q: Integer }
+          |  entity e is {
+          |    record F is { q: Integer }
+          |    state S of record e.F
+          |    handler H is {
+          |      on init { set field e.F.q to "0" }
+          |      on query Ask { yield result Res }
+          |    }
+          |  }
+          |}}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-yield")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(compareRoots(originalRoot, nebula), "yield-statement round trip: ASTs differ")
+              val ys = Finder(nebula.contents).recursiveFindByType[AST.YieldStatement]
+              assert(ys.size == 1, s"expected one YieldStatement, found ${ys.size}")
+              assert(ys.head.msg.pathId.value.last == "Res", "yield target lost in BAST")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize named-type requires/returns on a function and saga (A9)" in {
       val riddlSource =
         """domain d is { context c is {

@@ -1,7 +1,7 @@
-// Corpus fixture for A19: a command/query type may declare an optional `yields <messageRef>`
-// clause between its identifier and its body. A command yields an event; a query yields a result.
-// Exercised by both the fastparse parser (TypeParserTest) and the EBNF/TatSu grammar so the two
-// accept the same input.
+// Corpus fixture for A19 (the `yields <messageRef>` clause on a command/query type) and A22 (the
+// `yield` statement that produces the declared response). A command yields an event; a query yields
+// a result. Exercised by both the fastparse parser and the EBNF/TatSu grammar so the two accept the
+// same input.
 domain d is {
   context c is {
     event OrderPlaced is { id: Integer }
@@ -10,5 +10,16 @@ domain d is {
     query FindOrder yields result OrderFound is { id: Integer }
     // A plain command with no yields still parses.
     command CancelOrder is { id: Integer }
+
+    entity Order is {
+      record Fields is { id: Integer }
+      state Current of record Order.Fields
+      handler H is {
+        on init { set field Order.Fields.id to "0" }
+        // A22: the `yield` statement produces the command's declared `yields` event.
+        on command PlaceOrder { yield event OrderPlaced }
+        on query FindOrder { yield result OrderFound }
+      }
+    }
   }
 }

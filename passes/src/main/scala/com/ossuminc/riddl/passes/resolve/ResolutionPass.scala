@@ -215,6 +215,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         None
       case AliasedTypeExpression(_, _, pathId) =>
         associateUsage[Type](user, resolveAPathId[Type](pathId, parents))
+      case auc: AggregateUseCaseTypeExpression =>
+        auc.fields.foreach { (fld: Field) =>
+          associateUsage[Type](fld, resolveTypeExpression(fld, fld.typeEx, parents))
+        }
+        // A19: a `yields <messageRef>` clause references a message type; register it as a usage so
+        // a message referenced only by a `yields` clause is not flagged as unused.
+        auc.yields.foreach { y =>
+          associateUsage[Type](user, resolveARef[Type](y, parents))
+        }
+        None
       case agg: AggregateTypeExpression =>
         agg.fields.foreach { (fld: Field) =>
           associateUsage[Type](fld, resolveTypeExpression(fld, fld.typeEx, parents))
@@ -280,7 +290,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           case _: LiteralString => () // no references
           case ir: InvariantRef => resolveARef[Invariant](ir, parents)
         }
-      case ReplyStatement(_, msg) =>
+      case YieldStatement(_, msg) =>
         associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
       case _: WhenStatement  => () // no references (condition is a literal string)
       case _: MatchStatement => () // no references (expression/patterns are literal strings)

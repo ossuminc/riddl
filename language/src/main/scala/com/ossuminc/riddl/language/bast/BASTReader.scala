@@ -955,9 +955,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
             RequireStatement(loc, condition)
         }
 
-      case 15 => // Reply
+      case 15 => // Yield (formerly Reply — wire format unchanged)
         val msg = readMessageRef()
-        ReplyStatement(loc, msg)
+        YieldStatement(loc, msg)
 
       case _ =>
         PromptStatement(loc, LiteralString(loc, s"<unknown statement $stmtType>"))

@@ -247,7 +247,7 @@ Statements appear in handler on-clauses and function bodies.
 { "kind": "tell", "message": {"ref":"M","kind":"command"}, "to": "<path>", "processor": "entity" } // entity|context|projector|repository|adaptor
 { "kind": "morph", "entity": "<path>", "state": "<path>", "value": {"ref":"E","kind":"event"} }
 { "kind": "become", "entity": "<path>", "handler": "<path>" }
-{ "kind": "reply", "message": {"ref":"R","kind":"result"} }
+{ "kind": "yield", "message": {"ref":"R","kind":"result"} }              // also reads legacy "kind":"reply"
 { "kind": "when", "condition": "...", "negated": false, "then": [<stmt>], "else": [<stmt>] }   // or "conditionIdentifier"
 { "kind": "match", "expression": "...", "cases": [ { "pattern": "...", "statements": [<stmt>] } ], "default": [<stmt>] }
 ```

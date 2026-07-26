@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-26 18:30 UTC
+# Generated: 2026-07-26 18:53 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -194,7 +194,7 @@ on-message-clause ::= "on" ws1 message-ref ws ("from" (identifier ":")? message-
 message-origins ::= inlet-ref | processor-ref | user-ref | epic-ref
 
 # Core statements available in all contexts
-statement ::= when-statement | match-statement | send-statement | tell-statement | reply-statement | the-set-statement | let-statement | prompt-statement | code-statement | error-statement | require-statement | morph-statement | become-statement | comment
+statement ::= when-statement | match-statement | send-statement | tell-statement | yield-statement | reply-statement | the-set-statement | let-statement | prompt-statement | code-statement | error-statement | require-statement | morph-statement | become-statement | comment
 
 # Control flow
 when-statement ::= "when" ws1 literal-string ws "then" ws1 pseudo-code-block ws ("else" pseudo-code-block)? ws "end"
@@ -204,6 +204,9 @@ match-case ::= "case" ws1 literal-string ws "{" ws (statement)* ws "}"
 # Message operations
 send-statement ::= "send" ws1 message-ref ws "to" ws (outlet-ref | inlet-ref)
 tell-statement ::= "tell" ws1 message-ref ws "to" ws1 processor-ref
+yield-statement ::= "yield" ws1 message-ref
+
+# `reply` is the deprecated synonym for `yield`; both parse to the same node
 reply-statement ::= "reply" ws1 message-ref
 
 # Variable operations

@@ -2,5 +2,5 @@
 type ReservationId is Id(FrontOfHouse.Reservation)
 type MakeReservation is command { partySize: Number }
 type ReservationMade is event { partySize: Number }
-type GetReservation is query { id: String }
+query GetReservation yields result ReservationResult is { id: String }
 type ReservationResult is result { partySize: Number }

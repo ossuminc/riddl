@@ -381,8 +381,8 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         addLine(s"send ${msg.format} to ${portlet.format}")
       case TellStatement(_, msg, to) =>
         addLine(s"tell ${msg.format} to ${to.format}")
-      case ReplyStatement(_, msg) =>
-        addLine(s"reply ${msg.format}")
+      case YieldStatement(_, msg) =>
+        addLine(s"yield ${msg.format}")
       case CodeStatement(_, lang, body) =>
         addIndent(s"```${lang.s}").add(body).nl.addIndent("```")
       case RequireStatement(_, condition) =>

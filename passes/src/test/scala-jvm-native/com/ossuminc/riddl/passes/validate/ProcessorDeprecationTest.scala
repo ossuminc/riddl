@@ -49,6 +49,33 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
       }
     }
 
+    "emit a Deprecation for the `reply` statement (A22: `yield` is canonical)" in {
+      (td: TestData) =>
+        val rpi = RiddlParserInput(
+          """domain D is {
+          |  context C is {
+          |    result Res is { ok: Boolean }
+          |    query Ask yields result Res is { q: Integer }
+          |    handler H is {
+          |      on query Ask { reply result Res }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+          td
+        )
+        Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
+          case Left(errors) => fail(errors.format)
+          case Right(result) =>
+            val deprecations = result.messages.justDeprecations
+            info(deprecations.format)
+            deprecations.exists { (m: Messages.Message) =>
+              m.message.contains("`reply` statement is deprecated") &&
+              m.message.contains("yield")
+            } must be(true)
+        }
+    }
+
     "not emit a Deprecation for the `processor F as flow` form" in { (td: TestData) =>
       val rpi = RiddlParserInput(flowModel("processor F as flow"), td)
       Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {

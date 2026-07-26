@@ -254,7 +254,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: PromptStatement  => writePromptStatement(s)
       case s: ErrorStatement   => writeErrorStatement(s)
       case s: RequireStatement => writeRequireStatement(s)
-      case s: ReplyStatement   => writeReplyStatement(s)
+      case s: YieldStatement   => writeYieldStatement(s)
       case s: SetStatement     => writeSetStatement(s)
       case s: SendStatement    => writeSendStatement(s)
       case s: MorphStatement   => writeMorphStatement(s)
@@ -967,9 +967,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     }
   }
 
-  def writeReplyStatement(s: ReplyStatement): Unit = {
+  def writeYieldStatement(s: YieldStatement): Unit = {
     writer.writeU8(NODE_STATEMENT)
-    writer.writeU8(15) // Reply statement
+    writer.writeU8(15) // Yield statement (formerly Reply — wire format unchanged)
     writeLocation(s.loc)
     writeMessageRef(s.msg)
   }
