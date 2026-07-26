@@ -264,6 +264,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: MatchStatement   => writeMatchStatement(s)
       case s: LetStatement     => writeLetStatement(s)
       case s: CodeStatement    => writeCodeStatement(s)
+      case s: ForeachStatement => writeForeachStatement(s)
 
       // References
       case r: AuthorRef     => writeAuthorRef(r)
@@ -1073,6 +1074,24 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeLiteralString(s.language)
     writeString(s.body)
+  }
+
+  def writeForeachStatement(s: ForeachStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(16) // Foreach statement
+    writeLocation(s.loc)
+    writeIdentifierInline(s.element)
+    // Write collection with a type flag (0 = FieldRef, 1 = Identifier local)
+    s.collection match {
+      case fr: FieldRef =>
+        writer.writeU8(0)
+        writeLocation(fr.loc)
+        writePathIdentifierInline(fr.pathId)
+      case id: Identifier =>
+        writer.writeU8(1)
+        writeIdentifierInline(id)
+    }
+    // NOTE: doStatements count/items are written by the Pass's traverse() override
   }
 
   // ========== Reference Serialization ==========

@@ -195,7 +195,7 @@ message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 
 (* Statements *)
 (* Core statements available in all contexts *)
-statement = when_statement | match_statement | send_statement | tell_statement |
+statement = when_statement | match_statement | foreach_statement | send_statement | tell_statement |
     yield_statement | reply_statement | the_set_statement | let_statement | prompt_statement |
     code_statement | error_statement | require_statement | morph_statement | become_statement |
     comment ;
@@ -204,6 +204,9 @@ statement = when_statement | match_statement | send_statement | tell_statement |
 when_statement = "when" literal_string "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
 match_statement = "match" literal_string "{" {match_case}+ ["default" "{" {statement} "}"] "}" ;
 match_case = "case" literal_string "{" {statement} "}" ;
+(* A25: `foreach <element> in <collection> { <statements> }`; `field <path>` collection is a
+   FieldRef, a bare identifier is a `let`-bound local *)
+foreach_statement = "foreach" identifier "in" (field_ref | identifier) "{" {statement} "}" ;
 
 (* Message operations *)
 send_statement = "send" message_ref "to" (outlet_ref | inlet_ref) ;

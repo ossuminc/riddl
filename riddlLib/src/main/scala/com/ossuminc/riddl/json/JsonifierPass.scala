@@ -546,6 +546,17 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         cases.map(c => MatchCaseDto(c.pattern.s, serializeStatements(c.statements))),
         serializeStatements(default)
       )
+    case ForeachStatement(_, element, collection, doStatements) =>
+      collection match
+        case fr: FieldRef =>
+          ForeachStmtDto(
+            element.value,
+            Some(path(fr.pathId)),
+            None,
+            serializeStatements(doStatements)
+          )
+        case id: Identifier =>
+          ForeachStmtDto(element.value, None, Some(id.value), serializeStatements(doStatements))
 
   private def serializeInteraction(i: Interaction): InteractionDto = i match
     case VagueInteraction(_, from, rel, to, _) => VagueIxnDto(from.s, rel.s, to.s)

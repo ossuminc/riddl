@@ -144,6 +144,7 @@ is covered in that construct's phase. The builder emits references as
 | YieldStatement | ✅ Phase 3 | writes "yield"; reads "yield" and legacy "reply" |
 | WhenStatement | ✅ Phase 3 | nested statements |
 | MatchStatement / MatchCase | ✅ Phase 3 | nested statements |
+| ForeachStatement | ✅ A25 | field-ref or local collection; nested body statements |
 
 ## Metadata
 

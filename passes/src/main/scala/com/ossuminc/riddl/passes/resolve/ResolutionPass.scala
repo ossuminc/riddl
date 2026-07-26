@@ -292,13 +292,48 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         }
       case YieldStatement(_, msg) =>
         associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
-      case _: WhenStatement  => () // no references (condition is a literal string)
-      case _: MatchStatement => () // no references (expression/patterns are literal strings)
+      case ws: WhenStatement =>
+        // The condition has no references, but a nested foreach's field ref must be resolved so
+        // validation can find it in the refMap.
+        resolveForeachFieldRefs(ws.thenStatements, parents)
+        resolveForeachFieldRefs(ws.elseStatements, parents)
+      case ms: MatchStatement =>
+        // Patterns/expression have no references; resolve any nested foreach field refs.
+        ms.cases.foreach(mc => resolveForeachFieldRefs(mc.statements, parents))
+        resolveForeachFieldRefs(ms.default, parents)
+      case fs: ForeachStatement =>
+        // A25: resolve the collection's FieldRef (a bare Identifier collection is a local, resolved
+        // at validation time). The pass framework does not descend into nested statement bodies, so
+        // recurse to reach any foreach nested under this one.
+        fs.collection match
+          case fr: FieldRef  => associateUsage[Field](parents.head, resolveARef[Field](fr, parents))
+          case _: Identifier => ()
+        resolveForeachFieldRefs(fs.doStatements, parents)
       case ls: LetStatement =>
         ls.typeRef.foreach(tr => resolveARef[Type](tr, parents))
       case _: CodeStatement => () // no references (code body is a string)
     }
   }
+
+  /** Resolve the collection FieldRefs of every [[ForeachStatement]] nested anywhere within `stmts`.
+    * `parents` is held constant (its head is the enclosing on-clause/function) so the refMap keys
+    * match those validation uses — when/match/foreach nesting introduces no named scope of its own.
+    */
+  private def resolveForeachFieldRefs(stmts: Contents[Statements], parents: Parents): Unit =
+    stmts.foreach {
+      case fs: ForeachStatement =>
+        fs.collection match
+          case fr: FieldRef  => associateUsage[Field](parents.head, resolveARef[Field](fr, parents))
+          case _: Identifier => ()
+        resolveForeachFieldRefs(fs.doStatements, parents)
+      case ws: WhenStatement =>
+        resolveForeachFieldRefs(ws.thenStatements, parents)
+        resolveForeachFieldRefs(ws.elseStatements, parents)
+      case ms: MatchStatement =>
+        ms.cases.foreach(mc => resolveForeachFieldRefs(mc.statements, parents))
+        resolveForeachFieldRefs(ms.default, parents)
+      case _ => ()
+    }
 
   private def resolveInteractions(
     useCase: UseCase,

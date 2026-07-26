@@ -80,9 +80,10 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.pop()
 
       // Nodes with multiple Contents fields
-      case ss: SagaStep       => traverseSagaStep(ss, parents)
-      case ws: WhenStatement  => traverseWhenStatement(ws, parents)
-      case ms: MatchStatement => traverseMatchStatement(ms, parents)
+      case ss: SagaStep         => traverseSagaStep(ss, parents)
+      case ws: WhenStatement    => traverseWhenStatement(ws, parents)
+      case ms: MatchStatement   => traverseMatchStatement(ms, parents)
+      case fs: ForeachStatement => traverseForeachStatement(fs, parents)
 
       // OnClauses (grouped for clarity)
       case oc: OnInitializationClause => traverseOnClause(oc, oc.contents, parents)
@@ -146,6 +147,12 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
       mc.statements.toSeq.foreach { value => traverse(value, parents) }
     }
     ms.default.toSeq.foreach { value => traverse(value, parents) }
+  }
+
+  private def traverseForeachStatement(fs: ForeachStatement, parents: ParentStack): Unit = {
+    process(fs, parents)
+    bastWriter.writeContents(fs.doStatements)
+    fs.doStatements.toSeq.foreach { value => traverse(value, parents) }
   }
 
   private def traverseOnClause[T <: RiddlValue](

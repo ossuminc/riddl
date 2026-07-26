@@ -2699,6 +2699,38 @@ object AST:
     override def kind: String = "Code Statement"
   }
 
+  /** A25: a `foreach` statement — the safe, bounded loop. Iterates a collection-typed value,
+    * binding each element to a local `element` identifier that is visible to the nested body
+    * statements.
+    *
+    * @param loc
+    *   The location of the statement in the model
+    * @param element
+    *   The local identifier bound to each element of the collection during iteration
+    * @param collection
+    *   The collection being traversed. Disambiguated at parse time by the `field` keyword: a
+    *   [[FieldRef]] (`foreach o in field X.Y { … }`) names a collection-typed field of the
+    *   enclosing entity's state, the handled message, or a function's `requires` input; a bare
+    *   [[Identifier]] (`foreach o in myLocal { … }`) names a `let`-bound local whose declared type
+    *   is a collection.
+    * @param doStatements
+    *   The statements to execute for each element of the collection
+    */
+  @JSExportTopLevel("ForeachStatement")
+  case class ForeachStatement(
+    loc: At,
+    element: Identifier,
+    collection: FieldRef | Identifier,
+    doStatements: Contents[Statements]
+  ) extends Statement {
+    override def kind: String = "Foreach Statement"
+    def format: String =
+      val collectionStr = collection match
+        case fr: FieldRef   => fr.format
+        case id: Identifier => id.format
+      s"foreach ${element.format} in $collectionStr { … }"
+  }
+
   ///////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
   /** A trait that is the base trait of Adaptor directions */

@@ -206,6 +206,54 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize a `foreach` statement (A25)" in {
+      // A25 uses new BAST subtag 16 (FORMAT_REVISION 13). Verify both a field-ref collection and a
+      // let-local collection round-trip, and the nested body survives.
+      val riddlSource =
+        """domain d is { context c is {
+          |  type Order is record { id: Integer }
+          |  type OrderList is many Order
+          |  type Batch is command { orders: OrderList }
+          |  handler h is {
+          |    on command Batch {
+          |      let batch: OrderList = "orders"
+          |      foreach o in field Batch.orders {
+          |        foreach p in batch { prompt "process" }
+          |      }
+          |    }
+          |  }
+          |}}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-foreach")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(
+                compareRoots(originalRoot, nebula),
+                "foreach-statement round trip: ASTs differ"
+              )
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.{FieldRef, ForeachStatement, Identifier}
+              val fes = Finder(nebula.contents).recursiveFindByType[ForeachStatement]
+              assert(fes.size == 2, s"expected two ForeachStatements, found ${fes.size}")
+              val outer = fes.find(_.element.value == "o").getOrElse(fail("outer foreach lost"))
+              outer.collection match
+                case fr: FieldRef => assert(fr.pathId.value == Seq("Batch", "orders"))
+                case other        => fail(s"expected FieldRef, got $other")
+              val inner = fes.find(_.element.value == "p").getOrElse(fail("inner foreach lost"))
+              inner.collection match
+                case id: Identifier => assert(id.value == "batch")
+                case other          => fail(s"expected Identifier, got $other")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize named-type requires/returns on a function and saga (A9)" in {
       val riddlSource =
         """domain d is { context c is {

@@ -339,6 +339,16 @@ object JsonModel:
   case class MatchStmtDto(expression: String, cases: Seq[MatchCaseDto], default: Seq[StatementDto])
       extends StatementDto
 
+  /** `{ "kind": "foreach", "element": "o", "field"|"local": "<path>", "do": [<stmt>] }` — exactly
+    * one of `field` (a FieldRef collection) or `local` (a `let`-bound local) is present.
+    */
+  case class ForeachStmtDto(
+    element: String,
+    field: Option[String],
+    local: Option[String],
+    doStatements: Seq[StatementDto]
+  ) extends StatementDto
+
   /** `{ "pattern": "...", "statements": [<stmt>] }` */
   case class MatchCaseDto(pattern: String, statements: Seq[StatementDto])
 
@@ -859,6 +869,13 @@ object JsonModel:
               )
               .getOrElse(Nil)
             MatchStmtDto(m("expression").str, cases, readStmts(m.get("default")))
+          case "foreach" =>
+            ForeachStmtDto(
+              m("element").str,
+              m.get("field").map(_.str),
+              m.get("local").map(_.str),
+              readStmts(m.get("do"))
+            )
           case other => throw new IllegalArgumentException(s"Unknown statement kind: '$other'")
     end match
   end readStatement
@@ -947,6 +964,16 @@ object JsonModel:
             )
           ),
           "default" -> stmtArr(default)
+        )
+      case ForeachStmtDto(element, field, local, doStatements) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("foreach"),
+            "element" -> ujson.Str(element)
+          )
+            ++ field.map(x => "field" -> (ujson.Str(x): ujson.Value))
+            ++ local.map(x => "local" -> (ujson.Str(x): ujson.Value))
+            ++ Seq("do" -> (stmtArr(doStatements): ujson.Value))
         )
   end writeStatement
 

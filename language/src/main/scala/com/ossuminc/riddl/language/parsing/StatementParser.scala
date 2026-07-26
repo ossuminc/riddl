@@ -179,6 +179,28 @@ private[parsing] trait StatementParser {
     }
   }
 
+  // A25: `foreach <element> in <collection> { <statements> }`. The `field` keyword disambiguates
+  // the collection at parse time: `field X.Y` parses as a FieldRef (a collection-typed field);
+  // a bare name parses as an Identifier (a `let`-bound local). Body statements are threaded with
+  // the same `StatementsSet` so per-context restrictions apply inside the loop (mirror whenStatement).
+  private def foreachCollection[u: P]: P[FieldRef | Identifier] = {
+    // fastparse `|` unifies to the least upper bound (RiddlValue), so widen each branch to the
+    // target union explicitly to keep the collection typed as `FieldRef | Identifier`.
+    P(
+      fieldRef.map(fr => fr: FieldRef | Identifier) |
+        identifier.map(id => id: FieldRef | Identifier)
+    )
+  }
+
+  private def foreachStatement[u: P](set: StatementsSet): P[ForeachStatement] = {
+    P(
+      Index ~ Keywords.foreach ~/ identifier ~ in ~ foreachCollection ~
+        open ~/ setOfStatements(set) ~ close ~/ Index
+    )./.map { case (start, element, collection, statements, end) =>
+      ForeachStatement(at(start, end), element, collection, statements.toContents)
+    }
+  }
+
   private def letStatement[u: P]: P[LetStatement] = {
     P(
       Index ~ Keywords.let ~/ identifier ~ (Punctuation.colon ~ typeRef).? ~
@@ -243,7 +265,7 @@ private[parsing] trait StatementParser {
   private def anyDefStatements[u: P](set: StatementsSet): P[Statements] = {
     P(
       // GROUP 1: Control flow statements
-      whenStatement(set) | matchStatement(set) |
+      whenStatement(set) | matchStatement(set) | foreachStatement(set) |
         // GROUP 2: Common message operations (suppressed under ActivationClause)
         messagingStatements(set) |
         // GROUP 3: Variable operations (set is banned in a pure Function body — see setStatements)

@@ -959,6 +959,20 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val msg = readMessageRef()
         YieldStatement(loc, msg)
 
+      case 16 => // Foreach
+        val element = readIdentifierInline()
+        val collectionType = reader.readU8()
+        val collection: FieldRef | Identifier = collectionType match {
+          case 0 =>
+            val frLoc = readLocation()
+            val pid = readPathIdentifierInline()
+            FieldRef(frLoc, pid)
+          case 1 => readIdentifierInline()
+          case _ => throw new RuntimeException(s"Invalid foreach collection type: $collectionType")
+        }
+        val doStatements = readContentsDeferred[Statements]()
+        ForeachStatement(loc, element, collection, doStatements)
+
       case _ =>
         PromptStatement(loc, LiteralString(loc, s"<unknown statement $stmtType>"))
     }

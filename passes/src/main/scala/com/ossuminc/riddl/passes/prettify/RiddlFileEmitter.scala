@@ -372,6 +372,14 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           decr.addLine("}")
         end if
         decr.addLine("}")
+      case ForeachStatement(_, element, collection, doStatements) =>
+        val collectionStr = collection match
+          case fr: FieldRef   => fr.format
+          case id: Identifier => id.format
+        addIndent(s"foreach ${element.format} in $collectionStr {").nl.incr
+        if doStatements.isEmpty then addLine("???")
+        else doStatements.toSeq.foreach(emitStatement)
+        decr.addLine("}")
       case LetStatement(_, id, optTypeRef, expr) =>
         val typeClause = optTypeRef.map(t => s": ${t.format}").getOrElse("")
         addLine(s"let ${id.format}$typeClause = ${expr.format}")

@@ -91,6 +91,8 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
                   mc.statements.foldLeft(next) { case (next2, child) => consider(next2, child) }
                 }
                 default.foldLeft(r1) { case (next, child) => consider(next, child) }
+              case ForeachStatement(_, _, _, doStatements) =>
+                doStatements.foldLeft(list) { case (next, child) => consider(next, child) }
               case SagaStep(_, _, dos, undos, _) =>
                 val r2 = dos.foldLeft(list) { case (next, child) => consider(next, child) }
                 undos.foldLeft(r2) { case (next, child) => consider(next, child) }

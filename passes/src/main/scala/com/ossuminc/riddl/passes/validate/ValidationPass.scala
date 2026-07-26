@@ -295,6 +295,16 @@ case class ValidationPass(
       case p: Processor[?] => validateProcessorShape(p)
       case _               => ()
     }
+    // A25: validate `foreach` collection scoping once per statement-bearing container (on-clause or
+    // function). checkForeachScopes recurses through nested statement bodies threading `let` scope,
+    // so invoking it at the container root covers every foreach at any depth exactly once.
+    value match {
+      case oc: OnClause =>
+        checkForeachScopes(oc.statements, Seq.empty[LetStatement], oc +: parentsAsSeq)
+      case fn: Function =>
+        checkForeachScopes(fn.statements, Seq.empty[LetStatement], fn +: parentsAsSeq)
+      case _ => ()
+    }
     value match {
       case f: AggregateValue =>
         f match {
@@ -587,6 +597,24 @@ case class ValidationPass(
         }
       case YieldStatement(_, msg) =>
         checkRef[Type](msg, parents)
+      case ForeachStatement(loc, element, _, doStatements) =>
+        // Collection scoping/collection-type checks run in checkForeachScopes (which threads
+        // in-scope `let` locals). Here we only enforce the local structural checks.
+        check(
+          element.value.length >= 1,
+          "'foreach' element identifier must not be empty",
+          MissingWarning,
+          element.loc,
+          suggestion = "Name the loop element, e.g. 'foreach item in ...'."
+        )
+        checkNonEmpty(
+          doStatements.toSeq,
+          "statements",
+          onClause,
+          loc,
+          MissingWarning,
+          required = true
+        )
     end match
   end validateStatement
 
@@ -2380,10 +2408,178 @@ case class ValidationPass(
           case MatchStatement(_, _, cases, default) =>
             cases.foreach(mc => walkStatements(mc.statements)(f))
             walkStatements(default)(f)
+          case ForeachStatement(_, _, _, doStatements) =>
+            walkStatements(doStatements)(f)
           case _ => ()
       case _ => () // skip Comments
     }
   end walkStatements
+
+  /** A25: is `te` a collection type — i.e. iterable by `foreach`? Covers the collection type
+    * expressions (Sequence/Set/Graph/Table/Replica/Mapping) and the multiplicative cardinalities
+    * (ZeroOrMore/OneOrMore/SpecificRange). Aliased types are resolved and checked transitively.
+    */
+  private def isCollectionType(te: TypeExpression): Boolean =
+    te match
+      case _: Sequence | _: AST.Set | _: Graph | _: Table | _: Replica | _: Mapping => true
+      case _: ZeroOrMore | _: OneOrMore | _: SpecificRange                          => true
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).exists(t => isCollectionType(t.typEx))
+      case _ => false
+
+  /** A25: the set of fields a `foreach ... in field <path>` may legally iterate — the fields of the
+    * enclosing entity's state record(s), of the handled message, and of the enclosing function's
+    * `requires` input. Membership is tested by identity against the resolved field.
+    */
+  private def foreachAllowedFields(parents: Parents): Seq[Field] =
+    def aggFields(t: Type): Seq[Field] =
+      t.typEx match
+        case ate: AggregateTypeExpression => ate.fields
+        case _                            => Seq.empty[Field]
+    val stateFields: Seq[Field] =
+      parents.collectFirst { case e: Entity => e }.toSeq.flatMap { e =>
+        e.states.flatMap { st =>
+          resolution.refMap.definitionOf[Type](st.typ.pathId).toSeq.flatMap(aggFields)
+        }
+      }
+    val messageFields: Seq[Field] =
+      parents
+        .collectFirst { case omc: OnMessageLikeClause if omc.msg.nonEmpty => omc }
+        .toSeq
+        .flatMap { omc =>
+          resolution.refMap.definitionOf[Type](omc.msg.pathId).toSeq.flatMap(aggFields)
+        }
+    val functionFields: Seq[Field] =
+      parents.collectFirst { case f: Function => f }.toSeq.flatMap { f =>
+        f.input.toSeq.flatMap {
+          case tr: TypeRef =>
+            resolution.refMap.definitionOf[Type](tr.pathId).toSeq.flatMap(aggFields)
+          case agg: Aggregation => agg.fields
+        }
+      }
+    stateFields ++ messageFields ++ functionFields
+  end foreachAllowedFields
+
+  /** A25: validate a single `foreach` collection against the in-scope `let` locals and foreach
+    * element names threaded to this point.
+    */
+  private def validateForeachCollection(
+    fs: ForeachStatement,
+    inScopeLets: Seq[LetStatement],
+    inScopeElements: scala.collection.immutable.Set[String],
+    parents: Parents
+  ): Unit =
+    fs.collection match
+      case id: Identifier =>
+        // A bare identifier names a `let`-bound local (or an enclosing foreach element).
+        if inScopeElements.contains(id.value) then () // an outer foreach element; accepted
+        else
+          inScopeLets.reverse.find(_.identifier.value == id.value) match
+            case Some(ls) =>
+              ls.typeRef match
+                case Some(tr) =>
+                  resolution.refMap.definitionOf[Type](tr.pathId) match
+                    case Some(typ) if !isCollectionType(typ.typEx) =>
+                      messages.addError(
+                        fs.loc,
+                        s"'foreach' local '${id.value}' is not a collection; its declared type " +
+                          s"'${tr.pathId.format}' is not iterable",
+                        suggestion =
+                          "Iterate a local whose 'let' type is a collection, e.g. 'let batch: many Order = ...'."
+                      )
+                    case _ => () // resolves to a collection, or unresolved (reported elsewhere)
+                case None =>
+                  messages.addError(
+                    fs.loc,
+                    s"'foreach' local '${id.value}' has no declared type, so it cannot be verified " +
+                      "as a collection",
+                    suggestion =
+                      s"Declare the local's collection type, e.g. 'let ${id.value}: many Order = ...'."
+                  )
+            case None =>
+              messages.addError(
+                fs.loc,
+                s"'foreach' collection '${id.value}' is not a 'let'-bound local in scope",
+                suggestion =
+                  "Bind the collection with a 'let' before the loop, or use 'field <path>' to iterate a field."
+              )
+      case fr: FieldRef =>
+        resolution.refMap.definitionOf[Field](fr.pathId) match
+          case Some(field) =>
+            if !isCollectionType(field.typeEx) then
+              messages.addError(
+                fs.loc,
+                s"'foreach' field '${fr.pathId.format}' is not a collection type",
+                suggestion =
+                  "Iterate a collection-typed field (Sequence/Set/Graph/Table/Replica/Mapping or a " +
+                    "'many'/'1+'/range cardinality)."
+              )
+            else if !foreachAllowedFields(parents).exists(_ eq field) then
+              messages.addError(
+                fs.loc,
+                s"'foreach' field '${fr.pathId.format}' must be a field of the enclosing entity's " +
+                  "state, the handled message, or a function input",
+                suggestion =
+                  "Reference a collection field of the entity state, the on-clause's message, or a " +
+                    "function 'requires' input."
+              )
+          case None => () // unresolved field — ResolutionPass already reported it
+  end validateForeachCollection
+
+  /** A25: recursively walk `stmts` in lexical order, threading the set of in-scope `let` locals and
+    * enclosing `foreach` element names, validating each `foreach` collection as it is reached. A
+    * `let` is visible to later siblings and to statements nested under them; a `foreach` element is
+    * visible only within that loop's body.
+    */
+  private def checkForeachScopes(
+    stmts: Seq[Statement],
+    inScopeLets: Seq[LetStatement],
+    parents: Parents,
+    inScopeElements: scala.collection.immutable.Set[String] =
+      scala.collection.immutable.Set.empty[String]
+  ): Unit =
+    var lets = inScopeLets
+    stmts.foreach {
+      case ls: LetStatement => lets = lets :+ ls
+      case fs: ForeachStatement =>
+        validateForeachCollection(fs, lets, inScopeElements, parents)
+        checkForeachScopes(
+          fs.doStatements.toSeq.collect { case s: Statement => s },
+          lets,
+          parents,
+          inScopeElements + fs.element.value
+        )
+      case ws: WhenStatement =>
+        checkForeachScopes(
+          ws.thenStatements.toSeq.collect { case s: Statement => s },
+          lets,
+          parents,
+          inScopeElements
+        )
+        checkForeachScopes(
+          ws.elseStatements.toSeq.collect { case s: Statement => s },
+          lets,
+          parents,
+          inScopeElements
+        )
+      case ms: MatchStatement =>
+        ms.cases.foreach { mc =>
+          checkForeachScopes(
+            mc.statements.toSeq.collect { case s: Statement => s },
+            lets,
+            parents,
+            inScopeElements
+          )
+        }
+        checkForeachScopes(
+          ms.default.toSeq.collect { case s: Statement => s },
+          lets,
+          parents,
+          inScopeElements
+        )
+      case _ => ()
+    }
+  end checkForeachScopes
 
   /** Classify all collected handlers by behavioral completeness. A handler is:
     *   - Executable: has at least one executable statement (tell, send, morph, set, become, error,

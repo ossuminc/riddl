@@ -598,6 +598,14 @@ object JsonAstBuilder:
           cases.map(buildMatchCase),
           buildStatements(default)
         )
+      case ForeachStmtDto(element, field, local, doStatements) =>
+        val collection: FieldRef | Identifier = (field, local) match
+          case (Some(f), _)    => FieldRef(At(), pathId(f))
+          case (None, Some(l)) => ident(l)
+          case (None, None) =>
+            ctx.err("foreach statement needs a 'field' or a 'local' collection")
+            FieldRef(At(), PathIdentifier.empty)
+        ForeachStatement(At(), ident(element), collection, buildStatements(doStatements))
   end buildStatement
 
   private def buildMatchCase(c: MatchCaseDto)(using Ctx): MatchCase =

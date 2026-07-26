@@ -202,6 +202,39 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip a `foreach` statement (A25) losslessly" in {
+      val feModel =
+        """domain FE is { context c is {
+          |  type Order is record { id: Integer }
+          |  type OrderList is many Order
+          |  type Batch is command { orders: OrderList }
+          |  handler h is {
+          |    on command Batch is {
+          |      let batch: OrderList = "orders"
+          |      foreach o in field Batch.orders {
+          |        foreach p in batch { prompt "process" }
+          |      }
+          |    }
+          |  }
+          |}}
+          |""".stripMargin
+      RiddlLib.parseString(feModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // JsonifierPass emits the foreach kind with both a field-ref and a local collection...
+          json1 must include("\"foreach\"")
+          json1 must include("Batch.orders")
+          // ...and JsonAstBuilder rebuilds them so the JSON is a fixed point.
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the foreach JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the foreach model failed: $errors")
+      end match
+    }
+
     "round-trip a command/query `yields` clause (A19) losslessly" in {
       val yModel =
         """domain YD is {

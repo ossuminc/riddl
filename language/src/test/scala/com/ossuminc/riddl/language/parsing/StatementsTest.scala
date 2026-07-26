@@ -219,5 +219,77 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
 
     }
 
+    "check Foreach Statement" in { td =>
+      val element = Identifier(At.empty, "item")
+      val collection = FieldRef(At.empty, PathIdentifier(At.empty, Seq("State", "orders")))
+      val s = ForeachStatement(At.empty, element, collection, Contents.empty())
+      s.kind must be("Foreach Statement")
+      s.format must be(s"foreach ${element.format} in ${collection.format} { … }")
+      checkStatement(s)
+    }
+
+    "parse Foreach Statement over a field" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain ForeachTest is {
+          |  context ForeachTest is {
+          |    handler h is {
+          |      on init {
+          |        foreach o in field S.orders {
+          |          prompt "process order"
+          |        }
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(input) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(root) =>
+          val clause =
+            AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
+          val s: Statement = clause.contents.filter[Statement].head
+          s.isInstanceOf[ForeachStatement] must be(true)
+          val fs = s.asInstanceOf[ForeachStatement]
+          fs.element.value must be("o")
+          fs.collection.isInstanceOf[FieldRef] must be(true)
+          fs.collection.asInstanceOf[FieldRef].pathId.value must be(Seq("S", "orders"))
+          fs.doStatements.filter[Statement].size must be(1)
+    }
+
+    "parse Foreach Statement over a local" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain ForeachTest2 is {
+          |  context ForeachTest2 is {
+          |    type Order is record { id: String }
+          |    type OrderList is many Order
+          |    handler h is {
+          |      on init {
+          |        let batch: OrderList = "orders"
+          |        foreach o in batch {
+          |          prompt "process order"
+          |        }
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(input) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(root) =>
+          val clause =
+            AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
+          val stmts = clause.contents.filter[Statement]
+          val fs = stmts
+            .collectFirst { case f: ForeachStatement => f }
+            .getOrElse(
+              fail("expected a ForeachStatement")
+            )
+          fs.element.value must be("o")
+          fs.collection.isInstanceOf[Identifier] must be(true)
+          fs.collection.asInstanceOf[Identifier].value must be("batch")
+    }
+
   }
 }
