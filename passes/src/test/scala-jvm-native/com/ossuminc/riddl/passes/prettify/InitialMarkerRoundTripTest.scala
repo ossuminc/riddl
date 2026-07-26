@@ -57,7 +57,13 @@ class InitialMarkerRoundTripTest extends AbstractValidatingTest {
     "round-trip explicit and defaulted `initial` markers through prettify" in { (td: TestData) =>
       val e1 = Finder(parse(src, "src")).recursiveFindByType[Entity].head
       e1.states.find(_.id.value == "Second").get.isInitial mustBe true
-      e1.states.find(_.id.value == "First").get.handlers.find(_.id.value == "H2").get.isInitial mustBe true
+      e1.states
+        .find(_.id.value == "First")
+        .get
+        .handlers
+        .find(_.id.value == "H2")
+        .get
+        .isInitial mustBe true
 
       val pretty = prettify(parse(src, "src"))
       pretty must include("initial state Second is")

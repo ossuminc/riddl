@@ -73,14 +73,16 @@ private[parsing] trait StatementParser {
     )./.map { (start, msg, proc, end) => TellStatement(at(start, end), msg, proc) }
   }
 
-  /** The processor context a statement occurs in — drives which extra statements are added
-    * (Entity adds morph/become/reply; Context/Repository add reply). */
+  /** The processor context a statement occurs in — drives which extra statements are added (Entity
+    * adds morph/become/reply; Context/Repository add reply).
+    */
   enum ProcessorKind:
     case Any, Adaptor, Context, Entity, Function, Projector, Repository, Saga, Stream
   end ProcessorKind
 
-  /** A per-clause restriction that composes with the processor context by *subtracting*
-    * statements. Threads through nested blocks (when/match) via the same [[StatementsSet]]. */
+  /** A per-clause restriction that composes with the processor context by *subtracting* statements.
+    * Threads through nested blocks (when/match) via the same [[StatementsSet]].
+    */
   enum ClauseRestriction:
     case Unrestricted
     case EventClause // events must always be accepted -> no require/error
@@ -89,7 +91,8 @@ private[parsing] trait StatementParser {
 
   /** What statements are legal in a clause body: the processor context combined with an optional
     * per-clause restriction. Convenience vals on the companion preserve the old `StatementsSet.X`
-    * call sites (now `Unrestricted`); `.forEvent`/`.forActivation` layer a restriction on. */
+    * call sites (now `Unrestricted`); `.forEvent`/`.forActivation` layer a restriction on.
+    */
   case class StatementsSet(
     processor: ProcessorKind,
     clause: ClauseRestriction = ClauseRestriction.Unrestricted

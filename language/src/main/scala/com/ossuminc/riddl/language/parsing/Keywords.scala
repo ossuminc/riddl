@@ -174,7 +174,8 @@ object Keywords {
 
   /** Optional `initial` marker returning whether it was present. MUST NOT cut (unlike `keyword`):
     * it precedes alternatives that both allow it (state vs handler), so a mismatch has to backtrack
-    * to try the other alternative. */
+    * to try the other alternative.
+    */
   def maybeInitial[u: P]: P[Boolean] =
     P((Keyword.initial ~~ &(isNotKeywordChar)).!.?).map(_.isDefined)
 

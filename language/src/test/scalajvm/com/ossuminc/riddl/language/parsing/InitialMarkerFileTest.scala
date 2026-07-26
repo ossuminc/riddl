@@ -17,8 +17,8 @@ import scala.concurrent.duration.DurationInt
 
 /** Parity guard for the `initial` marker (#14): the corpus fixture
   * `language/input/initial-marker.riddl` is validated against the EBNF grammar by the TatSu
-  * validator. This proves the fastparse parser accepts the SAME file (see CLAUDE.md
-  * "Parser/EBNF Synchronization Requirement").
+  * validator. This proves the fastparse parser accepts the SAME file (see CLAUDE.md "Parser/EBNF
+  * Synchronization Requirement").
   */
 class InitialMarkerFileTest extends AnyWordSpec with Matchers {
 

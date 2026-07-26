@@ -466,11 +466,27 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
              |  }
              |}""".stripMargin
         // The rejecter fires on the leading keyword, so partial statement syntax is fine.
-        rejectsParse(onActivate("send event Evt to inlet c.p.in"), "side-effect-free", "activate: send")(td)
-        rejectsParse(onActivate("tell event Evt to entity e"), "side-effect-free", "activate: tell")(td)
+        rejectsParse(
+          onActivate("send event Evt to inlet c.p.in"),
+          "side-effect-free",
+          "activate: send"
+        )(td)
+        rejectsParse(
+          onActivate("tell event Evt to entity e"),
+          "side-effect-free",
+          "activate: tell"
+        )(td)
         rejectsParse(onActivate("reply event Evt"), "side-effect-free", "activate: reply")(td)
-        rejectsParse(onActivate("morph entity e to state e.s with event Evt"), "side-effect-free", "activate: morph")(td)
-        rejectsParse(onActivate("become entity e to handler h"), "side-effect-free", "activate: become")(td)
+        rejectsParse(
+          onActivate("morph entity e to state e.s with event Evt"),
+          "side-effect-free",
+          "activate: morph"
+        )(td)
+        rejectsParse(
+          onActivate("become entity e to handler h"),
+          "side-effect-free",
+          "activate: become"
+        )(td)
     }
   }
 

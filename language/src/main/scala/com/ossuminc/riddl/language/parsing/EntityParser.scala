@@ -41,7 +41,8 @@ private[parsing] trait EntityParser {
     }
   }
 
-  /** If no [[Handler]] in these contents is marked `initial`, mark the first (declaration order). */
+  /** If no [[Handler]] in these contents is marked `initial`, mark the first (declaration order).
+    */
   private def markFirstHandlerInitial(contents: Seq[StateContents]): Seq[StateContents] = {
     val handlers = contents.collect { case h: Handler => h }
     if handlers.isEmpty || handlers.exists(_.isInitial) then contents
@@ -58,7 +59,8 @@ private[parsing] trait EntityParser {
     * [[State]] if none is marked, and — only when the entity has a single state — mark the first
     * entity-scope [[Handler]] if none is marked. Refactor-safety comes from the explicit `initial`
     * keyword; this only preserves prior semantics for unmarked models. States/handlers nested in
-    * includes are not reached here (they are resolved later). */
+    * includes are not reached here (they are resolved later).
+    */
   private def defaultEntityInitials(contents: Seq[EntityContents]): Seq[EntityContents] = {
     val states = contents.collect { case s: State => s }
     val withState =

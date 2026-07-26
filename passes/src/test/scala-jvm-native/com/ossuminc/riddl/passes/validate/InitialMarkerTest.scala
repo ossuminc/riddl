@@ -12,12 +12,14 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
-/** Tests for the explicit `initial` marker on States and Handlers (#14): the default (first-declared
-  * is initial), explicit marking, and the "at most one initial" validation errors.
+/** Tests for the explicit `initial` marker on States and Handlers (#14): the default
+  * (first-declared is initial), explicit marking, and the "at most one initial" validation errors.
   */
 class InitialMarkerTest extends AbstractValidatingTest {
 
-  private def entity(src: String, td: TestData)(check: (Entity, Messages.Messages) => org.scalatest.Assertion) =
+  private def entity(src: String, td: TestData)(
+    check: (Entity, Messages.Messages) => org.scalatest.Assertion
+  ) =
     parseAndValidateDomain(RiddlParserInput(src, td), shouldFailOnErrors = false) {
       case (domain, _, messages) => check(Finder(domain).recursiveFindByType[Entity].head, messages)
     }
@@ -91,21 +93,22 @@ class InitialMarkerTest extends AbstractValidatingTest {
         }
     }
 
-    "NOT default any entity-scope handler when the entity has multiple states" in { (td: TestData) =>
-      // With >1 state the entity-scope handlers are common parts merged into each state's
-      // handler set, so none of them is the entity's initial handler.
-      entity(
-        """domain d is { context c is { entity e is {
+    "NOT default any entity-scope handler when the entity has multiple states" in {
+      (td: TestData) =>
+        // With >1 state the entity-scope handlers are common parts merged into each state's
+        // handler set, so none of them is the entity's initial handler.
+        entity(
+          """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
           |  state First of type d.c.e.Data is { handler S1 is { on other is { prompt "a" } } }
           |  state Second of type d.c.e.Data is { handler S2 is { on other is { prompt "b" } } }
           |  handler E1 is { on other is { prompt "c" } }
           |  handler E2 is { on other is { prompt "d" } }
           |}}}""".stripMargin,
-        td
-      ) { (e, _) =>
-        e.handlers.forall(_.isInitial == false) mustBe true
-      }
+          td
+        ) { (e, _) =>
+          e.handlers.forall(_.isInitial == false) mustBe true
+        }
     }
 
     "error when more than one handler in a state is marked initial" in { (td: TestData) =>

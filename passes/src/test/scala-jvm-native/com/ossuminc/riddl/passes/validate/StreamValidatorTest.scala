@@ -112,7 +112,9 @@ class StreamValidatorTest extends AbstractValidatingTest {
           messages.hasErrors mustBe false // domain-scoped cross-context is CORRECT placement
           messages
             .filter(_.kind == Messages.CompletenessWarning)
-            .exists(_.message.contains("spans a context boundary but is not 'persistent'")) mustBe true
+            .exists(
+              _.message.contains("spans a context boundary but is not 'persistent'")
+            ) mustBe true
         }
     }
 

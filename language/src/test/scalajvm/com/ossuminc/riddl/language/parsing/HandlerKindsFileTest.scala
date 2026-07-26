@@ -6,7 +6,12 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{Root, OnActivationClause, OnPassivationClause, OnEventClause}
+import com.ossuminc.riddl.language.AST.{
+  Root,
+  OnActivationClause,
+  OnPassivationClause,
+  OnEventClause
+}
 import com.ossuminc.riddl.language.Finder
 import com.ossuminc.riddl.utils.{pc, ec, Await, PathUtils}
 import org.scalatest.wordspec.AnyWordSpec
@@ -16,9 +21,9 @@ import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
 /** Parity guard for the RIDDL 2.0 handler-kind syntax: the corpus fixture
-  * `language/input/handler-kinds.riddl` is validated against the EBNF grammar by
-  * the TatSu validator (which scans every input-directory riddl file). This test proves fastparse accepts
-  * the SAME file, so the documented grammar and the implementation stay in sync (see CLAUDE.md
+  * `language/input/handler-kinds.riddl` is validated against the EBNF grammar by the TatSu
+  * validator (which scans every input-directory riddl file). This test proves fastparse accepts the
+  * SAME file, so the documented grammar and the implementation stay in sync (see CLAUDE.md
   * "Parser/EBNF Synchronization Requirement").
   */
 class HandlerKindsFileTest extends AnyWordSpec with Matchers {
