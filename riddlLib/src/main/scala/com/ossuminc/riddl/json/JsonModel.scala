@@ -1023,6 +1023,32 @@ object JsonModel:
     end match
   end writeInteraction
 
+  /** ujson <-> ArgDto. A function/saga `input`/`output` arg is a bare string (a type ref — the A9
+    * canonical form) or a bare array of fields (the deprecated inline aggregation, per the
+    * `"input"?: [<field>]` wire schema). Reading also tolerates the legacy object form `{ "ref"?,
+    * "fields"? }`. (macroRW alone could only read/write that object form, so the documented
+    * bare-array/string shapes failed to parse — this reconciles read and write.)
+    */
+  private def readArg(v: ujson.Value): ArgDto = v match
+    case ujson.Str(s)     => ArgDto(ref = Some(s))
+    case ujson.Arr(items) => ArgDto(fields = items.map(j => readJson[FieldDto](j)).toSeq)
+    case obj: ujson.Obj =>
+      val m = obj.obj
+      ArgDto(
+        ref = m.get("ref").map(_.str),
+        fields = m.get("fields").map(_.arr.map(j => readJson[FieldDto](j)).toSeq).getOrElse(Nil)
+      )
+    case other =>
+      throw new IllegalArgumentException(
+        s"Invalid arg: expected a type-ref string or a field array, got: ${other.getClass.getSimpleName}"
+      )
+  end readArg
+
+  private def writeArg(dto: ArgDto): ujson.Value = dto.ref match
+    case Some(r) => ujson.Str(r)
+    case None    => ujson.Arr.from(dto.fields.map(f => writeJs(f)))
+  end writeArg
+
   given typeExprRW: ReadWriter[TypeExprDto] =
     readwriter[ujson.Value].bimap[TypeExprDto](writeTypeExpr, readTypeExpr)
   given statementRW: ReadWriter[StatementDto] =
@@ -1032,7 +1058,8 @@ object JsonModel:
   given userStoryRW: ReadWriter[UserStoryDto] = macroRW
   given useCaseRW: ReadWriter[UseCaseDto] = macroRW
   given epicRW: ReadWriter[EpicDto] = macroRW
-  given argRW: ReadWriter[ArgDto] = macroRW
+  given argRW: ReadWriter[ArgDto] =
+    readwriter[ujson.Value].bimap[ArgDto](writeArg, readArg)
   given functionRW: ReadWriter[FunctionDto] = macroRW
   given portletRW: ReadWriter[PortletDto] = macroRW
   given connectorDtoRW: ReadWriter[ConnectorDto] = macroRW
