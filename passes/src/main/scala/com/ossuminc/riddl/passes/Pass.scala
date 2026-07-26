@@ -80,7 +80,8 @@ object PassOutput {
   *   be reached
   */
 case class PassInput(
-  root: PassRoot
+  root: PassRoot,
+  parseMessages: Messages.Messages = Messages.empty
 )
 
 object PassInput {
@@ -793,12 +794,14 @@ object Pass {
         val output: PassOutput = runOnePass(input.root, aPass)
         outputs.outputIs(aPass.name, output)
       }
-      PassesResult(input, outputs, Messages.empty)
+      // Carry any parse-time messages (warnings/deprecations) accumulated during
+      // parsing into the result via additionalMessages so they surface to the user.
+      PassesResult(input, outputs, input.parseMessages)
     } catch {
       case NonFatal(exception) =>
         val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n")
         val messages: Messages.Messages = List(Messages.severe(message, At.empty))
-        PassesResult(input, outputs, messages)
+        PassesResult(input, outputs, messages ++ input.parseMessages)
     }
   }
 

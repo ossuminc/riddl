@@ -115,12 +115,12 @@ object Riddl {
     shouldFailOnError: Boolean = true,
     extraPasses: PassCreators = Seq.empty[PassCreator]
   )(using io: PlatformContext): Either[Messages, PassesResult] = {
-    TopLevelParser.parseInput(input) match {
+    TopLevelParser.parseInputWithMessages(input) match {
       case Left(messages) =>
         Left(messages)
-      case Right(root) =>
-        val input = PassInput(root)
-        val result = Pass.runThesePasses(input, Pass.standardPasses ++ extraPasses)
+      case Right((root, parseMessages)) =>
+        val passInput = PassInput(root, parseMessages)
+        val result = Pass.runThesePasses(passInput, Pass.standardPasses ++ extraPasses)
         if shouldFailOnError && result.messages.hasErrors then Left(result.messages)
         else Right(result)
     }

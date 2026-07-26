@@ -33,7 +33,9 @@ case class TestParser(
     try {
       fastparse.parse[CT](input, parser(_), withVerboseFailures) match {
         case Success(content: CT, _) =>
-          if messagesNonEmpty then Left(messagesAsList)
+          // Non-error parse messages (warnings/deprecations) should not turn a
+          // successful parse into a failure; only error-level messages do.
+          if messagesHaveErrors then Left(messagesAsList)
           else Right(content)
         case failure: Failure =>
           makeParseFailureError(failure, input)

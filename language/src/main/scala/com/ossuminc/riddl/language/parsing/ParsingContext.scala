@@ -39,7 +39,11 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     try {
       fastparse.parse[RESULT](rpi, rule, withVerboseFailures) match {
         case fastparse.Parsed.Success(list, index) =>
-          if messagesNonEmpty then Left(messagesAsList -> index) else Right(list -> index)
+          // A successful parse may still have accumulated non-fatal messages
+          // (warnings/deprecations). Only treat error-level messages as a
+          // failure; carry the rest through so they can surface on the Root.
+          if messagesHaveErrors then Left(messagesAsList -> index)
+          else Right(list -> index)
         case failure: fastparse.Parsed.Failure =>
           makeParseFailureError(failure, rpi)
           Left(messagesAsList -> failure.index)

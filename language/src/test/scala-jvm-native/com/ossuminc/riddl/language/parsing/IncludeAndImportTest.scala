@@ -96,13 +96,16 @@ class IncludeAndImportTest extends ParsingTest {
       val path = java.nio.file.Path.of(defaultInputDir + "/includes/duplicateInclude.riddl")
       val url = PathUtils.urlFromCwdPath(path)
       val future: Future[Assertion] = RiddlParserInput.fromURL(url, td).map { rpi =>
-        TopLevelParser.parseInput(rpi) match {
-          case Right(_) =>
-            fail("Should have failed with warnings")
+        // A duplicate-include warning is a non-fatal parse-time message: the parse
+        // succeeds and the warning surfaces via parseInputWithMessages rather than
+        // (incorrectly) turning the successful parse into a failure.
+        TopLevelParser.parseInputWithMessages(rpi) match {
           case Left(messages) =>
-            val errors = messages.justErrors
+            fail(messages.format)
+          case Right((_, parseMessages)) =>
+            val errors = parseMessages.justErrors
             if errors.nonEmpty then fail(errors.format)
-            val warnings = messages.justWarnings
+            val warnings = parseMessages.justWarnings
             warnings.size mustBe 1
             warnings.head.message must include("Duplicate include origin detected in")
             succeed

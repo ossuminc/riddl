@@ -119,6 +119,16 @@ private[parsing] trait StreamingParser {
     )./.map { case (start, id, contents, descriptives, end) =>
       val loc = at(start, end)
       val shape = keywordToKind(keyword, loc)
+      // The dedicated shape keywords (source/sink/flow/merge/split/router) are
+      // deprecated in favor of the generic `processor <id> as <shape>` form.
+      // `void` has no `processor` equivalent, so it is not deprecated.
+      if keyword != Keyword.void then
+        val kwLoc = at(start, start + keyword.length)
+        deprecation(
+          kwLoc,
+          s"The `$keyword` keyword is deprecated; use `processor ${id.value} as $keyword` instead"
+        )
+      end if
       checkForDuplicateIncludes(contents)
       Streamlet(loc, id, Some(shape), contents.toContents, descriptives.toContents)
     }

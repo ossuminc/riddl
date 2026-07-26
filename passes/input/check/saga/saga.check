@@ -132,3 +132,6 @@ passes/input/check/saga/saga.riddl(5:5->26):
 passes/input/check/saga/saga.riddl(8:5->30):
  Function 'UndoAnotherThing' is unused:
      function UndoAnotherThing {
+passes/input/check/saga/saga.riddl(13:7->11):
+ The `sink` keyword is deprecated; use `processor trashCan as sink` instead:
+       sink trashCan is { inlet in is command Something }

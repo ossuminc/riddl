@@ -31,6 +31,12 @@ trait ParsingErrors {
 
   protected def messagesNonEmpty: Boolean = synchronized { messages.nonEmpty }
 
+  /** True iff any accumulated message is error-severity. A successful fastparse that only
+    * accumulated warnings/deprecations should NOT be treated as a failure — only error-level
+    * messages indicate the parse should be abandoned.
+    */
+  protected def messagesHaveErrors: Boolean = synchronized { messages.exists(_.isError) }
+
   private def addMessage(message: Messages.Message): Unit = {
     synchronized {
       messages.append(message)
@@ -41,6 +47,12 @@ trait ParsingErrors {
     synchronized { messages.toList }
   }
 
+  /** The accumulated non-fatal (and fatal) messages produced during a parse. Unlike a fastparse
+    * failure, a *successful* parse can still accumulate warnings/deprecations; this accessor lets
+    * callers retrieve them so they can be surfaced alongside the parsed Root.
+    */
+  def accumulatedMessages: Messages.Messages = messagesAsList
+
   def error(loc: At, message: String, context: String = ""): Unit = {
     val msg = Messages.Message(loc, message, Messages.Error, context)
     addMessage(msg)
@@ -48,6 +60,11 @@ trait ParsingErrors {
 
   def warning(loc: At, message: String, context: String = ""): Unit = {
     val msg = Messages.Message(loc, message, Messages.Warning, context)
+    addMessage(msg)
+  }
+
+  def deprecation(loc: At, message: String, context: String = ""): Unit = {
+    val msg = Messages.Message(loc, message, Messages.Deprecation, context)
     addMessage(msg)
   }
 

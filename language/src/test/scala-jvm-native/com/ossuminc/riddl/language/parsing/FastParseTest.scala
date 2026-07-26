@@ -41,7 +41,7 @@ abstract class FastParseTest(using PlatformContext)
     try {
       fastparse.parse[RESULT](rpi, rule(_), true) match {
         case Success(root, index) =>
-          if messagesNonEmpty then validateResult(Left(messagesAsList), rpi, index)
+          if messagesHaveErrors then validateResult(Left(messagesAsList), rpi, index)
           else validateResult(Right(root), rpi, index)
           end if
         case failure: Failure =>

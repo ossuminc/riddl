@@ -172,6 +172,38 @@ object TopLevelParser:
     }
   }
 
+  /** Like [[parseInput]] but, on a successful parse, also returns the non-fatal messages
+    * (warnings/deprecations) that were accumulated during parsing. These would otherwise be dropped
+    * because a successful parse returns only the Root. Callers (e.g. `Riddl.parseAndValidate`) can
+    * thread these into the validation output so they surface to the user.
+    *
+    * @param input
+    *   The RiddlParserInput that contains the data to parse
+    * @param withVerboseFailures
+    *   For the utility of RIDDL implementers.
+    * @return
+    *   Left(messages) on parse failure; Right((root, parseMessages)) on success where parseMessages
+    *   are the accumulated non-fatal parse-time messages.
+    */
+  def parseInputWithMessages(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using pc: PlatformContext): Either[Messages, (Root, Messages)] = {
+    Timer.time(s"parse ${input.origin}", pc.options.showTimes) {
+      implicit val _: ExecutionContext = pc.ec
+      val tlp = new TopLevelParser(input, withVerboseFailures)
+      tlp.parseRoot match {
+        case Left(parseErrors) => Left(parseErrors)
+        case Right(root)       =>
+          // Load any BAST imports referenced in the parsed file
+          val (loadedRoot, importMsgs) = loadBASTImports(root, input.root)
+          if importMsgs.hasErrors then Left(importMsgs)
+          else Right(loadedRoot -> (tlp.accumulatedMessages ++ importMsgs))
+          end if
+      }
+    }
+  }
+
   /** Parse a string directly
     *
     * @param input

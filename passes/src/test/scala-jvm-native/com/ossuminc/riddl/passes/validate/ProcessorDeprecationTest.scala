@@ -1,0 +1,89 @@
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl.passes.validate
+
+import com.ossuminc.riddl.language.{At, Messages, *}
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.passes.{Pass, PassInput, Riddl}
+import com.ossuminc.riddl.utils.pc
+
+import org.scalatest.TestData
+
+/** Tests for:
+  *   - Part B: the deprecated shape keywords (source/sink/flow/merge/split/router) emit a
+  *     [[Messages.Deprecation]] telling the user to use `processor <id> as <kw>`.
+  *   - Part A: parse-time messages (warnings/deprecations) accumulated during a *successful* parse
+  *     now surface in `Riddl.parseAndValidate`'s output.
+  */
+class ProcessorDeprecationTest extends AbstractValidatingTest {
+
+  private def flowModel(header: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    type Cmd = command { x: Integer }
+       |    $header is {
+       |      inlet i is command Cmd
+       |      outlet o is command Cmd
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+
+  "ProcessorDeprecation" must {
+    "emit a Deprecation for the `flow` shape keyword" in { (td: TestData) =>
+      val rpi = RiddlParserInput(flowModel("flow F"), td)
+      Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
+        case Left(errors) => fail(errors.format)
+        case Right(result) =>
+          val deprecations = result.messages.justDeprecations
+          info(deprecations.format)
+          val found = deprecations.exists { (m: Messages.Message) =>
+            m.message.contains("flow") && m.message.contains("processor")
+          }
+          found must be(true)
+      }
+    }
+
+    "not emit a Deprecation for the `processor F as flow` form" in { (td: TestData) =>
+      val rpi = RiddlParserInput(flowModel("processor F as flow"), td)
+      Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
+        case Left(errors) => fail(errors.format)
+        case Right(result) =>
+          val deprecations = result.messages.justDeprecations.filter { (m: Messages.Message) =>
+            m.message.contains("keyword is deprecated")
+          }
+          info(result.messages.format)
+          deprecations mustBe empty
+      }
+    }
+
+    "surface a parse-time message accumulated during a successful parse" in { (td: TestData) =>
+      // The `flow` deprecation is emitted during parsing (not by a validation pass), so its
+      // presence in the final result proves parse-time messages now reach the output. Confirm it
+      // originates from parsing by checking TopLevelParser.parseInputWithMessages directly.
+      val rpi = RiddlParserInput(flowModel("flow F"), td)
+      TopLevelParser.parseInputWithMessages(rpi) match {
+        case Left(errors) => fail(errors.format)
+        case Right((_, parseMessages)) =>
+          parseMessages.exists(_.isDeprecation) must be(true)
+      }
+    }
+
+    "thread PassInput.parseMessages into PassesResult.messages" in { (td: TestData) =>
+      val rpi = RiddlParserInput(flowModel("processor F as flow"), td)
+      TopLevelParser.parseInput(rpi) match {
+        case Left(errors) => fail(errors.format)
+        case Right(root) =>
+          val parseWarning = Messages.Message(At.empty, "synthetic parse warning", Messages.Warning)
+          val input = PassInput(root, List(parseWarning))
+          val result = Pass.runThesePasses(input, Pass.standardPasses)
+          result.messages.contains(parseWarning) must be(true)
+      }
+    }
+  }
+}
