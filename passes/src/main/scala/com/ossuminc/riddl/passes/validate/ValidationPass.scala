@@ -1980,7 +1980,10 @@ case class ValidationPass(
         )
       case _ => ()
     end match
-    if c.groups.nonEmpty && !c.intention.contains(Intention.Application) then
+    // Only flag a context that has EXPLICITLY declared a non-application intention. A context with
+    // no declared intention is grandfathered: the intention prefix is not yet expressible in the
+    // EBNF-validated corpus, so existing group-bearing contexts must remain valid.
+    if c.groups.nonEmpty && c.intention.exists(_ != Intention.Application) then
       val intentionStr = c.intention.map(_.keyword).getOrElse("none")
       messages.addError(
         c.errorLoc,
