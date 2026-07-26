@@ -246,10 +246,51 @@ class StreamValidatorTest extends AbstractValidatingTest {
     "validate Streamlet types" in { _ =>
       // A32/Task 2: the AST no longer throws IllegalArgumentException on a
       // shape/arity mismatch (crashing on user input is wrong). The arity-vs-
-      // ascribed-shape check moves to ValidationPass as an Error — Task 10
-      // restores these cases as assertions on validation messages (e.g. an
-      // Error for `as source` with 2 inlets). Pending until Task 10 lands.
+      // ascribed-shape check moves to ValidationPass as an Error - Task 10
+      // restores these cases as assertions on validation messages. Pending
+      // until Task 10 lands.
       pending
+    }
+
+    // ---- A31 (Task 9): exactly one connector per inlet and per outlet ----
+
+    "error when more than one connector attaches to a single inlet" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          | type T = Integer
+          | context c is {
+          |  source s1 is { outlet o1 is type T }
+          |  source s2 is { outlet o2 is type T }
+          |  sink k is { inlet in is type T }
+          |  connector a is { from outlet c.s1.o1 to inlet c.k.in }
+          |  connector b is { from outlet c.s2.o2 to inlet c.k.in }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+        val matching = messages.justErrors.filter { m =>
+          m.message.contains("Inlet 'in' is connected by 2 connectors")
+        }
+        matching.size must be(1)
+      }
+    }
+
+    "not error when exactly one connector attaches to each portlet" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          | type T = Integer
+          | context c is {
+          |  source s is { outlet o is type T }
+          |  sink k is { inlet in is type T }
+          |  connector a is { from outlet c.s.o to inlet c.k.in }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+        messages.justErrors.exists(_.message.contains("exactly one is allowed")) must be(false)
+      }
     }
   }
 }

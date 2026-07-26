@@ -24,6 +24,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
   def checkStreaming(root: PassRoot): Unit = {
     checkStreamingUsage(root)
     checkConnectorPlacement()
+    checkPortletCardinality()
     checkUnattachedOutlets()
   }
 
@@ -245,6 +246,53 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               s"Remove the 'persistent' option from ${connector.identify}; both ends are in the same context."
           )
         end if
+    }
+  }
+
+  /** A31: exactly one connector may attach to any given inlet or outlet. Fan-in/out is modeled by
+    * declaring MULTIPLE ports on a processor (which changes its arity-derived shape to merge/split/
+    * router), never by attaching several connectors to a single port. Resolve each connector's
+    * `from` outlet and `to` inlet to the actual [[Outlet]]/[[Inlet]] definitions, count how many
+    * connectors reference each, and emit an Error for any portlet referenced by more than one. Zero
+    * connectors is the separate `checkUnattachedOutlets` completeness concern and is not handled
+    * here.
+    */
+  private def checkPortletCardinality(): Unit = {
+    val outletCounts = mutable.LinkedHashMap.empty[Outlet, Int]
+    val inletCounts = mutable.LinkedHashMap.empty[Inlet, Int]
+
+    connectors.filterNot(_.isEmpty).foreach { connector =>
+      val connParents = symbols.parentsOf(connector)
+      resolvePath[Outlet](connector.from.pathId, connParents).foreach { outlet =>
+        outletCounts.update(outlet, outletCounts.getOrElse(outlet, 0) + 1)
+      }
+      resolvePath[Inlet](connector.to.pathId, connParents).foreach { inlet =>
+        inletCounts.update(inlet, inletCounts.getOrElse(inlet, 0) + 1)
+      }
+    }
+
+    outletCounts.foreach { case (outlet, count) =>
+      if count > 1 then
+        messages.addError(
+          outlet.errorLoc,
+          s"Outlet '${outlet.id.value}' is connected by $count connectors; exactly one is allowed " +
+            "(model fan-out with multiple outlets)",
+          suggestion =
+            "Attach only one connector to this outlet; to fan out, declare additional outlets on the " +
+              "processor (which makes it a split or router) and connect each separately."
+        )
+    }
+
+    inletCounts.foreach { case (inlet, count) =>
+      if count > 1 then
+        messages.addError(
+          inlet.errorLoc,
+          s"Inlet '${inlet.id.value}' is connected by $count connectors; exactly one is allowed " +
+            "(model fan-in with multiple inlets)",
+          suggestion =
+            "Attach only one connector to this inlet; to fan in, declare additional inlets on the " +
+              "processor (which makes it a merge or router) and connect each separately."
+        )
     }
   }
 
