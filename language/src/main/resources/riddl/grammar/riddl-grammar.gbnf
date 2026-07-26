@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-25 23:51 UTC
+# Generated: 2026-07-26 02:58 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -74,7 +74,7 @@ entity ::= "entity" ws1 identifier ws1 is ws "{" ws entity-body ws "}" ws (with-
 entity-body ::= entity-definitions | "???"
 entity-definitions ::= (entity-content)+
 entity-content ::= processor-definition-contents | state | entity-include
-state ::= ("initial")? ws "state" ws1 identifier ws ("of" | is) ws type-ref ws (state-body)? ws (with-metadata)?
+state ::= ("initial")? ws "state" ws1 identifier ws ("of" | is) ws record-ref ws (state-body)? ws (with-metadata)?
 state-body ::= is ws "{" ws ((state-content)+ | "???") ws "}"
 state-content ::= handler | comment
 entity-include ::= "include" ws1 literal-string
@@ -151,7 +151,7 @@ function-include ::= "include" ws1 literal-string
 type-ref ::= (aggregate-use-case)? ws path-identifier
 field-ref ::= "field" ws1 path-identifier
 constant-ref ::= "constant" ws1 path-identifier
-message-ref ::= command-ref | event-ref | query-ref | result-ref | record-ref
+message-ref ::= command-ref | event-ref | query-ref | result-ref
 command-ref ::= "command" ws1 path-identifier
 event-ref ::= "event" ws1 path-identifier
 query-ref ::= "query" ws1 path-identifier
@@ -218,7 +218,7 @@ require-statement ::= "require" ws (literal-string | invariant-ref)
 invariant-ref ::= "invariant" ws1 path-identifier
 
 # Entity state transitions
-morph-statement ::= "morph" ws1 entity-ref ws "to" ws1 state-ref ws "with" ws1 message-ref
+morph-statement ::= "morph" ws1 entity-ref ws "to" ws1 state-ref ws "with" ws1 record-ref
 become-statement ::= "become" ws1 entity-ref ws "to" ws1 handler-ref
 
 # Pseudo Code Block

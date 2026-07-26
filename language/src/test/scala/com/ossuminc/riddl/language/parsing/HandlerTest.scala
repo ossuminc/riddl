@@ -120,7 +120,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
       val input = RiddlParserInput(
         """entity DistributionItem is {
           |  type ArbitraryState is { value: String }
-          |  state DistributionState of ArbitraryState
+          |  state DistributionState of record ArbitraryState
           |  handler FromContainer  is {
           |    on event ContainerNestedInContainer {
           |      when "==(field ContainerNestedInContainer.id, parentContainer)" then
@@ -149,7 +149,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |  }
           |entity DistributionItem is {
           |  type ArbitraryState is { value: String }
-          |  state DistributionState of ArbitraryState
+          |  state DistributionState of record ArbitraryState
           | handler FromContainer  is {
           |    on event ContainerNestedInContainer {
           |      when "==(field ContainerNestedInContainer.id,parentContainer)" then
@@ -239,7 +239,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
       val input = RiddlParserInput(
         """entity Account is {
           |  type AccountState is { balance: Number }
-          |  state Active of Account.AccountState
+          |  state Active of record Account.AccountState
           |  handler Transactions is {
           |    on command Withdraw {
           |      require "balance >= amount"
@@ -478,7 +478,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
         )(td)
         rejectsParse(onActivate("reply event Evt"), "side-effect-free", "activate: reply")(td)
         rejectsParse(
-          onActivate("morph entity e to state e.s with event Evt"),
+          onActivate("morph entity e to state e.s with record Evt"),
           "side-effect-free",
           "activate: morph"
         )(td)

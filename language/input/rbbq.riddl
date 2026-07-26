@@ -19,7 +19,7 @@ domain ReactiveBBQ is {
 
   context Customers is {
     entity Customer is {
-      state main of ReactiveBBQ.Empty
+      state main of record ReactiveBBQ.Empty
       handler Input is { ??? }
     }
   }
@@ -32,7 +32,7 @@ domain ReactiveBBQ is {
     }
     entity OrderViewer is {
      record AField is { field: type OrderViewType }
-     state OrderState of OrderViewer.AField
+     state OrderState of record OrderViewer.AField
      handler Input is { ??? }
     } with {
      option is kind("device")
@@ -86,7 +86,7 @@ domain ReactiveBBQ is {
         points is Number,
         rewardEvents is many optional RewardEvent
       }
-      state RewardState of RewardsAccount.Fields
+      state RewardState of record RewardsAccount.Fields
       handler Inputs is { ??? }
     }
 
@@ -101,7 +101,7 @@ domain ReactiveBBQ is {
         orderId is OrderId,
         customerId is CustomerId
       }
-      state OrderState of Order.Fields
+      state OrderState of record Order.Fields
       handler foo  is {}
     } with {
       option is aggregate
@@ -115,7 +115,7 @@ domain ReactiveBBQ is {
         amount is Number,
         cardToken is String
       }
-      state PaymentState of Payment.Fields
+      state PaymentState of record Payment.Fields
       handler foo is { ??? }
     } with {
      option is aggregate
@@ -125,13 +125,13 @@ domain ReactiveBBQ is {
   context Menus is {
     entity MenuItem is {
       record Fields is { something: String }
-      state MenuState of MenuItem.Fields
+      state MenuState of record MenuItem.Fields
       handler foo is {}
     }
     type MenuItemRef is reference to entity MenuItem
     entity Menu is {
       record Fields is { items: many MenuItemRef }
-      state typical of Menu.Fields
+      state typical of record Menu.Fields
       handler foo is { ??? }
     } with {
       option is aggregate
@@ -148,13 +148,13 @@ domain ReactiveBBQ is {
     }
     entity Location is {
       record Fields is { name: String }
-      state typical of Location.Fields
+      state typical of record Location.Fields
       handler foo is {}
     } with { explained as "This is a retail store Location" }
 
     entity Reservation is {
      record Fields is { value: ReservationValue }
-     state reservation of Reservation.Fields
+     state reservation of record Reservation.Fields
      handler ofInputs is {}
     } with {
      option aggregate

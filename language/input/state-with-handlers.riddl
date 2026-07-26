@@ -12,7 +12,7 @@ domain StateHandlerTest is {
       record InactiveFields(reason: String)
 
       // State with handlers - the new syntax
-      state ActiveState of StateMachine.ActiveFields is {
+      state ActiveState of record StateMachine.ActiveFields is {
         handler onActive is {
           on command Deactivate {
             send event Deactivated to outlet TestContext.Sink.Out
@@ -21,7 +21,7 @@ domain StateHandlerTest is {
       }
 
       // State with handlers using multiple handlers
-      state InactiveState of StateMachine.InactiveFields is {
+      state InactiveState of record StateMachine.InactiveFields is {
         handler onInactive is {
           on command Activate {
             send event Activated to outlet TestContext.Sink.Out
@@ -30,7 +30,7 @@ domain StateHandlerTest is {
       }
 
       // State without handlers - the traditional syntax
-      state PlainState of StateMachine.ActiveFields
+      state PlainState of record StateMachine.ActiveFields
 
       handler default is {
         on command Activate { ??? }

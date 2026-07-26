@@ -823,7 +823,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case 7 => // Morph
         val entity = readEntityRef()
         val state = readStateRef()
-        val value = readMessageRef()
+        val value = readRecordRefInline() // A9b: morph value is a RecordRef
         MorphStatement(loc, entity, state, value)
 
       case 8 => // Become
@@ -923,7 +923,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readStateNode(): State = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val typ = readTypeRefInline() // Inline - position known
+    val typ = readRecordRefInline() // A9b: state type is a RecordRef; inline - position known
     val isInitial = reader.readU8() != 0
     val contents = readContentsDeferred[StateContents]()
     val metadata = readMetadataDeferred()
@@ -1813,6 +1813,13 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     TypeRef(loc, keyword, pathId)
   }
 
+  // A9b: inverse of writeRecordRefInline (state.typ, morph.value) — loc + pathId, no keyword.
+  private def readRecordRefInline(): RecordRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    RecordRef(loc, pathId)
+  }
+
   private def readFieldRefOrConstantRef(): FieldRef | ConstantRef = {
     val tag = reader.readU8() // Read NODE_FIELD tag
     val loc = readLocation()
@@ -2153,13 +2160,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_RESULT_REF =>
         reader.readU8() // consume tag
         readResultRefNode()
-      case NODE_RECORD_REF =>
-        reader.readU8() // consume tag
-        readRecordRefNode()
       case _ =>
+        // A9b: a record is not a message; only the 4 message tags are valid here.
         addError(s"Unknown message ref tag: $refTag")
         // Use lastLocation for best-effort location on error
-        RecordRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
+        CommandRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
     }
   }
 

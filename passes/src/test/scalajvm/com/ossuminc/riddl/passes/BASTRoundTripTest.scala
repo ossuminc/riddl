@@ -130,8 +130,8 @@ class BASTRoundTripTest extends AnyWordSpec {
       val riddlSource =
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state First of type d.c.e.Data is { handler H is { on other is { prompt "a" } } }
-          |  initial state Second of type d.c.e.Data is {
+          |  state First of record d.c.e.Data is { handler H is { on other is { prompt "a" } } }
+          |  initial state Second of record d.c.e.Data is {
           |    handler H1 is { on other is { prompt "b" } }
           |    initial handler H2 is { on other is { prompt "c" } }
           |  }

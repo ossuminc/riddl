@@ -120,7 +120,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |    type DSimple = Number
           |    entity E {
           |      record fields is { a : D.DSimple }
-          |      state only of E.fields is {
+          |      state only of record E.fields is {
           |        handler OnlyFoo is { ??? }
           |      }
           |      handler ForE is { ??? }
@@ -200,7 +200,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |        type ESimple = B.CSimple // partial path
           |        event blah is { dSimple: D.DSimple }
           |        record fields is { a : A.Top }
-          |        state only of E.fields is {
+          |        state only of record E.fields is {
           |          handler foo  is {
           |            on event E.blah {
           |              then set E.fields.a to @E.blah.dSimple
@@ -263,7 +263,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |      record fields is {
           |        f: A.TPrime
           |      }
-          |      state S of E.fields
+          |      state S of record E.fields
           |      handler foo is {
           |       on command DoIt {
           |         set field E.S.f.t to "true"
@@ -290,7 +290,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |    type Info is { g: C.DoIt }
           |    entity E is {
           |      record fields is { f: C.Info }
-          |      state S of E.fields is {
+          |      state S of record E.fields is {
           |        handler E_Handler is {
           |          on command C.DoIt {
           |            |set S.f.g.value to @C.DoIt.value
@@ -402,7 +402,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |      handler only is {
           |        on command MorphIt {
           |          morph entity Ignore2.OfInterest to state OfInterest.First
-          |            with command MorphIt // WTF is this for?
+          |            with record MorphIt // WTF is this for?
           |        }
           |      }
           |    }

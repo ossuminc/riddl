@@ -111,7 +111,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         context C is {
           entity E is {
             record Fields is { name: String }
-            state S of E.Fields
+            state S of record E.Fields
           }
         }
       }"""
@@ -315,7 +315,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
           type T is String
           entity E is {
             record Fields is { name: String }
-            state S of E.Fields
+            state S of record E.Fields
             handler H is {
               on other { error "unknown" }
             }
@@ -488,7 +488,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
           entity E is {
             type Add is command { name: String }
             record Fields is { name: String }
-            state S of E.Fields
+            state S of record E.Fields
             handler H is {
               on command Add {
                 send event Added to outlet EventSource.out
@@ -561,7 +561,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
             type CompanyEvent is one of { event CompanyAdded }
 
             record fields is { companyId: CompanyId, address: Address }
-            state CompanyBase of Company.fields
+            state CompanyBase of record Company.fields
             handler CompanyHandler is {
               on command AddCompany {
                 send event CompanyAdded to outlet events.CompanyEvents_out
@@ -601,7 +601,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         context Reservations is {
           type ReservationBoardEntry is { name: String }
           entity ReservationBoard is {
-            state main of ReservationBoard.ReservationBoardEntry
+            state main of record ReservationBoard.ReservationBoardEntry
             handler Input is {
               on event TestDomain.Reservations.ReservationBoard.SomeEvent {
                 let entry: ReservationBoardEntry = "new ReservationBoardEntry from event"
@@ -625,7 +625,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
 
         context Customers is {
           entity Customer is {
-            state main of ReactiveBBQ.Empty
+            state main of record ReactiveBBQ.Empty
             handler Input is { ??? }
           }
         }
@@ -635,7 +635,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
           type OrderViewType is { address: type IP4Address }
           entity OrderViewer is {
             record AField is { field: type OrderViewType }
-            state OrderState of OrderViewer.AField
+            state OrderState of record OrderViewer.AField
             handler Input is { ??? }
           } with {
             option is kind("device")

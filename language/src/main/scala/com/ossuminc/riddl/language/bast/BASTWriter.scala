@@ -603,7 +603,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_STATE, s.metadata.nonEmpty)
     writeLocation(s.loc)
     writeIdentifierInline(s.id) // Inline - no tag needed
-    writeTypeRefInline(s.typ) // Inline - position known
+    writeRecordRefInline(s.typ) // A9b: state type is a RecordRef; inline - position known
     writer.writeU8(if s.isInitial then 1 else 0)
     writeContents(s.contents)
   }
@@ -973,7 +973,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeEntityRef(s.entity)
     writeStateRef(s.state)
-    writeMessageRef(s.value)
+    writeRecordRefInline(s.value) // A9b: morph value is a RecordRef; inline - position known
   }
 
   def writeBecomeStatement(s: BecomeStatement): Unit = {
@@ -1068,6 +1068,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeTypeRefInline(r: TypeRef): Unit = {
     writeLocation(r.loc)
     writeString(r.keyword)
+    writePathIdentifierInline(r.pathId)
+  }
+
+  /** A9b: write a RecordRef without tag - used where the position implies a record (state.typ,
+    * morph.value). No keyword (a RecordRef's keyword is always "record").
+    */
+  def writeRecordRefInline(r: RecordRef): Unit = {
+    writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 

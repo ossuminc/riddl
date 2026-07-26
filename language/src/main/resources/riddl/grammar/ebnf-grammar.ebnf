@@ -66,7 +66,7 @@ entity = "entity" identifier is "{" entity_body "}" [with_metadata] ;
 entity_body = entity_definitions | "???" ;
 entity_definitions = {entity_content}+ ;
 entity_content = processor_definition_contents | state | entity_include ;
-state = ["initial"] "state" identifier ("of" | is) type_ref [state_body] [with_metadata] ;
+state = ["initial"] "state" identifier ("of" | is) record_ref [state_body] [with_metadata] ;
 state_body = is "{" ({state_content}+ | "???") "}" ;
 state_content = handler | comment ;
 entity_include = "include" literal_string ;
@@ -151,7 +151,7 @@ function_include = "include" literal_string ;
 type_ref = [aggregate_use_case] path_identifier ;
 field_ref = "field" path_identifier ;
 constant_ref = "constant" path_identifier ;
-message_ref = command_ref | event_ref | query_ref | result_ref | record_ref ;
+message_ref = command_ref | event_ref | query_ref | result_ref ;
 command_ref = "command" path_identifier ;
 event_ref = "event" path_identifier ;
 query_ref = "query" path_identifier ;
@@ -221,7 +221,7 @@ require_statement = "require" (literal_string | invariant_ref) ;
 invariant_ref = "invariant" path_identifier ;
 
 (* Entity state transitions *)
-morph_statement = "morph" entity_ref "to" state_ref "with" message_ref ;
+morph_statement = "morph" entity_ref "to" state_ref "with" record_ref ;
 become_statement = "become" entity_ref "to" handler_ref ;
 
 (* Pseudo Code Block *)

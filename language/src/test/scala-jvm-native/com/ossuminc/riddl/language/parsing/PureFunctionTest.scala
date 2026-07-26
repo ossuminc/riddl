@@ -30,7 +30,7 @@ class PureFunctionTest extends AbstractParsingTest {
         "set field a to \"1\"",
         "send command Go to inlet c.e.t.in",
         "tell command Go to entity c.e",
-        "morph entity c.e to state c.e.s with command Go",
+        "morph entity c.e to state c.e.s with record Go",
         "become entity c.e to handler c.e.h",
         "reply command Go"
       )
@@ -42,7 +42,11 @@ class PureFunctionTest extends AbstractParsingTest {
           case Right(_)     => fail(s"expected parse failure for a function containing: $stmt")
       }
 
-    for stmt <- Seq("set field a to \"1\"", "send command Go to inlet c.e.t.in", "morph entity c.e to state c.e.s with command Go")
+    for stmt <- Seq(
+        "set field a to \"1\"",
+        "send command Go to inlet c.e.t.in",
+        "morph entity c.e to state c.e.s with record Go"
+      )
     do
       s"report the pure-function message for '${stmt.takeWhile(_ != ' ')}'" in { (td: TestData) =>
         parseDefinition[Context](RiddlParserInput(fnWith(stmt), td)) match
@@ -59,8 +63,9 @@ class PureFunctionTest extends AbstractParsingTest {
     do
       s"accept a pure function using '$label'" in { (td: TestData) =>
         parseDefinition[Context](RiddlParserInput(fnWith(stmt), td)) match
-          case Left(errors) => fail(s"pure '$label' should parse:\n" + errors.map(_.format).mkString("\n"))
-          case Right(_)     => succeed
+          case Left(errors) =>
+            fail(s"pure '$label' should parse:\n" + errors.map(_.format).mkString("\n"))
+          case Right(_) => succeed
       }
   }
 }

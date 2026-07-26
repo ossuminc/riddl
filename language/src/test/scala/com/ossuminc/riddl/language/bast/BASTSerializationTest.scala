@@ -113,7 +113,7 @@ class BASTSerializationTest extends AbstractTestingBasis {
 
     "round-trip entity with state containing handlers" in { (_: TestData) =>
       val stateHandler = Handler(At(), Identifier(At(), "StateHandler"))
-      val typRef = TypeRef(At(), "type", PathIdentifier(At(), Seq("MyFields")))
+      val typRef = RecordRef(At(), PathIdentifier(At(), Seq("MyFields")))
       val state = State(At(), Identifier(At(), "Active"), typRef, Contents(stateHandler))
       val entity = Entity(At(), Identifier(At(), "MyEntity"), Contents(state))
       val context = Context(At(), Identifier(At(), "MyCtx"), Contents(entity))

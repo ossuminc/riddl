@@ -26,7 +26,7 @@ private[parsing] trait EntityParser {
 
   def state[u: P]: P[State] = {
     P(
-      Index ~ Keywords.maybeInitial ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/
+      Index ~ Keywords.maybeInitial ~ Keywords.state ~ identifier ~/ (of | is) ~ recordRef ~/
         stateBody.? ~ withMetaData ~ Index
     )./.map { case (start, isInitial, id, typRef, body, descriptives, end) =>
       State(

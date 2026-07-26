@@ -309,9 +309,9 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
 
   "Overall Parse + Validate Benchmark" should {
     "measure performance on dokn.riddl" in {
-      val url = com.ossuminc.riddl.utils.URL(
-        "https://raw.githubusercontent.com/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl"
-      )
+      // A9b: use the migrated local copy rather than downloading from riddl-examples/main, which
+      // isn't migrated to the new syntax until task A9b-ext lands (decouples from external state).
+      val url = com.ossuminc.riddl.utils.URL.fromCwdPath("language/input/dokn.riddl")
 
       // Parse
       val rpi = com.ossuminc.riddl.utils.Await.result(

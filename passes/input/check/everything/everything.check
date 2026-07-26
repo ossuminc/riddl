@@ -82,7 +82,7 @@ passes/input/check/everything/everything.riddl(42:5->21):
      entity Something is {
 passes/input/check/everything/everything.riddl(48:7->22):
  State 'someState' in Entity 'Something' has no 'on init' clause to initialize its state:
-       state someState of type Everything.StateType
+       state someState of record Everything.StateType
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' has no 'on query' clause; information cannot be extracted from it:
      entity Something is {
@@ -97,10 +97,10 @@ passes/input/check/everything/everything.riddl(44:12->25):
        type somethingDate is Date
 passes/input/check/everything/everything.riddl(48:7->22):
  Metadata in State 'someState' should not be empty:
-       state someState of type Everything.StateType
+       state someState of record Everything.StateType
 passes/input/check/everything/everything.riddl(48:7->22):
  State 'someState' should have a description:
-       state someState of type Everything.StateType
+       state someState of record Everything.StateType
 passes/input/check/everything/everything.riddl(50:7->37):
  Metadata in Function 'whenUnderTheInfluence' should not be empty:
        function whenUnderTheInfluence is {
@@ -141,7 +141,7 @@ passes/input/check/everything/everything.riddl(66:5->26):
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(69:7->28):
  State 'otherThingState' in Entity 'SomeOtherThing' has no 'on init' clause to initialize its state:
-       state otherThingState of type Everything.StateType
+       state otherThingState of record Everything.StateType
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' has no 'on query' clause; information cannot be extracted from it:
      entity SomeOtherThing is {
@@ -162,10 +162,10 @@ passes/input/check/everything/everything.riddl(67:7->20):
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(69:7->28):
  Metadata in State 'otherThingState' should not be empty:
-       state otherThingState of type Everything.StateType
+       state otherThingState of record Everything.StateType
 passes/input/check/everything/everything.riddl(69:7->28):
  State 'otherThingState' should have a description:
-       state otherThingState of type Everything.StateType
+       state otherThingState of record Everything.StateType
 passes/input/check/everything/everything.riddl(70:7->18):
  Handler 'fee' in Entity 'SomeOtherThing' handles no commands or queries; entity handlers typically handle commands and queries:
        handler fee is {

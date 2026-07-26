@@ -18,7 +18,7 @@ class AnalysisPassSpec extends AnyWordSpec with Matchers {
     |  context TestContext {
     |    type TestType = String
     |    entity TestEntity {
-    |      state main of TestType
+    |      state main of record TestType
     |    }
     |  }
     |}
@@ -32,7 +32,7 @@ class AnalysisPassSpec extends AnyWordSpec with Matchers {
     |    type OrderState = record { orderId: OrderId, customerId: CustomerId }
     |
     |    entity Order {
-    |      state main of OrderState
+    |      state main of record OrderState
     |    }
     |  }
     |
@@ -41,7 +41,7 @@ class AnalysisPassSpec extends AnyWordSpec with Matchers {
     |    type CustomerState = record { id: CustomerId, name: String }
     |
     |    entity Customer {
-    |      state main of CustomerState
+    |      state main of record CustomerState
     |    }
     |  }
     |}

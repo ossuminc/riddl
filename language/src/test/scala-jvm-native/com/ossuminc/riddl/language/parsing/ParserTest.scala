@@ -127,7 +127,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           |    entity one is { ??? }
           |    entity two is {
           |      type twoState is { foo: Integer }
-          |      state entityState of twoState
+          |      state entityState of record twoState
           |      handler one  is { ??? }
           |      function one is { ??? }
           |      invariant one is "???"
@@ -240,7 +240,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       val input = RiddlParserInput(
         """entity Hamburger is {
          |  type Foo is { x: String }
-         |  state BurgerState of type BurgerStruct
+         |  state BurgerState of record BurgerStruct
          |  handler BurgerHandler is {}
          |} with {
          |  option transient
@@ -255,7 +255,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           fail(msg)
         case Right((content, rpi)) =>
           val expected = Entity(
-            At(rpi, 0, 170),
+            At(rpi, 0, 172),
             Identifier(At(rpi, 7, 16), "Hamburger"),
             Contents(
               Type(
@@ -273,19 +273,23 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
                 )
               ),
               State(
-                At(rpi, 52, 93),
+                At(rpi, 52, 95),
                 Identifier(At(rpi, 58, 69), "BurgerState"),
-                TypeRef(
-                  At(rpi, 73, 93),
-                  "type",
-                  PathIdentifier(At(rpi, 78, 90), List("BurgerStruct"))
-                )
+                RecordRef(
+                  At(rpi, 73, 92),
+                  PathIdentifier(At(rpi, 80, 92), List("BurgerStruct"))
+                ),
+                isInitial = true
               ),
-              Handler(At(rpi, 93, 121), Identifier(At(rpi, 101, 114), "BurgerHandler"))
+              Handler(
+                At(rpi, 95, 123),
+                Identifier(At(rpi, 103, 116), "BurgerHandler"),
+                isInitial = true
+              )
             ),
             Contents(
-              OptionValue(At(rpi, 132, 151), "transient", Seq.empty),
-              OptionValue(At(rpi, 151, 168), "aggregate", Seq.empty)
+              OptionValue(At(rpi, 134, 153), "transient", Seq.empty),
+              OptionValue(At(rpi, 153, 170), "aggregate", Seq.empty)
             )
           )
           content mustBe expected

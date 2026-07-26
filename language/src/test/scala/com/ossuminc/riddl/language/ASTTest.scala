@@ -185,6 +185,7 @@ class ASTTest extends AbstractTestingBasis {
 
   val fieldRef: FieldRef = FieldRef(At(), PathIdentifier(At(), Seq("command", "foo")))
   val messageRef: CommandRef = CommandRef(At(), PathIdentifier(At(), Seq("command")))
+  val recordRef: RecordRef = RecordRef(At(), PathIdentifier(At(), Seq("record")))
   val statements: Contents[Statements] = Contents(
     PromptStatement(At.empty, LiteralString(At.empty, "prompt")),
     BecomeStatement(At.empty, entityRef, HandlerRef(At(), PathIdentifier(At(), Seq("Entity")))),
@@ -205,7 +206,7 @@ class ASTTest extends AbstractTestingBasis {
       At.empty,
       entityRef,
       StateRef(At.empty, PathIdentifier(At(), Seq("state"))),
-      messageRef
+      recordRef
     ),
     SendStatement(At.empty, messageRef, InletRef(At.empty, PathIdentifier(At.empty, Seq("inlet")))),
     SetStatement(At.empty, fieldRef, LiteralString(At.empty, "value")),
@@ -237,7 +238,7 @@ class ASTTest extends AbstractTestingBasis {
   val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), Contents(handler))
   val handlerRef: HandlerRef = HandlerRef(At.empty, PathIdentifier(At(), Seq("handler")))
   val sagaStep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagaStep"))
-  val state: State = State(At.empty, Identifier(At.empty, "state"), TypeRef())
+  val state: State = State(At.empty, Identifier(At.empty, "state"), RecordRef())
   val stateRef: StateRef = StateRef(At.empty, PathIdentifier(At(), Seq("state")))
   val user: User =
     User(At.empty, Identifier(At.empty, "john"), LiteralString(At.empty, "GenericUser"))
@@ -339,7 +340,7 @@ class ASTTest extends AbstractTestingBasis {
           State(
             At(),
             Identifier(At(), "bar"),
-            TypeRef()
+            RecordRef()
           )
         )
         val handlers = Contents(Handler(At(), Identifier(At(), "con")))

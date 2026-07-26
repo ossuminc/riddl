@@ -46,9 +46,9 @@ class EntityValidatorTest extends AbstractValidatingTest {
       val input =
         """entity MultiState is {
           |  record fields is { field: String  }
-          |  state One of MultiState.fields
+          |  state One of record MultiState.fields
           |  handler x is {???}
-          |  state Two of MultiState.fields
+          |  state Two of record MultiState.fields
           |  handler y is {???}
           |  handler fum is { ??? }
           |} with {
@@ -63,7 +63,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
       val input =
         """entity MultiState is {
           |  record fields is { field: String }
-          |  state foo of MultiState.fields
+          |  state foo of record MultiState.fields
           |  handler x is {???}
           |} with {
           |  option finite-state-machine
@@ -84,7 +84,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
     "catch missing things" in { (_: TestData) =>
       val input = """entity Hamburger is {
                     |  record fields is { field: SomeType }
-                    |  state foo of Hamburger.fields
+                    |  state foo of record Hamburger.fields
                     |}""".stripMargin
       pc.withOptions(CommonOptions.default) { _ =>
         parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {
@@ -117,7 +117,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
           |context bar is {
           |  entity Hamburger  is {
           |    record fields is { field: SomeType }
-          |    state field of Hamburger.fields
+          |    state field of record Hamburger.fields
           |    handler foo is { ??? }
           |  } with {
           |    option aggregate option transient
@@ -150,7 +150,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
           |    type SomeType is Number
           |    record fields is { something: SomeType }
           |    handler x is { ??? }
-          |    state field of Hamburger.fields
+          |    state field of record Hamburger.fields
           |    handler baz is {
           |      on command DoIt {
           |        send event Message to outlet ridOfIt

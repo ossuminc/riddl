@@ -118,7 +118,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case e: Entity =>
         addEntity(e)
       case s: State =>
-        associateUsage(s, resolveATypeRef(s.typ, parents))
+        // A9b: state.typ is a RecordRef; resolve generically (record-kind check is in validation).
+        associateUsage(s, resolveARef[Type](s.typ, parents))
       case f: Function =>
         resolveFunction(f, parents)
       case i: Inlet =>
@@ -505,7 +506,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     // The anchor is the first component of a multi-element path; it's an
     // intermediate (not the final target), so record it as a path usage —
     // unless the anchor is itself an ancestor of the authoring site
-    // (e.g., `state AState of fooBar.fields` inside `entity fooBar`),
+    // (e.g., `state AState of record fooBar.fields` inside `entity fooBar`),
     // in which case the reference is internal to the definition itself
     // and should not count as external usage.
     if pathIdStart.nonEmpty && parents.nonEmpty &&

@@ -12,7 +12,7 @@ domain HandlerKinds is {
 
     entity Cart is {
       record Fields is { count: Integer }
-      state Contents of Cart.Fields
+      state Contents of record Cart.Fields
       handler CartHandler is {
         on command AddItem {
           send event ItemAdded to outlet Shopping.emit.out

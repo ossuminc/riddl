@@ -46,14 +46,17 @@ private[parsing] trait ReferenceParser {
     }
   }
 
-  private def recordRef[u: P]: P[RecordRef] = {
+  // A9b: non-private — a RecordRef is used by `state … of record` (EntityParser) and
+  // `morph … with record` (StatementParser), not just as a message.
+  def recordRef[u: P]: P[RecordRef] = {
     P(Index ~ Keywords.record ~ pathIdentifier ~~ Index).map { case (start, pid, end) =>
       RecordRef(at(start, end), pid)
     }
   }
 
+  // A9b: a record is not a message — messageRef is the 4 real messages only.
   def messageRef[u: P]: P[MessageRef] = {
-    P(commandRef | eventRef | queryRef | resultRef | recordRef)
+    P(commandRef | eventRef | queryRef | resultRef)
   }
 
   def entityRef[u: P]: P[EntityRef] = {

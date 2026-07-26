@@ -30,11 +30,11 @@ class InitialMarkerTest extends AbstractValidatingTest {
       entity(
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state First of type d.c.e.Data is {
+          |  state First of record d.c.e.Data is {
           |    handler H1 is { on other is { prompt "a" } }
           |    handler H2 is { on other is { prompt "b" } }
           |  }
-          |  state Second of type d.c.e.Data is {
+          |  state Second of record d.c.e.Data is {
           |    handler H3 is { on other is { prompt "c" } }
           |  }
           |}}}""".stripMargin,
@@ -54,8 +54,8 @@ class InitialMarkerTest extends AbstractValidatingTest {
       entity(
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state First of type d.c.e.Data is { handler H is { on other is { prompt "a" } } }
-          |  initial state Second of type d.c.e.Data is { handler H2 is { on other is { prompt "b" } } }
+          |  state First of record d.c.e.Data is { handler H is { on other is { prompt "a" } } }
+          |  initial state Second of record d.c.e.Data is { handler H2 is { on other is { prompt "b" } } }
           |}}}""".stripMargin,
         td
       ) { (e, _) =>
@@ -68,8 +68,8 @@ class InitialMarkerTest extends AbstractValidatingTest {
       entity(
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  initial state First of type d.c.e.Data is { handler H is { on other is { prompt "a" } } }
-          |  initial state Second of type d.c.e.Data is { handler H2 is { on other is { prompt "b" } } }
+          |  initial state First of record d.c.e.Data is { handler H is { on other is { prompt "a" } } }
+          |  initial state Second of record d.c.e.Data is { handler H2 is { on other is { prompt "b" } } }
           |}}}""".stripMargin,
         td
       ) { (_, messages) =>
@@ -82,7 +82,7 @@ class InitialMarkerTest extends AbstractValidatingTest {
         entity(
           """domain d is { context c is { entity e is {
             |  type Data is { x: Integer }
-            |  state Only of type d.c.e.Data is { handler S is { on other is { prompt "s" } } }
+            |  state Only of record d.c.e.Data is { handler S is { on other is { prompt "s" } } }
             |  handler E1 is { on other is { prompt "a" } }
             |  handler E2 is { on other is { prompt "b" } }
             |}}}""".stripMargin,
@@ -100,8 +100,8 @@ class InitialMarkerTest extends AbstractValidatingTest {
         entity(
           """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state First of type d.c.e.Data is { handler S1 is { on other is { prompt "a" } } }
-          |  state Second of type d.c.e.Data is { handler S2 is { on other is { prompt "b" } } }
+          |  state First of record d.c.e.Data is { handler S1 is { on other is { prompt "a" } } }
+          |  state Second of record d.c.e.Data is { handler S2 is { on other is { prompt "b" } } }
           |  handler E1 is { on other is { prompt "c" } }
           |  handler E2 is { on other is { prompt "d" } }
           |}}}""".stripMargin,
@@ -115,7 +115,7 @@ class InitialMarkerTest extends AbstractValidatingTest {
       entity(
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state Only of type d.c.e.Data is {
+          |  state Only of record d.c.e.Data is {
           |    initial handler H1 is { on other is { prompt "a" } }
           |    initial handler H2 is { on other is { prompt "b" } }
           |  }

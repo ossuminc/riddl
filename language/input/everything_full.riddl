@@ -81,7 +81,7 @@ context full is {
     event Inebriated is { ??? }
 
     record someData(field:  SomeType)
-    state someState of Something.someData
+    state someState of record Something.someData
 
     handler foo is {
       // Handle the ACommand
@@ -113,7 +113,7 @@ context full is {
   entity SomeOtherThing is {
     type ItHappened is event { aField: String }
     record otherThingData is { aField: String }
-    state otherThingState of SomeOtherThing.otherThingData
+    state otherThingState of record SomeOtherThing.otherThingData
     handler fee is {
       on event ItHappened {
         set field SomeOtherThing.otherThingState.aField to "arbitrary string value"

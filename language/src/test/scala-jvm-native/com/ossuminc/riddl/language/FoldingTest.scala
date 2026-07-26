@@ -34,13 +34,13 @@ class FoldingTest extends AbstractParsingTest {
       |     }
       |    type oneState is Integer
       |    entity one is {
-      |      state entityState of oneState
+      |      state entityState of record oneState
       |      handler one  is { ??? }
       |      function one is { ??? }
       |      invariant one is ""
       |    }
       |    entity two is {
-      |      state entityState of oneState
+      |      state entityState of record oneState
       |      handler one  is { ??? }
       |      function one is { ??? }
       |      invariant one is ???

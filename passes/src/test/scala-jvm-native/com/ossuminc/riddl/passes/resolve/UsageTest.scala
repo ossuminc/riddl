@@ -32,7 +32,7 @@ class UsageTest extends ParsingTest {
           |        f2: D.T,
           |        f3: C.DT
           |      }
-          |      state S of E.SFields
+          |      state S of record E.SFields
           |      handler H is {
           |        on command C.DoIt from di: context C{
           |          set field S.f2 to "field di.f1"
@@ -105,7 +105,7 @@ class UsageTest extends ParsingTest {
           |    command ACommand is { ??? } with { described as "AC" }
           |    entity fooBar is {
           |      record fields is { field: Number }
-          |      state AState of fooBar.fields
+          |      state AState of record fooBar.fields
           |      handler fooBarHandlerForAState is {
           |        on command ACommand {
           |          ???
@@ -161,7 +161,7 @@ class UsageTest extends ParsingTest {
             |    command DoIt is { ??? }
             |    entity E is {
             |      record EState is { x: Number }
-            |      state S of E.EState
+            |      state S of record E.EState
             |      handler H is {
             |        on command DoIt {
             |          set field R.f to "1"
@@ -209,7 +209,7 @@ class UsageTest extends ParsingTest {
           |    command DoIt is { ??? }
           |    entity E is {
           |      record EState is { r: R }
-          |      state S of E.EState
+          |      state S of record E.EState
           |      handler H is {
           |        on command DoIt { ??? }
           |      } with { described as "h" }
@@ -254,7 +254,7 @@ class UsageTest extends ParsingTest {
             |    command DoIt is { ??? }
             |    entity E is {
             |      record EState is { r: R }
-            |      state S of E.EState
+            |      state S of record E.EState
             |      handler H is {
             |        on command DoIt {
             |          set field R.f to "1"
@@ -300,7 +300,7 @@ class UsageTest extends ParsingTest {
           |  context C is {
           |    entity E is {
           |      record EState is { x: Number }
-          |      state S of E.EState
+          |      state S of record E.EState
           |      command DoIt is { ??? }
           |      handler H is {
           |        on command DoIt { ??? }
@@ -308,7 +308,7 @@ class UsageTest extends ParsingTest {
           |    } with { described as "e" }
           |    entity Other is {
           |      record OState is { y: Number }
-          |      state S2 of Other.OState
+          |      state S2 of record Other.OState
           |      handler H2 is {
           |        on command E.DoIt {
           |          ???

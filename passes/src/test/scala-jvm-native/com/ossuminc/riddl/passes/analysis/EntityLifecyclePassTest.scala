@@ -49,17 +49,17 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |    type BarData is { y: String }
             |    entity E is {
             |      record FooFields is { f: String }
-            |      state Foo of E.FooFields
+            |      state Foo of record E.FooFields
             |      record BarFields is { b: String }
-            |      state Bar of E.BarFields
+            |      state Bar of record E.BarFields
             |      handler H is {
             |        on command D.C.GoBar {
             |          morph entity D.C.E to state Bar
-            |            with command D.C.GoBar
+            |            with record D.C.GoBar
             |        }
             |        on command D.C.GoFoo {
             |          morph entity D.C.E to state Foo
-            |            with command D.C.GoFoo
+            |            with record D.C.GoFoo
             |        }
             |      }
             |    }
@@ -86,20 +86,20 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |    command Deactivate is { ??? }
             |    entity E is {
             |      record ActiveFields is { a: String }
-            |      state Active of E.ActiveFields is {
+            |      state Active of record E.ActiveFields is {
             |        handler ActiveHandler is {
             |          on command D.C.Deactivate {
             |            morph entity D.C.E to state Inactive
-            |              with command D.C.Deactivate
+            |              with record D.C.Deactivate
             |          }
             |        }
             |      }
             |      record InactiveFields is { i: String }
-            |      state Inactive of E.InactiveFields is {
+            |      state Inactive of record E.InactiveFields is {
             |        handler InactiveHandler is {
             |          on command D.C.Activate {
             |            morph entity D.C.E to state Active
-            |              with command D.C.Activate
+            |              with record D.C.Activate
             |          }
             |        }
             |      }
@@ -136,16 +136,16 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |    command GoBar is { ??? }
             |    entity E is {
             |      record FooFields is { f: String }
-            |      state Foo of E.FooFields
+            |      state Foo of record E.FooFields
             |      record BarFields is { b: String }
-            |      state Bar of E.BarFields
+            |      state Bar of record E.BarFields
             |      handler H is {
             |        on init {
             |          set state Foo to "initial"
             |        }
             |        on command D.C.GoBar {
             |          morph entity D.C.E to state Bar
-            |            with command D.C.GoBar
+            |            with record D.C.GoBar
             |        }
             |      }
             |    }
@@ -170,25 +170,25 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |    command GoEnd is { ??? }
             |    entity E is {
             |      record StartFields is { s: String }
-            |      state Start of E.StartFields is {
+            |      state Start of record E.StartFields is {
             |        handler StartH is {
             |          on command D.C.GoMiddle {
             |            morph entity D.C.E to state Middle
-            |              with command D.C.GoMiddle
+            |              with record D.C.GoMiddle
             |          }
             |        }
             |      }
             |      record MiddleFields is { m: String }
-            |      state Middle of E.MiddleFields is {
+            |      state Middle of record E.MiddleFields is {
             |        handler MiddleH is {
             |          on command D.C.GoEnd {
             |            morph entity D.C.E to state End
-            |              with command D.C.GoEnd
+            |              with record D.C.GoEnd
             |          }
             |        }
             |      }
             |      record EndFields is { e: String }
-            |      state End of E.EndFields
+            |      state End of record E.EndFields
             |    }
             |  }
             |}
@@ -210,7 +210,7 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |  context C is {
             |    entity E is {
             |      record Fields is { f: String }
-            |      state Only of E.Fields
+            |      state Only of record E.Fields
             |      handler H is { ??? }
             |    }
             |  }
@@ -229,20 +229,20 @@ class EntityLifecyclePassTest extends AbstractValidatingTest {
             |    command Advance is { ??? }
             |    entity E is {
             |      record IdleFields is { i: String }
-            |      state Idle of E.IdleFields is {
+            |      state Idle of record E.IdleFields is {
             |        handler IdleH is {
             |          on command D.C.Advance {
             |            morph entity D.C.E to state Running
-            |              with command D.C.Advance
+            |              with record D.C.Advance
             |          }
             |        }
             |      }
             |      record RunningFields is { r: String }
-            |      state Running of E.RunningFields
+            |      state Running of record E.RunningFields
             |      handler GlobalH is {
             |        on command D.C.Reset {
             |          morph entity D.C.E to state Idle
-            |            with command D.C.Reset
+            |            with record D.C.Reset
             |        }
             |      }
             |    }

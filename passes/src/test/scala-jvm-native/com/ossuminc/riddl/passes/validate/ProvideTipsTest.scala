@@ -37,7 +37,7 @@ class ProvideTipsTest extends AbstractValidatingTest {
       |  context C is {
       |    entity E is {
       |      record F is { x: String }
-      |      state S of E.F is { handler H is { ??? } }
+      |      state S of record E.F is { handler H is { ??? } }
       |    }
       |  }
       |}

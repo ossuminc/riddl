@@ -2146,23 +2146,26 @@ object AST:
     override def isAssignmentCompatible(other: TypeExpression): Boolean = false
   }
 
-  /** Base trait for the four kinds of message references */
-  sealed trait MessageRef extends Reference[Type] {
+  /** Base trait for a reference to an aggregate type: the four messages
+    * (command/event/query/result) plus record. A Record is data, not a message (A9b), so it is an
+    * `AggregateRef` but NOT a [[MessageRef]]. `messageKind` is the aggregate use-case
+    * discriminator.
+    */
+  sealed trait AggregateRef extends Reference[Type] {
     def messageKind: AggregateUseCase
 
     override def format: String =
       s"${messageKind.useCase.toLowerCase} ${pathId.format}"
   }
 
+  /** Base trait for the four kinds of message references (command/event/query/result). */
+  sealed trait MessageRef extends AggregateRef
+
   @JSExportTopLevel("MessageRef")
   object MessageRef {
-    lazy val empty: MessageRef = new MessageRef {
-      def messageKind: AggregateUseCase = AggregateUseCase.RecordCase
-
-      override def pathId: PathIdentifier = PathIdentifier.empty
-
-      override def loc: At = At.empty
-    }
+    // A9b: a concrete CommandRef (not an anonymous MessageRef) so that sealed
+    // matches over the four MessageRef subclasses stay exhaustive.
+    lazy val empty: MessageRef = CommandRef(At.empty, PathIdentifier.empty)
   }
 
   /** A Reference to a command message type
@@ -2225,18 +2228,20 @@ object AST:
     def messageKind: AggregateUseCase = AggregateUseCase.ResultCase
   end ResultRef
 
-  /** A reference to a record message type
+  /** A reference to a record type. A9b: a record is DATA, so `RecordRef` is an [[AggregateRef]] but
+    * NOT a [[MessageRef]] — it cannot be sent/told/handled/replied, only used for state data, morph
+    * values, and repository schemas.
     *
     * @param loc
     *   The location of the reference
     * @param pathId
-    *   The path identifier to the result type
+    *   The path identifier to the record type
     */
   @JSExportTopLevel("RecordRef")
   case class RecordRef(
-    loc: At,
-    pathId: PathIdentifier
-  ) extends MessageRef:
+    loc: At = At.empty,
+    pathId: PathIdentifier = PathIdentifier.empty
+  ) extends AggregateRef:
     def messageKind: AggregateUseCase = AggregateUseCase.RecordCase
     override def isEmpty: Boolean =
       super.isEmpty && loc.isEmpty && pathId.isEmpty
@@ -2465,7 +2470,9 @@ object AST:
     loc: At,
     entity: EntityRef,
     state: StateRef,
-    value: MessageRef
+    // A9b: the morph carries the RECORD that types the target state (its data), not a message.
+    // (Later, A24 upgrades this to a record constructor R("v1",…).)
+    value: RecordRef
   ) extends Statement {
     override def kind: String = "Morph Statement"
     def format: String = s"morph ${entity.format} to ${state.format} with ${value.format}"
@@ -3007,7 +3014,8 @@ object AST:
   case class State(
     loc: At,
     id: Identifier,
-    typ: TypeRef,
+    // A9b: a state is record-shaped data, so its type is a RecordRef (`state S of record R`).
+    typ: RecordRef,
     contents: Contents[StateContents] = Contents.empty[StateContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData](),
     // Marks this as the entity's starting state. Set by the parser: from an explicit `initial`

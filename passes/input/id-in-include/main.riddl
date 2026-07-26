@@ -4,7 +4,7 @@ domain Restaurant is {
 
     entity Reservation is {
       record ReservationFields is { partySize: Number }
-      state Active of Reservation.ReservationFields
+      state Active of record Reservation.ReservationFields
       handler ReservationHandler is {
         on init { set field Reservation.ReservationFields.partySize to "0" }
         on command Restaurant.FrontOfHouse.MakeReservation {

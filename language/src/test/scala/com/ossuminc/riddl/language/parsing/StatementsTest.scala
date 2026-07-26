@@ -61,10 +61,10 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       val pathId = PathIdentifier(At.empty, Seq("foo"))
       val entityRef = EntityRef(At.empty, pathId)
       val stateRef = StateRef(At.empty, pathId)
-      val value = CommandRef(At.empty, pathId)
+      val value = RecordRef(At.empty, pathId)
       val s = MorphStatement(At.empty, entityRef, stateRef, value)
       s.kind must be("Morph Statement")
-      s.format must be(s"morph entity foo to state foo with command foo")
+      s.format must be(s"morph entity foo to state foo with record foo")
       checkStatement(s)
     }
     "check Become Statement" in { td =>

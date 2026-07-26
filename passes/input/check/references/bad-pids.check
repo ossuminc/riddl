@@ -1,9 +1,9 @@
 passes/input/check/references/bad-pids.riddl(11:7->23):
  Metadata in State 'FooExample' should not be empty:
-       state FooExample of FooExampleState
+       state FooExample of record FooExampleState
 passes/input/check/references/bad-pids.riddl(11:7->23):
  State 'FooExample' should have a description:
-       state FooExample of FooExampleState
+       state FooExample of record FooExampleState
 passes/input/check/references/bad-pids.riddl(13:20->26):
  Path 'DooFoo' was not resolved, in OnMessageClause 'command DooFoo'
  because the sought name, 'DooFoo', was not found in the symbol table,
@@ -49,7 +49,7 @@ passes/input/check/references/bad-pids.riddl(7:5->21):
      entity FooEntity is {
 passes/input/check/references/bad-pids.riddl(11:7->23):
  State 'FooExample' in Entity 'FooEntity' has no 'on init' clause to initialize its state:
-       state FooExample of FooExampleState
+       state FooExample of record FooExampleState
 passes/input/check/references/bad-pids.riddl(7:5->21):
  Entity 'FooEntity' has no 'on query' clause; information cannot be extracted from it:
      entity FooEntity is {

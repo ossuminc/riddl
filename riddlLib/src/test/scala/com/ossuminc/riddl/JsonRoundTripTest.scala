@@ -31,23 +31,23 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       |      type ClosedData is { reason: String }
       |      command CancelOrder is { id: String }
       |      event OrderCancelled is { id: String }
-      |      state Open of type Order.OpenData is {
+      |      state Open of record Order.OpenData is {
       |        handler OpenInit is {
       |          on init is { set state Open to "initialize" }
       |        }
       |      }
-      |      state Closed of type Order.ClosedData is {
+      |      state Closed of record Order.ClosedData is {
       |        handler ClosedInit is {
       |          on init is { set state Closed to "initialize" }
       |        }
       |      }
       |      handler OrderHandler is {
       |        on command PlaceOrder is {
-      |          morph entity Order to state Order.Open with command PlaceOrder
+      |          morph entity Order to state Order.Open with record PlaceOrder
       |          tell event OrderPlaced to entity Order
       |        }
       |        on command CancelOrder is {
-      |          morph entity Order to state Order.Closed with command CancelOrder
+      |          morph entity Order to state Order.Closed with record CancelOrder
       |          tell event OrderCancelled to entity Order
       |        }
       |      }
@@ -106,8 +106,8 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       val initModel =
         """domain d is { context c is { entity e is {
           |  type Data is { x: Integer }
-          |  state First of type d.c.e.Data is { handler H is { on other is { prompt "a" } } }
-          |  initial state Second of type d.c.e.Data is {
+          |  state First of record d.c.e.Data is { handler H is { on other is { prompt "a" } } }
+          |  initial state Second of record d.c.e.Data is {
           |    initial handler H2 is { on other is { prompt "b" } }
           |  }
           |}}}

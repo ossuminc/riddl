@@ -251,7 +251,7 @@ object JsonAstBuilder:
     State(
       At(),
       ident(s.name),
-      TypeRef(At(), "record", pathId(s.recordType)),
+      RecordRef(At(), pathId(s.recordType)), // A9b: state type is a RecordRef
       contentsOf[StateContents](s.handlers.map(buildHandler)),
       meta(s.brief),
       s.isInitial
@@ -309,9 +309,9 @@ object JsonAstBuilder:
       case "event"   => EventRef(At(), pathId(mr.ref))
       case "query"   => QueryRef(At(), pathId(mr.ref))
       case "result"  => ResultRef(At(), pathId(mr.ref))
-      case "record"  => RecordRef(At(), pathId(mr.ref))
-      case other =>
-        ctx.err(s"unknown message kind '$other' (expected command|event|query|result|record)")
+      case other     =>
+        // A9b: a record is not a message.
+        ctx.err(s"unknown message kind '$other' (expected command|event|query|result)")
         CommandRef(At(), pathId(mr.ref))
 
   private def buildInvariant(i: InvariantDto): Invariant =
@@ -563,7 +563,7 @@ object JsonAstBuilder:
           At(),
           EntityRef(At(), pathId(entity)),
           StateRef(At(), pathId(state)),
-          messageRef(value)
+          RecordRef(At(), pathId(value.ref)) // A9b: morph value is a RecordRef
         )
       case BecomeStmtDto(entity, handler) =>
         BecomeStatement(At(), EntityRef(At(), pathId(entity)), HandlerRef(At(), pathId(handler)))

@@ -498,7 +498,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case SendStatement(_, msg, portlet) =>
       val (pp, pk) = portletRef(portlet); SendStmtDto(messageRefDto(msg), pp, pk)
     case MorphStatement(_, entity, state, value) =>
-      MorphStmtDto(path(entity.pathId), path(state.pathId), messageRefDto(value))
+      // A9b: morph value is a RecordRef, serialized as a record-kinded MessageRefDto.
+      MorphStmtDto(
+        path(entity.pathId),
+        path(state.pathId),
+        MessageRefDto(path(value.pathId), "record")
+      )
     case BecomeStatement(_, entity, handler) =>
       BecomeStmtDto(path(entity.pathId), path(handler.pathId))
     case TellStatement(_, msg, proc) =>
@@ -561,13 +566,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case cr: ConstantRef   => PutOutDto("constant", path(cr.pathId), None)
     case ls: LiteralString => PutOutDto("literal", ls.s, None)
 
+  // A9b: a MessageRef is one of the 4 messages (a record is not a message).
   private def messageRefDto(mr: MessageRef): MessageRefDto = mr match
     case CommandRef(_, p) => MessageRefDto(path(p), "command")
     case EventRef(_, p)   => MessageRefDto(path(p), "event")
     case QueryRef(_, p)   => MessageRefDto(path(p), "query")
     case ResultRef(_, p)  => MessageRefDto(path(p), "result")
-    case RecordRef(_, p)  => MessageRefDto(path(p), "record")
-    case other            => MessageRefDto(path(other.pathId), "command")
 
   private def processorRef(pr: ProcessorRef[?]): (String, String) = pr match
     case EntityRef(_, p)     => (path(p), "entity")

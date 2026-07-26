@@ -176,7 +176,7 @@ class RegressionTests extends AbstractValidatingTest {
           |    entity ExampleEntity is {
           |      handler ExampleHandler is {
           |          on command Foo {
-          |            morph entity ExampleContext.ExampleEntity to state ExampleEntity.FooExample with command Foo
+          |            morph entity ExampleContext.ExampleEntity to state ExampleEntity.FooExample with record Foo
           |          }
           |          on other {
           |            error "You must first create an event using ScheduleEvent command."
@@ -187,7 +187,7 @@ class RegressionTests extends AbstractValidatingTest {
           |        stateInfo: String,
           |        name: String
           |      }
-          |      state FooExample of FooExampleState
+          |      state FooExample of record FooExampleState
           |      handler FooExampleHandler {
           |        on other {
           |          error "You must first create an event using ScheduleEvent command."

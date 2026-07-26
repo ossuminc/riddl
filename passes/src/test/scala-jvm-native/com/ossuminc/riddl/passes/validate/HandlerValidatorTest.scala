@@ -24,7 +24,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |context EntityContext is {
           |entity Hamburger is {
           |  type StateFields is { field1: Number, field2: String }
-          |  state HamburgerState of StateFields
+          |  state HamburgerState of record StateFields
           |  handler foo is {
           |    on command EntityCommand {
           |      set field HamburgerState.field1 to "345"
@@ -69,7 +69,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |  event HandleMe is { field0: String }
           |  entity Hamburger is {
           |   type StateFields is { field1: Number }
-          |   state HamburgerState of Hamburger.StateFields
+          |   state HamburgerState of record Hamburger.StateFields
           |   handler foo is {
           |    on event EntityContext.Incoming {
           |     set field HamburgerState.field1 to "678"
@@ -104,7 +104,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |entity Hamburger is {
           |  type EntityCommand is command { foo: String }
           |  record Fields is { field1: String }
-          |  state HamburgerState of Fields
+          |  state HamburgerState of record Fields
           |  handler doit is {
           |    on command EntityCommand {
           |      set field HamburgerState.field1 to "field ec.foo"
@@ -159,7 +159,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
             |    event Evt is { h: Integer }
             |    entity e is {
             |      record F is { count: Integer }
-            |      state S of e.F
+            |      state S of record e.F
             |      handler h is {
             |        on command Cmd { prompt "handle" }
             |        on event Evt { prompt "note" }

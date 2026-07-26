@@ -43,11 +43,11 @@ class InitialMarkerRoundTripTest extends AbstractValidatingTest {
   private val src =
     """domain d is { context c is { entity e is {
       |  type Data is { x: Integer }
-      |  state First of type d.c.e.Data is {
+      |  state First of record d.c.e.Data is {
       |    handler H1 is { on other is { prompt "a" } }
       |    initial handler H2 is { on other is { prompt "b" } }
       |  }
-      |  initial state Second of type d.c.e.Data is {
+      |  initial state Second of record d.c.e.Data is {
       |    handler H3 is { on other is { prompt "c" } }
       |  }
       |}}}

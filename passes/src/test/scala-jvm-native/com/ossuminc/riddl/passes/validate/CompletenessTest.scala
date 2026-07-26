@@ -27,7 +27,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on command D.C.Cmd {
           |          send event D.C.Evt to outlet D.C.Events.out
@@ -59,7 +59,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init {
           |          prompt "should set state here"
@@ -94,7 +94,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init {
           |          set field E.Fields.data to "default"
@@ -128,7 +128,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Cmd is command { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
@@ -164,7 +164,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on query D.C.Qry {
@@ -263,7 +263,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler Empty is {
           |        on event D.C.Evt { ??? }
           |      }
@@ -290,7 +290,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler PromptOnly is {
           |        on event D.C.Evt {
           |          prompt "do something"
@@ -320,7 +320,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
@@ -353,7 +353,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type GetData is query { id: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
@@ -389,7 +389,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type GetData is query { id: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
@@ -444,7 +444,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type DataResult is result { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
@@ -476,7 +476,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity Reservation is {
           |      record Fields is { data: String }
-          |      state Main of Reservation.Fields
+          |      state Main of record Reservation.Fields
           |      handler H is {
           |        on init { set field Reservation.Fields.data to "x" }
           |        on event D.FrontOfHouse.Evt {
@@ -522,7 +522,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    entity E is {
           |      type EId is Id(E)
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on event D.C.Evt {
@@ -549,7 +549,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on event D.C.Evt {
@@ -579,7 +579,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type DataResult is result { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
@@ -640,7 +640,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on event D.C.Evt {
           |          set field E.Fields.data to "updated"
@@ -722,7 +722,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type DataResult is result { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
@@ -792,7 +792,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init {
           |          set field E.Fields.data to "default"
@@ -845,7 +845,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type DataResult is result { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on query D.C.GetData {
@@ -874,7 +874,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    entity E is {
           |      record Fields is { balance: Number }
           |      invariant BalanceNonNegative is "balance >= 0"
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.balance to "0" }
           |        on command D.C.Cmd {
@@ -909,7 +909,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    entity E is {
           |      record Fields is { data: String }
           |      invariant DataNotEmpty is "data.nonEmpty"
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on event D.C.Evt {
@@ -940,7 +940,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    type Evt is event { data: String }
           |    entity E is {
           |      record Fields is { data: String }
-          |      state Main of E.Fields
+          |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on event D.C.Evt {

@@ -128,7 +128,7 @@ trait ScopedParsingTest(using PlatformContext) extends AbstractTestingBasisWithT
     "parse handler and state definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """type Fields is { name: String }
-          |state current of SyntheticScope.Fields
+          |state current of record SyntheticScope.Fields
           |handler input is { ??? }""".stripMargin,
         td
       )

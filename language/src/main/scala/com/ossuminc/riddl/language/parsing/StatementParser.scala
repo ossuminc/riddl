@@ -115,7 +115,7 @@ private[parsing] trait StatementParser {
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      Index ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ messageRef ~/ Index
+      Index ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ recordRef ~/ Index
     )./.map { case (start, eRef, sRef, mRef, end) =>
       MorphStatement(at(start, end), eRef, sRef, mRef)
     }
