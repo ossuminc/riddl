@@ -55,14 +55,15 @@ import_def = "import" "domain" identifier "from" literal_string ;
 domain_include = "include" literal_string ;
 
 (* Context *)
-context = "context" identifier is "{" context_body "}" [with_metadata] ;
+intention = "application" | "external" | "gateway" | "service" ;
+context = [intention] "context" identifier [as_shape] is "{" context_body "}" [with_metadata] ;
 context_body = context_definitions | "???" ;
 context_definitions = {context_definition}+ ;
 context_definition = processor_definition_contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | context_include | comment ;
 context_include = "include" literal_string ;
 
 (* Entity *)
-entity = "entity" identifier is "{" entity_body "}" [with_metadata] ;
+entity = "entity" identifier [as_shape] is "{" entity_body "}" [with_metadata] ;
 entity_body = entity_definitions | "???" ;
 entity_definitions = {entity_content}+ ;
 entity_content = processor_definition_contents | state | entity_include ;
@@ -72,7 +73,7 @@ state_content = handler | comment ;
 entity_include = "include" literal_string ;
 
 (* Processor Definition Contents *)
-processor_definition_contents = vital_definition_contents | constant | invariant | function | handler | streamlet | connector | relationship ;
+processor_definition_contents = vital_definition_contents | constant | invariant | function | handler | streamlet | processor | connector | relationship | inlet | outlet ;
 vital_definition_contents = type_def | comment ;
 
 (* Type Definition *)
@@ -237,6 +238,8 @@ relationship = "relationship" identifier "to" processor_ref byAs relationship_ca
 relationship_cardinality = "1:1" | "1:N" | "N:1" | "N:N" ;
 
 (* Streamlet-related *)
+as_shape = "as" ( "void" | "source" | "sink" | "flow" | "cascade" | "merge" | "fanin" | "split" | "broadcast" | "fanout" | "router" ) ;
+processor = "processor" identifier [as_shape] is "{" ( {processor_definition_contents}+ | "???" ) "}" [with_metadata] ;
 streamlet = source | sink | flow | merge | split | router | void ;
 source = "source" identifier is "{" streamlet_body "}" [with_metadata] ;
 sink = "sink" identifier is "{" streamlet_body "}" [with_metadata] ;
@@ -268,7 +271,7 @@ presentation_aliases = "presents" | "shows" | "displays" | "writes" | "emits" ;
 acquisition_aliases = "acquires" | "reads" | "takes" | "accepts" | "admits" | "initiates" | "submits" | "triggers" | "activates" | "starts" ;
 
 (* Repository-related *)
-repository = "repository" identifier is "{" repository_body "}" [with_metadata] ;
+repository = "repository" identifier [as_shape] is "{" repository_body "}" [with_metadata] ;
 repository_body = {"???" | repository_definitions} ;
 repository_definitions = {processor_definition_contents | schema | repository_include} ;
 repository_include = "include" literal_string ;
@@ -279,14 +282,14 @@ link = "link" identifier byAs field_ref "to" field_ref ;
 index = "index" "on" field_ref ;
 
 (* Adaptor-related *)
-adaptor = "adaptor" identifier adaptor_direction context_ref is "{" adaptor_body "}" [with_metadata] ;
+adaptor = "adaptor" identifier adaptor_direction context_ref [as_shape] is "{" adaptor_body "}" [with_metadata] ;
 adaptor_direction = "from" | "to" ;
 adaptor_body = {"???" | adaptor_contents} ;
 adaptor_contents = {processor_definition_contents | handler | adaptor_include} ;
 adaptor_include = "include" literal_string ;
 
 (* Projector-related *)
-projector = "projector" identifier is "{" projector_body "}" [with_metadata] ;
+projector = "projector" identifier [as_shape] is "{" projector_body "}" [with_metadata] ;
 projector_body = {"???" | projector_definitions} ;
 projector_definitions = {processor_definition_contents | updates | projector_include} ;
 projector_include = "include" literal_string ;

@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-26 02:58 UTC
+# Generated: 2026-07-26 14:53 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -63,14 +63,15 @@ import-def ::= "import" ws "domain" ws1 identifier ws "from" ws1 literal-string
 domain-include ::= "include" ws1 literal-string
 
 # Context
-context ::= "context" ws1 identifier ws1 is ws "{" ws context-body ws "}" ws (with-metadata)?
+intention ::= "application" | "external" | "gateway" | "service"
+context ::= (intention)? ws "context" ws1 identifier ws (as-shape)? ws is ws "{" ws context-body ws "}" ws (with-metadata)?
 context-body ::= context-definitions | "???"
 context-definitions ::= (context-definition)+
 context-definition ::= processor-definition-contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | context-include | comment
 context-include ::= "include" ws1 literal-string
 
 # Entity
-entity ::= "entity" ws1 identifier ws1 is ws "{" ws entity-body ws "}" ws (with-metadata)?
+entity ::= "entity" ws1 identifier ws (as-shape)? ws is ws "{" ws entity-body ws "}" ws (with-metadata)?
 entity-body ::= entity-definitions | "???"
 entity-definitions ::= (entity-content)+
 entity-content ::= processor-definition-contents | state | entity-include
@@ -80,7 +81,7 @@ state-content ::= handler | comment
 entity-include ::= "include" ws1 literal-string
 
 # Processor Definition Contents
-processor-definition-contents ::= vital-definition-contents | constant | invariant | function | handler | streamlet | connector | relationship
+processor-definition-contents ::= vital-definition-contents | constant | invariant | function | handler | streamlet | processor | connector | relationship | inlet | outlet
 vital-definition-contents ::= type-def | comment
 
 # Type Definition
@@ -234,6 +235,8 @@ relationship ::= "relationship" ws1 identifier ws "to" ws1 processor-ref ws1 by-
 relationship-cardinality ::= "1:1" | "1:N" | "N:1" | "N:N"
 
 # Streamlet-related
+as-shape ::= "as" ws ("void" | "source" | "sink" | "flow" | "cascade" | "merge" | "fanin" | "split" | "broadcast" | "fanout" | "router")
+processor ::= "processor" ws1 identifier ws (as-shape)? ws is ws "{" ws ((processor-definition-contents)+ | "???") ws "}" ws (with-metadata)?
 streamlet ::= source | sink | flow | merge | split | router | void
 source ::= "source" ws1 identifier ws1 is ws "{" ws streamlet-body ws "}" ws (with-metadata)?
 sink ::= "sink" ws1 identifier ws1 is ws "{" ws streamlet-body ws "}" ws (with-metadata)?
@@ -265,7 +268,7 @@ presentation-aliases ::= "presents" | "shows" | "displays" | "writes" | "emits"
 acquisition-aliases ::= "acquires" | "reads" | "takes" | "accepts" | "admits" | "initiates" | "submits" | "triggers" | "activates" | "starts"
 
 # Repository-related
-repository ::= "repository" ws1 identifier ws1 is ws "{" ws repository-body ws "}" ws (with-metadata)?
+repository ::= "repository" ws1 identifier ws (as-shape)? ws is ws "{" ws repository-body ws "}" ws (with-metadata)?
 repository-body ::= ("???" | repository-definitions)*
 repository-definitions ::= (processor-definition-contents | schema | repository-include)*
 repository-include ::= "include" ws1 literal-string
@@ -276,14 +279,14 @@ link ::= "link" ws1 identifier ws1 by-as ws1 field-ref ws "to" ws1 field-ref
 index ::= "index" ws "on" ws1 field-ref
 
 # Adaptor-related
-adaptor ::= "adaptor" ws1 identifier ws1 adaptor-direction ws1 context-ref ws1 is ws "{" ws adaptor-body ws "}" ws (with-metadata)?
+adaptor ::= "adaptor" ws1 identifier ws1 adaptor-direction ws1 context-ref ws (as-shape)? ws is ws "{" ws adaptor-body ws "}" ws (with-metadata)?
 adaptor-direction ::= "from" | "to"
 adaptor-body ::= ("???" | adaptor-contents)*
 adaptor-contents ::= (processor-definition-contents | handler | adaptor-include)*
 adaptor-include ::= "include" ws1 literal-string
 
 # Projector-related
-projector ::= "projector" ws1 identifier ws1 is ws "{" ws projector-body ws "}" ws (with-metadata)?
+projector ::= "projector" ws1 identifier ws (as-shape)? ws is ws "{" ws projector-body ws "}" ws (with-metadata)?
 projector-body ::= ("???" | projector-definitions)*
 projector-definitions ::= (processor-definition-contents | updates | projector-include)*
 projector-include ::= "include" ws1 literal-string

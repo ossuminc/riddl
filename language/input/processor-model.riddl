@@ -1,0 +1,33 @@
+// Corpus fixture exercising the unified processor model (Task 17): context intention
+// prefixes (`application`, `gateway`), shape ascription (`as <shape>`) on processor
+// headers, the generic `processor` keyword, and inlet/outlet ports declared in
+// non-streamlet processor bodies (a generic processor, a plain processor, an entity).
+// Both the fastparse parser and the EBNF/TatSu grammar must accept this input.
+domain ProcessorModel is {
+  type Pkg is { id: String }
+
+  application context Assembly as flow is {
+
+    // Generic processor with an ascribed shape and >= 2 outlets.
+    processor Splitter as split is {
+      inlet in is type ProcessorModel.Pkg
+      outlet left is type ProcessorModel.Pkg
+      outlet right is type ProcessorModel.Pkg
+    }
+
+    // Plain generic processor (no shape) carrying a single inlet and outlet.
+    processor Relay is {
+      inlet feed is type ProcessorModel.Pkg
+      outlet done is type ProcessorModel.Pkg
+    }
+
+    // A processor definition (entity) that now admits an inlet port directly.
+    entity Gadget is {
+      inlet incoming is type ProcessorModel.Pkg
+    }
+  }
+
+  gateway context Edge as merge is {
+    type Note is { text: String }
+  }
+}
