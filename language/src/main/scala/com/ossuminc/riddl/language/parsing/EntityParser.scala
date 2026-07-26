@@ -101,10 +101,17 @@ private[parsing] trait EntityParser {
 
   def entity[u: P]: P[Entity] = {
     P(
-      Index ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ withMetaData ~ Index
-    )./ map { case (start, id, contents, meta, end) =>
+      Index ~ Keywords.entity ~/ identifier ~ asShape ~ is ~ open ~/ entityBody ~ close ~
+        withMetaData ~ Index
+    )./ map { case (start, id, ascribed, contents, meta, end) =>
       checkForDuplicateIncludes(contents)
-      Entity(at(start, end), id, defaultEntityInitials(contents).toContents, metadata = meta.toContents)
+      Entity(
+        at(start, end),
+        id,
+        defaultEntityInitials(contents).toContents,
+        ascribedShape = ascribed,
+        metadata = meta.toContents
+      )
     }
   }
 }

@@ -48,11 +48,19 @@ private[parsing] trait AdaptorParser(using PlatformContext) { this: ProcessorPar
   def adaptor[u: P]: P[Adaptor] = {
     P(
       Index ~ Keywords.adaptor ~/ identifier ~
-        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~
+        adaptorDirection ~ contextRef ~ asShape ~ is ~ open ~ adaptorBody ~
         close ~ withMetaData ~ Index
-    )./ map { (start, id, direction, cRef, contents, meta, end) =>
+    )./ map { (start, id, direction, cRef, ascribed, contents, meta, end) =>
       checkForDuplicateIncludes(contents)
-      Adaptor(at(start, end), id, direction, cRef, contents.toContents, metadata = meta.toContents)
+      Adaptor(
+        at(start, end),
+        id,
+        direction,
+        cRef,
+        contents.toContents,
+        ascribedShape = ascribed,
+        metadata = meta.toContents
+      )
     }
   }
 }

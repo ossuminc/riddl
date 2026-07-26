@@ -236,5 +236,45 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
       )
       checkDefinition[Domain, Context](rpi, expected, _.contexts.head)
     }
+
+    "recognize a generic processor with an ascribed shape in a context" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """processor P as fanout is {
+          |  inlet i is command Cmd
+          |  outlet a is command Cmd
+          |  outlet b is command Cmd
+          |}""".stripMargin,
+        td
+      )
+      TopLevelParser.parseAsContext(input) match {
+        case Left(errors) => fail(errors.format)
+        case Right(context) =>
+          val streamlet = context.streamlets.head
+          streamlet.id.value mustBe "P"
+          streamlet.ascribedShape.map(_.keyword) mustBe Some("split")
+          streamlet.inlets.size mustBe 1
+          streamlet.outlets.size mustBe 2
+      }
+    }
+
+    "recognize a generic processor with no ascribed shape" in { (td: TestData) =>
+      val input = RiddlParserInput("processor P is { ??? }", td)
+      TopLevelParser.parseAsContext(input) match {
+        case Left(errors) => fail(errors.format)
+        case Right(context) =>
+          val streamlet = context.streamlets.head
+          streamlet.id.value mustBe "P"
+          streamlet.ascribedShape mustBe None
+      }
+    }
+
+    "recognize an ascribed shape on a projector" in { (td: TestData) =>
+      val input = RiddlParserInput("projector Pr as merge is { ??? }", td)
+      TopLevelParser.parseAsContext(input) match {
+        case Left(errors) => fail(errors.format)
+        case Right(context) =>
+          context.projectors.head.ascribedShape.map(_.keyword) mustBe Some("merge")
+      }
+    }
   }
 }

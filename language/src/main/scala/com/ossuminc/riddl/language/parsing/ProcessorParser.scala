@@ -8,6 +8,7 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.{*}
 import com.ossuminc.riddl.language.{Contents, *}
+import com.ossuminc.riddl.language.At
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -17,6 +18,20 @@ trait ProcessorParser
     with HandlerParser
     with StreamingParser
     with CommonParser {
+
+  /** An optional shape ascription usable on any processor header, between the identifier and `is`.
+    * e.g. `processor P as fanout is { … }`. Recognizes the canonical shape keywords and their
+    * synonyms (cascade→Flow, fanin→Merge, broadcast/fanout→Split). Wholly optional and, when the
+    * `as` is absent, consumes nothing so it never collides with the other `as` uses (relationship
+    * cardinality/label, repository schema data/link).
+    */
+  def asShape[u: P]: P[Option[StreamletShape]] =
+    P(
+      (as ~ StringIn(
+        "void", "source", "sink", "flow", "cascade", "merge", "fanin",
+        "split", "broadcast", "fanout", "router"
+      ).!).?
+    ).map(_.flatMap(kw => StreamletShape.fromKeyword(kw, At.empty)))
 
   private def relationshipCardinality[u: P]: P[RelationshipCardinality] =
     P(StringIn("1:1", "1:N", "N:1", "N:N").!).map {

@@ -83,10 +83,17 @@ private[parsing] trait RepositoryParser {
 
   def repository[u: P]: P[Repository] = {
     P(
-      Index ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close ~ withMetaData ~ Index
-    ).map { case (start, id, contents, descriptives, end) =>
+      Index ~ Keywords.repository ~/ identifier ~ asShape ~ is ~ open ~ repositoryBody ~ close ~
+        withMetaData ~ Index
+    ).map { case (start, id, ascribed, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Repository(at(start, end), id, contents.toContents, metadata = descriptives.toContents)
+      Repository(
+        at(start, end),
+        id,
+        contents.toContents,
+        ascribedShape = ascribed,
+        metadata = descriptives.toContents
+      )
     }
   }
 

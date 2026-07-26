@@ -88,8 +88,8 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int
   ): P[Seq[StreamletContents]] = {
     P(
-      streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets) |
-        undefined(Seq.empty[StreamletContents])
+      undefined(Seq.empty[StreamletContents]) |
+        streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)
     )
   }
 
@@ -176,7 +176,19 @@ private[parsing] trait StreamingParser {
 
   def void[u: P]: P[Streamlet] = { streamletTemplate(Keyword.void) }
 
+  /** A generic processor with no fixed arity; the author may ascribe a shape via `as <shape>`. */
+  def processor[u: P]: P[Streamlet] = {
+    P(
+      Index ~ Keywords.processor ~/ identifier ~ asShape ~ is ~ open ~
+        streamletBody(0, MaxStreamlets, 0, MaxStreamlets) ~
+        close ~ withMetaData ~ Index
+    )./.map { case (start, id, ascribed, contents, descriptives, end) =>
+      checkForDuplicateIncludes(contents)
+      Streamlet(at(start, end), id, ascribed, contents.toContents, descriptives.toContents)
+    }
+  }
+
   def streamlet[u: P]: P[Streamlet] =
-    P(source | flow | sink | merge | split | router | void)
+    P(source | flow | sink | merge | split | router | void | processor)
 
 }

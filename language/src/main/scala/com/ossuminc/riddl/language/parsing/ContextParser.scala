@@ -47,10 +47,17 @@ private[parsing] trait ContextParser {
 
   def context[u: P]: P[Context] = {
     P(
-      Index ~ Keywords.context ~/ identifier ~ is ~ open ~ contextBody ~ close ~ withMetaData ~ Index
-    )./.map { case (start, id, contents, descriptives, end) =>
+      Index ~ Keywords.context ~/ identifier ~ asShape ~ is ~ open ~ contextBody ~ close ~
+        withMetaData ~ Index
+    )./.map { case (start, id, ascribed, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Context(at(start, end), id, contents.toContents, metadata = descriptives.toContents)
+      Context(
+        at(start, end),
+        id,
+        contents.toContents,
+        ascribedShape = ascribed,
+        metadata = descriptives.toContents
+      )
     }
   }
 }

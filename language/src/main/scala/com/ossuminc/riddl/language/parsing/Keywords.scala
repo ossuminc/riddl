@@ -255,6 +255,8 @@ object Keywords {
 
   def presents[u: P]: P[Unit] = keyword(Keyword.presents)
 
+  def processor[u: P]: P[Unit] = keyword(Keyword.processor)
+
   def projector[u: P]: P[Unit] = keyword(Keyword.projector)
 
   def prompt[u: P]: P[Unit] = keyword(Keyword.prompt)
@@ -447,6 +449,7 @@ object Keywords {
           Keyword.passivate,
           Keyword.pipe,
           Keyword.plant,
+          Keyword.processor,
           Keyword.projector,
           Keyword.query,
           Keyword.range,
@@ -599,6 +602,7 @@ object Keyword {
   final val passivate = "passivate"
   final val pipe = "pipe"
   final val plant = "plant"
+  final val processor = "processor"
   final val projector = "projector"
   final val prompt = "prompt"
   final val query = "query"
@@ -747,6 +751,7 @@ object Keyword {
     passivate,
     pipe,
     plant,
+    processor,
     projector,
     prompt,
     query,
