@@ -55,7 +55,7 @@ package object bast {
     * table layout). Independent of VERSION which tracks major header layout changes. Old files with
     * revision 0 (pre-check era) will be rejected with a clear message.
     */
-  val FORMAT_REVISION: Short = 10
+  val FORMAT_REVISION: Short = 11
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)
@@ -144,13 +144,17 @@ package object bast {
   val ADAPTOR_INBOUND: Byte = 57
   val ADAPTOR_OUTBOUND: Byte = 58
 
-  // Streamlet shapes (59-64)
+  // Streamlet shapes (59-64, plus STREAMLET_ROUTER at 102)
   val STREAMLET_SOURCE: Byte = 59
   val STREAMLET_SINK: Byte = 60
   val STREAMLET_FLOW: Byte = 61
   val STREAMLET_MERGE: Byte = 62
   val STREAMLET_SPLIT: Byte = 63
   val STREAMLET_VOID: Byte = 64
+  // Router previously shared STREAMLET_VOID's tag (latent bug: Router read back as Void).
+  // A distinct tag makes Split/Router/Void round-trip correctly. Placed at 102 (next free byte)
+  // to avoid renumbering the existing shape block.
+  val STREAMLET_ROUTER: Byte = 102
 
   // Simple values (65-67) - kept for polymorphic cases
   val NODE_IDENTIFIER: Byte = 65

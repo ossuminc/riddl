@@ -318,6 +318,68 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize context intention, ascribed shape, and ports (Task 15)" in {
+      // Reflective across BAST: context intention, a processor's OPTIONAL ascribed shape
+      // (Some AND None), the fixed Router-vs-Void distinction, and ports on a non-streamlet
+      // processor must all survive AST -> BAST -> AST.
+      val riddlSource =
+        """domain d is {
+          |  type T is String
+          |  application context Orders as flow is {
+          |    processor P as router is {
+          |      inlet i1 is T
+          |      inlet i2 is T
+          |      outlet o1 is T
+          |      outlet o2 is T
+          |    }
+          |    processor Q is {
+          |      inlet qi is T
+          |    }
+          |    entity E is {
+          |      inlet ei is T
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-processor-model")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(
+                compareRoots(originalRoot, nebula),
+                "processor-model round trip failed: ASTs are not equivalent"
+              )
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.{Context, Entity, Intention, Streamlet}
+              val f = Finder(nebula.contents)
+              val ctx = f.recursiveFindByType[Context].head
+              assert(ctx.intention == Some(Intention.Application), "context intention lost in BAST")
+              assert(
+                ctx.ascribedShape.map(_.keyword) == Some("flow"),
+                "context ascribed shape lost in BAST"
+              )
+              val p = f.recursiveFindByType[Streamlet].find(_.id.value == "P").get
+              assert(
+                p.ascribedShape.map(_.keyword) == Some("router"),
+                "Router shape not distinguished from Void in BAST"
+              )
+              assert(p.inlets.map(_.id.value) == Seq("i1", "i2"), "P inlets lost")
+              assert(p.outlets.map(_.id.value) == Seq("o1", "o2"), "P outlets lost")
+              val q = f.recursiveFindByType[Streamlet].find(_.id.value == "Q").get
+              assert(q.ascribedShape.isEmpty, "None ascribed shape leaked a value in BAST")
+              assert(q.inlets.map(_.id.value) == Seq("qi"), "Q inlet lost")
+              val e = f.recursiveFindByType[Entity].head
+              assert(e.inlets.map(_.id.value) == Seq("ei"), "entity port lost in BAST")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize dokn.riddl" in {
       val url = URL.fromCwdPath("language/input/dokn.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "dokn-test")

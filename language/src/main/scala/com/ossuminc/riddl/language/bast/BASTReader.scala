@@ -305,6 +305,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     case STREAMLET_FLOW         => "Flow"
     case STREAMLET_MERGE        => "Merge"
     case STREAMLET_SPLIT        => "Split"
+    case STREAMLET_ROUTER       => "Router"
     case ADAPTOR_INBOUND        => "InboundAdaptor"
     case ADAPTOR_OUTBOUND       => "OutboundAdaptor"
     // Entity Reference tags (Phase 9)
@@ -476,6 +477,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         case STREAMLET_FLOW   => readFlowNode()
         case STREAMLET_MERGE  => readMergeNode()
         case STREAMLET_SPLIT  => readSplitNode()
+        case STREAMLET_ROUTER => readRouterNode()
 
         // Adaptor directions
         case ADAPTOR_INBOUND  => readInboundAdaptorNode()
@@ -534,21 +536,50 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     Domain(loc, id, contents, metadata)
   }
 
+  /** Mirror of BASTWriter.writeAscribedShape: presence byte then, when present, the shape tag. */
+  private def readAscribedShape(loc: At): Option[StreamletShape] = reader.readU8() match {
+    case 0 => None
+    case 1 =>
+      Some(reader.readU8() match {
+        case STREAMLET_VOID   => Void(loc)
+        case STREAMLET_SOURCE => Source(loc)
+        case STREAMLET_SINK   => Sink(loc)
+        case STREAMLET_FLOW   => Flow(loc)
+        case STREAMLET_MERGE  => Merge(loc)
+        case STREAMLET_SPLIT  => Split(loc)
+        case STREAMLET_ROUTER => Router(loc)
+        case _                => Void(loc)
+      })
+    case _ => None
+  }
+
+  /** Mirror of BASTWriter.writeIntention: 0 = None, else 1..4. */
+  private def readIntention(): Option[Intention] = reader.readU8() match {
+    case 1 => Some(Intention.Application)
+    case 2 => Some(Intention.External)
+    case 3 => Some(Intention.Gateway)
+    case 4 => Some(Intention.Service)
+    case _ => None
+  }
+
   private def readContextNode(): Context = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
+    val intention = readIntention()
+    val ascribedShape = readAscribedShape(loc)
     val contents = readContentsDeferred[OccursInContext]().asInstanceOf[Contents[ContextContents]]
     val metadata = readMetadataDeferred()
-    Context(loc, id, contents, metadata = metadata)
+    Context(loc, id, contents, ascribedShape, intention, metadata)
   }
 
   private def readEntityNode(): Entity = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
+    val ascribedShape = readAscribedShape(loc)
     val contents =
       readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
     val metadata = readMetadataDeferred()
-    Entity(loc, id, contents, metadata = metadata)
+    Entity(loc, id, contents, ascribedShape, metadata)
   }
 
   private def readModuleNode(): Module = {
@@ -631,9 +662,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case _                => InboundAdaptor(loc) // Default
     }
     val referent = readContextRef()
+    val ascribedShape = readAscribedShape(loc)
     val contents = readContentsDeferred[OccursInProcessor]().asInstanceOf[Contents[AdaptorContents]]
     val metadata = readMetadataDeferred()
-    Adaptor(loc, id, direction, referent, contents, metadata = metadata)
+    Adaptor(loc, id, direction, referent, contents, ascribedShape, metadata)
   }
 
   // A9: `requires`/`returns` hold a TypeRef (preferred) or a deprecated inline Aggregation.
@@ -682,19 +714,21 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readProjectorNode(): Projector = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
+    val ascribedShape = readAscribedShape(loc)
     val contents = readContentsDeferred[OccursInProcessor | RepositoryRef]()
       .asInstanceOf[Contents[ProjectorContents]]
     val metadata = readMetadataDeferred()
-    Projector(loc, id, contents, metadata = metadata)
+    Projector(loc, id, contents, ascribedShape, metadata)
   }
 
   private def readRepositoryNode(): Repository = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
+    val ascribedShape = readAscribedShape(loc)
     val contents =
       readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
     val metadata = readMetadataDeferred()
-    Repository(loc, id, contents, metadata = metadata)
+    Repository(loc, id, contents, ascribedShape, metadata)
   }
 
   private def readSchemaNode(): Schema = {
@@ -732,20 +766,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readStreamletNode(): Streamlet = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val shapeTag = reader.readU8()
-    val shape: StreamletShape = shapeTag match {
-      case STREAMLET_VOID   => Void(loc)
-      case STREAMLET_SOURCE => Source(loc)
-      case STREAMLET_SINK   => Sink(loc)
-      case STREAMLET_FLOW   => Flow(loc)
-      case STREAMLET_MERGE  => Merge(loc)
-      case STREAMLET_SPLIT  => Split(loc)
-      case _                => Void(loc)
-    }
+    val ascribedShape = readAscribedShape(loc)
     val contents = readContentsDeferred[OccursInProcessor | Inlet | Outlet | Connector]()
       .asInstanceOf[Contents[StreamletContents]]
     val metadata = readMetadataDeferred()
-    Streamlet(loc, id, Some(shape), contents, metadata)
+    Streamlet(loc, id, ascribedShape, contents, metadata)
   }
 
   // ========== Epic Definitions ==========
@@ -1366,6 +1391,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readSplitNode(): Split = {
     val loc = readLocation()
     Split(loc)
+  }
+
+  private def readRouterNode(): Router = {
+    val loc = readLocation()
+    Router(loc)
   }
 
   // ========== Adaptor Directions ==========

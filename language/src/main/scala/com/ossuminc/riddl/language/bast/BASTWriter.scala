@@ -402,10 +402,40 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     // Metadata written by traverse() if flag is set
   }
 
+  /** The shape discriminator byte for a definite [[StreamletShape]]. */
+  private def shapeTagOf(shape: StreamletShape): Byte = shape match {
+    case _: Void   => STREAMLET_VOID
+    case _: Source => STREAMLET_SOURCE
+    case _: Sink   => STREAMLET_SINK
+    case _: Flow   => STREAMLET_FLOW
+    case _: Merge  => STREAMLET_MERGE
+    case _: Split  => STREAMLET_SPLIT
+    case _: Router => STREAMLET_ROUTER
+  }
+
+  /** Persist a Processor's OPTIONAL ascribed shape: a presence byte (0 = None, 1 = present) then,
+    * when present, the shape tag. When None the effective shape is derived from arity on read.
+    */
+  private def writeAscribedShape(shape: Option[StreamletShape]): Unit = shape match {
+    case Some(s) => writer.writeU8(1); writer.writeU8(shapeTagOf(s))
+    case None    => writer.writeU8(0)
+  }
+
+  /** Persist a Context's optional intention as a single byte: 0 = None, else 1..4. */
+  private def writeIntention(intention: Option[Intention]): Unit = writer.writeU8(intention match {
+    case Some(Intention.Application) => 1
+    case Some(Intention.External)    => 2
+    case Some(Intention.Gateway)     => 3
+    case Some(Intention.Service)     => 4
+    case None                        => 0
+  })
+
   def writeContext(c: Context): Unit = {
     writeNodeTag(NODE_CONTEXT, c.metadata.nonEmpty)
     writeLocation(c.loc)
     writeIdentifierInline(c.id) // Inline - no tag needed
+    writeIntention(c.intention)
+    writeAscribedShape(c.ascribedShape)
     writeContents(c.contents)
   }
 
@@ -416,6 +446,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_ENTITY, e.metadata.nonEmpty)
     writeLocation(e.loc)
     writeIdentifierInline(e.id) // Inline - no tag needed
+    writeAscribedShape(e.ascribedShape)
     writeContents(e.contents)
     debugLog(
       f"[WRITER] writeEntity: finished at pos ${writer.position}, contents count=${e.contents.length}"
@@ -461,6 +492,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case _: OutboundAdaptor => writer.writeU8(ADAPTOR_OUTBOUND)
     }
     writeContextRef(a.referent)
+    writeAscribedShape(a.ascribedShape)
     writeContents(a.contents)
   }
 
@@ -477,6 +509,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_PROJECTOR, p.metadata.nonEmpty)
     writeLocation(p.loc)
     writeIdentifierInline(p.id) // Inline - no tag needed
+    writeAscribedShape(p.ascribedShape)
     writeContents(p.contents)
   }
 
@@ -484,6 +517,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_REPOSITORY, r.metadata.nonEmpty)
     writeLocation(r.loc)
     writeIdentifierInline(r.id) // Inline - no tag needed
+    writeAscribedShape(r.ascribedShape)
     writeContents(r.contents)
   }
 
@@ -491,16 +525,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_STREAMLET, s.metadata.nonEmpty)
     writeLocation(s.loc)
     writeIdentifierInline(s.id) // Inline - no tag needed
-    // Write shape tag
-    s.effectiveShape match {
-      case _: Void   => writer.writeU8(STREAMLET_VOID)
-      case _: Source => writer.writeU8(STREAMLET_SOURCE)
-      case _: Sink   => writer.writeU8(STREAMLET_SINK)
-      case _: Flow   => writer.writeU8(STREAMLET_FLOW)
-      case _: Merge  => writer.writeU8(STREAMLET_MERGE)
-      case _: Split  => writer.writeU8(STREAMLET_SPLIT)
-      case _: Router => writer.writeU8(STREAMLET_VOID) // Router not in tags
-    }
+    // Persist the OPTIONAL ascribed shape (None = derived from arity on read).
+    writeAscribedShape(s.ascribedShape)
     writeContents(s.contents)
   }
 
@@ -1410,7 +1436,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeRouter(r: Router): Unit = {
-    writer.writeU8(STREAMLET_VOID) // Router not defined, use void
+    writer.writeU8(STREAMLET_ROUTER)
     writeLocation(r.loc)
   }
 
