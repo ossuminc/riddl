@@ -61,13 +61,13 @@ class YieldConformanceTest extends AbstractValidatingTest {
       }
     }
 
-    "reject a yield when the command declares no yields clause" in { (td: TestData) =>
-      val input = RiddlParserInput(model("yield event E", yieldsClause = ""), td)
-      parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
-        errors(msgs).exists(m =>
-          m.message.contains("does not") && m.message.contains("'yields' clause")
-        ) mustBe true
-      }
+    "allow a yield when the command declares no yields clause (yields is optional)" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(model("yield event E", yieldsClause = ""), td)
+        parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
+          // No yields declared ⇒ conformance is not enforced; the yield must not error.
+          errors(msgs).exists(m => m.message.contains("yields")) mustBe false
+        }
     }
   }
 }

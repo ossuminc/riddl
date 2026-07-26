@@ -595,8 +595,11 @@ case class ValidationPass(
     *   - a command/query that declares `yields M` must be handled by a clause that yields `M` (same
     *     kind + same resolved Type);
     *   - a yield whose message does not match the declared `yields` is an error;
-    *   - yielding in a handler whose command/query declares no `yields` is an error — `yields` is
-    *     the contract that authorizes a response.
+    *   - a command/query that declares `yields` but whose handler never yields it is an error.
+    *
+    * `yields` is optional (A19): yielding in a handler whose command/query declares no `yields` is
+    * allowed and unchecked — conformance is enforced only when the author opts in with a `yields`
+    * clause.
     *
     * Skips cleanly when refs don't resolve (those are reported by other checks) and when the
     * handled message is not a command/query (no `yields` contract applies).
@@ -635,17 +638,7 @@ case class ValidationPass(
                       suggestion = s"Yield the declared response: 'yield ${declaredYield.format}'."
                     )
                 }
-            case None =>
-              yieldStmts.foreach { ys =>
-                messages.addError(
-                  ys.loc,
-                  s"'yield ${ys.msg.format}' is not allowed: ${handledType.identify} does not " +
-                    "declare a 'yields' clause",
-                  suggestion =
-                    "Declare the response on the command/query type with a 'yields' clause, " +
-                      "or remove the yield."
-                )
-              }
+            case None => () // `yields` is optional; yielding without a declared clause is allowed
           }
         case _ => () // not a command/query, or unresolved — no 'yields' contract to enforce
       }
