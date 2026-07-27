@@ -77,10 +77,9 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
         }
     }
 
-    "warn a SendMessage step whose receiver has no on-clause for the message" in {
-      (td: TestData) =>
-        runWitnessPass(
-          """domain D is {
+    "warn a SendMessage step whose receiver has no on-clause for the message" in { (td: TestData) =>
+      runWitnessPass(
+        """domain D is {
             |  user U is "a user"
             |  command DoIt is { ??? }
             |  context App is { ??? }
@@ -94,11 +93,11 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
             |  }
             |}
             |""".stripMargin
-        ) { (uwo, _) =>
-          val warns = unwitnessed(uwo)
-          warns must not be empty
-          warns.exists(_.message.contains("no 'on")) mustBe true
-        }
+      ) { (uwo, _) =>
+        val warns = unwitnessed(uwo)
+        warns must not be empty
+        warns.exists(_.message.contains("no 'on")) mustBe true
+      }
     }
 
     "not warn a ShowOutput step when a put statement produces the output" in { (td: TestData) =>

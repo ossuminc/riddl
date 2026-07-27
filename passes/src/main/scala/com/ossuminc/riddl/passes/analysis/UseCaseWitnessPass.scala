@@ -19,8 +19,9 @@ import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.scalajs.js.annotation.*
 
-/** Output of the [[UseCaseWitnessPass]] (A36 Level 1). Carries the completeness warnings emitted for
-  * use-case interaction steps that are not witnessed by the model's handler structure and wiring.
+/** Output of the [[UseCaseWitnessPass]] (A36 Level 1). Carries the completeness warnings emitted
+  * for use-case interaction steps that are not witnessed by the model's handler structure and
+  * wiring.
   *
   * @param root
   *   The root of the model
@@ -92,8 +93,8 @@ case class UseCaseWitnessPass(
   /** Resolve a path identifier to a single definition of the requested kind via the (parent
     * independent) symbol table. Interaction and on-clause references are keyed in the resolution
     * refMap under differing scopes, so resolving through the symbol table by name keeps this robust
-    * regardless of where a reference textually appears. Returns the first match (fixtures name these
-    * uniquely); an empty path yields None.
+    * regardless of where a reference textually appears. Returns the first match (fixtures name
+    * these uniquely); an empty path yields None.
     */
   private def lookupOne[T <: Definition: ClassTag](pid: PathIdentifier): Option[T] =
     if pid.value.isEmpty then None
@@ -244,16 +245,15 @@ case class UseCaseWitnessPass(
       case uc: UseCase => witnessSteps(uc, uc.contents.toSeq)
       case _           => () // interaction steps are reached from their enclosing UseCase
     end match
-
   /** Recurse the interaction structure (into containers) and apply the per-step witness rules. */
   private def witnessSteps(uc: UseCase, contents: Seq[RiddlValue]): Unit =
     contents.foreach {
-      case ic: InteractionContainer    => witnessSteps(uc, ic.contents.toSeq)
-      case s: SendMessageInteraction   => witnessSend(uc, s)
-      case s: ShowOutputInteraction    => witnessShow(uc, s)
-      case s: TakeInputInteraction     => witnessInput(uc, s.to, s.loc, s.format)
-      case s: SelectInputInteraction   => witnessInput(uc, s.to, s.loc, s.format)
-      case _                           => () // Focus/DirectURL/Self/Arbitrary/Vague/Refusal: skip
+      case ic: InteractionContainer  => witnessSteps(uc, ic.contents.toSeq)
+      case s: SendMessageInteraction => witnessSend(uc, s)
+      case s: ShowOutputInteraction  => witnessShow(uc, s)
+      case s: TakeInputInteraction   => witnessInput(uc, s.to, s.loc, s.format)
+      case s: SelectInputInteraction => witnessInput(uc, s.to, s.loc, s.format)
+      case _                         => () // Focus/DirectURL/Self/Arbitrary/Vague/Refusal: skip
     }
 
   private def warnUnwitnessed(uc: UseCase, loc: At, stepDesc: String, why: String): Unit =
