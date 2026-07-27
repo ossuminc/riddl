@@ -97,7 +97,7 @@ class AnalysisPassSpec extends AnyWordSpec with Matchers {
 
     "provide pass creators" in {
       val passes = AnalysisPass.analysisPasses
-      passes must have size 9
+      passes must have size 10
     }
   }
 
