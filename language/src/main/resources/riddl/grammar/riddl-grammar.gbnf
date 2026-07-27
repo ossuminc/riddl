@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 15:19 UTC
+# Generated: 2026-07-27 15:38 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -333,7 +333,8 @@ epic-body ::= user-story ws (epic-definitions)*
 epic-definitions ::= (vital-definition-contents | use-case | shown-by | epic-include)*
 epic-include ::= "include" ws1 literal-string
 use-case ::= "case" ws1 identifier ws1 is ws "{" ws user-story ws ("???" | interactions)* ws "}" ws (with-metadata)?
-user-story ::= user-ref ws "wants" ws ("to")? ws literal-string ws "so" ws ("that")? ws literal-string
+user-story-verb ::= "wants" | "must" | "shall" | "should" | "may" | "will" | "can"
+user-story ::= user-ref ws1 user-story-verb ws ("to")? ws literal-string ws "so" ws ("that")? ws literal-string
 interactions ::= (interaction | comment)*
 interaction ::= parallel-interactions | optional-interactions | sequential-interactions | step-interactions
 parallel-interactions ::= "parallel" ws "{" ws interactions ws "}"

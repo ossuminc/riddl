@@ -1,0 +1,27 @@
+domain foo {
+  user U is "an example user"
+  context App is { ??? }
+  context Gateway is { ??? }
+  command DoSomething is { ??? }
+  epic MustCase is {
+    user U must to "hmm" so that "haw"
+    case one is {
+      user U should to "hmm" so that "haw"
+      step send command DoSomething from context App to context Gateway
+    }
+  }
+  epic MayCase is {
+    user U may to "hmm" so that "haw"
+    case two is {
+      user U can to "hmm" so that "haw"
+      step send command DoSomething from context App to context Gateway
+    }
+  }
+  epic WillCase is {
+    user U will to "hmm" so that "haw"
+    case three is {
+      user U shall to "hmm" so that "haw"
+      step send command DoSomething from context App to context Gateway
+    }
+  }
+}

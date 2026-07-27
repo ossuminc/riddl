@@ -66,6 +66,40 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
       }
     }
 
+    "parse modal user-story verbs equivalently to `wants`" in { (td: TestData) =>
+      // A43: the user-story verb accepts modal synonyms in addition to `wants`.
+      // The verb is discarded (not captured in the AST), so every synonym must
+      // produce a UserStory with the same user, capability, and benefit.
+      def parseStory(verb: String): UserStory = {
+        val input = RiddlParserInput(
+          s"""domain foo is {
+             |  epic X is {
+             |    user foo $verb "to do a thing" so that "he gets bar"
+             |    ???
+             |  }
+             |}""".stripMargin,
+          td
+        )
+        parseTopLevelDomain[Epic](input, _.domains.head.epics.head) match {
+          case Left(messages)   => fail(messages.format)
+          case Right((epic, _)) => epic.userStory
+        }
+      }
+
+      val baseline = parseStory("wants")
+      baseline.capability.s mustBe "to do a thing"
+      baseline.benefit.s mustBe "he gets bar"
+      baseline.user.pathId.value mustBe Seq("foo")
+
+      for verb <- Seq("must", "shall", "should", "may", "will", "can") do
+        val story = parseStory(verb)
+        withClue(s"verb `$verb`: ") {
+          story.user.pathId.value mustBe baseline.user.pathId.value
+          story.capability.s mustBe baseline.capability.s
+          story.benefit.s mustBe baseline.benefit.s
+        }
+    }
+
     "parseTopLevelDomain[Type]" in { (td: TestData) =>
       val input = RiddlParserInput("domain foo is { type X is String }", td)
       parseTopLevelDomain[Type](input, _.domains.head.types.head) match {

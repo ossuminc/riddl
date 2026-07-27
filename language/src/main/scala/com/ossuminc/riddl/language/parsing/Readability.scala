@@ -42,6 +42,15 @@ trait Readability {
 
   def wants[u: P]: P[Unit] = readable("wants")
 
+  /** The user-story obligation verb. Widened from the lone `wants` to accept the RFC-2119 / MoSCoW
+    * modal synonyms. This is a pure vocabulary alias: the verb word is discarded (like `wants`
+    * always has been) and is NOT captured in the `UserStory` AST, so all seven verbs parse to an
+    * equivalent `UserStory`.
+    */
+  def userStoryVerb[u: P]: P[Unit] = Keywords.keywords(
+    StringIn("wants", "must", "shall", "should", "may", "will", "can")
+  )
+
   def `with`[u: P]: P[Unit] = readable("with")
 
   def anyReadability[u: P]: P[Unit] = {

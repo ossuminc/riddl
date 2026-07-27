@@ -150,7 +150,7 @@ private[parsing] trait EpicParser {
 
   def userStory[u: P]: P[UserStory] = {
     P(
-      Index ~ userRef ~ wants ~ to.? ~ literalString ~ so ~ that.? ~ literalString ~ Index
+      Index ~ userRef ~ userStoryVerb ~ to.? ~ literalString ~ so ~ that.? ~ literalString ~ Index
     ).map { case (start, user, capability, benefit, end) =>
       UserStory(at(start, end), user, capability, benefit)
     }
