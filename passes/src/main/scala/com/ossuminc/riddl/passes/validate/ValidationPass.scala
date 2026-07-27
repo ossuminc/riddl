@@ -1016,6 +1016,29 @@ case class ValidationPass(
     // OnMessageLikeClause covers both OnMessageClause (command/query/result/record) and
     // OnEventClause (event); the kind checks below stay precise via `msg.messageKind`.
     val messageClauses = h.clauses.collect { case omc: OnMessageLikeClause => omc }
+    // A21: within a SINGLE handler, warn when two 'on <message>' clauses handle the
+    // same message — the later clause shadows the earlier one, which is unreachable.
+    // Key by the resolved message type when it resolves, else by messageKind + pathId text.
+    // groupBy preserves encounter order within each group, so `dups.tail` are the later clauses.
+    messageClauses
+      .groupBy { omc =>
+        resolution.refMap
+          .definitionOf[Type](omc.msg.pathId)
+          .map(t => s"resolved:${t.id.value}#${t.loc.offset}")
+          .getOrElse(s"${omc.msg.messageKind}:${omc.msg.pathId.format}")
+      }
+      .foreach { case (_, dups) =>
+        if dups.size > 1 then
+          dups.tail.foreach { later =>
+            messages.addStyle(
+              later.loc,
+              s"on-clause for '${later.msg.format}' shadows an earlier clause in this handler; " +
+                s"the earlier one is unreachable",
+              suggestion =
+                s"Remove the redundant 'on ${later.msg.format}' clause or merge its statements into the earlier one."
+            )
+          }
+      }
     parents.headOption match {
       case Some(entity: Entity) =>
         if messageClauses.nonEmpty then {
