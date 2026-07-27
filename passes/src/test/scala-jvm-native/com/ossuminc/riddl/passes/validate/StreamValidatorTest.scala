@@ -437,5 +437,94 @@ class StreamValidatorTest extends AbstractValidatingTest {
         }
       }
     }
+
+    // ---- A7-ext: async over-parallelization warning (fully-async pipeline) ----
+
+    def asyncWarnings(messages: Messages.Messages): Seq[Messages.Message] =
+      messages.filter(m => m.kind == Messages.StyleWarning && m.message.contains("fused anywhere"))
+
+    "style-warn a streaming pipeline whose every portlet is 'async'" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          | type T = Integer
+          | context c is {
+          |  source s is { outlet o is type T with { option async } }
+          |  flow f is {
+          |    inlet fin is type T with { option async }
+          |    outlet fout is type T with { option async }
+          |  }
+          |  sink k is { inlet in is type T with { option async } }
+          |  connector a is { from outlet c.s.o to inlet c.f.fin }
+          |  connector b is { from outlet c.f.fout to inlet c.k.in }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          asyncWarnings(messages).size must be(1)
+        }
+      }
+    }
+
+    "not async-warn a pipeline that has at least one non-async portlet" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          | type T = Integer
+          | context c is {
+          |  source s is { outlet o is type T with { option async } }
+          |  flow f is {
+          |    inlet fin is type T with { option async }
+          |    outlet fout is type T
+          |  }
+          |  sink k is { inlet in is type T with { option async } }
+          |  connector a is { from outlet c.s.o to inlet c.f.fin }
+          |  connector b is { from outlet c.f.fout to inlet c.k.in }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          asyncWarnings(messages) must be(empty)
+        }
+      }
+    }
+
+    "not async-warn a single async portlet that forms no full pipeline" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          | type T = Integer
+          | context c is {
+          |  source s is { outlet o is type T with { option async } }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          asyncWarnings(messages) must be(empty)
+        }
+      }
+    }
+
+    "not async-warn a fully non-async pipeline" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          | type T = Integer
+          | context c is {
+          |  source s is { outlet o is type T }
+          |  sink k is { inlet in is type T }
+          |  connector a is { from outlet c.s.o to inlet c.k.in }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          asyncWarnings(messages) must be(empty)
+        }
+      }
+    }
   }
 }

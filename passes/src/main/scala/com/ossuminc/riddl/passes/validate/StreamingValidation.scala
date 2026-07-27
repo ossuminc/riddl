@@ -27,6 +27,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     checkPortletCardinality()
     checkUnattachedOutlets()
     checkExternalContextConnectors()
+    checkAsyncOverParallelization()
   }
 
   /** A context is "external" if it carries the External intention or (during deprecation) the
@@ -367,6 +368,99 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             "Attach only one connector to this inlet; to fan in, declare additional inlets on the " +
               "processor (which makes it a merge or router) and connect each separately."
         )
+    }
+  }
+
+  /** A7-ext (async over-parallelization): `option async` on a portlet marks it as a deliberate
+    * async boundary so the code generator inserts a real async boundary there instead of fusing the
+    * stream (cf. Akka Streams operator fusion). If EVERY portlet along a connected streaming
+    * pipeline is `async`, the stream cannot be fused anywhere — a fully un-fused stream pays
+    * message-passing overhead at every boundary and typically runs SLOWER than a fused one. Emit
+    * ONE StyleWarning per such pipeline.
+    *
+    * A "pipeline" is a connected component of portlets under union-find over two kinds of edges:
+    * (a) each connector joins its `from` outlet and its `to` inlet; (b) each streamlet's own
+    * inlets+outlets are joined (a streamlet's ports are part of one flow). Because connectors are
+    * accumulated across the whole model (including domain-scoped cross-context connectors, per
+    * A31), a pipeline that spans contexts is analyzed as a single component. Only components with
+    * ≥2 portlets warn (a lone async port is a legitimate single boundary), and only when ALL
+    * portlets in the component are `async` (any non-async portlet means the stream still fuses
+    * somewhere). Never an Error.
+    */
+  private def checkAsyncOverParallelization(): Unit = {
+    val nodes: Array[Portlet] = (inlets.toSeq ++ outlets.toSeq).toArray
+    val n = nodes.length
+    if n >= 2 then {
+      // Union-find over portlet indices; endpoints compared by reference identity (`eq`).
+      val parent = Array.tabulate(n)(identity)
+      def find(x: Int): Int = {
+        var root = x
+        while parent(root) != root do root = parent(root)
+        var cur = x
+        while parent(cur) != root do
+          val next = parent(cur)
+          parent(cur) = root
+          cur = next
+        end while
+        root
+      }
+      def union(a: Int, b: Int): Unit = {
+        val ra = find(a)
+        val rb = find(b)
+        if ra != rb then parent(ra) = rb
+      }
+      def indexOf(p: Portlet): Int = {
+        var i = 0
+        var found = -1
+        while i < n && found < 0 do
+          if nodes(i) eq p then found = i
+          i += 1
+        end while
+        found
+      }
+
+      // Edge kind (b): a streamlet's own inlets+outlets belong to the same pipeline.
+      streamlets.foreach { streamlet =>
+        val portIdxs = (streamlet.inlets ++ streamlet.outlets).map(indexOf).filter(_ >= 0)
+        portIdxs.headOption.foreach { head =>
+          portIdxs.tail.foreach(union(head, _))
+        }
+      }
+
+      // Edge kind (a): a connector joins its resolved `from` outlet and `to` inlet.
+      connectors.filterNot(_.isEmpty).foreach { connector =>
+        val connParents = symbols.parentsOf(connector)
+        val maybeOutlet = resolvePath[Outlet](connector.from.pathId, connParents)
+        val maybeInlet = resolvePath[Inlet](connector.to.pathId, connParents)
+        (maybeOutlet, maybeInlet) match
+          case (Some(outlet), Some(inlet)) =>
+            val oi = indexOf(outlet)
+            val ii = indexOf(inlet)
+            if oi >= 0 && ii >= 0 then union(oi, ii)
+          case _ => ()
+      }
+
+      // Group portlets into connected components by their union-find root.
+      val components = mutable.LinkedHashMap.empty[Int, mutable.ListBuffer[Portlet]]
+      var i = 0
+      while i < n do
+        components.getOrElseUpdate(find(i), mutable.ListBuffer.empty) += nodes(i)
+        i += 1
+      end while
+      // A pipeline (≥2 portlets) with EVERY portlet marked `async` is over-parallelized.
+      components.values.foreach { component =>
+        if component.length >= 2 && component.forall(_.hasOption("async")) then
+          val representative = component.head
+          messages.addStyle(
+            representative.errorLoc,
+            "Every portlet in this streaming pipeline is marked 'async', so the stream cannot be " +
+              "fused anywhere; a fully-async pipeline usually performs worse than a fused one because " +
+              "it pays message-passing overhead at every boundary",
+            suggestion =
+              "Mark only the specific boundaries that genuinely need parallelism as 'async', and " +
+                "leave the rest un-marked so the code generator can fuse them into a single operator."
+          )
+      }
     }
   }
 
