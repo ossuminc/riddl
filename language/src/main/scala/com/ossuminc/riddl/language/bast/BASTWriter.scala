@@ -1133,10 +1133,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   /** A54/A28: self-contained value codec. A leading discriminator byte selects the arm
-    * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue, 5=BooleanExpression);
-    * the reader mirrors this exactly. Discriminator 5 is followed by a sub-tag byte selecting the
-    * boolean node (0=BooleanLiteral, 1=Comparison, 2=Logical, 3=Not); operator enums are stored by
-    * ordinal.
+    * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue, 5=BooleanExpression,
+    * 6=Call); the reader mirrors this exactly. Discriminator 5 is followed by a sub-tag byte
+    * selecting the boolean node (0=BooleanLiteral, 1=Comparison, 2=Logical, 3=Not); operator enums
+    * are stored by ordinal.
     */
   def writeValue(v: Value): Unit = {
     v match
@@ -1151,6 +1151,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case c: Constructor =>
         writer.writeU8(1)
         writeConstructor(c)
+      case call: Call =>
+        writer.writeU8(6)
+        writeCall(call)
       case vr: ValueRef =>
         writer.writeU8(2)
         writeLocation(vr.loc)
@@ -1236,6 +1239,25 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(kind)
     writeLocation(rLoc)
     writePathIdentifierInline(pid)
+    writer.writeVarInt(c.args.size)
+    c.args.foreach { arg =>
+      writeLocation(arg.loc)
+      arg.name match
+        case Some(id) =>
+          writer.writeU8(1)
+          writeIdentifierInline(id)
+        case None =>
+          writer.writeU8(0)
+      writeValue(arg.value)
+    }
+  }
+
+  /** A24: mirror in [[BASTReader.readCall]]. `writeFunctionRef` emits its own NODE_FUNCTION_REF
+    * tag; args are framed exactly like [[writeConstructor]]'s.
+    */
+  def writeCall(c: Call): Unit = {
+    writeLocation(c.loc)
+    writeFunctionRef(c.function)
     writer.writeVarInt(c.args.size)
     c.args.foreach { arg =>
       writeLocation(arg.loc)

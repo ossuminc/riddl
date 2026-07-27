@@ -596,6 +596,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         case ir: InputRef => GetValueDto("input", Some(ir.keyword), path(ir.pathId))
         case sr: StateRef => GetValueDto("state", None, path(sr.pathId))
     case c: Constructor     => serializeConstructor(c)
+    case call: Call         => serializeCall(call) // A24
     case bl: BooleanLiteral => BooleanLiteralDto(bl.value)
     case ce: ComparisonExpression =>
       ComparisonDto(ce.op.symbol, serializeComparand(ce.left), serializeComparand(ce.right))
@@ -623,6 +624,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     ConstructorValueDto(
       refKind,
       path(c.ref.pathId),
+      c.args.map(a => ConstructorArgDto(a.name.map(_.value), serializeValue(a.value)))
+    )
+
+  // A24: AST Call -> CallValueDto.
+  private def serializeCall(c: Call): CallValueDto =
+    CallValueDto(
+      path(c.function.pathId),
       c.args.map(a => ConstructorArgDto(a.name.map(_.value), serializeValue(a.value)))
     )
 

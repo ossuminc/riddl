@@ -386,6 +386,11 @@ object JsonModel:
   case class ConstructorValueDto(refKind: String, ref: String, args: Seq[ConstructorArgDto])
       extends ValueDto
 
+  /** `{ "value": "call", "function": "<path>", "args": [<constructorArg>] }` — a call of a pure
+    * function to obtain its result (A24).
+    */
+  case class CallValueDto(function: String, args: Seq[ConstructorArgDto]) extends ValueDto
+
   /** `{ "value": "valueRef", "path": "<path>" }` */
   case class ValueRefDto(path: String) extends ValueDto
 
@@ -931,6 +936,16 @@ object JsonModel:
           )
           .getOrElse(Nil)
         ConstructorValueDto(m("refKind").str, m("ref").str, args)
+      case "call" =>
+        val args = m
+          .get("args")
+          .map(
+            _.arr
+              .map(a => ConstructorArgDto(a.obj.get("name").map(_.str), readValue(a.obj("value"))))
+              .toSeq
+          )
+          .getOrElse(Nil)
+        CallValueDto(m("function").str, args)
       case other => throw new IllegalArgumentException(s"Unknown value kind: '$other'")
   end readValueObj
 
@@ -976,6 +991,17 @@ object JsonModel:
           "value" -> ujson.Str("constructor"),
           "refKind" -> ujson.Str(refKind),
           "ref" -> ujson.Str(ref),
+          "args" -> ujson.Arr.from(args.map { a =>
+            ujson.Obj.from(
+              a.name.map(n => "name" -> (ujson.Str(n): ujson.Value)).toSeq
+                ++ Seq("value" -> (writeValue(a.value): ujson.Value))
+            )
+          })
+        )
+      case CallValueDto(function, args) =>
+        ujson.Obj(
+          "value" -> ujson.Str("call"),
+          "function" -> ujson.Str(function),
           "args" -> ujson.Arr.from(args.map { a =>
             ujson.Obj.from(
               a.name.map(n => "name" -> (ujson.Str(n): ujson.Value)).toSeq

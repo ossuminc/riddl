@@ -315,6 +315,62 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize a `call function F(args)` value (A24)" in {
+      // A24 uses value discriminator 6 (FORMAT_REVISION 18). A return of a call with named args
+      // and an empty-arg call must round-trip byte-symmetrically preserving the Call structure.
+      val riddlSource =
+        """domain d is {
+          |  context Calc is {
+          |    type Args is record { a: Integer, b: Integer }
+          |    type Sum is record { total: Integer }
+          |    function Add is {
+          |      requires record Args
+          |      returns record Sum
+          |      return record Sum(total = "t")
+          |    }
+          |    function Now is {
+          |      returns record Sum
+          |      return record Sum(total = "0")
+          |    }
+          |    function Caller is {
+          |      requires record Args
+          |      returns record Sum
+          |      return call function Add(a = "1", b = "2")
+          |    }
+          |    function CallerZero is {
+          |      returns record Sum
+          |      return call function Now()
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-call")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(compareRoots(originalRoot, nebula), "call round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.*
+              // A Call is a Value (not a Contents node): reach it through its ReturnStatement.
+              val calls = Finder(nebula.contents)
+                .recursiveFindByType[ReturnStatement]
+                .map(_.value)
+                .collect { case c: Call => c }
+              assert(calls.size == 2, s"expected two Calls, found ${calls.size}")
+              val add = calls.find(_.function.pathId.value == Seq("Add")).get
+              assert(add.args.size == 2)
+              assert(add.args.map(_.name.map(_.value)) == Seq(Some("a"), Some("b")))
+              assert(calls.find(_.function.pathId.value == Seq("Now")).get.args.isEmpty)
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize a nested boolean expression (A28)" in {
       // A28 uses BAST value discriminator 5 with sub-tags 0-3 (FORMAT_REVISION 16). Verify a nested
       // let x = (a or b) and not c survives byte-symmetric round-trip preserving its tree shape.

@@ -322,6 +322,7 @@ private[parsing] trait StatementParser {
     P(
       literalString.map(ls => ls: Value) |
         promptValue.map(pv => pv: Value) |
+        callValue.map(c => c: Value) | // A24: `call function F(args)` (keyword-led)
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
         booleanExpr
@@ -460,6 +461,19 @@ private[parsing] trait StatementParser {
         Punctuation.roundClose ~/ Index
     )./.map { case (start, ref, args, end) =>
       Constructor(at(start, end), ref, args.toSeq)
+    }
+  }
+
+  // A24: `call function <path>(<args>)` — call a pure function to get its result value. `functionRef`
+  // consumes the leading `function` keyword; args reuse `constructorArg` (positional then named).
+  // "Functions only" is enforced by the `functionRef` target; empty `()` is allowed (no-input function).
+  private def callValue[u: P]: P[Call] = {
+    P(
+      Index ~ Keywords.call ~/ functionRef ~
+        Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+        Punctuation.roundClose ~/ Index
+    )./.map { case (start, fnRef, args, end) =>
+      Call(at(start, end), fnRef, args.toSeq)
     }
   }
 

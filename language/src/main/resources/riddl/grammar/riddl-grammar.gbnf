@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 04:39 UTC
+# Generated: 2026-07-27 05:10 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -215,8 +215,11 @@ reply-statement ::= "reply" ws1 message-value
 # Variable operations. A54: `set`/`let` operands are now full value expressions.
 the-set-statement ::= "set" ws (field-ref | state-ref) ws "to" ws1 value
 let-statement ::= "let" ws1 identifier ws (":" type-ref)? ws "=" ws value
-value ::= literal-string | prompt-value | constructor | get-value | boolean-expression
+value ::= literal-string | prompt-value | call | constructor | get-value | boolean-expression
 prompt-value ::= "prompt" ws "(" ws literal-string ws ")"
+
+# A24: call a pure function to get a result. "Functions only" — the callee is a function_ref.
+call ::= "call" ws1 function-ref ws "(" ws (constructor-arg ("," constructor-arg)*)? ws ")"
 constructor ::= (message-ref | record-ref) ws "(" ws (constructor-arg ("," constructor-arg)*)? ws ")"
 constructor-arg ::= (identifier "=" value) | value
 get-value ::= "get" ws "from" ws (input-ref | state-ref)

@@ -654,6 +654,7 @@ object JsonAstBuilder:
             StateRef(At(), pathId(ref))
         GetValue(At(), src)
       case c: ConstructorValueDto => buildConstructor(c)
+      case c: CallValueDto        => buildCall(c) // A24
       case BooleanLiteralDto(b)   => BooleanLiteral(At(), b)
       case ComparisonDto(op, left, right) =>
         val cop = ComparisonOperator.values
@@ -700,6 +701,14 @@ object JsonAstBuilder:
     Constructor(
       At(),
       cref,
+      c.args.map(a => ConstructorArg(At(), a.name.map(ident), buildValue(a.value)))
+    )
+
+  // A24: CallValueDto -> AST Call.
+  private def buildCall(c: CallValueDto)(using ctx: Ctx): Call =
+    Call(
+      At(),
+      FunctionRef(At(), pathId(c.function)),
       c.args.map(a => ConstructorArg(At(), a.name.map(ident), buildValue(a.value)))
     )
 

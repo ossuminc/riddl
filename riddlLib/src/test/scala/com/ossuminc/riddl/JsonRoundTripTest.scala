@@ -165,6 +165,50 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip a `call function F(args)` value (A24) losslessly" in {
+      val callModel =
+        """domain d is {
+          |  context Calc is {
+          |    type Args is record { a: Integer, b: Integer }
+          |    type Sum is record { total: Integer }
+          |    function Add is {
+          |      requires record Args
+          |      returns record Sum
+          |      return record Sum(total = "t")
+          |    }
+          |    function Now is {
+          |      returns record Sum
+          |      return record Sum(total = "0")
+          |    }
+          |    function Caller is {
+          |      requires record Args
+          |      returns record Sum
+          |      return call function Add(a = "1", b = "2")
+          |    }
+          |    function CallerZero is {
+          |      returns record Sum
+          |      return call function Now()
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(callModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // JsonifierPass emits the call discriminator and function ref...
+          json1 must include("\"call\"")
+          json1 must include("Add")
+          // ...and JsonAstBuilder rebuilds it so the JSON is a fixed point.
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the call JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the call model failed: $errors")
+      end match
+    }
+
     "round-trip the 2.0 handler-kind clauses (on event / on activate / on passivate) losslessly" in {
       val hkModel =
         """domain HK is {

@@ -163,6 +163,53 @@ class ValueRoundTripTest extends AbstractValidatingTest {
         case other => fail(s"expected And condition after round-trip, got $other")
     }
 
+    // A24: a `call function F(args)` value must emit and re-parse to a Call at the same place,
+    // preserving the function ref and (named) arguments — including a nested call as an argument.
+    "round-trip a `call function F(args)` value through prettify (A24)" in { (td: TestData) =>
+      val callSrc =
+        """domain d is {
+          |  context Calc is {
+          |    type Args is record { a: Integer, b: Integer }
+          |    type Sum is record { total: Integer }
+          |    function Add is {
+          |      requires record Args
+          |      returns record Sum
+          |      return record Sum(total = "t")
+          |    }
+          |    function Now is {
+          |      returns record Sum
+          |      return record Sum(total = "0")
+          |    }
+          |    function Caller is {
+          |      requires record Args
+          |      returns record Sum
+          |      return call function Add(a = "1", b = "2")
+          |    }
+          |    function CallerZero is {
+          |      returns record Sum
+          |      return call function Now()
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val pretty = prettify(parse(callSrc, "callsrc"))
+      pretty must include("call function Add(a = \"1\", b = \"2\")")
+      pretty must include("call function Now()")
+
+      val regen = parse(pretty, "callregen")
+      // A Call is a Value (not a Contents node), so it is reached via its containing ReturnStatement.
+      val calls = Finder(regen).recursiveFindByType[ReturnStatement].map(_.value).collect {
+        case c: Call => c
+      }
+      calls.size mustBe 2
+      val add = calls
+        .find(_.function.pathId.value == Seq("Add"))
+        .getOrElse(fail("call of Add lost"))
+      add.args.size mustBe 2
+      add.args.map(_.name.map(_.value)) mustBe Seq(Some("a"), Some("b"))
+      calls.find(_.function.pathId.value == Seq("Now")).map(_.args.size) mustBe Some(0)
+    }
+
     // A17: a bare boolean value reference (single name AND dotted path) must survive prettify as a
     // ValueRef condition (not dropped, not relocated, not degraded to an Identifier/LiteralString).
     "round-trip a bare boolean `when <ref>` condition through prettify (A17)" in { (td: TestData) =>

@@ -718,7 +718,7 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression
+    GetValue | PromptValue | BooleanExpression | Call
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInModule = Domain | Author | Comment
@@ -2406,7 +2406,8 @@ object AST:
     * extended: A28 adds a `BooleanExpression` arm. All arms are [[RiddlValue]]s so `.format` and
     * `.loc` are available on the union directly.
     */
-  type Value = LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression
+  type Value =
+    LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -2454,6 +2455,34 @@ object AST:
     override def kind: String = "Constructor"
     def format: String = s"${ref.format}(${args.map(_.format).mkString(", ")})"
   end Constructor
+
+  /** A24: a call of a pure [[Function]] to obtain its result value. "Functions only" is a *target*
+    * restriction: the callee is a [[FunctionRef]], so only a `Function` can be called (never an
+    * entity, context, or other definition). A call is effect-free — functions are pure (A26) — so
+    * it composes anywhere a [[Value]] is valid: handler bodies and function bodies alike (`let x =
+    * call function F(a, b)`, `set f to call function F(...)`, `return call function F(...)`, and
+    * comparison/logical operands). Its type (for downstream checks) is the called function's
+    * `output`. Arguments reuse [[ConstructorArg]] (positional | named) and bind to the fields of
+    * the function's `input` aggregate; empty `()` is allowed for a no-input function.
+    *
+    * @param loc
+    *   The location of the call in the source
+    * @param function
+    *   The reference to the [[Function]] being called
+    * @param args
+    *   The arguments supplied to the call
+    */
+  // `loc` required (not defaulted): see the ConstructorArg note — @JSExportTopLevel forbids a
+  // non-trailing default and `function`/`args` have no empty default.
+  @JSExportTopLevel("Call")
+  case class Call(
+    loc: At,
+    function: FunctionRef,
+    args: Seq[ConstructorArg]
+  ) extends RiddlValue:
+    override def kind: String = "Call"
+    def format: String = s"call ${function.format}(${args.map(_.format).mkString(", ")})"
+  end Call
 
   /** A54: a reference to a named value in scope. Resolved (at validation time) from one of four
     * sources: a `let`-bound local, a field of the handled on-clause message, a field of the

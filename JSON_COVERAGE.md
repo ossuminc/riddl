@@ -159,6 +159,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | LiteralString (value) | ✅ A54 | `{ "value": "literal", "text": ... }` |
 | PromptValue | ✅ A54 | `{ "value": "prompt", "prompt": ... }` — AI-computed value |
 | Constructor / ConstructorArg | ✅ A54 | refKind command/event/query/result/record; positional + named args |
+| Call | ✅ A24 | `{ "value": "call", "function": "<path>", "args": [<arg>] }` — call a pure function to get a result |
 | ValueRef | ✅ A54 | `{ "value": "valueRef", "path": ... }` |
 | GetValue | ✅ A54 | `{ "value": "get", "source": "input"\|"state", "ref": ... }` |
 | BooleanLiteral | ✅ A28 | `{ "value": "boolLiteral", "bool": true\|false }` |

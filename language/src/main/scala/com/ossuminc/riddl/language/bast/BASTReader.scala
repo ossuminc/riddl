@@ -2255,6 +2255,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         PromptValue(loc, what)
       case 1 => // Constructor
         readConstructor()
+      case 6 => // A24: Call
+        readCall()
       case 2 => // ValueRef
         val loc = readLocation()
         val pid = readPathIdentifierInline()
@@ -2365,6 +2367,21 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       ConstructorArg(argLoc, name, v)
     }.toSeq
     Constructor(loc, ref, args)
+  }
+
+  /** A24: mirror of [[BASTWriter.writeCall]]. */
+  private def readCall(): Call = {
+    val loc = readLocation()
+    val function = readFunctionRef()
+    val count = reader.readVarInt()
+    val args = (0 until count).map { _ =>
+      val argLoc = readLocation()
+      val hasName = reader.readU8() != 0
+      val name = if hasName then Some(readIdentifierInline()) else None
+      val v = readValue()
+      ConstructorArg(argLoc, name, v)
+    }.toSeq
+    Call(loc, function, args)
   }
 
   private def readMessageRef(): MessageRef = {

@@ -353,6 +353,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case c: Constructor =>
         associateUsage[Type](parents.head, resolveARef[Type](c.ref, parents))
         c.args.foreach(arg => resolveValue(arg.value, parents))
+      case call: Call =>
+        // A24: resolve the called function and recurse into argument values.
+        associateUsage[Function](parents.head, resolveARef[Function](call.function, parents))
+        call.args.foreach(arg => resolveValue(arg.value, parents))
       case _: ValueRef => () // four-source resolution happens at validation time
       case gv: GetValue =>
         gv.source match

@@ -11,6 +11,22 @@ domain Values is {
       // A57: return a record constructor built with a named argument.
       return record Sum(total = "the computed total")
     }
+    // A24: a no-input pure function, called with empty args below.
+    function Zero is {
+      returns record Sum
+      return record Sum(total = "0")
+    }
+    // A24: call a pure function to get a result — named args, in `return` position.
+    function Compute is {
+      requires record Args
+      returns record Sum
+      return call function Add(a = "1", b = "2")
+    }
+    // A24: an empty-arg call to a no-input function.
+    function ComputeZero is {
+      returns record Sum
+      return call function Zero()
+    }
   }
   application context UI is {
     type Greeting is record { text: String }

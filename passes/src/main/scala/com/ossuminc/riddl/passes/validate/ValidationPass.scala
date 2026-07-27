@@ -2645,7 +2645,15 @@ case class ValidationPass(
       case _: LiteralString => None // pseudo-code, untyped
       case _: PromptValue   => None // AI-computed, untyped
       case c: Constructor   => resolution.refMap.definitionOf[Type](c.ref.pathId)
-      case vr: ValueRef     => valueRefType(vr, parents, lets)
+      case call: Call       =>
+        // A24: a call's type is the called function's `output` Type (None for an inline-aggregate
+        // output or a function with no output — best-effort, so the check is skipped).
+        resolution.refMap.definitionOf[Function](call.function.pathId).flatMap { fn =>
+          fn.output match
+            case Some(tr: TypeRef) => resolution.refMap.definitionOf[Type](tr.pathId)
+            case _                 => None
+        }
+      case vr: ValueRef => valueRefType(vr, parents, lets)
       case gv: GetValue =>
         gv.source match
           case ir: InputRef =>
@@ -2723,6 +2731,7 @@ case class ValidationPass(
       case _: LiteralString => ()
       case _: PromptValue   => () // literal AI prompt, nothing to resolve
       case c: Constructor   => validateConstructor(c, parents, lets)
+      case call: Call       => validateCall(call, parents, lets)
       case vr: ValueRef =>
         if !valueRefResolves(vr, parents, lets) then
           messages.addError(
@@ -3003,6 +3012,106 @@ case class ValidationPass(
         c.args.foreach(arg => validateValue(arg.value, parents, lets))
       case None => () // unresolved constructor ref reported by ResolutionPass
   end validateConstructor
+
+  /** A24: validate a [[Call]] — resolve the called [[Function]], bind arguments to the fields of
+    * its `input` aggregate (positional-before-named ordering, named-field existence, arity,
+    * best-effort per-argument type compatibility), and require the function to have an `output` (a
+    * call is used to obtain a result). Mirrors [[validateConstructor]]; recurses into argument
+    * values.
+    */
+  private def validateCall(
+    call: Call,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Unit =
+    resolution.refMap.definitionOf[Function](call.function.pathId) match
+      case Some(fn) =>
+        val fields: Seq[Field] = fn.input match
+          case Some(tr: TypeRef) =>
+            resolution.refMap.definitionOf[Type](tr.pathId) match
+              case Some(typ) =>
+                typ.typEx match
+                  case ate: AggregateTypeExpression => ate.fields
+                  case _                            => Seq.empty[Field]
+              case None => Seq.empty[Field]
+          case Some(agg: Aggregation) => agg.fields
+          case None                   => Seq.empty[Field]
+        // A call is used to obtain a result; a function with no output cannot produce one.
+        if fn.output.isEmpty then
+          messages.addError(
+            call.loc,
+            s"${fn.identify} has no 'returns' output, so a call to it produces no value",
+            suggestion =
+              s"Give ${fn.identify} a 'returns' clause, or do not use its call as a value."
+          )
+        // Ordering: positional args must precede named args.
+        val firstNamed = call.args.indexWhere(_.name.isDefined)
+        if firstNamed >= 0 && call.args.drop(firstNamed).exists(_.name.isEmpty) then
+          messages.addError(
+            call.loc,
+            s"In call of ${fn.identify}, positional arguments must precede named arguments",
+            suggestion =
+              "Reorder so all positional arguments come before any 'name = value' argument."
+          )
+        // Named args must reference real input fields.
+        call.args.foreach { arg =>
+          arg.name.foreach { id =>
+            if !fields.exists(_.id.value == id.value) then
+              messages.addError(
+                arg.loc,
+                s"'${id.value}' is not an input field of ${fn.identify}",
+                suggestion = if fields.isEmpty then s"${fn.identify} takes no input arguments."
+                else
+                  s"Use one of the input fields of ${fn.identify}: ${fields.map(_.id.value).mkString(", ")}."
+              )
+          }
+        }
+        // Arity.
+        def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
+        if call.args.sizeIs > fields.size then
+          messages.addError(
+            call.loc,
+            s"Call of ${fn.identify} has ${count(call.args.size, "argument")} but the function " +
+              s"takes ${count(fields.size, "input field")}",
+            suggestion = s"Supply at most ${count(fields.size, "argument")}."
+          )
+        else if call.args.nonEmpty && call.args.forall(
+            _.name.isEmpty
+          ) && call.args.sizeIs != fields.size
+        then
+          messages.addError(
+            call.loc,
+            s"Call of ${fn.identify} has ${count(call.args.size, "positional argument")} but the " +
+              s"function takes ${count(fields.size, "input field")}",
+            suggestion =
+              s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset."
+          )
+        // Best-effort per-argument type compatibility (only when both sides resolve to a Type).
+        call.args.zipWithIndex.foreach { case (arg, idx) =>
+          val fieldOpt: Option[Field] = arg.name match
+            case Some(id) => fields.find(_.id.value == id.value)
+            case None     => if idx < fields.size then Some(fields(idx)) else None
+          fieldOpt.foreach { field =>
+            field.typeEx match
+              case ate: AliasedTypeExpression =>
+                val expected = resolution.refMap.definitionOf[Type](ate.pathId)
+                val actual = valueType(arg.value, parents, lets)
+                (expected, actual) match
+                  case (Some(e), Some(a)) if !(e eq a) =>
+                    messages.addError(
+                      arg.loc,
+                      s"Argument for input '${field.id.value}' has type ${a.identify} but " +
+                        s"${field.id.value} expects ${e.identify}",
+                      suggestion = s"Supply a value of type ${e.identify} for '${field.id.value}'."
+                    )
+                  case _ => ()
+              case _ => () // primitive/other field type — literals accepted, no check
+          }
+        }
+        // Recurse into argument values (nested constructors, calls, value refs).
+        call.args.foreach(arg => validateValue(arg.value, parents, lets))
+      case None => () // unresolved function ref reported by ResolutionPass
+  end validateCall
 
   /** A45: validate a `put` — the value, the output target's existence, and best-effort type
     * compatibility of the value against the resolved [[Output.putOut]].
