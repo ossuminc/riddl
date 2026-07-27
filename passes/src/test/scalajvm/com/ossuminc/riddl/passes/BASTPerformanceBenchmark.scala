@@ -10,10 +10,8 @@ import com.ossuminc.riddl.language.AST.{Module, Root}
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.utils.{pc, ec, Await, URL}
+import com.ossuminc.riddl.utils.{pc, ec, AbstractTestingBasisWithTestData, Await, URL}
 import org.scalatest.TestData
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.matchers.should.Matchers
 
 import java.nio.file.{Files, Paths}
 import scala.concurrent.duration.*
@@ -26,7 +24,7 @@ import scala.concurrent.duration.*
   *
   * The goal is for BAST loading to be significantly faster (10-50x) than parsing.
   */
-class BASTPerformanceBenchmark extends AnyWordSpec with Matchers {
+class BASTPerformanceBenchmark extends AbstractTestingBasisWithTestData {
 
   "BAST Performance" should {
 
@@ -72,10 +70,10 @@ class BASTPerformanceBenchmark extends AnyWordSpec with Matchers {
                   println()
 
                   // Verify we got a valid result
-                  module.contents.toSeq should not be empty
+                  module.contents.toSeq must not be empty
 
                   // The speedup should be positive (load faster than parse)
-                  speedup should be > 1.0
+                  speedup must be > 1.0
 
                   true
 
@@ -167,7 +165,7 @@ class BASTPerformanceBenchmark extends AnyWordSpec with Matchers {
               println(f"Worst case:      $worstSpeedup%6.1fx")
 
               // Should have meaningful speedup
-              avgSpeedup should be > 1.0
+              avgSpeedup must be > 1.0
 
               true
 

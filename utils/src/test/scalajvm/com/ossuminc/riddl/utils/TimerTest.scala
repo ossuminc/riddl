@@ -7,11 +7,10 @@
 package com.ossuminc.riddl.utils
 
 import org.scalatest.TestData
-import org.scalatest.wordspec.AnyWordSpec
 
 import java.time.Instant
 
-class TimerTest extends AbstractTestingBasis {
+class TimerTest extends AbstractTestingBasisWithTestData {
   import TimerTest.*
 
   "timer" should {

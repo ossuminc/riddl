@@ -6,11 +6,10 @@
 
 package com.ossuminc.riddl.utils
 
-import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.TestData
 import java.time.Instant
 
-class BuildInfoTest extends AbstractTestingBasis {
+class BuildInfoTest extends AbstractTestingBasisWithTestData {
 
   "BuildInfo" must {
     "have all the fields" in { (td: TestData) =>
@@ -19,7 +18,7 @@ class BuildInfoTest extends AbstractTestingBasis {
       RiddlBuildInfo.version must startWith regex """[0-9]+."""
       RiddlBuildInfo.gitCommit must not be empty
       RiddlBuildInfo.scalaVersion must startWith("3")
-      RiddlBuildInfo.sbtVersion must startWith("1.")
+      RiddlBuildInfo.sbtVersion must startWith("2.")
       RiddlBuildInfo.normalizedName must be("utils")
       RiddlBuildInfo.moduleName must be("riddl-utils")
       RiddlBuildInfo.description must be("Various utilities used throughout riddl libraries")
@@ -32,11 +31,11 @@ class BuildInfoTest extends AbstractTestingBasis {
       RiddlBuildInfo.copyrightHolder must be("Ossum Inc.")
       RiddlBuildInfo.organizationHomepage must be("https://ossuminc.com/")
       RiddlBuildInfo.projectHomepage must be("https://github.com/ossuminc/riddl")
-      RiddlBuildInfo.licenses must be("Apache-2.0")
+      RiddlBuildInfo.licenses must include("Apache-2.0")
       RiddlBuildInfo.buildInfoPackage must be("com.ossuminc.riddl.utils")
       RiddlBuildInfo.buildInfoObject must be("RiddlBuildInfo")
       RiddlBuildInfo.startYear must be("2019")
-      RiddlBuildInfo.scalaCompatVersion must be("3.4.2")
+      RiddlBuildInfo.scalaCompatVersion must be(RiddlBuildInfo.scalaVersion)
       val now: Long = Instant.now().toEpochMilli
       val yesterday: Long = now - 1000 * 24 * 60 * 60
       RiddlBuildInfo.builtAtMillis must be > yesterday
@@ -45,7 +44,7 @@ class BuildInfoTest extends AbstractTestingBasis {
     "has functioning toMap" in { (td: TestData) =>
       println(td.name)
       val map = RiddlBuildInfo.toMap
-      map.size must be(24) // 23 + gitCommit
+      map.size must be(25) // 24 sbt-buildinfo keys + gitCommit
     }
     "has functioning toJson" in { (td: TestData) =>
       println(td.name)

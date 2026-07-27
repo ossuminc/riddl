@@ -9,7 +9,7 @@ package com.ossuminc.riddl.language.bast
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{AbstractTestingBasis, pc}
+import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, pc}
 import org.scalatest.TestData
 
 /** Unit tests for BAST serialization at the language module level.
@@ -18,7 +18,7 @@ import org.scalatest.TestData
   * framework. They use a simple manual traversal to serialize AST nodes, then verify BASTReader can
   * deserialize them.
   */
-class BASTSerializationTest extends AbstractTestingBasis {
+class BASTSerializationTest extends AbstractTestingBasisWithTestData {
 
   /** Simple manual serialization that mirrors what BASTWriterPass does, but without depending on
     * the passes module.

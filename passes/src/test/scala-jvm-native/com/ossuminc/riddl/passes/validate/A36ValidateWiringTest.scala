@@ -9,15 +9,13 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Riddl
-import com.ossuminc.riddl.utils.{ec, pc, CommonOptions}
+import com.ossuminc.riddl.utils.{ec, pc, AbstractTestingBasisWithTestData, CommonOptions}
 import org.scalatest.TestData
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.matchers.must.Matchers
 
 /** Verifies A36 use-case witness/trace CompletenessWarnings surface through the standard validate
   * pass path when completeness warnings are enabled, and NOT when disabled.
   */
-class A36ValidateWiringTest extends AnyWordSpec with Matchers {
+class A36ValidateWiringTest extends AbstractTestingBasisWithTestData {
 
   private val src =
     """domain D is {
@@ -44,13 +42,13 @@ class A36ValidateWiringTest extends AnyWordSpec with Matchers {
     }
 
   "A36 validate wiring" should {
-    "surface witness CompletenessWarning when completeness is enabled" in { (td: TestData) =>
+    "surface witness CompletenessWarning when completeness is enabled" in { (_: TestData) =>
       val msgs = validateWith(CommonOptions.default.copy(showCompletenessWarnings = true))
       msgs.exists(m =>
         m.kind == Messages.CompletenessWarning && m.message.contains("is not witnessed")
       ) mustBe true
     }
-    "emit no witness warning when completeness is disabled" in { (td: TestData) =>
+    "emit no witness warning when completeness is disabled" in { (_: TestData) =>
       val msgs = validateWith(CommonOptions.default.copy(showCompletenessWarnings = false))
       msgs.exists(_.message.contains("is not witnessed")) mustBe false
     }
