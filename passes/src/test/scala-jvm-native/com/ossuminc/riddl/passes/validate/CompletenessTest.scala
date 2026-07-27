@@ -1120,5 +1120,60 @@ class CompletenessTest extends AbstractValidatingTest {
         }
       }
     }
+
+    "accept async option on connectors and streamlets" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type Forecast is any of { Rainy, Cloudy, Sunny }
+          |    source GetForecast is {
+          |      outlet Out is type Forecast
+          |    } with { option async }
+          |    sink UseForecast is {
+          |      inlet In is type Forecast
+          |    }
+          |    connector Feed is {
+          |      from outlet C.GetForecast.Out
+          |      to inlet C.UseForecast.In
+          |    } with { option async }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        // async should be accepted on both the connector and the streamlet
+        // without "not recognized" or "not typically used" style warnings
+        msgs.exists(m =>
+          m.message.contains("async") &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
+      }
+    }
+
+    "reject async option on non-streaming definitions" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type T is String
+          |  } with { option async }
+          |}
+          |""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          // async is recognized (no "not a recognized" warning) but drawn on a
+          // context it should trigger the parent-kind "not typically used" nudge
+          msgs.exists(m =>
+            m.message.contains("async") && m.message.contains("not a recognized")
+          ) mustBe false
+          msgs.exists(m =>
+            m.message.contains("async") && m.message.contains("not typically used")
+          ) mustBe true
+        }
+      }
+    }
   }
 }

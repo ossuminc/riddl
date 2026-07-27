@@ -28,6 +28,7 @@ object KnownOptions {
 
   final val connector: Seq[String] = Seq(
     KnownOption.persistent,
+    KnownOption.async,
     KnownOption.technology,
     KnownOption.kind
   )
@@ -130,7 +131,8 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.css,
     KnownOption.kind,
-    KnownOption.protocol
+    KnownOption.protocol,
+    KnownOption.async
   )
 }
 
