@@ -139,8 +139,29 @@ object RecognizedOptions:
     "microservice" -> OptionSpec(Seq("Context", "Entity", "Projector", "Repository", "Saga"), 0, 0),
     "namespace" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
     "package" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
-    // Transport/protocol option (used by AsyncAPI generation)
-    "protocol" -> OptionSpec(Seq("Context", "Streamlet"), 1, 1),
+    // Transport/protocol option (used by AsyncAPI generation). Valid on ANY processor.
+    // A processor's parent-kind is its class simple name; a Streamlet's is its SHAPE
+    // simple name (Source/Sink/Flow/Merge/Split/Router/Void) — so "Streamlet" never
+    // matched a real streamlet. List every processor kind, including the shape names.
+    "protocol" -> OptionSpec(
+      Seq(
+        "Context",
+        "Source",
+        "Sink",
+        "Flow",
+        "Merge",
+        "Split",
+        "Router",
+        "Void",
+        "Adaptor",
+        "Projector",
+        "Repository",
+        "Entity",
+        "Saga"
+      ),
+      1,
+      1
+    ),
     // Version pinning for EventCatalog generation; valid on domains,
     // contexts and message types alike, hence no validParents
     "event_catalog_version" -> OptionSpec(Seq.empty, 1, 1),

@@ -982,6 +982,32 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept protocol option on any processor (streamlet, entity)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type Evt is String
+          |    source Events is { outlet out is type Evt } with { option protocol("kafka") }
+          |    entity E is {
+          |      handler h is { ??? }
+          |    } with { option protocol("amqp") }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        // protocol on a streamlet (parent-kind = shape name "Source") and on an
+        // entity should be accepted without "not recognized" or "not typically
+        // used" style warnings
+        msgs.exists(m =>
+          m.message.contains("protocol") &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
+      }
+    }
+
     "accept event_catalog_version option on domains, contexts and messages" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

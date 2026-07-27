@@ -80,6 +80,7 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.css,
     KnownOption.faicon,
+    KnownOption.protocol,
     KnownOption.sql_dialect,
     KnownOption.sql_table,
     KnownOption.backstage_owner,
@@ -100,6 +101,7 @@ object KnownOptions {
     KnownOption.css,
     KnownOption.faicon,
     KnownOption.kind,
+    KnownOption.protocol,
     KnownOption.backstage_owner,
     KnownOption.backstage_lifecycle,
     KnownOption.backstage_type
@@ -110,6 +112,7 @@ object KnownOptions {
     KnownOption.kind,
     KnownOption.css,
     KnownOption.faicon,
+    KnownOption.protocol,
     KnownOption.sql_dialect,
     KnownOption.sql_table,
     KnownOption.backstage_owner,
@@ -122,6 +125,7 @@ object KnownOptions {
     KnownOption.kind,
     KnownOption.css,
     KnownOption.faicon,
+    KnownOption.protocol,
     KnownOption.parallel,
     KnownOption.sequential
   )
