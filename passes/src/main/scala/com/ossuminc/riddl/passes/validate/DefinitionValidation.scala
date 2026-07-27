@@ -349,6 +349,25 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         case _: Description      => () // No validation needed
         case _: Comment          => () // No validation needed
     }
+    // A52: a single-valued metadata kind appearing more than once is redundant — only the
+    // first is used. The single-valued kinds are those whose accessor is Option/at-most-one
+    // (not a Seq): BriefDescription (`brief`) and ULIDAttachment (`ulid`). Multi-valued kinds
+    // (author/see/term/option/comment/description) are legitimately repeatable.
+    val briefs = definition.metadata.filter[BriefDescription]
+    if briefs.size > 1 then
+      messages.addStyle(
+        briefs(1).loc,
+        s"$identity has multiple 'brief description' metadata; only the first is used",
+        suggestion =
+          "Keep a single 'briefly \"...\"'; merge or remove the extra brief descriptions."
+      )
+    val ulids = definition.metadata.filter[ULIDAttachment]
+    if ulids.size > 1 then
+      messages.addStyle(
+        ulids(1).loc,
+        s"$identity has multiple 'ULID' metadata; only the first is used",
+        suggestion = "Keep a single ULID attachment; remove the extras."
+      )
     check(
       hasDescription,
       s"$identity should have a description",
