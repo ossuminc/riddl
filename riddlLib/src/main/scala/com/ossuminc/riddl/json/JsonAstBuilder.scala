@@ -39,7 +39,55 @@ object JsonAstBuilder:
   private def buildModule(m: ModuleDto)(using Ctx): Module =
     val authors = m.authors.map(buildAuthor)
     val domains = m.domains.map(buildDomain)
-    Module(At(), ident(m.name), contentsOf[ModuleContents](authors, domains), meta(m.brief))
+    val types = m.types.map(buildType)
+    val commands = m.commands.map(buildMessage(_, AggregateUseCase.CommandCase))
+    val events = m.events.map(buildMessage(_, AggregateUseCase.EventCase))
+    val queries = m.queries.map(buildMessage(_, AggregateUseCase.QueryCase))
+    val results = m.results.map(buildMessage(_, AggregateUseCase.ResultCase))
+    val constants = m.constants.map(buildConstant)
+    val invariants = m.invariants.map(buildInvariant)
+    val users = m.users.map(buildUser)
+    val contexts = m.contexts.map(buildContext)
+    val entities = m.entities.map(buildEntity)
+    val adaptors = m.adaptors.map(buildAdaptor)
+    val functions = m.functions.map(buildFunction)
+    val projectors = m.projectors.map(buildProjector)
+    val repositories = m.repositories.map(buildRepository)
+    val streamlets = m.streamlets.map(buildStreamlet)
+    val sagas = m.sagas.map(buildSaga)
+    val epics = m.epics.map(buildEpic)
+    val connectors = m.connectors.map(buildConnector)
+    val relationships = m.relationships.map(buildRelationship)
+    val modules = m.modules.map(buildModule)
+    Module(
+      At(),
+      ident(m.name),
+      contentsOf[ModuleContents](
+        authors,
+        domains,
+        types,
+        commands,
+        events,
+        queries,
+        results,
+        constants,
+        invariants,
+        users,
+        contexts,
+        entities,
+        adaptors,
+        functions,
+        projectors,
+        repositories,
+        streamlets,
+        sagas,
+        epics,
+        connectors,
+        relationships,
+        modules
+      ),
+      meta(m.brief, m.metadata)
+    )
 
   /** Mutable error sink threaded through construction. */
   private final class Ctx:

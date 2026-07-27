@@ -165,6 +165,72 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    // S61-1: a Module is a FLAT collection of ANY top-level definition, so ModuleDto carries a
+    // group per kind. The fixed point proves both the serialize arm (JsonifierPass) and the build
+    // arm (JsonAstBuilder) cover every group — a missing arm silently drops members.
+    "round-trip a mixed-contents Module losslessly" in {
+      val moduleModel =
+        """module M is {
+          |  author Reid is { name is "Reid Spencer" email is "reid@ossuminc.com" }
+          |  type Amount is Number
+          |  constant Limit is Number = "100"
+          |  user Shopper is "a person who buys things"
+          |  invariant Positive is "the limit is positive"
+          |  function Compute is { ??? }
+          |  context Ordering is { type Placed is event { when: TimeStamp } }
+          |  entity Loose is { handler Anything is { ??? } }
+          |  adaptor FromOrdering from context Ordering is { ??? }
+          |  projector Totals is {
+          |    record Snapshot is { total: Number }
+          |    handler Updates is { ??? }
+          |  }
+          |  repository Ledger is { ??? }
+          |  saga Checkout is {
+          |    step ReserveStock is { do "reserve" } reverted by { do "release" }
+          |    step ChargeCard is { do "charge" } reverted by { do "refund" }
+          |  }
+          |  epic Buying is {
+          |    user Shopper wants to "buy something" so that "they own it"
+          |    type Cart is String
+          |  }
+          |  domain Retail is { context Store is { ??? } }
+          |  module Nested is { type Inner is String }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(moduleModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // Every widened group must actually carry its member.
+          for name <- Seq(
+              "Reid",
+              "Amount",
+              "Limit",
+              "Shopper",
+              "Positive",
+              "Compute",
+              "Ordering",
+              "Loose",
+              "FromOrdering",
+              "Totals",
+              "Ledger",
+              "Checkout",
+              "Buying",
+              "Retail",
+              "Nested"
+            )
+          do json1 must include("\"" + name + "\"")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              root1.modules.headOption.map(_.id.value) mustBe Some("M")
+              RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the module JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the module model failed: $errors")
+      end match
+    }
+
     "round-trip a refusal interaction step (A38) losslessly" in {
       val refusalModel =
         """domain ImprovingApp is {

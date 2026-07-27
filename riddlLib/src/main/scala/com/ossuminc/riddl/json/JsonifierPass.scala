@@ -84,7 +84,36 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       case r: Root =>
         Some(RootDto(col[DomainDto], col[ModuleDto]))
       case m: Module =>
-        Some(ModuleDto(m.id.value, briefOf(m.metadata), col[AuthorDto], col[DomainDto]))
+        // A Module is flat and may hold any top-level definition; every kind gets its own group.
+        Some(
+          ModuleDto(
+            m.id.value,
+            briefOf(m.metadata),
+            col[AuthorDto],
+            col[DomainDto],
+            col[TypeDefDto],
+            msgs(AggregateUseCase.CommandCase),
+            msgs(AggregateUseCase.EventCase),
+            msgs(AggregateUseCase.QueryCase),
+            msgs(AggregateUseCase.ResultCase),
+            col[ConstantDto],
+            col[InvariantDto],
+            col[UserDto],
+            col[ContextDto],
+            col[EntityDto],
+            col[AdaptorDto],
+            col[FunctionDto],
+            col[ProjectorDto],
+            col[RepositoryDto],
+            col[StreamletDto],
+            col[SagaDto],
+            col[EpicDto],
+            col[ConnectorDto],
+            col[RelationshipDto],
+            col[ModuleDto],
+            metaOf(m.metadata)
+          )
+        )
       case dom: Domain =>
         Some(
           DomainDto(

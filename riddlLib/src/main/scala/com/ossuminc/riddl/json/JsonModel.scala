@@ -120,14 +120,36 @@ object JsonModel:
 
   case class RootDto(domains: Seq[DomainDto] = Nil, modules: Seq[ModuleDto] = Nil)
 
-  /** A module groups domains (and authors): `{ "name": "M", "domains": [...], "authors": [...] }`
-    * (Phase 6)
+  /** A Module is a FLAT collection of ANY top-level definition — no hierarchy is enforced at its
+    * top level. The DTO therefore carries a group per definition kind, exactly the union
+    * `AST.OccursInModule` expresses (S61-1; the first four fields predate the widening).
     */
   case class ModuleDto(
     name: String,
     brief: Option[String] = None,
     authors: Seq[AuthorDto] = Nil,
-    domains: Seq[DomainDto] = Nil
+    domains: Seq[DomainDto] = Nil,
+    types: Seq[TypeDefDto] = Nil,
+    commands: Seq[MessageDto] = Nil,
+    events: Seq[MessageDto] = Nil,
+    queries: Seq[MessageDto] = Nil,
+    results: Seq[MessageDto] = Nil,
+    constants: Seq[ConstantDto] = Nil,
+    invariants: Seq[InvariantDto] = Nil,
+    users: Seq[UserDto] = Nil,
+    contexts: Seq[ContextDto] = Nil,
+    entities: Seq[EntityDto] = Nil,
+    adaptors: Seq[AdaptorDto] = Nil,
+    functions: Seq[FunctionDto] = Nil,
+    projectors: Seq[ProjectorDto] = Nil,
+    repositories: Seq[RepositoryDto] = Nil,
+    streamlets: Seq[StreamletDto] = Nil,
+    sagas: Seq[SagaDto] = Nil,
+    epics: Seq[EpicDto] = Nil,
+    connectors: Seq[ConnectorDto] = Nil,
+    relationships: Seq[RelationshipDto] = Nil,
+    modules: Seq[ModuleDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   case class DomainDto(

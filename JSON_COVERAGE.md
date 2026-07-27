@@ -64,7 +64,7 @@ is covered in that construct's phase. The builder emits references as
 | Relationship | ✅ Phase 4 | ProcessorRef + cardinality |
 | Saga | ✅ Phase 5 | requires/returns as `ArgDto` (type ref or deprecated inline agg) + steps |
 | SagaStep | ✅ Phase 5 | do/undo statements |
-| Module | ✅ Phase 6 | nested modules/domains |
+| Module | ✅ S61-1 | FLAT bag: authors, domains, types + message groups, constants, invariants, users, contexts, entities, adaptors, functions, projectors, repositories, streamlets, sagas, epics, connectors, relationships, nested modules, metadata |
 | Epic | ✅ Phase 7 | user story + use cases + shownBy |
 | UseCase | ✅ Phase 7 | user story + interactions |
 | VagueInteraction | ✅ Phase 7 | |
