@@ -171,7 +171,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           case be: BooleanExpression => resolveValue(be, parents)
           case _: LiteralString      => ()
         }
-      case _: BASTImport => () // BAST imports are resolved in BASTLoadingPass
+      // A BASTImport holds no references of its own. Its .bast file was already read by
+      // BASTLoader at parse time (TopLevelParser.loadBASTImports) and its contents are traversed
+      // as if they sat in the enclosing container, so the imported definitions resolve normally.
+      case _: BASTImport => ()
       case _: MatchCase => () // MatchCase statements contain references handled in resolveStatement
       case _: MatchPattern => () // A29: pattern refs are resolved in resolveMatchParts
       case _: NonReferencableDefinitions => () // These can't be referenced

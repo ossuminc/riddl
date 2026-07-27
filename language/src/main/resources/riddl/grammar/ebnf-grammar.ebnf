@@ -40,14 +40,22 @@ root = {root_content}+ ;
 root_content = bast_import | root_definition | module | root_include ;
 root_definition = domain | author | comment ;
 root_include = "include" literal_string ;
-bast_import = "import" literal_string ;  (* path must end with .bast *)
+(* An import plucks definitions out of an already-compiled .bast file. The full form takes    *)
+(* everything the file's root Module holds; the selective form takes exactly one named        *)
+(* definition, optionally renamed with "as".                                                  *)
+bast_import = selective_bast_import | full_bast_import ;
+full_bast_import = "import" literal_string ;  (* path must end with .bast *)
+selective_bast_import = "import" importable_kind identifier "from" literal_string ["as" identifier] ;
+importable_kind = "domain" | "context" | "entity" | "type" | "epic" | "saga" | "adaptor"
+                | "function" | "projector" | "repository" | "streamlet" | "author" | "module"
+                | "user" | "connector" | "constant" | "invariant" ;
 
 (* Module - a FLAT collection: any top-level definition, in any order, no hierarchy enforced *)
 (* at this level. The internal rules of each contained definition still apply.               *)
 module = "module" identifier is "{" {module_content | module_include}+ "}" [with_metadata] ;
-module_content = adaptor | author | comment | connector | constant | context | domain | entity
-               | epic | function | invariant | module | projector | relationship | repository
-               | saga | streamlet | type_def | user ;
+module_content = bast_import | adaptor | author | comment | connector | constant | context
+               | domain | entity | epic | function | invariant | module | projector
+               | relationship | repository | saga | streamlet | type_def | user ;
 module_include = "include" literal_string ;
 
 (* DEPRECATED: an anonymous "nebula" - a whole-input sequence of module_content with no       *)
@@ -59,8 +67,7 @@ nebula = {module_content} ;
 domain = "domain" identifier is "{" domain_body "}" [with_metadata] ;
 domain_body = domain_definitions | "???" ;
 domain_definitions = {domain_content}+ ;
-domain_content = vital_definition_contents | author | context | domain | user | epic | saga | repository | connector | import_def | bast_import | domain_include | comment ;
-import_def = "import" "domain" identifier "from" literal_string ;
+domain_content = vital_definition_contents | author | context | domain | user | epic | saga | repository | connector | bast_import | domain_include | comment ;
 domain_include = "include" literal_string ;
 
 (* Context *)
@@ -68,7 +75,7 @@ intention = "application" | "external" | "gateway" | "service" ;
 context = [intention] "context" identifier [as_shape] is "{" context_body "}" [with_metadata] ;
 context_body = context_definitions | "???" ;
 context_definitions = {context_definition}+ ;
-context_definition = processor_definition_contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | context_include | comment ;
+context_definition = processor_definition_contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | bast_import | context_include | comment ;
 context_include = "include" literal_string ;
 
 (* Entity *)

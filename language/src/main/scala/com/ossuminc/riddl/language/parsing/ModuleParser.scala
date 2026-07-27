@@ -17,9 +17,9 @@ import fastparse.MultiLineWhitespace.*
   * order, with no hierarchy enforced at that level. (The internal rules of each contained
   * definition still apply.)
   * {{{
-  *   Module = { Adaptor | Author | Comment | Connector | Constant | Context | Domain | Entity |
-  *              Epic | Function | Invariant | Module | Projector | Relationship | Repository |
-  *              Saga | Streamlet | Type | User | Include }
+  *   Module = { BASTImport | Adaptor | Author | Comment | Connector | Constant | Context |
+  *              Domain | Entity | Epic | Function | Invariant | Module | Projector |
+  *              Relationship | Repository | Saga | Streamlet | Type | User | Include }
   * }}}
   */
 private[parsing] trait ModuleParser {
@@ -36,9 +36,9 @@ private[parsing] trait ModuleParser {
     */
   def moduleContent[u: P]: P[ModuleContents] =
     P(
-      adaptor | author | comment | connector | constant | context | domain | entity | epic |
-        function | invariant | module | projector | relationship | repository | saga | streamlet |
-        typeDef | user
+      bastImport | adaptor | author | comment | connector | constant | context | domain | entity |
+        epic | function | invariant | module | projector | relationship | repository | saga |
+        streamlet | typeDef | user
     ).asInstanceOf[P[ModuleContents]]
 
   def moduleContents[u: P]: P[Seq[ModuleContents]] = {

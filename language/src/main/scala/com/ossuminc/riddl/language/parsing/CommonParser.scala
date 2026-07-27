@@ -60,14 +60,6 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   end author
 
-  def importDef[u: P]: P[OccursInDomain] = {
-    P(
-      Index ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ from ~ literalString ~ Index
-    ).map { case (off1, id, litStr, off2) =>
-      doImport(at(off1, off2), id, litStr)
-    }
-  }
-
   /** Parse importable definition kinds for selective imports */
   private def importableKind[u: P]: P[String] = {
     P(
@@ -98,32 +90,41 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
   /** Keyword "as" for aliasing in selective imports */
   private def as_[u: P]: P[Unit] = Keywords.keyword("as")
 
-  /** Parse a selective BAST import: `import domain X from "file.bast" [as Alias]` */
-  private def selectiveBastImport[u: P]: P[BASTImport] = {
-    P(
-      Index ~ Keywords.import_ ~ importableKind ~ identifier ~
-        from ~ literalString ~ (as_ ~ identifier).? ~ Index
-    ).map { case (start, kind, selector, path, alias, end) =>
-      doBASTImport(at(start, end), path, Some(kind), Some(selector), alias)
+  /** Everything after the `im` + `port` keyword: the kind/selector (selective only), the path, and
+    * the optional alias.
+    */
+  private type ImportTail = (Option[String], Option[Identifier], LiteralString, Option[Identifier])
+
+  /** The tail of a selective load: `<kind> X from "file.bast" [as Alias]` */
+  private def selectiveImportTail[u: P]: P[ImportTail] = {
+    P(importableKind ~ identifier ~ from ~ literalString ~ (as_ ~ identifier).?).map {
+      case (kind, selector, path, alias) => (Some(kind), Some(selector), path, alias)
     }
   }
 
-  /** Parse a full BAST import: `import "path/to/file.bast"` */
-  private def fullBastImport[u: P]: P[BASTImport] = {
-    P(Index ~ Keywords.import_ ~ literalString ~ Index).map { case (start, path, end) =>
-      doBASTImport(at(start, end), path)
-    }
+  /** The tail of a full load: just `"file.bast"` */
+  private def fullImportTail[u: P]: P[ImportTail] = {
+    P(literalString).map(path => (None, None, path, None))
   }
 
-  /** Parse a BAST import statement (selective or full import)
+  /** Parse a BAST load statement (selective or full).
     *
     * Syntax variants:
-    *   - Full import: `import "path/to/file.bast"`
-    *   - Selective import: `import domain X from "file.bast"`
-    *   - Aliased import: `import type T from "file.bast" as MyT`
+    *   - Full: `import "path/to/file.bast"`
+    *   - Selective: `import domain X from "file.bast"`
+    *   - Aliased: `import type T from "file.bast" as MyT`
+    *
+    * NOTE on shape: the keyword is matched ONCE, ahead of the choice between the two tails.
+    * `Keywords.keyword` ends in a cut (`./`), so spelling this as `(kw ~ selectiveTail) | (kw ~
+    * fullTail)` makes the first alternative's cut poison the choice and the full form becomes
+    * unparseable. Hoisting the keyword out keeps the choice backtrackable (fastparse resets the cut
+    * flag when it enters each alternative of a `|`).
     */
   def bastImport[u: P]: P[BASTImport] = {
-    P(selectiveBastImport | fullBastImport)
+    P(Index ~ Keywords.import_ ~ (selectiveImportTail | fullImportTail) ~ Index).map {
+      case (start, (kind, selector, path, alias), end) =>
+        doBASTImport(at(start, end), path, kind, selector, alias)
+    }
   }
 
   def undefined[u: P, RT](f: => RT): P[RT] = {

@@ -724,7 +724,7 @@ object AST:
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
     * widened to any top-level definition (see [[OccursInModule]]).
     */
-  private type OccursInRoot = Domain | Author | Comment
+  private[language] type OccursInRoot = Domain | Author | Comment
 
   /** Type of definitions that occur in a [[Module]] without [[Include]].
     *
@@ -734,8 +734,12 @@ object AST:
     */
   type OccursInModule = NebulaContents | Comment
 
-  /** Type of definitions that can occur in a [[Module]] */
-  type ModuleContents = OccursInModule | Include[OccursInModule]
+  /** Type of definitions that can occur in a [[Module]].
+    *
+    * A [[Module]] may also contain a [[BASTImport]]: `import` is legal wherever a flat collection
+    * of definitions is legal (root, domain, context) and a module is exactly such a collection.
+    */
+  type ModuleContents = OccursInModule | Include[OccursInModule] | BASTImport
 
   /** The root is a module that can have other modules and BAST imports */
   type RootContents = OccursInRoot | Include[OccursInRoot] | Module | BASTImport
@@ -1321,16 +1325,17 @@ object AST:
     def isSynthetic(module: Module): Boolean = module.id.value == syntheticId
 
     /** Unwrap a Module into a [[Root]], keeping only the contents that are legal at Root level
-      * (`ModuleContents ∩ RootContents` = Domain | Module | Author | Comment). Used wherever a
-      * Module-rooted BAST file has to be handed to code that expects a Root.
+      * (`ModuleContents ∩ RootContents` = Domain | Module | Author | Comment | BASTImport). Used
+      * wherever a Module-rooted BAST file has to be handed to code that expects a Root.
       */
     def toRoot(module: Module): Root =
       val items: Seq[RootContents] = module.contents.toSeq.flatMap {
-        case d: Domain  => Some(d: RootContents)
-        case m: Module  => Some(m: RootContents)
-        case a: Author  => Some(a: RootContents)
-        case c: Comment => Some(c: RootContents)
-        case _          => None // not valid at Root level
+        case d: Domain      => Some(d: RootContents)
+        case m: Module      => Some(m: RootContents)
+        case a: Author      => Some(a: RootContents)
+        case c: Comment     => Some(c: RootContents)
+        case bi: BASTImport => Some(bi: RootContents)
+        case _              => None // not valid at Root level
       }
       Root(module.loc, Contents[RootContents](items*))
     end toRoot

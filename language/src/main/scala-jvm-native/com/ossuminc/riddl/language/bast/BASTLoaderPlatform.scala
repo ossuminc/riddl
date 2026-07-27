@@ -32,28 +32,35 @@ private[bast] object BASTLoaderPlatform {
     pc: PlatformContext
   ): Either[String, Module] = {
     Try {
-      // Resolve the path relative to the base URL
-      val bastURL = if URL.isValid(bi.path.s) then {
-        URL(bi.path.s)
-      } else {
-        baseURL.parent.resolve(bi.path.s)
-      }
-
-      // Load the BAST file bytes
-      implicit val ec: ExecutionContext = pc.ec
-      val future = pc.load(bastURL).map { data =>
-        // Parse as BAST - note: data is loaded as String, convert to bytes
-        val bytes = data.getBytes("ISO-8859-1") // Binary data preserved
-        val reader = BASTReader(bytes)
-        reader.read() // Returns Either[Messages, Module]
-      }
-
-      // Wait for the result (with timeout) - blocking I/O
-      Await.result(future, 30.seconds)
+      // Resolve the path: full URL, absolute filesystem path, or relative to the base URL
+      val bastURL = BASTLoader.resolveBastURL(bi.path.s, baseURL)
+      BASTReader(readBytes(bastURL)).read() // Returns Either[Messages, Module]
     } match {
       case Success(Right(module)) => Right(module)
       case Success(Left(msgs))    => Left(msgs.map(_.format).mkString("; "))
       case Failure(ex)            => Left(ex.getMessage)
     }
   }
+
+  /** Read the raw bytes of a BAST file.
+    *
+    * A `.bast` file is BINARY. `PlatformContext.load` decodes as UTF-8 and joins lines with "\n",
+    * which either throws `MalformedInputException` or silently mangles the bytes — so a local file
+    * is read directly instead. Only a remote (http) BAST file still goes through the string path,
+    * which remains lossy; fetching those as bytes needs a platform-context capability that does not
+    * exist yet.
+    */
+  private def readBytes(url: URL)(using pc: PlatformContext): Array[Byte] =
+    if url.isFileScheme then
+      import java.nio.file.{Files, Path}
+      val path: Path =
+        if url.basis.nonEmpty && url.path.nonEmpty then Path.of("/" + url.basis + "/" + url.path)
+        else if url.basis.isEmpty && url.path.nonEmpty then Path.of(url.path)
+        else Path.of("/" + url.basis)
+      Files.readAllBytes(path)
+    else
+      implicit val ec: ExecutionContext = pc.ec
+      Await.result(pc.load(url).map(_.getBytes("ISO-8859-1")), 30.seconds)
+    end if
+  end readBytes
 }

@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 18:42 UTC
+# Generated: 2026-07-27 20:08 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -48,11 +48,16 @@ end-of-line-comment ::= "//" [^\n]*
 root-content ::= bast-import | root-definition | module | root-include
 root-definition ::= domain | author | comment
 root-include ::= "include" ws1 literal-string
-bast-import ::= "import" ws1 literal-string
+
+# definition, optionally renamed with "as".
+bast-import ::= selective-bast-import | full-bast-import
+full-bast-import ::= "import" ws1 literal-string
+selective-bast-import ::= "import" ws1 importable-kind ws1 identifier ws "from" ws1 literal-string ws ("as" identifier)?
+importable-kind ::= "domain" | "context" | "entity" | "type" | "epic" | "saga" | "adaptor" | "function" | "projector" | "repository" | "streamlet" | "author" | "module" | "user" | "connector" | "constant" | "invariant"
 
 # at this level. The internal rules of each contained definition still apply.
 module ::= "module" ws1 identifier ws1 is ws "{" ws (module-content | module-include)+ ws "}" ws (with-metadata)?
-module-content ::= adaptor | author | comment | connector | constant | context | domain | entity | epic | function | invariant | module | projector | relationship | repository | saga | streamlet | type-def | user
+module-content ::= bast-import | adaptor | author | comment | connector | constant | context | domain | entity | epic | function | invariant | module | projector | relationship | repository | saga | streamlet | type-def | user
 module-include ::= "include" ws1 literal-string
 
 # yields a Module with the synthetic id `nebula`. Use `module` instead.
@@ -62,8 +67,7 @@ nebula ::= (module-content)*
 domain ::= "domain" ws1 identifier ws1 is ws "{" ws domain-body ws "}" ws (with-metadata)?
 domain-body ::= domain-definitions | "???"
 domain-definitions ::= (domain-content)+
-domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | repository | connector | import-def | bast-import | domain-include | comment
-import-def ::= "import" ws "domain" ws1 identifier ws "from" ws1 literal-string
+domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | repository | connector | bast-import | domain-include | comment
 domain-include ::= "include" ws1 literal-string
 
 # Context
@@ -71,7 +75,7 @@ intention ::= "application" | "external" | "gateway" | "service"
 context ::= (intention)? ws "context" ws1 identifier ws (as-shape)? ws is ws "{" ws context-body ws "}" ws (with-metadata)?
 context-body ::= context-definitions | "???"
 context-definitions ::= (context-definition)+
-context-definition ::= processor-definition-contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | context-include | comment
+context-definition ::= processor-definition-contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | bast-import | context-include | comment
 context-include ::= "include" ws1 literal-string
 
 # Entity

@@ -62,7 +62,13 @@ object TopLevelParser:
   /** Load BAST imports for a parsed Root.
     *
     * After parsing, any BASTImport nodes will have empty contents. This method calls BASTLoader to
-    * populate them with the imported Nebula contents from the referenced .bast files.
+    * populate them with the contents of the Module at the root of the referenced .bast files.
+    *
+    * This is the single loading step for the whole compiler: every `parse*` entry point that yields
+    * a Root calls it, so loading is uniform. There is deliberately no `BASTLoadingPass` — loading
+    * needs the parse-time base URL and must happen before any pass runs, and the passes that follow
+    * see imported definitions through traversal without the wrapper being spliced away. Making the
+    * imports permanent is a separate, opt-in flatten (see `FlattenPass`).
     *
     * @param root
     *   The parsed Root containing potential BASTImport nodes
@@ -210,7 +216,16 @@ object TopLevelParser:
   )(using PlatformContext): Either[Messages, Root] = {
     val rpi = RiddlParserInput(input, "")
     val tlp = new TopLevelParser(rpi, withVerboseFailures)
-    tlp.parseRoot
+    tlp.parseRoot match {
+      case Left(parseErrors) => Left(parseErrors)
+      case Right(root)       =>
+        // Load any BAST imports referenced in the parsed string, exactly as the other entry
+        // points do; relative paths resolve against the (empty) origin of the string input.
+        val (loadedRoot, importMsgs) = loadBASTImports(root, rpi.root)
+        if importMsgs.hasErrors then Left(importMsgs)
+        else Right(loadedRoot)
+        end if
+    }
   }
 
   /** Parse an arbitrary (nebulous) set of definitions in any order

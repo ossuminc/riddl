@@ -12,7 +12,6 @@ import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.bast.BASTLoader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{pc, ec, Await, URL}
-import org.scalatest.TestData
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.{Files, Path}
@@ -21,11 +20,10 @@ import scala.concurrent.duration.*
 class BASTLoaderTest extends AnyWordSpec {
 
   "BASTLoader" should {
-    "load a BAST import and populate contents" in { (td: TestData) =>
+    "load a BAST import and populate contents" in {
       // Step 1: Create a simple RIDDL source with a type definition
       val sourceRiddl = """domain ImportedLib is {
                           |  type MyImportedType is String
-                          |  briefly "A library domain"
                           |}
                           |""".stripMargin
 
@@ -52,9 +50,8 @@ class BASTLoaderTest extends AnyWordSpec {
             // Step 4: Create a RIDDL file that imports the BAST
             val riddlContent = s"""import "${bastFile.toAbsolutePath}"
                                   |
-                                  |domain TestDomain is {
-                                  |  briefly "A test domain"
-                                  |}
+                                  |domain TestDomain is { ??? }
+                                  |
                                   |""".stripMargin
 
             // Step 5: Parse the RIDDL file
@@ -101,13 +98,12 @@ class BASTLoaderTest extends AnyWordSpec {
       }
     }
 
-    "report error for missing BAST file" in { (td: TestData) =>
+    "report error for missing BAST file" in {
       // Create a RIDDL file that imports a non-existent BAST
       val riddlContent = """import "nonexistent.bast"
                            |
-                           |domain TestDomain is {
-                           |  briefly "A test domain"
-                           |}
+                           |domain TestDomain is { ??? }
+                           |
                            |""".stripMargin
 
       val rpi = RiddlParserInput(riddlContent, "test-missing")
@@ -129,17 +125,15 @@ class BASTLoaderTest extends AnyWordSpec {
       }
     }
 
-    "handle multiple imports" in { (td: TestData) =>
+    "handle multiple imports" in {
       // Create two RIDDL sources with different definitions
       val source1Riddl = """domain UtilsDomain is {
                            |  type TypeA is String
-                           |  briefly "Utils domain"
                            |}
                            |""".stripMargin
 
       val source2Riddl = """domain ModelsDomain is {
                            |  type TypeB is Number
-                           |  briefly "Models domain"
                            |}
                            |""".stripMargin
 
@@ -171,9 +165,8 @@ class BASTLoaderTest extends AnyWordSpec {
             val riddlContent = s"""import "${bastFile1.toAbsolutePath}"
                                   |import "${bastFile2.toAbsolutePath}"
                                   |
-                                  |domain TestDomain is {
-                                  |  briefly "A test domain"
-                                  |}
+                                  |domain TestDomain is { ??? }
+                                  |
                                   |""".stripMargin
 
             val rpi = RiddlParserInput(riddlContent, "test-multi-import")
@@ -212,12 +205,11 @@ class BASTLoaderTest extends AnyWordSpec {
       }
     }
 
-    "load imports inside domains" in { (td: TestData) =>
+    "load imports inside domains" in {
       // Create a RIDDL source with shared types
       val sharedRiddl = """domain SharedTypes is {
                           |  type UserId is UUID
                           |  type Email is String
-                          |  briefly "Shared type definitions"
                           |}
                           |""".stripMargin
 
@@ -244,10 +236,8 @@ class BASTLoaderTest extends AnyWordSpec {
             val riddlContent = s"""domain MyApp is {
                                   |  import "${bastFile.toAbsolutePath}"
                                   |
-                                  |  context Users is {
-                                  |    briefly "User management"
-                                  |  }
-                                  |  briefly "Main application domain"
+                                  |  context Users is { ??? }
+                                  |  
                                   |}
                                   |""".stripMargin
 

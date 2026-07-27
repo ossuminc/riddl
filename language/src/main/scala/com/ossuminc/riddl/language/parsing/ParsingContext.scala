@@ -84,14 +84,21 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     context.input.asInstanceOf[RiddlParserInput].at(offset1, offset2)
   }
 
+  /** Placeholder for the old, never-implemented `import domain <id> from "<file>"` production
+    * (issue #72). That syntax is now a selective BAST import handled by [[doBASTImport]]: it plucks
+    * exactly the named domain out of the referenced `.bast` file. Nothing calls this any more; it
+    * is retained only so the public trait keeps its shape through the 1.x/2.0 boundary.
+    */
+  @deprecated(
+    "Superseded by doBASTImport; 'import domain X from \"f.bast\"' is a BAST import",
+    "2.0.0"
+  )
   def doImport(
     loc: At,
     domainName: Identifier,
     url: LiteralString
   )(implicit ctx: P[?]): Domain = {
-    // TODO: implement importDomain, issue #72
     Domain(At(), Identifier(At(), "NotImplemented"))
-    // importDomain(url)
   }
 
   /** Parse a BAST import statement.

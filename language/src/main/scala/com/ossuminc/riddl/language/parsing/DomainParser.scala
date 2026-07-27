@@ -37,7 +37,7 @@ private[parsing] trait DomainParser {
     P(
       vitalDefinitionContents |
         author | context | domain | user | epic | saga | repository | connector |
-        importDef | bastImport | domainInclude | comment
+        bastImport | domainInclude | comment
     ).asInstanceOf[P[DomainContents]]./.rep(1)
   }
 

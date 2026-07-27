@@ -18,12 +18,54 @@ import scala.collection.mutable
   *
   * This loads BAST files referenced by BASTImport nodes and populates their contents field with the
   * contents of the loaded Module (the BAST serialization root). Imports can appear at the root
-  * level, inside domains, or inside contexts.
+  * level, inside modules, domains and contexts; the walk below is generic over [[AST.Container]] so
+  * an import nested at any depth (including inside `include` wrappers) is found.
   *
   * Supports selective imports that import a specific definition by kind and name, with optional
   * aliasing to rename the imported definition.
+  *
+  * '''Loading populates wrappers only.''' The loaded definitions land inside the [[AST.BASTImport]]
+  * node itself; they are NOT spliced into the enclosing container. A `HierarchyPass` (prettify,
+  * jsonify) descends into the wrapper without pushing it onto the parent stack, so those surfaces
+  * already see the loaded definitions as members of the enclosing container. The plain `Pass`
+  * traversal that Symbols/Resolution/Validation use does NOT descend, so an imported definition is
+  * not in the symbol table and cannot be referenced yet.
+  *
+  * '''A self-contained model therefore requires an explicit flatten''' — `FlattenPass`,
+  * `RiddlLib.flattenAST`, or `Container.flatten()` — which promotes the loaded definitions into the
+  * container that holds the directive. Flattening is deliberately opt-in and is NOT part of
+  * `Pass.standardPasses`: the unflattened tree is what re-emits and re-serializes the directive
+  * itself instead of its expansion.
   */
 object BASTLoader {
+
+  /** Turn the path written in a load directive into the URL to read.
+    *
+    * Three shapes are accepted: an already-valid `file:`/`http(s):` URL, an absolute filesystem
+    * path (`/a/b/lib.bast` — `URL.resolve` rejects a leading `/`, so it must go through
+    * `fromFullPath`), and a path relative to the file that holds the directive.
+    */
+  private[bast] def resolveBastURL(path: String, baseURL: URL): URL =
+    if URL.isValid(path) then URL(path)
+    else if path.startsWith("/") then URL.fromFullPath(path)
+    else baseURL.parent.resolve(path)
+  end resolveBastURL
+
+  /** Apply `f` to every [[AST.BASTImport]] reachable from `container`, at any depth.
+    *
+    * The walk descends into every nested [[AST.Container]] — definitions, `include` wrappers and
+    * modules alike — so an import is found wherever the grammar allows one. It deliberately does
+    * NOT descend into a BASTImport's own contents: those are loaded content, not source, and an
+    * import cannot nest inside another import.
+    */
+  private def foreachImport(container: Container[?])(f: BASTImport => Unit): Unit = {
+    def walk[T <: RiddlValue](contents: Contents[T]): Unit = contents.foreach {
+      case bi: BASTImport  => f(bi)
+      case c: Container[?] => walk(c.contents)
+      case _               => () // a leaf; nothing to descend into
+    }
+    walk(container.contents)
+  }
 
   /** Result of loading BAST imports */
   case class LoadResult(
@@ -32,14 +74,14 @@ object BASTLoader {
     messages: Messages
   )
 
-  /** Load all BAST imports in a Root, including those inside domains and contexts.
+  /** Load all BAST imports reachable from `container`, at any depth.
     *
-    * Finds all BASTImport nodes in the Root, its domains, and contexts, loads the referenced BAST
-    * files, and populates each BASTImport's contents field with the loaded Module contents. Handles
-    * selective imports by filtering to the specified definition.
+    * Finds every BASTImport node, loads the referenced BAST file, and populates that import's
+    * contents field with the loaded Module contents. Handles selective imports by filtering to the
+    * specified definition.
     *
-    * @param root
-    *   The Root containing BASTImport nodes to load
+    * @param container
+    *   The container (typically a [[AST.Root]] or [[AST.Module]]) holding BASTImport nodes
     * @param baseURL
     *   The base URL for resolving relative BAST file paths
     * @param pc
@@ -47,7 +89,7 @@ object BASTLoader {
     * @return
     *   LoadResult with counts and any error messages
     */
-  def loadImports(root: Root, baseURL: URL)(using pc: PlatformContext): LoadResult = {
+  def loadImports(container: Container[?], baseURL: URL)(using pc: PlatformContext): LoadResult = {
     val msgs = mutable.ListBuffer.empty[Messages.Message]
     var loaded = 0
     var failed = 0
@@ -72,16 +114,7 @@ object BASTLoader {
       }
     }
 
-    def processContents[T <: RiddlValue](contents: Contents[T]): Unit = {
-      contents.foreach {
-        case bi: BASTImport => loadImport(bi)
-        case d: Domain      => processContents(d.contents)
-        case c: Context     => processContents(c.contents)
-        case _              => () // Not a BASTImport, Domain, or Context, skip
-      }
-    }
-
-    processContents(root.contents)
+    foreachImport(container)(loadImport)
     LoadResult(loaded, failed, msgs.toList)
   }
 
@@ -157,22 +190,16 @@ object BASTLoader {
       }
     }
 
+    // Breadth-first: everything at this level, then every nested container in order. A BASTImport's
+    // own contents are skipped — an import re-exports nothing.
     def searchContents[T <: RiddlValue](contents: Contents[T]): Option[NebulaContents] = {
-      // First check top-level items
       contents.toSeq
-        .collectFirst {
-          case defn: NebulaContents if matchesKindAndName(defn) => defn
-        }
+        .collectFirst { case defn: NebulaContents if matchesKindAndName(defn) => defn }
         .orElse {
-          // Then search recursively in containers
-          contents.toSeq.collectFirst {
-            case d: Domain =>
-              searchContents(d.contents).orElse(if matchesKindAndName(d) then Some(d) else None)
-            case c: Context =>
-              searchContents(c.contents).orElse(if matchesKindAndName(c) then Some(c) else None)
-            case m: Module =>
-              searchContents(m.contents).orElse(if matchesKindAndName(m) then Some(m) else None)
-          }.flatten
+          contents.toSeq.iterator
+            .collect { case c: Container[?] if !c.isInstanceOf[BASTImport] => c }
+            .map(c => searchContents(c.contents))
+            .collectFirst { case Some(found) => found }
         }
     }
 
@@ -211,45 +238,29 @@ object BASTLoader {
     }
   }
 
-  /** Check if a Root has any unloaded BASTImport nodes.
+  /** Check if a container holds any unloaded BASTImport nodes, at any depth.
     *
-    * @param root
-    *   The Root to check
+    * @param container
+    *   The container to check
     * @return
     *   true if there are BASTImport nodes with empty contents
     */
-  def hasUnloadedImports(root: Root): Boolean = {
+  def hasUnloadedImports(container: Container[?]): Boolean = {
     var found = false
-    def checkContents[T <: RiddlValue](contents: Contents[T]): Unit = {
-      if !found then
-        contents.foreach {
-          case bi: BASTImport => if bi.contents.isEmpty then found = true
-          case d: Domain      => checkContents(d.contents)
-          case _              => ()
-        }
-      end if
-    }
-    checkContents(root.contents)
+    foreachImport(container) { bi => if bi.contents.isEmpty then found = true }
     found
   }
 
-  /** Get all BASTImport nodes from a Root, including those inside domains.
+  /** Get all BASTImport nodes reachable from a container, at any depth.
     *
-    * @param root
-    *   The Root to search
+    * @param container
+    *   The container to search
     * @return
     *   Sequence of BASTImport nodes
     */
-  def getImports(root: Root): Seq[BASTImport] = {
+  def getImports(container: Container[?]): Seq[BASTImport] = {
     val result = mutable.ListBuffer.empty[BASTImport]
-    def collectFromContents[T <: RiddlValue](contents: Contents[T]): Unit = {
-      contents.foreach {
-        case bi: BASTImport => result += bi
-        case d: Domain      => collectFromContents(d.contents)
-        case _              => ()
-      }
-    }
-    collectFromContents(root.contents)
+    foreachImport(container) { bi => result += bi }
     result.toSeq
   }
 }

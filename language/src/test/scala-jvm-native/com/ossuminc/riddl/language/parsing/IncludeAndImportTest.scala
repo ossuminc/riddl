@@ -8,6 +8,7 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.bast.BASTLoader
 import com.ossuminc.riddl.utils.{Await, PathUtils, PlatformContext, URL, ec, pc}
 import org.scalatest.{Assertion, TestData}
 
@@ -115,12 +116,24 @@ class IncludeAndImportTest extends ParsingTest {
     }
   }
 
+  // S61-2: `import domain X from "f.bast"` used to be a stub that discarded the path and produced
+  // a Domain literally named "NotImplemented". It is now a selective load of one domain out of the
+  // compiled `.bast`, landing in the BASTImport WRAPPER — not spliced into the enclosing domain
+  // until an explicit flatten runs.
   "Import" should {
-    "work syntactically" in { (td: TestData) =>
+    "load the named domain out of the .bast into the wrapper" in { (td: TestData) =>
       val (root, _) = checkFile("Import", "import/import.riddl")
       root.domains must not(be(empty))
-      root.domains.head.domains must not(be(empty))
-      root.domains.head.domains.head.id.value must be("NotImplemented")
+      val foo = root.domains.head
+      val loads = BASTLoader.getImports(root)
+      loads.size must be(1)
+      loads.head.kindOpt must be(Some("domain"))
+      loads.head.selector.map(_.value) must be(Some("NotImplemented"))
+      loads.head.contents.toSeq.collect { case d: Domain => d.id.value } must be(
+        Seq("NotImplemented")
+      )
+      // Wrapper only: nothing is spliced into `foo` without a flatten.
+      foo.domains must be(empty)
     }
   }
 }
