@@ -175,12 +175,12 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
         parseAndValidateDomain(input, shouldFailOnErrors = false) { (_, _, messages) =>
           assert(
             !messages.exists(_.message.contains("isolation seam")),
-            s"unexpected seam warning present:\n${messages.format}"
+            s"unexpected seam message present:\n${messages.format}"
           )
         }
     }
 
-    "flag a third-context message referenced in an adaptor 'on' clause as a seam warning" in {
+    "flag a third-context message referenced in an adaptor 'on' clause as a seam error" in {
       (td: TestData) =>
         val input = RiddlParserInput(
           """domain D is {
@@ -199,23 +199,25 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
           td
         )
         parseAndValidateDomain(input, shouldFailOnErrors = false) { (_, _, messages) =>
-          val seamWarnings = messages.filter { m =>
-            m.kind == Messages.Warning && m.message.contains("isolation seam")
+          val seamErrors = messages.filter { m =>
+            m.kind == Messages.Error && m.message.contains("isolation seam")
           }
           assert(
-            seamWarnings.size == 1,
-            s"expected exactly one seam warning, got ${seamWarnings.size}:\n${messages.format}"
+            seamErrors.size == 1,
+            s"expected exactly one seam error, got ${seamErrors.size}:\n${messages.format}"
           )
           assert(
-            seamWarnings.head.message
+            seamErrors.head.message
               .contains("references message 'ShippingContext.ShipmentQueued'") &&
-              seamWarnings.head.message.contains("from context 'ShippingContext'"),
-            s"seam warning text unexpected:\n${seamWarnings.head.message}"
+              seamErrors.head.message.contains("from context 'ShippingContext'"),
+            s"seam error text unexpected:\n${seamErrors.head.message}"
           )
-          // It is a Warning, not a hard Error.
+          // It is a hard Error, not a mere Warning.
           assert(
-            !messages.exists(m => m.kind == Messages.Error && m.message.contains("isolation seam")),
-            s"seam violation should not be an Error:\n${messages.format}"
+            !messages.exists(m =>
+              m.kind == Messages.Warning && m.message.contains("isolation seam")
+            ),
+            s"seam violation should be an Error, not a Warning:\n${messages.format}"
           )
           // No double-report with the generic cross-context reference check (disabled in adaptors).
           assert(
@@ -225,7 +227,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
         }
     }
 
-    "flag a third-context message referenced as a send/tell target as a seam warning" in {
+    "flag a third-context message referenced as a send/tell target as a seam error" in {
       (td: TestData) =>
         val input = RiddlParserInput(
           """domain D is {
@@ -248,21 +250,23 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
           td
         )
         parseAndValidateDomain(input, shouldFailOnErrors = false) { (_, _, messages) =>
-          val seamWarnings = messages.filter { m =>
-            m.kind == Messages.Warning && m.message.contains("isolation seam")
+          val seamErrors = messages.filter { m =>
+            m.kind == Messages.Error && m.message.contains("isolation seam")
           }
           assert(
-            seamWarnings.size == 1,
-            s"expected exactly one seam warning, got ${seamWarnings.size}:\n${messages.format}"
+            seamErrors.size == 1,
+            s"expected exactly one seam error, got ${seamErrors.size}:\n${messages.format}"
           )
           assert(
-            seamWarnings.head.message
+            seamErrors.head.message
               .contains("references message 'ShippingContext.QueueShipment'"),
-            s"seam warning text unexpected:\n${seamWarnings.head.message}"
+            s"seam error text unexpected:\n${seamErrors.head.message}"
           )
           assert(
-            !messages.exists(m => m.kind == Messages.Error && m.message.contains("isolation seam")),
-            s"seam violation should not be an Error:\n${messages.format}"
+            !messages.exists(m =>
+              m.kind == Messages.Warning && m.message.contains("isolation seam")
+            ),
+            s"seam violation should be an Error, not a Warning:\n${messages.format}"
           )
         }
     }

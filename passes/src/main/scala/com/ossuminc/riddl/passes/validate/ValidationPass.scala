@@ -1795,9 +1795,10 @@ case class ValidationPass(
         // point between contexts. We inspect both surfaces where the adaptor names a message:
         //   - the `on <message>` clause message (the input it consumes), and
         //   - every `send`/`tell` statement's message target (the translated output it emits).
-        // Emitted as a Warning (parity with the generic cross-context reference check in
-        // BasicValidation, which is intentionally disabled inside adaptors so this seam-aware check
-        // replaces it for adaptors — avoiding a double-report). Error is the stronger alternative.
+        // Emitted as an Error: the adaptor is the only sanctioned context crossing, so a
+        // third-context reference is a hard modeling error. This replaces the generic cross-context
+        // reference check in BasicValidation, which is intentionally disabled inside adaptors so
+        // this seam-aware check governs adaptors — avoiding a double-report.
         resolvePath[Context](adaptor.referent.pathId, parents).foreach { referentContext =>
           // Gather every message reference the adaptor traffics in: on-clause messages plus the
           // message targets of send/tell statements (walking nested when/match/foreach bodies).
@@ -1827,7 +1828,7 @@ case class ValidationPass(
               // A context-less (root/domain-level shared) type has no owning context — allowed.
               symbols.contextOf(resolvedType).foreach { owningContext =>
                 if owningContext != c && owningContext != referentContext then
-                  messages.addWarning(
+                  messages.addError(
                     msgRef.loc,
                     s"Adaptor '${adaptor.id.value}' references message '${msgRef.pathId.value
                         .mkString(".")}' from context '${owningContext.id.value}', which is neither " +
