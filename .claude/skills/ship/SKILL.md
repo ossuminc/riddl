@@ -176,6 +176,18 @@ not provided:
 15. Report a summary: tag, commit SHA, release URL, and any
     CI workflows triggered.
 
+16. **Drop upgrade tasks in dependent projects.** Invoke
+    `/ossuminc-skills:bump-consumers` with library `riddl` and the
+    version just released. That skill owns the consumer list
+    (`skills/bump-consumers/consumers.md`) and the task-file format —
+    do **not** maintain a repo list here. riddl has more consumers
+    than any other library (Scala via `project/Dependencies.scala`;
+    npm via `@ossuminc/riddl-lib` in `package.json`), so let the skill
+    apply its usual restraint: it asks before writing and proposes
+    skipping patch releases rather than filing a task in every
+    consumer for a bugfix. Requires the `ossuminc-skills` plugin
+    installed (`claude plugin list | grep ossuminc-skills`).
+
 ## If Something Fails
 
 - If tests fail in step 9: delete the local tag
