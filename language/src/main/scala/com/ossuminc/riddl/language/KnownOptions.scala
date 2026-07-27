@@ -120,6 +120,10 @@ object KnownOptions {
     KnownOption.backstage_type
   )
 
+  /** Options advertised for a Saga. A saga is SEQUENTIAL by definition, so
+    * [[KnownOption.sequential]] is deliberately NOT listed here — an option to request the default
+    * behaviour is redundant (A11). The constant itself is retained as public API.
+    */
   final val saga: Seq[String] = Seq(
     KnownOption.technology,
     KnownOption.kind,
@@ -127,7 +131,6 @@ object KnownOptions {
     KnownOption.faicon,
     KnownOption.protocol,
     KnownOption.parallel,
-    KnownOption.sequential,
     KnownOption.compensate
   )
 

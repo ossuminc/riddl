@@ -1051,6 +1051,64 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept parallel option on sagas" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    saga S is {
+          |      step One is {
+          |        do "do something"
+          |      } reverted by {
+          |        do "undo something"
+          |      }
+          |      step Two is {
+          |        do "do more"
+          |      } reverted by {
+          |        do "undo more"
+          |      }
+          |    } with { option parallel }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        // A11: parallel is a Saga option; accepted without "not recognized" or
+        // "not typically used" style warnings
+        msgs.exists(m =>
+          m.message.contains("parallel") &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
+      }
+    }
+
+    "nudge parallel option on non-saga definitions" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type T is String
+          |  } with { option parallel }
+          |}
+          |""".stripMargin,
+        td
+      )
+      // Pin the options: the "not typically used" nudge is a StyleWarning, and ambient
+      // options vary across a full sequential run (cf. the async nudge test below).
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          // Recognized (so no "not a recognized"), but drawn on a Context it should
+          // trigger the parent-kind "not typically used" nudge
+          msgs.exists(m =>
+            m.message.contains("parallel") && m.message.contains("not a recognized")
+          ) mustBe false
+          msgs.exists(m =>
+            m.message.contains("parallel") && m.message.contains("not typically used")
+          ) mustBe true
+        }
+      }
+    }
+
     "accept protocol option on any processor (streamlet, entity)" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

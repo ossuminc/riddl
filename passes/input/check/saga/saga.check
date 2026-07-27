@@ -69,10 +69,6 @@ passes/input/check/saga/saga.riddl(13:7->20):
 passes/input/check/saga/saga.riddl(13:32->34):
  Inlet identifier 'in' is too short. The minimum length is 3:
        sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(35:7->36:7):
- Option 'parallel' in Saga 'name' is not a recognized RIDDL option:
-       option parallel
-       described as "ignore"
 passes/input/check/saga/saga.riddl(16:18->20):
  Field identifier 'p1' is too short. The minimum length is 3:
        requires { p1: String, p2: String }

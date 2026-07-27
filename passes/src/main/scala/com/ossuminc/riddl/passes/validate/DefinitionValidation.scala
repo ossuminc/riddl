@@ -85,6 +85,17 @@ object RecognizedOptions:
       0,
       0
     ),
+    // Saga-level parallelism marker (A11). A saga is SEQUENTIAL by definition; `parallel` declares
+    // the exception. The semantics are a contract for the code generator (riddl-gen), NOT something
+    // riddlc acts on: all steps start in parallel; the coordinator gathers results asynchronously;
+    // when they all succeed the saga succeeds; any one failure triggers compensating actions in
+    // REVERSE order of the original sends. Registration only — no behavioral validation, mirroring
+    // how A7 added `async` and A10 added `compensate`.
+    "parallel" -> OptionSpec(
+      Seq("Saga"),
+      0,
+      0
+    ),
     // Resilience options (C2)
     "circuit-breaker" -> OptionSpec(
       Seq("Adaptor", "Connector"),
