@@ -2391,8 +2391,11 @@ case class ValidationPass(
             )
           }
         case gi: GenericInteraction =>
-          // Use comprehensive validateInteraction instead of inline validation
-          validateInteraction(gi, parents)
+          // Use comprehensive validateInteraction instead of inline validation. Pass `uc`
+          // explicitly: interaction references are keyed in the resolution refMap under the
+          // enclosing UseCase, which is NOT present in `parents` while the UseCase is itself
+          // being processed (a Branch is not on its own parent stack).
+          validateInteraction(uc, gi, parents)
           // Additional checks for specific interaction types
           gi match {
             case is: TwoReferenceInteraction =>
@@ -2561,10 +2564,11 @@ case class ValidationPass(
     end if
   end checkUserInteractionBoundary
 
-  // FIXME: This should be used
-  private def validateInteraction(interaction: Interaction, parents: Parents): Unit = {
-    val useCase = parents.head
-    // checkMetadata(useCase.identify, interaction, interaction.loc)
+  private def validateInteraction(
+    useCase: UseCase,
+    interaction: Interaction,
+    parents: Parents
+  ): Unit = {
     interaction match {
       case SelfInteraction(_, from, _, _) =>
         checkRef[Definition](from, parents)
@@ -2582,8 +2586,11 @@ case class ValidationPass(
       case ArbitraryInteraction(_, from, _, to, _) =>
         checkRef[Definition](from, parents)
         checkRef[Definition](to, parents)
-        val origin = resolution.refMap.definitionOf[Definition](from.pathId, parents.head)
-        val destination = resolution.refMap.definitionOf[Definition](to.pathId, parents.head)
+        // Interaction refs are keyed in the refMap under the enclosing UseCase, so resolve
+        // with `useCase` as the scope (parents.head is the UseCase's parent here — using it
+        // left this resolution permanently None, hence the dead type/direction checks).
+        val origin = resolution.refMap.definitionOf[Definition](from.pathId, useCase)
+        val destination = resolution.refMap.definitionOf[Definition](to.pathId, useCase)
         validateArbitraryInteraction(origin, destination, parents)
         checkUserInteractionBoundary(from, to)
       case ShowOutputInteraction(_, from: OutputRef, _, to: UserRef, _) =>
