@@ -142,5 +142,129 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
         )
       }
     }
+
+    // A4: isolation-seam validation. An adaptor may only traffic in messages owned by the two
+    // contexts it bridges (its parent context and its referent context) or context-less
+    // root/shared types. Referencing a THIRD context's message crosses the isolation seam.
+
+    "not flag an adaptor that only references parent, referent, and shared messages" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain D is {
+            |  event Shared is { s: String }
+            |  context PaymentContext is {
+            |    event PaymentCompleted is { orderId: String }
+            |  }
+            |  context OrderContext is {
+            |    event OrderPaymentReceived is { id: String }
+            |    outlet OrderEvents is event OrderPaymentReceived
+            |    adaptor PayIn from context PaymentContext is {
+            |      handler H is {
+            |        on event PaymentContext.PaymentCompleted {
+            |          send event OrderContext.OrderPaymentReceived to outlet OrderEvents
+            |        }
+            |        on event D.Shared { do "shared vocabulary is fine" }
+            |        on other { error "unexpected message" }
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { (_, _, messages) =>
+          assert(
+            !messages.exists(_.message.contains("isolation seam")),
+            s"unexpected seam warning present:\n${messages.format}"
+          )
+        }
+    }
+
+    "flag a third-context message referenced in an adaptor 'on' clause as a seam warning" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain D is {
+            |  context PaymentContext is { event PaymentCompleted is { x: String } }
+            |  context ShippingContext is { event ShipmentQueued is { y: String } }
+            |  context OrderContext is {
+            |    adaptor PayIn from context PaymentContext is {
+            |      handler H is {
+            |        on event ShippingContext.ShipmentQueued { do "ignore" }
+            |        on other { error "unexpected message" }
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { (_, _, messages) =>
+          val seamWarnings = messages.filter { m =>
+            m.kind == Messages.Warning && m.message.contains("isolation seam")
+          }
+          assert(
+            seamWarnings.size == 1,
+            s"expected exactly one seam warning, got ${seamWarnings.size}:\n${messages.format}"
+          )
+          assert(
+            seamWarnings.head.message
+              .contains("references message 'ShippingContext.ShipmentQueued'") &&
+              seamWarnings.head.message.contains("from context 'ShippingContext'"),
+            s"seam warning text unexpected:\n${seamWarnings.head.message}"
+          )
+          // It is a Warning, not a hard Error.
+          assert(
+            !messages.exists(m => m.kind == Messages.Error && m.message.contains("isolation seam")),
+            s"seam violation should not be an Error:\n${messages.format}"
+          )
+          // No double-report with the generic cross-context reference check (disabled in adaptors).
+          assert(
+            !messages.exists(_.message.contains("violate the 'bounded' aspect")),
+            s"generic cross-context warning should not fire inside an adaptor:\n${messages.format}"
+          )
+        }
+    }
+
+    "flag a third-context message referenced as a send/tell target as a seam warning" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain D is {
+            |  context PaymentContext is { event PaymentCompleted is { x: String } }
+            |  context ShippingContext is {
+            |    command QueueShipment is { z: String }
+            |  }
+            |  context OrderContext is {
+            |    adaptor PayIn from context PaymentContext is {
+            |      handler H is {
+            |        on event PaymentContext.PaymentCompleted {
+            |          tell command ShippingContext.QueueShipment to context ShippingContext
+            |        }
+            |        on other { error "unexpected message" }
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { (_, _, messages) =>
+          val seamWarnings = messages.filter { m =>
+            m.kind == Messages.Warning && m.message.contains("isolation seam")
+          }
+          assert(
+            seamWarnings.size == 1,
+            s"expected exactly one seam warning, got ${seamWarnings.size}:\n${messages.format}"
+          )
+          assert(
+            seamWarnings.head.message
+              .contains("references message 'ShippingContext.QueueShipment'"),
+            s"seam warning text unexpected:\n${seamWarnings.head.message}"
+          )
+          assert(
+            !messages.exists(m => m.kind == Messages.Error && m.message.contains("isolation seam")),
+            s"seam violation should not be an Error:\n${messages.format}"
+          )
+        }
+    }
   }
 }

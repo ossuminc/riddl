@@ -1788,6 +1788,59 @@ case class ValidationPass(
             }
           }
         }
+        // A4: Isolation-seam check. An adaptor bridges exactly two contexts — its parent context
+        // `c` and its `referent` context. Every message it traffics in must belong to one of those
+        // two contexts (or be a context-less root/shared type). A message owned by any THIRD context
+        // crosses the adaptor's isolation seam, since the adaptor is the ONLY sanctioned crossing
+        // point between contexts. We inspect both surfaces where the adaptor names a message:
+        //   - the `on <message>` clause message (the input it consumes), and
+        //   - every `send`/`tell` statement's message target (the translated output it emits).
+        // Emitted as a Warning (parity with the generic cross-context reference check in
+        // BasicValidation, which is intentionally disabled inside adaptors so this seam-aware check
+        // replaces it for adaptors — avoiding a double-report). Error is the stronger alternative.
+        resolvePath[Context](adaptor.referent.pathId, parents).foreach { referentContext =>
+          // Gather every message reference the adaptor traffics in: on-clause messages plus the
+          // message targets of send/tell statements (walking nested when/match/foreach bodies).
+          val onClauseRefs: Seq[MessageRef] =
+            adaptor.handlers.flatMap(_.clauses).collect { case omc: OnMessageLikeClause => omc.msg }
+          val sendTellRefs = scala.collection.mutable.ArrayBuffer.empty[MessageRef]
+          adaptor.handlers.foreach { handler =>
+            handler.clauses.foreach { clause =>
+              walkStatements(clause.contents) {
+                case SendStatement(_, mr: MessageRef, _) => sendTellRefs.append(mr)
+                case SendStatement(_, ctor: Constructor, _) =>
+                  ctor.ref match
+                    case mr: MessageRef => sendTellRefs.append(mr)
+                    case _              => ()
+                case TellStatement(_, mr: MessageRef, _) => sendTellRefs.append(mr)
+                case TellStatement(_, ctor: Constructor, _) =>
+                  ctor.ref match
+                    case mr: MessageRef => sendTellRefs.append(mr)
+                    case _              => ()
+                case _ => ()
+              }
+            }
+          }
+          (onClauseRefs ++ sendTellRefs.toSeq).foreach { msgRef =>
+            // Skip unresolved refs — other checks report those; we must not NPE on them.
+            resolution.refMap.definitionOf[Type](msgRef.pathId).foreach { resolvedType =>
+              // A context-less (root/domain-level shared) type has no owning context — allowed.
+              symbols.contextOf(resolvedType).foreach { owningContext =>
+                if owningContext != c && owningContext != referentContext then
+                  messages.addWarning(
+                    msgRef.loc,
+                    s"Adaptor '${adaptor.id.value}' references message '${msgRef.pathId.value
+                        .mkString(".")}' from context '${owningContext.id.value}', which is neither " +
+                      s"its parent context '${c.id.value}' nor its referent context " +
+                      s"'${referentContext.id.value}'; this crosses the adaptor's isolation seam",
+                    suggestion = "Keep the adaptor's translation within the two contexts it bridges: reference " +
+                      "only messages owned by its parent context or its referent context (or shared " +
+                      "root-level types). Route a third context's messages through its own adaptor."
+                  )
+              }
+            }
+          }
+        }
       case None | Some(_) =>
         messages.addError(
           adaptor.errorLoc,
