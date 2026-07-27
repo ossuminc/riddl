@@ -2654,7 +2654,20 @@ object AST:
   ////////////////////////////////////////////////////////////////////////////////////// STATEMENTS
 
   /** Base trait of all Statements that can occur in [[OnClause]]s */
-  sealed trait Statement extends RiddlValue
+  sealed trait Statement extends RiddlValue:
+
+    /** A12/A36: can this statement, BY ITSELF, be a runtime failure point? A plain computed
+      * predicate (no constructor field ⇒ zero reflection cost: no prettify/BAST/JSON, no
+      * `FORMAT_REVISION` bump). The shared source of truth for the "can-fail" census: `send`,
+      * `tell`, `yield` and `put` interact with the outside world and may fail; every other
+      * statement cannot fail by itself. NOTE this is a DIFFERENT axis from A23's
+      * `isEffectStatement` — `set` is an effect (mutates state) but cannot fail. Value-level
+      * failure points (`call`/`get`, which are [[Value]]s, not [[Statement]]s) are counted
+      * separately by scanning a statement's value expressions; they are deliberately NOT folded
+      * into this predicate.
+      */
+    def canFail: Boolean = false
+  end Statement
 
   /** A statement whose behavior is specified as a text string allowing a prompt for AI-based
     * simulation to be specified.
@@ -2749,6 +2762,7 @@ object AST:
     portlet: PortletRef[Portlet]
   ) extends Statement {
     override def kind: String = "Send Statement"
+    override def canFail: Boolean = true // A12: sending to a portlet may fail
     def format: String = s"send ${msg.format} to ${portlet.format}"
   }
 
@@ -2815,6 +2829,7 @@ object AST:
     processorRef: ProcessorRef[Processor[?]]
   ) extends Statement {
     override def kind: String = "Tell Statement"
+    override def canFail: Boolean = true // A12: telling a processor may fail
     def format: String = s"tell ${msg.format} to ${processorRef.format}"
   }
 
@@ -2833,6 +2848,7 @@ object AST:
     msg: MessageRef | Constructor
   ) extends Statement {
     override def kind: String = "Yield Statement"
+    override def canFail: Boolean = true // A12: yielding a result to the sender may fail
     def format: String = s"yield ${msg.format}"
   }
 
@@ -3065,6 +3081,7 @@ object AST:
     output: OutputRef
   ) extends Statement {
     override def kind: String = "Put Statement"
+    override def canFail: Boolean = true // A12: publishing to a UI output may fail
     def format: String = s"put ${value.format} to ${output.format}"
   }
 

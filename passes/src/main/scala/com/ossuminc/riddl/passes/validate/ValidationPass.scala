@@ -2225,6 +2225,26 @@ case class ValidationPass(
         )
       }
     }
+    // A12: a saga step's do-block is all-or-nothing (undo assumes all-or-none of it happened), so it
+    // must have AT MOST ONE potential failure point. Count statement-level failure points
+    // (send/tell/yield/put via Statement.canFail) plus every embedded Call/GetValue in value
+    // expressions, across nested when/match/foreach bodies (walkStatements recurses into those).
+    if s.doStatements.nonEmpty then {
+      var failPoints = 0
+      walkStatements(s.doStatements) { st => failPoints += countStatementFailPoints(st) }
+      if failPoints > 1 then
+        messages.add(
+          Messages.warning(
+            s"saga step '${s.id.value}' has $failPoints potential failure points in its do-block; " +
+              "a step's do/undo is all-or-nothing, so it should have at most one — split into " +
+              "multiple steps",
+            s.errorLoc,
+            suggestion =
+              "Split the saga step so each step's do-block has at most one potential failure point " +
+                "(send/tell/yield/put, or an embedded call/get)."
+          )
+        )
+    }
     checkMetadata(s)
   }
 
@@ -2705,6 +2725,46 @@ case class ValidationPass(
       case _ => () // skip Comments
     }
   end walkStatements
+
+  /** A12: count embedded [[Call]] / [[GetValue]] nodes anywhere within a value-expression subtree.
+    * Each `call` (a pure function call — A24) and each `get from input/state` (A45) is its own
+    * potential failure point (a call may fail; a get from an absent input or unset state may fail).
+    * Because `call`/`get` are [[Value]]s (not [[Statement]]s), they are counted here rather than
+    * via `Statement.canFail`. Recurses through [[Constructor]] arguments and the boolean-expression
+    * sub-language so nested occurrences (e.g. `yield E(get …)`, `call F(get …)`, `a and get …`) are
+    * all found.
+    */
+  private def countValueFailPoints(v: RiddlValue): Int = v match
+    case call: Call               => 1 + call.args.map(a => countValueFailPoints(a.value)).sum
+    case _: GetValue              => 1
+    case c: Constructor           => c.args.map(a => countValueFailPoints(a.value)).sum
+    case le: LogicalExpression    => countValueFailPoints(le.left) + countValueFailPoints(le.right)
+    case ne: NotExpression        => countValueFailPoints(ne.expr)
+    case ce: ComparisonExpression => countValueFailPoints(ce.left) + countValueFailPoints(ce.right)
+    case _                        => 0
+  end countValueFailPoints
+
+  /** A12: the number of potential failure points contributed by a SINGLE statement (not recursing
+    * into nested when/match/foreach bodies — the caller walks those via `walkStatements`). This is
+    * the statement-level `canFail` (send/tell/yield/put) PLUS every embedded [[Call]]/[[GetValue]]
+    * in the statement's value expression(s).
+    */
+  private def countStatementFailPoints(s: Statement): Int =
+    val embedded = s match
+      case set: SetStatement     => countValueFailPoints(set.value)
+      case let: LetStatement     => countValueFailPoints(let.expression)
+      case put: PutStatement     => countValueFailPoints(put.value)
+      case ret: ReturnStatement  => countValueFailPoints(ret.value)
+      case snd: SendStatement    => countValueFailPoints(snd.msg)
+      case tel: TellStatement    => countValueFailPoints(tel.msg)
+      case yld: YieldStatement   => countValueFailPoints(yld.msg)
+      case mor: MorphStatement   => countValueFailPoints(mor.value)
+      case req: RequireStatement => countValueFailPoints(req.condition)
+      case whn: WhenStatement    => countValueFailPoints(whn.condition)
+      case mat: MatchStatement   => countValueFailPoints(mat.expression)
+      case _                     => 0
+    (if s.canFail then 1 else 0) + embedded
+  end countStatementFailPoints
 
   /** A23: is `s` an EFFECT statement — one that mutates state, changes behavior, or emits a
     * message? This is the shared A23 effect set: A26's pure-function bans
