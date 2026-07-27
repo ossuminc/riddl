@@ -860,6 +860,14 @@ to the right group rather than appending to a list.
   silently reattaches it (breaks `cJS`, invisible to `cJVM`). Any AST
   edit near an exported type MUST be checked with `cJS` (and `cNative`),
   not `cJVM` alone.
+- **Scala.js stale-incremental devirtualization** — when a class gains a
+  `WithX` accessor trait (or any mixin changing which field a trait
+  method resolves to), the JS linker can keep a *stale devirtualization*
+  of that method to the OLD owner's field, producing a runtime
+  `TypeError` while `cJS` succeeds. Neither a passing `cJS` nor deleting
+  the `*-fastopt` dir clears it — only `<module>JS/clean` does. Symptom:
+  JS-only runtime failure that no compile catches. Learned adding
+  `WithContexts` etc. to `Module` (#61).
 - **Parse-time messages now surface** — `warning()`/`deprecation()`
   emitted during a *successful* parse used to be dropped (`parseRule`
   returned the buffer only on fastparse failure). They now flow via
