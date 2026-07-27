@@ -315,6 +315,50 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize a nested boolean expression (A28)" in {
+      // A28 uses BAST value discriminator 5 with sub-tags 0-3 (FORMAT_REVISION 16). Verify a nested
+      // let x = (a or b) and not c survives byte-symmetric round-trip preserving its tree shape.
+      val riddlSource =
+        """domain d is {
+          |  context c is {
+          |    handler h is {
+          |      on init {
+          |        let x = (a or b) and not c
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-boolexpr")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.*
+              val lets = Finder(nebula.contents).recursiveFindByType[LetStatement]
+              assert(lets.size == 1, s"expected one LetStatement, found ${lets.size}")
+              lets.head.expression match
+                case LogicalExpression(_, LogicalOperator.And, left, right) =>
+                  left match
+                    case LogicalExpression(_, LogicalOperator.Or, a, b) =>
+                      assert(a.asInstanceOf[ValueRef].path.value == Seq("a"))
+                      assert(b.asInstanceOf[ValueRef].path.value == Seq("b"))
+                    case other => fail(s"expected Or on the left, got $other")
+                  right match
+                    case NotExpression(_, inner) =>
+                      assert(inner.asInstanceOf[ValueRef].path.value == Seq("c"))
+                    case other => fail(s"expected Not on the right, got $other")
+                case other => fail(s"expected And at the root, got $other")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize widened operands: send/morph/set/let(prompt)/yield (A54)" in {
       // A54 widens set/let values, send/tell/yield messages, and morph values. Verify each widened
       // form (including the `prompt(...)` value and inline constructors) round-trips at rev 14.

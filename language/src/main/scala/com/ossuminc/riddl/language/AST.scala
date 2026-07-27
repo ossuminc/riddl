@@ -718,7 +718,7 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue
+    GetValue | PromptValue | BooleanExpression
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInModule = Domain | Author | Comment
@@ -2406,7 +2406,7 @@ object AST:
     * extended: A28 adds a `BooleanExpression` arm. All arms are [[RiddlValue]]s so `.format` and
     * `.loc` are available on the union directly.
     */
-  type Value = LiteralString | PromptValue | Constructor | ValueRef | GetValue
+  type Value = LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -2513,6 +2513,89 @@ object AST:
     override def kind: String = "Prompt Value"
     def format: String = s"prompt(${prompt.format})"
   end PromptValue
+
+  /** A28: the relational operator of a [[ComparisonExpression]]. `symbol` is the surface syntax
+    * (`==`, `!=`, `<`, `>`, `<=`, `>=`) used by both the parser and `format`.
+    */
+  enum ComparisonOperator(val symbol: String):
+    case EQ extends ComparisonOperator("==")
+    case NE extends ComparisonOperator("!=")
+    case LT extends ComparisonOperator("<")
+    case GT extends ComparisonOperator(">")
+    case LE extends ComparisonOperator("<=")
+    case GE extends ComparisonOperator(">=")
+  end ComparisonOperator
+
+  /** A28: the boolean connective of a [[LogicalExpression]]. `symbol` is the surface keyword
+    * (`and`, `or`). Left-associative binary; the parser folds a `rep` left.
+    */
+  enum LogicalOperator(val symbol: String):
+    case And extends LogicalOperator("and")
+    case Or extends LogicalOperator("or")
+  end LogicalOperator
+
+  /** A28: the boolean-expression sub-language. An arm of the [[Value]] union so `let`/`set`/`put`/
+    * `return` accept booleans for free. All cases are [[RiddlValue]]s so `.format`/`.loc` work on
+    * the union directly. Operands are typed as [[Value]] (not `BooleanExpression`) because the
+    * layered precedence parser returns a bare `Value` atom — e.g. a [[ValueRef]] to a boolean field
+    * — at any operand position; validation (not the type system) enforces that logical/`not`
+    * operands and comparison operands are appropriately typed.
+    */
+  sealed trait BooleanExpression extends RiddlValue
+
+  /** A28: a boolean constant (`true` / `false`). Matched only within the boolean-expression rules
+    * so `true`/`false` remain legal identifiers elsewhere.
+    */
+  // `loc` required (not defaulted): @JSExportTopLevel forbids a non-trailing default and `value` has
+  // no empty default — matching the sibling value nodes (Constructor/GetValue/PromptValue).
+  @JSExportTopLevel("BooleanLiteral")
+  case class BooleanLiteral(loc: At, value: Boolean) extends BooleanExpression:
+    override def kind: String = "Boolean Literal"
+    def format: String = if value then "true" else "false"
+  end BooleanLiteral
+
+  /** A28: a relational comparison of two values (`left <op> right`). Non-associative — exactly one
+    * operator and two operands.
+    */
+  @JSExportTopLevel("ComparisonExpression")
+  case class ComparisonExpression(
+    loc: At,
+    op: ComparisonOperator,
+    left: Value,
+    right: Value
+  ) extends BooleanExpression:
+    override def kind: String = "Comparison Expression"
+    def format: String = s"${left.format} ${op.symbol} ${right.format}"
+  end ComparisonExpression
+
+  /** A28: a binary logical connective (`left and right`, `left or right`). Left-associative; the
+    * parser folds a `rep` left. A logical sub-expression operand is parenthesized in `format` so
+    * the emitted text re-parses to the same tree regardless of precedence.
+    */
+  @JSExportTopLevel("LogicalExpression")
+  case class LogicalExpression(
+    loc: At,
+    op: LogicalOperator,
+    left: Value,
+    right: Value
+  ) extends BooleanExpression:
+    override def kind: String = "Logical Expression"
+    private def paren(v: Value): String = v match
+      case _: LogicalExpression => s"(${v.format})"
+      case _                    => v.format
+    def format: String = s"${paren(left)} ${op.symbol} ${paren(right)}"
+  end LogicalExpression
+
+  /** A28: logical negation (`not expr`). A logical sub-expression operand is parenthesized in
+    * `format` so `not (a and b)` re-parses as `Not(And(a, b))`, not `And(Not(a), b)`.
+    */
+  @JSExportTopLevel("NotExpression")
+  case class NotExpression(loc: At, expr: Value) extends BooleanExpression:
+    override def kind: String = "Not Expression"
+    def format: String = expr match
+      case _: LogicalExpression => s"not (${expr.format})"
+      case _                    => s"not ${expr.format}"
+  end NotExpression
 
   /** A54: accessors for a widened message/record operand (a bare ref, or a [[Constructor]] whose
     * ref names the constructed message/record). Used by send/tell/yield (message) and morph

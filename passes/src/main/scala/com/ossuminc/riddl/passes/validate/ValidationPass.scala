@@ -2647,6 +2647,26 @@ case class ValidationPass(
             resolution.refMap
               .definitionOf[State](sr.pathId)
               .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
+      case _: BooleanExpression => None // A28: a boolean expression denotes no named Type
+
+  /** A28: the broad category of a [[Value]] for best-effort boolean/comparison checks: `"boolean"`,
+    * `"numeric"`, or `"string"`; `None` when it cannot be determined (skip the check). A
+    * [[BooleanExpression]] is always boolean; otherwise the value's named [[Type]] is classified by
+    * its underlying [[TypeExpression]], following one level of type alias.
+    */
+  private def valueCategory(v: Value, parents: Parents, lets: Seq[LetStatement]): Option[String] =
+    v match
+      case _: BooleanExpression => Some("boolean")
+      case _ => valueType(v, parents, lets).flatMap(t => typeExprCategory(t.typEx))
+
+  private def typeExprCategory(te: TypeExpression): Option[String] =
+    te match
+      case _: Bool        => Some("boolean") // Bool <: NumericType, so it must precede NumericType
+      case _: NumericType => Some("numeric")
+      case _: String_     => Some("string")
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => typeExprCategory(t.typEx))
+      case _ => None
 
   /** A54: the named [[Type]] a [[ValueRef]] resolves to, if determinable — from a `let`-local (a
     * single-component path), or a field of the message/state/function-input scope (by the path's
@@ -2708,6 +2728,46 @@ case class ValidationPass(
         gv.source match
           case ir: InputRef => checkRef[Input](ir, parents)
           case sr: StateRef => checkRef[State](sr, parents)
+      case _: BooleanLiteral        => ()
+      case ce: ComparisonExpression =>
+        // A28: recurse operands, then require both to be category-compatible when both resolve.
+        validateValue(ce.left, parents, lets)
+        validateValue(ce.right, parents, lets)
+        (valueCategory(ce.left, parents, lets), valueCategory(ce.right, parents, lets)) match
+          case (Some(a), Some(b)) if a != b =>
+            messages.addError(
+              ce.loc,
+              s"Cannot compare a $a value to a $b value with '${ce.op.symbol}'",
+              suggestion = "Compare operands of the same kind (both numeric, both strings, etc.)."
+            )
+          case _ => ()
+      case le: LogicalExpression =>
+        validateValue(le.left, parents, lets)
+        validateValue(le.right, parents, lets)
+        checkBooleanOperand(le.left, s"'${le.op.symbol}'", parents, lets)
+        checkBooleanOperand(le.right, s"'${le.op.symbol}'", parents, lets)
+      case ne: NotExpression =>
+        validateValue(ne.expr, parents, lets)
+        checkBooleanOperand(ne.expr, "'not'", parents, lets)
+
+  /** A28: require a logical/`not` operand to be boolean. Emits an Error only when the operand's
+    * category is clearly non-boolean; an undetermined category is skipped (best-effort).
+    */
+  private def checkBooleanOperand(
+    v: Value,
+    what: String,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Unit =
+    valueCategory(v, parents, lets) match
+      case Some("boolean") => ()
+      case Some(other) =>
+        messages.addError(
+          v.loc,
+          s"Operand of $what must be a boolean but is $other",
+          suggestion = "Use a comparison, a boolean field, or a boolean literal (true/false)."
+        )
+      case None => () // undetermined — skip
 
   /** A54: best-effort type-compatibility check for a [[Value]] against an expected [[Type]]. Only
     * fires when both the expected type and the value's type resolve; otherwise skipped (an

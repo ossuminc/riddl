@@ -570,7 +570,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       gv.source match
         case ir: InputRef => GetValueDto("input", Some(ir.keyword), path(ir.pathId))
         case sr: StateRef => GetValueDto("state", None, path(sr.pathId))
-    case c: Constructor => serializeConstructor(c)
+    case c: Constructor     => serializeConstructor(c)
+    case bl: BooleanLiteral => BooleanLiteralDto(bl.value)
+    case ce: ComparisonExpression =>
+      ComparisonDto(ce.op.symbol, serializeValue(ce.left), serializeValue(ce.right))
+    case le: LogicalExpression =>
+      LogicalDto(le.op.symbol, serializeValue(le.left), serializeValue(le.right))
+    case ne: NotExpression => NotDto(serializeValue(ne.expr))
 
   // A54: AST Constructor -> ConstructorValueDto.
   private def serializeConstructor(c: Constructor): ConstructorValueDto =

@@ -2252,6 +2252,27 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
             StateRef(srLoc, pid)
           case _ => throw new RuntimeException(s"Invalid get-value source type: $srcType")
         GetValue(loc, source)
+      case 5 => // A28: BooleanExpression, with a sub-tag selecting the node
+        reader.readU8() match
+          case 0 => // BooleanLiteral
+            val loc = readLocation()
+            BooleanLiteral(loc, reader.readU8() != 0)
+          case 1 => // ComparisonExpression
+            val loc = readLocation()
+            val op = ComparisonOperator.fromOrdinal(reader.readU8())
+            val left = readValue()
+            val right = readValue()
+            ComparisonExpression(loc, op, left, right)
+          case 2 => // LogicalExpression
+            val loc = readLocation()
+            val op = LogicalOperator.fromOrdinal(reader.readU8())
+            val left = readValue()
+            val right = readValue()
+            LogicalExpression(loc, op, left, right)
+          case 3 => // NotExpression
+            val loc = readLocation()
+            NotExpression(loc, readValue())
+          case sub => throw new RuntimeException(s"Invalid boolean-expression sub-tag: $sub")
       case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
   }
 

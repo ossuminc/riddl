@@ -51,4 +51,25 @@ domain Values is {
       }
     }
   }
+  // A28: the boolean-expression sub-language exercised through `let`/`set`. Comparisons, logical
+  // and/or/not, precedence, parenthesization, and boolean literals all parse and validate here.
+  context Flags is {
+    command Check is { threshold: Integer }
+    entity Gate is {
+      record GateData is { count: Integer, active: Boolean, open: Boolean }
+      state Status of record GateData
+      handler Ops is {
+        on command Check {
+          // A28: comparison + logical `and` + `not` over message/state fields (a > b and not c).
+          let ok = count > threshold and not active
+          // A28: a bare boolean literal.
+          let always = true
+          // A28: parenthesization overrides precedence ((a or b) grouped, then `and`).
+          let either = (active or open) and ok
+          // A28: `set` a boolean field to a comparison (set f to a == b).
+          set field Gate.Status.open to count == threshold
+        }
+      }
+    }
+  }
 }

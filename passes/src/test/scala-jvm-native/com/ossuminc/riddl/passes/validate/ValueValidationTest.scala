@@ -242,5 +242,72 @@ class ValueValidationTest extends AbstractValidatingTest {
         msgs.filter(m => m.kind == Error && m.message.contains("Constructor of")) mustBe empty
       }
     }
+
+    "reject a comparison of a numeric to a string operand (A28)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Num is Integer
+          |    type Str is String
+          |    handler h is {
+          |      on init {
+          |        let a: Num = "1"
+          |        let b: Str = "x"
+          |        let bad = a == b
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "Cannot compare")
+      }
+    }
+
+    "reject a non-boolean operand of a logical `and` (A28)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Num is Integer
+          |    handler h is {
+          |      on init {
+          |        let a: Num = "1"
+          |        let b: Num = "2"
+          |        let bad = a and b
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "must be a boolean")
+      }
+    }
+
+    "accept a well-formed boolean expression (A28)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Num is Integer
+          |    type Flag is Boolean
+          |    handler h is {
+          |      on init {
+          |        let n: Num = "1"
+          |        let f: Flag = "true"
+          |        let ok = n > n and f
+          |        let lit = true
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        msgs.filter(m =>
+          m.kind == Error && (m.message.contains("Cannot compare") || m.message.contains(
+            "must be a boolean"
+          ))
+        ) mustBe empty
+      }
+    }
   }
 }

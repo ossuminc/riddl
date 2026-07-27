@@ -627,6 +627,18 @@ object JsonAstBuilder:
             StateRef(At(), pathId(ref))
         GetValue(At(), src)
       case c: ConstructorValueDto => buildConstructor(c)
+      case BooleanLiteralDto(b)   => BooleanLiteral(At(), b)
+      case ComparisonDto(op, left, right) =>
+        val cop = ComparisonOperator.values
+          .find(_.symbol == op)
+          .getOrElse { ctx.err(s"unknown comparison operator '$op'"); ComparisonOperator.EQ }
+        ComparisonExpression(At(), cop, buildValue(left), buildValue(right))
+      case LogicalDto(op, left, right) =>
+        val lop = LogicalOperator.values
+          .find(_.symbol == op)
+          .getOrElse { ctx.err(s"unknown logical operator '$op'"); LogicalOperator.And }
+        LogicalExpression(At(), lop, buildValue(left), buildValue(right))
+      case NotDto(expr) => NotExpression(At(), buildValue(expr))
 
   // A54: ConstructorValueDto -> AST Constructor.
   private def buildConstructor(c: ConstructorValueDto)(using ctx: Ctx): Constructor =

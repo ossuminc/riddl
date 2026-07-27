@@ -277,6 +277,37 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip a nested boolean expression (A28) losslessly" in {
+      val bModel =
+        """domain BD is {
+          |  context c is {
+          |    handler h is {
+          |      on init is {
+          |        let x = (a or b) and not c
+          |        let y = true
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(bModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // JsonifierPass emits the boolean-expression discriminators...
+          json1 must include("\"logical\"")
+          json1 must include("\"not\"")
+          json1 must include("\"boolLiteral\"")
+          // ...and JsonAstBuilder rebuilds them so the JSON is a fixed point.
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the boolean-expression JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the boolean-expression model failed: $errors")
+      end match
+    }
+
     "round-trip widened operands: send/morph/set/let(prompt)/yield constructors (A54) losslessly" in {
       val wModel =
         """domain WD is {

@@ -268,13 +268,96 @@ private[parsing] trait StatementParser {
     )./.map { case (start, str, end) => PromptValue(at(start, end), str) }
   }
 
-  // A54: a value expression. The alternation is ordered so the keyword-led forms (`prompt(…)`,
-  // constructor via a message/record ref keyword, `get from`) are tried before the permissive
-  // bare-path `valueRef`. fastparse `|` unifies to the least upper bound (RiddlValue), so each branch
-  // is widened to the `Value` union explicitly (mirror foreachCollection).
+  // A54/A28: a value expression. Keyword-led forms (`prompt(…)`, constructor, `get from`) are tried
+  // first; everything else flows through the boolean-expression sub-language (`booleanExpr`), which
+  // returns the bare atom unchanged when no comparison/logical operator is present — so a plain
+  // `let x = y` still yields exactly a `ValueRef`, not a wrapper. fastparse `|` unifies to the least
+  // upper bound (RiddlValue), so each branch is widened to `Value` explicitly (mirror foreachCollection).
   def value[u: P]: P[Value] = {
     P(
       literalString.map(ls => ls: Value) |
+        promptValue.map(pv => pv: Value) |
+        constructor.map(c => c: Value) |
+        getValue.map(gv => gv: Value) |
+        booleanExpr
+    )
+  }
+
+  // A28: the boolean-expression sub-language — a layered left-fold, loosest to tightest:
+  //   or < and < not < comparison < atom.
+  // CONTEXT-SENSITIVE OPERATORS: `and`/`or`/`not`/`true`/`false` are matched ONLY here (each with a
+  // keyword word-boundary via `Keywords.keyword`, so `andrew`/`notify`/`truthy` stay identifiers).
+  // They are NOT added to any global reserved-word filter, so they remain legal identifiers elsewhere.
+  // Every level returns the bare `Value` atom when no operator is present, so plain values are
+  // never wrapped.
+
+  // `or` level (loosest). Left-associative fold of `and`-expressions.
+  private def booleanExpr[u: P]: P[Value] = {
+    P(Index ~ andExpr ~ (Keywords.keyword("or") ~/ andExpr).rep ~ Index).map {
+      case (start, first, rest, end) =>
+        rest.foldLeft(first)((l, r) => LogicalExpression(at(start, end), LogicalOperator.Or, l, r))
+    }
+  }
+
+  // `and` level. Left-associative fold of `not`-expressions.
+  private def andExpr[u: P]: P[Value] = {
+    P(Index ~ notExpr ~ (Keywords.keyword("and") ~/ notExpr).rep ~ Index).map {
+      case (start, first, rest, end) =>
+        rest.foldLeft(first)((l, r) => LogicalExpression(at(start, end), LogicalOperator.And, l, r))
+    }
+  }
+
+  // `not` level (prefix). Recurses so `not not a` works; falls through to `comparison`.
+  private def notExpr[u: P]: P[Value] = {
+    P(
+      (Index ~ Keywords.keyword("not") ~/ notExpr ~ Index).map { case (start, inner, end) =>
+        NotExpression(at(start, end), inner): Value
+      } | comparison
+    )
+  }
+
+  // comparison level (non-associative). One optional relational operator between two atoms; when
+  // absent, the bare atom is returned unchanged (NOT wrapped in a BooleanExpression).
+  private def comparison[u: P]: P[Value] = {
+    P(Index ~ booleanAtom ~ (comparisonOperator ~/ booleanAtom).? ~ Index).map {
+      case (start, left, Some((op, right)), end) =>
+        ComparisonExpression(at(start, end), op, left, right)
+      case (_, left, None, _) => left
+    }
+  }
+
+  // Relational operators. `StringIn` is longest-match, so `<=`/`>=` win over `<`/`>` and `!=`/`==`
+  // are matched as whole tokens.
+  private def comparisonOperator[u: P]: P[ComparisonOperator] = {
+    P(StringIn("==", "!=", "<=", ">=", "<", ">").!).map {
+      case "==" => ComparisonOperator.EQ
+      case "!=" => ComparisonOperator.NE
+      case "<=" => ComparisonOperator.LE
+      case ">=" => ComparisonOperator.GE
+      case "<"  => ComparisonOperator.LT
+      case _    => ComparisonOperator.GT
+    }
+  }
+
+  // A28: a boolean literal (`true`/`false`), matched with a keyword word-boundary so `truthy` is not
+  // read as `true` + `thy`.
+  private def booleanLiteral[u: P]: P[BooleanLiteral] = {
+    P(
+      Index ~ (Keywords.keyword("true").map(_ => true) | Keywords
+        .keyword("false")
+        .map(_ => false)) ~ Index
+    ).map { case (start, b, end) => BooleanLiteral(at(start, end), b) }
+  }
+
+  // A28: an atom reachable through a boolean expression: a boolean literal, a parenthesized boolean
+  // expression, or any existing value atom (so a comparison operand can be a literal/get/constructor/
+  // prompt/ref). `booleanLiteral` precedes `valueRef` so `true`/`false` are literals here; `valueRef`
+  // stays last (permissive bare path).
+  private def booleanAtom[u: P]: P[Value] = {
+    P(
+      booleanLiteral.map(bl => bl: Value) |
+        (Punctuation.roundOpen ~ booleanExpr ~ Punctuation.roundClose) |
+        literalString.map(ls => ls: Value) |
         promptValue.map(pv => pv: Value) |
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |

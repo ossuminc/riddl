@@ -343,6 +343,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         gv.source match
           case ir: InputRef => associateUsage[Input](parents.head, resolveARef[Input](ir, parents))
           case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
+      // A28: recurse into boolean-expression operands so any nested ValueRef/GetValue/Constructor
+      // atoms resolve (a BooleanLiteral has no references).
+      case _: BooleanLiteral => ()
+      case ce: ComparisonExpression =>
+        resolveValue(ce.left, parents); resolveValue(ce.right, parents)
+      case le: LogicalExpression => resolveValue(le.left, parents); resolveValue(le.right, parents)
+      case ne: NotExpression     => resolveValue(ne.expr, parents)
 
   /** A54: resolve a message/record operand — a bare ref (resolved as a Type) or a [[Constructor]]
     * (resolved via [[resolveValue]]). Shared by send/tell/yield (message) and morph (record).

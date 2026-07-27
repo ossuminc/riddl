@@ -94,5 +94,39 @@ class ValueRoundTripTest extends AbstractValidatingTest {
             case other        => fail(s"expected InputRef source, got $other")
         case other => fail(s"expected a GetValue put value, got $other")
     }
+
+    "round-trip a nested boolean expression through prettify preserving structure (A28)" in {
+      (td: TestData) =>
+        val boolSrc =
+          """domain d is {
+            |  context c is {
+            |    handler h is {
+            |      on init {
+            |        let x = (a or b) and not c
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+        val pretty = prettify(parse(boolSrc, "boolsrc"))
+        val regen = parse(pretty, "boolregen")
+        val let = Finder(regen)
+          .recursiveFindByType[LetStatement]
+          .headOption
+          .getOrElse(fail("let statement lost"))
+        // Structure must survive: And(Or(a, b), Not(c)) — precedence preserved via parenthesization.
+        let.expression match
+          case LogicalExpression(_, LogicalOperator.And, left, right) =>
+            left match
+              case LogicalExpression(_, LogicalOperator.Or, a, b) =>
+                a.asInstanceOf[ValueRef].path.value mustBe Seq("a")
+                b.asInstanceOf[ValueRef].path.value mustBe Seq("b")
+              case other => fail(s"expected Or on the left, got $other")
+            right match
+              case NotExpression(_, inner) =>
+                inner.asInstanceOf[ValueRef].path.value mustBe Seq("c")
+              case other => fail(s"expected Not on the right, got $other")
+          case other => fail(s"expected And at the root after round-trip, got $other")
+    }
   }
 }

@@ -25,6 +25,34 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
     s.isIdentified must be(false)
     s.isProcessor must be(false)
   }
+  // A28: parse `body` as the single statement inside a context handler `on init` clause and return
+  // that statement. Only parsing runs (no passes), so bare identifiers need not resolve.
+  private def parseStmt(body: String, td: TestData): Statement = {
+    val input = RiddlParserInput(
+      s"""domain d is {
+         |  context c is {
+         |    handler h is {
+         |      on init {
+         |        $body
+         |      }
+         |    }
+         |  }
+         |}""".stripMargin,
+      td
+    )
+    TopLevelParser.parseInput(input) match
+      case Left(messages) => fail(messages.justErrors.format)
+      case Right(root) =>
+        val clause =
+          AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
+        clause.contents.filter[Statement].head
+  }
+
+  private def parseLetExpr(expr: String, td: TestData): Value =
+    parseStmt(s"let x = $expr", td).asInstanceOf[LetStatement].expression
+
+  private def vref(v: Value): String = v.asInstanceOf[ValueRef].path.value.mkString(".")
+
   "Statements" must {
     "check Prompt Statements" in { td =>
       val comment = LiteralString(At.empty, "foo")
@@ -399,6 +427,101 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       TopLevelParser.parseInput(input) match
         case Left(messages) => messages.hasErrors must be(true)
         case Right(_)       => fail("expected a parse ban for 'return' outside a function")
+    }
+
+    "parse each comparison operator (A28)" in { (td: TestData) =>
+      val ops = Seq(
+        "==" -> ComparisonOperator.EQ,
+        "!=" -> ComparisonOperator.NE,
+        "<" -> ComparisonOperator.LT,
+        ">" -> ComparisonOperator.GT,
+        "<=" -> ComparisonOperator.LE,
+        ">=" -> ComparisonOperator.GE
+      )
+      ops.foreach { case (sym, op) =>
+        parseLetExpr(s"a $sym b", td) match
+          case ce: ComparisonExpression =>
+            ce.op must be(op)
+            vref(ce.left) must be("a")
+            vref(ce.right) must be("b")
+          case other => fail(s"expected a ComparisonExpression for '$sym', got $other")
+      }
+    }
+
+    "parse `or`/`and` precedence: a or b and c => Or(a, And(b, c)) (A28)" in { (td: TestData) =>
+      parseLetExpr("a or b and c", td) match
+        case LogicalExpression(_, LogicalOperator.Or, left, right) =>
+          vref(left) must be("a")
+          right match
+            case LogicalExpression(_, LogicalOperator.And, b, c) =>
+              vref(b) must be("b"); vref(c) must be("c")
+            case other => fail(s"expected And on the right, got $other")
+        case other => fail(s"expected Or at the root, got $other")
+    }
+
+    "parse `not` precedence: not a and b => And(Not(a), b) (A28)" in { (td: TestData) =>
+      parseLetExpr("not a and b", td) match
+        case LogicalExpression(_, LogicalOperator.And, left, right) =>
+          left match
+            case NotExpression(_, inner) => vref(inner) must be("a")
+            case other                   => fail(s"expected Not on the left, got $other")
+          vref(right) must be("b")
+        case other => fail(s"expected And at the root, got $other")
+    }
+
+    "parenthesization overrides precedence: (a or b) and c => And(Or(a, b), c) (A28)" in {
+      (td: TestData) =>
+        parseLetExpr("(a or b) and c", td) match
+          case LogicalExpression(_, LogicalOperator.And, left, right) =>
+            left match
+              case LogicalExpression(_, LogicalOperator.Or, a, b) =>
+                vref(a) must be("a"); vref(b) must be("b")
+              case other => fail(s"expected Or on the left, got $other")
+            vref(right) must be("c")
+          case other => fail(s"expected And at the root, got $other")
+    }
+
+    "parse a boolean literal: true (A28)" in { (td: TestData) =>
+      parseLetExpr("true", td) match
+        case BooleanLiteral(_, v) => v must be(true)
+        case other                => fail(s"expected a BooleanLiteral, got $other")
+      parseLetExpr("false", td) match
+        case BooleanLiteral(_, v) => v must be(false)
+        case other                => fail(s"expected a BooleanLiteral, got $other")
+    }
+
+    "parse a combined expression: a > b and not c (A28)" in { (td: TestData) =>
+      parseLetExpr("a > b and not c", td) match
+        case LogicalExpression(_, LogicalOperator.And, left, right) =>
+          left match
+            case ComparisonExpression(_, ComparisonOperator.GT, a, b) =>
+              vref(a) must be("a"); vref(b) must be("b")
+            case other => fail(s"expected a comparison on the left, got $other")
+          right match
+            case NotExpression(_, inner) => vref(inner) must be("c")
+            case other                   => fail(s"expected Not on the right, got $other")
+        case other => fail(s"expected And at the root, got $other")
+    }
+
+    "leave a plain value unwrapped (regression): let x = someField => ValueRef (A28)" in {
+      (td: TestData) =>
+        // A bare value must parse to exactly its atom, NOT a BooleanExpression wrapper.
+        parseLetExpr("someField", td) mustBe a[ValueRef]
+        vref(parseLetExpr("someField", td)) must be("someField")
+        parseLetExpr("\"hello\"", td) mustBe a[LiteralString]
+        // Operator substrings in identifiers stay identifiers (word boundary): `android`, `notify`.
+        parseLetExpr("android", td) mustBe a[ValueRef]
+        vref(parseLetExpr("android", td)) must be("android")
+        parseLetExpr("notify", td) mustBe a[ValueRef]
+    }
+
+    "parse `set f to a == b` as a comparison (A28)" in { (td: TestData) =>
+      parseStmt("set field F to a == b", td) match
+        case SetStatement(_, _, ce: ComparisonExpression) =>
+          ce.op must be(ComparisonOperator.EQ)
+          vref(ce.left) must be("a")
+          vref(ce.right) must be("b")
+        case other => fail(s"expected a SetStatement with a comparison, got $other")
     }
 
     "ban a put statement outside a context handler (A45)" in { (td: TestData) =>

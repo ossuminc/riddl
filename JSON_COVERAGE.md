@@ -161,6 +161,10 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | Constructor / ConstructorArg | ✅ A54 | refKind command/event/query/result/record; positional + named args |
 | ValueRef | ✅ A54 | `{ "value": "valueRef", "path": ... }` |
 | GetValue | ✅ A54 | `{ "value": "get", "source": "input"\|"state", "ref": ... }` |
+| BooleanLiteral | ✅ A28 | `{ "value": "boolLiteral", "bool": true\|false }` |
+| ComparisonExpression | ✅ A28 | `{ "value": "comparison", "op": "=="\|..., "left": <value>, "right": <value> }` |
+| LogicalExpression | ✅ A28 | `{ "value": "logical", "op": "and"\|"or", "left": <value>, "right": <value> }` |
+| NotExpression | ✅ A28 | `{ "value": "not", "expr": <value> }` |
 
 ## Metadata
 

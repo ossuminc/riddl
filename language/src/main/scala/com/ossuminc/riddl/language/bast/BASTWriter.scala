@@ -1113,9 +1113,11 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeValue(s.value)
   }
 
-  /** A54: self-contained value codec. A leading discriminator byte selects the arm
-    * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue); the reader mirrors
-    * this exactly.
+  /** A54/A28: self-contained value codec. A leading discriminator byte selects the arm
+    * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue, 5=BooleanExpression);
+    * the reader mirrors this exactly. Discriminator 5 is followed by a sub-tag byte selecting the
+    * boolean node (0=BooleanLiteral, 1=Comparison, 2=Logical, 3=Not); operator enums are stored by
+    * ordinal.
     */
   def writeValue(v: Value): Unit = {
     v match
@@ -1147,6 +1149,30 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
             writer.writeU8(1)
             writeLocation(sr.loc)
             writePathIdentifierInline(sr.pathId)
+      case bl: BooleanLiteral =>
+        writer.writeU8(5)
+        writer.writeU8(0)
+        writeLocation(bl.loc)
+        writer.writeU8(if bl.value then 1 else 0)
+      case ce: ComparisonExpression =>
+        writer.writeU8(5)
+        writer.writeU8(1)
+        writeLocation(ce.loc)
+        writer.writeU8(ce.op.ordinal)
+        writeValue(ce.left)
+        writeValue(ce.right)
+      case le: LogicalExpression =>
+        writer.writeU8(5)
+        writer.writeU8(2)
+        writeLocation(le.loc)
+        writer.writeU8(le.op.ordinal)
+        writeValue(le.left)
+        writeValue(le.right)
+      case ne: NotExpression =>
+        writer.writeU8(5)
+        writer.writeU8(3)
+        writeLocation(ne.loc)
+        writeValue(ne.expr)
   }
 
   def writeConstructor(c: Constructor): Unit = {

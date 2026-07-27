@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 00:59 UTC
+# Generated: 2026-07-27 02:40 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -214,12 +214,19 @@ reply-statement ::= "reply" ws1 message-value
 # Variable operations. A54: `set`/`let` operands are now full value expressions.
 the-set-statement ::= "set" ws (field-ref | state-ref) ws "to" ws1 value
 let-statement ::= "let" ws1 identifier ws (":" type-ref)? ws "=" ws value
-value ::= literal-string | prompt-value | constructor | get-value | value-ref
+value ::= literal-string | prompt-value | constructor | get-value | boolean-expression
 prompt-value ::= "prompt" ws "(" ws literal-string ws ")"
 constructor ::= (message-ref | record-ref) ws "(" ws (constructor-arg ("," constructor-arg)*)? ws ")"
 constructor-arg ::= (identifier "=" value) | value
 get-value ::= "get" ws "from" ws (input-ref | state-ref)
 value-ref ::= path-identifier
+boolean-expression ::= and-expression ws ("or" and-expression)*
+and-expression ::= not-expression ws ("and" not-expression)*
+not-expression ::= "not" ws1 not-expression | comparison
+comparison ::= boolean-atom ws (comparison-operator boolean-atom)?
+comparison-operator ::= "==" | "!=" | "<=" | ">=" | "<" | ">"
+boolean-atom ::= boolean-literal | "(" ws boolean-expression ws ")" | literal-string | prompt-value | constructor | get-value | value-ref
+boolean-literal ::= "true" | "false"
 put-statement ::= "put" ws1 value ws "to" ws1 output-ref
 return-statement ::= "return" ws1 value
 

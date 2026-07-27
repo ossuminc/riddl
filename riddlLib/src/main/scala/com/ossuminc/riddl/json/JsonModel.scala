@@ -383,6 +383,18 @@ object JsonModel:
     */
   case class GetValueDto(source: String, keyword: Option[String], ref: String) extends ValueDto
 
+  /** `{ "value": "boolLiteral", "bool": true|false }` — a boolean literal (A28). */
+  case class BooleanLiteralDto(bool: Boolean) extends ValueDto
+
+  /** `{ "value": "comparison", "op": "=="|..., "left": <value>, "right": <value> }` (A28). */
+  case class ComparisonDto(op: String, left: ValueDto, right: ValueDto) extends ValueDto
+
+  /** `{ "value": "logical", "op": "and"|"or", "left": <value>, "right": <value> }` (A28). */
+  case class LogicalDto(op: String, left: ValueDto, right: ValueDto) extends ValueDto
+
+  /** `{ "value": "not", "expr": <value> }` — logical negation (A28). */
+  case class NotDto(expr: ValueDto) extends ValueDto
+
   /** `{ "name"?: "<field>", "value": <value> }` — a positional or named constructor argument. */
   case class ConstructorArgDto(name: Option[String], value: ValueDto)
 
@@ -881,10 +893,14 @@ object JsonModel:
   private def readValueObj(v: ujson.Value): ValueDto =
     val m = v.obj
     m("value").str match
-      case "literal"  => LiteralValueDto(m("text").str)
-      case "prompt"   => PromptValueDto(m("prompt").str)
-      case "valueRef" => ValueRefDto(m("path").str)
-      case "get"      => GetValueDto(m("source").str, m.get("keyword").map(_.str), m("ref").str)
+      case "literal"     => LiteralValueDto(m("text").str)
+      case "prompt"      => PromptValueDto(m("prompt").str)
+      case "valueRef"    => ValueRefDto(m("path").str)
+      case "get"         => GetValueDto(m("source").str, m.get("keyword").map(_.str), m("ref").str)
+      case "boolLiteral" => BooleanLiteralDto(m("bool").bool)
+      case "comparison"  => ComparisonDto(m("op").str, readValue(m("left")), readValue(m("right")))
+      case "logical"     => LogicalDto(m("op").str, readValue(m("left")), readValue(m("right")))
+      case "not"         => NotDto(readValue(m("expr")))
       case "constructor" =>
         val args = m
           .get("args")
@@ -915,6 +931,24 @@ object JsonModel:
             ++ keyword.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
             ++ Seq("ref" -> (ujson.Str(ref): ujson.Value))
         )
+      case BooleanLiteralDto(b) =>
+        ujson.Obj("value" -> ujson.Str("boolLiteral"), "bool" -> ujson.Bool(b))
+      case ComparisonDto(op, left, right) =>
+        ujson.Obj(
+          "value" -> ujson.Str("comparison"),
+          "op" -> ujson.Str(op),
+          "left" -> writeValue(left),
+          "right" -> writeValue(right)
+        )
+      case LogicalDto(op, left, right) =>
+        ujson.Obj(
+          "value" -> ujson.Str("logical"),
+          "op" -> ujson.Str(op),
+          "left" -> writeValue(left),
+          "right" -> writeValue(right)
+        )
+      case NotDto(expr) =>
+        ujson.Obj("value" -> ujson.Str("not"), "expr" -> writeValue(expr))
       case ConstructorValueDto(refKind, ref, args) =>
         ujson.Obj(
           "value" -> ujson.Str("constructor"),
