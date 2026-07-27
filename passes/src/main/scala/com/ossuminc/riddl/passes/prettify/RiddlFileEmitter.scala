@@ -181,9 +181,13 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   }
 
   def emitConstant(constant: Constant): this.type =
+    // `constant <id> is <type> = <value>` — the type expression is part of the surface syntax, so
+    // it must be emitted for the round trip to re-parse.
     addIndent("constant ")
     add(constant.id.format)
     add(" is ")
+    emitTypeExpression(constant.typeEx)
+    add(" = ")
     add(constant.value.format)
     emitMetaData(constant.metadata)
   end emitConstant

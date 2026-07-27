@@ -76,6 +76,7 @@ class TestVisitor extends PassVisitor:
     kindMap.put(value.kind, old + 1)
 
   def openType(typ: Type, parents: Parents): Unit = incr(typ)
+  def openModule(module: Module, parents: Parents): Unit = incr(module)
   def openDomain(domain: Domain, parents: Parents): Unit = incr(domain)
   def openContext(context: Context, parents: Parents): Unit = incr(context)
   def openEntity(entity: Entity, parents: Parents): Unit = incr(entity)
@@ -97,6 +98,7 @@ class TestVisitor extends PassVisitor:
 
   // Close for each type of container definition
   def closeType(typ: Type, parents: Parents): Unit = decr(typ)
+  def closeModule(module: Module, parents: Parents): Unit = decr(module)
   def closeDomain(domain: Domain, parents: Parents): Unit = decr(domain)
   def closeContext(context: Context, parents: Parents): Unit = decr(context)
   def closeEntity(entity: Entity, parents: Parents): Unit = decr(entity)

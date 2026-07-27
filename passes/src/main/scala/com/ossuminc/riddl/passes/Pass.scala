@@ -495,6 +495,7 @@ abstract class HierarchyPass(
 trait PassVisitor:
   // Open for each Container Definition
   def openType(typ: Type, parents: Parents): Unit
+  def openModule(module: Module, parents: Parents): Unit
   def openDomain(domain: Domain, parents: Parents): Unit
   def openContext(context: Context, parents: Parents): Unit
   def openEntity(entity: Entity, parents: Parents): Unit
@@ -517,6 +518,7 @@ trait PassVisitor:
 
   // Close for each type of container definition
   def closeType(typ: Type, parents: Parents): Unit
+  def closeModule(module: Module, parents: Parents): Unit
   def closeDomain(domain: Domain, parents: Parents): Unit
   def closeContext(context: Context, parents: Parents): Unit
   def closeEntity(entity: Entity, parents: Parents): Unit
@@ -578,6 +580,7 @@ abstract class VisitingPass[VT <: PassVisitor](
   protected final def openContainer(container: Definition, parents: Parents): Unit =
     container match
       case typ: Type              => visitor.openType(typ, parents)
+      case module: Module         => visitor.openModule(module, parents)
       case domain: Domain         => visitor.openDomain(domain, parents)
       case context: Context       => visitor.openContext(context, parents)
       case entity: Entity         => visitor.openEntity(entity, parents)
@@ -608,6 +611,7 @@ abstract class VisitingPass[VT <: PassVisitor](
   protected final def closeContainer(container: Definition, parents: Parents): Unit =
     container match
       case typ: Type              => visitor.closeType(typ, parents)
+      case module: Module         => visitor.closeModule(module, parents)
       case domain: Domain         => visitor.closeDomain(domain, parents)
       case context: Context       => visitor.closeContext(context, parents)
       case entity: Entity         => visitor.closeEntity(entity, parents)

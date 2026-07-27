@@ -1928,11 +1928,16 @@ case class ValidationPass(
             }
           }
         }
+      case Some(_: Module) =>
+        // S61-1: a Module is a FLAT collection of any top-level definition, so an adaptor may sit
+        // directly in one. The context-pairing checks above need a parent Context to compare
+        // against and simply do not apply here; the adaptor's own internal rules still do.
+        checkContainer(parents, adaptor)
       case None | Some(_) =>
         messages.addError(
           adaptor.errorLoc,
           "Adaptor not contained within Context",
-          suggestion = "Define the adaptor inside a context."
+          suggestion = "Define the adaptor inside a context or a module."
         )
     }
   }

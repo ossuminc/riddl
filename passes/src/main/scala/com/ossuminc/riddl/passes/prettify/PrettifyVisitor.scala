@@ -43,6 +43,11 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         rfe.emitMetaData(typ.metadata)
     }
 
+  // A Module is emitted as `module <id> is { ... }` so that parse -> prettify -> re-parse keeps
+  // the wrapper (and everything flat inside it) exactly where it was.
+  def openModule(module: Module, parents: Parents): Unit = open(module)
+  def closeModule(module: Module, parents: Parents): Unit = close(module)
+
   def openDomain(domain: Domain, parents: Parents): Unit = open(domain)
   def closeDomain(domain: Domain, parents: Parents): Unit = close(domain)
 
@@ -519,6 +524,7 @@ def keyword(definition: Definition): String =
     case input: Input   => input.nounAlias
     case output: Output => output.nounAlias
     case _: Handler     => Keyword.handler
+    case _: Module      => Keyword.module
     case _: Inlet       => Keyword.inlet
     case _: Invariant   => Keyword.invariant
     case _: Outlet      => Keyword.outlet
