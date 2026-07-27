@@ -479,16 +479,19 @@ case class ValidationPass(
             val finder = Finder(omc.contents)
             val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
             val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
+            val yields: Seq[YieldStatement] = finder.recursiveFindByType[YieldStatement]
             val foundSend = sends.nonEmpty &&
               sends.exists(s => operandMessageKind(s.msg) == AggregateUseCase.EventCase)
             val foundTell = tells.nonEmpty &&
               tells.exists(t => operandMessageKind(t.msg) == AggregateUseCase.EventCase)
-            if !(foundSend || foundTell) then
+            val foundYield = yields.nonEmpty &&
+              yields.exists(y => operandMessageKind(y.msg) == AggregateUseCase.EventCase)
+            if !(foundSend || foundTell || foundYield) then
               messages.addCompleteness(
                 omc.errorLoc,
                 s"Command processing in ${entity.identify} should result in sending an event",
                 suggestion =
-                  "Send or tell an event from this command handler, e.g. 'send event SomethingHappened to outlet ...'."
+                  "Send, tell, or yield an event from this command handler, e.g. 'send event SomethingHappened to outlet ...' or 'yield event SomethingHappened'."
               )
           case AggregateUseCase.QueryCase =>
             val finder = Finder(omc.contents)

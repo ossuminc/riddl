@@ -150,6 +150,30 @@ class HandlerValidatorTest extends AbstractValidatingTest {
       }
     }
 
+    "produce no 'send an event' warning when a command handler yields an event" in {
+      (_: TestData) =>
+        val input =
+          """domain ignore is {
+          |  context ignore is {
+          |    command C is { field: Integer }
+          |    event E is { field: Integer }
+          |    entity example is {
+          |      handler default is {
+          |        on command C {
+          |          yield event E
+          |        }
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin
+        pc.withOptions(CommonOptions.default) { _ =>
+          parseAndValidate(input, "test", shouldFailOnErrors = false) {
+            case (_, _, messages: Messages) =>
+              messages.justWarnings.format mustNot include("should result in sending an event")
+          }
+        }
+    }
+
     "validate entity 'on activate'/'on passivate'/'on event' clauses without spurious errors" in {
       (td: TestData) =>
         val input = RiddlParserInput(

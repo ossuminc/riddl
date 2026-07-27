@@ -156,6 +156,43 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "not warn when command handler yields an event" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type Cmd is command { data: String }
+          |    type Evt is event { data: String }
+          |    entity E is {
+          |      record Fields is { data: String }
+          |      state Main of record E.Fields
+          |      handler H is {
+          |        on init { set field E.Fields.data to "x" }
+          |        on command D.C.Cmd {
+          |          yield event D.C.Evt
+          |        }
+          |        on query D.C.GetData {
+          |          do "return data"
+          |        }
+          |      }
+          |    }
+          |    type GetData is query { id: String }
+          |    source Events is { outlet out is type Evt }
+          |    sink Incoming is { inlet in is type Cmd }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
+            "should result in sending an event"
+          )
+        ) mustBe false
+      }
+    }
+
     "warn when query handler does not send result" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
