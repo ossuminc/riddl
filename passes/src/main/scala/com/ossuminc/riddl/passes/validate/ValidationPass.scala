@@ -1153,6 +1153,37 @@ case class ValidationPass(
       bi.loc,
       suggestion = "Give the imported file a '.bast' extension."
     )
+    checkImportedDefinitionsMakeSenseHere(bi, parents)
+  }
+
+  /** Sense-at-location: a definition plucked out of a `.bast` file must be structurally legal WHERE
+    * THE DIRECTIVE SITS — exactly as if it had been written there by hand. Importing an Entity into
+    * a Domain, or a Context into the Root, produces a tree the parser would have rejected, and
+    * flattening it would make that tree permanent.
+    *
+    * The placement rule is not restated here: `AST.mayOccurDirectlyIn` answers it from the very
+    * contents unions that define each container, so this check widens automatically whenever a
+    * container does.
+    *
+    * A directive whose contents are empty is skipped — it either failed to load or was never
+    * loaded, and the load failure is reported elsewhere.
+    */
+  private def checkImportedDefinitionsMakeSenseHere(bi: BASTImport, parents: Parents): Unit = {
+    if bi.contents.nonEmpty then
+      parents.headOption.foreach { parent =>
+        bi.contents.toSeq.foreach {
+          case d: Definition if AST.mayOccurDirectlyIn(parent, d).contains(false) =>
+            messages.addError(
+              bi.loc,
+              s"imported ${d.kind} '${d.id.value}' is not allowed at this location",
+              suggestion = s"Move the load directive into a container that may hold a ${d.kind}" +
+                s" (a 'module' accepts any top-level definition), or select something that fits" +
+                s" here with 'im${"port"} <kind> <id> from \"${bi.path.s}\"'."
+            )
+          case _ => () // legal here, or no placement rule applies
+        }
+      }
+    end if
   }
 
   private def validateSchema(

@@ -16,8 +16,8 @@ import java.nio.file.Files
   *
   * JSON is a FLATTENED projection of the AST: `JsonifierPass` is a `HierarchyPass`, and its
   * traversal descends into a `BASTImport` without pushing the wrapper onto the parent stack. So the
-  * loaded definitions are emitted as members of the container that holds the directive, and the
-  * AST -> JSON -> AST -> JSON fixed point still holds. JVM-only because it needs a `.bast` file on
+  * loaded definitions are emitted as members of the container that holds the directive, and the AST
+  * -> JSON -> AST -> JSON fixed point still holds. JVM-only because it needs a `.bast` file on
   * disk.
   */
 class JsonImportRoundTripTest extends AnyWordSpec with Matchers {
@@ -50,7 +50,7 @@ class JsonImportRoundTripTest extends AnyWordSpec with Matchers {
              |""".stripMargin
         RiddlLib.parseString(model) match
           case RiddlResult.Failure(errors) => fail(s"model parse failed: $errors")
-          case RiddlResult.Success(root0)  =>
+          case RiddlResult.Success(root0) =>
             val json1 = RiddlLib.root2Json(root0)
             // The loaded domain is present, not lost with the wrapper.
             json1 must include("\"Lib\"")

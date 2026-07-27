@@ -21,12 +21,11 @@ import java.nio.file.{Files, Path}
 /** S61-2: import-loading maturation.
   *
   * A load (`import`) plucks definitions out of an already-compiled `.bast` file. Loading populates
-  * the `BASTImport` WRAPPER only — the definitions are visible to every pass through traversal but
-  * are NOT spliced into the enclosing container until an explicit flatten runs. These tests pin
-  * down the gaps slice 2 closed:
+  * the `BASTImport` WRAPPER only — nothing is spliced into the enclosing container until an
+  * explicit flatten runs. These tests pin down the gaps slice 2 closed:
   *
-  *   - the full form parses at all (`Keywords.import_` ends in a cut, so the old
-  *     `selective | full` choice could never fall through to the full form),
+  *   - the full form parses at all (`Keywords.import_` ends in a cut, so the old `selective | full`
+  *     choice could never fall through to the full form),
   *   - all three surface forms load, including `im`+`port domain X from ...`, which used to hit a
   *     stub that returned a `NotImplemented` placeholder Domain,
   *   - `parseString` loads (it previously did not, so every string-parsed model silently kept empty
@@ -139,7 +138,7 @@ class BASTImportLoadingTest extends AnyWordSpec with Matchers {
              |domain App is { ??? }
              |""".stripMargin
         TopLevelParser.parseString(src) match
-          case Left(msgs)  => fail(s"parseString failed:\n${msgs.format}")
+          case Left(msgs) => fail(s"parseString failed:\n${msgs.format}")
           case Right(root) =>
             val bi = theOnlyImport(root)
             bi.contents.toSeq.collect { case d: Domain => d.id.value } mustBe Seq("Lib")
@@ -262,7 +261,7 @@ class BASTImportLoadingTest extends AnyWordSpec with Matchers {
           .bytes
 
         BASTReader.read(bytes) match
-          case Left(msgs)    => fail(s"BAST read failed:\n${msgs.format}")
+          case Left(msgs) => fail(s"BAST read failed:\n${msgs.format}")
           case Right(module) =>
             val bi = theOnlyImport(module)
             bi.kindOpt mustBe Some("type")

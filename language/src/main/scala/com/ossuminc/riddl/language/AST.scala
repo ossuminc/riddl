@@ -744,6 +744,34 @@ object AST:
   /** The root is a module that can have other modules and BAST imports */
   type RootContents = OccursInRoot | Include[OccursInRoot] | Module | BASTImport
 
+  /** Whether `value` may occur DIRECTLY inside `container`, i.e. whether writing it there would
+    * have parsed.
+    *
+    * The answer is a type test against the very `OccursInX` union that defines the container's
+    * contents, so this cannot drift out of step with the AST or the parser: widen a union and this
+    * predicate widens with it.
+    *
+    * Only the containers in which a [[BASTImport]] is legal (Root, Module, Domain, Context) have a
+    * rule. Everywhere else the parser is the only gatekeeper and there is nothing to re-check, so
+    * the answer is `None` — "no rule, do not judge".
+    *
+    * @param container
+    *   The container the value would sit in
+    * @param value
+    *   The value in question
+    * @return
+    *   `Some(true)`/`Some(false)` when a placement rule applies, `None` when none does
+    */
+  def mayOccurDirectlyIn(container: Container[?], value: RiddlValue): Option[Boolean] =
+    container match
+      case _: Root    => Some(value.isInstanceOf[OccursInRoot])
+      case _: Module  => Some(value.isInstanceOf[OccursInModule])
+      case _: Domain  => Some(value.isInstanceOf[OccursInDomain])
+      case _: Context => Some(value.isInstanceOf[OccursInContext])
+      case _          => None
+    end match
+  end mayOccurDirectlyIn
+
   /** Things that can occur in the "With" section of a leaf definition */
   type MetaData =
     BriefDescription | Description | Term | AuthorRef | FileAttachment | StringAttachment |
