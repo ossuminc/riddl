@@ -11,12 +11,13 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.AST.{Token, *}
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.utils.{Await, PlatformContext, Timer, URL}
+import com.ossuminc.riddl.utils.{PlatformContext, Timer}
 import org.scalatest.TestData
 
-import scala.concurrent.ExecutionContext
-import scala.io.AnsiColor.{GREEN, RED, RESET}
-
+/** Tokenizer cases that run on every platform. The two cases that read a `.riddl` file from the
+  * working directory live in the JVM-only `TokenParserFileTest`, because Scala.js cannot load
+  * files.
+  */
 abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsingTest {
   "TokenParser" must {
     "handle simple document fragment" in { (td: TestData) =>
@@ -77,53 +78,6 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
           )
           tokens must be(expected)
     }
-  }
-
-  "handle rbbq.riddl, a more complete example" in { (td: TestData) =>
-    implicit val ec: ExecutionContext = pc.ec
-    val url = URL.fromCwdPath("language/input/rbbq.riddl")
-    val future = RiddlParserInput.fromURL(url, td).map { rpi =>
-      val result = pc.withOptions(pc.options.copy(showTimes = true)) { _ =>
-        Timer.time("parseToTokens") {
-          TopLevelParser.parseToTokens(rpi)
-        }
-      }
-      result match
-        case Left(messages) =>
-          fail(messages.format)
-        case Right(tokens) =>
-          // A9b: robust tokenizer check. This was a ~500-token exact-offset golden list that broke
-          // on every syntax change (e.g. `of type` -> `of record`); replaced with count + head +
-          // no-unrecognized-tokens, matching the everything.riddl test's style.
-          tokens.length must be(542)
-          tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
-          tokens.toString must not include ("Other")
-      end match
-    }
-    Await.result(future, 30)
-  }
-
-  "handle everything.riddl, a more complete example" in { (td: TestData) =>
-    implicit val ec: ExecutionContext = pc.ec
-    val url = URL.fromCwdPath("language/input/everything_full.riddl")
-    val future = RiddlParserInput.fromURL(url, td).map { rpi =>
-      val result = pc.withOptions(pc.options.copy(showTimes = true)) { _ =>
-        Timer.time("parseToTokens") {
-          TopLevelParser.parseToTokens(rpi)
-        }
-      }
-      result match
-        case Left(messages) =>
-          fail(messages.format)
-        case Right(tokens) =>
-          tokens.length must be(409) // A9b: +2 tokens (record keyword on migrated states)
-          val tasStr = tokens.toString
-          tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
-          tasStr must include("LiteralCode")
-          tasStr must not include ("Other")
-      end match
-    }
-    Await.result(future, 30)
   }
 
   "handle mapping text with tokens" in { (td: TestData) =>

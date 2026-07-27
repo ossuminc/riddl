@@ -20,3 +20,4 @@ class JSRepositoryTest extends RepositoryTest
 class JSStatementsTest extends StatementsTest
 class JSStreamingParserTest extends StreamingParserTest
 class JSTypeParserTest extends TypeParserTest
+class JSTokenParserTest extends TokenParserTest
