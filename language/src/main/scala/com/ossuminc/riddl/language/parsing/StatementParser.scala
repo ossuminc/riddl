@@ -279,11 +279,21 @@ private[parsing] trait StatementParser {
     )
   }
 
-  // A29: `case <pattern> [when <BooleanExpression>] { <statements> }`. The optional `when` guard
-  // reuses A28's structured boolean-expression parser (`booleanExprOnly`).
+  // A29: the optional `when` guard of a case. Mirrors A17's `when` condition: a structured
+  // BooleanExpression, or a bare boolean-typed value reference (`when active`, `when order.isPaid`).
+  // ORDER: `booleanExprOnly` first so `a > b`/`x and y` become a real BooleanExpression; a BARE atom
+  // (`active`) fails that filter and backtracks (no cut before an operator) to `valueRef`.
+  private def matchGuard[u: P]: P[BooleanExpression | ValueRef] = {
+    P(
+      booleanExprOnly.map(be => be: BooleanExpression | ValueRef) |
+        valueRef.map(vr => vr: BooleanExpression | ValueRef)
+    )
+  }
+
+  // A29: `case <pattern> [when <guard>] { <statements> }`.
   private def matchCase[u: P](set: StatementsSet): P[MatchCase] = {
     P(
-      Index ~ Keywords.case_ ~/ matchPattern ~ (Keywords.when ~/ booleanExprOnly).? ~
+      Index ~ Keywords.case_ ~/ matchPattern ~ (Keywords.when ~/ matchGuard).? ~
         open ~/ setOfStatements(set) ~ close ~/ Index
     )./.map { case (start, pattern, guard, statements, end) =>
       MatchCase(at(start, end), pattern, guard, statements.toContents)

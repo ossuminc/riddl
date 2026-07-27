@@ -193,6 +193,18 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
         case other => fail(s"expected a guard ComparisonExpression, got $other")
       s.default.isEmpty must be(false)
     }
+    "parse a match case with a bare boolean value-ref guard (A29)" in { td =>
+      val s = parseStmt(
+        """match order.status {
+          |  case Shipped when active { error "s" }
+          |  default { error "d" }
+          |}""".stripMargin,
+        td
+      ).asInstanceOf[MatchStatement]
+      s.cases.head.guard match
+        case Some(vr: ValueRef) => vr.path.value.mkString(".") must be("active")
+        case other              => fail(s"expected a bare ValueRef guard, got $other")
+    }
     "parse a match with a get-from-state subject (A29)" in { td =>
       val s = parseStmt(
         """match get from state S {

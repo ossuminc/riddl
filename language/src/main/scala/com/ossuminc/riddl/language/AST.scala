@@ -2928,13 +2928,15 @@ object AST:
   end LiteralPattern
 
   /** A case clause within a match statement (A29: structured [[MatchPattern]] plus an optional
-    * [[BooleanExpression]] guard — `case <pattern> [when <guard>] { … }`).
+    * `when` guard — `case <pattern> [when <guard>] { … }`). The guard mirrors A17's
+    * [[WhenStatement]] condition: a structured [[BooleanExpression]] OR a bare boolean-typed
+    * [[ValueRef]] (`case X when active { … }`), validated to be Boolean-typed.
     */
   @JSExportTopLevel("MatchCase")
   case class MatchCase(
     loc: At,
     pattern: MatchPattern,
-    guard: Option[BooleanExpression],
+    guard: Option[BooleanExpression | ValueRef],
     statements: Contents[Statements]
   ) extends RiddlValue {
     override def kind: String = "Match Case"

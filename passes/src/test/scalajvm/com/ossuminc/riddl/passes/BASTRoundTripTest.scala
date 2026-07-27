@@ -530,7 +530,7 @@ class BASTRoundTripTest extends AnyWordSpec {
           |    handler h is {
           |      on init {
           |        match order.status {
-          |          case Shipped { error "s" }
+          |          case Shipped when active { error "s" }
           |          case == Cancelled { error "c" }
           |          case > MaxRetries when count > MaxRetries { error "r" }
           |          default { error "d" }
@@ -563,6 +563,10 @@ class BASTRoundTripTest extends AnyWordSpec {
               structured.cases(0).pattern match
                 case TypePattern(_, tr) => assert(tr.pathId.value == Seq("Shipped"))
                 case other              => fail(s"expected TypePattern, got $other")
+              // A29: a bare boolean value-ref guard round-trips via the value codec (no new tag).
+              structured.cases(0).guard match
+                case Some(vr: ValueRef) => assert(vr.path.value == Seq("active"))
+                case other              => fail(s"expected a bare ValueRef guard, got $other")
               structured.cases(1).pattern match
                 case ComparisonPattern(_, ComparisonOperator.EQ, c) =>
                   assert(c.asInstanceOf[ValueRef].path.value == Seq("Cancelled"))

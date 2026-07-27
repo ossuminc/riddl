@@ -144,7 +144,7 @@ domain Values is {
           // `default` branch covers the rest so there is no exhaustiveness warning.
           match count {
             case == MaxRetries { error "at max" }
-            case > MaxRetries when count > MaxRetries { error "over max" }
+            case > MaxRetries when active { error "over max" }
             default { error "under" }
           }
           // Legacy pseudo-code string match still parses unchanged.

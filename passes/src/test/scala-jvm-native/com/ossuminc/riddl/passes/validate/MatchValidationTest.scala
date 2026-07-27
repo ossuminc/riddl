@@ -25,6 +25,7 @@ class MatchValidationTest extends AbstractValidatingTest {
     s"""domain d is {
        |  context c is {
        |    type OrderStatus is any of { Pending, Shipped, Delivered }
+       |    type OtherStatus is any of { Archived }
        |    command Track is { status: OrderStatus, count: Integer }
        |    constant MaxRetries is Integer = "3"
        |    constant Label is String = "x"
@@ -95,7 +96,7 @@ class MatchValidationTest extends AbstractValidatingTest {
       }
     }
 
-    "reject a type-case that is not a member of the subject's enumeration" in { (td: TestData) =>
+    "reject an unknown type-case name (resolves to nothing)" in { (td: TestData) =>
       parseAndValidate(
         matchEnt(
           """match status {
@@ -106,7 +107,86 @@ class MatchValidationTest extends AbstractValidatingTest {
         td.name,
         shouldFailOnErrors = false
       ) { case (_, _, msgs: Messages) =>
-        assertValidationMessage(msgs, Error, "is not a member of")
+        assertValidationMessage(msgs, Error, "Unknown type-case 'Bogus'")
+      }
+    }
+
+    "reject a type-case that resolves but is not a member of the subject's enumeration" in {
+      (td: TestData) =>
+        // `Archived` is a real enumerator of OtherStatus — it resolves, but it is not a member of
+        // the subject's OrderStatus enumeration (identity membership rejects the foreign same-kind).
+        parseAndValidate(
+          matchEnt(
+            """match status {
+              |  case Archived { error "a" }
+              |  default { error "d" }
+              |}""".stripMargin
+          ),
+          td.name,
+          shouldFailOnErrors = false
+        ) { case (_, _, msgs: Messages) =>
+          assertValidationMessage(msgs, Error, "is not a member of")
+        }
+    }
+
+    "reject an unknown type-case name on a non-closed (numeric) subject" in { (td: TestData) =>
+      parseAndValidate(
+        matchEnt(
+          """match count {
+            |  case Bogus { error "b" }
+            |  default { error "d" }
+            |}""".stripMargin
+        ),
+        td.name,
+        shouldFailOnErrors = false
+      ) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "Unknown type-case 'Bogus'")
+      }
+    }
+
+    "accept a type-case naming a real definition on a non-closed subject" in { (td: TestData) =>
+      // On a non-closed subject the name need only resolve to a real definition — no membership.
+      parseAndValidate(
+        matchEnt(
+          """match count {
+            |  case OrderStatus { error "o" }
+            |  default { error "d" }
+            |}""".stripMargin
+        ),
+        td.name,
+        shouldFailOnErrors = false
+      ) { case (_, _, msgs: Messages) =>
+        msgs.filter(m => m.kind == Error && m.message.contains("type-case")) mustBe empty
+      }
+    }
+
+    "accept a bare boolean value-reference guard (`case X when active`)" in { (td: TestData) =>
+      parseAndValidate(
+        matchEnt(
+          """match status {
+            |  case Pending when active { error "p" }
+            |  default { error "d" }
+            |}""".stripMargin
+        ),
+        td.name,
+        shouldFailOnErrors = false
+      ) { case (_, _, msgs: Messages) =>
+        msgs.filter(m => m.kind == Error) mustBe empty
+      }
+    }
+
+    "reject a non-boolean bare-reference guard" in { (td: TestData) =>
+      parseAndValidate(
+        matchEnt(
+          """match status {
+            |  case Pending when count { error "p" }
+            |  default { error "d" }
+            |}""".stripMargin
+        ),
+        td.name,
+        shouldFailOnErrors = false
+      ) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "must be a Boolean value")
       }
     }
 

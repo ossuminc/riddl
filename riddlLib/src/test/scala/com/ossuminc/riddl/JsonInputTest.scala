@@ -206,7 +206,7 @@ class JsonInputTest extends AnyWordSpec with Matchers {
           |      { "kind": "let", "name": "x", "expression": "compute a value" },
           |      { "kind": "require", "condition": "x > 0" },
           |      { "kind": "when", "condition": "x > 0", "then": [ "do the then" ], "else": [ "do the else" ] },
-          |      { "kind": "match", "expression": "x", "cases": [ { "pattern": "1", "statements": [ "matched one" ] } ], "default": [ "no match" ] }
+          |      { "kind": "match", "subject": "x", "cases": [ { "pattern": { "kind": "literal", "text": "1" }, "statements": [ "matched one" ] } ], "default": [ "no match" ] }
           |    ] } ] } ] } ],
           |  "types": [ { "name": "R", "typeExpression": { "kind": "Record", "fields": [ { "name": "n", "type": { "kind": "Integer" } } ] } } ] } ] } ] }""".stripMargin
       )

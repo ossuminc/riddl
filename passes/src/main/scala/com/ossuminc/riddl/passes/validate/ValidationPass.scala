@@ -3113,14 +3113,17 @@ case class ValidationPass(
       case gv: GetValue     => valueCategory(gv, parents, lets)
       case _: LiteralString => None
 
-  /** A29: the member names of a CLOSED subject type — the enumerators of an `any of {…}`
-    * [[Enumeration]] or the alternant names of an `one of {…}` [[Alternation]] — following one
-    * level of type alias. `None` for open/primitive types (exhaustiveness is intractable there).
+  /** A29: the member [[Definition]]s of a CLOSED subject type — the enumerators of an `any of {…}`
+    * [[Enumeration]] or the resolved alternant Types of an `one of {…}` [[Alternation]] — following
+    * one level of type alias. `None` for open/primitive types (exhaustiveness/closed-membership is
+    * intractable there). Membership is later tested by identity (`eq`) against these, so a foreign
+    * definition that merely shares a name is not accepted.
     */
-  private def closedMemberNames(t: Type): Option[Seq[String]] =
-    def ofTypeExpr(te: TypeExpression): Option[Seq[String]] = te match
-      case e: Enumeration => Some(e.enumerators.toSeq.map(_.id.value))
-      case a: Alternation => Some(a.of.toSeq.map(_.pathId.value.lastOption.getOrElse("")))
+  private def closedMemberDefs(t: Type): Option[Seq[Definition]] =
+    def ofTypeExpr(te: TypeExpression): Option[Seq[Definition]] = te match
+      case e: Enumeration => Some(e.enumerators.toSeq)
+      case a: Alternation =>
+        Some(a.of.toSeq.flatMap(alt => resolution.refMap.definitionOf[Type](alt.pathId)))
       case ate: AliasedTypeExpression =>
         resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t2 => ofTypeExpr(t2.typEx))
       case _ => None
@@ -3136,32 +3139,26 @@ case class ValidationPass(
     validateValue(ms.expression, parents, lets)
     val subjType = matchSubjectType(ms.expression, parents, lets)
     val subjCat = matchSubjectCategory(ms.expression, parents, lets)
-    val closedMembers: Option[Seq[String]] = subjType.flatMap(closedMemberNames)
+    val memberDefs: Option[Seq[Definition]] = subjType.flatMap(closedMemberDefs)
     ms.cases.foreach { mc =>
       mc.pattern match
-        case tp: TypePattern =>
-          // Type-compat: a type-case naming a member of a CLOSED subject must be one of its members.
-          closedMembers.foreach { members =>
-            val name = tp.typeRef.pathId.value.lastOption.getOrElse("")
-            if members.nonEmpty && name.nonEmpty && !members.contains(name) then
-              messages.addError(
-                tp.loc,
-                s"Pattern '$name' is not a member of ${subjType.get.identify}; expected one of: " +
-                  members.mkString(", "),
-                suggestion =
-                  "Match an alternant/enumerator of the subject's type, or use 'default' for other cases."
-              )
-          }
+        case tp: TypePattern => validateTypePattern(tp, subjType, memberDefs)
         case cp: ComparisonPattern =>
           validateComparand(cp.comparand, parents, lets)
           checkPatternComparison(cp, subjCat, parents, lets)
         case _: LiteralPattern => () // legacy pseudo-code, untyped
-      mc.guard.foreach(g => validateValue(g, parents, lets)) // A29: guard is a boolean expression
+      // A29: a guard is a structured BooleanExpression (validated as a value) or a bare
+      // boolean-typed ValueRef (checked Boolean-typed, mirroring A17's `when`).
+      mc.guard.foreach {
+        case be: BooleanExpression => validateValue(be, parents, lets)
+        case vr: ValueRef          => checkWhenValueRef(vr, parents, lets)
+      }
     }
     // Exhaustiveness — StyleWarning, CLOSED subjects only, and only when there is no `default`. Only
     // UNGUARDED type-cases count toward coverage (a guarded case may not fire).
     if ms.default.isEmpty then
-      closedMembers.foreach { members =>
+      memberDefs.foreach { members =>
+        val memberNames = members.map(_.id.value)
         val covered: scala.collection.immutable.Set[String] = ms.cases
           .collect {
             case mc if mc.guard.isEmpty =>
@@ -3171,8 +3168,8 @@ case class ValidationPass(
           }
           .flatten
           .toSet
-        val uncovered = members.filterNot(covered.contains)
-        if members.nonEmpty && uncovered.nonEmpty then
+        val uncovered = memberNames.filterNot(covered.contains)
+        if memberNames.nonEmpty && uncovered.nonEmpty then
           messages.addStyle(
             ms.loc,
             s"match on ${subjType.get.identify} is not exhaustive; uncovered: " +
@@ -3182,6 +3179,45 @@ case class ValidationPass(
           )
       }
   end validateMatch
+
+  /** A29: validate a type-case pattern. The name is resolved as a SYMBOL (a Type, an Enumerator, a
+    * message type, …) — NOT via `resolveARef[Type]`, which false-errors on an Enumerator. An
+    * unresolvable name is an Error. For a CLOSED subject, the resolved symbol must be one of the
+    * subject's members BY IDENTITY (so a foreign same-named definition is rejected).
+    */
+  private def validateTypePattern(
+    tp: TypePattern,
+    subjType: Option[Type],
+    memberDefs: Option[Seq[Definition]]
+  ): Unit =
+    val name = tp.typeRef.pathId.value.lastOption.getOrElse("")
+    val resolved: List[Definition] =
+      if tp.typeRef.pathId.value.nonEmpty then
+        symbols.lookup[Definition](tp.typeRef.pathId.value.reverse)
+      else List.empty[Definition]
+    if resolved.isEmpty then
+      messages.addError(
+        tp.loc,
+        s"Unknown type-case '$name'; it does not name a known type, enumerator, or message",
+        suggestion =
+          "Name a type, an enumerator of the subject's enumeration, an alternant of its " +
+            "alternation, or a message subtype; or use a comparison pattern / 'default'."
+      )
+    else
+      memberDefs.foreach { members =>
+        // Identity membership: the resolved symbol must be one of the subject's actual members —
+        // a foreign definition that only shares the name does not count.
+        val isMember = resolved.exists(sym => members.exists(_ eq sym))
+        if members.nonEmpty && !isMember then
+          messages.addError(
+            tp.loc,
+            s"Pattern '$name' is not a member of ${subjType.get.identify}; expected one of: " +
+              members.map(_.id.value).mkString(", "),
+            suggestion =
+              "Match an alternant/enumerator of the subject's type, or use 'default' for other cases."
+          )
+      }
+  end validateTypePattern
 
   /** A29: type-check a [[ComparisonPattern]] with the match subject as the implicit LEFT operand.
     * Mirrors [[checkComparison]]: equality (`==`/`!=`) requires the subject and comparand to share

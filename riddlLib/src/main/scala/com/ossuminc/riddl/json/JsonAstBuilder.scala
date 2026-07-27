@@ -731,11 +731,12 @@ object JsonAstBuilder:
       case m: MessageRefDto       => RecordRef(At(), pathId(m.ref))
 
   private def buildMatchCase(c: MatchCaseDto)(using ctx: Ctx): MatchCase =
-    val guard: Option[BooleanExpression] = c.guard.map(g =>
+    val guard: Option[BooleanExpression | ValueRef] = c.guard.map(g =>
       buildValue(g) match
         case be: BooleanExpression => be
+        case vr: ValueRef          => vr // A29: bare boolean value-ref guard
         case _ =>
-          ctx.err("match case guard must be a boolean expression")
+          ctx.err("match case guard must be a boolean expression or a boolean value reference")
           BooleanLiteral(At(), true)
     )
     MatchCase(At(), buildMatchPattern(c.pattern), guard, buildStatements(c.statements))

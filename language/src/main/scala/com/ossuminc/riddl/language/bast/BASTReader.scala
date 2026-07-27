@@ -917,10 +917,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val caseHeaders = (0 until numCases).map { _ =>
           val caseLoc = readLocation()
           val pattern = readMatchPattern() // A29: structured pattern
-          val guard: Option[BooleanExpression] = // A29: optional `when` guard
+          val guard: Option[BooleanExpression | ValueRef] = // A29: optional `when` guard
             if reader.readU8() != 0 then
               readValue() match
                 case be: BooleanExpression => Some(be)
+                case vr: ValueRef          => Some(vr) // A29: bare boolean value-ref guard
                 case other => throw new RuntimeException(s"Invalid match guard: $other")
             else None
           val count = reader.readVarInt()
