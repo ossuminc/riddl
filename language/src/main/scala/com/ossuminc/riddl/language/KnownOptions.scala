@@ -28,7 +28,6 @@ object KnownOptions {
 
   final val connector: Seq[String] = Seq(
     KnownOption.persistent,
-    KnownOption.async,
     KnownOption.technology,
     KnownOption.kind
   )
@@ -131,7 +130,13 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.css,
     KnownOption.kind,
-    KnownOption.protocol,
+    KnownOption.protocol
+  )
+
+  /** Options recognized on a portlet (Inlet or Outlet). `async` marks a portlet as a codegen async
+    * boundary (anti-fusion); see RecognizedOptions.registry.
+    */
+  final val portlet: Seq[String] = Seq(
     KnownOption.async
   )
 }

@@ -97,14 +97,17 @@ object RecognizedOptions:
     "exactly-once" -> OptionSpec(Seq("Connector"), 0, 0),
     "ordered" -> OptionSpec(Seq("Connector", "Inlet"), 0, 0),
     "partitioned" -> OptionSpec(Seq("Connector"), 1, 1),
-    // Asynchronous messaging-boundary marker (A7). Naturally annotated on the
-    // Connector (the edge), and also allowed on a streamlet. A Streamlet's
-    // parent-kind is its shape name (Source/Sink/Flow/Merge/Split/Router/Void),
-    // never "Streamlet", so the streamlet shapes must be listed explicitly for
-    // the parent-kind check to accept `option async` on a streamlet. NOTE: this
-    // is registration only — no behavioral pairing with context-boundary logic.
+    // Asynchronous messaging-boundary marker (A7, corrected). `async` is a
+    // PORTLET option: it marks an individual Inlet or Outlet as an async
+    // boundary so the code generator inserts a real async boundary there
+    // instead of fusing the stream (cf. Akka Streams operator fusion). A
+    // Portlet's parent-kind is its class name — Inlet.kind / Outlet.kind =
+    // getSimpleName = "Inlet" / "Outlet" — so those are the strings the
+    // parent-kind check (`identity.split(" ").head`) compares against. NOTE:
+    // this is registration only — no behavioral pairing with over-
+    // parallelization / context-boundary logic (tracked as A7-ext / #59).
     "async" -> OptionSpec(
-      Seq("Connector", "Source", "Sink", "Flow", "Merge", "Split", "Router", "Void"),
+      Seq("Inlet", "Outlet"),
       0,
       0
     ),

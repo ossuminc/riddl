@@ -1121,29 +1121,26 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
-    "accept async option on connectors and streamlets" in { (td: TestData) =>
+    "accept async option on portlets (inlets and outlets)" in { (td: TestData) =>
+      // `async` is a PORTLET option: it marks an Inlet or Outlet as a codegen
+      // async boundary (anti-fusion). It must draw neither "not a recognized"
+      // nor "not typically used" when placed on an outlet or an inlet.
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
           |    type Forecast is any of { Rainy, Cloudy, Sunny }
           |    source GetForecast is {
-          |      outlet Out is type Forecast
-          |    } with { option async }
-          |    sink UseForecast is {
-          |      inlet In is type Forecast
+          |      outlet Out is type Forecast with { option async }
           |    }
-          |    connector Feed is {
-          |      from outlet C.GetForecast.Out
-          |      to inlet C.UseForecast.In
-          |    } with { option async }
+          |    sink UseForecast is {
+          |      inlet In is type Forecast with { option async }
+          |    }
           |  }
           |}
           |""".stripMargin,
         td
       )
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        // async should be accepted on both the connector and the streamlet
-        // without "not recognized" or "not typically used" style warnings
         msgs.exists(m =>
           m.message.contains("async") &&
             (m.message.contains("not a recognized") ||
@@ -1152,11 +1149,17 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
-    "reject async option on non-streaming definitions" in { (td: TestData) =>
+    "nudge async option on non-portlet definitions" in { (td: TestData) =>
+      // On a streamlet or a context, `async` is recognized (no "not a
+      // recognized" warning) but draws the parent-kind "not typically used"
+      // nudge because its valid parents are Inlet / Outlet only.
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type T is String
+          |    type Forecast is any of { Rainy, Cloudy, Sunny }
+          |    source GetForecast is {
+          |      outlet Out is type Forecast
+          |    } with { option async }
           |  } with { option async }
           |}
           |""".stripMargin,
@@ -1164,8 +1167,6 @@ class CompletenessTest extends AbstractValidatingTest {
       )
       pc.withOptions(CommonOptions.default) { _ =>
         parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-          // async is recognized (no "not a recognized" warning) but drawn on a
-          // context it should trigger the parent-kind "not typically used" nudge
           msgs.exists(m =>
             m.message.contains("async") && m.message.contains("not a recognized")
           ) mustBe false
