@@ -239,13 +239,16 @@ value_ref = path_identifier ;
 (* A28: the boolean-expression sub-language, lowest to highest precedence: or < and < not <
    comparison < atom. `and`/`or`/`not`/`true`/`false` are context-sensitive operators — legal
    identifiers everywhere except these rules. A boolean_atom with no comparison operator is a plain
-   value. *)
+   value. A28 s3: comparisons are TYPE-SAFE — their operands are ref-only `comparand`s (a value_ref,
+   a get_value, or a constant_ref), never a literal/constructor/boolean_literal — so a comparison is
+   always between two typed references. *)
 boolean_expression = and_expression {"or" and_expression} ;
 and_expression = not_expression {"and" not_expression} ;
 not_expression = "not" not_expression | comparison ;
-comparison = boolean_atom [comparison_operator boolean_atom] ;
+comparison = comparand comparison_operator comparand | boolean_atom ;
+comparand = get_value | constant_ref | value_ref ;
 comparison_operator = "==" | "!=" | "<=" | ">=" | "<" | ">" ;
-boolean_atom = boolean_literal | "(" boolean_expression ")" | literal_string | prompt_value | constructor | get_value | value_ref ;
+boolean_atom = boolean_literal | "(" boolean_expression ")" | get_value | value_ref ;
 boolean_literal = "true" | "false" ;
 
 (* A45/A57: boundary value operations. `put` (application/context handlers only) publishes a value

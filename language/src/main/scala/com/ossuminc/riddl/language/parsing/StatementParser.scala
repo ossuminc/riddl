@@ -362,14 +362,33 @@ private[parsing] trait StatementParser {
     )
   }
 
-  // comparison level (non-associative). One optional relational operator between two atoms; when
-  // absent, the bare atom is returned unchanged (NOT wrapped in a BooleanExpression).
+  // comparison level (non-associative). A comparison is TYPE-SAFE: its two operands are TYPED refs
+  // only (`comparand`) — never a literal, a constructor, a boolean literal, or a bare number. So
+  // `count > "5"` / `count > true` / `count > 5` / `count > R(1)` FAIL to parse: the `~/` cut after
+  // the operator commits, and the right operand must be a ref. When there is NO operator the bare
+  // boolean ATOM is returned unchanged (NOT wrapped) — a comparand parsed as the left operand with no
+  // operator following backtracks (no cut before the operator) and re-parses via `booleanAtom`, so
+  // `true`, `(a and b)`, and a bare boolean-typed ref remain valid standalone atoms.
   private def comparison[u: P]: P[Value] = {
-    P(Index ~ booleanAtom ~ (comparisonOperator ~/ booleanAtom).? ~ Index).map {
-      case (start, left, Some((op, right)), end) =>
-        ComparisonExpression(at(start, end), op, left, right)
-      case (_, left, None, _) => left
-    }
+    P(
+      (Index ~ comparand ~ comparisonOperator ~/ comparand ~ Index).map {
+        case (start, left, op, right, end) =>
+          ComparisonExpression(at(start, end), op, left, right): Value
+      } | booleanAtom
+    )
+  }
+
+  // A28: a comparison operand — a TYPED reference and nothing else. `get from …` and `constant
+  // <path>` are keyword-led (tried first); a bare path is a `ValueRef` (which may itself resolve to a
+  // `Constant` at validation, so `count > MaxCount` works). `!booleanLiteral` rejects `true`/`false`
+  // as operands (they are boolean ATOMS, not comparands) so `count > true` is a parse error while a
+  // field named `trueValue` (word-boundary) is still a legal ref.
+  private def comparand[u: P]: P[Comparand] = {
+    P(
+      getValue.map(gv => gv: Comparand) |
+        constantRef.map(cr => cr: Comparand) |
+        (!booleanLiteral ~ valueRef).map(vr => vr: Comparand)
+    )
   }
 
   // Relational operators. `StringIn` is longest-match, so `<=`/`>=` win over `<`/`>` and `!=`/`==`
@@ -395,17 +414,17 @@ private[parsing] trait StatementParser {
     ).map { case (start, b, end) => BooleanLiteral(at(start, end), b) }
   }
 
-  // A28: an atom reachable through a boolean expression: a boolean literal, a parenthesized boolean
-  // expression, or any existing value atom (so a comparison operand can be a literal/get/constructor/
-  // prompt/ref). `booleanLiteral` precedes `valueRef` so `true`/`false` are literals here; `valueRef`
-  // stays last (permissive bare path).
+  // A28: an atom of the boolean-expression sub-language: a boolean literal (`true`/`false`), a
+  // parenthesized boolean expression (for grouping / precedence override), or a bare boolean-typed
+  // reference (`get from …` or a bare path). Comparison operands are NOT parsed here — they are the
+  // ref-only `comparand`; a boolean atom is the operand of `and`/`or`/`not` or a standalone boolean.
+  // `booleanLiteral` precedes `valueRef` so `true`/`false` are literals here; `valueRef` stays last
+  // (permissive bare path). Non-boolean value atoms (literal strings, constructors, prompt values)
+  // are handled by `value` directly, before the boolean sub-language, so they never reach here.
   private def booleanAtom[u: P]: P[Value] = {
     P(
       booleanLiteral.map(bl => bl: Value) |
         (Punctuation.roundOpen ~ booleanExpr ~ Punctuation.roundClose) |
-        literalString.map(ls => ls: Value) |
-        promptValue.map(pv => pv: Value) |
-        constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
         valueRef.map(vr => vr: Value)
     )

@@ -589,10 +589,19 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case c: Constructor     => serializeConstructor(c)
     case bl: BooleanLiteral => BooleanLiteralDto(bl.value)
     case ce: ComparisonExpression =>
-      ComparisonDto(ce.op.symbol, serializeValue(ce.left), serializeValue(ce.right))
+      ComparisonDto(ce.op.symbol, serializeComparand(ce.left), serializeComparand(ce.right))
     case le: LogicalExpression =>
       LogicalDto(le.op.symbol, serializeValue(le.left), serializeValue(le.right))
     case ne: NotExpression => NotDto(serializeValue(ne.expr))
+
+  // A28: a comparison operand (Comparand = ValueRef | GetValue | ConstantRef) -> ValueDto.
+  private def serializeComparand(c: Comparand): ValueDto = c match
+    case vr: ValueRef    => ValueRefDto(path(vr.path))
+    case cr: ConstantRef => ConstantRefDto(path(cr.pathId))
+    case gv: GetValue =>
+      gv.source match
+        case ir: InputRef => GetValueDto("input", Some(ir.keyword), path(ir.pathId))
+        case sr: StateRef => GetValueDto("state", None, path(sr.pathId))
 
   // A54: AST Constructor -> ConstructorValueDto.
   private def serializeConstructor(c: Constructor): ConstructorValueDto =

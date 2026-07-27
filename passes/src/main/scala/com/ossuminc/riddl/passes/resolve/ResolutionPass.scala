@@ -358,11 +358,22 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
       // A28: recurse into boolean-expression operands so any nested ValueRef/GetValue/Constructor
       // atoms resolve (a BooleanLiteral has no references).
-      case _: BooleanLiteral => ()
+      case _: BooleanLiteral        => ()
       case ce: ComparisonExpression =>
-        resolveValue(ce.left, parents); resolveValue(ce.right, parents)
+        // A28: operands are ref-only Comparands (not general Values); resolve each ref.
+        resolveComparand(ce.left, parents); resolveComparand(ce.right, parents)
       case le: LogicalExpression => resolveValue(le.left, parents); resolveValue(le.right, parents)
       case ne: NotExpression     => resolveValue(ne.expr, parents)
+
+  /** A28: resolve a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef). A
+    * `ConstantRef` and a `GetValue` source resolve here (into the refMap); a bare [[ValueRef]]'s
+    * four-source (plus bare-`Constant`) resolution is deferred to validation, like `resolveValue`.
+    */
+  private def resolveComparand(c: Comparand, parents: Parents): Unit =
+    c match
+      case cr: ConstantRef => associateUsage(parents.head, resolveARef[Constant](cr, parents))
+      case gv: GetValue    => resolveValue(gv, parents)
+      case _: ValueRef => () // four-source (incl. bare Constant) resolution happens at validation
 
   /** A54: resolve a message/record operand — a bare ref (resolved as a Type) or a [[Constructor]]
     * (resolved via [[resolveValue]]). Shared by send/tell/yield (message) and morph (record).

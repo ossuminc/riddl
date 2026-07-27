@@ -51,7 +51,27 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
   private def parseLetExpr(expr: String, td: TestData): Value =
     parseStmt(s"let x = $expr", td).asInstanceOf[LetStatement].expression
 
-  private def vref(v: Value): String = v.asInstanceOf[ValueRef].path.value.mkString(".")
+  // A28 s3: assert that `let x = <expr>` fails to PARSE (not merely validate). Used to prove
+  // magic-constant comparison operands are rejected by the parser itself.
+  private def parseLetExprFails(expr: String, td: TestData): Assertion = {
+    val input = RiddlParserInput(
+      s"""domain d is {
+         |  context c is {
+         |    handler h is {
+         |      on init {
+         |        let x = $expr
+         |      }
+         |    }
+         |  }
+         |}""".stripMargin,
+      td
+    )
+    TopLevelParser.parseInput(input) match
+      case Left(messages) => messages.hasErrors must be(true)
+      case Right(_)       => fail(s"expected a PARSE error for 'let x = $expr'")
+  }
+
+  private def vref(v: RiddlValue): String = v.asInstanceOf[ValueRef].path.value.mkString(".")
 
   "Statements" must {
     "check Prompt Statements" in { td =>
@@ -522,6 +542,46 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           vref(ce.left) must be("a")
           vref(ce.right) must be("b")
         case other => fail(s"expected a SetStatement with a comparison, got $other")
+    }
+
+    // ---- A28 slice 3: comparison operands are type-safe, ref-only ----
+
+    "reject a string-literal comparison operand at PARSE: count > \"5\" (A28 s3)" in {
+      (td: TestData) => parseLetExprFails("count > \"5\"", td)
+    }
+
+    "reject a boolean-literal comparison operand at PARSE: count > true (A28 s3)" in {
+      (td: TestData) => parseLetExprFails("count > true", td)
+    }
+
+    "reject a bare-number comparison operand at PARSE: count > 5 (A28 s3)" in { (td: TestData) =>
+      parseLetExprFails("count > 5", td)
+    }
+
+    "reject a constructor comparison operand at PARSE: count > R(1) (A28 s3)" in { (td: TestData) =>
+      parseLetExprFails("count > R(1)", td)
+    }
+
+    "parse a comparison against a `constant` ref: count > constant Max (A28 s3)" in {
+      (td: TestData) =>
+        parseLetExpr("count > constant Max", td) match
+          case ComparisonExpression(_, ComparisonOperator.GT, left, right) =>
+            vref(left) must be("count")
+            right match
+              case cr: ConstantRef => cr.pathId.value.mkString(".") must be("Max")
+              case other           => fail(s"expected a ConstantRef right operand, got $other")
+          case other => fail(s"expected a ComparisonExpression, got $other")
+    }
+
+    "group with parentheses: (a and b) or c => Or(And(a, b), c) (A28 s3)" in { (td: TestData) =>
+      parseLetExpr("(a and b) or c", td) match
+        case LogicalExpression(_, LogicalOperator.Or, left, right) =>
+          left match
+            case LogicalExpression(_, LogicalOperator.And, a, b) =>
+              vref(a) must be("a"); vref(b) must be("b")
+            case other => fail(s"expected And on the left, got $other")
+          vref(right) must be("c")
+        case other => fail(s"expected Or at the root, got $other")
     }
 
     // ---- A28 slice 2: boolean expressions as when/require/invariant conditions ----

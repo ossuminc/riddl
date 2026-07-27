@@ -1174,8 +1174,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(1)
         writeLocation(ce.loc)
         writer.writeU8(ce.op.ordinal)
-        writeValue(ce.left)
-        writeValue(ce.right)
+        writeComparand(ce.left)
+        writeComparand(ce.right)
       case le: LogicalExpression =>
         writer.writeU8(5)
         writer.writeU8(2)
@@ -1188,6 +1188,36 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(3)
         writeLocation(ne.loc)
         writeValue(ne.expr)
+  }
+
+  /** A28: a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef). A leading
+    * discriminator byte selects the arm (0=ValueRef, 1=GetValue, 2=ConstantRef); the reader mirrors
+    * this exactly. Comparison operands are ref-only, so this is a compact codec separate from
+    * [[writeValue]].
+    */
+  def writeComparand(c: Comparand): Unit = {
+    c match
+      case vr: ValueRef =>
+        writer.writeU8(0)
+        writeLocation(vr.loc)
+        writePathIdentifierInline(vr.path)
+      case gv: GetValue =>
+        writer.writeU8(1)
+        writeLocation(gv.loc)
+        gv.source match
+          case ir: InputRef =>
+            writer.writeU8(0)
+            writeLocation(ir.loc)
+            writeString(ir.keyword)
+            writePathIdentifierInline(ir.pathId)
+          case sr: StateRef =>
+            writer.writeU8(1)
+            writeLocation(sr.loc)
+            writePathIdentifierInline(sr.pathId)
+      case cr: ConstantRef =>
+        writer.writeU8(2)
+        writeLocation(cr.loc)
+        writePathIdentifierInline(cr.pathId)
   }
 
   def writeConstructor(c: Constructor): Unit = {

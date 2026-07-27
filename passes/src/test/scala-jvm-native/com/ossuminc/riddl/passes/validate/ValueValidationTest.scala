@@ -310,6 +310,98 @@ class ValueValidationTest extends AbstractValidatingTest {
       }
     }
 
+    // ---- A28 slice 3: type-safe, ref-only comparison operands ----
+
+    "accept `count > MaxCount` comparing a numeric local to a numeric constant (A28 s3)" in {
+      (td: TestData) =>
+        val model =
+          """domain d is {
+            |  context c is {
+            |    type Num is Integer
+            |    constant MaxCount is Integer = "5"
+            |    handler h is {
+            |      on init {
+            |        let count: Num = "1"
+            |        let ok = count > MaxCount
+            |        let ok2 = count > constant MaxCount
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+        parseAndValidate(model, td.name, shouldFailOnErrors = false) {
+          case (_, _, msgs: Messages) =>
+            msgs.filter(m =>
+              m.kind == Error && (m.message.contains("Cannot compare") ||
+                m.message.contains("requires a numeric operand") ||
+                m.message.contains("is not a 'let'-local"))
+            ) mustBe empty
+        }
+    }
+
+    "reject an ordering comparison against a string constant (A28 s3)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Num is Integer
+          |    constant Label is String = "hi"
+          |    handler h is {
+          |      on init {
+          |        let count: Num = "1"
+          |        let bad = count > Label
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "requires a numeric operand")
+      }
+    }
+
+    "reject an ordering comparison of two booleans (A28 s3)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Flag is Boolean
+          |    handler h is {
+          |      on init {
+          |        let f: Flag = "true"
+          |        let g: Flag = "false"
+          |        let bad = f < g
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "requires a numeric operand")
+      }
+    }
+
+    "accept `==` identity on same-typed refs (A28 s3)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Num is Integer
+          |    handler h is {
+          |      on init {
+          |        let a: Num = "1"
+          |        let b: Num = "2"
+          |        let ok = a == b
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        msgs.filter(m =>
+          m.kind == Error && (m.message.contains("Cannot compare") ||
+            m.message.contains("requires a numeric operand"))
+        ) mustBe empty
+      }
+    }
+
     // ---- A28 slice 2: boolean-expression conditions in when/require/invariant ----
 
     "reject a non-boolean `when` condition (A28 s2)" in { (td: TestData) =>

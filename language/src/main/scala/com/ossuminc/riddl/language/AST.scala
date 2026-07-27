@@ -2534,12 +2534,24 @@ object AST:
     case Or extends LogicalOperator("or")
   end LogicalOperator
 
+  /** A28: the operand of a [[ComparisonExpression]]. Comparisons are TYPE-SAFE and therefore
+    * compare two TYPED references only — a [[ValueRef]] (a `let`-local, a field of the handled
+    * message / entity state / function input, or a bare path naming a [[Constant]]), a [[GetValue]]
+    * (a UI input or entity-state read), or a [[ConstantRef]] (`constant <path>`). RIDDL
+    * deliberately has NO magic-constant comparison operands: literals, constructors and prompt
+    * values are not comparands — to compare against a constant, declare a `constant` and reference
+    * it. The parser enforces this (a non-ref comparison operand is a PARSE error); validation
+    * enforces type compatibility.
+    */
+  type Comparand = ValueRef | GetValue | ConstantRef
+
   /** A28: the boolean-expression sub-language. An arm of the [[Value]] union so `let`/`set`/`put`/
     * `return` accept booleans for free. All cases are [[RiddlValue]]s so `.format`/`.loc` work on
-    * the union directly. Operands are typed as [[Value]] (not `BooleanExpression`) because the
-    * layered precedence parser returns a bare `Value` atom — e.g. a [[ValueRef]] to a boolean field
-    * — at any operand position; validation (not the type system) enforces that logical/`not`
-    * operands and comparison operands are appropriately typed.
+    * the union directly. Logical/`not` operands are typed as [[Value]] (not `BooleanExpression`)
+    * because the layered precedence parser returns a bare `Value` atom — e.g. a [[ValueRef]] to a
+    * boolean field — at any operand position; validation (not the type system) enforces that
+    * logical/`not` operands are boolean. Comparison operands, by contrast, are narrowed to
+    * [[Comparand]] (ref-only) so magic-constant comparisons cannot be constructed at all.
     */
   sealed trait BooleanExpression extends RiddlValue
 
@@ -2561,8 +2573,8 @@ object AST:
   case class ComparisonExpression(
     loc: At,
     op: ComparisonOperator,
-    left: Value,
-    right: Value
+    left: Comparand,
+    right: Comparand
   ) extends BooleanExpression:
     override def kind: String = "Comparison Expression"
     def format: String = s"${left.format} ${op.symbol} ${right.format}"

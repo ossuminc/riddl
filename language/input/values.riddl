@@ -55,6 +55,8 @@ domain Values is {
   // and/or/not, precedence, parenthesization, and boolean literals all parse and validate here.
   context Flags is {
     command Check is { threshold: Integer }
+    // A28 s3: a numeric constant used as a type-safe comparison operand (no magic-number literals).
+    constant MaxCount is Integer = "100"
     entity Gate is {
       record GateData is { count: Integer, active: Boolean, open: Boolean }
       state Status of record GateData
@@ -62,6 +64,9 @@ domain Values is {
         on command Check {
           // A28: comparison + logical `and` + `not` over message/state fields (a > b and not c).
           let ok = count > threshold and not active
+          // A28 s3: compare a field against a numeric `constant` — bare path and `constant` keyword.
+          let underMax = count > MaxCount
+          let underMax2 = count > constant MaxCount
           // A28: a bare boolean literal.
           let always = true
           // A28: parenthesization overrides precedence ((a or b) grouped, then `and`).

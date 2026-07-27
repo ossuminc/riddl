@@ -2277,8 +2277,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           case 1 => // ComparisonExpression
             val loc = readLocation()
             val op = ComparisonOperator.fromOrdinal(reader.readU8())
-            val left = readValue()
-            val right = readValue()
+            val left = readComparand()
+            val right = readComparand()
             ComparisonExpression(loc, op, left, right)
           case 2 => // LogicalExpression
             val loc = readLocation()
@@ -2291,6 +2291,37 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
             NotExpression(loc, readValue())
           case sub => throw new RuntimeException(s"Invalid boolean-expression sub-tag: $sub")
       case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
+  }
+
+  /** A28: mirror of [[BASTWriter.writeComparand]] — a comparison operand (ValueRef | GetValue |
+    * ConstantRef).
+    */
+  private def readComparand(): Comparand = {
+    reader.readU8() match
+      case 0 => // ValueRef
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ValueRef(loc, pid)
+      case 1 => // GetValue
+        val loc = readLocation()
+        val srcType = reader.readU8()
+        val source: InputRef | StateRef = srcType match
+          case 0 =>
+            val irLoc = readLocation()
+            val keyword = readString()
+            val pid = readPathIdentifierInline()
+            InputRef(irLoc, keyword, pid)
+          case 1 =>
+            val srLoc = readLocation()
+            val pid = readPathIdentifierInline()
+            StateRef(srLoc, pid)
+          case _ => throw new RuntimeException(s"Invalid get-value source type: $srcType")
+        GetValue(loc, source)
+      case 2 => // ConstantRef
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ConstantRef(loc, pid)
+      case other => throw new RuntimeException(s"Invalid comparand discriminator: $other")
   }
 
   /** A54: mirror of [[BASTWriter.writeMessageOperand]]. */

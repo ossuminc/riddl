@@ -389,6 +389,10 @@ object JsonModel:
   /** `{ "value": "valueRef", "path": "<path>" }` */
   case class ValueRefDto(path: String) extends ValueDto
 
+  /** `{ "value": "constantRef", "path": "<path>" }` — a `constant <path>` comparison operand (A28).
+    */
+  case class ConstantRefDto(path: String) extends ValueDto
+
   /** `{ "value": "prompt", "prompt": "..." }` — an AI-computed value (A54). */
   case class PromptValueDto(prompt: String) extends ValueDto
 
@@ -911,6 +915,7 @@ object JsonModel:
       case "literal"     => LiteralValueDto(m("text").str)
       case "prompt"      => PromptValueDto(m("prompt").str)
       case "valueRef"    => ValueRefDto(m("path").str)
+      case "constantRef" => ConstantRefDto(m("path").str)
       case "get"         => GetValueDto(m("source").str, m.get("keyword").map(_.str), m("ref").str)
       case "boolLiteral" => BooleanLiteralDto(m("bool").bool)
       case "comparison"  => ComparisonDto(m("op").str, readValue(m("left")), readValue(m("right")))
@@ -937,6 +942,8 @@ object JsonModel:
         ujson.Obj("value" -> ujson.Str("prompt"), "prompt" -> ujson.Str(prompt))
       case ValueRefDto(path) =>
         ujson.Obj("value" -> ujson.Str("valueRef"), "path" -> ujson.Str(path))
+      case ConstantRefDto(path) =>
+        ujson.Obj("value" -> ujson.Str("constantRef"), "path" -> ujson.Str(path))
       case GetValueDto(source, keyword, ref) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)](

@@ -658,13 +658,32 @@ object JsonAstBuilder:
         val cop = ComparisonOperator.values
           .find(_.symbol == op)
           .getOrElse { ctx.err(s"unknown comparison operator '$op'"); ComparisonOperator.EQ }
-        ComparisonExpression(At(), cop, buildValue(left), buildValue(right))
+        ComparisonExpression(At(), cop, buildComparand(left), buildComparand(right))
+      case ConstantRefDto(p) => ValueRef(At(), pathId(p)) // A28: only valid as a comparand
       case LogicalDto(op, left, right) =>
         val lop = LogicalOperator.values
           .find(_.symbol == op)
           .getOrElse { ctx.err(s"unknown logical operator '$op'"); LogicalOperator.And }
         LogicalExpression(At(), lop, buildValue(left), buildValue(right))
       case NotDto(expr) => NotExpression(At(), buildValue(expr))
+
+  // A28: ValueDto -> AST Comparand (ValueRef | GetValue | ConstantRef). Comparison operands are
+  // ref-only; any other DTO is a malformed comparand (reported), degraded to a bare ValueRef.
+  private def buildComparand(v: ValueDto)(using ctx: Ctx): Comparand =
+    v match
+      case ValueRefDto(p)    => ValueRef(At(), pathId(p))
+      case ConstantRefDto(p) => ConstantRef(At(), pathId(p))
+      case GetValueDto(source, keyword, ref) =>
+        val src: InputRef | StateRef = source match
+          case "input" => InputRef(At(), keyword.getOrElse("input"), pathId(ref))
+          case "state" => StateRef(At(), pathId(ref))
+          case other =>
+            ctx.err(s"unknown get-value source '$other' (expected input|state)")
+            StateRef(At(), pathId(ref))
+        GetValue(At(), src)
+      case other =>
+        ctx.err(s"comparison operand must be a value/constant reference, got: $other")
+        ValueRef(At(), PathIdentifier.empty)
 
   // A54: ConstructorValueDto -> AST Constructor.
   private def buildConstructor(c: ConstructorValueDto)(using ctx: Ctx): Constructor =

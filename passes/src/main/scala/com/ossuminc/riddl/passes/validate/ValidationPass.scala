@@ -2738,17 +2738,10 @@ case class ValidationPass(
           case sr: StateRef => checkRef[State](sr, parents)
       case _: BooleanLiteral        => ()
       case ce: ComparisonExpression =>
-        // A28: recurse operands, then require both to be category-compatible when both resolve.
-        validateValue(ce.left, parents, lets)
-        validateValue(ce.right, parents, lets)
-        (valueCategory(ce.left, parents, lets), valueCategory(ce.right, parents, lets)) match
-          case (Some(a), Some(b)) if a != b =>
-            messages.addError(
-              ce.loc,
-              s"Cannot compare a $a value to a $b value with '${ce.op.symbol}'",
-              suggestion = "Compare operands of the same kind (both numeric, both strings, etc.)."
-            )
-          case _ => ()
+        // A28: operands are ref-only Comparands; validate each resolves, then enforce type-safety.
+        validateComparand(ce.left, parents, lets)
+        validateComparand(ce.right, parents, lets)
+        checkComparison(ce, parents, lets)
       case le: LogicalExpression =>
         validateValue(le.left, parents, lets)
         validateValue(le.right, parents, lets)
@@ -2776,6 +2769,87 @@ case class ValidationPass(
           suggestion = "Use a comparison, a boolean field, or a boolean literal (true/false)."
         )
       case None => () // undetermined — skip
+
+  /** A28: the [[Constant]] a bare comparison [[ValueRef]] names, if any. Comparisons may compare a
+    * field/local against a named `constant` written as a bare path (`count > MaxCount`); the
+    * four-source [[valueRefResolves]] does not cover constants, so this consults the symbol table.
+    */
+  private def constantOf(vr: ValueRef): Option[Constant] =
+    if vr.path.value.nonEmpty then symbols.lookup[Constant](vr.path.value.reverse).headOption
+    else None
+
+  /** A28: the broad category of a comparison operand ([[Comparand]]). A [[ConstantRef]] resolves
+    * via the refMap to a [[Constant]] whose declared `typeEx` is classified; a bare [[ValueRef]]
+    * naming a constant is classified likewise; everything else defers to [[valueCategory]].
+    */
+  private def comparandCategory(
+    c: Comparand,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Option[String] =
+    c match
+      case cr: ConstantRef =>
+        resolution.refMap.definitionOf[Constant](cr.pathId).flatMap(k => typeExprCategory(k.typeEx))
+      case gv: GetValue => valueCategory(gv, parents, lets)
+      case vr: ValueRef =>
+        valueCategory(vr, parents, lets)
+          .orElse(constantOf(vr).flatMap(k => typeExprCategory(k.typeEx)))
+
+  /** A28: validate a comparison operand ([[Comparand]]) resolves. A [[ConstantRef]]/[[GetValue]] is
+    * checked via [[checkRef]]; a bare [[ValueRef]] must be a `let`-local, an in-scope field, or a
+    * named [[Constant]].
+    */
+  private def validateComparand(c: Comparand, parents: Parents, lets: Seq[LetStatement]): Unit =
+    c match
+      case cr: ConstantRef => checkRef[Constant](cr, parents)
+      case gv: GetValue    => validateValue(gv, parents, lets)
+      case vr: ValueRef =>
+        if !valueRefResolves(vr, parents, lets) && constantOf(vr).isEmpty then
+          messages.addError(
+            vr.loc,
+            s"Value reference '${vr.path.format}' is not a 'let'-local, a field of the handled " +
+              "message or entity state, a function input, or a constant in scope",
+            suggestion =
+              "Bind it with a 'let'; reference a field of the on-clause message, entity state, or " +
+                "the function's 'requires' input; or declare and reference a 'constant'."
+          )
+
+  /** A28: enforce type-safe comparisons. Equality (`==`/`!=`) requires both operands to share a
+    * category (identity comparison); ordering (`<`/`>`/`<=`/`>=`) requires an ORDERED type —
+    * conservatively, numeric — on both operands. Undetermined categories are skipped (best-effort;
+    * an unresolved ref is reported by [[validateComparand]]).
+    */
+  private def checkComparison(
+    ce: ComparisonExpression,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Unit =
+    val lc = comparandCategory(ce.left, parents, lets)
+    val rc = comparandCategory(ce.right, parents, lets)
+    ce.op match
+      case ComparisonOperator.EQ | ComparisonOperator.NE =>
+        (lc, rc) match
+          case (Some(a), Some(b)) if a != b =>
+            messages.addError(
+              ce.loc,
+              s"Cannot compare a $a value to a $b value with '${ce.op.symbol}'",
+              suggestion = "Compare operands of the same type (both numeric, both strings, etc.)."
+            )
+          case _ => ()
+      case _ =>
+        def requireNumeric(cat: Option[String], operand: Comparand): Unit =
+          cat match
+            case Some("numeric") => ()
+            case Some(other) =>
+              messages.addError(
+                operand.loc,
+                s"Ordering operator '${ce.op.symbol}' requires a numeric operand but got a $other value",
+                suggestion =
+                  "Order only numeric operands; use '=='/'!=' for equality of non-numeric values."
+              )
+            case None => ()
+        requireNumeric(lc, ce.left)
+        requireNumeric(rc, ce.right)
 
   /** A54: best-effort type-compatibility check for a [[Value]] against an expected [[Type]]. Only
     * fires when both the expected type and the value's type resolve; otherwise skipped (an
