@@ -330,8 +330,18 @@ object JsonAstBuilder:
         ctx.err(s"unknown message kind '$other' (expected command|event|query|result)")
         CommandRef(At(), pathId(mr.ref))
 
-  private def buildInvariant(i: InvariantDto): Invariant =
-    Invariant(At(), ident(i.name), Some(LiteralString(At(), i.condition)), meta(i.brief))
+  private def buildInvariant(i: InvariantDto)(using ctx: Ctx): Invariant =
+    // A28: a structured `expression` rebuilds a BooleanExpression; otherwise the `condition` string
+    // rebuilds a LiteralString (preserving the legacy always-Some behavior).
+    val cond: Option[LiteralString | BooleanExpression] = i.expression match
+      case Some(exprDto) =>
+        buildValue(exprDto) match
+          case be: BooleanExpression => Some(be)
+          case _ =>
+            ctx.err("invariant 'expression' must be a boolean expression")
+            Some(LiteralString(At(), ""))
+      case None => Some(LiteralString(At(), i.condition))
+    Invariant(At(), ident(i.name), cond, meta(i.brief))
 
   // ---------------------------------------------------------------------------
   // Functions and statements (Phase 3)
@@ -554,15 +564,23 @@ object JsonAstBuilder:
           buildValue(expression)
         )
       case CodeStmtDto(language, body) => CodeStatement(At(), LiteralString(At(), language), body)
-      case RequireStmtDto(condition, invariant) =>
-        val cond: LiteralString | InvariantRef = invariant match
-          case Some(name) => InvariantRef(At(), pathId(name))
-          case None =>
-            condition match
-              case Some(c) => LiteralString(At(), c)
-              case None =>
-                ctx.err("require statement needs a 'condition' or an 'invariant'")
+      case RequireStmtDto(condition, invariant, expression) =>
+        val cond: LiteralString | InvariantRef | BooleanExpression = expression match
+          case Some(exprDto) => // A28: structured boolean-expression condition
+            buildValue(exprDto) match
+              case be: BooleanExpression => be
+              case _ =>
+                ctx.err("require 'expression' must be a boolean expression")
                 LiteralString(At(), "")
+          case None =>
+            invariant match
+              case Some(name) => InvariantRef(At(), pathId(name))
+              case None =>
+                condition match
+                  case Some(c) => LiteralString(At(), c)
+                  case None =>
+                    ctx.err("require statement needs a 'condition', 'invariant', or 'expression'")
+                    LiteralString(At(), "")
         RequireStatement(At(), cond)
       case SetStmtDto(field, state, value) =>
         val target: FieldRef | StateRef = (field, state) match
@@ -586,10 +604,18 @@ object JsonAstBuilder:
       case TellStmtDto(message, to, processor) =>
         TellStatement(At(), buildMsgOperand(message), processorRef(to, processor))
       case YieldStmtDto(message) => YieldStatement(At(), buildMsgOperand(message))
-      case WhenStmtDto(condition, conditionId, negated, thenS, elseS) =>
-        val cond: LiteralString | Identifier = conditionId match
-          case Some(id) => ident(id)
-          case None     => LiteralString(At(), condition.getOrElse(""))
+      case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
+        val cond: LiteralString | Identifier | BooleanExpression = expression match
+          case Some(exprDto) => // A28: structured boolean-expression condition
+            buildValue(exprDto) match
+              case be: BooleanExpression => be
+              case _ =>
+                ctx.err("when 'expression' must be a boolean expression")
+                LiteralString(At(), "")
+          case None =>
+            conditionId match
+              case Some(id) => ident(id)
+              case None     => LiteralString(At(), condition.getOrElse(""))
         WhenStatement(At(), cond, buildStatements(thenS), buildStatements(elseS), negated)
       case MatchStmtDto(expression, cases, default) =>
         MatchStatement(

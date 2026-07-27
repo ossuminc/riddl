@@ -2661,12 +2661,13 @@ object AST:
   @JSExportTopLevel("RequireStatement")
   case class RequireStatement(
     loc: At,
-    condition: LiteralString | InvariantRef
+    condition: LiteralString | InvariantRef | BooleanExpression
   ) extends Statement {
     override def kind: String = "Require Statement"
     def format: String = condition match {
-      case ls: LiteralString => s"require ${ls.format}"
-      case ir: InvariantRef  => s"require ${ir.format}"
+      case ls: LiteralString     => s"require ${ls.format}"
+      case ir: InvariantRef      => s"require ${ir.format}"
+      case be: BooleanExpression => s"require ${be.format}" // A28
     }
   }
 
@@ -2815,7 +2816,7 @@ object AST:
   @JSExportTopLevel("WhenStatement")
   case class WhenStatement(
     loc: At,
-    condition: LiteralString | Identifier,
+    condition: LiteralString | Identifier | BooleanExpression,
     thenStatements: Contents[Statements],
     elseStatements: Contents[Statements] = Contents.empty[Statements](0),
     negated: Boolean = false
@@ -2823,8 +2824,9 @@ object AST:
     override def kind: String = "When Statement"
     def format: String = {
       val condStr = condition match {
-        case ls: LiteralString => ls.format
-        case id: Identifier    => if negated then s"!${id.format}" else id.format
+        case ls: LiteralString     => ls.format
+        case id: Identifier        => if negated then s"!${id.format}" else id.format
+        case be: BooleanExpression => be.format // A28: negation is expressed via `not` in the expr
       }
       val thenStr =
         if thenStatements.isEmpty then "" else thenStatements.toSeq.map(_.format).mkString("\n  ")
@@ -3113,7 +3115,9 @@ object AST:
   case class Invariant(
     loc: At,
     id: Identifier,
-    condition: Option[LiteralString] = Option.empty[LiteralString],
+    // A28: a condition is either an opaque pseudo-code LiteralString or a structured BooleanExpression
+    condition: Option[LiteralString | BooleanExpression] =
+      Option.empty[LiteralString | BooleanExpression],
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf {
     override def isEmpty: Boolean = condition.isEmpty

@@ -72,4 +72,25 @@ domain Values is {
       }
     }
   }
+  // A28 slice 2: structured boolean expressions as when/require/invariant CONDITIONS (not just
+  // let/set values). Exercises the widened condition parsers so the EBNF/TatSu grammar covers them.
+  context Conditions is {
+    command Act is { count: Integer }
+    entity Guard is {
+      record GuardData is { count: Integer, total: Integer, active: Boolean }
+      state GState of record GuardData
+      // A28: an invariant condition as a structured comparison (was: opaque literal string only).
+      invariant balanced is count == total
+      handler Rules is {
+        on command Act {
+          // A28: a `require` condition as a comparison (was: literal string / invariant ref only).
+          require count == total
+          // A28: a `when` condition as a structured boolean expression (was: literal / identifier).
+          when count > total and not active then
+            error "over"
+          end
+        }
+      }
+    }
+  }
 }

@@ -308,6 +308,53 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip boolean-expression when/require/invariant conditions (A28 s2) losslessly" in {
+      val cModel =
+        """domain CD is {
+          |  context c is {
+          |    entity e is {
+          |      invariant inv is x > y
+          |      handler h is {
+          |        on init is {
+          |          require count == total
+          |          when a > b and not c then error "boom" end
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(cModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // JsonifierPass emits the structured `expression` field for widened conditions...
+          json1 must include("\"expression\"")
+          json1 must include("\"comparison\"")
+          json1 must include("\"logical\"")
+          json1 must include("\"not\"")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              // Fixed point proves the AST<->JSON mapping is lossless for the widened conditions.
+              RiddlLib.root2Json(root1) mustBe json1
+              // And the rebuilt AST preserves the M3 `when a > b and not c` structure.
+              val ws = Finder(root1.contents).recursiveFindByType[WhenStatement].head
+              ws.condition match
+                case LogicalExpression(_, LogicalOperator.And, left, right) =>
+                  left mustBe a[ComparisonExpression]
+                  right mustBe a[NotExpression]
+                case other => fail(s"expected And when condition, got $other")
+              val rs = Finder(root1.contents).recursiveFindByType[RequireStatement].head
+              rs.condition mustBe a[ComparisonExpression]
+              val inv = Finder(root1.contents).recursiveFindByType[Invariant].head
+              inv.condition.map(_.getClass.getSimpleName) mustBe Some("ComparisonExpression")
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the boolean-condition JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the boolean-condition model failed: $errors")
+      end match
+    }
+
     "round-trip widened operands: send/morph/set/let(prompt)/yield constructors (A54) losslessly" in {
       val wModel =
         """domain WD is {

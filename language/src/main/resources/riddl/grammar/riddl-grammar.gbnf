@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 02:40 UTC
+# Generated: 2026-07-27 03:29 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -197,7 +197,8 @@ message-origins ::= inlet-ref | processor-ref | user-ref | epic-ref
 statement ::= when-statement | match-statement | foreach-statement | send-statement | tell-statement | yield-statement | reply-statement | the-set-statement | let-statement | put-statement | return-statement | prompt-statement | code-statement | error-statement | require-statement | morph-statement | become-statement | comment
 
 # Control flow
-when-statement ::= "when" ws1 literal-string ws "then" ws1 pseudo-code-block ws ("else" pseudo-code-block)? ws "end"
+when-statement ::= "when" ws1 when-condition ws "then" ws1 pseudo-code-block ws ("else" pseudo-code-block)? ws "end"
+when-condition ::= literal-string | "!" ws identifier | boolean-expression
 match-statement ::= "match" ws1 literal-string ws "{" ws (match-case)+ ws ("default" "{" (statement)* "}")? ws "}"
 match-case ::= "case" ws1 literal-string ws "{" ws (statement)* ws "}"
 foreach-statement ::= "foreach" ws1 identifier ws "in" ws (field-ref | identifier) ws "{" ws (statement)* ws "}"
@@ -235,7 +236,7 @@ prompt-statement ::= ("do" | "prompt") ws literal-string
 code-statement ::= "```" ("scala" | "java" | "python" | "mojo") code-contents "```"
 code-contents ::= (any-char-except-triple-backtick)*
 error-statement ::= "error" ws1 literal-string
-require-statement ::= "require" ws (literal-string | invariant-ref)
+require-statement ::= "require" ws (literal-string | invariant-ref | boolean-expression)
 invariant-ref ::= "invariant" ws1 path-identifier
 
 # Entity state transitions. A54: the morph value is a bare record ref or an inline constructor.
@@ -249,7 +250,7 @@ pseudo-code-contents ::= ("???")? ws (statement)*
 
 # Constants and Invariants
 constant ::= "constant" ws1 identifier ws1 is ws1 type-expression ws "=" ws literal-string ws (with-metadata)?
-invariant ::= "invariant" ws1 identifier ws1 is ws (literal-string)? ws (with-metadata)?
+invariant ::= "invariant" ws1 identifier ws1 is ws (literal-string | boolean-expression)? ws (with-metadata)?
 
 # Relationship
 relationship ::= "relationship" ws1 identifier ws "to" ws1 processor-ref ws1 by-as ws1 relationship-cardinality ws ("label" by-as literal-string)? ws (with-metadata)?

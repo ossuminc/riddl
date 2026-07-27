@@ -359,6 +359,72 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize boolean-expression conditions in when/require/invariant (A28 s2)" in {
+      // A28 slice 2 widens the when/require/invariant condition BAST codecs (flag 2 -> writeValue,
+      // and the invariant option sub-flag). Verify each survives a byte round-trip, and that the M3
+      // `when a > b and not c` structure is preserved.
+      val riddlSource =
+        """domain d is {
+          |  context c is {
+          |    entity e is {
+          |      invariant inv is x > y
+          |      handler h is {
+          |        on init {
+          |          require count == total
+          |          when a > b and not c then error "boom" end
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-boolcond")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.*
+              // require count == total -> ComparisonExpression
+              val requires = Finder(nebula.contents).recursiveFindByType[RequireStatement]
+              assert(requires.size == 1, s"expected one RequireStatement, found ${requires.size}")
+              requires.head.condition match
+                case ComparisonExpression(_, ComparisonOperator.EQ, l, r) =>
+                  assert(l.asInstanceOf[ValueRef].path.value == Seq("count"))
+                  assert(r.asInstanceOf[ValueRef].path.value == Seq("total"))
+                case other => fail(s"expected a comparison require condition, got $other")
+              // when a > b and not c -> And(Comparison, Not)
+              val whens = Finder(nebula.contents).recursiveFindByType[WhenStatement]
+              assert(whens.size == 1, s"expected one WhenStatement, found ${whens.size}")
+              whens.head.condition match
+                case LogicalExpression(_, LogicalOperator.And, left, right) =>
+                  left match
+                    case ComparisonExpression(_, ComparisonOperator.GT, a, b) =>
+                      assert(a.asInstanceOf[ValueRef].path.value == Seq("a"))
+                      assert(b.asInstanceOf[ValueRef].path.value == Seq("b"))
+                    case other => fail(s"expected a > b on the left, got $other")
+                  right match
+                    case NotExpression(_, inner) =>
+                      assert(inner.asInstanceOf[ValueRef].path.value == Seq("c"))
+                    case other => fail(s"expected not c on the right, got $other")
+                case other => fail(s"expected And when condition, got $other")
+              // invariant inv is x > y -> ComparisonExpression
+              val invs = Finder(nebula.contents).recursiveFindByType[Invariant]
+              assert(invs.size == 1, s"expected one Invariant, found ${invs.size}")
+              invs.head.condition match
+                case Some(ComparisonExpression(_, ComparisonOperator.GT, l, r)) =>
+                  assert(l.asInstanceOf[ValueRef].path.value == Seq("x"))
+                  assert(r.asInstanceOf[ValueRef].path.value == Seq("y"))
+                case other => fail(s"expected a comparison invariant condition, got $other")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize widened operands: send/morph/set/let(prompt)/yield (A54)" in {
       // A54 widens set/let values, send/tell/yield messages, and morph values. Verify each widened
       // form (including the `prompt(...)` value and inline constructors) round-trips at rev 14.
@@ -667,7 +733,9 @@ class BASTRoundTripTest extends AnyWordSpec {
                 "state-scoped invariant lost in BAST"
               )
               assert(
-                s.invariants.head.condition.map(_.s).contains("x must be >= 0"),
+                s.invariants.head.condition
+                  .collect { case ls: AST.LiteralString => ls.s }
+                  .contains("x must be >= 0"),
                 "invariant condition lost in BAST"
               )
               assert(e.invariants.isEmpty, "invariant leaked to entity level in BAST")

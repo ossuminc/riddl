@@ -569,6 +569,7 @@ case class ValidationPass(
             checkNonEmptyValue(ls, "condition", onClause, loc, MissingWarning, required = true)
           case id: Identifier =>
             checkNonEmptyValue(id, "condition", onClause, loc, MissingWarning, required = true)
+          case _: BooleanExpression => () // A28: type-checked in checkStatementScopes
         }
         checkNonEmpty(
           thenStatements.toSeq,
@@ -623,6 +624,7 @@ case class ValidationPass(
             )
           case ir: InvariantRef =>
             checkRef[Invariant](ir, parents)
+          case _: BooleanExpression => () // A28: type-checked in checkStatementScopes
         }
       case YieldStatement(_, msg) =>
         // A54: a bare ref is checked here; a Constructor is validated in checkStatementScopes.
@@ -776,6 +778,11 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, i)
     checkNonEmpty(i.condition.toList, "Condition", i, Messages.MissingWarning)
+    // A28: type-check a structured BooleanExpression condition (invariants have no `let` scope).
+    i.condition.foreach {
+      case be: BooleanExpression => validateValue(be, parents, Seq.empty[LetStatement])
+      case _: LiteralString      => ()
+    }
     checkMetadata(i)
   }
 
@@ -2983,6 +2990,11 @@ case class ValidationPass(
           inScopeElements + fs.element.value
         )
       case ws: WhenStatement =>
+        // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
+        // the LiteralString/Identifier forms have no expression to check here.
+        ws.condition match
+          case be: BooleanExpression => validateValue(be, parents, lets)
+          case _                     => ()
         checkStatementScopes(
           ws.thenStatements.toSeq.collect { case s: Statement => s },
           lets,
@@ -2995,6 +3007,12 @@ case class ValidationPass(
           parents,
           inScopeElements
         )
+      case rs: RequireStatement =>
+        // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
+        // the LiteralString/InvariantRef forms are checked in validateStatement.
+        rs.condition match
+          case be: BooleanExpression => validateValue(be, parents, lets)
+          case _                     => ()
       case ms: MatchStatement =>
         ms.cases.foreach { mc =>
           checkStatementScopes(

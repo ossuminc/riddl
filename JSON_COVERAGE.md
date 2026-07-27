@@ -45,7 +45,7 @@ is covered in that construct's phase. The builder emits references as
 | OnPassivationClause | ✅ 2.0 | `kind: "passivate"` |
 | OnOtherClause | ✅ Phase 1 | `kind: "other"` |
 | OnTerminationClause | ✅ Phase 1 | `kind: "term"` |
-| Invariant | ✅ Phase 1 | string condition |
+| Invariant | ✅ Phase 1 / A28 s2 | string condition or structured `expression` (ValueDto) |
 | Author | ✅ Phase 1 | at domain level |
 | Enumerator | ✅ Phase 2 | names + explicit `value` |
 | Constant | ✅ Phase 2 | in context/entity |
@@ -135,14 +135,14 @@ is covered in that construct's phase. The builder emits references as
 | ErrorStatement | ✅ Phase 3 | |
 | LetStatement | ✅ Phase 3 / A54 | expression widened to ValueDto |
 | CodeStatement | ✅ Phase 3 | |
-| RequireStatement | ✅ Phase 3 | |
+| RequireStatement | ✅ Phase 3 / A28 s2 | condition widened: string, `invariant` name, or structured `expression` (ValueDto) |
 | SetStatement | ✅ Phase 3 / A54 | FieldRef/StateRef; value widened to ValueDto |
 | SendStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; + PortletRef |
 | MorphStatement | ✅ Phase 3 / A54 | value = RecordRef or Constructor |
 | BecomeStatement | ✅ Phase 3 | |
 | TellStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor |
 | YieldStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; reads legacy "reply" |
-| WhenStatement | ✅ Phase 3 | nested statements |
+| WhenStatement | ✅ Phase 3 / A28 s2 | nested statements; condition widened: string, identifier, or structured `expression` (ValueDto) |
 | MatchStatement / MatchCase | ✅ Phase 3 | nested statements |
 | ForeachStatement | ✅ A25 | field-ref or local collection; nested body statements |
 | PutStatement | ✅ A45 | value + OutputRef; value via ValueDto |

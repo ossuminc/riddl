@@ -165,6 +165,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         }
       case cg: ContainedGroup =>
         associateUsage(cg, resolveARef[Group](cg.group, parents))
+      case inv: Invariant =>
+        // A28: resolve operand refs inside a structured BooleanExpression condition (a LiteralString
+        // condition has none).
+        inv.condition.foreach {
+          case be: BooleanExpression => resolveValue(be, parents)
+          case _: LiteralString      => ()
+        }
       case _: BASTImport => () // BAST imports are resolved in BASTLoadingPass
       case _: MatchCase => () // MatchCase statements contain references handled in resolveStatement
       case _: NonReferencableDefinitions => () // These can't be referenced
@@ -289,14 +296,20 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: ErrorStatement  => () // no references
       case rs: RequireStatement =>
         rs.condition match {
-          case _: LiteralString => () // no references
-          case ir: InvariantRef => resolveARef[Invariant](ir, parents)
+          case _: LiteralString      => () // no references
+          case ir: InvariantRef      => resolveARef[Invariant](ir, parents)
+          case be: BooleanExpression => resolveValue(be, parents) // A28: resolve operand refs
         }
       case YieldStatement(_, msg) =>
         resolveMessageOperand(msg, parents)
       case ws: WhenStatement =>
-        // The condition has no references, but a nested foreach's field ref must be resolved so
-        // validation can find it in the refMap.
+        // A28: a BooleanExpression condition may carry operand refs; the LiteralString/Identifier
+        // forms have none. A nested foreach's field ref must also be resolved so validation can
+        // find it in the refMap.
+        ws.condition match {
+          case be: BooleanExpression => resolveValue(be, parents)
+          case _                     => ()
+        }
         resolveForeachFieldRefs(ws.thenStatements, parents)
         resolveForeachFieldRefs(ws.elseStatements, parents)
       case ms: MatchStatement =>

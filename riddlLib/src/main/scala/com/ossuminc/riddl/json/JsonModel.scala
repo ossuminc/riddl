@@ -257,7 +257,15 @@ object JsonModel:
 
   case class MessageRefDto(ref: String, kind: String)
 
-  case class InvariantDto(name: String, condition: String, brief: Option[String] = None)
+  /** `condition` holds an opaque pseudo-code string; A28's structured BooleanExpression condition
+    * is carried in `expression` (with `condition` empty). At most one is populated.
+    */
+  case class InvariantDto(
+    name: String,
+    condition: String,
+    brief: Option[String] = None,
+    expression: Option[ValueDto] = None
+  )
 
   case class FieldDto(name: String, `type`: TypeExprDto, brief: Option[String] = None)
 
@@ -300,9 +308,14 @@ object JsonModel:
   /** `{ "kind": "code", "language": "scala", "body": "..." }` */
   case class CodeStmtDto(language: String, body: String) extends StatementDto
 
-  /** `{ "kind": "require", "condition": "..." }` or `{ ..., "invariant": "<name>" }` */
-  case class RequireStmtDto(condition: Option[String], invariant: Option[String])
-      extends StatementDto
+  /** `{ "kind": "require", "condition": "..." }`, `{ ..., "invariant": "<name>" }`, or A28's
+    * structured `{ ..., "expression": <value> }`. At most one is populated.
+    */
+  case class RequireStmtDto(
+    condition: Option[String],
+    invariant: Option[String],
+    expression: Option[ValueDto] = None
+  ) extends StatementDto
 
   /** A54: a message operand — a bare message ref or an inline constructor value. */
   type MsgOperandDto = MessageRefDto | ConstructorValueDto
@@ -331,15 +344,17 @@ object JsonModel:
     */
   case class YieldStmtDto(message: MsgOperandDto) extends StatementDto
 
-  /** `{ "kind": "when", "condition"|"conditionIdentifier": "...", "negated"?: bool, "then":
-    * [<stmt>], "else"?: [<stmt>] }`
+  /** `{ "kind": "when", "condition"|"conditionIdentifier"|"expression": ..., "negated"?: bool,
+    * "then": [<stmt>], "else"?: [<stmt>] }`. A28's structured BooleanExpression condition is
+    * carried in `expression`; at most one of the three condition fields is populated.
     */
   case class WhenStmtDto(
     condition: Option[String],
     conditionIdentifier: Option[String],
     negated: Boolean,
     thenStatements: Seq[StatementDto],
-    elseStatements: Seq[StatementDto]
+    elseStatements: Seq[StatementDto],
+    expression: Option[ValueDto] = None
   ) extends StatementDto
 
   /** `{ "kind": "match", "expression": "...", "cases": [<matchCase>], "default"?: [<stmt>] }` */
@@ -992,7 +1007,11 @@ object JsonModel:
             LetStmtDto(m("name").str, m.get("type").map(_.str), readValue(m("expression")))
           case "code" => CodeStmtDto(m("language").str, m("body").str)
           case "require" =>
-            RequireStmtDto(m.get("condition").map(_.str), m.get("invariant").map(_.str))
+            RequireStmtDto(
+              m.get("condition").map(_.str),
+              m.get("invariant").map(_.str),
+              m.get("expression").map(readValue)
+            )
           case "set" =>
             SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), readValue(m("value")))
           case "send" => SendStmtDto(readMsgOperand(m("message")), m("to").str, m("portlet").str)
@@ -1008,7 +1027,8 @@ object JsonModel:
               m.get("conditionIdentifier").map(_.str),
               m.get("negated").exists(_.bool),
               readStmts(m.get("then")),
-              readStmts(m.get("else"))
+              readStmts(m.get("else")),
+              m.get("expression").map(readValue)
             )
           case "match" =>
             val cases = m
@@ -1054,11 +1074,12 @@ object JsonModel:
           "language" -> ujson.Str(language),
           "body" -> ujson.Str(body)
         )
-      case RequireStmtDto(condition, invariant) =>
+      case RequireStmtDto(condition, invariant, expression) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("require"))
             ++ condition.map(x => "condition" -> (ujson.Str(x): ujson.Value))
             ++ invariant.map(x => "invariant" -> (ujson.Str(x): ujson.Value))
+            ++ expression.map(x => "expression" -> (writeValue(x): ujson.Value))
         )
       case SetStmtDto(field, state, value) =>
         ujson.Obj.from(
@@ -1096,11 +1117,12 @@ object JsonModel:
         )
       case YieldStmtDto(message) =>
         ujson.Obj("kind" -> ujson.Str("yield"), "message" -> writeMsgOperand(message))
-      case WhenStmtDto(condition, conditionId, negated, thenS, elseS) =>
+      case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("when"))
             ++ condition.map(x => "condition" -> (ujson.Str(x): ujson.Value))
             ++ conditionId.map(x => "conditionIdentifier" -> (ujson.Str(x): ujson.Value))
+            ++ expression.map(x => "expression" -> (writeValue(x): ujson.Value))
             ++ Seq[(String, ujson.Value)](
               "negated" -> ujson.Bool(negated),
               "then" -> stmtArr(thenS),
@@ -1303,6 +1325,11 @@ object JsonModel:
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW
   given onClauseRW: ReadWriter[OnClauseDto] = macroRW
   given handlerRW: ReadWriter[HandlerDto] = macroRW
+  // A28: InvariantDto (macroRW) may carry a structured BooleanExpression in `expression: Option[
+  // ValueDto]`. ValueDto is read/written by the manual readValue/writeValue codec, so bridge it into
+  // a ReadWriter for macroRW derivation.
+  given valueDtoRW: ReadWriter[ValueDto] =
+    readwriter[ujson.Value].bimap[ValueDto](writeValue, readValue)
   given invariantRW: ReadWriter[InvariantDto] = macroRW
   given constantRW: ReadWriter[ConstantDto] = macroRW
   given userRW: ReadWriter[UserDto] = macroRW

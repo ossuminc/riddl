@@ -348,8 +348,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     statement match
       case WhenStatement(_, cond, thenStatements, elseStatements, negated) =>
         val condStr = cond match {
-          case ls: LiteralString => ls.format
-          case id: Identifier    => if negated then s"!${id.format}" else id.format
+          case ls: LiteralString     => ls.format
+          case id: Identifier        => if negated then s"!${id.format}" else id.format
+          case be: BooleanExpression => be.format // A28: structured boolean expression
         }
         addIndent(s"when $condStr then").nl.incr
         if thenStatements.isEmpty then addLine("???")
@@ -396,8 +397,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         addIndent(s"```${lang.s}").add(body).nl.addIndent("```")
       case RequireStatement(_, condition) =>
         condition match {
-          case ls: LiteralString => addLine(s"require ${ls.format}")
-          case ir: InvariantRef  => addLine(s"require ${ir.format}")
+          case ls: LiteralString     => addLine(s"require ${ls.format}")
+          case ir: InvariantRef      => addLine(s"require ${ir.format}")
+          case be: BooleanExpression => addLine(s"require ${be.format}") // A28
         }
       case statement: Statement => addLine(statement.format)
       case comment: Comment     => emitComment(comment)

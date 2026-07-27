@@ -201,7 +201,10 @@ statement = when_statement | match_statement | foreach_statement | send_statemen
     morph_statement | become_statement | comment ;
 
 (* Control flow *)
-when_statement = "when" literal_string "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
+when_statement = "when" when_condition "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
+(* A28: a condition is an opaque pseudo-code literal, a negated/bare let-binding identifier, or a
+   structured boolean_expression. boolean_expression's atom covers a bare value_ref. *)
+when_condition = literal_string | "!" identifier | boolean_expression ;
 match_statement = "match" literal_string "{" {match_case}+ ["default" "{" {statement} "}"] "}" ;
 match_case = "case" literal_string "{" {statement} "}" ;
 (* A25: `foreach <element> in <collection> { <statements> }`; `field <path>` collection is a
@@ -255,7 +258,7 @@ prompt_statement = ("do" | "prompt") literal_string ;
 code_statement = "```" ("scala" | "java" | "python" | "mojo") code_contents "```" ;
 code_contents = {any_char_except_triple_backtick} ;
 error_statement = "error" literal_string ;
-require_statement = "require" (literal_string | invariant_ref) ;
+require_statement = "require" (literal_string | invariant_ref | boolean_expression) ; (* A28 *)
 invariant_ref = "invariant" path_identifier ;
 
 (* Entity state transitions. A54: the morph value is a bare record ref or an inline constructor. *)
@@ -269,7 +272,7 @@ pseudo_code_contents = ["???"] {statement} ;
 
 (* Constants and Invariants *)
 constant = "constant" identifier is type_expression "=" literal_string [with_metadata] ;
-invariant = "invariant" identifier is [literal_string] [with_metadata] ;
+invariant = "invariant" identifier is [literal_string | boolean_expression] [with_metadata] ; (* A28 *)
 
 (* Relationship *)
 relationship = "relationship" identifier "to" processor_ref byAs relationship_cardinality ["label" byAs literal_string] [with_metadata] ;

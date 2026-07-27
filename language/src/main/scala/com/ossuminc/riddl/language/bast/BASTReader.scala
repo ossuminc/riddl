@@ -882,9 +882,13 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
       case 10 => // When
         val conditionType = reader.readU8()
-        val condition: LiteralString | Identifier = conditionType match {
+        val condition: LiteralString | Identifier | BooleanExpression = conditionType match {
           case 0 => readLiteralString()
           case 1 => readIdentifierInline()
+          case 2 => // A28: structured boolean-expression condition
+            readValue() match
+              case be: BooleanExpression => be
+              case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
           case _ => throw new RuntimeException(s"Invalid when condition type: $conditionType")
         }
         val negated = reader.readU8() != 0
@@ -950,6 +954,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           case 1 => // invariant ref
             val pathId = readPathIdentifierInline()
             RequireStatement(loc, InvariantRef(loc, pathId))
+          case 2 => // A28: structured boolean-expression condition
+            readValue() match
+              case be: BooleanExpression => RequireStatement(loc, be)
+              case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
           case _ =>
             val condition = readLiteralString()
             RequireStatement(loc, condition)
@@ -1000,7 +1008,16 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readInvariantNode(): Invariant = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val condition = readOption(readLiteralString())
+    // A28: a sub-flag byte (0=literal, 1=boolean-expression) selects the arm inside the option.
+    val condition: Option[LiteralString | BooleanExpression] = readOption {
+      reader.readU8() match
+        case 0 => readLiteralString()
+        case 1 =>
+          readValue() match
+            case be: BooleanExpression => be
+            case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
+        case k => throw new RuntimeException(s"Invalid invariant condition kind: $k")
+    }
     val metadata = readMetadataDeferred()
     Invariant(loc, id, condition, metadata)
   }

@@ -55,7 +55,9 @@ class StateInvariantRoundTripTest extends AbstractValidatingTest {
       val e = Finder(parse(src, "src")).recursiveFindByType[Entity].head
       val s = e.states.find(_.id.value == "S").getOrElse(fail("state S missing"))
       s.invariants.map(_.id.value) mustBe Seq("nonNegative")
-      s.invariants.head.condition.map(_.s) mustBe Some("x must be >= 0")
+      s.invariants.head.condition.collect { case ls: LiteralString => ls.s } mustBe Some(
+        "x must be >= 0"
+      )
       // The invariant lives in the state, not at the entity level.
       e.invariants mustBe empty
     }

@@ -44,15 +44,43 @@ private[parsing] trait StatementParser {
     )./.map { case (start, str, end) => ErrorStatement(at(start, end), str) }
   }
 
+  // A28: `require` accepts a pseudo-code LiteralString, an `invariant <pathId>` reference, or a
+  // structured BooleanExpression. `booleanExprOnly` is tried LAST: `require invariant X` is caught by
+  // the `invariant`-keyword arm first, and a bare-ref pseudo-condition (never valid in `require`) is
+  // rejected by the filter (so `require count == 0` becomes a BooleanExpression while the legacy
+  // forms are unchanged).
   private def requireStatement[u: P]: P[RequireStatement] = {
     P(
-      Index ~ Keywords.require ~/ (literalString | (Keywords.invariant ~ pathIdentifier).map {
-        case pid => pid
-      }) ~/ Index
+      Index ~ Keywords.require ~/ (
+        literalString |
+          (Keywords.invariant ~ pathIdentifier).map { case pid => pid } |
+          booleanExprOnly
+      ) ~/ Index
     )./.map {
       case (start, str: LiteralString, end) => RequireStatement(at(start, end), str)
       case (start, pid: PathIdentifier, end) =>
         RequireStatement(at(start, end), InvariantRef(at(start, end), pid))
+      case (start, be: BooleanExpression, end) => RequireStatement(at(start, end), be)
+    }
+  }
+
+  // A28: an invariant's condition is either an opaque pseudo-code LiteralString or a structured
+  // BooleanExpression (or absent via `undefined`/`???`). Lives here (rather than in CommonParser)
+  // so it can reach `booleanExprOnly`; every caller (ProcessorParser/EntityParser/NebulaParser/
+  // ExtensibleTopLevelParser) mixes in StatementParser transitively. ORDER: `literalString` MUST
+  // precede `booleanExprOnly` — `literalString` cuts after the opening quote, so a quoted string fed
+  // to `booleanExprOnly` first would fail the filter behind that cut (no backtrack). A quoted string
+  // and an unquoted expression never share a first token, so trying `literalString` first is safe:
+  // `invariant X is "…"` stays a LiteralString, `invariant X is a > b` becomes a BooleanExpression.
+  def invariant[u: P]: P[Invariant] = {
+    P(
+      Index ~ Keywords.invariant ~ identifier ~/ is ~ (
+        undefined(Option.empty[LiteralString | BooleanExpression]) |
+          literalString.map(ls => Some(ls): Option[LiteralString | BooleanExpression]) |
+          booleanExprOnly.map(be => Some(be): Option[LiteralString | BooleanExpression])
+      ) ~ withMetaData ~/ Index
+    ).map { case (off1, id, condition, metas, off2) =>
+      Invariant(at(off1, off2), id, condition, metas.toContents)
     }
   }
 
@@ -189,10 +217,18 @@ private[parsing] trait StatementParser {
     )./.map { case (start, eRef, hRef, end) => BecomeStatement(at(start, end), eRef, hRef) }
   }
 
-  private def whenCondition[u: P]: P[(LiteralString | Identifier, Boolean)] = {
+  // A28: `when` accepts a pseudo-code LiteralString, a bare `let`-binding Identifier (optionally
+  // negated with `!`), or a structured BooleanExpression. `booleanExprOnly` is tried BEFORE the bare
+  // `identifier` arm: for `when someBoolField` it parses the ref as a bare atom, the filter rejects
+  // it, and the parse backtracks to `identifier` (so the AST stays an Identifier, unchanged). For
+  // `when a > b` / `when x and y` it succeeds and yields a BooleanExpression. The `! identifier`
+  // (negated) arm precedes it because `!` is not a boolean-atom start, so the boolean grammar never
+  // consumes it.
+  private def whenCondition[u: P]: P[(LiteralString | Identifier | BooleanExpression, Boolean)] = {
     P(
       literalString.map(ls => (ls, false)) |
         (Punctuation.exclamation ~ identifier).map(id => (id, true)) |
+        booleanExprOnly.map(be => (be, false)) |
         identifier.map(id => (id, false))
     )
   }
@@ -297,6 +333,16 @@ private[parsing] trait StatementParser {
       case (start, first, rest, end) =>
         rest.foldLeft(first)((l, r) => LogicalExpression(at(start, end), LogicalOperator.Or, l, r))
     }
+  }
+
+  // A28: a boolean expression that MUST contain a real operator/literal (i.e. produce an actual
+  // `BooleanExpression` node, not a bare atom). `booleanExpr` returns the bare `Value` atom when no
+  // operator is present; filtering to `BooleanExpression` makes that bare-atom case FAIL so the
+  // enclosing alternation backtracks to the legacy arm. This is the disambiguation that keeps
+  // `when someBoolField` an `Identifier` and `require invariant X` an `InvariantRef`, while
+  // `when a > b`, `when x and y`, `require count == 0` become structured BooleanExpressions.
+  private def booleanExprOnly[u: P]: P[BooleanExpression] = {
+    P(booleanExpr).filter(_.isInstanceOf[BooleanExpression]).map(_.asInstanceOf[BooleanExpression])
   }
 
   // `and` level. Left-associative fold of `not`-expressions.

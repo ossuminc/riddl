@@ -326,16 +326,6 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   }
 
-  def invariant[u: P]: P[Invariant] = {
-    P(
-      Index ~ Keywords.invariant ~ identifier ~/ is ~ (
-        undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-      ) ~ withMetaData ~/ Index
-    ).map { case (off1, id, condition, metas, off2) =>
-      Invariant(at(off1, off2), id, condition, metas.toContents)
-    }
-  }
-
   def groupAliases[u: P]: P[String] = {
     P(
       Keywords.keywords(

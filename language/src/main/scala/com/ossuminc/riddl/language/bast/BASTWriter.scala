@@ -641,7 +641,16 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_INVARIANT, i.metadata.nonEmpty)
     writeLocation(i.loc)
     writeIdentifierInline(i.id) // Inline - no tag needed
-    writeOption(i.condition)(writeLiteralString)
+    // A28: condition is Option[LiteralString | BooleanExpression]; a sub-flag byte (0=literal,
+    // 1=boolean-expression) selects the arm inside the option.
+    writeOption(i.condition) {
+      case ls: LiteralString =>
+        writer.writeU8(0)
+        writeLiteralString(ls)
+      case be: BooleanExpression =>
+        writer.writeU8(1)
+        writeValue(be)
+    }
   }
 
   // ========== OnClause Serialization ==========
@@ -967,6 +976,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case ir: InvariantRef =>
         writer.writeU8(1) // invariant reference condition
         writePathIdentifier(ir.pathId)
+      case be: BooleanExpression =>
+        writer.writeU8(2) // A28: structured boolean-expression condition
+        writeValue(be)
     }
   }
 
@@ -1045,7 +1057,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(10) // When statement
     writeLocation(s.loc)
-    // Write condition with type flag (0=LiteralString, 1=Identifier)
+    // Write condition with type flag (0=LiteralString, 1=Identifier, 2=BooleanExpression [A28])
     s.condition match {
       case ls: LiteralString =>
         writer.writeU8(0)
@@ -1053,6 +1065,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case id: Identifier =>
         writer.writeU8(1)
         writeIdentifierInline(id)
+      case be: BooleanExpression =>
+        writer.writeU8(2)
+        writeValue(be)
     }
     // Write negated flag (0=not negated, 1=negated)
     writer.writeU8(if s.negated then 1 else 0)

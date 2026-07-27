@@ -235,7 +235,9 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         .addIndent("invariant ")
         .add(invariant.id.format)
         .add(" is ")
-        .add(invariant.condition.format)
+        // A28: condition is Option[LiteralString | BooleanExpression]; both arms are RiddlValues
+        // with `.format` (the Option[LiteralString] `.format` extension no longer applies).
+        .add(invariant.condition.map(_.format).getOrElse("N/A"))
         .emitMetaData(invariant.metadata)
     }
   end doInvariant

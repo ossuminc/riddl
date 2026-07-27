@@ -524,6 +524,110 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
         case other => fail(s"expected a SetStatement with a comparison, got $other")
     }
 
+    // ---- A28 slice 2: boolean expressions as when/require/invariant conditions ----
+
+    "parse `when a > b` as a BooleanExpression condition (A28 s2)" in { (td: TestData) =>
+      parseStmt("when a > b then error \"boom\" end", td) match
+        case ws: WhenStatement =>
+          ws.condition match
+            case ce: ComparisonExpression =>
+              ce.op must be(ComparisonOperator.GT)
+              vref(ce.left) must be("a")
+              vref(ce.right) must be("b")
+            case other => fail(s"expected a ComparisonExpression condition, got $other")
+        case other => fail(s"expected a WhenStatement, got $other")
+    }
+
+    "parse `when x and y` as a BooleanExpression condition (A28 s2)" in { (td: TestData) =>
+      parseStmt("when x and y then error \"boom\" end", td) match
+        case ws: WhenStatement =>
+          ws.condition match
+            case LogicalExpression(_, LogicalOperator.And, left, right) =>
+              vref(left) must be("x"); vref(right) must be("y")
+            case other => fail(s"expected an And LogicalExpression condition, got $other")
+        case other => fail(s"expected a WhenStatement, got $other")
+    }
+
+    "keep legacy `when` forms unchanged (regression, A28 s2)" in { (td: TestData) =>
+      // A quoted pseudo-code condition stays a LiteralString.
+      parseStmt("when \"newPrice > 0\" then error \"boom\" end", td) match
+        case ws: WhenStatement =>
+          ws.condition mustBe a[LiteralString]
+          ws.negated must be(false)
+        case other => fail(s"expected a WhenStatement, got $other")
+      // A bare boolean-field ref stays an Identifier (NOT a ValueRef-wrapped BooleanExpression).
+      parseStmt("when someBoolField then error \"boom\" end", td) match
+        case ws: WhenStatement =>
+          ws.condition mustBe a[Identifier]
+          ws.condition.asInstanceOf[Identifier].value must be("someBoolField")
+          ws.negated must be(false)
+        case other => fail(s"expected a WhenStatement, got $other")
+      // A negated bare ref stays an Identifier with negated=true.
+      parseStmt("when !flag then error \"boom\" end", td) match
+        case ws: WhenStatement =>
+          ws.condition mustBe a[Identifier]
+          ws.negated must be(true)
+        case other => fail(s"expected a WhenStatement, got $other")
+    }
+
+    // NOTE: `require count == 0` (a bare numeric literal operand) does NOT parse — slice-1's boolean
+    // atom has no numeric-literal form (operands are refs / quoted literals / true / false). A
+    // numeric literal would be a new AST node touching every reflective surface, i.e. a slice-1
+    // grammar change, out of scope here. Comparing two refs exercises the same widening.
+    "parse `require count == total` as a BooleanExpression condition (A28 s2)" in {
+      (td: TestData) =>
+        parseStmt("require count == total", td) match
+          case rs: RequireStatement =>
+            rs.condition match
+              case ce: ComparisonExpression =>
+                ce.op must be(ComparisonOperator.EQ)
+                vref(ce.left) must be("count")
+                vref(ce.right) must be("total")
+              case other => fail(s"expected a ComparisonExpression condition, got $other")
+          case other => fail(s"expected a RequireStatement, got $other")
+    }
+
+    "keep legacy `require` forms unchanged (regression, A28 s2)" in { (td: TestData) =>
+      parseStmt("require \"balance >= amount\"", td) match
+        case rs: RequireStatement => rs.condition mustBe a[LiteralString]
+        case other                => fail(s"expected a RequireStatement, got $other")
+      parseStmt("require invariant MyInv", td) match
+        case rs: RequireStatement =>
+          rs.condition mustBe a[InvariantRef]
+          rs.condition.asInstanceOf[InvariantRef].pathId.value must be(Seq("MyInv"))
+        case other => fail(s"expected a RequireStatement, got $other")
+    }
+
+    "parse `invariant X is a > b` as a BooleanExpression condition (A28 s2)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain d is {
+          |  context c is {
+          |    entity e is {
+          |      invariant nonNeg is a > b
+          |      invariant legacy is "x must be >= 0"
+          |    }
+          |  }
+          |}""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(input) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(root) =>
+          val entity = Finder(AST.getTopLevelDomains(root).head.contents)
+            .recursiveFindByType[Entity]
+            .head
+          val invs = entity.invariants
+          invs.find(_.id.value == "nonNeg").flatMap(_.condition) match
+            case Some(ce: ComparisonExpression) =>
+              ce.op must be(ComparisonOperator.GT)
+              vref(ce.left) must be("a"); vref(ce.right) must be("b")
+            case other => fail(s"expected a ComparisonExpression condition, got $other")
+          // Legacy quoted pseudo-code condition stays a LiteralString.
+          invs.find(_.id.value == "legacy").flatMap(_.condition) match
+            case Some(_: LiteralString) => succeed
+            case other                  => fail(s"expected a LiteralString condition, got $other")
+    }
+
     "ban a put statement outside a context handler (A45)" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain PutBan is {

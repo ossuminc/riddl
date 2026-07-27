@@ -309,5 +309,111 @@ class ValueValidationTest extends AbstractValidatingTest {
         ) mustBe empty
       }
     }
+
+    // ---- A28 slice 2: boolean-expression conditions in when/require/invariant ----
+
+    "reject a non-boolean `when` condition (A28 s2)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Num is Integer
+          |    type Str is String
+          |    handler h is {
+          |      on init {
+          |        let a: Num = "1"
+          |        let b: Str = "x"
+          |        when a == b then error "unreachable" end
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "Cannot compare")
+      }
+    }
+
+    "accept a well-formed boolean `when` condition (A28 s2)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Flag is Boolean
+          |    handler h is {
+          |      on init {
+          |        let f: Flag = "true"
+          |        when f and f then error "unreachable" end
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        msgs.filter(m =>
+          m.kind == Error && (m.message.contains("Cannot compare") || m.message.contains(
+            "must be a boolean"
+          ))
+        ) mustBe empty
+      }
+    }
+
+    "reject a non-boolean `require` condition (A28 s2)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Num is Integer
+          |    type Str is String
+          |    handler h is {
+          |      on init {
+          |        let a: Num = "1"
+          |        let b: Str = "x"
+          |        require a == b
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "Cannot compare")
+      }
+    }
+
+    "reject a non-boolean logical operand in a `require` condition (A28 s2)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    type Num is Integer
+          |    handler h is {
+          |      on init {
+          |        let a: Num = "1"
+          |        let b: Num = "2"
+          |        require a and b
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "must be a boolean")
+      }
+    }
+
+    "accept a structured boolean invariant condition (A28 s2)" in { (td: TestData) =>
+      val model =
+        """domain d is {
+          |  context c is {
+          |    entity e is {
+          |      invariant ok is a > b and true
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        msgs.filter(m =>
+          m.kind == Error && (m.message.contains("Cannot compare") || m.message.contains(
+            "must be a boolean"
+          ))
+        ) mustBe empty
+      }
+    }
   }
 }

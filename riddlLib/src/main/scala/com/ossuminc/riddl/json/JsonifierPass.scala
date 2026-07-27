@@ -365,7 +365,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case c: Constant =>
       Some(ConstantDto(c.id.value, serializeTypeExpr(c.typeEx), c.value.s, briefOf(c.metadata)))
     case i: Invariant =>
-      Some(InvariantDto(i.id.value, i.condition.map(_.s).getOrElse(""), briefOf(i.metadata)))
+      // A28: a LiteralString condition serializes to the `condition` string; a BooleanExpression to
+      // the structured `expression` field (with `condition` empty).
+      val (condStr, condExpr) = i.condition match
+        case Some(ls: LiteralString)     => (ls.s, None)
+        case Some(be: BooleanExpression) => ("", Some(serializeValue(be)))
+        case None                        => ("", None)
+      Some(InvariantDto(i.id.value, condStr, briefOf(i.metadata), condExpr))
     case u: User => Some(UserDto(u.id.value, u.is_a.s, briefOf(u.metadata)))
     case a: Author =>
       Some(AuthorDto(a.id.value, a.name.s, a.email.s, a.organization.map(_.s), a.title.map(_.s)))
@@ -504,8 +510,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case CodeStatement(_, lang, body) => CodeStmtDto(lang.s, body)
     case RequireStatement(_, cond) =>
       cond match
-        case ls: LiteralString => RequireStmtDto(Some(ls.s), None)
-        case ir: InvariantRef  => RequireStmtDto(None, Some(path(ir.pathId)))
+        case ls: LiteralString     => RequireStmtDto(Some(ls.s), None)
+        case ir: InvariantRef      => RequireStmtDto(None, Some(path(ir.pathId)))
+        case be: BooleanExpression => RequireStmtDto(None, None, Some(serializeValue(be))) // A28
     case SetStatement(_, field, value) =>
       field match
         case fr: FieldRef => SetStmtDto(Some(path(fr.pathId)), None, serializeValue(value))
@@ -538,6 +545,15 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             negated,
             serializeStatements(thenS),
             serializeStatements(elseS)
+          )
+        case be: BooleanExpression => // A28: structured boolean-expression condition
+          WhenStmtDto(
+            None,
+            None,
+            negated,
+            serializeStatements(thenS),
+            serializeStatements(elseS),
+            Some(serializeValue(be))
           )
     case MatchStatement(_, expr, cases, default) =>
       MatchStmtDto(

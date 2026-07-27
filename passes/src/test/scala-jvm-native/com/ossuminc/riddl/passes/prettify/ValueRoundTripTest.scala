@@ -128,5 +128,39 @@ class ValueRoundTripTest extends AbstractValidatingTest {
               case other => fail(s"expected Not on the right, got $other")
           case other => fail(s"expected And at the root after round-trip, got $other")
     }
+
+    // A28 slice 2 / review M3: a `when a > b and not c` condition must survive prettify with its
+    // ComparisonExpression/LogicalExpression/NotExpression structure intact.
+    "round-trip a `when a > b and not c` condition through prettify (A28 s2)" in { (td: TestData) =>
+      val whenSrc =
+        """domain d is {
+            |  context c is {
+            |    handler h is {
+            |      on init {
+            |        when a > b and not c then error "boom" end
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+      val pretty = prettify(parse(whenSrc, "whensrc"))
+      val regen = parse(pretty, "whenregen")
+      val ws = Finder(regen)
+        .recursiveFindByType[WhenStatement]
+        .headOption
+        .getOrElse(fail("when statement lost"))
+      ws.condition match
+        case LogicalExpression(_, LogicalOperator.And, left, right) =>
+          left match
+            case ComparisonExpression(_, ComparisonOperator.GT, a, b) =>
+              a.asInstanceOf[ValueRef].path.value mustBe Seq("a")
+              b.asInstanceOf[ValueRef].path.value mustBe Seq("b")
+            case other => fail(s"expected a > b comparison on the left, got $other")
+          right match
+            case NotExpression(_, inner) =>
+              inner.asInstanceOf[ValueRef].path.value mustBe Seq("c")
+            case other => fail(s"expected not c on the right, got $other")
+        case other => fail(s"expected And condition after round-trip, got $other")
+    }
   }
 }
