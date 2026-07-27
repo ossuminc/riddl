@@ -157,6 +157,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             s.id.value,
             path(s.typ.pathId),
             col[HandlerDto],
+            col[InvariantDto],
             briefOf(s.metadata),
             s.isInitial
           )

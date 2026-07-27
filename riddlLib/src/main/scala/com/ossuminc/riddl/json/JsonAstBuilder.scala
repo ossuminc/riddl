@@ -268,7 +268,7 @@ object JsonAstBuilder:
       At(),
       ident(s.name),
       RecordRef(At(), pathId(s.recordType)), // A9b: state type is a RecordRef
-      contentsOf[StateContents](s.handlers.map(buildHandler)),
+      contentsOf[StateContents](s.handlers.map(buildHandler), s.invariants.map(buildInvariant)),
       meta(s.brief),
       s.isInitial
     )

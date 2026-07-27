@@ -593,6 +593,46 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize a state-scoped invariant (A18)" in {
+      // A18 adds Invariant to StateContents (FORMAT_REVISION 15). Verify an invariant declared
+      // inside a state survives AST -> BAST -> AST, staying inside the state (not relocated).
+      val riddlSource =
+        """domain d is { context c is { entity e is {
+          |  type Data is { x: Integer }
+          |  state S of record d.c.e.Data is {
+          |    invariant nonNegative is "x must be >= 0"
+          |    handler H is { on other is { do "a" } }
+          |  }
+          |}}}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-state-invariant")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              assert(compareRoots(originalRoot, nebula), "state-invariant round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.Entity
+              val e = Finder(nebula.contents).recursiveFindByType[Entity].head
+              val s = e.states.find(_.id.value == "S").getOrElse(fail("state S lost in BAST"))
+              assert(
+                s.invariants.map(_.id.value) == Seq("nonNegative"),
+                "state-scoped invariant lost in BAST"
+              )
+              assert(
+                s.invariants.head.condition.map(_.s).contains("x must be >= 0"),
+                "invariant condition lost in BAST"
+              )
+              assert(e.invariants.isEmpty, "invariant leaked to entity level in BAST")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize dokn.riddl" in {
       val url = URL.fromCwdPath("language/input/dokn.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "dokn-test")

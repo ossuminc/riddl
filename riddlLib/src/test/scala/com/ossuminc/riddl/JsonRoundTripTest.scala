@@ -360,6 +360,39 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip a state-scoped invariant (A18) losslessly" in {
+      val siModel =
+        """domain d is { context c is { entity e is {
+          |  type Data is { x: Integer }
+          |  state S of record d.c.e.Data is {
+          |    invariant nonNegative is "x must be >= 0"
+          |    handler H is { on other is { do "a" } }
+          |  }
+          |}}}
+          |""".stripMargin
+      RiddlLib.parseString(siModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // JsonifierPass emits the state's invariants array...
+          json1 must include("\"invariants\"")
+          json1 must include("\"nonNegative\"")
+          json1 must include("x must be >= 0")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              // Fixed point: JsonAstBuilder rebuilds the state's invariant, else json2 would drop it.
+              RiddlLib.root2Json(root1) mustBe json1
+              val e = Finder(root1.contents).recursiveFindByType[Entity].head
+              val s = e.states.find(_.id.value == "S").get
+              s.invariants.map(_.id.value) mustBe Seq("nonNegative")
+              e.invariants mustBe empty
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the state-invariant JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the state-invariant model failed: $errors")
+      end match
+    }
+
     "round-trip context intention, ascribed shape (Some/None), and ports losslessly (Task 16)" in {
       val pmModel =
         """domain PM is {

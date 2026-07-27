@@ -234,6 +234,7 @@ object JsonModel:
     name: String,
     recordType: String,
     handlers: Seq[HandlerDto] = Nil,
+    invariants: Seq[InvariantDto] = Nil,
     brief: Option[String] = None,
     isInitial: Boolean = false
   )

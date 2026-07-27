@@ -774,7 +774,7 @@ object AST:
   type EntityContents = OccursInEntity | Include[OccursInEntity]
 
   /** Type of definitions that occur in a [[State]] */
-  type StateContents = Handler | Comment
+  type StateContents = Handler | Invariant | Comment
 
   /** Type of definitions that occur in a [[Handler]] */
   type HandlerContents = OnClause | Comment
@@ -3273,7 +3273,8 @@ object AST:
     // keyword, or defaulted onto the first state when none is marked (refactor-safe under reorder).
     isInitial: Boolean = false
   ) extends Branch[StateContents]
-      with WithHandlers[StateContents]:
+      with WithHandlers[StateContents]
+      with WithInvariants[StateContents]:
     def format: String = Keyword.state + " " + id.format
   end State
 

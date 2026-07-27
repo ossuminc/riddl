@@ -69,7 +69,7 @@ entity_definitions = {entity_content}+ ;
 entity_content = processor_definition_contents | state | entity_include ;
 state = ["initial"] "state" identifier ("of" | is) record_ref [state_body] [with_metadata] ;
 state_body = is "{" ({state_content}+ | "???") "}" ;
-state_content = handler | comment ;
+state_content = handler | invariant | comment ;
 entity_include = "include" literal_string ;
 
 (* Processor Definition Contents *)

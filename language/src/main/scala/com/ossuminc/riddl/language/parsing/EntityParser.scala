@@ -16,7 +16,7 @@ private[parsing] trait EntityParser {
   this: ProcessorParser & StreamingParser =>
 
   private def stateContent[u: P]: P[StateContents] =
-    P(handler(StatementsSet.EntityStatements) | comment).asInstanceOf[P[StateContents]]
+    P(handler(StatementsSet.EntityStatements) | invariant | comment).asInstanceOf[P[StateContents]]
 
   private def stateContents[u: P]: P[Seq[StateContents]] =
     stateContent.rep(1)

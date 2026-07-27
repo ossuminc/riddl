@@ -56,6 +56,26 @@ class InvariantValidator extends AbstractValidatingTest {
         )
       }
     }
+    "validate a state-scoped invariant without spurious errors (A18)" in { (td: TestData) =>
+      // An invariant declared inside a state is validated exactly like a processor-level one:
+      // no new error kind, and it lives inside the state's invariants accessor.
+      parseAndValidateInContext[AST.Entity](
+        """
+          |entity user is {
+          | type Data is { x: Integer }
+          | state S of record foo.bar.user.Data is {
+          |   invariant nonNegative is "x must be >= 0" with { described as { "constraint" } }
+          |   handler H is { on other is { do "a" } }
+          | }
+          |}
+          |""".stripMargin
+      ) { (entity, _, msgs) =>
+        val s = entity.states.find(_.id.value == "S").getOrElse(fail("state S missing"))
+        assert(s.invariants.map(_.id.value) == Seq("nonNegative"), "state invariant not parsed")
+        assert(entity.invariants.isEmpty, "invariant leaked to entity level")
+        assert(msgs.justErrors.isEmpty, s"unexpected errors:\n${msgs.format}")
+      }
+    }
     "allow arbitrary conditional" in { (td: TestData) =>
       parseAndValidateInContext[AST.Entity]("""
                                               |entity user is {

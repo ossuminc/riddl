@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-26 23:00 UTC
+# Generated: 2026-07-27 00:59 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -77,7 +77,7 @@ entity-definitions ::= (entity-content)+
 entity-content ::= processor-definition-contents | state | entity-include
 state ::= ("initial")? ws "state" ws1 identifier ws ("of" | is) ws record-ref ws (state-body)? ws (with-metadata)?
 state-body ::= is ws "{" ws ((state-content)+ | "???") ws "}"
-state-content ::= handler | comment
+state-content ::= handler | invariant | comment
 entity-include ::= "include" ws1 literal-string
 
 # Processor Definition Contents
