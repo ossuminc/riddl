@@ -35,8 +35,8 @@ class SagaValidatorTest extends AbstractValidatingTest {
        |    saga sag is {
        |      $requires
        |      $returns
-       |      step StepOne is { send command Go to outlet d.c.e.tank.inn }
-       |        reverted by { send command UndoGo to outlet d.c.e.tank.inn }
+       |      step StepOne is { send command Go to inlet d.c.e.tank.inn }
+       |        reverted by { send command UndoGo to inlet d.c.e.tank.inn }
        |      step StepTwo is { do "do it" } reverted by { do "undo it" }
        |    }
        |  }

@@ -116,7 +116,7 @@ private[parsing] trait StatementParser {
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
       Index ~ Keywords.send ~/ messageValue ~/ to ~ (outletRef | inletRef) ~/ Index
-    ).map { case (start, msg, portlet, end) =>
+    )./.map { case (start, msg, portlet, end) =>
       portlet match
         case ref: InletRef =>
           deprecation(

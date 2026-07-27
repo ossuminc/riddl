@@ -141,8 +141,8 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |  saga s is {
           |    requires record Args
           |    returns result Res
-          |    step One is { send command Go to outlet d.c.e.t.in }
-          |      reverted by { send command UndoGo to outlet d.c.e.t.in }
+          |    step One is { send command Go to inlet d.c.e.t.in }
+          |      reverted by { send command UndoGo to inlet d.c.e.t.in }
           |    step Two is { do "do" } reverted by { do "undo" }
           |  }
           |}}

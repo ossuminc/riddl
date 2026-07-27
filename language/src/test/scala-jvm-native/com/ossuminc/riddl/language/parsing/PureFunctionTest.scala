@@ -28,7 +28,7 @@ class PureFunctionTest extends AbstractParsingTest {
   "Pure functions" should {
     for stmt <- Seq(
         "set field a to \"1\"",
-        "send command Go to outlet c.e.t.in",
+        "send command Go to inlet c.e.t.in",
         "tell command Go to entity c.e",
         "morph entity c.e to state c.e.s with record Go",
         "become entity c.e to handler c.e.h",
@@ -45,7 +45,7 @@ class PureFunctionTest extends AbstractParsingTest {
 
     for stmt <- Seq(
         "set field a to \"1\"",
-        "send command Go to outlet c.e.t.in",
+        "send command Go to inlet c.e.t.in",
         "morph entity c.e to state c.e.s with record Go"
       )
     do
