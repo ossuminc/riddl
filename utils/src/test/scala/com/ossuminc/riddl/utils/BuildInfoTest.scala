@@ -44,7 +44,39 @@ class BuildInfoTest extends AbstractTestingBasisWithTestData {
     "has functioning toMap" in { (td: TestData) =>
       println(td.name)
       val map = RiddlBuildInfo.toMap
-      map.size must be(25) // 24 sbt-buildinfo keys + gitCommit
+      // The JVM row has 25 keys (24 from sbt-buildinfo plus the gitCommit key sbt-ossuminc adds);
+      // the JS and Native rows add one more for their platform version (e.g. scalaJSVersion). A
+      // hardcoded count is therefore platform-dependent, so assert the actual contract: every
+      // field BuildInfo advertises is present in the map.
+      map.size must be >= 25
+      map.keySet must contain allOf (
+        "name",
+        "version",
+        "scalaVersion",
+        "sbtVersion",
+        "normalizedName",
+        "moduleName",
+        "description",
+        "organization",
+        "organizationName",
+        "gitHubOrganization",
+        "gitHubRepository",
+        "copyrightHolder",
+        "organizationHomepage",
+        "projectHomepage",
+        "licenses",
+        "isSnapshot",
+        "buildInfoPackage",
+        "buildInfoObject",
+        "startYear",
+        "copyright",
+        "scalaCompatVersion",
+        "buildInstant",
+        "gitCommit",
+        "builtAtString",
+        "builtAtMillis"
+      )
+      map("moduleName") must be(RiddlBuildInfo.moduleName)
     }
     "has functioning toJson" in { (td: TestData) =>
       println(td.name)
