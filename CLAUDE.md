@@ -868,6 +868,39 @@ to the right group rather than appending to a list.
 
 ### Build / CI / Tooling
 
+- **Three ways a test suite passes without running** (all found in
+  #64, which had hidden 38 dead cases — including a completely
+  non-parsing `import "f.bast"` — for months). A green suite is NOT
+  proof the assertions ran; the check is to drop a `fail("canary")`
+  into a case body and confirm the suite goes red.
+  1. **TestData lambda on a plain spec.** `AbstractTestingBasis`
+     (`utils/src/test/.../AbstractTestingBasis.scala`) is a PLAIN
+     `AnyWordSpec with Matchers`, so its `in` takes a by-name
+     `=> Any`. Writing `in { (td: TestData) => body }` there merely
+     constructs a `Function1` and **never evaluates `body`** —
+     deterministic Scala semantics, not sbt elision. That form is
+     only meaningful on `AbstractTestingBasisWithTestData` (the
+     `FixtureAnyWordSpec` base) and everything derived from it
+     (`AbstractParsingTest` → `ParsingTest` → `AbstractValidatingTest`
+     → `AbstractRunPassTest`). **Rule: if a case body takes `(td:
+     TestData)`, the suite MUST extend a `…WithTestData` base.**
+  2. **Abstract spec with no concrete subclass.** The runner never
+     instantiates it, so its cases never appear in the log at all —
+     zero mentions, not even as skipped. Either make the class
+     concrete or declare a subclass in the platform aggregator
+     (`JVMTests.scala` / `JSTests.scala`). Beware the silent trap:
+     a class stays abstract because an inherited member is
+     unimplemented (`PrettifyPassTest` declared `checkAFile(Path,
+     File)` against a base wanting `checkAFile(Path, Path)`).
+  3. **Constructor parameters on a concrete suite.** ScalaTest cannot
+     instantiate `class FooTest(using PlatformContext)`, so it is
+     never discovered. Concrete suites take NO parameters; import
+     `com.ossuminc.riddl.utils.pc` instead.
+- **Unawaited Future in a non-async spec** is a fourth variant of the
+  same failure: `inputFuture.map { … assertions … }` followed by
+  `Await.result(inputFuture, …)` awaits the WRONG future — the
+  assertions run detached and their failures are discarded. Await the
+  MAPPED future. (`BASTWriterSpec` still has this shape.)
 - **`test`/`tJVM` resolve to `testQuick`** — which incrementally
   SKIPS test suites it judges unaffected, even after a source change
   and even with `~/Library/Caches/sbt/v2/ac` cleared (a DIFFERENT cache
