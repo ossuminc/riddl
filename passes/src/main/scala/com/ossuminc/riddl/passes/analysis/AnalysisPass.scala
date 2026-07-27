@@ -28,6 +28,7 @@ import com.ossuminc.riddl.utils.PlatformContext
   *   - MessageFlowPass: Message producer/consumer graph
   *   - EntityLifecyclePass: Entity state machines
   *   - DependencyAnalysisPass: Cross-context/entity/type dependencies
+  *   - UseCaseWitnessPass: Use-case interaction-step witnessing (A36 Level 1)
   */
 object AnalysisPass:
 
@@ -44,7 +45,8 @@ object AnalysisPass:
       DiagramsPass.creator(),
       MessageFlowPass.creator(),
       EntityLifecyclePass.creator(),
-      DependencyAnalysisPass.creator()
+      DependencyAnalysisPass.creator(),
+      UseCaseWitnessPass.creator()
     )
 
   /** Run analysis passes on a parsed model.
