@@ -75,6 +75,16 @@ object RecognizedOptions:
       1,
       1
     ),
+    // Saga-level failure-control marker (A10). `compensate` is a SAGA option: it declares that,
+    // on failure, the saga automatically runs the accumulated steps' compensation (undo) blocks in
+    // reverse. A Saga's parent-kind is its class simple name ("Saga"), the string the parent-kind
+    // check compares against (cf. "microservice" above). Registration only — no behavioral
+    // validation, mirroring how A7 added `async`.
+    "compensate" -> OptionSpec(
+      Seq("Saga"),
+      0,
+      0
+    ),
     // Resilience options (C2)
     "circuit-breaker" -> OptionSpec(
       Seq("Adaptor", "Connector"),

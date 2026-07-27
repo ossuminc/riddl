@@ -982,6 +982,38 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept compensate option on sagas" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    saga S is {
+          |      step One is {
+          |        do "do something"
+          |      } reverted by {
+          |        do "undo something"
+          |      }
+          |      step Two is {
+          |        do "do more"
+          |      } reverted by {
+          |        do "undo more"
+          |      }
+          |    } with { option compensate }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        // compensate should be accepted without "not recognized" or
+        // "not typically used" style warnings
+        msgs.exists(m =>
+          m.message.contains("compensate") &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
+      }
+    }
+
     "accept protocol option on any processor (streamlet, entity)" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
