@@ -422,20 +422,171 @@ class ASTTest extends AbstractTestingBasis {
     }
   }
 
-  "Inlet" should { "have a test" in { pending } }
-  "InletJoint" should { "have a test" in { pending } }
-  "Input" should { "have a test" in { pending } }
-  "Invariant" should { "have a test" in { pending } }
-  "OnMessageClause" should { "have a test" in { pending } }
-  "OnOtherClause" should { "have a test" in { pending } }
-  "Outlet" should { "have a test" in { pending } }
-  "OutletJoint" should { "have a test" in { pending } }
-  "Output" should { "have a test" in { pending } }
-  "Pipe" should { "have a test" in { pending } }
-  "Plant" should { "have a test" in { pending } }
-  "Processor" should { "have a test" in { pending } }
-  "Projector" should { "have a test" in { pending } }
-  "Repository" should { "have a test" in { pending } }
+  val dataTypeRef: TypeRef = TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("DataPoint")))
+  val inlet: Inlet = Inlet(At.empty, Identifier(At.empty, "in"), dataTypeRef)
+  val outlet: Outlet = Outlet(At.empty, Identifier(At.empty, "out"), dataTypeRef)
+  val inletRef: InletRef = InletRef(At.empty, PathIdentifier(At.empty, Seq("Sink", "in")))
+  val outletRef: OutletRef = OutletRef(At.empty, PathIdentifier(At.empty, Seq("Source", "out")))
+
+  "Inlet" should {
+    "have a test" in {
+      inlet.id.value mustBe "in"
+      inlet.type_ mustBe dataTypeRef
+      inlet.format mustBe "inlet in is type DataPoint"
+      inlet.isEmpty mustBe true
+    }
+  }
+  "InletJoint" should {
+    // The InletJoint node was retired: a Connector now names its inlet end directly via an
+    // InletRef, so the join is the Connector's `to` field.
+    "have a test" in {
+      val connector =
+        Connector(At.empty, Identifier(At.empty, "channel"), outletRef, inletRef)
+      connector.to mustBe inletRef
+      connector.to.pathId.value mustBe Seq("Sink", "in")
+      inletRef.format mustBe "inlet Sink.in"
+    }
+  }
+  "Input" should {
+    "have a test" in {
+      val input = Input(At.empty, "form", Identifier(At.empty, "Signup"), "takes", dataTypeRef)
+      input.id.value mustBe "Signup"
+      input.takeIn mustBe dataTypeRef
+      input.kind mustBe "form"
+      input.identify mustBe "takes Signup"
+      input.format mustBe "form takes type DataPoint"
+    }
+  }
+  "Invariant" should {
+    "have a test" in {
+      val condition = LiteralString(At.empty, "x must be positive")
+      val invariant = Invariant(At.empty, Identifier(At.empty, "Positive"), Some(condition))
+      invariant.id.value mustBe "Positive"
+      invariant.condition mustBe Some(condition)
+      invariant.isEmpty mustBe false
+      Invariant(At.empty, Identifier(At.empty, "Bare")).isEmpty mustBe true
+    }
+  }
+  "OnMessageClause" should {
+    "have a test" in {
+      val omc = OnMessageClause(At.empty, messageRef, None, statements)
+      omc.msg mustBe messageRef
+      omc.from mustBe empty
+      // The synthetic id is the message reference's format, which is what round-trips to source
+      omc.id.value mustBe messageRef.format
+      omc.statements mustBe statements
+    }
+  }
+  "OnOtherClause" should {
+    "have a test" in {
+      val ooc = OnOtherClause(At.empty, statements)
+      ooc.id.value mustBe "other"
+      ooc.kind mustBe "On Other"
+      ooc.statements mustBe statements
+      OnOtherClause(At.empty).statements mustBe empty
+    }
+  }
+  "Outlet" should {
+    "have a test" in {
+      outlet.id.value mustBe "out"
+      outlet.type_ mustBe dataTypeRef
+      outlet.format mustBe "outlet out is type DataPoint"
+      outlet.isEmpty mustBe true
+    }
+  }
+  "OutletJoint" should {
+    // The OutletJoint node was retired: a Connector now names its outlet end directly via an
+    // OutletRef, so the join is the Connector's `from` field.
+    "have a test" in {
+      val connector =
+        Connector(At.empty, Identifier(At.empty, "channel"), outletRef, inletRef)
+      connector.from mustBe outletRef
+      connector.from.pathId.value mustBe Seq("Source", "out")
+      outletRef.format mustBe "outlet Source.out"
+    }
+  }
+  "Output" should {
+    "have a test" in {
+      val output = Output(At.empty, "document", Identifier(At.empty, "Receipt"), "shows", typeRef)
+      output.id.value mustBe "Receipt"
+      output.putOut mustBe typeRef
+      output.kind mustBe "document"
+      output.identify mustBe "shows Receipt"
+      output.format mustBe s"document Receipt shows ${typeRef.format}"
+    }
+  }
+  "Pipe" should {
+    // The Pipe node was renamed to Connector; it still joins one Outlet to one Inlet.
+    "have a test" in {
+      val connector = Connector(At.empty, Identifier(At.empty, "channel"), outletRef, inletRef)
+      connector.id.value mustBe "channel"
+      connector.format mustBe "connector channel"
+      connector.isEmpty mustBe false
+      Connector(
+        At.empty,
+        Identifier.empty,
+        OutletRef(At.empty, PathIdentifier.empty),
+        InletRef(At.empty, PathIdentifier.empty)
+      ).isEmpty mustBe true
+    }
+  }
+  "Plant" should {
+    // The Plant node was retired: a Context is the streaming container, holding the streamlets
+    // and the connectors that join them.
+    "have a test" in {
+      val source = Streamlet(At.empty, Identifier(At.empty, "Source"), None, Contents(outlet))
+      val sink = Streamlet(At.empty, Identifier(At.empty, "Sink"), None, Contents(inlet))
+      val connector = Connector(At.empty, Identifier(At.empty, "channel"), outletRef, inletRef)
+      val plant =
+        Context(At.empty, Identifier(At.empty, "plant"), Contents(source, sink, connector))
+      plant.streamlets.map(_.id.value) mustBe Seq("Source", "Sink")
+      plant.connectors.map(_.id.value) mustBe Seq("channel")
+      source.effectiveShape mustBe Source(At.empty)
+      sink.effectiveShape mustBe Sink(At.empty)
+    }
+  }
+  "Processor" should {
+    "have a test" in {
+      // Every Processor is port-bearing; its shape is derived from arity unless ascribed.
+      val derived = Context(At.empty, Identifier(At.empty, "derived"), Contents(inlet, outlet))
+      derived.isProcessor mustBe true
+      derived.inlets mustBe Seq(inlet)
+      derived.outlets mustBe Seq(outlet)
+      derived.arityShape mustBe Flow(At.empty)
+      derived.ascribedShape mustBe empty
+      derived.effectiveShape mustBe Flow(At.empty)
+
+      // An ascribed shape wins over the arity-derived one
+      val ascribed = derived.copy(ascribedShape = Some(Merge(At.empty)))
+      ascribed.arityShape mustBe Flow(At.empty)
+      ascribed.effectiveShape mustBe Merge(At.empty)
+
+      // A processor with no ports at all is Void, not a crash
+      Context(At.empty, Identifier(At.empty, "empty")).arityShape mustBe Void(At.empty)
+    }
+  }
+  "Projector" should {
+    "have a test" in {
+      val repoRef = RepositoryRef(At.empty, PathIdentifier(At.empty, Seq("Store")))
+      val projector =
+        Projector(At.empty, Identifier(At.empty, "projector"), Contents(repoRef, handler))
+      projector.id.value mustBe "projector"
+      projector.format mustBe s"${Keyword.projector} projector"
+      projector.repositories mustBe Seq(repoRef)
+      projector.handlers mustBe Seq(handler)
+      projector.isProcessor mustBe true
+    }
+  }
+  "Repository" should {
+    "have a test" in {
+      val repository = Repository(At.empty, Identifier(At.empty, "repository"), Contents(handler))
+      repository.id.value mustBe "repository"
+      repository.format mustBe s"${Keyword.repository} repository"
+      repository.handlers mustBe Seq(handler)
+      repository.isProcessor mustBe true
+      repository.effectiveShape mustBe Void(At.empty)
+    }
+  }
 
   "Root(Nil)" should {
     "be at location 0,0" in { Root(At.empty, Contents.empty()).loc must be(At.empty) }
@@ -449,8 +600,32 @@ class ASTTest extends AbstractTestingBasis {
     }
   }
 
-  "Saga" should { "have a test" in {} }
-  "SagaStep" should { "have a test" in { pending } }
+  "Saga" should {
+    "have a test" in {
+      val saga = Saga(At.empty, Identifier(At.empty, "saga"), contents = Contents(sagaStep))
+      saga.id.value mustBe "saga"
+      saga.format mustBe s"${Keyword.saga} saga"
+      saga.sagaSteps mustBe Seq(sagaStep)
+      saga.input mustBe empty
+      saga.output mustBe empty
+      saga.isEmpty mustBe false
+      Saga(At.empty, Identifier(At.empty, "empty")).isEmpty mustBe true
+    }
+  }
+  "SagaStep" should {
+    "have a test" in {
+      val doIt = Contents[Statements](PromptStatement(At.empty, LiteralString(At.empty, "do it")))
+      val undoIt =
+        Contents[Statements](PromptStatement(At.empty, LiteralString(At.empty, "undo it")))
+      val step = SagaStep(At.empty, Identifier(At.empty, "step"), doIt, undoIt)
+      step.id.value mustBe "step"
+      step.format mustBe "step step"
+      step.doStatements mustBe doIt
+      step.undoStatements mustBe undoIt
+      sagaStep.doStatements mustBe empty
+      sagaStep.undoStatements mustBe empty
+    }
+  }
   "State" should { "format correctly" in { state.format mustBe "state state" } }
   "Story Case" should {
     "format correctly" in { storyCase.format mustBe "case story-case" }
