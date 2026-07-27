@@ -426,6 +426,8 @@ case class ValidationPass(
             s"Add one or more statements to ${onClause.identify} (use '???' as a placeholder if needed)."
         )
       )
+    // A23: refusals (require/error) must precede any effect within each linear statement list.
+    checkRefusalsFirst(onClause.statements)
   end validateOnClause
 
   private def validateOnMessageClause(omc: OnMessageLikeClause, parents: Parents): Unit = {
@@ -2092,6 +2094,9 @@ case class ValidationPass(
     checkDefinition(parents, s)
     checkNonEmpty(s.doStatements.toSeq, "Do Statements", s, MissingWarning)
     checkNonEmpty(s.undoStatements.toSeq, "Revert Statements", s, MissingWarning)
+    // A23: refusals must precede any effect in the do-step's statement list (undo/compensation is
+    // NOT checked — it has different, compensation semantics and is out of A23's scope).
+    checkRefusalsFirst(s.doStatements.toSeq.collect { case st: Statement => st })
     check(
       s.doStatements.nonEmpty == s.undoStatements.nonEmpty,
       "A saga step with do statements must also have revert statements, and vice versa",
@@ -2516,6 +2521,60 @@ case class ValidationPass(
       case _ => () // skip Comments
     }
   end walkStatements
+
+  /** A23: is `s` an EFFECT statement — one that mutates state, changes behavior, or emits a
+    * message? This is the shared A23 effect set: A26's pure-function bans
+    * (`set`/`morph`/`become`/`send`/ `tell`/`yield`) plus A45's `put`. It deliberately EXCLUDES the
+    * refusals themselves (`require`/`error`) and the opaque `CodeStatement` (unclassifiable — not
+    * treated as an effect).
+    */
+  private def isEffectStatement(s: Statement): Boolean = s match
+    case _: SetStatement | _: MorphStatement | _: BecomeStatement | _: SendStatement |
+        _: TellStatement | _: YieldStatement | _: PutStatement =>
+      true
+    case _ => false
+
+  /** A23 ("refusals first"): within a single linear statement list, no EFFECT statement may appear
+    * before a REFUSAL (`require`/`error`). Performing effects before refusing would leave partial
+    * changes, so every refusal must precede every effect in its list.
+    *
+    * Each statement list is checked independently in source order (Option A — per-list): the
+    * clause/step body is one list, and each `when`/`match` branch body and each `foreach` body is
+    * its OWN list, recursed into with a fresh effect-seen state. "Before" therefore only means
+    * "earlier in the same list" — an effect at top level does NOT conflict with a refusal nested in
+    * a branch. Modeled on `checkStatementScopes` (per-list order), NOT `walkStatements` (which
+    * flattens and loses per-list position).
+    */
+  private def checkRefusalsFirst(stmts: Seq[Statement]): Unit =
+    var firstEffect: Option[Statement] = None
+    stmts.foreach {
+      case s if isEffectStatement(s) =>
+        if firstEffect.isEmpty then firstEffect = Some(s)
+      case r @ (_: RequireStatement | _: ErrorStatement) =>
+        firstEffect.foreach { eff =>
+          messages.addError(
+            r.loc,
+            s"a refusal (require/error) must come before any effect; the effect '${eff.kind}' at " +
+              s"${eff.loc.toShort} precedes this refusal — performing effects before refusing leaves " +
+              "partial changes",
+            suggestion =
+              "Move all refusals (require/error preconditions) ahead of any effect statements " +
+                "(set/morph/become/send/tell/yield/put) in this statement list."
+          )
+        }
+      case ws: WhenStatement =>
+        checkRefusalsFirst(ws.thenStatements.toSeq.collect { case s: Statement => s })
+        checkRefusalsFirst(ws.elseStatements.toSeq.collect { case s: Statement => s })
+      case ms: MatchStatement =>
+        ms.cases.foreach { mc =>
+          checkRefusalsFirst(mc.statements.toSeq.collect { case s: Statement => s })
+        }
+        checkRefusalsFirst(ms.default.toSeq.collect { case s: Statement => s })
+      case fs: ForeachStatement =>
+        checkRefusalsFirst(fs.doStatements.toSeq.collect { case s: Statement => s })
+      case _ => () // let/prompt/return/code/comment: neither effect nor refusal
+    }
+  end checkRefusalsFirst
 
   /** A25: is `te` a collection type — i.e. iterable by `foreach`? Covers the collection type
     * expressions (Sequence/Set/Graph/Table/Replica/Mapping) and the multiplicative cardinalities
