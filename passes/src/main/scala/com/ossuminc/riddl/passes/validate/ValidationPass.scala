@@ -2162,7 +2162,119 @@ case class ValidationPass(
     // A9: validate saga requires/returns (previously unvalidated).
     saga.input.foreach(validateRequiresReturns(_, saga, parents))
     saga.output.foreach(validateRequiresReturns(_, saga, parents))
+    // A8: a saga may only orchestrate definitions WITHIN its own enclosing domain. Each step's
+    // do-statements drive commands/entities/etc; every such reference that resolves to a definition
+    // owned by a DIFFERENT domain crosses the saga's domain boundary and is an Error. Unresolved
+    // refs are skipped (other checks report those). A referent with no owning domain (a root/domain-
+    // level shared definition) is allowed. Mirrors A4's isolation-seam approach (resolve the ref,
+    // find the referent's owning domain, compare) using the parent-walk `domainOf` from the
+    // connector-placement check.
+    domainOf(saga).foreach { ownDomain =>
+      saga.sagaSteps.foreach { step =>
+        walkStatements(step.doStatements) { stmt =>
+          statementReferencedDefs(stmt).foreach { case (pid, referent) =>
+            domainOf(referent).foreach { otherDomain =>
+              if otherDomain ne ownDomain then
+                messages.addError(
+                  pid.loc,
+                  s"saga '${saga.id.value}' step references '${pid.format}' in domain " +
+                    s"'${otherDomain.id.value}', outside its own domain '${ownDomain.id.value}'; " +
+                    "a saga may only orchestrate within its enclosing domain",
+                  suggestion =
+                    s"Reference only definitions within domain '${ownDomain.id.value}', " +
+                      s"or move the saga into domain '${otherDomain.id.value}'. Coordinate across " +
+                      "domains through their contexts' adaptors rather than a single saga."
+                )
+            }
+          }
+        }
+      }
+    }
   }
+
+  /** A8: the nearest enclosing [[Domain]] of a definition (its owning domain), or None if the
+    * definition sits at root/Nebula level with no owning domain. Same parent-walk as the
+    * connector-placement check's local `domainOf`.
+    */
+  private def domainOf(d: Definition): Option[Domain] =
+    symbols.parentsOf(d).collectFirst { case dom: Domain => dom }
+
+  /** A8: the definitions a single saga-step statement references, paired with the
+    * [[PathIdentifier]] that named each (for error location/text). Covers the message targets of
+    * send/tell/yield, the entity/state of morph, the entity/handler of become, the output of put,
+    * plus every embedded `call` function and `get from input/state` in the statement's value
+    * expressions. Each ref is resolved by its concrete expected type via the (parent-independent)
+    * by-path lookup, exactly as A4 resolves adaptor message refs; unresolved refs simply don't
+    * appear in the result.
+    */
+  private def statementReferencedDefs(s: Statement): Seq[(PathIdentifier, Definition)] =
+    def msgRefs(m: MessageRef | Constructor): Seq[(PathIdentifier, Definition)] = m match
+      case mr: MessageRef =>
+        resolution.refMap.definitionOf[Type](mr.pathId).map(mr.pathId -> _).toSeq
+      case c: Constructor =>
+        val direct = c.ref match
+          case mr: MessageRef => resolution.refMap.definitionOf[Type](mr.pathId).map(mr.pathId -> _)
+          case rr: RecordRef  => resolution.refMap.definitionOf[Type](rr.pathId).map(rr.pathId -> _)
+        direct.toSeq ++ c.args.flatMap(a => valueReferencedDefs(a.value))
+    s match
+      case snd: SendStatement  => msgRefs(snd.msg)
+      case tel: TellStatement  => msgRefs(tel.msg)
+      case yld: YieldStatement => msgRefs(yld.msg)
+      case mor: MorphStatement =>
+        resolution.refMap
+          .definitionOf[Entity](mor.entity.pathId)
+          .map(mor.entity.pathId -> _)
+          .toSeq ++
+          resolution.refMap
+            .definitionOf[State](mor.state.pathId)
+            .map(mor.state.pathId -> _)
+            .toSeq ++
+          valueReferencedDefs(mor.value)
+      case bec: BecomeStatement =>
+        resolution.refMap
+          .definitionOf[Entity](bec.entity.pathId)
+          .map(bec.entity.pathId -> _)
+          .toSeq ++
+          resolution.refMap
+            .definitionOf[Handler](bec.handler.pathId)
+            .map(bec.handler.pathId -> _)
+            .toSeq
+      case put: PutStatement =>
+        resolution.refMap
+          .definitionOf[Output](put.output.pathId)
+          .map(put.output.pathId -> _)
+          .toSeq ++
+          valueReferencedDefs(put.value)
+      case set: SetStatement    => valueReferencedDefs(set.value)
+      case let: LetStatement    => valueReferencedDefs(let.expression)
+      case ret: ReturnStatement => valueReferencedDefs(ret.value)
+      case _                    => Seq.empty
+  end statementReferencedDefs
+
+  /** A8: the definitions referenced inside a value expression — each `call function F(…)` (a
+    * [[Function]]) and each `get from input/state <ref>` (an [[Input]] or [[State]]) — recursing
+    * through constructor arguments and the boolean-expression sub-language. Companion to
+    * [[statementReferencedDefs]].
+    */
+  private def valueReferencedDefs(v: RiddlValue): Seq[(PathIdentifier, Definition)] = v match
+    case call: Call =>
+      resolution.refMap
+        .definitionOf[Function](call.function.pathId)
+        .map(call.function.pathId -> _)
+        .toSeq ++
+        call.args.flatMap(a => valueReferencedDefs(a.value))
+    case gv: GetValue =>
+      gv.source match
+        case ir: InputRef =>
+          resolution.refMap.definitionOf[Input](ir.pathId).map(ir.pathId -> _).toSeq
+        case sr: StateRef =>
+          resolution.refMap.definitionOf[State](sr.pathId).map(sr.pathId -> _).toSeq
+    case c: Constructor           => c.args.flatMap(a => valueReferencedDefs(a.value))
+    case le: LogicalExpression    => valueReferencedDefs(le.left) ++ valueReferencedDefs(le.right)
+    case ne: NotExpression        => valueReferencedDefs(ne.expr)
+    case ce: ComparisonExpression => valueReferencedDefs(ce.left) ++ valueReferencedDefs(ce.right)
+    case _                        => Seq.empty
+  end valueReferencedDefs
 
   private def validateSagaStep(
     s: SagaStep,
