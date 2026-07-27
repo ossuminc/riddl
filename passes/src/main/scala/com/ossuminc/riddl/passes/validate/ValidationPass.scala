@@ -1104,7 +1104,17 @@ case class ValidationPass(
     }
   }
 
-  // FIXME: This should be used:
+  /** Validate an `Include` node directly.
+    *
+    * NOTE: This is currently UNREACHED. `ValidationPass` runs with `withIncludes = false`, so
+    * `Pass.traverse` never dispatches `Include` nodes to `process` (the `case include: Include[?]`
+    * branch above therefore never fires). Include hygiene is instead validated from each
+    * container's `checkContents` via `checkIncludeHygiene` (see `DefinitionValidation`), which
+    * walks the container's direct `includes` rather than relying on the Include node being
+    * processed. This method is retained as the future hook for a `withIncludes = true` validation
+    * path; if that path is ever enabled, reconcile these checks with `checkIncludeHygiene` to avoid
+    * duplicate messages.
+    */
   private def validateInclude[T <: RiddlValue](i: Include[T]): Unit = {
     check(
       i.contents.nonEmpty,
