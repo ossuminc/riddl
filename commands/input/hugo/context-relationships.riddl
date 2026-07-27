@@ -11,7 +11,7 @@ domain foo {
       handler AHandler is {
         on command ACommand is {
           set field B.BEntity.BData.b01 to "initial value"
-          send event A.AEvent1 to inlet B.Flow.bInlet
+          send event A.AEvent1 to outlet B.Flow.bInlet
           tell command C.CCommand to entity C.CEntity
         }
       }
@@ -48,7 +48,7 @@ domain foo {
       state BState of record BData
       handler CHandler is {
         on command CCommand is {
-          send event C.CEvent to inlet A.Sink.aInlet
+          send event C.CEvent to outlet A.Sink.aInlet
         }
       }
     }

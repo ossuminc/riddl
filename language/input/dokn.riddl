@@ -92,10 +92,10 @@ domain dokn is {
             state DriverBase of record Driver.fields
             handler DriverBaseHandler is {
                 on command AddDriverToCompany {
-                  send event DriverAddedToCompany to inlet Driver_out
+                  send event DriverAddedToCompany to outlet Driver_out
                 }
                 on command RemoveDriverFromCompany {
-                  send event DriverRemovedFromCompany to inlet Driver_out
+                  send event DriverRemovedFromCompany to outlet Driver_out
                 }
             }
         } with {
@@ -172,16 +172,16 @@ domain dokn is {
             state LocationBase of record Location.fields
             handler Base is {
               on command Location.AddDeliveryLocation {
-                send event Location.DeliveryLocationAdded to inlet CompanyEvents_in
+                send event Location.DeliveryLocationAdded to outlet CompanyEvents_out
               }
               on command ChangeLocationName {
-                send event Location.LocationNameChanged to inlet CompanyEvents_in
+                send event Location.LocationNameChanged to outlet CompanyEvents_out
               }
               on command ReportTicketReceived {
-                send event Location.TicketReportedAtLocation to inlet CompanyEvents_in
+                send event Location.TicketReportedAtLocation to outlet CompanyEvents_out
               }
               on command ModifyNotesAtLocation {
-                send event Location.NotesForLocationModified to inlet CompanyEvents_in
+                send event Location.NotesForLocationModified to outlet CompanyEvents_out
               }
               on event Location.LocationAddressReceived {
                 set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"

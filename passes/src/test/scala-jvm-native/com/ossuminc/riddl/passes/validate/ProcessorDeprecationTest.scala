@@ -34,6 +34,23 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
        |}
        |""".stripMargin
 
+  // A30: `send` canonically targets an outlet; `send ... to inlet` is deprecated. The `$target`
+  // is either `inlet C.P.i` or `outlet C.P.o`, both resolvable ports on the processor `P`.
+  private def sendModel(target: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    type Cmd = command { x: Integer }
+       |    processor P as flow is {
+       |      inlet i is command Cmd
+       |      outlet o is command Cmd
+       |      handler H is {
+       |        on command Cmd { send command Cmd to $target }
+       |      }
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+
   "ProcessorDeprecation" must {
     "emit a Deprecation for the `flow` shape keyword" in { (td: TestData) =>
       val rpi = RiddlParserInput(flowModel("flow F"), td)
@@ -98,6 +115,35 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
             m.message.contains("`prompt` statement is deprecated") &&
             m.message.contains("do")
           } must be(true)
+      }
+    }
+
+    "emit a Deprecation for `send ... to inlet` (A30: outlet is canonical)" in { (td: TestData) =>
+      val rpi = RiddlParserInput(sendModel("inlet C.P.i"), td)
+      Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
+        case Left(errors) => fail(errors.format)
+        case Right(result) =>
+          val sendDeprecations = result.messages.justDeprecations.filter { (m: Messages.Message) =>
+            m.message.contains("send to an inlet is deprecated")
+          }
+          info(result.messages.format)
+          sendDeprecations.size must be(1)
+          sendDeprecations.head.message must be(
+            "send to an inlet is deprecated and will be removed in 3.0; send to your outlet and " +
+              "connect it with a connector, or use `tell` to deliver directly to a processor"
+          )
+      }
+    }
+
+    "not emit a Deprecation for `send ... to outlet` (A30)" in { (td: TestData) =>
+      val rpi = RiddlParserInput(sendModel("outlet C.P.o"), td)
+      Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
+        case Left(errors) => fail(errors.format)
+        case Right(result) =>
+          val sendDeprecations = result.messages.justDeprecations.filter { (m: Messages.Message) =>
+            m.message.contains("send to an inlet is deprecated")
+          }
+          sendDeprecations mustBe empty
       }
     }
 

@@ -70,7 +70,7 @@ domain Everything is {
       handler foo is {
         on command ACommand {
           when "and(Something arrives, misc())" then
-            send event Inebriated to inlet Everything.full.input
+            send event Inebriated to outlet Everything.APlant.Source.Commands
           end
         }
       }

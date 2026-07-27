@@ -135,3 +135,9 @@ passes/input/check/saga/saga.riddl(8:5->30):
 passes/input/check/saga/saga.riddl(13:7->11):
  The `sink` keyword is deprecated; use `processor trashCan as sink` instead:
        sink trashCan is { inlet in is command Something }
+passes/input/check/saga/saga.riddl(19:35->57):
+ send to an inlet is deprecated and will be removed in 3.0; send to your outlet and connect it with a connector, or use `tell` to deliver directly to a processor:
+         send command Something to inlet blah.trashCan.in
+passes/input/check/saga/saga.riddl(21:39->61):
+ send to an inlet is deprecated and will be removed in 3.0; send to your outlet and connect it with a connector, or use `tell` to deliver directly to a processor:
+         send command UndoSomething to inlet blah.trashCan.in

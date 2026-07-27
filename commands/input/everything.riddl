@@ -65,7 +65,7 @@ domain Everything is {
       handler foo is {
         on command ACommand is {
           // if and(Something arrives, misc()) then
-          send event Inebriated to inlet Everything.full.Sink.input
+          send event Inebriated to outlet Everything.APlant.Source.Commands
           // end
         }
       }

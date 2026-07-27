@@ -166,13 +166,13 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |      set field DistributionItem.trackingId to "field CreateItem.trackingId"
           |      set field DistributionItem.manifestId to "field CreateItem.manifestId"
           |      set field DistributionItem.destination to "field CreatItem.postalCode"
-          |      send event DistributionItem.ItemPreInducted to inlet Contextual.foo.incoming
+          |      send event DistributionItem.ItemPreInducted to outlet Contextual.foo.incoming
           |    }
           |    on command InductItem {
           |      set field DistributionItem.timeOfFirstScan to "field InductItem.originTimeStamp"
           |      set field DistributionItem.journey to "field InductItem.Inducted"
           |      set field DistributionItem.lastKnownWorkCenterId to "field InductItem.workCenter"
-          |      send event DistributionItem.ItemInducted to inlet DistributionItem.incoming
+          |      send event DistributionItem.ItemInducted to outlet DistributionItem.incoming
           |    }
           |    on command SortItem {
           |      when "rue == empty(timeOfFirstScan())" then
@@ -189,7 +189,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |      when "==(true,empty(timeOfFirstScan()))" then
           |        set field timeOfFirstScan to "field NestItem.originTimeStamp"
           |        set field parentContainer to "field NestItem.container"
-          |        send command AddItemToContainer to inlet incoming
+          |        send command AddItemToContainer to outlet incoming
           |      end
           |    }
           |    on command TransportItem {
@@ -467,7 +467,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
              |}""".stripMargin
         // The rejecter fires on the leading keyword, so partial statement syntax is fine.
         rejectsParse(
-          onActivate("send event Evt to inlet c.p.in"),
+          onActivate("send event Evt to outlet c.p.in"),
           "side-effect-free",
           "activate: send"
         )(td)

@@ -210,6 +210,9 @@ foreach_statement = "foreach" identifier "in" (field_ref | identifier) "{" {stat
 
 (* Message operations. A54: the message operand is a bare ref or an inline constructor. *)
 message_value = constructor | message_ref ;
+(* A30: `outlet` is the canonical `send` target (emit on your own outlet; a connector routes it
+   to a downstream inlet). The `inlet_ref` form is DEPRECATED (soft, removed in 3.0) but still
+   parses; use `tell` for direct delivery to a processor. *)
 send_statement = "send" message_value "to" (outlet_ref | inlet_ref) ;
 tell_statement = "tell" message_value "to" processor_ref ;
 yield_statement = "yield" message_value ;

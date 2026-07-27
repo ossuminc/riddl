@@ -109,10 +109,22 @@ private[parsing] trait StatementParser {
     }
   }
 
+  // `send` canonically targets an OUTLET: a processor emits on its own outlet and a Connector
+  // routes the message to a downstream inlet. Sending directly to an INLET bypasses that model
+  // (that is `tell`'s job), so the inlet form is DEPRECATED (soft, removed in 3.0). Both forms
+  // still parse; the inlet branch emits a deprecation at the ref (mirrors reply -> yield, prompt).
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
       Index ~ Keywords.send ~/ messageValue ~/ to ~ (outletRef | inletRef) ~/ Index
     ).map { case (start, msg, portlet, end) =>
+      portlet match
+        case ref: InletRef =>
+          deprecation(
+            ref.loc,
+            "send to an inlet is deprecated and will be removed in 3.0; send to your outlet and " +
+              "connect it with a connector, or use `tell` to deliver directly to a processor"
+          )
+        case _ => ()
       SendStatement(at(start, end), msg, portlet)
     }
   }
