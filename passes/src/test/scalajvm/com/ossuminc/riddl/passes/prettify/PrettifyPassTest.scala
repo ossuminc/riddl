@@ -21,9 +21,9 @@ import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
 /** Test The PrettifyPass's ability to generate consistent output */
-abstract class PrettifyPassTest extends RiddlFilesTestBase {
+class PrettifyPassTest extends RiddlFilesTestBase {
 
-  def checkAFile(rootDir: Path, file: File): Assertion = { checkAFile(file) }
+  def checkAFile(rootDir: Path, file: Path): Assertion = { checkAFile(file) }
 
   def runPrettify(source: RiddlParserInput, run: String): String = {
     val passes = standardPasses ++ Seq(
@@ -48,9 +48,9 @@ abstract class PrettifyPassTest extends RiddlFilesTestBase {
 
   /** Parse and prettify a file twice and compare the original with the third version. */
   def checkAFile(
-    file: File
+    file: Path
   ): Assertion = {
-    val url = PathUtils.urlFromCwdPath(file.toPath)
+    val url = PathUtils.urlFromCwdPath(file)
     val future = RiddlParserInput.fromURL(url).map { input1 =>
       val output1 = runPrettify(input1, "first")
       FileUtils

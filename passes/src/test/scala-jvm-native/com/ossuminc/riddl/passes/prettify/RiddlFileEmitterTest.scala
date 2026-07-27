@@ -15,7 +15,7 @@ import com.ossuminc.riddl.utils.{AbstractTestingBasis, URL, pc}
 import java.nio.file.{Files, Path}
 
 /** Tests For RiddlFileEmitter */
-abstract class RiddlFileEmitterTest extends AbstractTestingBasis {
+class RiddlFileEmitterTest extends AbstractTestingBasis {
 
   private val path: URL = URL.fromCwdPath("prettify/target/test/rfe.out")
   val rfe = RiddlFileEmitter(path)
@@ -84,8 +84,13 @@ abstract class RiddlFileEmitterTest extends AbstractTestingBasis {
     "emits descriptions" in {
       rfe.clear()
       val desc = BlockDescription(At.empty, Seq(LiteralString(At.empty, "foo")))
+      // This case originally called `rfe.emitDescription(Some(desc))`, which rendered only the
+      // `described as { ... }` block. That helper became private and the call site was retargeted
+      // to `emitMetaData`, which additionally emits the enclosing ` with { ... }` metadata block.
+      // The expected value below is the same description rendering (re-indented one level) inside
+      // that wrapper — the original assertion's intent, at the current helper's contract.
       rfe.emitMetaData(Contents(desc))
-      rfe.toString mustBe "described as {\n  |foo\n}\n"
+      rfe.toString mustBe " with {\n  described as {\n    |foo\n  }\n}\n"
     }
 
     val patt = Pattern(At.empty, Seq(LiteralString(At.empty, "^stuff.*$")))
