@@ -8,6 +8,7 @@ package com.ossuminc.riddl
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Finder
+import com.ossuminc.riddl.passes.Pass
 import com.ossuminc.riddl.utils.{pc, PlatformContext}
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
@@ -769,6 +770,39 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
         case RiddlResult.Success(root2) => RiddlLib.root2Json(root2) mustBe json1
         case RiddlResult.Failure(errors) =>
           fail(s"parseJson of the deprecated `Abstract` JSON kind failed: $errors")
+      end match
+    }
+
+    /** #60: the predefined `Riddl` standard module is seeded into the SYMBOL TABLE by
+      * `SymbolsPass`, never into the user's `Root.contents`. A model that never mentions the
+      * terminators must therefore serialize to exactly the JSON it did before the module existed —
+      * proved here by requiring the JSON of the freshly-parsed root and the JSON of the root after
+      * the standard passes (which do the seeding) to be identical, and by requiring neither to
+      * carry any name from the standard module.
+      */
+    "be untouched by the predefined standard module (non-injection)" in {
+      val oblivious =
+        """domain Simple is {
+          |  type Thing is String
+          |  context Only is {
+          |    processor Producer as source is { outlet out is type Simple.Thing }
+          |    processor Consumer as sink is { inlet in is type Simple.Thing }
+          |    connector Wire is { from outlet Producer.out to inlet Consumer.in }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(oblivious) match
+        case RiddlResult.Success(root0) =>
+          val beforePasses = RiddlLib.root2Json(root0)
+          val passed = Pass.runStandardPasses(root0)
+          val afterPasses = RiddlLib.root2Json(passed.root.asInstanceOf[Root])
+          afterPasses mustBe beforePasses
+          beforePasses mustNot include("BottomlessPit")
+          beforePasses mustNot include("ForeverEmpty")
+          beforePasses mustNot include("Drain")
+          beforePasses mustNot include("\"Riddl\"")
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the oblivious model failed: $errors")
       end match
     }
   }

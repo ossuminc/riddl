@@ -1,0 +1,57 @@
+module Riddl is {
+  type Drain is Anything with {
+    briefly "The universal stream type; it absorbs any message"
+  }
+  processor BottomlessPit as sink is {
+    inlet hole is type Drain with {
+      briefly "The inlet that swallows everything sent to it"
+    }
+    handler Swallow is {
+      on other {
+        do "discard the message"
+      } with {
+        briefly "Everything received is discarded"
+      }
+    } with {
+      briefly "Accepts every message and discards it"
+    }
+  } with {
+    briefly "A sink that consumes everything delivered to it and emits nothing"
+    described as {
+      | /dev/null for a stream. Every port is the endpoint of exactly one connector, so
+      | an outlet that legitimately has no consumer must still terminate somewhere.
+      | Terminate it here to say "deliberately discarded" rather than inventing a
+      | placeholder consumer that models something untrue. Any number of connectors may
+      | drain into its single inlet.
+    }
+  }
+  processor ForeverEmpty as source is {
+    outlet void is type Drain with {
+      briefly "The outlet that never emits anything"
+    }
+    handler Silence is {
+      on other {
+        do "produce nothing"
+      } with {
+        briefly "Nothing is ever yielded"
+      }
+    } with {
+      briefly "Never produces a message"
+    }
+  } with {
+    briefly "A source that never produces anything on its outlet"
+    described as {
+      | The dual of BottomlessPit. Every inlet must be fed by exactly one connector, so
+      | an inlet whose producer has not been modelled yet must still be fed. Draw from
+      | here to say "deliberately never supplied". Any number of connectors may draw
+      | from its single outlet.
+    }
+  }
+} with {
+  briefly "The RIDDL standard module; always in scope, no import required"
+  described as {
+    | The RIDDL standard module. Its definitions are available to every model with no
+    | import and no author declaration. It is never part of a model's own AST: a model
+    | that does not reference it is completely unaffected by it.
+  }
+}

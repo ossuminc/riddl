@@ -649,6 +649,29 @@ to the right group rather than appending to a list.
 
 ### AST / Language Internals
 
+- **The predefined `Riddl` standard module** (`language/.../
+  PredefinedModule.scala`) is readable RIDDL held in a string constant,
+  parsed ONCE and cached as a singleton. It holds `type Drain is
+  Anything` plus the two terminators `BottomlessPit` (sink, inlet
+  `hole`) and `ForeverEmpty` (source, outlet `void`), directly in the
+  module (no domain/context — `ModuleContents` is `NebulaContents`).
+  **NEVER inject it into a user's `Root.contents`.** The ONLY seam is
+  `SymbolsPass.postProcess`, which seeds `predefinedSymTab` /
+  `predefinedParentage` — separate maps on `SymbolsOutput` that lookups
+  fall back to. Keeping them separate is load-bearing: several public
+  APIs (`AnalysisResult.domains/streamlets/…`, `UseCaseWitnessPass`,
+  `foreachOverloadedSymbol`) ENUMERATE `parentage`/`symTab`, and seeding
+  the shared maps leaks the standard library into "all X in the model".
+  A user definition with a colliding name wins structurally (the user's
+  table is consulted first) — no ambiguity, no message.
+  All exemptions (A31 cardinality, unattached/isolated/reachability,
+  handler completeness) test REFERENCE IDENTITY via
+  `PredefinedModule.isPredefined`, never a name. A port typed `Anything`
+  is connector-compatible with every type (`validateConnector`).
+  `language/input/predefined/riddl-standard-module.riddl` is a verbatim
+  copy so the CI grammar validators cover it; `PredefinedModuleSourceTest`
+  fails if the copy drifts from the constant.
+
 - **Unified processor model (2026-07-26, release/2)** — every
   `Processor` (Context/Entity/Projector/Repository/Adaptor + the
   generic `processor` keyword) is port-bearing: `Inlet`/`Outlet` are in

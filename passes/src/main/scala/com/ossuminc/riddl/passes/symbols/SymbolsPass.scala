@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.symbols
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.{Messages, PredefinedModule}
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.{Parentage, SymTab, SymTabItem}
@@ -43,7 +43,29 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: Platfo
 
   private val parentage: Parentage = mutable.HashMap.empty[Definition, Parents]
 
-  override def postProcess(root: PassRoot @unused): Unit = ()
+  /** The predefined `Riddl` standard module's symbols and parentage, kept SEPARATE from the user's
+    * so that anything enumerating `symTab`/`parentage` (`AnalysisResult.domains`,
+    * `UseCaseWitnessPass`, the overloaded-symbol scan, …) sees the user's model and nothing else.
+    * [[SymbolsOutput]] consults these only as a fallback, which is what makes a user definition of
+    * the same name WIN.
+    */
+  private val predefinedSymTab: SymTab = mutable.HashMap.empty[String, Seq[SymTabItem]]
+  private val predefinedParentage: Parentage = mutable.HashMap.empty[Definition, Parents]
+
+  /** Make the predefined `Riddl` standard module ([[PredefinedModule]]) available to EVERY model
+    * with no `import`. The module is deliberately NOT injected into the user's `Root.contents` — a
+    * model that never mentions its definitions must produce byte-identical prettify/BAST/JSON
+    * output and exactly the messages it produced before the module existed. So the ONLY seam is the
+    * symbol table.
+    */
+  override def postProcess(root: PassRoot @unused): Unit = {
+    PredefinedModule.symbolEntries.foreach { case (definition, parents) =>
+      predefinedParentage.update(definition, parents)
+      val name = definition.id.value
+      if name.nonEmpty then predefinedSymTab.update(name, Seq(definition -> parents))
+      end if
+    }
+  }
 
   private def rootLessParents(parents: Parents): Parents = {
     parents.filter {
@@ -92,7 +114,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: Platfo
   override def result(root: PassRoot): SymbolsOutput = {
     if pc.options.debug then println(symTab.toPrettyString)
     end if
-    SymbolsOutput(root, Messages.empty, symTab, parentage)
+    SymbolsOutput(root, Messages.empty, symTab, parentage, predefinedSymTab, predefinedParentage)
   }
 
   override def close(): Unit = ()

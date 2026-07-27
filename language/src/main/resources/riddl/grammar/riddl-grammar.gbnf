@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 21:15 UTC
+# Generated: 2026-07-27 21:53 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -273,7 +273,9 @@ relationship-cardinality ::= "1:1" | "1:N" | "N:1" | "N:N"
 # Streamlet-related
 as-shape ::= "as" ws ("void" | "source" | "sink" | "flow" | "cascade" | "merge" | "fanin" | "split" | "broadcast" | "fanout" | "router")
 processor ::= "processor" ws1 identifier ws (as-shape)? ws is ws "{" ws ((processor-definition-contents)+ | "???") ws "}" ws (with-metadata)?
-streamlet ::= source | sink | flow | merge | split | router | void
+
+# parse with fastparse but not with this grammar.
+streamlet ::= source | sink | flow | merge | split | router | void | processor
 source ::= "source" ws1 identifier ws1 is ws "{" ws streamlet-body ws "}" ws (with-metadata)?
 sink ::= "sink" ws1 identifier ws1 is ws "{" ws streamlet-body ws "}" ws (with-metadata)?
 flow ::= "flow" ws1 identifier ws1 is ws "{" ws streamlet-body ws "}" ws (with-metadata)?

@@ -15,6 +15,53 @@ to the task file and note the disposition below.
 
 ---
 
+## #60 Slice 2 — the predefined `Riddl` standard module — DONE
+
+Two terminators, available to EVERY model with no `import` and no author
+declaration: **`BottomlessPit`** (a `sink` that consumes everything and
+emits nothing) and **`ForeverEmpty`** (a `source` that never produces).
+They exist because under the unified streaming model every port is the
+endpoint of exactly one connector (A31), so every outlet must terminate
+somewhere and every inlet must be fed.
+
+- **The module is readable RIDDL, not hand-built AST.**
+  `language/.../PredefinedModule.scala` holds the source in a string
+  constant, parses it once via `TopLevelParser.parseString`, and caches the
+  resulting `Module` singleton (so `eq` comparisons are meaningful).
+  Streamlets and the `Drain` type (`type Drain is Anything`) live DIRECTLY
+  in the module — `ModuleContents` is the wide `NebulaContents` union, so
+  no domain/context wrapping.
+- **The seam is the SYMBOL TABLE, not the AST.** `SymbolsPass.postProcess`
+  seeds `predefinedSymTab`/`predefinedParentage` — **two NEW maps on
+  `SymbolsOutput`, deliberately separate** from `symTab`/`parentage`.
+  Lookups consult the user's tables first and fall back to the predefined
+  ones. Consequences: (a) `AnalysisResult.domains/streamlets/…`,
+  `UseCaseWitnessPass`, and `foreachOverloadedSymbol`, which all ENUMERATE
+  `parentage`/`symTab`, still see only the user's model (the first cut
+  seeded the shared maps and broke `AnalysisPassSpec`); (b) a user
+  definition with a colliding name WINS structurally, with no ambiguity
+  and no message.
+- **Non-injection is the invariant.** The module never enters
+  `Root.contents`. A terminator-free model's AST, prettify, BAST bytes and
+  JSON are unchanged — asserted directly (BAST bytes before-passes ==
+  after-passes; same for JSON).
+- **Exemptions** (all by REFERENCE IDENTITY against the singleton, never by
+  name): A31 port cardinality; unattached-port; isolated-streamlet;
+  source→sink and sink←source reachability (reaching `BottomlessPit`
+  TERMINATES a pipeline; `ForeverEmpty` ORIGINATES one); handler
+  completeness (Empty/PromptOnly). Plus a general rule in
+  `validateConnector`: a port whose type is `Anything` is compatible with
+  every other type, which is what lets one drain absorb any message type.
+- **EBNF drift found and fixed:** `streamlet` was
+  `source|sink|flow|merge|split|router|void` — missing `processor`, so a
+  `processor` written directly in a *module* parsed with fastparse but not
+  with the published grammar. Added `| processor`; GBNF regenerated
+  (296 rules, all validators pass). `riddl_grammar.lark` was left alone —
+  it has no `processor` rule at all and is separately stale.
+- **Grammar coverage:** `language/input/predefined/riddl-standard-module.riddl`
+  is a verbatim copy of the constant so the CI TatSu/GBNF validators scan
+  it; `PredefinedModuleSourceTest` (JVM) fails if the two drift.
+
 ## #60 Slice 1 — `Anything` replaces `Abstract` — DONE
 
 The dual of `Nothing` already existed as the `Abstract` predefined type

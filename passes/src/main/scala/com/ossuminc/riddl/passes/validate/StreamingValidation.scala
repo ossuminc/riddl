@@ -9,12 +9,26 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.PredefinedModule
 import com.ossuminc.riddl.passes.PassRoot
 import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.collection.mutable
 
 trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
+
+  /** True when `definition` is one of the predefined `Riddl` standard-module definitions (the
+    * terminators `BottomlessPit`/`ForeverEmpty` and their ports). Reference identity against the
+    * parsed singleton — NEVER a name match, so a user definition that happens to share the name is
+    * treated as ordinary model content.
+    *
+    * The terminators are exempt from the streaming completeness rules because they exist precisely
+    * to satisfy them: A31 (one connector per port) is meaningless for a universal drain that any
+    * number of connectors may terminate in, and "not connected" / "no path to a sink" are model
+    * concerns, not library concerns.
+    */
+  protected def isPredefined(definition: Definition): Boolean =
+    PredefinedModule.isPredefined(definition)
 
   def addInlet(inlet: Inlet): Unit = inlets.addOne(inlet)
   def addOutlet(outlet: Outlet): Unit = outlets.addOne(outlet)
@@ -142,7 +156,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       }
 
       // Check 1: Isolated streamlets (non-Void, not connected to any connector)
-      streamlets.foreach { streamlet =>
+      streamlets.filterNot(isPredefined).foreach { streamlet =>
         streamlet.effectiveShape match {
           case _: Void => () // Void streamlets are excluded
           case _ =>
@@ -157,9 +171,20 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
         }
       }
 
-      // Check 2: Source→Sink reachability via BFS
-      val sources = streamlets.filter(_.effectiveShape.isInstanceOf[Source])
-      val sinks = streamlets.filter(_.effectiveShape.isInstanceOf[Sink]).toSet
+      // Check 2: Source→Sink reachability via BFS. Reaching the predefined `BottomlessPit`
+      // TERMINATES a pipeline just as a modelled sink does — that is the whole point of it — so
+      // it satisfies reachability without being reported on itself.
+      val modelStreamlets = streamlets.filterNot(isPredefined)
+      val sources = modelStreamlets.filter(_.effectiveShape.isInstanceOf[Source])
+      val sinks = modelStreamlets.filter(_.effectiveShape.isInstanceOf[Sink]).toSet
+      val sourceSet = sources.toSet
+      // A pipeline that ends in `BottomlessPit` IS terminated, and one that begins at
+      // `ForeverEmpty` IS fed; the predefined terminators satisfy reachability for the model
+      // streamlets they touch, while never being reported on themselves.
+      def terminates(s: Streamlet): Boolean =
+        sinks.contains(s) || (isPredefined(s) && s.effectiveShape.isInstanceOf[Sink])
+      def originates(s: Streamlet): Boolean =
+        sourceSet.contains(s) || (isPredefined(s) && s.effectiveShape.isInstanceOf[Source])
 
       sources.foreach { source =>
         if adjacency.contains(source) then {
@@ -172,7 +197,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
           while queue.nonEmpty && !reachesSink do
             val current = queue.dequeue()
-            if sinks.contains(current) && current != source then reachesSink = true
+            if terminates(current) && current != source then reachesSink = true
             else
               adjacency.getOrElse(current, mutable.Set.empty).foreach { neighbor =>
                 if !visited.contains(neighbor) then
@@ -199,7 +224,6 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
         }
       }
 
-      val sourceSet = sources.toSet
       sinks.foreach { sink =>
         if connectedStreamlets.contains(sink) then {
           val visited = mutable.Set.empty[Streamlet]
@@ -210,7 +234,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
           while queue.nonEmpty && !reachedBySource do
             val current = queue.dequeue()
-            if sourceSet.contains(current) then reachedBySource = true
+            if originates(current) then reachedBySource = true
             else
               reverseAdjacency.getOrElse(current, mutable.Set.empty).foreach { neighbor =>
                 if !visited.contains(neighbor) then
@@ -338,11 +362,14 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
     connectors.filterNot(_.isEmpty).foreach { connector =>
       val connParents = symbols.parentsOf(connector)
-      resolvePath[Outlet](connector.from.pathId, connParents).foreach { outlet =>
-        outletCounts.update(outlet, outletCounts.getOrElse(outlet, 0) + 1)
+      // The predefined terminators are exempt: any number of connectors may drain into
+      // `BottomlessPit.hole` or draw from `ForeverEmpty.spout`.
+      resolvePath[Outlet](connector.from.pathId, connParents).filterNot(isPredefined).foreach {
+        outlet => outletCounts.update(outlet, outletCounts.getOrElse(outlet, 0) + 1)
       }
-      resolvePath[Inlet](connector.to.pathId, connParents).foreach { inlet =>
-        inletCounts.update(inlet, inletCounts.getOrElse(inlet, 0) + 1)
+      resolvePath[Inlet](connector.to.pathId, connParents).filterNot(isPredefined).foreach {
+        inlet =>
+          inletCounts.update(inlet, inletCounts.getOrElse(inlet, 0) + 1)
       }
     }
 
@@ -477,7 +504,9 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     }
 
     def findUnconnected[OI <: Portlet](portlets: scala.collection.Set[OI]): Unit = {
-      portlets.foreach { portlet =>
+      // A predefined terminator's port is a library fixture, not model content: it is never
+      // "unconnected" even when the model under validation is the standard module itself.
+      portlets.filterNot(isPredefined).foreach { portlet =>
         val message = s"${portlet.identify} is not connected"
         messages.addCompleteness(
           portlet.errorLoc,

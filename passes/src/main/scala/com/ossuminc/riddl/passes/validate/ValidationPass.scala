@@ -182,7 +182,10 @@ case class ValidationPass(
         case c: Context => c.hasOption("external")
         case _          => false
       }
-      if !isExternal then {
+      // The predefined terminators' handlers are intentionally behavior-free: consuming
+      // everything and producing nothing are implemented by the runtime, not modelled. They are
+      // library definitions, not model content, so completeness does not apply to them.
+      if !isExternal && !isPredefined(hc.handler) then {
         hc.category match {
           case BehaviorCategory.Empty =>
             messages.addCompleteness(
@@ -867,7 +870,14 @@ case class ValidationPass(
           val inType = resolvePath[Type](inlet.type_.pathId, inletParents)
           (outType, inType) match
             case (Some(outletType), Some(inletType)) =>
-              if !areSameType(Some(inletType), Some(outletType)) then
+              // A port typed `Anything` (the dual of `Nothing`) absorbs — or supplies — any
+              // message, so it is compatible with every other type. This is what lets the
+              // predefined `BottomlessPit`/`ForeverEmpty` terminators, whose ports are typed
+              // `Drain is Anything`, terminate a pipeline of ANY message type.
+              def isUniversal(t: Type): Boolean = t.typEx.isInstanceOf[Anything]
+              if !areSameType(Some(inletType), Some(outletType)) &&
+                !isUniversal(inletType) && !isUniversal(outletType)
+              then
                 messages.addError(
                   inlet.loc,
                   s"Type mismatch in ${connector.identify}: ${inlet.identify} " +

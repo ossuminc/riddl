@@ -311,7 +311,11 @@ relationship_cardinality = "1:1" | "1:N" | "N:1" | "N:N" ;
 (* Streamlet-related *)
 as_shape = "as" ( "void" | "source" | "sink" | "flow" | "cascade" | "merge" | "fanin" | "split" | "broadcast" | "fanout" | "router" ) ;
 processor = "processor" identifier [as_shape] is "{" ( {processor_definition_contents}+ | "???" ) "}" [with_metadata] ;
-streamlet = source | sink | flow | merge | split | router | void ;
+(* `streamlet` mirrors StreamingParser.streamlet exactly: the deprecated shape keywords PLUS the *)
+(* generic `processor <id> [as <shape>]` form. Without `processor` here, a processor written     *)
+(* directly in a module (where `module_content` reaches streamlets only through this rule) would *)
+(* parse with fastparse but not with this grammar.                                              *)
+streamlet = source | sink | flow | merge | split | router | void | processor ;
 source = "source" identifier is "{" streamlet_body "}" [with_metadata] ;
 sink = "sink" identifier is "{" streamlet_body "}" [with_metadata] ;
 flow = "flow" identifier is "{" streamlet_body "}" [with_metadata] ;
