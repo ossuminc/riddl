@@ -108,7 +108,12 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   def emitComment(comment: Comment): this.type =
     comment match
       case block: InlineComment =>
-        val all = block.lines.mkString(s"$spc/* ", s"$spc  \n", s"$spc*/")
+        // The parser keeps everything between `/*` and `*/` verbatim, including the whitespace
+        // that precedes the closing fence. Emitting `$spc` before `*/` therefore appended one
+        // indent's worth of blanks on EVERY prettify generation, so a re-prettified file never
+        // reached a fixed point. Trim each line and emit a canonical, idempotent layout instead.
+        val lines = block.lines.map(_.trim)
+        val all = lines.mkString(s"$spc/* ", s"\n$spc   ", " */")
         this.add(all).nl
       case inline: LineComment => this.addLine(inline.format)
     end match
@@ -401,7 +406,13 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case YieldStatement(_, msg) =>
         addLine(s"yield ${msg.format}")
       case CodeStatement(_, lang, body) =>
-        addIndent(s"```${lang.s}").add(body).nl.addIndent("```")
+        // The parser captures the body up to (but not including) the closing "```" fence, so it
+        // retains the newline and indent that precede that fence. Emitting the body verbatim and
+        // THEN adding `nl.addIndent("```")` grew the body by one line on every prettify
+        // generation. Strip the body's trailing whitespace so re-emission is idempotent; the
+        // closing fence supplies its own newline and indent.
+        val trimmed = body.reverse.dropWhile(_.isWhitespace).reverse
+        addIndent(s"```${lang.s}").add(trimmed).nl.addIndent("```")
       case RequireStatement(_, condition) =>
         condition match {
           case ls: LiteralString     => addLine(s"require ${ls.format}")
