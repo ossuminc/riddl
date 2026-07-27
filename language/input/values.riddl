@@ -122,4 +122,38 @@ domain Values is {
       }
     }
   }
+  // A29: structured `match` — type-cases over a closed enumeration (exhaustive, no default needed),
+  // value-comparison patterns with an explicit operator, a `when` guard, and the legacy pseudo-code
+  // string form. All parse via fastparse and the EBNF/TatSu + GBNF grammars, and validate cleanly.
+  context Matching is {
+    type OrderStatus is any of { Pending, Shipped, Delivered }
+    command Track is { status: OrderStatus, count: Integer }
+    constant MaxRetries is Integer = "3"
+    entity Tracker is {
+      record TrackData is { status: OrderStatus, count: Integer, active: Boolean }
+      state TState of record TrackData
+      handler Ops is {
+        on command Track {
+          // Type-cases covering every enumerator of a closed subject -> exhaustive (no `default`).
+          match status {
+            case Pending { error "pending" }
+            case Shipped { error "shipped" }
+            case Delivered { error "delivered" }
+          }
+          // Value-comparison patterns (subject is the implicit left operand) + a `when` guard; the
+          // `default` branch covers the rest so there is no exhaustiveness warning.
+          match count {
+            case == MaxRetries { error "at max" }
+            case > MaxRetries when count > MaxRetries { error "over max" }
+            default { error "under" }
+          }
+          // Legacy pseudo-code string match still parses unchanged.
+          match "orderStatus" {
+            case "pending" { error "pending" }
+            default { error "unknown" }
+          }
+        }
+      }
+    }
+  }
 }

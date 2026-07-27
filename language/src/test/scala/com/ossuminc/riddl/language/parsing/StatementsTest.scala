@@ -154,11 +154,68 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
     }
     "check Match Statement" in { td =>
       val expression = LiteralString(At.empty, "expression")
-      val pattern = LiteralString(At.empty, "pattern")
-      val mc = MatchCase(At.empty, pattern, Contents.empty())
+      val pattern = LiteralPattern(At.empty, LiteralString(At.empty, "pattern"))
+      val mc = MatchCase(At.empty, pattern, None, Contents.empty())
       val s = MatchStatement(At.empty, expression, Seq(mc), Contents.empty())
       s.kind must be("Match Statement")
       checkStatement(s)
+    }
+    "parse a structured match: value-ref subject, type-case, comparison, guard (A29)" in { td =>
+      val s = parseStmt(
+        """match order.status {
+          |  case Shipped { error "s" }
+          |  case == Cancelled { error "c" }
+          |  case > MaxRetries when count > MaxRetries { error "r" }
+          |  default { error "d" }
+          |}""".stripMargin,
+        td
+      ).asInstanceOf[MatchStatement]
+      s.expression mustBe a[ValueRef]
+      s.expression.asInstanceOf[ValueRef].path.value.mkString(".") must be("order.status")
+      s.cases must have size 3
+      // type-case
+      s.cases(0).pattern match
+        case TypePattern(_, tr) => tr.pathId.value.mkString(".") must be("Shipped")
+        case other              => fail(s"expected TypePattern, got $other")
+      s.cases(0).guard must be(None)
+      // equality comparison pattern
+      s.cases(1).pattern match
+        case ComparisonPattern(_, op, cmp) =>
+          op must be(ComparisonOperator.EQ)
+          cmp.asInstanceOf[ValueRef].path.value.mkString(".") must be("Cancelled")
+        case other => fail(s"expected ComparisonPattern, got $other")
+      // ordering comparison pattern with a guard
+      s.cases(2).pattern match
+        case ComparisonPattern(_, op, _) => op must be(ComparisonOperator.GT)
+        case other                       => fail(s"expected ComparisonPattern, got $other")
+      s.cases(2).guard match
+        case Some(_: ComparisonExpression) => succeed
+        case other => fail(s"expected a guard ComparisonExpression, got $other")
+      s.default.isEmpty must be(false)
+    }
+    "parse a match with a get-from-state subject (A29)" in { td =>
+      val s = parseStmt(
+        """match get from state S {
+          |  case Ready { error "r" }
+          |}""".stripMargin,
+        td
+      ).asInstanceOf[MatchStatement]
+      s.expression mustBe a[GetValue]
+      s.cases.head.pattern mustBe a[TypePattern]
+    }
+    "parse a legacy string match unchanged (A29 regression)" in { td =>
+      val s = parseStmt(
+        """match "orderStatus" {
+          |  case "pending" { error "p" }
+          |  default { error "u" }
+          |}""".stripMargin,
+        td
+      ).asInstanceOf[MatchStatement]
+      s.expression mustBe a[LiteralString]
+      s.expression.asInstanceOf[LiteralString].s must be("orderStatus")
+      s.cases.head.pattern match
+        case LiteralPattern(_, ls) => ls.s must be("pending")
+        case other                 => fail(s"expected LiteralPattern, got $other")
     }
     "check Let Statement" in { td =>
       val id = Identifier(At.empty, "foo")

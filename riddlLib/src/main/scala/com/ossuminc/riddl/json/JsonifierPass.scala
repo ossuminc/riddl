@@ -566,8 +566,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           )
     case MatchStatement(_, expr, cases, default) =>
       MatchStmtDto(
-        expr.s,
-        cases.map(c => MatchCaseDto(c.pattern.s, serializeStatements(c.statements))),
+        serializeValue(expr), // A29: subject is a MatchSubject (all Value arms)
+        cases.map(c =>
+          MatchCaseDto(
+            serializeMatchPattern(c.pattern),
+            c.guard.map(serializeValue),
+            serializeStatements(c.statements)
+          )
+        ),
         serializeStatements(default)
       )
     case ForeachStatement(_, element, collection, doStatements) =>
@@ -603,6 +609,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case le: LogicalExpression =>
       LogicalDto(le.op.symbol, serializeValue(le.left), serializeValue(le.right))
     case ne: NotExpression => NotDto(serializeValue(ne.expr))
+
+  // A29: a match-case pattern -> MatchPatternDto.
+  private def serializeMatchPattern(p: MatchPattern): MatchPatternDto = p match
+    case tp: TypePattern =>
+      TypePatternDto(path(tp.typeRef.pathId), Some(tp.typeRef.keyword))
+    case cp: ComparisonPattern =>
+      ComparisonPatternDto(cp.op.symbol, serializeComparand(cp.comparand))
+    case lp: LiteralPattern => LiteralPatternDto(lp.literal.s)
 
   // A28: a comparison operand (Comparand = ValueRef | GetValue | ConstantRef) -> ValueDto.
   private def serializeComparand(c: Comparand): ValueDto = c match

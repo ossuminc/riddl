@@ -143,7 +143,8 @@ is covered in that construct's phase. The builder emits references as
 | TellStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor |
 | YieldStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; reads legacy "reply" |
 | WhenStatement | ✅ Phase 3 / A28 s2 | nested statements; condition widened: string, identifier, or structured `expression` (ValueDto) |
-| MatchStatement / MatchCase | ✅ Phase 3 | nested statements |
+| MatchStatement / MatchCase | ✅ Phase 3 / A29 | subject = ValueDto (valueRef/get/literal); each case: structured `pattern` (type/comparison/literal MatchPatternDto) + optional `guard` (ValueDto) + nested statements |
+| MatchPattern (Type/Comparison/Literal) | ✅ A29 | `{ "kind": "type", "path", "keyword"? }` / `{ "kind": "comparison", "op", "comparand": <value> }` / `{ "kind": "literal", "text" }` |
 | ForeachStatement | ✅ A25 | field-ref or local collection; nested body statements |
 | PutStatement | ✅ A45 | value + OutputRef; value via ValueDto |
 | ReturnStatement | ✅ A57 | value via ValueDto |

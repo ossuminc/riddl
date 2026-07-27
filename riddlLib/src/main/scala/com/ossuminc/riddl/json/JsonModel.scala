@@ -357,8 +357,10 @@ object JsonModel:
     expression: Option[ValueDto] = None
   ) extends StatementDto
 
-  /** `{ "kind": "match", "expression": "...", "cases": [<matchCase>], "default"?: [<stmt>] }` */
-  case class MatchStmtDto(expression: String, cases: Seq[MatchCaseDto], default: Seq[StatementDto])
+  /** `{ "kind": "match", "subject": <value>, "cases": [<matchCase>], "default"?: [<stmt>] }` (A29:
+    * the subject is a structured [[ValueDto]] — a value ref, a `get`, or a legacy literal).
+    */
+  case class MatchStmtDto(subject: ValueDto, cases: Seq[MatchCaseDto], default: Seq[StatementDto])
       extends StatementDto
 
   /** `{ "kind": "foreach", "element": "o", "field"|"local": "<path>", "do": [<stmt>] }` — exactly
@@ -371,8 +373,28 @@ object JsonModel:
     doStatements: Seq[StatementDto]
   ) extends StatementDto
 
-  /** `{ "pattern": "...", "statements": [<stmt>] }` */
-  case class MatchCaseDto(pattern: String, statements: Seq[StatementDto])
+  /** `{ "pattern": <matchPattern>, "guard"?: <value>, "statements": [<stmt>] }` (A29). */
+  case class MatchCaseDto(
+    pattern: MatchPatternDto,
+    guard: Option[ValueDto],
+    statements: Seq[StatementDto]
+  )
+
+  /** A29: the structured pattern of a [[MatchCaseDto]]. Serialized as an object with a `kind`
+    * discriminator via readMatchPattern/writeMatchPattern.
+    */
+  sealed trait MatchPatternDto
+
+  /** `{ "kind": "type", "path": "<path>", "keyword"?: "<kw>" }` — a type-case (A29). */
+  case class TypePatternDto(path: String, keyword: Option[String]) extends MatchPatternDto
+
+  /** `{ "kind": "comparison", "op": "=="|..., "comparand": <value> }` — subject <op> comparand
+    * (A29).
+    */
+  case class ComparisonPatternDto(op: String, comparand: ValueDto) extends MatchPatternDto
+
+  /** `{ "kind": "literal", "text": "..." }` — a legacy pseudo-code label pattern (A29). */
+  case class LiteralPatternDto(text: String) extends MatchPatternDto
 
   // A54: value-expression DTOs. Serialized inline within put/return via readValue/writeValue.
   sealed trait ValueDto
@@ -908,6 +930,33 @@ object JsonModel:
   private def readStmts(o: Option[ujson.Value]): Seq[StatementDto] =
     o.map(_.arr.map(readStatement).toSeq).getOrElse(Nil)
 
+  // A29: ujson <-> MatchPatternDto.
+  private def readMatchPattern(v: ujson.Value): MatchPatternDto =
+    val m = v.obj
+    m("kind").str match
+      case "type"       => TypePatternDto(m("path").str, m.get("keyword").map(_.str))
+      case "comparison" => ComparisonPatternDto(m("op").str, readValue(m("comparand")))
+      case "literal"    => LiteralPatternDto(m("text").str)
+      case other => throw new IllegalArgumentException(s"Unknown match pattern kind: '$other'")
+  end readMatchPattern
+
+  private def writeMatchPattern(dto: MatchPatternDto): ujson.Value =
+    dto match
+      case TypePatternDto(path, keyword) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str("type"), "path" -> ujson.Str(path))
+            ++ keyword.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
+        )
+      case ComparisonPatternDto(op, comparand) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("comparison"),
+          "op" -> ujson.Str(op),
+          "comparand" -> writeValue(comparand)
+        )
+      case LiteralPatternDto(text) =>
+        ujson.Obj("kind" -> ujson.Str("literal"), "text" -> ujson.Str(text))
+  end writeMatchPattern
+
   // A54: ujson <-> ValueDto.
   private def readValue(v: ujson.Value): ValueDto =
     v match
@@ -1068,11 +1117,17 @@ object JsonModel:
               .get("cases")
               .map(
                 _.arr
-                  .map(c => MatchCaseDto(c.obj("pattern").str, readStmts(c.obj.get("statements"))))
+                  .map(c =>
+                    MatchCaseDto(
+                      readMatchPattern(c.obj("pattern")),
+                      c.obj.get("guard").map(readValue),
+                      readStmts(c.obj.get("statements"))
+                    )
+                  )
                   .toSeq
               )
               .getOrElse(Nil)
-            MatchStmtDto(m("expression").str, cases, readStmts(m.get("default")))
+            MatchStmtDto(readValue(m("subject")), cases, readStmts(m.get("default")))
           case "foreach" =>
             ForeachStmtDto(
               m("element").str,
@@ -1162,13 +1217,19 @@ object JsonModel:
               "else" -> stmtArr(elseS)
             )
         )
-      case MatchStmtDto(expression, cases, default) =>
+      case MatchStmtDto(subject, cases, default) =>
         ujson.Obj(
           "kind" -> ujson.Str("match"),
-          "expression" -> ujson.Str(expression),
+          "subject" -> writeValue(subject),
           "cases" -> ujson.Arr.from(
             cases.map(c =>
-              ujson.Obj("pattern" -> ujson.Str(c.pattern), "statements" -> stmtArr(c.statements))
+              ujson.Obj.from(
+                Seq[(String, ujson.Value)](
+                  "pattern" -> writeMatchPattern(c.pattern)
+                )
+                  ++ c.guard.map(g => "guard" -> (writeValue(g): ujson.Value))
+                  ++ Seq[(String, ujson.Value)]("statements" -> stmtArr(c.statements))
+              )
             )
           ),
           "default" -> stmtArr(default)

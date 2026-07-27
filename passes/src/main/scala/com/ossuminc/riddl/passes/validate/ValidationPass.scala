@@ -411,6 +411,7 @@ case class ValidationPass(
       case r: Relationship =>
         validateRelationship(r, parentsAsSeq)
       case _: MatchCase           => () // Validated through MatchStatement
+      case _: MatchPattern        => () // A29: validated through MatchStatement
       case _: Definition          => () // abstract type
       case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
@@ -584,17 +585,25 @@ case class ValidationPass(
         )
       // elseStatements is optional, so no check needed
       case MatchStatement(loc, expression, cases, default) =>
-        checkNonEmptyValue(expression, "expression", onClause, loc, MissingWarning, required = true)
+        // A29: only the legacy LiteralString subject/pattern get a structural non-empty check here;
+        // structured subjects/patterns are resolved + type-checked in checkStatementScopes.
+        expression match
+          case ls: LiteralString =>
+            checkNonEmptyValue(ls, "expression", onClause, loc, MissingWarning, required = true)
+          case _ => ()
         checkNonEmpty(cases, "cases", onClause, loc, MissingWarning, required = true)
         cases.foreach { mc =>
-          checkNonEmptyValue(
-            mc.pattern,
-            "case pattern",
-            onClause,
-            mc.loc,
-            MissingWarning,
-            required = true
-          )
+          mc.pattern match
+            case lp: LiteralPattern =>
+              checkNonEmptyValue(
+                lp.literal,
+                "case pattern",
+                onClause,
+                mc.loc,
+                MissingWarning,
+                required = true
+              )
+            case _ => ()
         }
       case LetStatement(loc, identifier, _, expression) =>
         check(
@@ -3076,6 +3085,142 @@ case class ValidationPass(
         requireNumeric(lc, ce.left)
         requireNumeric(rc, ce.right)
 
+  /** A29: the named [[Type]] a [[MatchSubject]] denotes, or `None` when undeterminable. A bare
+    * [[ValueRef]] resolves through the same four-source machinery as any other value; a legacy
+    * [[LiteralString]] subject is untyped.
+    */
+  private def matchSubjectType(
+    subject: MatchSubject,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Option[Type] =
+    subject match
+      case vr: ValueRef     => valueRefType(vr, parents, lets)
+      case gv: GetValue     => valueType(gv, parents, lets)
+      case _: LiteralString => None
+
+  /** A29: the broad category (`"boolean"`/`"numeric"`/`"string"`) of a [[MatchSubject]] used as the
+    * implicit left operand of a [[ComparisonPattern]]. A bare [[ValueRef]] uses the broad
+    * [[whenValueRefCategory]] (which classifies directly-typed fields, not just aliased ones).
+    */
+  private def matchSubjectCategory(
+    subject: MatchSubject,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Option[String] =
+    subject match
+      case vr: ValueRef     => whenValueRefCategory(vr, parents, lets)
+      case gv: GetValue     => valueCategory(gv, parents, lets)
+      case _: LiteralString => None
+
+  /** A29: the member names of a CLOSED subject type — the enumerators of an `any of {…}`
+    * [[Enumeration]] or the alternant names of an `one of {…}` [[Alternation]] — following one
+    * level of type alias. `None` for open/primitive types (exhaustiveness is intractable there).
+    */
+  private def closedMemberNames(t: Type): Option[Seq[String]] =
+    def ofTypeExpr(te: TypeExpression): Option[Seq[String]] = te match
+      case e: Enumeration => Some(e.enumerators.toSeq.map(_.id.value))
+      case a: Alternation => Some(a.of.toSeq.map(_.pathId.value.lastOption.getOrElse("")))
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t2 => ofTypeExpr(t2.typEx))
+      case _ => None
+    ofTypeExpr(t.typEx)
+
+  /** A29: validate a [[MatchStatement]] — resolve the subject; for each case, resolve/type-check
+    * the pattern against the subject and validate any guard; then, for a CLOSED subject with no
+    * `default`, warn (StyleWarning) about uncovered members. All checks are best-effort: an
+    * undeterminable subject type skips type-compat and exhaustiveness entirely.
+    */
+  private def validateMatch(ms: MatchStatement, parents: Parents, lets: Seq[LetStatement]): Unit =
+    // Subject must resolve (a ValueRef reports out-of-scope; a GetValue source is checked).
+    validateValue(ms.expression, parents, lets)
+    val subjType = matchSubjectType(ms.expression, parents, lets)
+    val subjCat = matchSubjectCategory(ms.expression, parents, lets)
+    val closedMembers: Option[Seq[String]] = subjType.flatMap(closedMemberNames)
+    ms.cases.foreach { mc =>
+      mc.pattern match
+        case tp: TypePattern =>
+          // Type-compat: a type-case naming a member of a CLOSED subject must be one of its members.
+          closedMembers.foreach { members =>
+            val name = tp.typeRef.pathId.value.lastOption.getOrElse("")
+            if members.nonEmpty && name.nonEmpty && !members.contains(name) then
+              messages.addError(
+                tp.loc,
+                s"Pattern '$name' is not a member of ${subjType.get.identify}; expected one of: " +
+                  members.mkString(", "),
+                suggestion =
+                  "Match an alternant/enumerator of the subject's type, or use 'default' for other cases."
+              )
+          }
+        case cp: ComparisonPattern =>
+          validateComparand(cp.comparand, parents, lets)
+          checkPatternComparison(cp, subjCat, parents, lets)
+        case _: LiteralPattern => () // legacy pseudo-code, untyped
+      mc.guard.foreach(g => validateValue(g, parents, lets)) // A29: guard is a boolean expression
+    }
+    // Exhaustiveness — StyleWarning, CLOSED subjects only, and only when there is no `default`. Only
+    // UNGUARDED type-cases count toward coverage (a guarded case may not fire).
+    if ms.default.isEmpty then
+      closedMembers.foreach { members =>
+        val covered: scala.collection.immutable.Set[String] = ms.cases
+          .collect {
+            case mc if mc.guard.isEmpty =>
+              mc.pattern match
+                case tp: TypePattern => Some(tp.typeRef.pathId.value.lastOption.getOrElse(""))
+                case _               => None
+          }
+          .flatten
+          .toSet
+        val uncovered = members.filterNot(covered.contains)
+        if members.nonEmpty && uncovered.nonEmpty then
+          messages.addStyle(
+            ms.loc,
+            s"match on ${subjType.get.identify} is not exhaustive; uncovered: " +
+              uncovered.mkString(", "),
+            suggestion =
+              "Add a case for each uncovered member, or add a 'default' branch to handle the rest."
+          )
+      }
+  end validateMatch
+
+  /** A29: type-check a [[ComparisonPattern]] with the match subject as the implicit LEFT operand.
+    * Mirrors [[checkComparison]]: equality (`==`/`!=`) requires the subject and comparand to share
+    * a category; ordering (`<`/`>`/`<=`/`>=`) requires numeric on both. Undetermined categories are
+    * skipped (best-effort).
+    */
+  private def checkPatternComparison(
+    cp: ComparisonPattern,
+    subjCat: Option[String],
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Unit =
+    val rc = comparandCategory(cp.comparand, parents, lets)
+    cp.op match
+      case ComparisonOperator.EQ | ComparisonOperator.NE =>
+        (subjCat, rc) match
+          case (Some(a), Some(b)) if a != b =>
+            messages.addError(
+              cp.loc,
+              s"Cannot compare a $a subject to a $b value with '${cp.op.symbol}'",
+              suggestion = "Compare the subject against a value of the same type."
+            )
+          case _ => ()
+      case _ =>
+        def requireNumeric(cat: Option[String], loc: At, what: String): Unit =
+          cat match
+            case Some("numeric") => ()
+            case Some(other) =>
+              messages.addError(
+                loc,
+                s"Ordering operator '${cp.op.symbol}' requires a numeric $what but got a $other value",
+                suggestion =
+                  "Order only numeric operands; use '=='/'!=' for equality of non-numeric values."
+              )
+            case None => ()
+        requireNumeric(subjCat, cp.loc, "subject")
+        requireNumeric(rc, cp.comparand.loc, "operand")
+  end checkPatternComparison
+
   /** A54: best-effort type-compatibility check for a [[Value]] against an expected [[Type]]. Only
     * fires when both the expected type and the value's type resolve; otherwise skipped (an
     * unresolved side is reported elsewhere, and untyped values — literals/prompts — carry no type
@@ -3415,6 +3560,11 @@ case class ValidationPass(
           case be: BooleanExpression => validateValue(be, parents, lets)
           case _                     => ()
       case ms: MatchStatement =>
+        validateMatch(
+          ms,
+          parents,
+          lets
+        ) // A29: subject/pattern/guard resolution + type-compat + exhaustiveness
         ms.cases.foreach { mc =>
           checkStatementScopes(
             mc.statements.toSeq.collect { case s: Statement => s },

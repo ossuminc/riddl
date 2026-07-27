@@ -236,5 +236,42 @@ class ValueRoundTripTest extends AbstractValidatingTest {
         case vr: ValueRef => vr.path.value mustBe Seq("order", "isPaid")
         case other        => fail(s"expected a dotted ValueRef condition, got $other")
     }
+
+    "round-trip a structured match (subject, type-case, comparison, guard) through prettify (A29)" in {
+      (td: TestData) =>
+        val matchSrc =
+          """domain d is {
+            |  context c is {
+            |    handler h is {
+            |      on init {
+            |        match order.status {
+            |          case Shipped { error "s" }
+            |          case == Cancelled { error "c" }
+            |          case > MaxRetries when count > MaxRetries { error "r" }
+            |          default { error "d" }
+            |        }
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+        val pretty = prettify(parse(matchSrc, "matchsrc"))
+        pretty must include("match order.status {")
+        pretty must include("case Shipped {")
+        pretty must include("case == Cancelled {")
+        pretty must include("case > MaxRetries when count > MaxRetries {")
+        val regen = parse(pretty, "matchregen")
+        val ms = Finder(regen)
+          .recursiveFindByType[MatchStatement]
+          .headOption
+          .getOrElse(fail("match statement lost"))
+        ms.expression.asInstanceOf[ValueRef].path.value mustBe Seq("order", "status")
+        ms.cases must have size 3
+        ms.cases(0).pattern.asInstanceOf[TypePattern].typeRef.pathId.value mustBe Seq("Shipped")
+        ms.cases(1).pattern match
+          case ComparisonPattern(_, op, _) => op mustBe ComparisonOperator.EQ
+          case other                       => fail(s"expected ComparisonPattern, got $other")
+        ms.cases(2).guard mustBe defined
+    }
   }
 }

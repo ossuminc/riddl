@@ -520,6 +520,72 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize a structured match: subject + patterns + guard (A29)" in {
+      // A29 restructures MatchStatement (subject union + structured patterns + optional guards),
+      // FORMAT_REVISION 19. Verify the value-ref subject, a type-case, a comparison pattern, a guard,
+      // and a legacy literal pattern all survive a byte round-trip.
+      val riddlSource =
+        """domain d is {
+          |  context c is {
+          |    handler h is {
+          |      on init {
+          |        match order.status {
+          |          case Shipped { error "s" }
+          |          case == Cancelled { error "c" }
+          |          case > MaxRetries when count > MaxRetries { error "r" }
+          |          default { error "d" }
+          |        }
+          |        match "legacy" {
+          |          case "x" { error "x" }
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-match")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.*
+              val matches = Finder(nebula.contents).recursiveFindByType[MatchStatement]
+              assert(matches.size == 2, s"expected two MatchStatements, found ${matches.size}")
+              val structured =
+                matches.find(_.cases.size == 3).getOrElse(fail("structured match lost"))
+              structured.expression match
+                case vr: ValueRef => assert(vr.path.value == Seq("order", "status"))
+                case other        => fail(s"expected a ValueRef subject, got $other")
+              structured.cases(0).pattern match
+                case TypePattern(_, tr) => assert(tr.pathId.value == Seq("Shipped"))
+                case other              => fail(s"expected TypePattern, got $other")
+              structured.cases(1).pattern match
+                case ComparisonPattern(_, ComparisonOperator.EQ, c) =>
+                  assert(c.asInstanceOf[ValueRef].path.value == Seq("Cancelled"))
+                case other => fail(s"expected == ComparisonPattern, got $other")
+              structured.cases(2).pattern match
+                case ComparisonPattern(_, ComparisonOperator.GT, _) => succeed
+                case other => fail(s"expected > ComparisonPattern, got $other")
+              structured.cases(2).guard match
+                case Some(_: ComparisonExpression) => succeed
+                case other                         => fail(s"expected a guard, got $other")
+              val legacy = matches.find(_.cases.size == 1).getOrElse(fail("legacy match lost"))
+              legacy.expression match
+                case ls: LiteralString => assert(ls.s == "legacy")
+                case other             => fail(s"expected a LiteralString subject, got $other")
+              legacy.cases.head.pattern match
+                case LiteralPattern(_, ls) => assert(ls.s == "x")
+                case other                 => fail(s"expected LiteralPattern, got $other")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize widened operands: send/morph/set/let(prompt)/yield (A54)" in {
       // A54 widens set/let values, send/tell/yield messages, and morph values. Verify each widened
       // form (including the `prompt(...)` value and inline constructors) round-trips at rev 14.

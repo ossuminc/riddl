@@ -174,6 +174,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         }
       case _: BASTImport => () // BAST imports are resolved in BASTLoadingPass
       case _: MatchCase => () // MatchCase statements contain references handled in resolveStatement
+      case _: MatchPattern => () // A29: pattern refs are resolved in resolveMatchParts
       case _: NonReferencableDefinitions => () // These can't be referenced
       case _: NonDefinitionValues        => () // Neither can these values
       case _: Definition                 => () // abstract definition, can't be referenced
@@ -315,7 +316,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveForeachFieldRefs(ws.thenStatements, parents)
         resolveForeachFieldRefs(ws.elseStatements, parents)
       case ms: MatchStatement =>
-        // Patterns/expression have no references; resolve any nested foreach field refs.
+        // A29: resolve the subject, each pattern's TypeRef/comparand refs, and each guard's operand
+        // refs; then resolve any nested foreach field refs in the case/default bodies.
+        resolveMatchParts(ms, parents)
         ms.cases.foreach(mc => resolveForeachFieldRefs(mc.statements, parents))
         resolveForeachFieldRefs(ms.default, parents)
       case fs: ForeachStatement =>
@@ -381,6 +384,28 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case gv: GetValue    => resolveValue(gv, parents)
       case _: ValueRef => () // four-source (incl. bare Constant) resolution happens at validation
 
+  /** A29: resolve the reference-bearing parts of a [[MatchStatement]] — the subject (a GetValue
+    * source; a bare ValueRef's four-source resolution is deferred to validation), each pattern (a
+    * [[TypePattern]]'s TypeRef, a [[ComparisonPattern]]'s comparand), and each optional guard's
+    * operand refs. The case/default statement bodies are handled separately via
+    * [[resolveForeachFieldRefs]].
+    */
+  private def resolveMatchParts(ms: MatchStatement, parents: Parents): Unit =
+    ms.expression match
+      case gv: GetValue     => resolveValue(gv, parents)
+      case _: ValueRef      => () // four-source resolution deferred to validation
+      case _: LiteralString => () // legacy pseudo-code, no references
+    ms.cases.foreach { mc =>
+      mc.pattern match
+        // A TypePattern is resolved LENIENTLY at validation time by name against the subject's
+        // closed member set — a type-case may name an Enumerator (not a Type), so calling
+        // resolveARef[Type] here would spuriously error. Skip it (like a deferred bare ValueRef).
+        case _: TypePattern        => ()
+        case cp: ComparisonPattern => resolveComparand(cp.comparand, parents)
+        case _: LiteralPattern     => () // legacy pseudo-code, no references
+      mc.guard.foreach(g => resolveValue(g, parents))
+    }
+
   /** A54: resolve a message/record operand — a bare ref (resolved as a Type) or a [[Constructor]]
     * (resolved via [[resolveValue]]). Shared by send/tell/yield (message) and morph (record).
     */
@@ -408,6 +433,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveForeachFieldRefs(ws.thenStatements, parents)
         resolveForeachFieldRefs(ws.elseStatements, parents)
       case ms: MatchStatement =>
+        resolveMatchParts(ms, parents) // A29: resolve nested match subject/pattern/guard refs
         ms.cases.foreach(mc => resolveForeachFieldRefs(mc.statements, parents))
         resolveForeachFieldRefs(ms.default, parents)
       // A45/A57: put/return may nest under a foreach/when/match — resolve their value refs too.

@@ -902,28 +902,41 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         WhenStatement(loc, condition, thenStatements, elseStatements, negated)
 
       case 11 => // Match
-        val expression = readLiteralString()
-        // Writer writes all case headers (loc + pattern + count) first,
+        // A29: subject is a MatchSubject (ValueRef | GetValue | LiteralString), written via the
+        // value codec — narrow it back.
+        val expression: MatchSubject = readValue() match
+          case vr: ValueRef      => vr
+          case gv: GetValue      => gv
+          case ls: LiteralString => ls
+          case other =>
+            throw new RuntimeException(s"Invalid match subject: $other")
+        // Writer writes all case headers (loc + pattern + optional guard + count) first,
         // then all case items sequentially, then default items.
         val numCases = reader.readVarInt()
-        // Phase 1: Read all case headers (loc, pattern, count)
+        // Phase 1: Read all case headers (loc, pattern, guard, count)
         val caseHeaders = (0 until numCases).map { _ =>
           val caseLoc = readLocation()
-          val pattern = readLiteralString()
+          val pattern = readMatchPattern() // A29: structured pattern
+          val guard: Option[BooleanExpression] = // A29: optional `when` guard
+            if reader.readU8() != 0 then
+              readValue() match
+                case be: BooleanExpression => Some(be)
+                case other => throw new RuntimeException(s"Invalid match guard: $other")
+            else None
           val count = reader.readVarInt()
-          (caseLoc, pattern, count)
+          (caseLoc, pattern, guard, count)
         }.toSeq
         // Read default count
         val defaultCount = reader.readVarInt()
         // Phase 2: Read case items in order
-        val cases = caseHeaders.map { case (caseLoc, pattern, count) =>
+        val cases = caseHeaders.map { case (caseLoc, pattern, guard, count) =>
           val buffer = scala.collection.mutable.ArrayBuffer[Statements]()
           var i = 0
           while i < count do
             buffer += readNode().asInstanceOf[Statements]
             i += 1
           end while
-          MatchCase(caseLoc, pattern, Contents(buffer.toSeq*))
+          MatchCase(caseLoc, pattern, guard, Contents(buffer.toSeq*))
         }
         // Phase 3: Read default items
         val defaultBuffer = scala.collection.mutable.ArrayBuffer[Statements]()
@@ -2330,6 +2343,23 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         ConstantRef(loc, pid)
       case other => throw new RuntimeException(s"Invalid comparand discriminator: $other")
   }
+
+  /** A29: mirror of [[BASTWriter.writeMatchPattern]] — a match-case pattern (TypePattern |
+    * ComparisonPattern | LiteralPattern).
+    */
+  private def readMatchPattern(): MatchPattern =
+    reader.readU8() match
+      case 0 => // TypePattern
+        val loc = readLocation()
+        TypePattern(loc, readTypeRefInline())
+      case 1 => // ComparisonPattern
+        val loc = readLocation()
+        val op = ComparisonOperator.fromOrdinal(reader.readU8())
+        ComparisonPattern(loc, op, readComparand())
+      case 2 => // LiteralPattern
+        val loc = readLocation()
+        LiteralPattern(loc, readLiteralString())
+      case other => throw new RuntimeException(s"Invalid match pattern discriminator: $other")
 
   /** A54: mirror of [[BASTWriter.writeMessageOperand]]. */
   private def readMessageOperand(): MessageRef | Constructor =

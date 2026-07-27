@@ -199,7 +199,14 @@ class ASTTest extends AbstractTestingBasis {
     MatchStatement(
       At.empty,
       LiteralString(At.empty, "expr"),
-      Seq(MatchCase(At.empty, LiteralString(At.empty, "pattern"), Contents.empty())),
+      Seq(
+        MatchCase(
+          At.empty,
+          LiteralPattern(At.empty, LiteralString(At.empty, "pattern")),
+          None,
+          Contents.empty()
+        )
+      ),
       Contents.empty()
     ),
     MorphStatement(

@@ -1082,17 +1082,41 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(11) // Match statement
     writeLocation(s.loc)
-    writeLiteralString(s.expression)
-    // Write all case headers (loc + pattern + count) first
+    // A29: subject is a MatchSubject (ValueRef | GetValue | LiteralString) — all Value arms, so the
+    // self-contained value codec handles it (reader narrows back to MatchSubject).
+    writeValue(s.expression)
+    // Write all case headers (loc + pattern + optional guard + count) first
     writer.writeVarInt(s.cases.size)
     s.cases.foreach { mc =>
       writeLocation(mc.loc)
-      writeLiteralString(mc.pattern)
+      writeMatchPattern(mc.pattern) // A29: structured pattern
+      mc.guard match // A29: optional `when` guard
+        case Some(g) => writer.writeU8(1); writeValue(g)
+        case None    => writer.writeU8(0)
       writeContents(mc.statements)
     }
     // Write default count
     writeContents(s.default)
     // NOTE: case and default statement items are written by the Pass's traverse() override
+  }
+
+  /** A29: a [[MatchPattern]] codec. A leading discriminator byte selects the arm (0=TypePattern,
+    * 1=ComparisonPattern, 2=LiteralPattern); [[BASTReader.readMatchPattern]] mirrors this exactly.
+    */
+  def writeMatchPattern(p: MatchPattern): Unit = p match {
+    case tp: TypePattern =>
+      writer.writeU8(0)
+      writeLocation(tp.loc)
+      writeTypeRefInline(tp.typeRef)
+    case cp: ComparisonPattern =>
+      writer.writeU8(1)
+      writeLocation(cp.loc)
+      writer.writeU8(cp.op.ordinal)
+      writeComparand(cp.comparand)
+    case lp: LiteralPattern =>
+      writer.writeU8(2)
+      writeLocation(lp.loc)
+      writeLiteralString(lp.literal)
   }
 
   def writeLetStatement(s: LetStatement): Unit = {

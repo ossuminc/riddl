@@ -254,23 +254,51 @@ private[parsing] trait StatementParser {
     }
   }
 
+  // A29: the subject of a `match` — a `get from input/state` read (keyword-led, tried first), a
+  // legacy pseudo-code string, or a bare value reference (`order.status`). NOT a constant (matching
+  // a constant subject is pointless). fastparse `|` unifies to RiddlValue, so each branch is widened.
+  private def matchSubject[u: P]: P[MatchSubject] = {
+    P(
+      getValue.map(gv => gv: MatchSubject) |
+        literalString.map(ls => ls: MatchSubject) |
+        valueRef.map(vr => vr: MatchSubject)
+    )
+  }
+
+  // A29: a case pattern. ORDER: the comparison arm (an explicit operator + comparand) is tried first
+  // so `case == Approved`/`case > MaxCount` become a ComparisonPattern; a quoted string is the legacy
+  // LiteralPattern; a bare path is a TypePattern (type-case). The explicit operator on the comparison
+  // arm is what disambiguates it from a bare type-case (`case Approved` is a TYPE-case).
+  private def matchPattern[u: P]: P[MatchPattern] = {
+    P(
+      (Index ~ comparisonOperator ~/ comparand ~ Index).map { case (s, op, c, e) =>
+        ComparisonPattern(at(s, e), op, c): MatchPattern
+      } |
+        literalString.map(ls => LiteralPattern(ls.loc, ls): MatchPattern) |
+        typeRef.map(tr => TypePattern(tr.loc, tr): MatchPattern)
+    )
+  }
+
+  // A29: `case <pattern> [when <BooleanExpression>] { <statements> }`. The optional `when` guard
+  // reuses A28's structured boolean-expression parser (`booleanExprOnly`).
   private def matchCase[u: P](set: StatementsSet): P[MatchCase] = {
     P(
-      Index ~ Keywords.case_ ~/ literalString ~ open ~/ setOfStatements(set) ~ close ~/ Index
-    )./.map { case (start, pattern, statements, end) =>
-      MatchCase(at(start, end), pattern, statements.toContents)
+      Index ~ Keywords.case_ ~/ matchPattern ~ (Keywords.when ~/ booleanExprOnly).? ~
+        open ~/ setOfStatements(set) ~ close ~/ Index
+    )./.map { case (start, pattern, guard, statements, end) =>
+      MatchCase(at(start, end), pattern, guard, statements.toContents)
     }
   }
 
   private def matchStatement[u: P](set: StatementsSet): P[MatchStatement] = {
     P(
-      Index ~ Keywords.`match` ~/ literalString ~ open ~/
+      Index ~ Keywords.`match` ~/ matchSubject ~ open ~/
         matchCase(set).rep(1) ~
         (Keywords.default ~ open ~/ setOfStatements(set) ~ close).? ~/
         close ~/ Index
-    )./.map { case (start, expr, cases, maybeDefault, end) =>
+    )./.map { case (start, subject, cases, maybeDefault, end) =>
       val default = maybeDefault.getOrElse(Seq.empty[Statements])
-      MatchStatement(at(start, end), expr, cases.toSeq, default.toContents)
+      MatchStatement(at(start, end), subject, cases.toSeq, default.toContents)
     }
   }
 

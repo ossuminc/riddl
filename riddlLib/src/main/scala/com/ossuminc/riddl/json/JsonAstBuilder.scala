@@ -618,10 +618,17 @@ object JsonAstBuilder:
               case Some(id) => ident(id)
               case None     => LiteralString(At(), condition.getOrElse(""))
         WhenStatement(At(), cond, buildStatements(thenS), buildStatements(elseS), negated)
-      case MatchStmtDto(expression, cases, default) =>
+      case MatchStmtDto(subject, cases, default) =>
+        val subj: MatchSubject = buildValue(subject) match // A29: narrow to MatchSubject
+          case vr: ValueRef      => vr
+          case gv: GetValue      => gv
+          case ls: LiteralString => ls
+          case other =>
+            ctx.err(s"match subject must be a value ref, get, or literal, got: $other")
+            LiteralString(At(), "")
         MatchStatement(
           At(),
-          LiteralString(At(), expression),
+          subj,
           cases.map(buildMatchCase),
           buildStatements(default)
         )
@@ -723,8 +730,27 @@ object JsonAstBuilder:
       case c: ConstructorValueDto => buildConstructor(c)
       case m: MessageRefDto       => RecordRef(At(), pathId(m.ref))
 
-  private def buildMatchCase(c: MatchCaseDto)(using Ctx): MatchCase =
-    MatchCase(At(), LiteralString(At(), c.pattern), buildStatements(c.statements))
+  private def buildMatchCase(c: MatchCaseDto)(using ctx: Ctx): MatchCase =
+    val guard: Option[BooleanExpression] = c.guard.map(g =>
+      buildValue(g) match
+        case be: BooleanExpression => be
+        case _ =>
+          ctx.err("match case guard must be a boolean expression")
+          BooleanLiteral(At(), true)
+    )
+    MatchCase(At(), buildMatchPattern(c.pattern), guard, buildStatements(c.statements))
+
+  // A29: MatchPatternDto -> AST MatchPattern.
+  private def buildMatchPattern(p: MatchPatternDto)(using ctx: Ctx): MatchPattern =
+    p match
+      case TypePatternDto(path, keyword) =>
+        TypePattern(At(), TypeRef(At(), keyword.getOrElse("type"), pathId(path)))
+      case ComparisonPatternDto(op, comparand) =>
+        val cop = ComparisonOperator.values
+          .find(_.symbol == op)
+          .getOrElse { ctx.err(s"unknown comparison operator '$op'"); ComparisonOperator.EQ }
+        ComparisonPattern(At(), cop, buildComparand(comparand))
+      case LiteralPatternDto(text) => LiteralPattern(At(), LiteralString(At(), text))
 
   private def portletRef(path: String, kind: String)(using ctx: Ctx): PortletRef[Portlet] =
     kind match

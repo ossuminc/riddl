@@ -604,5 +604,41 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           fail(s"parse of the processor-model model failed: $errors")
       end match
     }
+
+    "round-trip a structured match (subject + patterns + guard) losslessly (A29)" in {
+      val matchModel =
+        """domain d is { context c is { handler h is { on init is {
+          |  match order.status {
+          |    case Shipped { error "s" }
+          |    case == Cancelled { error "c" }
+          |    case > MaxRetries when count > MaxRetries { error "r" }
+          |    default { error "d" }
+          |  }
+          |  match "legacy" { case "x" { error "x" } }
+          |}}}}
+          |""".stripMargin
+      RiddlLib.parseString(matchModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"subject\"")
+          json1 must include("guard")
+          json1 must include("comparison")
+          // fixed point proves JsonifierPass + JsonAstBuilder round-trip the structured match
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              RiddlLib.root2Json(root1) mustBe json1
+              val ms = Finder(root1).recursiveFindByType[MatchStatement].find(_.cases.size == 3).get
+              ms.expression.asInstanceOf[ValueRef].path.value mustBe Seq("order", "status")
+              ms.cases(0).pattern.asInstanceOf[TypePattern].typeRef.pathId.value mustBe Seq(
+                "Shipped"
+              )
+              ms.cases(2).guard mustBe defined
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the match JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the match model failed: $errors")
+      end match
+    }
   }
 }

@@ -364,7 +364,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case MatchStatement(_, expr, cases, default) =>
         addIndent(s"match ${expr.format} {").nl.incr
         cases.foreach { mc =>
-          addIndent(s"case ${mc.pattern.format} {").nl.incr
+          // A29: `case <pattern> [when <guard>] { … }`
+          val guardStr = mc.guard.map(g => s" when ${g.format}").getOrElse("")
+          addIndent(s"case ${mc.pattern.format}$guardStr {").nl.incr
           mc.statements.toSeq.foreach(emitStatement)
           decr.addLine("}")
         }

@@ -2881,16 +2881,66 @@ object AST:
     }
   }
 
-  /** A case clause within a match statement */
+  /** A29: the subject of a [[MatchStatement]] — the value being matched. Either a runtime value
+    * reference ([[ValueRef]]), a `get from input/state` read ([[GetValue]]), or a legacy opaque
+    * pseudo-code label ([[LiteralString]], kept for backward compatibility). Deliberately NOT a
+    * [[ConstantRef]]: matching on a constant subject is pointless (0/1 case can ever match).
+    */
+  type MatchSubject = ValueRef | GetValue | LiteralString
+
+  /** A29: a structured pattern within a [[MatchCase]]. Three forms: a **type-case**
+    * ([[TypePattern]]) that matches when the subject IS a given type / alternant of an `one of {…}`
+    * alternation / member of an `any of {…}` enumeration / message subtype; a **value comparison**
+    * ([[ComparisonPattern]]) `<op> <comparand>` with the subject as the implicit left operand; and
+    * a legacy opaque pseudo-code label ([[LiteralPattern]]). All arms are [[RiddlValue]]s.
+    */
+  sealed trait MatchPattern extends RiddlValue
+
+  /** A29: a type-case pattern — `case <TypeRef>` (a bare path). Matches when the subject is that
+    * type / that alternant / that enumerator / that message subtype.
+    */
+  @JSExportTopLevel("TypePattern")
+  case class TypePattern(loc: At, typeRef: TypeRef) extends MatchPattern:
+    override def kind: String = "Type Pattern"
+    // Emit only the bare path (a type-case is written `case Shipped`, not `case type Shipped`); the
+    // parser re-reads a bare path into a TypeRef with the default `type` keyword, so this round-trips.
+    def format: String = typeRef.pathId.format
+  end TypePattern
+
+  /** A29: a value-comparison pattern — `case <op> <comparand>` (e.g. `case == Approved`, `case >
+    * MaxCount`). Semantics: "subject <op> comparand" — the subject is the implicit left operand.
+    * The explicit operator disambiguates from a bare type-case (`case Approved` is a TYPE-case).
+    */
+  @JSExportTopLevel("ComparisonPattern")
+  case class ComparisonPattern(loc: At, op: ComparisonOperator, comparand: Comparand)
+      extends MatchPattern:
+    override def kind: String = "Comparison Pattern"
+    def format: String = s"${op.symbol} ${comparand.format}"
+  end ComparisonPattern
+
+  /** A29: a legacy opaque pseudo-code pattern — `case "some label"`. Never resolved or typed; kept
+    * for backward compatibility with pre-A29 string `match`/`case` models.
+    */
+  @JSExportTopLevel("LiteralPattern")
+  case class LiteralPattern(loc: At, literal: LiteralString) extends MatchPattern:
+    override def kind: String = "Literal Pattern"
+    def format: String = literal.format
+  end LiteralPattern
+
+  /** A case clause within a match statement (A29: structured [[MatchPattern]] plus an optional
+    * [[BooleanExpression]] guard — `case <pattern> [when <guard>] { … }`).
+    */
   @JSExportTopLevel("MatchCase")
   case class MatchCase(
     loc: At,
-    pattern: LiteralString,
+    pattern: MatchPattern,
+    guard: Option[BooleanExpression],
     statements: Contents[Statements]
   ) extends RiddlValue {
     override def kind: String = "Match Case"
     def format: String =
-      s"case ${pattern.format} {\n${statements.toSeq.map(_.format).mkString("\n  ")}\n}"
+      val guardStr = guard.map(g => s" when ${g.format}").getOrElse("")
+      s"case ${pattern.format}$guardStr {\n${statements.toSeq.map(_.format).mkString("\n  ")}\n}"
   }
 
   /** A pattern matching statement for value-based branching
@@ -2898,24 +2948,26 @@ object AST:
     * @param loc
     *   The location of the statement in the model
     * @param expression
-    *   The expression to match against
+    *   The [[MatchSubject]] to match against
     * @param cases
     *   The case clauses (pattern -> statements)
     * @param default
-    *   The default statements if no case matches (required)
+    *   The default statements if no case matches (optional)
     */
   @JSExportTopLevel("MatchStatement")
   case class MatchStatement(
     loc: At,
-    expression: LiteralString,
+    expression: MatchSubject,
     cases: Seq[MatchCase],
     default: Contents[Statements]
   ) extends Statement {
     override def kind: String = "Match Statement"
     def format: String = {
       val casesStr = cases.map(_.format).mkString("\n")
-      val defaultStr = s"default {\n${default.toSeq.map(_.format).mkString("\n  ")}\n}"
-      s"match ${expression.format} {\n$casesStr\n$defaultStr\n}"
+      val defaultStr =
+        if default.isEmpty then ""
+        else s"\ndefault {\n${default.toSeq.map(_.format).mkString("\n  ")}\n}"
+      s"match ${expression.format} {\n$casesStr$defaultStr\n}"
     }
   }
 
