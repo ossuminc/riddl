@@ -115,7 +115,7 @@ is covered in that construct's phase. The builder emits references as
 | Optional / ZeroOrMore / OneOrMore | ✅ Phase 1 | `cardinality` wrapper |
 | SpecificRange | ✅ Phase 2 | `cardinality: "range"` with min/max |
 | UserId | ✅ Phase 2 | |
-| Abstract | ✅ Phase 2 | |
+| Anything | ✅ Phase 2 | serialized as `kind: "Anything"`; `"Abstract"` still accepted on input (deprecated) |
 | Location | ✅ Phase 2 | |
 | URI | ✅ Phase 2 | optional scheme |
 | Blob | ✅ Phase 2 | blob kind (default Text) |

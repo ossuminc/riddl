@@ -15,7 +15,7 @@ import com.ossuminc.riddl.utils.AbstractTestingBasis
 /** Unit Tests For TypeExpressions */
 class TypeExpressionTest extends AbstractTestingBasis {
 
-  val abstract_ = Abstract(At.empty)
+  val anything_ = Anything(At.empty)
   val bool: Bool = Bool(At.empty)
   val current: Current = Current(At.empty)
   val currency: Currency = Currency(At.empty, "CA")
@@ -44,9 +44,24 @@ class TypeExpressionTest extends AbstractTestingBasis {
   val id = UniqueId(At.empty, PathIdentifier(At.empty, Seq("a", "b")))
 
   "Simple Predefined Types" must {
-    "support Abstract" in {
-      abstract_.kind mustBe PredefType.Abstract
-      AST.errorDescription(abstract_) mustBe PredefType.Abstract
+    "support Anything" in {
+      anything_.kind mustBe PredefType.Anything
+      AST.errorDescription(anything_) mustBe PredefType.Anything
+      // Anything is the DUAL of Nothing: compatible with everything in both directions.
+      anything_.isAssignmentCompatible(string) mustBe true
+      string.isAssignmentCompatible(anything_) mustBe true
+    }
+    "keep the deprecated `Abstract` Scala alias source-compatible" in {
+      // Backward-compat policy: downstream Scala code naming `Abstract` must still compile.
+      // Both the TYPE alias and the COMPANION alias (apply + unapply) are exercised here.
+      @annotation.nowarn("cat=deprecation")
+      val viaAlias: AST.Abstract = AST.Abstract(At.empty)
+      viaAlias mustBe anything_
+      @annotation.nowarn("cat=deprecation")
+      val matched = (viaAlias: TypeExpression) match
+        case AST.Abstract(loc) => loc
+        case _                 => fail("the deprecated `Abstract` extractor did not match")
+      matched mustBe At.empty
     }
     "support Boolean" in {
       bool.kind mustBe PredefType.Boolean
@@ -236,7 +251,7 @@ class TypeExpressionTest extends AbstractTestingBasis {
     At.empty,
     Contents(
       Field(At.empty, Identifier(At.empty, "integer"), integer),
-      Field(At.empty, Identifier(At.empty, "abstract"), abstract_),
+      Field(At.empty, Identifier(At.empty, "anything"), anything_),
       Field(At.empty, Identifier(At.empty, "bool"), bool),
       Field(At.empty, Identifier(At.empty, "current"), current),
       Field(At.empty, Identifier(At.empty, "currency"), currency),
@@ -294,7 +309,7 @@ class TypeExpressionTest extends AbstractTestingBasis {
     "Support Aggregation" in {
       AST.errorDescription(aggregation) mustBe "Aggregation of 27 fields"
       aggregation.format mustBe
-        "{ integer: Integer, abstract: Abstract, " +
+        "{ integer: Integer, anything: Anything, " +
         "bool: Boolean, current: Current, currency: Currency, date: Date, " +
         "dateTime: DateTime, decimal: Decimal(8,3), duration: Duration, " +
         "integer: Integer, length: Length, location: Location, " +
@@ -334,7 +349,7 @@ class TypeExpressionTest extends AbstractTestingBasis {
     "Support Messages" in {
       AST.errorDescription(message) mustBe "Record of 27 fields and 0 methods"
       message.format mustBe
-        "record { integer: Integer, abstract: Abstract, " +
+        "record { integer: Integer, anything: Anything, " +
         "bool: Boolean, current: Current, currency: Currency, date: Date, " +
         "dateTime: DateTime, decimal: Decimal(8,3), duration: Duration, " +
         "integer: Integer, length: Length, location: Location, " +
@@ -380,9 +395,9 @@ class TypeExpressionTest extends AbstractTestingBasis {
   }
 
   "Assignment Compatibility" must {
-    "support abstract equality" in {
-      val abs = Abstract(At.empty)
-      abs.isAssignmentCompatible(abstract_) mustBe true
+    "support Anything equality" in {
+      val abs = Anything(At.empty)
+      abs.isAssignmentCompatible(anything_) mustBe true
       abs.isAssignmentCompatible(bool) mustBe true
       abs.isAssignmentCompatible(current) mustBe true
       abs.isAssignmentCompatible(currency) mustBe true
@@ -441,7 +456,7 @@ class TypeExpressionTest extends AbstractTestingBasis {
       range.isAssignmentCompatible(range) mustBe true
     }
     "support Nothing" in {
-      nothing.isAssignmentCompatible(abstract_) mustBe false
+      nothing.isAssignmentCompatible(anything_) mustBe false
       nothing.isAssignmentCompatible(bool) mustBe false
       nothing.isAssignmentCompatible(current) mustBe false
       nothing.isAssignmentCompatible(currency) mustBe false

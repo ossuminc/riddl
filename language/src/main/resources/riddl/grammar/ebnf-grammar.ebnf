@@ -115,7 +115,9 @@ integer_predef_types = "Boolean" | "Integer" | "Natural" | "Whole" ;
 real_predef_types = "Current" | "Length" | "Luminosity" | "Mass" | "Mole" | "Number" | "Real" | "Temperature" ;
 time_predef_types = "Duration" | "DateTime" | "Date" | "TimeStamp" | "Time" ;
 zoned_predef_types = ("ZonedDate" | "ZonedDateTime") "(" [zone] ")" ;
-other_predef_types = "Abstract" | "Location" | "Nothing" | "UUID" | "UserId" ;
+(* "Abstract" is the DEPRECATED spelling of "Anything"; it still parses to the same
+   node but emits a [deprecated] message. *)
+other_predef_types = "Abstract" | "Anything" | "Location" | "Nothing" | "UUID" | "UserId" ;
 zone = /[A-Z0-9:.+-]{2,}/ ;
 
 (* Type Expressions *)

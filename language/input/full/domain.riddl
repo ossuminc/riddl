@@ -2,7 +2,8 @@ author Reid is { name: "Reid Spencer" email: "reid@ossum.biz" }
 
 domain full is {
   user Doer is "that which does"
-  type Something is Abstract
+  type Something is Anything
+  type LegacyAny is Abstract
   include "application"
   include "context"
 } with {

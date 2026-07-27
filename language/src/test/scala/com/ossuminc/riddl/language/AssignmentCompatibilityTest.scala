@@ -14,7 +14,7 @@ import org.scalatest.wordspec.AnyWordSpec
 /** Unit Tests For AssignmentCompatibility */
 class AssignmentCompatibilityTest extends AbstractTestingBasis {
 
-  val abstrct = Abstract(At.empty)
+  val anything = Anything(At.empty)
   val datetime = DateTime(At.empty)
   val timestamp = TimeStamp(At.empty)
   val date = Date(At.empty)
@@ -32,7 +32,7 @@ class AssignmentCompatibilityTest extends AbstractTestingBasis {
       date.isAssignmentCompatible(timestamp) must be(true)
       date.isAssignmentCompatible(datetime) must be(true)
       date.isAssignmentCompatible(date) must be(true)
-      date.isAssignmentCompatible(abstrct) must be(true)
+      date.isAssignmentCompatible(anything) must be(true)
       date.isAssignmentCompatible(string) must be(true)
       date.isAssignmentCompatible(time) must be(false)
       date.isAssignmentCompatible(nothing) must be(false)
@@ -40,7 +40,7 @@ class AssignmentCompatibilityTest extends AbstractTestingBasis {
     "check compatibility of DateTime " in {
       datetime.isAssignmentCompatible(datetime) must be(true)
       datetime.isAssignmentCompatible(timestamp) must be(true)
-      datetime.isAssignmentCompatible(abstrct) must be(true)
+      datetime.isAssignmentCompatible(anything) must be(true)
       datetime.isAssignmentCompatible(date) must be(true)
       datetime.isAssignmentCompatible(string) must be(true)
       datetime.isAssignmentCompatible(number) must be(false)
@@ -49,7 +49,7 @@ class AssignmentCompatibilityTest extends AbstractTestingBasis {
     "check compatibility of Nothing " in {
       nothing.isAssignmentCompatible(datetime) must be(false)
       nothing.isAssignmentCompatible(timestamp) must be(false)
-      nothing.isAssignmentCompatible(abstrct) must be(false)
+      nothing.isAssignmentCompatible(anything) must be(false)
       nothing.isAssignmentCompatible(date) must be(false)
       nothing.isAssignmentCompatible(number) must be(false)
       nothing.isAssignmentCompatible(string) must be(false)
@@ -58,7 +58,7 @@ class AssignmentCompatibilityTest extends AbstractTestingBasis {
     "check compatibility of Time" in {
       time.isAssignmentCompatible(datetime) must be(true)
       time.isAssignmentCompatible(timestamp) must be(true)
-      time.isAssignmentCompatible(abstrct) must be(true)
+      time.isAssignmentCompatible(anything) must be(true)
       time.isAssignmentCompatible(string) must be(true)
       time.isAssignmentCompatible(date) must be(false)
       time.isAssignmentCompatible(integer) must be(false)
@@ -70,7 +70,7 @@ class AssignmentCompatibilityTest extends AbstractTestingBasis {
       timestamp.isAssignmentCompatible(timestamp) must be(true)
       timestamp.isAssignmentCompatible(datetime) must be(true)
       timestamp.isAssignmentCompatible(date) must be(true)
-      timestamp.isAssignmentCompatible(abstrct) must be(true)
+      timestamp.isAssignmentCompatible(anything) must be(true)
     }
   }
 }

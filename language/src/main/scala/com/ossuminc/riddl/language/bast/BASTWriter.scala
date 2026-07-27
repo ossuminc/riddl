@@ -2009,9 +2009,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeLocation(b.loc)
         writer.writeU8(b.blobKind.ordinal.toByte)
 
-      case a: Abstract =>
+      case a: Anything =>
         writer.writeU8(TYPE_REF)
-        writer.writeU8(99) // Abstract
+        writer.writeU8(99) // Anything (formerly spelled `Abstract`; tag unchanged)
         writeLocation(a.loc)
 
       case u: UserId =>

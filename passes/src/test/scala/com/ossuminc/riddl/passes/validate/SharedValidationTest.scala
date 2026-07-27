@@ -75,7 +75,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |
           |domain full is {
           |  user Doer is "that which does"
-          |  type Something is Abstract
+          |  type Something is Anything
           |  context dosomething is { ??? } with {
           |    by author Reid
           |    term term is "Terminal"

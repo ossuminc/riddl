@@ -30,7 +30,7 @@ simple predefined types:
 
 | Name        | Description                                                       |
 |-------------|-------------------------------------------------------------------|
-| Abstract    | An unspecified, arbitrary type, compatible with any other type    |
+| Anything    | An unspecified, arbitrary type, compatible with any other type (`Abstract` is the deprecated spelling) |
 | Nothing     | A type that cannot hold any value, commonly used as a placeholder |
 | Boolean     | A Boolean value, with values true or false                        |
 | Current     | An SI unit of electric current, measured in Amperes               |

@@ -46,7 +46,8 @@ object PredefTypes {
   def otherTypes[u: P]: P[String] = keywords(
     StringIn(
       // order matters in this list, because of common prefixes
-      PredefType.Abstract,
+      PredefType.Abstract, // deprecated spelling of Anything
+      PredefType.Anything,
       PredefType.Length,
       PredefType.Location,
       PredefType.Nothing,
@@ -56,7 +57,8 @@ object PredefTypes {
     ).!
   )
 
-  def Abstract[u: P]: P[Unit] = keyword("Abstract")
+  def Abstract[u: P]: P[Unit] = keyword("Abstract") // deprecated spelling of Anything
+  def Anything[u: P]: P[Unit] = keyword("Anything")
   def Boolean[u: P]: P[Unit] = keyword("Boolean")
   def Current[u: P]: P[Unit] = keyword("Current") // in amperes
   def Currency[u: P]: P[Unit] = keyword("Currency") // for some nation
@@ -89,14 +91,18 @@ object PredefTypes {
 
   def anyPredefType[u: P]: P[Unit] =
     P(
-      realTypes | integerTypes | timeTypes | otherTypes | Abstract | Boolean | Current | Currency | Date | DateTime |
-        Decimal | Duration | Id | Integer | Location | Length | Luminosity | Mass | Mole | Nothing | Natural | Number |
-        Pattern | Range | Real | String_ | Temperature | Time | TimeStamp | Unknown | URL | UserId | UUID | Whole
+      realTypes | integerTypes | timeTypes | otherTypes | Abstract | Anything | Boolean | Current | Currency | Date |
+        DateTime | Decimal | Duration | Id | Integer | Location | Length | Luminosity | Mass | Mole | Nothing |
+        Natural | Number | Pattern | Range | Real | String_ | Temperature | Time | TimeStamp | Unknown | URL |
+        UserId | UUID | Whole
     )
 }
 
 object PredefType {
+
+  /** Deprecated spelling of [[Anything]]; still accepted by the parser but emits a deprecation. */
   final val Abstract = "Abstract"
+  final val Anything = "Anything"
   final val Blob = "Blob"
   final val Boolean = "Boolean"
   final val Current = "Current" // in amperes
@@ -133,6 +139,7 @@ object PredefType {
   // NOTE: Keep this list in synch with the one in TokenParser
   final val allPredefTypes: Seq[String] = Seq(
     Abstract,
+    Anything,
     Blob,
     Boolean,
     Current,

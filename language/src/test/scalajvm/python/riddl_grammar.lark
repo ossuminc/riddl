@@ -200,7 +200,8 @@ time_predef_types: "Duration" | "DateTime" | "Date" | "TimeStamp" | "Time"
 
 zoned_predef_types: ("ZonedDate" | "ZonedDateTime") "(" ZONE? ")"
 
-other_predef_types: "Abstract" | "Location" | "Nothing" | "UUID" | "UserId"
+// "Abstract" is the DEPRECATED spelling of "Anything"
+other_predef_types: "Abstract" | "Anything" | "Location" | "Nothing" | "UUID" | "UserId"
 
 // =============================================================================
 // TYPE EXPRESSION VARIANTS

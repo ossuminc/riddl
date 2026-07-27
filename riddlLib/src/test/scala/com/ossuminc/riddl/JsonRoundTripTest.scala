@@ -740,5 +740,36 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           fail(s"parse of the match model failed: $errors")
       end match
     }
+
+    // `Anything` replaces `Abstract`: the JSON discriminator carries the class name, so output is
+    // always `"Anything"`. The deprecated `Abstract` input spelling parses to the same node and so
+    // produces IDENTICAL JSON; `"Abstract"` is still accepted as a JSON input kind.
+    "round-trip `Anything` (and the deprecated `Abstract` spelling) losslessly" in {
+      def jsonOf(typeExpr: String): String =
+        RiddlLib.parseString(s"domain d is { type Whatever is $typeExpr }\n") match
+          case RiddlResult.Success(root) => RiddlLib.root2Json(root)
+          case RiddlResult.Failure(errors) =>
+            fail(s"parse of the `$typeExpr` model failed: $errors")
+
+      val json1 = jsonOf("Anything")
+      json1 must include("\"Anything\"")
+      json1 mustNot include("\"Abstract\"")
+      jsonOf("Abstract") mustBe json1
+
+      RiddlLib.parseJson(json1) match
+        case RiddlResult.Success(root1) =>
+          RiddlLib.root2Json(root1) mustBe json1
+          val typ = Finder(root1).recursiveFindByType[Type].find(_.id.value == "Whatever").get
+          typ.typEx mustBe a[Anything]
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseJson of the Anything JSON failed: $errors")
+      end match
+      // The deprecated JSON input kind still builds an `Anything` and normalizes on output.
+      RiddlLib.parseJson(json1.replace("\"Anything\"", "\"Abstract\"")) match
+        case RiddlResult.Success(root2) => RiddlLib.root2Json(root2) mustBe json1
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseJson of the deprecated `Abstract` JSON kind failed: $errors")
+      end match
+    }
   }
 }

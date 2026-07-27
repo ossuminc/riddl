@@ -1503,8 +1503,8 @@ object AST:
     /** Determines whether the `other` type is assignable to `this` type. */
     def isAssignmentCompatible(other: TypeExpression): Boolean =
       (other == this) || (other.getClass == this.getClass) ||
-        (other.getClass == classOf[Abstract]) ||
-        (this.getClass == classOf[Abstract])
+        (other.getClass == classOf[Anything]) ||
+        (this.getClass == classOf[Anything])
     end isAssignmentCompatible
 
     /** Indicates whether this type has/is a [[Cardinality]] expression. */
@@ -2017,18 +2017,33 @@ object AST:
   @JSExportTopLevel("Currency")
   case class Currency(loc: At, country: String) extends PredefinedType
 
-  /** The simplest type expression: Abstract An abstract type expression is one that is not defined
-    * explicitly. It is treated as a concrete type but without any structural or type information.
-    * This is useful for types that are defined only at implementation time or for types whose
-    * variations are so complicated they need to remain abstract at the specification level.
+  /** The simplest type expression: `Anything`. An `Anything` type expression is one that is not
+    * defined explicitly. It is treated as a concrete type but without any structural or type
+    * information. This is useful for types that are defined only at implementation time or for
+    * types whose variations are so complicated they need to remain abstract at the specification
+    * level. It is the DUAL of [[Nothing]]: every type is assignment compatible with `Anything` in
+    * both directions.
+    *
     * @param loc
-    *   The location of the Bool type expression
+    *   The location of the `Anything` type expression
     */
-  @JSExportTopLevel("Abstract")
-  case class Abstract(loc: At) extends PredefinedType {
+  @JSExportTopLevel("Anything")
+  @JSExportTopLevel("Abstract") // deprecated JS name; kept for JS/TS API source compatibility
+  case class Anything(loc: At) extends PredefinedType {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = true
   }
+
+  /** Deprecated spelling of [[Anything]]. Retained so downstream Scala code that names `Abstract`
+    * keeps compiling; `Abstract(loc)` and `case Abstract(loc)` both still work because the
+    * companion of [[Anything]] is aliased below.
+    */
+  @deprecated("Use Anything instead", "2.0.0")
+  type Abstract = Anything
+
+  /** Deprecated companion alias of [[Anything]]. See [[Abstract]]. */
+  @deprecated("Use Anything instead", "2.0.0")
+  val Abstract: Anything.type = Anything
 
   @JSExportTopLevel("UserId")
   case class UserId(loc: At) extends PredefinedType {

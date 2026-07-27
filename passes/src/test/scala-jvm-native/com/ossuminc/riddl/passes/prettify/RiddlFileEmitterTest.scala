@@ -108,7 +108,7 @@ abstract class RiddlFileEmitterTest extends AbstractTestingBasis {
       rfe.clear()
       rfe.emitTypeExpression(patt).toString mustBe "Pattern(\"^stuff.*$\")"
       rfe.clear()
-      rfe.emitTypeExpression(Abstract(At.empty)).toString mustBe "Abstract"
+      rfe.emitTypeExpression(Anything(At.empty)).toString mustBe "Anything"
       rfe.clear()
       rfe
         .emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42))

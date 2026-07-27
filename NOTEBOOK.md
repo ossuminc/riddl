@@ -15,6 +15,35 @@ to the task file and note the disposition below.
 
 ---
 
+## #60 Slice 1 — `Anything` replaces `Abstract` — DONE
+
+The dual of `Nothing` already existed as the `Abstract` predefined type
+(`isAssignmentCompatible = true`, plus a both-directions special case in
+the `TypeExpression` base). Renamed the AST node to `Anything`; `Abstract`
+survives as a deprecated *input* spelling and a deprecated *Scala* alias.
+
+- **AST** — `case class Anything(loc)`; `@deprecated type Abstract =
+  Anything` + `@deprecated val Abstract: Anything.type = Anything`, so
+  `Abstract(loc)` AND `case Abstract(loc)` both still compile downstream
+  (test in `TypeExpressionTest`). Nothing internal touches the alias, so
+  `-Werror` stays quiet.
+- **Parser** — `otherPredefTypes` accepts both; `Abstract` yields an
+  `Anything` node plus exactly ONE `deprecation(...)` (same mechanism as
+  `reply`→`yield` / `prompt`→`do`).
+- **Prettify/JSON** — both key off `getClass.getSimpleName`, so output is
+  now `Anything` for free. JSON still ACCEPTS `"Abstract"` on input and
+  normalizes it to `"Anything"` on output.
+- **BAST — the tag did NOT change** (`TYPE_REF`/subtype 99), so the wire
+  format is identical and `FORMAT_REVISION` stayed at **21**. Guarded by a
+  `BASTRoundTripTest` case asserting `Anything` and `Abstract` sources
+  produce byte-identical BAST.
+- **Fixture** — `language/input/full/domain.riddl` now has one `Anything`
+  type and one `Abstract` type, so the CI TatSu run covers both arms.
+
+**Found along the way:** `passes/.../prettify/RiddlFileEmitterTest.scala`
+is `abstract` with **no concrete subclass anywhere** — it compiles but has
+never run. Worth wiring up (or deleting) separately.
+
 ## Session 2026-07-26 — Unified streaming processor model (A37/A31/A32/A6)
 
 Shipped a large release/2 change (27 commits, pushed to origin at

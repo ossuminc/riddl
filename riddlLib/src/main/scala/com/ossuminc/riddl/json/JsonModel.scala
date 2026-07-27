@@ -777,9 +777,9 @@ object JsonModel:
         case "Id"     => IdDto(m.get("entity").map(_.str))
         // Argument-less predefined kinds (Phase 1 + Phase 2)
         case k @ ("UUID" | "Boolean" | "Date" | "TimeStamp" | "Integer" | "Whole" | "Natural" |
-            "Number" | "Real" | "UserId" | "Abstract" | "Location" | "Nothing" | "Time" |
-            "DateTime" | "Duration" | "Current" | "Length" | "Luminosity" | "Mass" | "Mole" |
-            "Temperature") =>
+            "Number" | "Real" | "UserId" | "Anything" | "Abstract" | "Location" | "Nothing" |
+            "Time" | "DateTime" | "Duration" | "Current" | "Length" | "Luminosity" | "Mass" |
+            "Mole" | "Temperature") =>
           PredefDto(k)
         case "Decimal" =>
           DecimalDto(m.get("whole").map(_.num.toLong), m.get("fractional").map(_.num.toLong))

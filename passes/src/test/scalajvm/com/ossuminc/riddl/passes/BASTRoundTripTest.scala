@@ -126,6 +126,42 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    // `Anything` (formerly spelled `Abstract`) keeps BAST tag TYPE_REF/99 — the Scala name
+    // changed, the wire format did not, so FORMAT_REVISION does NOT move. Both spellings must
+    // therefore produce byte-IDENTICAL BAST, since both parse to the same `Anything` node.
+    "serialize and deserialize `Anything` with a wire format identical to `Abstract`" in {
+      def bastOf(typeExpr: String): Array[Byte] =
+        val src = s"domain d is { type Whatever is $typeExpr }\n"
+        TopLevelParser.parseInput(RiddlParserInput(src, s"bast-$typeExpr"), true) match {
+          case Right(root: Root) =>
+            val writerResult =
+              Pass.runThesePasses(PassInput(root), Seq(BASTWriterPass.creator()))
+            writerResult.outputOf[BASTOutput](BASTWriterPass.name).get.bytes
+          case Left(messages) => fail(s"Parse failed: ${messages.format}")
+        }
+
+      val anythingBytes = bastOf("Anything")
+      // The deprecated spelling has the same character length, so locations coincide and the
+      // encodings must match byte for byte.
+      assert(
+        anythingBytes.sameElements(bastOf("Abstract")),
+        "BAST bytes differ between `Anything` and the deprecated `Abstract` spelling"
+      )
+
+      BASTReader.read(anythingBytes) match {
+        case Right(module) =>
+          val typ = Finder(module)
+            .recursiveFindByType[com.ossuminc.riddl.language.AST.Type]
+            .find(_.id.value == "Whatever")
+            .getOrElse(fail("type Whatever missing after BAST read"))
+          assert(
+            typ.typEx.isInstanceOf[com.ossuminc.riddl.language.AST.Anything],
+            s"expected Anything, got ${typ.typEx.getClass.getSimpleName}"
+          )
+        case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+      }
+    }
+
     "serialize and deserialize the `initial` marker on states and handlers" in {
       val riddlSource =
         """domain d is { context c is { entity e is {

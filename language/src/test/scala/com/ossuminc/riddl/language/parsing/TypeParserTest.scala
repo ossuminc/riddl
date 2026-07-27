@@ -209,6 +209,7 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
           |type date = Date
           |type timesmap = TimeStamp
           |type time = Time
+          |type anything = Anything
           |type abstract = Abstract
           |type loc = Location
           |type nada = Nothing
@@ -236,11 +237,25 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         Type(At(rpi, 0, 17), Identifier(At(rpi, 5, 9), "num"), Number(At(rpi, 11, 17)))
       checkDefinition[Type, Type](rpi, expected, identity)
     }
-    "allow rename of Abstract" in { (td: TestData) =>
-      val rpi = RiddlParserInput("type abs = Abstract", td)
+    "allow rename of Anything" in { (td: TestData) =>
+      val rpi = RiddlParserInput("type any = Anything", td)
       val expected =
-        Type(At(rpi, 0, 18), Identifier(At(rpi, 5, 9), "abs"), Abstract(At(rpi, 11, 18)))
+        Type(At(rpi, 0, 18), Identifier(At(rpi, 5, 9), "any"), Anything(At(rpi, 11, 18)))
       checkDefinition[Type, Type](rpi, expected, identity)
+    }
+    // `Abstract` is the deprecated spelling of `Anything`: same node, exactly one deprecation.
+    "accept the deprecated `Abstract` spelling as Anything with one deprecation" in {
+      (td: TestData) =>
+        val rpi = RiddlParserInput("type abs = Abstract", td)
+        val tp = TestParser(rpi)
+        tp.parseDefinition[Type] match
+          case Left(messages) => fail(messages.format)
+          case Right((typ, _)) =>
+            typ.typEx mustBe Anything(At(rpi, 11, 18))
+            val deprecations = tp.accumulatedMessages.filter(_.kind == Messages.Deprecation)
+            deprecations.size must be(1)
+            deprecations.head.message must include("`Abstract`")
+            deprecations.head.message must include("`Anything`")
     }
     "allow rename of Boolean" in { (td: TestData) =>
       val rpi = RiddlParserInput("type boo = Boolean", td)

@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 20:08 UTC
+# Generated: 2026-07-27 21:15 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -111,7 +111,7 @@ integer-predef-types ::= "Boolean" | "Integer" | "Natural" | "Whole"
 real-predef-types ::= "Current" | "Length" | "Luminosity" | "Mass" | "Mole" | "Number" | "Real" | "Temperature"
 time-predef-types ::= "Duration" | "DateTime" | "Date" | "TimeStamp" | "Time"
 zoned-predef-types ::= ("ZonedDate" | "ZonedDateTime") "(" (zone)? ")"
-other-predef-types ::= "Abstract" | "Location" | "Nothing" | "UUID" | "UserId"
+other-predef-types ::= "Abstract" | "Anything" | "Location" | "Nothing" | "UUID" | "UserId"
 zone ::= [A-Z0-9:.+-] [A-Z0-9:.+-] [A-Z0-9:.+-]*
 
 # Type Expressions

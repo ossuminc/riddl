@@ -300,7 +300,12 @@ private[parsing] trait TypeParser {
     ).map { case (start, otherType, end) =>
       val loc = at(start, end)
       otherType match
-        case PredefType.Abstract => AST.Abstract(loc)
+        case PredefType.Anything => AST.Anything(loc)
+        // `Abstract` is the DEPRECATED spelling of `Anything`; it yields the SAME node and emits
+        // one deprecation at the keyword (pattern mirrors `reply` -> `yield` and `prompt` -> `do`).
+        case PredefType.Abstract =>
+          deprecation(loc, "The `Abstract` type is deprecated; use `Anything` instead")
+          AST.Anything(loc)
         case PredefType.Location => AST.Location(loc)
         case PredefType.Nothing  => AST.Nothing(loc)
         case PredefType.Natural  => AST.Natural(loc)
@@ -309,7 +314,7 @@ private[parsing] trait TypeParser {
         case PredefType.UserId   => AST.UserId(loc)
         case _ =>
           error(loc, "Unrecognized predefined type")
-          AST.Abstract(loc)
+          AST.Anything(loc)
       end match
     }
   }

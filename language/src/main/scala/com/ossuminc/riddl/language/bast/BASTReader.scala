@@ -1610,15 +1610,15 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
             val entity = readPathIdentifierInline()
             EntityReferenceTypeExpression(loc, entity)
 
-          case 99 => // Abstract
-            Abstract(loc)
+          case 99 => // Anything (formerly spelled `Abstract`; tag unchanged)
+            Anything(loc)
 
           case 100 => // Nothing
             Nothing(loc)
 
           case _ =>
             addError(s"Unknown TYPE_REF subtype: $subtype")
-            Abstract(loc)
+            Anything(loc)
         }
 
       // Strings - all variants have subtype byte
@@ -1784,7 +1784,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case _ =>
         addError(s"Unknown type expression tag: $typeTag at position ${reader.position}")
         // Use lastLocation for best-effort location on error
-        Abstract(lastLocation)
+        Anything(lastLocation)
     }
   }
 

@@ -178,6 +178,7 @@ class TypeValidatorTest extends AbstractValidatingTest {
         scala.collection.immutable
           .Set(
             "Abstract",
+            "Anything",
             "Boolean",
             "Current",
             "Currency",

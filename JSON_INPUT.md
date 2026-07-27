@@ -198,7 +198,8 @@ defaulted by the builder (see the table below).
 More type expressions:
 
 ```jsonc
-{ "kind": "UserId" } | { "kind": "Abstract" } | { "kind": "Location" } | { "kind": "Nothing" }
+{ "kind": "UserId" } | { "kind": "Anything" } | { "kind": "Location" } | { "kind": "Nothing" }
+// "Abstract" is the deprecated input spelling of "Anything"; output is always "Anything"
 { "kind": "Time" } | { "kind": "DateTime" } | { "kind": "Duration" }
 { "kind": "ZonedDate", "zone": "UTC" } | { "kind": "ZonedDateTime", "zone": "UTC" }   // zone optional
 { "kind": "Current" } | { "kind": "Length" } | { "kind": "Luminosity" }               // SI base units

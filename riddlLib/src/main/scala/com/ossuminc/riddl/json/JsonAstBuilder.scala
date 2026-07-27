@@ -1044,7 +1044,8 @@ object JsonAstBuilder:
           case "Number"      => Number(At())
           case "Real"        => Real(At())
           case "UserId"      => UserId(At())
-          case "Abstract"    => Abstract(At())
+          case "Anything"    => Anything(At())
+          case "Abstract"    => Anything(At()) // deprecated spelling of Anything
           case "Location"    => Location(At())
           case "Nothing"     => Nothing(At())
           case "Time"        => Time(At())
@@ -1058,7 +1059,7 @@ object JsonAstBuilder:
           case "Temperature" => Temperature(At())
           case other =>
             ctx.err(s"unknown predefined type kind '$other'")
-            Abstract(At())
+            Anything(At())
 
       case DecimalDto(w, f)   => Decimal(At(), w.getOrElse(12L), f.getOrElse(2L))
       case CurrencyDto(c)     => Currency(At(), c.getOrElse("USD"))
