@@ -15,9 +15,9 @@ import com.ossuminc.riddl.utils.pc
 
 import org.scalatest.*
 
-/** A18: an `invariant` may be declared inside a `state` body. RIDDL is reflective, so a state-scoped
-  * invariant must emit (prettify) and survive a parse -> prettify -> re-parse round-trip AT the same
-  * place — inside the state, not dropped and not relocated up to the entity.
+/** A18: an `invariant` may be declared inside a `state` body. RIDDL is reflective, so a
+  * state-scoped invariant must emit (prettify) and survive a parse -> prettify -> re-parse
+  * round-trip AT the same place — inside the state, not dropped and not relocated up to the entity.
   */
 class StateInvariantRoundTripTest extends AbstractValidatingTest {
 
