@@ -106,6 +106,10 @@ object RecognizedOptions:
     "at-most-once" -> OptionSpec(Seq("Connector"), 0, 0),
     "exactly-once" -> OptionSpec(Seq("Connector"), 0, 0),
     "ordered" -> OptionSpec(Seq("Connector", "Inlet"), 0, 0),
+    // Complement of `ordered` (A33): messages MAY be delivered out of order,
+    // enabling partitioning/parallelism. Same stream-property parents as
+    // `ordered`. Registration only — no behavioral / cross-option check.
+    "unordered" -> OptionSpec(Seq("Connector", "Inlet"), 0, 0),
     "partitioned" -> OptionSpec(Seq("Connector"), 1, 1),
     // Asynchronous messaging-boundary marker (A7, corrected). `async` is a
     // PORTLET option: it marks an individual Inlet or Outlet as an async

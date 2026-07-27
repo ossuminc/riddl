@@ -1207,6 +1207,35 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept unordered option on connectors and inlets" in { (td: TestData) =>
+      // `unordered` (A33) is the complement of `ordered`: it is a delivery-
+      // ordering property of a Connector or an Inlet. It must draw neither
+      // "not a recognized" nor "not typically used" on either parent.
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type Evt is any of { A, B }
+          |    source Events is { outlet out is type Evt }
+          |    sink Incoming is {
+          |      inlet in is type Evt with { option unordered }
+          |    }
+          |    connector Pipe is {
+          |      from outlet C.Events.out to inlet C.Incoming.in
+          |    } with { option unordered }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        msgs.exists(m =>
+          m.message.contains("unordered") &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
+      }
+    }
+
     "nudge async option on non-portlet definitions" in { (td: TestData) =>
       // On a streamlet or a context, `async` is recognized (no "not a
       // recognized" warning) but draws the parent-kind "not typically used"
