@@ -2294,6 +2294,21 @@ case class ValidationPass(
         suggestion = s"Use an entry verb (e.g. 'acquires') for '${input.takeIn.pathId.format}', " +
           "or make its type an enumeration or a 'one of { ... }' alternation."
       )
+    // A46: compound consistency (unambiguous half only). 'picklist' and 'selector' are selection
+    // widgets, so they should be paired with a selection verb (selects/chooses/picks). If the noun
+    // is a selection noun but the verb is not a selection verb, emit a StyleWarning (never an
+    // Error). Other input nouns (form/text/button/item/input) pair legitimately with a range of
+    // verbs and are intentionally NOT policed here.
+    if UIVerbs.isSelectionNoun(input.nounAlias) && !UIVerbs.isSelectionVerb(input.verbAlias)
+    then
+      messages.addStyle(
+        input.loc,
+        s"a '${input.nounAlias}' is a selection widget; use a selection verb " +
+          s"(selects/chooses/picks) rather than '${input.verbAlias}'",
+        suggestion = s"Change '${input.verbAlias}' to a selection verb such as 'selects', " +
+          s"or use a non-selection noun (e.g. 'input'/'form') if '${input.nounAlias}' is " +
+          "not really a picker."
+      )
     checkMetadata(input)
   }
 

@@ -123,5 +123,49 @@ trait SharedApplicationTest extends AbstractValidatingTest {
           messages.filter(_.message.contains(selectionWarning)) mustBe empty
       }
     }
+
+    // A46: compound consistency for selection nouns (picklist/selector)
+
+    val selectionWidgetWarning = "is a selection widget"
+
+    "not warn when a picklist uses a selection verb" in { (td: TestData) =>
+      parseAndValidateDomain(appWith("picklist favColor selects type Color")) {
+        case (_, _, messages: Messages.Messages) =>
+          messages.hasErrors mustBe false
+          messages.filter(_.message.contains(selectionWidgetWarning)) mustBe empty
+      }
+    }
+
+    "not warn when a selector uses a selection verb" in { (td: TestData) =>
+      parseAndValidateDomain(appWith("selector aChoice chooses type Choice")) {
+        case (_, _, messages: Messages.Messages) =>
+          messages.hasErrors mustBe false
+          messages.filter(_.message.contains(selectionWidgetWarning)) mustBe empty
+      }
+    }
+
+    "emit a StyleWarning (not an Error) when a picklist uses a non-selection verb" in {
+      (td: TestData) =>
+        parseAndValidateDomain(
+          appWith("picklist favColor acquires type Color"),
+          shouldFailOnErrors = false
+        ) { case (_, _, messages: Messages.Messages) =>
+          val warnings = messages.filter(_.message.contains(selectionWidgetWarning))
+          warnings.size mustBe 1
+          warnings.head.kind mustBe Messages.StyleWarning
+          messages.filter(m =>
+            m.kind == Messages.Error && m.message.contains(selectionWidgetWarning)
+          ) mustBe empty
+        }
+    }
+
+    "not warn for a non-selection noun with a non-selection verb (flexible pairing)" in {
+      (td: TestData) =>
+        parseAndValidateDomain(appWith("form order submits type Color")) {
+          case (_, _, messages: Messages.Messages) =>
+            messages.hasErrors mustBe false
+            messages.filter(_.message.contains(selectionWidgetWarning)) mustBe empty
+        }
+    }
   }
 }
