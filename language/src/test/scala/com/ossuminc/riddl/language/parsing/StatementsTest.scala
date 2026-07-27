@@ -615,18 +615,35 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           ws.condition mustBe a[LiteralString]
           ws.negated must be(false)
         case other => fail(s"expected a WhenStatement, got $other")
-      // A bare boolean-field ref stays an Identifier (NOT a ValueRef-wrapped BooleanExpression).
-      parseStmt("when someBoolField then error \"boom\" end", td) match
-        case ws: WhenStatement =>
-          ws.condition mustBe a[Identifier]
-          ws.condition.asInstanceOf[Identifier].value must be("someBoolField")
-          ws.negated must be(false)
-        case other => fail(s"expected a WhenStatement, got $other")
-      // A negated bare ref stays an Identifier with negated=true.
+      // A negated bare ref stays an Identifier with negated=true (the `! identifier` legacy arm).
       parseStmt("when !flag then error \"boom\" end", td) match
         case ws: WhenStatement =>
           ws.condition mustBe a[Identifier]
           ws.negated must be(true)
+        case other => fail(s"expected a WhenStatement, got $other")
+    }
+
+    // ---- A17: a bare boolean value reference is a first-class `when` condition ----
+
+    "parse `when flag` (single name) as a ValueRef condition (A17)" in { (td: TestData) =>
+      parseStmt("when flag then error \"boom\" end", td) match
+        case ws: WhenStatement =>
+          ws.condition match
+            case vr: ValueRef =>
+              vr.path.format must be("flag")
+              ws.negated must be(false)
+            case other => fail(s"expected a ValueRef condition, got $other")
+        case other => fail(s"expected a WhenStatement, got $other")
+    }
+
+    "parse `when order.isPaid` (dotted path) as a ValueRef condition (A17)" in { (td: TestData) =>
+      parseStmt("when order.isPaid then error \"boom\" end", td) match
+        case ws: WhenStatement =>
+          ws.condition match
+            case vr: ValueRef =>
+              vr.path.format must be("order.isPaid")
+              ws.negated must be(false)
+            case other => fail(s"expected a ValueRef condition, got $other")
         case other => fail(s"expected a WhenStatement, got $other")
     }
 

@@ -425,6 +425,45 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize a bare boolean value-reference `when` condition (A17)" in {
+      // A17 adds when-condition BAST flag 3 (writeValue of a ValueRef), FORMAT_REVISION 17. Verify a
+      // single-name and a dotted-path bare boolean reference each survive a byte round-trip.
+      val riddlSource =
+        """domain d is {
+          |  context c is {
+          |    handler h is {
+          |      on init {
+          |        when flag then error "one" end
+          |        when order.isPaid then error "two" end
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-whenref")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.*
+              val whens = Finder(nebula.contents).recursiveFindByType[WhenStatement]
+              assert(whens.size == 2, s"expected two WhenStatements, found ${whens.size}")
+              whens.head.condition match
+                case vr: ValueRef => assert(vr.path.value == Seq("flag"))
+                case other        => fail(s"expected a ValueRef condition, got $other")
+              whens(1).condition match
+                case vr: ValueRef => assert(vr.path.value == Seq("order", "isPaid"))
+                case other        => fail(s"expected a dotted ValueRef condition, got $other")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize widened operands: send/morph/set/let(prompt)/yield (A54)" in {
       // A54 widens set/let values, send/tell/yield messages, and morph values. Verify each widened
       // form (including the `prompt(...)` value and inline constructors) round-trips at rev 14.

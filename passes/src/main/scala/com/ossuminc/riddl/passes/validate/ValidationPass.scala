@@ -569,6 +569,7 @@ case class ValidationPass(
             checkNonEmptyValue(ls, "condition", onClause, loc, MissingWarning, required = true)
           case id: Identifier =>
             checkNonEmptyValue(id, "condition", onClause, loc, MissingWarning, required = true)
+          case _: ValueRef          => () // A17: resolved + boolean-checked in checkStatementScopes
           case _: BooleanExpression => () // A28: type-checked in checkStatementScopes
         }
         checkNonEmpty(
@@ -2770,6 +2771,55 @@ case class ValidationPass(
         )
       case None => () // undetermined — skip
 
+  /** A17: the broad category (`"boolean"`/`"numeric"`/`"string"`) of a bare [[ValueRef]] used as a
+    * `when` condition, or `None` when it cannot be determined. Resolves the reference against the
+    * same four sources as a `when` condition plus named constants, classifying each source's
+    * [[TypeExpression]] DIRECTLY via [[typeExprCategory]] (following one level of alias). This is
+    * broader than [[valueCategory]]/[[valueRefType]], which only classify a field whose type is an
+    * ALIASED type — a directly-typed `flag: Boolean` field must classify too.
+    */
+  private def whenValueRefCategory(
+    vr: ValueRef,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Option[String] =
+    val name = vr.path.value.lastOption.getOrElse("")
+    val fromLet: Option[String] =
+      if vr.path.value.sizeIs == 1 then
+        lets.reverse
+          .find(_.identifier.value == name)
+          .flatMap(_.typeRef)
+          .flatMap(tr => resolution.refMap.definitionOf[Type](tr.pathId))
+          .flatMap(t => typeExprCategory(t.typEx))
+      else None
+    def fromField: Option[String] =
+      valueAllowedFields(parents).find(_.id.value == name).flatMap(f => typeExprCategory(f.typeEx))
+    def fromConstant: Option[String] = constantOf(vr).flatMap(k => typeExprCategory(k.typeEx))
+    fromLet.orElse(fromField).orElse(fromConstant)
+
+  /** A17: a bare boolean value reference used as a `when` condition must resolve to a Boolean-typed
+    * value — a boolean field of the handled message/entity-state/function-input, a boolean
+    * `let`-local, or a boolean `constant`. Emits an Error only when the reference's category is
+    * clearly non-boolean; an undetermined category (unresolved ref, or a type we cannot classify)
+    * is skipped — best-effort, mirroring [[checkBooleanOperand]].
+    */
+  private def checkWhenValueRef(
+    vr: ValueRef,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Unit =
+    whenValueRefCategory(vr, parents, lets) match
+      case Some("boolean") => ()
+      case Some(other) =>
+        messages.addError(
+          vr.loc,
+          s"A 'when' condition must be a Boolean value; '${vr.path.format}' has type $other",
+          suggestion =
+            "Reference a Boolean field or constant, or use a comparison/logical expression " +
+              "(e.g. 'a > b', 'x and y', 'not z')."
+        )
+      case None => () // undetermined — skip (best-effort)
+
   /** A28: the [[Constant]] a bare comparison [[ValueRef]] names, if any. Comparisons may compare a
     * field/local against a named `constant` written as a bare path (`count > MaxCount`); the
     * four-source [[valueRefResolves]] does not cover constants, so this consults the symbol table.
@@ -3065,9 +3115,11 @@ case class ValidationPass(
         )
       case ws: WhenStatement =>
         // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
-        // the LiteralString/Identifier forms have no expression to check here.
+        // the LiteralString/Identifier forms have no expression to check here. A17: a bare boolean
+        // ValueRef condition must resolve to a Boolean-typed value.
         ws.condition match
           case be: BooleanExpression => validateValue(be, parents, lets)
+          case vr: ValueRef          => checkWhenValueRef(vr, parents, lets) // A17
           case _                     => ()
         checkStatementScopes(
           ws.thenStatements.toSeq.collect { case s: Statement => s },

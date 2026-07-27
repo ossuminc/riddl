@@ -555,6 +555,15 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             serializeStatements(elseS),
             Some(serializeValue(be))
           )
+        case vr: ValueRef => // A17: bare boolean value reference -> structured `expression` field
+          WhenStmtDto(
+            None,
+            None,
+            negated,
+            serializeStatements(thenS),
+            serializeStatements(elseS),
+            Some(serializeValue(vr))
+          )
     case MatchStatement(_, expr, cases, default) =>
       MatchStmtDto(
         expr.s,

@@ -605,12 +605,13 @@ object JsonAstBuilder:
         TellStatement(At(), buildMsgOperand(message), processorRef(to, processor))
       case YieldStmtDto(message) => YieldStatement(At(), buildMsgOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
-        val cond: LiteralString | Identifier | BooleanExpression = expression match
-          case Some(exprDto) => // A28: structured boolean-expression condition
+        val cond: LiteralString | Identifier | ValueRef | BooleanExpression = expression match
+          case Some(exprDto) => // A28: boolean expression, or A17: bare boolean value reference
             buildValue(exprDto) match
               case be: BooleanExpression => be
+              case vr: ValueRef          => vr // A17
               case _ =>
-                ctx.err("when 'expression' must be a boolean expression")
+                ctx.err("when 'expression' must be a boolean expression or a value reference")
                 LiteralString(At(), "")
           case None =>
             conditionId match

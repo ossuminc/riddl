@@ -2828,7 +2828,7 @@ object AST:
   @JSExportTopLevel("WhenStatement")
   case class WhenStatement(
     loc: At,
-    condition: LiteralString | Identifier | BooleanExpression,
+    condition: LiteralString | Identifier | ValueRef | BooleanExpression,
     thenStatements: Contents[Statements],
     elseStatements: Contents[Statements] = Contents.empty[Statements](0),
     negated: Boolean = false
@@ -2838,6 +2838,7 @@ object AST:
       val condStr = condition match {
         case ls: LiteralString     => ls.format
         case id: Identifier        => if negated then s"!${id.format}" else id.format
+        case vr: ValueRef          => if negated then s"!${vr.format}" else vr.format // A17
         case be: BooleanExpression => be.format // A28: negation is expressed via `not` in the expr
       }
       val thenStr =

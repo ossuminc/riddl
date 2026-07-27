@@ -350,6 +350,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         val condStr = cond match {
           case ls: LiteralString     => ls.format
           case id: Identifier        => if negated then s"!${id.format}" else id.format
+          case vr: ValueRef          => if negated then s"!${vr.format}" else vr.format // A17
           case be: BooleanExpression => be.format // A28: structured boolean expression
         }
         addIndent(s"when $condStr then").nl.incr

@@ -304,10 +304,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveMessageOperand(msg, parents)
       case ws: WhenStatement =>
         // A28: a BooleanExpression condition may carry operand refs; the LiteralString/Identifier
-        // forms have none. A nested foreach's field ref must also be resolved so validation can
-        // find it in the refMap.
+        // forms have none. A17: a bare boolean ValueRef condition is resolved via resolveValue (its
+        // four-source resolution is deferred to validation, like every other bare ValueRef). A nested
+        // foreach's field ref must also be resolved so validation can find it in the refMap.
         ws.condition match {
           case be: BooleanExpression => resolveValue(be, parents)
+          case vr: ValueRef          => resolveValue(vr, parents) // A17
           case _                     => ()
         }
         resolveForeachFieldRefs(ws.thenStatements, parents)

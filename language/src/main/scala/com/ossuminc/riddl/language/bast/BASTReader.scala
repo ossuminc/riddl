@@ -882,15 +882,20 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
       case 10 => // When
         val conditionType = reader.readU8()
-        val condition: LiteralString | Identifier | BooleanExpression = conditionType match {
-          case 0 => readLiteralString()
-          case 1 => readIdentifierInline()
-          case 2 => // A28: structured boolean-expression condition
-            readValue() match
-              case be: BooleanExpression => be
-              case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
-          case _ => throw new RuntimeException(s"Invalid when condition type: $conditionType")
-        }
+        val condition: LiteralString | Identifier | ValueRef | BooleanExpression =
+          conditionType match {
+            case 0 => readLiteralString()
+            case 1 => readIdentifierInline()
+            case 2 => // A28: structured boolean-expression condition
+              readValue() match
+                case be: BooleanExpression => be
+                case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
+            case 3 => // A17: bare boolean value reference
+              readValue() match
+                case vr: ValueRef => vr
+                case other        => throw new RuntimeException(s"Expected ValueRef, got: $other")
+            case _ => throw new RuntimeException(s"Invalid when condition type: $conditionType")
+          }
         val negated = reader.readU8() != 0
         val thenStatements = readContentsDeferred[Statements]()
         val elseStatements = readContentsDeferred[Statements]()

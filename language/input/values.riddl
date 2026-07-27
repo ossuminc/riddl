@@ -94,6 +94,14 @@ domain Values is {
           when count > total and not active then
             error "over"
           end
+          // A17: a bare boolean value reference as a first-class `when` condition (single name).
+          when active then
+            error "inactive"
+          end
+          // A17: a bare boolean value reference via a dotted path (resolved on its last component).
+          when GState.active then
+            error "inactive"
+          end
         }
       }
     }

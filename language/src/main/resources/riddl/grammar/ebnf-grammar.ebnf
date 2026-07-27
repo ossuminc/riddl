@@ -202,9 +202,10 @@ statement = when_statement | match_statement | foreach_statement | send_statemen
 
 (* Control flow *)
 when_statement = "when" when_condition "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
-(* A28: a condition is an opaque pseudo-code literal, a negated/bare let-binding identifier, or a
-   structured boolean_expression. boolean_expression's atom covers a bare value_ref. *)
-when_condition = literal_string | "!" identifier | boolean_expression ;
+(* A28/A17: a condition is an opaque pseudo-code literal, a negated/bare let-binding identifier, a
+   structured boolean_expression, or (A17) a first-class bare boolean value_ref (a single name or a
+   dotted path, resolved and validated to be Boolean-typed). *)
+when_condition = literal_string | "!" identifier | boolean_expression | value_ref ;
 match_statement = "match" literal_string "{" {match_case}+ ["default" "{" {statement} "}"] "}" ;
 match_case = "case" literal_string "{" {statement} "}" ;
 (* A25: `foreach <element> in <collection> { <statements> }`; `field <path>` collection is a

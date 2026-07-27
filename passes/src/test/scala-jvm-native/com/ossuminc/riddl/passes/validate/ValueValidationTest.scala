@@ -51,6 +51,26 @@ class ValueValidationTest extends AbstractValidatingTest {
        |}
        |""".stripMargin
 
+  // A17: an entity whose state carries boolean fields `flag`/`isPaid` and a numeric field `count` —
+  // all in scope of the `on command Do` clause as state fields (used to exercise bare boolean value
+  // references as `when` conditions).
+  private def whenEnt(body: String): String =
+    s"""domain d is {
+       |  context c is {
+       |    command Do is { ??? }
+       |    entity E is {
+       |      record Data is { flag: Boolean, isPaid: Boolean, count: Integer }
+       |      state S of record Data
+       |      handler h is {
+       |        on command Do {
+       |          $body
+       |        }
+       |      }
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+
   "Value validation (A54/A45/A45b/A57)" should {
 
     "accept a put whose constructor value matches the output type" in { (td: TestData) =>
@@ -505,6 +525,44 @@ class ValueValidationTest extends AbstractValidatingTest {
             "must be a boolean"
           ))
         ) mustBe empty
+      }
+    }
+
+    // ---- A17: a bare boolean value reference is a first-class, type-checked `when` condition ----
+
+    "accept a bare Boolean field ref as a `when` condition — single name (A17)" in {
+      (td: TestData) =>
+        parseAndValidate(
+          whenEnt("""when flag then error "x" end"""),
+          td.name,
+          shouldFailOnErrors = false
+        ) { case (_, _, msgs: Messages) =>
+          msgs.filter(m =>
+            m.kind == Error && m.message.contains("must be a Boolean value")
+          ) mustBe empty
+        }
+    }
+
+    "accept a bare Boolean field ref as a `when` condition — dotted path (A17)" in {
+      (td: TestData) =>
+        parseAndValidate(
+          whenEnt("""when order.isPaid then error "x" end"""),
+          td.name,
+          shouldFailOnErrors = false
+        ) { case (_, _, msgs: Messages) =>
+          msgs.filter(m =>
+            m.kind == Error && m.message.contains("must be a Boolean value")
+          ) mustBe empty
+        }
+    }
+
+    "reject a non-Boolean field ref as a `when` condition (A17)" in { (td: TestData) =>
+      parseAndValidate(
+        whenEnt("""when count then error "x" end"""),
+        td.name,
+        shouldFailOnErrors = false
+      ) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(msgs, Error, "must be a Boolean value")
       }
     }
   }

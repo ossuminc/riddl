@@ -355,6 +355,44 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip a bare boolean value-reference `when` condition (A17) losslessly" in {
+      val cModel =
+        """domain WR is {
+          |  context c is {
+          |    handler h is {
+          |      on init is {
+          |        when flag then error "one" end
+          |        when order.isPaid then error "two" end
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(cModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // A17: a bare boolean ValueRef condition serializes via the structured `expression` field.
+          json1 must include("\"expression\"")
+          json1 must include("\"valueRef\"")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              RiddlLib.root2Json(root1) mustBe json1 // fixed point => lossless
+              val whens = Finder(root1.contents).recursiveFindByType[WhenStatement]
+              whens.size mustBe 2
+              whens.head.condition match
+                case vr: ValueRef => vr.path.value mustBe Seq("flag")
+                case other        => fail(s"expected a ValueRef condition, got $other")
+              whens(1).condition match
+                case vr: ValueRef => vr.path.value mustBe Seq("order", "isPaid")
+                case other        => fail(s"expected a dotted ValueRef condition, got $other")
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the value-ref-condition JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the value-ref-condition model failed: $errors")
+      end match
+    }
+
     "round-trip widened operands: send/morph/set/let(prompt)/yield constructors (A54) losslessly" in {
       val wModel =
         """domain WD is {

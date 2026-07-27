@@ -162,5 +162,32 @@ class ValueRoundTripTest extends AbstractValidatingTest {
             case other => fail(s"expected not c on the right, got $other")
         case other => fail(s"expected And condition after round-trip, got $other")
     }
+
+    // A17: a bare boolean value reference (single name AND dotted path) must survive prettify as a
+    // ValueRef condition (not dropped, not relocated, not degraded to an Identifier/LiteralString).
+    "round-trip a bare boolean `when <ref>` condition through prettify (A17)" in { (td: TestData) =>
+      val whenSrc =
+        """domain d is {
+          |  context c is {
+          |    handler h is {
+          |      on init {
+          |        when flag then error "one" end
+          |        when order.isPaid then error "two" end
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val pretty = prettify(parse(whenSrc, "whenrefsrc"))
+      val regen = parse(pretty, "whenrefregen")
+      val whens = Finder(regen).recursiveFindByType[WhenStatement]
+      whens.size mustBe 2
+      whens.head.condition match
+        case vr: ValueRef => vr.path.value mustBe Seq("flag")
+        case other        => fail(s"expected a ValueRef condition, got $other")
+      whens(1).condition match
+        case vr: ValueRef => vr.path.value mustBe Seq("order", "isPaid")
+        case other        => fail(s"expected a dotted ValueRef condition, got $other")
+    }
   }
 }

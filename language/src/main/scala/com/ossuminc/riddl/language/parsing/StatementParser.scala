@@ -217,18 +217,27 @@ private[parsing] trait StatementParser {
     )./.map { case (start, eRef, hRef, end) => BecomeStatement(at(start, end), eRef, hRef) }
   }
 
-  // A28: `when` accepts a pseudo-code LiteralString, a bare `let`-binding Identifier (optionally
-  // negated with `!`), or a structured BooleanExpression. `booleanExprOnly` is tried BEFORE the bare
-  // `identifier` arm: for `when someBoolField` it parses the ref as a bare atom, the filter rejects
-  // it, and the parse backtracks to `identifier` (so the AST stays an Identifier, unchanged). For
-  // `when a > b` / `when x and y` it succeeds and yields a BooleanExpression. The `! identifier`
-  // (negated) arm precedes it because `!` is not a boolean-atom start, so the boolean grammar never
-  // consumes it.
-  private def whenCondition[u: P]: P[(LiteralString | Identifier | BooleanExpression, Boolean)] = {
+  // A28/A17: `when` accepts a structured BooleanExpression, a bare boolean value reference (a single
+  // name OR a dotted path -> ValueRef, A17), a pseudo-code LiteralString, or the legacy negated/bare
+  // `let`-binding Identifier. ORDER matters:
+  //   - `! identifier` (negated) is tried first: `!` is not a boolean-atom start, so the boolean
+  //     grammar never consumes it.
+  //   - `booleanExprOnly` is tried before `valueRef`: for `when a > b` / `when x and y` / `when true`
+  //     it yields a real BooleanExpression; for a BARE atom (`when flag`, `when order.isPaid`) the
+  //     filter rejects the bare-atom result and the parse backtracks (no cut before an operator) to
+  //     `valueRef`, which builds a first-class ValueRef (A17) covering both a single name and a
+  //     dotted path.
+  //   - `literalString` then handles the opaque pseudo-code form (`when "user is authenticated"`);
+  //     `valueRef` above never consumes a quote, so the order is safe.
+  //   - the bare `identifier` arm is the legacy fallback (now effectively unreached, since a bare
+  //     name is routed to `valueRef`); kept for AST/API back-compat.
+  private def whenCondition[u: P]
+    : P[(LiteralString | Identifier | ValueRef | BooleanExpression, Boolean)] = {
     P(
-      literalString.map(ls => (ls, false)) |
-        (Punctuation.exclamation ~ identifier).map(id => (id, true)) |
+      (Punctuation.exclamation ~ identifier).map(id => (id, true)) |
         booleanExprOnly.map(be => (be, false)) |
+        valueRef.map(vr => (vr, false)) |
+        literalString.map(ls => (ls, false)) |
         identifier.map(id => (id, false))
     )
   }
