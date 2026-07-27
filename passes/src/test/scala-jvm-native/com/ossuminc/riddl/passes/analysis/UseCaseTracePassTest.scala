@@ -30,7 +30,11 @@ class UseCaseTracePassTest extends AbstractValidatingTest {
         val passInput = PassInput(root)
         val outputs = pr.outputs
         // EntityLifecyclePass is a required predecessor; run it first so its output is available.
-        Pass.runPass[EntityLifecycleOutput](passInput, outputs, EntityLifecyclePass(passInput, outputs))
+        Pass.runPass[EntityLifecycleOutput](
+          passInput,
+          outputs,
+          EntityLifecyclePass(passInput, outputs)
+        )
         val pass = UseCaseTracePass(passInput, outputs)
         val uto = Pass.runPass[UseCaseTraceOutput](passInput, outputs, pass)
         check(uto, msgs)
@@ -43,14 +47,12 @@ class UseCaseTracePassTest extends AbstractValidatingTest {
   // A two-state (plus terminal) entity: S0 --CmdA--> S1 --CmdB--> S2.
   private def linearEntity(guardCmdA: Boolean = false, initToS1: Boolean = false): String =
     val cmdABody =
-      if guardCmdA then
-        """when "ready" then
+      if guardCmdA then """when "ready" then
           |            morph entity D.C.E to state S1 with record D.C.E.F
           |          end"""
       else "morph entity D.C.E to state S1 with record D.C.E.F"
     val initHandler =
-      if initToS1 then
-        """      handler Init is {
+      if initToS1 then """      handler Init is {
           |        on init { set state S1 to "start" }
           |      }
           |""".stripMargin
@@ -60,6 +62,7 @@ class UseCaseTracePassTest extends AbstractValidatingTest {
        |  context C is {
        |    command CmdA is { ??? }
        |    command CmdB is { ??? }
+       |    command Ping is { ??? }
        |    entity E is {
        |      record F is { x: String }
        |$initHandler      state S0 of record E.F is {
@@ -67,6 +70,7 @@ class UseCaseTracePassTest extends AbstractValidatingTest {
        |          on command D.C.CmdA {
        |            $cmdABody
        |          }
+       |          on command D.C.Ping { ??? }
        |        }
        |      }
        |      state S1 of record E.F is {
@@ -103,7 +107,7 @@ class UseCaseTracePassTest extends AbstractValidatingTest {
       }
     }
 
-    "warn when a delivery has no transition in the current state (CmdB first, from S0)" in {
+    "warn when the current state does not handle the delivered message (CmdB first, from S0)" in {
       (td: TestData) =>
         runTracePass(
           linearEntity() +
@@ -120,8 +124,26 @@ class UseCaseTracePassTest extends AbstractValidatingTest {
           val warns = inadmissible(uto)
           warns must not be empty
           warns.exists(m =>
-            m.message.contains("no transition") && m.message.contains("state 'S0'")
+            m.message.contains("does not handle it") && m.message.contains("state 'S0'")
           ) mustBe true
+        }
+    }
+
+    "not warn a handled-but-non-transitioning delivery (self-loop) — Ping in S0" in {
+      (td: TestData) =>
+        runTracePass(
+          linearEntity() +
+            """  epic Ep is {
+              |    user U wants to "drive" so that "done"
+              |    case Loop is {
+              |      user U wants to "drive" so that "done"
+              |      step send command D.C.Ping from user D.U to entity D.C.E
+              |    }
+              |  }
+              |}
+              |""".stripMargin
+        ) { (uto, _) =>
+          inadmissible(uto) mustBe empty
         }
     }
 
