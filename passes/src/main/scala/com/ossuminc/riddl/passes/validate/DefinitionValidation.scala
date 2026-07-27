@@ -267,7 +267,35 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         s"Add at least one definition inside ${container.identify} (or '???' as a placeholder), " +
           "or remove it if it is not needed."
     )
+    checkIncludeHygiene(container)
   end checkContents
+
+  /** A51: include hygiene (validation-only subset). ValidationPass does not process `Include` nodes
+    * directly (`withIncludes` is false, so `validateInclude` never runs), so the hygiene checks run
+    * here from each container's `checkContents` over its direct `includes`. Circular-include
+    * detection is intentionally NOT done — it needs the include loader/parser before flattening and
+    * is out of validation scope.
+    */
+  private def checkIncludeHygiene(container: Branch[?]): Unit =
+    container.contents.includes.foreach { incl =>
+      // A51(a): included files should carry the .riddl extension (mirrors the .bast suffix check in
+      // validateBASTImport). Only checked when an origin was provided.
+      if incl.origin.nonEmpty && !incl.origin.path.endsWith(".riddl") then
+        messages.addStyle(
+          incl.loc,
+          s"Included file '${incl.origin.path}' should end with .riddl",
+          suggestion = "Give the included file a '.riddl' extension."
+        )
+      // A51(b): an include that parsed but contributed no definitions (e.g. only comments or
+      // whitespace) adds nothing to the model.
+      if incl.contents.nonEmpty && incl.contents.definitions.isEmpty then
+        messages.addMissing(
+          incl.loc,
+          "Include contributes no definitions",
+          suggestion =
+            "Add RIDDL definitions to the included file, or remove the include if it is not needed."
+        )
+    }
 
   def checkContainer(
     parents: Parents,

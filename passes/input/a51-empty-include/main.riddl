@@ -1,0 +1,4 @@
+domain d is {
+  include "empty"
+  type T is Integer
+}
