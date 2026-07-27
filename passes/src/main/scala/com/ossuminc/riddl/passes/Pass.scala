@@ -15,6 +15,12 @@ import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, Resolu
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.stats.StatsPass
 import com.ossuminc.riddl.passes.validate.{ValidationOutput, ValidationPass}
+import com.ossuminc.riddl.passes.analysis.{
+  EntityLifecyclePass,
+  MessageFlowPass,
+  UseCaseTracePass,
+  UseCaseWitnessPass
+}
 
 import scala.annotation.unused
 import scala.collection.mutable
@@ -756,7 +762,22 @@ object Pass {
     * passed successful should the model be considered processable by other passes
     */
   def standardPasses(using PlatformContext): PassCreators =
-    Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
+    val base = Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
+    // When completeness warnings are enabled, additionally run the A36 epic/use-case
+    // analysis passes so their CompletenessWarnings surface in `riddlc validate`. These
+    // are gated behind `showCompletenessWarnings` so that a plain `validate` (completeness
+    // off) pays no extra pass cost. Prerequisites first: MessageFlowPass feeds
+    // UseCaseWitnessPass; EntityLifecyclePass feeds UseCaseTracePass.
+    if summon[PlatformContext].options.showCompletenessWarnings then
+      base ++ Seq(
+        MessageFlowPass.creator(),
+        EntityLifecyclePass.creator(),
+        UseCaseWitnessPass.creator(),
+        UseCaseTracePass.creator()
+      )
+    else base
+    end if
+  end standardPasses
 
   /** Like standardPasses but uses Quick validation mode, skipping expensive streaming analysis and
     * handler classification. Suitable for interactive/LSP use where speed matters more than
