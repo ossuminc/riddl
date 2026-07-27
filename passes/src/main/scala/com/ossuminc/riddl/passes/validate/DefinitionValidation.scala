@@ -186,6 +186,13 @@ end RecognizedOptions
 trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   def symbols: SymbolsOutput
 
+  /** A49: every [[Term]] seen during metadata validation, accumulated here for a cross-scope
+    * consistency check reconciled in postProcess (same collect-here / reconcile-in-postProcess
+    * pattern as the ValidationPass collectors).
+    */
+  protected val collectedTerms: scala.collection.mutable.ListBuffer[Term] =
+    scala.collection.mutable.ListBuffer.empty
+
   private def checkUniqueContent(definition: Branch[?]): Unit = {
     val allNamedValues = definition.contents.definitions
     val allNames = allNamedValues.map(_.identify)
@@ -333,6 +340,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             suggestion =
               s"Expand the definition of ${t.identify} to at least 10 characters so the glossary term is meaningful."
           )
+          // A49: accumulate for the cross-scope consistency check in postProcess.
+          collectedTerms.addOne(t)
         case o: OptionValue =>
           check(
             o.name.length >= 3,

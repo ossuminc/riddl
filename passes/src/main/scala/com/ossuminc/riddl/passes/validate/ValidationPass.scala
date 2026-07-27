@@ -109,6 +109,7 @@ case class ValidationPass(
 
   override def postProcess(root: PassRoot): Unit = {
     checkOverloads()
+    checkTermConsistency()
     if mode == ValidationMode.Full then
       checkStreaming(root)
       checkTellReachability()
@@ -142,6 +143,36 @@ case class ValidationPass(
         )
       end if
     }
+  }
+
+  /** A49: the same glossary term NAME (case-insensitive) defined at two scopes with DIFFERENT
+    * definition text is a contradiction. A redefinition with identical text is fine. Emit a
+    * StyleWarning per conflicting definition (the first-seen text vs each later differing text).
+    */
+  private def checkTermConsistency(): Unit = {
+    collectedTerms
+      .groupBy(_.id.value.toLowerCase)
+      .foreach { case (_, terms) =>
+        // Deduplicate by definition text, preserving first-seen order. Identical redefinitions
+        // collapse to one entry (no conflict); only differing texts remain as separate entries.
+        val distinctByText = mutable.LinkedHashMap.empty[String, Term]
+        terms.foreach { t =>
+          val text = t.definition.map(_.s).mkString(" ").trim
+          distinctByText.getOrElseUpdate(text, t)
+        }
+        val entries = distinctByText.toSeq
+        if entries.size > 1 then {
+          val (baseText, _) = entries.head
+          entries.tail.foreach { case (text, term) =>
+            messages.addStyle(
+              term.loc,
+              s"term '${term.id.value}' is defined inconsistently: '$baseText' vs '$text'",
+              suggestion =
+                s"Use a single consistent definition for term '${term.id.value}' across all scopes."
+            )
+          }
+        }
+      }
   }
 
   private def checkCompletenessPostProcess(): Unit = {
