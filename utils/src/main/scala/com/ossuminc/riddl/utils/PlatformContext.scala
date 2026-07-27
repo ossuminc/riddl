@@ -41,9 +41,8 @@ trait PlatformContext {
     val cachedOptions = options_
     synchronized {
       options_ = newOptions
-      val result = doIt(newOptions)
-      options_ = cachedOptions
-      result
+      try doIt(newOptions)
+      finally options_ = cachedOptions
     }
   }
 
