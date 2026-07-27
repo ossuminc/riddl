@@ -1,7 +1,7 @@
 domain example is {
   user Admin is "fickle"
   record Activate { name: String }
-  context App is {
+  application context App is {
     group NewTenantPage {
       group TenantInfoPage {
         input NextButton acquires record Activate

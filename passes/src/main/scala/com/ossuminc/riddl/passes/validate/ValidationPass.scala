@@ -2515,6 +2515,67 @@ case class ValidationPass(
     }
   }
 
+  /** A39: is `referent` an application-boundary element? A user (actor) may interact only at the
+    * application boundary. A boundary element is either a UI element (an [[Input]], [[Output]], or
+    * [[Group]] — these are pinned to an application-intention context by A41) or any definition
+    * whose enclosing context has [[Intention.Application]]. Everything else (entities, and
+    * definitions in Service/Gateway/External or intention-less contexts) is internal domain and off
+    * limits to direct user interaction.
+    */
+  private def isApplicationBoundary(referent: Definition): Boolean =
+    referent match
+      case _: Input | _: Output | _: Group => true
+      case _ => symbols.contextOf(referent).exists(_.intention.contains(Intention.Application))
+
+  /** A39: resolve an interaction step's participant reference to its [[Definition]] via the symbol
+    * table. Interaction references are keyed in the resolution refMap under the enclosing use case
+    * (not the parents available here), so this resolves through the symbol table by fully-qualified
+    * name instead. Returns the definition only on a unique match; an unresolved or ambiguous
+    * reference yields `None` and A39 is skipped (other checks report those).
+    */
+  private def resolveInteractionParticipant(ref: Reference[Definition]): Option[Definition] =
+    if ref.pathId.value.isEmpty then None
+    else
+      symbols.lookupParentage(ref.pathId.value.reverse) match
+        case (d, _) :: Nil => Some(d)
+        case _             => None
+
+  /** A39: a User (actor) may interact only at the application boundary. Applied to the two untyped
+    * interaction steps ([[ArbitraryInteraction]], [[SendMessageInteraction]]) — the five dedicated
+    * user steps hard-type their non-user side to a UI element or URL and are compliant by
+    * construction. When exactly one side resolves to a [[User]], the opposite (non-user) referent
+    * must satisfy [[isApplicationBoundary]]; otherwise the user is reaching past the application
+    * straight into the domain, which is an Error (consistent with A41, the complementary right-edge
+    * rule). Unresolved referents are skipped (other checks report those); if neither side (or both
+    * sides) is a user, A39 does not apply.
+    */
+  private def checkUserInteractionBoundary(
+    from: Reference[Definition],
+    to: Reference[Definition]
+  ): Unit =
+    val origin = resolveInteractionParticipant(from)
+    val destination = resolveInteractionParticipant(to)
+    val fromIsUser = origin.exists(_.isInstanceOf[User])
+    val toIsUser = destination.exists(_.isInstanceOf[User])
+    // A39 applies only when exactly one side is a user (from XOR to).
+    if fromIsUser != toIsUser then
+      val (otherRef, otherDef) = if fromIsUser then (to, destination) else (from, origin)
+      otherDef match
+        case Some(d) if !isApplicationBoundary(d) =>
+          messages.addError(
+            otherRef.loc,
+            s"a user may interact only at the application boundary; '${otherRef.pathId.format}' is " +
+              "not an application UI element (input/output/group) nor in an application-intention " +
+              "context — route user interactions through the application, which then reaches the domain",
+            suggestion =
+              "Interact with an application UI element (input/output/group) or an element in an " +
+                "'application context'; let the application reach domain elements on the user's behalf."
+          )
+        case _ => () // unresolved (reported elsewhere) or already on the boundary
+      end match
+    end if
+  end checkUserInteractionBoundary
+
   // FIXME: This should be used
   private def validateInteraction(interaction: Interaction, parents: Parents): Unit = {
     val useCase = parents.head
@@ -2539,6 +2600,7 @@ case class ValidationPass(
         val origin = resolution.refMap.definitionOf[Definition](from.pathId, parents.head)
         val destination = resolution.refMap.definitionOf[Definition](to.pathId, parents.head)
         validateArbitraryInteraction(origin, destination, parents)
+        checkUserInteractionBoundary(from, to)
       case ShowOutputInteraction(_, from: OutputRef, _, to: UserRef, _) =>
         checkRef[Output](from, parents)
         checkRef[User](to, parents)
@@ -2546,6 +2608,7 @@ case class ValidationPass(
         checkMessageRef(msg, parents, Seq(msg.messageKind))
         checkRef[Definition](from, parents)
         checkRef[Processor[?]](to, parents)
+        checkUserInteractionBoundary(from, to)
       case _: VagueInteraction =>
       // Nothing else to validate
       case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>
