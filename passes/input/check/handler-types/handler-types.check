@@ -31,3 +31,6 @@ passes/input/check/handler-types/handler-types.riddl(7:5->25):
 passes/input/check/handler-types/handler-types.riddl(8:7->24):
  Schema 'RepoSchema' should have a description:
        schema RepoSchema is flat
+passes/input/check/handler-types/handler-types.riddl(1:1->20):
+ Domain 'HandlerTypes' has no author:
+ domain HandlerTypes is {

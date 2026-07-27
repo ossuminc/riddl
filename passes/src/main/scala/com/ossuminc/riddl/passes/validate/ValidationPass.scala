@@ -2123,6 +2123,20 @@ case class ValidationPass(
       suggestion =
         "Merge the single nested domain into its parent, or add sibling domains to justify the nesting."
     )
+    // A48: a Domain should identify an author, either directly (an author reference or a defined
+    // author) or inherited from an enclosing domain. MissingWarning, so it is suppressible via the
+    // existing showMissingWarnings / noMinorWarnings gates (no new option). Scoped to Domain only.
+    def hasAuthorInfo(d: Domain): Boolean = d.authorRefs.nonEmpty || d.authors.nonEmpty
+    val inheritedAuthor = parents.collect { case d: Domain => d }.exists(hasAuthorInfo)
+    check(
+      hasAuthorInfo(domain) || inheritedAuthor,
+      s"${domain.identify} has no author",
+      MissingWarning,
+      domain.errorLoc,
+      suggestion =
+        s"Identify an author for ${domain.identify}, e.g. 'by author Name', or define one in an " +
+          "enclosing domain."
+    )
   }
 
   private def validateSaga(

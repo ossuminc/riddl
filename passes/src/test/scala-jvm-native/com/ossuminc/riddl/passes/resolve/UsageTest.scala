@@ -139,15 +139,20 @@ class UsageTest extends ParsingTest {
           |""".stripMargin,
         td
       )
+      // Apply the intended options (previously defined but never used): suppress style and
+      // missing warnings so only the unused-type UsageWarning remains (A48 adds a no-author
+      // MissingWarning to the author-less domain otherwise).
       val options = CommonOptions(showStyleWarnings = false, showMissingWarnings = false)
-      Riddl.parseAndValidate(input, shouldFailOnError = false) match {
-        case Left(messages) => fail(messages.format)
-        case Right(result) =>
-          result.messages.isOnlyIgnorable mustBe true
-          val warnings = result.messages.justWarnings
-          warnings.size mustBe 1
-          val warnMessage = warnings.last.format
-          warnMessage must include("Type 'Bar' is unused")
+      pc.withOptions(options) { _ =>
+        Riddl.parseAndValidate(input, shouldFailOnError = false) match {
+          case Left(messages) => fail(messages.format)
+          case Right(result) =>
+            result.messages.isOnlyIgnorable mustBe true
+            val warnings = result.messages.justWarnings
+            warnings.size mustBe 1
+            val warnMessage = warnings.last.format
+            warnMessage must include("Type 'Bar' is unused")
+        }
       }
     }
     // Path-identifier usage tracking and the "only used in path"

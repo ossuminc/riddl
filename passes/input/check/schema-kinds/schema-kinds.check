@@ -37,3 +37,6 @@ passes/input/check/schema-kinds/schema-kinds.riddl(26:7->26):
 passes/input/check/schema-kinds/schema-kinds.riddl(6:5->26):
  Repository 'SchemaRepo' is unused:
      repository SchemaRepo is {
+passes/input/check/schema-kinds/schema-kinds.riddl(1:1->19):
+ Domain 'SchemaKinds' has no author:
+ domain SchemaKinds is {

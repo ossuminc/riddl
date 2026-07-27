@@ -72,7 +72,9 @@ class TypeValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      pc.withOptions(CommonOptions.default) { _ =>
+      // Suppress missing warnings so the only message is the unused-type UsageWarning; A48 adds a
+      // no-author MissingWarning to the author-less domain otherwise.
+      pc.withOptions(CommonOptions.default.copy(showMissingWarnings = false)) { _ =>
         parseAndValidateDomain(input, shouldFailOnErrors = false) {
           case (_: Domain, _, msgs: Messages) =>
             msgs mustNot be(empty)

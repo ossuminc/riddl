@@ -1,3 +1,6 @@
 passes/input/check/fd-success/fd-success.riddl(1:1->11):
  Domain 'foo' in Root should have content:
  domain foo is { ??? } with { explained in file "bar.md" }
+passes/input/check/fd-success/fd-success.riddl(1:1->11):
+ Domain 'foo' has no author:
+ domain foo is { ??? } with { explained in file "bar.md" }

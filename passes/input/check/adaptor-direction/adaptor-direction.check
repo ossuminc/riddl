@@ -4,3 +4,6 @@ passes/input/check/adaptor-direction/adaptor-direction.riddl(12:9->34):
 passes/input/check/adaptor-direction/adaptor-direction.riddl(23:9->34):
  Outbound Adaptor 'BadOutbound' handles Event 'SourceCtx.ItDone' from Context 'SourceCtx', but outbound adaptors should handle commands and queries (the target's input):
          on event SourceCtx.ItDone {
+passes/input/check/adaptor-direction/adaptor-direction.riddl(1:1->18):
+ Domain 'AdaptorDir' has no author:
+ domain AdaptorDir is {

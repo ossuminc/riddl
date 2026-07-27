@@ -16,3 +16,6 @@ passes/input/check/sink-reach/sink-reach.riddl(12:5->9):
 passes/input/check/sink-reach/sink-reach.riddl(5:5->9):
  The `flow` keyword is deprecated; use `processor Processor as flow` instead:
      flow Processor is {
+passes/input/check/sink-reach/sink-reach.riddl(1:1->17):
+ Domain 'SinkReach' has no author:
+ domain SinkReach is {

@@ -141,3 +141,6 @@ passes/input/check/saga/saga.riddl(19:35->57):
 passes/input/check/saga/saga.riddl(21:39->61):
  send to an inlet is deprecated and will be removed in 3.0; send to your outlet and connect it with a connector, or use `tell` to deliver directly to a processor:
          send command UndoSomething to inlet blah.trashCan.in
+passes/input/check/saga/saga.riddl(1:1->15):
+ Domain 'ignore1' has no author:
+ domain ignore1 is {
