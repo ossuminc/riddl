@@ -431,6 +431,8 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
           rfe.addIndent(s"step ${si.from.format} selects ${si.to.format}")
         case ti: TakeInputInteraction =>
           rfe.addIndent(s"step take ${ti.to.format} from ${ti.from.format}")
+        case ri: RefusalInteraction =>
+          rfe.addIndent(s"step ${ri.from.format} refuses ${ri.to.format} ${ri.reason.format}")
       end match
       rfe.emitMetaData(interaction.metadata)
       if interaction.metadata.isEmpty then rfe.nl

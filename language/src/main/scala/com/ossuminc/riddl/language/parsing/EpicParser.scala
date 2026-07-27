@@ -88,10 +88,19 @@ private[parsing] trait EpicParser {
     }
   }
 
+  private def refusalStep[u: P]: P[RefusalInteraction] = {
+    P(
+      Index ~ anyInteractionRef ~ Keywords.refuses ~/ userRef ~ literalString ~/ withMetaData ~ Index
+    )./.map { case (start, from, user, reason, descriptives, end) =>
+      RefusalInteraction(at(start, end), from = from, to = user, reason, descriptives.toContents)
+    }
+  }
+
   private def stepInteractions[u: P]: P[Interaction] = {
     P(
-      Keywords.step ~ (focusOnGroupStep | directUserToURL | selectInputStep | takeInputStep |
-        showOutputStep | selfProcessingStep | sendMessageStep | arbitraryStep | vagueStep)
+      Keywords.step ~ (focusOnGroupStep | directUserToURL | selectInputStep | refusalStep |
+        takeInputStep | showOutputStep | selfProcessingStep | sendMessageStep | arbitraryStep |
+        vagueStep)
     )
   }
 

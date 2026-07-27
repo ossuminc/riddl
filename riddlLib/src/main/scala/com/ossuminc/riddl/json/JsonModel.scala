@@ -607,6 +607,7 @@ object JsonModel:
       extends InteractionDto
   case class SelectInputIxnDto(user: String, input: String) extends InteractionDto
   case class TakeInputIxnDto(user: String, input: String) extends InteractionDto
+  case class RefusalIxnDto(from: RefDto, user: String, reason: String) extends InteractionDto
   case class ParallelIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
   case class SequentialIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
   case class OptionalIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
@@ -1278,6 +1279,7 @@ object JsonModel:
       case "showOutput"   => ShowOutputIxnDto(m("output").str, m("relationship").str, m("user").str)
       case "selectInput"  => SelectInputIxnDto(m("user").str, m("input").str)
       case "takeInput"    => TakeInputIxnDto(m("user").str, m("input").str)
+      case "refusal"      => RefusalIxnDto(readRef(m("from")), m("user").str, m("reason").str)
       case "parallel"     => ParallelIxnDto(readIxns(m.get("interactions")))
       case "sequential"   => SequentialIxnDto(readIxns(m.get("interactions")))
       case "optional"     => OptionalIxnDto(readIxns(m.get("interactions")))
@@ -1348,6 +1350,13 @@ object JsonModel:
           "kind" -> ujson.Str("takeInput"),
           "user" -> ujson.Str(user),
           "input" -> ujson.Str(input)
+        )
+      case RefusalIxnDto(from, user, reason) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("refusal"),
+          "from" -> refJs(from),
+          "user" -> ujson.Str(user),
+          "reason" -> ujson.Str(reason)
         )
       case ParallelIxnDto(ixns) =>
         ujson.Obj("kind" -> ujson.Str("parallel"), "interactions" -> ixnArr(ixns))

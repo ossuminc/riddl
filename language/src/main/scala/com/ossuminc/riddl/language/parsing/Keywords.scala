@@ -301,6 +301,8 @@ object Keywords {
 
   def router[u: P]: P[Unit] = keyword(Keyword.router)
 
+  def refuses[u: P]: P[Unit] = keyword(Keyword.refuses)
+
   def saga[u: P]: P[Unit] = keyword(Keyword.saga)
 
   def schema[u: P]: P[Unit] = keywords(Keyword.schema)
@@ -473,6 +475,7 @@ object Keywords {
           Keyword.requires,
           Keyword.required,
           Keyword.record,
+          Keyword.refuses,
           Keyword.result,
           Keyword.results,
           Keyword.return_,
@@ -631,6 +634,7 @@ object Keyword {
   final val requires = "requires"
   final val required = "required"
   final val record = "record"
+  final val refuses = "refuses"
   final val result = "result"
   final val results = "results"
   final val return_ = "return"

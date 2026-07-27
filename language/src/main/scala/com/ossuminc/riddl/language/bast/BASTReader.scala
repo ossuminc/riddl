@@ -1220,6 +1220,13 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val metadata = readMetadataDeferred()
         TakeInputInteraction(loc, from, to, metadata)
 
+      case 19 => // Refusal (A38)
+        val from = readReference()
+        val to = readUserRef()
+        val reason = readLiteralString()
+        val metadata = readMetadataDeferred()
+        RefusalInteraction(loc, from, to, reason, metadata)
+
       case _ => // Relationship (default)
         val id = readIdentifierInline() // Inline - no tag
         val withProcessor = readProcessorRef()

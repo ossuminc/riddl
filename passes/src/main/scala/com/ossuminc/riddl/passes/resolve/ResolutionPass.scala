@@ -482,6 +482,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         case pi: TakeInputInteraction =>
           associateUsage[Definition](useCase, resolveARef[User](pi.from, parentsAsSeq))
           associateUsage[Definition](useCase, resolveARef[Input](pi.to, parentsAsSeq))
+        case ri: RefusalInteraction =>
+          associateUsage[Definition](useCase, resolveARef[Definition](ri.from, parentsAsSeq))
+          associateUsage[Definition](useCase, resolveARef[User](ri.to, parentsAsSeq))
         case si: SelfInteraction =>
           associateUsage[Definition](useCase, resolveARef[Definition](si.from, parentsAsSeq))
         case SendMessageInteraction(_, from, message, to, _) =>

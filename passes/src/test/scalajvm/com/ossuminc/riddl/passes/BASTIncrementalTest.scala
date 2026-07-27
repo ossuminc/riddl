@@ -6,8 +6,8 @@
 
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.language.AST.Root
-import com.ossuminc.riddl.language.{Contents, *}
+import com.ossuminc.riddl.language.AST.{Root, RefusalInteraction}
+import com.ossuminc.riddl.language.{Contents, Finder, *}
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.pc
@@ -656,6 +656,46 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         }
       }"""
       )
+    }
+
+    "round-trip a refusal interaction step (A38) preserving from/user/reason" in {
+      val refusalModel =
+        """domain ImprovingApp is {
+          |  context OrganizationContext is {
+          |    entity Organization is { ??? }
+          |  }
+          |  user Owner is "a person"
+          |  epic EstablishOrganization is {
+          |    user ImprovingApp.Owner wants "to establish an organization" so that "business happens"
+          |    case primary is {
+          |      user ImprovingApp.Owner wants "to incorporate" so that "it can be used"
+          |      step entity ImprovingApp.OrganizationContext.Organization
+          |        refuses user ImprovingApp.Owner "not authorized"
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(refusalModel, "refusal-bast")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(root: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(root), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              val refusals = Finder(nebula).recursiveFindByType[RefusalInteraction]
+              refusals.size shouldBe 1
+              val r = refusals.head
+              r.from.pathId.value shouldBe
+                Seq("ImprovingApp", "OrganizationContext", "Organization")
+              r.to.pathId.value shouldBe Seq("ImprovingApp", "Owner")
+              r.reason.s shouldBe "not authorized"
+            case Left(errors) =>
+              fail(s"BAST read failed:\n${errors.format}")
+          }
+        case Left(messages) =>
+          fail(s"Parse failed: ${messages.format}")
+      }
     }
   }
 }

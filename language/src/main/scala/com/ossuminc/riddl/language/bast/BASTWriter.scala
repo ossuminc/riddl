@@ -243,6 +243,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case i: ShowOutputInteraction      => writeShowOutputInteraction(i)
       case i: SelectInputInteraction     => writeSelectInputInteraction(i)
       case i: TakeInputInteraction       => writeTakeInputInteraction(i)
+      case i: RefusalInteraction         => writeRefusalInteraction(i)
 
       // UI Components
       case g: Group           => writeGroup(g)
@@ -896,6 +897,15 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(tii.loc)
     writeUserRef(tii.from)
     writeInputRef(tii.to)
+  }
+
+  def writeRefusalInteraction(ri: RefusalInteraction): Unit = {
+    writeNodeTag(NODE_PIPE, ri.metadata.nonEmpty)
+    writer.writeU8(19) // Refusal interaction (A38)
+    writeLocation(ri.loc)
+    writeReference(ri.from)
+    writeUserRef(ri.to)
+    writeLiteralString(ri.reason)
   }
 
   // ========== UI Component Serialization ==========

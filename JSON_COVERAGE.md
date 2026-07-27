@@ -76,6 +76,7 @@ is covered in that construct's phase. The builder emits references as
 | ShowOutputInteraction | ✅ Phase 7 | |
 | SelectInputInteraction | ✅ Phase 7 | |
 | TakeInputInteraction | ✅ Phase 7 | |
+| RefusalInteraction | ✅ A38 | `refusal` kind: from (RefDto), user, reason |
 | ParallelInteractions | ✅ Phase 7 | |
 | SequentialInteractions | ✅ Phase 7 | |
 | OptionalInteractions | ✅ Phase 7 | |

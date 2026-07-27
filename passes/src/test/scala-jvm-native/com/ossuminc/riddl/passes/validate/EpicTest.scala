@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.{Contents, Messages, *}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
@@ -201,6 +201,69 @@ class EpicTest extends AbstractValidatingTest {
             fail("Shouldn't have errors")
       }
     }
+    "parse and validate a refusal step (A38)" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
+        """domain ImprovingApp is {
+          |context OrganizationContext is {
+          |  entity Organization is { ??? } with { described as "nada" }
+          |} with { described as "nada" }
+          |
+          |user Owner is "a person"
+          |
+          |epic EstablishOrganization is {
+          |  user ImprovingApp.Owner wants "to establish an organization" so that "business happens"
+          |  case primary is {
+          |    user ImprovingApp.Owner wants "to incorporate" so that "it can be used"
+          |    step entity ImprovingApp.OrganizationContext.Organization
+          |      refuses user ImprovingApp.Owner "not authorized"
+          |      with { briefly "request refused" }
+          |  } with { described as "TBD" }
+          |} with { briefly "A placeholder" described by "Not important" }
+          |} with { described as "a convenience" }
+          |""".stripMargin,
+        td
+      )
+      parseAndValidateDomain(rpi, shouldFailOnErrors = true) {
+        case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
+          val errors = msgs.justErrors
+          if errors.nonEmpty then fail(errors.format)
+          val uc = domain.epics.head.cases.head
+          val refusals = uc.contents.filter[RefusalInteraction]
+          refusals.size mustBe 1
+          val r = refusals.head
+          r.from.pathId.value mustBe Seq("ImprovingApp", "OrganizationContext", "Organization")
+          r.to.pathId.value mustBe Seq("ImprovingApp", "Owner")
+          r.reason.s mustBe "not authorized"
+      }
+    }
+
+    "flag a refusal step whose 'to' does not resolve to a User (A38)" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
+        """domain ImprovingApp is {
+          |context OrganizationContext is {
+          |  entity Organization is { ??? } with { described as "nada" }
+          |} with { described as "nada" }
+          |
+          |user Owner is "a person"
+          |
+          |epic EstablishOrganization is {
+          |  user ImprovingApp.Owner wants "to establish an organization" so that "business happens"
+          |  case primary is {
+          |    user ImprovingApp.Owner wants "to incorporate" so that "it can be used"
+          |    step entity ImprovingApp.OrganizationContext.Organization
+          |      refuses user ImprovingApp.OrganizationContext "not authorized"
+          |  } with { described as "TBD" }
+          |} with { briefly "A placeholder" described by "Not important" }
+          |} with { described as "a convenience" }
+          |""".stripMargin,
+        td
+      )
+      parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
+        case (_: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
+          msgs.hasErrors mustBe true
+      }
+    }
+
     "handle optional group" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain ImprovingApp is {

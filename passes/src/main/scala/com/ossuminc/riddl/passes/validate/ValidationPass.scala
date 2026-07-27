@@ -2805,6 +2805,9 @@ case class ValidationPass(
       case ShowOutputInteraction(_, from: OutputRef, _, to: UserRef, _) =>
         checkRef[Output](from, parents)
         checkRef[User](to, parents)
+      case RefusalInteraction(_, from, to: UserRef, _, _) =>
+        checkRef[Definition](from, parents)
+        checkRef[User](to, parents)
       case SendMessageInteraction(_, from, msg, to, _) =>
         checkMessageRef(msg, parents, Seq(msg.messageKind))
         checkRef[Definition](from, parents)

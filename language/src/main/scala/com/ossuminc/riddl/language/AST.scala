@@ -4323,6 +4323,35 @@ object AST:
     def relationship: LiteralString = LiteralString(loc, "Provides data to")
   }
 
+  /** An interaction where a system element refuses a User's request (A38). The refusing element is
+    * the `from` side (a processor/context/entity or any interaction reference), the refused party
+    * is the `to` [[UserRef]], and `reason` is a literal string explaining why the request was
+    * refused.
+    *
+    * @param loc
+    *   The location of the interaction in the source
+    * @param from
+    *   A reference to the system element that refuses the request
+    * @param to
+    *   The user whose request is refused
+    * @param reason
+    *   A literal string describing why the request is refused
+    * @param metadata
+    *   The metadata for this RefusalInteraction
+    */
+  @JSExportTopLevel("RefusalInteraction")
+  case class RefusalInteraction(
+    loc: At,
+    from: Reference[Definition],
+    to: UserRef,
+    reason: LiteralString,
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends TwoReferenceInteraction {
+    override def kind: String = "Refusal Interaction"
+    def relationship: LiteralString = LiteralString(loc, "refuses")
+    def format: String = s"${from.format} refuses ${to.format} ${reason.format}"
+  }
+
   /** The definition of a Jacobsen Use Case RIDDL defines these epics by allowing a linkage between
     * the user and RIDDL applications or bounded contexts.
     * @param loc

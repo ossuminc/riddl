@@ -675,6 +675,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       SelectInputIxnDto(path(user.pathId), path(input.pathId))
     case TakeInputInteraction(_, user, input, _) =>
       TakeInputIxnDto(path(user.pathId), path(input.pathId))
+    case RefusalInteraction(_, from, user, reason, _) =>
+      RefusalIxnDto(refDto(from), path(user.pathId), reason.s)
     case ParallelInteractions(_, contents, _)   => ParallelIxnDto(serIxns(contents))
     case SequentialInteractions(_, contents, _) => SequentialIxnDto(serIxns(contents))
     case OptionalInteractions(_, contents, _)   => OptionalIxnDto(serIxns(contents))

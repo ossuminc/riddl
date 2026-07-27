@@ -165,6 +165,40 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip a refusal interaction step (A38) losslessly" in {
+      val refusalModel =
+        """domain ImprovingApp is {
+          |  context OrganizationContext is {
+          |    entity Organization is { ??? }
+          |  }
+          |  user Owner is "a person"
+          |  epic EstablishOrganization is {
+          |    user ImprovingApp.Owner wants "to establish an organization" so that "business happens"
+          |    case primary is {
+          |      user ImprovingApp.Owner wants "to incorporate" so that "it can be used"
+          |      step entity ImprovingApp.OrganizationContext.Organization
+          |        refuses user ImprovingApp.Owner "not authorized"
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(refusalModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // JsonifierPass emits the refusal discriminator, from ref, user, and reason...
+          json1 must include("\"refusal\"")
+          json1 must include("not authorized")
+          // ...and JsonAstBuilder rebuilds it so the JSON is a fixed point.
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the refusal JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the refusal model failed: $errors")
+      end match
+    }
+
     "round-trip a `call function F(args)` value (A24) losslessly" in {
       val callModel =
         """domain d is {

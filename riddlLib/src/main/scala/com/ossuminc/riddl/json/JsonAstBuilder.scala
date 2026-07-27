@@ -456,6 +456,14 @@ object JsonAstBuilder:
           InputRef(At(), "input", pathId(input)),
           nm
         )
+      case RefusalIxnDto(from, user, reason) =>
+        RefusalInteraction(
+          At(),
+          buildRef(from),
+          UserRef(At(), pathId(user)),
+          LiteralString(At(), reason),
+          nm
+        )
       case ParallelIxnDto(ixns) =>
         ParallelInteractions(
           At(),
