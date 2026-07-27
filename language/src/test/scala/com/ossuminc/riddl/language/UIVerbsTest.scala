@@ -33,12 +33,5 @@ class UIVerbsTest extends AbstractTestingBasis {
       UIVerbs.isSelectionVerb("acquires") mustBe false
       UIVerbs.isPresentationVerb("acquires") mustBe false
     }
-
-    "identify selection nouns (A46)" in {
-      UIVerbs.selectionNouns mustBe Set("picklist", "selector")
-      UIVerbs.isSelectionNoun("picklist") mustBe true
-      UIVerbs.isSelectionNoun("selector") mustBe true
-      UIVerbs.isSelectionNoun("form") mustBe false
-    }
   }
 }

@@ -19,9 +19,8 @@ package com.ossuminc.riddl.language
   * is used by [[AST.Output]] elements to render or emit a value. All other verbs are entry/workflow
   * (acquisition) verbs with no such expectation.
   *
-  * Keep [[selectionVerbs]], [[presentationVerbs]] and [[selectionNouns]] in sync with the parser
-  * whitelists (`acquisitionAliases` / `presentationAliases` / `inputAliases` in `GroupParser` and
-  * `CommonParser`) and the EBNF grammar.
+  * Keep [[selectionVerbs]] and [[presentationVerbs]] in sync with the parser whitelists
+  * (`acquisitionAliases` / `presentationAliases` in `GroupParser`) and the EBNF grammar.
   */
 object UIVerbs {
 
@@ -30,12 +29,6 @@ object UIVerbs {
 
   /** Presentation verbs used by [[AST.Output]] elements (the `presentationAliases` whitelist). */
   val presentationVerbs: Set[String] = Set("presents", "shows", "displays", "writes", "emits")
-
-  /** Input nouns that unambiguously denote a selection widget — one that lets the user pick from a
-    * closed set of choices. Kept narrow on purpose: other input nouns (`form` / `text` / `button` /
-    * `item` / `input`) pair legitimately with a range of verbs, so only these are policed.
-    */
-  val selectionNouns: Set[String] = Set("picklist", "selector")
 
   /** Coarse category name for an interaction verb: `"selection"` for a selection verb,
     * `"presentation"` for a presentation verb, otherwise `"acquisition"`.
@@ -52,7 +45,4 @@ object UIVerbs {
     * `emits`).
     */
   def isPresentationVerb(verb: String): Boolean = presentationVerbs.contains(verb)
-
-  /** True iff `noun` is an unambiguous selection widget (`picklist` / `selector`). */
-  def isSelectionNoun(noun: String): Boolean = selectionNouns.contains(noun)
 }
