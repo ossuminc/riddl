@@ -100,12 +100,21 @@ private[parsing] trait GroupParser extends CommonParser:
   }
 
   private def acquisitionAliases[u: P]: P[String] = {
+    // A44: input interaction verbs. Selection verbs (selects/chooses/picks) imply the
+    // acquired value is one of a closed set of choices; the rest are entry/workflow verbs.
+    // Keep this whitelist in sync with the EBNF `acquisition_aliases` rule and with
+    // `UIVerbs.selectionVerbs` used by input validation.
     StringIn(
       "acquires",
       "reads",
       "takes",
       "accepts",
       "admits",
+      "enters",
+      "provides",
+      "selects",
+      "chooses",
+      "picks",
       "initiates",
       "submits",
       "triggers",

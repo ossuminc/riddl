@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 05:10 UTC
+# Generated: 2026-07-27 06:03 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -291,7 +291,7 @@ group-aliases ::= "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "fra
 output-aliases ::= "output" | "document" | "list" | "table" | "graph" | "animation" | "picture"
 input-aliases ::= "input" | "form" | "text" | "button" | "picklist" | "selector" | "item"
 presentation-aliases ::= "presents" | "shows" | "displays" | "writes" | "emits"
-acquisition-aliases ::= "acquires" | "reads" | "takes" | "accepts" | "admits" | "initiates" | "submits" | "triggers" | "activates" | "starts"
+acquisition-aliases ::= "acquires" | "reads" | "takes" | "accepts" | "admits" | "enters" | "provides" | "selects" | "chooses" | "picks" | "initiates" | "submits" | "triggers" | "activates" | "starts"
 
 # Repository-related
 repository ::= "repository" ws1 identifier ws (as-shape)? ws is ws "{" ws repository-body ws "}" ws (with-metadata)?

@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.utils.PlatformContext
@@ -57,6 +58,40 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
           fail(messages.format)
         case Right((dom: Domain, _)) =>
           succeed
+      }
+    }
+    "support selection and entry input verbs (A44)" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """
+          |domain foo {
+          |context foo2 {
+          |  page picker is {
+          |    picklist favColor selects String is { ??? }
+          |    selector aChoice chooses String is { ??? }
+          |    item pick3 picks String is { ??? }
+          |    input amount enters String is { ??? }
+          |    text given provides String is { ??? }
+          |    button classic acquires String is { ??? }
+          |  }
+          |}
+          |}""".stripMargin,
+        td
+      )
+      parseDefinition[Domain](input) match {
+        case Left(messages: Messages) =>
+          fail(messages.format)
+        case Right((dom: Domain, _)) =>
+          val ctx = dom.contexts.head
+          val group = ctx.groups.head
+          val inputs = group.contents.toSeq.collect { case i: Input => i }
+          inputs.map(_.verbAlias) must contain theSameElementsAs Seq(
+            "selects",
+            "chooses",
+            "picks",
+            "enters",
+            "provides",
+            "acquires"
+          )
       }
     }
     "supports 'shown by' in groups" in { (td: TestData) =>

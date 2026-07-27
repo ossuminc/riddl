@@ -315,7 +315,7 @@ group_aliases = "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "frame
 output_aliases = "output" | "document" | "list" | "table" | "graph" | "animation" | "picture" ;
 input_aliases = "input" | "form" | "text" | "button" | "picklist" | "selector" | "item" ;
 presentation_aliases = "presents" | "shows" | "displays" | "writes" | "emits" ;
-acquisition_aliases = "acquires" | "reads" | "takes" | "accepts" | "admits" | "initiates" | "submits" | "triggers" | "activates" | "starts" ;
+acquisition_aliases = "acquires" | "reads" | "takes" | "accepts" | "admits" | "enters" | "provides" | "selects" | "chooses" | "picks" | "initiates" | "submits" | "triggers" | "activates" | "starts" ;
 
 (* Repository-related *)
 repository = "repository" identifier [as_shape] is "{" repository_body "}" [with_metadata] ;

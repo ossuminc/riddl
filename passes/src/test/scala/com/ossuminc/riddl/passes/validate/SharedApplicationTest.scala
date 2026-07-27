@@ -52,5 +52,76 @@ trait SharedApplicationTest extends AbstractValidatingTest {
           messages.hasErrors mustBe false
       }
     }
+
+    // A44: selection-verb semantics for Inputs
+
+    val selectionWarning = "a selection verb"
+
+    def appWith(input: String): RiddlParserInput =
+      RiddlParserInput(
+        s"""domain foo is {
+           |  application context Shopping is {
+           |    type Color is any of { Red, Green, Blue }
+           |    type Palette is any of { Warm, Cool }
+           |    type Choice is one of { type Color, type Palette }
+           |    type Amount is Integer
+           |    page picker is {
+           |      $input
+           |    }
+           |  }
+           |}
+           |""".stripMargin,
+        "A44 selection verbs"
+      )
+
+    "not warn when a selection verb acquires an enumeration" in { (td: TestData) =>
+      parseAndValidateDomain(appWith("picklist favColor selects type Color")) {
+        case (_, _, messages: Messages.Messages) =>
+          messages.hasErrors mustBe false
+          messages.filter(_.message.contains(selectionWarning)) mustBe empty
+      }
+    }
+
+    "not warn when a selection verb acquires an alternation" in { (td: TestData) =>
+      parseAndValidateDomain(appWith("selector aChoice chooses type Choice")) {
+        case (_, _, messages: Messages.Messages) =>
+          messages.hasErrors mustBe false
+          messages.filter(_.message.contains(selectionWarning)) mustBe empty
+      }
+    }
+
+    "emit a StyleWarning (not an Error) when a selection verb acquires a non-choice type" in {
+      (td: TestData) =>
+        parseAndValidateDomain(
+          appWith("picklist favColor selects type Amount"),
+          shouldFailOnErrors = false
+        ) { case (_, _, messages: Messages.Messages) =>
+          val warnings = messages.filter(_.message.contains(selectionWarning))
+          warnings.size mustBe 1
+          warnings.head.kind mustBe Messages.StyleWarning
+          messages.filter(m =>
+            m.kind == Messages.Error && m.message.contains(selectionWarning)
+          ) mustBe empty
+        }
+    }
+
+    "emit a StyleWarning when a selection verb acquires a predefined String" in { (td: TestData) =>
+      parseAndValidateDomain(
+        appWith("picklist favColor selects String"),
+        shouldFailOnErrors = false
+      ) { case (_, _, messages: Messages.Messages) =>
+        val warnings = messages.filter(_.message.contains(selectionWarning))
+        warnings.size mustBe 1
+        warnings.head.kind mustBe Messages.StyleWarning
+      }
+    }
+
+    "not warn for a non-selection verb regardless of type" in { (td: TestData) =>
+      parseAndValidateDomain(appWith("input amount acquires type Amount")) {
+        case (_, _, messages: Messages.Messages) =>
+          messages.hasErrors mustBe false
+          messages.filter(_.message.contains(selectionWarning)) mustBe empty
+      }
+    }
   }
 }

@@ -2281,8 +2281,45 @@ case class ValidationPass(
     val parentsSeq = parents
     checkDefinition(parentsSeq, input)
     checkTypeRef(input.takeIn, parentsSeq)
+    // A44: a selection verb (selects/chooses/picks) expects the acquired type to be a
+    // choice among options — an Enumeration or Alternation. If the type resolves and is
+    // NOT a choice type, emit a StyleWarning (never an Error). Skip when unresolved so we
+    // don't pile onto the error checkTypeRef already reports.
+    if UIVerbs.isSelectionVerb(input.verbAlias) && typeRefIsChoice(input.takeIn).contains(false)
+    then
+      messages.addStyle(
+        input.loc,
+        s"a selection verb ('${input.verbAlias}') expects the input type to be an " +
+          s"enumeration or alternation of choices; '${input.takeIn.pathId.format}' is not",
+        suggestion = s"Use an entry verb (e.g. 'acquires') for '${input.takeIn.pathId.format}', " +
+          "or make its type an enumeration or a 'one of { ... }' alternation."
+      )
     checkMetadata(input)
   }
+
+  /** A44: classify the type a [[TypeRef]] refers to as a "choice among options" (an [[Enumeration]]
+    * or [[Alternation]]) or not. Returns `Some(true)` when it resolves to a choice type,
+    * `Some(false)` when it resolves (to a user type or a predefined type) but is not a choice type,
+    * and `None` when it does not resolve at all (caller should skip). Predefined types (String,
+    * Integer, …) are never choice types. Shared by input (A44) selection-verb validation and
+    * reusable by output (A46) validation.
+    */
+  private def typeRefIsChoice(ref: TypeRef): Option[Boolean] =
+    val pathId = ref.pathId
+    val name = pathId.value.lastOption.getOrElse("")
+    if pathId.value.sizeIs == 1 && PredefType.allPredefTypes.contains(name) then Some(false)
+    else resolution.refMap.definitionOf[Type](pathId).map(t => isChoiceType(t.typEx))
+
+  /** A44: whether a [[TypeExpression]] is a "choice among options" — an [[Enumeration]] or
+    * [[Alternation]], following one level of type alias via the refMap.
+    */
+  private def isChoiceType(te: TypeExpression): Boolean =
+    te match
+      case _: Enumeration => true
+      case _: Alternation => true
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).exists(t => isChoiceType(t.typEx))
+      case _ => false
 
   private def validateOutput(
     output: Output,
