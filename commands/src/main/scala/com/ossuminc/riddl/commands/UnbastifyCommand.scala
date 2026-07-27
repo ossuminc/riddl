@@ -99,7 +99,13 @@ class UnbastifyCommand(using pc: PlatformContext)
     BASTReader.read(bytes) match {
       case Left(errors) =>
         return Left(errors)
-      case Right(nebula) =>
+      case Right(rootModule) =>
+        // A BAST file is rooted at a Module. When that Module is the synthetic one the writer
+        // emits for an id-less Root, unwrap it: emitting `module nebula is { ... }` around the
+        // whole file would add a wrapper the original source never had. A Module the author
+        // actually wrote keeps its wrapper.
+        val root: PassRoot =
+          if Module.isSynthetic(rootModule) then Module.toRoot(rootModule) else rootModule
         // Step 3: Determine output directory
         val outputDir = outputDirOverride
           .orElse(options.outputDir)
@@ -112,14 +118,14 @@ class UnbastifyCommand(using pc: PlatformContext)
         val inputName = inputPath.getFileName.toString
         val riddlName = inputName.replaceAll("\\.bast$", ".riddl")
 
-        // Step 5: Derive inputDir from the nebula's first content node's
+        // Step 5: Derive inputDir from the root's first content node's
         // source origin (the FILE_CHANGE_MARKER path from the original
         // root .riddl file). Its parent directory = inputDir.
         // Note: URL.apply("file:///path/to/file") stores path without
         // leading '/', so inputDir must also omit the leading '/' to
         // match when toDestination strips the prefix.
         val inputDir =
-          val contents = nebula.contents.toSeq
+          val contents = root.contents.toSeq
           if contents.nonEmpty then
             val origin = contents.head.loc.source.origin
             // Strip file:// scheme and leading '/' to match URL.path format
@@ -131,7 +137,7 @@ class UnbastifyCommand(using pc: PlatformContext)
           else ""
 
         // Step 6: Run PrettifyPass to convert AST back to RIDDL text
-        val passInput = PassInput(nebula)
+        val passInput = PassInput(root)
         val prettifyOptions = PrettifyPass.Options(
           flatten = options.singleFile,
           topFile = riddlName,

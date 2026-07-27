@@ -55,7 +55,7 @@ package object bast {
     * table layout). Independent of VERSION which tracks major header layout changes. Old files with
     * revision 0 (pre-check era) will be rejected with a clear message.
     */
-  val FORMAT_REVISION: Short = 20 // A38: RefusalInteraction step kind
+  val FORMAT_REVISION: Short = 21 // S61-1: Module (not Nebula) is the serialization root
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

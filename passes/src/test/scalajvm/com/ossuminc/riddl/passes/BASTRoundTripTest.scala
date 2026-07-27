@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.{
-  Nebula,
+  Module,
   OnActivationClause,
   OnEventClause,
   OnMessageClause,
@@ -55,11 +55,11 @@ class BASTRoundTripTest extends AnyWordSpec {
 
           // Deserialize BAST binary -> AST
           BASTReader.read(output.bytes) match {
-            case Right(reconstructedNebula) =>
-              println(s"BAST read: Nebula reconstructed")
+            case Right(reconstructedModule) =>
+              println(s"BAST read: Module reconstructed")
 
               // Compare original and reconstructed
-              val areEqual = compareRoots(originalRoot, reconstructedNebula)
+              val areEqual = compareRoots(originalRoot, reconstructedModule)
 
               if areEqual then
                 println("[OK] Round trip successful: Original AST == Reconstructed AST")
@@ -98,16 +98,16 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
+            case Right(module) =>
               // Full structural round-trip.
               assert(
-                compareRoots(originalRoot, nebula),
+                compareRoots(originalRoot, module),
                 "domain-scoped repository round trip failed: ASTs are not equivalent"
               )
               // And specifically: the repository is a direct child of the domain,
               // not dropped and not relocated into a context.
               val domain =
-                nebula.domains
+                module.domains
                   .find(_.id.value == "d")
                   .getOrElse(fail("domain d missing after BAST read"))
               assert(
@@ -144,11 +144,11 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
-              assert(compareRoots(originalRoot, nebula), "initial-marker round trip: ASTs differ")
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "initial-marker round trip: ASTs differ")
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.Entity
-              val e = Finder(nebula.contents).recursiveFindByType[Entity].head
+              val e = Finder(module.contents).recursiveFindByType[Entity].head
               assert(
                 e.states.find(_.id.value == "Second").get.isInitial,
                 "state initial lost in BAST"
@@ -195,9 +195,9 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
-              assert(compareRoots(originalRoot, nebula), "yield-statement round trip: ASTs differ")
-              val ys = Finder(nebula.contents).recursiveFindByType[AST.YieldStatement]
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "yield-statement round trip: ASTs differ")
+              val ys = Finder(module.contents).recursiveFindByType[AST.YieldStatement]
               assert(ys.size == 1, s"expected one YieldStatement, found ${ys.size}")
               assert(ys.head.msg.operandPathId.value.last == "Res", "yield target lost in BAST")
             case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
@@ -231,14 +231,14 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
+            case Right(module) =>
               assert(
-                compareRoots(originalRoot, nebula),
+                compareRoots(originalRoot, module),
                 "foreach-statement round trip: ASTs differ"
               )
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.{FieldRef, ForeachStatement, Identifier}
-              val fes = Finder(nebula.contents).recursiveFindByType[ForeachStatement]
+              val fes = Finder(module.contents).recursiveFindByType[ForeachStatement]
               assert(fes.size == 2, s"expected two ForeachStatements, found ${fes.size}")
               val outer = fes.find(_.element.value == "o").getOrElse(fail("outer foreach lost"))
               outer.collection match
@@ -288,11 +288,11 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
-              assert(compareRoots(originalRoot, nebula), "put/return round trip: ASTs differ")
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "put/return round trip: ASTs differ")
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.*
-              val rets = Finder(nebula.contents).recursiveFindByType[ReturnStatement]
+              val rets = Finder(module.contents).recursiveFindByType[ReturnStatement]
               assert(rets.size == 1, s"expected one ReturnStatement, found ${rets.size}")
               rets.head.value match
                 case c: Constructor =>
@@ -300,7 +300,7 @@ class BASTRoundTripTest extends AnyWordSpec {
                   assert(c.args.size == 1)
                   assert(c.args.head.name.map(_.value) == Some("total"))
                 case other => fail(s"expected Constructor, got $other")
-              val puts = Finder(nebula.contents).recursiveFindByType[PutStatement]
+              val puts = Finder(module.contents).recursiveFindByType[PutStatement]
               assert(puts.size == 1, s"expected one PutStatement, found ${puts.size}")
               assert(puts.head.output.pathId.value == Seq("Panel"))
               puts.head.value match
@@ -351,12 +351,12 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
-              assert(compareRoots(originalRoot, nebula), "call round trip: ASTs differ")
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "call round trip: ASTs differ")
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.*
               // A Call is a Value (not a Contents node): reach it through its ReturnStatement.
-              val calls = Finder(nebula.contents)
+              val calls = Finder(module.contents)
                 .recursiveFindByType[ReturnStatement]
                 .map(_.value)
                 .collect { case c: Call => c }
@@ -392,10 +392,10 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
+            case Right(module) =>
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.*
-              val lets = Finder(nebula.contents).recursiveFindByType[LetStatement]
+              val lets = Finder(module.contents).recursiveFindByType[LetStatement]
               assert(lets.size == 1, s"expected one LetStatement, found ${lets.size}")
               lets.head.expression match
                 case LogicalExpression(_, LogicalOperator.And, left, right) =>
@@ -441,11 +441,11 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
+            case Right(module) =>
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.*
               // require count == total -> ComparisonExpression
-              val requires = Finder(nebula.contents).recursiveFindByType[RequireStatement]
+              val requires = Finder(module.contents).recursiveFindByType[RequireStatement]
               assert(requires.size == 1, s"expected one RequireStatement, found ${requires.size}")
               requires.head.condition match
                 case ComparisonExpression(_, ComparisonOperator.EQ, l, r) =>
@@ -453,7 +453,7 @@ class BASTRoundTripTest extends AnyWordSpec {
                   assert(r.asInstanceOf[ValueRef].path.value == Seq("total"))
                 case other => fail(s"expected a comparison require condition, got $other")
               // when a > b and not c -> And(Comparison, Not)
-              val whens = Finder(nebula.contents).recursiveFindByType[WhenStatement]
+              val whens = Finder(module.contents).recursiveFindByType[WhenStatement]
               assert(whens.size == 1, s"expected one WhenStatement, found ${whens.size}")
               whens.head.condition match
                 case LogicalExpression(_, LogicalOperator.And, left, right) =>
@@ -468,7 +468,7 @@ class BASTRoundTripTest extends AnyWordSpec {
                     case other => fail(s"expected not c on the right, got $other")
                 case other => fail(s"expected And when condition, got $other")
               // invariant inv is x > y -> ComparisonExpression
-              val invs = Finder(nebula.contents).recursiveFindByType[Invariant]
+              val invs = Finder(module.contents).recursiveFindByType[Invariant]
               assert(invs.size == 1, s"expected one Invariant, found ${invs.size}")
               invs.head.condition match
                 case Some(ComparisonExpression(_, ComparisonOperator.GT, l, r)) =>
@@ -503,10 +503,10 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
+            case Right(module) =>
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.*
-              val whens = Finder(nebula.contents).recursiveFindByType[WhenStatement]
+              val whens = Finder(module.contents).recursiveFindByType[WhenStatement]
               assert(whens.size == 2, s"expected two WhenStatements, found ${whens.size}")
               whens.head.condition match
                 case vr: ValueRef => assert(vr.path.value == Seq("flag"))
@@ -550,10 +550,10 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
+            case Right(module) =>
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.*
-              val matches = Finder(nebula.contents).recursiveFindByType[MatchStatement]
+              val matches = Finder(module.contents).recursiveFindByType[MatchStatement]
               assert(matches.size == 2, s"expected two MatchStatements, found ${matches.size}")
               val structured =
                 matches.find(_.cases.size == 3).getOrElse(fail("structured match lost"))
@@ -628,29 +628,29 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
-              assert(compareRoots(originalRoot, nebula), "widened operands round trip: ASTs differ")
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "widened operands round trip: ASTs differ")
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.*
-              val lets = Finder(nebula.contents).recursiveFindByType[LetStatement]
+              val lets = Finder(module.contents).recursiveFindByType[LetStatement]
               lets.find(_.identifier.value == "note").map(_.expression) match
                 case Some(pv: PromptValue) => assert(pv.prompt.s == "summarize the addition")
                 case other                 => fail(s"expected a PromptValue let, got $other")
-              val sets = Finder(nebula.contents).recursiveFindByType[SetStatement]
+              val sets = Finder(module.contents).recursiveFindByType[SetStatement]
               sets.head.value match
                 case c: Constructor => assert(c.ref.isInstanceOf[RecordRef])
                 case other          => fail(s"expected Constructor set value, got $other")
-              val sends = Finder(nebula.contents).recursiveFindByType[SendStatement]
+              val sends = Finder(module.contents).recursiveFindByType[SendStatement]
               sends.head.msg match
                 case c: Constructor => assert(c.ref.isInstanceOf[EventRef])
                 case other          => fail(s"expected Constructor send msg, got $other")
-              val morphs = Finder(nebula.contents).recursiveFindByType[MorphStatement]
+              val morphs = Finder(module.contents).recursiveFindByType[MorphStatement]
               morphs.head.value match
                 case c: Constructor =>
                   assert(c.ref.isInstanceOf[RecordRef])
                   assert(c.args.head.value.isInstanceOf[Constructor])
                 case other => fail(s"expected Constructor morph value, got $other")
-              val yields = Finder(nebula.contents).recursiveFindByType[YieldStatement]
+              val yields = Finder(module.contents).recursiveFindByType[YieldStatement]
               yields.head.msg match
                 case c: Constructor => assert(c.ref.isInstanceOf[ResultRef])
                 case other          => fail(s"expected Constructor yield msg, got $other")
@@ -686,11 +686,11 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
-              assert(compareRoots(originalRoot, nebula), "requires/returns round trip: ASTs differ")
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "requires/returns round trip: ASTs differ")
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.{Aggregation, Function, TypeRef}
-              val funcs = Finder(nebula.contents).recursiveFindByType[Function]
+              val funcs = Finder(module.contents).recursiveFindByType[Function]
               val f = funcs.find(_.id.value == "f").get
               assert(f.input.get.isInstanceOf[TypeRef], "function ref requires lost in BAST")
               assert(
@@ -725,13 +725,13 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
+            case Right(module) =>
               assert(
-                compareRoots(originalRoot, nebula),
+                compareRoots(originalRoot, module),
                 "domain-scoped connector round trip failed: ASTs are not equivalent"
               )
               val domain =
-                nebula.domains
+                module.domains
                   .find(_.id.value == "d")
                   .getOrElse(fail("domain d missing after BAST"))
               assert(
@@ -774,14 +774,14 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
+            case Right(module) =>
               assert(
-                compareRoots(originalRoot, nebula),
+                compareRoots(originalRoot, module),
                 "handler-kinds round trip failed: ASTs are not equivalent"
               )
               // And specifically: each new clause kind survives, not collapsed/dropped.
               import com.ossuminc.riddl.language.Finder
-              val f = Finder(nebula.contents)
+              val f = Finder(module.contents)
               assert(
                 f.recursiveFindByType[OnEventClause].size == 1,
                 "OnEventClause did not survive BAST round trip"
@@ -836,14 +836,14 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
+            case Right(module) =>
               assert(
-                compareRoots(originalRoot, nebula),
+                compareRoots(originalRoot, module),
                 "processor-model round trip failed: ASTs are not equivalent"
               )
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.{Context, Entity, Intention, Streamlet}
-              val f = Finder(nebula.contents)
+              val f = Finder(module.contents)
               val ctx = f.recursiveFindByType[Context].head
               assert(ctx.intention == Some(Intention.Application), "context intention lost in BAST")
               assert(
@@ -887,11 +887,11 @@ class BASTRoundTripTest extends AnyWordSpec {
             Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
           val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
           BASTReader.read(output.bytes) match {
-            case Right(nebula) =>
-              assert(compareRoots(originalRoot, nebula), "state-invariant round trip: ASTs differ")
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "state-invariant round trip: ASTs differ")
               import com.ossuminc.riddl.language.Finder
               import com.ossuminc.riddl.language.AST.Entity
-              val e = Finder(nebula.contents).recursiveFindByType[Entity].head
+              val e = Finder(module.contents).recursiveFindByType[Entity].head
               val s = e.states.find(_.id.value == "S").getOrElse(fail("state S lost in BAST"))
               assert(
                 s.invariants.map(_.id.value) == Seq("nonNegative"),
@@ -931,9 +931,9 @@ class BASTRoundTripTest extends AnyWordSpec {
               )
 
               BASTReader.read(output.bytes) match {
-                case Right(reconstructedNebula) =>
+                case Right(reconstructedModule) =>
                   println(
-                    s"BAST read: Nebula with ${reconstructedNebula.contents.toSeq.size} items"
+                    s"BAST read: Module with ${reconstructedModule.contents.toSeq.size} items"
                   )
                   true
                 case Left(errors) =>
@@ -978,11 +978,11 @@ class BASTRoundTripTest extends AnyWordSpec {
               val bastReader = BASTReader(output.bytes)
               bastReader.enableDebugTracking()
               bastReader.read() match {
-                case Right(reconstructedNebula) =>
-                  println(s"BAST read: Nebula reconstructed")
+                case Right(reconstructedModule) =>
+                  println(s"BAST read: Module reconstructed")
 
                   // Step 4: Compare original and reconstructed
-                  val areEqual = compareRoots(originalRoot, reconstructedNebula)
+                  val areEqual = compareRoots(originalRoot, reconstructedModule)
 
                   if areEqual then
                     println("[OK] Round trip successful: Original AST == Reconstructed AST")
@@ -1008,21 +1008,21 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
   }
 
-  /** Compare Root (original) with Nebula (reconstructed) for deep structural equality
+  /** Compare Root (original) with Module (reconstructed) for deep structural equality
     *
-    * Note: BASTWriter writes Root using NODE_NEBULA tag, so deserialization produces Nebula. This
-    * is expected - we're comparing the CONTENT, not the container type.
+    * Note: BASTWriter writes a Root as a NODE_MODULE node (S61-1), so deserialization produces a is
+    * expected - we're comparing the CONTENT, not the container type.
     *
     * Uses DeepASTComparison to recursively verify all fields, identifiers, locations, and nested
     * content.
     */
-  private def compareRoots(original: Root, reconstructed: Nebula): Boolean = {
+  private def compareRoots(original: Root, reconstructed: Module): Boolean = {
     println(s"\n=== Deep Structural Comparison ===")
     println(s"Original: Root with ${original.contents.toSeq.size} top-level elements")
-    println(s"Reconstructed: Nebula with ${reconstructed.contents.toSeq.size} top-level elements")
+    println(s"Reconstructed: Module with ${reconstructed.contents.toSeq.size} top-level elements")
 
     // Perform deep comparison
-    val results = DeepASTComparison.compareRootAndNebula(original, reconstructed)
+    val results = DeepASTComparison.compareRootAndModule(original, reconstructed)
 
     // Generate report
     val report = DeepASTComparison.report(results)

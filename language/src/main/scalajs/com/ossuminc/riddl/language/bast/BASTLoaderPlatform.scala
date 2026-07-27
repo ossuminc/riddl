@@ -22,7 +22,7 @@ private[bast] object BASTLoaderPlatform {
     */
   def loadSingleImport(bi: BASTImport, baseURL: URL)(using
     pc: PlatformContext
-  ): Either[String, Nebula] = {
+  ): Either[String, Module] = {
     Left(
       "BAST import loading is not supported on JavaScript platform. " +
         "The browser cannot perform local file I/O operations."

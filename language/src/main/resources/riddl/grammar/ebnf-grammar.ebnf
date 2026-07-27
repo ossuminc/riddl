@@ -1,5 +1,5 @@
 (* RIDDL Grammar in EBNF *)
-(* Last updated: January 28, 2026 *)
+(* Last updated: July 27, 2026 *)
 (* This grammar is automatically included in the riddl language module *)
 (* and can be loaded from the classpath at: riddl/grammar/ebnf-grammar.ebnf *)
 
@@ -37,14 +37,23 @@ end_of_line_comment = /\/\/[^\n]*/ ;
 
 (* Main Structure *)
 root = {root_content}+ ;
-root_content = bast_import | module_content | module | root_include ;
-module_content = domain | author | comment ;
+root_content = bast_import | root_definition | module | root_include ;
+root_definition = domain | author | comment ;
 root_include = "include" literal_string ;
 bast_import = "import" literal_string ;  (* path must end with .bast *)
 
-(* Module *)
+(* Module - a FLAT collection: any top-level definition, in any order, no hierarchy enforced *)
+(* at this level. The internal rules of each contained definition still apply.               *)
 module = "module" identifier is "{" {module_content | module_include}+ "}" [with_metadata] ;
+module_content = adaptor | author | comment | connector | constant | context | domain | entity
+               | epic | function | invariant | module | projector | relationship | repository
+               | saga | streamlet | type_def | user ;
 module_include = "include" literal_string ;
+
+(* DEPRECATED: an anonymous "nebula" - a whole-input sequence of module_content with no       *)
+(* `module <id> is { ... }` wrapper. Still parsed (it emits one [deprecated] message) and     *)
+(* yields a Module with the synthetic id `nebula`. Use `module` instead.                      *)
+nebula = {module_content} ;
 
 (* Domain *)
 domain = "domain" identifier is "{" domain_body "}" [with_metadata] ;

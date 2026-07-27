@@ -15,7 +15,7 @@ import scalajs.js.annotation.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-trait RootParser { this: ModuleParser & CommonParser & ParsingContext =>
+trait RootParser { this: ModuleParser & DomainParser & CommonParser & ParsingContext =>
 
   private def rootInclude[u: P]: P[Include[RootContents]] = {
     include[u, RootContents]((p: P[?]) => rootContents(using p.asInstanceOf[P[u]]))
@@ -23,8 +23,13 @@ trait RootParser { this: ModuleParser & CommonParser & ParsingContext =>
 
   // bastImport is inherited from CommonParser
 
+  /** A Root is the file parse-root, not the reuse unit, so it stays narrow: only Domains, Authors
+    * and Comments sit directly in it. Wide, flat collections of any definition belong in a
+    * [[AST.Module]] (see [[ModuleParser.moduleContent]]).
+    */
   private def rootContent[u: P]: P[RootContents] = {
-    P(bastImport | moduleContent | module | rootInclude[u]).asInstanceOf[P[RootContents]]
+    P(bastImport | domain | author | comment | module | rootInclude[u])
+      .asInstanceOf[P[RootContents]]
   }
 
   private def rootContents[u: P]: P[Seq[RootContents]] =

@@ -17,7 +17,6 @@ import com.ossuminc.riddl.language.AST.{
   Epic,
   Inlet,
   Module,
-  Nebula,
   Outlet,
   Projector,
   Repository,
@@ -26,7 +25,8 @@ import com.ossuminc.riddl.language.AST.{
   Streamlet,
   StreamletShape,
   Token,
-  UserStory
+  UserStory,
+  WithIdentifier
 }
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -145,12 +145,15 @@ object RiddlAPI {
     )
   end rootToJsObject
 
-  /** Convert AST Nebula to a simplified JavaScript object */
-  private def nebulaToJsObject(nebula: Nebula): js.Dynamic =
+  /** Convert the synthetic Module produced by the deprecated `nebula` entry point to a simplified
+    * JavaScript object.
+    */
+  private def nebulaToJsObject(nebula: Module): js.Dynamic =
     val defs: js.Array[js.Dynamic] =
       nebula.contents.toSeq.map { d =>
-        val idValue =
-          Option(d.id).map(_.value).getOrElse("")
+        val idValue = d match
+          case wi: WithIdentifier => wi.id.value
+          case _                  => "" // Comment / Include carry no identifier
         js.Dynamic.literal(
           kind = d.getClass.getSimpleName
             .replace("$", ""),
@@ -160,7 +163,7 @@ object RiddlAPI {
       }.toJSArray
 
     js.Dynamic.literal(
-      kind = "Nebula",
+      kind = "Module",
       isEmpty = nebula.isEmpty,
       nonEmpty = nebula.nonEmpty,
       definitions = defs,

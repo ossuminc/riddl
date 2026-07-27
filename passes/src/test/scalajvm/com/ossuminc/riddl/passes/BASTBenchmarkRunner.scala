@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.language.AST.{Nebula, Root}
+import com.ossuminc.riddl.language.AST.{Module, Root}
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{pc, ec, Await, URL}
@@ -131,7 +131,7 @@ object BASTBenchmarkRunner {
               val coldLoadMs = (System.nanoTime() - coldLoadStart) / 1_000_000.0
 
               loadResult match {
-                case Right(_: Nebula) =>
+                case Right(_: Module) =>
                   // Warm benchmark (50 iterations)
                   val (warmParseMs, warmLoadMs) = runWarmBenchmark(input, bastBytes)
 

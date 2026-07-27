@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.language.AST.{Nebula, Root}
+import com.ossuminc.riddl.language.AST.{Module, Root}
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
@@ -55,7 +55,7 @@ class BASTPerformanceBenchmark extends AnyWordSpec with Matchers {
               val loadTime = (System.nanoTime() - loadStart) / 1_000_000.0
 
               loadResult match {
-                case Right(nebula: Nebula) =>
+                case Right(module: Module) =>
                   val speedup = parseTime / loadTime
 
                   println(s"\n=== Comprehensive Test File Performance ===")
@@ -72,7 +72,7 @@ class BASTPerformanceBenchmark extends AnyWordSpec with Matchers {
                   println()
 
                   // Verify we got a valid result
-                  nebula.contents.toSeq should not be empty
+                  module.contents.toSeq should not be empty
 
                   // The speedup should be positive (load faster than parse)
                   speedup should be > 1.0

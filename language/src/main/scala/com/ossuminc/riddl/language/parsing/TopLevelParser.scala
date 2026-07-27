@@ -45,29 +45,19 @@ object TopLevelParser:
 
   import scala.concurrent.ExecutionContext
 
-  /** Convert a Nebula to a Root.
+  /** Convert a Module to a Root.
     *
-    * BAST files contain Nebula, but top-level parsing expects Root. This converts the Nebula
-    * contents to Root contents, filtering to only include valid RootContents types.
+    * BAST files are rooted at a Module, but top-level parsing expects a Root. This converts the
+    * Module's contents to Root contents, filtering to only include valid RootContents types.
     *
-    * Valid at both Nebula and Root level: Domain, Module, Author
+    * Valid at both Module and Root level: Domain, Module, Author, Comment
     *
-    * @param nebula
-    *   The Nebula to convert
+    * @param module
+    *   The Module to convert
     * @return
-    *   A Root containing the Nebula's contents
+    *   A Root containing the Module's contents
     */
-  private def nebulaToRoot(nebula: Nebula): Root = {
-    // Filter to only items that are valid in RootContents
-    // NebulaContents ∩ RootContents = Domain | Module | Author
-    val rootItems: Seq[RootContents] = nebula.contents.toSeq.flatMap {
-      case d: Domain => Some(d: RootContents)
-      case m: Module => Some(m: RootContents)
-      case a: Author => Some(a: RootContents)
-      case _         => None // Skip other NebulaContents not valid at Root level
-    }
-    Root(nebula.loc, rootItems.toContents)
-  }
+  private[parsing] def moduleToRoot(module: Module): Root = Module.toRoot(module)
 
   /** Load BAST imports for a parsed Root.
     *
@@ -118,10 +108,10 @@ object TopLevelParser:
   )(using pc: PlatformContext): Future[Either[Messages, Root]] = {
     // Check for BAST file first
     BASTUtils.tryLoadBastOrParseRiddl(url) match {
-      case Some((nebula, _)) =>
+      case Some((module, _)) =>
         // BAST loaded successfully, convert to Root
         pc.log.info(s"Loaded from BAST: ${BASTUtils.getBastUrlFor(url).toExternalForm}")
-        val root = nebulaToRoot(nebula)
+        val root = moduleToRoot(module)
         // Load any nested BAST imports
         val (loadedRoot, importMsgs) = loadBASTImports(root, url)
         if importMsgs.hasErrors then Future.successful(Left(importMsgs))
@@ -231,12 +221,12 @@ object TopLevelParser:
     *   For the utility of RIDDL implementers.
     * @return
     *   - Left(messages) -> messages indicaitng the error
-    *   - Right(nebula) -> the nebula containing the list of things that were parsed
+    *   - Right(module) -> a synthetic [[AST.Module]] holding the things that were parsed
     */
   def parseNebula(
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
-  )(using pc: PlatformContext): Either[Messages, Nebula] = {
+  )(using pc: PlatformContext): Either[Messages, Module] = {
     Timer.time(s"parse nebula from ${input.origin}", pc.options.showTimes) {
       val tlp = new TopLevelParser(input, withVerboseFailures)
       tlp.parseNebula

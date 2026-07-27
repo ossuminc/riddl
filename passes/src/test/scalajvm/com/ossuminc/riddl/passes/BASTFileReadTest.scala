@@ -44,8 +44,8 @@ class BASTFileReadTest extends AnyWordSpec {
       println("\n--- Deserializing in-memory bytes ---")
       val result = BASTReader.read(inMemoryBytes)
       result match {
-        case Right(nebula) =>
-          println(s"Success! Nebula has ${nebula.contents.toSeq.size} items")
+        case Right(module) =>
+          println(s"Success! Module has ${module.contents.toSeq.size} items")
         case Left(errors) =>
           println(s"FAILED - ${errors.format}")
       }

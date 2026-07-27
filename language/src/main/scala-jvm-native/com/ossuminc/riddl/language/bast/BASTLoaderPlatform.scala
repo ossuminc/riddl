@@ -26,11 +26,11 @@ private[bast] object BASTLoaderPlatform {
     * @param pc
     *   The platform context
     * @return
-    *   Either an error message or the loaded Nebula
+    *   Either an error message or the loaded Module
     */
   def loadSingleImport(bi: BASTImport, baseURL: URL)(using
     pc: PlatformContext
-  ): Either[String, Nebula] = {
+  ): Either[String, Module] = {
     Try {
       // Resolve the path relative to the base URL
       val bastURL = if URL.isValid(bi.path.s) then {
@@ -45,13 +45,13 @@ private[bast] object BASTLoaderPlatform {
         // Parse as BAST - note: data is loaded as String, convert to bytes
         val bytes = data.getBytes("ISO-8859-1") // Binary data preserved
         val reader = BASTReader(bytes)
-        reader.read() // Returns Either[Messages, Nebula]
+        reader.read() // Returns Either[Messages, Module]
       }
 
       // Wait for the result (with timeout) - blocking I/O
       Await.result(future, 30.seconds)
     } match {
-      case Success(Right(nebula)) => Right(nebula)
+      case Success(Right(module)) => Right(module)
       case Success(Left(msgs))    => Left(msgs.map(_.format).mkString("; "))
       case Failure(ex)            => Left(ex.getMessage)
     }

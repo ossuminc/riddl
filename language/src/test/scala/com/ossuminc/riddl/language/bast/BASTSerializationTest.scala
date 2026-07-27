@@ -27,7 +27,7 @@ class BASTSerializationTest extends AbstractTestingBasis {
     val bw = BASTWriter()
     bw.reserveHeader()
 
-    // Write the root (Nebula wrapper)
+    // Write the root (Module wrapper)
     bw.writeNode(root)
 
     // Manually traverse and write all contents
@@ -87,8 +87,8 @@ class BASTSerializationTest extends AbstractTestingBasis {
       bytes.length must be > 0
 
       BASTReader.read(bytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
         case Left(errors) =>
           fail(s"BAST read failed: ${errors.format}")
       }
@@ -104,8 +104,8 @@ class BASTSerializationTest extends AbstractTestingBasis {
       val bytes = serializeToBASTBytes(root)
 
       BASTReader.read(bytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
         case Left(errors) =>
           fail(s"BAST read failed: ${errors.format}")
       }
@@ -123,8 +123,8 @@ class BASTSerializationTest extends AbstractTestingBasis {
       val bytes = serializeToBASTBytes(root)
 
       BASTReader.read(bytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
         case Left(errors) =>
           fail(s"BAST read failed: ${errors.format}")
       }
@@ -145,8 +145,8 @@ class BASTSerializationTest extends AbstractTestingBasis {
       val bytes = serializeToBASTBytes(root)
 
       BASTReader.read(bytes) match {
-        case Right(nebula: Nebula) =>
-          val domainOut = nebula.contents.toSeq.collectFirst { case d: Domain => d }.get
+        case Right(module: Module) =>
+          val domainOut = module.contents.toSeq.collectFirst { case d: Domain => d }.get
           val typOut = domainOut.contents.toSeq.collectFirst { case t: Type => t }.get
           typOut.typEx match {
             case a: AggregateUseCaseTypeExpression =>
@@ -177,8 +177,8 @@ class BASTSerializationTest extends AbstractTestingBasis {
       val bytes = serializeToBASTBytes(root)
 
       BASTReader.read(bytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
         case Left(errors) =>
           fail(s"BAST read failed: ${errors.format}")
       }
@@ -205,8 +205,8 @@ class BASTSerializationTest extends AbstractTestingBasis {
       val bytes = serializeToBASTBytes(root)
 
       BASTReader.read(bytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 3
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 3
         case Left(errors) =>
           fail(s"BAST read failed: ${errors.format}")
       }
@@ -267,8 +267,8 @@ class BASTSerializationTest extends AbstractTestingBasis {
       val bytes = serializeToBASTBytes(root)
 
       BASTReader.read(bytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
         case Left(errors) =>
           fail(s"Should accept current revision: ${errors.format}")
       }

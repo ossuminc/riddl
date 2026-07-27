@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.language.AST.{Nebula, Root, Domain, Identifier}
+import com.ossuminc.riddl.language.AST.{Module, Root, Domain, Identifier}
 import com.ossuminc.riddl.language.{At, Contents, *}
 import com.ossuminc.riddl.language.bast.{
   BASTReader,
@@ -67,8 +67,8 @@ class BASTDebugTest extends AnyWordSpec with Matchers {
           println("\n=== Attempting to read ===")
           val readResult = BASTReader.read(bytes)
           readResult match {
-            case Right(nebula) =>
-              println(s"Success! Nebula has ${nebula.contents.toSeq.size} items")
+            case Right(module) =>
+              println(s"Success! Module has ${module.contents.toSeq.size} items")
             case Left(errors) =>
               println(s"Read failed: ${errors.map(_.format).mkString("\n")}")
           }

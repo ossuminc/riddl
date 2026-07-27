@@ -17,8 +17,8 @@ import scala.collection.mutable
 /** Utility for loading BAST imports.
   *
   * This loads BAST files referenced by BASTImport nodes and populates their contents field with the
-  * loaded Nebula contents. Imports can appear at the root level, inside domains, or inside
-  * contexts.
+  * contents of the loaded Module (the BAST serialization root). Imports can appear at the root
+  * level, inside domains, or inside contexts.
   *
   * Supports selective imports that import a specific definition by kind and name, with optional
   * aliasing to rename the imported definition.
@@ -35,7 +35,7 @@ object BASTLoader {
   /** Load all BAST imports in a Root, including those inside domains and contexts.
     *
     * Finds all BASTImport nodes in the Root, its domains, and contexts, loads the referenced BAST
-    * files, and populates each BASTImport's contents field with the loaded Nebula contents. Handles
+    * files, and populates each BASTImport's contents field with the loaded Module contents. Handles
     * selective imports by filtering to the specified definition.
     *
     * @param root
@@ -100,12 +100,12 @@ object BASTLoader {
     bi: BASTImport,
     baseURL: URL
   )(using pc: PlatformContext): Either[String, Seq[NebulaContents]] = {
-    BASTLoaderPlatform.loadSingleImport(bi, baseURL).flatMap { nebula =>
+    BASTLoaderPlatform.loadSingleImport(bi, baseURL).flatMap { module =>
       if bi.isSelective then
         // Selective import: find the specific definition
         val kind = bi.kindOpt.get
         val selectorName = bi.selector.get.value
-        findDefinition(nebula, kind, selectorName) match {
+        findDefinition(module, kind, selectorName) match {
           case Some(defn) =>
             // Apply alias if present
             val finalDefn = bi.alias match {
@@ -118,14 +118,14 @@ object BASTLoader {
         }
       else
         // Full import: load all contents
-        Right(nebula.contents.toSeq)
+        Right(module.contents.toSeq.collect { case nc: NebulaContents => nc })
     }
   }
 
-  /** Find a definition by kind and name in a Nebula, searching recursively.
+  /** Find a definition by kind and name in a Module, searching recursively.
     *
-    * @param nebula
-    *   The Nebula to search
+    * @param module
+    *   The Module to search
     * @param kind
     *   The kind of definition ("domain", "context", "type", etc.)
     * @param name
@@ -133,7 +133,7 @@ object BASTLoader {
     * @return
     *   The found definition, or None if not found
     */
-  private def findDefinition(nebula: Nebula, kind: String, name: String): Option[NebulaContents] = {
+  private def findDefinition(module: Module, kind: String, name: String): Option[NebulaContents] = {
     def matchesKindAndName(defn: RiddlValue): Boolean = {
       defn match {
         case d: Domain if kind == "domain"         => d.id.value == name
@@ -176,7 +176,7 @@ object BASTLoader {
         }
     }
 
-    searchContents(nebula.contents)
+    searchContents(module.contents)
   }
 
   /** Rename a definition by replacing its identifier with a new one.

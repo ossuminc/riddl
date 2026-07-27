@@ -337,15 +337,15 @@ object DeepASTComparison {
     results.toList :+ Success(path + " (Description)")
   }
 
-  /** Compare Root and Nebula contents
+  /** Compare Root and Module contents
     *
-    * Note: Root is serialized as Nebula, so we compare their contents
+    * Note: Root is serialized as a Module node, so we compare their contents
     */
-  def compareRootAndNebula(root: Root, nebula: Nebula): List[ComparisonResult] = {
+  def compareRootAndModule(root: Root, module: Module): List[ComparisonResult] = {
     // Compare top-level contents
     compareContents(
       root.contents.asInstanceOf[Contents[RiddlValue]],
-      nebula.contents.asInstanceOf[Contents[RiddlValue]],
+      module.contents.asInstanceOf[Contents[RiddlValue]],
       "root"
     )
   }

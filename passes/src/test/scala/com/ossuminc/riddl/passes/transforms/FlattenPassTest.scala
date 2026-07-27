@@ -184,9 +184,9 @@ class FlattenPassTest extends AbstractTestingBasis {
       assert(domain.contexts.map(_.id.value) == Seq("DirectCtx", "IncludedCtx"))
     }
 
-    "work on Nebula (not just Root)" in {
-      // Nebula contains definitions directly; put an Include
-      // inside a Domain to verify recursion through Nebula
+    "work on Module (not just Root)" in {
+      // A Module holds definitions directly; put an Include
+      // inside a Domain to verify recursion through the Module
       val ctx = mkContext("NebCtx")
       val include = Include[Context](At(), contents = Contents(ctx))
       val domain = Domain(
@@ -194,12 +194,12 @@ class FlattenPassTest extends AbstractTestingBasis {
         mkId("NebDomain"),
         Contents[DomainContents](include.asInstanceOf[DomainContents])
       )
-      val nebula = Nebula(At(), Contents[NebulaContents](domain))
+      val module = Module.anonymous(At(), Contents[ModuleContents](domain))
 
-      nebula.flatten()
+      module.flatten()
 
-      assert(nebula.contents.toSeq.size == 1)
-      val d = nebula.contents.toSeq.head.asInstanceOf[Domain]
+      assert(module.contents.toSeq.size == 1)
+      val d = module.contents.toSeq.head.asInstanceOf[Domain]
       assert(d.contexts.size == 1)
       assert(d.contexts.head.id.value == "NebCtx")
     }

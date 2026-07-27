@@ -51,7 +51,7 @@ trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWit
     tp.parseTopLevelDomain[TO](extract).map(x => (x, input))
   }
 
-  def parseNebula(input: RiddlParserInput): Either[Messages, Nebula] = {
+  def parseNebula(input: RiddlParserInput): Either[Messages, Module] = {
     val tp = TestParser(input)
     tp.parseNebula
   }

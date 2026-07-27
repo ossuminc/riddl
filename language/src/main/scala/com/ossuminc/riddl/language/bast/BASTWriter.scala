@@ -175,7 +175,6 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     )
     value match {
       // Root containers
-      case n: Nebula      => writeNebula(n)
       case r: Root        => writeRoot(r)
       case i: Include[?]  => writeInclude(i)
       case bi: BASTImport => writeBASTImport(bi)
@@ -356,19 +355,16 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   // ========== Root Container Serialization ==========
 
+  /** A [[Root]] is serialized as a [[Module]] node: `Module` is the BAST serialization root (it
+    * replaced `Nebula` in FORMAT_REVISION 21). A Root has no id of its own, so the synthetic
+    * [[Module.syntheticId]] is written; `BASTReader.readRootNode` reads this back as a Module and
+    * consumers unwrap it when they want a Root again.
+    */
   def writeRoot(r: Root): Unit = {
-    writer.writeU8(NODE_NEBULA) // Root uses same tag as Nebula
+    writeNodeTag(NODE_MODULE, hasMetadata = false) // Root has no metadata
     writeLocation(r.loc)
-    writeIdentifier(Identifier.empty) // Root has no id
+    writeIdentifierInline(Identifier(At.empty, Module.syntheticId))
     writeContents(r.contents)
-    // Metadata for Root is always empty, so no need to store it
-  }
-
-  def writeNebula(n: Nebula): Unit = {
-    writer.writeU8(NODE_NEBULA)
-    writeLocation(n.loc)
-    writeIdentifier(Identifier.empty) // Nebula has no explicit id field
-    writeContents(n.contents)
   }
 
   def writeInclude[T <: RiddlValue](i: Include[T]): Unit = {

@@ -45,8 +45,8 @@ class BASTMinimalTest extends AnyWordSpec with Matchers {
           // Read
           println(s"\n--- Attempting to read ---")
           BASTReader.read(bastBytes) match {
-            case Right(nebula) =>
-              println(s"SUCCESS: Nebula with ${nebula.contents.toSeq.size} items")
+            case Right(module) =>
+              println(s"SUCCESS: Module with ${module.contents.toSeq.size} items")
               succeed
             case Left(errors) =>
               fail(s"BAST read failed: ${errors.format}")

@@ -11,22 +11,35 @@ import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-/** Parsing production rules for Modules
+/** Parsing production rules for Modules.
+  *
+  * A Module is a FLAT collection: any top-level definition may appear directly inside it, in any
+  * order, with no hierarchy enforced at that level. (The internal rules of each contained
+  * definition still apply.)
   * {{{
-  *   Root = Comment | Domain | Module | Author
-  *   Module = Root | Context | User | Epic | Author | Application | Saga
-  *   Domain = VitalDefinition | Domain | Context | User | Epic | Author | Application |  Saga
+  *   Module = { Adaptor | Author | Comment | Connector | Constant | Context | Domain | Entity |
+  *              Epic | Function | Invariant | Module | Projector | Relationship | Repository |
+  *              Saga | Streamlet | Type | User | Include }
   * }}}
   */
 private[parsing] trait ModuleParser {
-  this: DomainParser & CommonParser =>
+  this: ProcessorParser & DomainParser & AdaptorParser & ContextParser & EntityParser & EpicParser &
+    FunctionParser & HandlerParser & ProjectorParser & RepositoryParser & SagaParser &
+    StreamingParser & TypeParser & Readability & CommonParser =>
 
   private def moduleInclude[u: P]: P[Include[ModuleContents]] = {
     include[u, ModuleContents]((p: P[?]) => moduleContents(using p.asInstanceOf[P[u]]))
   }
 
+  /** Any top-level definition. Shared with the deprecated `nebula` entry point, which has exactly
+    * the same content model.
+    */
   def moduleContent[u: P]: P[ModuleContents] =
-    P(domain | author | comment).asInstanceOf[P[ModuleContents]]
+    P(
+      adaptor | author | comment | connector | constant | context | domain | entity | epic |
+        function | invariant | module | projector | relationship | repository | saga | streamlet |
+        typeDef | user
+    ).asInstanceOf[P[ModuleContents]]
 
   def moduleContents[u: P]: P[Seq[ModuleContents]] = {
     P(moduleContent | moduleInclude[u]).asInstanceOf[P[ModuleContents]].rep(1)

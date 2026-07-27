@@ -19,7 +19,6 @@ import com.ossuminc.riddl.language.AST.{
   Identifier,
   Inlet,
   Module,
-  Nebula,
   Outlet,
   Projector,
   Repository,
@@ -117,13 +116,15 @@ trait RiddlLib:
 
   /** Parse arbitrary RIDDL definitions (nebula).
     *
-    * A nebula is a collection of RIDDL definitions that may not form a complete, valid Root.
+    * A nebula is a collection of RIDDL definitions that may not form a complete, valid Root. The
+    * anonymous `nebula` surface is DEPRECATED: parsing emits one `[deprecated]` message and the
+    * result is a [[AST.Module]] with the synthetic id `AST.Module.syntheticId`.
     */
   def parseNebula(
     source: String,
     origin: String = "string",
     verbose: Boolean = false
-  )(using PlatformContext): RiddlResult[Nebula]
+  )(using PlatformContext): RiddlResult[Module]
 
   /** Parse RIDDL source into a list of tokens for syntax highlighting.
     */
@@ -242,7 +243,7 @@ trait RiddlLib:
 
   /** Deserialize BAST binary bytes to a flattened AST Root.
     *
-    * Reads BAST binary data, converts the resulting Nebula to a Root (filtering to valid
+    * Reads BAST binary data, converts the resulting root Module to a Root (filtering to valid
     * RootContents), then flattens Include/BASTImport wrapper nodes.
     *
     * @param bytes
@@ -554,7 +555,7 @@ object RiddlLib extends RiddlLib:
     source: String,
     origin: String,
     verbose: Boolean
-  )(using PlatformContext): RiddlResult[Nebula] =
+  )(using PlatformContext): RiddlResult[Module] =
     val input = RiddlParserInput(source, originToURL(origin))
     RiddlResult.fromEither(
       TopLevelParser.parseNebula(input, verbose)
@@ -819,18 +820,8 @@ object RiddlLib extends RiddlLib:
   override def bast2FlatAST(
     bytes: Array[Byte]
   )(using PlatformContext): RiddlResult[Root] =
-    RiddlResult.fromEither(BASTReader.read(bytes)).map { nebula =>
-      val rootItems: Seq[RootContents] =
-        nebula.contents.toSeq.collect {
-          case d: Domain => d
-          case m: Module => m
-          case a: Author => a
-        }
-      val root = Root(
-        nebula.loc,
-        Contents[RootContents](rootItems*)
-      )
-      flattenAST(root)
+    RiddlResult.fromEither(BASTReader.read(bytes)).map { module =>
+      flattenAST(Module.toRoot(module))
     }
   end bast2FlatAST
 

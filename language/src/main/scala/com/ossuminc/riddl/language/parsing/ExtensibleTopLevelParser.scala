@@ -116,7 +116,6 @@ trait ExtensibleTopLevelParser(using PlatformContext)
       case x if x == classOf[Group]        => p => group(using p)
       case x if x == classOf[Invariant]    => p => invariant(using p)
       case x if x == classOf[Module]       => p => module(using p)
-      case x if x == classOf[Nebula]       => p => nebula(using p)
       case x if x == classOf[Projector]    => p => projector(using p)
       case x if x == classOf[Relationship] => p => relationship(using p)
       case x if x == classOf[Repository]   => p => repository(using p)
@@ -155,22 +154,25 @@ trait ExtensibleTopLevelParser(using PlatformContext)
   /** Parse the input expecting main definitions in any order, a nebula. Each definition must be
     * syntactically correct but the top level definitions do not require the hierarchical structure
     * of parsing for Root contents.
+    *
+    * The anonymous `nebula` surface is DEPRECATED — parsing it emits one `[deprecated]` message and
+    * yields a [[AST.Module]] with the synthetic id [[AST.Module.syntheticId]].
     * @return
-    *   Either the failure messages or the Nebula of definitions
+    *   Either the failure messages or the Module of definitions
     */
-  def parseNebula: Either[Messages, Nebula] = doParse[Nebula](p => nebula(using p))
+  def parseNebula: Either[Messages, Module] = doParse[Module](p => nebula(using p))
 
   /** Parse the input expecting definitions in any order, a nebula. Each definition must be
     * syntactically correct but the top level definitions do not require the hierarchical structure
     * of parsing for Root contents.
     * @return
-    *   Either the failure messages with the list of parsed URL or the Nebula of definitions with
+    *   Either the failure messages with the list of parsed URL or the Module of definitions with
     *   the list of parsed URLs
     */
-  def parseNebulaWithURLs: Either[(Messages, Seq[URL]), (Nebula, Seq[URL])] = {
-    doParse[Nebula](p => nebula(using p)) match {
+  def parseNebulaWithURLs: Either[(Messages, Seq[URL]), (Module, Seq[URL])] = {
+    doParse[Module](p => nebula(using p)) match {
       case l @ Left(messages) => Left(messages -> this.getURLs)
-      case r @ Right(nebula)  => Right(nebula -> this.getURLs)
+      case r @ Right(module)  => Right(module -> this.getURLs)
     }
   }
 

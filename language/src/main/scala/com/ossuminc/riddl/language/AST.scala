@@ -720,14 +720,25 @@ object AST:
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
     GetValue | PromptValue | BooleanExpression | Call
 
-  /** Type of definitions that occur in a [[Root]] without [[Include]] */
-  private type OccursInModule = Domain | Author | Comment
+  /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
+    * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
+    * widened to any top-level definition (see [[OccursInModule]]).
+    */
+  private type OccursInRoot = Domain | Author | Comment
+
+  /** Type of definitions that occur in a [[Module]] without [[Include]].
+    *
+    * A [[Module]] is a FLAT collection of ANY top-level definition — no hierarchy is enforced at
+    * its top level (the internal rules of each contained definition still apply). This is the same
+    * "any standalone definition" union that [[NebulaContents]] expresses, plus [[Comment]].
+    */
+  type OccursInModule = NebulaContents | Comment
 
   /** Type of definitions that can occur in a [[Module]] */
   type ModuleContents = OccursInModule | Include[OccursInModule]
 
   /** The root is a module that can have other modules and BAST imports */
-  type RootContents = ModuleContents | Module | BASTImport
+  type RootContents = OccursInRoot | Include[OccursInRoot] | Module | BASTImport
 
   /** Things that can occur in the "With" section of a leaf definition */
   type MetaData =
@@ -1197,12 +1208,19 @@ object AST:
   end Root
   ////////////////////////////////////////////////////////////////////////////////////////// NEBULA
 
-  /** The nubula of arbitrary definitions. This allows any named definition in its contents without
+  /** The nebula of arbitrary definitions. This allows any named definition in its contents without
     * regard to intended structure of those things. This can be used as a general "scratchpad".
+    *
+    * '''Deprecated.''' [[Module]] subsumes this type entirely: as of RIDDL 2.0 a [[Module]] holds
+    * the same wide [[NebulaContents]] union, is likewise a flat collection with no enforced
+    * hierarchy, and is the BAST serialization root. Nothing in RIDDL produces a `Nebula` any more —
+    * the anonymous `nebula` parse entry point yields a [[Module]] with the synthetic id
+    * [[Module.syntheticId]]. The type is retained only so existing source keeps compiling.
     *
     * @param contents
     *   The nebula of unrelated single definitions
     */
+  @deprecated("Use Module instead; a Module is a flat bag of any top-level definition", "2.0.0")
   case class Nebula(
     loc: At,
     contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
@@ -1238,6 +1256,7 @@ object AST:
     def format: String = "Nebula"
   end Nebula
 
+  @deprecated("Use Module instead", "2.0.0")
   object Nebula:
 
     /** The value to use for an empty [[Nebula]] instance */
@@ -1246,16 +1265,78 @@ object AST:
 
   ////////////////////////////////////////////////////////////////////////////////////////// MODULE
 
-  /** A Module represents a */
+  /** A Module is a named, FLAT collection of any top-level definition. No hierarchy is enforced at
+    * a Module's top level — the internal rules of each contained definition still apply. Modules
+    * are the unit of reuse: they compile to BAST and are the BAST serialization root.
+    *
+    * @param loc
+    *   The location of the module in the source
+    * @param id
+    *   The name of the module
+    * @param contents
+    *   The definitions the module holds — any [[ModuleContents]]
+    * @param metadata
+    *   The metadata for the Module
+    */
   case class Module(
     loc: At,
     id: Identifier,
     contents: Contents[ModuleContents] = Contents.empty[ModuleContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[ModuleContents]
+      with WithAdaptors[ModuleContents]
+      with WithAuthors[ModuleContents]
+      with WithConstants[ModuleContents]
+      with WithContexts[ModuleContents]
+      with WithDomains[ModuleContents]
+      with WithEntities[ModuleContents]
+      with WithEpics[ModuleContents]
+      with WithFunctions[ModuleContents]
+      with WithInvariants[ModuleContents]
       with WithModules[ModuleContents]
-      with WithDomains[ModuleContents]:
+      with WithProjectors[ModuleContents]
+      with WithRepositories[ModuleContents]
+      with WithSagas[ModuleContents]
+      with WithStreamlets[ModuleContents]
+      with WithUsers[ModuleContents]:
     def format: String = s"${Keyword.module} ${id.format}"
+  end Module
+
+  object Module:
+
+    /** The identifier given to a [[Module]] that stands in for an anonymous, id-less source.
+      *
+      * Two places produce such a Module: the deprecated `nebula` parse entry point (a bare,
+      * unwrapped sequence of definitions has no name to take), and the BAST serialization root
+      * written from a [[Root]] (a Root has no id either). Keeping one documented convention means a
+      * reader can always recognize "this Module was synthesized, not written by a human".
+      */
+    val syntheticId: String = "nebula"
+
+    /** Construct a Module for content that has no name of its own. */
+    def anonymous(loc: At, contents: Contents[ModuleContents]): Module =
+      Module(loc, Identifier(At.empty, syntheticId), contents)
+
+    /** True if `module` is one this compiler synthesized for anonymous content. */
+    def isSynthetic(module: Module): Boolean = module.id.value == syntheticId
+
+    /** Unwrap a Module into a [[Root]], keeping only the contents that are legal at Root level
+      * (`ModuleContents ∩ RootContents` = Domain | Module | Author | Comment). Used wherever a
+      * Module-rooted BAST file has to be handed to code that expects a Root.
+      */
+    def toRoot(module: Module): Root =
+      val items: Seq[RootContents] = module.contents.toSeq.flatMap {
+        case d: Domain  => Some(d: RootContents)
+        case m: Module  => Some(m: RootContents)
+        case a: Author  => Some(a: RootContents)
+        case c: Comment => Some(c: RootContents)
+        case _          => None // not valid at Root level
+      }
+      Root(module.loc, Contents[RootContents](items*))
+    end toRoot
+
+    /** The value to use for an empty [[Module]] instance */
+    def empty: Module = Module.anonymous(At.empty, Contents.empty[ModuleContents]())
   end Module
 
   //////////////////////////////////////////////////////////////////////////////////////////// USER

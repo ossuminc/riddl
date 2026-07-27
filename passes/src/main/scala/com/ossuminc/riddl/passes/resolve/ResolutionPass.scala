@@ -146,7 +146,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case r: Relationship =>
         resolveARef[Processor[?]](r.withProcessor, parents)
       case m: Module  =>
-      case n: Nebula  => ()
       case d: Domain  =>
       case c: Context =>
       case e: Epic    =>

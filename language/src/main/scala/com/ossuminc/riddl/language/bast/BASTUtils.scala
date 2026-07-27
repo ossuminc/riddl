@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language.bast
 
-import com.ossuminc.riddl.language.AST.Nebula
+import com.ossuminc.riddl.language.AST.Module
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
@@ -67,23 +67,23 @@ object BASTUtils {
     }
   }
 
-  /** Load a BAST file and return its contents as a Nebula.
+  /** Load a BAST file and return its contents as a Module (the BAST serialization root).
     *
     * @param bastUrl
     *   The URL of the BAST file to load
     * @param pc
     *   The platform context for file operations
     * @return
-    *   Either error messages or the loaded Nebula
+    *   Either error messages or the loaded Module
     */
-  def loadBAST(bastUrl: URL)(using pc: PlatformContext): Either[Messages, Nebula] = {
+  def loadBAST(bastUrl: URL)(using pc: PlatformContext): Either[Messages, Module] = {
     Try {
       implicit val ec: ExecutionContext = pc.ec
       val future = pc.load(bastUrl).map { data =>
         // Parse as BAST - data is loaded as String, convert to bytes
         val bytes = data.getBytes("ISO-8859-1") // Binary data preserved
         val reader = BASTReader(bytes)
-        reader.read() // Returns Either[Messages, Nebula]
+        reader.read() // Returns Either[Messages, Module]
       }
 
       // Wait for the result (with timeout)
@@ -114,17 +114,17 @@ object BASTUtils {
     * @param pc
     *   The platform context
     * @return
-    *   Some((nebula, messages)) if BAST loaded, None if should parse RIDDL
+    *   Some((module, messages)) if BAST loaded, None if should parse RIDDL
     */
   def tryLoadBastOrParseRiddl(
     riddlUrl: URL
-  )(using pc: PlatformContext): Option[(Nebula, Messages)] = {
+  )(using pc: PlatformContext): Option[(Module, Messages)] = {
     checkForBastFile(riddlUrl) match {
       case None => None // No BAST file or out of date, parse RIDDL
       case Some(bastUrl) =>
         loadBAST(bastUrl) match {
-          case Right(nebula) =>
-            Some((nebula, Messages.empty))
+          case Right(module) =>
+            Some((module, Messages.empty))
           case Left(errors) =>
             // BAST load failed, log warning and fall back to parsing
             pc.log.warn(

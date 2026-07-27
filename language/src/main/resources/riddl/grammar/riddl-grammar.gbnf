@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 15:38 UTC
+# Generated: 2026-07-27 18:42 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -45,14 +45,18 @@ inline-comment ::= "/*" ([^*] | "*" [^/])* "*/"  # (from override)
 end-of-line-comment ::= "//" [^\n]*
 
 # Main Structure
-root-content ::= bast-import | module-content | module | root-include
-module-content ::= domain | author | comment
+root-content ::= bast-import | root-definition | module | root-include
+root-definition ::= domain | author | comment
 root-include ::= "include" ws1 literal-string
 bast-import ::= "import" ws1 literal-string
 
-# Module
+# at this level. The internal rules of each contained definition still apply.
 module ::= "module" ws1 identifier ws1 is ws "{" ws (module-content | module-include)+ ws "}" ws (with-metadata)?
+module-content ::= adaptor | author | comment | connector | constant | context | domain | entity | epic | function | invariant | module | projector | relationship | repository | saga | streamlet | type-def | user
 module-include ::= "include" ws1 literal-string
+
+# yields a Module with the synthetic id `nebula`. Use `module` instead.
+nebula ::= (module-content)*
 
 # Domain
 domain ::= "domain" ws1 identifier ws1 is ws "{" ws domain-body ws "}" ws (with-metadata)?

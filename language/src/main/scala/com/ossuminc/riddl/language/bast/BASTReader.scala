@@ -28,9 +28,9 @@ object BASTReader {
     * @param pc
     *   Platform context for error reporting
     * @return
-    *   Either errors or the deserialized Nebula root
+    *   Either errors or the deserialized Module root
     */
-  def read(bytes: Array[Byte])(using pc: PlatformContext): Either[Messages.Messages, Nebula] = {
+  def read(bytes: Array[Byte])(using pc: PlatformContext): Either[Messages.Messages, Module] = {
     val reader = new BASTReader(bytes)
     reader.read()
   }
@@ -112,9 +112,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   /** Read and deserialize the BAST file
     *
     * @return
-    *   Either errors or the deserialized Nebula root
+    *   Either errors or the deserialized Module root
     */
-  def read(): Either[Messages.Messages, Nebula] = {
+  def read(): Either[Messages.Messages, Module] = {
     try {
       // Read and validate header
       val header = readHeader()
@@ -147,12 +147,12 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       // Save string table offset for bounds checking
       val stringTableBoundary = header.stringTableOffset
 
-      // Read root Nebula from root offset
+      // Read root Module from root offset
       reader.seek(header.rootOffset)
-      val nebula = readRootNode(stringTableBoundary)
+      val module = readRootNode(stringTableBoundary)
 
       if messages.nonEmpty then Left(messages.toList)
-      else Right(nebula)
+      else Right(module)
 
     } catch {
       case e: Exception =>
@@ -216,12 +216,16 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     if debugPositionTracking then println(msg)
   }
 
-  private def readRootNode(boundary: Int): Nebula = {
+  /** Read the root node. Since FORMAT_REVISION 21 the BAST root is a [[Module]] node — written by
+    * `BASTWriter.writeModule` for a real Module, or by `BASTWriter.writeRoot` (synthetic id) for a
+    * [[Root]]. Byte layout is exactly `readModuleNode`'s, so writer and reader stay symmetric.
+    */
+  private def readRootNode(boundary: Int): Module = {
     nodeDataBoundary = boundary
-    var nodeType = reader.readU8()
+    var tagByte = reader.readU8()
 
     // Handle FILE_CHANGE_MARKER at the start
-    if nodeType == FILE_CHANGE_MARKER then
+    if tagByte == FILE_CHANGE_MARKER then
       val newPath = readString()
       currentSourcePath = newPath
       val url =
@@ -233,20 +237,16 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       // Reset location tracking for new source - first location will be absolute
       lastLocation = At.empty
       firstLocationRead = false
-      nodeType = reader.readU8()
+      tagByte = reader.readU8()
     end if
 
-    if nodeType != NODE_NEBULA then
-      throw new IllegalArgumentException(s"Expected Nebula root node, got node type $nodeType")
+    currentNodeHasMetadata = (tagByte & HAS_METADATA_FLAG) != 0
+    val nodeType = (tagByte & 0x7f).toByte
+    if nodeType != NODE_MODULE then
+      throw new IllegalArgumentException(s"Expected Module root node, got node type $nodeType")
     end if
 
-    val loc = readLocation()
-    val _id = readIdentifier() // Nebula has no explicit id, this is empty
-    val contents = readContentsDeferred[NebulaContents]()
-    // Nebula doesn't have metadata - don't try to read any
-    // (currentNodeHasMetadata flag may be set from last content item)
-
-    Nebula(loc, contents)
+    readModuleNode()
   }
 
   // ========== Node Deserialization ==========
@@ -512,12 +512,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   // ========== Container Nodes ==========
 
-  private def readNebulaNode(): Nebula = {
+  /** The legacy anonymous-container node (`NODE_NEBULA`). No longer written for roots; retained
+    * because `writeSimpleContainer` still uses the tag. Yields a synthetic [[Module]].
+    */
+  private def readNebulaNode(): Module = {
     val loc = readLocation()
     val _id = readIdentifier()
-    val contents = readContentsDeferred[NebulaContents]()
-    // Nebula doesn't have metadata - don't try to read any
-    Nebula(loc, contents)
+    val contents = readContentsDeferred[ModuleContents]()
+    Module.anonymous(loc, contents)
   }
 
   private def readDomainNode(): Domain = {
@@ -604,8 +606,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readModuleNode(): Module = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val contents =
-      readContentsDeferred[Domain | Author | Comment]().asInstanceOf[Contents[ModuleContents]]
+    val contents = readContentsDeferred[ModuleContents]()
     val metadata = readMetadataDeferred()
     Module(loc, id, contents, metadata)
   }

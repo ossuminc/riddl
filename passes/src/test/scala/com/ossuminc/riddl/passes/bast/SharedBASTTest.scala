@@ -41,8 +41,8 @@ class SharedBASTTest extends AbstractTestingBasis {
 
       // Deserialize from BAST
       BASTReader.read(bastBytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
           succeed
         case Left(errors) =>
           fail(s"BAST read failed: ${errors.format}")
@@ -63,8 +63,8 @@ class SharedBASTTest extends AbstractTestingBasis {
       val bastBytes = output.bytes
 
       BASTReader.read(bastBytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
           succeed
         case Left(errs) =>
           fail(s"BAST read failed: ${errs.format}")
@@ -90,8 +90,8 @@ class SharedBASTTest extends AbstractTestingBasis {
       val bastBytes = output.bytes
 
       BASTReader.read(bastBytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
           succeed
         case Left(errs) =>
           fail(s"BAST read failed: ${errs.format}")
@@ -129,8 +129,8 @@ class SharedBASTTest extends AbstractTestingBasis {
       val bastBytes = output.bytes
 
       BASTReader.read(bastBytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 3
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 3
           succeed
         case Left(errs) =>
           fail(s"BAST read failed: ${errs.format}")
@@ -155,8 +155,8 @@ class SharedBASTTest extends AbstractTestingBasis {
       output.stringTableSize must be > 0
 
       BASTReader.read(output.bytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
           succeed
         case Left(errs) =>
           fail(s"BAST read failed: ${errs.format}")
@@ -182,8 +182,8 @@ class SharedBASTTest extends AbstractTestingBasis {
       val bastBytes = output.bytes
 
       BASTReader.read(bastBytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
           succeed
         case Left(errs) =>
           fail(s"BAST read failed: ${errs.format}")
@@ -237,11 +237,62 @@ class SharedBASTTest extends AbstractTestingBasis {
       val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
 
       BASTReader.read(output.bytes) match {
-        case Right(nebula: Nebula) =>
-          nebula.contents.toSeq.size mustBe 1
+        case Right(module: Module) =>
+          module.contents.toSeq.size mustBe 1
           succeed
         case Left(errs) =>
           fail(s"BAST read should accept current format revision: ${errs.format}")
+      }
+    }
+
+    // S61-1: Module replaced Nebula as the BAST serialization root (FORMAT_REVISION 21). A Module
+    // holding a flat mix of top-level definitions must survive write -> read with its id, its
+    // metadata and every member intact.
+    "round-trip a Module root holding a flat mix of definitions" in {
+      val module = Module(
+        At(),
+        Identifier(At(), "MixedBag"),
+        Contents[ModuleContents](
+          Type(At(), Identifier(At(), "Amount"), Number(At())),
+          Context(At(), Identifier(At(), "Ordering"), Contents()),
+          Entity(At(), Identifier(At(), "Loose"), Contents()),
+          Domain(At(), Identifier(At(), "Retail"), Contents()),
+          User(At(), Identifier(At(), "Shopper"), LiteralString(At(), "a person")),
+          Module(At(), Identifier(At(), "Nested"), Contents())
+        )
+      )
+
+      val writerResult = Pass.runThesePasses(PassInput(module), Seq(BASTWriterPass.creator()))
+      val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+      output.bytes.length must be > 0
+
+      BASTReader.read(output.bytes) match {
+        case Right(read: Module) =>
+          read.id.value mustBe "MixedBag"
+          read.contents.toSeq.size mustBe 6
+          read.types.map(_.id.value) mustBe Seq("Amount")
+          read.contexts.map(_.id.value) mustBe Seq("Ordering")
+          read.entities.map(_.id.value) mustBe Seq("Loose")
+          read.domains.map(_.id.value) mustBe Seq("Retail")
+          read.users.map(_.id.value) mustBe Seq("Shopper")
+          read.modules.map(_.id.value) mustBe Seq("Nested")
+        case Left(errs) =>
+          fail(s"BAST read failed: ${errs.format}")
+      }
+    }
+
+    // A Root is written as a synthetic Module node, so reading one back yields Module.syntheticId.
+    "read a Root-rooted BAST file back as the synthetic Module" in {
+      val root = Root(At(), Contents(Domain(At(), Identifier(At(), "D"), Contents())))
+      val writerResult = Pass.runThesePasses(PassInput(root), Seq(BASTWriterPass.creator()))
+      val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+
+      BASTReader.read(output.bytes) match {
+        case Right(read: Module) =>
+          Module.isSynthetic(read) mustBe true
+          read.id.value mustBe Module.syntheticId
+          read.domains.map(_.id.value) mustBe Seq("D")
+        case Left(errs) => fail(s"BAST read failed: ${errs.format}")
       }
     }
   }
