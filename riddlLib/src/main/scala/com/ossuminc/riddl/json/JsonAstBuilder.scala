@@ -351,30 +351,48 @@ object JsonAstBuilder:
 
   private def buildOnClause(oc: OnClauseDto)(using ctx: Ctx): OnClause =
     val statements = buildStatements(oc.statements)
+    // A55: the optional local name bound to the handled message
+    val binding: Option[Identifier] = oc.binding.map(ident)
     oc.kind match
       case "message" =>
         oc.message match
           case Some(mr) =>
-            OnMessageClause(At(), messageRef(mr), None, statements, Contents.empty[MetaData]())
+            OnMessageClause(
+              At(),
+              messageRef(mr),
+              None,
+              binding,
+              statements,
+              Contents.empty[MetaData]()
+            )
           case None =>
             ctx.err("on-clause of kind 'message' requires a 'message' reference")
             OnMessageClause(
               At(),
               CommandRef(At(), PathIdentifier.empty),
               None,
+              binding,
               statements,
               Contents.empty[MetaData]()
             )
       case "event" =>
         oc.message match
           case Some(mr) =>
-            OnEventClause(At(), messageRef(mr), None, statements, Contents.empty[MetaData]())
+            OnEventClause(
+              At(),
+              messageRef(mr),
+              None,
+              binding,
+              statements,
+              Contents.empty[MetaData]()
+            )
           case None =>
             ctx.err("on-clause of kind 'event' requires a 'message' reference")
             OnEventClause(
               At(),
               EventRef(At(), PathIdentifier.empty),
               None,
+              binding,
               statements,
               Contents.empty[MetaData]()
             )

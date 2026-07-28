@@ -130,6 +130,35 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip the A55 on-clause message binding losslessly" in {
+      val bindingModel =
+        """domain d is { context c is { entity e is {
+          |  command Foo is { a: Integer }
+          |  event Bar is { b: Integer }
+          |  handler H is {
+          |    on foo: command Foo is { do "a" }
+          |    on bar: event Bar is { do "b" }
+          |    on command Foo is { do "c" }
+          |  }
+          |}}}
+          |""".stripMargin
+      RiddlLib.parseString(bindingModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"binding\"")
+          json1 must include("\"foo\"")
+          json1 must include("\"bar\"")
+          // The fixed point proves JsonAstBuilder rebuilds the binding (else json2 would lose it).
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the binding JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the binding model failed: $errors")
+      end match
+    }
+
     "round-trip named-type requires/returns on a function and saga (A9) losslessly" in {
       val rrModel =
         """domain d is { context c is {

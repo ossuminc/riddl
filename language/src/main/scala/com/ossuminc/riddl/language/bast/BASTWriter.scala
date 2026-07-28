@@ -689,6 +689,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       writeOption(optId)(writeIdentifier)
       writeReference(ref)
     }
+    // A55 (rev 23): the optional local message binding
+    writeOption(oc.binding)(writeIdentifier)
     writeContents(oc.contents)
   }
 
@@ -709,6 +711,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       writeOption(optId)(writeIdentifier)
       writeReference(ref)
     }
+    // A55 (rev 23): the optional local message binding
+    writeOption(oc.binding)(writeIdentifier)
     writeContents(oc.contents)
   }
 

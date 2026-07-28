@@ -489,6 +489,82 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           "activate: become"
         )(td)
     }
+
+    // ---------------------------------------------------------------- A55: message binding
+
+    "bind a local name to the handled message with `on <name>: <msgRef>`" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """context c is {
+          |  entity e is {
+          |    command Foo is { a: Integer }
+          |    event Evt is { b: Integer }
+          |    handler h is {
+          |      on foo: command Foo { do "handle" }
+          |      on evt: event Evt { do "note" }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Context](input) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right((context, _)) =>
+          val finder = Finder(context)
+          val omcs = finder.recursiveFindByType[OnMessageClause]
+          omcs.size must be(1)
+          omcs.head.binding.map(_.value) must be(Some("foo"))
+          val oecs = finder.recursiveFindByType[OnEventClause]
+          oecs.size must be(1)
+          oecs.head.binding.map(_.value) must be(Some("evt"))
+          succeed
+      }
+    }
+
+    "leave the binding empty when `on <msgRef>` has no local name" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """context c is {
+          |  entity e is {
+          |    command Foo is { a: Integer }
+          |    handler h is {
+          |      on command Foo { do "handle" }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Context](input) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right((context, _)) =>
+          val omcs = Finder(context).recursiveFindByType[OnMessageClause]
+          omcs.size must be(1)
+          omcs.head.binding must be(empty)
+          succeed
+      }
+    }
+
+    "accept a binding and a `from` clause together" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """context c is {
+          |  command Foo is { a: Integer }
+          |  handler h is {
+          |    on foo: command Foo from di: context c { do "handle" }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Context](input) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right((context, _)) =>
+          val omcs = Finder(context).recursiveFindByType[OnMessageClause]
+          omcs.size must be(1)
+          omcs.head.binding.map(_.value) must be(Some("foo"))
+          omcs.head.from.flatMap(_._1).map(_.value) must be(Some("di"))
+          succeed
+      }
+    }
   }
 
   /** Assert that parsing `src` as a Context fails and its error mentions `substring`. */

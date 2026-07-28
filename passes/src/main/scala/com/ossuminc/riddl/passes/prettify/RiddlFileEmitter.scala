@@ -40,10 +40,11 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     // An OnMessageClause's id is a synthetic "keyword path" string (e.g.
     // "command Go"); emit the message reference itself, which is the
     // round-trippable source form, rather than quoting it as an identifier.
+    // A55: an optional local binding is emitted as `<binding>: <msg>`.
     val name = definition match
-      case omc: OnMessageClause => omc.msg.format
-      case oec: OnEventClause   => oec.msg.format
-      case _                    => definition.id.format
+      case omc: OnMessageLikeClause =>
+        omc.binding.map(id => s"${id.format}: ").getOrElse("") + omc.msg.format
+      case _ => definition.id.format
     // A handler marked (or defaulted to) the initial/live one emits the `initial` keyword so the
     // choice survives round-trip and is refactor-safe. (State's `initial` is emitted in openState.)
     // A Context with an intention emits it as a keyword prefix (e.g. `application context ...`).
@@ -66,6 +67,15 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           case a: AggregateUseCaseTypeExpression =>
             a.yields.map(y => s" ${Keyword.yields} ${y.format}").getOrElse("")
           case _ => ""
+      // A55: an on-clause's `from [<name>:] <origin>` sits between the message ref and `is`. This
+      // was never emitted before A55, so every `on … from …` silently lost its origin on a
+      // prettify round-trip.
+      case omc: OnMessageLikeClause =>
+        omc.from
+          .map { case (optId, ref) =>
+            s" ${Keyword.from} " + optId.map(id => s"${id.format}: ").getOrElse("") + ref.format
+          }
+          .getOrElse("")
       case _ => ""
     addIndent(s"$prefix$kw $name$ascription is ")
     if withBrace then

@@ -232,7 +232,7 @@ class ASTTest extends AbstractTestingBasis {
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
   val onClauses: Contents[OnClause] = Contents(
     OnInitializationClause(At.empty, statements),
-    OnMessageClause(At.empty, messageRef, None, statements),
+    OnMessageClause(At.empty, messageRef, None, None, statements),
     OnOtherClause(At.empty, statements),
     OnTerminationClause(At.empty, statements)
   )
@@ -469,9 +469,10 @@ class ASTTest extends AbstractTestingBasis {
   }
   "OnMessageClause" should {
     "have a test" in {
-      val omc = OnMessageClause(At.empty, messageRef, None, statements)
+      val omc = OnMessageClause(At.empty, messageRef, None, None, statements)
       omc.msg mustBe messageRef
       omc.from mustBe empty
+      omc.binding mustBe empty // A55: the local message binding is optional
       // The synthetic id is the message reference's format, which is what round-trips to source
       omc.id.value mustBe messageRef.format
       omc.statements mustBe statements

@@ -90,12 +90,18 @@ private[parsing] trait HandlerParser
     * alternatives: `Keywords.on` cuts after matching, so two `on …` alternatives could not
     * backtrack between event and non-event refs. The parsed ref kind then selects the node AND the
     * clause restriction — event bodies parse under `forEvent` (no `require`/`error`).
+    *
+    * A55: an optional local name may be bound to the handled message with ordinary type ascription
+    * — `on foo: command Foo { … }`. It reuses [[maybeName]], the same combinator the `from <name>:
+    * <origin>` clause uses. There is no ambiguity with a bare message reference: every message ref
+    * is keyword-led (`command`/`event`/`query`/`result`/`record`), and `maybeName` contains no cut,
+    * so `on command Foo` backtracks out of the optional binding cleanly.
     */
   private def onMessageOrEventClause[u: P](set: StatementsSet): P[OnClause] = {
     P(
-      Index ~ Keywords.on ~ onMessageLikeRef(set) ~
+      Index ~ Keywords.on ~ maybeName ~ onMessageLikeRef(set) ~
         (from ~ maybeName ~~ messageOrigins).? ~ is ~/ Index
-    ).flatMap { case (start, msgRef, msgOrigins, _) =>
+    ).flatMap { case (start, binding, msgRef, msgOrigins, _) =>
       val bodySet = msgRef match
         case _: EventRef => set.forEvent
         case _           => set
@@ -107,6 +113,7 @@ private[parsing] trait HandlerParser
                 at(start, end),
                 msgRef,
                 msgOrigins,
+                binding,
                 statements.toContents,
                 descriptives.toContents
               )
@@ -115,6 +122,7 @@ private[parsing] trait HandlerParser
                 at(start, end),
                 msgRef,
                 msgOrigins,
+                binding,
                 statements.toContents,
                 descriptives.toContents
               )

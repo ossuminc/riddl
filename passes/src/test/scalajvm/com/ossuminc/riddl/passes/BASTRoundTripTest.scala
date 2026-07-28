@@ -11,6 +11,7 @@ import com.ossuminc.riddl.language.AST.{
   OnActivationClause,
   OnEventClause,
   OnMessageClause,
+  OnMessageLikeClause,
   OnPassivationClause,
   Root
 }
@@ -839,6 +840,49 @@ class BASTRoundTripTest extends AnyWordSpec {
           }
         case Left(messages) =>
           fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
+    "serialize and deserialize the A55 on-clause message binding" in {
+      // Reflective across BAST: the optional local binding rides on the existing on-clause
+      // sub-discriminators 2 (message) and 4 (event) at FORMAT_REVISION 23 — no new node tag.
+      val riddlSource =
+        """domain d is {
+          |  context c is {
+          |    entity e is {
+          |      command Cmd is { g: Integer }
+          |      event Evt is { h: Integer }
+          |      handler hh is {
+          |        on cmd: command Cmd { do "handle" }
+          |        on evt: event Evt { do "note" }
+          |        on command Cmd { do "again" }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-on-clause-binding")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(module) =>
+              assert(
+                compareRoots(originalRoot, module),
+                "on-clause binding round trip failed: ASTs are not equivalent"
+              )
+              import com.ossuminc.riddl.language.Finder
+              val clauses = Finder(module.contents).recursiveFindByType[OnMessageLikeClause]
+              assert(clauses.size == 3, s"expected 3 on-clauses, got ${clauses.size}")
+              assert(
+                clauses.flatMap(_.binding.map(_.value)) == Seq("cmd", "evt"),
+                "on-clause bindings did not survive BAST round trip"
+              )
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
       }
     }
 

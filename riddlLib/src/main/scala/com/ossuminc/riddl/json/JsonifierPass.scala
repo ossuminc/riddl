@@ -201,9 +201,24 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         val statements = serializeStatements(oc.contents)
         oc match
           case omc: OnMessageClause =>
-            Some(OnClauseDto("message", Some(messageRefDto(omc.msg)), statements))
+            // A55: carry the optional local message binding
+            Some(
+              OnClauseDto(
+                "message",
+                Some(messageRefDto(omc.msg)),
+                statements,
+                omc.binding.map(_.value)
+              )
+            )
           case oec: OnEventClause =>
-            Some(OnClauseDto("event", Some(messageRefDto(oec.msg)), statements))
+            Some(
+              OnClauseDto(
+                "event",
+                Some(messageRefDto(oec.msg)),
+                statements,
+                oec.binding.map(_.value)
+              )
+            )
           case _: OnInitializationClause => Some(OnClauseDto("init", None, statements))
           case _: OnTerminationClause    => Some(OnClauseDto("term", None, statements))
           case _: OnActivationClause     => Some(OnClauseDto("activate", None, statements))

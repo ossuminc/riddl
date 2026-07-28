@@ -1077,9 +1077,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           val ref = readReference()
           (optId, ref)
         }
+        // A55 (rev 23): the optional local message binding
+        val binding = readOption(readIdentifier())
         val contents = readContentsDeferred[Statements]()
         val metadata = readMetadataDeferred()
-        OnMessageClause(loc, msg, from, contents, metadata)
+        OnMessageClause(loc, msg, from, binding, contents, metadata)
 
       case 3 => // Other
         val contents = readContentsDeferred[Statements]()
@@ -1093,9 +1095,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           val ref = readReference()
           (optId, ref)
         }
+        // A55 (rev 23): the optional local message binding
+        val binding = readOption(readIdentifier())
         val contents = readContentsDeferred[Statements]()
         val metadata = readMetadataDeferred()
-        OnEventClause(loc, msg, from, contents, metadata)
+        OnEventClause(loc, msg, from, binding, contents, metadata)
 
       case 5 => // Activation — entity lifecycle, no message ref
         val contents = readContentsDeferred[Statements]()

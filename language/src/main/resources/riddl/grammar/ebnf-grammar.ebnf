@@ -208,8 +208,10 @@ on_other_clause = "on" "other" is pseudo_code_block [with_metadata] ;
 on_term_clause = "on" "term" is pseudo_code_block [with_metadata] ;
 on_activate_clause = "on" "activate" is pseudo_code_block [with_metadata] ;
 on_passivate_clause = "on" "passivate" is pseudo_code_block [with_metadata] ;
-on_event_clause = "on" event_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;
-on_message_clause = "on" message_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;
+(* A55: an optional local name may be bound to the handled message with type ascription:
+   `on foo: command Foo { ... }`. Within the body the name denotes the whole message. *)
+on_event_clause = "on" [identifier ":"] event_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;
+on_message_clause = "on" [identifier ":"] message_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;
 message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 
 (* Statements *)

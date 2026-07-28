@@ -278,11 +278,14 @@ object JsonModel:
 
   /** `kind`: "message" | "init" | "other" | "term". For "message", `message` carries the message
     * ref + its kind. `statements` are tagged statement objects (or a bare string = prompt).
+    * `binding` is A55's optional local name bound to the handled message (`on foo: command Foo`);
+    * it is DEFAULTED so JSON written before A55 still reads.
     */
   case class OnClauseDto(
     kind: String,
     message: Option[MessageRefDto] = None,
-    statements: Seq[StatementDto] = Nil
+    statements: Seq[StatementDto] = Nil,
+    binding: Option[String] = None
   )
 
   case class MessageRefDto(ref: String, kind: String)

@@ -15,6 +15,29 @@ to the task file and note the disposition below.
 
 ---
 
+## A55 — optional local name binding for the on-clause message — WIP
+
+`on foo: command Foo { … }` binds an optional local name to the handled
+message. The `:` is ordinary **type ascription** — the same rule as
+`let x: T = …` and a field declaration `p1: String` — so the parser reuses
+`HandlerParser.maybeName`, the very combinator the `from <name>: <origin>`
+clause already uses. `when` is untouched.
+
+**Slice 1 (done).** `binding: Option[Identifier]` on `OnMessageLikeClause`
+and on both concrete nodes. It sits **immediately after `from`, without a
+default**, because `@JSExportTopLevel` requires defaulted parameters to be
+trailing and `contents`/`metadata` are defaulted. All four reflection
+surfaces carry it: prettify, BAST (no new node tag — the existing on-clause
+sub-discriminators 2 and 4 grew a field; `FORMAT_REVISION` 22 → 23, and the
+checked-in `NotImplemented.bast` fixture's header was bumped to match), JSON
+(`OnClauseDto.binding` is **defaulted** so pre-A55 JSON still reads), and the
+EBNF/GBNF grammars plus a corpus fixture.
+
+**Adjacent bug fixed in slice 1:** prettify never emitted an on-clause's
+`from [<name>:] <origin>` clause at all, so `on command C.DoIt from di:
+context C` silently lost its origin on **every** round trip. It is emitted
+now, in the same `openDef` slot the binding uses.
+
 ## #60 Slice 2 — the predefined `Riddl` standard module — DONE
 
 Two terminators, available to EVERY model with no `import` and no author

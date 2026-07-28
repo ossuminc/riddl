@@ -60,7 +60,8 @@ package object bast {
     * table layout). Independent of VERSION which tracks major header layout changes. Old files with
     * revision 0 (pre-check era) will be rejected with a clear message.
     */
-  val FORMAT_REVISION: Short = 22 // A53: Version leaf (NODE_VERSION = 103)
+  val FORMAT_REVISION: Short =
+    23 // A55: optional on-clause message binding (on-clause subtypes 2 and 4)
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

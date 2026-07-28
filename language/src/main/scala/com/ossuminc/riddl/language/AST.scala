@@ -3487,6 +3487,13 @@ object AST:
     */
   sealed trait OnMessageLikeClause extends OnClause {
     def msg: MessageRef
+
+    /** A55: the optional local name bound to the handled message — `on foo: command Foo { … }`. The
+      * `:` is ordinary type ascription (as in `let x: T = …` or a field declaration), so the
+      * binding reads "foo has type command Foo". When present, the name denotes the whole message
+      * within the clause body (`foo`) and prefixes field access (`foo.someField`).
+      */
+    def binding: Option[Identifier]
     def from: Option[(Option[Identifier], Reference[Definition])]
   }
 
@@ -3541,6 +3548,10 @@ object AST:
     *   A reference to the message type that is handled
     * @param from
     *   Optional message generating
+    * @param binding
+    *   A55: the optional local name bound to the handled message (`on foo: command Foo`). Declared
+    *   before `contents`/`metadata` and WITHOUT a default because `@JSExportTopLevel` requires all
+    *   defaulted parameters to be trailing.
     * @param contents
     *   A set of statements that define the behavior when the [[msg]] is received.
     */
@@ -3549,6 +3560,7 @@ object AST:
     loc: At,
     msg: MessageRef,
     from: Option[(Option[Identifier], Reference[Definition])],
+    binding: Option[Identifier],
     contents: Contents[Statements] = Contents.empty[Statements](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnMessageLikeClause {
@@ -3583,12 +3595,17 @@ object AST:
     *
     * @param msg
     *   A reference to the event type that is handled
+    * @param binding
+    *   A55: the optional local name bound to the handled event (`on evt: event Started`). Declared
+    *   before `contents`/`metadata` and WITHOUT a default because `@JSExportTopLevel` requires all
+    *   defaulted parameters to be trailing.
     */
   @JSExportTopLevel("OnEventClause")
   case class OnEventClause(
     loc: At,
     msg: MessageRef,
     from: Option[(Option[Identifier], Reference[Definition])],
+    binding: Option[Identifier],
     contents: Contents[Statements] = Contents.empty[Statements](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnMessageLikeClause {
