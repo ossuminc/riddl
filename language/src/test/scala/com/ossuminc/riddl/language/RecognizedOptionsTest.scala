@@ -196,7 +196,8 @@ class RecognizedOptionsTest extends AbstractTestingBasis {
     }
 
     "register the six formerly-missing entity options" in {
-      val six = Seq("transient", "event-sourced", "value", "consistent", "available", "message-queue")
+      val six =
+        Seq("transient", "event-sourced", "value", "consistent", "available", "message-queue")
       six.foreach { name =>
         withClue(s"option '$name' is not registered: ") {
           RecognizedOptions.registry.contains(name) mustBe true

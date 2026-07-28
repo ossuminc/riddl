@@ -52,9 +52,9 @@ end DeprecatedOptions
   * A `validParents` of `Seq.empty` means "valid on any definition"; such options therefore appear
   * in EVERY derived per-kind list.
   *
-  * NOTE on parent-kind strings: the string compared against `validParents` is
-  * `Definition.kind`, which for most definitions is the class's simple name ("Entity", "Context",
-  * "Domain", …). Two families are exceptions and are a recurring source of bugs:
+  * NOTE on parent-kind strings: the string compared against `validParents` is `Definition.kind`,
+  * which for most definitions is the class's simple name ("Entity", "Context", "Domain", …). Two
+  * families are exceptions and are a recurring source of bugs:
   *   - a [[AST.Streamlet]]'s kind is its SHAPE's simple name — "Source", "Sink", "Flow", "Merge",
   *     "Split", "Router" or "Void" — never "Streamlet".
   *   - a portlet's kind is "Inlet" or "Outlet", never "Portlet".
@@ -250,10 +250,13 @@ object RecognizedOptions:
     *   (`validParents` empty), sorted for stable output.
     */
   def optionsFor(parentKind: String): Seq[String] =
-    registry.collect {
-      case (name, spec) if spec.validParents.isEmpty || spec.validParents.contains(parentKind) =>
-        name
-    }.toSeq.sorted
+    registry
+      .collect {
+        case (name, spec) if spec.validParents.isEmpty || spec.validParents.contains(parentKind) =>
+          name
+      }
+      .toSeq
+      .sorted
 
   /** The union of [[optionsFor]] over several kinds. Needed for the definition families whose kind
     * string varies: a Streamlet (seven shape names) and a Portlet (Inlet/Outlet).
