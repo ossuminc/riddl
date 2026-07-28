@@ -232,14 +232,33 @@ private[parsing] trait StatementParser {
   //   - the bare `identifier` arm is the legacy fallback (now effectively unreached, since a bare
   //     name is routed to `valueRef`); kept for AST/API back-compat.
   private def whenCondition[u: P]
-    : P[(LiteralString | Identifier | ValueRef | BooleanExpression, Boolean)] = {
+    : P[(LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue, Boolean)] = {
     P(
       (Punctuation.exclamation ~ identifier).map(id => (id, true)) |
         booleanExprOnly.map(be => (be, false)) |
+        promptValue.map(pv => (pv, false)) |
         valueRef.map(vr => (vr, false)) |
-        literalString.map(ls => (ls, false)) |
+        deprecatedStringCondition.map(ls => (ls, false)) |
         identifier.map(id => (id, false))
     )
+  }
+
+  /** A bare string condition — `when "the order has drink items"`.
+    *
+    * A54 settled that a bare `"x"` is a LITERAL while `prompt("x")` marks a value an AI decides. A
+    * natural-language condition is plainly the latter, so spelling it as a bare string contradicts
+    * the convention the rest of the language follows. `prompt(...)` is now accepted here and this
+    * form is deprecated; it still parses, so no model breaks today.
+    */
+  private def deprecatedStringCondition[u: P]: P[LiteralString] = {
+    P(Index ~ literalString)./.map { case (start, ls) =>
+      deprecation(
+        at(start, start),
+        "A bare string `when` condition is deprecated; use `when prompt(\"...\")` for a condition " +
+          "an AI evaluates, or a boolean expression for one the model decides"
+      )
+      ls
+    }
   }
 
   private def whenStatement[u: P](set: StatementsSet): P[WhenStatement] = {

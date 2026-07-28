@@ -227,7 +227,9 @@ when_statement = "when" when_condition "then" pseudo_code_block ["else" pseudo_c
 (* A28/A17: a condition is an opaque pseudo-code literal, a negated/bare let-binding identifier, a
    structured boolean_expression, or (A17) a first-class bare boolean value_ref (a single name or a
    dotted path, resolved and validated to be Boolean-typed). *)
-when_condition = literal_string | "!" identifier | boolean_expression | value_ref ;
+(* literal_string is DEPRECATED as a condition: a bare string means a literal everywhere else,
+   so a natural-language condition is written prompt("...") and evaluated by an AI. *)
+when_condition = prompt_value | literal_string | "!" identifier | boolean_expression | value_ref ;
 (* A29: `match <subject> { case <pattern> [when <boolean_expression>] { <statements> } ...
    [default { <statements> }] }`. The subject is a runtime value ref / `get` / legacy literal. A
    pattern is a type-case (a bare type_ref), an explicit value comparison (`<op> <comparand>`, the

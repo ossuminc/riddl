@@ -171,21 +171,19 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case cg: ContainedGroup =>
         associateUsage(cg, resolveARef[Group](cg.group, parents))
       // A schema's references live in FIELDS (`data`, `links`, `indices`), not in `contents`, so
-      // nothing resolves them on our behalf and `Schema` had no case of its own — it fell through
-      // to the catch-all `case _: Definition` below. The effect was that a type the model
-      // demonstrably persists was reported unused, while the same type referenced by a field or a
-      // state was not. Must stay ABOVE the NonDefinitionValues arm: Schema is a Leaf but also a
-      // member of that union, so a later case would shadow this one.
+      // nothing resolved them and `Schema` had no case of its own — it fell through to the
+      // catch-all `case _: Definition` below. Two consequences: a type the model demonstrably
+      // persists was reported unused, and `of <name> as type <T>` was never checked at all.
+      //
+      // Resolved STRICTLY, on purpose. The syntax says `as type`, so `T` must BE a type: a path
+      // that lands on an Entity is a semantic error even though it parses, and it stays an error
+      // unless a Type of that name genuinely exists. Models that wrote `of orders as type Order`
+      // against an entity were relying on a check that never ran.
+      //
+      // Must stay ABOVE the NonDefinitionValues arm: Schema is a Leaf but also a member of that
+      // union, so a later case would shadow this one.
       case sc: Schema =>
-        // Resolved QUIETLY, for the same reason nested send/tell are: the point is to record that
-        // a stored type IS used, not to start policing clauses nothing has ever checked. Models
-        // routinely write `of orders as type Order` where `Order` is an ENTITY, not a Type —
-        // which reads naturally for a repository — and demanding a Type here turns dozens of
-        // clean models across riddl-models into failures. Whether an entity belongs on the right
-        // of `as type` is a language question worth settling separately.
-        quietly {
-          sc.data.values.foreach(tr => associateUsage(sc, resolveATypeRef(tr, parents)))
-        }
+        sc.data.values.foreach(tr => associateUsage(sc, resolveATypeRef(tr, parents)))
       // `links` and `indices` are deliberately NOT resolved here yet. They hold FieldRefs, and
       // resolving them surfaces references that have never been checked: `language/input/
       // everything_full.riddl` alone has `link relationship as field agg.time to field agg.ident`

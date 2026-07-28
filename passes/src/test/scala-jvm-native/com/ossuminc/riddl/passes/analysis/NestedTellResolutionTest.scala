@@ -19,11 +19,11 @@ import org.scalatest.{Assertion, TestData}
   * for eight references in riddl-models that resolve everywhere else — the model reported zero
   * errors, and fully qualifying the paths did not help. Every occurrence sat inside a conditional.
   *
-  * The cause is not, as first supposed, a refMap keyed on the wrong parent. `ResolutionPass`
-  * walks nested `when`/`foreach`/`match` bodies through `resolveForeachFieldRefs`, but for a
-  * nested TellStatement or SendStatement it resolved ONLY a `Constructor` operand — never the
-  * processor reference or the message. So no entry was ever added and MessageFlowPass's lookup
-  * correctly found nothing.
+  * The cause is not, as first supposed, a refMap keyed on the wrong parent. `ResolutionPass` walks
+  * nested `when`/`foreach`/`match` bodies through `resolveForeachFieldRefs`, but for a nested
+  * TellStatement or SendStatement it resolved ONLY a `Constructor` operand — never the processor
+  * reference or the message. So no entry was ever added and MessageFlowPass's lookup correctly
+  * found nothing.
   */
 class NestedTellResolutionTest extends AbstractValidatingTest {
 

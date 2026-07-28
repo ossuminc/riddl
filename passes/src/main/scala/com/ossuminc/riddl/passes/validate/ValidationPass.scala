@@ -659,6 +659,17 @@ case class ValidationPass(
             checkNonEmptyValue(id, "condition", onClause, loc, MissingWarning, required = true)
           case _: ValueRef          => () // A17: resolved + boolean-checked in checkStatementScopes
           case _: BooleanExpression => () // A28: type-checked in checkStatementScopes
+          case pv: PromptValue      =>
+            // An AI-evaluated condition: nothing to type-check, but an empty prompt says nothing
+            // for an AI to act on, so it gets the same emptiness check the bare string had.
+            checkNonEmptyValue(
+              pv.prompt,
+              "condition",
+              onClause,
+              loc,
+              MissingWarning,
+              required = true
+            )
         }
         checkNonEmpty(
           thenStatements.toSeq,

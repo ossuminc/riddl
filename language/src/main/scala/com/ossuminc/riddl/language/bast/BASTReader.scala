@@ -891,7 +891,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
       case 10 => // When
         val conditionType = reader.readU8()
-        val condition: LiteralString | Identifier | ValueRef | BooleanExpression =
+        val condition: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue =
           conditionType match {
             case 0 => readLiteralString()
             case 1 => readIdentifierInline()
@@ -903,6 +903,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
               readValue() match
                 case vr: ValueRef => vr
                 case other        => throw new RuntimeException(s"Expected ValueRef, got: $other")
+            case 4 => // an AI-evaluated condition, `when prompt("...")`
+              readValue() match
+                case pv: PromptValue => pv
+                case other => throw new RuntimeException(s"Expected PromptValue, got: $other")
             case _ => throw new RuntimeException(s"Invalid when condition type: $conditionType")
           }
         val negated = reader.readU8() != 0

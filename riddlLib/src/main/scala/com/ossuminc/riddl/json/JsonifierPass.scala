@@ -131,8 +131,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
 
   /** The children a container was handed, and the record of which it consumed.
     *
-    * A parent assembles itself out of `col`/`msgs` picks. Anything it does not pick is
-    * forgotten, so every pick is recorded and `closeContainer` reports the remainder.
+    * A parent assembles itself out of `col`/`msgs` picks. Anything it does not pick is forgotten,
+    * so every pick is recorded and `closeContainer` reports the remainder.
     */
   private final class Kids(kids: Seq[Any]):
     private def keep[T](t: T): T = { consumed.put(t, true); t }
@@ -144,9 +144,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
 
   /** Build one container's DTO from the child DTOs its own `closeContainer` collected.
     *
-    * Split across four builders by kind rather than written as one match: the whole thing
-    * exceeded the coverage instrumenter's tree-node threshold, so it was silently skipped
-    * and could never be measured. Each part is now small enough to instrument.
+    * Split across four builders by kind rather than written as one match: the whole thing exceeded
+    * the coverage instrumenter's tree-node threshold, so it was silently skipped and could never be
+    * measured. Each part is now small enough to instrument.
     */
   private def buildContainer(d: Definition, kids: Seq[Any]): Option[Any] =
     val k = Kids(kids)
@@ -231,7 +231,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       case _ => None
   end buildTopLevelDto
 
-  /** The six Processors. They share `OccursInProcessor`, so their DTOs share most of their shape. */
+  /** The six Processors. They share `OccursInProcessor`, so their DTOs share most of their shape.
+    */
   private def buildProcessorDto(d: Definition, k: Kids): Option[Any] =
     d match
       case c: Context =>
@@ -413,7 +414,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       case _ => None
   end buildProcessorDto
 
-  /** The definitions that carry behaviour: states, handlers and their clauses, types, sagas, functions. */
+  /** The definitions that carry behaviour: states, handlers and their clauses, types, sagas,
+    * functions.
+    */
   private def buildBehaviorDto(d: Definition, k: Kids): Option[Any] =
     d match
       case s: State =>
@@ -922,6 +925,15 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             serializeStatements(thenS),
             serializeStatements(elseS),
             Some(serializeValue(vr))
+          )
+        case pv: PromptValue => // an AI-evaluated condition, `when prompt("...")`
+          WhenStmtDto(
+            None,
+            None,
+            negated,
+            serializeStatements(thenS),
+            serializeStatements(elseS),
+            Some(serializeValue(pv))
           )
     case MatchStatement(_, expr, cases, default) =>
       MatchStmtDto(

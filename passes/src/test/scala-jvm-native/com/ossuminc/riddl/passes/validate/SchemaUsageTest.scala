@@ -60,4 +60,35 @@ class SchemaUsageTest extends AbstractValidatingTest {
       }
     }
   }
+
+  /** `of <name> as type <T>` says `T` is a TYPE. A path that lands on an entity is a semantic error
+    * even though it parses — the syntax made a claim the model does not honour. This went unnoticed
+    * because schema references were never resolved at all, so models came to rely on a check that
+    * never ran.
+    */
+  private val storesAnEntity =
+    """domain D is {
+      |  context C is {
+      |    type Datum is { id: String }
+      |    entity Order is {
+      |      handler H is { ??? }
+      |    }
+      |    repository Store is {
+      |      schema Data is relational of orders as type D.C.Order
+      |      handler SH is { ??? }
+      |    }
+      |  }
+      |}
+      |""".stripMargin
+
+  "a schema naming an entity where a type is required" should {
+    "be an error" in { (td: TestData) =>
+      validating(storesAnEntity, td) { msgs =>
+        val mismatch = msgs.justErrors.filter(m =>
+          m.message.contains("Order") && m.message.contains("Type was expected")
+        )
+        withClue(s"messages were:\n${msgs.format}\n") { mismatch must not be empty }
+      }
+    }
+  }
 }

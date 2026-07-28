@@ -3248,7 +3248,7 @@ object AST:
   @JSExportTopLevel("WhenStatement")
   case class WhenStatement(
     loc: At,
-    condition: LiteralString | Identifier | ValueRef | BooleanExpression,
+    condition: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue,
     thenStatements: Contents[Statements],
     elseStatements: Contents[Statements] = Contents.empty[Statements](0),
     negated: Boolean = false

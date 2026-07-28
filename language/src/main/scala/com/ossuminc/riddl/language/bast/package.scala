@@ -74,7 +74,8 @@ package object bast {
     * be mistaken for a new one. Do NOT renumber again within version 2 — that WOULD reuse numbers
     * that real files carry.
     */
-  val FORMAT_REVISION: Short = 1
+  val FORMAT_REVISION: Short =
+    2 // `when prompt("...")` — condition flag 4
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

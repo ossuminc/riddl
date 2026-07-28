@@ -1099,7 +1099,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(10) // When statement
     writeLocation(s.loc)
     // Write condition with type flag
-    // (0=LiteralString, 1=Identifier, 2=BooleanExpression [A28], 3=ValueRef [A17])
+    // (0=LiteralString, 1=Identifier, 2=BooleanExpression [A28], 3=ValueRef [A17],
+    //  4=PromptValue — an AI-evaluated condition, which the bare LiteralString form now defers to)
     s.condition match {
       case ls: LiteralString =>
         writer.writeU8(0)
@@ -1113,6 +1114,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case vr: ValueRef => // A17: bare boolean value reference
         writer.writeU8(3)
         writeValue(vr)
+      case pv: PromptValue =>
+        writer.writeU8(4)
+        writeValue(pv)
     }
     // Write negated flag (0=not negated, 1=negated)
     writer.writeU8(if s.negated then 1 else 0)

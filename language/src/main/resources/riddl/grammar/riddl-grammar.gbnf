@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-28 04:31 UTC
+# Generated: 2026-07-28 20:57 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -207,7 +207,7 @@ statement ::= when-statement | match-statement | foreach-statement | send-statem
 
 # Control flow
 when-statement ::= "when" ws1 when-condition ws "then" ws1 pseudo-code-block ws ("else" pseudo-code-block)? ws "end"
-when-condition ::= literal-string | "!" ws identifier | boolean-expression | value-ref
+when-condition ::= prompt-value | literal-string | "!" ws identifier | boolean-expression | value-ref
 match-statement ::= "match" ws1 match-subject ws "{" ws (match-case)+ ws ("default" "{" (statement)* "}")? ws "}"
 match-subject ::= get-value | literal-string | value-ref
 match-case ::= "case" ws1 match-pattern ws ("when" boolean-expression)? ws "{" ws (statement)* ws "}"
