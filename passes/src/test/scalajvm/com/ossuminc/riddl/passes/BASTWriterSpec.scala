@@ -8,7 +8,14 @@ package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.{Root, Module}
 import com.ossuminc.riddl.language.{Contents, *}
-import com.ossuminc.riddl.language.bast.{ByteBufferReader, MAGIC_BYTES, VERSION, HEADER_SIZE, Flags}
+import com.ossuminc.riddl.language.bast.{
+  BinaryFormat,
+  ByteBufferReader,
+  Flags,
+  HEADER_SIZE,
+  MAGIC_BYTES,
+  VERSION
+}
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult, BASTWriterPass, BASTOutput}
 import com.ossuminc.riddl.passes.AbstractRunPassTest
@@ -25,7 +32,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
       val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
-      inputFuture.map { input =>
+      val assertionFuture = inputFuture.map { input =>
         // Parse the input
         val parseResult = TopLevelParser.parseInput(input, true)
         parseResult match {
@@ -60,14 +67,14 @@ class BASTWriterSpec extends AbstractRunPassTest {
         }
       }
 
-      Await.result(inputFuture, 30.seconds)
+      Await.result(assertionFuture, 30.seconds)
     }
 
     "validate BAST header structure" in { (td: TestData) =>
       val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
-      inputFuture.map { input =>
+      val assertionFuture = inputFuture.map { input =>
         val parseResult = TopLevelParser.parseInput(input, true)
         parseResult match {
           case Right(root: Root) =>
@@ -97,8 +104,12 @@ class BASTWriterSpec extends AbstractRunPassTest {
             val rootOffset = reader.readInt()
             val fileSize = reader.readInt()
 
-            stringTableOffset must be > HEADER_SIZE
-            rootOffset must be > stringTableOffset
+            // The root tree sits immediately after the header; the interning tables trail it,
+            // because the writer is single-pass and only knows what to intern once the tree is
+            // written. See the `bast` package documentation.
+            rootOffset must equal(HEADER_SIZE)
+            stringTableOffset must be > rootOffset
+            stringTableOffset must be < bytes.length
             fileSize must equal(bytes.length)
 
             info(s"Header validated: v$version, ${bytes.length} bytes")
@@ -109,14 +120,14 @@ class BASTWriterSpec extends AbstractRunPassTest {
         }
       }
 
-      Await.result(inputFuture, 30.seconds)
+      Await.result(assertionFuture, 30.seconds)
     }
 
     "serialize and validate string table" in { (td: TestData) =>
       val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
-      inputFuture.map { input =>
+      val assertionFuture = inputFuture.map { input =>
         val parseResult = TopLevelParser.parseInput(input, true)
         parseResult match {
           case Right(root: Root) =>
@@ -126,8 +137,11 @@ class BASTWriterSpec extends AbstractRunPassTest {
             val bytes = result.outputOf[BASTOutput](BASTWriterPass.name).get.bytes
             val reader = ByteBufferReader(bytes)
 
-            // Skip header
-            reader.skip(HEADER_SIZE)
+            // The string table does NOT follow the header — the node tree does. Seek to the
+            // offset the header records, exactly as BASTReader does.
+            reader.skip(12) // magic(4) + version(4) + flags(2) + reserved(2)
+            val stringTableOffset = reader.readInt()
+            reader.seek(stringTableOffset)
 
             // Read string table
             val stringCount = reader.readVarInt()
@@ -153,14 +167,14 @@ class BASTWriterSpec extends AbstractRunPassTest {
         }
       }
 
-      Await.result(inputFuture, 30.seconds)
+      Await.result(assertionFuture, 30.seconds)
     }
 
     "measure serialization performance" in { (td: TestData) =>
       val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
-      inputFuture.map { input =>
+      val assertionFuture = inputFuture.map { input =>
         val parseResult = TopLevelParser.parseInput(input, true)
         parseResult match {
           case Right(root: Root) =>
@@ -208,14 +222,14 @@ class BASTWriterSpec extends AbstractRunPassTest {
         }
       }
 
-      Await.result(inputFuture, 60.seconds)
+      Await.result(assertionFuture, 60.seconds)
     }
 
     "serialize all node types without errors" in { (td: TestData) =>
       val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
-      inputFuture.map { input =>
+      val assertionFuture = inputFuture.map { input =>
         val parseResult = TopLevelParser.parseInput(input, true)
         parseResult match {
           case Right(root: Root) =>
@@ -237,7 +251,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
         }
       }
 
-      Await.result(inputFuture, 30.seconds)
+      Await.result(assertionFuture, 30.seconds)
     }
   }
 
@@ -260,12 +274,16 @@ class BASTWriterSpec extends AbstractRunPassTest {
     val rootOffset = reader.readInt()
     val fileSize = reader.readInt()
 
-    // Validate offsets
-    stringTableOffset must be >= HEADER_SIZE
-    stringTableOffset must be < bytes.length
-    rootOffset must be > stringTableOffset
+    // Validate offsets. Layout is Header, Root tree, String Table, Path Table — the interning
+    // tables trail the tree because the writer is single-pass. See the `bast` package docs.
+    rootOffset must equal(HEADER_SIZE)
     rootOffset must be < bytes.length
+    stringTableOffset must be > rootOffset
+    stringTableOffset must be < bytes.length
     fileSize must equal(bytes.length)
+
+    // Every BAST file RIDDL writes carries locations, comments and descriptions
+    flags must equal(BinaryFormat.Header.defaultFlags)
 
     // Validate version
     version must equal(VERSION)

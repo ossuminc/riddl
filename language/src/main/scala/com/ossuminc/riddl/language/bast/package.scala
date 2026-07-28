@@ -23,10 +23,15 @@ package com.ossuminc.riddl.language
   * File Structure:
   * {{{
   *   Header (32 bytes)
-  *   String Table (varint count + strings)
-  *   Path Table (varint count + path entries)  <- Phase 8
-  *   Root Nebula Node (tree of nodes)
+  *   Root Node (tree of nodes)                 <- at header.rootOffset, always HEADER_SIZE
+  *   String Table (varint count + strings)     <- at header.stringTableOffset
+  *   Path Table (varint count + path entries)  <- Phase 8, immediately after the string table
   * }}}
+  * The interning tables trail the node tree because the writer is single-pass: it discovers the
+  * strings and paths to intern while writing the nodes, so it cannot emit the tables until the tree
+  * is complete. The reader does not care — it seeks by way of the header's offsets, reading the
+  * tables (`header.stringTableOffset`) before the tree (`header.rootOffset`). Do NOT infer the
+  * position of either from the header size alone.
   *
   * Usage:
   * {{{

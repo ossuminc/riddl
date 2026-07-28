@@ -86,12 +86,20 @@ object BinaryFormat {
   }
 
   object Header {
+
+    /** The content flags of every BAST file RIDDL writes. [[BASTWriter]] serializes a location for
+      * every node, and serializes comments and descriptions along with the rest of a definition's
+      * metadata, unconditionally — so all three content flags hold.
+      */
+    val defaultFlags: Short =
+      (Flags.WITH_LOCATIONS | Flags.WITH_COMMENTS | Flags.WITH_DESCRIPTIONS).toShort
+
     def apply(
       stringTableOffset: Int,
       rootOffset: Int,
       fileSize: Int,
       checksum: Int,
-      flags: Short = (Flags.WITH_LOCATIONS | Flags.WITH_DESCRIPTIONS).toShort,
+      flags: Short = defaultFlags,
       formatRevision: Short = FORMAT_REVISION
     ): Header = {
       Header(

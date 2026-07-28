@@ -138,16 +138,17 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     val bytes = writer.toByteArray
     val checksum = BinaryFormat.calculateChecksum(bytes, HEADER_SIZE, bytes.length - HEADER_SIZE)
 
+    // Build the header through BinaryFormat.Header's convenience apply so that the magic bytes,
+    // version, content flags, format revision and reserved bytes are declared in exactly ONE
+    // place. Spelling the full case class out here instead is what let `flags` be hardcoded to 0
+    // while BASTWriter was in fact writing locations, comments and descriptions — so every BAST
+    // file RIDDL produced claimed, through Header.hasLocations/hasComments/hasDescriptions, to
+    // contain none of them.
     val header = BinaryFormat.Header(
-      magic = MAGIC_BYTES,
-      version = VERSION,
-      flags = 0,
-      formatRevision = FORMAT_REVISION,
       stringTableOffset = stringTableOffset,
       rootOffset = HEADER_SIZE,
       fileSize = writer.size,
-      checksum = checksum,
-      reserved = Array.fill(4)(0.toByte)
+      checksum = checksum
     )
 
     // Write header at the beginning
