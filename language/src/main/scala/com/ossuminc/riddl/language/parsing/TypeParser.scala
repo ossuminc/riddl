@@ -384,12 +384,31 @@ private[parsing] trait TypeParser {
   private def alternation[u: P]: P[Alternation] = {
     P(
       Index ~ Keywords.one ~ of.? ~/ open ~
-        (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
+        // `???` and an empty body both yield no alternatives but mean different things, so they
+        // are kept apart here: None is the explicit "not decided yet" placeholder, Some(Nil) is a
+        // body that genuinely lists nothing.
+        (Punctuation.undefinedMark.!.map(_ => Option.empty[Seq[AliasedTypeExpression]]) |
           aliasedTypeExpression
-            .rep(0, P(Keywords.or | Punctuation.verticalBar | Punctuation.comma))) ~ close
+            .rep(0, P(Keywords.or | Punctuation.verticalBar | Punctuation.comma))
+            .map(Some(_))) ~ close
         ~/ Index
-    ).map { case (start, contents, end) =>
-      Alternation(at(start, end), contents.toContents)
+    ).map { case (start, alternatives, end) =>
+      val loc = at(start, end)
+      val contents = alternatives.getOrElse(Seq.empty[AliasedTypeExpression])
+      alternatives match
+        case Some(alts) if alts.isEmpty =>
+          // Nothing to choose between. `???` is how you say "not decided yet".
+          error(loc, "An alternation must have at least one alternative, or `???`")
+        case Some(alts) if alts.sizeIs == 1 =>
+          // Legal for now, but a choice of one is just that type wearing a wrapper.
+          deprecation(
+            loc,
+            "An alternation of a single alternative is deprecated; give it a second alternative " +
+              "or use the type directly"
+          )
+        case _ => ()
+      end match
+      Alternation(loc, contents.toContents)
     }
   }
 

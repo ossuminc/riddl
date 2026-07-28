@@ -253,7 +253,13 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
   }
 
   private def simpleIdentifier[u: P]: P[String] = {
-    P(CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_\\-").?).!
+    // An identifier may not be spelled as a keyword that INTRODUCES a definition, which is what
+    // made `domain domain is { … }` parse. Only that set — not every keyword — because models
+    // legitimately name fields `version` or `copyright`, which A53/A47 kept working on purpose.
+    // Case-sensitive, so `Domain` is unaffected; a quoted identifier ('domain') still works.
+    P(CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_\\-").?).!.filter(id =>
+      !Keyword.definitionKeywords.contains(id)
+    )
   }
 
   private def quotedIdentifier[u: P]: P[String] = {

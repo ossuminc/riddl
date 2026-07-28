@@ -691,6 +691,10 @@ object Keyword {
 
   def allKeywords: Seq[String] = Seq(
     acquires,
+    get,
+    put,
+    refuses,
+    require_,
     activate,
     adaptor,
     all,
@@ -842,6 +846,35 @@ object Keyword {
     with_,
     yields,
     yield_
+  )
+
+  lazy val allKeywordsSet: Set[String] = allKeywords.toSet
+
+  /** The keywords that INTRODUCE a definition, which an identifier may therefore not be spelled as:
+    * `domain domain is { … }` used to parse, which reads as nonsense and is ambiguous to tooling.
+    *
+    * Deliberately NOT all keywords. `version` and `copyright` are keywords that models legitimately
+    * use as field and type names, and A53/A47 kept them usable on purpose — see VersionTest and
+    * CopyrightTest, which pin that. The same goes for type-ish words such as `table`, `graph` and
+    * `result`. Banning every keyword breaks those models for no gain: the ambiguity only bites
+    * where the word would otherwise start a definition.
+    *
+    * Case-SENSITIVE, since keywords are lower case: `Domain` is still a fine identifier, and only
+    * the exact keyword spelling is refused. A quoted identifier ('domain') remains the escape
+    * hatch.
+    */
+  lazy val definitionKeywords: Set[String] = Set(
+    domain,
+    context,
+    entity,
+    adaptor,
+    saga,
+    epic,
+    projector,
+    repository,
+    streamlet,
+    handler,
+    function
   )
 
 }

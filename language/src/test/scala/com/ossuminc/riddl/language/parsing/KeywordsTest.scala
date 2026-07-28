@@ -12,7 +12,9 @@ class KeywordsTest extends AbstractTestingBasis {
 
   "Keyword" should {
     "produce all keywords" in {
-      Keyword.allKeywords.size must be(152)
+      // 156, not 152: `get`, `put`, `refuses` and `require_` were declared as Keyword constants
+      // but omitted from allKeywords, so anything driven by that list silently under-counted.
+      Keyword.allKeywords.size must be(156)
     }
   }
 

@@ -51,14 +51,14 @@ class ParserErrorRecoveryTest extends ParsingTest {
       }
     }
 
-    "reject domain with missing 'is' keyword" in { (_: TestData) =>
-      val input = "domain Test { ??? }" // Missing 'is'
+    // `is` is INTENTIONALLY optional — `domain Test { ??? }` is well-formed RIDDL.
+    "accept a domain without the optional 'is' keyword" in { (_: TestData) =>
+      val input = "domain Test { ??? }"
       val parser = StringParser(input)
       parser.parseRoot match {
+        case Right(root) => root.domains.head.id.value mustBe "Test"
         case Left(messages) =>
-          messages.nonEmpty mustBe true
-        case Right(_) =>
-          fail("Should reject missing 'is' keyword")
+          fail(s"`is` is optional, so this must parse: ${messages.format}")
       }
     }
 
@@ -257,16 +257,16 @@ class ParserErrorRecoveryTest extends ParsingTest {
       }
     }
 
-    "reject nested domains" in { (_: TestData) =>
+    // Domains DO nest — AST.OccursInDomain includes Domain. Subdomains are the point.
+    "accept nested domains" in { (_: TestData) =>
       val input = """domain Outer is {
                     |  domain Inner is { ??? }
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
+        case Right(root) => root.domains.head.domains.head.id.value mustBe "Inner"
         case Left(messages) =>
-          messages.nonEmpty mustBe true
-        case Right(_) =>
-          fail("Should reject nested domains")
+          fail(s"nested domains are legal, so this must parse: ${messages.format}")
       }
     }
   }

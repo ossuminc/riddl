@@ -4,24 +4,24 @@ context other  is {
   by author Reid
   attachment foo is text/plain as "nada"
 }
-context context is {
-  adaptor adaptor from context other is { ??? }
-  function function is { ??? }
+context 'context' is {
+  adaptor 'adaptor' from context other is { ??? }
+  function 'function' is { ??? }
   event event is { at: TimeStamp }
-  handler handler is {
+  handler 'handler' is {
     on event event {
       when "there is a condition" then
         do "handle the event"
       end
     }
   }
-  repository repository is { ??? }
+  repository 'repository' is { ??? }
   source source is { ??? }
   sink sink is { ??? }
   flow flow is { ??? }
   merge merge is { ??? }
   split split is { ??? }
-  saga saga is {
+  saga 'saga' is {
    step a is {
      do "a.1"
    } reverted by {
