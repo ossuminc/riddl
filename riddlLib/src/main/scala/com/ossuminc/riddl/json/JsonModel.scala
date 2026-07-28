@@ -73,7 +73,8 @@ object JsonModel:
     name: String,
     `type`: TypeExprDto,
     args: Seq[MethodArgDto] = Nil,
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "kind": "Record", "fields": [ <field> ], "methods"?: [ <method> ] }` -> aggregate. */
@@ -185,14 +186,20 @@ object JsonModel:
   )
 
   /** `{ "name": "Shopper", "isA": "a person", "brief"?: ... }` (Phase 2) */
-  case class UserDto(name: String, isA: String, brief: Option[String] = None)
+  case class UserDto(
+    name: String,
+    isA: String,
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
+  )
 
   case class AuthorDto(
     name: String,
     fullName: String,
     email: String,
     organization: Option[String] = None,
-    title: Option[String] = None
+    title: Option[String] = None,
+    metadata: Option[MetaDto] = None
   )
 
   case class TypeDefDto(
@@ -241,7 +248,8 @@ object JsonModel:
     fields: Seq[FieldDto] = Nil,
     // A19: for a command/query, the optional message it yields (a command yields an event; a
     // query yields a result).
-    yields: Option[MessageRefDto] = None
+    yields: Option[MessageRefDto] = None,
+    metadata: Option[MetaDto] = None
   )
 
   case class EntityDto(
@@ -279,7 +287,8 @@ object JsonModel:
     name: String,
     `type`: TypeExprDto,
     value: String,
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
   )
 
   case class StateDto(
@@ -288,14 +297,16 @@ object JsonModel:
     handlers: Seq[HandlerDto] = Nil,
     invariants: Seq[InvariantDto] = Nil,
     brief: Option[String] = None,
-    isInitial: Boolean = false
+    isInitial: Boolean = false,
+    metadata: Option[MetaDto] = None
   )
 
   case class HandlerDto(
     name: String,
     brief: Option[String] = None,
     onClauses: Seq[OnClauseDto] = Nil,
-    isInitial: Boolean = false
+    isInitial: Boolean = false,
+    metadata: Option[MetaDto] = None
   )
 
   /** `kind`: "message" | "init" | "other" | "term". For "message", `message` carries the message
@@ -307,7 +318,10 @@ object JsonModel:
     kind: String,
     message: Option[MessageRefDto] = None,
     statements: Seq[StatementDto] = Nil,
-    binding: Option[String] = None
+    binding: Option[String] = None,
+    metadata: Option[MetaDto] = None,
+    // An on-clause may be documented like any other definition (`on other { … } with { briefly … }`).
+    brief: Option[String] = None
   )
 
   case class MessageRefDto(ref: String, kind: String)
@@ -319,7 +333,8 @@ object JsonModel:
     name: String,
     condition: String,
     brief: Option[String] = None,
-    expression: Option[ValueDto] = None
+    expression: Option[ValueDto] = None,
+    metadata: Option[MetaDto] = None
   )
 
   /** A53: a scope's version component — `{ "name": "Garibaldi" }` for the named form or `{ "name":
@@ -329,7 +344,8 @@ object JsonModel:
   case class VersionDto(
     name: String,
     numeric: Boolean = false,
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
   )
 
   /** A47: a scope's copyright notice — `{ "name": "C", "text": "\u00a9 2026 Ossum Inc." }`. `text`
@@ -338,10 +354,16 @@ object JsonModel:
   case class CopyrightDto(
     name: String,
     text: String,
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
   )
 
-  case class FieldDto(name: String, `type`: TypeExprDto, brief: Option[String] = None)
+  case class FieldDto(
+    name: String,
+    `type`: TypeExprDto,
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
+  )
 
   /** A9: a Function/Saga `requires`/`returns` value — either a named type reference (`ref` =
     * "keyword path", e.g. "record Args", the preferred form) or a deprecated inline field list
@@ -359,7 +381,8 @@ object JsonModel:
     output: Option[ArgDto] = None,
     types: Seq[TypeDefDto] = Nil,
     statements: Seq[StatementDto] = Nil,
-    functions: Seq[FunctionDto] = Nil
+    functions: Seq[FunctionDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   // ---------------------------------------------------------------------------
@@ -553,14 +576,26 @@ object JsonModel:
     invariants: Seq[InvariantDto] = Nil,
     streamlets: Seq[StreamletDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
-    relationships: Seq[RelationshipDto] = Nil
+    relationships: Seq[RelationshipDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   /** An inlet or outlet: `{ "name": "in", "type": "<typePath>", "brief"?: ... }` */
-  case class PortletDto(name: String, `type`: String, brief: Option[String] = None)
+  case class PortletDto(
+    name: String,
+    `type`: String,
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
+  )
 
   /** `{ "name": "C", "from": "<outletPath>", "to": "<inletPath>", "brief"?: ... }` */
-  case class ConnectorDto(name: String, from: String, to: String, brief: Option[String] = None)
+  case class ConnectorDto(
+    name: String,
+    from: String,
+    to: String,
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
+  )
 
   /** `{ "name": "S", "shape"?: "source"|"sink"|"flow"|"merge"|"split"|"router"|"void", ... }`.
     * `shape` is the OPTIONAL author-ascribed shape (absent = derived from arity).
@@ -586,7 +621,8 @@ object JsonModel:
     functions: Seq[FunctionDto] = Nil,
     invariants: Seq[InvariantDto] = Nil,
     streamlets: Seq[StreamletDto] = Nil,
-    relationships: Seq[RelationshipDto] = Nil
+    relationships: Seq[RelationshipDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "name": "R", "withProcessor": "<path>", "processor": "entity"|..., "cardinality":
@@ -598,7 +634,8 @@ object JsonModel:
     processor: String,
     cardinality: String,
     label: Option[String] = None,
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "name": "P", "repository"?: "<path>", ... }` */
@@ -625,7 +662,8 @@ object JsonModel:
     invariants: Seq[InvariantDto] = Nil,
     streamlets: Seq[StreamletDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
-    relationships: Seq[RelationshipDto] = Nil
+    relationships: Seq[RelationshipDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   /** A repository schema: `{ "name": "S", "kind"?: "Relational"|..., "data"?: {field->typePath},
@@ -637,7 +675,8 @@ object JsonModel:
     data: Map[String, String] = Map.empty,
     links: Map[String, Seq[String]] = Map.empty,
     indices: Seq[String] = Nil,
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "name": "Repo", "schema"?: <schema>, ... }` */
@@ -667,7 +706,8 @@ object JsonModel:
     invariants: Seq[InvariantDto] = Nil,
     streamlets: Seq[StreamletDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
-    relationships: Seq[RelationshipDto] = Nil
+    relationships: Seq[RelationshipDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   // ---------------------------------------------------------------------------
@@ -679,7 +719,8 @@ object JsonModel:
     name: String,
     `do`: Seq[StatementDto] = Nil,
     undo: Seq[StatementDto] = Nil,
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "name": "Booking", "input"?: [<field>], "output"?: [<field>], "types"?: [...], "steps":
@@ -691,7 +732,8 @@ object JsonModel:
     input: Option[ArgDto] = None,
     output: Option[ArgDto] = None,
     types: Seq[TypeDefDto] = Nil,
-    steps: Seq[SagaStepDto] = Nil
+    steps: Seq[SagaStepDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   // ---------------------------------------------------------------------------
@@ -730,7 +772,8 @@ object JsonModel:
     name: String,
     userStory: UserStoryDto,
     interactions: Seq[InteractionDto] = Nil,
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "name": "Checkout", "userStory": <userStory>, "shownBy"?: [url], "types"?: [...],
@@ -742,7 +785,8 @@ object JsonModel:
     brief: Option[String] = None,
     shownBy: Seq[String] = Nil,
     types: Seq[TypeDefDto] = Nil,
-    useCases: Seq[UseCaseDto] = Nil
+    useCases: Seq[UseCaseDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   // ---------------------------------------------------------------------------
@@ -781,7 +825,12 @@ object JsonModel:
   )
 
   /** `{ "name": "Sub", "group": "<groupPath>", "brief"?: ... }` */
-  case class ContainedGroupDto(name: String, group: String, brief: Option[String] = None)
+  case class ContainedGroupDto(
+    name: String,
+    group: String,
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
+  )
 
   /** `{ "name": "Main", "alias"?: "group", "groups"?: [...], "containedGroups"?: [...], "inputs"?:
     * [...], "outputs"?: [...], "brief"?: ... }`
@@ -825,7 +874,9 @@ object JsonModel:
     byAuthors: Seq[String] = Nil,
     attachments: Seq[AttachmentDto] = Nil,
     comments: Seq[String] = Nil,
-    figmaRefs: Seq[FigmaRefDto] = Nil
+    figmaRefs: Seq[FigmaRefDto] = Nil,
+    // A `described at <url>` description, which points at prose kept outside the model.
+    urlDescription: Option[String] = None
   )
 
   // ---------------------------------------------------------------------------

@@ -252,11 +252,20 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[HandlerDto],
             col[InvariantDto],
             briefOf(s.metadata),
-            s.isInitial
+            s.isInitial,
+            metaOf(s.metadata)
           )
         )
       case h: Handler =>
-        Some(HandlerDto(h.id.value, briefOf(h.metadata), col[OnClauseDto], h.isInitial))
+        Some(
+          HandlerDto(
+            h.id.value,
+            briefOf(h.metadata),
+            col[OnClauseDto],
+            h.isInitial,
+            metaOf(h.metadata)
+          )
+        )
       case oc: OnClause =>
         val statements = serializeStatements(oc.contents)
         oc match
@@ -267,7 +276,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 "message",
                 Some(messageRefDto(omc.msg)),
                 statements,
-                omc.binding.map(_.value)
+                omc.binding.map(_.value),
+                metaOf(omc.metadata),
+                briefOf(omc.metadata)
               )
             )
           case oec: OnEventClause =>
@@ -276,14 +287,61 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 "event",
                 Some(messageRefDto(oec.msg)),
                 statements,
-                oec.binding.map(_.value)
+                oec.binding.map(_.value),
+                metaOf(oec.metadata),
+                briefOf(oec.metadata)
               )
             )
-          case _: OnInitializationClause => Some(OnClauseDto("init", None, statements))
-          case _: OnTerminationClause    => Some(OnClauseDto("term", None, statements))
-          case _: OnActivationClause     => Some(OnClauseDto("activate", None, statements))
-          case _: OnPassivationClause    => Some(OnClauseDto("passivate", None, statements))
-          case _                         => Some(OnClauseDto("other", None, statements))
+          case _: OnInitializationClause =>
+            Some(
+              OnClauseDto(
+                "init",
+                None,
+                statements,
+                metadata = metaOf(oc.metadata),
+                brief = briefOf(oc.metadata)
+              )
+            )
+          case _: OnTerminationClause =>
+            Some(
+              OnClauseDto(
+                "term",
+                None,
+                statements,
+                metadata = metaOf(oc.metadata),
+                brief = briefOf(oc.metadata)
+              )
+            )
+          case _: OnActivationClause =>
+            Some(
+              OnClauseDto(
+                "activate",
+                None,
+                statements,
+                metadata = metaOf(oc.metadata),
+                brief = briefOf(oc.metadata)
+              )
+            )
+          case _: OnPassivationClause =>
+            Some(
+              OnClauseDto(
+                "passivate",
+                None,
+                statements,
+                metadata = metaOf(oc.metadata),
+                brief = briefOf(oc.metadata)
+              )
+            )
+          case _ =>
+            Some(
+              OnClauseDto(
+                "other",
+                None,
+                statements,
+                metadata = metaOf(oc.metadata),
+                brief = briefOf(oc.metadata)
+              )
+            )
       case t: Type =>
         t.typEx match
           case a: AggregateUseCaseTypeExpression if messageUseCase(a.usecase) =>
@@ -294,7 +352,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                   t.id.value,
                   briefOf(t.metadata),
                   a.fields.map(serializeField),
-                  a.yields.map(messageRefDto)
+                  a.yields.map(messageRefDto),
+                  metaOf(t.metadata)
                 )
               )
             )
@@ -333,7 +392,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InvariantDto],
             col[StreamletDto],
             col[ConnectorDto],
-            col[RelationshipDto]
+            col[RelationshipDto],
+            metaOf(a.metadata)
           )
         )
       case s: Streamlet =>
@@ -357,7 +417,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[FunctionDto],
             col[InvariantDto],
             col[StreamletDto],
-            col[RelationshipDto]
+            col[RelationshipDto],
+            metaOf(s.metadata)
           )
         )
       case p: Projector =>
@@ -383,7 +444,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InvariantDto],
             col[StreamletDto],
             col[ConnectorDto],
-            col[RelationshipDto]
+            col[RelationshipDto],
+            metaOf(p.metadata)
           )
         )
       case r: Repository =>
@@ -411,7 +473,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InvariantDto],
             col[StreamletDto],
             col[ConnectorDto],
-            col[RelationshipDto]
+            col[RelationshipDto],
+            metaOf(r.metadata)
           )
         )
       case s: Saga =>
@@ -422,7 +485,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             argDto(s.input),
             argDto(s.output),
             col[TypeDefDto],
-            col[SagaStepDto]
+            col[SagaStepDto],
+            metaOf(s.metadata)
           )
         )
       case f: Function =>
@@ -434,7 +498,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             argDto(f.output),
             col[TypeDefDto],
             f.contents.toSeq.collect { case st: Statement => serializeStatement(st) },
-            col[FunctionDto]
+            col[FunctionDto],
+            metaOf(f.metadata)
           )
         )
       case g: Group =>
@@ -483,7 +548,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             uc.id.value,
             serializeUserStory(uc.userStory),
             interactions,
-            briefOf(uc.metadata)
+            briefOf(uc.metadata),
+            metaOf(uc.metadata)
           )
         )
       case e: Epic =>
@@ -497,14 +563,23 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             briefOf(e.metadata),
             shownBy,
             col[TypeDefDto],
-            col[UseCaseDto]
+            col[UseCaseDto],
+            metaOf(e.metadata)
           )
         )
       case _ => None // interaction containers etc. — read from their parent node directly
 
   private def buildLeaf(l: Leaf): Option[Any] = l match
     case c: Constant =>
-      Some(ConstantDto(c.id.value, serializeTypeExpr(c.typeEx), c.value.s, briefOf(c.metadata)))
+      Some(
+        ConstantDto(
+          c.id.value,
+          serializeTypeExpr(c.typeEx),
+          c.value.s,
+          briefOf(c.metadata),
+          metaOf(c.metadata)
+        )
+      )
     case i: Invariant =>
       // A28: a LiteralString condition serializes to the `condition` string; a BooleanExpression to
       // the structured `expression` field (with `condition` empty).
@@ -512,20 +587,47 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         case Some(ls: LiteralString)     => (ls.s, None)
         case Some(be: BooleanExpression) => ("", Some(serializeValue(be)))
         case None                        => ("", None)
-      Some(InvariantDto(i.id.value, condStr, briefOf(i.metadata), condExpr))
+      Some(InvariantDto(i.id.value, condStr, briefOf(i.metadata), condExpr, metaOf(i.metadata)))
     // A53: `name` is the rendered component; `numeric` records whether it was written as a number.
-    case v: Version => Some(VersionDto(v.component, v.isNumeric, briefOf(v.metadata)))
+    case v: Version =>
+      Some(VersionDto(v.component, v.isNumeric, briefOf(v.metadata), metaOf(v.metadata)))
     // A47: the notice is carried verbatim; the name identifies it for generators.
-    case c: Copyright => Some(CopyrightDto(c.id.value, c.notice, briefOf(c.metadata)))
-    case u: User      => Some(UserDto(u.id.value, u.is_a.s, briefOf(u.metadata)))
+    case c: Copyright =>
+      Some(CopyrightDto(c.id.value, c.notice, briefOf(c.metadata), metaOf(c.metadata)))
+    case u: User => Some(UserDto(u.id.value, u.is_a.s, briefOf(u.metadata), metaOf(u.metadata)))
     case a: Author =>
-      Some(AuthorDto(a.id.value, a.name.s, a.email.s, a.organization.map(_.s), a.title.map(_.s)))
+      Some(
+        AuthorDto(
+          a.id.value,
+          a.name.s,
+          a.email.s,
+          a.organization.map(_.s),
+          a.title.map(_.s),
+          metaOf(a.metadata)
+        )
+      )
     case i: Inlet =>
-      Some(InletChild(PortletDto(i.id.value, path(i.type_.pathId), briefOf(i.metadata))))
+      Some(
+        InletChild(
+          PortletDto(i.id.value, path(i.type_.pathId), briefOf(i.metadata), metaOf(i.metadata))
+        )
+      )
     case o: Outlet =>
-      Some(OutletChild(PortletDto(o.id.value, path(o.type_.pathId), briefOf(o.metadata))))
+      Some(
+        OutletChild(
+          PortletDto(o.id.value, path(o.type_.pathId), briefOf(o.metadata), metaOf(o.metadata))
+        )
+      )
     case c: Connector =>
-      Some(ConnectorDto(c.id.value, path(c.from.pathId), path(c.to.pathId), briefOf(c.metadata)))
+      Some(
+        ConnectorDto(
+          c.id.value,
+          path(c.from.pathId),
+          path(c.to.pathId),
+          briefOf(c.metadata),
+          metaOf(c.metadata)
+        )
+      )
     case r: Relationship =>
       val (p, kind) = processorRef(r.withProcessor)
       Some(
@@ -535,7 +637,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           kind,
           r.cardinality.proportion,
           r.label.map(_.s),
-          briefOf(r.metadata)
+          briefOf(r.metadata),
+          metaOf(r.metadata)
         )
       )
     case sc: Schema =>
@@ -546,7 +649,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           sc.data.map { case (id, tr) => id.value -> path(tr.pathId) },
           sc.links.map { case (id, (a, b)) => id.value -> Seq(path(a.pathId), path(b.pathId)) },
           sc.indices.map(fr => path(fr.pathId)),
-          briefOf(sc.metadata)
+          briefOf(sc.metadata),
+          metaOf(sc.metadata)
         )
       )
     case st: SagaStep =>
@@ -555,11 +659,19 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           st.id.value,
           serializeStatements(st.doStatements),
           serializeStatements(st.undoStatements),
-          briefOf(st.metadata)
+          briefOf(st.metadata),
+          metaOf(st.metadata)
         )
       )
     case cg: ContainedGroup =>
-      Some(ContainedGroupDto(cg.id.value, path(cg.group.pathId), briefOf(cg.metadata)))
+      Some(
+        ContainedGroupDto(
+          cg.id.value,
+          path(cg.group.pathId),
+          briefOf(cg.metadata),
+          metaOf(cg.metadata)
+        )
+      )
     case _ => None // Field / Method / Enumerator — captured via their Type's typEx
 
   // ---------------------------------------------------------------------------
@@ -589,13 +701,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     }
     val comments = items.collect { case c: LineComment => c.text }
     val figmaRefs = items.collect { case fr: FigmaRef => FigmaRefDto(fr.fileKey.s, fr.nodeId.s) }
+    val url = items.collectFirst { case u: URLDescription => u.url.toExternalForm }
     if descr.isEmpty && terms.isEmpty && options.isEmpty && authors.isEmpty && attachments.isEmpty &&
-      comments.isEmpty && figmaRefs.isEmpty
+      comments.isEmpty && figmaRefs.isEmpty && url.isEmpty
     then None
-    else Some(MetaDto(descr, terms, options, authors, attachments, comments, figmaRefs))
+    else Some(MetaDto(descr, terms, options, authors, attachments, comments, figmaRefs, url))
 
   private def serializeField(f: Field): FieldDto =
-    FieldDto(f.id.value, serializeTypeExpr(f.typeEx), briefOf(f.metadata))
+    FieldDto(f.id.value, serializeTypeExpr(f.typeEx), briefOf(f.metadata), metaOf(f.metadata))
 
   private def serializeMethod(m: Method): MethodDto =
     MethodDto(

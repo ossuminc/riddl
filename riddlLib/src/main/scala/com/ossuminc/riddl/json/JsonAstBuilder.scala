@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, Contents}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.{Message, Messages}
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{PlatformContext, URL}
 
 import scala.collection.mutable
 
@@ -28,7 +28,7 @@ object JsonAstBuilder:
   import JsonModel.*
 
   /** Build a `Root` from the wire model, or the accumulated builder errors. */
-  def build(dto: RootDto): Either[Messages, Root] =
+  def build(dto: RootDto)(using PlatformContext): Either[Messages, Root] =
     given ctx: Ctx = new Ctx
     val domains = dto.domains.map(buildDomain)
     val modules = dto.modules.map(buildModule)
@@ -97,8 +97,14 @@ object JsonAstBuilder:
       meta(m.brief, m.metadata)
     )
 
-  /** Mutable error sink threaded through construction. */
-  private final class Ctx:
+  /** Mutable error sink threaded through construction, and the platform capability that one
+    * metadata kind needs. A `described at <url>` description holds a loader so that its lines can
+    * be fetched on demand; rebuilding the node therefore needs a `PlatformContext`, even though
+    * nothing here loads anything — `URLDescription.lines` is lazy, so the builder stays no-I/O.
+    * Carrying it on `Ctx`, which is already threaded through every `build*`, keeps that requirement
+    * from spreading across two dozen signatures.
+    */
+  private final class Ctx(using val pc: PlatformContext):
     val errors: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
     def err(message: String): Unit = errors += Messages.error(message)
 
@@ -114,7 +120,9 @@ object JsonAstBuilder:
     * [[JsonModel.MetaDto]] (description, terms, options, author refs, attachments, comments). Pure
     * — references are resolved later by the passes.
     */
-  private def meta(brief: Option[String], md: Option[MetaDto] = None): Contents[MetaData] =
+  private def meta(brief: Option[String], md: Option[MetaDto] = None)(using
+    ctx: Ctx
+  ): Contents[MetaData] =
     val items = mutable.ArrayBuffer.empty[MetaData]
     brief.foreach(b => items += BriefDescription(At(), LiteralString(At(), b)))
     md.foreach { m =>
@@ -135,6 +143,8 @@ object JsonAstBuilder:
       m.figmaRefs.foreach(fr =>
         items += FigmaRef(At(), LiteralString(At(), fr.fileKey), LiteralString(At(), fr.nodeId))
       )
+      import ctx.pc
+      m.urlDescription.foreach(u => items += URLDescription(At(), URL(u)))
     }
     Contents[MetaData](items.toSeq*)
   end meta
@@ -188,8 +198,8 @@ object JsonAstBuilder:
       meta(d.brief, d.metadata)
     )
 
-  private def buildUser(u: UserDto): User =
-    User(At(), ident(u.name), LiteralString(At(), u.isA), meta(u.brief))
+  private def buildUser(u: UserDto)(using Ctx): User =
+    User(At(), ident(u.name), LiteralString(At(), u.isA), meta(u.brief, u.metadata))
 
   private def buildConstant(c: ConstantDto)(using Ctx): Constant =
     Constant(
@@ -197,21 +207,21 @@ object JsonAstBuilder:
       ident(c.name),
       buildTypeExpr(c.`type`),
       LiteralString(At(), c.value),
-      meta(c.brief)
+      meta(c.brief, c.metadata)
     )
 
   /** A53: `name` always carries the rendered component; `numeric` says how it was written, and the
     * `number` field is re-derived from the name so the two stay in step.
     */
-  private def buildVersion(v: VersionDto): Version =
+  private def buildVersion(v: VersionDto)(using Ctx): Version =
     val number = if v.numeric then v.name.toLongOption else None
-    Version(At(), ident(v.name), number, meta(v.brief))
+    Version(At(), ident(v.name), number, meta(v.brief, v.metadata))
 
   /** A47: the notice is carried verbatim in `text`; `name` identifies it. */
-  private def buildCopyright(c: CopyrightDto): Copyright =
-    Copyright(At(), ident(c.name), LiteralString(At(), c.text), meta(c.brief))
+  private def buildCopyright(c: CopyrightDto)(using Ctx): Copyright =
+    Copyright(At(), ident(c.name), LiteralString(At(), c.text), meta(c.brief, c.metadata))
 
-  private def buildAuthor(a: AuthorDto): Author =
+  private def buildAuthor(a: AuthorDto)(using Ctx): Author =
     Author(
       At(),
       ident(a.name),
@@ -220,7 +230,7 @@ object JsonAstBuilder:
       a.organization.map(LiteralString(At(), _)),
       a.title.map(LiteralString(At(), _)),
       None,
-      Contents.empty[MetaData]()
+      meta(None, a.metadata)
     )
 
   private def buildType(t: TypeDefDto)(using Ctx): Type =
@@ -292,10 +302,10 @@ object JsonAstBuilder:
       Contents[AggregateContents](fields*),
       m.yields.map(messageRef)
     )
-    Type(At(), ident(m.name), typEx, meta(m.brief))
+    Type(At(), ident(m.name), typEx, meta(m.brief, m.metadata))
 
   private def buildField(f: FieldDto)(using Ctx): Field =
-    Field(At(), ident(f.name), buildTypeExpr(f.`type`), meta(f.brief))
+    Field(At(), ident(f.name), buildTypeExpr(f.`type`), meta(f.brief, f.metadata))
 
   /** A field list as an optional Aggregation (None when empty) — used for function and saga
     * input/output.
@@ -323,7 +333,7 @@ object JsonAstBuilder:
 
   private def buildMethod(m: MethodDto)(using Ctx): Method =
     val args = m.args.map(a => MethodArgument(At(), a.name, buildTypeExpr(a.`type`)))
-    Method(At(), ident(m.name), buildTypeExpr(m.`type`), args, meta(m.brief))
+    Method(At(), ident(m.name), buildTypeExpr(m.`type`), args, meta(m.brief, m.metadata))
 
   private def buildEntity(e: EntityDto)(using Ctx): Entity =
     val types = e.types.map(buildType)
@@ -379,18 +389,25 @@ object JsonAstBuilder:
       ident(s.name),
       RecordRef(At(), pathId(s.recordType)), // A9b: state type is a RecordRef
       contentsOf[StateContents](s.handlers.map(buildHandler), s.invariants.map(buildInvariant)),
-      meta(s.brief),
+      meta(s.brief, s.metadata),
       s.isInitial
     )
 
   private def buildHandler(h: HandlerDto)(using Ctx): Handler =
     val clauses = h.onClauses.map(buildOnClause)
-    Handler(At(), ident(h.name), contentsOf[HandlerContents](clauses), meta(h.brief), h.isInitial)
+    Handler(
+      At(),
+      ident(h.name),
+      contentsOf[HandlerContents](clauses),
+      meta(h.brief, h.metadata),
+      h.isInitial
+    )
 
   private def buildOnClause(oc: OnClauseDto)(using ctx: Ctx): OnClause =
     val statements = buildStatements(oc.statements)
     // A55: the optional local name bound to the handled message
     val binding: Option[Identifier] = oc.binding.map(ident)
+    val md = meta(oc.brief, oc.metadata)
     oc.kind match
       case "message" =>
         oc.message match
@@ -401,7 +418,7 @@ object JsonAstBuilder:
               None,
               binding,
               statements,
-              Contents.empty[MetaData]()
+              md
             )
           case None =>
             ctx.err("on-clause of kind 'message' requires a 'message' reference")
@@ -411,7 +428,7 @@ object JsonAstBuilder:
               None,
               binding,
               statements,
-              Contents.empty[MetaData]()
+              md
             )
       case "event" =>
         oc.message match
@@ -422,7 +439,7 @@ object JsonAstBuilder:
               None,
               binding,
               statements,
-              Contents.empty[MetaData]()
+              md
             )
           case None =>
             ctx.err("on-clause of kind 'event' requires a 'message' reference")
@@ -432,18 +449,18 @@ object JsonAstBuilder:
               None,
               binding,
               statements,
-              Contents.empty[MetaData]()
+              md
             )
-      case "init"      => OnInitializationClause(At(), statements, Contents.empty[MetaData]())
-      case "other"     => OnOtherClause(At(), statements, Contents.empty[MetaData]())
-      case "term"      => OnTerminationClause(At(), statements, Contents.empty[MetaData]())
-      case "activate"  => OnActivationClause(At(), statements, Contents.empty[MetaData]())
-      case "passivate" => OnPassivationClause(At(), statements, Contents.empty[MetaData]())
+      case "init"      => OnInitializationClause(At(), statements, md)
+      case "other"     => OnOtherClause(At(), statements, md)
+      case "term"      => OnTerminationClause(At(), statements, md)
+      case "activate"  => OnActivationClause(At(), statements, md)
+      case "passivate" => OnPassivationClause(At(), statements, md)
       case other =>
         ctx.err(
           s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate)"
         )
-        OnOtherClause(At(), statements, Contents.empty[MetaData]())
+        OnOtherClause(At(), statements, md)
     end match
   end buildOnClause
 
@@ -469,7 +486,7 @@ object JsonAstBuilder:
             ctx.err("invariant 'expression' must be a boolean expression")
             Some(LiteralString(At(), ""))
       case None => Some(LiteralString(At(), i.condition))
-    Invariant(At(), ident(i.name), cond, meta(i.brief))
+    Invariant(At(), ident(i.name), cond, meta(i.brief, i.metadata))
 
   // ---------------------------------------------------------------------------
   // Functions and statements (Phase 3)
@@ -485,7 +502,7 @@ object JsonAstBuilder:
       argOf(f.input),
       argOf(f.output),
       contentsOf[FunctionContents](types, statements, functions),
-      meta(f.brief)
+      meta(f.brief, f.metadata)
     )
 
   private def buildSagaStep(st: SagaStepDto)(using Ctx): SagaStep =
@@ -494,7 +511,7 @@ object JsonAstBuilder:
       ident(st.name),
       buildStatements(st.`do`),
       buildStatements(st.undo),
-      meta(st.brief)
+      meta(st.brief, st.metadata)
     )
 
   private def buildSaga(s: SagaDto)(using Ctx): Saga =
@@ -506,7 +523,7 @@ object JsonAstBuilder:
       argOf(s.input),
       argOf(s.output),
       contentsOf[SagaContents](types, steps),
-      meta(s.brief)
+      meta(s.brief, s.metadata)
     )
 
   // ---------------------------------------------------------------------------
@@ -619,7 +636,7 @@ object JsonAstBuilder:
       ident(u.name),
       buildUserStory(u.userStory),
       contentsOf[UseCaseContents](u.interactions.map(buildInteraction)),
-      meta(u.brief)
+      meta(u.brief, u.metadata)
     )
 
   private def buildEpic(e: EpicDto)(using Ctx): Epic =
@@ -631,7 +648,7 @@ object JsonAstBuilder:
       ident(e.name),
       buildUserStory(e.userStory),
       contentsOf[EpicContents](types, shownBy, useCases),
-      meta(e.brief)
+      meta(e.brief, e.metadata)
     )
 
   // ---------------------------------------------------------------------------
@@ -669,8 +686,13 @@ object JsonAstBuilder:
       meta(o.brief, o.metadata)
     )
 
-  private def buildContainedGroup(cg: ContainedGroupDto): ContainedGroup =
-    ContainedGroup(At(), ident(cg.name), GroupRef(At(), "group", pathId(cg.group)), meta(cg.brief))
+  private def buildContainedGroup(cg: ContainedGroupDto)(using Ctx): ContainedGroup =
+    ContainedGroup(
+      At(),
+      ident(cg.name),
+      GroupRef(At(), "group", pathId(cg.group)),
+      meta(cg.brief, cg.metadata)
+    )
 
   private def buildGroup(g: GroupDto)(using Ctx): Group =
     val groups = g.groups.map(buildGroup)
@@ -963,7 +985,7 @@ object JsonAstBuilder:
         relationships
       ),
       ascribedShape = parseShape(a.shape),
-      metadata = meta(a.brief)
+      metadata = meta(a.brief, a.metadata)
     )
 
   /** Rebuild a Processor's OPTIONAL ascribed shape from its keyword (absent = None). */
@@ -976,19 +998,19 @@ object JsonAstBuilder:
   private def parseIntention(s: Option[String]): Option[Intention] =
     s.flatMap(Intention.fromKeyword)
 
-  private def buildInlet(p: PortletDto): Inlet =
-    Inlet(At(), ident(p.name), TypeRef(At(), "type", pathId(p.`type`)), meta(p.brief))
+  private def buildInlet(p: PortletDto)(using Ctx): Inlet =
+    Inlet(At(), ident(p.name), TypeRef(At(), "type", pathId(p.`type`)), meta(p.brief, p.metadata))
 
-  private def buildOutlet(p: PortletDto): Outlet =
-    Outlet(At(), ident(p.name), TypeRef(At(), "type", pathId(p.`type`)), meta(p.brief))
+  private def buildOutlet(p: PortletDto)(using Ctx): Outlet =
+    Outlet(At(), ident(p.name), TypeRef(At(), "type", pathId(p.`type`)), meta(p.brief, p.metadata))
 
-  private def buildConnector(c: ConnectorDto): Connector =
+  private def buildConnector(c: ConnectorDto)(using Ctx): Connector =
     Connector(
       At(),
       ident(c.name),
       OutletRef(At(), pathId(c.from)),
       InletRef(At(), pathId(c.to)),
-      meta(c.brief)
+      meta(c.brief, c.metadata)
     )
 
   private def buildStreamlet(s: StreamletDto)(using Ctx): Streamlet =
@@ -1030,7 +1052,7 @@ object JsonAstBuilder:
         nested,
         relationships
       ),
-      meta(s.brief)
+      meta(s.brief, s.metadata)
     )
 
   private def relationshipCardinality(s: String)(using ctx: Ctx): RelationshipCardinality =
@@ -1050,7 +1072,7 @@ object JsonAstBuilder:
       processorRef(r.withProcessor, r.processor),
       relationshipCardinality(r.cardinality),
       r.label.map(LiteralString(At(), _)),
-      meta(r.brief)
+      meta(r.brief, r.metadata)
     )
 
   private def buildProjector(p: ProjectorDto)(using Ctx): Projector =
@@ -1089,7 +1111,7 @@ object JsonAstBuilder:
         connectors,
         relationships
       ),
-      metadata = meta(p.brief)
+      metadata = meta(p.brief, p.metadata)
     )
 
   private def schemaKind(s: Option[String])(using ctx: Ctx): RepositorySchemaKind =
@@ -1116,7 +1138,7 @@ object JsonAstBuilder:
         None
     }
     val indices = s.indices.map(f => FieldRef(At(), pathId(f)))
-    Schema(At(), ident(s.name), schemaKind(s.kind), data, links, indices, meta(s.brief))
+    Schema(At(), ident(s.name), schemaKind(s.kind), data, links, indices, meta(s.brief, s.metadata))
 
   private def buildRepository(r: RepositoryDto)(using Ctx): Repository =
     val types = r.types.map(buildType)
@@ -1157,7 +1179,7 @@ object JsonAstBuilder:
         connectors,
         relationships
       ),
-      metadata = meta(r.brief)
+      metadata = meta(r.brief, r.metadata)
     )
 
   // ---------------------------------------------------------------------------
