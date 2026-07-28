@@ -9,6 +9,7 @@ package com.ossuminc.riddl.language
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.PlatformContext
+import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 /** IDE integration tests
@@ -22,7 +23,7 @@ import org.scalatest.TestData
   *
   * Priority 8: IDE-Specific Tests from test-coverage-analysis.md
   */
-class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
+class IDEIntegrationTest extends ParsingTest {
   import IDEIntegrationTest.*
 
   private def parseModel(input: String): Either[Messages.Messages, Root] = {

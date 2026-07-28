@@ -9,6 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.utils.PlatformContext
+import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 /** Error path and recovery tests for RIDDL parsers
@@ -23,7 +24,7 @@ import org.scalatest.TestData
   *
   * Priority 6: Error Path Tests from test-coverage-analysis.md
   */
-class ParserErrorRecoveryTest(using PlatformContext) extends ParsingTest {
+class ParserErrorRecoveryTest extends ParsingTest {
 
   "Parser malformed input handling" should {
 

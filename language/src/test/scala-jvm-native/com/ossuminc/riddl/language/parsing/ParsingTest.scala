@@ -15,6 +15,7 @@ import fastparse.*
 
 import java.nio.file.{Files, Path}
 import scala.annotation.unused
+import scala.util.control.NonFatal
 import scala.concurrent.duration.DurationInt
 import scala.reflect.*
 
@@ -24,20 +25,26 @@ trait ParsingTest extends AbstractParsingTest {
   def parsePath(
     path: Path
   ): Either[Messages, Root] = {
-    if Files.exists(path) then
-      if Files.isReadable(path) then {
-        val url = PathUtils.urlFromCwdPath(path, "")
+    if !Files.exists(path) then Left(List(error(s"Input file `$path` does not exist.")))
+    else if Files.isDirectory(path) then
+      Left(List(error(s"`$path` is a directory, not a RIDDL input file.")))
+    else if !Files.isReadable(path) then Left(List(error(s"Input file `$path` is not readable.")))
+    else
+      // An ABSOLUTE path cannot go through urlFromCwdPath: URL.fromCwdPath requires a relative one
+      // and throws otherwise, so any test parsing a temp file failed here before reaching the
+      // parser.
+      val url =
+        if path.isAbsolute then URL.fromFullPath(path.toString)
+        else PathUtils.urlFromCwdPath(path, "")
+      try
         val future = RiddlParserInput.fromURL(url, "").map { rpi => TopLevelParser.parseInput(rpi) }
         Await.result(future, 10.seconds)
-      } else {
-        val message: Message = error(s"Input file `${path.toString} is not readable.")
-        Left(List(message))
-      }
-      end if
-    else {
-      val message: Message = error(s"Input file `${path.toString} does not exist.")
-      Left(List(message))
-    }
+      catch
+        // Unreadable content — a binary file, a bad encoding — is an ordinary bad input, not a
+        // crash. Report it as a message like any other so a caller can handle it uniformly.
+        case NonFatal(x) =>
+          Left(List(error(s"Could not read `$path`: ${x.getClass.getSimpleName}: ${x.getMessage}")))
+      end try
     end if
   }
 

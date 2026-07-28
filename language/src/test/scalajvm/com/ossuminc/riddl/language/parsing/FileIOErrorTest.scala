@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.utils.{Await, PathUtils, PlatformContext}
+import com.ossuminc.riddl.utils.{Await, PathUtils, PlatformContext, pc}
 import org.scalatest.TestData
 
 import java.nio.file.{Files, Path, Paths}
@@ -25,7 +25,7 @@ import scala.concurrent.duration.DurationInt
   *
   * Priority 6: Error Path Tests from test-coverage-analysis.md
   */
-class FileIOErrorTest(using PlatformContext) extends ParsingTest {
+class FileIOErrorTest extends ParsingTest {
   import FileIOErrorTest.*
 
   "RiddlParserInput file error handling" should {
@@ -187,9 +187,11 @@ class FileIOErrorTest(using PlatformContext) extends ParsingTest {
     "handle URL to non-existent file" in { (_: TestData) =>
       val nonExistentPath = Path.of("/tmp/riddl-test-nonexistent-12345.riddl")
       val url = PathUtils.urlFromFullPath(nonExistentPath)
-      val future = RiddlParserInput.fromURL(url)
 
       try {
+        // fromURL throws SYNCHRONOUSLY when the file is missing, so it has to be inside the try —
+        // outside it, the exception escapes the handler that exists to catch it.
+        val future = RiddlParserInput.fromURL(url)
         val result = Await.result(future, 5.seconds)
         // Should fail or return error - test passes if we get here
         succeed

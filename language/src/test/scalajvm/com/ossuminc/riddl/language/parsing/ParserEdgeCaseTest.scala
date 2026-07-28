@@ -9,6 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.utils.PlatformContext
+import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 /** Comprehensive edge case tests for RIDDL parsers
@@ -24,7 +25,7 @@ import org.scalatest.TestData
   *
   * Priority 5: Edge Case Tests from test-coverage-analysis.md
   */
-class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
+class ParserEdgeCaseTest extends ParsingTest {
   import ParserEdgeCaseTest.*
 
   "Parser empty input handling" should {
@@ -64,10 +65,11 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
     }
 
     "handle domain with only comments" in { (_: TestData) =>
+      // `???` marks an EMPTY body, so it cannot follow content. Comments are content: Comment is
+      // a member of AST.OccursInDomain, so a domain holding only comments is already well-formed.
       val input = """domain OnlyComments is {
                     |  // This is a comment
                     |  /* This is another comment */
-                    |  ???
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -142,7 +144,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle Unicode in string literals" in { (_: TestData) =>
       val input = """domain Test is {
-                    |  type Message is String briefly "Hello 世界 🌍"
+                    |  type Message is String with { briefly "Hello 世界 🌍" }
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -157,6 +159,8 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
     "handle Unicode in descriptions" in { (_: TestData) =>
       val input = """domain Test is {
                     |  context Ctx is {
+                    |    ???
+                    |  } with {
                     |    explained as {
                     |      | Unicode characters: 日本語, 한글, العربية, עברית
                     |    }
@@ -173,7 +177,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle emoji in descriptions" in { (_: TestData) =>
       val input = """domain Test is {
-                    |  type Status is String briefly "✅ Success or ❌ Failure"
+                    |  type Status is String with { briefly "✅ Success or ❌ Failure" }
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -187,7 +191,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
     "handle multi-byte characters in various contexts" in { (_: TestData) =>
       val input = """domain Test is {
                     |  // Comment with Unicode: 测试
-                    |  type Message is String briefly "Multi-byte: à è ì ò ù"
+                    |  type Message is String with { briefly "Multi-byte: à è ì ò ù" }
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -204,7 +208,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
     "handle very long string literals (1000+ chars)" in { (_: TestData) =>
       val longString = "A" * LONG_STRING_LENGTH
       val input = s"""domain Test is {
-                     |  type LongString is String briefly "$longString"
+                     |  type LongString is String with { briefly "$longString" }
                      |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -245,7 +249,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle zero" in { (_: TestData) =>
       val input = """domain Test is {
-                    |  type Zero is Number(0)
+                    |  type Zero is range(0,0)
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -276,15 +280,17 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
   "Parser nesting depth edge cases" should {
 
-    "handle deeply nested contexts (10 levels)" in { (_: TestData) =>
+    // Contexts do NOT nest: AST.OccursInContext admits no Context. Domains are what nest, so
+    // that is what a depth test has to exercise.
+    "handle deeply nested domains (10 levels)" in { (_: TestData) =>
       val deepNesting = (1 to DEEP_NESTING_LEVELS).foldLeft("???") { case (inner, level) =>
-        s"context Level$level is { $inner }"
+        s"domain Level$level is { $inner }"
       }
       val input = s"domain Deep is { $deepNesting }"
       val parser = StringParser(input)
       parser.parseRoot match {
         case Right(root) =>
-          root.domains.head.contexts.nonEmpty mustBe true
+          root.domains.head.domains.nonEmpty mustBe true
         case Left(errors) =>
           fail(s"Should handle deep nesting: ${errors.format}")
       }
@@ -324,7 +330,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle strings with escaped quotes" in { (_: TestData) =>
       val input = """domain Test is {
-                    |  type Message is String briefly "She said \"hello\""
+                    |  type Message is String with { briefly "She said \"hello\"" }
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -337,7 +343,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle strings with newlines" in { (_: TestData) =>
       val input = """domain Test is {
-                    |  type Message is String briefly "Line 1\nLine 2"
+                    |  type Message is String with { briefly "Line 1\nLine 2" }
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -350,7 +356,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle strings with tabs" in { (_: TestData) =>
       val input = """domain Test is {
-                    |  type Message is String briefly "Column1\tColumn2"
+                    |  type Message is String with { briefly "Column1\tColumn2" }
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -363,7 +369,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle URLs in strings" in { (_: TestData) =>
       val input = """domain Test is {
-                    |  type URL is String briefly "https://example.com/path?query=value&other=123"
+                    |  type URL is String with { briefly "https://example.com/path?query=value&other=123" }
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -376,7 +382,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle paths in strings" in { (_: TestData) =>
       val input = """domain Test is {
-                    |  type Path is String briefly "/usr/local/bin/riddlc"
+                    |  type Path is String with { briefly "/usr/local/bin/riddlc" }
                     |}""".stripMargin
       val parser = StringParser(input)
       parser.parseRoot match {
