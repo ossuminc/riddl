@@ -159,6 +159,41 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip A42 figma references losslessly" in {
+      val figmaModel =
+        """domain Storefront is {
+          |  application context Checkout is {
+          |    command PlaceOrder is { item: String }
+          |    result Confirmation is { text: String }
+          |    group PaymentScreen is {
+          |      input CardNumber acquires command Storefront.Checkout.PlaceOrder with {
+          |        figma "FILEKEY" node "12:34"
+          |      }
+          |      output OrderSummary presents result Storefront.Checkout.Confirmation with {
+          |        figma "FILEKEY" node "12:36"
+          |      }
+          |    } with { figma "FILEKEY" node "12:30" }
+          |  } with { figma "FILEKEY" node "12:1" }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(figmaModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"figmaRefs\"")
+          json1 must include("\"12:30\"")
+          json1 must include("\"FILEKEY\"")
+          // The fixed point proves JsonAstBuilder rebuilds every FigmaRef; if any were dropped,
+          // json2 would be missing it.
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the figma JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the figma model failed: $errors")
+      end match
+    }
+
     "round-trip named-type requires/returns on a function and saga (A9) losslessly" in {
       val rrModel =
         """domain d is { context c is {

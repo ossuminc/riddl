@@ -296,6 +296,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     case NODE_STATEMENT         => "Statement"
     case NODE_AUTHOR            => "Author"
     case NODE_TERM              => "Term"
+    case NODE_FIGMA_REF         => "FigmaRef"
     case NODE_COMMAND_REF       => "CommandRef"
     case NODE_EVENT_REF         => "EventRef"
     case NODE_QUERY_REF         => "QueryRef"
@@ -442,6 +443,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         // Authors
         case NODE_AUTHOR => readAuthorOrAuthorRefNode()
         case NODE_TERM   => readTermNode()
+
+        // A42: Figma design references
+        case NODE_FIGMA_REF => readFigmaRefNode()
 
         // Message References (dedicated tags)
         case NODE_COMMAND_REF => readCommandRefNode()
@@ -1393,6 +1397,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val id = readIdentifierInline() // Inline - no tag
     val definition = readSeq(() => readLiteralString())
     Term(loc, id, definition)
+  }
+
+  /** A42: mirror of [[BASTWriter.writeFigmaRef]] — location then two literal strings. */
+  private def readFigmaRefNode(): FigmaRef = {
+    val loc = readLocation()
+    val fileKey = readLiteralString()
+    val nodeId = readLiteralString()
+    FigmaRef(loc, fileKey, nodeId)
   }
 
   // ========== Metadata ==========

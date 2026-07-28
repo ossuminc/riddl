@@ -55,6 +55,7 @@ object CommonOptionsHelper:
   private inline val warnings_are_fatal = "warnings-are-fatal"
   private inline val auto_generate_bast = "auto-generate-bast"
   private inline val provide_tips = "provide-tips"
+  private inline val check_figma_drift = "check-figma-drift"
 
   lazy val commonOptionsParser: OParser[Unit, CommonOptions] = {
     val builder: OParserBuilder[CommonOptions] = OParser.builder[CommonOptions]
@@ -162,6 +163,12 @@ object CommonOptionsHelper:
         .action((_, c) => c.copy(provideTips = true))
         .text(
           "Include a remediation suggestion (tip) with each message that provides one (for AI-assisted fixing)"
+        ),
+      opt[Unit](check_figma_drift)
+        .optional()
+        .action((_, c) => c.copy(checkFigmaDrift = true))
+        .text(
+          "Check 'figma' references against the Figma REST API (needs network and a FIGMA_TOKEN environment variable)"
         )
     )
   }
@@ -262,6 +269,9 @@ object CommonOptionsHelper:
       else default.autoGenerateBAST
     val provideTips =
       if obj.hasPath(provide_tips) then obj.getBoolean(provide_tips) else default.provideTips
+    val checkFigmaDrift =
+      if obj.hasPath(check_figma_drift) then obj.getBoolean(check_figma_drift)
+      else default.checkFigmaDrift
 
     CommonOptions(
       showTimes,
@@ -284,7 +294,8 @@ object CommonOptionsHelper:
       maxIncludeWait,
       warningsAreFatal,
       autoGenerateBAST,
-      provideTips
+      provideTips,
+      checkFigmaDrift
     )
   end commonOptionsReader
 

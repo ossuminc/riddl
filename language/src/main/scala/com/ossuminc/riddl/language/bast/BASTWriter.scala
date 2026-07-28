@@ -306,6 +306,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case c: InlineComment     => writeInlineComment(c)
       case opt: OptionValue     => writeOptionValue(opt)
       case term: Term           => writeTerm(term)
+      case fr: FigmaRef         => writeFigmaRef(fr)
 
       // Attachments
       case a: FileAttachment   => writeFileAttachment(a)
@@ -587,6 +588,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(t.loc)
     writeIdentifierInline(t.id) // Inline - no tag needed
     writeSeq(t.definition)(writeLiteralString)
+  }
+
+  /** A42: a FigmaRef carries no metadata and no identifier — just two literal strings. */
+  def writeFigmaRef(fr: FigmaRef): Unit = {
+    writer.writeU8(NODE_FIGMA_REF)
+    writeLocation(fr.loc)
+    writeLiteralString(fr.fileKey)
+    writeLiteralString(fr.nodeId)
   }
 
   def writeRelationship(r: Relationship): Unit = {

@@ -462,6 +462,9 @@ object AST:
     /** A lazily constructed mutable [[Seq]] of [[AuthorRef]] */
     def terms: Seq[Term] = metadata.filter[Term]
 
+    /** The [[FigmaRef]]s attached to this definition (A42) */
+    def figmaRefs: Seq[FigmaRef] = metadata.filter[FigmaRef]
+
     def stringAttachments: Seq[StringAttachment] = metadata.filter[StringAttachment]
 
     def fileAttachments: Seq[FileAttachment] = metadata.filter[FileAttachment]
@@ -805,8 +808,8 @@ object AST:
 
   /** Things that can occur in the "With" section of a leaf definition */
   type MetaData =
-    BriefDescription | Description | Term | AuthorRef | FileAttachment | StringAttachment |
-      ULIDAttachment | Comment | OptionValue
+    BriefDescription | Description | Term | AuthorRef | FigmaRef | FileAttachment |
+      StringAttachment | ULIDAttachment | Comment | OptionValue
 
   /** Type of definitions that occurs within all Vital Definitions */
   type OccursInVitalDefinition = Type | Comment
@@ -1517,6 +1520,37 @@ object AST:
   case class AuthorRef(loc: At, pathId: PathIdentifier) extends Reference[Author] with Meta:
     override def format: String = Keyword.author + " " + pathId.format
   end AuthorRef
+
+  /////////////////////////////////////////////////////////////////////////////////////////// FIGMA
+
+  /** A structured reference to a node (frame) in a Figma design file (A42).
+    *
+    * Unlike an opaque URL in a `briefly` or an attachment, this reference is machine-resolvable to
+    * one specific frame: the file key identifies the document and the node id identifies the frame
+    * within it, which is exactly what the Figma REST API's `/v1/files/{fileKey}/nodes?ids={nodeId}`
+    * endpoint takes. That makes it possible to check the model against the design and report drift
+    * (see the drift validation in the validation pass) rather than discovering it months later.
+    *
+    * It is metadata rather than a definition because it decorates a definition instead of being
+    * one: it has no identifier, nothing in the model can path-reference it, and it contributes
+    * nothing to the definition hierarchy.
+    *
+    * Only the UI-bearing definitions may carry one — [[Input]], [[Output]], [[Group]] and a
+    * [[Context]] whose intention is `application`. The parser accepts it in any `with` block, as it
+    * does every other [[MetaData]]; the placement rule is enforced by validation so that a
+    * misplaced reference gets a clear error rather than a parse failure.
+    *
+    * @param loc
+    *   The [[At]] at which the reference is located
+    * @param fileKey
+    *   The Figma file key — the opaque document identifier from a Figma file URL
+    * @param nodeId
+    *   The Figma node id of the referenced frame, conventionally of the form "1:23"
+    */
+  case class FigmaRef(loc: At, fileKey: LiteralString, nodeId: LiteralString) extends Meta:
+    override def format: String =
+      s"${Keyword.figma} ${fileKey.format} ${Keyword.node} ${nodeId.format}"
+  end FigmaRef
 
   ///////////////////////////////////////////////////////////////////////////////////////// VERSION
 

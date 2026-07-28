@@ -68,6 +68,13 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   *   concise. This is the generic replacement for the former AIHelperPass: any pass may attach a
   *   suggestion to a message and it surfaces only when this option is enabled (e.g. `riddlc
   *   --provide-tips ...` or `riddlc advise ...`).
+  * @param checkFigmaDrift
+  *   A42. When set to true, `figma "<fileKey>" node "<nodeId>"` references are checked against the
+  *   Figma REST API: a referenced node that the API does not know about is an error, and a frame
+  *   whose name does not correspond to the annotated definition's name is a warning. Default FALSE,
+  *   and deliberately so — the check needs network access and a `FIGMA_TOKEN`, and an offline,
+  *   unconfigured or air-gapped build must be unaffected by it. With the flag off, no request is
+  *   ever made and no message is ever produced.
   */
 @JSExportTopLevel("CommonOptions")
 case class CommonOptions(
@@ -91,7 +98,8 @@ case class CommonOptions(
   maxIncludeWait: FiniteDuration = 10.second,
   warningsAreFatal: Boolean = false,
   autoGenerateBAST: Boolean = false,
-  provideTips: Boolean = false
+  provideTips: Boolean = false,
+  checkFigmaDrift: Boolean = false
 )
 
 @JSExportTopLevel("CommonOptions$")

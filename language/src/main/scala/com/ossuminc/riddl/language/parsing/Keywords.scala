@@ -142,6 +142,8 @@ object Keywords {
 
   def field[u: P]: P[Unit] = keyword(Keyword.field)
 
+  def figma[u: P]: P[Unit] = keyword(Keyword.figma)
+
   def file[u: P]: P[Unit] = keyword(Keyword.file)
 
   def flow[u: P]: P[Unit] = keyword(Keyword.flow)
@@ -216,6 +218,8 @@ object Keywords {
   def name[u: P]: P[Unit] = keyword(Keyword.name)
 
   def nebula[u: P]: P[Unit] = keyword(Keyword.nebula)
+
+  def node[u: P]: P[Unit] = keyword(Keyword.node)
 
   def on[u: P]: P[Unit] = keyword(Keyword.on)
 
@@ -574,6 +578,7 @@ object Keyword {
   final val explained = "explained"
   final val explanation = "explanation"
   final val field = "field"
+  final val figma = "figma"
   final val file = "file"
   final val flow = "flow"
   final val focus = "focus"
@@ -610,6 +615,7 @@ object Keyword {
   final val morph = "morph"
   final val name = "name"
   final val nebula = "nebula"
+  final val node = "node"
   final val on = "on"
   final val one = "one"
   final val or = "or"
@@ -730,6 +736,7 @@ object Keyword {
     explanation,
     explained,
     field,
+    figma,
     file,
     flow,
     focus,
@@ -765,6 +772,7 @@ object Keyword {
     morph,
     name,
     nebula,
+    node,
     on,
     one,
     or,

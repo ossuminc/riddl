@@ -433,10 +433,11 @@ url_path = /[A-Za-z0-9_.~!$&'()*+,;=\/-]*/ ;
 
 (* Metadata *)
 with_metadata = ["with" "{" {"???" | {meta_data}} "}"] ;
-meta_data = brief_description | description | term | option | author_ref | attachment | ulid_attachment | comment ;
+meta_data = brief_description | description | term | option | author_ref | figma_ref | attachment | ulid_attachment | comment ;
 brief_description = briefly byAs literal_string ;
 description = described (byAs doc_block | ("at" http_url) | ("in" "file" literal_string)) ;
 term = "term" identifier is doc_block ;
+figma_ref = "figma" literal_string "node" literal_string ;
 option = "option" is option_name ["(" {literal_string} ")"] ;
 option_name = /[a-z0-9_-]*/ ;
 attachment = "attachment" identifier is mime_type (("in" "file" literal_string) | (byAs literal_string)) ;

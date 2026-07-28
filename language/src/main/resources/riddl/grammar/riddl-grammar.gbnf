@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-28 03:15 UTC
+# Generated: 2026-07-28 04:31 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -383,10 +383,11 @@ url-path ::= [A-Za-z0-9_.~!$&'()*+,;=/-]*
 
 # Metadata
 with-metadata ::= ("with" "{" ("???" | (meta-data)*)* "}")?
-meta-data ::= brief-description | description | term | option | author-ref | attachment | ulid-attachment | comment
+meta-data ::= brief-description | description | term | option | author-ref | figma-ref | attachment | ulid-attachment | comment
 brief-description ::= briefly ws1 by-as ws1 literal-string
 description ::= described ws (by-as doc-block | ("at" http-url) | ("in" "file" literal-string))
 term ::= "term" ws1 identifier ws1 is ws1 doc-block
+figma-ref ::= "figma" ws1 literal-string ws "node" ws1 literal-string
 option ::= "option" ws1 is ws1 option-name ws ("(" (literal-string)* ")")?
 option-name ::= [a-z0-9_-]*
 attachment ::= "attachment" ws1 identifier ws1 is ws1 mime-type ws (("in" "file" literal-string) | (by-as literal-string))

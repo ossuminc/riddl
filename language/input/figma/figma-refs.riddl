@@ -1,0 +1,26 @@
+// A42: structured Figma references. Legal on inputs, outputs, groups and
+// application-intended contexts.
+domain Storefront is {
+  application context Checkout is {
+    command PlaceOrder is { item: String }
+    result Confirmation is { text: String }
+    group PaymentScreen is {
+      input CardNumber acquires command Storefront.Checkout.PlaceOrder with {
+        briefly "where the shopper types a card number"
+        figma "aBcDeF123456" node "12:34"
+      }
+      output OrderSummary presents result Storefront.Checkout.Confirmation with {
+        briefly "the read-back of what is about to be bought"
+        figma "aBcDeF123456" node "12:36"
+      }
+    } with {
+      briefly "the screen on which payment is taken"
+      figma "aBcDeF123456" node "12:30"
+    }
+  } with {
+    briefly "the part of the storefront that takes money"
+    figma "aBcDeF123456" node "12:1"
+  }
+} with {
+  briefly "an online shop"
+}

@@ -351,9 +351,22 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   end option
 
+  /** A42: `figma "<fileKey>" node "<nodeId>"` — a structured, machine-resolvable reference to one
+    * frame of a Figma design file. Accepted in any `with` block by the parser; the rule that
+    * confines it to Input, Output, Group and application-intended Context is enforced by validation
+    * so a misplaced reference reports a clear error instead of failing the parse.
+    */
+  private def figmaRef[u: P]: P[FigmaRef] =
+    P(
+      Index ~ Keywords.figma ~/ literalString ~ Keywords.node ~ literalString ~ Index
+    ).map { case (start, fileKey, nodeId, end) =>
+      FigmaRef(at(start, end), fileKey, nodeId)
+    }
+  end figmaRef
+
   private def metaData[u: P]: P[MetaData] =
     P(
-      briefDescription | description | term | option | authorRef | attachment |
+      briefDescription | description | term | option | authorRef | figmaRef | attachment |
         ulidAttachment | comment
     ).asInstanceOf[P[MetaData]]
 

@@ -169,16 +169,20 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         .add(output.verbAlias)
         .add(" ")
         .add(output.putOut.format)
-      if output.isEmpty then rfe.nl else rfe.add(" {").nl.incr
+      // Leave the line unterminated: closeOutput decides between a contents block, a `with`
+      // metadata block, or neither.
+      if output.nonEmpty then rfe.add(" {").nl.incr
     }
   end openOutput
 
   def closeOutput(output: Output, parents: Parents): Unit =
-    if output.nonEmpty then
-      state.withCurrent { rfe =>
-        rfe.decr.addLine("}")
-      }
-    end if
+    state.withCurrent { rfe =>
+      if output.nonEmpty then rfe.decr.addIndent("}")
+      // A42: an Output's metadata (a `figma` reference, a `briefly`, ...) was previously dropped
+      // here, so it could not survive a round-trip. Emit it, and note that an Output with no
+      // contents still needs it -- hence the metadata emission is independent of `nonEmpty`.
+      if output.metadata.nonEmpty then rfe.emitMetaData(output.metadata) else rfe.nl
+    }
   end closeOutput
 
   def openInput(input: Input, parents: Parents): Unit =
@@ -192,16 +196,20 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         .add(input.verbAlias)
         .add(" ")
         .add(input.takeIn.format)
-      if input.isEmpty then rfe.nl else rfe.add(" {").nl.incr
+      // Leave the line unterminated: closeInput decides between a contents block, a `with`
+      // metadata block, or neither.
+      if input.nonEmpty then rfe.add(" {").nl.incr
     }
   end openInput
 
   def closeInput(input: Input, parents: Parents): Unit =
-    if input.nonEmpty then
-      state.withCurrent { rfe =>
-        rfe.decr.addLine("}")
-      }
-    end if
+    state.withCurrent { rfe =>
+      if input.nonEmpty then rfe.decr.addIndent("}")
+      // A42: an Input's metadata (a `figma` reference, a `briefly`, ...) was previously dropped
+      // here, so it could not survive a round-trip. Emit it, and note that an Input with no
+      // contents still needs it -- hence the metadata emission is independent of `nonEmpty`.
+      if input.metadata.nonEmpty then rfe.emitMetaData(input.metadata) else rfe.nl
+    }
   end closeInput
 
   // Close for each type of container definition

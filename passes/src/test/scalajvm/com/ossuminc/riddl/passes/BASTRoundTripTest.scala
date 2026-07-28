@@ -1151,6 +1151,60 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize figma references (A42)" in {
+      // A42 adds FigmaRef metadata (NODE_FIGMA_REF = 105, FORMAT_REVISION 25) on inputs,
+      // outputs, groups and application-intended contexts. Both literal strings must survive
+      // AST -> BAST -> AST on every one of them.
+      val riddlSource =
+        """domain Storefront is {
+          |  application context Checkout is {
+          |    command PlaceOrder is { item: String }
+          |    result Confirmation is { text: String }
+          |    group PaymentScreen is {
+          |      input CardNumber acquires command Storefront.Checkout.PlaceOrder with {
+          |        figma "FILEKEY" node "12:34"
+          |      }
+          |      output OrderSummary presents result Storefront.Checkout.Confirmation with {
+          |        figma "FILEKEY" node "12:36"
+          |      }
+          |    } with { figma "FILEKEY" node "12:30" }
+          |  } with { figma "FILEKEY" node "12:1" }
+          |}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-figma")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "figma round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.{Context, Group, Input, Output}
+              val finder = Finder(module.contents)
+              val group = finder.recursiveFindByType[Group].head
+              assert(group.figmaRefs.size == 1, "group figma ref lost")
+              assert(group.figmaRefs.head.fileKey.s == "FILEKEY", "group figma fileKey lost")
+              assert(group.figmaRefs.head.nodeId.s == "12:30", "group figma nodeId lost")
+              assert(
+                finder.recursiveFindByType[Input].head.figmaRefs.head.nodeId.s == "12:34",
+                "input figma ref lost"
+              )
+              assert(
+                finder.recursiveFindByType[Output].head.figmaRefs.head.nodeId.s == "12:36",
+                "output figma ref lost"
+              )
+              assert(
+                finder.recursiveFindByType[Context].head.figmaRefs.head.nodeId.s == "12:1",
+                "context figma ref lost"
+              )
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize dokn.riddl" in {
       val url = URL.fromCwdPath("language/input/dokn.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "dokn-test")

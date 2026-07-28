@@ -106,6 +106,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         case t: Term              => emitTerm(t)
         case o: OptionValue       => emitOption(o)
         case a: AuthorRef         => emitAuthorRef(a)
+        case fr: FigmaRef         => emitFigmaRef(fr)
         case sa: StringAttachment => emitStringAttachment(sa)
         case fa: FileAttachment   => emitFileAttachment(fa)
         case ua: ULIDAttachment   => emitULIDAttachment(ua)
@@ -168,6 +169,11 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   def emitAuthorRef(authorRef: AuthorRef): this.type =
     addIndent("by ").add(authorRef.format).nl
   end emitAuthorRef
+
+  /** A42: `figma "<fileKey>" node "<nodeId>"` */
+  def emitFigmaRef(figmaRef: FigmaRef): this.type =
+    addIndent(figmaRef.format).nl
+  end emitFigmaRef
 
   private def emitStringAttachment(a: StringAttachment): this.type =
     addIndent("attachment " + a.id.format).add(s" is \"${a.mimeType}\" as ${a.value.format}")

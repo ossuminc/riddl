@@ -130,6 +130,9 @@ object JsonAstBuilder:
           items += StringAttachment(At(), ident(a.name), a.mimeType, LiteralString(At(), a.value))
       }
       m.comments.foreach(c => items += LineComment(At(), c))
+      m.figmaRefs.foreach(fr =>
+        items += FigmaRef(At(), LiteralString(At(), fr.fileKey), LiteralString(At(), fr.nodeId))
+      )
     }
     Contents[MetaData](items.toSeq*)
   end meta
@@ -630,7 +633,7 @@ object JsonAstBuilder:
       i.verbAlias.getOrElse("acquires"),
       TypeRef(At(), "type", pathId(i.takeIn)),
       contentsOf[OccursInInput](i.inputs.map(buildInput)),
-      meta(i.brief)
+      meta(i.brief, i.metadata)
     )
 
   private def buildOutput(o: OutputDto)(using Ctx): Output =
@@ -641,7 +644,7 @@ object JsonAstBuilder:
       o.verbAlias.getOrElse("displays"),
       buildPutOut(o.putOut),
       contentsOf[OccursInOutput](o.outputs.map(buildOutput)),
-      meta(o.brief)
+      meta(o.brief, o.metadata)
     )
 
   private def buildContainedGroup(cg: ContainedGroupDto): ContainedGroup =
@@ -657,7 +660,7 @@ object JsonAstBuilder:
       g.alias.getOrElse("group"),
       ident(g.name),
       contentsOf[OccursInGroup](groups, contained, inputs, outputs),
-      meta(g.brief)
+      meta(g.brief, g.metadata)
     )
 
   private def buildStatements(stmts: Seq[StatementDto])(using Ctx): Contents[Statements] =

@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At, Contents, *}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
-import com.ossuminc.riddl.utils.PlatformContext
+import com.ossuminc.riddl.utils.{FigmaAccess, FigmaClient, FigmaLookup, PlatformContext}
 
 /** A Trait that defines typical Validation checkers for validating definitions */
 trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
@@ -209,6 +209,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             suggestion = "Use an option name of at least 3 characters."
           )
           validateRecognizedOption(o, identity, loc)
+        case fr: FigmaRef        => validateFigmaRef(fr, identity, definition)
         case _: AuthorRef        => hasAuthorRef = true
         case _: StringAttachment => () // No validation needed
         case _: FileAttachment   => () // No validation needed
@@ -244,6 +245,127 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         s"Add documentation to $identity, e.g. 'briefly \"A short summary\"' or 'described as { | ... | }'."
     )
   end checkMetadata
+
+  /** A42: the definitions a [[FigmaRef]] may decorate. A Figma frame depicts a piece of user
+    * interface, so the reference belongs only where the model describes user interface: the two
+    * ends of a UI conversation ([[Input]] and [[Output]]), the screen or region that groups them
+    * ([[Group]]), and the [[Context]] that owns them, which by the rules of A41 is exactly a
+    * context whose intention is `application`.
+    */
+  private def mayCarryFigmaRef(definition: WithMetaData): Boolean =
+    definition match
+      case _: Input | _: Output | _: Group => true
+      case c: Context                      => c.intention.contains(Intention.Application)
+      case _                               => false
+    end match
+  end mayCarryFigmaRef
+
+  /** A42: reduce a name to its bare word-characters so that a Figma frame called "Login Screen", a
+    * group called `LoginScreen` and a group called `login_screen` all correspond. The comparison is
+    * deliberately forgiving about case, spacing and separators and strict about everything else:
+    * the point is to catch a frame that has been renamed or repurposed, not to police house style.
+    */
+  private def normalizedName(name: String): String =
+    name.filter(_.isLetterOrDigit).toLowerCase
+
+  /** A42: memo of Figma lookups for this pass, so a file referenced by twenty definitions costs one
+    * request per distinct node rather than twenty.
+    */
+  private val figmaLookups: scala.collection.mutable.HashMap[(String, String), FigmaLookup] =
+    scala.collection.mutable.HashMap.empty
+
+  /** A42: resolved once per pass. When drift checking is off this is never even consulted, so an
+    * offline build does no work and reads no environment.
+    */
+  private lazy val figmaAccess: FigmaAccess = FigmaClient.access
+
+  /** A42: validate one `figma "<fileKey>" node "<nodeId>"` reference.
+    *
+    * Two independent concerns:
+    *
+    *   1. PLACEMENT, always checked and offline: the reference is only meaningful on a UI-bearing
+    *      definition, and anywhere else it is an Error. The parser accepts it in any `with` block
+    *      (as it does every other metadata), so this is where a misplaced reference is reported —
+    *      as a clear message rather than a parse failure.
+    *   1. DRIFT, checked only when `checkFigmaDrift` is on: the node must still exist in the design
+    *      (Error if the API says it does not) and the frame's name must still correspond to the
+    *      annotated definition's name (Warning if it does not). The point of the feature is that
+    *      design/model divergence fails the build now instead of being discovered months later.
+    *
+    * The drift half can never break an offline, unconfigured or air-gapped build. It is off by
+    * default; with no token there is no client; and any failure to reach or understand the API
+    * yields [[FigmaLookup.Unavailable]], which produces nothing at all. Only a successful API
+    * answer can produce a message.
+    */
+  private def validateFigmaRef(
+    figmaRef: FigmaRef,
+    identity: String,
+    definition: WithMetaData
+  ): Unit =
+    if !mayCarryFigmaRef(definition) then
+      messages.addError(
+        figmaRef.loc,
+        s"A 'figma' reference is not allowed on $identity; it may only appear on an input, an " +
+          "output, a group, or an application-intended context",
+        suggestion = "Move the 'figma' reference onto the input, output, group or " +
+          "'application context' whose design frame it identifies."
+      )
+    else if summon[PlatformContext].options.checkFigmaDrift then
+      checkFigmaDrift(figmaRef, identity, definition)
+    end if
+  end validateFigmaRef
+
+  private def checkFigmaDrift(
+    figmaRef: FigmaRef,
+    identity: String,
+    definition: WithMetaData
+  ): Unit =
+    val fileKey = figmaRef.fileKey.s
+    val nodeId = figmaRef.nodeId.s
+    figmaAccess match
+      case FigmaAccess.NotConfigured(reason) =>
+        // The user asked for drift checking and cannot have it. Say so once, informationally, and
+        // never as a warning or error: an unconfigured environment is not a defect in the model.
+        if !figmaLookups.contains(("", "")) then
+          figmaLookups.update(("", ""), FigmaLookup.Unavailable(reason))
+          messages.info(
+            s"Figma drift checking was requested but is unavailable: $reason",
+            figmaRef.loc,
+            suggestion = s"Set the ${FigmaClient.TokenEnvVar} environment variable to a Figma " +
+              "personal access token, or drop the --check-figma-drift option."
+          )
+        end if
+      case FigmaAccess.Available(client) =>
+        val lookup =
+          figmaLookups.getOrElseUpdate((fileKey, nodeId), client.lookupNode(fileKey, nodeId))
+        lookup match
+          case FigmaLookup.Unavailable(_) =>
+          // Nothing was learned about the design, so nothing may be said about it. A network
+          // failure must never be reported as drift, and must never fail a build.
+          case FigmaLookup.Missing =>
+            messages.addError(
+              figmaRef.loc,
+              s"Figma node '$nodeId' referenced by $identity does not exist in Figma file " +
+                s"'$fileKey'",
+              suggestion = "Update the node id to the frame's current id, or remove the 'figma' " +
+                "reference if the frame was deleted."
+            )
+          case FigmaLookup.Found(frameName) =>
+            val expected = definition match
+              case d: Definition => d.id.value
+              case _             => identity
+            if normalizedName(frameName) != normalizedName(expected) then
+              messages.addWarning(
+                figmaRef.loc,
+                s"Figma frame '$frameName' does not correspond to $identity; the design and the " +
+                  "model have drifted apart",
+                suggestion = s"Rename the Figma frame to '$expected', rename the definition to " +
+                  s"'$frameName', or point the reference at the frame that does correspond."
+              )
+            end if
+        end match
+    end match
+  end checkFigmaDrift
 
   /** Validate an option against the recognized options registry. Checks argument count and parent
     * definition type compatibility. Unrecognized options produce style warnings to keep the system

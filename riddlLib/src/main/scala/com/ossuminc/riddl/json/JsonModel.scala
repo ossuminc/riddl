@@ -720,7 +720,8 @@ object JsonModel:
     nounAlias: Option[String] = None,
     verbAlias: Option[String] = None,
     brief: Option[String] = None,
-    inputs: Seq[InputDto] = Nil
+    inputs: Seq[InputDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "name": "Page", "nounAlias"?: "output", "verbAlias"?: "displays", "putOut": <putOut>,
@@ -732,7 +733,8 @@ object JsonModel:
     nounAlias: Option[String] = None,
     verbAlias: Option[String] = None,
     brief: Option[String] = None,
-    outputs: Seq[OutputDto] = Nil
+    outputs: Seq[OutputDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "name": "Sub", "group": "<groupPath>", "brief"?: ... }` */
@@ -748,7 +750,8 @@ object JsonModel:
     groups: Seq[GroupDto] = Nil,
     containedGroups: Seq[ContainedGroupDto] = Nil,
     inputs: Seq[InputDto] = Nil,
-    outputs: Seq[OutputDto] = Nil
+    outputs: Seq[OutputDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   // ---------------------------------------------------------------------------
@@ -760,6 +763,9 @@ object JsonModel:
 
   /** `{ "name": "microservice", "args": [] }` (an option value) */
   case class OptionDto(name: String, args: Seq[String] = Nil)
+
+  /** A42: `{ "fileKey": "abc123", "nodeId": "1:23" }` — a structured Figma frame reference. */
+  case class FigmaRefDto(fileKey: String, nodeId: String)
 
   /** `{ "name": "diagram", "mimeType": "image/svg", "value": "<text or path>", "inFile"?: false }`.
     * `inFile: true` -> a FileAttachment (value is a path); otherwise a StringAttachment.
@@ -775,7 +781,8 @@ object JsonModel:
     options: Seq[OptionDto] = Nil,
     byAuthors: Seq[String] = Nil,
     attachments: Seq[AttachmentDto] = Nil,
-    comments: Seq[String] = Nil
+    comments: Seq[String] = Nil,
+    figmaRefs: Seq[FigmaRefDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -1492,6 +1499,7 @@ object JsonModel:
   given termDtoRW: ReadWriter[TermDto] = macroRW
   given optionDtoRW: ReadWriter[OptionDto] = macroRW
   given attachmentDtoRW: ReadWriter[AttachmentDto] = macroRW
+  given figmaRefDtoRW: ReadWriter[FigmaRefDto] = macroRW
   given metaDtoRW: ReadWriter[MetaDto] = macroRW
   given fieldRW: ReadWriter[FieldDto] = macroRW
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW

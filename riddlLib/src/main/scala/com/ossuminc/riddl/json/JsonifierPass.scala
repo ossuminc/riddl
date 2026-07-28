@@ -375,7 +375,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[GroupDto],
             col[ContainedGroupDto],
             col[InputDto],
-            col[OutputDto]
+            col[OutputDto],
+            metaOf(g.metadata)
           )
         )
       case in: Input =>
@@ -386,7 +387,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             Some(in.nounAlias),
             Some(in.verbAlias),
             briefOf(in.metadata),
-            col[InputDto]
+            col[InputDto],
+            metaOf(in.metadata)
           )
         )
       case o: Output =>
@@ -397,7 +399,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             Some(o.nounAlias),
             Some(o.verbAlias),
             briefOf(o.metadata),
-            col[OutputDto]
+            col[OutputDto],
+            metaOf(o.metadata)
           )
         )
       case uc: UseCase =>
@@ -514,10 +517,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         AttachmentDto(sa.id.value, sa.mimeType, sa.value.s, inFile = false)
     }
     val comments = items.collect { case c: LineComment => c.text }
+    val figmaRefs = items.collect { case fr: FigmaRef => FigmaRefDto(fr.fileKey.s, fr.nodeId.s) }
     if descr.isEmpty && terms.isEmpty && options.isEmpty && authors.isEmpty && attachments.isEmpty &&
-      comments.isEmpty
+      comments.isEmpty && figmaRefs.isEmpty
     then None
-    else Some(MetaDto(descr, terms, options, authors, attachments, comments))
+    else Some(MetaDto(descr, terms, options, authors, attachments, comments, figmaRefs))
 
   private def serializeField(f: Field): FieldDto =
     FieldDto(f.id.value, serializeTypeExpr(f.typeEx), briefOf(f.metadata))

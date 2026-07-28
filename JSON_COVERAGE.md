@@ -174,7 +174,8 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 ## Metadata
 
 Rich metadata (below) is carried by `metadata` on the primary containers
-(domain, context, entity, type); `brief` remains a shorthand everywhere.
+(domain, context, entity, type) and, since A42, on group, input and output
+as well; `brief` remains a shorthand everywhere.
 
 | Construct | Status | Notes |
 |---|---|---|
@@ -183,5 +184,6 @@ Rich metadata (below) is carried by `metadata` on the primary containers
 | Term (as metadata) | ✅ Phase 9 | `terms` |
 | OptionValue (options) | ✅ Phase 9 | `options` |
 | AuthorRef (byAuthor) | ✅ Phase 9 | `byAuthors` |
+| FigmaRef | ✅ A42 | `figmaRefs` (`{fileKey, nodeId}`) |
 | FileAttachment / StringAttachment | ✅ Phase 9 | `attachments` (ULIDAttachment is builder-internal) |
 | Comment | ✅ Phase 9 | `comments` (line comments) |

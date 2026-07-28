@@ -61,7 +61,7 @@ package object bast {
     * revision 0 (pre-check era) will be rejected with a clear message.
     */
   val FORMAT_REVISION: Short =
-    24 // A47: Copyright leaf (NODE_COPYRIGHT = 104)
+    25 // A42: Figma reference metadata (NODE_FIGMA_REF = 105)
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)
@@ -217,6 +217,9 @@ package object bast {
 
   /** A47: a Copyright leaf. */
   val NODE_COPYRIGHT: Byte = 104
+
+  /** A42: a FigmaRef metadata item. */
+  val NODE_FIGMA_REF: Byte = 105
 
   /** Flag bit indicating metadata presence in node tag
     *
