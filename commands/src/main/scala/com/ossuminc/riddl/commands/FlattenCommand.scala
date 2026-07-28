@@ -55,7 +55,9 @@ class FlattenCommand(using pc: PlatformContext)
   ): Either[Messages, PassesResult] = {
     options.withInputFile[PassesResult] { (inputFile: Path) =>
       implicit val ec: ExecutionContext = pc.ec
-      val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
+      val future = RiddlParserInput.fromPathSafe(inputFile.toString).map {
+        case Left(messages) => Left(messages)
+        case Right(rpi) =>
         Riddl.parse(rpi) match
           case Left(errors) => return Left(errors)
           case Right(root) =>

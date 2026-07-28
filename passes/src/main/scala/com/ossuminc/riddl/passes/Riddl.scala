@@ -137,9 +137,12 @@ object Riddl {
     shouldFailOnError: Boolean = true,
     extraPasses: PassCreators = Seq.empty[PassCreator]
   )(using io: PlatformContext): Either[Messages, PassesResult] =
-    val url = URL.fromCwdPath(path)
-    val rpi = Await.result(RiddlParserInput.fromURL(url), 10)
-    parseAndValidate(rpi, shouldFailOnError, Pass.standardPasses ++ extraPasses)
+    // fromPathSafe rather than fromURL: it reports a missing file, a directory or unreadable
+    // content as Messages, and guards the URL construction too — URL.fromCwdPath throws on a
+    // path with a leading slash, which used to escape as a raw exception.
+    Await.result(RiddlParserInput.fromPathSafe(path), 10) match
+      case Left(messages) => Left(messages)
+      case Right(rpi) => parseAndValidate(rpi, shouldFailOnError, Pass.standardPasses ++ extraPasses)
   end parseAndValidatePath
 
   /** Convert a previously parsed Root back into plain text */

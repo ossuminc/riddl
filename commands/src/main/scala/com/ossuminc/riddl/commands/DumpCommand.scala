@@ -30,7 +30,9 @@ class DumpCommand(using pc: PlatformContext) extends InputFileCommand(DumpComman
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
       implicit val ec: ExecutionContext = pc.ec
-      val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
+      val future = RiddlParserInput.fromPathSafe(inputFile.toString).map {
+        case Left(messages) => Left(messages)
+        case Right(rpi) =>
         Riddl.parseAndValidate(rpi).map { result =>
           if !pc.options.quiet then
             pc.log.info(s"AST of $inputFile is:")

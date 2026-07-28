@@ -7,7 +7,9 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{pc, Await, PlatformContext, URL}
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.Messages.{Message, Messages}
+import com.ossuminc.riddl.utils.{pc, Await, LoadFailure, PlatformContext, URL}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
@@ -15,6 +17,8 @@ import scala.collection.Searching
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 import scala.language.implicitConversions
+import scala.annotation.nowarn
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 import scala.scalajs.js.annotation.*
 import scala.io.AnsiColor.{BOLD, RESET}
@@ -64,6 +68,8 @@ object RiddlParserInput {
     * @return
     *   A Future[RiddlParserInput] with the RPI set up to load data from the provided url
     */
+  @deprecated("Use fromURLSafe, which reports load failures instead of throwing", "2.0.0")
+  @nowarn("cat=deprecation")
   def fromURL(url: URL, purpose: String = "")(using
     io: PlatformContext
   ): Future[RiddlParserInput] = {
@@ -71,6 +77,75 @@ object RiddlParserInput {
     io.load(url).map(data => apply(data, url, purpose))
   }
 
+  /** Read a URL into a parser input, reporting a load failure as Messages rather than throwing.
+    *
+    * A missing file, a directory named where a file belongs, or a binary file are ordinary user
+    * mistakes, and each used to arrive at the command-level catch-all as a raw Java exception —
+    * `[severe] Exception Thrown:: java.io.FileNotFoundException`. `PlatformContext.loadSafe`
+    * classifies them; this is where that classification becomes a RIDDL message with a
+    * suggestion, which is possible here and not in `utils` because Messages lives in this module.
+    */
+  def fromURLSafe(url: URL, purpose: String = "")(using
+    io: PlatformContext
+  ): Future[Either[Messages, RiddlParserInput]] = {
+    implicit val ec: ExecutionContext = io.ec
+    io.loadSafe(url).map {
+      case Right(data)     => Right(apply(data, url, purpose))
+      case Left(failure)   => Left(List(loadFailureToMessage(failure)))
+    }
+  }
+
+  /** Turn a [[LoadFailure]] into an error a user can act on. The advice differs by case, which is
+    * the reason loadSafe returns an ADT rather than a string.
+    */
+  private def loadFailureToMessage(failure: LoadFailure): Message =
+    val suggestion = failure match
+      case _: LoadFailure.NotFound =>
+        "Check the path for a typo, and that the file exists relative to where riddlc was run."
+      case _: LoadFailure.NotAFile =>
+        "Name the RIDDL file itself, not the directory containing it."
+      case _: LoadFailure.Unreadable =>
+        "Check the file's permissions."
+      case _: LoadFailure.Undecodable =>
+        "RIDDL sources are UTF-8 text; this file appears to be binary or in another encoding."
+      case _: LoadFailure.Unreachable =>
+        "Check the URL and that the resource is reachable."
+    Messages.error(failure.describe, At.empty).copy(suggestion = suggestion)
+  end loadFailureToMessage
+
+  /** Read a path into a parser input, reporting failure as Messages rather than throwing.
+    *
+    * Building the URL is inside the try because that can throw too: URL.fromCwdPath and
+    * fromFullPath each `require` a particular leading slash, so a caller could be handed an
+    * exception before any loading was attempted.
+    */
+  def fromPathSafe(path: String, purpose: String = "")(using
+    io: PlatformContext
+  ): Future[Either[Messages, RiddlParserInput]] = {
+    implicit val ec: ExecutionContext = io.ec
+    try
+      if path.isEmpty then
+        Future.successful(Left(List(Messages.error("No input file was given", At.empty))))
+      else
+        val url: URL = if path.head == '/' then URL.fromFullPath(path) else URL.fromCwdPath(path)
+        fromURLSafe(url, purpose)
+      end if
+    catch
+      case NonFatal(x) =>
+        Future.successful(
+          Left(
+            List(
+              Messages
+                .error(s"Invalid input path `$path`: ${x.getMessage}", At.empty)
+                .copy(suggestion = "Check the path for a typo or an unexpected leading slash.")
+            )
+          )
+        )
+    end try
+  }
+
+  @deprecated("Use fromPathSafe, which reports failures instead of throwing", "2.0.0")
+  @nowarn("cat=deprecation")
   def fromPath(path: String, purpose: String = "")(using
     PlatformContext
   ): Future[RiddlParserInput] = {

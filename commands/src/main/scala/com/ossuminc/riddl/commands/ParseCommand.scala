@@ -30,7 +30,9 @@ class ParseCommand(using pc: PlatformContext) extends InputFileCommand(ParseComm
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
       implicit val ec: ExecutionContext = pc.ec
-      val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
+      val future = RiddlParserInput.fromPathSafe(inputFile.toString).map {
+        case Left(messages) => Left(messages)
+        case Right(rpi) =>
         TopLevelParser
           .parseInputWithMessages(rpi)
           .map { case (_, parseMessages) => PassesResult(additionalMessages = parseMessages) }

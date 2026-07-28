@@ -38,7 +38,9 @@ class AdviseCommand(using pc: PlatformContext) extends InputFileCommand("advise"
       // on the returned messages and are rendered by Message.format regardless
       // of the option's value at log time.
       pc.withOptions(pc.options.copy(provideTips = true)) { _ =>
-        val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
+        val future = RiddlParserInput.fromPathSafe(inputFile.toString).map {
+          case Left(messages) => Left(messages)
+          case Right(rpi) =>
           Riddl.parseAndValidate(rpi)
         }
         Await.result(future, 10.seconds)

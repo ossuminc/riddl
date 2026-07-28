@@ -41,7 +41,12 @@ class JVMPlatformContext extends PlatformContext {
             else if url.basis.nonEmpty && url.path.isEmpty then Path.of("/" + url.basis)
             else throw new IllegalStateException("URL is invalid!")
             end if
-          if Files.exists(path) then Source.fromFile(path.toFile)(using Codec.UTF8)
+          if Files.isDirectory(path) then
+            // Distinguish this from "not found": Source.fromFile on a directory raises an
+            // IOException whose only clue is its message text, and on some paths the directory
+            // never gets that far, so it was being reported as a missing file.
+            throw new java.io.IOException(s"Operation on file $path failed: Is a directory")
+          else if Files.exists(path) then Source.fromFile(path.toFile)(using Codec.UTF8)
           else throw FileNotFoundException(s"While loading $path")
         case _ =>
           val jurl = java.net.URI(url.toExternalForm).toURL

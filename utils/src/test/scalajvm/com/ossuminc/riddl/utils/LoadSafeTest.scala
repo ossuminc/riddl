@@ -38,11 +38,11 @@ class LoadSafeTest extends AnyWordSpec with Matchers {
       val dir = Files.createTempDirectory("riddl-loadsafe")
       try
         loadOf(URL.fromFullPath(dir.toString)) match
-          case Left(f) =>
-            // A directory surfaces as NotAFile where the platform says so, and as another
-            // LoadFailure otherwise — either way it is REPORTED rather than thrown, which is the
-            // property under test.
-            f.url.toExternalForm must include(dir.getFileName.toString)
+          case Left(f: LoadFailure.NotAFile) => f.describe must include("directory")
+          case Left(other) =>
+            // Previously this asserted only "some failure", which let a directory be reported as
+            // "No such file" — accurate-sounding and wrong, and the loose assertion hid it.
+            fail(s"a directory must be NotAFile, not $other")
           case Right(_) => fail("reading a directory must not succeed")
       finally Files.deleteIfExists(dir)
     }
