@@ -8,6 +8,8 @@ package com.ossuminc.riddl.utils
 
 import scala.collection.convert.StreamExtensions
 import scala.concurrent.{ExecutionContext, Future}
+import scala.annotation.nowarn
+import scala.util.control.NonFatal
 
 /** This trait allows RIDDL to abstract away its IO operations. Several places in RIDDL declare a
   * `using` clause with this trait in order to allow RIDDL to invoke synchronous and asynchronous
@@ -56,7 +58,43 @@ trait PlatformContext {
     * @return
     *   The content of the file as a String, asynchronously in a Future
     */
+  @deprecated("Use loadSafe, which reports failure instead of throwing", "2.0.0")
   def load(url: URL): Future[String]
+
+  /** Load the content of a text file, reporting failure rather than throwing.
+    *
+    * [[load]] throws — and on the JVM it throws SYNCHRONOUSLY for a missing file, before the Future
+    * even exists, so `load(url).recover { … }` does not catch it. The exception then travels to the
+    * command-level catch-all and a user sees a Java class name instead of a diagnosis. This is the
+    * total version: every expected condition comes back as a [[LoadFailure]], and anything
+    * unexpected is caught and reported as [[LoadFailure.Unreachable]] rather than escaping.
+    *
+    * The returned Future's own failure channel is therefore dead by contract. That redundancy is
+    * deliberate: the point is that a caller never has to think about exceptions again.
+    *
+    * Implemented once here in terms of [[load]], so every platform gets it without reimplementing
+    * the classification.
+    *
+    * @param url
+    *   The URL of the file to load, typically with the `file://` scheme.
+    * @return
+    *   The content, or the reason there is none — never a failed Future.
+    */
+  // This IS the sanctioned bridge to the deprecated `load`, so the deprecation is expected here
+  // and only here.
+  @nowarn("cat=deprecation")
+  def loadSafe(url: URL): Future[Either[LoadFailure, String]] =
+    given ExecutionContext = ec
+    try
+      load(url)
+        .map(Right(_): Either[LoadFailure, String])
+        .recover { case NonFatal(x) => Left(LoadFailure.from(url, x)) }
+    catch
+      // load throws synchronously on the JVM for a missing file or a directory, so catching only
+      // the Future's failure would miss exactly the cases this method exists for.
+      case NonFatal(x) => Future.successful(Left(LoadFailure.from(url, x)))
+    end try
+  end loadSafe
 
   /** Read the entire contents of a file and return it, synchronously
     *

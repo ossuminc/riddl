@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.utils
 
 import scala.concurrent.Future
+import scala.annotation.nowarn
 import scala.scalajs.js
 import scala.scalajs.js.annotation.*
 
@@ -96,9 +97,16 @@ case class URL(scheme: String = "", authority: String = "", basis: String = "", 
     URL(scheme, authority, basis, p)
   }
 
+  @deprecated("Use loadSafe, which reports failure instead of throwing", "2.0.0")
+  @nowarn("cat=deprecation")
   def load: Future[String] = {
     pc.load(this)
   }
+
+  /** Load this URL's content, reporting failure rather than throwing. See
+    * [[PlatformContext.loadSafe]].
+    */
+  def loadSafe: Future[Either[LoadFailure, String]] = pc.loadSafe(this)
 }
 
 @JSExportTopLevel("URL$")
