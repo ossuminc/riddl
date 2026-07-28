@@ -170,6 +170,20 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         }
       case cg: ContainedGroup =>
         associateUsage(cg, resolveARef[Group](cg.group, parents))
+      // A schema's references live in FIELDS (`data`, `links`, `indices`), not in `contents`, so
+      // nothing resolves them on our behalf and `Schema` had no case of its own — it fell through
+      // to the catch-all `case _: Definition` below. The effect was that a type the model
+      // demonstrably persists was reported unused, while the same type referenced by a field or a
+      // state was not. Must stay ABOVE the NonDefinitionValues arm: Schema is a Leaf but also a
+      // member of that union, so a later case would shadow this one.
+      case sc: Schema =>
+        sc.data.values.foreach(tr => associateUsage(sc, resolveATypeRef(tr, parents)))
+      // `links` and `indices` are deliberately NOT resolved here yet. They hold FieldRefs, and
+      // resolving them surfaces references that have never been checked: `language/input/
+      // everything_full.riddl` alone has `link relationship as field agg.time to field agg.ident`
+      // where `agg` has no `ident` field. Turning that into a new class of error belongs in its
+      // own change, with the corpus checked first — not folded into a fix for unused-type false
+      // positives.
       case inv: Invariant =>
         // A28: resolve operand refs inside a structured BooleanExpression condition (a LiteralString
         // condition has none).

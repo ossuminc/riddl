@@ -19,9 +19,6 @@ passes/input/check/handler-types/handler-types.riddl(23:7->31):
 passes/input/check/handler-types/handler-types.riddl(4:5->21):
  Command 'SomeCommand' is unused:
      type SomeCommand is command { data: String }
-passes/input/check/handler-types/handler-types.riddl(5:5->20):
- Record 'RecordType' is unused:
-     type RecordType is record { field1: String }
 passes/input/check/handler-types/handler-types.riddl(7:5->25):
  Repository 'EventRepo' handlers do not handle any commands or queries; repositories typically handle commands (for mutations) and queries (for reads):
      repository EventRepo is {

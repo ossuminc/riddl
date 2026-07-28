@@ -41,7 +41,9 @@ class ReferenceMapTest extends AbstractValidatingTest {
     }
     "have correct size" in { _ =>
       info("size: " + refMap.size.toString)
-      refMap.size must be(31)
+      // 32 since a repository schema's `of <name> as type <T>` data clauses are resolved; they
+      // used to be skipped entirely, which is what made stored types look unused.
+      refMap.size must be(32)
     }
 
     "have definitionOf(pathId:String) work" in { _ =>

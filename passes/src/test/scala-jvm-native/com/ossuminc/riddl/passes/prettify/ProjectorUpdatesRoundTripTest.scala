@@ -24,9 +24,9 @@ import org.scalatest.*
   * regeneration.
   *
   * The clause parses to a [[RepositoryRef]] in the projector's contents. A `RepositoryRef` is a
-  * Reference rather than a Definition, so the prettify visitor never saw it — the same shape as
-  * the comments that used to be dropped, and as the schema type references that do not count as
-  * usage. Anything in `contents` that is not a Definition has to be emitted by hand.
+  * Reference rather than a Definition, so the prettify visitor never saw it — the same shape as the
+  * comments that used to be dropped, and as the schema type references that do not count as usage.
+  * Anything in `contents` that is not a Definition has to be emitted by hand.
   */
 class ProjectorUpdatesRoundTripTest extends AbstractValidatingTest {
 
