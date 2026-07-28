@@ -129,22 +129,45 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   // Container assembly (children come from the scope; node internals read direct)
   // ---------------------------------------------------------------------------
 
-  private def buildContainer(d: Definition, kids: Seq[Any]): Option[Any] =
-    def keep[T](t: T): T = { consumed.put(t, true); t }
+  /** The children a container was handed, and the record of which it consumed.
+    *
+    * A parent assembles itself out of `col`/`msgs` picks. Anything it does not pick is
+    * forgotten, so every pick is recorded and `closeContainer` reports the remainder.
+    */
+  private final class Kids(kids: Seq[Any]):
+    private def keep[T](t: T): T = { consumed.put(t, true); t }
     def col[T: reflect.ClassTag]: Seq[T] = kids.collect { case t: T => keep(t) }
     def msgs(uc: AggregateUseCase): Seq[MessageDto] = kids.collect {
       case m @ MsgChild(u, dto) if u == uc => keep(m); dto
     }
+  end Kids
+
+  /** Build one container's DTO from the child DTOs its own `closeContainer` collected.
+    *
+    * Split across four builders by kind rather than written as one match: the whole thing
+    * exceeded the coverage instrumenter's tree-node threshold, so it was silently skipped
+    * and could never be measured. Each part is now small enough to instrument.
+    */
+  private def buildContainer(d: Definition, kids: Seq[Any]): Option[Any] =
+    val k = Kids(kids)
+    buildTopLevelDto(d, k)
+      .orElse(buildProcessorDto(d, k))
+      .orElse(buildBehaviorDto(d, k))
+      .orElse(buildUiDto(d, k))
+  end buildContainer
+
+  /** A Root, a Module or a Domain: the containers that hold whole models. */
+  private def buildTopLevelDto(d: Definition, k: Kids): Option[Any] =
     d match
       case r: Root =>
         Some(
           RootDto(
-            col[DomainDto],
-            col[ModuleDto],
-            col[VersionDto].headOption,
-            col[CopyrightDto].headOption,
-            col[AuthorDto],
-            col[CommentDto]
+            k.col[DomainDto],
+            k.col[ModuleDto],
+            k.col[VersionDto].headOption,
+            k.col[CopyrightDto].headOption,
+            k.col[AuthorDto],
+            k.col[CommentDto]
           )
         )
       case m: Module =>
@@ -153,32 +176,32 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           ModuleDto(
             m.id.value,
             briefOf(m.metadata),
-            col[AuthorDto],
-            col[DomainDto],
-            col[TypeDefDto],
-            msgs(AggregateUseCase.CommandCase),
-            msgs(AggregateUseCase.EventCase),
-            msgs(AggregateUseCase.QueryCase),
-            msgs(AggregateUseCase.ResultCase),
-            col[ConstantDto],
-            col[InvariantDto],
-            col[UserDto],
-            col[ContextDto],
-            col[EntityDto],
-            col[AdaptorDto],
-            col[FunctionDto],
-            col[ProjectorDto],
-            col[RepositoryDto],
-            col[StreamletDto],
-            col[SagaDto],
-            col[EpicDto],
-            col[ConnectorDto],
-            col[RelationshipDto],
-            col[ModuleDto],
+            k.col[AuthorDto],
+            k.col[DomainDto],
+            k.col[TypeDefDto],
+            k.msgs(AggregateUseCase.CommandCase),
+            k.msgs(AggregateUseCase.EventCase),
+            k.msgs(AggregateUseCase.QueryCase),
+            k.msgs(AggregateUseCase.ResultCase),
+            k.col[ConstantDto],
+            k.col[InvariantDto],
+            k.col[UserDto],
+            k.col[ContextDto],
+            k.col[EntityDto],
+            k.col[AdaptorDto],
+            k.col[FunctionDto],
+            k.col[ProjectorDto],
+            k.col[RepositoryDto],
+            k.col[StreamletDto],
+            k.col[SagaDto],
+            k.col[EpicDto],
+            k.col[ConnectorDto],
+            k.col[RelationshipDto],
+            k.col[ModuleDto],
             metaOf(m.metadata),
-            col[VersionDto].headOption,
-            col[CopyrightDto].headOption,
-            col[CommentDto]
+            k.col[VersionDto].headOption,
+            k.col[CopyrightDto].headOption,
+            k.col[CommentDto]
           )
         )
       case dom: Domain =>
@@ -186,56 +209,62 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           DomainDto(
             dom.id.value,
             briefOf(dom.metadata),
-            col[AuthorDto],
-            col[UserDto],
-            col[TypeDefDto],
-            col[SagaDto],
-            col[EpicDto],
-            col[DomainDto],
-            col[ContextDto],
+            k.col[AuthorDto],
+            k.col[UserDto],
+            k.col[TypeDefDto],
+            k.col[SagaDto],
+            k.col[EpicDto],
+            k.col[DomainDto],
+            k.col[ContextDto],
             metaOf(dom.metadata),
-            col[VersionDto].headOption,
-            col[CopyrightDto].headOption,
-            msgs(AggregateUseCase.CommandCase),
-            msgs(AggregateUseCase.EventCase),
-            msgs(AggregateUseCase.QueryCase),
-            msgs(AggregateUseCase.ResultCase),
-            col[RepositoryDto],
-            col[ConnectorDto],
-            col[CommentDto]
+            k.col[VersionDto].headOption,
+            k.col[CopyrightDto].headOption,
+            k.msgs(AggregateUseCase.CommandCase),
+            k.msgs(AggregateUseCase.EventCase),
+            k.msgs(AggregateUseCase.QueryCase),
+            k.msgs(AggregateUseCase.ResultCase),
+            k.col[RepositoryDto],
+            k.col[ConnectorDto],
+            k.col[CommentDto]
           )
         )
+      case _ => None
+  end buildTopLevelDto
+
+  /** The six Processors. They share `OccursInProcessor`, so their DTOs share most of their shape. */
+  private def buildProcessorDto(d: Definition, k: Kids): Option[Any] =
+    d match
       case c: Context =>
         Some(
           ContextDto(
             c.id.value,
             briefOf(c.metadata),
-            col[TypeDefDto],
-            col[ConstantDto],
-            msgs(AggregateUseCase.CommandCase),
-            msgs(AggregateUseCase.EventCase),
-            msgs(AggregateUseCase.QueryCase),
-            msgs(AggregateUseCase.ResultCase),
-            col[EntityDto],
-            col[FunctionDto],
-            col[AdaptorDto],
-            col[StreamletDto],
-            col[ProjectorDto],
-            col[RepositoryDto],
-            col[ConnectorDto],
-            col[RelationshipDto],
-            col[SagaDto],
-            col[GroupDto],
-            col[HandlerDto],
+            k.col[TypeDefDto],
+            k.col[ConstantDto],
+            k.msgs(AggregateUseCase.CommandCase),
+            k.msgs(AggregateUseCase.EventCase),
+            k.msgs(AggregateUseCase.QueryCase),
+            k.msgs(AggregateUseCase.ResultCase),
+            k.col[EntityDto],
+            k.col[FunctionDto],
+            k.col[AdaptorDto],
+            k.col[StreamletDto],
+            k.col[ProjectorDto],
+            k.col[RepositoryDto],
+            k.col[ConnectorDto],
+            k.col[RelationshipDto],
+            k.col[SagaDto],
+            k.col[GroupDto],
+            k.col[HandlerDto],
             metaOf(c.metadata),
             c.intention.map(_.keyword),
             c.ascribedShape.map(_.keyword),
-            col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto),
-            col[VersionDto].headOption,
-            col[CopyrightDto].headOption,
-            col[InvariantDto],
-            col[CommentDto]
+            k.col[InletChild].map(_.dto),
+            k.col[OutletChild].map(_.dto),
+            k.col[VersionDto].headOption,
+            k.col[CopyrightDto].headOption,
+            k.col[InvariantDto],
+            k.col[CommentDto]
           )
         )
       case e: Entity =>
@@ -244,39 +273,160 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             e.id.value,
             briefOf(e.metadata),
             None,
-            col[StateDto],
-            col[TypeDefDto],
-            col[ConstantDto],
-            msgs(AggregateUseCase.CommandCase),
-            msgs(AggregateUseCase.EventCase),
-            msgs(AggregateUseCase.QueryCase),
-            msgs(AggregateUseCase.ResultCase),
-            col[FunctionDto],
-            col[HandlerDto],
-            col[InvariantDto],
+            k.col[StateDto],
+            k.col[TypeDefDto],
+            k.col[ConstantDto],
+            k.msgs(AggregateUseCase.CommandCase),
+            k.msgs(AggregateUseCase.EventCase),
+            k.msgs(AggregateUseCase.QueryCase),
+            k.msgs(AggregateUseCase.ResultCase),
+            k.col[FunctionDto],
+            k.col[HandlerDto],
+            k.col[InvariantDto],
             metaOf(e.metadata),
             e.ascribedShape.map(_.keyword),
-            col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto),
-            col[VersionDto].headOption,
-            col[CopyrightDto].headOption,
-            col[StreamletDto],
-            col[ConnectorDto],
-            col[RelationshipDto],
-            col[CommentDto]
+            k.col[InletChild].map(_.dto),
+            k.col[OutletChild].map(_.dto),
+            k.col[VersionDto].headOption,
+            k.col[CopyrightDto].headOption,
+            k.col[StreamletDto],
+            k.col[ConnectorDto],
+            k.col[RelationshipDto],
+            k.col[CommentDto]
           )
         )
+      case a: Adaptor =>
+        val dir = a.direction match
+          case _: InboundAdaptor => "inbound"
+          case _                 => "outbound"
+        Some(
+          AdaptorDto(
+            a.id.value,
+            dir,
+            path(a.referent.pathId),
+            briefOf(a.metadata),
+            k.col[TypeDefDto],
+            k.col[ConstantDto],
+            k.msgs(AggregateUseCase.CommandCase),
+            k.msgs(AggregateUseCase.EventCase),
+            k.msgs(AggregateUseCase.QueryCase),
+            k.msgs(AggregateUseCase.ResultCase),
+            k.col[FunctionDto],
+            k.col[HandlerDto],
+            a.ascribedShape.map(_.keyword),
+            k.col[InletChild].map(_.dto),
+            k.col[OutletChild].map(_.dto),
+            k.col[VersionDto].headOption,
+            k.col[CopyrightDto].headOption,
+            k.col[InvariantDto],
+            k.col[StreamletDto],
+            k.col[ConnectorDto],
+            k.col[RelationshipDto],
+            metaOf(a.metadata),
+            k.col[CommentDto]
+          )
+        )
+      case s: Streamlet =>
+        Some(
+          StreamletDto(
+            s.id.value,
+            s.ascribedShape.map(_.keyword),
+            briefOf(s.metadata),
+            k.col[InletChild].map(_.dto),
+            k.col[OutletChild].map(_.dto),
+            k.col[ConnectorDto],
+            k.col[TypeDefDto],
+            k.msgs(AggregateUseCase.CommandCase),
+            k.msgs(AggregateUseCase.EventCase),
+            k.msgs(AggregateUseCase.QueryCase),
+            k.msgs(AggregateUseCase.ResultCase),
+            k.col[HandlerDto],
+            k.col[VersionDto].headOption,
+            k.col[CopyrightDto].headOption,
+            k.col[ConstantDto],
+            k.col[FunctionDto],
+            k.col[InvariantDto],
+            k.col[StreamletDto],
+            k.col[RelationshipDto],
+            metaOf(s.metadata),
+            k.col[CommentDto]
+          )
+        )
+      case p: Projector =>
+        val repo = p.contents.toSeq.collectFirst { case rr: RepositoryRef => path(rr.pathId) }
+        Some(
+          ProjectorDto(
+            p.id.value,
+            briefOf(p.metadata),
+            repo,
+            k.col[TypeDefDto],
+            k.col[ConstantDto],
+            k.msgs(AggregateUseCase.CommandCase),
+            k.msgs(AggregateUseCase.EventCase),
+            k.msgs(AggregateUseCase.QueryCase),
+            k.msgs(AggregateUseCase.ResultCase),
+            k.col[FunctionDto],
+            k.col[HandlerDto],
+            p.ascribedShape.map(_.keyword),
+            k.col[InletChild].map(_.dto),
+            k.col[OutletChild].map(_.dto),
+            k.col[VersionDto].headOption,
+            k.col[CopyrightDto].headOption,
+            k.col[InvariantDto],
+            k.col[StreamletDto],
+            k.col[ConnectorDto],
+            k.col[RelationshipDto],
+            metaOf(p.metadata),
+            k.col[CommentDto]
+          )
+        )
+      case r: Repository =>
+        Some(
+          RepositoryDto(
+            r.id.value,
+            briefOf(r.metadata),
+            // The plural `schemas` below carries them all; the singular stays empty on output so a
+            // round trip cannot duplicate the first one. Reading still accepts either.
+            None,
+            k.col[TypeDefDto],
+            k.msgs(AggregateUseCase.CommandCase),
+            k.msgs(AggregateUseCase.EventCase),
+            k.msgs(AggregateUseCase.QueryCase),
+            k.msgs(AggregateUseCase.ResultCase),
+            k.col[HandlerDto],
+            r.ascribedShape.map(_.keyword),
+            k.col[InletChild].map(_.dto),
+            k.col[OutletChild].map(_.dto),
+            k.col[VersionDto].headOption,
+            k.col[CopyrightDto].headOption,
+            k.col[SchemaDto],
+            k.col[ConstantDto],
+            k.col[FunctionDto],
+            k.col[InvariantDto],
+            k.col[StreamletDto],
+            k.col[ConnectorDto],
+            k.col[RelationshipDto],
+            metaOf(r.metadata),
+            k.col[CommentDto]
+          )
+        )
+      case _ => None
+  end buildProcessorDto
+
+  /** The definitions that carry behaviour: states, handlers and their clauses, types, sagas, functions. */
+  private def buildBehaviorDto(d: Definition, k: Kids): Option[Any] =
+    d match
       case s: State =>
         Some(
           StateDto(
             s.id.value,
             path(s.typ.pathId),
-            col[HandlerDto],
-            col[InvariantDto],
+            k.col[HandlerDto],
+            k.col[InvariantDto],
             briefOf(s.metadata),
             s.isInitial,
             metaOf(s.metadata),
-            col[CommentDto]
+            k.col[CommentDto]
           )
         )
       case h: Handler =>
@@ -284,10 +434,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           HandlerDto(
             h.id.value,
             briefOf(h.metadata),
-            col[OnClauseDto],
+            k.col[OnClauseDto],
             h.isInitial,
             metaOf(h.metadata),
-            col[CommentDto]
+            k.col[CommentDto]
           )
         )
       case oc: OnClause =>
@@ -295,7 +445,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         // comments in it. Consume the pushed comment children so the drop guard stays honest —
         // writing them again under `comments` would duplicate every one of them on rebuild.
         val statements = serializeStatements(oc.contents)
-        col[CommentDto]
+        k.col[CommentDto]
         oc match
           case omc: OnMessageClause =>
             // A55: carry the optional local message binding
@@ -395,121 +545,6 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 metaOf(t.metadata)
               )
             )
-      case a: Adaptor =>
-        val dir = a.direction match
-          case _: InboundAdaptor => "inbound"
-          case _                 => "outbound"
-        Some(
-          AdaptorDto(
-            a.id.value,
-            dir,
-            path(a.referent.pathId),
-            briefOf(a.metadata),
-            col[TypeDefDto],
-            col[ConstantDto],
-            msgs(AggregateUseCase.CommandCase),
-            msgs(AggregateUseCase.EventCase),
-            msgs(AggregateUseCase.QueryCase),
-            msgs(AggregateUseCase.ResultCase),
-            col[FunctionDto],
-            col[HandlerDto],
-            a.ascribedShape.map(_.keyword),
-            col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto),
-            col[VersionDto].headOption,
-            col[CopyrightDto].headOption,
-            col[InvariantDto],
-            col[StreamletDto],
-            col[ConnectorDto],
-            col[RelationshipDto],
-            metaOf(a.metadata),
-            col[CommentDto]
-          )
-        )
-      case s: Streamlet =>
-        Some(
-          StreamletDto(
-            s.id.value,
-            s.ascribedShape.map(_.keyword),
-            briefOf(s.metadata),
-            col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto),
-            col[ConnectorDto],
-            col[TypeDefDto],
-            msgs(AggregateUseCase.CommandCase),
-            msgs(AggregateUseCase.EventCase),
-            msgs(AggregateUseCase.QueryCase),
-            msgs(AggregateUseCase.ResultCase),
-            col[HandlerDto],
-            col[VersionDto].headOption,
-            col[CopyrightDto].headOption,
-            col[ConstantDto],
-            col[FunctionDto],
-            col[InvariantDto],
-            col[StreamletDto],
-            col[RelationshipDto],
-            metaOf(s.metadata),
-            col[CommentDto]
-          )
-        )
-      case p: Projector =>
-        val repo = p.contents.toSeq.collectFirst { case rr: RepositoryRef => path(rr.pathId) }
-        Some(
-          ProjectorDto(
-            p.id.value,
-            briefOf(p.metadata),
-            repo,
-            col[TypeDefDto],
-            col[ConstantDto],
-            msgs(AggregateUseCase.CommandCase),
-            msgs(AggregateUseCase.EventCase),
-            msgs(AggregateUseCase.QueryCase),
-            msgs(AggregateUseCase.ResultCase),
-            col[FunctionDto],
-            col[HandlerDto],
-            p.ascribedShape.map(_.keyword),
-            col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto),
-            col[VersionDto].headOption,
-            col[CopyrightDto].headOption,
-            col[InvariantDto],
-            col[StreamletDto],
-            col[ConnectorDto],
-            col[RelationshipDto],
-            metaOf(p.metadata),
-            col[CommentDto]
-          )
-        )
-      case r: Repository =>
-        Some(
-          RepositoryDto(
-            r.id.value,
-            briefOf(r.metadata),
-            // The plural `schemas` below carries them all; the singular stays empty on output so a
-            // round trip cannot duplicate the first one. Reading still accepts either.
-            None,
-            col[TypeDefDto],
-            msgs(AggregateUseCase.CommandCase),
-            msgs(AggregateUseCase.EventCase),
-            msgs(AggregateUseCase.QueryCase),
-            msgs(AggregateUseCase.ResultCase),
-            col[HandlerDto],
-            r.ascribedShape.map(_.keyword),
-            col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto),
-            col[VersionDto].headOption,
-            col[CopyrightDto].headOption,
-            col[SchemaDto],
-            col[ConstantDto],
-            col[FunctionDto],
-            col[InvariantDto],
-            col[StreamletDto],
-            col[ConnectorDto],
-            col[RelationshipDto],
-            metaOf(r.metadata),
-            col[CommentDto]
-          )
-        )
       case s: Saga =>
         Some(
           SagaDto(
@@ -517,10 +552,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             briefOf(s.metadata),
             argDto(s.input),
             argDto(s.output),
-            col[TypeDefDto],
-            col[SagaStepDto],
+            k.col[TypeDefDto],
+            k.col[SagaStepDto],
             metaOf(s.metadata),
-            col[CommentDto]
+            k.col[CommentDto]
           )
         )
       case f: Function =>
@@ -530,25 +565,31 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             briefOf(f.metadata),
             argDto(f.input),
             argDto(f.output),
-            col[TypeDefDto],
+            k.col[TypeDefDto],
             f.contents.toSeq.collect { case st: Statement => serializeStatement(st) },
-            col[FunctionDto],
+            k.col[FunctionDto],
             metaOf(f.metadata),
-            col[CommentDto]
+            k.col[CommentDto]
           )
         )
+      case _ => None
+  end buildBehaviorDto
+
+  /** The UI and epic surface: groups, their inputs and outputs, use cases and epics. */
+  private def buildUiDto(d: Definition, k: Kids): Option[Any] =
+    d match
       case g: Group =>
         Some(
           GroupDto(
             g.id.value,
             Some(g.alias),
             briefOf(g.metadata),
-            col[GroupDto],
-            col[ContainedGroupDto],
-            col[InputDto],
-            col[OutputDto],
+            k.col[GroupDto],
+            k.col[ContainedGroupDto],
+            k.col[InputDto],
+            k.col[OutputDto],
             metaOf(g.metadata),
-            col[CommentDto]
+            k.col[CommentDto]
           )
         )
       case in: Input =>
@@ -559,7 +600,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             Some(in.nounAlias),
             Some(in.verbAlias),
             briefOf(in.metadata),
-            col[InputDto],
+            k.col[InputDto],
             metaOf(in.metadata)
           )
         )
@@ -571,7 +612,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             Some(o.nounAlias),
             Some(o.verbAlias),
             briefOf(o.metadata),
-            col[OutputDto],
+            k.col[OutputDto],
             metaOf(o.metadata)
           )
         )
@@ -586,7 +627,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             interactions,
             briefOf(uc.metadata),
             metaOf(uc.metadata),
-            col[CommentDto]
+            k.col[CommentDto]
           )
         )
       case e: Epic =>
@@ -599,13 +640,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             serializeUserStory(e.userStory),
             briefOf(e.metadata),
             shownBy,
-            col[TypeDefDto],
-            col[UseCaseDto],
+            k.col[TypeDefDto],
+            k.col[UseCaseDto],
             metaOf(e.metadata),
-            col[CommentDto]
+            k.col[CommentDto]
           )
         )
-      case _ => None // interaction containers etc. — read from their parent node directly
+      case _ => None
+  end buildUiDto
 
   private def buildLeaf(l: Leaf): Option[Any] = l match
     case c: Constant =>

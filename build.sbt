@@ -65,6 +65,18 @@ lazy val riddl: Project = Root("riddl", startYr = startYear, spdx = "Apache-2.0"
   )
 
 lazy val Utils = config("utils")
+/** The coverage instrumenter reports any value initializer or method body over 3000 tree nodes
+  * as "skipped", and -Werror turns that into a build failure whenever coverage is enabled. A
+  * large METHOD is worth splitting and has been (see JsonifierPass.buildContainer), but upickle's
+  * macro-generated picklers are over the threshold purely because of how many fields their DTOs
+  * have — there is nothing to split and nothing to act on. Silence that one message so -Werror
+  * keeps its teeth everywhere else.
+  */
+lazy val quietCoverageSkips = Seq(
+  Compile / scalacOptions += "-Wconf:msg=Skipping coverage instrumentation:s",
+  Test / scalacOptions += "-Wconf:msg=Skipping coverage instrumentation:s"
+)
+
 lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
@@ -273,6 +285,7 @@ lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Na
     coverageExcludedFiles := """<empty>;$anon""",
     libraryDependencies += Dep.upickle
   )
+  .settings(quietCoverageSkips)
   .jsConfigure(With.ScalaJS("RIDDL: riddl-lib"))
   .jsConfigure(With.noMiMa)
   .jsSettings(
