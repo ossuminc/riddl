@@ -8,9 +8,10 @@ package com.ossuminc.riddl.utils
 
 /** A42: the answer to "does this Figma node exist, and what is it called?".
   *
-  * Deliberately three-valued. `Unavailable` is NOT the same as `Missing`: a network timeout, an
-  * expired token or a rate limit tells us nothing about the design, and must never be reported as
-  * drift. Only a successful API answer that does not contain the node is `Missing`.
+  * Deliberately four-valued, because the ways of not finding a node are not equivalent.
+  * `Unavailable` is NOT drift: a network timeout, an expired token or a rate limit tells us nothing
+  * about the design. `Missing` and `FileNotFound` both are drift, but about different things — one
+  * node has gone, versus the whole file has.
   */
 enum FigmaLookup:
   /** The node exists; `nodeName` is the name Figma has for it. */
@@ -18,6 +19,13 @@ enum FigmaLookup:
 
   /** The API answered successfully and the node was not among the results. */
   case Missing
+
+  /** The API denied the file itself (HTTP 404). Reported as drift, deliberately: the file has most
+    * likely been deleted or moved. It is worth knowing that this reading is not certain — Figma
+    * answers 404 for a file the token cannot see just as it does for one that no longer exists — so
+    * the message this produces says so.
+    */
+  case FileNotFound(detail: String)
 
   /** No answer could be obtained. Never reported as drift; at most informational. */
   case Unavailable(reason: String)

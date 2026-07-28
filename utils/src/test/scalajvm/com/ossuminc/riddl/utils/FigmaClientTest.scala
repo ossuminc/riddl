@@ -27,7 +27,7 @@ class FigmaClientTest extends AnyWordSpec with Matchers {
       |"components":{},"schemaVersion":0,"styles":{}}}}""".stripMargin.replace("\n", "")
 
   private def clientReturning(body: String): JVMFigmaClient =
-    JVMFigmaClient((_, _) => Right(body))
+    JVMFigmaClient((_, _) => FigmaTransport.Body(body))
 
   "JVMFigmaClient" should {
 
@@ -47,8 +47,13 @@ class FigmaClientTest extends AnyWordSpec with Matchers {
     }
 
     "report a transport failure as Unavailable, never as Missing" in {
-      val client = JVMFigmaClient((_, _) => Left("connect timed out"))
+      val client = JVMFigmaClient((_, _) => FigmaTransport.Unreachable("connect timed out"))
       client.lookupNode("KEY", "12:30") mustBe FigmaLookup.Unavailable("connect timed out")
+    }
+
+    "report a denied file as FileNotFound, distinct from both Missing and Unavailable" in {
+      val client = JVMFigmaClient((_, _) => FigmaTransport.NotFound("HTTP 404 for file 'KEY'"))
+      client.lookupNode("KEY", "12:30") mustBe FigmaLookup.FileNotFound("HTTP 404 for file 'KEY'")
     }
 
     "report an unparseable body as Unavailable, never as Missing" in {
@@ -60,6 +65,31 @@ class FigmaClientTest extends AnyWordSpec with Matchers {
     "handle escapes in the frame name" in {
       clientReturning("""{"nodes":{"1:2":{"document":{"name":"A \"quoted\" name"}}}}""")
         .lookupNode("KEY", "1:2") mustBe FigmaLookup.Found("A \"quoted\" name")
+    }
+  }
+
+  /** The single decision this layer exists to make: which HTTP statuses mean the design changed,
+    * and which mean we simply could not ask.
+    */
+  "JVMFigmaClient.classify" should {
+
+    "treat 200 as a body" in {
+      JVMFigmaClient.classify(200, "KEY", "{}") mustBe FigmaTransport.Body("{}")
+    }
+
+    "treat 404 as NotFound, since the file itself was denied" in {
+      JVMFigmaClient.classify(404, "KEY", fail("the body must not be read")) match
+        case FigmaTransport.NotFound(detail) => detail must include("KEY")
+        case other                           => fail(s"expected NotFound, got $other")
+    }
+
+    "treat every other failing status as Unreachable, never as drift" in {
+      for status <- Seq(401, 403, 429, 500, 502, 503) do
+        JVMFigmaClient.classify(status, "KEY", "") match
+          case FigmaTransport.Unreachable(reason) => reason must include(status.toString)
+          case other => fail(s"expected Unreachable for $status, got $other")
+      end for
+      succeed
     }
   }
 

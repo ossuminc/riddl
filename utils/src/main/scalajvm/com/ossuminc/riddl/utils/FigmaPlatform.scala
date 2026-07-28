@@ -36,22 +36,40 @@ object FigmaPlatform:
 
 end FigmaPlatform
 
+/** A42: what one HTTP exchange with Figma can come back as.
+  *
+  * Three-valued rather than an `Either`, because a 404 must not be lumped in with a timeout: the
+  * one says the file is gone, the other says nothing at all. Collapsing them is exactly the
+  * distinction this type exists to keep.
+  */
+enum FigmaTransport:
+  /** A 200 and its body. */
+  case Body(text: String)
+
+  /** A 404: the file could not be read. */
+  case NotFound(detail: String)
+
+  /** Any other non-200, a timeout, or an exception. */
+  case Unreachable(reason: String)
+end FigmaTransport
+
 /** A42: the entire network layer, and nothing else.
   *
-  * `transport` maps a (fileKey, nodeId) pair to either a failure description or the raw response
-  * body. The default performs the real HTTPS GET against the Figma API; injecting a different one
-  * lets tests exercise response handling against recorded payloads without a socket.
+  * `transport` maps a (fileKey, nodeId) pair to one [[FigmaTransport]] outcome. The default
+  * performs the real HTTPS GET against the Figma API; injecting a different one lets tests exercise
+  * response handling against recorded payloads without a socket.
   */
 final class JVMFigmaClient(
-  transport: (String, String) => Either[String, String]
+  transport: (String, String) => FigmaTransport
 ) extends FigmaClient:
 
   def this(token: String) = this(JVMFigmaClient.httpTransport(token))
 
   override def lookupNode(fileKey: String, nodeId: String): FigmaLookup =
     transport(fileKey, nodeId) match
-      case Left(reason) => FigmaLookup.Unavailable(reason)
-      case Right(body) =>
+      case FigmaTransport.Unreachable(reason) => FigmaLookup.Unavailable(reason)
+      case FigmaTransport.NotFound(detail)    => FigmaLookup.FileNotFound(detail)
+      case FigmaTransport.Body(body) =>
         try
           FigmaJson.nodeName(body, nodeId) match
             case Some(name) => FigmaLookup.Found(name)
@@ -73,14 +91,29 @@ object JVMFigmaClient:
 
   private def encode(s: String): String = URLEncoder.encode(s, StandardCharsets.UTF_8)
 
-  /** The real GET. Every failure mode — a non-200 status, an exception, a timeout — comes back as a
-    * `Left`, which the caller turns into `Unavailable`. Nothing here can throw at the caller.
-    *
-    * Note that a 404 is reported as unavailable rather than as a missing node: a 404 means the FILE
-    * could not be read, which is indistinguishable from a token that lacks access to it, and an
-    * access problem must not be reported as design drift.
+  /** Which outcome an HTTP status means. Separated from the GET itself so that the one decision
+    * that matters — that 404 is drift and every other failure is not — can be tested without a
+    * socket. `body` is by-name so it is not touched for a status that discards it.
     */
-  def httpTransport(token: String)(fileKey: String, nodeId: String): Either[String, String] =
+  private[utils] def classify(status: Int, fileKey: String, body: => String): FigmaTransport =
+    status match
+      case 200 => FigmaTransport.Body(body)
+      case 404 => FigmaTransport.NotFound(s"the Figma API answered HTTP 404 for file '$fileKey'")
+      case other =>
+        FigmaTransport.Unreachable(s"the Figma API answered HTTP $other for file '$fileKey'")
+    end match
+  end classify
+
+  /** The real GET. Every failure mode — a non-200 status, an exception, a timeout — comes back as a
+    * value, never as a thrown exception: nothing here can throw at the caller.
+    *
+    * A 404 is singled out. It means the FILE could not be read, which the caller reports as drift
+    * on the grounds that a referenced design file going away is worth knowing about. It is not a
+    * certain reading — Figma answers 404 for a file the token cannot see just as it does for one
+    * that has been deleted — so the diagnostic says both. Every other failure stays `Unreachable`
+    * and produces nothing, because it says nothing about the design.
+    */
+  def httpTransport(token: String)(fileKey: String, nodeId: String): FigmaTransport =
     try
       val uri = URI.create(
         s"https://api.figma.com/v1/files/${encode(fileKey)}/nodes?ids=${encode(nodeId)}"
@@ -92,13 +125,12 @@ object JVMFigmaClient:
         .GET()
         .build()
       val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-      response.statusCode() match
-        case 200    => Right(response.body())
-        case status => Left(s"the Figma API answered HTTP $status for file '$fileKey'")
-      end match
+      classify(response.statusCode(), fileKey, response.body())
     catch
       case NonFatal(x) =>
-        Left(s"the Figma API could not be reached: ${x.getClass.getSimpleName}: ${x.getMessage}")
+        FigmaTransport.Unreachable(
+          s"the Figma API could not be reached: ${x.getClass.getSimpleName}: ${x.getMessage}"
+        )
     end try
   end httpTransport
 

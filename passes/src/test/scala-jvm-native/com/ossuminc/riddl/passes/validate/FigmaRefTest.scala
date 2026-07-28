@@ -260,6 +260,47 @@ class FigmaRefTest extends AbstractValidatingTest {
       }
     }
 
+    "report a denied file as an error when enabled, admitting the access ambiguity" in {
+      (td: TestData) =>
+        val denied = FigmaLookup.FileNotFound("the Figma API answered HTTP 404 for file 'FILEKEY'")
+        val stub = StubFigmaClient(
+          Map(
+            ("FILEKEY", "12:34") -> denied,
+            ("FILEKEY", "12:36") -> denied,
+            ("FILEKEY", "12:30") -> denied,
+            ("FILEKEY", "12:1") -> denied
+          )
+        )
+        FigmaClient.withClient(stub) {
+          pc.withOptions[Assertion](CommonOptions.default.copy(checkFigmaDrift = true)) { _ =>
+            validating(wellPlacedModel, td) { msgs =>
+              val errors = figmaMessages(msgs).justErrors
+              // One per reference, as a missing node is; all four name the file, and each says
+              // both of the things a 404 can mean so the reader is not sent after the wrong one.
+              errors.size mustBe 4
+              errors.foreach { e =>
+                e.message must include("'FILEKEY'")
+                e.message must include("could not be read")
+                e.message must include("cannot see it")
+              }
+              succeed
+            }
+          }
+        }
+    }
+
+    "keep a denied file silent while the flag is off" in { (td: TestData) =>
+      val stub = StubFigmaClient(
+        Map(("FILEKEY", "12:30") -> FigmaLookup.FileNotFound("HTTP 404"))
+      )
+      FigmaClient.withClient(stub) {
+        validating(wellPlacedModel, td) { msgs =>
+          stub.calls mustBe empty
+          figmaMessages(msgs) mustBe empty
+        }
+      }
+    }
+
     "ask about each distinct node only once" in { (td: TestData) =>
       val stub = StubFigmaClient(
         Map(

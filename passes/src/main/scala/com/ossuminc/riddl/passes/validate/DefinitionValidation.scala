@@ -288,14 +288,15 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     *      (as it does every other metadata), so this is where a misplaced reference is reported —
     *      as a clear message rather than a parse failure.
     *   1. DRIFT, checked only when `checkFigmaDrift` is on: the node must still exist in the design
-    *      (Error if the API says it does not) and the frame's name must still correspond to the
-    *      annotated definition's name (Warning if it does not). The point of the feature is that
-    *      design/model divergence fails the build now instead of being discovered months later.
+    *      (Error if the API says it does not, or if the file itself is gone) and the frame's name
+    *      must still correspond to the annotated definition's name (Warning if it does not). The
+    *      point of the feature is that design/model divergence fails the build now instead of being
+    *      discovered months later.
     *
     * The drift half can never break an offline, unconfigured or air-gapped build. It is off by
     * default; with no token there is no client; and any failure to reach or understand the API
-    * yields [[FigmaLookup.Unavailable]], which produces nothing at all. Only a successful API
-    * answer can produce a message.
+    * yields [[FigmaLookup.Unavailable]], which produces nothing at all. Only an API answer — a
+    * successful one, or a 404 denying the file — can produce a message.
     */
   private def validateFigmaRef(
     figmaRef: FigmaRef,
@@ -349,6 +350,19 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
                 s"'$fileKey'",
               suggestion = "Update the node id to the frame's current id, or remove the 'figma' " +
                 "reference if the frame was deleted."
+            )
+          case FigmaLookup.FileNotFound(_) =>
+            // The message admits its own ambiguity, because Figma answers 404 for a file the token
+            // cannot see exactly as it does for one that has been deleted, and sending the reader
+            // after the wrong one of those wastes their time. Reported per reference, as `Missing`
+            // is; the memo in `figmaLookups` spares the network, not the diagnostics.
+            messages.addError(
+              figmaRef.loc,
+              s"Figma file '$fileKey' referenced by $identity could not be read; it has been " +
+                "deleted or moved, or the token in use cannot see it",
+              suggestion = s"Check that the file key is current and that the " +
+                s"${FigmaClient.TokenEnvVar} token has access to it, or remove the 'figma' " +
+                "reference if the design has been retired."
             )
           case FigmaLookup.Found(frameName) =>
             val expected = definition match
