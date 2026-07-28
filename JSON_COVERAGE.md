@@ -173,9 +173,11 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 
 ## Metadata
 
-Rich metadata (below) is carried by `metadata` on the primary containers
-(domain, context, entity, type) and, since A42, on group, input and output
-as well; `brief` remains a shorthand everywhere.
+Rich metadata (below) is carried by `metadata` on **every** definition. It used
+to ride on only seven of them — domain, context, entity, type, and since A42
+group, input and output — so a `described as` on a saga, a `term` on an author
+or an `option` on a connector was parsed and then dropped. `brief` remains a
+shorthand everywhere.
 
 | Construct | Status | Notes |
 |---|---|---|
@@ -186,4 +188,6 @@ as well; `brief` remains a shorthand everywhere.
 | AuthorRef (byAuthor) | ✅ Phase 9 | `byAuthors` |
 | FigmaRef | ✅ A42 | `figmaRefs` (`{fileKey, nodeId}`) |
 | FileAttachment / StringAttachment | ✅ Phase 9 | `attachments` (ULIDAttachment is builder-internal) |
-| Comment | ✅ Phase 9 | `comments` (line comments) |
+| Comment (in metadata) | ✅ Phase 9 | `comments` on the metadata object |
+| Comment (in contents) | ✅ 2.0 | `comments` on the container: `{text, inline?}`. Grouped with the container's other children, so position relative to neighbouring definitions is not preserved — the schema groups every child by kind, so that ordering is already gone for definitions too. **Known gap:** a comment written as the first thing in a `group` body cannot be restored. The parser puts it in the group's contents, but `AST.OccursInGroup` does not admit a `Comment`, so there is no legal way to put it back. Reconciling the parser with the union is a language change; `Root2JsonFixturesTest` pins the loss at exactly 3 occurrences so it cannot grow unnoticed. |
+| URL description (`described at`) | ✅ 2.0 | `urlDescription` |

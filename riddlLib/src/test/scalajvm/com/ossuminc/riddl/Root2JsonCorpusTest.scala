@@ -11,10 +11,9 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.File
-import java.nio.file.Files
+import scala.io.Source
 
-/** Fidelity regression over the whole riddl-models corpus. For every `.bast` model it runs two
-  * round-trips:
+/** Fidelity regression over the whole riddl-models corpus. For every model it runs two round-trips:
   *
   *   1. JSON-identity (the strong check): `root0 -> json1 -> root1 -> json2`, asserting `json1 ==
   *      json2`. If the serializer drops or reorders anything, the second JSON diverges from the
@@ -22,19 +21,46 @@ import java.nio.file.Files
   *      2. Validation-parity (the weak check): the re-parsed AST introduces no new validation
   *      errors vs the original.
   *
-  * JVM-only (walks the `../riddl-models` directory tree); cancels if the corpus isn't present. A
-  * cross-platform (JVM/JS/Native) idempotence check on inline models lives in the shared
+  * **This suite is EXPECTED RED until the corpus is migrated to 2.0 syntax**, by standing policy,
+  * along with `RiddlModelsRoundTripTest`. It reads a live sibling checkout, so it is a moving
+  * target rather than a signal about this repository. The in-repo counterpart that DOES gate is
+  * `Root2JsonFixturesTest`; a cross-platform idempotence check on inline models lives in the shared
   * `JsonRoundTripTest`.
+  *
+  * It is driven from RIDDL SOURCE, not from the checked-in `.bast` artifacts. Those artifacts carry
+  * whatever `FORMAT_REVISION` was current when they were written, and the reader rejects any
+  * mismatch — so as soon as the format moved, every read failed, every failure was skipped, and
+  * both assertions below quietly reduced to `0 mustBe 0`. The suite passed for months without
+  * checking anything. Driving from source removes the dependency on artifacts that have to be
+  * regenerated anyway, and a parse failure is now reported rather than skipped.
   */
 class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
 
-  private def bastFiles: Seq[File] =
+  /** The corpus entry points: each `<name>.conf` names its sibling `<name>.riddl` as `input-file`,
+    * so the sibling is the model. Everything else under the tree is an include fragment.
+    */
+  private def modelFiles: Seq[File] =
     val root = new File("../riddl-models")
     def walk(f: File): Seq[File] =
       if f.isDirectory then Option(f.listFiles).map(_.toSeq).getOrElse(Nil).flatMap(walk)
-      else if f.getName.endsWith(".bast") then Seq(f)
+      else if f.getName.endsWith(".conf") then
+        val model = new File(f.getPath.stripSuffix(".conf") + ".riddl")
+        if model.isFile then Seq(model) else Nil
       else Nil
-    if root.isDirectory then walk(root) else Nil
+    if root.isDirectory then walk(root).sortBy(_.getPath) else Nil
+  end modelFiles
+
+  private def read(f: File): String =
+    val s = Source.fromFile(f)
+    try s.mkString
+    finally s.close()
+  end read
+
+  /** Parse a model with its ABSOLUTE path as the origin, so `include` resolves against the model's
+    * own directory (`RiddlLib.originToURL` only builds a full-path URL for an origin starting "/").
+    */
+  private def parseModel(f: File): RiddlResult[com.ossuminc.riddl.language.AST.Root] =
+    RiddlLib.parseString(read(f), f.getAbsolutePath)
 
   /** Collapse names/paths/quotes so error categories aggregate. */
   private def normalize(e: String): String =
@@ -56,19 +82,19 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
   "root2Json over the riddl-models corpus" should {
 
     "produce byte-identical JSON on the second round-trip (json1 == json2)" in {
-      val files = bastFiles
+      val files = modelFiles
       if files.isEmpty then cancel("../riddl-models corpus not found relative to the build root")
 
-      var read = 0
+      var parsed = 0
       var reparsed = 0
       var identical = 0
+      val unparsed = scala.collection.mutable.ListBuffer.empty[String]
       val mismatches = scala.collection.mutable.ListBuffer.empty[String]
 
       for f <- files do
-        val bytes = Files.readAllBytes(f.toPath)
-        RiddlLib.bast2FlatAST(bytes) match
+        parseModel(f) match
           case RiddlResult.Success(root0) =>
-            read += 1
+            parsed += 1
             val json1 = RiddlLib.root2Json(root0)
             RiddlLib.parseJson(json1, f.getName) match
               case RiddlResult.Success(root1) =>
@@ -77,23 +103,31 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
                 if json1 == json2 then identical += 1
                 else mismatches += s"${f.getName}: ${firstDiff(json1, json2)}"
               case RiddlResult.Failure(_) => mismatches += s"${f.getName} [reparse-fail]"
-          case RiddlResult.Failure(_) => // bast read failure (skip)
+          case RiddlResult.Failure(errors) =>
+            unparsed += s"${f.getName}: ${errors.take(1).map(_.format).mkString}"
+      end for
       val pct = if files.nonEmpty then 100.0 * identical / files.size else 0.0
       info(
-        f"json-identity: files=${files.size} bastRead=$read reparsed=$reparsed identical=$identical ($pct%.1f%%)"
+        f"json-identity: models=${files.size} parsed=$parsed reparsed=$reparsed identical=$identical ($pct%.1f%%)"
       )
+      if unparsed.nonEmpty then
+        info(s"models that did not parse (${unparsed.size}, corpus migration pending):")
+        unparsed.take(8).foreach(m => info("  " + m))
+      end if
       if mismatches.nonEmpty then
-        info("mismatches (first 8):")
+        info(s"mismatches (${mismatches.size}, first 8):")
         mismatches.take(8).foreach(m => info("  " + m))
+      end if
 
-      // The AST<->JSON mapping must be a lossless, deterministic fixed point for
-      // the whole corpus. Currently 187/187; require identity for all read models.
+      // The AST<->JSON mapping must be a lossless, deterministic fixed point for the whole corpus.
+      // Every model must parse, and every parsed model must round-trip identically — no skips.
       identical mustBe reparsed
-      reparsed mustBe read
+      reparsed mustBe parsed
+      parsed mustBe files.size
     }
 
     "introduce no new validation errors on the re-parsed AST (>= 95% of models)" in {
-      val files = bastFiles
+      val files = modelFiles
       if files.isEmpty then cancel("../riddl-models corpus not found relative to the build root")
 
       var reparsed = 0
@@ -102,8 +136,7 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
       val failedFiles = scala.collection.mutable.ListBuffer.empty[String]
 
       for f <- files do
-        val bytes = Files.readAllBytes(f.toPath)
-        RiddlLib.bast2FlatAST(bytes) match
+        parseModel(f) match
           case RiddlResult.Success(root) =>
             val base = RiddlLib.validateRoot(root).errors.map(_.format).toSet
             val json = RiddlLib.root2Json(root)
@@ -117,16 +150,18 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
                   failedFiles += f.getName
                   added.foreach(e => newErrs(normalize(e)) += 1)
               case RiddlResult.Failure(_) => failedFiles += (f.getName + " [reparse-fail]")
-          case RiddlResult.Failure(_) => // bast read failure (skip)
+          case RiddlResult.Failure(_) => failedFiles += (f.getName + " [parse-fail]")
+      end for
       val pct = if files.nonEmpty then 100.0 * clean / files.size else 0.0
       info(
-        f"validation-parity: files=${files.size} reparsed=$reparsed cleanRoundTrip=$clean ($pct%.1f%%)"
+        f"validation-parity: models=${files.size} reparsed=$reparsed cleanRoundTrip=$clean ($pct%.1f%%)"
       )
       info("top new-error categories (count, normalized message):")
       newErrs.toSeq.sortBy(-_._2).take(15).foreach { case (msg, n) => info(f"  $n%4d  $msg") }
       info("failed models: " + failedFiles.take(12).mkString(", "))
 
-      // Currently 100% (187/187); floor guards regressions.
+      // The percentage is of ALL models, not of the ones that happened to parse, so a corpus that
+      // stops parsing shows up as a falling number instead of a vacuous pass.
       pct must be >= 95.0
     }
   }

@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.json
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, Contents}
+import com.ossuminc.riddl.language.{At, Contents, toSeq}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.{Message, Messages}
 import com.ossuminc.riddl.utils.{PlatformContext, URL}
@@ -36,7 +36,7 @@ object JsonAstBuilder:
     val copyright = dto.copyright.map(buildCopyright).toSeq
     val authors = dto.authors.map(buildAuthor)
     val root =
-      Root(At(), contentsOf[RootContents](domains, modules, version, copyright, authors))
+      Root(At(), contentsOf[RootContents](domains, modules, version, copyright, authors, comments(dto.comments)))
     if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
   end build
 
@@ -92,7 +92,8 @@ object JsonAstBuilder:
         relationships,
         modules,
         version,
-        copyright
+        copyright,
+        comments(m.comments)
       ),
       meta(m.brief, m.metadata)
     )
@@ -149,6 +150,16 @@ object JsonAstBuilder:
     Contents[MetaData](items.toSeq*)
   end meta
 
+  /** Rebuild the comments that belong in a container's CONTENTS (as opposed to the ones attached
+    * to its metadata, which `meta` handles). They are appended after the definitions, since the
+    * schema groups children by kind and their original position is not recoverable.
+    */
+  private def comments(cs: Seq[CommentDto]): Seq[Comment] =
+    cs.map { c =>
+      if c.inline then InlineComment(At(), c.text.split("\n").toSeq)
+      else LineComment(At(), c.text)
+    }
+
   private def ident(name: String): Identifier = Identifier(At(), name)
 
   /** A dotted reference string -> PathIdentifier segments. */
@@ -193,7 +204,8 @@ object JsonAstBuilder:
         queries,
         results,
         repositories,
-        connectors
+        connectors,
+        comments(d.comments)
       ),
       meta(d.brief, d.metadata)
     )
@@ -284,7 +296,8 @@ object JsonAstBuilder:
         outlets,
         version,
         copyright,
-        invariants
+        invariants,
+        comments(c.comments)
       ),
       ascribedShape = parseShape(c.shape),
       intention = parseIntention(c.intention),
@@ -299,7 +312,7 @@ object JsonAstBuilder:
     val typEx = AggregateUseCaseTypeExpression(
       At(),
       useCase,
-      Contents[AggregateContents](fields*),
+      contentsOf[AggregateContents](fields, comments(m.comments)),
       m.yields.map(messageRef)
     )
     Type(At(), ident(m.name), typEx, meta(m.brief, m.metadata))
@@ -374,7 +387,8 @@ object JsonAstBuilder:
         copyright,
         streamlets,
         connectors,
-        relationships
+        relationships,
+        comments(e.comments)
       ),
       ascribedShape = parseShape(e.shape),
       metadata = meta(e.brief, e.metadata)
@@ -388,7 +402,11 @@ object JsonAstBuilder:
       At(),
       ident(s.name),
       RecordRef(At(), pathId(s.recordType)), // A9b: state type is a RecordRef
-      contentsOf[StateContents](s.handlers.map(buildHandler), s.invariants.map(buildInvariant)),
+      contentsOf[StateContents](
+        s.handlers.map(buildHandler),
+        s.invariants.map(buildInvariant),
+        comments(s.comments)
+      ),
       meta(s.brief, s.metadata),
       s.isInitial
     )
@@ -398,13 +416,16 @@ object JsonAstBuilder:
     Handler(
       At(),
       ident(h.name),
-      contentsOf[HandlerContents](clauses),
+      contentsOf[HandlerContents](clauses, comments(h.comments)),
       meta(h.brief, h.metadata),
       h.isInitial
     )
 
   private def buildOnClause(oc: OnClauseDto)(using ctx: Ctx): OnClause =
-    val statements = buildStatements(oc.statements)
+    // `Statements` is `Statement | Comment`, so a comment written between two statements belongs
+    // in the on-clause's contents beside them, not in its metadata.
+    val statements =
+      contentsOf[Statements](buildStatements(oc.statements).toSeq, comments(oc.comments))
     // A55: the optional local name bound to the handled message
     val binding: Option[Identifier] = oc.binding.map(ident)
     val md = meta(oc.brief, oc.metadata)
@@ -501,7 +522,7 @@ object JsonAstBuilder:
       ident(f.name),
       argOf(f.input),
       argOf(f.output),
-      contentsOf[FunctionContents](types, statements, functions),
+      contentsOf[FunctionContents](types, statements, functions, comments(f.comments)),
       meta(f.brief, f.metadata)
     )
 
@@ -522,7 +543,7 @@ object JsonAstBuilder:
       ident(s.name),
       argOf(s.input),
       argOf(s.output),
-      contentsOf[SagaContents](types, steps),
+      contentsOf[SagaContents](types, steps, comments(s.comments)),
       meta(s.brief, s.metadata)
     )
 
@@ -635,7 +656,7 @@ object JsonAstBuilder:
       At(),
       ident(u.name),
       buildUserStory(u.userStory),
-      contentsOf[UseCaseContents](u.interactions.map(buildInteraction)),
+      contentsOf[UseCaseContents](u.interactions.map(buildInteraction), comments(u.comments)),
       meta(u.brief, u.metadata)
     )
 
@@ -647,7 +668,7 @@ object JsonAstBuilder:
       At(),
       ident(e.name),
       buildUserStory(e.userStory),
-      contentsOf[EpicContents](types, shownBy, useCases),
+      contentsOf[EpicContents](types, shownBy, useCases, comments(e.comments)),
       meta(e.brief, e.metadata)
     )
 
@@ -982,7 +1003,8 @@ object JsonAstBuilder:
         invariants,
         streamlets,
         connectors,
-        relationships
+        relationships,
+        comments(a.comments)
       ),
       ascribedShape = parseShape(a.shape),
       metadata = meta(a.brief, a.metadata)
@@ -1050,7 +1072,8 @@ object JsonAstBuilder:
         functions,
         invariants,
         nested,
-        relationships
+        relationships,
+        comments(s.comments)
       ),
       meta(s.brief, s.metadata)
     )
@@ -1109,7 +1132,8 @@ object JsonAstBuilder:
         invariants,
         streamlets,
         connectors,
-        relationships
+        relationships,
+        comments(p.comments)
       ),
       metadata = meta(p.brief, p.metadata)
     )
@@ -1177,7 +1201,8 @@ object JsonAstBuilder:
         invariants,
         streamlets,
         connectors,
-        relationships
+        relationships,
+        comments(r.comments)
       ),
       metadata = meta(r.brief, r.metadata)
     )
@@ -1251,14 +1276,18 @@ object JsonAstBuilder:
         val aliases = of.map(t => AliasedTypeExpression(At(), "type", pathId(t)))
         Alternation(At(), Contents[AliasedTypeExpression](aliases*))
 
-      case RecordDto(fields, methods) =>
+      case RecordDto(fields, methods, cs) =>
         // A named Record becomes a proper RIDDL `record` (an aggregate tagged
         // RecordCase), not a bare aggregation, so that a `state ... of record X`
         // reference resolves (ResolutionPass.handleTypeResolution).
         AggregateUseCaseTypeExpression(
           At(),
           AggregateUseCase.RecordCase,
-          contentsOf[AggregateContents](fields.map(buildField), methods.map(buildMethod))
+          contentsOf[AggregateContents](
+            fields.map(buildField),
+            methods.map(buildMethod),
+            comments(cs)
+          )
         )
 
       case AliasDto(ref) => AliasedTypeExpression(At(), "type", pathId(ref))

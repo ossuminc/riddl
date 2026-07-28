@@ -82,7 +82,24 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   override protected def processLeaf(definition: Leaf, parents: Parents): Unit =
     buildLeaf(definition).foreach(add)
 
-  override protected def processValue(value: RiddlValue, parents: Parents): Unit = ()
+  /** A `Comment` is a `RiddlValue`, not a `Leaf`, so it arrives here rather than through
+    * `processLeaf` — which is why comments in a definition's contents were invisible to this pass
+    * and to its drop guard for so long. Pushing them onto the scope makes them ordinary children,
+    * so a container that forgets to collect them now gets reported like any other loss.
+    */
+  override protected def processValue(value: RiddlValue, parents: Parents): Unit = value match
+    case c: Comment if !isMetadataOfParent(c, parents) =>
+      c match
+        case lc: LineComment   => add(CommentDto(lc.text))
+        case ic: InlineComment => add(CommentDto(ic.lines.mkString("\n"), inline = true))
+    case _ => ()
+
+  /** Whether this comment hangs off the parent's METADATA rather than sitting in its contents.
+    * Metadata comments are already carried by `metaOf`, so counting them here as well would write
+    * each one twice and move it into contents on the way back.
+    */
+  private def isMetadataOfParent(c: Comment, parents: Parents): Boolean =
+    parents.headOption.exists(_.metadata.toSeq.exists(_ eq c))
 
   override protected def closeContainer(definition: Definition, parents: Parents): Unit =
     val kids = stack.pop().toSeq
@@ -126,7 +143,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[ModuleDto],
             col[VersionDto].headOption,
             col[CopyrightDto].headOption,
-            col[AuthorDto]
+            col[AuthorDto],
+            col[CommentDto]
           )
         )
       case m: Module =>
@@ -159,7 +177,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[ModuleDto],
             metaOf(m.metadata),
             col[VersionDto].headOption,
-            col[CopyrightDto].headOption
+            col[CopyrightDto].headOption,
+            col[CommentDto]
           )
         )
       case dom: Domain =>
@@ -182,7 +201,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             msgs(AggregateUseCase.QueryCase),
             msgs(AggregateUseCase.ResultCase),
             col[RepositoryDto],
-            col[ConnectorDto]
+            col[ConnectorDto],
+            col[CommentDto]
           )
         )
       case c: Context =>
@@ -214,7 +234,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[OutletChild].map(_.dto),
             col[VersionDto].headOption,
             col[CopyrightDto].headOption,
-            col[InvariantDto]
+            col[InvariantDto],
+            col[CommentDto]
           )
         )
       case e: Entity =>
@@ -241,7 +262,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[CopyrightDto].headOption,
             col[StreamletDto],
             col[ConnectorDto],
-            col[RelationshipDto]
+            col[RelationshipDto],
+            col[CommentDto]
           )
         )
       case s: State =>
@@ -253,7 +275,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InvariantDto],
             briefOf(s.metadata),
             s.isInitial,
-            metaOf(s.metadata)
+            metaOf(s.metadata),
+            col[CommentDto]
           )
         )
       case h: Handler =>
@@ -263,7 +286,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             briefOf(h.metadata),
             col[OnClauseDto],
             h.isInitial,
-            metaOf(h.metadata)
+            metaOf(h.metadata),
+            col[CommentDto]
           )
         )
       case oc: OnClause =>
@@ -278,7 +302,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 statements,
                 omc.binding.map(_.value),
                 metaOf(omc.metadata),
-                briefOf(omc.metadata)
+                briefOf(omc.metadata),
+                col[CommentDto]
               )
             )
           case oec: OnEventClause =>
@@ -289,7 +314,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 statements,
                 oec.binding.map(_.value),
                 metaOf(oec.metadata),
-                briefOf(oec.metadata)
+                briefOf(oec.metadata),
+                col[CommentDto]
               )
             )
           case _: OnInitializationClause =>
@@ -353,7 +379,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                   briefOf(t.metadata),
                   a.fields.map(serializeField),
                   a.yields.map(messageRefDto),
-                  metaOf(t.metadata)
+                  metaOf(t.metadata),
+                  commentsOf(a.contents)
                 )
               )
             )
@@ -393,7 +420,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[StreamletDto],
             col[ConnectorDto],
             col[RelationshipDto],
-            metaOf(a.metadata)
+            metaOf(a.metadata),
+            col[CommentDto]
           )
         )
       case s: Streamlet =>
@@ -418,7 +446,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InvariantDto],
             col[StreamletDto],
             col[RelationshipDto],
-            metaOf(s.metadata)
+            metaOf(s.metadata),
+            col[CommentDto]
           )
         )
       case p: Projector =>
@@ -445,7 +474,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[StreamletDto],
             col[ConnectorDto],
             col[RelationshipDto],
-            metaOf(p.metadata)
+            metaOf(p.metadata),
+            col[CommentDto]
           )
         )
       case r: Repository =>
@@ -474,7 +504,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[StreamletDto],
             col[ConnectorDto],
             col[RelationshipDto],
-            metaOf(r.metadata)
+            metaOf(r.metadata),
+            col[CommentDto]
           )
         )
       case s: Saga =>
@@ -486,7 +517,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             argDto(s.output),
             col[TypeDefDto],
             col[SagaStepDto],
-            metaOf(s.metadata)
+            metaOf(s.metadata),
+            col[CommentDto]
           )
         )
       case f: Function =>
@@ -499,7 +531,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[TypeDefDto],
             f.contents.toSeq.collect { case st: Statement => serializeStatement(st) },
             col[FunctionDto],
-            metaOf(f.metadata)
+            metaOf(f.metadata),
+            col[CommentDto]
           )
         )
       case g: Group =>
@@ -549,7 +582,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             serializeUserStory(uc.userStory),
             interactions,
             briefOf(uc.metadata),
-            metaOf(uc.metadata)
+            metaOf(uc.metadata),
+            col[CommentDto]
           )
         )
       case e: Epic =>
@@ -564,7 +598,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             shownBy,
             col[TypeDefDto],
             col[UseCaseDto],
-            metaOf(e.metadata)
+            metaOf(e.metadata),
+            col[CommentDto]
           )
         )
       case _ => None // interaction containers etc. — read from their parent node directly
@@ -688,6 +723,15 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     val items: Seq[RiddlValue] = md.toSeq
     items.collectFirst { case b: BriefDescription => b.brief.s }
 
+  /** Comments sitting in a type expression's contents. Aggregates are serialized directly from
+    * the node rather than through the child-DTO scope, so they need their own pick.
+    */
+  private def commentsOf[T <: RiddlValue](contents: Contents[T]): Seq[CommentDto] =
+    contents.toSeq.collect {
+      case lc: LineComment   => CommentDto(lc.text)
+      case ic: InlineComment => CommentDto(ic.lines.mkString("\n"), inline = true)
+    }
+
   private def metaOf(md: Contents[MetaData]): Option[MetaDto] =
     val items: Seq[RiddlValue] = md.toSeq
     val descr = items.collect { case d: BlockDescription => d.lines.map(_.s) }.flatten
@@ -755,7 +799,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case SpecificRange(_, inner, mn, mx) =>
       CardinalityDto("range", serializeTypeExpr(inner), Some(mn), Some(mx))
     case a: AggregateTypeExpression =>
-      RecordDto(a.fields.map(serializeField), a.methods.map(serializeMethod))
+      RecordDto(
+        a.fields.map(serializeField),
+        a.methods.map(serializeMethod),
+        commentsOf(a.contents)
+      )
     case p: PredefinedType => PredefDto(p.getClass.getSimpleName.replace("$", ""))
 
   private def serializeStatements(c: Contents[Statements]): Seq[StatementDto] =

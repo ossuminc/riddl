@@ -78,8 +78,11 @@ object JsonModel:
   )
 
   /** `{ "kind": "Record", "fields": [ <field> ], "methods"?: [ <method> ] }` -> aggregate. */
-  case class RecordDto(fields: Seq[FieldDto] = Nil, methods: Seq[MethodDto] = Nil)
-      extends TypeExprDto
+  case class RecordDto(
+    fields: Seq[FieldDto] = Nil,
+    methods: Seq[MethodDto] = Nil,
+    comments: Seq[CommentDto] = Nil
+  ) extends TypeExprDto
 
   /** `{ "kind": "Alias", "ref": "SomeDeclaredType" }` */
   case class AliasDto(ref: String) extends TypeExprDto
@@ -125,7 +128,8 @@ object JsonModel:
     version: Option[VersionDto] = None,
     copyright: Option[CopyrightDto] = None,
     // `OccursInRoot` admits a top-level author, which the schema used to drop on the floor.
-    authors: Seq[AuthorDto] = Nil
+    authors: Seq[AuthorDto] = Nil,
+    comments: Seq[CommentDto] = Nil
   )
 
   /** A Module is a FLAT collection of ANY top-level definition — no hierarchy is enforced at its
@@ -159,7 +163,8 @@ object JsonModel:
     modules: Seq[ModuleDto] = Nil,
     metadata: Option[MetaDto] = None,
     version: Option[VersionDto] = None,
-    copyright: Option[CopyrightDto] = None
+    copyright: Option[CopyrightDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   case class DomainDto(
@@ -182,7 +187,8 @@ object JsonModel:
     queries: Seq[MessageDto] = Nil,
     results: Seq[MessageDto] = Nil,
     repositories: Seq[RepositoryDto] = Nil,
-    connectors: Seq[ConnectorDto] = Nil
+    connectors: Seq[ConnectorDto] = Nil,
+    comments: Seq[CommentDto] = Nil
   )
 
   /** `{ "name": "Shopper", "isA": "a person", "brief"?: ... }` (Phase 2) */
@@ -239,7 +245,8 @@ object JsonModel:
     version: Option[VersionDto] = None,
     copyright: Option[CopyrightDto] = None,
     // `OccursInProcessor` admits an invariant directly on the processor, not only on a state.
-    invariants: Seq[InvariantDto] = Nil
+    invariants: Seq[InvariantDto] = Nil,
+    comments: Seq[CommentDto] = Nil
   )
 
   case class MessageDto(
@@ -249,7 +256,8 @@ object JsonModel:
     // A19: for a command/query, the optional message it yields (a command yields an event; a
     // query yields a result).
     yields: Option[MessageRefDto] = None,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   case class EntityDto(
@@ -279,7 +287,8 @@ object JsonModel:
     // streamlets, connectors and relationships that wire those ports up.
     streamlets: Seq[StreamletDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
-    relationships: Seq[RelationshipDto] = Nil
+    relationships: Seq[RelationshipDto] = Nil,
+    comments: Seq[CommentDto] = Nil
   )
 
   /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
@@ -298,7 +307,8 @@ object JsonModel:
     invariants: Seq[InvariantDto] = Nil,
     brief: Option[String] = None,
     isInitial: Boolean = false,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   case class HandlerDto(
@@ -306,7 +316,8 @@ object JsonModel:
     brief: Option[String] = None,
     onClauses: Seq[OnClauseDto] = Nil,
     isInitial: Boolean = false,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   /** `kind`: "message" | "init" | "other" | "term". For "message", `message` carries the message
@@ -321,7 +332,8 @@ object JsonModel:
     binding: Option[String] = None,
     metadata: Option[MetaDto] = None,
     // An on-clause may be documented like any other definition (`on other { … } with { briefly … }`).
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   case class MessageRefDto(ref: String, kind: String)
@@ -382,7 +394,8 @@ object JsonModel:
     types: Seq[TypeDefDto] = Nil,
     statements: Seq[StatementDto] = Nil,
     functions: Seq[FunctionDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -577,7 +590,8 @@ object JsonModel:
     streamlets: Seq[StreamletDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   /** An inlet or outlet: `{ "name": "in", "type": "<typePath>", "brief"?: ... }` */
@@ -622,7 +636,8 @@ object JsonModel:
     invariants: Seq[InvariantDto] = Nil,
     streamlets: Seq[StreamletDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   /** `{ "name": "R", "withProcessor": "<path>", "processor": "entity"|..., "cardinality":
@@ -663,7 +678,8 @@ object JsonModel:
     streamlets: Seq[StreamletDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   /** A repository schema: `{ "name": "S", "kind"?: "Relational"|..., "data"?: {field->typePath},
@@ -707,7 +723,8 @@ object JsonModel:
     streamlets: Seq[StreamletDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -733,7 +750,8 @@ object JsonModel:
     output: Option[ArgDto] = None,
     types: Seq[TypeDefDto] = Nil,
     steps: Seq[SagaStepDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -773,7 +791,8 @@ object JsonModel:
     userStory: UserStoryDto,
     interactions: Seq[InteractionDto] = Nil,
     brief: Option[String] = None,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   /** `{ "name": "Checkout", "userStory": <userStory>, "shownBy"?: [url], "types"?: [...],
@@ -786,7 +805,8 @@ object JsonModel:
     shownBy: Seq[String] = Nil,
     types: Seq[TypeDefDto] = Nil,
     useCases: Seq[UseCaseDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -852,6 +872,16 @@ object JsonModel:
 
   /** `{ "name": "SKU", "definition": ["a stock keeping unit"] }` (glossary term) */
   case class TermDto(name: String, definition: Seq[String] = Nil)
+
+  /** A comment that lives in a definition's CONTENTS rather than its metadata: `{ "text": "...",
+    * "inline"?: true }`. `inline` distinguishes a `/* ... */` comment from a `//` one; an inline
+    * comment's lines are joined with newlines in `text`.
+    *
+    * Comments group with their container's other children, so their position relative to the
+    * definitions around them is not preserved — the schema groups every child by kind, so that
+    * ordering is already gone for definitions too.
+    */
+  case class CommentDto(text: String, inline: Boolean = false)
 
   /** `{ "name": "microservice", "args": [] }` (an option value) */
   case class OptionDto(name: String, args: Seq[String] = Nil)
@@ -1040,7 +1070,7 @@ object JsonModel:
         )
       case AlternationDto(of) =>
         ujson.Obj("kind" -> ujson.Str("Alternation"), "of" -> ujson.Arr.from(of.map(ujson.Str(_))))
-      case RecordDto(fields, methods) =>
+      case RecordDto(fields, methods, _) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)](
             "kind" -> ujson.Str("Record"),
@@ -1590,6 +1620,7 @@ object JsonModel:
   given outputRW: ReadWriter[OutputDto] = macroRW
   given containedGroupRW: ReadWriter[ContainedGroupDto] = macroRW
   given groupRW: ReadWriter[GroupDto] = macroRW
+  given commentDtoRW: ReadWriter[CommentDto] = macroRW
   given termDtoRW: ReadWriter[TermDto] = macroRW
   given optionDtoRW: ReadWriter[OptionDto] = macroRW
   given attachmentDtoRW: ReadWriter[AttachmentDto] = macroRW

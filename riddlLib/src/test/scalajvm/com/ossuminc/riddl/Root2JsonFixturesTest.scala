@@ -1,0 +1,223 @@
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl
+
+import com.ossuminc.riddl.language.AST.{Root, RiddlValue, WithMetaData}
+import com.ossuminc.riddl.language.{Finder, toSeq}
+import com.ossuminc.riddl.utils.{pc, PlatformContext}
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
+import java.io.File
+import scala.io.Source
+
+/** The JSON identity fixed point, over every RIDDL fixture in this repository.
+  *
+  * The check is `root0 -> json1 -> root1 -> json2`, asserting `json1 == json2`. A stable fixed
+  * point proves the AST<->JSON mapping is lossless and deterministic: anything the serializer
+  * drops, reorders or cannot re-read makes the second JSON diverge from the first.
+  *
+  * This is the in-repo counterpart to `Root2JsonCorpusTest`, and it is the one that gates. The
+  * corpus test reads `../riddl-models`, which is a moving target being migrated to 2.0 syntax; the
+  * fixtures below are the models this repository owns and must keep working, and they are where
+  * every construct the language has gained actually appears.
+  *
+  * A great many fixtures are not standalone models — `include` fragments, and deliberately-broken
+  * inputs under `issues/` that exist precisely to produce parse errors. Those are skipped, but the
+  * skip is COUNTED AND NAMED in the test output and the suite asserts a floor on the number of
+  * models it actually parsed. That floor is the point: without it a change that broke parsing
+  * everywhere would empty the check and the suite would pass green, which is exactly how the corpus
+  * test came to assert `0 mustBe 0` for months.
+  */
+class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
+
+  /** JVM tests run with the build root as the working directory, which is how sibling suites read
+    * `riddlLib/json-examples` and `../riddl-models`.
+    */
+  private val fixtureDirs: Seq[String] =
+    Seq("language/input", "passes/input", "riddlc/input", "commands/input")
+
+  private def riddlFiles(dir: String): Seq[File] =
+    def walk(f: File): Seq[File] =
+      if f.isDirectory then Option(f.listFiles).map(_.toSeq).getOrElse(Nil).flatMap(walk)
+      else if f.getName.endsWith(".riddl") then Seq(f)
+      else Nil
+    val root = new File(dir)
+    if root.isDirectory then walk(root).sortBy(_.getPath) else Nil
+  end riddlFiles
+
+  private def read(f: File): String =
+    val s = Source.fromFile(f)
+    try s.mkString
+    finally s.close()
+  end read
+
+  /** First line index where two JSON strings differ, with a short excerpt of each side. */
+  private def firstDiff(a: String, b: String): String =
+    val la = a.linesIterator.toIndexedSeq
+    val lb = b.linesIterator.toIndexedSeq
+    val i = la.indices.find(i => i >= lb.size || la(i) != lb(i)).getOrElse(la.size)
+    val ja = if i < la.size then la(i) else "<eof>"
+    val jb = if i < lb.size then lb(i) else "<eof>"
+    s"line $i:\n      json1: ${ja.trim.take(140)}\n      json2: ${jb.trim.take(140)}"
+  end firstDiff
+
+  /** Below this many parsed models something is wrong with the harness itself, not with the
+    * fixtures. Set well under the number that parse today so ordinary fixture churn does not
+    * disturb it, but far above zero so the suite cannot go vacuously green.
+    */
+  private val ParsedFloor: Int = 40
+
+  /** How many nodes of each kind the tree holds, counting metadata as well as contents.
+    *
+    * This is what makes the round trip a FIDELITY check and not merely an idempotence one. A
+    * construct the serializer drops entirely is absent from both JSONs, so `json1 == json2` still
+    * holds and the identity check sails past it — the census does not, because the re-parsed tree
+    * is then short by exactly the nodes that were dropped.
+    *
+    * Traversal is `Finder`'s, so the statement containers it knows about (`when` branches, `match`
+    * cases, `foreach` bodies, saga steps) are all included; metadata hangs off definitions rather
+    * than living in their contents, so it is gathered separately.
+    */
+  /** Kinds the JSON document deliberately does not represent.
+    *
+    * `Include` and `BASTImport` are file-reference mechanisms, and a JSON model is self-contained
+    * and built with no I/O so that it works on Native too (`JSON_COVERAGE.md` records the reason).
+    * Their CONTENTS are inlined, so no model content is lost with them — only the wrapper node.
+    */
+  private val NotRepresented: Set[String] = Set("Include", "BASTImport")
+
+  private def census(root: Root): Map[String, Int] =
+    val finder = Finder(root)
+    val nodes = finder.recursiveFindByType[RiddlValue]
+    val metadata = finder.recursiveFindByType[WithMetaData].flatMap(_.metadata.toSeq)
+    (nodes ++ metadata)
+      .groupBy(_.getClass.getSimpleName)
+      .collect { case (kind, all) if !NotRepresented.contains(kind) => kind -> all.size }
+  end census
+
+  /** The kinds present in one census and missing (or short) in the other, most-lost first. */
+  private def censusDiff(before: Map[String, Int], after: Map[String, Int]): String =
+    (before.keySet ++ after.keySet).toSeq
+      .map(k => (k, before.getOrElse(k, 0), after.getOrElse(k, 0)))
+      .filter((_, b, a) => b != a)
+      .sortBy((_, b, a) => -(b - a).abs)
+      .map((k, b, a) => s"$k: $b -> $a")
+      .mkString(", ")
+
+  "the JSON identity fixed point" should {
+
+    "hold for every standalone RIDDL fixture in this repository" in {
+      val files = fixtureDirs.flatMap(riddlFiles)
+      files must not be empty
+
+      var parsed = 0
+      var reparsed = 0
+      var identical = 0
+      val notStandalone = scala.collection.mutable.ListBuffer.empty[String]
+      val failures = scala.collection.mutable.ListBuffer.empty[String]
+
+      for f <- files do
+        // The ABSOLUTE path is the origin so that `include` resolves against the fixture's own
+        // directory: RiddlLib.originToURL only builds a full-path URL for an origin starting "/".
+        val origin = f.getAbsolutePath
+        RiddlLib.parseString(read(f), origin) match
+          case RiddlResult.Success(root0) =>
+            parsed += 1
+            val json1 = RiddlLib.root2Json(root0)
+            RiddlLib.parseJson(json1, f.getName) match
+              case RiddlResult.Success(root1) =>
+                reparsed += 1
+                val json2 = RiddlLib.root2Json(root1)
+                if json1 == json2 then identical += 1
+                else failures += s"${f.getPath}: ${firstDiff(json1, json2)}"
+              case RiddlResult.Failure(errors) =>
+                failures += s"${f.getPath} [the generated JSON did not re-parse]: " +
+                  errors.take(2).map(_.format).mkString("; ")
+          // Not a standalone model: an include fragment, or an input written to fail parsing.
+          // That is a property of the fixture, not a defect, so it is recorded and skipped.
+          case RiddlResult.Failure(_) => notStandalone += f.getPath
+      end for
+
+      info(s"fixtures=${files.size} parsed=$parsed reparsed=$reparsed identical=$identical")
+      if notStandalone.nonEmpty then
+        info(s"not standalone models (skipped, ${notStandalone.size}):")
+        notStandalone.foreach(p => info("  " + p))
+      end if
+      if failures.nonEmpty then
+        info(s"identity failures (${failures.size}):")
+        failures.foreach(m => info("  " + m))
+      end if
+
+      withClue(
+        s"only $parsed fixtures parsed, below the floor of $ParsedFloor — the harness is broken, " +
+          "not the fixtures: "
+      ) {
+        parsed must be >= ParsedFloor
+      }
+      // Every model that parses must survive the round trip, and survive it identically.
+      reparsed mustBe parsed
+      identical mustBe parsed
+    }
+
+    "carry every node of every fixture through the round trip, losing none" in {
+      val files = fixtureDirs.flatMap(riddlFiles)
+
+      var compared = 0
+      val lossy = scala.collection.mutable.ListBuffer.empty[String]
+      // Aggregated across all fixtures, so a kind the serializer cannot express shows up as one
+      // headline number rather than as eighty separate lines, each with a fixture to look at.
+      val lostByKind = scala.collection.mutable.Map.empty[String, Int].withDefaultValue(0)
+      val exampleOf = scala.collection.mutable.Map.empty[String, String]
+
+      for f <- files do
+        RiddlLib.parseString(read(f), f.getAbsolutePath) match
+          case RiddlResult.Success(root0) =>
+            RiddlLib.parseJson(RiddlLib.root2Json(root0), f.getName) match
+              case RiddlResult.Success(root1) =>
+                compared += 1
+                val before = census(root0)
+                val after = census(root1)
+                if before != after then
+                  lossy += s"${f.getPath}: ${censusDiff(before, after)}"
+                  for kind <- before.keySet ++ after.keySet do
+                    val delta = before.getOrElse(kind, 0) - after.getOrElse(kind, 0)
+                    if delta != 0 then
+                      lostByKind(kind) += delta
+                      exampleOf.getOrElseUpdate(kind, f.getPath)
+                    end if
+                  end for
+                end if
+              case RiddlResult.Failure(_) => () // reported by the identity case above
+          case RiddlResult.Failure(_) => () // not a standalone model; listed by the case above
+      end for
+
+      info(s"censuses compared=$compared lossy=${lossy.size}")
+      if lostByKind.nonEmpty then
+        info("net node count change by kind (positive = lost in the round trip):")
+        lostByKind.toSeq
+          .sortBy(-_._2.abs)
+          .foreach((k, n) => info(f"  $n%5d  $k%-20s e.g. ${exampleOf.getOrElse(k, "?")}"))
+      end if
+      if lossy.nonEmpty then
+        info(s"lossy fixtures (${lossy.size}, first 12):")
+        lossy.take(12).foreach(m => info("  " + m))
+      end if
+
+      compared must be >= ParsedFloor
+      // The one known exception, held to its exact size so it cannot grow unnoticed: a `Group`
+      // whose body opens with a comment. The parser puts that comment in the group's contents,
+      // but `AST.OccursInGroup` is `Group | ContainedGroup | Input | Output` and does not admit a
+      // Comment, so there is no legal way to put it back. `Contents` is an opaque ArrayBuffer, so
+      // the parser gets away with it at runtime — the AST union and the parser disagree, and
+      // reconciling them is a language change (BAST included), not a serializer change.
+      withClue(s"${lossy.size} of $compared fixtures lost nodes in the JSON round trip: ") {
+        lostByKind.filter((_, n) => n != 0).toMap mustBe Map("LineComment" -> 3)
+      }
+    }
+  }
+}
