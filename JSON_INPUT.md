@@ -395,6 +395,41 @@ entity, type) accept a `metadata` object:
 otherwise string attachments. Coverage of the definition / type-expression /
 statement / interaction surface is enforced by `JsonCoverageGuardTest`.
 
+## 2.0 additions — full fidelity
+
+The schema now tracks the AST's contents unions rather than the constructs
+that happened to have fixtures, because tracking the latter is how it fell
+behind in the first place.
+
+**Children that were being dropped.** `RootDto` gained `authors`; `DomainDto`
+gained `commands`/`events`/`queries`/`results`, `repositories` and
+`connectors`; `EntityDto` gained `streamlets`, `connectors` and
+`relationships`. Every processor DTO (adaptor, streamlet, projector,
+repository, and context/entity) now carries the whole of `OccursInProcessor` —
+`invariants`, `streamlets`, `connectors`, `relationships`, and for some also
+`constants` and `functions`. A repository gained `schemas` (plural) beside the
+back-compatible singular `schema`; `root2Json` writes only the plural, and a
+reader accepts either.
+
+**Metadata everywhere.** `metadata` used to appear on seven DTOs. Every
+definition DTO carries it now, so a `described as` on a saga, a `term` on an
+author or an `option` on a connector survives. `MetaDto` gained
+`urlDescription` for `described at <url>`. An on-clause gained `brief`, which
+it never had.
+
+**Comments.** A container DTO carries `comments: [{text, inline?}]` for the
+comments in its CONTENTS — distinct from `metadata.comments`, which are the
+ones attached to the definition. `inline` marks a `/* … */` comment; its lines
+are joined with newlines. Comments group with the container's other children,
+so their position relative to neighbouring definitions is not preserved; the
+schema groups every child by kind, so that ordering was already gone for
+definitions. `RecordDto` and `MessageDto` carry them too, since
+`AggregateContents` admits a comment between fields.
+
+Groups, inputs and outputs do NOT carry `comments`: `OccursInGroup`,
+`OccursInInput` and `OccursInOutput` admit no `Comment`. See `JSON_COVERAGE.md`
+for the one comment position that is consequently not representable.
+
 ## Inverse — `root2Json`
 
 `RiddlLib.root2Json(root, pretty)` (JS: `RiddlAPI.root2Json`) is the symmetric
