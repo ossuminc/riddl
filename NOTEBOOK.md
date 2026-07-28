@@ -15,6 +15,53 @@ to the task file and note the disposition below.
 
 ---
 
+## Corpus-blocking bug reports from riddl-models/riddl-examples — DONE
+
+Four reports arrived while release/2 was being finished, all filed against the
+staged `riddlc`. All four fixed, each with a regression test; task files carry
+their results in `task/done/`.
+
+| Report | Cause | Fix |
+|---|---|---|
+| prettify drops `updates repository` | `RepositoryRef` is a Reference in contents, so the visitor never saw it | `ef4945d14` |
+| schema types "unused" | `Schema` refs live in FIELDS, not contents; no resolver case at all | `508403875` |
+| `show … to …` unvalidatable | parser hardcoded the empty relationship the validator rejects | `46384b252` |
+| MessageFlowPass false positives | nested `send`/`tell` resolved only their `Constructor` operand | `9042c17d6` |
+
+**One pattern explains three of them.** Anything in `contents` that is not a
+`Definition` — a Reference, a `Comment` — is invisible to the generic machinery,
+and every pass has to reach for it by hand. Comments (#70) were the first
+instance, `RepositoryRef` the second, and a `Schema`'s field-borne refs the third.
+Expect the next one to have the same shape.
+
+**`quietly` is the instrument for resolution-without-policing.** Populate the
+refMap so downstream passes can look references up; do NOT start reporting
+references that have never been checked. Nested `send`/`tell` use it, as A55's
+`ValueRef` does. Ignoring this took `RiddlModelsRoundTripTest` from 106 failures
+to 180 in one change, when a strict schema resolution began rejecting clauses
+nothing had ever validated.
+
+**`of <name> as type <T>` is STRICT, by ruling.** A path landing on an Entity is
+an error even though it parses: the syntax says `type`, so it must be a type.
+This surfaced 202 errors across 186 of 187 riddl-models — nearly the whole corpus
+— and the ruling was held with those numbers in hand. The corpus is being
+corrected. `SchemaUsageTest` pins the semantics.
+
+**`when prompt("…")` (`7147a0039`).** A54 made a bare `"x"` a literal and
+`prompt("x")` an AI-evaluated value, but a `when` condition could only be written
+as a bare string and `prompt(...)` did not parse there at all. It does now and
+the bare form is deprecated. Carried through all six surfaces; BAST condition
+flag 4, FORMAT_REVISION 1 -> 2. `matchGuard` needed nothing — it never accepted
+a string.
+
+**Two tests no longer fetch `dokn.riddl` over the network** (`aecf4392e`).
+`RiddlParserInputTest` asserted byte offsets into a file in *another repository*,
+so migrating riddl-examples to 2.0 broke it — catching a correct migration, not a
+defect, and aborting a coverage run. It now reads
+`language/input/parser-input/offsets.riddl` through a local file URL. The JS
+`TopLevelParserTest` parses an inline model. `RunRiddlcOnRemoteTest` is left
+alone: the remote IS its subject.
+
 ## #70 — the JSON round trip is a real fidelity check now — DONE
 
 The AST<->JSON round trip was checked for IDENTITY — `root -> json1 -> root ->
