@@ -275,6 +275,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     case NODE_STATE             => "State"
     case NODE_INVARIANT         => "Invariant"
     case NODE_VERSION           => "Version"
+    case NODE_COPYRIGHT         => "Copyright"
     case NODE_ON_CLAUSE         => "OnClause"
     case NODE_INLET             => "Inlet"
     case NODE_OUTLET            => "Outlet"
@@ -407,6 +408,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         case NODE_STATE     => readStateNode()
         case NODE_INVARIANT => readInvariantNode()
         case NODE_VERSION   => readVersionNode()
+        case NODE_COPYRIGHT => readCopyrightNode()
         case NODE_ON_CLAUSE => readOnClauseNode()
 
         // Streamlet components
@@ -1053,6 +1055,15 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val number = if reader.readU8() != 0 then Some(id.value.toLong) else None
     val metadata = readMetadataDeferred()
     Version(loc, id, number, metadata)
+  }
+
+  /** A47: a Copyright leaf — mirror of BASTWriter.writeCopyright. */
+  private def readCopyrightNode(): Copyright = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val text = readLiteralString()
+    val metadata = readMetadataDeferred()
+    Copyright(loc, id, text, metadata)
   }
 
   private def readOnClauseNode(): OnClause = {

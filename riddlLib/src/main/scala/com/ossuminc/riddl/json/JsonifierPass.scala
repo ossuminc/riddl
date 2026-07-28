@@ -82,7 +82,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     }
     d match
       case r: Root =>
-        Some(RootDto(col[DomainDto], col[ModuleDto], col[VersionDto].headOption))
+        Some(
+          RootDto(
+            col[DomainDto],
+            col[ModuleDto],
+            col[VersionDto].headOption,
+            col[CopyrightDto].headOption
+          )
+        )
       case m: Module =>
         // A Module is flat and may hold any top-level definition; every kind gets its own group.
         Some(
@@ -112,7 +119,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[RelationshipDto],
             col[ModuleDto],
             metaOf(m.metadata),
-            col[VersionDto].headOption
+            col[VersionDto].headOption,
+            col[CopyrightDto].headOption
           )
         )
       case dom: Domain =>
@@ -128,7 +136,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[DomainDto],
             col[ContextDto],
             metaOf(dom.metadata),
-            col[VersionDto].headOption
+            col[VersionDto].headOption,
+            col[CopyrightDto].headOption
           )
         )
       case c: Context =>
@@ -158,7 +167,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             c.ascribedShape.map(_.keyword),
             col[InletChild].map(_.dto),
             col[OutletChild].map(_.dto),
-            col[VersionDto].headOption
+            col[VersionDto].headOption,
+            col[CopyrightDto].headOption
           )
         )
       case e: Entity =>
@@ -181,7 +191,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             e.ascribedShape.map(_.keyword),
             col[InletChild].map(_.dto),
             col[OutletChild].map(_.dto),
-            col[VersionDto].headOption
+            col[VersionDto].headOption,
+            col[CopyrightDto].headOption
           )
         )
       case s: State =>
@@ -267,7 +278,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[HandlerDto],
             a.ascribedShape.map(_.keyword),
             col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto)
+            col[OutletChild].map(_.dto),
+            col[VersionDto].headOption,
+            col[CopyrightDto].headOption
           )
         )
       case s: Streamlet =>
@@ -284,7 +297,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             msgs(AggregateUseCase.EventCase),
             msgs(AggregateUseCase.QueryCase),
             msgs(AggregateUseCase.ResultCase),
-            col[HandlerDto]
+            col[HandlerDto],
+            col[VersionDto].headOption,
+            col[CopyrightDto].headOption
           )
         )
       case p: Projector =>
@@ -304,7 +319,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[HandlerDto],
             p.ascribedShape.map(_.keyword),
             col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto)
+            col[OutletChild].map(_.dto),
+            col[VersionDto].headOption,
+            col[CopyrightDto].headOption
           )
         )
       case r: Repository =>
@@ -321,7 +338,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[HandlerDto],
             r.ascribedShape.map(_.keyword),
             col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto)
+            col[OutletChild].map(_.dto),
+            col[VersionDto].headOption,
+            col[CopyrightDto].headOption
           )
         )
       case s: Saga =>
@@ -422,7 +441,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       Some(InvariantDto(i.id.value, condStr, briefOf(i.metadata), condExpr))
     // A53: `name` is the rendered component; `numeric` records whether it was written as a number.
     case v: Version => Some(VersionDto(v.component, v.isNumeric, briefOf(v.metadata)))
-    case u: User    => Some(UserDto(u.id.value, u.is_a.s, briefOf(u.metadata)))
+    // A47: the notice is carried verbatim; the name identifies it for generators.
+    case c: Copyright => Some(CopyrightDto(c.id.value, c.notice, briefOf(c.metadata)))
+    case u: User      => Some(UserDto(u.id.value, u.is_a.s, briefOf(u.metadata)))
     case a: Author =>
       Some(AuthorDto(a.id.value, a.name.s, a.email.s, a.organization.map(_.s), a.title.map(_.s)))
     case i: Inlet =>

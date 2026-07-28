@@ -61,7 +61,7 @@ package object bast {
     * revision 0 (pre-check era) will be rejected with a clear message.
     */
   val FORMAT_REVISION: Short =
-    23 // A55: optional on-clause message binding (on-clause subtypes 2 and 4)
+    24 // A47: Copyright leaf (NODE_COPYRIGHT = 104)
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)
@@ -214,6 +214,9 @@ package object bast {
     * 103.
     */
   val NODE_VERSION: Byte = 103
+
+  /** A47: a Copyright leaf. */
+  val NODE_COPYRIGHT: Byte = 104
 
   /** Flag bit indicating metadata presence in node tag
     *

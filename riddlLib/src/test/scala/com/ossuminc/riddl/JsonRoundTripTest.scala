@@ -732,6 +732,75 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip copyrights at every permitted scope (A47) losslessly" in {
+      // A47: `copyright` is a NAMED leaf at root/module/domain and all six processors, and
+      // `version` was widened to the same set. Both must survive AST -> JSON -> AST at every
+      // scope, with the notice carried verbatim, else the fixed point would break.
+      val cModel =
+        """copyright Root is "© 2026 Ossum Inc."
+          |version Jellyfish
+          |domain d is {
+          |  copyright Domain is "© 2026 Ossum Inc. (domain)"
+          |  context c is {
+          |    copyright Context is "© 2026 Ossum Inc. (context)"
+          |    command Ping(at: TimeStamp)
+          |    entity e is {
+          |      copyright Entity is "© 2026 Ossum Inc. (entity)"
+          |      version 3
+          |      type Data is { x: Integer }
+          |      state S of record d.c.e.Data is { handler H is { on other is { do "a" } } }
+          |    }
+          |    repository repo is {
+          |      copyright Repository is "© 2026 Third Party Ltd."
+          |      version 2
+          |    }
+          |    projector proj is {
+          |      copyright Projector is "© 2026 Ossum Inc. (projector)"
+          |      version 1
+          |    }
+          |    processor src as source is {
+          |      copyright Streamlet is "© 2026 Ossum Inc. (streamlet)"
+          |      version 5
+          |      outlet Out is type d.c.Ping
+          |    }
+          |    adaptor ad to context d.c is {
+          |      copyright Adaptor is "© 1998 Legacy Systems Inc."
+          |      version 7
+          |    }
+          |  }
+          |}
+          |module m is { copyright Module is "© 2026 Ossum Inc. (module)" }
+          |""".stripMargin
+      RiddlLib.parseString(cModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"copyright\"")
+          json1 must include("© 1998 Legacy Systems Inc.")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              RiddlLib.root2Json(root1) mustBe json1
+              root1.copyright.map(_.id.value) mustBe Some("Root")
+              root1.copyright.map(_.notice) mustBe Some("© 2026 Ossum Inc.")
+              val finder = Finder(root1.contents)
+              finder.recursiveFindByType[Domain].head.copyright.map(_.notice) mustBe
+                Some("© 2026 Ossum Inc. (domain)")
+              finder.recursiveFindByType[Context].head.copyright.isDefined mustBe true
+              finder.recursiveFindByType[Entity].head.copyright.isDefined mustBe true
+              finder.recursiveFindByType[Repository].head.copyright.isDefined mustBe true
+              finder.recursiveFindByType[Projector].head.copyright.isDefined mustBe true
+              finder.recursiveFindByType[Streamlet].head.copyright.isDefined mustBe true
+              val ad = finder.recursiveFindByType[Adaptor].head
+              ad.copyright.map(_.notice) mustBe Some("© 1998 Legacy Systems Inc.")
+              ad.version.flatMap(_.number) mustBe Some(7L)
+              finder.recursiveFindByType[Module].head.copyright.isDefined mustBe true
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the copyright JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the copyright model failed: $errors")
+      end match
+    }
+
     "round-trip context intention, ascribed shape (Some/None), and ports losslessly (Task 16)" in {
       val pmModel =
         """domain PM is {

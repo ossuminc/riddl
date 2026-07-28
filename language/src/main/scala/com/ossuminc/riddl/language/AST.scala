@@ -624,6 +624,21 @@ object AST:
     def version: Option[Version] = versions.headOption
   end WithVersion
 
+  /** Base trait to use in any [[Definition]] that establishes a copyright scope (A47).
+    *
+    * A scope may declare AT MOST ONE [[Copyright]]; a second one is a validation Error.
+    * `copyrights` exposes every one found so validation can detect the duplicate; `copyright` is
+    * the accessor everything else should use.
+    */
+  sealed trait WithCopyright[CV <: RiddlValue] extends Container[CV]:
+
+    /** Every [[Copyright]] declared directly in this scope. At most one is legal. */
+    def copyrights: Seq[Copyright] = contents.filter[Copyright]
+
+    /** The [[Copyright]] this scope declares, if any (the first one, if the model is invalid). */
+    def copyright: Option[Copyright] = copyrights.headOption
+  end WithCopyright
+
   /** Base trait to use in any [[Definition]] that can define [[User]]s */
   sealed trait WithUsers[CV <: RiddlValue] extends Container[CV]:
 
@@ -725,7 +740,8 @@ object AST:
   ///// This section defines various abstract things needed by the rest of the definitions
 
   /** The list of definitions to which a reference cannot be made */
-  type NonReferencableDefinitions = Enumerator | Root | SagaStep | Term | Invariant | Version
+  type NonReferencableDefinitions = Enumerator | Root | SagaStep | Term | Invariant | Version |
+    Copyright
 
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description |
@@ -739,7 +755,7 @@ object AST:
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
     * widened to any top-level definition (see [[OccursInModule]]).
     */
-  private[language] type OccursInRoot = Domain | Author | Comment | Version
+  private[language] type OccursInRoot = Domain | Author | Comment | Version | Copyright
 
   /** Type of definitions that occur in a [[Module]] without [[Include]].
     *
@@ -795,21 +811,33 @@ object AST:
   /** Type of definitions that occurs within all Vital Definitions */
   type OccursInVitalDefinition = Type | Comment
 
-  /** Type of definitions that occur within all Processor types */
+  /** Type of definitions that occur within all Processor types.
+    *
+    * A47 widened this with [[Version]] and [[Copyright]]: both are scope-inherited leaves, and a
+    * [[Processor]] — Adaptor, Context, Entity, Projector, Repository or Streamlet — is exactly the
+    * set of things whose messages form an API, and therefore a versioned, attributable contract.
+    * Adding them HERE (rather than naming Context and Entity individually, as A53 first did) is
+    * what gives all six the same spread, and is why [[OccursInContext]] and [[OccursInEntity]] no
+    * longer mention [[Version]] themselves.
+    */
   type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | Handler |
-    Streamlet | Connector | Relationship | Inlet | Outlet
+    Streamlet | Connector | Relationship | Inlet | Outlet | Version | Copyright
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain =
     OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga | Repository |
-      Connector | Version
+      Connector | Version | Copyright
 
   /** Type of definitions that occur in a [[Domain]] with [[Include]] and [[BASTImport]] */
   type DomainContents = OccursInDomain | Include[OccursInDomain] | BASTImport
 
-  /** Type of definitions that occur in a [[Context]] without [[Include]] */
+  /** Type of definitions that occur in a [[Context]] without [[Include]].
+    *
+    * [[Version]] and [[Copyright]] arrive via [[OccursInProcessor]] (A47) — naming them here too
+    * would be a redundant re-admission.
+    */
   type OccursInContext = OccursInProcessor | Entity | Adaptor | Group | Saga | Projector |
-    Repository | Version
+    Repository
 
   /** Type of definitions that occur in a [[Context]] with [[Include]] and [[BASTImport]] */
   type ContextContents = OccursInContext | Include[OccursInContext] | BASTImport
@@ -825,8 +853,10 @@ object AST:
 
   type GroupRelated = Group | Input | Output
 
-  /** Type of definitions that occur in an [[Entity]] without [[Include]] */
-  private type OccursInEntity = OccursInProcessor | State | Version
+  /** Type of definitions that occur in an [[Entity]] without [[Include]]. [[Version]] and
+    * [[Copyright]] arrive via [[OccursInProcessor]] (A47).
+    */
+  private type OccursInEntity = OccursInProcessor | State
 
   /** Type of definitions that occur in an [[Entity]] with [[Include]] */
   type EntityContents = OccursInEntity | Include[OccursInEntity]
@@ -899,7 +929,7 @@ object AST:
 
   type NebulaContents = Adaptor | Author | Connector | Constant | Context | Domain | Entity | Epic |
     Function | Invariant | Module | Projector | Relationship | Repository | Saga | Streamlet |
-    Type | User | Version
+    Type | User | Version | Copyright
 
   ///////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
   //////// The Abstract classes for defining Definitions by using the foregoing traits
@@ -1090,7 +1120,14 @@ object AST:
       with WithHandlers[CT]
       with WithStreamlets[CT]
       with WithInlets[CT]
-      with WithOutlets[CT]:
+      with WithOutlets[CT]
+      // A47: every Processor is a version AND copyright scope. A processor's messages form an API,
+      // and therefore a contract, so both attribution and versioning must be expressible per
+      // component — Adaptor, Context, Entity, Projector, Repository and Streamlet alike. Mixing
+      // them in HERE is what gives all six the same spread; Context and Entity must NOT list
+      // WithVersion again (a trait inherited twice in one extends clause is an error).
+      with WithVersion[CT]
+      with WithCopyright[CT]:
     final override def isProcessor: Boolean = true
 
     /** The shape explicitly ascribed by the author via `as <shape>`, if any. */
@@ -1234,6 +1271,7 @@ object AST:
       with WithAuthors[RootContents]
       with WithComments[RootContents]
       with WithVersion[RootContents]
+      with WithCopyright[RootContents]
       with WithIncludes[RootContents]:
 
     def metadata: Contents[MetaData] = Contents.empty[MetaData](0)
@@ -1347,6 +1385,7 @@ object AST:
       with WithSagas[ModuleContents]
       with WithStreamlets[ModuleContents]
       with WithVersion[ModuleContents]
+      with WithCopyright[ModuleContents]
       with WithUsers[ModuleContents]:
     def format: String = s"${Keyword.module} ${id.format}"
   end Module
@@ -1380,6 +1419,7 @@ object AST:
         case a: Author      => Some(a: RootContents)
         case c: Comment     => Some(c: RootContents)
         case v: Version     => Some(v: RootContents)
+        case c: Copyright   => Some(c: RootContents)
         case bi: BASTImport => Some(bi: RootContents)
         case _              => None // not valid at Root level
       }
@@ -1503,14 +1543,16 @@ object AST:
     *
     * ==Scope and composition==
     *
-    * A `Version` may be declared in a [[Root]], [[Module]], [[Domain]], [[Context]] or [[Entity]],
-    * and AT MOST ONCE per scope (a second one in the same scope is a validation Error). It follows
-    * the [[Author]] precedent of scope inheritance: the *precise* version of any definition is
-    * COMPOSED from the versions of its versioned ancestors, root→leaf, by [[AST.composedVersion]],
-    * and rendered by joining the components with `.` — a domain `Garibaldi` over contexts and
-    * entities numbered `4` and `3` yields `Garibaldi.4.3`. A [[Type]] or message therefore takes
-    * the composed version of its containing definition — types are notoriously hard to attach
-    * metadata to and some have no body at all.
+    * A `Version` may be declared in a [[Root]], [[Module]], [[Domain]] or any [[Processor]] —
+    * [[Adaptor]], [[Context]], [[Entity]], [[Projector]], [[Repository]], [[Streamlet]] (A47
+    * widened A53's original five scopes to all six processors, since a processor's messages form a
+    * versioned contract) — and AT MOST ONCE per scope (a second one in the same scope is a
+    * validation Error). It follows the [[Author]] precedent of scope inheritance: the *precise*
+    * version of any definition is COMPOSED from the versions of its versioned ancestors, root→leaf,
+    * by [[AST.composedVersion]], and rendered by joining the components with `.` — a domain
+    * `Garibaldi` over contexts and entities numbered `4` and `3` yields `Garibaldi.4.3`. A [[Type]]
+    * or message therefore takes the composed version of its containing definition — types are
+    * notoriously hard to attach metadata to and some have no body at all.
     *
     * Only scopes that actually BEAR a version contribute a component ("missing-level rule"), so
     * adoption is incremental: version the domain first, refine inward later.
@@ -1566,6 +1608,60 @@ object AST:
     ): Version =
       Version(loc, Identifier(idLoc, value.toString), Some(value), metadata)
   end Version
+
+  /////////////////////////////////////////////////////////////////////////////////////// COPYRIGHT
+
+  /** The copyright notice that applies across the scope that declares it (A47).
+    *
+    * A `Copyright` is a NAMED [[Leaf]] carrying the notice verbatim:
+    * {{{
+    *   copyright C is "© 2026 Ossum Inc."
+    * }}}
+    * The [[LiteralString]] is the notice '''in its entirety''' — including the © symbol, the year
+    * and the holder. RIDDL does not decompose it, because notices vary by jurisdiction, by holder
+    * and by license, and any decomposition would be wrong somewhere.
+    *
+    * ==Why it is NAMED==
+    *
+    * Copyrights at lower scopes routinely DIFFER — a vendored `external context` carries a foreign
+    * holder's notice — and they vary in detail. The name lets a documentation generator gather the
+    * distinct copyrights of a model and attribute each one properly (e.g. in a page's front matter)
+    * rather than emitting the same string many times or guessing at identity.
+    *
+    * ==Scope and inheritance — NEAREST WINS==
+    *
+    * A `Copyright` may be declared in a [[Root]], [[Module]], [[Domain]] or any [[Processor]]
+    * ([[Adaptor]], [[Context]], [[Entity]], [[Projector]], [[Repository]], [[Streamlet]]), and AT
+    * MOST ONCE per scope (a second one in the same scope is a validation Error).
+    *
+    * Unlike [[Version]], which COMPOSES a coordinate out of every versioned ancestor, a copyright
+    * does '''not''' accumulate: the applicable notice is the one from the '''nearest ancestor that
+    * declares it''', exactly like [[AST.findAuthors]]. That is the whole point of allowing it at
+    * inner scopes — an `external context` bearing a third party's notice must OVERRIDE its
+    * enclosing domain's for everything inside it, not be appended to it. See [[AST.findCopyright]].
+    *
+    * @param loc
+    *   The location of the copyright definition in the source
+    * @param id
+    *   The name of this copyright, used to identify and group distinct notices
+    * @param text
+    *   The notice, verbatim and in its entirety
+    * @param metadata
+    *   The metadata for the Copyright
+    */
+  @JSExportTopLevel("Copyright")
+  case class Copyright(
+    loc: At,
+    id: Identifier,
+    text: LiteralString,
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends Leaf:
+
+    /** The notice this scope declares, verbatim. */
+    def notice: String = text.s
+
+    override def format: String = s"${Keyword.copyright} ${id.format}"
+  end Copyright
 
   //////////////////////////////////////////////////////////////////////////////////// RELATIONSHIP
 
@@ -3762,7 +3858,6 @@ object AST:
     ascribedShape: Option[StreamletShape] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[EntityContents]
-      with WithVersion[EntityContents]
       with WithStates[EntityContents]:
     override def format: String = Keyword.entity + " " + id.format
   end Entity
@@ -3951,7 +4046,6 @@ object AST:
       with WithConnectors[ContextContents]
       with WithAdaptors[ContextContents]
       with WithSagas[ContextContents]
-      with WithVersion[ContextContents]
       with WithGroups[ContextContents] {
     def format: String = Keyword.context + " " + id.format
   }
@@ -4887,6 +4981,7 @@ object AST:
       with WithRepositories[DomainContents]
       with WithConnectors[DomainContents]
       with WithVersion[DomainContents]
+      with WithCopyright[DomainContents]
       with WithDomains[DomainContents] {
     override def format: String = Keyword.domain + " " + id.format
   }
@@ -4943,8 +5038,8 @@ object AST:
 
   /** The version component a single definition declares for its own scope, if any (A53).
     *
-    * Only the five version-bearing scopes ([[Root]], [[Module]], [[Domain]], [[Context]],
-    * [[Entity]]) can declare one; everything else yields [[None]].
+    * Only the version-bearing scopes ([[Root]], [[Module]], [[Domain]] and every [[Processor]] —
+    * A47) can declare one; everything else yields [[None]].
     */
   @JSExport
   def versionOf(definition: Definition): Option[String] =

@@ -89,8 +89,7 @@ private[parsing] trait EntityParser {
 
   private def entityDefinitions[u: P]: P[Seq[EntityContents]] = {
     P(
-      processorDefinitionContents(StatementsSet.EntityStatements) | state | versionDef |
-        entityInclude
+      processorDefinitionContents(StatementsSet.EntityStatements) | state | entityInclude
     ).asInstanceOf[P[EntityContents]]./.rep(1)
   }
 

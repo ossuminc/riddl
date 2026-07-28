@@ -47,7 +47,8 @@ is covered in that construct's phase. The builder emits references as
 | OnTerminationClause | ✅ Phase 1 | `kind: "term"` |
 | Invariant | ✅ Phase 1 / A28 s2 | string condition or structured `expression` (ValueDto) |
 | Author | ✅ Phase 1 | at domain level |
-| Version | ✅ A53 | `version` on root/module/domain/context/entity; `name` + `numeric` flag |
+| Version | ✅ A53 / A47 | `version` on root/module/domain + all six processors; `name` + `numeric` flag |
+| Copyright | ✅ A47 | `copyright` on root/module/domain + all six processors; `name` + verbatim `text` |
 | Enumerator | ✅ Phase 2 | names + explicit `value` |
 | Constant | ✅ Phase 2 | in context/entity |
 | User | ✅ Phase 2 | at domain level |

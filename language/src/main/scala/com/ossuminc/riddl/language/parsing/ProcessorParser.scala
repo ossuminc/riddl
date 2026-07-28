@@ -67,6 +67,6 @@ trait ProcessorParser
   def processorDefinitionContents[u: P](statementsSet: StatementsSet): P[OccursInProcessor] =
     P(
       vitalDefinitionContents | constant | invariant | function | handler(statementsSet) |
-        portlet | streamlet | connector | relationship
+        portlet | streamlet | connector | relationship | versionDef | copyrightDef
     )./.asInstanceOf[P[OccursInProcessor]]
 }

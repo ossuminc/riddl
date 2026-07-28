@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-28 02:09 UTC
+# Generated: 2026-07-28 03:15 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -47,7 +47,7 @@ end-of-line-comment ::= "//" [^\n]*
 
 # Main Structure
 root-content ::= bast-import | root-definition | module | root-include
-root-definition ::= domain | author | version | comment
+root-definition ::= domain | author | version | copyright | comment
 root-include ::= "include" ws1 literal-string
 
 # definition, optionally renamed with "as".
@@ -58,7 +58,7 @@ importable-kind ::= "domain" | "context" | "entity" | "type" | "epic" | "saga" |
 
 # at this level. The internal rules of each contained definition still apply.
 module ::= "module" ws1 identifier ws1 is ws "{" ws (module-content | module-include)+ ws "}" ws (with-metadata)?
-module-content ::= bast-import | adaptor | author | comment | connector | constant | context | domain | entity | epic | function | invariant | module | projector | relationship | repository | saga | streamlet | type-def | user | version
+module-content ::= bast-import | adaptor | author | comment | connector | constant | context | domain | entity | epic | function | invariant | module | projector | relationship | repository | saga | streamlet | type-def | user | version | copyright
 module-include ::= "include" ws1 literal-string
 
 # yields a Module with the synthetic id `nebula`. Use `module` instead.
@@ -68,7 +68,7 @@ nebula ::= (module-content)*
 domain ::= "domain" ws1 identifier ws1 is ws "{" ws domain-body ws "}" ws (with-metadata)?
 domain-body ::= domain-definitions | "???"
 domain-definitions ::= (domain-content)+
-domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | repository | connector | version | bast-import | domain-include | comment
+domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | repository | connector | version | copyright | bast-import | domain-include | comment
 domain-include ::= "include" ws1 literal-string
 
 # Context
@@ -76,21 +76,21 @@ intention ::= "application" | "external" | "gateway" | "service"
 context ::= (intention)? ws "context" ws1 identifier ws (as-shape)? ws is ws "{" ws context-body ws "}" ws (with-metadata)?
 context-body ::= context-definitions | "???"
 context-definitions ::= (context-definition)+
-context-definition ::= processor-definition-contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | version | bast-import | context-include | comment
+context-definition ::= processor-definition-contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | bast-import | context-include | comment
 context-include ::= "include" ws1 literal-string
 
 # Entity
 entity ::= "entity" ws1 identifier ws (as-shape)? ws is ws "{" ws entity-body ws "}" ws (with-metadata)?
 entity-body ::= entity-definitions | "???"
 entity-definitions ::= (entity-content)+
-entity-content ::= processor-definition-contents | state | version | entity-include
+entity-content ::= processor-definition-contents | state | entity-include
 state ::= ("initial")? ws "state" ws1 identifier ws ("of" | is) ws record-ref ws (state-body)? ws (with-metadata)?
 state-body ::= is ws "{" ws ((state-content)+ | "???") ws "}"
 state-content ::= handler | invariant | comment
 entity-include ::= "include" ws1 literal-string
 
 # Processor Definition Contents
-processor-definition-contents ::= vital-definition-contents | constant | invariant | function | handler | streamlet | processor | connector | relationship | inlet | outlet
+processor-definition-contents ::= vital-definition-contents | constant | invariant | function | handler | streamlet | processor | connector | relationship | inlet | outlet | version | copyright
 vital-definition-contents ::= type-def | comment
 
 # Type Definition
@@ -269,6 +269,9 @@ invariant ::= "invariant" ws1 identifier ws1 is ws (literal-string | boolean-exp
 
 # precise version, e.g. Garibaldi.4.3. At most one version per scope.
 version ::= "version" ws (natural | identifier) ws (with-metadata)?
+
+# ancestor scope that declares one. At most one copyright per scope.
+copyright ::= "copyright" ws1 identifier ws1 is ws1 literal-string ws (with-metadata)?
 
 # Relationship
 relationship ::= "relationship" ws1 identifier ws "to" ws1 processor-ref ws1 by-as ws1 relationship-cardinality ws ("label" by-as literal-string)? ws (with-metadata)?

@@ -31,7 +31,7 @@ private[parsing] trait ContextParser {
         // GROUP 4: Moderate - orchestration and streaming (10-15%)
         saga | streamlet |
         // GROUP 5: Less common - UI, connectivity, includes, imports (5-10%)
-        group | connector | versionDef | contextInclude | bastImport | comment
+        group | connector | contextInclude | bastImport | comment
     ).asInstanceOf[P[ContextContents]]
   }
 

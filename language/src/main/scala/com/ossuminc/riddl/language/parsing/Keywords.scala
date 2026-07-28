@@ -102,6 +102,8 @@ object Keywords {
 
   def context[u: P]: P[Unit] = keyword(Keyword.context)
 
+  def copyright[u: P]: P[Unit] = keyword(Keyword.copyright)
+
   def create[u: P]: P[Unit] = keyword(Keyword.create)
 
   def default[u: P]: P[Unit] = keyword(Keyword.default_)
@@ -398,6 +400,7 @@ object Keywords {
           Keyword.container,
           Keyword.contains,
           Keyword.context,
+          Keyword.copyright,
           Keyword.create,
           Keyword.described,
           Keyword.details,
@@ -549,6 +552,7 @@ object Keyword {
   final val container = "container"
   final val contains = "contains"
   final val context = "context"
+  final val copyright = "copyright"
   final val create = "create"
   final val default_ = "default"
   final val described = "described"
@@ -704,6 +708,7 @@ object Keyword {
     container,
     contains,
     context,
+    copyright,
     create,
     default_,
     described,

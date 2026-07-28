@@ -121,7 +121,8 @@ object JsonModel:
   case class RootDto(
     domains: Seq[DomainDto] = Nil,
     modules: Seq[ModuleDto] = Nil,
-    version: Option[VersionDto] = None
+    version: Option[VersionDto] = None,
+    copyright: Option[CopyrightDto] = None
   )
 
   /** A Module is a FLAT collection of ANY top-level definition — no hierarchy is enforced at its
@@ -154,7 +155,8 @@ object JsonModel:
     relationships: Seq[RelationshipDto] = Nil,
     modules: Seq[ModuleDto] = Nil,
     metadata: Option[MetaDto] = None,
-    version: Option[VersionDto] = None
+    version: Option[VersionDto] = None,
+    copyright: Option[CopyrightDto] = None
   )
 
   case class DomainDto(
@@ -168,7 +170,8 @@ object JsonModel:
     domains: Seq[DomainDto] = Nil,
     contexts: Seq[ContextDto] = Nil,
     metadata: Option[MetaDto] = None,
-    version: Option[VersionDto] = None
+    version: Option[VersionDto] = None,
+    copyright: Option[CopyrightDto] = None
   )
 
   /** `{ "name": "Shopper", "isA": "a person", "brief"?: ... }` (Phase 2) */
@@ -216,7 +219,8 @@ object JsonModel:
     shape: Option[String] = None,
     inlets: Seq[PortletDto] = Nil,
     outlets: Seq[PortletDto] = Nil,
-    version: Option[VersionDto] = None
+    version: Option[VersionDto] = None,
+    copyright: Option[CopyrightDto] = None
   )
 
   case class MessageDto(
@@ -249,7 +253,8 @@ object JsonModel:
     shape: Option[String] = None,
     inlets: Seq[PortletDto] = Nil,
     outlets: Seq[PortletDto] = Nil,
-    version: Option[VersionDto] = None
+    version: Option[VersionDto] = None,
+    copyright: Option[CopyrightDto] = None
   )
 
   /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
@@ -307,6 +312,15 @@ object JsonModel:
   case class VersionDto(
     name: String,
     numeric: Boolean = false,
+    brief: Option[String] = None
+  )
+
+  /** A47: a scope's copyright notice — `{ "name": "C", "text": "\u00a9 2026 Ossum Inc." }`. `text`
+    * is the notice VERBATIM and in its entirety; RIDDL never decomposes it.
+    */
+  case class CopyrightDto(
+    name: String,
+    text: String,
     brief: Option[String] = None
   )
 
@@ -514,7 +528,10 @@ object JsonModel:
     // A Processor may carry an optional ascribed shape and inlet/outlet ports.
     shape: Option[String] = None,
     inlets: Seq[PortletDto] = Nil,
-    outlets: Seq[PortletDto] = Nil
+    outlets: Seq[PortletDto] = Nil,
+    // A47: every Processor is a version and copyright scope.
+    version: Option[VersionDto] = None,
+    copyright: Option[CopyrightDto] = None
   )
 
   /** An inlet or outlet: `{ "name": "in", "type": "<typePath>", "brief"?: ... }` */
@@ -538,7 +555,10 @@ object JsonModel:
     events: Seq[MessageDto] = Nil,
     queries: Seq[MessageDto] = Nil,
     results: Seq[MessageDto] = Nil,
-    handlers: Seq[HandlerDto] = Nil
+    handlers: Seq[HandlerDto] = Nil,
+    // A47: every Processor is a version and copyright scope.
+    version: Option[VersionDto] = None,
+    copyright: Option[CopyrightDto] = None
   )
 
   /** `{ "name": "R", "withProcessor": "<path>", "processor": "entity"|..., "cardinality":
@@ -569,7 +589,10 @@ object JsonModel:
     // A Processor may carry an optional ascribed shape and inlet/outlet ports.
     shape: Option[String] = None,
     inlets: Seq[PortletDto] = Nil,
-    outlets: Seq[PortletDto] = Nil
+    outlets: Seq[PortletDto] = Nil,
+    // A47: every Processor is a version and copyright scope.
+    version: Option[VersionDto] = None,
+    copyright: Option[CopyrightDto] = None
   )
 
   /** A repository schema: `{ "name": "S", "kind"?: "Relational"|..., "data"?: {field->typePath},
@@ -598,7 +621,10 @@ object JsonModel:
     // A Processor may carry an optional ascribed shape and inlet/outlet ports.
     shape: Option[String] = None,
     inlets: Seq[PortletDto] = Nil,
-    outlets: Seq[PortletDto] = Nil
+    outlets: Seq[PortletDto] = Nil,
+    // A47: every Processor is a version and copyright scope.
+    version: Option[VersionDto] = None,
+    copyright: Option[CopyrightDto] = None
   )
 
   // ---------------------------------------------------------------------------
@@ -1478,6 +1504,7 @@ object JsonModel:
     readwriter[ujson.Value].bimap[ValueDto](writeValue, readValue)
   given invariantRW: ReadWriter[InvariantDto] = macroRW
   given versionRW: ReadWriter[VersionDto] = macroRW
+  given copyrightRW: ReadWriter[CopyrightDto] = macroRW
   given constantRW: ReadWriter[ConstantDto] = macroRW
   given userRW: ReadWriter[UserDto] = macroRW
   given stateRW: ReadWriter[StateDto] = macroRW

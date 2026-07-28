@@ -1043,6 +1043,114 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize copyrights at every permitted scope (A47)" in {
+      // A47 adds Copyright (NODE_COPYRIGHT = 104, FORMAT_REVISION 24) at root/module/domain and
+      // all six processors, and widens Version to the same set. Both leaves must survive
+      // AST -> BAST -> AST at their own scope, with the notice carried verbatim.
+      val riddlSource =
+        """copyright Root is "© 2026 Ossum Inc."
+          |version Jellyfish
+          |domain d is {
+          |  copyright Domain is "© 2026 Ossum Inc. (domain)"
+          |  context c is {
+          |    copyright Context is "© 2026 Ossum Inc. (context)"
+          |    command Ping(at: TimeStamp)
+          |    entity e is {
+          |      copyright Entity is "© 2026 Ossum Inc. (entity)"
+          |      version 3
+          |      record R(x: Integer)
+          |      state S of record d.c.e.R is { handler H is { on other is { do "a" } } }
+          |    }
+          |    repository repo is {
+          |      copyright Repository is "© 2026 Third Party Ltd."
+          |      version 2
+          |    }
+          |    projector proj is {
+          |      copyright Projector is "© 2026 Ossum Inc. (projector)"
+          |      version 1
+          |    }
+          |    processor src as source is {
+          |      copyright Streamlet is "© 2026 Ossum Inc. (streamlet)"
+          |      version 5
+          |      outlet Out is type d.c.Ping
+          |    }
+          |    adaptor ad to context d.c is {
+          |      copyright Adaptor is "© 1998 Legacy Systems Inc."
+          |      version 7
+          |    }
+          |  }
+          |}
+          |module m is { copyright Module is "© 2026 Ossum Inc. (module)" }
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-copyright")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "copyright round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.{
+                Adaptor,
+                Context,
+                Domain,
+                Entity,
+                Module as ModuleAST,
+                Projector,
+                Repository,
+                Streamlet
+              }
+              // The BAST serialization root is a Module standing in for the Root, so the
+              // root-level `copyright Root` lands directly in its contents.
+              assert(
+                module.copyright.map(_.id.value).contains("Root"),
+                "root-level copyright lost in BAST"
+              )
+              val finder = Finder(module.contents)
+              assert(
+                finder
+                  .recursiveFindByType[Domain]
+                  .head
+                  .copyright
+                  .map(_.notice)
+                  .contains(
+                    "© 2026 Ossum Inc. (domain)"
+                  ),
+                "domain copyright lost"
+              )
+              assert(
+                finder.recursiveFindByType[Context].head.copyright.isDefined,
+                "context copyright lost"
+              )
+              assert(
+                finder.recursiveFindByType[Entity].head.copyright.isDefined,
+                "entity copyright lost"
+              )
+              assert(
+                finder.recursiveFindByType[Repository].head.copyright.isDefined,
+                "repository copyright lost"
+              )
+              assert(
+                finder.recursiveFindByType[Projector].head.copyright.isDefined,
+                "projector copyright lost"
+              )
+              assert(
+                finder.recursiveFindByType[Streamlet].head.copyright.isDefined,
+                "streamlet copyright lost"
+              )
+              val ad = finder.recursiveFindByType[Adaptor].head
+              assert(ad.copyright.isDefined, "adaptor copyright lost")
+              assert(ad.version.flatMap(_.number).contains(7L), "adaptor version lost")
+              val m = finder.recursiveFindByType[ModuleAST].find(_.id.value == "m").get
+              assert(m.copyright.isDefined, "module copyright lost")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize dokn.riddl" in {
       val url = URL.fromCwdPath("language/input/dokn.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "dokn-test")

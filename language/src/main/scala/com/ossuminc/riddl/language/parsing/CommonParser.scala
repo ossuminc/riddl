@@ -83,6 +83,21 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   end versionDef
 
+  /** A47: `copyright <identifier> is "<notice>"`.
+    *
+    * The notice is a [[LiteralString]] taken VERBATIM and in its entirety — the © symbol, the year
+    * and the holder all live inside the quotes, because notices vary by jurisdiction and holder and
+    * any decomposition would be wrong somewhere. The definition is NAMED so a documentation
+    * generator can gather a model's distinct notices and attribute each properly.
+    */
+  def copyrightDef[u: P]: P[Copyright] =
+    P(
+      Index ~ Keywords.copyright ~/ identifier ~ is ~ literalString ~ withMetaData ~/ Index
+    ).map { case (start, id, text, descriptives, end) =>
+      Copyright(at(start, end), id, text, descriptives.toContents)
+    }
+  end copyrightDef
+
   /** Parse importable definition kinds for selective imports */
   private def importableKind[u: P]: P[String] = {
     P(

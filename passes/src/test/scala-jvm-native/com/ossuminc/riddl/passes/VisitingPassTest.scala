@@ -125,6 +125,7 @@ class TestVisitor extends PassVisitor:
   def doConstant(constant: Constant): Unit = leaf(constant)
   def doInvariant(invariant: Invariant): Unit = leaf(invariant)
   def doVersion(version: Version): Unit = leaf(version)
+  def doCopyright(copyright: Copyright): Unit = leaf(copyright)
   def doSagaStep(sagaStep: SagaStep): Unit = leaf(sagaStep)
   def doInlet(inlet: Inlet): Unit = leaf(inlet)
   def doOutlet(outlet: Outlet): Unit = leaf(outlet)

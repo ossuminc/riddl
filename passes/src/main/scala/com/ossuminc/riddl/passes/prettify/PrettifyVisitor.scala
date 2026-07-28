@@ -262,6 +262,16 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     }
   end doVersion
 
+  // A47: `copyright <name> is "<notice>"`.
+  def doCopyright(copyright: Copyright): Unit =
+    state.withCurrent { rfe =>
+      rfe.addIndent("copyright ").add(copyright.id.format).add(" is ").add(copyright.text.format)
+      // A copyright is a one-line leaf with nothing following it on the line, so it must terminate
+      // its own line when there is no `with { ... }` block to do it.
+      if copyright.metadata.isEmpty then rfe.nl else rfe.emitMetaData(copyright.metadata)
+    }
+  end doCopyright
+
   def doSagaStep(sagaStep: SagaStep): Unit =
     state.withCurrent { rfe =>
       rfe
@@ -543,6 +553,7 @@ def keyword(definition: Definition): String =
     case _: Inlet       => Keyword.inlet
     case _: Invariant   => Keyword.invariant
     case _: Version     => Keyword.version
+    case _: Copyright   => Keyword.copyright
     case _: Outlet      => Keyword.outlet
     case s: Streamlet   => s.effectiveShape.keyword
     case _: Root        => "root"

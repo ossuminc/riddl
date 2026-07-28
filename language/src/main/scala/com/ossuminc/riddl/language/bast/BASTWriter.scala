@@ -318,9 +318,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case ls: LiteralString   => writeLiteralString(ls)
 
       // Authors and Users
-      case a: Author  => writeAuthor(a)
-      case u: User    => writeUser(u)
-      case v: Version => writeVersion(v)
+      case a: Author    => writeAuthor(a)
+      case u: User      => writeUser(u)
+      case v: Version   => writeVersion(v)
+      case c: Copyright => writeCopyright(c)
 
       // Constants
       case c: Constant => writeConstant(c)
@@ -563,6 +564,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(v.loc)
     writeIdentifierInline(v.id) // Inline - no tag needed
     writer.writeU8(if v.isNumeric then 1 else 0)
+  }
+
+  /** A47: a Copyright leaf — its name (inline identifier) plus the notice, verbatim. */
+  def writeCopyright(c: Copyright): Unit = {
+    writeNodeTag(NODE_COPYRIGHT, c.metadata.nonEmpty)
+    writeLocation(c.loc)
+    writeIdentifierInline(c.id) // Inline - no tag needed
+    writeLiteralString(c.text)
   }
 
   def writeUser(u: User): Unit = {

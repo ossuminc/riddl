@@ -33,7 +33,8 @@ object JsonAstBuilder:
     val domains = dto.domains.map(buildDomain)
     val modules = dto.modules.map(buildModule)
     val version = dto.version.map(buildVersion).toSeq
-    val root = Root(At(), contentsOf[RootContents](domains, modules, version))
+    val copyright = dto.copyright.map(buildCopyright).toSeq
+    val root = Root(At(), contentsOf[RootContents](domains, modules, version, copyright))
     if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
   end build
 
@@ -61,6 +62,7 @@ object JsonAstBuilder:
     val relationships = m.relationships.map(buildRelationship)
     val modules = m.modules.map(buildModule)
     val version = m.version.map(buildVersion).toSeq
+    val copyright = m.copyright.map(buildCopyright).toSeq
     Module(
       At(),
       ident(m.name),
@@ -87,7 +89,8 @@ object JsonAstBuilder:
         connectors,
         relationships,
         modules,
-        version
+        version,
+        copyright
       ),
       meta(m.brief, m.metadata)
     )
@@ -150,6 +153,7 @@ object JsonAstBuilder:
     val subdomains = d.domains.map(buildDomain)
     val contexts = d.contexts.map(buildContext)
     val version = d.version.map(buildVersion).toSeq
+    val copyright = d.copyright.map(buildCopyright).toSeq
     Domain(
       At(),
       ident(d.name),
@@ -161,7 +165,8 @@ object JsonAstBuilder:
         epics,
         subdomains,
         contexts,
-        version
+        version,
+        copyright
       ),
       meta(d.brief, d.metadata)
     )
@@ -184,6 +189,10 @@ object JsonAstBuilder:
   private def buildVersion(v: VersionDto): Version =
     val number = if v.numeric then v.name.toLongOption else None
     Version(At(), ident(v.name), number, meta(v.brief))
+
+  /** A47: the notice is carried verbatim in `text`; `name` identifies it. */
+  private def buildCopyright(c: CopyrightDto): Copyright =
+    Copyright(At(), ident(c.name), LiteralString(At(), c.text), meta(c.brief))
 
   private def buildAuthor(a: AuthorDto): Author =
     Author(
@@ -221,6 +230,7 @@ object JsonAstBuilder:
     val inlets = c.inlets.map(buildInlet)
     val outlets = c.outlets.map(buildOutlet)
     val version = c.version.map(buildVersion).toSeq
+    val copyright = c.copyright.map(buildCopyright).toSeq
     Context(
       At(),
       ident(c.name),
@@ -244,7 +254,8 @@ object JsonAstBuilder:
         handlers,
         inlets,
         outlets,
-        version
+        version,
+        copyright
       ),
       ascribedShape = parseShape(c.shape),
       intention = parseIntention(c.intention),
@@ -310,6 +321,7 @@ object JsonAstBuilder:
     val inlets = e.inlets.map(buildInlet)
     val outlets = e.outlets.map(buildOutlet)
     val version = e.version.map(buildVersion).toSeq
+    val copyright = e.copyright.map(buildCopyright).toSeq
     Entity(
       At(),
       ident(e.name),
@@ -326,7 +338,8 @@ object JsonAstBuilder:
         invariants,
         inlets,
         outlets,
-        version
+        version,
+        copyright
       ),
       ascribedShape = parseShape(e.shape),
       metadata = meta(e.brief, e.metadata)
@@ -895,6 +908,8 @@ object JsonAstBuilder:
     val handlers = a.handlers.map(buildHandler)
     val inlets = a.inlets.map(buildInlet)
     val outlets = a.outlets.map(buildOutlet)
+    val version = a.version.map(buildVersion).toSeq
+    val copyright = a.copyright.map(buildCopyright).toSeq
     Adaptor(
       At(),
       ident(a.name),
@@ -910,7 +925,9 @@ object JsonAstBuilder:
         functions,
         handlers,
         inlets,
-        outlets
+        outlets,
+        version,
+        copyright
       ),
       ascribedShape = parseShape(a.shape),
       metadata = meta(a.brief)
@@ -951,6 +968,8 @@ object JsonAstBuilder:
     val queries = s.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
     val results = s.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val handlers = s.handlers.map(buildHandler)
+    val version = s.version.map(buildVersion).toSeq
+    val copyright = s.copyright.map(buildCopyright).toSeq
     Streamlet(
       At(),
       ident(s.name),
@@ -964,7 +983,9 @@ object JsonAstBuilder:
         inlets,
         outlets,
         connectors,
-        handlers
+        handlers,
+        version,
+        copyright
       ),
       meta(s.brief)
     )
@@ -999,6 +1020,8 @@ object JsonAstBuilder:
     val functions = p.functions.map(buildFunction)
     val handlers = p.handlers.map(buildHandler)
     val repoRefs = p.repository.toSeq.map(r => RepositoryRef(At(), pathId(r)))
+    val version = p.version.map(buildVersion).toSeq
+    val copyright = p.copyright.map(buildCopyright).toSeq
     Projector(
       At(),
       ident(p.name),
@@ -1011,7 +1034,9 @@ object JsonAstBuilder:
         results,
         functions,
         handlers,
-        repoRefs
+        repoRefs,
+        version,
+        copyright
       ),
       metadata = meta(p.brief)
     )
@@ -1050,10 +1075,22 @@ object JsonAstBuilder:
     val results = r.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val handlers = r.handlers.map(buildHandler)
     val schemas = r.schema.toSeq.map(buildSchema)
+    val version = r.version.map(buildVersion).toSeq
+    val copyright = r.copyright.map(buildCopyright).toSeq
     Repository(
       At(),
       ident(r.name),
-      contentsOf[RepositoryContents](types, schemas, commands, events, queries, results, handlers),
+      contentsOf[RepositoryContents](
+        types,
+        schemas,
+        commands,
+        events,
+        queries,
+        results,
+        handlers,
+        version,
+        copyright
+      ),
       metadata = meta(r.brief)
     )
 

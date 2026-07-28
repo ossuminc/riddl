@@ -38,7 +38,7 @@ private[parsing] trait ModuleParser {
     P(
       bastImport | adaptor | author | comment | connector | constant | context | domain | entity |
         epic | function | invariant | module | projector | relationship | repository | saga |
-        streamlet | typeDef | user | versionDef
+        streamlet | typeDef | user | versionDef | copyrightDef
     ).asInstanceOf[P[ModuleContents]]
 
   def moduleContents[u: P]: P[Seq[ModuleContents]] = {
