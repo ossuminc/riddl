@@ -2932,6 +2932,12 @@ case class ValidationPass(
       .split(' ')
       .toSet
 
+  /** A40: the least number of distinct content words a step's prose must contain before its
+    * translatability is predicted at all. Below this threshold there is not enough prose to predict
+    * FROM, and the check declines to judge rather than emitting a guaranteed false positive.
+    */
+  private val translatabilityMinimumContentWords: Int = 2
+
   /** A40: split `text` into lowercase content words: maximal runs of letters/digits, at least three
     * characters long, that are not [[translatabilityStopWords]]. Hand-rolled rather than
     * regex-based so it stays cheap ("quickly predict") and identical on JVM, JS and Native.
@@ -3010,6 +3016,13 @@ case class ValidationPass(
     * if any of them appears in the [[inScopeVocabulary]]. Prose with no grounded word at all is
     * predicted untranslatable and draws a [[CompletenessWarning]] — never an error, because a
     * prediction must not fail a build, and it is silenced with completeness warnings off.
+    *
+    * A prediction is only made when there is enough prose to predict FROM: fewer than
+    * [[translatabilityMinimumContentWords]] content words and the check stays silent. A single bare
+    * verb — which is all an [[ArbitraryInteraction]]'s relationship usually is ("presses", "sends",
+    * "select") — carries no evidence either way, and bare verbs never appear in a noun-dominated
+    * vocabulary, so warning on one is a guaranteed false positive. Declining to judge is the honest
+    * answer. [[VagueInteraction]], whose three parts are all prose, is unaffected in practice.
     */
   private def checkInteractionTranslatability(
     step: GenericInteraction,
@@ -3021,15 +3034,17 @@ case class ValidationPass(
       (step.brief.map(_.brief.s).toSeq ++ step.descriptions.map(_.lines.map(_.s).mkString(" ")))
         .mkString(" ")
     val words = contentWordsOf(prose + " " + ownProse)
-    val vocabulary = inScopeVocabulary(useCase, parents)
-    if !words.exists(vocabulary.contains) then
-      messages.addCompleteness(
-        step.loc,
-        s"interaction '${prose.trim}' uses no terms defined in scope, so it is unlikely to be " +
-          "translatable into a generated test",
-        suggestion = "Define the nouns and verbs it uses as 'term's, or add a 'briefly' / " +
-          "'described as' to the step that uses in-scope vocabulary."
-      )
+    if words.size >= translatabilityMinimumContentWords then
+      val vocabulary = inScopeVocabulary(useCase, parents)
+      if !words.exists(vocabulary.contains) then
+        messages.addCompleteness(
+          step.loc,
+          s"interaction '${prose.trim}' uses no terms defined in scope, so it is unlikely to be " +
+            "translatable into a generated test",
+          suggestion = "Define the nouns and verbs it uses as 'term's, or add a 'briefly' / " +
+            "'described as' to the step that uses in-scope vocabulary."
+        )
+      end if
     end if
   end checkInteractionTranslatability
 

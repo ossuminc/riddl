@@ -20,6 +20,10 @@ import org.scalatest.{Assertion, TestData}
   * is vocabulary grounding: prose containing at least one content word drawn from the model's
   * in-scope vocabulary (definition names, term names, brief/description text) is predicted
   * translatable. Richer in-scope terminology therefore raises the prediction.
+  *
+  * A prediction is only made when the prose has at least two content words to predict FROM. One
+  * bare word — typically all an ArbitraryInteraction's relationship is — is no evidence either way,
+  * so the check declines to judge rather than emitting a certain false positive.
   */
 class InteractionTranslatabilityTest extends AbstractValidatingTest {
 
@@ -33,7 +37,7 @@ class InteractionTranslatabilityTest extends AbstractValidatingTest {
       case (_, _, msgs: Messages) => check(msgs)
     }
 
-  /** A vague step whose prose is entirely undefined vocabulary. */
+  /** A vague step with several content words, none of them defined vocabulary. */
   private val ungroundedVagueModel: String =
     """domain Ordering is {
       |  user Shopper is "a customer"
@@ -41,7 +45,7 @@ class InteractionTranslatabilityTest extends AbstractValidatingTest {
       |    user Ordering.Shopper wants to "check out" so that "buy"
       |    case Simple is {
       |      user Ordering.Shopper wants to "check out" so that "buy"
-      |      step is "someone" "does" "the thing somehow"
+      |      step is "an auditor" "reconciles" "the ledger"
       |    }
       |  }
       |}
@@ -71,8 +75,27 @@ class InteractionTranslatabilityTest extends AbstractValidatingTest {
         validating(ungroundedVagueModel, td) { msgs =>
           val warnings = a40Messages(msgs)
           warnings.size mustBe 1
-          warnings.head.message must include("someone does the thing somehow")
+          warnings.head.message must include("an auditor reconciles the ledger")
         }
+    }
+
+    "decline to judge prose that has no content words at all to predict from" in { (td: TestData) =>
+      // Every word here is either under three characters or a stop word, so there is no evidence
+      // either way and the check must stay silent rather than guess.
+      validating(
+        """domain Ordering is {
+          |  user Shopper is "a customer"
+          |  epic Checkout is {
+          |    user Ordering.Shopper wants to "check out" so that "buy"
+          |    case Simple is {
+          |      user Ordering.Shopper wants to "check out" so that "buy"
+          |      step is "someone" "does" "the thing somehow"
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )(msgs => a40Messages(msgs) mustBe empty)
     }
 
     "fall silent once a term the prose uses is defined (richer terminology raises the prediction)" in {
@@ -116,7 +139,7 @@ class InteractionTranslatabilityTest extends AbstractValidatingTest {
             |    user Ordering.Shopper wants to "check out" so that "buy"
             |    case Simple is {
             |      user Ordering.Shopper wants to "check out" so that "buy"
-            |      step is "someone" "does" "the thing somehow" with {
+            |      step is "an auditor" "reconciles" "the ledger" with {
             |        briefly "the Shopper completes Checkout"
             |      }
             |    }
@@ -127,8 +150,39 @@ class InteractionTranslatabilityTest extends AbstractValidatingTest {
         )(msgs => a40Messages(msgs) mustBe empty)
     }
 
-    "warn for an arbitrary step whose relationship text is undefined vocabulary" in {
+    "warn for an arbitrary step whose multi-word relationship text is undefined vocabulary" in {
       (td: TestData) =>
+        validating(
+          """domain Ordering is {
+            |  user Shopper is "a customer"
+            |  application context Store is {
+            |    result Info is { msg: String }
+            |    group main is {
+            |      output greeting presents result Ordering.Store.Info
+            |    }
+            |  }
+            |  epic Checkout is {
+            |    user Ordering.Shopper wants to "check out" so that "buy"
+            |    case Simple is {
+            |      user Ordering.Shopper wants to "check out" so that "buy"
+            |      step from user Ordering.Shopper "frobnicates the widget" to output Ordering.Store.main.greeting
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        ) { msgs =>
+          val warnings = a40Messages(msgs)
+          warnings.size mustBe 1
+          warnings.head.message must include("frobnicates the widget")
+        }
+    }
+
+    "decline to judge an arbitrary step whose relationship is a single bare verb" in {
+      (td: TestData) =>
+        // The overwhelmingly common shape in practice ("presses", "sends", "select"). A bare verb
+        // is no evidence either way, and never appears in a noun-dominated vocabulary, so warning
+        // on it would be a guaranteed false positive.
         validating(
           """domain Ordering is {
             |  user Shopper is "a customer"
@@ -148,11 +202,7 @@ class InteractionTranslatabilityTest extends AbstractValidatingTest {
             |}
             |""".stripMargin,
           td
-        ) { msgs =>
-          val warnings = a40Messages(msgs)
-          warnings.size mustBe 1
-          warnings.head.message must include("frobnicates")
-        }
+        )(msgs => a40Messages(msgs) mustBe empty)
     }
 
     "stay silent for an arbitrary step whose relationship text is grounded" in { (td: TestData) =>
