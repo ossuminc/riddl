@@ -12,8 +12,8 @@ import com.ossuminc.riddl.utils.{ec, pc}
 import org.scalatest.TestData
 
 /** A47: `copyright` is a NAMED leaf definition establishing a copyright scope at [[Root]],
-  * [[Module]], [[Domain]] and every [[Processor]] — Adaptor, Context, Entity, Projector,
-  * Repository and Streamlet: NINE scopes in all.
+  * [[Module]], [[Domain]] and every [[Processor]] — Adaptor, Context, Entity, Projector, Repository
+  * and Streamlet: NINE scopes in all.
   *
   * Unlike [[Version]], which COMPOSES a coordinate out of every versioned ancestor, a copyright is
   * NEAREST-WINS: the applicable notice is the one from the closest ancestor that declares one.
@@ -43,6 +43,10 @@ class CopyrightTest extends ParsingTest {
     search(root, Nil) match
       case Some((d, ancestors)) => d -> Contents[RiddlValue](ancestors*)
       case None                 => fail(s"no definition named '$id'")
+
+  private def applicable(root: Root, id: String): Option[Copyright] =
+    val (d, parents) = parentsOf(root, id)
+    findCopyright(d, parents)
 
   /** One model exercising all NINE permitted scopes at once. */
   private val allNine =
@@ -90,8 +94,10 @@ class CopyrightTest extends ParsingTest {
     }
 
     "carry the notice VERBATIM, © symbol and all" in { (td: TestData) =>
-      val root = parse("""domain D is { copyright C is "© 2026 Ossum Inc. All rights reserved." }""", td)
-      val c = Finder(root).recursiveFindByType[Domain].head.copyright.getOrElse(fail("no copyright"))
+      val root =
+        parse("""domain D is { copyright C is "© 2026 Ossum Inc. All rights reserved." }""", td)
+      val c =
+        Finder(root).recursiveFindByType[Domain].head.copyright.getOrElse(fail("no copyright"))
       c.notice mustBe "© 2026 Ossum Inc. All rights reserved."
       c.text.s mustBe "© 2026 Ossum Inc. All rights reserved."
     }
@@ -101,12 +107,15 @@ class CopyrightTest extends ParsingTest {
         """domain D is { copyright C is "© 2026 Ossum Inc." with { briefly "the notice" } }""",
         td
       )
-      val c = Finder(root).recursiveFindByType[Domain].head.copyright.getOrElse(fail("no copyright"))
+      val c =
+        Finder(root).recursiveFindByType[Domain].head.copyright.getOrElse(fail("no copyright"))
       c.metadata.nonEmpty mustBe true
     }
 
     "REQUIRE a name" in { (td: TestData) =>
-      TopLevelParser.parseInput(RiddlParserInput("""domain D is { copyright "© 2026" }""", td)) match
+      TopLevelParser.parseInput(
+        RiddlParserInput("""domain D is { copyright "© 2026" }""", td)
+      ) match
         case Right(_)   => fail("an unnamed copyright must not parse")
         case Left(msgs) => msgs.nonEmpty mustBe true
     }
@@ -129,6 +138,58 @@ class CopyrightTest extends ParsingTest {
         td
       )
       Finder(root).recursiveFindByType[Type].map(_.id.value) must contain("copyright")
+    }
+  }
+
+  "Copyright inheritance" should {
+    "be NEAREST-WINS, not composed" in { (td: TestData) =>
+      val root = parse(allNine, td)
+      // The entity declares its own, so its own wins over the context's and the domain's.
+      applicable(root, "E").map(_.id.value) mustBe Some("Entity")
+      // The state inside it declares none, so it takes the entity's — the NEAREST declaring
+      // ancestor — and NOT an accumulation of every ancestor's.
+      applicable(root, "S").map(_.id.value) mustBe Some("Entity")
+      // A definition in the context but outside the entity takes the context's.
+      applicable(root, "Repo").map(_.id.value) mustBe Some("Repo")
+    }
+
+    "let an `external context` OVERRIDE its enclosing domain for everything inside it" in {
+      (td: TestData) =>
+        val root = parse(
+          """domain D is {
+            |  copyright Ours is "© 2026 Ossum Inc."
+            |  external context Legacy is {
+            |    copyright Theirs is "© 1998 Legacy Systems Inc."
+            |    command Migrate(id: Integer)
+            |  }
+            |  context Mine is {
+            |    command Local(id: Integer)
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        // Inside the external context the FOREIGN notice applies — not the domain's.
+        applicable(root, "Legacy").map(_.notice) mustBe Some("© 1998 Legacy Systems Inc.")
+        applicable(root, "Migrate").map(_.notice) mustBe Some("© 1998 Legacy Systems Inc.")
+        // A sibling context that declares nothing still inherits the domain's.
+        applicable(root, "Local").map(_.notice) mustBe Some("© 2026 Ossum Inc.")
+    }
+
+    "yield None when no ancestor declares one" in { (td: TestData) =>
+      val root = parse("""domain D is { context C is { command Nothing(id: Integer) } }""", td)
+      applicable(root, "Nothing") mustBe None
+      applicable(root, "D") mustBe None
+    }
+
+    "reach all the way to the root when only the root declares one" in { (td: TestData) =>
+      val root = parse(
+        """copyright House is "© 2026 Ossum Inc."
+          |domain D is { context C is { command Anything(id: Integer) } }
+          |""".stripMargin,
+        td
+      )
+      applicable(root, "Anything").map(_.id.value) mustBe Some("House")
     }
   }
 

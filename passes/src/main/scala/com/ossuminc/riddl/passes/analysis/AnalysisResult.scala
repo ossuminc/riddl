@@ -230,6 +230,15 @@ case class AnalysisResult(
   def composedVersionStringOf(definition: Definition): String =
     composedVersionOf(definition).mkString(VersionSeparator)
 
+  /** A47: the [[com.ossuminc.riddl.language.AST.Copyright]] that APPLIES to a definition.
+    *
+    * NEAREST DECLARING SCOPE WINS — unlike a version coordinate, copyrights do not compose. The
+    * result is the definition's own notice if it declares one, else the nearest ancestor's, else
+    * [[None]].
+    */
+  def copyrightOf(definition: Definition): Option[Copyright] =
+    findCopyright(definition, Contents(parentsOf(definition)*))
+
   // ============================================================
   // Statistics helpers
   // ============================================================

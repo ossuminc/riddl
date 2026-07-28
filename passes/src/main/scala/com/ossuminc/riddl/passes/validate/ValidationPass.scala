@@ -339,6 +339,12 @@ case class ValidationPass(
       case wv: (WithVersion[?] & Definition) => checkSingleVersion(wv)
       case _                                 => ()
     }
+    // A47: a scope may declare AT MOST ONE copyright, on the same terms as a version. Dispatched
+    // generically so all nine copyright-bearing scopes are covered in one place.
+    value match {
+      case wc: (WithCopyright[?] & Definition) => checkSingleCopyright(wc)
+      case _                                   => ()
+    }
     // A25/A54: validate `foreach` collection scoping and value expressions once per statement-bearing
     // container (on-clause or function). checkStatementScopes recurses through nested statement
     // bodies threading `let` scope, so invoking it at the container root covers every statement at
@@ -874,6 +880,21 @@ case class ValidationPass(
         s"${wv.identify} declares ${versions.size} versions; a scope may declare at most one",
         suggestion =
           s"Remove the extra 'version' declarations from ${wv.identify} so exactly one remains."
+      )
+    }
+  }
+
+  /** A47: exactly one `copyright` per scope. A second one is a hard Error, reported at the
+    * offending (second) declaration so the fix is obvious.
+    */
+  private def checkSingleCopyright(wc: WithCopyright[?] & Definition): Unit = {
+    val copyrights = wc.copyrights
+    if copyrights.sizeIs > 1 then {
+      messages.addError(
+        copyrights(1).loc,
+        s"${wc.identify} declares ${copyrights.size} copyrights; a scope may declare at most one",
+        suggestion =
+          s"Remove the extra 'copyright' declarations from ${wc.identify} so exactly one remains."
       )
     }
   }

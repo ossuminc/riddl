@@ -5036,6 +5036,47 @@ object AST:
     end if
   end findAuthors
 
+  /** The [[Copyright]] a single definition declares for its own scope, if any (A47).
+    *
+    * Only the copyright-bearing scopes ([[Root]], [[Module]], [[Domain]] and every [[Processor]])
+    * can declare one; everything else yields [[None]].
+    */
+  @JSExport
+  def copyrightOf(definition: Definition): Option[Copyright] =
+    definition match
+      case wc: WithCopyright[?] => wc.copyright
+      case _                    => None
+  end copyrightOf
+
+  /** The [[Copyright]] that APPLIES to a definition: NEAREST DECLARING SCOPE WINS (A47).
+    *
+    * Unlike [[composedVersion]], which accumulates a coordinate out of EVERY versioned ancestor, a
+    * copyright does not compose. The applicable notice is the one declared by the definition
+    * itself, or failing that by the nearest ancestor that declares one — the [[findAuthors]]
+    * precedent. That is the whole point of allowing it at inner scopes: an `external context`
+    * bearing a third party's notice must OVERRIDE its enclosing domain's for everything inside it,
+    * not be appended to it.
+    *
+    * `parents` arrives in RIDDL's usual LEAF→ROOT order, which is already nearest-first, so this
+    * walk does NOT reverse it — the opposite of [[composedVersion]].
+    *
+    * @param definition
+    *   The definition whose applicable copyright is sought
+    * @param parents
+    *   The parents of that definition, in RIDDL's usual LEAF→ROOT order
+    * @return
+    *   The nearest declared [[Copyright]], or [[None]] when nothing in the chain declares one
+    */
+  @JSExport
+  def findCopyright(
+    definition: Definition,
+    parents: Contents[RiddlValue]
+  ): Option[Copyright] =
+    copyrightOf(definition).orElse {
+      parents.filter[Definition].iterator.map(copyrightOf).collectFirst { case Some(c) => c }
+    }
+  end findCopyright
+
   /** The version component a single definition declares for its own scope, if any (A53).
     *
     * Only the version-bearing scopes ([[Root]], [[Module]], [[Domain]] and every [[Processor]] —

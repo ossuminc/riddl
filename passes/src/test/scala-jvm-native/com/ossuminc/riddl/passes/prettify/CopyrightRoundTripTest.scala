@@ -126,4 +126,33 @@ class CopyrightRoundTripTest extends AbstractValidatingTest {
       assertShape(parse(pretty, "regen"), "after prettify")
     }
   }
+
+  "A scope declaring more than one copyright" should {
+    "be an Error" in { (td: TestData) =>
+      val two =
+        """domain D is {
+          |  copyright A is "© 2026 Ossum Inc."
+          |  copyright B is "© 2026 Someone Else"
+          |  context C is { ??? }
+          |}
+          |""".stripMargin
+      parseAndValidateDomain(RiddlParserInput(two, td), shouldFailOnErrors = false) {
+        case (_, _, messages) =>
+          messages.justErrors.exists(_.message.contains("at most one")) mustBe true
+      }
+    }
+
+    "be fine with exactly one, at a processor scope too" in { (td: TestData) =>
+      val one =
+        """domain D is {
+          |  copyright A is "© 2026 Ossum Inc."
+          |  context C is { copyright B is "© 2026 Someone Else" }
+          |}
+          |""".stripMargin
+      parseAndValidateDomain(RiddlParserInput(one, td), shouldFailOnErrors = false) {
+        case (_, _, messages) =>
+          messages.justErrors.exists(_.message.contains("at most one")) mustBe false
+      }
+    }
+  }
 }
