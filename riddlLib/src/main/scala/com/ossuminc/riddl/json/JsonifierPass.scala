@@ -33,7 +33,11 @@ object JsonifierPass:
 case class JsonifierOutput(
   root: PassRoot,
   messages: Messages,
-  rootDto: JsonModel.RootDto
+  rootDto: JsonModel.RootDto,
+  /** `ParentKind -> ChildKind` pairs the schema could not express. Empty when the walk was
+    * lossless. See [[JsonifierPass.droppedKinds]].
+    */
+  droppedKinds: Seq[(String, String)] = Nil
 )(using PlatformContext)
     extends PassOutput
 
@@ -54,6 +58,24 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
 
   private def add(x: Any): Unit = if stack.nonEmpty then stack.top += x
 
+  /** Child DTOs consumed by the container currently being built, by identity.
+    *
+    * A parent assembles itself out of `col[T]` picks from its children. Anything it does not pick
+    * is simply forgotten — which is how a whole class of silent data loss got in: the AST unions
+    * widened (an entity became port-bearing, a domain gained connectors, a root gained authors) and
+    * the DTOs did not follow, so those children were built, discarded, and never missed. Recording
+    * what was picked lets the pass report what was not, instead of losing it quietly.
+    */
+  private var consumed = java.util.IdentityHashMap[Any, Boolean]()
+
+  /** Kinds dropped, as `ParentKind -> ChildKind` seen at least once. */
+  private val dropped = mutable.LinkedHashSet.empty[(String, String)]
+
+  /** What the serializer could not express, for callers who want to know. Empty means the walk was
+    * lossless with respect to the children the AST actually produced.
+    */
+  def droppedKinds: Seq[(String, String)] = dropped.toSeq
+
   override protected def openContainer(definition: Definition, parents: Parents): Unit =
     stack.push(mutable.ArrayBuffer.empty[Any])
 
@@ -64,21 +86,37 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
 
   override protected def closeContainer(definition: Definition, parents: Parents): Unit =
     val kids = stack.pop().toSeq
-    buildContainer(definition, kids) match
+    val outer = consumed
+    consumed = java.util.IdentityHashMap[Any, Boolean]()
+    val built = buildContainer(definition, kids)
+    for kid <- kids if !consumed.containsKey(kid) do
+      dropped += (definition.getClass.getSimpleName -> kindOf(kid))
+    end for
+    consumed = outer
+    built match
       case Some(r: RootDto) if parents.isEmpty => rootDto = r
-      case Some(built)                         => add(built)
+      case Some(b)                             => add(b)
       case None                                => ()
+  end closeContainer
 
-  def result(root: PassRoot): PassOutput = JsonifierOutput(root, empty, rootDto)
+  /** The reportable name of a child DTO, unwrapping the tagging wrappers. */
+  private def kindOf(kid: Any): String = kid match
+    case MsgChild(uc, _) => s"MessageDto($uc)"
+    case _: InletChild   => "InletDto"
+    case _: OutletChild  => "OutletDto"
+    case other           => other.getClass.getSimpleName
+
+  def result(root: PassRoot): PassOutput = JsonifierOutput(root, empty, rootDto, droppedKinds)
 
   // ---------------------------------------------------------------------------
   // Container assembly (children come from the scope; node internals read direct)
   // ---------------------------------------------------------------------------
 
   private def buildContainer(d: Definition, kids: Seq[Any]): Option[Any] =
-    def col[T: reflect.ClassTag]: Seq[T] = kids.collect { case t: T => t }
+    def keep[T](t: T): T = { consumed.put(t, true); t }
+    def col[T: reflect.ClassTag]: Seq[T] = kids.collect { case t: T => keep(t) }
     def msgs(uc: AggregateUseCase): Seq[MessageDto] = kids.collect {
-      case MsgChild(u, m) if u == uc => m
+      case m @ MsgChild(u, dto) if u == uc => keep(m); dto
     }
     d match
       case r: Root =>
@@ -87,7 +125,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[DomainDto],
             col[ModuleDto],
             col[VersionDto].headOption,
-            col[CopyrightDto].headOption
+            col[CopyrightDto].headOption,
+            col[AuthorDto]
           )
         )
       case m: Module =>
@@ -137,7 +176,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[ContextDto],
             metaOf(dom.metadata),
             col[VersionDto].headOption,
-            col[CopyrightDto].headOption
+            col[CopyrightDto].headOption,
+            msgs(AggregateUseCase.CommandCase),
+            msgs(AggregateUseCase.EventCase),
+            msgs(AggregateUseCase.QueryCase),
+            msgs(AggregateUseCase.ResultCase),
+            col[RepositoryDto],
+            col[ConnectorDto]
           )
         )
       case c: Context =>
@@ -168,7 +213,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InletChild].map(_.dto),
             col[OutletChild].map(_.dto),
             col[VersionDto].headOption,
-            col[CopyrightDto].headOption
+            col[CopyrightDto].headOption,
+            col[InvariantDto]
           )
         )
       case e: Entity =>
@@ -192,7 +238,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InletChild].map(_.dto),
             col[OutletChild].map(_.dto),
             col[VersionDto].headOption,
-            col[CopyrightDto].headOption
+            col[CopyrightDto].headOption,
+            col[StreamletDto],
+            col[ConnectorDto],
+            col[RelationshipDto]
           )
         )
       case s: State =>
@@ -280,7 +329,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InletChild].map(_.dto),
             col[OutletChild].map(_.dto),
             col[VersionDto].headOption,
-            col[CopyrightDto].headOption
+            col[CopyrightDto].headOption,
+            col[InvariantDto],
+            col[StreamletDto],
+            col[ConnectorDto],
+            col[RelationshipDto]
           )
         )
       case s: Streamlet =>
@@ -299,7 +352,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             msgs(AggregateUseCase.ResultCase),
             col[HandlerDto],
             col[VersionDto].headOption,
-            col[CopyrightDto].headOption
+            col[CopyrightDto].headOption,
+            col[ConstantDto],
+            col[FunctionDto],
+            col[InvariantDto],
+            col[StreamletDto],
+            col[RelationshipDto]
           )
         )
       case p: Projector =>
@@ -321,7 +379,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InletChild].map(_.dto),
             col[OutletChild].map(_.dto),
             col[VersionDto].headOption,
-            col[CopyrightDto].headOption
+            col[CopyrightDto].headOption,
+            col[InvariantDto],
+            col[StreamletDto],
+            col[ConnectorDto],
+            col[RelationshipDto]
           )
         )
       case r: Repository =>
@@ -329,7 +391,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           RepositoryDto(
             r.id.value,
             briefOf(r.metadata),
-            col[SchemaDto].headOption,
+            // The plural `schemas` below carries them all; the singular stays empty on output so a
+            // round trip cannot duplicate the first one. Reading still accepts either.
+            None,
             col[TypeDefDto],
             msgs(AggregateUseCase.CommandCase),
             msgs(AggregateUseCase.EventCase),
@@ -340,7 +404,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[InletChild].map(_.dto),
             col[OutletChild].map(_.dto),
             col[VersionDto].headOption,
-            col[CopyrightDto].headOption
+            col[CopyrightDto].headOption,
+            col[SchemaDto],
+            col[ConstantDto],
+            col[FunctionDto],
+            col[InvariantDto],
+            col[StreamletDto],
+            col[ConnectorDto],
+            col[RelationshipDto]
           )
         )
       case s: Saga =>

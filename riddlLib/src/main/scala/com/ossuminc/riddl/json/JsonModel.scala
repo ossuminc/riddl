@@ -122,7 +122,9 @@ object JsonModel:
     domains: Seq[DomainDto] = Nil,
     modules: Seq[ModuleDto] = Nil,
     version: Option[VersionDto] = None,
-    copyright: Option[CopyrightDto] = None
+    copyright: Option[CopyrightDto] = None,
+    // `OccursInRoot` admits a top-level author, which the schema used to drop on the floor.
+    authors: Seq[AuthorDto] = Nil
   )
 
   /** A Module is a FLAT collection of ANY top-level definition — no hierarchy is enforced at its
@@ -171,7 +173,15 @@ object JsonModel:
     contexts: Seq[ContextDto] = Nil,
     metadata: Option[MetaDto] = None,
     version: Option[VersionDto] = None,
-    copyright: Option[CopyrightDto] = None
+    copyright: Option[CopyrightDto] = None,
+    // `OccursInDomain` also admits messages, repositories and connectors: a domain may declare the
+    // message vocabulary its contexts share, own a repository, and wire a cross-context connector.
+    commands: Seq[MessageDto] = Nil,
+    events: Seq[MessageDto] = Nil,
+    queries: Seq[MessageDto] = Nil,
+    results: Seq[MessageDto] = Nil,
+    repositories: Seq[RepositoryDto] = Nil,
+    connectors: Seq[ConnectorDto] = Nil
   )
 
   /** `{ "name": "Shopper", "isA": "a person", "brief"?: ... }` (Phase 2) */
@@ -220,7 +230,9 @@ object JsonModel:
     inlets: Seq[PortletDto] = Nil,
     outlets: Seq[PortletDto] = Nil,
     version: Option[VersionDto] = None,
-    copyright: Option[CopyrightDto] = None
+    copyright: Option[CopyrightDto] = None,
+    // `OccursInProcessor` admits an invariant directly on the processor, not only on a state.
+    invariants: Seq[InvariantDto] = Nil
   )
 
   case class MessageDto(
@@ -254,7 +266,12 @@ object JsonModel:
     inlets: Seq[PortletDto] = Nil,
     outlets: Seq[PortletDto] = Nil,
     version: Option[VersionDto] = None,
-    copyright: Option[CopyrightDto] = None
+    copyright: Option[CopyrightDto] = None,
+    // The unified processor model made an entity port-bearing, which also lets it own the
+    // streamlets, connectors and relationships that wire those ports up.
+    streamlets: Seq[StreamletDto] = Nil,
+    connectors: Seq[ConnectorDto] = Nil,
+    relationships: Seq[RelationshipDto] = Nil
   )
 
   /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
@@ -531,7 +548,12 @@ object JsonModel:
     outlets: Seq[PortletDto] = Nil,
     // A47: every Processor is a version and copyright scope.
     version: Option[VersionDto] = None,
-    copyright: Option[CopyrightDto] = None
+    copyright: Option[CopyrightDto] = None,
+    // The rest of `OccursInProcessor`, which every processor shares.
+    invariants: Seq[InvariantDto] = Nil,
+    streamlets: Seq[StreamletDto] = Nil,
+    connectors: Seq[ConnectorDto] = Nil,
+    relationships: Seq[RelationshipDto] = Nil
   )
 
   /** An inlet or outlet: `{ "name": "in", "type": "<typePath>", "brief"?: ... }` */
@@ -558,7 +580,13 @@ object JsonModel:
     handlers: Seq[HandlerDto] = Nil,
     // A47: every Processor is a version and copyright scope.
     version: Option[VersionDto] = None,
-    copyright: Option[CopyrightDto] = None
+    copyright: Option[CopyrightDto] = None,
+    // The rest of `OccursInProcessor`, which every processor shares.
+    constants: Seq[ConstantDto] = Nil,
+    functions: Seq[FunctionDto] = Nil,
+    invariants: Seq[InvariantDto] = Nil,
+    streamlets: Seq[StreamletDto] = Nil,
+    relationships: Seq[RelationshipDto] = Nil
   )
 
   /** `{ "name": "R", "withProcessor": "<path>", "processor": "entity"|..., "cardinality":
@@ -592,7 +620,12 @@ object JsonModel:
     outlets: Seq[PortletDto] = Nil,
     // A47: every Processor is a version and copyright scope.
     version: Option[VersionDto] = None,
-    copyright: Option[CopyrightDto] = None
+    copyright: Option[CopyrightDto] = None,
+    // The rest of `OccursInProcessor`, which every processor shares.
+    invariants: Seq[InvariantDto] = Nil,
+    streamlets: Seq[StreamletDto] = Nil,
+    connectors: Seq[ConnectorDto] = Nil,
+    relationships: Seq[RelationshipDto] = Nil
   )
 
   /** A repository schema: `{ "name": "S", "kind"?: "Relational"|..., "data"?: {field->typePath},
@@ -624,7 +657,17 @@ object JsonModel:
     outlets: Seq[PortletDto] = Nil,
     // A47: every Processor is a version and copyright scope.
     version: Option[VersionDto] = None,
-    copyright: Option[CopyrightDto] = None
+    copyright: Option[CopyrightDto] = None,
+    // `schema` (singular) is kept for back-compat; a repository may declare several, so `schemas`
+    // (plural) is the one that models it — the same shape `state`/`states` takes on an entity.
+    schemas: Seq[SchemaDto] = Nil,
+    // The rest of `OccursInProcessor`, which every processor shares.
+    constants: Seq[ConstantDto] = Nil,
+    functions: Seq[FunctionDto] = Nil,
+    invariants: Seq[InvariantDto] = Nil,
+    streamlets: Seq[StreamletDto] = Nil,
+    connectors: Seq[ConnectorDto] = Nil,
+    relationships: Seq[RelationshipDto] = Nil
   )
 
   // ---------------------------------------------------------------------------

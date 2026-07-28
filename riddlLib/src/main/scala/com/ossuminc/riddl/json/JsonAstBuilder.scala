@@ -34,7 +34,9 @@ object JsonAstBuilder:
     val modules = dto.modules.map(buildModule)
     val version = dto.version.map(buildVersion).toSeq
     val copyright = dto.copyright.map(buildCopyright).toSeq
-    val root = Root(At(), contentsOf[RootContents](domains, modules, version, copyright))
+    val authors = dto.authors.map(buildAuthor)
+    val root =
+      Root(At(), contentsOf[RootContents](domains, modules, version, copyright, authors))
     if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
   end build
 
@@ -157,6 +159,12 @@ object JsonAstBuilder:
     val contexts = d.contexts.map(buildContext)
     val version = d.version.map(buildVersion).toSeq
     val copyright = d.copyright.map(buildCopyright).toSeq
+    val commands = d.commands.map(buildMessage(_, AggregateUseCase.CommandCase))
+    val events = d.events.map(buildMessage(_, AggregateUseCase.EventCase))
+    val queries = d.queries.map(buildMessage(_, AggregateUseCase.QueryCase))
+    val results = d.results.map(buildMessage(_, AggregateUseCase.ResultCase))
+    val repositories = d.repositories.map(buildRepository)
+    val connectors = d.connectors.map(buildConnector)
     Domain(
       At(),
       ident(d.name),
@@ -169,7 +177,13 @@ object JsonAstBuilder:
         subdomains,
         contexts,
         version,
-        copyright
+        copyright,
+        commands,
+        events,
+        queries,
+        results,
+        repositories,
+        connectors
       ),
       meta(d.brief, d.metadata)
     )
@@ -234,6 +248,7 @@ object JsonAstBuilder:
     val outlets = c.outlets.map(buildOutlet)
     val version = c.version.map(buildVersion).toSeq
     val copyright = c.copyright.map(buildCopyright).toSeq
+    val invariants = c.invariants.map(buildInvariant)
     Context(
       At(),
       ident(c.name),
@@ -258,7 +273,8 @@ object JsonAstBuilder:
         inlets,
         outlets,
         version,
-        copyright
+        copyright,
+        invariants
       ),
       ascribedShape = parseShape(c.shape),
       intention = parseIntention(c.intention),
@@ -325,6 +341,9 @@ object JsonAstBuilder:
     val outlets = e.outlets.map(buildOutlet)
     val version = e.version.map(buildVersion).toSeq
     val copyright = e.copyright.map(buildCopyright).toSeq
+    val streamlets = e.streamlets.map(buildStreamlet)
+    val connectors = e.connectors.map(buildConnector)
+    val relationships = e.relationships.map(buildRelationship)
     Entity(
       At(),
       ident(e.name),
@@ -342,7 +361,10 @@ object JsonAstBuilder:
         inlets,
         outlets,
         version,
-        copyright
+        copyright,
+        streamlets,
+        connectors,
+        relationships
       ),
       ascribedShape = parseShape(e.shape),
       metadata = meta(e.brief, e.metadata)
@@ -913,6 +935,10 @@ object JsonAstBuilder:
     val outlets = a.outlets.map(buildOutlet)
     val version = a.version.map(buildVersion).toSeq
     val copyright = a.copyright.map(buildCopyright).toSeq
+    val invariants = a.invariants.map(buildInvariant)
+    val streamlets = a.streamlets.map(buildStreamlet)
+    val connectors = a.connectors.map(buildConnector)
+    val relationships = a.relationships.map(buildRelationship)
     Adaptor(
       At(),
       ident(a.name),
@@ -930,7 +956,11 @@ object JsonAstBuilder:
         inlets,
         outlets,
         version,
-        copyright
+        copyright,
+        invariants,
+        streamlets,
+        connectors,
+        relationships
       ),
       ascribedShape = parseShape(a.shape),
       metadata = meta(a.brief)
@@ -973,6 +1003,11 @@ object JsonAstBuilder:
     val handlers = s.handlers.map(buildHandler)
     val version = s.version.map(buildVersion).toSeq
     val copyright = s.copyright.map(buildCopyright).toSeq
+    val constants = s.constants.map(buildConstant)
+    val functions = s.functions.map(buildFunction)
+    val invariants = s.invariants.map(buildInvariant)
+    val nested = s.streamlets.map(buildStreamlet)
+    val relationships = s.relationships.map(buildRelationship)
     Streamlet(
       At(),
       ident(s.name),
@@ -988,7 +1023,12 @@ object JsonAstBuilder:
         connectors,
         handlers,
         version,
-        copyright
+        copyright,
+        constants,
+        functions,
+        invariants,
+        nested,
+        relationships
       ),
       meta(s.brief)
     )
@@ -1025,6 +1065,10 @@ object JsonAstBuilder:
     val repoRefs = p.repository.toSeq.map(r => RepositoryRef(At(), pathId(r)))
     val version = p.version.map(buildVersion).toSeq
     val copyright = p.copyright.map(buildCopyright).toSeq
+    val invariants = p.invariants.map(buildInvariant)
+    val streamlets = p.streamlets.map(buildStreamlet)
+    val connectors = p.connectors.map(buildConnector)
+    val relationships = p.relationships.map(buildRelationship)
     Projector(
       At(),
       ident(p.name),
@@ -1039,7 +1083,11 @@ object JsonAstBuilder:
         handlers,
         repoRefs,
         version,
-        copyright
+        copyright,
+        invariants,
+        streamlets,
+        connectors,
+        relationships
       ),
       metadata = meta(p.brief)
     )
@@ -1077,9 +1125,18 @@ object JsonAstBuilder:
     val queries = r.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
     val results = r.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val handlers = r.handlers.map(buildHandler)
-    val schemas = r.schema.toSeq.map(buildSchema)
+    // Accept both the singular `schema` (back-compat) and plural `schemas`, as an entity accepts
+    // both `state` and `states`. root2Json writes the plural and leaves the singular empty, so a
+    // round trip cannot duplicate the first schema.
+    val schemas = (r.schema.toSeq ++ r.schemas).map(buildSchema)
     val version = r.version.map(buildVersion).toSeq
     val copyright = r.copyright.map(buildCopyright).toSeq
+    val constants = r.constants.map(buildConstant)
+    val functions = r.functions.map(buildFunction)
+    val invariants = r.invariants.map(buildInvariant)
+    val streamlets = r.streamlets.map(buildStreamlet)
+    val connectors = r.connectors.map(buildConnector)
+    val relationships = r.relationships.map(buildRelationship)
     Repository(
       At(),
       ident(r.name),
@@ -1092,7 +1149,13 @@ object JsonAstBuilder:
         results,
         handlers,
         version,
-        copyright
+        copyright,
+        constants,
+        functions,
+        invariants,
+        streamlets,
+        connectors,
+        relationships
       ),
       metadata = meta(r.brief)
     )
