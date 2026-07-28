@@ -245,7 +245,7 @@ class SharedBASTTest extends AbstractTestingBasis {
       }
     }
 
-    // S61-1: Module replaced Nebula as the BAST serialization root (FORMAT_REVISION 21). A Module
+    // S61-1: Module replaced Nebula as the BAST serialization root (a wire change carried into version 2). A Module
     // holding a flat mix of top-level definitions must survive write -> read with its id, its
     // metadata and every member intact.
     "round-trip a Module root holding a flat mix of definitions" in {

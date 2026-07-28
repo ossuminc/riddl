@@ -244,7 +244,7 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
 
     "serialize and deserialize a `foreach` statement (A25)" in {
-      // A25 uses new BAST subtag 16 (FORMAT_REVISION 13). Verify both a field-ref collection and a
+      // A25 uses new BAST subtag 16 (a wire change carried into version 2). Verify both a field-ref collection and a
       // let-local collection round-trip, and the nested body survives.
       val riddlSource =
         """domain d is { context c is {
@@ -292,7 +292,7 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
 
     "serialize and deserialize `put` and `return` with value expressions (A45/A54/A57)" in {
-      // A45/A57 use BAST subtags 17/18 (FORMAT_REVISION 14). Verify a return with a record
+      // A45/A57 use BAST subtags 17/18 (a wire change carried into version 2). Verify a return with a record
       // constructor and a put reading from a UI input round-trip losslessly.
       val riddlSource =
         """domain d is {
@@ -353,7 +353,7 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
 
     "serialize and deserialize a `call function F(args)` value (A24)" in {
-      // A24 uses value discriminator 6 (FORMAT_REVISION 18). A return of a call with named args
+      // A24 uses value discriminator 6 (a wire change carried into version 2). A return of a call with named args
       // and an empty-arg call must round-trip byte-symmetrically preserving the Call structure.
       val riddlSource =
         """domain d is {
@@ -409,7 +409,7 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
 
     "serialize and deserialize a nested boolean expression (A28)" in {
-      // A28 uses BAST value discriminator 5 with sub-tags 0-3 (FORMAT_REVISION 16). Verify a nested
+      // A28 uses BAST value discriminator 5 with sub-tags 0-3 (a wire change carried into version 2). Verify a nested
       // let x = (a or b) and not c survives byte-symmetric round-trip preserving its tree shape.
       val riddlSource =
         """domain d is {
@@ -519,7 +519,7 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
 
     "serialize and deserialize a bare boolean value-reference `when` condition (A17)" in {
-      // A17 adds when-condition BAST flag 3 (writeValue of a ValueRef), FORMAT_REVISION 17. Verify a
+      // A17 adds when-condition BAST flag 3 (writeValue of a ValueRef) — a wire change carried into version 2. Verify a
       // single-name and a dotted-path bare boolean reference each survive a byte round-trip.
       val riddlSource =
         """domain d is {
@@ -559,7 +559,8 @@ class BASTRoundTripTest extends AnyWordSpec {
 
     "serialize and deserialize a structured match: subject + patterns + guard (A29)" in {
       // A29 restructures MatchStatement (subject union + structured patterns + optional guards),
-      // FORMAT_REVISION 19. Verify the value-ref subject, a type-case, a comparison pattern, a guard,
+      // a wire change carried into version 2. Verify the value-ref subject, a type-case, a
+      // comparison pattern, a guard,
       // and a legacy literal pattern all survive a byte round-trip.
       val riddlSource =
         """domain d is {
@@ -787,7 +788,7 @@ class BASTRoundTripTest extends AnyWordSpec {
 
     "serialize and deserialize the 2.0 handler-kind clauses" in {
       // Reflective across BAST too: on event / on activate / on passivate must survive
-      // AST -> BAST -> AST as the same node kinds (new node tags 4/5/6, FORMAT_REVISION 7).
+      // AST -> BAST -> AST as the same node kinds (new node tags 4/5/6, a wire change carried into version 2).
       val riddlSource =
         """domain d is {
           |  context c is {
@@ -845,7 +846,7 @@ class BASTRoundTripTest extends AnyWordSpec {
 
     "serialize and deserialize the A55 on-clause message binding" in {
       // Reflective across BAST: the optional local binding rides on the existing on-clause
-      // sub-discriminators 2 (message) and 4 (event) at FORMAT_REVISION 23 — no new node tag.
+      // sub-discriminators 2 (message) and 4 (event) — no new node tag.
       val riddlSource =
         """domain d is {
           |  context c is {
@@ -949,7 +950,7 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
 
     "serialize and deserialize a state-scoped invariant (A18)" in {
-      // A18 adds Invariant to StateContents (FORMAT_REVISION 15). Verify an invariant declared
+      // A18 adds Invariant to StateContents (a wire change carried into version 2). Verify an invariant declared
       // inside a state survives AST -> BAST -> AST, staying inside the state (not relocated).
       val riddlSource =
         """domain d is { context c is { entity e is {
@@ -991,7 +992,7 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
 
     "serialize and deserialize versions in BOTH component forms (A53)" in {
-      // A53 adds Version (NODE_VERSION = 103, FORMAT_REVISION 22) at root/module/domain/context/
+      // A53 adds Version (NODE_VERSION = 103, a wire change carried into version 2) at root/module/domain/context/
       // entity. Both the NAMED and the NUMERIC component form must survive AST -> BAST -> AST at
       // their own scope, keeping the numeric/named discriminator intact.
       val riddlSource =
@@ -1044,7 +1045,7 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
 
     "serialize and deserialize copyrights at every permitted scope (A47)" in {
-      // A47 adds Copyright (NODE_COPYRIGHT = 104, FORMAT_REVISION 24) at root/module/domain and
+      // A47 adds Copyright (NODE_COPYRIGHT = 104, a wire change carried into version 2) at root/module/domain and
       // all six processors, and widens Version to the same set. Both leaves must survive
       // AST -> BAST -> AST at their own scope, with the notice carried verbatim.
       val riddlSource =
@@ -1152,7 +1153,7 @@ class BASTRoundTripTest extends AnyWordSpec {
     }
 
     "serialize and deserialize figma references (A42)" in {
-      // A42 adds FigmaRef metadata (NODE_FIGMA_REF = 105, FORMAT_REVISION 25) on inputs,
+      // A42 adds FigmaRef metadata (NODE_FIGMA_REF = 105, a wire change carried into version 2) on inputs,
       // outputs, groups and application-intended contexts. Both literal strings must survive
       // AST -> BAST -> AST on every one of them.
       val riddlSource =

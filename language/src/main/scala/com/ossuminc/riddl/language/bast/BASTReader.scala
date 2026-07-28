@@ -216,7 +216,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     if debugPositionTracking then println(msg)
   }
 
-  /** Read the root node. Since FORMAT_REVISION 21 the BAST root is a [[Module]] node — written by
+  /** Read the root node. Since version 2 the BAST root is a [[Module]] node — written by
     * `BASTWriter.writeModule` for a real Module, or by `BASTWriter.writeRoot` (synthetic id) for a
     * [[Root]]. Byte layout is exactly `readModuleNode`'s, so writer and reader stay symmetric.
     */

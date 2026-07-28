@@ -70,8 +70,9 @@ object BinaryFormat {
     def invalidReason: String = {
       if !magic.sameElements(MAGIC_BYTES) then "Not a BAST file (invalid magic bytes)"
       else if version != VERSION then
-        s"BAST format version $version does not match " +
-          s"expected version $VERSION"
+        // The arm a 1.x file lands in, so it says what to do rather than only what is wrong.
+        s"BAST format version $version does not match expected version $VERSION; " +
+          s"this file was written by an older RIDDL, so regenerate it with the current riddlc"
       else if formatRevision != FORMAT_REVISION then
         s"BAST format revision $formatRevision does not " +
           s"match expected revision $FORMAT_REVISION; " +

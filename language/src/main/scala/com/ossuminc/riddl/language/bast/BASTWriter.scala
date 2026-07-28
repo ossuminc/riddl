@@ -360,7 +360,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Root Container Serialization ==========
 
   /** A [[Root]] is serialized as a [[Module]] node: `Module` is the BAST serialization root (it
-    * replaced `Nebula` in FORMAT_REVISION 21). A Root has no id of its own, so the synthetic
+    * replaced `Nebula` during version 1's development). A Root has no id of its own, so the synthetic
     * [[Module.syntheticId]] is written; `BASTReader.readRootNode` reads this back as a Module and
     * consumers unwrap it when they want a Root again.
     */

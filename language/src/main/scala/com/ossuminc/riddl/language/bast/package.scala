@@ -47,21 +47,34 @@ package com.ossuminc.riddl.language
   */
 package object bast {
 
-  /** BAST format version - single monotonically incrementing integer.
+  /** BAST format version — the released schema generation.
     *
-    * TODO: Finalize BAST schema before releasing to users. Until then, version stays at 1 even as
-    * format evolves during development.
+    * Version 1 was RIDDL 1.x, where the schema was explicitly provisional: it stayed at 1 while the
+    * format evolved during development, on the understanding that it would be incremented when the
+    * schema was finalized for users. **RIDDL 2.0 is that moment**, so this is 2.
     *
-    * When finalizing, document the schema and increment version for any future breaking changes.
+    * Increment it again only for a released schema change; use [[FORMAT_REVISION]] for changes
+    * within a generation.
     */
-  val VERSION: Int = 1
+  val VERSION: Int = 2
 
   /** Format revision — incremented for any internal serialization change (node tags, encoding,
-    * table layout). Independent of VERSION which tracks major header layout changes. Old files with
-    * revision 0 (pre-check era) will be rejected with a clear message.
+    * table layout) WITHIN a [[VERSION]]. A file whose revision differs is rejected with a clear
+    * message rather than misread.
+    *
+    * Reset to 1 for version 2. Version 1 reached revision 25, but revisions 13 through 25 were
+    * consumed entirely inside the unreleased release/2 branch — no file carrying one was ever
+    * published, and the last revision anyone outside has is 12 (RIDDL 1.31). Carrying the
+    * development churn of one branch into a user-facing constant would have meant a 1.31 file
+    * reporting "revision 12 does not match expected revision 25", implying twelve generations the
+    * user might have files from and cannot.
+    *
+    * Numbering restarts safely ONLY because the version moved with it: `Header.isValid` checks
+    * version first, and no file in existence carries version 2, so an old revision-13 file cannot
+    * be mistaken for a new one. Do NOT renumber again within version 2 — that WOULD reuse numbers
+    * that real files carry.
     */
-  val FORMAT_REVISION: Short =
-    25 // A42: Figma reference metadata (NODE_FIGMA_REF = 105)
+  val FORMAT_REVISION: Short = 1
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)
