@@ -4924,6 +4924,62 @@ object AST:
     end if
   end findAuthors
 
+  /** The version component a single definition declares for its own scope, if any (A53).
+    *
+    * Only the five version-bearing scopes ([[Root]], [[Module]], [[Domain]], [[Context]],
+    * [[Entity]]) can declare one; everything else yields [[None]].
+    */
+  @JSExport
+  def versionOf(definition: Definition): Option[String] =
+    definition match
+      case wv: WithVersion[?] => wv.version.map(_.component)
+      case _                  => None
+  end versionOf
+
+  /** The separator joining the components of a composed version coordinate (A53). */
+  final val VersionSeparator: String = "."
+
+  /** Compose the precise version of a definition from its versioned ancestors, root→leaf (A53).
+    *
+    * The result is a '''hierarchical coordinate''', NOT a semantic version — see [[AST.Version]]
+    * for the caveats. Components are strings because a scope may name its version rather than
+    * number it (`version Garibaldi`). Only ancestors (and the definition itself) that actually BEAR
+    * a [[Version]] contribute a component, so `domain Garibaldi / context 4 / entity 3` composes to
+    * `Seq("Garibaldi", "4", "3")` while the same model with an unversioned context composes to
+    * `Seq("Garibaldi", "3")` ("missing-level rule").
+    *
+    * A definition that establishes no version scope of its own — a [[Type]], a message, a
+    * [[Handler]] — simply contributes nothing, so it reports the composed version of its container.
+    *
+    * @param definition
+    *   The definition whose composed version is sought
+    * @param parents
+    *   The parents of that definition, in RIDDL's usual LEAF→ROOT order
+    * @return
+    *   The composed version coordinate, root→leaf; empty when nothing in the chain is versioned
+    */
+  @JSExport
+  def composedVersion(
+    definition: Definition,
+    parents: Contents[RiddlValue]
+  ): Seq[String] =
+    val chain: Seq[Definition] = parents.filter[Definition].reverse :+ definition
+    chain.flatMap(versionOf)
+  end composedVersion
+
+  /** The dotted rendering of [[composedVersion]] — components joined with `.` (A53).
+    *
+    * @return
+    *   e.g. `"Garibaldi.4.3"`, or the empty string when nothing in the chain is versioned
+    */
+  @JSExport
+  def composedVersionString(
+    definition: Definition,
+    parents: Contents[RiddlValue]
+  ): String =
+    composedVersion(definition, parents).mkString(VersionSeparator)
+  end composedVersionString
+
   /** Get all the top level domain definitions even if they are in include statements
     * @param root
     *   The model's [[AST.Root]] node.

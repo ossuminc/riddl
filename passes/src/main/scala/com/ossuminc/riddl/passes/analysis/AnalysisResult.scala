@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.analysis
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{Messages, toSeq}
+import com.ossuminc.riddl.language.{Contents, Messages, toSeq}
 import com.ossuminc.riddl.utils.pc
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.diagrams.{
@@ -214,6 +214,21 @@ case class AnalysisResult(
   def qualifiedNameOf(definition: Definition): String =
     val parents = parentsOf(definition).collect { case d: Definition => d }
     (parents.reverse.map(_.id.value) :+ definition.id.value).mkString(".")
+
+  /** A53: the composed version coordinate of a definition, root→leaf.
+    *
+    * Only versioned ancestors contribute a component ("missing-level rule"), so the result is empty
+    * when nothing in the chain declares a version. This is a '''hierarchical coordinate''', not a
+    * semantic version — see [[com.ossuminc.riddl.language.AST.Version]] for the caveats.
+    */
+  def composedVersionOf(definition: Definition): Seq[String] =
+    composedVersion(definition, Contents(parentsOf(definition)*))
+
+  /** A53: the dotted rendering of [[composedVersionOf]], e.g. `"Garibaldi.4.3"`. Empty when nothing
+    * in the chain is versioned.
+    */
+  def composedVersionStringOf(definition: Definition): String =
+    composedVersionOf(definition).mkString(VersionSeparator)
 
   // ============================================================
   // Statistics helpers

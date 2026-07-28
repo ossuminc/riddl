@@ -333,6 +333,12 @@ case class ValidationPass(
       case p: Processor[?] => validateProcessorShape(p)
       case _               => ()
     }
+    // A53: a scope may declare AT MOST ONE version. Dispatched generically here so all five
+    // version-bearing scopes (Root, Module, Domain, Context, Entity) are covered in one place.
+    value match {
+      case wv: (WithVersion[?] & Definition) => checkSingleVersion(wv)
+      case _                                 => ()
+    }
     // A25/A54: validate `foreach` collection scoping and value expressions once per statement-bearing
     // container (on-clause or function). checkStatementScopes recurses through nested statement
     // bodies threading `let` scope, so invoking it at the container root covers every statement at
@@ -819,6 +825,21 @@ case class ValidationPass(
           )
         )
     checkMetadata(m)
+  }
+
+  /** A53: exactly one `version` per scope. A second one is a hard Error, reported at the offending
+    * (second) declaration so the fix is obvious.
+    */
+  private def checkSingleVersion(wv: WithVersion[?] & Definition): Unit = {
+    val versions = wv.versions
+    if versions.sizeIs > 1 then {
+      messages.addError(
+        versions(1).loc,
+        s"${wv.identify} declares ${versions.size} versions; a scope may declare at most one",
+        suggestion =
+          s"Remove the extra 'version' declarations from ${wv.identify} so exactly one remains."
+      )
+    }
   }
 
   private def validateInvariant(

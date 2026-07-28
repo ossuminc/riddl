@@ -92,4 +92,34 @@ class VersionRoundTripTest extends AbstractValidatingTest {
       assertShape(parse(pretty, "regen"), "after prettify")
     }
   }
+
+  "A scope declaring more than one version" should {
+    "be an Error" in { (td: TestData) =>
+      val two =
+        """domain D is {
+          |  version 1
+          |  version 2
+          |  context C is { ??? }
+          |}
+          |""".stripMargin
+      parseAndValidateDomain(RiddlParserInput(two, td), shouldFailOnErrors = false) {
+        case (_, _, messages) =>
+          val errs = messages.justErrors
+          errs.exists(_.message.contains("at most one")) mustBe true
+      }
+    }
+
+    "be fine with exactly one" in { (td: TestData) =>
+      val one =
+        """domain D is {
+          |  version 1
+          |  context C is { ??? }
+          |}
+          |""".stripMargin
+      parseAndValidateDomain(RiddlParserInput(one, td), shouldFailOnErrors = false) {
+        case (_, _, messages) =>
+          messages.justErrors.exists(_.message.contains("at most one")) mustBe false
+      }
+    }
+  }
 }
