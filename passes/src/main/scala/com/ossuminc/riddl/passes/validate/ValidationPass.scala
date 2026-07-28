@@ -3897,6 +3897,47 @@ case class ValidationPass(
       case _ => ()
   end checkValueType
 
+  /** Best-effort per-argument type compatibility, shared by a constructor and a call.
+    *
+    * Both bind arguments to the fields of an aggregate by the same rule — a named argument to the
+    * field of that name, a positional one to the field at its index — and both check compatibility
+    * only where the field's declared type and the argument's value each resolve to a [[Type]].
+    * Written out once per caller, the two copies were free to drift: a rule tightened for
+    * constructors would silently not apply to calls.
+    *
+    * Only the noun differs, and it is a parameter: a constructor fills a `field`, a call fills an
+    * `input`.
+    */
+  private def checkArgumentTypes(
+    args: Seq[ConstructorArg],
+    fields: Seq[Field],
+    fieldNoun: String,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Unit =
+    args.zipWithIndex.foreach { case (arg, idx) =>
+      val fieldOpt: Option[Field] = arg.name match
+        case Some(id) => fields.find(_.id.value == id.value)
+        case None     => if idx < fields.size then Some(fields(idx)) else None
+      fieldOpt.foreach { field =>
+        field.typeEx match
+          case ate: AliasedTypeExpression =>
+            val expected = resolution.refMap.definitionOf[Type](ate.pathId)
+            val actual = valueType(arg.value, parents, lets)
+            (expected, actual) match
+              case (Some(e), Some(a)) if !(e eq a) =>
+                messages.addError(
+                  arg.loc,
+                  s"Argument for $fieldNoun '${field.id.value}' has type ${a.identify} but " +
+                    s"${field.id.value} expects ${e.identify}",
+                  suggestion = s"Supply a value of type ${e.identify} for '${field.id.value}'."
+                )
+              case _ => ()
+          case _ => () // primitive/other field type — literals accepted, no check
+      }
+    }
+  end checkArgumentTypes
+
   /** A54: validate a [[Constructor]] — arg ordering (positional before named), named-arg field
     * existence, arity, and best-effort per-argument type compatibility against the target
     * aggregate's fields. Recurses into argument values.
@@ -3950,28 +3991,7 @@ case class ValidationPass(
             suggestion =
               s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset."
           )
-        // Best-effort per-argument type compatibility (only when both sides resolve to a Type).
-        c.args.zipWithIndex.foreach { case (arg, idx) =>
-          val fieldOpt: Option[Field] = arg.name match
-            case Some(id) => fields.find(_.id.value == id.value)
-            case None     => if idx < fields.size then Some(fields(idx)) else None
-          fieldOpt.foreach { field =>
-            field.typeEx match
-              case ate: AliasedTypeExpression =>
-                val expected = resolution.refMap.definitionOf[Type](ate.pathId)
-                val actual = valueType(arg.value, parents, lets)
-                (expected, actual) match
-                  case (Some(e), Some(a)) if !(e eq a) =>
-                    messages.addError(
-                      arg.loc,
-                      s"Argument for field '${field.id.value}' has type ${a.identify} but " +
-                        s"${field.id.value} expects ${e.identify}",
-                      suggestion = s"Supply a value of type ${e.identify} for '${field.id.value}'."
-                    )
-                  case _ => ()
-              case _ => () // primitive/other field type — literals accepted, no check
-          }
-        }
+        checkArgumentTypes(c.args, fields, "field", parents, lets)
         // Recurse into argument values (nested constructors, value refs).
         c.args.foreach(arg => validateValue(arg.value, parents, lets))
       case None => () // unresolved constructor ref reported by ResolutionPass
@@ -4050,28 +4070,7 @@ case class ValidationPass(
             suggestion =
               s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset."
           )
-        // Best-effort per-argument type compatibility (only when both sides resolve to a Type).
-        call.args.zipWithIndex.foreach { case (arg, idx) =>
-          val fieldOpt: Option[Field] = arg.name match
-            case Some(id) => fields.find(_.id.value == id.value)
-            case None     => if idx < fields.size then Some(fields(idx)) else None
-          fieldOpt.foreach { field =>
-            field.typeEx match
-              case ate: AliasedTypeExpression =>
-                val expected = resolution.refMap.definitionOf[Type](ate.pathId)
-                val actual = valueType(arg.value, parents, lets)
-                (expected, actual) match
-                  case (Some(e), Some(a)) if !(e eq a) =>
-                    messages.addError(
-                      arg.loc,
-                      s"Argument for input '${field.id.value}' has type ${a.identify} but " +
-                        s"${field.id.value} expects ${e.identify}",
-                      suggestion = s"Supply a value of type ${e.identify} for '${field.id.value}'."
-                    )
-                  case _ => ()
-              case _ => () // primitive/other field type — literals accepted, no check
-          }
-        }
+        checkArgumentTypes(call.args, fields, "input", parents, lets)
         // Recurse into argument values (nested constructors, calls, value refs).
         call.args.foreach(arg => validateValue(arg.value, parents, lets))
       case None => () // unresolved function ref reported by ResolutionPass
