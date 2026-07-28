@@ -15,6 +15,61 @@ to the task file and note the disposition below.
 
 ---
 
+## #70 — the JSON round trip is a real fidelity check now — DONE
+
+The AST<->JSON round trip was checked for IDENTITY — `root -> json1 -> root ->
+json2`, asserting `json1 == json2`. That is a good check of determinism and
+re-readability and a **useless** check of fidelity: a construct the serializer
+drops is missing from both sides, so identity holds over the wreckage. It was
+holding over 242 lost nodes.
+
+**Two new checks, both in `Root2JsonFixturesTest`** (JVM, walks
+`language/passes/riddlc/commands input`, 109 fixtures of which 84 are standalone
+models):
+
+1. identity, as before;
+2. a **census** — count every node by kind, including metadata, in the original
+   and the re-parsed tree, and require them equal. This is what catches a
+   dropped construct.
+
+Both name their skips and assert a floor on how many models were actually
+compared, so neither can go vacuously green.
+
+**What the census found, and what was fixed:**
+
+- **25 definitions** (types, fields, schemas, authors, streamlets, inlets, a
+  connector). The AST unions had widened in release/2 and the DTOs never
+  followed: a domain gained connectors and repositories, every processor became
+  port-bearing so an entity may own streamlets, a root may carry a top-level
+  author. `JsonifierPass` now records which children each parent consumed and
+  reports the rest as `droppedKinds` — that guard found all five gaps in one
+  run and will find the next one the day a union widens again.
+- **45 metadata nodes**, 31 of them block descriptions. Rich metadata rode on
+  seven DTOs; RIDDL lets any definition carry it. Every definition DTO carries
+  it now.
+- **171 comments.** `Comment` is a `RiddlValue`, not a `Leaf`, so it arrived at
+  `processValue` (which did nothing) rather than `processLeaf` — invisible to
+  the pass AND to its own drop guard.
+
+**Known gap, pinned at exactly 3 occurrences:** a comment opening a `group`
+body. The parser puts it in the group's contents, but `AST.OccursInGroup` is
+`Group | ContainedGroup | Input | Output` and admits no `Comment`, so there is
+no legal way to rebuild it. `Contents` is an opaque `ArrayBuffer`, which is how
+the parser gets away with it at runtime. **The parser and the AST union
+disagree — that is an AST bug, not a serializer bug.** Fixing it means widening
+the union, which touches BAST and prettify. Awaiting a decision.
+
+**`Root2JsonCorpusTest` had been passing without running.** It drove off the 187
+checked-in `.bast` files in `../riddl-models`, which are at `formatRevision` 12
+against a current 25; `Header.isValid` rejects a mismatch, every read failed,
+every failure was silently skipped, and both assertions reduced to `0 mustBe 0`.
+It now drives from the `.conf` entry points' sibling `.riddl` sources and
+reports parse failures rather than skipping them. It is EXPECTED RED until the
+corpus is migrated (standing policy), alongside `RiddlModelsRoundTripTest`.
+This is a fourth member of the "suite passes without running" family catalogued
+in CLAUDE.md — and the first one where the vacuum was caused by a data file
+going stale rather than by test-framework misuse.
+
 ## A55 — optional local name binding for the on-clause message — DONE
 
 `on foo: command Foo { … }` binds an optional local name to the handled
