@@ -291,7 +291,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           )
         )
       case oc: OnClause =>
+        // An on-clause's contents ARE its statement list, and `serializeStatements` carries the
+        // comments in it. Consume the pushed comment children so the drop guard stays honest —
+        // writing them again under `comments` would duplicate every one of them on rebuild.
         val statements = serializeStatements(oc.contents)
+        col[CommentDto]
         oc match
           case omc: OnMessageClause =>
             // A55: carry the optional local message binding
@@ -302,8 +306,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 statements,
                 omc.binding.map(_.value),
                 metaOf(omc.metadata),
-                briefOf(omc.metadata),
-                col[CommentDto]
+                briefOf(omc.metadata)
               )
             )
           case oec: OnEventClause =>
@@ -314,8 +317,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 statements,
                 oec.binding.map(_.value),
                 metaOf(oec.metadata),
-                briefOf(oec.metadata),
-                col[CommentDto]
+                briefOf(oec.metadata)
               )
             )
           case _: OnInitializationClause =>
@@ -545,7 +547,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[ContainedGroupDto],
             col[InputDto],
             col[OutputDto],
-            metaOf(g.metadata)
+            metaOf(g.metadata),
+            col[CommentDto]
           )
         )
       case in: Input =>
@@ -723,8 +726,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     val items: Seq[RiddlValue] = md.toSeq
     items.collectFirst { case b: BriefDescription => b.brief.s }
 
-  /** Comments sitting in a type expression's contents. Aggregates are serialized directly from
-    * the node rather than through the child-DTO scope, so they need their own pick.
+  /** Comments sitting in a type expression's contents. Aggregates are serialized directly from the
+    * node rather than through the child-DTO scope, so they need their own pick.
     */
   private def commentsOf[T <: RiddlValue](contents: Contents[T]): Seq[CommentDto] =
     contents.toSeq.collect {
@@ -806,8 +809,15 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       )
     case p: PredefinedType => PredefDto(p.getClass.getSimpleName.replace("$", ""))
 
+  /** `Statements` is `Statement | Comment`, so a comment between two statements is part of the list
+    * and is serialized in place rather than dropped.
+    */
   private def serializeStatements(c: Contents[Statements]): Seq[StatementDto] =
-    c.toSeq.collect { case s: Statement => serializeStatement(s) }
+    c.toSeq.collect {
+      case s: Statement      => serializeStatement(s)
+      case lc: LineComment   => CommentStmtDto(lc.text)
+      case ic: InlineComment => CommentStmtDto(ic.lines.mkString("\n"), inline = true)
+    }
 
   private def serializeStatement(s: Statement): StatementDto = s match
     case PromptStatement(_, what) => PromptStmtDto(what.s)

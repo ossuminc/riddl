@@ -332,8 +332,7 @@ object JsonModel:
     binding: Option[String] = None,
     metadata: Option[MetaDto] = None,
     // An on-clause may be documented like any other definition (`on other { … } with { briefly … }`).
-    brief: Option[String] = None,
-    comments: Seq[CommentDto] = Nil
+    brief: Option[String] = None
   )
 
   case class MessageRefDto(ref: String, kind: String)
@@ -407,6 +406,14 @@ object JsonModel:
 
   /** `"text"` or `{ "kind": "prompt", "text": "..." }` */
   case class PromptStmtDto(text: String) extends StatementDto
+
+  /** `{ "kind": "comment", "text": "...", "inline"?: true }`.
+    *
+    * `AST.Statements` is `Statement | Comment`, so a comment written between two statements — or
+    * inside a `when`/`foreach` body or a saga step — is part of the statement list, not trivia
+    * hanging off the enclosing definition. It needs an arm here or it has nowhere to go.
+    */
+  case class CommentStmtDto(text: String, inline: Boolean = false) extends StatementDto
 
   /** `{ "kind": "error", "message": "..." }` */
   case class ErrorStmtDto(message: String) extends StatementDto
@@ -863,7 +870,8 @@ object JsonModel:
     containedGroups: Seq[ContainedGroupDto] = Nil,
     inputs: Seq[InputDto] = Nil,
     outputs: Seq[OutputDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -1285,7 +1293,9 @@ object JsonModel:
         val m = v.obj
         m("kind").str match
           case "prompt" => PromptStmtDto(m("text").str)
-          case "error"  => ErrorStmtDto(m("message").str)
+          case "comment" =>
+            CommentStmtDto(m("text").str, m.get("inline").exists(_.bool))
+          case "error" => ErrorStmtDto(m("message").str)
           case "let" =>
             LetStmtDto(m("name").str, m.get("type").map(_.str), readValue(m("expression")))
           case "code" => CodeStmtDto(m("language").str, m("body").str)
@@ -1349,6 +1359,11 @@ object JsonModel:
     dto match
       case PromptStmtDto(text) =>
         ujson.Obj("kind" -> ujson.Str("prompt"), "text" -> ujson.Str(text))
+      case CommentStmtDto(text, inline) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str("comment"), "text" -> ujson.Str(text))
+            ++ (if inline then Seq("inline" -> (ujson.Bool(true): ujson.Value)) else Nil)
+        )
       case ErrorStmtDto(message) =>
         ujson.Obj("kind" -> ujson.Str("error"), "message" -> ujson.Str(message))
       case LetStmtDto(name, t, e) =>

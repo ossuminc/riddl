@@ -845,8 +845,17 @@ object AST:
   /** Type of definitions that occur in a [[Context]] with [[Include]] and [[BASTImport]] */
   type ContextContents = OccursInContext | Include[OccursInContext] | BASTImport
 
-  /** Type of definitions that occur in a [[Group]] */
-  type OccursInGroup = Group | ContainedGroup | Input | Output
+  /** Type of definitions that occur in a [[Group]].
+    *
+    * [[Comment]] and [[ShownBy]] are here because `GroupParser.groupDefinitions` has always parsed
+    * both inside a group body. It reaches this union through an `asInstanceOf`, so for a long time
+    * the parser produced contents the union did not admit and nothing complained — `Contents`
+    * erases to an `ArrayBuffer`, so the mismatch is invisible at runtime. It surfaced as a JSON
+    * round trip that could not rebuild a comment written at the top of a group: there was no legal
+    * way to put it back. [[ShownBy]] is admitted for the same reason and by the same precedent as
+    * `OccursInEpic`, which names it explicitly; a [[Group]] is a `WithShownBy` too.
+    */
+  type OccursInGroup = Group | ContainedGroup | Input | Output | Comment | ShownBy
 
   /** Type of definitions that occur in an [[Input]] */
   type OccursInInput = Input | TypeRef

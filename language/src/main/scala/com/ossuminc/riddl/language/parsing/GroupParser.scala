@@ -22,6 +22,8 @@ private[parsing] trait GroupParser extends CommonParser:
   }
 
   private def groupDefinitions[u: P]: P[Seq[OccursInGroup]] = {
+    // Every alternative here is a member of OccursInGroup, `comment` and `shownBy` included; the
+    // cast bridges fastparse's inferred common supertype, not a gap in the union.
     P(
       group | containedGroup | shownBy | groupOutput | groupInput | comment
     ).asInstanceOf[P[OccursInGroup]].rep(1)

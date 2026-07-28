@@ -209,14 +209,11 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
       end if
 
       compared must be >= ParsedFloor
-      // The one known exception, held to its exact size so it cannot grow unnoticed: a `Group`
-      // whose body opens with a comment. The parser puts that comment in the group's contents,
-      // but `AST.OccursInGroup` is `Group | ContainedGroup | Input | Output` and does not admit a
-      // Comment, so there is no legal way to put it back. `Contents` is an opaque ArrayBuffer, so
-      // the parser gets away with it at runtime — the AST union and the parser disagree, and
-      // reconciling them is a language change (BAST included), not a serializer change.
-      withClue(s"${lossy.size} of $compared fixtures lost nodes in the JSON round trip: ") {
-        lostByKind.filter((_, n) => n != 0).toMap mustBe Map("LineComment" -> 3)
+      // Nothing is lost, and nothing is duplicated either: a non-zero count in EITHER direction
+      // fails. Gaining nodes is as wrong as losing them — carrying a comment in two places at
+      // once is how the statement-list work first went wrong.
+      withClue(s"${lossy.size} of $compared fixtures changed node counts in the round trip: ") {
+        lostByKind.filter((_, n) => n != 0).toMap mustBe empty
       }
     }
   }

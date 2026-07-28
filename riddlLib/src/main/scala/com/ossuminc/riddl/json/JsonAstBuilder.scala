@@ -36,7 +36,17 @@ object JsonAstBuilder:
     val copyright = dto.copyright.map(buildCopyright).toSeq
     val authors = dto.authors.map(buildAuthor)
     val root =
-      Root(At(), contentsOf[RootContents](domains, modules, version, copyright, authors, comments(dto.comments)))
+      Root(
+        At(),
+        contentsOf[RootContents](
+          domains,
+          modules,
+          version,
+          copyright,
+          authors,
+          comments(dto.comments)
+        )
+      )
     if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
   end build
 
@@ -150,9 +160,9 @@ object JsonAstBuilder:
     Contents[MetaData](items.toSeq*)
   end meta
 
-  /** Rebuild the comments that belong in a container's CONTENTS (as opposed to the ones attached
-    * to its metadata, which `meta` handles). They are appended after the definitions, since the
-    * schema groups children by kind and their original position is not recoverable.
+  /** Rebuild the comments that belong in a container's CONTENTS (as opposed to the ones attached to
+    * its metadata, which `meta` handles). They are appended after the definitions, since the schema
+    * groups children by kind and their original position is not recoverable.
     */
   private def comments(cs: Seq[CommentDto]): Seq[Comment] =
     cs.map { c =>
@@ -424,8 +434,8 @@ object JsonAstBuilder:
   private def buildOnClause(oc: OnClauseDto)(using ctx: Ctx): OnClause =
     // `Statements` is `Statement | Comment`, so a comment written between two statements belongs
     // in the on-clause's contents beside them, not in its metadata.
-    val statements =
-      contentsOf[Statements](buildStatements(oc.statements).toSeq, comments(oc.comments))
+    // The statement list carries its own comments (`Statements` is `Statement | Comment`).
+    val statements = buildStatements(oc.statements)
     // A55: the optional local name bound to the handled message
     val binding: Option[Identifier] = oc.binding.map(ident)
     val md = meta(oc.brief, oc.metadata)
@@ -724,15 +734,29 @@ object JsonAstBuilder:
       At(),
       g.alias.getOrElse("group"),
       ident(g.name),
-      contentsOf[OccursInGroup](groups, contained, inputs, outputs),
+      contentsOf[OccursInGroup](groups, contained, inputs, outputs, comments(g.comments)),
       meta(g.brief, g.metadata)
     )
 
+  /** `Statements` is `Statement | Comment`, so the comment arm rebuilds a `Comment` in place rather
+    * than a statement. `buildStatement` stays total over the statement kinds.
+    */
   private def buildStatements(stmts: Seq[StatementDto])(using Ctx): Contents[Statements] =
-    Contents[Statements](stmts.map(buildStatement)*)
+    val items: Seq[Statements] = stmts.map {
+      case CommentStmtDto(text, true)  => InlineComment(At(), text.split("\n").toSeq)
+      case CommentStmtDto(text, false) => LineComment(At(), text)
+      case other                       => buildStatement(other)
+    }
+    Contents[Statements](items*)
 
   private def buildStatement(s: StatementDto)(using ctx: Ctx): Statement =
     s match
+      // A comment is a member of `Statements` but not of `Statement`, so `buildStatements`
+      // intercepts it and this arm is unreachable. It is spelled out rather than left to a
+      // catch-all so that adding a statement kind still fails the exhaustivity check.
+      case CommentStmtDto(text, _) =>
+        ctx.err(s"a comment is not a statement and should not reach buildStatement: '$text'")
+        PromptStatement(At(), LiteralString(At(), text))
       case PromptStmtDto(text)   => PromptStatement(At(), LiteralString(At(), text))
       case ErrorStmtDto(message) => ErrorStatement(At(), LiteralString(At(), message))
       case LetStmtDto(name, t, expression) =>
