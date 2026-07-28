@@ -226,8 +226,15 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     CharIn("0-9").rep(1).!.map(_.toLong)
   }
 
+  /** A signed whole number. The sign used to be matched but DISCARDED, so `-3` silently parsed as
+    * `3` — a range of `range(-5, 5)` came out as `range(5, 5)` and an enumerator value of `(-1)`
+    * became `1`. The sign is now applied.
+    */
   def integer[u: P]: P[Long] = {
-    CharIn("+\\-").? ~~ naturalNumber
+    (CharIn("+\\-").!.? ~~ naturalNumber).map {
+      case (Some("-"), n) => -n
+      case (_, n)         => n
+    }
   }
 
   private def simpleIdentifier[u: P]: P[String] = {

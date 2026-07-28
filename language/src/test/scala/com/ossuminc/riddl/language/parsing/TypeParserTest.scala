@@ -558,6 +558,18 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
       checkDefinition[Type, Type](rpi, expected, identity)
     }
 
+    "keep the sign on a negative range bound" in { (td: TestData) =>
+      // `integer` used to match a leading `+`/`-` and DISCARD it, so `range(-5,5)` silently
+      // parsed as `range(5,5)`.
+      val rpi = RiddlParserInput("type r2 = range(-5,5)", td)
+      val expected = Type(
+        At(rpi, 0, 21),
+        Identifier(At(rpi, 5, 8), "r2"),
+        RangeType(At(rpi, 10, 21), -5, 5)
+      )
+      checkDefinition[Type, Type](rpi, expected, identity)
+    }
+
     "allow one or more in regex style" in { (td: TestData) =>
       val rpi = RiddlParserInput("type oneOrMoreB = agg+", td)
       val expected = Type(
