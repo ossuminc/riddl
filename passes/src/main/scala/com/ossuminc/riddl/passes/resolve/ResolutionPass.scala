@@ -177,7 +177,15 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       // state was not. Must stay ABOVE the NonDefinitionValues arm: Schema is a Leaf but also a
       // member of that union, so a later case would shadow this one.
       case sc: Schema =>
-        sc.data.values.foreach(tr => associateUsage(sc, resolveATypeRef(tr, parents)))
+        // Resolved QUIETLY, for the same reason nested send/tell are: the point is to record that
+        // a stored type IS used, not to start policing clauses nothing has ever checked. Models
+        // routinely write `of orders as type Order` where `Order` is an ENTITY, not a Type —
+        // which reads naturally for a repository — and demanding a Type here turns dozens of
+        // clean models across riddl-models into failures. Whether an entity belongs on the right
+        // of `as type` is a language question worth settling separately.
+        quietly {
+          sc.data.values.foreach(tr => associateUsage(sc, resolveATypeRef(tr, parents)))
+        }
       // `links` and `indices` are deliberately NOT resolved here yet. They hold FieldRefs, and
       // resolving them surfaces references that have never been checked: `language/input/
       // everything_full.riddl` alone has `link relationship as field agg.time to field agg.ident`
