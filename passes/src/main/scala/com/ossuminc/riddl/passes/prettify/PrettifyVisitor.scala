@@ -141,7 +141,18 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def openRepository(repository: Repository, parents: Parents): Unit = open(repository)
   def closeRepository(repository: Repository, parents: Parents): Unit = close(repository)
 
-  def openProjector(projector: Projector, parents: Parents): Unit = open(projector)
+  /** A projector's `updates repository <path>` clause is a [[RepositoryRef]] in its contents, not a
+    * Definition, so nothing emits it on our behalf. It names the repository that persists the
+    * projection — semantic content, and validation reports the projector as incomplete without it —
+    * so it has to be written out here or every round trip loses it.
+    */
+  def openProjector(projector: Projector, parents: Parents): Unit =
+    open(projector)
+    state.withCurrent { rfe =>
+      projector.contents.filter[RepositoryRef].foreach { ref =>
+        rfe.addIndent(s"updates ${ref.format}").nl
+      }
+    }
   def closeProjector(projector: Projector, parents: Parents): Unit = close(projector)
 
   def openHandler(handler: Handler, parents: Parents): Unit = open(handler)
