@@ -15,11 +15,11 @@ import org.scalatest.{Assertion, TestData}
 
 /** A `step show <output> to <user>` interaction must be able to validate.
   *
-  * It could not. `EpicParser` built every `ShowOutputInteraction` with `LiteralString.empty` as
-  * its relationship, and validation rejects any `TwoReferenceInteraction` whose relationship is
-  * empty — so the parser guaranteed the condition the validator forbids, and no source spelling
-  * avoided it. Adding `with { briefly … }` did not help, because the relationship is not metadata.
-  * One documented step kind was simply unusable, and it blocked any model aiming for zero missing
+  * It could not. `EpicParser` built every `ShowOutputInteraction` with `LiteralString.empty` as its
+  * relationship, and validation rejects any `TwoReferenceInteraction` whose relationship is empty —
+  * so the parser guaranteed the condition the validator forbids, and no source spelling avoided it.
+  * Adding `with { briefly … }` did not help, because the relationship is not metadata. One
+  * documented step kind was simply unusable, and it blocked any model aiming for zero missing
   * warnings.
   *
   * The relationship reads as `<from> <relationship> <to>`, so the synthesized word is "shown" —

@@ -41,9 +41,11 @@ class ReferenceMapTest extends AbstractValidatingTest {
     }
     "have correct size" in { _ =>
       info("size: " + refMap.size.toString)
-      // 32 since a repository schema's `of <name> as type <T>` data clauses are resolved; they
-      // used to be skipped entirely, which is what made stored types look unused.
-      refMap.size must be(32)
+      // 33: a repository schema's `of <name> as type <T>` data clauses are resolved (they used to
+      // be skipped, which made stored types look unused), and so are the references in a `send`
+      // or `tell` nested inside a conditional (which used to leave MessageFlowPass unable to find
+      // them).
+      refMap.size must be(33)
     }
 
     "have definitionOf(pathId:String) work" in { _ =>

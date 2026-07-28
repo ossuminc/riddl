@@ -572,15 +572,31 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage[Output](parents.head, resolveARef[Output](output, parents))
       case ReturnStatement(_, v) =>
         resolveValue(v, parents)
-      // A54: widened operands may nest too — resolve the constructor/value they carry. (Bare refs in
-      // nested messaging statements are intentionally left as-is; the framework never resolved them,
-      // and doing so here would introduce new errors the top-level path already covers.)
+      // A54: widened operands may nest too — resolve the constructor/value they carry.
       case SetStatement(_, _, v) => resolveValue(v, parents)
       case ls: LetStatement      => resolveValue(ls.expression, parents)
+      // A nested `send`/`tell` gets the SAME treatment as a top-level one. Only the constructor
+      // operand used to be resolved here, so the portlet/processor and the message were never
+      // entered in the refMap at all — and MessageFlowPass, which finds nested statements
+      // recursively, then reported perfectly good references as unresolvable. Eight such warnings
+      // in riddl-models were the only ones left in the corpus.
+      // Resolved QUIETLY, as A55 resolves a ValueRef. The goal is to POPULATE the refMap so
+      // downstream passes can look these up — MessageFlowPass finds nested statements recursively
+      // and was reporting perfectly good references as unresolvable. It is NOT to start policing
+      // references that have never been checked: `language/input/everything_full.riddl` has
+      // `send event Inebriated to outlet APlant.Source.Commands`, which does not resolve, and
+      // promoting that to an error here would fail models that validate today. Whether such paths
+      // are genuinely wrong is worth settling, but on its own terms and after checking the corpus.
       case s: SendStatement =>
-        s.msg match { case c: Constructor => resolveValue(c, parents); case _ => () }
+        quietly {
+          resolveMessageOperand(s.msg, parents)
+          associateUsage[Portlet](parents.head, resolveARef[Portlet](s.portlet, parents))
+        }
       case s: TellStatement =>
-        s.msg match { case c: Constructor => resolveValue(c, parents); case _ => () }
+        quietly {
+          resolveMessageOperand(s.msg, parents)
+          associateUsage(parents.head, resolveARef[Processor[?]](s.processorRef, parents))
+        }
       case s: YieldStatement =>
         s.msg match { case c: Constructor => resolveValue(c, parents); case _ => () }
       case s: MorphStatement =>
