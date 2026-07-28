@@ -68,7 +68,13 @@ private[parsing] trait EpicParser {
     P(
       Index ~ Keywords.show ~/ outputRef ~ to ~ userRef ~/ withMetaData ~ Index
     )./.map { case (start, from, to, descriptives, end) =>
-      ShowOutputInteraction(at(start, end), from, LiteralString.empty, to, descriptives.toContents)
+      // `show X to U` carries no relationship in the source, but a TwoReferenceInteraction with an
+      // empty one is rejected by validation — so every `show` step was unvalidatable and no
+      // spelling could fix it. Synthesize the word instead of widening the syntax: the relationship
+      // reads as "<from> <relationship> <to>", making this "X shown to U", which is the past-tense
+      // form of the step itself and how it should read in a generated diagram.
+      val loc = at(start, end)
+      ShowOutputInteraction(loc, from, LiteralString(loc, "shown"), to, descriptives.toContents)
     }
   }
 
