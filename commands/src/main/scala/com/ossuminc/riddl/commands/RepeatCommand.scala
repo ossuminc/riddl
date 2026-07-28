@@ -61,29 +61,28 @@ class RepeatCommand(using pc: PlatformContext)
           .action { (cmd, opt) =>
             opt.copy(targetCommand = cmd)
           }
-          .text("The name of the command to select from the configuration file"),
+          .text(RepeatingCommandText.targetCommand),
         arg[FiniteDuration]("refresh-rate")
           .optional()
           .validate {
-            case r if r.toMillis < 1000 =>
-              Left("<refresh-rate> is too fast, minimum is 1 seconds")
-            case r if r.toDays > 1 =>
-              Left("<refresh-rate> is too slow, maximum is 1 day")
+            case r if r < RepeatingCommandText.minRefreshRate =>
+              Left(RepeatingCommandText.refreshRateTooFast)
+            case r if r > RepeatingCommandText.maxRefreshRate =>
+              Left(RepeatingCommandText.refreshRateTooSlow)
             case _ => Right(())
           }
           .action((r, c) => c.copy(refreshRate = r))
-          .text("""Specifies the rate at which the <git-clone-dir> is checked
-                  |for updates so the process to regenerate the hugo site is
-                  |started""".stripMargin),
+          .text(RepeatingCommandText.refreshRate),
         arg[Int]("max-cycles")
           .optional()
           .validate {
-            case x if x < 1           => Left("<max-cycles> can't be less than 1")
-            case x if x > 1024 * 1024 => Left("<max-cycles> is too big")
-            case _                    => Right(())
+            case x if x < RepeatingCommandText.minCycles => Left(RepeatingCommandText.tooFewCycles)
+            case x if x > RepeatingCommandText.maxCyclesLimit =>
+              Left(RepeatingCommandText.tooManyCycles)
+            case _ => Right(())
           }
           .action((m, c) => c.copy(maxCycles = m))
-          .text("""Limit the number of check cycles that will be repeated."""),
+          .text(RepeatingCommandText.maxCycles),
         opt[Unit]('n', "interactive")
           .optional()
           .action((_, c) => c.copy(interactive = true))
