@@ -15,6 +15,21 @@ enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
 
+// Test sources may still call the deprecated throwing loaders. `fromURL`/`fromPath`
+// are deprecated because THROWING is wrong for user-supplied input: riddlc used to
+// print `java.io.FileNotFoundException` at people. A test loading a fixture that is
+// guaranteed to exist has the opposite requirement — if it is missing, the test
+// SHOULD blow up — so migrating ~60 test call sites to the Either-returning
+// variants would only add ceremony. Silenced by message so every OTHER deprecation
+// in test code still fails the build under -Werror.
+// Must be applied per project: `With.typical` defines a project-level
+// `scalacOptions`, and an undefined `<proj> / Test / scalacOptions` delegates to
+// THAT before it ever reaches `ThisBuild / Test`, so a ThisBuild setting here is
+// silently ignored.
+lazy val deprecatedLoadersOkInTests = Seq[Setting[?]](
+  Test / scalacOptions += "-Wconf:msg=fromURL:s,msg=fromPath:s"
+)
+
 // The full git commit SHA of the source tree, captured at build-definition load.
 // Exposed via RiddlBuildInfo.gitCommit so `riddlc info` can report the exact source
 // commit a binary was built from (lets downstream model repos locate the changes).
@@ -146,6 +161,7 @@ lazy val utilsNative = utils_cp.native
 
 val Language = config("language")
 lazy val language_cp = CrossModule("language", "riddl-language", V.scala)(JVM, JS, Native)
+  .settings(deprecatedLoadersOkInTests)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -198,6 +214,7 @@ lazy val languageNative = language_cp.native.dependsOn(pDep(utilsNative))
 
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes", V.scala)(JVM, JS, Native)
+  .settings(deprecatedLoadersOkInTests)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -231,6 +248,7 @@ val passesJS = passes_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS))
 val passesNative = passes_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative))
 
 lazy val testkit_cp = CrossModule("testkit", "riddl-testkit", V.scala)(JVM, JS, Native)
+  .settings(deprecatedLoadersOkInTests)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -266,6 +284,7 @@ val testkitNative =
   testkit_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
 
 lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Native)
+  .settings(deprecatedLoadersOkInTests)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -347,6 +366,7 @@ val commandsNative =
 
 val Riddlc = config("riddlc")
 lazy val riddlc_cp = CrossModule("riddlc", "riddlc", V.scala)(JVM, Native)
+  .settings(deprecatedLoadersOkInTests)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .configure(With.noMiMa)
   .settings(

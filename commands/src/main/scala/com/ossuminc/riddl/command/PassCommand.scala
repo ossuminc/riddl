@@ -66,21 +66,23 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(us
     options.withInputFile { (inputPath: Path) =>
       val url = PathUtils.urlFromPath(inputPath)
       implicit val ec: ExecutionContext = pc.ec
-      val future = RiddlParserInput.fromURL(url).map { rpi =>
-        TopLevelParser.parseInputWithMessages(rpi) match {
-          case Left(errors) =>
-            Left[Messages, PassesResult](errors)
-          case Right((root, parseMessages)) =>
-            val input: PassInput = PassInput(root, parseMessages)
-            val passes = getPasses(options)
-            val result = Pass.runThesePasses(input, passes)
-            if result.messages.hasErrors then Left(result.messages)
-            else
-              if pc.options.debug then
-                println(s"Errors after running ${this.name}:")
-                println(result.messages.format)
-              Right(result)
-        }
+      val future = RiddlParserInput.fromURLSafe(url).map {
+        case Left(loadFailure) => Left[Messages, PassesResult](loadFailure)
+        case Right(rpi) =>
+          TopLevelParser.parseInputWithMessages(rpi) match {
+            case Left(errors) =>
+              Left[Messages, PassesResult](errors)
+            case Right((root, parseMessages)) =>
+              val input: PassInput = PassInput(root, parseMessages)
+              val passes = getPasses(options)
+              val result = Pass.runThesePasses(input, passes)
+              if result.messages.hasErrors then Left(result.messages)
+              else
+                if pc.options.debug then
+                  println(s"Errors after running ${this.name}:")
+                  println(result.messages.format)
+                Right(result)
+          }
       }
       Await.result(future, 20.seconds)
     }
