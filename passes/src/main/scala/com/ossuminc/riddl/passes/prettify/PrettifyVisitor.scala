@@ -391,6 +391,15 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def closeState(riddl_state: State, parents: Parents): Unit =
     state.withCurrent { rfe =>
       if riddl_state.contents.nonEmpty then rfe.closeDef(riddl_state)
+      else
+        // A body-less state has no brace to close, but it may still carry metadata —
+        // `state X of record R with { briefly ... }` is legal and common. `closeDef` emits BOTH
+        // the brace and the metadata, so guarding the whole call on `contents.nonEmpty` silently
+        // dropped the metadata of every body-less state. Emit it on its own here.
+        if riddl_state.metadata.nonEmpty then
+          rfe.trimTrailingNewline()
+          rfe.emitMetaData(riddl_state.metadata)
+        end if
       end if
     }
   end closeState
