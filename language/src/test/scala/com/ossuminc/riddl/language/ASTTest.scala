@@ -338,7 +338,8 @@ class ASTTest extends AbstractTestingBasis {
     }
   }
 
-  "Epic" should { "format correctly" in { epic.format mustBe "Epic epic" } }
+  // Named after its own keyword, so `format` must quote it: `Epic epic` does not re-parse.
+  "Epic" should { "format correctly" in { epic.format mustBe "Epic 'epic'" } }
 
   "Entity" should {
     "contents" should {
@@ -572,7 +573,7 @@ class ASTTest extends AbstractTestingBasis {
       val projector =
         Projector(At.empty, Identifier(At.empty, "projector"), Contents(repoRef, handler))
       projector.id.value mustBe "projector"
-      projector.format mustBe s"${Keyword.projector} projector"
+      projector.format mustBe s"${Keyword.projector} 'projector'"
       projector.repositories mustBe Seq(repoRef)
       projector.handlers mustBe Seq(handler)
       projector.isProcessor mustBe true
@@ -582,7 +583,7 @@ class ASTTest extends AbstractTestingBasis {
     "have a test" in {
       val repository = Repository(At.empty, Identifier(At.empty, "repository"), Contents(handler))
       repository.id.value mustBe "repository"
-      repository.format mustBe s"${Keyword.repository} repository"
+      repository.format mustBe s"${Keyword.repository} 'repository'"
       repository.handlers mustBe Seq(handler)
       repository.isProcessor mustBe true
       repository.effectiveShape mustBe Void(At.empty)
@@ -605,7 +606,7 @@ class ASTTest extends AbstractTestingBasis {
     "have a test" in {
       val saga = Saga(At.empty, Identifier(At.empty, "saga"), contents = Contents(sagaStep))
       saga.id.value mustBe "saga"
-      saga.format mustBe s"${Keyword.saga} saga"
+      saga.format mustBe s"${Keyword.saga} 'saga'"
       saga.sagaSteps mustBe Seq(sagaStep)
       saga.input mustBe empty
       saga.output mustBe empty

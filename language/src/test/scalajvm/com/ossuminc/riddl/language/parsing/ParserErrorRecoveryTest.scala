@@ -180,18 +180,40 @@ class ParserErrorRecoveryTest extends ParsingTest {
       }
     }
 
-    "reject aggregation with invalid field syntax" in { (_: TestData) =>
+    // `field String` is NOT invalid: the grammar is
+    // `field = identifier is field_type_expression` where
+    // `is = ["is" | "are" | ":" | "="]` — the separator is optional throughout RIDDL,
+    // deliberately, so the colon is optional here for the same reason `is` is optional
+    // on a domain. This suite never ran, so it kept an expectation the language never
+    // had. What genuinely IS rejected is a field with no type at all.
+    "accept a field whose optional separator is omitted" in { (_: TestData) =>
       val input = """domain Test is {
                     |  type T is {
                     |    field String
                     |  }
                     |}""".stripMargin
-      val parser = StringParser(input)
-      parser.parseRoot match {
+      StringParser(input).parseRoot match {
+        case Right(root) =>
+          val fields = root.domains.head.types.head.typEx match {
+            case agg: com.ossuminc.riddl.language.AST.Aggregation => agg.fields
+            case other => fail(s"expected an Aggregation, got ${other.getClass.getSimpleName}")
+          }
+          fields.size mustBe 1
+          fields.head.id.value mustBe "field"
         case Left(messages) =>
-          messages.nonEmpty mustBe true
-        case Right(_) =>
-          fail("Should reject invalid field syntax")
+          fail(s"the separator is optional, so this must parse:\n${messages.format}")
+      }
+    }
+
+    "reject a field with no type expression at all" in { (_: TestData) =>
+      val input = """domain Test is {
+                    |  type T is {
+                    |    field
+                    |  }
+                    |}""".stripMargin
+      StringParser(input).parseRoot match {
+        case Left(messages) => messages.nonEmpty mustBe true
+        case Right(_)       => fail("a field must still name a type")
       }
     }
 

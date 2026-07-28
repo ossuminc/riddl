@@ -115,7 +115,7 @@ domain ComprehensiveTest is {
     // Projector
     projector UserViewProjector is {
       record View is { userId: UserIdent }
-      handler projector is { ??? }
+      handler 'projector' is { ??? }
     } with { briefly "Projects user view" }
 
     // Repository

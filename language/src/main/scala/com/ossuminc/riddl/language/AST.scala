@@ -182,10 +182,17 @@ object AST:
 
     /** True when `value` is a bare (unquoted) identifier and therefore can be emitted to RIDDL
       * source verbatim. Matches the parser's `simpleIdentifier` rule exactly: an ASCII letter
-      * followed by any number of ASCII letters, digits, underscores, or hyphens.
+      * followed by any number of ASCII letters, digits, underscores, or hyphens, AND not a
+      * definition keyword.
+      *
+      * The keyword clause is what makes prettify's output re-parsable. `handler 'projector' is …`
+      * uses the quoting escape valve precisely because a bare `projector` there is ambiguous with
+      * the start of a projector definition; emitting it back unquoted produced source that this
+      * very parser then rejected, breaking the round-trip contract on `everything.riddl`.
       */
     def isBareIdentifier(value: String): Boolean =
-      value.nonEmpty && isAsciiLetter(value.head) && value.tail.forall(isBareIdChar)
+      value.nonEmpty && isAsciiLetter(value.head) && value.tail.forall(isBareIdChar) &&
+        !Keyword.definitionKeywords.contains(value)
 
     /** Render an identifier `value` as valid RIDDL source. A bare identifier is emitted unchanged;
       * anything else is single-quoted using the parser's `quotedIdentifier` form (`'...'`). An

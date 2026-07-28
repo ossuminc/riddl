@@ -59,13 +59,16 @@ class RiddlFileEmitterTest extends AbstractTestingBasis {
     }
     "starts a definition with/out a brace" in {
       rfe.clear()
+      // Named "domain" on purpose: a definition keyword used as an identifier must come back
+      // QUOTED, because `domain domain is …` no longer re-parses. The emitter's job is source
+      // that round-trips, not source that looks like what was typed.
       val defn = Domain(At.empty, Identifier(At.empty, "domain"))
       rfe.openDef(defn)
       defn.isEmpty mustBe true
-      rfe.toString mustBe "domain domain is { ??? }\n"
+      rfe.toString mustBe "domain 'domain' is { ??? }\n"
       rfe.clear()
       rfe.openDef(defn, withBrace = false)
-      rfe.toString mustBe "domain domain is "
+      rfe.toString mustBe "domain 'domain' is "
     }
     "emits Strngs" in {
       rfe.clear()

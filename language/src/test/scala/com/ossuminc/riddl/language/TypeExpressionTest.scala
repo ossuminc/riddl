@@ -341,8 +341,11 @@ class TypeExpressionTest extends AbstractTestingBasis {
     }
     "Support EntityReference" in {
       AST.errorDescription(reference) mustBe
-        "Reference to entity a.b.c.d.entity"
-      reference.format mustBe "entity a.b.c.d.entity"
+        "Reference to entity 'a.b.c.d.entity'"
+      // The last component is a keyword, so the path cannot be emitted bare — `entity` in
+      // declaration position introduces a definition. RIDDL's whole-path quoted form is the
+      // established rendering (see PathIdentifier.format) and re-parses to the same components.
+      reference.format mustBe "entity 'a.b.c.d.entity'"
       reference.isEmpty mustBe true
       reference.isContainer mustBe false
     }
