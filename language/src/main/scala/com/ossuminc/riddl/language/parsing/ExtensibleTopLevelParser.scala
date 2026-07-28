@@ -45,6 +45,31 @@ trait ExtensibleTopLevelParser(using PlatformContext)
   def input: RiddlParserInput
   def withVerboseFailures: Boolean
 
+  /** "The parser consumed the input but produced nothing" — reported identically by both parse
+    * entry points below, which differ only in whether they yield a `Contents[E]` or a single `E`.
+    */
+  private def reportEmptyResult(input: RiddlParserInput, index: Int): Unit =
+    error(
+      At(input, index),
+      s"Parser could not translate '${input.origin}' after $index characters"
+    )
+
+  /** "The parser produced the wrong kind of node" — likewise shared. Returns the Left both callers
+    * return, so the message and the failure value cannot drift apart.
+    */
+  private def reportWrongNode[E: ClassTag](
+    wrongNode: Any,
+    input: RiddlParserInput,
+    index: Int
+  ): Left[Messages, scala.Nothing] = // scala.Nothing: `AST.Nothing` is a RIDDL type expression
+    val expected = classTag[E].runtimeClass
+    val actual = wrongNode.getClass
+    error(
+      At(input, index),
+      s"Parser did not yield a ${expected.getSimpleName} but ${actual.getSimpleName}"
+    )
+    Left(this.messagesAsList)
+
   private def doContentsParse[E <: RiddlValue: ClassTag](
     rule: P[?] => P[Seq[E]]
   ): Either[Messages, Contents[E]] = {
@@ -53,21 +78,10 @@ trait ExtensibleTopLevelParser(using PlatformContext)
         result match {
           case l: Left[Messages, Seq[E]] => l
           case result @ Right(node: Seq[E]) =>
-            if node.isEmpty then
-              error(
-                At(input, index),
-                s"Parser could not translate '${input.origin}' after $index characters"
-              )
+            if node.isEmpty then reportEmptyResult(input, index)
             end if
             result
-          case _ @Right(wrongNode) =>
-            val expected = classTag[E].runtimeClass
-            val actual = wrongNode.getClass
-            error(
-              At(input, index),
-              s"Parser did not yield a ${expected.getSimpleName} but ${actual.getSimpleName}"
-            )
-            Left(this.messagesAsList)
+          case _ @Right(wrongNode) => reportWrongNode[E](wrongNode, input, index)
         }
     }
     result match
@@ -82,21 +96,10 @@ trait ExtensibleTopLevelParser(using PlatformContext)
         result match {
           case l: Left[Messages, E] => l
           case result @ Right(node: E) =>
-            if node.contents.isEmpty then
-              error(
-                At(input, index),
-                s"Parser could not translate '${input.origin}' after $index characters"
-              )
+            if node.contents.isEmpty then reportEmptyResult(input, index)
             end if
             result
-          case _ @Right(wrongNode) =>
-            val expected = classTag[E].runtimeClass
-            val actual = wrongNode.getClass
-            error(
-              At(input, index),
-              s"Parser did not yield a ${expected.getSimpleName} but ${actual.getSimpleName}"
-            )
-            Left(this.messagesAsList)
+          case _ @Right(wrongNode) => reportWrongNode[E](wrongNode, input, index)
         }
     }
   }

@@ -47,10 +47,12 @@ case class OutlinePass(
   private val buffer: mutable.ListBuffer[OutlineEntry] =
     mutable.ListBuffer.empty
 
-  protected def openContainer(
-    definition: Definition,
-    parents: Parents
-  ): Unit = {
+  /** Record one definition in the outline. Containers and leaves are outlined identically — the
+    * entry is built from the definition and its depth, and nothing about it depends on which of the
+    * two a definition happens to be — so both entry points come here rather than each carrying its
+    * own copy of the construction.
+    */
+  private def outline(definition: Definition, parents: Parents): Unit = {
     if definition.id.nonEmpty then
       buffer.append(
         OutlineEntry(
@@ -65,23 +67,11 @@ case class OutlinePass(
     end if
   }
 
-  protected def processLeaf(
-    definition: Leaf,
-    parents: Parents
-  ): Unit = {
-    if definition.id.nonEmpty then
-      buffer.append(
-        OutlineEntry(
-          kind = definition.kind,
-          id = definition.id.value,
-          depth = parents.size,
-          line = definition.loc.line,
-          col = definition.loc.col,
-          offset = definition.loc.offset
-        )
-      )
-    end if
-  }
+  protected def openContainer(definition: Definition, parents: Parents): Unit =
+    outline(definition, parents)
+
+  protected def processLeaf(definition: Leaf, parents: Parents): Unit =
+    outline(definition, parents)
 
   protected def processValue(
     value: RiddlValue,

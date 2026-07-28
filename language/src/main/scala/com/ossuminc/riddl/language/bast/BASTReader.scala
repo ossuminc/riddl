@@ -1834,121 +1834,115 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   // ========== References ==========
 
+  /** Consume the tag `peekU8` just reported, then read the node it introduces.
+    *
+    * Roughly twenty-five arms below spelled this out by hand as `reader.readU8() // consume tag`
+    * followed by the read. Saying it once means an arm cannot forget the consume.
+    */
+  private def consumingTag[T](read: => T): T = { reader.readU8(); read }
+
+  /** The dedicated MESSAGE reference tags, enumerated exactly once.
+    *
+    * [[readReference]] and [[readMessageRef]] both used to list them, so a new message kind could
+    * be added to one and forgotten in the other. A9b: a record is NOT a message, so NODE_RECORD_REF
+    * is deliberately absent — [[readReference]] handles it among the ordinary references and
+    * [[readMessageRef]] must reject it.
+    *
+    * Consumes nothing and returns None when the tag is not a message tag, so a caller can try this
+    * first and fall through.
+    */
+  private def messageRefByTag(refTag: Int): Option[MessageRef] = refTag match {
+    case NODE_COMMAND_REF => Some(consumingTag(readCommandRefNode()))
+    case NODE_EVENT_REF   => Some(consumingTag(readEventRefNode()))
+    case NODE_QUERY_REF   => Some(consumingTag(readQueryRefNode()))
+    case NODE_RESULT_REF  => Some(consumingTag(readResultRefNode()))
+    case _                => None
+  }
+
   private def readReference(): Reference[Definition] = {
     // Peek at tag to determine type - each reader consumes its own tag
     val refTag = reader.peekU8()
 
-    refTag match {
-      // Legacy definition tags used as refs (for backward compatibility)
-      case NODE_AUTHOR     => readAuthorRef()
-      case NODE_TYPE       => readTypeRef()
-      case NODE_FIELD      => readFieldRefOrConstantRef()
-      case NODE_ADAPTOR    => readAdaptorRef()
-      case NODE_FUNCTION   => readFunctionRef()
-      case NODE_HANDLER    => readHandlerRef()
-      case NODE_STATE      => readStateRef()
-      case NODE_ENTITY     => readEntityRef()
-      case NODE_REPOSITORY => readRepositoryRef()
-      case NODE_PROJECTOR  => readProjectorRef()
-      case NODE_CONTEXT    => readContextRef()
-      case NODE_STREAMLET  => readStreamletRef()
-      case NODE_INLET      => readInletRef()
-      case NODE_OUTLET     => readOutletRef()
-      case NODE_SAGA       => readSagaRef()
-      case NODE_USER       => readUserRef()
-      case NODE_EPIC       => readEpicRef()
-      case NODE_GROUP      => readGroupRef()
-      case NODE_INPUT      => readInputRef()
-      case NODE_OUTPUT     => readOutputRef()
-      case NODE_DOMAIN     => readDomainRef()
-      // Message References (dedicated tags)
-      case NODE_COMMAND_REF =>
-        reader.readU8() // consume tag
-        readCommandRefNode()
-      case NODE_EVENT_REF =>
-        reader.readU8() // consume tag
-        readEventRefNode()
-      case NODE_QUERY_REF =>
-        reader.readU8() // consume tag
-        readQueryRefNode()
-      case NODE_RESULT_REF =>
-        reader.readU8() // consume tag
-        readResultRefNode()
-      case NODE_RECORD_REF =>
-        reader.readU8() // consume tag
-        readRecordRefNode()
-      // Entity References (dedicated tags - Phase 9)
-      case NODE_AUTHOR_REF =>
-        reader.readU8() // consume tag
-        readAuthorRefNode()
-      case NODE_TYPE_REF =>
-        reader.readU8() // consume tag
-        readTypeRefNode()
-      case NODE_FIELD_REF =>
-        reader.readU8() // consume tag
-        readFieldRefNode()
-      case NODE_CONSTANT_REF =>
-        reader.readU8() // consume tag
-        readConstantRefNode()
-      case NODE_ADAPTOR_REF =>
-        reader.readU8() // consume tag
-        readAdaptorRefNode()
-      case NODE_FUNCTION_REF =>
-        reader.readU8() // consume tag
-        readFunctionRefNode()
-      case NODE_HANDLER_REF =>
-        reader.readU8() // consume tag
-        readHandlerRefNode()
-      case NODE_STATE_REF =>
-        reader.readU8() // consume tag
-        readStateRefNode()
-      case NODE_ENTITY_REF =>
-        reader.readU8() // consume tag
-        readEntityRefNode()
-      case NODE_REPOSITORY_REF =>
-        reader.readU8() // consume tag
-        readRepositoryRefNode()
-      case NODE_PROJECTOR_REF =>
-        reader.readU8() // consume tag
-        readProjectorRefNode()
-      case NODE_CONTEXT_REF =>
-        reader.readU8() // consume tag
-        readContextRefNode()
-      case NODE_STREAMLET_REF =>
-        reader.readU8() // consume tag
-        readStreamletRefNode()
-      case NODE_INLET_REF =>
-        reader.readU8() // consume tag
-        readInletRefNode()
-      case NODE_OUTLET_REF =>
-        reader.readU8() // consume tag
-        readOutletRefNode()
-      case NODE_SAGA_REF =>
-        reader.readU8() // consume tag
-        readSagaRefNode()
-      case NODE_USER_REF =>
-        reader.readU8() // consume tag
-        readUserRefNode()
-      case NODE_EPIC_REF =>
-        reader.readU8() // consume tag
-        readEpicRefNode()
-      case NODE_GROUP_REF =>
-        reader.readU8() // consume tag
-        readGroupRefNode()
-      case NODE_INPUT_REF =>
-        reader.readU8() // consume tag
-        readInputRefNode()
-      case NODE_OUTPUT_REF =>
-        reader.readU8() // consume tag
-        readOutputRefNode()
-      case NODE_DOMAIN_REF =>
-        reader.readU8() // consume tag
-        readDomainRefNode()
-      case _ =>
-        reader.readU8() // consume the unknown tag
-        addError(s"Unknown reference tag: $refTag")
-        // Use lastLocation for best-effort location on error
-        TypeRef(lastLocation, "", PathIdentifier(lastLocation, Seq.empty))
+    // Message tags are served from messageRefByTag, the one place they are enumerated; every
+    // other tag falls through to the match below.
+    messageRefByTag(refTag).getOrElse {
+      refTag match {
+        // Legacy definition tags used as refs (for backward compatibility)
+        case NODE_AUTHOR     => readAuthorRef()
+        case NODE_TYPE       => readTypeRef()
+        case NODE_FIELD      => readFieldRefOrConstantRef()
+        case NODE_ADAPTOR    => readAdaptorRef()
+        case NODE_FUNCTION   => readFunctionRef()
+        case NODE_HANDLER    => readHandlerRef()
+        case NODE_STATE      => readStateRef()
+        case NODE_ENTITY     => readEntityRef()
+        case NODE_REPOSITORY => readRepositoryRef()
+        case NODE_PROJECTOR  => readProjectorRef()
+        case NODE_CONTEXT    => readContextRef()
+        case NODE_STREAMLET  => readStreamletRef()
+        case NODE_INLET      => readInletRef()
+        case NODE_OUTLET     => readOutletRef()
+        case NODE_SAGA       => readSagaRef()
+        case NODE_USER       => readUserRef()
+        case NODE_EPIC       => readEpicRef()
+        case NODE_GROUP      => readGroupRef()
+        case NODE_INPUT      => readInputRef()
+        case NODE_OUTPUT     => readOutputRef()
+        case NODE_DOMAIN     => readDomainRef()
+        // Message References (dedicated tags)
+        case NODE_RECORD_REF =>
+          consumingTag(readRecordRefNode())
+        // Entity References (dedicated tags - Phase 9)
+        case NODE_AUTHOR_REF =>
+          consumingTag(readAuthorRefNode())
+        case NODE_TYPE_REF =>
+          consumingTag(readTypeRefNode())
+        case NODE_FIELD_REF =>
+          consumingTag(readFieldRefNode())
+        case NODE_CONSTANT_REF =>
+          consumingTag(readConstantRefNode())
+        case NODE_ADAPTOR_REF =>
+          consumingTag(readAdaptorRefNode())
+        case NODE_FUNCTION_REF =>
+          consumingTag(readFunctionRefNode())
+        case NODE_HANDLER_REF =>
+          consumingTag(readHandlerRefNode())
+        case NODE_STATE_REF =>
+          consumingTag(readStateRefNode())
+        case NODE_ENTITY_REF =>
+          consumingTag(readEntityRefNode())
+        case NODE_REPOSITORY_REF =>
+          consumingTag(readRepositoryRefNode())
+        case NODE_PROJECTOR_REF =>
+          consumingTag(readProjectorRefNode())
+        case NODE_CONTEXT_REF =>
+          consumingTag(readContextRefNode())
+        case NODE_STREAMLET_REF =>
+          consumingTag(readStreamletRefNode())
+        case NODE_INLET_REF =>
+          consumingTag(readInletRefNode())
+        case NODE_OUTLET_REF =>
+          consumingTag(readOutletRefNode())
+        case NODE_SAGA_REF =>
+          consumingTag(readSagaRefNode())
+        case NODE_USER_REF =>
+          consumingTag(readUserRefNode())
+        case NODE_EPIC_REF =>
+          consumingTag(readEpicRefNode())
+        case NODE_GROUP_REF =>
+          consumingTag(readGroupRefNode())
+        case NODE_INPUT_REF =>
+          consumingTag(readInputRefNode())
+        case NODE_OUTPUT_REF =>
+          consumingTag(readOutputRefNode())
+        case NODE_DOMAIN_REF =>
+          consumingTag(readDomainRefNode())
+        case _ =>
+          reader.readU8() // consume the unknown tag
+          addError(s"Unknown reference tag: $refTag")
+          // Use lastLocation for best-effort location on error
+          TypeRef(lastLocation, "", PathIdentifier(lastLocation, Seq.empty))
+      }
     }
   }
 
@@ -2469,24 +2463,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readMessageRef(): MessageRef = {
     val refTag = reader.peekU8()
-    refTag match {
-      case NODE_COMMAND_REF =>
-        reader.readU8() // consume tag
-        readCommandRefNode()
-      case NODE_EVENT_REF =>
-        reader.readU8() // consume tag
-        readEventRefNode()
-      case NODE_QUERY_REF =>
-        reader.readU8() // consume tag
-        readQueryRefNode()
-      case NODE_RESULT_REF =>
-        reader.readU8() // consume tag
-        readResultRefNode()
-      case _ =>
-        // A9b: a record is not a message; only the 4 message tags are valid here.
-        addError(s"Unknown message ref tag: $refTag")
-        // Use lastLocation for best-effort location on error
-        CommandRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
+    messageRefByTag(refTag).getOrElse {
+      // A9b: a record is not a message; only the 4 message tags are valid here.
+      addError(s"Unknown message ref tag: $refTag")
+      // Use lastLocation for best-effort location on error
+      CommandRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
     }
   }
 
@@ -2502,23 +2483,17 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_STREAMLET  => readStreamletRef()
       // New dedicated REF tags (Phase 9)
       case NODE_ADAPTOR_REF =>
-        reader.readU8() // consume tag
-        readAdaptorRefNode()
+        consumingTag(readAdaptorRefNode())
       case NODE_ENTITY_REF =>
-        reader.readU8() // consume tag
-        readEntityRefNode()
+        consumingTag(readEntityRefNode())
       case NODE_REPOSITORY_REF =>
-        reader.readU8() // consume tag
-        readRepositoryRefNode()
+        consumingTag(readRepositoryRefNode())
       case NODE_PROJECTOR_REF =>
-        reader.readU8() // consume tag
-        readProjectorRefNode()
+        consumingTag(readProjectorRefNode())
       case NODE_CONTEXT_REF =>
-        reader.readU8() // consume tag
-        readContextRefNode()
+        consumingTag(readContextRefNode())
       case NODE_STREAMLET_REF =>
-        reader.readU8() // consume tag
-        readStreamletRefNode()
+        consumingTag(readStreamletRefNode())
       case _ =>
         // Fallback - use lastLocation for best-effort location on error
         EntityRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
@@ -2533,11 +2508,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_OUTLET => readOutletRef()
       // New dedicated REF tags (Phase 9)
       case NODE_INLET_REF =>
-        reader.readU8() // consume tag
-        readInletRefNode()
+        consumingTag(readInletRefNode())
       case NODE_OUTLET_REF =>
-        reader.readU8() // consume tag
-        readOutletRefNode()
+        consumingTag(readOutletRefNode())
       case _ =>
         // Fallback - use lastLocation for best-effort location on error
         InletRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
