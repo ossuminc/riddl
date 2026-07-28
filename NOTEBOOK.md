@@ -54,6 +54,20 @@ the bare form is deprecated. Carried through all six surfaces; BAST condition
 flag 4, FORMAT_REVISION 1 -> 2. `matchGuard` needed nothing — it never accepted
 a string.
 
+**A fifth of the same family: a body-less `state` lost its metadata**
+(`d576ce59c`). `closeState` called `closeDef` only when the state had contents,
+and `closeDef` emits the closing brace AND the metadata — so `state X of record
+R with { … }`, having no brace to close, lost its `briefly` and `described as`
+too. 41 states across 41 corpus files, 82 missing warnings, blocking
+canonicalisation. Audited every other closer: all call `close(x)`
+unconditionally, so this was the only guarded one.
+
+**`IncludeHygieneTest` now fails DETERMINISTICALLY in a full `passes` run** while
+passing in isolation. Proven independent of the prettify fix by stashing that
+change and re-running. It is the known `PlatformContext.withOptions` defect —
+no try/finally, so a throwing test poisons global options for later sequential
+suites. Intermittent before, consistent now, so CI will see it. Unfixed.
+
 **Two tests no longer fetch `dokn.riddl` over the network** (`aecf4392e`).
 `RiddlParserInputTest` asserted byte offsets into a file in *another repository*,
 so migrating riddl-examples to 2.0 broke it — catching a correct migration, not a
