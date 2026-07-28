@@ -2910,6 +2910,129 @@ case class ValidationPass(
     end if
   end checkUserInteractionBoundary
 
+  /** A40: stop words dropped when tokenizing an interaction step's free text into "content words".
+    * Two groups, both deliberately tiny and fixed (no NLP, no corpus, no scoring):
+    *   1. function words — articles, conjunctions, prepositions, pronouns, auxiliary/modal verbs —
+    *      which carry no domain meaning wherever they appear; and 2. contentless placeholder
+    *      nouns/adverbs ("thing", "stuff", "somehow", ...) which are the very markers of the
+    *      vagueness this check is predicting on.
+    *
+    * Words of fewer than three characters are dropped by the tokenizer itself, so two-letter
+    * function words (a, an, of, to, is, it, by, in, on, ...) need not be listed here.
+    */
+  private val translatabilityStopWords: scala.collection.immutable.Set[String] =
+    // 1. function words
+    ("the and but nor for not with without from into onto that this these those then than there " +
+      "here their them they was were are been being has have had will shall should would can " +
+      "could may might must does did done some any all its his her our your when what who whom " +
+      "how why which you via per out off over under about after before each such also just only " +
+      "very more most much many both same other " +
+      // 2. contentless placeholders — the markers of vagueness itself
+      "thing things something somehow someone somewhere anything anyhow stuff whatever etc")
+      .split(' ')
+      .toSet
+
+  /** A40: split `text` into lowercase content words: maximal runs of letters/digits, at least three
+    * characters long, that are not [[translatabilityStopWords]]. Hand-rolled rather than
+    * regex-based so it stays cheap ("quickly predict") and identical on JVM, JS and Native.
+    */
+  private def contentWordsOf(text: String): scala.collection.immutable.Set[String] =
+    val words = mutable.Set.empty[String]
+    val sb = new StringBuilder
+    def flush(): Unit =
+      if sb.nonEmpty then {
+        val word = sb.toString.toLowerCase
+        if word.length >= 3 && !translatabilityStopWords.contains(word) then words += word
+        sb.clear()
+      }
+    text.foreach { ch =>
+      if ch.isLetterOrDigit then sb.append(ch) else flush()
+    }
+    flush()
+    words.toSet
+  end contentWordsOf
+
+  /** A40: contribute a definition/term name to the vocabulary, both whole and split into its
+    * constituent words on camelCase, '_', '-' and '.' boundaries, so prose like "shopping cart"
+    * grounds against a definition named `ShoppingCart` or `shopping_cart`.
+    */
+  private def nameWordsOf(name: String): scala.collection.immutable.Set[String] =
+    val parts = mutable.ListBuffer.empty[String]
+    val sb = new StringBuilder
+    name.foreach { ch =>
+      if ch == '_' || ch == '-' || ch == '.' then {
+        parts.addOne(sb.toString); sb.clear()
+      } else if ch.isUpper && sb.nonEmpty && !sb.last.isUpper then {
+        parts.addOne(sb.toString); sb.clear(); sb.append(ch)
+      } else sb.append(ch)
+    }
+    parts.addOne(sb.toString)
+    val whole = name.toLowerCase
+    val split = contentWordsOf(parts.mkString(" "))
+    if whole.length >= 3 then split + whole else split
+  end nameWordsOf
+
+  /** A40: the vocabulary in scope for an interaction step — every word the model has actually
+    * defined at or above the step's use case. Built from, for the use case and each of its
+    * ancestors: the scope's own name, the names of its direct contents, and, from its metadata,
+    * each [[Term]]'s name and definition text and the text of each [[BriefDescription]] /
+    * [[BlockDescription]]. The richer the in-scope terminology, the larger this set and the more
+    * likely a step's prose is predicted translatable.
+    */
+  private def inScopeVocabulary(
+    useCase: UseCase,
+    parents: Parents
+  ): scala.collection.immutable.Set[String] =
+    val vocabulary = mutable.Set.empty[String]
+    (useCase +: parents).foreach { scope =>
+      vocabulary ++= nameWordsOf(scope.id.value)
+      scope.terms.foreach { t =>
+        vocabulary ++= nameWordsOf(t.id.value)
+        vocabulary ++= contentWordsOf(t.definition.map(_.s).mkString(" "))
+      }
+      scope.brief.foreach(bd => vocabulary ++= contentWordsOf(bd.brief.s))
+      scope.descriptions.foreach(d => vocabulary ++= contentWordsOf(d.lines.map(_.s).mkString(" ")))
+      scope.contents.definitions.foreach(d => vocabulary ++= nameWordsOf(d.id.value))
+    }
+    vocabulary.toSet
+  end inScopeVocabulary
+
+  /** A40: predict, cheaply, whether a free-text interaction step will be AI-translatable into a
+    * generated test, and warn when the prediction is negative.
+    *
+    * Only the two free-text step kinds are predicted on: [[VagueInteraction]] (all three parts are
+    * literal prose) and [[ArbitraryInteraction]] (the relationship is literal prose; its two
+    * endpoints are references and are grounded by construction). The other step kinds are
+    * structurally typed and need no prediction.
+    *
+    * The heuristic is vocabulary grounding: tokenize the step's prose — its literal text plus any
+    * `briefly` / `described as` on the step itself — into content words, and predict TRANSLATABLE
+    * if any of them appears in the [[inScopeVocabulary]]. Prose with no grounded word at all is
+    * predicted untranslatable and draws a [[CompletenessWarning]] — never an error, because a
+    * prediction must not fail a build, and it is silenced with completeness warnings off.
+    */
+  private def checkInteractionTranslatability(
+    step: GenericInteraction,
+    prose: String,
+    useCase: UseCase,
+    parents: Parents
+  ): Unit =
+    val ownProse: String =
+      (step.brief.map(_.brief.s).toSeq ++ step.descriptions.map(_.lines.map(_.s).mkString(" ")))
+        .mkString(" ")
+    val words = contentWordsOf(prose + " " + ownProse)
+    val vocabulary = inScopeVocabulary(useCase, parents)
+    if !words.exists(vocabulary.contains) then
+      messages.addCompleteness(
+        step.loc,
+        s"interaction '${prose.trim}' uses no terms defined in scope, so it is unlikely to be " +
+          "translatable into a generated test",
+        suggestion = "Define the nouns and verbs it uses as 'term's, or add a 'briefly' / " +
+          "'described as' to the step that uses in-scope vocabulary."
+      )
+    end if
+  end checkInteractionTranslatability
+
   private def validateInteraction(
     useCase: UseCase,
     interaction: Interaction,
@@ -2929,7 +3052,7 @@ case class ValidationPass(
       case TakeInputInteraction(_, user: UserRef, inputRef: InputRef, _) =>
         checkRef[User](user, parents)
         checkRef[Input](inputRef, parents)
-      case ArbitraryInteraction(_, from, _, to, _) =>
+      case ai @ ArbitraryInteraction(_, from, relationship, to, _) =>
         checkRef[Definition](from, parents)
         checkRef[Definition](to, parents)
         // Interaction refs are keyed in the refMap under the enclosing UseCase, so resolve
@@ -2939,6 +3062,8 @@ case class ValidationPass(
         val destination = resolution.refMap.definitionOf[Definition](to.pathId, useCase)
         validateArbitraryInteraction(origin, destination, parents)
         checkUserInteractionBoundary(from, to)
+        // A40: only the relationship is free text; the endpoints are references.
+        checkInteractionTranslatability(ai, relationship.s, useCase, parents)
       case ShowOutputInteraction(_, from: OutputRef, _, to: UserRef, _) =>
         checkRef[Output](from, parents)
         checkRef[User](to, parents)
@@ -2950,8 +3075,14 @@ case class ValidationPass(
         checkRef[Definition](from, parents)
         checkRef[Processor[?]](to, parents)
         checkUserInteractionBoundary(from, to)
-      case _: VagueInteraction =>
-      // Nothing else to validate
+      case vi @ VagueInteraction(_, from, relationship, to, _) =>
+        // A40: every part of a vague step is free text, so all three contribute prose.
+        checkInteractionTranslatability(
+          vi,
+          s"${from.s} ${relationship.s} ${to.s}",
+          useCase,
+          parents
+        )
       case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>
       // These are all just containers of other interactions, not needing further validation
     }
