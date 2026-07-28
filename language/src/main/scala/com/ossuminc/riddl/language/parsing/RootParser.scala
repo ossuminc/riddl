@@ -28,7 +28,7 @@ trait RootParser { this: ModuleParser & DomainParser & CommonParser & ParsingCon
     * [[AST.Module]] (see [[ModuleParser.moduleContent]]).
     */
   private def rootContent[u: P]: P[RootContents] = {
-    P(bastImport | domain | author | comment | module | rootInclude[u])
+    P(bastImport | domain | author | versionDef | comment | module | rootInclude[u])
       .asInstanceOf[P[RootContents]]
   }
 

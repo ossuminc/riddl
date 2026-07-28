@@ -545,6 +545,7 @@ trait PassVisitor:
   def doAuthor(author: Author): Unit
   def doConstant(constant: Constant): Unit
   def doInvariant(invariant: Invariant): Unit
+  def doVersion(version: Version): Unit
   def doSagaStep(sagaStep: SagaStep): Unit
   def doInlet(inlet: Inlet): Unit
   def doOutlet(outlet: Outlet): Unit
@@ -601,8 +602,8 @@ abstract class VisitingPass[VT <: PassVisitor](
       case _: Root                => () // ignore
       case _: Enumerator          => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep |
-          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: GenericInteraction |
-          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
+          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: Version |
+          _: GenericInteraction | _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
           _: Definition => // not containers
         () // not  containers
     end match
@@ -631,7 +632,7 @@ abstract class VisitingPass[VT <: PassVisitor](
       case input: Input           => visitor.closeInput(input, parents)
       case _: Root                => () // ignore
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep |
-          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: Enumerator |
+          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: Enumerator | _: Version |
           _: GenericInteraction | _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
           _: Definition =>
         () // not  containers
@@ -645,6 +646,7 @@ abstract class VisitingPass[VT <: PassVisitor](
       case author: Author                 => visitor.doAuthor(author)
       case constant: Constant             => visitor.doConstant(constant)
       case invariant: Invariant           => visitor.doInvariant(invariant)
+      case version: Version               => visitor.doVersion(version)
       case sagaStep: SagaStep             => visitor.doSagaStep(sagaStep)
       case inlet: Inlet                   => visitor.doInlet(inlet)
       case outlet: Outlet                 => visitor.doOutlet(outlet)

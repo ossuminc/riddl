@@ -60,7 +60,7 @@ package object bast {
     * table layout). Independent of VERSION which tracks major header layout changes. Old files with
     * revision 0 (pre-check era) will be rejected with a clear message.
     */
-  val FORMAT_REVISION: Short = 21 // S61-1: Module (not Nebula) is the serialization root
+  val FORMAT_REVISION: Short = 22 // A53: Version leaf (NODE_VERSION = 103)
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)
@@ -208,6 +208,11 @@ package object bast {
   val NODE_INPUT_REF: Byte = 99
   val NODE_OUTPUT_REF: Byte = 100
   val NODE_DOMAIN_REF: Byte = 101
+
+  /** A53: a Version leaf. Tag 102 is taken in the streamlet-shape namespace, so nodes resume at
+    * 103.
+    */
+  val NODE_VERSION: Byte = 103
 
   /** Flag bit indicating metadata presence in node tag
     *

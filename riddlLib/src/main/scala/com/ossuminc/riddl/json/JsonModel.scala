@@ -118,7 +118,11 @@ object JsonModel:
   // Structural DTOs
   // ---------------------------------------------------------------------------
 
-  case class RootDto(domains: Seq[DomainDto] = Nil, modules: Seq[ModuleDto] = Nil)
+  case class RootDto(
+    domains: Seq[DomainDto] = Nil,
+    modules: Seq[ModuleDto] = Nil,
+    version: Option[VersionDto] = None
+  )
 
   /** A Module is a FLAT collection of ANY top-level definition — no hierarchy is enforced at its
     * top level. The DTO therefore carries a group per definition kind, exactly the union
@@ -149,7 +153,8 @@ object JsonModel:
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
     modules: Seq[ModuleDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    version: Option[VersionDto] = None
   )
 
   case class DomainDto(
@@ -162,7 +167,8 @@ object JsonModel:
     epics: Seq[EpicDto] = Nil,
     domains: Seq[DomainDto] = Nil,
     contexts: Seq[ContextDto] = Nil,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    version: Option[VersionDto] = None
   )
 
   /** `{ "name": "Shopper", "isA": "a person", "brief"?: ... }` (Phase 2) */
@@ -209,7 +215,8 @@ object JsonModel:
     intention: Option[String] = None,
     shape: Option[String] = None,
     inlets: Seq[PortletDto] = Nil,
-    outlets: Seq[PortletDto] = Nil
+    outlets: Seq[PortletDto] = Nil,
+    version: Option[VersionDto] = None
   )
 
   case class MessageDto(
@@ -241,7 +248,8 @@ object JsonModel:
     // A Processor may carry an optional ascribed shape and inlet/outlet ports.
     shape: Option[String] = None,
     inlets: Seq[PortletDto] = Nil,
-    outlets: Seq[PortletDto] = Nil
+    outlets: Seq[PortletDto] = Nil,
+    version: Option[VersionDto] = None
   )
 
   /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
@@ -287,6 +295,16 @@ object JsonModel:
     condition: String,
     brief: Option[String] = None,
     expression: Option[ValueDto] = None
+  )
+
+  /** A53: a scope's version component — `{ "name": "Garibaldi" }` for the named form or `{ "name":
+    * "4", "numeric": true }` for the numeric one. `name` always carries the RENDERED component;
+    * `numeric` is the discriminator that says how it was written.
+    */
+  case class VersionDto(
+    name: String,
+    numeric: Boolean = false,
+    brief: Option[String] = None
   )
 
   case class FieldDto(name: String, `type`: TypeExprDto, brief: Option[String] = None)
@@ -1456,6 +1474,7 @@ object JsonModel:
   given valueDtoRW: ReadWriter[ValueDto] =
     readwriter[ujson.Value].bimap[ValueDto](writeValue, readValue)
   given invariantRW: ReadWriter[InvariantDto] = macroRW
+  given versionRW: ReadWriter[VersionDto] = macroRW
   given constantRW: ReadWriter[ConstantDto] = macroRW
   given userRW: ReadWriter[UserDto] = macroRW
   given stateRW: ReadWriter[StateDto] = macroRW

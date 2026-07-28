@@ -23,6 +23,7 @@ escape_sequence = /\\[\\\"aefnrt]/ | hexEscape | unicodeEscape ;
 hexEscape = /\\x[0-9a-fA-F]{2,8}/ ;
 unicodeEscape = /\\u[0-9a-fA-F]{4}/ ;
 integer = /[+-]?[0-9]+/ ;
+natural = /[0-9]+/ ;
 
 (* Readability Keywords - these are always optional *)
 is = ["is" | "are" | ":" | "="] ;  (* optional readability word for definitions *)
@@ -38,7 +39,7 @@ end_of_line_comment = /\/\/[^\n]*/ ;
 (* Main Structure *)
 root = {root_content}+ ;
 root_content = bast_import | root_definition | module | root_include ;
-root_definition = domain | author | comment ;
+root_definition = domain | author | version | comment ;
 root_include = "include" literal_string ;
 (* An import plucks definitions out of an already-compiled .bast file. The full form takes    *)
 (* everything the file's root Module holds; the selective form takes exactly one named        *)
@@ -55,7 +56,7 @@ importable_kind = "domain" | "context" | "entity" | "type" | "epic" | "saga" | "
 module = "module" identifier is "{" {module_content | module_include}+ "}" [with_metadata] ;
 module_content = bast_import | adaptor | author | comment | connector | constant | context
                | domain | entity | epic | function | invariant | module | projector
-               | relationship | repository | saga | streamlet | type_def | user ;
+               | relationship | repository | saga | streamlet | type_def | user | version ;
 module_include = "include" literal_string ;
 
 (* DEPRECATED: an anonymous "nebula" - a whole-input sequence of module_content with no       *)
@@ -67,7 +68,7 @@ nebula = {module_content} ;
 domain = "domain" identifier is "{" domain_body "}" [with_metadata] ;
 domain_body = domain_definitions | "???" ;
 domain_definitions = {domain_content}+ ;
-domain_content = vital_definition_contents | author | context | domain | user | epic | saga | repository | connector | bast_import | domain_include | comment ;
+domain_content = vital_definition_contents | author | context | domain | user | epic | saga | repository | connector | version | bast_import | domain_include | comment ;
 domain_include = "include" literal_string ;
 
 (* Context *)
@@ -75,14 +76,14 @@ intention = "application" | "external" | "gateway" | "service" ;
 context = [intention] "context" identifier [as_shape] is "{" context_body "}" [with_metadata] ;
 context_body = context_definitions | "???" ;
 context_definitions = {context_definition}+ ;
-context_definition = processor_definition_contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | bast_import | context_include | comment ;
+context_definition = processor_definition_contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | version | bast_import | context_include | comment ;
 context_include = "include" literal_string ;
 
 (* Entity *)
 entity = "entity" identifier [as_shape] is "{" entity_body "}" [with_metadata] ;
 entity_body = entity_definitions | "???" ;
 entity_definitions = {entity_content}+ ;
-entity_content = processor_definition_contents | state | entity_include ;
+entity_content = processor_definition_contents | state | version | entity_include ;
 state = ["initial"] "state" identifier ("of" | is) record_ref [state_body] [with_metadata] ;
 state_body = is "{" ({state_content}+ | "???") "}" ;
 state_content = handler | invariant | comment ;
@@ -303,6 +304,11 @@ pseudo_code_contents = ["???"] {statement} ;
 (* Constants and Invariants *)
 constant = "constant" identifier is type_expression "=" literal_string [with_metadata] ;
 invariant = "invariant" identifier is [literal_string | boolean_expression] [with_metadata] ; (* A28 *)
+
+(* Version - A53: a scope's version component is EITHER a name OR a natural number, never both. *)
+(* Composing a definition's versioned ancestors root-to-leaf and joining with "." yields its    *)
+(* precise version, e.g. Garibaldi.4.3. At most one version per scope.                          *)
+version = "version" (natural | identifier) [with_metadata] ;
 
 (* Relationship *)
 relationship = "relationship" identifier "to" processor_ref byAs relationship_cardinality ["label" byAs literal_string] [with_metadata] ;

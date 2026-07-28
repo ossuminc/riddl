@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-27 21:53 UTC
+# Generated: 2026-07-28 00:58 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -32,6 +32,7 @@ escape-sequence ::= "\\" [\\"aefnrt] | hex-escape | unicode-escape
 hex-escape ::= "\\x" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]? [0-9a-fA-F]? [0-9a-fA-F]? [0-9a-fA-F]? [0-9a-fA-F]? [0-9a-fA-F]?
 unicode-escape ::= "\\u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]
 integer ::= [+-]? [0-9]+
+natural ::= [0-9]+
 
 # Readability Keywords - these are always optional
 is ::= ("is" | "are" | ":" | "=")?
@@ -46,7 +47,7 @@ end-of-line-comment ::= "//" [^\n]*
 
 # Main Structure
 root-content ::= bast-import | root-definition | module | root-include
-root-definition ::= domain | author | comment
+root-definition ::= domain | author | version | comment
 root-include ::= "include" ws1 literal-string
 
 # definition, optionally renamed with "as".
@@ -57,7 +58,7 @@ importable-kind ::= "domain" | "context" | "entity" | "type" | "epic" | "saga" |
 
 # at this level. The internal rules of each contained definition still apply.
 module ::= "module" ws1 identifier ws1 is ws "{" ws (module-content | module-include)+ ws "}" ws (with-metadata)?
-module-content ::= bast-import | adaptor | author | comment | connector | constant | context | domain | entity | epic | function | invariant | module | projector | relationship | repository | saga | streamlet | type-def | user
+module-content ::= bast-import | adaptor | author | comment | connector | constant | context | domain | entity | epic | function | invariant | module | projector | relationship | repository | saga | streamlet | type-def | user | version
 module-include ::= "include" ws1 literal-string
 
 # yields a Module with the synthetic id `nebula`. Use `module` instead.
@@ -67,7 +68,7 @@ nebula ::= (module-content)*
 domain ::= "domain" ws1 identifier ws1 is ws "{" ws domain-body ws "}" ws (with-metadata)?
 domain-body ::= domain-definitions | "???"
 domain-definitions ::= (domain-content)+
-domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | repository | connector | bast-import | domain-include | comment
+domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | repository | connector | version | bast-import | domain-include | comment
 domain-include ::= "include" ws1 literal-string
 
 # Context
@@ -75,14 +76,14 @@ intention ::= "application" | "external" | "gateway" | "service"
 context ::= (intention)? ws "context" ws1 identifier ws (as-shape)? ws is ws "{" ws context-body ws "}" ws (with-metadata)?
 context-body ::= context-definitions | "???"
 context-definitions ::= (context-definition)+
-context-definition ::= processor-definition-contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | bast-import | context-include | comment
+context-definition ::= processor-definition-contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | version | bast-import | context-include | comment
 context-include ::= "include" ws1 literal-string
 
 # Entity
 entity ::= "entity" ws1 identifier ws (as-shape)? ws is ws "{" ws entity-body ws "}" ws (with-metadata)?
 entity-body ::= entity-definitions | "???"
 entity-definitions ::= (entity-content)+
-entity-content ::= processor-definition-contents | state | entity-include
+entity-content ::= processor-definition-contents | state | version | entity-include
 state ::= ("initial")? ws "state" ws1 identifier ws ("of" | is) ws record-ref ws (state-body)? ws (with-metadata)?
 state-body ::= is ws "{" ws ((state-content)+ | "???") ws "}"
 state-content ::= handler | invariant | comment
@@ -265,6 +266,9 @@ pseudo-code-contents ::= ("???")? ws (statement)*
 # Constants and Invariants
 constant ::= "constant" ws1 identifier ws1 is ws1 type-expression ws "=" ws literal-string ws (with-metadata)?
 invariant ::= "invariant" ws1 identifier ws1 is ws (literal-string | boolean-expression)? ws (with-metadata)?
+
+# precise version, e.g. Garibaldi.4.3. At most one version per scope.
+version ::= "version" ws (natural | identifier) ws (with-metadata)?
 
 # Relationship
 relationship ::= "relationship" ws1 identifier ws "to" ws1 processor-ref ws1 by-as ws1 relationship-cardinality ws ("label" by-as literal-string)? ws (with-metadata)?

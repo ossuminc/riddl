@@ -32,7 +32,8 @@ object JsonAstBuilder:
     given ctx: Ctx = new Ctx
     val domains = dto.domains.map(buildDomain)
     val modules = dto.modules.map(buildModule)
-    val root = Root(At(), contentsOf[RootContents](domains, modules))
+    val version = dto.version.map(buildVersion).toSeq
+    val root = Root(At(), contentsOf[RootContents](domains, modules, version))
     if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
   end build
 
@@ -59,6 +60,7 @@ object JsonAstBuilder:
     val connectors = m.connectors.map(buildConnector)
     val relationships = m.relationships.map(buildRelationship)
     val modules = m.modules.map(buildModule)
+    val version = m.version.map(buildVersion).toSeq
     Module(
       At(),
       ident(m.name),
@@ -84,7 +86,8 @@ object JsonAstBuilder:
         epics,
         connectors,
         relationships,
-        modules
+        modules,
+        version
       ),
       meta(m.brief, m.metadata)
     )
@@ -146,10 +149,20 @@ object JsonAstBuilder:
     val epics = d.epics.map(buildEpic)
     val subdomains = d.domains.map(buildDomain)
     val contexts = d.contexts.map(buildContext)
+    val version = d.version.map(buildVersion).toSeq
     Domain(
       At(),
       ident(d.name),
-      contentsOf[DomainContents](authors, users, types, sagas, epics, subdomains, contexts),
+      contentsOf[DomainContents](
+        authors,
+        users,
+        types,
+        sagas,
+        epics,
+        subdomains,
+        contexts,
+        version
+      ),
       meta(d.brief, d.metadata)
     )
 
@@ -164,6 +177,13 @@ object JsonAstBuilder:
       LiteralString(At(), c.value),
       meta(c.brief)
     )
+
+  /** A53: `name` always carries the rendered component; `numeric` says how it was written, and the
+    * `number` field is re-derived from the name so the two stay in step.
+    */
+  private def buildVersion(v: VersionDto): Version =
+    val number = if v.numeric then v.name.toLongOption else None
+    Version(At(), ident(v.name), number, meta(v.brief))
 
   private def buildAuthor(a: AuthorDto): Author =
     Author(
@@ -200,6 +220,7 @@ object JsonAstBuilder:
     val handlers = c.handlers.map(buildHandler)
     val inlets = c.inlets.map(buildInlet)
     val outlets = c.outlets.map(buildOutlet)
+    val version = c.version.map(buildVersion).toSeq
     Context(
       At(),
       ident(c.name),
@@ -222,7 +243,8 @@ object JsonAstBuilder:
         groups,
         handlers,
         inlets,
-        outlets
+        outlets,
+        version
       ),
       ascribedShape = parseShape(c.shape),
       intention = parseIntention(c.intention),
@@ -287,6 +309,7 @@ object JsonAstBuilder:
     val invariants = e.invariants.map(buildInvariant)
     val inlets = e.inlets.map(buildInlet)
     val outlets = e.outlets.map(buildOutlet)
+    val version = e.version.map(buildVersion).toSeq
     Entity(
       At(),
       ident(e.name),
@@ -302,7 +325,8 @@ object JsonAstBuilder:
         handlers,
         invariants,
         inlets,
-        outlets
+        outlets,
+        version
       ),
       ascribedShape = parseShape(e.shape),
       metadata = meta(e.brief, e.metadata)

@@ -946,6 +946,59 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize versions in BOTH component forms (A53)" in {
+      // A53 adds Version (NODE_VERSION = 103, FORMAT_REVISION 22) at root/module/domain/context/
+      // entity. Both the NAMED and the NUMERIC component form must survive AST -> BAST -> AST at
+      // their own scope, keeping the numeric/named discriminator intact.
+      val riddlSource =
+        """version Jellyfish
+          |domain d is {
+          |  version Garibaldi
+          |  context c is {
+          |    version 4
+          |    entity e is {
+          |      version 3
+          |      record R(x: Integer)
+          |      state S of record d.c.e.R is { handler H is { on other is { do "a" } } }
+          |    }
+          |  }
+          |}
+          |module m is { version 9 }
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-version")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "version round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.{Context, Domain, Entity, Module as ModuleAST}
+              // The BAST serialization root is a Module standing in for the Root, so the root-level
+              // `version Jellyfish` lands directly in its contents.
+              assert(
+                module.version.map(_.component).contains("Jellyfish"),
+                "root-level named version lost in BAST"
+              )
+              assert(module.version.flatMap(_.number).isEmpty, "named version became numeric")
+              val finder = Finder(module.contents)
+              val d = finder.recursiveFindByType[Domain].head
+              assert(d.version.map(_.component).contains("Garibaldi"), "domain version lost")
+              assert(d.version.flatMap(_.number).isEmpty, "domain version became numeric")
+              val c = finder.recursiveFindByType[Context].head
+              assert(c.version.flatMap(_.number).contains(4L), "numeric context version lost")
+              val e = finder.recursiveFindByType[Entity].head
+              assert(e.version.flatMap(_.number).contains(3L), "numeric entity version lost")
+              val m = finder.recursiveFindByType[ModuleAST].find(_.id.value == "m").get
+              assert(m.version.flatMap(_.number).contains(9L), "numeric module version lost")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize dokn.riddl" in {
       val url = URL.fromCwdPath("language/input/dokn.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "dokn-test")

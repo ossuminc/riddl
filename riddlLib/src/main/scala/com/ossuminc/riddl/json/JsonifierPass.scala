@@ -82,7 +82,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     }
     d match
       case r: Root =>
-        Some(RootDto(col[DomainDto], col[ModuleDto]))
+        Some(RootDto(col[DomainDto], col[ModuleDto], col[VersionDto].headOption))
       case m: Module =>
         // A Module is flat and may hold any top-level definition; every kind gets its own group.
         Some(
@@ -111,7 +111,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[ConnectorDto],
             col[RelationshipDto],
             col[ModuleDto],
-            metaOf(m.metadata)
+            metaOf(m.metadata),
+            col[VersionDto].headOption
           )
         )
       case dom: Domain =>
@@ -126,7 +127,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             col[EpicDto],
             col[DomainDto],
             col[ContextDto],
-            metaOf(dom.metadata)
+            metaOf(dom.metadata),
+            col[VersionDto].headOption
           )
         )
       case c: Context =>
@@ -155,7 +157,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             c.intention.map(_.keyword),
             c.ascribedShape.map(_.keyword),
             col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto)
+            col[OutletChild].map(_.dto),
+            col[VersionDto].headOption
           )
         )
       case e: Entity =>
@@ -177,7 +180,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             metaOf(e.metadata),
             e.ascribedShape.map(_.keyword),
             col[InletChild].map(_.dto),
-            col[OutletChild].map(_.dto)
+            col[OutletChild].map(_.dto),
+            col[VersionDto].headOption
           )
         )
       case s: State =>
@@ -401,7 +405,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         case Some(be: BooleanExpression) => ("", Some(serializeValue(be)))
         case None                        => ("", None)
       Some(InvariantDto(i.id.value, condStr, briefOf(i.metadata), condExpr))
-    case u: User => Some(UserDto(u.id.value, u.is_a.s, briefOf(u.metadata)))
+    // A53: `name` is the rendered component; `numeric` records whether it was written as a number.
+    case v: Version => Some(VersionDto(v.component, v.isNumeric, briefOf(v.metadata)))
+    case u: User    => Some(UserDto(u.id.value, u.is_a.s, briefOf(u.metadata)))
     case a: Author =>
       Some(AuthorDto(a.id.value, a.name.s, a.email.s, a.organization.map(_.s), a.title.map(_.s)))
     case i: Inlet =>

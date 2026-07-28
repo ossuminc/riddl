@@ -609,6 +609,21 @@ object AST:
     override def hasAuthors: Boolean = authors.nonEmpty
   end WithAuthors
 
+  /** Base trait to use in any [[Definition]] that establishes a version scope (A53).
+    *
+    * A scope may declare AT MOST ONE [[Version]]; a second one is a validation Error. `versions`
+    * exposes every one found so validation can detect the duplicate; `version` is the accessor
+    * everything else should use.
+    */
+  sealed trait WithVersion[CV <: RiddlValue] extends Container[CV]:
+
+    /** Every [[Version]] declared directly in this scope. At most one is legal. */
+    def versions: Seq[Version] = contents.filter[Version]
+
+    /** The [[Version]] this scope declares, if any (the first one, if the model is invalid). */
+    def version: Option[Version] = versions.headOption
+  end WithVersion
+
   /** Base trait to use in any [[Definition]] that can define [[User]]s */
   sealed trait WithUsers[CV <: RiddlValue] extends Container[CV]:
 
@@ -710,7 +725,7 @@ object AST:
   ///// This section defines various abstract things needed by the rest of the definitions
 
   /** The list of definitions to which a reference cannot be made */
-  type NonReferencableDefinitions = Enumerator | Root | SagaStep | Term | Invariant
+  type NonReferencableDefinitions = Enumerator | Root | SagaStep | Term | Invariant | Version
 
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description |
@@ -724,7 +739,7 @@ object AST:
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
     * widened to any top-level definition (see [[OccursInModule]]).
     */
-  private[language] type OccursInRoot = Domain | Author | Comment
+  private[language] type OccursInRoot = Domain | Author | Comment | Version
 
   /** Type of definitions that occur in a [[Module]] without [[Include]].
     *
@@ -787,14 +802,14 @@ object AST:
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain =
     OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga | Repository |
-      Connector
+      Connector | Version
 
   /** Type of definitions that occur in a [[Domain]] with [[Include]] and [[BASTImport]] */
   type DomainContents = OccursInDomain | Include[OccursInDomain] | BASTImport
 
   /** Type of definitions that occur in a [[Context]] without [[Include]] */
   type OccursInContext = OccursInProcessor | Entity | Adaptor | Group | Saga | Projector |
-    Repository
+    Repository | Version
 
   /** Type of definitions that occur in a [[Context]] with [[Include]] and [[BASTImport]] */
   type ContextContents = OccursInContext | Include[OccursInContext] | BASTImport
@@ -811,7 +826,7 @@ object AST:
   type GroupRelated = Group | Input | Output
 
   /** Type of definitions that occur in an [[Entity]] without [[Include]] */
-  private type OccursInEntity = OccursInProcessor | State
+  private type OccursInEntity = OccursInProcessor | State | Version
 
   /** Type of definitions that occur in an [[Entity]] with [[Include]] */
   type EntityContents = OccursInEntity | Include[OccursInEntity]
@@ -884,7 +899,7 @@ object AST:
 
   type NebulaContents = Adaptor | Author | Connector | Constant | Context | Domain | Entity | Epic |
     Function | Invariant | Module | Projector | Relationship | Repository | Saga | Streamlet |
-    Type | User
+    Type | User | Version
 
   ///////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
   //////// The Abstract classes for defining Definitions by using the foregoing traits
@@ -1218,6 +1233,7 @@ object AST:
       with WithDomains[RootContents]
       with WithAuthors[RootContents]
       with WithComments[RootContents]
+      with WithVersion[RootContents]
       with WithIncludes[RootContents]:
 
     def metadata: Contents[MetaData] = Contents.empty[MetaData](0)
@@ -1330,6 +1346,7 @@ object AST:
       with WithRepositories[ModuleContents]
       with WithSagas[ModuleContents]
       with WithStreamlets[ModuleContents]
+      with WithVersion[ModuleContents]
       with WithUsers[ModuleContents]:
     def format: String = s"${Keyword.module} ${id.format}"
   end Module
@@ -1362,6 +1379,7 @@ object AST:
         case m: Module      => Some(m: RootContents)
         case a: Author      => Some(a: RootContents)
         case c: Comment     => Some(c: RootContents)
+        case v: Version     => Some(v: RootContents)
         case bi: BASTImport => Some(bi: RootContents)
         case _              => None // not valid at Root level
       }
@@ -1459,6 +1477,95 @@ object AST:
   case class AuthorRef(loc: At, pathId: PathIdentifier) extends Reference[Author] with Meta:
     override def format: String = Keyword.author + " " + pathId.format
   end AuthorRef
+
+  ///////////////////////////////////////////////////////////////////////////////////////// VERSION
+
+  /** A version component contributed by the scope that declares it (A53).
+    *
+    * A `Version` is a [[Leaf]] whose component is EITHER a NAME or a NATURAL NUMBER — never both,
+    * and never a name-plus-number pair:
+    * {{{
+    *   version Garibaldi   // the component is the identifier `Garibaldi`
+    *   version 4           // the component is the natural number 4
+    * }}}
+    * Organizations routinely NAME their releases (Ubuntu "Jammy Jellyfish", the Android desserts),
+    * so both forms are first-class and may be mixed freely across scopes. The name must use the
+    * IDENTIFIER production — the same one that names every other definition — so a composed
+    * coordinate never contains characters a generator would have to sanitize.
+    *
+    * ==Representation==
+    *
+    * `id.value` is ALWAYS the rendered component, so [[component]] is simply `id.value`. `number`
+    * is the discriminator: it is `Some(n)` exactly when the component was written as a natural
+    * number, and then `number.get.toString == id.value`; for a named version it is `None`. Carrying
+    * the number separately gives generators typed access without re-parsing, while keeping
+    * [[Definition]]'s `id: Identifier` contract honest for both forms.
+    *
+    * ==Scope and composition==
+    *
+    * A `Version` may be declared in a [[Root]], [[Module]], [[Domain]], [[Context]] or [[Entity]],
+    * and AT MOST ONCE per scope (a second one in the same scope is a validation Error). It follows
+    * the [[Author]] precedent of scope inheritance: the *precise* version of any definition is
+    * COMPOSED from the versions of its versioned ancestors, root→leaf, by [[AST.composedVersion]],
+    * and rendered by joining the components with `.` — a domain `Garibaldi` over contexts and
+    * entities numbered `4` and `3` yields `Garibaldi.4.3`. A [[Type]] or message therefore takes
+    * the composed version of its containing definition — types are notoriously hard to attach
+    * metadata to and some have no body at all.
+    *
+    * Only scopes that actually BEAR a version contribute a component ("missing-level rule"), so
+    * adoption is incremental: version the domain first, refine inward later.
+    *
+    * ==Caveats — this is NOT semver==
+    *
+    *   - The composed form (`3.1.6`) LOOKS like a semantic version but is a '''hierarchical
+    *     coordinate''': each component names a scope's own version, not a major/minor/patch role.
+    *     '''Compatibility semantics must not be read into it''' — a change from `3.1.6` to `3.2.1`
+    *     says nothing about breakage. Named components make this plainer still: `Garibaldi.4.3` is
+    *     not orderable against `Jellyfish.1.1` at all.
+    *   - Generators targeting ecosystems that DEMAND semver (npm, Maven, …) must define an
+    *     '''explicit mapping rule''' from the composed coordinate to a semantic version; there is
+    *     no canonical one, and a named component has no numeric meaning to map.
+    *   - The coordinate's '''length varies with nesting depth''' and with which ancestors bear a
+    *     version, so two coordinates must be compared '''component-wise''' (and only when they
+    *     denote the same scope chain). Lexical or dotted-string comparison is meaningless.
+    *
+    * @param loc
+    *   The location of the version definition in the source
+    * @param id
+    *   The rendered component: the written name, or the number's decimal text
+    * @param number
+    *   `Some(n)` when the component was written as a natural number; `None` when it was named
+    * @param metadata
+    *   The metadata for the Version
+    */
+  @JSExportTopLevel("Version")
+  case class Version(
+    loc: At,
+    id: Identifier,
+    number: Option[Long] = None,
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends Leaf:
+
+    /** The component this scope contributes to a composed version coordinate. */
+    def component: String = id.value
+
+    /** True when the component was written as a natural number rather than a name. */
+    def isNumeric: Boolean = number.isDefined
+
+    override def format: String = s"${Keyword.version} ${id.format}"
+  end Version
+
+  object Version:
+
+    /** Build the numeric form, keeping `id.value` in step with `number`. */
+    def numeric(
+      loc: At,
+      idLoc: At,
+      value: Long,
+      metadata: Contents[MetaData] = Contents.empty[MetaData]()
+    ): Version =
+      Version(loc, Identifier(idLoc, value.toString), Some(value), metadata)
+  end Version
 
   //////////////////////////////////////////////////////////////////////////////////// RELATIONSHIP
 
@@ -3638,6 +3745,7 @@ object AST:
     ascribedShape: Option[StreamletShape] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[EntityContents]
+      with WithVersion[EntityContents]
       with WithStates[EntityContents]:
     override def format: String = Keyword.entity + " " + id.format
   end Entity
@@ -3826,6 +3934,7 @@ object AST:
       with WithConnectors[ContextContents]
       with WithAdaptors[ContextContents]
       with WithSagas[ContextContents]
+      with WithVersion[ContextContents]
       with WithGroups[ContextContents] {
     def format: String = Keyword.context + " " + id.format
   }
@@ -4760,6 +4869,7 @@ object AST:
       with WithSagas[DomainContents]
       with WithRepositories[DomainContents]
       with WithConnectors[DomainContents]
+      with WithVersion[DomainContents]
       with WithDomains[DomainContents] {
     override def format: String = Keyword.domain + " " + id.format
   }

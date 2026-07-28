@@ -274,6 +274,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     case NODE_SAGA_STEP         => "SagaStep"
     case NODE_STATE             => "State"
     case NODE_INVARIANT         => "Invariant"
+    case NODE_VERSION           => "Version"
     case NODE_ON_CLAUSE         => "OnClause"
     case NODE_INLET             => "Inlet"
     case NODE_OUTLET            => "Outlet"
@@ -405,6 +406,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         case NODE_SAGA_STEP => readSagaStepNode()
         case NODE_STATE     => readStateNode()
         case NODE_INVARIANT => readInvariantNode()
+        case NODE_VERSION   => readVersionNode()
         case NODE_ON_CLAUSE => readOnClauseNode()
 
         // Streamlet components
@@ -1040,6 +1042,17 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     }
     val metadata = readMetadataDeferred()
     Invariant(loc, id, condition, metadata)
+  }
+
+  /** A53: a Version leaf — mirror of BASTWriter.writeVersion. The numeric flag re-derives the
+    * `number` field from the id text, which is where the component always lives.
+    */
+  private def readVersionNode(): Version = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val number = if reader.readU8() != 0 then Some(id.value.toLong) else None
+    val metadata = readMetadataDeferred()
+    Version(loc, id, number, metadata)
   }
 
   private def readOnClauseNode(): OnClause = {

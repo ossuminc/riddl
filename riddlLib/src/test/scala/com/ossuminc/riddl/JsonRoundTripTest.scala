@@ -654,6 +654,55 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip versions in BOTH component forms (A53) losslessly" in {
+      // A53: a version component is EITHER a name OR a natural number. The `numeric` discriminator
+      // must survive AST -> JSON -> AST at every permitted scope, else a numeric component would
+      // come back named (or vice versa) and the fixed point would break.
+      val vModel =
+        """version Jellyfish
+          |domain d is {
+          |  version Garibaldi
+          |  context c is {
+          |    version 4
+          |    entity e is {
+          |      version 3
+          |      type Data is { x: Integer }
+          |      state S of record d.c.e.Data is { handler H is { on other is { do "a" } } }
+          |    }
+          |  }
+          |}
+          |module m is { version 9 }
+          |""".stripMargin
+      RiddlLib.parseString(vModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"version\"")
+          json1 must include("Jellyfish")
+          json1 must include("Garibaldi")
+          json1 must include("\"numeric\"")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              RiddlLib.root2Json(root1) mustBe json1
+              root1.version.map(_.component) mustBe Some("Jellyfish")
+              root1.version.flatMap(_.number) mustBe None
+              val finder = Finder(root1.contents)
+              val d = finder.recursiveFindByType[Domain].head
+              d.version.map(_.component) mustBe Some("Garibaldi")
+              d.version.flatMap(_.number) mustBe None
+              val c = finder.recursiveFindByType[Context].head
+              c.version.flatMap(_.number) mustBe Some(4L)
+              val e = finder.recursiveFindByType[Entity].head
+              e.version.flatMap(_.number) mustBe Some(3L)
+              val m = finder.recursiveFindByType[Module].head
+              m.version.flatMap(_.number) mustBe Some(9L)
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the version JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the version model failed: $errors")
+      end match
+    }
+
     "round-trip context intention, ascribed shape (Some/None), and ports losslessly (Task 16)" in {
       val pmModel =
         """domain PM is {

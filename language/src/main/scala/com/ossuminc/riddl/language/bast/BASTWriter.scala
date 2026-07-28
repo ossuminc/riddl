@@ -318,8 +318,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case ls: LiteralString   => writeLiteralString(ls)
 
       // Authors and Users
-      case a: Author => writeAuthor(a)
-      case u: User   => writeUser(u)
+      case a: Author  => writeAuthor(a)
+      case u: User    => writeUser(u)
+      case v: Version => writeVersion(v)
 
       // Constants
       case c: Constant => writeConstant(c)
@@ -551,6 +552,17 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeOption(a.organization)(writeLiteralString)
     writeOption(a.title)(writeLiteralString)
     writeOption(a.url)(writeURL)
+  }
+
+  /** A53: a Version leaf — the rendered component (its id) plus a presence byte saying whether it
+    * was written as a natural number. The number itself is redundant with the id text, so only the
+    * discriminator is on the wire.
+    */
+  def writeVersion(v: Version): Unit = {
+    writeNodeTag(NODE_VERSION, v.metadata.nonEmpty)
+    writeLocation(v.loc)
+    writeIdentifierInline(v.id) // Inline - no tag needed
+    writer.writeU8(if v.isNumeric then 1 else 0)
   }
 
   def writeUser(u: User): Unit = {

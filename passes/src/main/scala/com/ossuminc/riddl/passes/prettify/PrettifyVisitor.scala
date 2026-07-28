@@ -247,6 +247,21 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     }
   end doInvariant
 
+  // A53: `version <name>` or `version <number>`.
+  def doVersion(version: Version): Unit =
+    state.withCurrent { rfe =>
+      rfe.addIndent("version ")
+      // A NUMERIC component must emit as bare digits: Identifier.format would quote "4" as '4',
+      // which re-parses as a NAMED component and silently loses the numeric form. A NAMED
+      // component goes through Identifier.format so names needing quotes ('Jammy Jellyfish')
+      // survive the round trip.
+      rfe.add(version.number.map(_.toString).getOrElse(version.id.format))
+      // A version is a one-line leaf with nothing following it on the line, so it must terminate
+      // its own line when there is no `with { ... }` block to do it.
+      if version.metadata.isEmpty then rfe.nl else rfe.emitMetaData(version.metadata)
+    }
+  end doVersion
+
   def doSagaStep(sagaStep: SagaStep): Unit =
     state.withCurrent { rfe =>
       rfe
@@ -527,6 +542,7 @@ def keyword(definition: Definition): String =
     case _: Module      => Keyword.module
     case _: Inlet       => Keyword.inlet
     case _: Invariant   => Keyword.invariant
+    case _: Version     => Keyword.version
     case _: Outlet      => Keyword.outlet
     case s: Streamlet   => s.effectiveShape.keyword
     case _: Root        => "root"

@@ -124,6 +124,7 @@ trait ExtensibleTopLevelParser(using PlatformContext)
       case x if x == classOf[Streamlet]    => p => streamlet(using p)
       case x if x == classOf[Type]         => p => typeDef(using p)
       case x if x == classOf[User]         => p => user(using p)
+      case x if x == classOf[Version]      => p => versionDef(using p)
       case _ =>
         throw new RuntimeException(
           s"No parser defined for ${classTag[T].runtimeClass}"

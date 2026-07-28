@@ -357,6 +357,8 @@ object Keywords {
 
   def value[u: P]: P[Unit] = keyword(Keyword.value)
 
+  def version[u: P]: P[Unit] = keyword(Keyword.version)
+
   def void[u: P]: P[Unit] = keyword(Keyword.void)
 
   def when[u: P]: P[Unit] = keyword(Keyword.when)
@@ -509,6 +511,7 @@ object Keywords {
           Keyword.updates,
           Keyword.user,
           Keyword.value,
+          Keyword.version,
           Keyword.void,
           Keyword.when,
           Keyword.where,
@@ -668,6 +671,7 @@ object Keyword {
   final val updates = "updates"
   final val user = "user"
   final val value = "final value"
+  final val version = "version"
   final val void = "void"
   final val when = "when"
   final val where = "where"
@@ -818,6 +822,7 @@ object Keyword {
     updates,
     user,
     value,
+    version,
     void,
     when,
     where,

@@ -60,6 +60,29 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   end author
 
+  /** A53: a version component is EITHER a name OR a natural number, never both.
+    *
+    * The name uses the ordinary `identifier` production so a composed coordinate can never contain
+    * characters a generator would have to sanitize. The numeric form uses `naturalNumber` (not
+    * `integer`) deliberately: a version component may not carry a sign, and `integer` accepts a
+    * leading `+`/`-`. The two alternatives share no first character, so their order is immaterial.
+    */
+  private def versionComponent[u: P]: P[(Identifier, Option[Long])] =
+    P(
+      (Index ~ naturalNumber ~~ Index).map { case (start, n, end) =>
+        (Identifier(at(start, end), n.toString), Some(n))
+      } | identifier.map(id => (id, Option.empty[Long]))
+    )
+
+  /** A53: `version <identifier>` or `version <naturalNumber>` */
+  def versionDef[u: P]: P[Version] =
+    P(
+      Index ~ Keywords.version ~/ versionComponent ~ withMetaData ~/ Index
+    ).map { case (start, (id, number), descriptives, end) =>
+      Version(at(start, end), id, number, descriptives.toContents)
+    }
+  end versionDef
+
   /** Parse importable definition kinds for selective imports */
   private def importableKind[u: P]: P[String] = {
     P(
@@ -196,12 +219,15 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     P(comment).rep(0)
   }
 
-  private def wholeNumber[u: P]: P[Long] = {
+  /** An unsigned, non-negative whole number. A53 promoted this from private so version components
+    * (which may not carry a sign) can use it directly rather than `integer`.
+    */
+  def naturalNumber[u: P]: P[Long] = {
     CharIn("0-9").rep(1).!.map(_.toLong)
   }
 
   def integer[u: P]: P[Long] = {
-    CharIn("+\\-").? ~~ wholeNumber
+    CharIn("+\\-").? ~~ naturalNumber
   }
 
   private def simpleIdentifier[u: P]: P[String] = {
