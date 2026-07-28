@@ -672,6 +672,17 @@ to the right group rather than appending to a list.
   copy so the CI grammar validators cover it; `PredefinedModuleSourceTest`
   fails if the copy drifts from the constant.
 
+- **On-clause message binding (A55, release/2)** — `on foo: command
+  Foo { … }` optionally binds a local name to the handled message.
+  The `:` is ordinary TYPE ASCRIPTION (same rule as `let x: T = …`
+  and `p1: String`), so the parser reuses `HandlerParser.maybeName`.
+  `binding: Option[Identifier]` sits on `OnMessageLikeClause` and
+  BOTH concrete nodes, declared immediately after `from` and
+  **without a default** — `@JSExportTopLevel` requires defaulted
+  params to be TRAILING and `contents`/`metadata` are defaulted.
+  `id`/`format` stay derived from `msg`. Bare `foo` denotes the whole
+  message; `foo.field` is an ordinary path walk. See "Validation
+  Specifics" for how it resolves.
 - **Unified processor model (2026-07-26, release/2)** — every
   `Processor` (Context/Entity/Projector/Repository/Adaptor + the
   generic `processor` keyword) is port-bearing: `Inlet`/`Outlet` are in
@@ -790,6 +801,32 @@ to the right group rather than appending to a list.
 
 ### Validation Specifics
 
+- **`ValueRef` resolves in the RESOLVER (A55), not in validation.**
+  `ResolutionPass` queues every `ValueRef` and resolves it in
+  `postProcess` (its anchors are reached through other references,
+  and the pass visits definitions in source order). Only the ANCHOR
+  differs from an ordinary reference: the on-clause `binding`, else
+  a field of the handled message / entity state / function
+  `requires` input (`valueScopeField`), else the ordinary
+  `findAnchor` route. The rest is `resolvePathFromAnchor`'s walk.
+  Validation reads `refMap.anyDefinitionOf(path, parents.head)`.
+  **Do NOT reintroduce last-component name matching** — that was
+  A54's `valueAllowedFields`/`constantOf`, and it let
+  `garbage.nonsense.realField` validate.
+  - **`let`-locals stay LEXICAL** — a `let` is not a Definition and
+    is statement-ORDERED (visible only after its declaration,
+    shadowed by inner blocks), which the symbol table cannot model.
+    They are threaded by `checkStatementScopes`; a `let`'s type is
+    DECLARED (`let x: T = …`) or INFERRED from its expression
+    (`letType`). Because the resolver cannot see them, the ValueRef
+    walk runs under `ResolutionPass.quietly` (suppresses
+    `notResolved`/`wrongType`/`ambiguous`) and **validation owns the
+    diagnostic**.
+  - **`Reference.id` is a reference's optional LOCAL NAME**, the one
+    `from di: context C` sets — NOT the referenced definition's id.
+    No `MessageRef` ever carries one, which is why
+    `findMatchingCandidate`'s on-clause arm was dead until A55
+    changed its guard to `omc.msg.nonEmpty`.
 - **Message suggestions / `provideTips` (1.24.0)** — every
   `Messages.Message` carries a `suggestion: String`; any pass
   attaches one at the message-creation site (via the `addX`/

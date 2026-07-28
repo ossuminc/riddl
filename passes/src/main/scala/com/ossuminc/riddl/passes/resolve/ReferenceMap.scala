@@ -62,6 +62,15 @@ case class ReferenceMap(messages: Messages.Accumulator) {
     map.update(key, definition)
   }
 
+  /** A55: the definition a path resolved to, WITHOUT constraining its kind. Every other accessor
+    * makes the caller name the expected kind, but a `ValueRef` legitimately resolves to a [[Field]]
+    * (a field of the handled message or entity state), a [[Type]] (the whole message, via an
+    * on-clause binding) or a [[Constant]] — so it has to ask "whatever this resolved to". Returns
+    * `None` (never a message) when nothing resolved; the caller decides whether that is an error.
+    */
+  def anyDefinitionOf(pathId: PathIdentifier, parent: Definition): Option[Definition] =
+    map.get(Key(pathId.format, parent))
+
   def definitionOf[T <: Definition: ClassTag](
     pathId: PathIdentifier
   )(using PlatformContext): Option[T] = {

@@ -530,7 +530,43 @@ case class ValidationPass(
     omc.from.foreach { (_: Option[Identifier], ref: Reference[Definition]) =>
       checkRef[Definition](ref, parents)
     }
+    omc.binding.foreach(id => checkLocalName(id, "on-clause binding", parents))
+    // A55: a binding may legally collide with a field of the message or the entity state — bare
+    // `foo` is the binding and `foo.foo` reaches the field — but that overload is easy to misread.
+    omc.binding.foreach { id =>
+      if foreachAllowedFields(omc +: parents).exists(_.id.value == id.value) then
+        messages.addWarning(
+          id.loc,
+          s"on-clause binding '${id.value}' has the same name as a field of the handled message " +
+            "or entity state",
+          suggestion =
+            s"Rename the binding, or write '${id.value}.${id.value}' to reach the field " +
+              s"— bare '${id.value}' is the binding."
+        )
+    }
   }
+
+  /** A55: shared checks for a LOCAL name — an on-clause message binding or a `let`. A local should
+    * BEGIN with a lowercase letter (a StyleWarning, not an Error, so camelCase like `myCounter`
+    * stays legal), and shadowing an outer definition is legal but worth a Warning because a reader
+    * cannot tell which one a bare name means.
+    */
+  private def checkLocalName(id: Identifier, what: String, parents: Parents): Unit =
+    if id.value.nonEmpty && !id.value.head.isLower then
+      messages.addStyle(
+        id.loc,
+        s"$what '${id.value}' should begin with a lowercase letter",
+        suggestion = s"Local names are conventionally lowerCamelCase; rename it to " +
+          s"'${id.value.head.toLower.toString + id.value.drop(1)}'."
+      )
+    if symbols.lookup[Definition](Seq(id.value)).nonEmpty then
+      messages.addWarning(
+        id.loc,
+        s"$what '${id.value}' shadows a definition of the same name",
+        suggestion = s"Rename the local so a bare '${id.value}' is unambiguous to a reader."
+      )
+    end if
+  end checkLocalName
 
   /** A54: the [[AggregateUseCase]] of a widened message operand — a bare ref or a constructor whose
     * ref names the constructed message/record.
@@ -3074,35 +3110,38 @@ case class ValidationPass(
         // A bare identifier names a `let`-bound local (or an enclosing foreach element).
         if inScopeElements.contains(id.value) then () // an outer foreach element; accepted
         else
-          inScopeLets.reverse.find(_.identifier.value == id.value) match
-            case Some(ls) =>
-              ls.typeRef match
-                case Some(tr) =>
-                  resolution.refMap.definitionOf[Type](tr.pathId) match
-                    case Some(typ) if !isCollectionType(typ.typEx) =>
-                      messages.addError(
-                        fs.loc,
-                        s"'foreach' local '${id.value}' is not a collection; its declared type " +
-                          s"'${tr.pathId.format}' is not iterable",
-                        suggestion =
-                          "Iterate a local whose 'let' type is a collection, e.g. 'let batch: many Order = ...'."
-                      )
-                    case _ => () // resolves to a collection, or unresolved (reported elsewhere)
-                case None =>
-                  messages.addError(
-                    fs.loc,
-                    s"'foreach' local '${id.value}' has no declared type, so it cannot be verified " +
-                      "as a collection",
-                    suggestion =
-                      s"Declare the local's collection type, e.g. 'let ${id.value}: many Order = ...'."
-                  )
-            case None =>
-              messages.addError(
-                fs.loc,
-                s"'foreach' collection '${id.value}' is not a 'let'-bound local in scope",
-                suggestion =
-                  "Bind the collection with a 'let' before the loop, or use 'field <path>' to iterate a field."
-              )
+          val idx = letIndexOf(id.value, inScopeLets)
+          if idx >= 0 then
+            val ls = inScopeLets(idx)
+            // A55: the type may be DECLARED (`let x: T = …`) or INFERRED from the bound
+            // expression, so the "no declared type" complaint below is now reached only when
+            // neither is available.
+            letType(ls, inScopeLets.take(idx), parents) match
+              case Some(typ) if !isCollectionType(typ.typEx) =>
+                messages.addError(
+                  fs.loc,
+                  s"'foreach' local '${id.value}' is not a collection; its type " +
+                    s"'${typ.id.value}' is not iterable",
+                  suggestion =
+                    "Iterate a local whose 'let' type is a collection, e.g. 'let batch: many Order = ...'."
+                )
+              case Some(_) => () // resolves to a collection
+              case None =>
+                messages.addError(
+                  fs.loc,
+                  s"'foreach' local '${id.value}' has no declared or inferable type, so it cannot " +
+                    "be verified as a collection",
+                  suggestion =
+                    s"Declare the local's collection type, e.g. 'let ${id.value}: many Order = ...'."
+                )
+          else
+            messages.addError(
+              fs.loc,
+              s"'foreach' collection '${id.value}' is not a 'let'-bound local in scope",
+              suggestion =
+                "Bind the collection with a 'let' before the loop, or use 'field <path>' to iterate a field."
+            )
+          end if
       case fr: FieldRef =>
         resolution.refMap.definitionOf[Field](fr.pathId) match
           case Some(field) =>
@@ -3126,13 +3165,9 @@ case class ValidationPass(
           case None => () // unresolved field — ResolutionPass already reported it
   end validateForeachCollection
 
-  /** A54: the fields a [[ValueRef]] may name — the fields of the enclosing entity's state
-    * record(s), of the handled on-clause message, and of the enclosing function's `requires` input.
-    * This is the same four-source machinery as [[foreachAllowedFields]] (function fields are only
-    * present when a Function is an ancestor, so the function-input source is naturally limited to
-    * function/return scope).
-    */
-  private def valueAllowedFields(parents: Parents): Seq[Field] = foreachAllowedFields(parents)
+  // A54's `valueAllowedFields` is gone: a ValueRef's scope is no longer matched by hand here. A55
+  // routes every ValueRef through ResolutionPass, whose `valueScopeField` supplies the same three
+  // sources as an ANCHOR for the ordinary path walk. See `valueRefDefinition`.
 
   /** A54: the named [[Type]] a [[Value]] denotes, or `None` when it is untyped (a pseudo-code
     * [[LiteralString]]) or cannot be determined. Used for best-effort type-compatibility checks;
@@ -3183,43 +3218,138 @@ case class ValidationPass(
         resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => typeExprCategory(t.typEx))
       case _ => None
 
-  /** A54: the named [[Type]] a [[ValueRef]] resolves to, if determinable — from a `let`-local (a
-    * single-component path), or a field of the message/state/function-input scope (by the path's
-    * last component).
+  /** A55: the definition a [[ValueRef]] resolved to, straight out of the refMap. `ResolutionPass`
+    * walks a ValueRef's path with the SAME engine as every other reference, so a Field, a Type (the
+    * whole message named by an on-clause binding) or a Constant can come back. Before A55 this was
+    * hand-rolled here by matching only `path.value.last` against the in-scope fields, which is why
+    * `garbage.nonsense.conditionRed` used to validate. The refMap key is the path plus the
+    * enclosing on-clause/function — the same `parents.head` ResolutionPass keyed it under.
+    */
+  private def valueRefDefinition(vr: ValueRef, parents: Parents): Option[Definition] =
+    parents.headOption.flatMap(p => resolution.refMap.anyDefinitionOf(vr.path, p))
+
+  /** A55: the aggregate [[Field]]s of a [[TypeExpression]], following one level of alias. */
+  private def aggregateFieldsOf(te: TypeExpression): Seq[Field] =
+    te match
+      case ate: AggregateTypeExpression => ate.fields
+      case ate: AliasedTypeExpression =>
+        resolution.refMap
+          .definitionOf[Type](ate.pathId)
+          .toSeq
+          .flatMap(t => aggregateFieldsOf(t.typEx))
+      case _ => Seq.empty[Field]
+
+  /** A55: walk `names` from a starting [[TypeExpression]] through its aggregate fields. Used ONLY
+    * for `let`-headed paths — a `let` is not a Definition, so ResolutionPass cannot anchor there
+    * and cannot walk the rest for us. Everything else comes from the refMap.
+    */
+  private def typeExprOfPath(start: TypeExpression, names: Seq[String]): Option[TypeExpression] =
+    names.foldLeft(Option(start)) { (acc, n) =>
+      acc.flatMap(te => aggregateFieldsOf(te).find(_.id.value == n).map(_.typeEx))
+    }
+
+  /** A55: the named [[Type]] a `let`-local denotes — its `let x: T = …` annotation when present,
+    * otherwise INFERRED from the bound expression. Inference is required for `let bar = foo;
+    * bar.a`, since the annotation is optional and only it was consulted before A55. `priorLets`
+    * holds only the locals declared BEFORE `ls`, so a `let` can never see itself and the recursion
+    * strictly decreases — a cycle is impossible.
+    */
+  private def letType(
+    ls: LetStatement,
+    priorLets: Seq[LetStatement],
+    parents: Parents
+  ): Option[Type] =
+    ls.typeRef
+      .flatMap(tr => resolution.refMap.definitionOf[Type](tr.pathId))
+      .orElse(valueType(ls.expression, parents, priorLets))
+
+  /** A55: the index in `lets` of the innermost `let` binding `name`, or -1. `let`-locals are the
+    * one thing NOT resolved by ResolutionPass: a `let` is not a Definition and is statement-ORDERED
+    * (visible only after its declaration, shadowed by inner blocks), which the symbol table does
+    * not model. They stay lexical, threaded by [[checkStatementScopes]].
+    */
+  private def letIndexOf(name: String, lets: Seq[LetStatement]): Int =
+    lets.lastIndexWhere(_.identifier.value == name)
+
+  /** A55: the [[TypeExpression]] a [[ValueRef]] denotes — from the lexical `let` scope when its
+    * head names a local (which SHADOWS any outer definition of the same name), otherwise from the
+    * definition ResolutionPass put in the refMap.
+    */
+  private def valueRefTypeExpr(
+    vr: ValueRef,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Option[TypeExpression] =
+    val names = vr.path.value
+    if names.isEmpty then None
+    else
+      val idx = letIndexOf(names.head, lets)
+      if idx >= 0 then
+        val ls = lets(idx)
+        val priorLets = lets.take(idx)
+        letType(ls, priorLets, parents)
+          .map(_.typEx)
+          .orElse(valueTypeExpr(ls.expression, parents, priorLets))
+          .flatMap(te => typeExprOfPath(te, names.tail))
+      else
+        valueRefDefinition(vr, parents).flatMap {
+          case f: Field    => Some(f.typeEx)
+          case t: Type     => Some(t.typEx)
+          case k: Constant => Some(k.typeEx)
+          case _           => None
+        }
+      end if
+  end valueRefTypeExpr
+
+  /** A55: the [[TypeExpression]] any [[Value]] denotes, for the cases where a named [[Type]] is too
+    * narrow (a directly-typed `flag: Boolean` field has no named Type).
+    */
+  private def valueTypeExpr(
+    v: Value,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Option[TypeExpression] =
+    v match
+      case vr: ValueRef => valueRefTypeExpr(vr, parents, lets)
+      case _            => valueType(v, parents, lets).map(_.typEx)
+
+  /** A54/A55: the named [[Type]] a [[ValueRef]] resolves to, if determinable. A bare on-clause
+    * binding denotes the whole message, so it yields the message's Type directly; a field yields
+    * the Type its (aliased) declaration names; a `let` yields its declared or inferred type.
     */
   private def valueRefType(
     vr: ValueRef,
     parents: Parents,
     lets: Seq[LetStatement]
   ): Option[Type] =
-    val name = vr.path.value.lastOption.getOrElse("")
-    val fromLet: Option[Type] =
-      if vr.path.value.sizeIs == 1 then
-        lets.reverse
-          .find(_.identifier.value == name)
-          .flatMap(_.typeRef)
-          .flatMap(tr => resolution.refMap.definitionOf[Type](tr.pathId))
-      else None
-    def fromField: Option[Type] =
-      valueAllowedFields(parents).find(_.id.value == name).flatMap { f =>
-        f.typeEx match
-          case ate: AliasedTypeExpression => resolution.refMap.definitionOf[Type](ate.pathId)
-          case _                          => None
-      }
-    fromLet.orElse(fromField)
+    val names = vr.path.value
+    if names.isEmpty then None
+    else
+      val idx = letIndexOf(names.head, lets)
+      if idx >= 0 && names.sizeIs == 1 then letType(lets(idx), lets.take(idx), parents)
+      else
+        valueRefDefinition(vr, parents) match
+          case Some(t: Type) if idx < 0 => Some(t) // the whole message named by a binding
+          case _ =>
+            valueRefTypeExpr(vr, parents, lets).flatMap {
+              case ate: AliasedTypeExpression => resolution.refMap.definitionOf[Type](ate.pathId)
+              case _                          => None
+            }
+      end if
+  end valueRefType
 
-  /** A54: whether a [[ValueRef]] resolves to something in scope (a `let`-local or a
-    * message/state/function-input field). Used to report out-of-scope references.
+  /** A55: whether a [[ValueRef]] resolves — either lexically to a `let`-local in scope, or through
+    * the refMap to a definition ResolutionPass walked to. Because the resolver genuinely walks
+    * EVERY component, `a.b.c.field` no longer passes on last-component luck.
     */
   private def valueRefResolves(
     vr: ValueRef,
     parents: Parents,
     lets: Seq[LetStatement]
   ): Boolean =
-    val name = vr.path.value.lastOption.getOrElse("")
-    val isLet = vr.path.value.sizeIs == 1 && lets.exists(_.identifier.value == name)
-    val isField = valueAllowedFields(parents).exists(_.id.value == name)
-    isLet || isField
+    val names = vr.path.value
+    names.nonEmpty &&
+    (letIndexOf(names.head, lets) >= 0 || valueRefDefinition(vr, parents).nonEmpty)
 
   /** A54: validate a [[Value]] — recurse constructors, and confirm value references resolve. Get
     * sources are checked for existence via [[checkRef]].
@@ -3278,31 +3408,20 @@ case class ValidationPass(
         )
       case None => () // undetermined — skip
 
-  /** A17: the broad category (`"boolean"`/`"numeric"`/`"string"`) of a bare [[ValueRef]] used as a
-    * `when` condition, or `None` when it cannot be determined. Resolves the reference against the
-    * same four sources as a `when` condition plus named constants, classifying each source's
-    * [[TypeExpression]] DIRECTLY via [[typeExprCategory]] (following one level of alias). This is
-    * broader than [[valueCategory]]/[[valueRefType]], which only classify a field whose type is an
-    * ALIASED type — a directly-typed `flag: Boolean` field must classify too.
+  /** A17/A55: the broad category (`"boolean"`/`"numeric"`/`"string"`) of a bare [[ValueRef]] used
+    * as a `when` condition, or `None` when it cannot be determined. It classifies the reference's
+    * [[TypeExpression]] DIRECTLY via [[typeExprCategory]], which is broader than
+    * [[valueCategory]]/[[valueRefType]] — those only classify a field whose type is an ALIASED
+    * type, and a directly-typed `flag: Boolean` field must classify too. The reference itself is
+    * resolved by [[valueRefTypeExpr]] (lexical `let` scope, then the refMap), so — unlike before
+    * A55 — every component of the path is walked, not just the last.
     */
   private def whenValueRefCategory(
     vr: ValueRef,
     parents: Parents,
     lets: Seq[LetStatement]
   ): Option[String] =
-    val name = vr.path.value.lastOption.getOrElse("")
-    val fromLet: Option[String] =
-      if vr.path.value.sizeIs == 1 then
-        lets.reverse
-          .find(_.identifier.value == name)
-          .flatMap(_.typeRef)
-          .flatMap(tr => resolution.refMap.definitionOf[Type](tr.pathId))
-          .flatMap(t => typeExprCategory(t.typEx))
-      else None
-    def fromField: Option[String] =
-      valueAllowedFields(parents).find(_.id.value == name).flatMap(f => typeExprCategory(f.typeEx))
-    def fromConstant: Option[String] = constantOf(vr).flatMap(k => typeExprCategory(k.typeEx))
-    fromLet.orElse(fromField).orElse(fromConstant)
+    valueRefTypeExpr(vr, parents, lets).flatMap(typeExprCategory)
 
   /** A17: a bare boolean value reference used as a `when` condition must resolve to a Boolean-typed
     * value — a boolean field of the handled message/entity-state/function-input, a boolean
@@ -3327,17 +3446,15 @@ case class ValidationPass(
         )
       case None => () // undetermined — skip (best-effort)
 
-  /** A28: the [[Constant]] a bare comparison [[ValueRef]] names, if any. Comparisons may compare a
-    * field/local against a named `constant` written as a bare path (`count > MaxCount`); the
-    * four-source [[valueRefResolves]] does not cover constants, so this consults the symbol table.
-    */
-  private def constantOf(vr: ValueRef): Option[Constant] =
-    if vr.path.value.nonEmpty then symbols.lookup[Constant](vr.path.value.reverse).headOption
-    else None
+  // A28's `constantOf` is gone. Comparisons may still compare a field/local against a named
+  // `constant` written as a bare path (`count > MaxCount`), but A55 resolves that path in
+  // ResolutionPass like every other ValueRef, so the Constant arrives via `valueRefDefinition`
+  // instead of a separate, unscoped symbol-table lookup here.
 
   /** A28: the broad category of a comparison operand ([[Comparand]]). A [[ConstantRef]] resolves
     * via the refMap to a [[Constant]] whose declared `typeEx` is classified; a bare [[ValueRef]]
-    * naming a constant is classified likewise; everything else defers to [[valueCategory]].
+    * (including one naming a constant) is classified by [[valueRefTypeExpr]], which sees a
+    * directly-typed field as well as an aliased one.
     */
   private def comparandCategory(
     c: Comparand,
@@ -3349,8 +3466,7 @@ case class ValidationPass(
         resolution.refMap.definitionOf[Constant](cr.pathId).flatMap(k => typeExprCategory(k.typeEx))
       case gv: GetValue => valueCategory(gv, parents, lets)
       case vr: ValueRef =>
-        valueCategory(vr, parents, lets)
-          .orElse(constantOf(vr).flatMap(k => typeExprCategory(k.typeEx)))
+        valueCategory(vr, parents, lets).orElse(whenValueRefCategory(vr, parents, lets))
 
   /** A28: validate a comparison operand ([[Comparand]]) resolves. A [[ConstantRef]]/[[GetValue]] is
     * checked via [[checkRef]]; a bare [[ValueRef]] must be a `let`-local, an in-scope field, or a
@@ -3361,7 +3477,7 @@ case class ValidationPass(
       case cr: ConstantRef => checkRef[Constant](cr, parents)
       case gv: GetValue    => validateValue(gv, parents, lets)
       case vr: ValueRef =>
-        if !valueRefResolves(vr, parents, lets) && constantOf(vr).isEmpty then
+        if !valueRefResolves(vr, parents, lets) then
           messages.addError(
             vr.loc,
             s"Value reference '${vr.path.format}' is not a 'let'-local, a field of the handled " +
@@ -3849,6 +3965,7 @@ case class ValidationPass(
         // A54: validate the bound expression with the scope BEFORE this let (a let can't see itself),
         // then check its type against a declared `let x: T = …`.
         validateValue(ls.expression, parents, lets)
+        checkLocalName(ls.identifier, "'let' local", parents) // A55
         ls.typeRef.foreach { tr =>
           val expected = resolution.refMap.definitionOf[Type](tr.pathId)
           checkValueType(

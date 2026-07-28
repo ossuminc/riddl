@@ -15,7 +15,7 @@ to the task file and note the disposition below.
 
 ---
 
-## A55 — optional local name binding for the on-clause message — WIP
+## A55 — optional local name binding for the on-clause message — DONE
 
 `on foo: command Foo { … }` binds an optional local name to the handled
 message. The `:` is ordinary **type ascription** — the same rule as
@@ -37,6 +37,48 @@ EBNF/GBNF grammars plus a corpus fixture.
 `from [<name>:] <origin>` clause at all, so `on command C.DoIt from di:
 context C` silently lost its origin on **every** round trip. It is emitted
 now, in the same `openDef` slot the binding uses.
+
+**Slice 2 (done): `ValueRef` is resolved by the RESOLVER, not by hand.**
+A54 had `ResolutionPass` skip `ValueRef` outright and matched only
+`path.value.last` in validation against three in-scope field sources — so
+`garbage.nonsense.conditionRed` validated whenever `conditionRed` was a
+field of the handled message. The leading components were never examined.
+That hole is a symptom of the duplication, and it closes as a consequence
+of removing it.
+
+- The three `case _: ValueRef => ()` opt-outs are gone. A ValueRef is now
+  queued and resolved in `postProcess` (its value-scope anchors are reached
+  THROUGH other references, and the pass visits definitions in source
+  order, so a handler written above the state it reads must not lose).
+- Only the ANCHOR choice differs from an ordinary reference: the on-clause
+  BINDING, else a field of the handled message / entity state / function
+  `requires` input, else the ordinary `findAnchor` route (which covers
+  qualified paths like `GState.active` and bare `constant` names). The rest
+  is `resolvePathFromAnchor`'s existing walk — no new traversal machinery.
+- **`let`-locals stay LEXICAL.** A `let` is not a Definition and is
+  statement-ORDERED (visible only after its declaration, shadowed by inner
+  blocks), which the symbol table cannot model. They stay threaded by
+  `checkStatementScopes`; everything else goes through the refMap. The
+  ValueRef walk therefore runs QUIETLY (`ResolutionPass.quietly`) — only
+  validation knows whether a failure is real, so it owns the diagnostic.
+- **A `let`'s type is now INFERRED from its expression** when it has no
+  `let x: T = …` annotation, which is what makes `let bar = foo; bar.a`
+  work. `validateForeachCollection`'s "has no declared type" complaint is
+  reworded to "no declared or inferable type" and fires less often.
+- `whenValueRefCategory`, `validateComparand`, `comparandCategory`,
+  `matchSubject*` all read the refMap now; `valueAllowedFields` and
+  `constantOf` are deleted (the resolver does that lookup).
+- Warnings: a local shadowing an outer definition → Warning; a binding
+  colliding with a field of the message/state → Warning (legal: bare `foo`
+  is the binding, `foo.foo` is the field); a local name not BEGINNING with
+  a lowercase letter → StyleWarning (camelCase stays legal).
+
+**Latent bug found and fixed:** `findMatchingCandidate`'s on-clause arm was
+guarded by `omc.msg.id.nonEmpty`, but `Reference.id` is a reference's
+OPTIONAL LOCAL NAME (what `from di: context C` sets) and no `MessageRef`
+ever carries one — so the arm was **unreachable**. The intended test is
+`omc.msg.nonEmpty` (a non-empty pathId), and it is what lets an
+`on foo: command Foo` binding walk `foo.someField`.
 
 ## #60 Slice 2 — the predefined `Riddl` standard module — DONE
 

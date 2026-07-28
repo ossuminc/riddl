@@ -83,6 +83,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   override def close(): Unit = ()
 
   override def postProcess(root: PassRoot): Unit = {
+    // A55: ValueRefs are resolved LAST, after every other reference is in the refMap. Their
+    // value-scope anchors are reached THROUGH other references (an on-clause's `msg`, a `state`'s
+    // record, a function's `requires`), and the pass visits definitions in source order — so a
+    // handler written above the state it reads would otherwise see an unresolved record.
+    deferredValueRefs.foreach { case (vr, parents) => resolveValueRef(vr, parents) }
+    deferredValueRefs.clear()
     checkUnused()
   }
 
@@ -348,8 +354,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
 
   /** A54: resolve the references inside a [[Value]] so validation can find them in the refMap.
     * Constructor refs (message/record Types) and GetValue sources (Input/State) resolve here; a
-    * [[ValueRef]]'s four-source resolution is deferred to validation (like a foreach local).
-    * Recurses into constructor arguments.
+    * [[ValueRef]] is queued for [[resolveValueRef]], which runs in `postProcess`. Recurses into
+    * constructor arguments.
     */
   private def resolveValue(v: Value, parents: Parents): Unit =
     v match
@@ -362,7 +368,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         // A24: resolve the called function and recurse into argument values.
         associateUsage[Function](parents.head, resolveARef[Function](call.function, parents))
         call.args.foreach(arg => resolveValue(arg.value, parents))
-      case _: ValueRef => () // four-source resolution happens at validation time
+      case vr: ValueRef => deferValueRef(vr, parents)
       case gv: GetValue =>
         gv.source match
           case ir: InputRef => associateUsage[Input](parents.head, resolveARef[Input](ir, parents))
@@ -377,25 +383,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case ne: NotExpression     => resolveValue(ne.expr, parents)
 
   /** A28: resolve a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef). A
-    * `ConstantRef` and a `GetValue` source resolve here (into the refMap); a bare [[ValueRef]]'s
-    * four-source (plus bare-`Constant`) resolution is deferred to validation, like `resolveValue`.
+    * `ConstantRef` and a `GetValue` source resolve here (into the refMap); a bare [[ValueRef]] is
+    * queued for [[resolveValueRef]], like `resolveValue`.
     */
   private def resolveComparand(c: Comparand, parents: Parents): Unit =
     c match
       case cr: ConstantRef => associateUsage(parents.head, resolveARef[Constant](cr, parents))
       case gv: GetValue    => resolveValue(gv, parents)
-      case _: ValueRef => () // four-source (incl. bare Constant) resolution happens at validation
+      case vr: ValueRef    => deferValueRef(vr, parents)
 
   /** A29: resolve the reference-bearing parts of a [[MatchStatement]] — the subject (a GetValue
-    * source; a bare ValueRef's four-source resolution is deferred to validation), each pattern (a
-    * [[TypePattern]]'s TypeRef, a [[ComparisonPattern]]'s comparand), and each optional guard's
-    * operand refs. The case/default statement bodies are handled separately via
-    * [[resolveForeachFieldRefs]].
+    * source; a bare ValueRef is queued for [[resolveValueRef]]), each pattern (a [[TypePattern]]'s
+    * TypeRef, a [[ComparisonPattern]]'s comparand), and each optional guard's operand refs. The
+    * case/default statement bodies are handled separately via [[resolveForeachFieldRefs]].
     */
   private def resolveMatchParts(ms: MatchStatement, parents: Parents): Unit =
     ms.expression match
       case gv: GetValue     => resolveValue(gv, parents)
-      case _: ValueRef      => () // four-source resolution deferred to validation
+      case vr: ValueRef     => deferValueRef(vr, parents)
       case _: LiteralString => () // legacy pseudo-code, no references
     ms.cases.foreach { mc =>
       mc.pattern match
@@ -407,6 +412,115 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         case _: LiteralPattern     => () // legacy pseudo-code, no references
       mc.guard.foreach(g => resolveValue(g, parents))
     }
+
+  ////////////////////////////////////////////////////////////////////////////////// A55 VALUE REFS
+
+  /** A55: [[ValueRef]]s awaiting resolution in `postProcess`, each with the `parents` in force
+    * where it was written (its head is the enclosing on-clause or function, matching the refMap
+    * keys ValidationPass looks up).
+    */
+  private val deferredValueRefs: mutable.ArrayBuffer[(ValueRef, Parents)] =
+    mutable.ArrayBuffer.empty
+
+  private def deferValueRef(vr: ValueRef, parents: Parents): Unit =
+    if parents.nonEmpty then deferredValueRefs.append(vr -> parents)
+
+  /** A55: message suppression while a [[ValueRef]] is resolved. A ValueRef is resolved by the same
+    * walker as every other reference, but it may legitimately fail here: its head can name a
+    * `let`-local, which is lexical and statement-ORDERED (visible only after its declaration,
+    * shadowed by inner blocks) and therefore not a Definition the symbol table models at all. Only
+    * ValidationPass threads that lexical scope, so it owns the diagnostic and the walk runs
+    * quietly.
+    */
+  private var quiet: Boolean = false
+
+  private def quietly[T](body: => T): T =
+    quiet = true
+    try body
+    finally quiet = false
+
+  /** A55: resolve a [[ValueRef]]'s path into the refMap using the SAME engine every other reference
+    * uses — [[resolvePathFromAnchor]] and its [[findMatchingCandidate]] walk. Only the ANCHOR is
+    * chosen differently, because a ValueRef's leading name is not a global symbol: it names
+    * something in the VALUE scope. In order:
+    *
+    *   1. the on-clause's message BINDING (`on foo: command Foo`) — bare `foo` denotes the whole
+    *      message Type, and `foo.field` anchors at the clause, whose arm in
+    *      [[findMatchingCandidate]] already pushes the message's members;
+    *   1. a field of the handled message, of the enclosing entity's state record(s), or of the
+    *      enclosing function's `requires` input — the anchor is that [[Field]], from which
+    *      `findMatchingCandidate`'s `case field: Field` arm walks any further components;
+    *   1. otherwise the ORDINARY reference route ([[resolveAPathId]]), which covers a qualified
+    *      path anchored at a real definition (`GState.active`) and a bare `constant` name.
+    *
+    * A `let`-local matches none of these and fails quietly — by design; see [[quiet]]. No new
+    * traversal machinery is written here: every hop already existed for ordinary references.
+    */
+  private def resolveValueRef(vr: ValueRef, parents: Parents): Unit =
+    val names = vr.path.value
+    if names.nonEmpty && parents.nonEmpty then
+      quietly {
+        val head = names.head
+        val parent = parents.head
+        parents.collectFirst {
+          case omc: OnMessageLikeClause if omc.binding.exists(_.value == head) => omc
+        } match
+          case Some(omc) =>
+            if names.sizeIs == 1 then
+              // The bare binding denotes the WHOLE message, so it resolves to the message's Type.
+              refMap.definitionOf[Type](omc.msg.pathId, omc).foreach { t =>
+                refMap.add[Type](vr.path, parent, t)
+                associateUsage(parent, t)
+              }
+            else
+              resolvePathFromAnchor[Definition](
+                vr.path,
+                parents,
+                omc,
+                parents.dropWhile(_ ne omc).drop(1)
+              )
+            end if
+          case None =>
+            valueScopeField(head, parents) match
+              case Some(field) if names.sizeIs == 1 =>
+                refMap.add[Field](vr.path, parent, field)
+                associateUsage(parent, field)
+              case Some(field) =>
+                resolvePathFromAnchor[Definition](vr.path, parents, field, symbols.parentsOf(field))
+              case None => resolveAPathId[Definition](vr.path, parents)
+        end match
+      }
+    end if
+  end resolveValueRef
+
+  /** A55: the value-scope [[Field]] a [[ValueRef]]'s leading name may denote — a field of the
+    * enclosing entity's state record(s), of the handled on-clause message, or of the enclosing
+    * function's `requires` input, in that order. Mirrors ValidationPass's `foreachAllowedFields` so
+    * both passes see the same fields (membership there is tested by identity).
+    */
+  private def valueScopeField(name: String, parents: Parents): Option[Field] =
+    def aggFields(t: Type): Seq[Field] =
+      t.typEx match
+        case ate: AggregateTypeExpression => ate.fields
+        case _                            => Seq.empty[Field]
+    val stateFields: Seq[Field] =
+      parents.collectFirst { case e: Entity => e }.toSeq.flatMap { e =>
+        e.states.flatMap(st => refMap.definitionOf[Type](st.typ.pathId).toSeq.flatMap(aggFields))
+      }
+    val messageFields: Seq[Field] =
+      parents
+        .collectFirst { case omc: OnMessageLikeClause if omc.msg.nonEmpty => omc }
+        .toSeq
+        .flatMap(omc => refMap.definitionOf[Type](omc.msg.pathId).toSeq.flatMap(aggFields))
+    val functionFields: Seq[Field] =
+      parents.collectFirst { case f: Function => f }.toSeq.flatMap { f =>
+        f.input.toSeq.flatMap {
+          case tr: TypeRef      => refMap.definitionOf[Type](tr.pathId).toSeq.flatMap(aggFields)
+          case agg: Aggregation => agg.fields
+        }
+      }
+    (stateFields ++ messageFields ++ functionFields).find(_.id.value == name)
+  end valueScopeField
 
   /** A54: resolve a message/record operand — a bare ref (resolved as a Type) or a [[Constructor]]
     * (resolved via [[resolveValue]]). Shared by send/tell/yield (message) and morph (record).
@@ -772,13 +886,14 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     val referTo = classTag[T].runtimeClass.getSimpleName
     val message = s"Path '${pathId.value.mkString(".")}' resolved to ${foundDef.identifyWithLoc}," +
       s" in ${container.identify}, but ${article(referTo)} was expected"
-    messages.addError(
-      pathId.loc,
-      message,
-      suggestion =
-        s"'${pathId.value.mkString(".")}' points at the wrong kind of definition. Point it at ${article(referTo)} " +
-          s"instead, or rename the reference to match the intended $referTo."
-    )
+    if !quiet then
+      messages.addError(
+        pathId.loc,
+        message,
+        suggestion =
+          s"'${pathId.value.mkString(".")}' points at the wrong kind of definition. Point it at ${article(referTo)} " +
+            s"instead, or rename the reference to match the intended $referTo."
+      )
     if io.options.debug then
       println(
         s"WrongType: ${pathId.format} ==> ${foundDef.identifyWithLoc} not ${article(referTo)}"
@@ -803,16 +918,17 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           }"
 
     val referTo = tc.getSimpleName
-    messages.addError(
-      pathId.loc,
-      message + {
-        if referTo.nonEmpty then s"and it should refer to ${article(referTo)}"
-        else ""
-      },
-      suggestion =
-        s"Define ${article(referTo)} named by '${pathId.value.mkString(".")}', or correct the path so it names " +
-          s"an existing $referTo reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
-    )
+    if !quiet then
+      messages.addError(
+        pathId.loc,
+        message + {
+          if referTo.nonEmpty then s"and it should refer to ${article(referTo)}"
+          else ""
+        },
+        suggestion =
+          s"Define ${article(referTo)} named by '${pathId.value.mkString(".")}', or correct the path so it names " +
+            s"an existing $referTo reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
+      )
     if io.options.debug then println(s"Unresolved: ${pathId.format} ==> ???")
   end notResolved
 
@@ -855,9 +971,14 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               // We found a state so the fields of the state
               // the contained handlers and the fields of the state's data
               candidatesFromPathIdentifier[Type](st.typ.pathId, defStack)
-            case omc: OnMessageLikeClause if omc.msg.id.nonEmpty =>
-              // we found an onClause (message or event) that references a named message
-              // need to push that message's path on the name stack
+            case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+              // We found an on-clause (message or event); its message's members are the
+              // candidates, so push that message's path on the name stack. A55: the guard was
+              // `omc.msg.id.nonEmpty`, but `Reference.id` is the OPTIONAL LOCAL NAME of a
+              // reference (what `from di: context C` sets) and no MessageRef ever carries one —
+              // so this arm was unreachable. `nonEmpty` on the reference itself (a non-empty
+              // pathId) is the intended test, and it is what makes an `on foo: command Foo`
+              // binding resolve `foo.someField` as an ordinary path walk.
               candidatesFromPathIdentifier[Type](omc.msg.pathId, defStack)
             case field: Field =>
               candidatesFromTypeExpression(field.typeEx, defStack)
@@ -1120,13 +1241,14 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         val message =
           s"Path reference '${pid.value.mkString(".")}' is ambiguous. Definitions are:\n$ambiguity" +
             context.map(_ + "\n").getOrElse("")
-        messages.addError(
-          pid.loc,
-          message,
-          suggestion =
-            s"Disambiguate '${pid.value.mkString(".")}' with a more specific, fully-qualified path " +
-              "(e.g. 'Domain.Context.Entity.Name') so it matches exactly one definition."
-        )
+        if !quiet then
+          messages.addError(
+            pid.loc,
+            message,
+            suggestion =
+              s"Disambiguate '${pid.value.mkString(".")}' with a more specific, fully-qualified path " +
+                "(e.g. 'Domain.Context.Entity.Name') so it matches exactly one definition."
+          )
         Seq.empty[WithIdentifier]
     }
   }
