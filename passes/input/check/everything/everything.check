@@ -73,10 +73,6 @@ passes/input/check/everything/everything.riddl(39:10->20):
 passes/input/check/everything/everything.riddl(40:10->18):
  Type 'optional' should start with a capital letter:
      type optional is agg?
-passes/input/check/everything/everything.riddl(63:24->64:5):
- Option 'transient' in Entity 'Something' is not a recognized RIDDL option:
-       option aggregate option transient
-     }
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' should have a description:
      entity Something is {

@@ -15,3 +15,4 @@ import org.scalatest.TestData
 class AdaptorTest extends SharedAdaptorTest
 class ApplicationTest extends SharedApplicationTest
 class ValidationTest extends SharedValidationTest
+class OptionValidationTest extends SharedOptionValidationTest

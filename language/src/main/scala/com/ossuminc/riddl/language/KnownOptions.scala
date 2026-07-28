@@ -8,145 +8,74 @@ package com.ossuminc.riddl.language
 
 import scala.scalajs.js.annotation.JSExportTopLevel
 
-/** AN object that defines the names of the known options */
+/** The option names advertised for each kind of definition.
+  *
+  * Every list here is now DERIVED from [[RecognizedOptions.registry]], which is the single source
+  * of truth for RIDDL options. Previously these lists were maintained by hand alongside the
+  * registry; the two drifted apart three times, and each drift produced a spurious "not a
+  * recognized RIDDL option" style warning on a perfectly valid option.
+  *
+  * All the lists are therefore `@deprecated`: call [[RecognizedOptions.optionsFor]]`(<definition
+  * kind>)` instead, which also gives you the argument counts by way of
+  * [[RecognizedOptions.registry]].
+  *
+  * The argument to `optionsFor` is a `Definition.kind` string. Note that a Streamlet's kind is its
+  * SHAPE name (Source/Sink/Flow/Merge/Split/Router/Void) and a portlet's is Inlet/Outlet — see
+  * [[RecognizedOptions.streamletKinds]] and [[RecognizedOptions.portletKinds]].
+  */
 @JSExportTopLevel("KnownOptions")
 object KnownOptions {
 
-  final val adaptor: Seq[String] = Seq(
-    KnownOption.technology,
-    KnownOption.kind,
-    KnownOption.css,
-    KnownOption.faicon
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val adaptor: Seq[String] = RecognizedOptions.optionsFor("Adaptor")
 
-  final val application: Seq[String] = Seq(
-    KnownOption.technology,
-    KnownOption.kind,
-    KnownOption.css,
-    KnownOption.faicon
-  )
+  /** Options advertised for an "application". An application is no longer a definition kind of its
+    * own: it is a [[AST.Context]] carrying the `application` intention, so its options are a
+    * context's options.
+    */
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val application: Seq[String] = RecognizedOptions.optionsFor("Context")
 
-  final val connector: Seq[String] = Seq(
-    KnownOption.persistent,
-    KnownOption.technology,
-    KnownOption.kind
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val connector: Seq[String] = RecognizedOptions.optionsFor("Connector")
 
-  final val context: Seq[String] = Seq(
-    KnownOption.wrapper,
-    KnownOption.gateway,
-    KnownOption.service,
-    KnownOption.package_,
-    KnownOption.namespace,
-    KnownOption.technology,
-    KnownOption.css,
-    KnownOption.kind,
-    KnownOption.faicon,
-    KnownOption.protocol,
-    KnownOption.event_catalog_version,
-    KnownOption.sql_dialect,
-    KnownOption.backstage_owner,
-    KnownOption.backstage_lifecycle,
-    KnownOption.backstage_type
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val context: Seq[String] = RecognizedOptions.optionsFor("Context")
 
-  final val domain: Seq[String] = Seq(
-    KnownOption.external,
-    KnownOption.package_,
-    KnownOption.namespace,
-    KnownOption.technology,
-    KnownOption.css,
-    KnownOption.kind,
-    KnownOption.faicon,
-    KnownOption.event_catalog_version,
-    KnownOption.sql_dialect,
-    KnownOption.backstage_owner,
-    KnownOption.backstage_lifecycle,
-    KnownOption.backstage_type,
-    KnownOption.confluence_space,
-    KnownOption.confluence_parent
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val domain: Seq[String] = RecognizedOptions.optionsFor("Domain")
 
-  final val entity: Seq[String] = Seq(
-    KnownOption.event_sourced,
-    KnownOption.value,
-    KnownOption.aggregate,
-    KnownOption.transient,
-    KnownOption.consistent,
-    KnownOption.available,
-    KnownOption.finite_state_machine,
-    KnownOption.kind,
-    KnownOption.message_queue,
-    KnownOption.technology,
-    KnownOption.css,
-    KnownOption.faicon,
-    KnownOption.protocol,
-    KnownOption.sql_dialect,
-    KnownOption.sql_table,
-    KnownOption.backstage_owner,
-    KnownOption.backstage_lifecycle,
-    KnownOption.backstage_type
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val entity: Seq[String] = RecognizedOptions.optionsFor("Entity")
 
-  final val epic: Seq[String] = Seq(
-    KnownOption.technology,
-    KnownOption.css,
-    KnownOption.sync,
-    KnownOption.kind,
-    KnownOption.faicon
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val epic: Seq[String] = RecognizedOptions.optionsFor("Epic")
 
-  final val projector: Seq[String] = Seq(
-    KnownOption.technology,
-    KnownOption.css,
-    KnownOption.faicon,
-    KnownOption.kind,
-    KnownOption.protocol,
-    KnownOption.backstage_owner,
-    KnownOption.backstage_lifecycle,
-    KnownOption.backstage_type
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val projector: Seq[String] = RecognizedOptions.optionsFor("Projector")
 
-  final val repository: Seq[String] = Seq(
-    KnownOption.technology,
-    KnownOption.kind,
-    KnownOption.css,
-    KnownOption.faicon,
-    KnownOption.protocol,
-    KnownOption.sql_dialect,
-    KnownOption.sql_table,
-    KnownOption.backstage_owner,
-    KnownOption.backstage_lifecycle,
-    KnownOption.backstage_type
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val repository: Seq[String] = RecognizedOptions.optionsFor("Repository")
 
   /** Options advertised for a Saga. A saga is SEQUENTIAL by definition, so
-    * [[KnownOption.sequential]] is deliberately NOT listed here — an option to request the default
+    * [[KnownOption.sequential]] is deliberately NOT registered — an option to request the default
     * behaviour is redundant (A11). The constant itself is retained as public API.
     */
-  final val saga: Seq[String] = Seq(
-    KnownOption.technology,
-    KnownOption.kind,
-    KnownOption.css,
-    KnownOption.faicon,
-    KnownOption.protocol,
-    KnownOption.parallel,
-    KnownOption.compensate
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val saga: Seq[String] = RecognizedOptions.optionsFor("Saga")
 
-  final val streamlet: Seq[String] = Seq(
-    KnownOption.technology,
-    KnownOption.css,
-    KnownOption.kind,
-    KnownOption.protocol
-  )
+  /** Options advertised for a streamlet. A Streamlet's `kind` is its SHAPE's simple name, never
+    * "Streamlet", so this is the union over all seven shapes.
+    */
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val streamlet: Seq[String] =
+    RecognizedOptions.optionsForAny(RecognizedOptions.streamletKinds)
 
   /** Options recognized on a portlet (Inlet or Outlet). `async` marks a portlet as a codegen async
     * boundary (anti-fusion); see RecognizedOptions.registry.
     */
-  final val portlet: Seq[String] = Seq(
-    KnownOption.async
-  )
+  @deprecated("Use RecognizedOptions.optionsFor(kind)", "2.0.0")
+  final val portlet: Seq[String] = RecognizedOptions.optionsForAny(RecognizedOptions.portletKinds)
 }
 
 object KnownOption {
@@ -183,7 +112,15 @@ object KnownOption {
   final val sql_table = "sql_table"
   final val sync = "sync"
   final val tail_recursive = "tail-recursive"
-  final val value = "final value"
+
+  /** The `value` entity option (an entity that is a DDD value object).
+    *
+    * NOTE: from its introduction until the option registry was consolidated this constant held the
+    * string `"final value"` — the artifact of a bad edit of `final val value = "value"`. That
+    * string contains a space and so could never name a parseable RIDDL option, and the constant had
+    * no consumers anywhere, so the typo was never observable. It is corrected here.
+    */
+  final val value = "value"
   final val wrapper = "wrapper"
   final val technology = "technology"
   final val transient = "transient"
