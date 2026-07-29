@@ -461,11 +461,18 @@ object JsonModel:
     * `binding` is A55's optional local name bound to the handled message (`on foo: command Foo`);
     * it is DEFAULTED so JSON written before A55 still reads.
     */
+  /** An on-clause's `from [<name>:] <origin>`: which processor the message came from, and the
+    * optional local name bound to it. Absent everywhere before this, so the builder hardcoded
+    * `None` and every `on … from …` silently lost its origin.
+    */
+  case class OnFromDto(ref: RefDto, name: Option[String] = None)
+
   case class OnClauseDto(
     kind: String,
     message: Option[MessageRefDto] = None,
     statements: Seq[StatementDto] = Nil,
     binding: Option[String] = None,
+    from: Option[OnFromDto] = None,
     metadata: Option[MetaDto] = None,
     // An on-clause may be documented like any other definition (`on other { … } with { briefly … }`).
     brief: Option[String] = None
@@ -946,7 +953,11 @@ object JsonModel:
   /** A generic definition reference: `{ "kind": "user"|"entity"|"context"|"group"|"output"|"input"|
     * "adaptor"|"projector", "path": "<path>" }`
     */
-  case class RefDto(kind: String, path: String)
+  /** A reference in an interaction. `keyword` preserves the ALIAS the source used — a group may be
+    * written `button`, `page` or `form`, and rebuilding it as the bare `group`/`input`/`output`
+    * rewrote the model's wording. Absent means the canonical keyword for that kind.
+    */
+  case class RefDto(kind: String, path: String, keyword: Option[String] = None)
 
   /** `{ "user": "<userPath>", "capability": "...", "benefit": "..." }` */
   case class UserStoryDto(user: String, capability: String, benefit: String)
@@ -958,12 +969,23 @@ object JsonModel:
       extends InteractionDto
   case class ArbitraryIxnDto(from: RefDto, relationship: String, to: RefDto) extends InteractionDto
   case class SelfIxnDto(from: RefDto, relationship: String) extends InteractionDto
-  case class FocusOnGroupIxnDto(user: String, group: String) extends InteractionDto
-  case class DirectToURLIxnDto(user: String, url: String) extends InteractionDto
-  case class ShowOutputIxnDto(output: String, relationship: String, user: String)
+
+  /** `keyword` preserves the group/input/output ALIAS the source used (`page`, `button`, `form`,
+    * …); rebuilding it as the bare canonical keyword rewrote the model's wording.
+    */
+  case class FocusOnGroupIxnDto(user: String, group: String, keyword: Option[String] = None)
       extends InteractionDto
-  case class SelectInputIxnDto(user: String, input: String) extends InteractionDto
-  case class TakeInputIxnDto(user: String, input: String) extends InteractionDto
+  case class DirectToURLIxnDto(user: String, url: String) extends InteractionDto
+  case class ShowOutputIxnDto(
+    output: String,
+    relationship: String,
+    user: String,
+    keyword: Option[String] = None
+  ) extends InteractionDto
+  case class SelectInputIxnDto(user: String, input: String, keyword: Option[String] = None)
+      extends InteractionDto
+  case class TakeInputIxnDto(user: String, input: String, keyword: Option[String] = None)
+      extends InteractionDto
   case class RefusalIxnDto(from: RefDto, user: String, reason: String) extends InteractionDto
   case class ParallelIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
   case class SequentialIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
@@ -1691,17 +1713,26 @@ object JsonModel:
         SendMessageIxnDto(readRef(m("from")), msgRef(m("message")), m("to").str, m("processor").str)
       case "arbitrary" =>
         ArbitraryIxnDto(readRef(m("from")), m("relationship").str, readRef(m("to")))
-      case "self"         => SelfIxnDto(readRef(m("from")), m("relationship").str)
-      case "focusOnGroup" => FocusOnGroupIxnDto(m("user").str, m("group").str)
-      case "directToURL"  => DirectToURLIxnDto(m("user").str, m("url").str)
-      case "showOutput"   => ShowOutputIxnDto(m("output").str, m("relationship").str, m("user").str)
-      case "selectInput"  => SelectInputIxnDto(m("user").str, m("input").str)
-      case "takeInput"    => TakeInputIxnDto(m("user").str, m("input").str)
-      case "refusal"      => RefusalIxnDto(readRef(m("from")), m("user").str, m("reason").str)
-      case "parallel"     => ParallelIxnDto(readIxns(m.get("interactions")))
-      case "sequential"   => SequentialIxnDto(readIxns(m.get("interactions")))
-      case "optional"     => OptionalIxnDto(readIxns(m.get("interactions")))
-      case other => throw new IllegalArgumentException(s"Unknown interaction kind: '$other'")
+      case "self" => SelfIxnDto(readRef(m("from")), m("relationship").str)
+      case "focusOnGroup" =>
+        FocusOnGroupIxnDto(m("user").str, m("group").str, m.get("keyword").map(_.str))
+      case "directToURL" => DirectToURLIxnDto(m("user").str, m("url").str)
+      case "showOutput" =>
+        ShowOutputIxnDto(
+          m("output").str,
+          m("relationship").str,
+          m("user").str,
+          m.get("keyword").map(_.str)
+        )
+      case "selectInput" =>
+        SelectInputIxnDto(m("user").str, m("input").str, m.get("keyword").map(_.str))
+      case "takeInput" =>
+        TakeInputIxnDto(m("user").str, m("input").str, m.get("keyword").map(_.str))
+      case "refusal"    => RefusalIxnDto(readRef(m("from")), m("user").str, m("reason").str)
+      case "parallel"   => ParallelIxnDto(readIxns(m.get("interactions")))
+      case "sequential" => SequentialIxnDto(readIxns(m.get("interactions")))
+      case "optional"   => OptionalIxnDto(readIxns(m.get("interactions")))
+      case other        => throw new IllegalArgumentException(s"Unknown interaction kind: '$other'")
     end match
   end readInteraction
 
@@ -1738,11 +1769,13 @@ object JsonModel:
           "from" -> refJs(from),
           "relationship" -> ujson.Str(rel)
         )
-      case FocusOnGroupIxnDto(user, group) =>
-        ujson.Obj(
-          "kind" -> ujson.Str("focusOnGroup"),
-          "user" -> ujson.Str(user),
-          "group" -> ujson.Str(group)
+      case FocusOnGroupIxnDto(user, group, kw) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("focusOnGroup"),
+            "user" -> ujson.Str(user),
+            "group" -> ujson.Str(group)
+          ) ++ kw.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
         )
       case DirectToURLIxnDto(user, url) =>
         ujson.Obj(
@@ -1750,24 +1783,30 @@ object JsonModel:
           "user" -> ujson.Str(user),
           "url" -> ujson.Str(url)
         )
-      case ShowOutputIxnDto(output, rel, user) =>
-        ujson.Obj(
-          "kind" -> ujson.Str("showOutput"),
-          "output" -> ujson.Str(output),
-          "relationship" -> ujson.Str(rel),
-          "user" -> ujson.Str(user)
+      case ShowOutputIxnDto(output, rel, user, kw) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("showOutput"),
+            "output" -> ujson.Str(output),
+            "relationship" -> ujson.Str(rel),
+            "user" -> ujson.Str(user)
+          ) ++ kw.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
         )
-      case SelectInputIxnDto(user, input) =>
-        ujson.Obj(
-          "kind" -> ujson.Str("selectInput"),
-          "user" -> ujson.Str(user),
-          "input" -> ujson.Str(input)
+      case SelectInputIxnDto(user, input, kw) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("selectInput"),
+            "user" -> ujson.Str(user),
+            "input" -> ujson.Str(input)
+          ) ++ kw.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
         )
-      case TakeInputIxnDto(user, input) =>
-        ujson.Obj(
-          "kind" -> ujson.Str("takeInput"),
-          "user" -> ujson.Str(user),
-          "input" -> ujson.Str(input)
+      case TakeInputIxnDto(user, input, kw) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("takeInput"),
+            "user" -> ujson.Str(user),
+            "input" -> ujson.Str(input)
+          ) ++ kw.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
         )
       case RefusalIxnDto(from, user, reason) =>
         ujson.Obj(
@@ -1973,6 +2012,8 @@ object JsonModel:
   given metaDtoRW: ReadWriter[MetaDto] = macroRW
   given fieldRW: ReadWriter[FieldDto] = macroRW
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW
+  given refDtoRW: ReadWriter[RefDto] = macroRW
+  given onFromRW: ReadWriter[OnFromDto] = macroRW
   given onClauseRW: ReadWriter[OnClauseDto] = macroRW
   given handlerRW: ReadWriter[HandlerDto] = macroRW
   // A28: InvariantDto (macroRW) may carry a structured BooleanExpression in `expression: Option[

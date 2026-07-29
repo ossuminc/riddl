@@ -755,6 +755,8 @@ object JsonAstBuilder:
     val statements = buildStatements(oc.statements)
     // A55: the optional local name bound to the handled message
     val binding: Option[Identifier] = oc.binding.map(ident)
+    val from: Option[(Option[Identifier], Reference[Definition])] =
+      oc.from.map(f => (f.name.map(ident), buildRef(f.ref)))
     val md = meta(oc.brief, oc.metadata)
     oc.kind match
       case "message" =>
@@ -763,7 +765,7 @@ object JsonAstBuilder:
             OnMessageClause(
               At(),
               messageRef(mr),
-              None,
+              from,
               binding,
               statements,
               md
@@ -773,7 +775,7 @@ object JsonAstBuilder:
             OnMessageClause(
               At(),
               CommandRef(At(), PathIdentifier.empty),
-              None,
+              from,
               binding,
               statements,
               md
@@ -784,7 +786,7 @@ object JsonAstBuilder:
             OnEventClause(
               At(),
               messageRef(mr),
-              None,
+              from,
               binding,
               statements,
               md
@@ -794,7 +796,7 @@ object JsonAstBuilder:
             OnEventClause(
               At(),
               EventRef(At(), PathIdentifier.empty),
-              None,
+              from,
               binding,
               statements,
               md
@@ -903,9 +905,9 @@ object JsonAstBuilder:
       case "user"      => UserRef(At(), pathId(r.path))
       case "entity"    => EntityRef(At(), pathId(r.path))
       case "context"   => ContextRef(At(), pathId(r.path))
-      case "group"     => GroupRef(At(), "group", pathId(r.path))
-      case "output"    => OutputRef(At(), "output", pathId(r.path))
-      case "input"     => InputRef(At(), "input", pathId(r.path))
+      case "group"     => GroupRef(At(), r.keyword.getOrElse("group"), pathId(r.path))
+      case "output"    => OutputRef(At(), r.keyword.getOrElse("output"), pathId(r.path))
+      case "input"     => InputRef(At(), r.keyword.getOrElse("input"), pathId(r.path))
       case "adaptor"   => AdaptorRef(At(), pathId(r.path))
       case "projector" => ProjectorRef(At(), pathId(r.path))
       case other =>
@@ -929,35 +931,35 @@ object JsonAstBuilder:
         ArbitraryInteraction(At(), buildRef(from), LiteralString(At(), rel), buildRef(to), nm)
       case SelfIxnDto(from, rel) =>
         SelfInteraction(At(), buildRef(from), LiteralString(At(), rel), nm)
-      case FocusOnGroupIxnDto(user, group) =>
+      case FocusOnGroupIxnDto(user, group, kw) =>
         FocusOnGroupInteraction(
           At(),
           UserRef(At(), pathId(user)),
-          GroupRef(At(), "group", pathId(group)),
+          GroupRef(At(), kw.getOrElse("group"), pathId(group)),
           nm
         )
       case DirectToURLIxnDto(user, url) =>
         DirectUserToURLInteraction(At(), UserRef(At(), pathId(user)), URL(url), nm)
-      case ShowOutputIxnDto(output, rel, user) =>
+      case ShowOutputIxnDto(output, rel, user, kw) =>
         ShowOutputInteraction(
           At(),
-          OutputRef(At(), "output", pathId(output)),
+          OutputRef(At(), kw.getOrElse("output"), pathId(output)),
           LiteralString(At(), rel),
           UserRef(At(), pathId(user)),
           nm
         )
-      case SelectInputIxnDto(user, input) =>
+      case SelectInputIxnDto(user, input, kw) =>
         SelectInputInteraction(
           At(),
           UserRef(At(), pathId(user)),
-          InputRef(At(), "input", pathId(input)),
+          InputRef(At(), kw.getOrElse("input"), pathId(input)),
           nm
         )
-      case TakeInputIxnDto(user, input) =>
+      case TakeInputIxnDto(user, input, kw) =>
         TakeInputInteraction(
           At(),
           UserRef(At(), pathId(user)),
-          InputRef(At(), "input", pathId(input)),
+          InputRef(At(), kw.getOrElse("input"), pathId(input)),
           nm
         )
       case RefusalIxnDto(from, user, reason) =>

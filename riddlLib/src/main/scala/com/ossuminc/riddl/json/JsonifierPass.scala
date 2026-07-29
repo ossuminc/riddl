@@ -696,6 +696,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 Some(messageRefDto(omc.msg)),
                 statements,
                 omc.binding.map(_.value),
+                onFromDto(omc.from),
                 metaOf(omc.metadata),
                 briefOf(omc.metadata)
               )
@@ -707,6 +708,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 Some(messageRefDto(oec.msg)),
                 statements,
                 oec.binding.map(_.value),
+                onFromDto(oec.from),
                 metaOf(oec.metadata),
                 briefOf(oec.metadata)
               )
@@ -1297,15 +1299,15 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       ArbitraryIxnDto(refDto(from), rel.s, refDto(to))
     case SelfInteraction(_, from, rel, _) => SelfIxnDto(refDto(from), rel.s)
     case FocusOnGroupInteraction(_, user, group, _) =>
-      FocusOnGroupIxnDto(path(user.pathId), path(group.pathId))
+      FocusOnGroupIxnDto(path(user.pathId), path(group.pathId), Some(group.keyword))
     case DirectUserToURLInteraction(_, user, url, _) =>
       DirectToURLIxnDto(path(user.pathId), url.toExternalForm)
     case ShowOutputInteraction(_, output, rel, user, _) =>
-      ShowOutputIxnDto(path(output.pathId), rel.s, path(user.pathId))
+      ShowOutputIxnDto(path(output.pathId), rel.s, path(user.pathId), Some(output.keyword))
     case SelectInputInteraction(_, user, input, _) =>
-      SelectInputIxnDto(path(user.pathId), path(input.pathId))
+      SelectInputIxnDto(path(user.pathId), path(input.pathId), Some(input.keyword))
     case TakeInputInteraction(_, user, input, _) =>
-      TakeInputIxnDto(path(user.pathId), path(input.pathId))
+      TakeInputIxnDto(path(user.pathId), path(input.pathId), Some(input.keyword))
     case RefusalInteraction(_, from, user, reason, _) =>
       RefusalIxnDto(refDto(from), path(user.pathId), reason.s)
     case ParallelInteractions(_, contents, _)   => ParallelIxnDto(serIxns(contents))
@@ -1342,15 +1344,23 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case InletRef(_, p)  => (path(p), "inlet")
     case OutletRef(_, p) => (path(p), "outlet")
 
+  /** A55's `from [<name>:] <origin>` on an on-clause. */
+  private def onFromDto(
+    from: Option[(Option[Identifier], Reference[Definition])]
+  ): Option[OnFromDto] =
+    from.map { case (optId, ref) => OnFromDto(refDto(ref), optId.map(_.value)) }
+
   private def refDto(r: Reference[?]): RefDto = r match
-    case UserRef(_, p)      => RefDto("user", path(p))
-    case EntityRef(_, p)    => RefDto("entity", path(p))
-    case ContextRef(_, p)   => RefDto("context", path(p))
-    case GroupRef(_, _, p)  => RefDto("group", path(p))
-    case OutputRef(_, _, p) => RefDto("output", path(p))
-    case InputRef(_, _, p)  => RefDto("input", path(p))
-    case AdaptorRef(_, p)   => RefDto("adaptor", path(p))
-    case ProjectorRef(_, p) => RefDto("projector", path(p))
-    case other              => RefDto("user", path(other.pathId))
+    case UserRef(_, p)    => RefDto("user", path(p))
+    case EntityRef(_, p)  => RefDto("entity", path(p))
+    case ContextRef(_, p) => RefDto("context", path(p))
+    // The keyword is the ALIAS the source used (`button`, `page`, `form`, …); dropping it rewrote
+    // the model's wording as the bare canonical keyword.
+    case GroupRef(_, kw, p)  => RefDto("group", path(p), Some(kw))
+    case OutputRef(_, kw, p) => RefDto("output", path(p), Some(kw))
+    case InputRef(_, kw, p)  => RefDto("input", path(p), Some(kw))
+    case AdaptorRef(_, p)    => RefDto("adaptor", path(p))
+    case ProjectorRef(_, p)  => RefDto("projector", path(p))
+    case other               => RefDto("user", path(other.pathId))
 
 end JsonifierPass

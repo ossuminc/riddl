@@ -94,11 +94,15 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     * 24 -> 14: the TypeRef KEYWORD on a portlet's and an input's type reference. `inlet in is
     * command Go` was coming back as `inlet in is type Go`.
     *
+    * 14 -> 12: the on-clause `from` (absent from the schema entirely, so the builder hardcoded
+    * `None`), and the group/input/output ALIAS on a reference — `to button X` was coming back as
+    * `to input X` and `on page X` as `on group X`.
+    *
     * 49 -> 24: `String` bounds. A bare `String` IS exactly `String(0,255)`, so prettify renders
     * only the bounds that are NOT the defaults and the two spellings of the one type stop
     * disagreeing.
     */
-  private val DivergentCeiling: Int = 14
+  private val DivergentCeiling: Int = 12
 
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *
