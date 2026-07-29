@@ -23,12 +23,22 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   protected val collectedTerms: scala.collection.mutable.ListBuffer[Term] =
     scala.collection.mutable.ListBuffer.empty
 
+  /** A definition's nested definitions must have UNIQUE NAMES — regardless of kind.
+    *
+    * Grouping by `identify` (which is `Kind 'name'`) only caught same-kind collisions, so `type
+    * Thing` beside `entity Thing` in one context passed silently. RIDDL is a precise language and a
+    * path identifier names ONE thing: with two same-named siblings, `Ctx.Thing` is ambiguous and
+    * whichever resolution happens to win is arbitrary. Grouping by the NAME closes that.
+    *
+    * Anonymous definitions are excluded — several constructs legitimately carry an empty id, and
+    * they are not addressable by name, so they cannot be ambiguous.
+    */
   private def checkUniqueContent(definition: Branch[?]): Unit = {
-    val allNamedValues = definition.contents.definitions
-    val allNames = allNamedValues.map(_.identify)
+    val allNamedValues = definition.contents.definitions.filter(_.id.nonEmpty)
+    val allNames = allNamedValues.map(_.id.value)
     if allNames.distinct.size < allNames.size then {
       val duplicates: Map[String, Seq[Definition]] =
-        allNamedValues.groupBy(_.identify).filterNot(_._2.size < 2)
+        allNamedValues.groupBy(_.id.value).filterNot(_._2.size < 2)
       if duplicates.nonEmpty then {
         val details = duplicates
           .map { case (_: String, defs: Seq[Definition]) =>
