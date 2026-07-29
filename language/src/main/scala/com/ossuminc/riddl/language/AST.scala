@@ -117,7 +117,17 @@ object AST:
       */
     def contents: Contents[CV]
 
-    override def isEmpty: Boolean = contents.isEmpty
+    /** A container is empty when it holds no DEFINITIONS — comments do not count.
+      *
+      * `context C is { // TODO }` is a stub, not a defined context, and treating it as non-empty
+      * let it slip past every "should not be empty" completeness check. Comment-tolerance is what
+      * makes `isEmpty` mean what the validator needs it to mean.
+      *
+      * Note this is a SEMANTIC predicate, not a structural one. Code that needs to know whether
+      * there are any children AT ALL — a text emitter deciding whether to open a brace, say — must
+      * ask `contents.isEmpty` directly.
+      */
+    override def isEmpty: Boolean = contents.toSeq.forall(_.isComment)
 
     /** Force all subclasses to return true as they are containers */
     final override def isContainer: Boolean = true
@@ -1014,7 +1024,9 @@ object AST:
   /** The Base trait for a definition that contains some unrestricted kind of content, RiddlValue */
   sealed trait Branch[CV <: RiddlValue] extends Definition with Container[CV]:
     override def isParent: Boolean = true
-    override def hasDefinitions: Boolean = contents.nonEmpty
+    // Comment-tolerant, in step with `isEmpty`: a body holding only comments has no
+    // definitions in it.
+    override def hasDefinitions: Boolean = !isEmpty
     opaque type ContentType <: RiddlValue = CV
   end Branch
 

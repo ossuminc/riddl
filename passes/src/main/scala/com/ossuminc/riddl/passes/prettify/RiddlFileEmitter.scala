@@ -79,26 +79,34 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case _ => ""
     addIndent(s"$prefix$kw $name$ascription is ")
     if withBrace then
-      if definition.isEmpty then add("{ ??? }").nl
+      // STRUCTURAL, not semantic: `isEmpty` is now comment-tolerant, so a comments-only body would
+      // self-close here and the comments would be emitted AFTER the closing brace.
+      if hasNoChildren(definition) then add("{ ??? }").nl
       else add("{").nl.incr
     else this
     end if
   }
 
+  /** Whether a definition has no children AT ALL — the question a brace-emitter must ask, since
+    * `isEmpty` counts a comments-only body as empty.
+    */
+  private def hasNoChildren(d: Definition): Boolean = d match
+    case b: Branch[?] => b.contents.isEmpty
+    case _            => true
+
+  private def onlyComments(d: Definition): Boolean = d match
+    case b: Branch[?] => b.contents.nonEmpty && b.contents.toSeq.forall(_.isComment)
+    case _            => false
+
   def closeDef(
     definition: Definition
   ): this.type = {
-    if definition.nonEmpty then
+    if !hasNoChildren(definition) then
       // A body holding nothing but COMMENTS is still an undefined body, and `???` is how RIDDL says
-      // so. `openDef` emits `{ ??? }` only for a body that is entirely empty, so a commented stub —
-      // `domain D is { // what goes here \n ??? }` — came back without its `???`: the marker records
-      // deliberate intent that a bare comment does not, and dropping it is a loss, not a
-      // normalisation. Emitting it here restores the round trip and makes the comments-only body
-      // say explicitly what it always meant.
-      definition match
-        case b: Branch[?] if b.contents.toSeq.forall(_.isComment) =>
-          addLine(Punctuation.undefinedMark)
-        case _ => ()
+      // so. `openDef` self-closes only a body with no children at all, so without this a commented
+      // stub came back without its `???` — a marker that records deliberate intent a bare comment
+      // does not.
+      if onlyComments(definition) then addLine(Punctuation.undefinedMark)
       decr.addIndent("}")
       emitMetaData(definition.metadata)
       if definition.metadata.isEmpty then nl

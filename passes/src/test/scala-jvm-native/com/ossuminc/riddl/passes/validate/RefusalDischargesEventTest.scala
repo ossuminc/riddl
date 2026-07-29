@@ -49,6 +49,27 @@ class RefusalDischargesEventTest extends AbstractValidatingTest {
     }
     found
 
+  "a comments-only body" should {
+
+    /** `isEmpty` is comment-tolerant now: a container holding nothing but comments has no
+      * DEFINITIONS, so it is a stub. Before this it read as non-empty and slipped past every
+      * "should not be empty" completeness check — a modeller could write `context C is { // TODO }`
+      * and be told it was fine.
+      */
+    "be reported as empty" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        "domain Dom is {\n  // TODO: describe the contexts\n  ???\n}\n",
+        td
+      )
+      var msgs = Seq.empty[String]
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+        msgs = messages.map(_.message).filter(_.contains("empty"))
+        succeed
+      }
+      withClue("a comments-only body must read as empty: ") { msgs mustNot be(empty) }
+    }
+  }
+
   "the command completeness rule" should {
 
     "accept a clause that REFUSES with `error`" in { (td: TestData) =>
