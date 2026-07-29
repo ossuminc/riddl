@@ -1,0 +1,12 @@
+// Corpus fixture for all THREE attachment forms. The ULID form had no fixture and no test
+// anywhere, which is why it went unnoticed that it could not be parsed at all: `meta_data`
+// listed it after the general `attachment` rule, and the parser's keyword combinator cuts.
+domain Attachments is {
+  context Docs is { ??? } with {
+    attachment Readme is text/plain in file "README.md"
+    attachment Motto is text/plain as "keep it simple"
+  }
+} with {
+  attachment ULID is "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+  briefly "exercises every attachment form"
+}

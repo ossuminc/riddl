@@ -435,15 +435,19 @@ url_path = /[A-Za-z0-9_.~!$&'()*+,;=\/-]*/ ;
 
 (* Metadata *)
 with_metadata = ["with" "{" {"???" | {meta_data}} "}"] ;
-meta_data = brief_description | description | term | option | author_ref | figma_ref | attachment | ulid_attachment | comment ;
+meta_data = brief_description | description | term | option | author_ref | figma_ref | attachment | comment ;
 brief_description = briefly byAs literal_string ;
 description = described (byAs doc_block | ("at" http_url) | ("in" "file" literal_string)) ;
 term = "term" identifier is doc_block ;
 figma_ref = "figma" literal_string "node" literal_string ;
 option = "option" is option_name ["(" {literal_string} ")"] ;
 option_name = /[a-z0-9_-]*/ ;
-attachment = "attachment" identifier is mime_type (("in" "file" literal_string) | (byAs literal_string)) ;
-ulid_attachment = "attachment" "ULID" is literal_string ;
+(* The three attachment forms share ONE "attachment" keyword. Listing the ULID form as a
+   separate meta_data alternative made it unreachable in the fastparse parser, whose keyword
+   combinator cuts. *)
+attachment = "attachment" (ulid_attachment_body | named_attachment_body) ;
+ulid_attachment_body = "ULID" is literal_string ;
+named_attachment_body = identifier is mime_type (("in" "file" literal_string) | (byAs literal_string)) ;
 doc_block = "{" {markdown_lines | literal_strings | "???"} "}" | literal_string ;
 markdown_lines = {markdown_line}+ ;
 markdown_line = "|" /[^\n]*\n?/ ;

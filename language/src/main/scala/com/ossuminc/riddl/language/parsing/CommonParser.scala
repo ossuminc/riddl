@@ -323,25 +323,40 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     ).!
   }
 
+  /** All three attachment forms, sharing ONE `attachment` keyword.
+    *
+    * They must be factored this way rather than listed as separate alternatives in [[metaData]],
+    * because `Keywords.keyword` ends in a cut (`P(key ~~ &(isNotKeywordChar))./`). Once the keyword
+    * matched, the enclosing `|` could not backtrack — so whichever attachment rule came first won
+    * unconditionally, and `attachment ULID is "…"` was UNREACHABLE: it failed where the mime type
+    * was expected, having never reached the ULID rule at all. The construct has no fixture and no
+    * test anywhere, which is why that went unnoticed.
+    *
+    * With the keyword parsed once, the branches below backtrack against each other normally. The
+    * ULID branch is tried first and is safe there: an ordinary attachment merely NAMED `ULID`
+    * (`attachment ULID is text/plain as "x"`) fails the branch at its `literalString` and falls
+    * through to the general form.
+    */
   private def attachment[u: P]: P[Attachment] =
-    P(
-      Index ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~
-        ((in.! ~ Keywords.file ~ literalString) | (as.! ~ literalString)) ~ Index
-    ).map {
-      case (off1, id, mimeType, ("in", fileName), off2) =>
-        FileAttachment(at(off1, off2), id, mimeType, fileName)
-      case (off1, id, mimeType, ("as", value), off2) =>
-        StringAttachment(at(off1, off2), id, mimeType, value)
+    P(Index ~ Keywords.attachment ~ (ulidAttachmentBody | namedAttachmentBody) ~ Index).map {
+      case (off1, mk, off2) => mk(at(off1, off2))
     }
 
-  private def ulidAttachment[u: P]: P[ULIDAttachment] =
-    P(
-      Index ~ Keywords.attachment ~ "ULID" ~ is ~ literalString ~ Index
-    ).map { case (start, ulidString, end) =>
-      val ulid = ULID.fromString(ulidString.s)
-      ULIDAttachment(at(start, end), ulid)
+  private def ulidAttachmentBody[u: P]: P[At => Attachment] =
+    P("ULID" ~ is ~ literalString).map { ulidString => (loc: At) =>
+      ULIDAttachment(loc, ULID.fromString(ulidString.s))
     }
-  end ulidAttachment
+
+  private def namedAttachmentBody[u: P]: P[At => Attachment] =
+    P(
+      identifier ~ is ~ mimeType ~
+        ((in.! ~ Keywords.file ~ literalString) | (as.! ~ literalString))
+    ).map {
+      case (id, mimeType, ("in", fileName)) =>
+        (loc: At) => FileAttachment(loc, id, mimeType, fileName)
+      case (id, mimeType, (_, value)) =>
+        (loc: At) => StringAttachment(loc, id, mimeType, value)
+    }
 
   def option[u: P]: P[OptionValue] =
     P(
@@ -373,7 +388,7 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
   private def metaData[u: P]: P[MetaData] =
     P(
       briefDescription | description | term | option | authorRef | figmaRef | attachment |
-        ulidAttachment | comment
+        comment
     ).asInstanceOf[P[MetaData]]
 
   def withMetaData[u: P]: P[Seq[MetaData]] = {
