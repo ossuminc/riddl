@@ -24,11 +24,37 @@ private[parsing] trait EntityParser {
   private def stateBody[u: P]: P[Seq[StateContents]] =
     P(is ~ open ~ (undefined(Seq.empty[StateContents]) | stateContents) ~ close)
 
+  /** What introduces a state's record reference.
+    *
+    * `of` is the canonical 2.0 spelling — `state X of record R is { … }`. `is` was also accepted,
+    * and since `is` is itself optional so was nothing at all, which left one keyword doing two jobs
+    * in a single production: `stateBody` already uses `is` to introduce the BODY, exactly as every
+    * other definition in the language does.
+    *
+    * Returns the location of the offending text when the spelling was NOT `of`, so the caller can
+    * deprecate it. The `is` alternative still succeeds on empty input, so this accepts precisely
+    * what it accepted before — nothing that parsed stops parsing.
+    */
+  private def stateRecordIntro[u: P]: P[Option[At]] =
+    P(
+      of.map(_ => Option.empty[At]) |
+        (Index ~ is ~ Index).map { case (start, end) => Some(at(start, end)) }
+    )
+
   def state[u: P]: P[State] = {
     P(
-      Index ~ Keywords.maybeInitial ~ Keywords.state ~ identifier ~/ (of | is) ~ recordRef ~/
+      Index ~ Keywords.maybeInitial ~ Keywords.state ~ identifier ~/ stateRecordIntro ~ recordRef ~/
         stateBody.? ~ withMetaData ~ Index
-    )./.map { case (start, isInitial, id, typRef, body, descriptives, end) =>
+    )./.map { case (start, isInitial, id, notOf, typRef, body, descriptives, end) =>
+      notOf.foreach { loc =>
+        deprecation(
+          loc,
+          s"Use `of` to introduce a state's record reference: `state ${id.value} of " +
+            s"${typRef.format} is { … }`. Introducing it with `is` (or with nothing) is deprecated " +
+            "and will be removed in a future major version, because `is` introduces a definition's " +
+            "BODY everywhere else in the language."
+        )
+      }
       State(
         at(start, end),
         id,

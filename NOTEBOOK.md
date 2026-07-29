@@ -215,6 +215,34 @@ containing ONLY a kind with no bucket of its own vanished entirely.
   nothing noticed. Not fully diagnosed — the alternation has no visible cut — so
   it needs a look. The JSON test builds the AST directly to work around it.
 
+## Two parser fixes found by the JSON work — DONE
+
+**`attachment ULID is "…"` could not be parsed at all.** `Keywords.keyword` ends
+in a cut — `P(key ~~ &(isNotKeywordChar))./` — so once the `attachment` keyword
+matched, the enclosing `|` in `metaData` could not backtrack and whichever
+attachment rule came first won outright. The general rule was first, so
+`ulidAttachment` was unreachable and the ULID form failed where a mime type was
+expected, having never been tried. Reordering would only have broken the other
+two the same way; the prefix had to be FACTORED so the keyword is matched once,
+ahead of the choice. `bastImport` in the same file was already factored exactly
+this way, with a comment describing the identical hazard.
+
+The construct had **no fixture and no test anywhere**, which is how a documented
+piece of syntax stayed unreachable unnoticed. Both added:
+`language/input/attachments.riddl` covers all three forms for the CI grammar
+validators, and `MetaDataTest` gains two cases — including an ordinary
+attachment NAMED `ULID`, which proves the branches backtrack against each other
+rather than the first winning.
+
+**`state X is <recordRef>` is deprecated.** `of` is the canonical 2.0 spelling.
+`is` was also accepted and — since `is` is itself optional — so was nothing at
+all, which left one keyword doing two jobs in a single production: `stateBody`
+already uses `is` to introduce the BODY, as every other definition does. The old
+spellings still parse (they are used throughout the suite and the external
+corpus) and now emit a `deprecation`. `StateRecordIntroTest` pins both halves —
+that they still parse, and that they say so. No `.check` golden moved, because
+every fixture already writes `of`.
+
 ## A55 — optional local name binding for the on-clause message — DONE
 
 `on foo: command Foo { … }` binds an optional local name to the handled
@@ -994,33 +1022,6 @@ Completed task files live in `task/done/` (gitignored, local
 hygiene only).
 
 ## Active Work Queue
-
-0. **`state X is <recordRef>` — deprecate the `is` spelling** (raised
-   2026-07-28, spec confirmed same day). `EntityParser.state`
-   (`EntityParser.scala:29`) reads
-   `identifier ~/ (of | is) ~ recordRef ~/ stateBody.?`, so the record
-   reference may be introduced by EITHER `of` or `is`. Every other
-   definition uses `is` to introduce a BODY, and `stateBody` already
-   does (`is ~ open ~ … ~ close`), so the `is` alternative here means
-   one keyword doing two jobs in one production.
-
-   **The 2.0 grammar is `of` only**, before the record reference:
-
-   ```
-   state <id> of <recordRef> [ is { <stateContents> } ]
-   ```
-
-   `stateBody` is UNCHANGED — it already supplies its own `is`, so
-   nothing about the body moves.
-
-   **`is` in the `of` position must still parse**, raising a
-   `deprecation(...)`; dropping it outright would invalidate a large
-   part of the test suite and the whole external corpus. It goes away in
-   a later major. Note `deprecation` messages now surface under every
-   `riddlc` command (see CLAUDE.md "Parse-time messages now surface"),
-   so `.check` goldens will move. Touches: parser, EBNF grammar (+
-   regenerate GBNF), and a deprecation test. Prettify already emits
-   `of`, so no emitter change — confirm with a round trip.
 
 1. **riddl-models validation errors** (handed off) — see
    `../riddl-models/TASK-fix-validation-errors.md`. As of last

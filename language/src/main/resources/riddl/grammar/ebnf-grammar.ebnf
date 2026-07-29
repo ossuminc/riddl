@@ -85,6 +85,9 @@ entity = "entity" identifier [as_shape] is "{" entity_body "}" [with_metadata] ;
 entity_body = entity_definitions | "???" ;
 entity_definitions = {entity_content}+ ;
 entity_content = processor_definition_contents | state | entity_include ;
+(* `of` is the canonical introducer for the record reference. `is` is DEPRECATED and, because
+   `is` is itself optional, so is omitting the introducer altogether; both still parse and both
+   draw a deprecation. `is` introduces a definition's BODY everywhere else, as state_body shows. *)
 state = ["initial"] "state" identifier ("of" | is) record_ref [state_body] [with_metadata] ;
 state_body = is "{" ({state_content}+ | "???") "}" ;
 state_content = handler | invariant | comment ;
