@@ -1067,8 +1067,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
 
   /** The `with { … }` entries in SOURCE ORDER.
     *
-    * `BriefDescription` is skipped: it is carried by the sibling `brief` field, and emitting it
-    * here as well would write it twice.
+    * `BriefDescription` is included even though the sibling `brief` field also carries it, because
+    * its POSITION matters: `option kind("device")` written before `briefly "…"` came back after it
+    * while brief was prepended outside the ordered list. `brief` stays as the convenient shorthand
+    * for readers and hand-authors; a reader that understands `items` takes the brief from there and
+    * ignores the shorthand, so it is never applied twice.
     */
   private def metaItems(md: Contents[MetaData]): Seq[MetaItemDto] =
     md.toSeq.flatMap {
@@ -1109,7 +1112,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         Some(
           MetaItemDto(MetaKind.FigmaRef, fileKey = Some(fr.fileKey.s), nodeId = Some(fr.nodeId.s))
         )
-      case _ => None // BriefDescription travels in `brief`
+      case b: BriefDescription => Some(MetaItemDto(MetaKind.Brief, value = Some(b.brief.s)))
+      case _                   => None
     }
 
   private def serializeField(f: Field): FieldDto =

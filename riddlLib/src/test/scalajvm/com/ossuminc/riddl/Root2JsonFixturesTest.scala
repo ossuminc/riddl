@@ -102,11 +102,15 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     * for exactly the reason the contents array exists — bucketing description, terms, options,
     * authors, attachments and comments separately reordered them.
     *
+    * 7 -> 2: `briefly`'s POSITION (it was prepended outside the ordered items), and the
+    * group/input/output alias on an interaction reference — RefDto had grown a `keyword` but
+    * `refJs`, a HAND-WRITTEN codec rather than the derived one, still did not write it.
+    *
     * 49 -> 24: `String` bounds. A bare `String` IS exactly `String(0,255)`, so prettify renders
     * only the bounds that are NOT the defaults and the two spellings of the one type stop
     * disagreeing.
     */
-  private val DivergentCeiling: Int = 7
+  private val DivergentCeiling: Int = 2
 
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *

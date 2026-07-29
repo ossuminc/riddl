@@ -427,7 +427,10 @@ object JsonAstBuilder:
     ctx: Ctx
   ): Contents[MetaData] =
     val items = mutable.ArrayBuffer.empty[MetaData]
-    brief.foreach(b => items += BriefDescription(At(), LiteralString(At(), b)))
+    // An ordered `items` array carries the brief IN ITS PLACE, so prepending the `brief` shorthand
+    // as well would both duplicate it and put it back at the front.
+    if md.forall(_.items.isEmpty) then
+      brief.foreach(b => items += BriefDescription(At(), LiteralString(At(), b)))
     // The ordered `items` array wins when the document has one; the per-kind buckets below are the
     // deprecated form and cannot express the order entries were written in.
     md.filter(_.items.nonEmpty).foreach { m =>
@@ -457,6 +460,8 @@ object JsonAstBuilder:
             val text = i.value.getOrElse("")
             items += (if i.inline then InlineComment(At(), text.split("\n").toSeq)
                       else LineComment(At(), text))
+          case MetaKind.Brief =>
+            items += BriefDescription(At(), LiteralString(At(), i.value.getOrElse("")))
           case MetaKind.FigmaRef =>
             items += FigmaRef(
               At(),

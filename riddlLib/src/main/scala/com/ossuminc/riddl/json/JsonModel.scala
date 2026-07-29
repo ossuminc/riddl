@@ -1154,6 +1154,7 @@ object JsonModel:
     val Attachment = "attachment"
     val Comment = "comment"
     val FigmaRef = "figma"
+    val Brief = "briefly"
   end MetaKind
 
   case class MetaDto(
@@ -1737,9 +1738,16 @@ object JsonModel:
   // mutual recursion FieldDto <-> TypeExprDto resolves correctly.
   // ujson <-> InteractionDto. Containers nest `interactions` recursively.
 
+  // RefDto is written by THIS hand-written codec rather than by its derived one, so a field added
+  // to the case class does not reach the wire until it is added here too — which is how the
+  // group/input/output alias went on being dropped after RefDto had grown a `keyword`.
   private def refJs(r: RefDto): ujson.Value =
-    ujson.Obj("kind" -> ujson.Str(r.kind), "path" -> ujson.Str(r.path))
-  private def readRef(v: ujson.Value): RefDto = RefDto(v.obj("kind").str, v.obj("path").str)
+    ujson.Obj.from(
+      Seq[(String, ujson.Value)]("kind" -> ujson.Str(r.kind), "path" -> ujson.Str(r.path))
+        ++ r.keyword.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
+    )
+  private def readRef(v: ujson.Value): RefDto =
+    RefDto(v.obj("kind").str, v.obj("path").str, v.obj.get("keyword").map(_.str))
   private def readIxns(o: Option[ujson.Value]): Seq[InteractionDto] =
     o.map(_.arr.map(readInteraction).toSeq).getOrElse(Nil)
 
