@@ -132,6 +132,88 @@ object JsonModel:
   // Structural DTOs
   // ---------------------------------------------------------------------------
 
+  /** Anything that can appear in a container's `contents`.
+    *
+    * RIDDL is fully reflective: a model written to JSON and read back must recover the EXACT AST,
+    * and that includes the ORDER of definitions within their parent. The per-kind buckets this
+    * schema started with (`domains`, `authors`, `comments`, …) cannot express order — reassembly
+    * concatenates the buckets in a fixed sequence, so a comment written at the top of a file comes
+    * back at the bottom. One ordered array of kind-tagged objects can.
+    *
+    * This is the same shape [[StatementDto]] already uses for a handler body, where statements and
+    * the comments interleaved between them share one ordered list and round-trip correctly. See
+    * `readContent`/`writeContent`, which mirror `readStatement`/`writeStatement`.
+    */
+  /** A UNION rather than a sealed trait, deliberately, for two reasons.
+    *
+    * It is how the AST itself models the same idea — `DomainContents`, `OccursInProcessor` and
+    * friends are unions of the kinds a container admits.
+    *
+    * And upickle derives TAGGED codecs for members of a sealed hierarchy: making these DTOs extend
+    * a sealed trait silently added a `$type` discriminator to every object in the schema, so every
+    * hand-authored document stopped loading. A union carries no inheritance, so each DTO's derived
+    * codec is untouched — while Scala 3 still checks the `writeContent` match for exhaustivity,
+    * which is the whole reason not to use a bare `Any`.
+    */
+  type ContentDto = DomainDto | ModuleDto | ContextDto | EntityDto | TypeDefDto | MessageDto |
+    StateDto | HandlerDto | OnClauseDto | FunctionDto | AdaptorDto | StreamletDto | ProjectorDto |
+    RepositoryDto | SchemaDto | ConnectorDto | RelationshipDto | SagaDto | SagaStepDto | EpicDto |
+    UseCaseDto | GroupDto | ContainedGroupDto | InputDto | OutputDto | AuthorDto | UserDto |
+    InvariantDto | ConstantDto | CommentDto | VersionDto | CopyrightDto | PortletDto | FieldDto |
+    MethodDto | TermDto
+
+  /** The `kind` tag a [[ContentDto]] is written under, and read back by.
+    *
+    * The tags are RIDDL keywords rather than DTO names, so a document reads like the language it
+    * describes. Four kinds share [[MessageDto]] and are told apart by the tag alone, which is why
+    * `MessageDto.usecase` exists — see its comment.
+    */
+  object ContentKind:
+    val Domain = "domain"
+    val Module = "module"
+    val Context = "context"
+    val Entity = "entity"
+    val Type = "type"
+    val Command = "command"
+    val Event = "event"
+    val Query = "query"
+    val Result = "result"
+    val State = "state"
+    val Handler = "handler"
+    val OnClause = "onClause"
+    val Function = "function"
+    val Adaptor = "adaptor"
+    val Streamlet = "streamlet"
+    val Projector = "projector"
+    val Repository = "repository"
+    val Schema = "schema"
+    val Connector = "connector"
+    val Relationship = "relationship"
+    val Saga = "saga"
+    val SagaStep = "step"
+    val Epic = "epic"
+    val UseCase = "case"
+    val Group = "group"
+    val ContainedGroup = "containedGroup"
+    val Input = "input"
+    val Output = "output"
+    val Author = "author"
+    val User = "user"
+    val Invariant = "invariant"
+    val Constant = "constant"
+    val Comment = "comment"
+    val Version = "version"
+    val Copyright = "copyright"
+    val Inlet = "inlet"
+    val Outlet = "outlet"
+    val Field = "field"
+    val Method = "method"
+    val Term = "term"
+
+    /** The four use cases that share [[MessageDto]]. */
+    val messageKinds: Set[String] = Set(Command, Event, Query, Result)
+  end ContentKind
+
   case class RootDto(
     domains: Seq[DomainDto] = Nil,
     modules: Seq[ModuleDto] = Nil,
@@ -139,7 +221,12 @@ object JsonModel:
     copyright: Option[CopyrightDto] = None,
     // `OccursInRoot` admits a top-level author, which the schema used to drop on the floor.
     authors: Seq[AuthorDto] = Nil,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   /** A Module is a FLAT collection of ANY top-level definition — no hierarchy is enforced at its
@@ -174,7 +261,12 @@ object JsonModel:
     metadata: Option[MetaDto] = None,
     version: Option[VersionDto] = None,
     copyright: Option[CopyrightDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   case class DomainDto(
@@ -198,7 +290,12 @@ object JsonModel:
     results: Seq[MessageDto] = Nil,
     repositories: Seq[RepositoryDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   /** `{ "name": "Shopper", "isA": "a person", "brief"?: ... }` (Phase 2) */
@@ -256,7 +353,12 @@ object JsonModel:
     copyright: Option[CopyrightDto] = None,
     // `OccursInProcessor` admits an invariant directly on the processor, not only on a state.
     invariants: Seq[InvariantDto] = Nil,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   case class MessageDto(
@@ -267,7 +369,21 @@ object JsonModel:
     // query yields a result).
     yields: Option[MessageRefDto] = None,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** Which of the four message use cases this is, as a [[ContentKind]] tag.
+      *
+      * In the bucketed form the bucket said so (`commands`, `events`, …) and the DTO did not need
+      * to. In the ordered `contents` array the `kind` tag is the only carrier, so it lives here.
+      * `None` means the document did not say — which only happens for a bucketed document, where
+      * the bucket supplies it, so the field is deliberately an Option rather than defaulting to
+      * "command" and quietly mislabelling an event.
+      */
+    usecase: Option[String] = None,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   case class EntityDto(
@@ -298,7 +414,12 @@ object JsonModel:
     streamlets: Seq[StreamletDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
@@ -318,7 +439,12 @@ object JsonModel:
     brief: Option[String] = None,
     isInitial: Boolean = false,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   case class HandlerDto(
@@ -327,7 +453,12 @@ object JsonModel:
     onClauses: Seq[OnClauseDto] = Nil,
     isInitial: Boolean = false,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   /** `kind`: "message" | "init" | "other" | "term". For "message", `message` carries the message
@@ -342,7 +473,12 @@ object JsonModel:
     binding: Option[String] = None,
     metadata: Option[MetaDto] = None,
     // An on-clause may be documented like any other definition (`on other { … } with { briefly … }`).
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   case class MessageRefDto(ref: String, kind: String)
@@ -404,7 +540,12 @@ object JsonModel:
     statements: Seq[StatementDto] = Nil,
     functions: Seq[FunctionDto] = Nil,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -608,15 +749,26 @@ object JsonModel:
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
-  /** An inlet or outlet: `{ "name": "in", "type": "<typePath>", "brief"?: ... }` */
+  /** An inlet or outlet: `{ "name": "in", "type": "<typePath>", "brief"?: ... }`
+    *
+    * `direction` plays the same role for a portlet that `MessageDto.usecase` plays for a message:
+    * in the bucketed form `inlets`/`outlets` said which this was, and in the ordered `contents`
+    * array the `kind` tag is the only carrier. `None` means a bucketed document supplied it.
+    */
   case class PortletDto(
     name: String,
     `type`: String,
     brief: Option[String] = None,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    direction: Option[String] = None
   )
 
   /** `{ "name": "C", "from": "<outletPath>", "to": "<inletPath>", "brief"?: ... }` */
@@ -654,7 +806,12 @@ object JsonModel:
     streamlets: Seq[StreamletDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   /** `{ "name": "R", "withProcessor": "<path>", "processor": "entity"|..., "cardinality":
@@ -696,7 +853,12 @@ object JsonModel:
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   /** A repository schema: `{ "name": "S", "kind"?: "Relational"|..., "data"?: {field->typePath},
@@ -741,7 +903,12 @@ object JsonModel:
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -768,7 +935,12 @@ object JsonModel:
     types: Seq[TypeDefDto] = Nil,
     steps: Seq[SagaStepDto] = Nil,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -809,7 +981,12 @@ object JsonModel:
     interactions: Seq[InteractionDto] = Nil,
     brief: Option[String] = None,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   /** `{ "name": "Checkout", "userStory": <userStory>, "shownBy"?: [url], "types"?: [...],
@@ -823,7 +1000,12 @@ object JsonModel:
     types: Seq[TypeDefDto] = Nil,
     useCases: Seq[UseCaseDto] = Nil,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -881,7 +1063,12 @@ object JsonModel:
     inputs: Seq[InputDto] = Nil,
     outputs: Seq[OutputDto] = Nil,
     metadata: Option[MetaDto] = None,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -1626,6 +1813,122 @@ object JsonModel:
     case None    => ujson.Arr.from(dto.fields.map(f => writeJs(f)))
   end writeArg
 
+  /** ujson <-> [[ContentDto]]: a `kind`-tagged object, one entry of an ordered `contents` array.
+    *
+    * The body is delegated to the DTO's own (macro-derived) codec and the `kind` tag is spliced on
+    * the front, so this stays a thin dispatch rather than a second hand-written serializer for
+    * thirty-odd DTOs. Reading strips `kind` before delegating.
+    *
+    * Two kinds are not one-to-one with a DTO: the four message use cases share [[MessageDto]], and
+    * inlet/outlet share [[PortletDto]]. For those the tag IS the discriminator, so it is lifted
+    * into `usecase`/`direction` on the way in and stripped on the way out to avoid writing it
+    * twice.
+    */
+  private def readContent(v: ujson.Value): ContentDto =
+    val obj = v.obj
+    val kind = obj
+      .get("kind")
+      .map(_.str)
+      .getOrElse(
+        throw new IllegalArgumentException(
+          s"A `contents` entry needs a `kind`: ${ujson.write(v).take(120)}"
+        )
+      )
+    val body: ujson.Value = ujson.Obj.from(obj.toSeq.filter(_._1 != "kind"))
+    kind match
+      case ContentKind.Domain         => readJson[DomainDto](body)
+      case ContentKind.Module         => readJson[ModuleDto](body)
+      case ContentKind.Context        => readJson[ContextDto](body)
+      case ContentKind.Entity         => readJson[EntityDto](body)
+      case ContentKind.Type           => readJson[TypeDefDto](body)
+      case ContentKind.State          => readJson[StateDto](body)
+      case ContentKind.Handler        => readJson[HandlerDto](body)
+      case ContentKind.OnClause       => readJson[OnClauseDto](body)
+      case ContentKind.Function       => readJson[FunctionDto](body)
+      case ContentKind.Adaptor        => readJson[AdaptorDto](body)
+      case ContentKind.Streamlet      => readJson[StreamletDto](body)
+      case ContentKind.Projector      => readJson[ProjectorDto](body)
+      case ContentKind.Repository     => readJson[RepositoryDto](body)
+      case ContentKind.Schema         => readJson[SchemaDto](body)
+      case ContentKind.Connector      => readJson[ConnectorDto](body)
+      case ContentKind.Relationship   => readJson[RelationshipDto](body)
+      case ContentKind.Saga           => readJson[SagaDto](body)
+      case ContentKind.SagaStep       => readJson[SagaStepDto](body)
+      case ContentKind.Epic           => readJson[EpicDto](body)
+      case ContentKind.UseCase        => readJson[UseCaseDto](body)
+      case ContentKind.Group          => readJson[GroupDto](body)
+      case ContentKind.ContainedGroup => readJson[ContainedGroupDto](body)
+      case ContentKind.Input          => readJson[InputDto](body)
+      case ContentKind.Output         => readJson[OutputDto](body)
+      case ContentKind.Author         => readJson[AuthorDto](body)
+      case ContentKind.User           => readJson[UserDto](body)
+      case ContentKind.Invariant      => readJson[InvariantDto](body)
+      case ContentKind.Constant       => readJson[ConstantDto](body)
+      case ContentKind.Comment        => readJson[CommentDto](body)
+      case ContentKind.Version        => readJson[VersionDto](body)
+      case ContentKind.Copyright      => readJson[CopyrightDto](body)
+      case ContentKind.Field          => readJson[FieldDto](body)
+      // MethodDto has no derived codec — its `args` need the hand-written pair.
+      case ContentKind.Method => readMethod(body)
+      case ContentKind.Term   => readJson[TermDto](body)
+      case k if ContentKind.messageKinds.contains(k) =>
+        readJson[MessageDto](body).copy(usecase = Some(k))
+      case k @ (ContentKind.Inlet | ContentKind.Outlet) =>
+        readJson[PortletDto](body).copy(direction = Some(k))
+      case other =>
+        throw new IllegalArgumentException(s"Unknown `contents` kind: '$other'")
+    end match
+  end readContent
+
+  private def writeContent(dto: ContentDto): ujson.Value =
+    val tagged: (String, ujson.Value) = dto match
+      case d: DomainDto         => (ContentKind.Domain, writeJs(d))
+      case d: ModuleDto         => (ContentKind.Module, writeJs(d))
+      case d: ContextDto        => (ContentKind.Context, writeJs(d))
+      case d: EntityDto         => (ContentKind.Entity, writeJs(d))
+      case d: TypeDefDto        => (ContentKind.Type, writeJs(d))
+      case d: StateDto          => (ContentKind.State, writeJs(d))
+      case d: HandlerDto        => (ContentKind.Handler, writeJs(d))
+      case d: OnClauseDto       => (ContentKind.OnClause, writeJs(d))
+      case d: FunctionDto       => (ContentKind.Function, writeJs(d))
+      case d: AdaptorDto        => (ContentKind.Adaptor, writeJs(d))
+      case d: StreamletDto      => (ContentKind.Streamlet, writeJs(d))
+      case d: ProjectorDto      => (ContentKind.Projector, writeJs(d))
+      case d: RepositoryDto     => (ContentKind.Repository, writeJs(d))
+      case d: SchemaDto         => (ContentKind.Schema, writeJs(d))
+      case d: ConnectorDto      => (ContentKind.Connector, writeJs(d))
+      case d: RelationshipDto   => (ContentKind.Relationship, writeJs(d))
+      case d: SagaDto           => (ContentKind.Saga, writeJs(d))
+      case d: SagaStepDto       => (ContentKind.SagaStep, writeJs(d))
+      case d: EpicDto           => (ContentKind.Epic, writeJs(d))
+      case d: UseCaseDto        => (ContentKind.UseCase, writeJs(d))
+      case d: GroupDto          => (ContentKind.Group, writeJs(d))
+      case d: ContainedGroupDto => (ContentKind.ContainedGroup, writeJs(d))
+      case d: InputDto          => (ContentKind.Input, writeJs(d))
+      case d: OutputDto         => (ContentKind.Output, writeJs(d))
+      case d: AuthorDto         => (ContentKind.Author, writeJs(d))
+      case d: UserDto           => (ContentKind.User, writeJs(d))
+      case d: InvariantDto      => (ContentKind.Invariant, writeJs(d))
+      case d: ConstantDto       => (ContentKind.Constant, writeJs(d))
+      case d: CommentDto        => (ContentKind.Comment, writeJs(d))
+      case d: VersionDto        => (ContentKind.Version, writeJs(d))
+      case d: CopyrightDto      => (ContentKind.Copyright, writeJs(d))
+      case d: FieldDto          => (ContentKind.Field, writeJs(d))
+      case d: MethodDto         => (ContentKind.Method, writeMethod(d))
+      case d: TermDto           => (ContentKind.Term, writeJs(d))
+      // The tag carries the discriminator, so it is cleared from the body rather than written
+      // twice. A message with no use case can only come from a bucketed document; the bucket said
+      // which it was, and the emitter always sets it.
+      case d: MessageDto =>
+        (d.usecase.getOrElse(ContentKind.Command), writeJs(d.copy(usecase = None)))
+      case d: PortletDto =>
+        (d.direction.getOrElse(ContentKind.Inlet), writeJs(d.copy(direction = None)))
+    val (kind, body) = tagged
+    ujson.Obj.from(("kind" -> (ujson.Str(kind): ujson.Value)) +: body.obj.toSeq)
+  end writeContent
+
+  given contentRW: ReadWriter[ContentDto] =
+    readwriter[ujson.Value].bimap[ContentDto](writeContent, readContent)
   given typeExprRW: ReadWriter[TypeExprDto] =
     readwriter[ujson.Value].bimap[TypeExprDto](writeTypeExpr, readTypeExpr)
   given statementRW: ReadWriter[StatementDto] =
