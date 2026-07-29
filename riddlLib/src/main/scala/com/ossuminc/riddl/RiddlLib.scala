@@ -568,8 +568,10 @@ object RiddlLib extends RiddlLib:
           )
     parsed match
       case Left(errors) => (RiddlResult.fromEither(Left(errors)), Nil)
-      case Right(dto) =>
-        val (result, messages) = JsonAstBuilder.buildWithMessages(dto)
+      case Right(dto)   =>
+        // The JSON TEXT goes through so a document declaring `basis: "document"` can resolve its
+        // own offsets against itself, giving exact line/col in diagnostics.
+        val (result, messages) = JsonAstBuilder.buildWithMessages(dto, json)
         (RiddlResult.fromEither(result), messages)
   end parseJsonWithMessages
 

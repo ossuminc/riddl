@@ -162,6 +162,35 @@ object JsonModel:
     InvariantDto | ConstantDto | CommentDto | VersionDto | CopyrightDto | PortletDto | FieldDto |
     MethodDto | TermDto | InteractionContentDto | IncludeContentDto | BASTImportContentDto
 
+  /** One entry of an ordered `contents` array: a child, and where it came from.
+    *
+    * `at` is `[offset, endOffset]` into whatever source [[LocationsDto]] names. It rides beside the
+    * `$kind` tag rather than living on the ~36 [[ContentDto]] case classes, so carrying locations
+    * costs those types nothing.
+    */
+  case class ContentEntry(content: ContentDto, at: Option[(Int, Int)] = None)
+
+  /** How to read every `$at` in the document.
+    *
+    * The basis follows PROVENANCE. A model that came from RIDDL keeps its RIDDL offsets (`basis:
+    * "origin"`), exactly as BAST does — BAST being an intermediary rather than a source is why it
+    * may fabricate line numbers and this may not. A model authored directly as JSON uses offsets
+    * into the JSON document itself (`basis: "document"`), which the reader HAS, so its line/col are
+    * exact and a diagnostic can quote the line the author wrote.
+    *
+    * Absent entirely means no locations: every node gets `At.empty`, which is what documents
+    * written before this keep doing.
+    */
+  case class LocationsDto(origin: String, basis: String = LocationBasis.Origin)
+
+  object LocationBasis:
+    /** Offsets index the file named by `LocationsDto.origin`. */
+    val Origin = "origin"
+
+    /** Offsets index THIS JSON document. */
+    val Document = "document"
+  end LocationBasis
+
   /** The `kind` tag a [[ContentDto]] is written under, and read back by.
     *
     * The tags are RIDDL keywords rather than DTO names, so a document reads like the language it
@@ -218,6 +247,8 @@ object JsonModel:
   end ContentKind
 
   case class RootDto(
+    /** How every `$at` in this document is to be read; absent means no locations at all. */
+    locations: Option[LocationsDto] = None,
     domains: Seq[DomainDto] = Nil,
     modules: Seq[ModuleDto] = Nil,
     version: Option[VersionDto] = None,
@@ -229,7 +260,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   /** A Module is a FLAT collection of ANY top-level definition — no hierarchy is enforced at its
@@ -269,7 +300,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   case class DomainDto(
@@ -298,7 +329,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   /** `{ "name": "Shopper", "isA": "a person", "brief"?: ... }` (Phase 2) */
@@ -361,7 +392,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   case class MessageDto(
@@ -417,7 +448,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
@@ -442,7 +473,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   case class HandlerDto(
@@ -456,7 +487,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   /** `kind`: "message" | "init" | "other" | "term". For "message", `message` carries the message
@@ -545,7 +576,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -754,7 +785,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   /** An inlet or outlet: `{ "name": "in", "type": "<typePath>", "brief"?: ... }`
@@ -817,7 +848,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   /** `{ "name": "R", "withProcessor": "<path>", "processor": "entity"|..., "cardinality":
@@ -864,7 +895,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   /** A repository schema: `{ "name": "S", "kind"?: "Relational"|..., "data"?: {field->typePath},
@@ -914,7 +945,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -946,7 +977,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -1012,7 +1043,7 @@ object JsonModel:
     * filesystem. Before this the wrapper was dropped and its children inlined into the parent, so a
     * model lost the fact that it was split across files at all.
     */
-  case class IncludeContentDto(origin: String, contents: Seq[ContentDto] = Nil)
+  case class IncludeContentDto(origin: String, contents: Seq[ContentEntry] = Nil)
 
   /** An `import … from "file.bast"` wrapper, contents nested for the same reason as
     * [[IncludeContentDto]].
@@ -1022,7 +1053,7 @@ object JsonModel:
     importKind: Option[String] = None,
     selector: Option[String] = None,
     alias: Option[String] = None,
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   case class UseCaseDto(
@@ -1036,7 +1067,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   /** `{ "name": "Checkout", "userStory": <userStory>, "shownBy"?: [url], "types"?: [...],
@@ -1055,7 +1086,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -1120,7 +1151,7 @@ object JsonModel:
       * are the deprecated form, kept readable for documents written against the older schema; they
       * cannot express order. See [[ContentDto]].
       */
-    contents: Seq[ContentDto] = Nil
+    contents: Seq[ContentEntry] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -1961,7 +1992,8 @@ object JsonModel:
           s"A `contents` entry needs a `$ContentTag`: ${ujson.write(v).take(120)}"
         )
       )
-    val body: ujson.Value = ujson.Obj.from(obj.toSeq.filter(_._1 != ContentTag))
+    val body: ujson.Value =
+      ujson.Obj.from(obj.toSeq.filter(kv => kv._1 != ContentTag && kv._1 != LocationTag))
     kind match
       case ContentKind.Domain         => readJson[DomainDto](body)
       case ContentKind.Module         => readJson[ModuleDto](body)
@@ -2084,14 +2116,41 @@ object JsonModel:
     ujson.Obj.from((ContentTag -> (ujson.Str(kind): ujson.Value)) +: body.obj.toSeq)
   end writeContent
 
-  private def readContents(o: Option[ujson.Value]): Seq[ContentDto] =
-    o.map(_.arr.map(readContent).toSeq).getOrElse(Nil)
+  /** The key an entry's `[offset, endOffset]` lives under.
+    *
+    * `$`-prefixed for the same reason as [[ContentTag]]: it is structural metadata about the entry
+    * rather than a field of the model, and it can never collide with a DTO's own field.
+    */
+  val LocationTag: String = "$at"
 
-  private def writeContents(cs: Seq[ContentDto]): ujson.Value =
-    ujson.Arr.from(cs.map(writeContent))
+  private def readContents(o: Option[ujson.Value]): Seq[ContentEntry] =
+    o.map(_.arr.map(readContentEntry).toSeq).getOrElse(Nil)
 
-  given contentRW: ReadWriter[ContentDto] =
-    readwriter[ujson.Value].bimap[ContentDto](writeContent, readContent)
+  private def writeContents(cs: Seq[ContentEntry]): ujson.Value =
+    ujson.Arr.from(cs.map(writeContentEntry))
+
+  private def readContentEntry(v: ujson.Value): ContentEntry =
+    val at = v.obj.get(LocationTag).flatMap { loc =>
+      val a = loc.arr
+      if a.sizeIs == 2 then Some((a(0).num.toInt, a(1).num.toInt)) else None
+    }
+    ContentEntry(readContent(v), at)
+
+  private def writeContentEntry(e: ContentEntry): ujson.Value =
+    val obj = writeContent(e.content).obj
+    e.at match
+      case None               => ujson.Obj.from(obj.toSeq)
+      case Some((start, end)) =>
+        // After `$kind`, so an entry reads "what it is, then where it came from".
+        val (tag, rest) = obj.toSeq.partition(_._1 == ContentTag)
+        val loc: (String, ujson.Value) =
+          LocationTag -> ujson.Arr(ujson.Num(start.toDouble), ujson.Num(end.toDouble))
+        ujson.Obj.from((tag :+ loc) ++ rest)
+  end writeContentEntry
+
+  given contentEntryRW: ReadWriter[ContentEntry] =
+    readwriter[ujson.Value].bimap[ContentEntry](writeContentEntry, readContentEntry)
+  given locationsRW: ReadWriter[LocationsDto] = macroRW
   given typeExprRW: ReadWriter[TypeExprDto] =
     readwriter[ujson.Value].bimap[TypeExprDto](writeTypeExpr, readTypeExpr)
   given statementRW: ReadWriter[StatementDto] =

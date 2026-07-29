@@ -321,6 +321,31 @@ free of I/O and so usable on Native:
   "contents": [ { "$kind": "entity", "name": "Order", … } ] }
 ```
 
+### Source locations
+
+Every `contents` entry may carry `$at: [offset, endOffset]`, and the document says
+once how to read those offsets:
+
+```jsonc
+{ "locations": { "origin": "orders.riddl", "basis": "origin" },
+  "contents": [ { "$kind": "domain", "$at": [0, 412], "name": "Ordering", … } ] }
+```
+
+- **`basis: "origin"`** — the offsets index the file named by `origin`. This is
+  what `root2Json` writes, because the model came from RIDDL and those are its
+  real coordinates. Reading gives exact offsets and origin; line and column are
+  not recoverable without that file, and resolving them is the caller's job.
+- **`basis: "document"`** — the offsets index THIS JSON document. Use this when
+  authoring JSON directly: the reader has the document, so line and column are
+  exact and a diagnostic can quote the line you wrote.
+- **absent** — no locations. Every node gets an empty location, which is what
+  documents written before this do; they keep working unchanged.
+
+Carrying locations matters for more than tidy messages. `Definition.equals`
+includes the location, so with every location empty two same-named definitions
+under different parents compare EQUAL — and collapse into one key in any map
+keyed by a definition.
+
 **The per-kind arrays still load**, so documents written against the older schema
 keep working; they are DEPRECATED and will be removed in a later major.
 `parseJson` accepts them silently; `parseJsonWithMessages` returns a

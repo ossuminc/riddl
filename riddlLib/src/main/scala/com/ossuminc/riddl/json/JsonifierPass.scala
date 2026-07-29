@@ -8,7 +8,7 @@ package com.ossuminc.riddl.json
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.{empty, Messages}
-import com.ossuminc.riddl.language.{Contents, toSeq}
+import com.ossuminc.riddl.language.{At, Contents, toSeq}
 import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInput, PassOutput, PassRoot, PassesOutput}
 import com.ossuminc.riddl.utils.PlatformContext
 
@@ -57,6 +57,25 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   private var rootDto: RootDto = RootDto()
 
   private def add(x: Any): Unit = if stack.nonEmpty then stack.top += x
+
+  /** Where each pushed child DTO came from in the source, by IDENTITY.
+    *
+    * A DTO is a case class with value equality, so two structurally identical children would share
+    * one entry in a normal map — which is the very confusion locations exist to prevent. The map
+    * never escapes this pass.
+    */
+  private val locOf = java.util.IdentityHashMap[Any, At]()
+
+  private def add(x: Any, loc: At): Unit =
+    if stack.nonEmpty then
+      stack.top += x
+      if !loc.isEmpty then locOf.put(x, loc)
+    end if
+  end add
+
+  /** `[offset, endOffset]` for a child, if its source location was recorded. */
+  private def atOf(kid: Any): Option[(Int, Int)] =
+    Option(locOf.get(kid)).map(loc => (loc.offset, loc.endOffset))
 
   /** Child DTOs consumed by the container currently being built, by identity.
     *
@@ -111,7 +130,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     stack.push(mutable.ArrayBuffer.empty[Any])
 
   override protected def processLeaf(definition: Leaf, parents: Parents): Unit =
-    buildLeaf(definition).foreach(add)
+    buildLeaf(definition).foreach(dto => add(dto, definition.loc))
 
   /** A `Comment` is a `RiddlValue`, not a `Leaf`, so it arrives here rather than through
     * `processLeaf` — which is why comments in a definition's contents were invisible to this pass
@@ -121,8 +140,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   override protected def processValue(value: RiddlValue, parents: Parents): Unit = value match
     case c: Comment if !isMetadataOfParent(c, parents) =>
       c match
-        case lc: LineComment   => add(CommentDto(lc.text))
-        case ic: InlineComment => add(CommentDto(ic.lines.mkString("\n"), inline = true))
+        case lc: LineComment => add(CommentDto(lc.text), lc.loc)
+        case ic: InlineComment =>
+          add(CommentDto(ic.lines.mkString("\n"), inline = true), ic.loc)
     case _ => ()
 
   /** Whether this comment hangs off the parent's METADATA rather than sitting in its contents.
@@ -143,7 +163,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     consumed = outer
     built match
       case Some(r: RootDto) if parents.isEmpty => rootDto = r
-      case Some(b)                             => add(b)
+      case Some(b)                             => add(b, definition.loc)
       case None                                => ()
   end closeContainer
 
@@ -153,19 +173,22 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     * buckets are precisely where that order was being thrown away. The three tagging wrappers are
     * unwrapped here, their discriminator moving onto the DTO where the `kind` tag can carry it.
     */
-  private def asContent(kid: Any): Option[ContentDto] = kid match
-    case MsgChild(uc, dto) => Some(dto.copy(usecase = Some(uc.useCase.toLowerCase())))
-    case InletChild(dto)   => Some(dto.copy(direction = Some(ContentKind.Inlet)))
-    case OutletChild(dto)  => Some(dto.copy(direction = Some(ContentKind.Outlet)))
-    case c: ContentDto     => Some(c)
-    case _                 => None
+  private def asContent(kid: Any): Option[ContentEntry] =
+    val dto: Option[ContentDto] = kid match
+      case MsgChild(uc, d) => Some(d.copy(usecase = Some(uc.useCase.toLowerCase())))
+      case InletChild(d)   => Some(d.copy(direction = Some(ContentKind.Inlet)))
+      case OutletChild(d)  => Some(d.copy(direction = Some(ContentKind.Outlet)))
+      case c: ContentDto   => Some(c)
+      case _               => None
+    dto.map(d => ContentEntry(d, atOf(kid)))
+  end asContent
 
   /** Attach the ordered children to whichever container DTO was just built.
     *
     * Done in one place rather than threaded through the ~180 `k.col` picks at the construction
     * sites, which stay exactly as they are while both forms are written.
     */
-  private def withContents(dto: Any, ordered: Seq[ContentDto]): Any = dto match
+  private def withContents(dto: Any, ordered: Seq[ContentEntry]): Any = dto match
     case d: RootDto =>
       d.copy(
         contents = ordered,
@@ -427,18 +450,30 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       .orElse(buildUiDto(d, k))
   end buildContainer
 
+  /** The source the root was parsed from, as this document's location basis. Absent when the tree
+    * carries no locations at all — a tree built from a location-free JSON document, for instance —
+    * so a round trip of one of those stays location-free rather than inventing an origin.
+    */
+  private def originOf(r: Root): Option[LocationsDto] =
+    if r.loc.isEmpty then None
+    else Some(LocationsDto(r.loc.source.origin, LocationBasis.Origin))
+
   /** A Root, a Module or a Domain: the containers that hold whole models. */
   private def buildTopLevelDto(d: Definition, k: Kids): Option[Any] =
     d match
       case r: Root =>
         Some(
           RootDto(
-            k.col[DomainDto],
-            k.col[ModuleDto],
-            k.col[VersionDto].headOption,
-            k.col[CopyrightDto].headOption,
-            k.col[AuthorDto],
-            k.col[CommentDto]
+            // Everything this pass writes came from RIDDL, so the offsets are coordinates in the
+            // file the root was parsed from. A document authored directly as JSON declares
+            // `basis: "document"` instead and indexes itself.
+            locations = originOf(r),
+            domains = k.col[DomainDto],
+            modules = k.col[ModuleDto],
+            version = k.col[VersionDto].headOption,
+            copyright = k.col[CopyrightDto].headOption,
+            authors = k.col[AuthorDto],
+            comments = k.col[CommentDto]
           )
         )
       case m: Module =>
@@ -901,10 +936,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         // stack, because its steps are read straight off `uc.contents` and never pushed as child
         // DTOs. Walking `uc.contents` once keeps the steps and the comments between them merged.
         // `UseCaseContents` is `Interaction | Comment`, so this match is exhaustive.
-        val ordered: Seq[ContentDto] = uc.contents.toSeq.map {
-          case i: Interaction    => InteractionContentDto(serializeInteraction(i))
-          case lc: LineComment   => CommentDto(lc.text)
-          case ic: InlineComment => CommentDto(ic.lines.mkString("\n"), inline = true)
+        val ordered: Seq[ContentEntry] = uc.contents.toSeq.map { v =>
+          val dto: ContentDto = v match
+            case i: Interaction    => InteractionContentDto(serializeInteraction(i))
+            case lc: LineComment   => CommentDto(lc.text)
+            case ic: InlineComment => CommentDto(ic.lines.mkString("\n"), inline = true)
+          ContentEntry(dto, if v.loc.isEmpty then None else Some((v.loc.offset, v.loc.endOffset)))
         }
         k.col[CommentDto] // consume them; `ordered` above is what actually carries them
         Some(

@@ -25,6 +25,10 @@ names and are tracked manually in the Metadata section.)
 > ✅, which is exactly how Projector/Repository ports were marked supported
 > while the builder ignored them.
 
+Source LOCATIONS are carried: each `contents` entry may hold `$at: [offset,
+endOffset]`, read against the basis the document declares (`origin` for a
+RIDDL-sourced model, `document` for one authored as JSON). See `JSON_INPUT.md`.
+
 **Schema reference:** `JSON_INPUT.md`. **Roadmap:** NOTEBOOK.md
 ("JSON input method — phased roadmap").
 

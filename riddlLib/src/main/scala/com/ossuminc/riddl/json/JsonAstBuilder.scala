@@ -9,6 +9,7 @@ package com.ossuminc.riddl.json
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, Contents, toSeq}
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.Messages.{Message, Messages}
 import com.ossuminc.riddl.utils.{PlatformContext, URL}
 
@@ -27,6 +28,44 @@ object JsonAstBuilder:
 
   import JsonModel.*
 
+  /** The location every node built for the current entry gets.
+    *
+    * `curAt` is EMPTY, so every node used to be location-free. This resolves to the enclosing
+    * definition's span instead: coarse for a definition's inner values (a field takes its type's
+    * span from the definition), but real, and — crucially — DISTINCT between two definitions that
+    * are otherwise identical.
+    */
+  private def curAt(using ctx: Ctx): At = ctx.current
+
+  /** The Root's own span: the whole source when there is one, else empty. */
+  private def rootLoc(ctx: Ctx): At =
+    if ctx.source.data.isEmpty then At(ctx.source, 0, 0)
+    else At(ctx.source, 0, ctx.source.data.length)
+
+  /** The source every `$at` in the document indexes.
+    *
+    * `document` basis: the offsets index the JSON itself, and the reader HAS the JSON, so this is a
+    * real input — line, column and the quoted line in a diagnostic are all exact.
+    *
+    * `origin` basis: the offsets index a RIDDL file this builder must not read (it is no-I/O, which
+    * is what keeps it usable on Native). The input therefore carries the origin NAME with no data:
+    * offsets and file name are exact, line/col are not recoverable here, and anyone who wants them
+    * has the `.riddl` file to resolve against. This is the same trade BAST makes.
+    *
+    * No `locations` at all means a location-free document, and every node keeps `At.empty`.
+    */
+  private def sourceFor(
+    locations: Option[LocationsDto],
+    jsonText: String
+  )(using PlatformContext): RiddlParserInput =
+    locations match
+      case None => RiddlParserInput.empty
+      case Some(loc) =>
+        val text = if loc.basis == LocationBasis.Document then jsonText else ""
+        // `RiddlParserInput.origin` derives from the URL's PATH, not from `purpose`, so the origin
+        // has to be carried there or every message reports "empty".
+        RiddlParserInput(text, URL(URL.fileScheme, "", "", loc.origin))
+
   /** Build a `Root` from the wire model, or the accumulated builder errors.
     *
     * Non-fatal messages are DISCARDED here so the long-standing signature and behaviour are
@@ -34,6 +73,11 @@ object JsonAstBuilder:
     */
   def build(dto: RootDto)(using PlatformContext): Either[Messages, Root] =
     buildWithMessages(dto)._1
+
+  /** As [[build]], told the JSON text so a `document`-basis document can resolve its own offsets.
+    */
+  def build(dto: RootDto, jsonText: String)(using PlatformContext): Either[Messages, Root] =
+    buildWithMessages(dto, jsonText)._1
 
   /** As [[build]], plus the non-fatal messages the build produced — currently one `Deprecation` per
     * container kind still using the per-kind buckets rather than the ordered `contents` array.
@@ -43,9 +87,11 @@ object JsonAstBuilder:
     * a failure.
     */
   def buildWithMessages(
-    dto: RootDto
+    dto: RootDto,
+    jsonText: String = ""
   )(using PlatformContext): (Either[Messages, Root], Messages) =
     given ctx: Ctx = new Ctx
+    ctx.source = sourceFor(dto.locations, jsonText)
     val domains = dto.domains.map(buildDomain)
     val modules = dto.modules.map(buildModule)
     val version = dto.version.map(buildVersion).toSeq
@@ -53,7 +99,7 @@ object JsonAstBuilder:
     val authors = dto.authors.map(buildAuthor)
     val root =
       Root(
-        At(),
+        rootLoc(ctx),
         childrenOrBuckets[RootContents](
           dto.contents,
           "Root",
@@ -112,7 +158,7 @@ object JsonAstBuilder:
     val version = m.version.map(buildVersion).toSeq
     val copyright = m.copyright.map(buildCopyright).toSeq
     Module(
-      At(),
+      curAt,
       ident(m.name),
       childrenOrBuckets[ModuleContents](
         m.contents,
@@ -167,6 +213,30 @@ object JsonAstBuilder:
       */
     val deprecations: mutable.LinkedHashSet[String] = mutable.LinkedHashSet.empty
     def deprecated(container: String): Unit = deprecations += container
+
+    /** The source every `$at` in this document indexes, and the location of the entry currently
+      * being built.
+      *
+      * `current` is set by [[childrenOf]] per entry, so a definition's inner values — its fields,
+      * statements and type expressions — inherit the enclosing definition's span instead of being
+      * empty. That is deliberately coarse: the document carries a location per DEFINITION, which is
+      * what a diagnostic points at, and it is what makes two same-named definitions DISTINCT again.
+      */
+    var source: RiddlParserInput = RiddlParserInput.empty
+    var current: At = At.empty
+
+    /** Run `body` with `loc` as the location every `curAt` inside it resolves to. */
+    def at[T](loc: At)(body: => T): T =
+      val saved = current
+      current = loc
+      try body
+      finally current = saved
+    end at
+
+    /** Build an `At` from a `[offset, endOffset]` pair against the document's declared source. */
+    def locOf(pair: Option[(Int, Int)]): At = pair match
+      case Some((start, end)) if end >= start => At(source, start, end)
+      case _                                  => current
 
   /** Collect heterogeneous child groups (each a subtype of `T`) into a typed `Contents[T]`. `Seq[?
     * <: T]` keeps each call-site group correctly typed.
@@ -378,18 +448,18 @@ object JsonAstBuilder:
       case d: FieldDto          => buildField(d)
       case d: MethodDto         => buildMethod(d)
       case d: TermDto =>
-        Term(At(), ident(d.name), d.definition.map(LiteralString(At(), _)))
+        Term(curAt, ident(d.name), d.definition.map(LiteralString(curAt, _)))
       case d: InteractionContentDto => buildInteraction(d.interaction)
       // A wrapper holds whatever its PARENT holds, so its nested children are checked against the
       // same legal set. Its contents are already in the document, which is what keeps the builder
       // free of I/O and so usable on Native.
       case d: IncludeContentDto =>
         import ctx.pc
-        Include[RiddlValue](At(), URL(d.origin), childrenOf(d.contents, container, legal))
+        Include[RiddlValue](curAt, URL(d.origin), childrenOf(d.contents, container, legal))
       case d: BASTImportContentDto =>
         BASTImport(
-          At(),
-          LiteralString(At(), d.path),
+          curAt,
+          LiteralString(curAt, d.path),
           d.importKind,
           d.selector.map(ident),
           d.alias.map(ident),
@@ -416,13 +486,18 @@ object JsonAstBuilder:
     * directly.
     */
   private def childrenOf[T <: RiddlValue](
-    contents: Seq[ContentDto],
+    contents: Seq[ContentEntry],
     container: String,
     legal: Kinds
   )(using ctx: Ctx): Contents[T] =
-    val built = contents.flatMap { c =>
-      val kind = kindOf(c)
-      if legal.contains(kind) then Some(buildContent(c, container, legal).asInstanceOf[T])
+    val built = contents.flatMap { entry =>
+      val kind = kindOf(entry.content)
+      if legal.contains(kind) then
+        // Everything built for this entry — the definition and its inner values — resolves `curAt`
+        // to the entry's own location.
+        ctx.at(ctx.locOf(entry.at)) {
+          Some(buildContent(entry.content, container, legal).asInstanceOf[T])
+        }
       else
         ctx.err(s"A $container may not contain a '$kind'")
         None
@@ -444,7 +519,7 @@ object JsonAstBuilder:
     * that, and is the remaining field-level work.
     */
   private def childrenOrBuckets[T <: RiddlValue](
-    contents: Seq[ContentDto],
+    contents: Seq[ContentEntry],
     container: String,
     legal: Kinds,
     legacy: => Contents[T],
@@ -469,7 +544,7 @@ object JsonAstBuilder:
     // An ordered `items` array carries the brief IN ITS PLACE, so prepending the `brief` shorthand
     // as well would both duplicate it and put it back at the front.
     if md.forall(_.items.isEmpty) then
-      brief.foreach(b => items += BriefDescription(At(), LiteralString(At(), b)))
+      brief.foreach(b => items += BriefDescription(curAt, LiteralString(curAt, b)))
     // The ordered `items` array wins when the document has one; the per-kind buckets below are the
     // deprecated form and cannot express the order entries were written in.
     md.filter(_.items.nonEmpty).foreach { m =>
@@ -477,60 +552,63 @@ object JsonAstBuilder:
       m.items.foreach { i =>
         i.kind match
           case MetaKind.Description =>
-            items += BlockDescription(At(), i.lines.map(LiteralString(At(), _)))
+            items += BlockDescription(curAt, i.lines.map(LiteralString(curAt, _)))
           case MetaKind.UrlDescription =>
-            i.value.foreach(u => items += URLDescription(At(), URL(u)))
+            i.value.foreach(u => items += URLDescription(curAt, URL(u)))
           case MetaKind.Term =>
             items += Term(
-              At(),
+              curAt,
               ident(i.name.getOrElse("")),
-              i.definition.map(LiteralString(At(), _))
+              i.definition.map(LiteralString(curAt, _))
             )
           case MetaKind.Option_ =>
-            items += OptionValue(At(), i.name.getOrElse(""), i.args.map(LiteralString(At(), _)))
-          case MetaKind.AuthorRef => items += AuthorRef(At(), pathId(i.path.getOrElse("")))
+            items += OptionValue(curAt, i.name.getOrElse(""), i.args.map(LiteralString(curAt, _)))
+          case MetaKind.AuthorRef => items += AuthorRef(curAt, pathId(i.path.getOrElse("")))
           case MetaKind.Attachment =>
             val nm = ident(i.name.getOrElse(""))
             val mt = i.mimeType.getOrElse("text/plain")
-            val v = LiteralString(At(), i.value.getOrElse(""))
-            items += (if i.inFile then FileAttachment(At(), nm, mt, v)
-                      else StringAttachment(At(), nm, mt, v))
+            val v = LiteralString(curAt, i.value.getOrElse(""))
+            items += (if i.inFile then FileAttachment(curAt, nm, mt, v)
+                      else StringAttachment(curAt, nm, mt, v))
           case MetaKind.Comment =>
             val text = i.value.getOrElse("")
-            items += (if i.inline then InlineComment(At(), text.split("\n").toSeq)
-                      else LineComment(At(), text))
+            items += (if i.inline then InlineComment(curAt, text.split("\n").toSeq)
+                      else LineComment(curAt, text))
           case MetaKind.UlidAttachment =>
-            i.value.foreach(u => items += ULIDAttachment(At(), wvlet.airframe.ulid.ULID(u)))
+            i.value.foreach(u => items += ULIDAttachment(curAt, wvlet.airframe.ulid.ULID(u)))
           case MetaKind.Brief =>
-            items += BriefDescription(At(), LiteralString(At(), i.value.getOrElse("")))
+            items += BriefDescription(curAt, LiteralString(curAt, i.value.getOrElse("")))
           case MetaKind.FigmaRef =>
             items += FigmaRef(
-              At(),
-              LiteralString(At(), i.fileKey.getOrElse("")),
-              LiteralString(At(), i.nodeId.getOrElse(""))
+              curAt,
+              LiteralString(curAt, i.fileKey.getOrElse("")),
+              LiteralString(curAt, i.nodeId.getOrElse(""))
             )
           case other => ctx.err(s"unknown metadata kind '$other'")
       }
     }
     md.filter(_.items.isEmpty).foreach { m =>
       if m.description.nonEmpty then
-        items += BlockDescription(At(), m.description.map(LiteralString(At(), _)))
+        items += BlockDescription(curAt, m.description.map(LiteralString(curAt, _)))
       m.terms
-        .foreach(t => items += Term(At(), ident(t.name), t.definition.map(LiteralString(At(), _))))
-      m.options.foreach(o => items += OptionValue(At(), o.name, o.args.map(LiteralString(At(), _))))
-      m.byAuthors.foreach(a => items += AuthorRef(At(), pathId(a)))
+        .foreach(t =>
+          items += Term(curAt, ident(t.name), t.definition.map(LiteralString(curAt, _)))
+        )
+      m.options
+        .foreach(o => items += OptionValue(curAt, o.name, o.args.map(LiteralString(curAt, _))))
+      m.byAuthors.foreach(a => items += AuthorRef(curAt, pathId(a)))
       m.attachments.foreach { a =>
         if a.inFile then
-          items += FileAttachment(At(), ident(a.name), a.mimeType, LiteralString(At(), a.value))
+          items += FileAttachment(curAt, ident(a.name), a.mimeType, LiteralString(curAt, a.value))
         else
-          items += StringAttachment(At(), ident(a.name), a.mimeType, LiteralString(At(), a.value))
+          items += StringAttachment(curAt, ident(a.name), a.mimeType, LiteralString(curAt, a.value))
       }
-      m.comments.foreach(c => items += LineComment(At(), c))
+      m.comments.foreach(c => items += LineComment(curAt, c))
       m.figmaRefs.foreach(fr =>
-        items += FigmaRef(At(), LiteralString(At(), fr.fileKey), LiteralString(At(), fr.nodeId))
+        items += FigmaRef(curAt, LiteralString(curAt, fr.fileKey), LiteralString(curAt, fr.nodeId))
       )
       import ctx.pc
-      m.urlDescription.foreach(u => items += URLDescription(At(), URL(u)))
+      m.urlDescription.foreach(u => items += URLDescription(curAt, URL(u)))
     }
     Contents[MetaData](items.toSeq*)
   end meta
@@ -539,17 +617,17 @@ object JsonAstBuilder:
     * its metadata, which `meta` handles). They are appended after the definitions, since the schema
     * groups children by kind and their original position is not recoverable.
     */
-  private def comments(cs: Seq[CommentDto]): Seq[Comment] =
+  private def comments(cs: Seq[CommentDto])(using Ctx): Seq[Comment] =
     cs.map { c =>
-      if c.inline then InlineComment(At(), c.text.split("\n").toSeq)
-      else LineComment(At(), c.text)
+      if c.inline then InlineComment(curAt, c.text.split("\n").toSeq)
+      else LineComment(curAt, c.text)
     }
 
-  private def ident(name: String): Identifier = Identifier(At(), name)
+  private def ident(name: String)(using Ctx): Identifier = Identifier(curAt, name)
 
   /** A dotted reference string -> PathIdentifier segments. */
-  private def pathId(ref: String): PathIdentifier =
-    PathIdentifier(At(), ref.split('.').iterator.filter(_.nonEmpty).toSeq)
+  private def pathId(ref: String)(using Ctx): PathIdentifier =
+    PathIdentifier(curAt, ref.split('.').iterator.filter(_.nonEmpty).toSeq)
 
   // ---------------------------------------------------------------------------
   // Definitions
@@ -572,7 +650,7 @@ object JsonAstBuilder:
     val repositories = d.repositories.map(buildRepository)
     val connectors = d.connectors.map(buildConnector)
     Domain(
-      At(),
+      curAt,
       ident(d.name),
       childrenOrBuckets[DomainContents](
         d.contents,
@@ -601,14 +679,14 @@ object JsonAstBuilder:
     )
 
   private def buildUser(u: UserDto)(using Ctx): User =
-    User(At(), ident(u.name), LiteralString(At(), u.isA), meta(u.brief, u.metadata))
+    User(curAt, ident(u.name), LiteralString(curAt, u.isA), meta(u.brief, u.metadata))
 
   private def buildConstant(c: ConstantDto)(using Ctx): Constant =
     Constant(
-      At(),
+      curAt,
       ident(c.name),
       buildTypeExpr(c.`type`),
-      LiteralString(At(), c.value),
+      LiteralString(curAt, c.value),
       meta(c.brief, c.metadata)
     )
 
@@ -617,26 +695,26 @@ object JsonAstBuilder:
     */
   private def buildVersion(v: VersionDto)(using Ctx): Version =
     val number = if v.numeric then v.name.toLongOption else None
-    Version(At(), ident(v.name), number, meta(v.brief, v.metadata))
+    Version(curAt, ident(v.name), number, meta(v.brief, v.metadata))
 
   /** A47: the notice is carried verbatim in `text`; `name` identifies it. */
   private def buildCopyright(c: CopyrightDto)(using Ctx): Copyright =
-    Copyright(At(), ident(c.name), LiteralString(At(), c.text), meta(c.brief, c.metadata))
+    Copyright(curAt, ident(c.name), LiteralString(curAt, c.text), meta(c.brief, c.metadata))
 
   private def buildAuthor(a: AuthorDto)(using Ctx): Author =
     Author(
-      At(),
+      curAt,
       ident(a.name),
-      LiteralString(At(), a.fullName),
-      LiteralString(At(), a.email),
-      a.organization.map(LiteralString(At(), _)),
-      a.title.map(LiteralString(At(), _)),
+      LiteralString(curAt, a.fullName),
+      LiteralString(curAt, a.email),
+      a.organization.map(LiteralString(curAt, _)),
+      a.title.map(LiteralString(curAt, _)),
       None,
       meta(None, a.metadata)
     )
 
   private def buildType(t: TypeDefDto)(using Ctx): Type =
-    Type(At(), ident(t.name), buildTypeExpr(t.typeExpression), meta(t.brief, t.metadata))
+    Type(curAt, ident(t.name), buildTypeExpr(t.typeExpression), meta(t.brief, t.metadata))
 
   private def buildContext(c: ContextDto)(using Ctx): Context =
     val types = c.types.map(buildType)
@@ -662,7 +740,7 @@ object JsonAstBuilder:
     val copyright = c.copyright.map(buildCopyright).toSeq
     val invariants = c.invariants.map(buildInvariant)
     Context(
-      At(),
+      curAt,
       ident(c.name),
       childrenOrBuckets[ContextContents](
         c.contents,
@@ -705,22 +783,22 @@ object JsonAstBuilder:
   private def buildMessage(m: MessageDto, useCase: AggregateUseCase)(using Ctx): Type =
     val fields = m.fields.map(buildField)
     val typEx = AggregateUseCaseTypeExpression(
-      At(),
+      curAt,
       useCase,
       contentsOf[AggregateContents](fields, comments(m.comments)),
       m.yields.map(messageRef)
     )
-    Type(At(), ident(m.name), typEx, meta(m.brief, m.metadata))
+    Type(curAt, ident(m.name), typEx, meta(m.brief, m.metadata))
 
   private def buildField(f: FieldDto)(using Ctx): Field =
-    Field(At(), ident(f.name), buildTypeExpr(f.`type`), meta(f.brief, f.metadata))
+    Field(curAt, ident(f.name), buildTypeExpr(f.`type`), meta(f.brief, f.metadata))
 
   /** A field list as an optional Aggregation (None when empty) — used for function and saga
     * input/output.
     */
   private def aggregationOf(fields: Seq[FieldDto])(using Ctx): Option[Aggregation] =
     if fields.isEmpty then None
-    else Some(Aggregation(At(), Contents[AggregateContents](fields.map(buildField)*)))
+    else Some(Aggregation(curAt, Contents[AggregateContents](fields.map(buildField)*)))
 
   /** A9: rebuild a Function/Saga `requires`/`returns` value from its ArgDto — a `TypeRef` from the
     * "keyword path" string (preferred), or a deprecated inline `Aggregation` from a field list.
@@ -735,13 +813,13 @@ object JsonAstBuilder:
             if spaceIdx > 0 then
               (trimmed.substring(0, spaceIdx), trimmed.substring(spaceIdx + 1).trim)
             else ("type", trimmed)
-          Some(TypeRef(At(), kw, pathId(p)))
+          Some(TypeRef(curAt, kw, pathId(p)))
         case None => aggregationOf(a.fields)
     }
 
   private def buildMethod(m: MethodDto)(using Ctx): Method =
-    val args = m.args.map(a => MethodArgument(At(), a.name, buildTypeExpr(a.`type`)))
-    Method(At(), ident(m.name), buildTypeExpr(m.`type`), args, meta(m.brief, m.metadata))
+    val args = m.args.map(a => MethodArgument(curAt, a.name, buildTypeExpr(a.`type`)))
+    Method(curAt, ident(m.name), buildTypeExpr(m.`type`), args, meta(m.brief, m.metadata))
 
   private def buildEntity(e: EntityDto)(using Ctx): Entity =
     val types = e.types.map(buildType)
@@ -763,7 +841,7 @@ object JsonAstBuilder:
     val connectors = e.connectors.map(buildConnector)
     val relationships = e.relationships.map(buildRelationship)
     Entity(
-      At(),
+      curAt,
       ident(e.name),
       childrenOrBuckets[EntityContents](
         e.contents,
@@ -799,9 +877,9 @@ object JsonAstBuilder:
     */
   private def buildState(s: StateDto)(using Ctx): State =
     State(
-      At(),
+      curAt,
       ident(s.name),
-      RecordRef(At(), pathId(s.recordType)), // A9b: state type is a RecordRef
+      RecordRef(curAt, pathId(s.recordType)), // A9b: state type is a RecordRef
       childrenOrBuckets[StateContents](
         s.contents,
         "State",
@@ -819,7 +897,7 @@ object JsonAstBuilder:
   private def buildHandler(h: HandlerDto)(using Ctx): Handler =
     val clauses = h.onClauses.map(buildOnClause)
     Handler(
-      At(),
+      curAt,
       ident(h.name),
       childrenOrBuckets[HandlerContents](
         h.contents,
@@ -846,7 +924,7 @@ object JsonAstBuilder:
         oc.message match
           case Some(mr) =>
             OnMessageClause(
-              At(),
+              curAt,
               messageRef(mr),
               from,
               binding,
@@ -856,8 +934,8 @@ object JsonAstBuilder:
           case None =>
             ctx.err("on-clause of kind 'message' requires a 'message' reference")
             OnMessageClause(
-              At(),
-              CommandRef(At(), PathIdentifier.empty),
+              curAt,
+              CommandRef(curAt, PathIdentifier.empty),
               from,
               binding,
               statements,
@@ -867,7 +945,7 @@ object JsonAstBuilder:
         oc.message match
           case Some(mr) =>
             OnEventClause(
-              At(),
+              curAt,
               messageRef(mr),
               from,
               binding,
@@ -877,36 +955,36 @@ object JsonAstBuilder:
           case None =>
             ctx.err("on-clause of kind 'event' requires a 'message' reference")
             OnEventClause(
-              At(),
-              EventRef(At(), PathIdentifier.empty),
+              curAt,
+              EventRef(curAt, PathIdentifier.empty),
               from,
               binding,
               statements,
               md
             )
-      case "init"      => OnInitializationClause(At(), statements, md)
-      case "other"     => OnOtherClause(At(), statements, md)
-      case "term"      => OnTerminationClause(At(), statements, md)
-      case "activate"  => OnActivationClause(At(), statements, md)
-      case "passivate" => OnPassivationClause(At(), statements, md)
+      case "init"      => OnInitializationClause(curAt, statements, md)
+      case "other"     => OnOtherClause(curAt, statements, md)
+      case "term"      => OnTerminationClause(curAt, statements, md)
+      case "activate"  => OnActivationClause(curAt, statements, md)
+      case "passivate" => OnPassivationClause(curAt, statements, md)
       case other =>
         ctx.err(
           s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate)"
         )
-        OnOtherClause(At(), statements, md)
+        OnOtherClause(curAt, statements, md)
     end match
   end buildOnClause
 
   private def messageRef(mr: MessageRefDto)(using ctx: Ctx): MessageRef =
     mr.kind match
-      case "command" => CommandRef(At(), pathId(mr.ref))
-      case "event"   => EventRef(At(), pathId(mr.ref))
-      case "query"   => QueryRef(At(), pathId(mr.ref))
-      case "result"  => ResultRef(At(), pathId(mr.ref))
+      case "command" => CommandRef(curAt, pathId(mr.ref))
+      case "event"   => EventRef(curAt, pathId(mr.ref))
+      case "query"   => QueryRef(curAt, pathId(mr.ref))
+      case "result"  => ResultRef(curAt, pathId(mr.ref))
       case other     =>
         // A9b: a record is not a message.
         ctx.err(s"unknown message kind '$other' (expected command|event|query|result)")
-        CommandRef(At(), pathId(mr.ref))
+        CommandRef(curAt, pathId(mr.ref))
 
   private def buildInvariant(i: InvariantDto)(using ctx: Ctx): Invariant =
     // A28: a structured `expression` rebuilds a BooleanExpression; otherwise the `condition` string
@@ -917,9 +995,9 @@ object JsonAstBuilder:
           case be: BooleanExpression => Some(be)
           case _ =>
             ctx.err("invariant 'expression' must be a boolean expression")
-            Some(LiteralString(At(), ""))
-      case None => Some(LiteralString(At(), i.condition))
-    Invariant(At(), ident(i.name), cond, meta(i.brief, i.metadata))
+            Some(LiteralString(curAt, ""))
+      case None => Some(LiteralString(curAt, i.condition))
+    Invariant(curAt, ident(i.name), cond, meta(i.brief, i.metadata))
 
   // ---------------------------------------------------------------------------
   // Functions and statements (Phase 3)
@@ -930,7 +1008,7 @@ object JsonAstBuilder:
     val statements = f.statements.map(buildStatement)
     val functions = f.functions.map(buildFunction)
     Function(
-      At(),
+      curAt,
       ident(f.name),
       argOf(f.input),
       argOf(f.output),
@@ -946,7 +1024,7 @@ object JsonAstBuilder:
 
   private def buildSagaStep(st: SagaStepDto)(using Ctx): SagaStep =
     SagaStep(
-      At(),
+      curAt,
       ident(st.name),
       buildStatements(st.`do`),
       buildStatements(st.undo),
@@ -957,7 +1035,7 @@ object JsonAstBuilder:
     val types = s.types.map(buildType)
     val steps = s.steps.map(buildSagaStep)
     Saga(
-      At(),
+      curAt,
       ident(s.name),
       argOf(s.input),
       argOf(s.output),
@@ -974,103 +1052,103 @@ object JsonAstBuilder:
   // Epics, use cases, interactions (Phase 7)
   // ---------------------------------------------------------------------------
 
-  private def buildUserStory(us: UserStoryDto): UserStory =
+  private def buildUserStory(us: UserStoryDto)(using Ctx): UserStory =
     UserStory(
-      At(),
-      UserRef(At(), pathId(us.user)),
-      LiteralString(At(), us.capability),
-      LiteralString(At(), us.benefit)
+      curAt,
+      UserRef(curAt, pathId(us.user)),
+      LiteralString(curAt, us.capability),
+      LiteralString(curAt, us.benefit)
     )
 
   /** A generic definition reference for an interaction's from/to. */
   private def buildRef(r: RefDto)(using ctx: Ctx): Reference[Definition] =
     r.kind match
-      case "user"       => UserRef(At(), pathId(r.path))
-      case "entity"     => EntityRef(At(), pathId(r.path))
-      case "context"    => ContextRef(At(), pathId(r.path))
-      case "group"      => GroupRef(At(), r.keyword.getOrElse("group"), pathId(r.path))
-      case "output"     => OutputRef(At(), r.keyword.getOrElse("output"), pathId(r.path))
-      case "input"      => InputRef(At(), r.keyword.getOrElse("input"), pathId(r.path))
-      case "adaptor"    => AdaptorRef(At(), pathId(r.path))
-      case "projector"  => ProjectorRef(At(), pathId(r.path))
-      case "repository" => RepositoryRef(At(), pathId(r.path))
-      case "saga"       => SagaRef(At(), pathId(r.path))
-      case "streamlet"  => StreamletRef(At(), r.keyword.getOrElse("source"), pathId(r.path))
+      case "user"       => UserRef(curAt, pathId(r.path))
+      case "entity"     => EntityRef(curAt, pathId(r.path))
+      case "context"    => ContextRef(curAt, pathId(r.path))
+      case "group"      => GroupRef(curAt, r.keyword.getOrElse("group"), pathId(r.path))
+      case "output"     => OutputRef(curAt, r.keyword.getOrElse("output"), pathId(r.path))
+      case "input"      => InputRef(curAt, r.keyword.getOrElse("input"), pathId(r.path))
+      case "adaptor"    => AdaptorRef(curAt, pathId(r.path))
+      case "projector"  => ProjectorRef(curAt, pathId(r.path))
+      case "repository" => RepositoryRef(curAt, pathId(r.path))
+      case "saga"       => SagaRef(curAt, pathId(r.path))
+      case "streamlet"  => StreamletRef(curAt, r.keyword.getOrElse("source"), pathId(r.path))
       case other =>
         ctx.err(s"unknown reference kind '$other' for an interaction")
-        UserRef(At(), pathId(r.path))
+        UserRef(curAt, pathId(r.path))
 
   private def buildInteraction(i: InteractionDto)(using ctx: Ctx): Interaction =
     val nm = Contents.empty[MetaData]()
     i match
       case VagueIxnDto(from, rel, to) =>
         VagueInteraction(
-          At(),
-          LiteralString(At(), from),
-          LiteralString(At(), rel),
-          LiteralString(At(), to),
+          curAt,
+          LiteralString(curAt, from),
+          LiteralString(curAt, rel),
+          LiteralString(curAt, to),
           nm
         )
       case SendMessageIxnDto(from, msg, to, proc) =>
-        SendMessageInteraction(At(), buildRef(from), messageRef(msg), processorRef(to, proc), nm)
+        SendMessageInteraction(curAt, buildRef(from), messageRef(msg), processorRef(to, proc), nm)
       case ArbitraryIxnDto(from, rel, to) =>
-        ArbitraryInteraction(At(), buildRef(from), LiteralString(At(), rel), buildRef(to), nm)
+        ArbitraryInteraction(curAt, buildRef(from), LiteralString(curAt, rel), buildRef(to), nm)
       case SelfIxnDto(from, rel) =>
-        SelfInteraction(At(), buildRef(from), LiteralString(At(), rel), nm)
+        SelfInteraction(curAt, buildRef(from), LiteralString(curAt, rel), nm)
       case FocusOnGroupIxnDto(user, group, kw) =>
         FocusOnGroupInteraction(
-          At(),
-          UserRef(At(), pathId(user)),
-          GroupRef(At(), kw.getOrElse("group"), pathId(group)),
+          curAt,
+          UserRef(curAt, pathId(user)),
+          GroupRef(curAt, kw.getOrElse("group"), pathId(group)),
           nm
         )
       case DirectToURLIxnDto(user, url) =>
-        DirectUserToURLInteraction(At(), UserRef(At(), pathId(user)), URL(url), nm)
+        DirectUserToURLInteraction(curAt, UserRef(curAt, pathId(user)), URL(url), nm)
       case ShowOutputIxnDto(output, rel, user, kw) =>
         ShowOutputInteraction(
-          At(),
-          OutputRef(At(), kw.getOrElse("output"), pathId(output)),
-          LiteralString(At(), rel),
-          UserRef(At(), pathId(user)),
+          curAt,
+          OutputRef(curAt, kw.getOrElse("output"), pathId(output)),
+          LiteralString(curAt, rel),
+          UserRef(curAt, pathId(user)),
           nm
         )
       case SelectInputIxnDto(user, input, kw) =>
         SelectInputInteraction(
-          At(),
-          UserRef(At(), pathId(user)),
-          InputRef(At(), kw.getOrElse("input"), pathId(input)),
+          curAt,
+          UserRef(curAt, pathId(user)),
+          InputRef(curAt, kw.getOrElse("input"), pathId(input)),
           nm
         )
       case TakeInputIxnDto(user, input, kw) =>
         TakeInputInteraction(
-          At(),
-          UserRef(At(), pathId(user)),
-          InputRef(At(), kw.getOrElse("input"), pathId(input)),
+          curAt,
+          UserRef(curAt, pathId(user)),
+          InputRef(curAt, kw.getOrElse("input"), pathId(input)),
           nm
         )
       case RefusalIxnDto(from, user, reason) =>
         RefusalInteraction(
-          At(),
+          curAt,
           buildRef(from),
-          UserRef(At(), pathId(user)),
-          LiteralString(At(), reason),
+          UserRef(curAt, pathId(user)),
+          LiteralString(curAt, reason),
           nm
         )
       case ParallelIxnDto(ixns) =>
         ParallelInteractions(
-          At(),
+          curAt,
           contentsOf[InteractionContainerContents](ixns.map(buildInteraction)),
           nm
         )
       case SequentialIxnDto(ixns) =>
         SequentialInteractions(
-          At(),
+          curAt,
           contentsOf[InteractionContainerContents](ixns.map(buildInteraction)),
           nm
         )
       case OptionalIxnDto(ixns) =>
         OptionalInteractions(
-          At(),
+          curAt,
           contentsOf[InteractionContainerContents](ixns.map(buildInteraction)),
           nm
         )
@@ -1079,7 +1157,7 @@ object JsonAstBuilder:
 
   private def buildUseCase(u: UseCaseDto)(using Ctx): UseCase =
     UseCase(
-      At(),
+      curAt,
       ident(u.name),
       buildUserStory(u.userStory),
       childrenOrBuckets[UseCaseContents](
@@ -1094,9 +1172,9 @@ object JsonAstBuilder:
   private def buildEpic(e: EpicDto)(using Ctx): Epic =
     val types = e.types.map(buildType)
     val useCases = e.useCases.map(buildUseCase)
-    val shownBy = if e.shownBy.isEmpty then Nil else Seq(ShownBy(At(), e.shownBy.map(u => URL(u))))
+    val shownBy = if e.shownBy.isEmpty then Nil else Seq(ShownBy(curAt, e.shownBy.map(u => URL(u))))
     Epic(
-      At(),
+      curAt,
       ident(e.name),
       buildUserStory(e.userStory),
       childrenOrBuckets[EpicContents](
@@ -1115,27 +1193,27 @@ object JsonAstBuilder:
 
   private def buildPutOut(p: PutOutDto)(using ctx: Ctx): TypeRef | ConstantRef | LiteralString =
     p.kind match
-      case "type"     => TypeRef(At(), p.keyword.getOrElse("type"), pathId(p.value))
-      case "constant" => ConstantRef(At(), pathId(p.value))
-      case "literal"  => LiteralString(At(), p.value)
+      case "type"     => TypeRef(curAt, p.keyword.getOrElse("type"), pathId(p.value))
+      case "constant" => ConstantRef(curAt, pathId(p.value))
+      case "literal"  => LiteralString(curAt, p.value)
       case other =>
         ctx.err(s"unknown output putOut kind '$other' (expected type|constant|literal)")
-        LiteralString(At(), p.value)
+        LiteralString(curAt, p.value)
 
   private def buildInput(i: InputDto)(using Ctx): Input =
     Input(
-      At(),
+      curAt,
       i.nounAlias.getOrElse("input"),
       ident(i.name),
       i.verbAlias.getOrElse("acquires"),
-      TypeRef(At(), i.keyword.getOrElse("type"), pathId(i.takeIn)),
+      TypeRef(curAt, i.keyword.getOrElse("type"), pathId(i.takeIn)),
       contentsOf[OccursInInput](i.inputs.map(buildInput)),
       meta(i.brief, i.metadata)
     )
 
   private def buildOutput(o: OutputDto)(using Ctx): Output =
     Output(
-      At(),
+      curAt,
       o.nounAlias.getOrElse("output"),
       ident(o.name),
       o.verbAlias.getOrElse("displays"),
@@ -1146,9 +1224,9 @@ object JsonAstBuilder:
 
   private def buildContainedGroup(cg: ContainedGroupDto)(using Ctx): ContainedGroup =
     ContainedGroup(
-      At(),
+      curAt,
       ident(cg.name),
-      GroupRef(At(), "group", pathId(cg.group)),
+      GroupRef(curAt, "group", pathId(cg.group)),
       meta(cg.brief, cg.metadata)
     )
 
@@ -1158,7 +1236,7 @@ object JsonAstBuilder:
     val inputs = g.inputs.map(buildInput)
     val outputs = g.outputs.map(buildOutput)
     Group(
-      At(),
+      curAt,
       g.alias.getOrElse("group"),
       ident(g.name),
       childrenOrBuckets[OccursInGroup](
@@ -1175,8 +1253,8 @@ object JsonAstBuilder:
     */
   private def buildStatements(stmts: Seq[StatementDto])(using Ctx): Contents[Statements] =
     val items: Seq[Statements] = stmts.map {
-      case CommentStmtDto(text, true)  => InlineComment(At(), text.split("\n").toSeq)
-      case CommentStmtDto(text, false) => LineComment(At(), text)
+      case CommentStmtDto(text, true)  => InlineComment(curAt, text.split("\n").toSeq)
+      case CommentStmtDto(text, false) => LineComment(curAt, text)
       case other                       => buildStatement(other)
     }
     Contents[Statements](items*)
@@ -1188,17 +1266,17 @@ object JsonAstBuilder:
       // catch-all so that adding a statement kind still fails the exhaustivity check.
       case CommentStmtDto(text, _) =>
         ctx.err(s"a comment is not a statement and should not reach buildStatement: '$text'")
-        PromptStatement(At(), LiteralString(At(), text))
-      case PromptStmtDto(text)   => PromptStatement(At(), LiteralString(At(), text))
-      case ErrorStmtDto(message) => ErrorStatement(At(), LiteralString(At(), message))
+        PromptStatement(curAt, LiteralString(curAt, text))
+      case PromptStmtDto(text)   => PromptStatement(curAt, LiteralString(curAt, text))
+      case ErrorStmtDto(message) => ErrorStatement(curAt, LiteralString(curAt, message))
       case LetStmtDto(name, t, expression) =>
         LetStatement(
-          At(),
+          curAt,
           ident(name),
-          t.map(p => TypeRef(At(), "type", pathId(p))),
+          t.map(p => TypeRef(curAt, "type", pathId(p))),
           buildValue(expression)
         )
-      case CodeStmtDto(language, body) => CodeStatement(At(), LiteralString(At(), language), body)
+      case CodeStmtDto(language, body) => CodeStatement(curAt, LiteralString(curAt, language), body)
       case RequireStmtDto(condition, invariant, expression) =>
         val cond: LiteralString | InvariantRef | BooleanExpression = expression match
           case Some(exprDto) => // A28: structured boolean-expression condition
@@ -1206,39 +1284,39 @@ object JsonAstBuilder:
               case be: BooleanExpression => be
               case _ =>
                 ctx.err("require 'expression' must be a boolean expression")
-                LiteralString(At(), "")
+                LiteralString(curAt, "")
           case None =>
             invariant match
-              case Some(name) => InvariantRef(At(), pathId(name))
+              case Some(name) => InvariantRef(curAt, pathId(name))
               case None =>
                 condition match
-                  case Some(c) => LiteralString(At(), c)
+                  case Some(c) => LiteralString(curAt, c)
                   case None =>
                     ctx.err("require statement needs a 'condition', 'invariant', or 'expression'")
-                    LiteralString(At(), "")
-        RequireStatement(At(), cond)
+                    LiteralString(curAt, "")
+        RequireStatement(curAt, cond)
       case SetStmtDto(field, state, value) =>
         val target: FieldRef | StateRef = (field, state) match
-          case (Some(f), _)     => FieldRef(At(), pathId(f))
-          case (None, Some(st)) => StateRef(At(), pathId(st))
+          case (Some(f), _)     => FieldRef(curAt, pathId(f))
+          case (None, Some(st)) => StateRef(curAt, pathId(st))
           case (None, None) =>
             ctx.err("set statement needs a 'field' or a 'state' target")
-            FieldRef(At(), PathIdentifier.empty)
-        SetStatement(At(), target, buildValue(value))
+            FieldRef(curAt, PathIdentifier.empty)
+        SetStatement(curAt, target, buildValue(value))
       case SendStmtDto(message, to, portlet) =>
-        SendStatement(At(), buildMsgOperand(message), portletRef(to, portlet))
+        SendStatement(curAt, buildMsgOperand(message), portletRef(to, portlet))
       case MorphStmtDto(entity, state, value) =>
         MorphStatement(
-          At(),
-          EntityRef(At(), pathId(entity)),
-          StateRef(At(), pathId(state)),
+          curAt,
+          EntityRef(curAt, pathId(entity)),
+          StateRef(curAt, pathId(state)),
           buildRecordOperand(value) // A9b/A54: RecordRef or Constructor
         )
       case BecomeStmtDto(entity, handler) =>
-        BecomeStatement(At(), EntityRef(At(), pathId(entity)), HandlerRef(At(), pathId(handler)))
+        BecomeStatement(curAt, EntityRef(curAt, pathId(entity)), HandlerRef(curAt, pathId(handler)))
       case TellStmtDto(message, to, processor) =>
-        TellStatement(At(), buildMsgOperand(message), processorRef(to, processor))
-      case YieldStmtDto(message) => YieldStatement(At(), buildMsgOperand(message))
+        TellStatement(curAt, buildMsgOperand(message), processorRef(to, processor))
+      case YieldStmtDto(message) => YieldStatement(curAt, buildMsgOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
         val cond: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue =
           expression match
@@ -1254,12 +1332,12 @@ object JsonAstBuilder:
                   ctx.err(
                     "when 'expression' must be a boolean expression, a value reference or a prompt"
                   )
-                  LiteralString(At(), "")
+                  LiteralString(curAt, "")
             case None =>
               conditionId match
                 case Some(id) => ident(id)
-                case None     => LiteralString(At(), condition.getOrElse(""))
-        WhenStatement(At(), cond, buildStatements(thenS), buildStatements(elseS), negated)
+                case None     => LiteralString(curAt, condition.getOrElse(""))
+        WhenStatement(curAt, cond, buildStatements(thenS), buildStatements(elseS), negated)
       case MatchStmtDto(subject, cases, default) =>
         val subj: MatchSubject = buildValue(subject) match // A29: narrow to MatchSubject
           case vr: ValueRef      => vr
@@ -1267,98 +1345,98 @@ object JsonAstBuilder:
           case ls: LiteralString => ls
           case other =>
             ctx.err(s"match subject must be a value ref, get, or literal, got: $other")
-            LiteralString(At(), "")
+            LiteralString(curAt, "")
         MatchStatement(
-          At(),
+          curAt,
           subj,
           cases.map(buildMatchCase),
           buildStatements(default)
         )
       case ForeachStmtDto(element, field, local, doStatements) =>
         val collection: FieldRef | Identifier = (field, local) match
-          case (Some(f), _)    => FieldRef(At(), pathId(f))
+          case (Some(f), _)    => FieldRef(curAt, pathId(f))
           case (None, Some(l)) => ident(l)
           case (None, None) =>
             ctx.err("foreach statement needs a 'field' or a 'local' collection")
-            FieldRef(At(), PathIdentifier.empty)
-        ForeachStatement(At(), ident(element), collection, buildStatements(doStatements))
+            FieldRef(curAt, PathIdentifier.empty)
+        ForeachStatement(curAt, ident(element), collection, buildStatements(doStatements))
       case PutStmtDto(value, output) =>
-        PutStatement(At(), buildValue(value), OutputRef(At(), "output", pathId(output)))
+        PutStatement(curAt, buildValue(value), OutputRef(curAt, "output", pathId(output)))
       case ReturnStmtDto(value) =>
-        ReturnStatement(At(), buildValue(value))
+        ReturnStatement(curAt, buildValue(value))
   end buildStatement
 
   // A54: ValueDto -> AST Value.
   private def buildValue(v: ValueDto)(using ctx: Ctx): Value =
     v match
-      case LiteralValueDto(text)  => LiteralString(At(), text)
-      case PromptValueDto(prompt) => PromptValue(At(), LiteralString(At(), prompt))
-      case ValueRefDto(p)         => ValueRef(At(), pathId(p))
+      case LiteralValueDto(text)  => LiteralString(curAt, text)
+      case PromptValueDto(prompt) => PromptValue(curAt, LiteralString(curAt, prompt))
+      case ValueRefDto(p)         => ValueRef(curAt, pathId(p))
       case GetValueDto(source, keyword, ref) =>
         val src: InputRef | StateRef = source match
-          case "input" => InputRef(At(), keyword.getOrElse("input"), pathId(ref))
-          case "state" => StateRef(At(), pathId(ref))
+          case "input" => InputRef(curAt, keyword.getOrElse("input"), pathId(ref))
+          case "state" => StateRef(curAt, pathId(ref))
           case other =>
             ctx.err(s"unknown get-value source '$other' (expected input|state)")
-            StateRef(At(), pathId(ref))
-        GetValue(At(), src)
+            StateRef(curAt, pathId(ref))
+        GetValue(curAt, src)
       case c: ConstructorValueDto => buildConstructor(c)
       case c: CallValueDto        => buildCall(c) // A24
-      case BooleanLiteralDto(b)   => BooleanLiteral(At(), b)
+      case BooleanLiteralDto(b)   => BooleanLiteral(curAt, b)
       case ComparisonDto(op, left, right) =>
         val cop = ComparisonOperator.values
           .find(_.symbol == op)
           .getOrElse { ctx.err(s"unknown comparison operator '$op'"); ComparisonOperator.EQ }
-        ComparisonExpression(At(), cop, buildComparand(left), buildComparand(right))
-      case ConstantRefDto(p) => ValueRef(At(), pathId(p)) // A28: only valid as a comparand
+        ComparisonExpression(curAt, cop, buildComparand(left), buildComparand(right))
+      case ConstantRefDto(p) => ValueRef(curAt, pathId(p)) // A28: only valid as a comparand
       case LogicalDto(op, left, right) =>
         val lop = LogicalOperator.values
           .find(_.symbol == op)
           .getOrElse { ctx.err(s"unknown logical operator '$op'"); LogicalOperator.And }
-        LogicalExpression(At(), lop, buildValue(left), buildValue(right))
-      case NotDto(expr) => NotExpression(At(), buildValue(expr))
+        LogicalExpression(curAt, lop, buildValue(left), buildValue(right))
+      case NotDto(expr) => NotExpression(curAt, buildValue(expr))
 
   // A28: ValueDto -> AST Comparand (ValueRef | GetValue | ConstantRef). Comparison operands are
   // ref-only; any other DTO is a malformed comparand (reported), degraded to a bare ValueRef.
   private def buildComparand(v: ValueDto)(using ctx: Ctx): Comparand =
     v match
-      case ValueRefDto(p)    => ValueRef(At(), pathId(p))
-      case ConstantRefDto(p) => ConstantRef(At(), pathId(p))
+      case ValueRefDto(p)    => ValueRef(curAt, pathId(p))
+      case ConstantRefDto(p) => ConstantRef(curAt, pathId(p))
       case GetValueDto(source, keyword, ref) =>
         val src: InputRef | StateRef = source match
-          case "input" => InputRef(At(), keyword.getOrElse("input"), pathId(ref))
-          case "state" => StateRef(At(), pathId(ref))
+          case "input" => InputRef(curAt, keyword.getOrElse("input"), pathId(ref))
+          case "state" => StateRef(curAt, pathId(ref))
           case other =>
             ctx.err(s"unknown get-value source '$other' (expected input|state)")
-            StateRef(At(), pathId(ref))
-        GetValue(At(), src)
+            StateRef(curAt, pathId(ref))
+        GetValue(curAt, src)
       case other =>
         ctx.err(s"comparison operand must be a value/constant reference, got: $other")
-        ValueRef(At(), PathIdentifier.empty)
+        ValueRef(curAt, PathIdentifier.empty)
 
   // A54: ConstructorValueDto -> AST Constructor.
   private def buildConstructor(c: ConstructorValueDto)(using ctx: Ctx): Constructor =
     val cref: MessageRef | RecordRef = c.refKind match
-      case "command" => CommandRef(At(), pathId(c.ref))
-      case "event"   => EventRef(At(), pathId(c.ref))
-      case "query"   => QueryRef(At(), pathId(c.ref))
-      case "result"  => ResultRef(At(), pathId(c.ref))
-      case "record"  => RecordRef(At(), pathId(c.ref))
+      case "command" => CommandRef(curAt, pathId(c.ref))
+      case "event"   => EventRef(curAt, pathId(c.ref))
+      case "query"   => QueryRef(curAt, pathId(c.ref))
+      case "result"  => ResultRef(curAt, pathId(c.ref))
+      case "record"  => RecordRef(curAt, pathId(c.ref))
       case other =>
         ctx.err(s"unknown constructor refKind '$other'")
-        RecordRef(At(), pathId(c.ref))
+        RecordRef(curAt, pathId(c.ref))
     Constructor(
-      At(),
+      curAt,
       cref,
-      c.args.map(a => ConstructorArg(At(), a.name.map(ident), buildValue(a.value)))
+      c.args.map(a => ConstructorArg(curAt, a.name.map(ident), buildValue(a.value)))
     )
 
   // A24: CallValueDto -> AST Call.
   private def buildCall(c: CallValueDto)(using ctx: Ctx): Call =
     Call(
-      At(),
-      FunctionRef(At(), pathId(c.function)),
-      c.args.map(a => ConstructorArg(At(), a.name.map(ident), buildValue(a.value)))
+      curAt,
+      FunctionRef(curAt, pathId(c.function)),
+      c.args.map(a => ConstructorArg(curAt, a.name.map(ident), buildValue(a.value)))
     )
 
   // A54: a message operand — a bare ref or an inline constructor.
@@ -1370,7 +1448,7 @@ object JsonAstBuilder:
   private def buildRecordOperand(o: MsgOperandDto)(using ctx: Ctx): RecordRef | Constructor =
     o match
       case c: ConstructorValueDto => buildConstructor(c)
-      case m: MessageRefDto       => RecordRef(At(), pathId(m.ref))
+      case m: MessageRefDto       => RecordRef(curAt, pathId(m.ref))
 
   private def buildMatchCase(c: MatchCaseDto)(using ctx: Ctx): MatchCase =
     val guard: Option[BooleanExpression | ValueRef] = c.guard.map(g =>
@@ -1379,47 +1457,47 @@ object JsonAstBuilder:
         case vr: ValueRef          => vr // A29: bare boolean value-ref guard
         case _ =>
           ctx.err("match case guard must be a boolean expression or a boolean value reference")
-          BooleanLiteral(At(), true)
+          BooleanLiteral(curAt, true)
     )
-    MatchCase(At(), buildMatchPattern(c.pattern), guard, buildStatements(c.statements))
+    MatchCase(curAt, buildMatchPattern(c.pattern), guard, buildStatements(c.statements))
 
   // A29: MatchPatternDto -> AST MatchPattern.
   private def buildMatchPattern(p: MatchPatternDto)(using ctx: Ctx): MatchPattern =
     p match
       case TypePatternDto(path, keyword) =>
-        TypePattern(At(), TypeRef(At(), keyword.getOrElse("type"), pathId(path)))
+        TypePattern(curAt, TypeRef(curAt, keyword.getOrElse("type"), pathId(path)))
       case ComparisonPatternDto(op, comparand) =>
         val cop = ComparisonOperator.values
           .find(_.symbol == op)
           .getOrElse { ctx.err(s"unknown comparison operator '$op'"); ComparisonOperator.EQ }
-        ComparisonPattern(At(), cop, buildComparand(comparand))
-      case LiteralPatternDto(text) => LiteralPattern(At(), LiteralString(At(), text))
+        ComparisonPattern(curAt, cop, buildComparand(comparand))
+      case LiteralPatternDto(text) => LiteralPattern(curAt, LiteralString(curAt, text))
 
   private def portletRef(path: String, kind: String)(using ctx: Ctx): PortletRef[Portlet] =
     kind match
-      case "inlet"  => InletRef(At(), pathId(path))
-      case "outlet" => OutletRef(At(), pathId(path))
+      case "inlet"  => InletRef(curAt, pathId(path))
+      case "outlet" => OutletRef(curAt, pathId(path))
       case other =>
         ctx.err(s"unknown portlet kind '$other' (expected inlet|outlet)")
-        InletRef(At(), pathId(path))
+        InletRef(curAt, pathId(path))
 
   private def processorRef(path: String, kind: String)(using ctx: Ctx): ProcessorRef[Processor[?]] =
     kind match
-      case "entity"     => EntityRef(At(), pathId(path))
-      case "context"    => ContextRef(At(), pathId(path))
-      case "projector"  => ProjectorRef(At(), pathId(path))
-      case "repository" => RepositoryRef(At(), pathId(path))
-      case "adaptor"    => AdaptorRef(At(), pathId(path))
+      case "entity"     => EntityRef(curAt, pathId(path))
+      case "context"    => ContextRef(curAt, pathId(path))
+      case "projector"  => ProjectorRef(curAt, pathId(path))
+      case "repository" => RepositoryRef(curAt, pathId(path))
+      case "adaptor"    => AdaptorRef(curAt, pathId(path))
       // A streamlet reference is named by its SHAPE, which doubles as the discriminator — it
       // cannot collide with the kinds above.
       case kw @ ("source" | "sink" | "merge" | "split" | "void") =>
-        StreamletRef(At(), kw, pathId(path))
+        StreamletRef(curAt, kw, pathId(path))
       case other =>
         ctx.err(
           s"unknown processor kind '$other' " +
             "(expected entity|context|projector|repository|adaptor|source|sink|merge|split|void)"
         )
-        EntityRef(At(), pathId(path))
+        EntityRef(curAt, pathId(path))
 
   // ---------------------------------------------------------------------------
   // Streaming & integration (Phase 4)
@@ -1427,11 +1505,11 @@ object JsonAstBuilder:
 
   private def adaptorDirection(s: String)(using ctx: Ctx): AdaptorDirection =
     s match
-      case "inbound"  => InboundAdaptor(At())
-      case "outbound" => OutboundAdaptor(At())
+      case "inbound"  => InboundAdaptor(curAt)
+      case "outbound" => OutboundAdaptor(curAt)
       case other =>
         ctx.err(s"unknown adaptor direction '$other' (expected inbound|outbound)")
-        InboundAdaptor(At())
+        InboundAdaptor(curAt)
 
   private def buildAdaptor(a: AdaptorDto)(using Ctx): Adaptor =
     val types = a.types.map(buildType)
@@ -1451,10 +1529,10 @@ object JsonAstBuilder:
     val connectors = a.connectors.map(buildConnector)
     val relationships = a.relationships.map(buildRelationship)
     Adaptor(
-      At(),
+      curAt,
       ident(a.name),
       adaptorDirection(a.direction),
-      ContextRef(At(), pathId(a.context)),
+      ContextRef(curAt, pathId(a.context)),
       childrenOrBuckets[AdaptorContents](
         a.contents,
         "Adaptor",
@@ -1495,26 +1573,26 @@ object JsonAstBuilder:
 
   private def buildInlet(p: PortletDto)(using Ctx): Inlet =
     Inlet(
-      At(),
+      curAt,
       ident(p.name),
-      TypeRef(At(), p.keyword.getOrElse("type"), pathId(p.`type`)),
+      TypeRef(curAt, p.keyword.getOrElse("type"), pathId(p.`type`)),
       meta(p.brief, p.metadata)
     )
 
   private def buildOutlet(p: PortletDto)(using Ctx): Outlet =
     Outlet(
-      At(),
+      curAt,
       ident(p.name),
-      TypeRef(At(), p.keyword.getOrElse("type"), pathId(p.`type`)),
+      TypeRef(curAt, p.keyword.getOrElse("type"), pathId(p.`type`)),
       meta(p.brief, p.metadata)
     )
 
   private def buildConnector(c: ConnectorDto)(using Ctx): Connector =
     Connector(
-      At(),
+      curAt,
       ident(c.name),
-      OutletRef(At(), pathId(c.from)),
-      InletRef(At(), pathId(c.to)),
+      OutletRef(curAt, pathId(c.from)),
+      InletRef(curAt, pathId(c.to)),
       meta(c.brief, c.metadata)
     )
 
@@ -1536,7 +1614,7 @@ object JsonAstBuilder:
     val nested = s.streamlets.map(buildStreamlet)
     val relationships = s.relationships.map(buildRelationship)
     Streamlet(
-      At(),
+      curAt,
       ident(s.name),
       parseShape(s.shape),
       childrenOrBuckets[StreamletContents](
@@ -1578,11 +1656,11 @@ object JsonAstBuilder:
 
   private def buildRelationship(r: RelationshipDto)(using Ctx): Relationship =
     Relationship(
-      At(),
+      curAt,
       ident(r.name),
       processorRef(r.withProcessor, r.processor),
       relationshipCardinality(r.cardinality),
-      r.label.map(LiteralString(At(), _)),
+      r.label.map(LiteralString(curAt, _)),
       meta(r.brief, r.metadata)
     )
 
@@ -1595,7 +1673,7 @@ object JsonAstBuilder:
     val results = p.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val functions = p.functions.map(buildFunction)
     val handlers = p.handlers.map(buildHandler)
-    val repoRefs = p.repository.toSeq.map(r => RepositoryRef(At(), pathId(r)))
+    val repoRefs = p.repository.toSeq.map(r => RepositoryRef(curAt, pathId(r)))
     val inlets = p.inlets.map(buildInlet)
     val outlets = p.outlets.map(buildOutlet)
     val version = p.version.map(buildVersion).toSeq
@@ -1605,7 +1683,7 @@ object JsonAstBuilder:
     val connectors = p.connectors.map(buildConnector)
     val relationships = p.relationships.map(buildRelationship)
     Projector(
-      At(),
+      curAt,
       ident(p.name),
       childrenOrBuckets[ProjectorContents](
         p.contents,
@@ -1647,21 +1725,31 @@ object JsonAstBuilder:
         }
 
   private def buildSchema(s: SchemaDto)(using ctx: Ctx): Schema =
-    val data = s.data.map { case (k, v) => Identifier(At(), k) -> TypeRef(At(), "type", pathId(v)) }
+    val data = s.data.map { case (k, v) =>
+      Identifier(curAt, k) -> TypeRef(curAt, "type", pathId(v))
+    }
     val links = s.links.flatMap { case (k, fields) =>
       if fields.sizeIs >= 2 then
         Some(
-          Identifier(At(), k) -> (
-            FieldRef(At(), pathId(fields(0))),
-            FieldRef(At(), pathId(fields(1)))
+          Identifier(curAt, k) -> (
+            FieldRef(curAt, pathId(fields(0))),
+            FieldRef(curAt, pathId(fields(1)))
           )
         )
       else
         ctx.err(s"schema link '$k' needs two field references")
         None
     }
-    val indices = s.indices.map(f => FieldRef(At(), pathId(f)))
-    Schema(At(), ident(s.name), schemaKind(s.kind), data, links, indices, meta(s.brief, s.metadata))
+    val indices = s.indices.map(f => FieldRef(curAt, pathId(f)))
+    Schema(
+      curAt,
+      ident(s.name),
+      schemaKind(s.kind),
+      data,
+      links,
+      indices,
+      meta(s.brief, s.metadata)
+    )
 
   private def buildRepository(r: RepositoryDto)(using Ctx): Repository =
     val types = r.types.map(buildType)
@@ -1685,7 +1773,7 @@ object JsonAstBuilder:
     val connectors = r.connectors.map(buildConnector)
     val relationships = r.relationships.map(buildRelationship)
     Repository(
-      At(),
+      curAt,
       ident(r.name),
       childrenOrBuckets[RepositoryContents](
         r.contents,
@@ -1737,66 +1825,66 @@ object JsonAstBuilder:
     dto match
       // AI-authored JSON may omit bounds; fill the canonical String(0,255)
       // defaults. root2Json emits these explicitly too, so json1==json2 holds.
-      case StringDto(min, max) => String_(At(), Some(min.getOrElse(0L)), Some(max.getOrElse(255L)))
+      case StringDto(min, max) => String_(curAt, Some(min.getOrElse(0L)), Some(max.getOrElse(255L)))
 
       case IdDto(entity) =>
         entity match
-          case Some(e) => UniqueId(At(), pathId(e))
+          case Some(e) => UniqueId(curAt, pathId(e))
           case None =>
             ctx.err("Id type requires an 'entity' path (it cannot be defaulted)")
-            UniqueId(At(), PathIdentifier.empty)
+            UniqueId(curAt, PathIdentifier.empty)
 
       case PredefDto(kind) =>
         kind match
-          case "UUID"        => UUID(At())
-          case "Boolean"     => Bool(At())
-          case "Date"        => Date(At())
-          case "TimeStamp"   => TimeStamp(At())
-          case "Integer"     => Integer(At())
-          case "Whole"       => Whole(At())
-          case "Natural"     => Natural(At())
-          case "Number"      => Number(At())
-          case "Real"        => Real(At())
-          case "UserId"      => UserId(At())
-          case "Anything"    => Anything(At())
-          case "Abstract"    => Anything(At()) // deprecated spelling of Anything
-          case "Location"    => Location(At())
-          case "Nothing"     => Nothing(At())
-          case "Time"        => Time(At())
-          case "DateTime"    => DateTime(At())
-          case "Duration"    => Duration(At())
-          case "Current"     => Current(At())
-          case "Length"      => Length(At())
-          case "Luminosity"  => Luminosity(At())
-          case "Mass"        => Mass(At())
-          case "Mole"        => Mole(At())
-          case "Temperature" => Temperature(At())
+          case "UUID"        => UUID(curAt)
+          case "Boolean"     => Bool(curAt)
+          case "Date"        => Date(curAt)
+          case "TimeStamp"   => TimeStamp(curAt)
+          case "Integer"     => Integer(curAt)
+          case "Whole"       => Whole(curAt)
+          case "Natural"     => Natural(curAt)
+          case "Number"      => Number(curAt)
+          case "Real"        => Real(curAt)
+          case "UserId"      => UserId(curAt)
+          case "Anything"    => Anything(curAt)
+          case "Abstract"    => Anything(curAt) // deprecated spelling of Anything
+          case "Location"    => Location(curAt)
+          case "Nothing"     => Nothing(curAt)
+          case "Time"        => Time(curAt)
+          case "DateTime"    => DateTime(curAt)
+          case "Duration"    => Duration(curAt)
+          case "Current"     => Current(curAt)
+          case "Length"      => Length(curAt)
+          case "Luminosity"  => Luminosity(curAt)
+          case "Mass"        => Mass(curAt)
+          case "Mole"        => Mole(curAt)
+          case "Temperature" => Temperature(curAt)
           case other =>
             ctx.err(s"unknown predefined type kind '$other'")
-            Anything(At())
+            Anything(curAt)
 
-      case DecimalDto(w, f)   => Decimal(At(), w.getOrElse(12L), f.getOrElse(2L))
-      case CurrencyDto(c)     => Currency(At(), c.getOrElse("USD"))
-      case RangeDto(min, max) => RangeType(At(), min.getOrElse(0L), max.getOrElse(100L))
+      case DecimalDto(w, f)   => Decimal(curAt, w.getOrElse(12L), f.getOrElse(2L))
+      case CurrencyDto(c)     => Currency(curAt, c.getOrElse("USD"))
+      case RangeDto(min, max) => RangeType(curAt, min.getOrElse(0L), max.getOrElse(100L))
 
       case PatternDto(ps) =>
         if ps.isEmpty then
           ctx.err("Pattern type requires at least one regular expression")
-          Pattern(At(), Seq.empty)
-        else Pattern(At(), ps.map(LiteralString(At(), _)))
+          Pattern(curAt, Seq.empty)
+        else Pattern(curAt, ps.map(LiteralString(curAt, _)))
 
       case EnumDto(es) =>
         if es.isEmpty then
           ctx.err("Enum type requires at least one value")
-          Enumeration(At(), Contents.empty[Enumerator]())
+          Enumeration(curAt, Contents.empty[Enumerator]())
         else
           val enumerators =
-            es.map(e => Enumerator(At(), ident(e.name), e.value, Contents.empty[MetaData]()))
-          Enumeration(At(), Contents[Enumerator](enumerators*))
+            es.map(e => Enumerator(curAt, ident(e.name), e.value, Contents.empty[MetaData]()))
+          Enumeration(curAt, Contents[Enumerator](enumerators*))
 
       case AlternationDto(of) =>
-        val aliases = of.map(t => AliasedTypeExpression(At(), "type", pathId(t)))
-        Alternation(At(), Contents[AliasedTypeExpression](aliases*))
+        val aliases = of.map(t => AliasedTypeExpression(curAt, "type", pathId(t)))
+        Alternation(curAt, Contents[AliasedTypeExpression](aliases*))
 
       case RecordDto(fields, methods, cs, aggregate) =>
         val contents = contentsOf[AggregateContents](
@@ -1810,12 +1898,12 @@ object JsonAstBuilder:
         // proper RIDDL `record` (an aggregate tagged RecordCase) rather than a bare aggregation, so
         // that a `state ... of record X` reference resolves (ResolutionPass.handleTypeResolution).
         aggregate.map(_.toLowerCase) match
-          case Some("aggregation") => Aggregation(At(), contents)
-          case flavour => AggregateUseCaseTypeExpression(At(), aggregateUseCase(flavour), contents)
+          case Some("aggregation") => Aggregation(curAt, contents)
+          case flavour => AggregateUseCaseTypeExpression(curAt, aggregateUseCase(flavour), contents)
 
-      case AliasDto(ref) => AliasedTypeExpression(At(), "type", pathId(ref))
+      case AliasDto(ref) => AliasedTypeExpression(curAt, "type", pathId(ref))
 
-      case URIDto(scheme) => URI(At(), scheme.map(LiteralString(At(), _)))
+      case URIDto(scheme) => URI(curAt, scheme.map(LiteralString(curAt, _)))
 
       case BlobDto(blobKind) =>
         val bk = blobKind match
@@ -1825,45 +1913,45 @@ object JsonAstBuilder:
               ctx.err(s"unknown blob kind '$s'")
               BlobKind.Text
             }
-        Blob(At(), bk)
+        Blob(curAt, bk)
 
       case ZonedDto(kind, zone) =>
         kind match
-          case "ZonedDate"     => ZonedDate(At(), zone.map(LiteralString(At(), _)))
-          case "ZonedDateTime" => ZonedDateTime(At(), zone.map(LiteralString(At(), _)))
+          case "ZonedDate"     => ZonedDate(curAt, zone.map(LiteralString(curAt, _)))
+          case "ZonedDateTime" => ZonedDateTime(curAt, zone.map(LiteralString(curAt, _)))
           case other =>
             ctx.err(s"unknown zoned time kind '$other'")
-            ZonedDateTime(At(), zone.map(LiteralString(At(), _)))
+            ZonedDateTime(curAt, zone.map(LiteralString(curAt, _)))
 
       case CollectionDto(kind, of) =>
         val inner = buildTypeExpr(of)
         kind match
-          case "Sequence" => Sequence(At(), inner)
-          case "Set"      => Set(At(), inner)
-          case "Graph"    => Graph(At(), inner)
-          case "Replica"  => Replica(At(), inner)
+          case "Sequence" => Sequence(curAt, inner)
+          case "Set"      => Set(curAt, inner)
+          case "Graph"    => Graph(curAt, inner)
+          case "Replica"  => Replica(curAt, inner)
           case other =>
             ctx.err(s"unknown collection kind '$other'")
-            Sequence(At(), inner)
+            Sequence(curAt, inner)
 
-      case MappingDto(from, to) => Mapping(At(), buildTypeExpr(from), buildTypeExpr(to))
+      case MappingDto(from, to) => Mapping(curAt, buildTypeExpr(from), buildTypeExpr(to))
 
-      case TableDto(of, dimensions) => Table(At(), buildTypeExpr(of), dimensions)
+      case TableDto(of, dimensions) => Table(curAt, buildTypeExpr(of), dimensions)
 
       case EntityRefDto(entity) =>
         entity match
-          case Some(e) => EntityReferenceTypeExpression(At(), pathId(e))
+          case Some(e) => EntityReferenceTypeExpression(curAt, pathId(e))
           case None =>
             ctx.err("EntityReference type requires an 'entity' path")
-            EntityReferenceTypeExpression(At(), PathIdentifier.empty)
+            EntityReferenceTypeExpression(curAt, PathIdentifier.empty)
 
       case CardinalityDto(card, of, min, max) =>
         val inner = buildTypeExpr(of)
         card match
-          case "optional"   => Optional(At(), inner)
-          case "zeroOrMore" => ZeroOrMore(At(), inner)
-          case "oneOrMore"  => OneOrMore(At(), inner)
-          case "range"      => SpecificRange(At(), inner, min.getOrElse(0L), max.getOrElse(1L))
+          case "optional"   => Optional(curAt, inner)
+          case "zeroOrMore" => ZeroOrMore(curAt, inner)
+          case "oneOrMore"  => OneOrMore(curAt, inner)
+          case "range"      => SpecificRange(curAt, inner, min.getOrElse(0L), max.getOrElse(1L))
           case other =>
             ctx.err(s"unknown cardinality '$other' (expected optional|zeroOrMore|oneOrMore|range)")
             inner

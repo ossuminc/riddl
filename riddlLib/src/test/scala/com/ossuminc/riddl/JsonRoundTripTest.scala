@@ -382,6 +382,84 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    /** Locations are carried now, so a JSON-sourced model reports real positions instead of
+      * `empty(1:1->1)`, and two definitions that differ only by position stay DISTINCT.
+      */
+    "carry each definition's offsets and origin through the round trip" in {
+      val src = "domain Dom is { context Ctx is { type T is Integer } }"
+      RiddlLib.parseString(src, "/tmp/offsets.riddl") match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"$at\"")
+          json1 must include("offsets.riddl")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              def spans(r: Root) = Finder(r).recursiveFindByType[Type].toSeq
+                .map(t => (t.id.value, t.loc.offset, t.loc.endOffset))
+              spans(root1) mustBe spans(root0)
+              spans(root1).head._2 must be > 0
+              // ...and the origin travels with them, so diagnostics name the right file.
+              Finder(root1).recursiveFindByType[Type].toSeq.head.loc.source.origin mustBe
+                "offsets.riddl"
+            case RiddlResult.Failure(errors) => fail(s"parseJson failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) => fail(s"parse failed: $errors")
+      end match
+    }
+
+    /** The collision class this was really about: `Definition.equals` includes `loc`, so with every
+      * location empty, two same-named ports on DIFFERENT processors compared EQUAL and collapsed
+      * into one key in any value-keyed map. That is what made `checkPortletCardinality` miscount
+      * `api-management.riddl`. With locations carried they are distinct in the tree itself.
+      */
+    "keep two same-named definitions UNEQUAL after a round trip" in {
+      val twoPorts =
+        """domain Dom is {
+          |  context Ctx is {
+          |    event Ev is { x: Integer }
+          |    processor Splitter as sink is { inlet FromEntity is event Dom.Ctx.Ev }
+          |    processor Store as sink is { inlet FromEntity is event Dom.Ctx.Ev }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(twoPorts, "/tmp/ports.riddl") match
+        case RiddlResult.Success(root0) =>
+          RiddlLib.parseJson(RiddlLib.root2Json(root0)) match
+            case RiddlResult.Success(root1) =>
+              val ports = Finder(root1).recursiveFindByType[Inlet].toSeq
+                .filter(_.id.value == "FromEntity")
+              ports.size mustBe 2
+              withClue("two distinct ports must not compare equal once locations are carried: ") {
+                ports(0) mustNot be(ports(1))
+                ports(0).hashCode mustNot be(ports(1).hashCode)
+              }
+            case RiddlResult.Failure(errors) => fail(s"parseJson failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) => fail(s"parse failed: $errors")
+      end match
+    }
+
+    /** A document authored AS JSON indexes itself, and the reader has the JSON, so its line and
+      * column are exact — the case `basis: "document"` exists for.
+      */
+    "resolve `document`-basis offsets against the JSON itself, with exact line and column" in {
+      val doc =
+        """{ "locations": { "origin": "model.json", "basis": "document" },
+          |  "contents": [
+          |    { "$kind": "domain", "$at": [80, 120], "name": "Dom" } ] }
+          |""".stripMargin
+      RiddlLib.parseJson(doc, "model.json") match
+        case RiddlResult.Success(root) =>
+          val dom = Finder(root).recursiveFindByType[Domain].toSeq.head
+          dom.loc.offset mustBe 80
+          dom.loc.source.origin mustBe "model.json"
+          // Line 3 is where offset 80 falls in the document above — a real line, not a synthetic
+          // one, because the source IS the document.
+          dom.loc.line mustBe 3
+        case RiddlResult.Failure(errors) => fail(s"parseJson of the document-basis JSON: $errors")
+      end match
+    }
+
     "round-trip a mixed-contents Module losslessly" in {
       val moduleModel =
         """module M is {
