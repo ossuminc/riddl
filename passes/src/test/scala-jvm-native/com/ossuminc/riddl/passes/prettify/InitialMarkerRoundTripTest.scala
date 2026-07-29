@@ -66,7 +66,9 @@ class InitialMarkerRoundTripTest extends AbstractValidatingTest {
         .isInitial mustBe true
 
       val pretty = prettify(parse(src, "src"))
-      pretty must include("initial state Second is")
+      // `of` introduces the record reference; `is` introduces the body. This asserted the
+      // deprecated spelling, which prettify emitted for a BODIED state until that was corrected.
+      pretty must include("initial state Second of")
       pretty must include("initial handler H2 is")
       // the defaulted-first handler of Second is emitted explicit, too
       pretty must include("initial handler H3 is")

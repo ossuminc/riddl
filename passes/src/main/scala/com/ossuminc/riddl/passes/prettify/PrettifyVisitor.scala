@@ -378,9 +378,15 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
           s"$prefix${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}"
         )
       else {
+        // `of` introduces the record reference and `is` introduces the BODY — the same division of
+        // labour every other definition uses. Emitting `is` for the record reference here made
+        // every state WITH A BODY prettify to the deprecated spelling, so a prettified model came
+        // back with a deprecation on every one of them. (The body-less case above was always
+        // right, which is how this stayed hidden.)
         rfe
           .addLine(
-            s"$prefix${keyword(riddl_state)} ${riddl_state.id.format} is ${riddl_state.typ.format} {"
+            s"$prefix${keyword(riddl_state)} ${riddl_state.id.format} of " +
+              s"${riddl_state.typ.format} is {"
           )
           .incr
       }
