@@ -114,6 +114,19 @@ trait RiddlLib:
     origin: String = "string"
   )(using PlatformContext): RiddlResult[Root]
 
+  /** As [[parseJson]], plus the non-fatal messages the build produced.
+    *
+    * `RiddlResult.Success` carries no messages, so a document that loads correctly but uses a
+    * deprecated shape has nowhere to say so through [[parseJson]]. Currently reports one
+    * `Deprecation` naming the container kinds still using the per-kind content arrays rather than
+    * the ordered `contents` array; those arrays cannot express the order of definitions within
+    * their parent, so a model read from them does not reproduce its source exactly.
+    */
+  def parseJsonWithMessages(
+    json: String,
+    origin: String = "string"
+  )(using PlatformContext): (RiddlResult[Root], Messages)
+
   /** Parse arbitrary RIDDL definitions (nebula).
     *
     * A nebula is a collection of RIDDL definitions that may not form a complete, valid Root. The
@@ -536,7 +549,12 @@ object RiddlLib extends RiddlLib:
   override def parseJson(
     json: String,
     origin: String
-  )(using PlatformContext): RiddlResult[Root] =
+  )(using PlatformContext): RiddlResult[Root] = parseJsonWithMessages(json, origin)._1
+
+  override def parseJsonWithMessages(
+    json: String,
+    origin: String
+  )(using PlatformContext): (RiddlResult[Root], Messages) =
     val parsed: Either[Messages, JsonModel.RootDto] =
       try Right(JsonModel.readRoot(json))
       catch
@@ -548,8 +566,12 @@ object RiddlLib extends RiddlLib:
               )
             )
           )
-    RiddlResult.fromEither(parsed.flatMap(JsonAstBuilder.build))
-  end parseJson
+    parsed match
+      case Left(errors) => (RiddlResult.fromEither(Left(errors)), Nil)
+      case Right(dto) =>
+        val (result, messages) = JsonAstBuilder.buildWithMessages(dto)
+        (RiddlResult.fromEither(result), messages)
+  end parseJsonWithMessages
 
   override def parseNebula(
     source: String,

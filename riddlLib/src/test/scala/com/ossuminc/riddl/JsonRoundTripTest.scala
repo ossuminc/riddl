@@ -235,6 +235,45 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
     // S61-1: a Module is a FLAT collection of ANY top-level definition, so ModuleDto carries a
     // group per kind. The fixed point proves both the serialize arm (JsonifierPass) and the build
     // arm (JsonAstBuilder) cover every group — a missing arm silently drops members.
+    /** The per-kind buckets stay READABLE — a document written against the older schema must keep
+      * loading — but they cannot express the order of definitions within their parent, so using
+      * them is deprecated. `parseJson` is unchanged and silent; `parseJsonWithMessages` is the
+      * additive way to see it, because `RiddlResult.Success` carries no messages.
+      */
+    "load a bucketed document, and say that its shape is deprecated" in {
+      val bucketed =
+        """{ "domains": [ { "name": "D",
+          |    "contexts": [ { "name": "C",
+          |      "types": [ { "name": "T", "typeExpression": { "kind": "Integer" } } ] } ] } ] }
+          |""".stripMargin
+      val (result, messages) = RiddlLib.parseJsonWithMessages(bucketed)
+      result match
+        case RiddlResult.Success(root) =>
+          // It loads, and loads correctly...
+          val names = Finder(root).recursiveFindByType[Type].toSeq.map(_.id.value)
+          names mustBe Seq("T")
+          // ...and reports exactly one deprecation, naming the containers that used the old shape.
+          val deprecations = messages.filter(_.isDeprecation)
+          deprecations.size mustBe 1
+          deprecations.head.message must include("Root")
+          deprecations.head.message must include("Domain")
+          deprecations.head.message must include("Context")
+          // The plain entry point stays silent, so no caller's output changes.
+          RiddlLib.parseJson(bucketed).succeeded mustBe true
+        case RiddlResult.Failure(errors) =>
+          fail(s"the bucketed document failed to load: $errors")
+      end match
+    }
+
+    "say nothing about deprecation for a document in the ordered form" in {
+      RiddlLib.parseString("domain D is { context C is { type T is Integer } }") match
+        case RiddlResult.Success(root0) =>
+          val (_, messages) = RiddlLib.parseJsonWithMessages(RiddlLib.root2Json(root0))
+          messages.filter(_.isDeprecation) mustBe empty
+        case RiddlResult.Failure(errors) => fail(s"parse failed: $errors")
+      end match
+    }
+
     "round-trip a mixed-contents Module losslessly" in {
       val moduleModel =
         """module M is {

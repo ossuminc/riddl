@@ -27,8 +27,24 @@ object JsonAstBuilder:
 
   import JsonModel.*
 
-  /** Build a `Root` from the wire model, or the accumulated builder errors. */
+  /** Build a `Root` from the wire model, or the accumulated builder errors.
+    *
+    * Non-fatal messages are DISCARDED here so the long-standing signature and behaviour are
+    * untouched; use [[buildWithMessages]] to see them.
+    */
   def build(dto: RootDto)(using PlatformContext): Either[Messages, Root] =
+    buildWithMessages(dto)._1
+
+  /** As [[build]], plus the non-fatal messages the build produced — currently one `Deprecation` per
+    * container kind still using the per-kind buckets rather than the ordered `contents` array.
+    *
+    * Additive rather than a change to [[build]]: `build` returns a `Left` exactly when there are
+    * errors, so a deprecation has nowhere to go in that shape without turning a good document into
+    * a failure.
+    */
+  def buildWithMessages(
+    dto: RootDto
+  )(using PlatformContext): (Either[Messages, Root], Messages) =
     given ctx: Ctx = new Ctx
     val domains = dto.domains.map(buildDomain)
     val modules = dto.modules.map(buildModule)
@@ -52,8 +68,23 @@ object JsonAstBuilder:
           )
         )
       )
-    if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
-  end build
+    val deprecations: Messages =
+      if ctx.deprecations.isEmpty then Nil
+      else
+        List(
+          Message(
+            At.empty,
+            "This JSON uses the deprecated per-kind content arrays (`domains`, `types`, " +
+              "`handlers`, …) on: " + ctx.deprecations.mkString(", ") +
+              ". They cannot express the order of definitions within their parent, so a model " +
+              "read from them does not reproduce its source exactly. Use the ordered `contents` " +
+              "array instead; `root2Json` writes it.",
+            Messages.Deprecation
+          )
+        )
+    val result = if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
+    (result, deprecations)
+  end buildWithMessages
 
   private def buildModule(m: ModuleDto)(using Ctx): Module =
     val authors = m.authors.map(buildAuthor)
@@ -128,6 +159,14 @@ object JsonAstBuilder:
   private final class Ctx(using val pc: PlatformContext):
     val errors: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
     def err(message: String): Unit = errors += Messages.error(message)
+
+    /** Non-fatal messages, kept apart from `errors` because `build` returns a `Left` whenever
+      * `errors` is non-empty — putting a deprecation there would turn a perfectly good document
+      * into a failure. Reported once per container KIND rather than per occurrence, so a large
+      * bucketed document says "Domain, Context" instead of five hundred identical lines.
+      */
+    val deprecations: mutable.LinkedHashSet[String] = mutable.LinkedHashSet.empty
+    def deprecated(container: String): Unit = deprecations += container
 
   /** Collect heterogeneous child groups (each a subtype of `T`) into a typed `Contents[T]`. `Seq[?
     * <: T]` keeps each call-site group correctly typed.
@@ -371,8 +410,13 @@ object JsonAstBuilder:
     legal: Kinds,
     legacy: => Contents[T],
     extras: => Seq[T] = Nil
-  )(using Ctx): Contents[T] =
-    if contents.isEmpty then legacy
+  )(using ctx: Ctx): Contents[T] =
+    if contents.isEmpty then
+      val built = legacy
+      // Only a container that actually HAS bucketed children is using the old shape; an empty one
+      // is simply empty and says nothing about which schema the document was written against.
+      if built.toSeq.nonEmpty then ctx.deprecated(container)
+      built
     else Contents[T]((childrenOf[T](contents, container, legal).toSeq ++ extras)*)
 
   /** Build a definition's metadata: a `brief` shorthand plus, optionally, the richer
