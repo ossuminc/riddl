@@ -106,21 +106,18 @@ with `npm dist-tag add @ossuminc/riddl-lib@<last-stable> latest`.
 
 ### 4. Homebrew — **`riddlc@rc`**
 
-**Half built. CHECK BEFORE CUTTING THE FIRST RC.**
+**Built on both sides** (riddl `0850570c9`, homebrew-tap `50b2f28`).
 
-Done here: `release.yml`'s `update-homebrew` job branches on
-`github.event.release.prerelease` and dispatches a `client_payload[formula]` of
-`riddlc@rc` or `riddlc`.
+- `release.yml`'s `update-homebrew` job branches on
+  `github.event.release.prerelease` and sends `client_payload[formula]` of
+  `riddlc@rc` or `riddlc`.
+- The tap has `Formula/riddlc@rc.rb` (class `RiddlcAtRc`) with `conflicts_with`
+  in both directions, and `update-formula.yml` routes on that payload field,
+  defaulting to `riddlc` when absent and rejecting any other value before it
+  becomes a file path.
 
-Still needed in `ossuminc/homebrew-tap` — task filed at
-`homebrew-tap/task/2026-07-29-riddlc-rc-formula.md`:
-
-- `Formula/riddlc@rc.rb`, with `conflicts_with` both ways
-- `update-formula.yml` honouring `client_payload.formula` instead of always
-  rewriting `Formula/riddlc.rb`
-
-Until BOTH land, a prerelease dispatch still rewrites the stable formula and
-`brew install riddlc` serves a release candidate.
+NOT yet exercised end to end. On the FIRST RC, confirm the dispatch touched only
+`Formula/riddlc@rc.rb` and left `Formula/riddlc.rb` alone before announcing it.
 
 Why a separate formula: Homebrew's `devel` block is deprecated and removed, and
 there is no prerelease flag. A versioned formula plus `conflicts_with` is what
@@ -168,6 +165,7 @@ npm dist-tag add @ossuminc/riddl-lib@1.32.0 latest
 - Reading `92/113` as "21 failures" — or ignoring a non-empty Unexpected list.
 - Omitting `--prerelease`, so the workflows treat it as a stable release.
 - Publishing npm without `--tag rc`.
-- Cutting an RC before `riddlc@rc` exists in the tap.
+- Announcing the first RC before confirming the dispatch left `Formula/riddlc.rb`
+  untouched.
 - Retagging an existing RC instead of cutting the next one.
 - Staging a native binary without `reload`, so it reports a stale commit.
