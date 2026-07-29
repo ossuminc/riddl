@@ -356,24 +356,50 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     * connectors is the separate `checkUnattachedOutlets` completeness concern and is not handled
     * here.
     */
+  /** Counts a portlet by IDENTITY rather than by value.
+    *
+    * `Definition.equals` compares class, `id`, `loc`, `metadata` and fields — so two genuinely
+    * DISTINCT ports that happen to be spelled the same are equal whenever their locations match.
+    * That never bites on a freshly parsed tree, where every node carries a distinct source
+    * location, which is exactly why it went unnoticed: it is `loc` that was doing the
+    * distinguishing, by accident. On any tree built WITHOUT locations — one read back from JSON,
+    * where every `loc` is `At.empty` — two ports like `APIProductEventSplit.FromEntity` and
+    * `APIProductRepository.FromEntity`, same name and same type, collapse into ONE map key and the
+    * single connector on each is reported as two connectors on one port.
+    *
+    * `resolvePath` returns the actual node from the tree, so reference identity is both correct and
+    * available. The wrapper keeps `LinkedHashMap`'s insertion order, which is what makes the
+    * emitted messages deterministic.
+    */
+  private final class ByIdentity[T <: AnyRef](val value: T):
+    override def hashCode: Int = System.identityHashCode(value)
+    override def equals(that: Any): Boolean = that match
+      case other: ByIdentity[?] => value eq other.value
+      case _                    => false
+  end ByIdentity
+
   private def checkPortletCardinality(): Unit = {
-    val outletCounts = mutable.LinkedHashMap.empty[Outlet, Int]
-    val inletCounts = mutable.LinkedHashMap.empty[Inlet, Int]
+    val outletCounts = mutable.LinkedHashMap.empty[ByIdentity[Outlet], Int]
+    val inletCounts = mutable.LinkedHashMap.empty[ByIdentity[Inlet], Int]
 
     connectors.filterNot(_.isEmpty).foreach { connector =>
       val connParents = symbols.parentsOf(connector)
       // The predefined terminators are exempt: any number of connectors may drain into
       // `BottomlessPit.hole` or draw from `ForeverEmpty.spout`.
       resolvePath[Outlet](connector.from.pathId, connParents).filterNot(isPredefined).foreach {
-        outlet => outletCounts.update(outlet, outletCounts.getOrElse(outlet, 0) + 1)
+        outlet =>
+          val key = ByIdentity(outlet)
+          outletCounts.update(key, outletCounts.getOrElse(key, 0) + 1)
       }
       resolvePath[Inlet](connector.to.pathId, connParents).filterNot(isPredefined).foreach {
         inlet =>
-          inletCounts.update(inlet, inletCounts.getOrElse(inlet, 0) + 1)
+          val key = ByIdentity(inlet)
+          inletCounts.update(key, inletCounts.getOrElse(key, 0) + 1)
       }
     }
 
-    outletCounts.foreach { case (outlet, count) =>
+    outletCounts.foreach { case (key, count) =>
+      val outlet = key.value
       if count > 1 then
         messages.addError(
           outlet.errorLoc,
@@ -385,7 +411,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
         )
     }
 
-    inletCounts.foreach { case (inlet, count) =>
+    inletCounts.foreach { case (key, count) =>
+      val inlet = key.value
       if count > 1 then
         messages.addError(
           inlet.errorLoc,

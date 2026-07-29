@@ -165,13 +165,12 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
       newErrs.toSeq.sortBy(-_._2).take(15).foreach { case (msg, n) => info(f"  $n%4d  $msg") }
       info("failed models: " + failedFiles.take(12).mkString(", "))
 
-      // A RATCHET, not a percentage floor. Exactly ONE model is known to differ:
-      // `api-management.riddl` gains "Inlet 'X' is connected by 2 connectors". Its connectors are
-      // NOT duplicated by the round trip — six before, six after — so this is a reference that
-      // resolves differently on the rebuilt tree, not a fidelity loss. Until that is diagnosed the
-      // allowance stays at one and cannot grow; when it is fixed, drop to `mustBe 0`.
+      // NO allowance. The one model that used to differ, `api-management.riddl`, was not a
+      // fidelity problem at all: `checkPortletCardinality` keyed its counting map by Definition
+      // VALUE, and since `Definition.equals` includes `loc`, two distinct same-named ports collapse
+      // into one key on a tree that has no locations. That check counts by identity now.
       withClue(s"models introducing new validation errors: ${failedFiles.mkString(", ")}: ") {
-        (reparsed - clean) must be <= 1
+        clean mustBe reparsed
       }
     }
   }

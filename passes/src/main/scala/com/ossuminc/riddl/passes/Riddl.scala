@@ -142,7 +142,8 @@ object Riddl {
     // path with a leading slash, which used to escape as a raw exception.
     Await.result(RiddlParserInput.fromPathSafe(path), 10) match
       case Left(messages) => Left(messages)
-      case Right(rpi) => parseAndValidate(rpi, shouldFailOnError, Pass.standardPasses ++ extraPasses)
+      case Right(rpi) =>
+        parseAndValidate(rpi, shouldFailOnError, Pass.standardPasses ++ extraPasses)
   end parseAndValidatePath
 
   /** Convert a previously parsed Root back into plain text */

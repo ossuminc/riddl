@@ -343,6 +343,45 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    /** Two DISTINCT ports that happen to be spelled the same must stay distinct when the tree has
+      * no source locations.
+      *
+      * `Definition.equals` compares class, `id`, `loc`, `metadata` and fields, and
+      * `checkPortletCardinality` counted ports in a map keyed by that. On a parsed tree every node
+      * has a distinct `loc`, so the two ports were different keys — `loc` was doing the
+      * distinguishing, by accident. On a tree read back from JSON every `loc` is `At.empty`, so
+      * they collapsed into one key and the single connector on each was reported as two connectors
+      * on one port. `api-management.riddl` in the corpus hit exactly this.
+      */
+    "keep same-named ports on different processors distinct after a round trip" in {
+      val twoPorts =
+        """domain Dom is {
+          |  context Ctx is {
+          |    event Ev is { x: Integer }
+          |    processor Producer as source is { outlet out is event Dom.Ctx.Ev }
+          |    processor Splitter as sink is { inlet FromEntity is event Dom.Ctx.Ev }
+          |    processor Store as sink is { inlet FromEntity is event Dom.Ctx.Ev }
+          |    processor Middle as source is { outlet toStore is event Dom.Ctx.Ev }
+          |    connector ToSplitter is { from outlet Producer.out to inlet Splitter.FromEntity }
+          |    connector ToStore is { from outlet Middle.toStore to inlet Store.FromEntity }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(twoPorts) match
+        case RiddlResult.Success(root0) =>
+          // The SOURCE must be clean, or the test proves nothing about the round trip.
+          RiddlLib.validateRoot(root0).errors.map(_.message) mustBe empty
+          RiddlLib.parseJson(RiddlLib.root2Json(root0)) match
+            case RiddlResult.Success(root1) =>
+              withClue("a JSON-built tree has no locations; the ports must still be told apart: ") {
+                RiddlLib.validateRoot(root1).errors.map(_.message) mustBe empty
+              }
+            case RiddlResult.Failure(errors) => fail(s"parseJson failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) => fail(s"parse of the two-port model failed: $errors")
+      end match
+    }
+
     "round-trip a mixed-contents Module losslessly" in {
       val moduleModel =
         """module M is {
