@@ -96,7 +96,9 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           // Both states survive (the multi-state collapse regression guard)...
           json must include("\"Open\"")
           json must include("\"Closed\"")
-          json must include("\"states\"")
+          // ...tagged as states in the ordered `contents` array, which replaced the `states`
+          // bucket: a per-kind bucket cannot express source order.
+          json must include("\"$kind\": \"state\"")
           // ...and the repository's own query/result land in message arrays.
           json must include("\"FindById\"")
           json must include("\"Found\"")
@@ -698,8 +700,8 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       RiddlLib.parseString(siModel) match
         case RiddlResult.Success(root0) =>
           val json1 = RiddlLib.root2Json(root0)
-          // JsonifierPass emits the state's invariants array...
-          json1 must include("\"invariants\"")
+          // JsonifierPass emits the state's invariant as an ordered content entry...
+          json1 must include("\"$kind\": \"invariant\"")
           json1 must include("\"nonNegative\"")
           json1 must include("x must be >= 0")
           RiddlLib.parseJson(json1) match

@@ -135,22 +135,219 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     * sites, which stay exactly as they are while both forms are written.
     */
   private def withContents(dto: Any, ordered: Seq[ContentDto]): Any = dto match
-    case d: RootDto       => d.copy(contents = ordered)
-    case d: ModuleDto     => d.copy(contents = ordered)
-    case d: DomainDto     => d.copy(contents = ordered)
-    case d: ContextDto    => d.copy(contents = ordered)
-    case d: EntityDto     => d.copy(contents = ordered)
-    case d: StateDto      => d.copy(contents = ordered)
-    case d: HandlerDto    => d.copy(contents = ordered)
-    case d: FunctionDto   => d.copy(contents = ordered)
-    case d: AdaptorDto    => d.copy(contents = ordered)
-    case d: StreamletDto  => d.copy(contents = ordered)
-    case d: ProjectorDto  => d.copy(contents = ordered)
-    case d: RepositoryDto => d.copy(contents = ordered)
-    case d: SagaDto       => d.copy(contents = ordered)
-    case d: EpicDto       => d.copy(contents = ordered)
-    case d: UseCaseDto    => d.copy(contents = ordered)
-    case d: GroupDto      => d.copy(contents = ordered)
+    case d: RootDto =>
+      d.copy(
+        contents = ordered,
+        domains = Nil,
+        modules = Nil,
+        version = None,
+        copyright = None,
+        authors = Nil,
+        comments = Nil
+      )
+    case d: ModuleDto =>
+      d.copy(
+        contents = ordered,
+        authors = Nil,
+        domains = Nil,
+        types = Nil,
+        commands = Nil,
+        events = Nil,
+        queries = Nil,
+        results = Nil,
+        constants = Nil,
+        invariants = Nil,
+        users = Nil,
+        contexts = Nil,
+        entities = Nil,
+        adaptors = Nil,
+        functions = Nil,
+        projectors = Nil,
+        repositories = Nil,
+        streamlets = Nil,
+        sagas = Nil,
+        epics = Nil,
+        connectors = Nil,
+        relationships = Nil,
+        modules = Nil,
+        version = None,
+        copyright = None,
+        comments = Nil
+      )
+    case d: DomainDto =>
+      d.copy(
+        contents = ordered,
+        authors = Nil,
+        users = Nil,
+        types = Nil,
+        sagas = Nil,
+        epics = Nil,
+        domains = Nil,
+        contexts = Nil,
+        version = None,
+        copyright = None,
+        commands = Nil,
+        events = Nil,
+        queries = Nil,
+        results = Nil,
+        repositories = Nil,
+        connectors = Nil,
+        comments = Nil
+      )
+    case d: ContextDto =>
+      d.copy(
+        contents = ordered,
+        types = Nil,
+        constants = Nil,
+        commands = Nil,
+        events = Nil,
+        queries = Nil,
+        results = Nil,
+        entities = Nil,
+        functions = Nil,
+        adaptors = Nil,
+        streamlets = Nil,
+        projectors = Nil,
+        repositories = Nil,
+        connectors = Nil,
+        relationships = Nil,
+        sagas = Nil,
+        groups = Nil,
+        handlers = Nil,
+        inlets = Nil,
+        outlets = Nil,
+        version = None,
+        copyright = None,
+        invariants = Nil,
+        comments = Nil
+      )
+    case d: EntityDto =>
+      d.copy(
+        contents = ordered,
+        state = None,
+        states = Nil,
+        types = Nil,
+        constants = Nil,
+        commands = Nil,
+        events = Nil,
+        queries = Nil,
+        results = Nil,
+        functions = Nil,
+        handlers = Nil,
+        invariants = Nil,
+        inlets = Nil,
+        outlets = Nil,
+        version = None,
+        copyright = None,
+        streamlets = Nil,
+        connectors = Nil,
+        relationships = Nil,
+        comments = Nil
+      )
+    case d: StateDto =>
+      d.copy(contents = ordered, handlers = Nil, invariants = Nil, comments = Nil)
+    case d: HandlerDto =>
+      d.copy(contents = ordered, onClauses = Nil, comments = Nil)
+    case d: FunctionDto =>
+      d.copy(contents = ordered, types = Nil, functions = Nil, comments = Nil)
+    case d: AdaptorDto =>
+      d.copy(
+        contents = ordered,
+        types = Nil,
+        constants = Nil,
+        commands = Nil,
+        events = Nil,
+        queries = Nil,
+        results = Nil,
+        functions = Nil,
+        handlers = Nil,
+        inlets = Nil,
+        outlets = Nil,
+        version = None,
+        copyright = None,
+        invariants = Nil,
+        streamlets = Nil,
+        connectors = Nil,
+        relationships = Nil,
+        comments = Nil
+      )
+    case d: StreamletDto =>
+      d.copy(
+        contents = ordered,
+        inlets = Nil,
+        outlets = Nil,
+        connectors = Nil,
+        types = Nil,
+        commands = Nil,
+        events = Nil,
+        queries = Nil,
+        results = Nil,
+        handlers = Nil,
+        version = None,
+        copyright = None,
+        constants = Nil,
+        functions = Nil,
+        invariants = Nil,
+        streamlets = Nil,
+        relationships = Nil,
+        comments = Nil
+      )
+    case d: ProjectorDto =>
+      d.copy(
+        contents = ordered,
+        types = Nil,
+        constants = Nil,
+        commands = Nil,
+        events = Nil,
+        queries = Nil,
+        results = Nil,
+        functions = Nil,
+        handlers = Nil,
+        inlets = Nil,
+        outlets = Nil,
+        version = None,
+        copyright = None,
+        invariants = Nil,
+        streamlets = Nil,
+        connectors = Nil,
+        relationships = Nil,
+        comments = Nil
+      )
+    case d: RepositoryDto =>
+      d.copy(
+        contents = ordered,
+        schema = None,
+        types = Nil,
+        commands = Nil,
+        events = Nil,
+        queries = Nil,
+        results = Nil,
+        handlers = Nil,
+        inlets = Nil,
+        outlets = Nil,
+        version = None,
+        copyright = None,
+        schemas = Nil,
+        constants = Nil,
+        functions = Nil,
+        invariants = Nil,
+        streamlets = Nil,
+        connectors = Nil,
+        relationships = Nil,
+        comments = Nil
+      )
+    case d: SagaDto    => d.copy(contents = ordered, types = Nil, steps = Nil, comments = Nil)
+    case d: EpicDto    => d.copy(contents = ordered, types = Nil, useCases = Nil, comments = Nil)
+    case d: UseCaseDto => d.copy(contents = ordered, comments = Nil)
+    case d: GroupDto =>
+      d.copy(
+        contents = ordered,
+        groups = Nil,
+        containedGroups = Nil,
+        inputs = Nil,
+        outputs = Nil,
+        comments = Nil
+      )
     // A Type (and so a MessageDto) and an OnClause deliberately have NO `contents`: a type's
     // children are derived from its type expression and already ordered inside `fields`, and an
     // on-clause body is ordered by `serializeStatements`, which keeps interleaved comments in
