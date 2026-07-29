@@ -1,0 +1,7 @@
+// Corpus fixture: a `???` stub introduced by a comment saying what belongs there. This is what a
+// "start from scratch" template looks like, and it did not parse before — once the comment was
+// consumed as ordinary content, the `???` branch of the body was unreachable.
+domain CommentedStub is {
+  // Describe the bounded contexts of your business here.
+  ???
+} with { briefly "a documented stub" }

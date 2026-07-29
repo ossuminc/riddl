@@ -1523,6 +1523,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     // streamlet reference fell through to the `user` fallback below and `from source X` came back
     // as `from user X`.
     case StreamletRef(_, kw, p) => RefDto("streamlet", path(p), Some(kw))
-    case other                  => RefDto("user", path(other.pathId))
+    // `Reference[?]` is far wider than the kinds an interaction or an on-clause origin can name, so
+    // this cannot be made exhaustive the way `processorRef` was. It can stop LYING, though: the old
+    // `RefDto("user", …)` silently relabelled anything unhandled as a user reference. Emitting the
+    // actual kind makes `JsonAstBuilder.buildRef` report "unknown reference kind '<kind>'" instead,
+    // which is a diagnosable failure rather than a wrong model.
+    case other =>
+      RefDto(other.getClass.getSimpleName.stripSuffix("Ref").toLowerCase, path(other.pathId))
 
 end JsonifierPass

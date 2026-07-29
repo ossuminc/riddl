@@ -460,6 +460,26 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    /** A comment introducing a `???` stub is kept as the container's CONTENTS, so it rides the
+      * ordinary comment machinery on every surface. Proved here for JSON; prettify and BAST are
+      * proved by `CommentedStubSurfacesTest` in the passes module.
+      */
+    "round-trip a comment introducing a `???` stub" in {
+      val stub = "domain Stub is {\n  // Describe the bounded contexts here.\n  ???\n}\n"
+      RiddlLib.parseString(stub) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("Describe the bounded contexts here")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              RiddlLib.root2Json(root1) mustBe json1
+              Finder(root1).recursiveFindByType[Comment].toSeq must have size 1
+            case RiddlResult.Failure(errors) => fail(s"parseJson failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) => fail(s"parse of the stub failed: $errors")
+      end match
+    }
+
     "round-trip a mixed-contents Module losslessly" in {
       val moduleModel =
         """module M is {

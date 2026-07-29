@@ -165,8 +165,27 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   }
 
+  /** `???` — a body with nothing in it yet, optionally preceded by COMMENTS saying what belongs
+    * there. A commented stub is what a "start from scratch" template looks like, and before this
+    * the comment made the body unparseable: once a comment was consumed as ordinary content, the
+    * `???` branch of `<container>_body` was no longer reachable.
+    *
+    * Comments AFTER `???` are deliberately not accepted — `???` ends the body.
+    *
+    * The comments are KEPT, as the container's own contents, rather than discarded. RIDDL is
+    * reflective: a comment that parsed but could not be emitted would vanish on the next prettify.
+    * `Comment` is a member of every contents union that has a `???` alternative, so returning them
+    * in place of the empty sequence is well-typed in practice; the one call site whose result is
+    * not a sequence (a saga's requires/returns triple) keeps the empty value it asked for.
+    */
   def undefined[u: P, RT](f: => RT): P[RT] = {
-    P(Punctuation.undefinedMark./).map(_ => f)
+    P(comment.rep ~ Punctuation.undefinedMark./).map { comments =>
+      if comments.isEmpty then f
+      else
+        f match
+          case empty: Seq[?] if empty.isEmpty => comments.asInstanceOf[RT]
+          case other                          => other
+    }
   }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }

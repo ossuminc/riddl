@@ -501,7 +501,14 @@ case class ValidationPass(
               tells.exists(t => operandMessageKind(t.msg) == AggregateUseCase.EventCase)
             val foundYield = yields.nonEmpty &&
               yields.exists(y => operandMessageKind(y.msg) == AggregateUseCase.EventCase)
-            if !(foundSend || foundTell || foundYield) then
+            // Refusing a command IS processing it: the clause decided, it declined, and there is
+            // nothing to record, so there is no event to send. Without this the rule was inverted —
+            // it flagged the honest refusal-only clause, and was SILENCED by adding a send after
+            // the refusal, which A23's refusals-before-effects ordering makes unreachable. It was
+            // rewarding exactly the dead code a modeller should avoid.
+            val refuses = finder.recursiveFindByType[ErrorStatement].nonEmpty ||
+              finder.recursiveFindByType[RequireStatement].nonEmpty
+            if !(foundSend || foundTell || foundYield || refuses) then
               messages.addCompleteness(
                 omc.errorLoc,
                 s"Command processing in ${entity.identify} should result in sending an event",

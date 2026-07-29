@@ -3,6 +3,11 @@
 (* This grammar is automatically included in the riddl language module *)
 (* and can be loaded from the classpath at: riddl/grammar/ebnf-grammar.ebnf *)
 
+(* A `???` stub, optionally introduced by comments saying what belongs there. Comments AFTER the
+   marker are NOT part of the stub: `???` ends the body. The comments are kept as the container's
+   contents so a stub can document its own intent without losing it on the next prettify. *)
+undefined = {comment} "???" ;
+
 (* Basic Elements *)
 letter = /[A-Za-z]/ ;
 digit = /[0-9]/ ;
@@ -67,7 +72,7 @@ nebula = {module_content} ;
 
 (* Domain *)
 domain = "domain" identifier is "{" domain_body "}" [with_metadata] ;
-domain_body = domain_definitions | "???" ;
+domain_body = domain_definitions | undefined ;
 domain_definitions = {domain_content}+ ;
 domain_content = vital_definition_contents | author | context | domain | user | epic | saga | repository | connector | version | copyright | bast_import | domain_include | comment ;
 domain_include = "include" literal_string ;
@@ -75,21 +80,21 @@ domain_include = "include" literal_string ;
 (* Context *)
 intention = "application" | "external" | "gateway" | "service" ;
 context = [intention] "context" identifier [as_shape] is "{" context_body "}" [with_metadata] ;
-context_body = context_definitions | "???" ;
+context_body = context_definitions | undefined ;
 context_definitions = {context_definition}+ ;
 context_definition = processor_definition_contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | bast_import | context_include | comment ;
 context_include = "include" literal_string ;
 
 (* Entity *)
 entity = "entity" identifier [as_shape] is "{" entity_body "}" [with_metadata] ;
-entity_body = entity_definitions | "???" ;
+entity_body = entity_definitions | undefined ;
 entity_definitions = {entity_content}+ ;
 entity_content = processor_definition_contents | state | entity_include ;
 (* `of` is the canonical introducer for the record reference. `is` is DEPRECATED and, because
    `is` is itself optional, so is omitting the introducer altogether; both still parse and both
    draw a deprecation. `is` introduces a definition's BODY everywhere else, as state_body shows. *)
 state = ["initial"] "state" identifier ("of" | is) record_ref [state_body] [with_metadata] ;
-state_body = is "{" ({state_content}+ | "???") "}" ;
+state_body = is "{" ({state_content}+ | undefined) "}" ;
 state_content = handler | invariant | comment ;
 entity_include = "include" literal_string ;
 
@@ -129,7 +134,7 @@ zone = /[A-Z0-9:.+-]{2,}/ ;
 pattern_type = "Pattern" "(" {literal_string} ")" ;
 unique_id_type = "Id" "(" ["entity"] path_identifier ")" ;
 enumeration = "any" ["of"] "{" enumerators "}" ;
-enumerators = "???" | {enumerator [","]} ;
+enumerators = undefined | {enumerator [","]} ;
 enumerator = identifier [enum_value] [with_metadata] ;
 enum_value = "(" integer ")" ;
 sequence_type = "sequence" "of" type_expression ;
@@ -142,10 +147,10 @@ replica_type_expression = integer_predef_types | mapping_from_to | a_set_type ;
 range_type = "range" "(" [integer] "," [integer] ")" ;
 decimal_type = "Decimal" "(" integer "," integer ")" ;
 alternation = "one" ["of"] "{" alternation_contents "}" ;
-alternation_contents = "???" | [aliased_type_expression {("|" | "or" | ",") aliased_type_expression}] ;
+alternation_contents = undefined | [aliased_type_expression {("|" | "or" | ",") aliased_type_expression}] ;
 entity_reference_type = "reference" ["to"] ["entity"] path_identifier ;
 aggregation = "{" aggregate_definitions "}" ;
-aggregate_definitions = "???" | {aggregate_content [","]} ;
+aggregate_definitions = undefined | {aggregate_content [","]} ;
 aggregate_content = field | method | comment ;
 aggregate_use_case_type_expression = aggregate_use_case aggregation ;
 aliased_type_expression = [aggregate_use_case] path_identifier ;
@@ -168,7 +173,7 @@ function = "function" identifier is "{" function_body "}" [with_metadata] ;
 function_body = [func_input] [func_output] function_definitions ;
 func_input = "requires" ( aggregation | type_ref ) ;
 func_output = "returns" ( aggregation | type_ref ) ;
-function_definitions = {"???" | (vital_definition_contents | function | function_include | statement)} ;
+function_definitions = {undefined | (vital_definition_contents | function | function_include | statement)} ;
 function_include = "include" literal_string ;
 
 (* References *)
@@ -206,7 +211,7 @@ any_interaction_ref = processor_ref | saga_ref | input_ref | output_ref | group_
 
 (* Handlers *)
 handler = ["initial"] "handler" identifier is "{" handler_body "}" [with_metadata] ;
-handler_body = {"???" | handler_contents} ;
+handler_body = {undefined | handler_contents} ;
 handler_contents = {on_clause | comment} ;
 on_clause = on_init_clause | on_other_clause | on_term_clause | on_activate_clause | on_passivate_clause | on_event_clause | on_message_clause ;
 on_init_clause = "on" "init" is pseudo_code_block [with_metadata] ;
@@ -308,8 +313,8 @@ morph_statement = "morph" entity_ref "to" state_ref "with" record_value ;
 become_statement = "become" entity_ref "to" handler_ref ;
 
 (* Pseudo Code Block *)
-pseudo_code_block = "???" | "{" pseudo_code_contents "}" | {statement} ;
-pseudo_code_contents = ["???"] {statement} ;
+pseudo_code_block = undefined | "{" pseudo_code_contents "}" | {statement} ;
+pseudo_code_contents = [undefined] {statement} ;
 
 (* Constants and Invariants *)
 constant = "constant" identifier is type_expression "=" literal_string [with_metadata] ;
@@ -331,7 +336,7 @@ relationship_cardinality = "1:1" | "1:N" | "N:1" | "N:N" ;
 
 (* Streamlet-related *)
 as_shape = "as" ( "void" | "source" | "sink" | "flow" | "cascade" | "merge" | "fanin" | "split" | "broadcast" | "fanout" | "router" ) ;
-processor = "processor" identifier [as_shape] is "{" ( {processor_definition_contents}+ | "???" ) "}" [with_metadata] ;
+processor = "processor" identifier [as_shape] is "{" ( {processor_definition_contents}+ | undefined ) "}" [with_metadata] ;
 (* `streamlet` mirrors StreamingParser.streamlet exactly: the deprecated shape keywords PLUS the *)
 (* generic `processor <id> [as <shape>]` form. Without `processor` here, a processor written     *)
 (* directly in a module (where `module_content` reaches streamlets only through this rule) would *)
@@ -344,7 +349,7 @@ merge = "merge" identifier is "{" streamlet_body "}" [with_metadata] ;
 split = "split" identifier is "{" streamlet_body "}" [with_metadata] ;
 router = "router" identifier is "{" streamlet_body "}" [with_metadata] ;
 void = "void" identifier is "{" streamlet_body "}" [with_metadata] ;
-streamlet_body = {"???" | streamlet_definition} ;
+streamlet_body = {undefined | streamlet_definition} ;
 streamlet_definition = {inlet | outlet | streamlet_include | processor_definition_contents} ;
 streamlet_include = "include" literal_string ;
 inlet = "inlet" identifier is type_ref [with_metadata] ;
@@ -353,13 +358,13 @@ connector = "connector" identifier is connector_definitions [with_metadata] ;
 connector_definitions = ["{" "from" outlet_ref "to" inlet_ref "}" | "from" outlet_ref "to" inlet_ref] ;
 
 (* Group-related *)
-group = group_aliases identifier is "{" {"???" | group_definitions} "}" [with_metadata] ;
+group = group_aliases identifier is "{" {undefined | group_definitions} "}" [with_metadata] ;
 group_definitions = {group | contained_group | shown_by | group_output | group_input | comment} ;
 contained_group = "contains" identifier byAs group_ref [with_metadata] ;
 group_output = output_aliases identifier presentation_aliases (literal_string | constant_ref | type_ref) [output_definitions] [with_metadata] ;
 group_input = input_aliases identifier acquisition_aliases type_ref [input_definitions] [with_metadata] ;
-output_definitions = [is "{" {"???" | (group_output | type_ref)} "}"] ;
-input_definitions = [is "{" {"???" | group_input} "}"] ;
+output_definitions = [is "{" {undefined | (group_output | type_ref)} "}"] ;
+input_definitions = [is "{" {undefined | group_input} "}"] ;
 group_aliases = "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "frame" | "column" | "window" | "section" | "tab" | "flow" | "block" ;
 output_aliases = "output" | "document" | "list" | "table" | "graph" | "animation" | "picture" ;
 input_aliases = "input" | "form" | "text" | "button" | "picklist" | "selector" | "item" ;
@@ -368,7 +373,7 @@ acquisition_aliases = "acquires" | "reads" | "takes" | "accepts" | "admits" | "e
 
 (* Repository-related *)
 repository = "repository" identifier [as_shape] is "{" repository_body "}" [with_metadata] ;
-repository_body = {"???" | repository_definitions} ;
+repository_body = {undefined | repository_definitions} ;
 repository_definitions = {processor_definition_contents | schema | repository_include} ;
 repository_include = "include" literal_string ;
 schema = "schema" identifier is schema_kind {data} {link} {index} [with_metadata] ;
@@ -380,13 +385,13 @@ index = "index" "on" field_ref ;
 (* Adaptor-related *)
 adaptor = "adaptor" identifier adaptor_direction context_ref [as_shape] is "{" adaptor_body "}" [with_metadata] ;
 adaptor_direction = "from" | "to" ;
-adaptor_body = {"???" | adaptor_contents} ;
+adaptor_body = {undefined | adaptor_contents} ;
 adaptor_contents = {processor_definition_contents | handler | adaptor_include} ;
 adaptor_include = "include" literal_string ;
 
 (* Projector-related *)
 projector = "projector" identifier [as_shape] is "{" projector_body "}" [with_metadata] ;
-projector_body = {"???" | projector_definitions} ;
+projector_body = {undefined | projector_definitions} ;
 projector_definitions = {processor_definition_contents | updates | projector_include} ;
 projector_include = "include" literal_string ;
 updates = "updates" repository_ref ;
@@ -403,7 +408,7 @@ epic = "epic" identifier is "{" epic_body "}" [with_metadata] ;
 epic_body = user_story {epic_definitions} ;
 epic_definitions = {vital_definition_contents | use_case | shown_by | epic_include} ;
 epic_include = "include" literal_string ;
-use_case = "case" identifier is "{" user_story {"???" | interactions} "}" [with_metadata] ;
+use_case = "case" identifier is "{" user_story {undefined | interactions} "}" [with_metadata] ;
 user_story_verb = "wants" | "must" | "shall" | "should" | "may" | "will" | "can" ;
 user_story = user_ref user_story_verb ["to"] literal_string "so" ["that"] literal_string ;
 interactions = {interaction | comment} ;
@@ -429,7 +434,7 @@ vague_step = is literal_string literal_string literal_string [with_metadata] ;
 user = "user" identifier is literal_string [with_metadata] ;
 
 (* Author-related *)
-author = "author" identifier is "{" [("???" | ("name" is literal_string "email" is literal_string
+author = "author" identifier is "{" [(undefined | ("name" is literal_string "email" is literal_string
         ["organization" is literal_string] ["title" is literal_string] ["url" is http_url]))] "}" [with_metadata] ;
 
 (* URLs *)
@@ -439,7 +444,7 @@ port_num = /[0-9]+/ ;
 url_path = /[A-Za-z0-9_.~!$&'()*+,;=\/-]*/ ;
 
 (* Metadata *)
-with_metadata = ["with" "{" {"???" | {meta_data}} "}"] ;
+with_metadata = ["with" "{" {undefined | {meta_data}} "}"] ;
 meta_data = brief_description | description | term | option | author_ref | figma_ref | attachment | comment ;
 brief_description = briefly byAs literal_string ;
 description = described (byAs doc_block | ("at" http_url) | ("in" "file" literal_string)) ;
@@ -453,7 +458,7 @@ option_name = /[a-z0-9_-]*/ ;
 attachment = "attachment" (ulid_attachment_body | named_attachment_body) ;
 ulid_attachment_body = "ULID" is literal_string ;
 named_attachment_body = identifier is mime_type (("in" "file" literal_string) | (byAs literal_string)) ;
-doc_block = "{" {markdown_lines | literal_strings | "???"} "}" | literal_string ;
+doc_block = "{" {markdown_lines | literal_strings | undefined} "}" | literal_string ;
 markdown_lines = {markdown_line}+ ;
 markdown_line = "|" /[^\n]*\n?/ ;
 literal_strings = {literal_string}+ ;

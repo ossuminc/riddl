@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-29 13:33 UTC
+# Generated: 2026-07-29 15:48 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -11,6 +11,9 @@ ws1 ::= [ \t\n\r]+
 
 # Main Structure
 root ::= (root-content)+
+
+# and can be loaded from the classpath at: riddl/grammar/ebnf-grammar.ebnf
+undefined ::= (comment)* ws "???"
 
 # Basic Elements
 letter ::= [A-Za-z]
@@ -66,7 +69,7 @@ nebula ::= (module-content)*
 
 # Domain
 domain ::= "domain" ws1 identifier ws1 is ws "{" ws domain-body ws "}" ws (with-metadata)?
-domain-body ::= domain-definitions | "???"
+domain-body ::= domain-definitions | undefined
 domain-definitions ::= (domain-content)+
 domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | repository | connector | version | copyright | bast-import | domain-include | comment
 domain-include ::= "include" ws1 literal-string
@@ -74,18 +77,18 @@ domain-include ::= "include" ws1 literal-string
 # Context
 intention ::= "application" | "external" | "gateway" | "service"
 context ::= (intention)? ws "context" ws1 identifier ws (as-shape)? ws is ws "{" ws context-body ws "}" ws (with-metadata)?
-context-body ::= context-definitions | "???"
+context-body ::= context-definitions | undefined
 context-definitions ::= (context-definition)+
 context-definition ::= processor-definition-contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | bast-import | context-include | comment
 context-include ::= "include" ws1 literal-string
 
 # Entity
 entity ::= "entity" ws1 identifier ws (as-shape)? ws is ws "{" ws entity-body ws "}" ws (with-metadata)?
-entity-body ::= entity-definitions | "???"
+entity-body ::= entity-definitions | undefined
 entity-definitions ::= (entity-content)+
 entity-content ::= processor-definition-contents | state | entity-include
 state ::= ("initial")? ws "state" ws1 identifier ws ("of" | is) ws record-ref ws (state-body)? ws (with-metadata)?
-state-body ::= is ws "{" ws ((state-content)+ | "???") ws "}"
+state-body ::= is ws "{" ws ((state-content)+ | undefined) ws "}"
 state-content ::= handler | invariant | comment
 entity-include ::= "include" ws1 literal-string
 
@@ -119,7 +122,7 @@ zone ::= [A-Z0-9:.+-] [A-Z0-9:.+-] [A-Z0-9:.+-]*
 pattern-type ::= "Pattern" ws "(" ws (literal-string)* ws ")"
 unique-id-type ::= "Id" ws "(" ws ("entity")? ws path-identifier ws ")"
 enumeration ::= "any" ws ("of")? ws "{" ws enumerators ws "}"
-enumerators ::= "???" | (enumerator (",")?)*
+enumerators ::= undefined | (enumerator (",")?)*
 enumerator ::= identifier ws (enum-value)? ws (with-metadata)?
 enum-value ::= "(" integer ")"
 sequence-type ::= "sequence" ws "of" ws1 type-expression
@@ -132,10 +135,10 @@ replica-type-expression ::= integer-predef-types | mapping-from-to | a-set-type
 range-type ::= "range" "(" (integer)? "," (integer)? ")"
 decimal-type ::= "Decimal" "(" integer "," integer ")"
 alternation ::= "one" ws ("of")? ws "{" ws alternation-contents ws "}"
-alternation-contents ::= "???" | (aliased-type-expression (("|" | "or" | ",") aliased-type-expression)*)?
+alternation-contents ::= undefined | (aliased-type-expression (("|" | "or" | ",") aliased-type-expression)*)?
 entity-reference-type ::= "reference" ws ("to")? ws ("entity")? ws path-identifier
 aggregation ::= "{" ws aggregate-definitions ws "}"
-aggregate-definitions ::= "???" | (aggregate-content (",")?)*
+aggregate-definitions ::= undefined | (aggregate-content (",")?)*
 aggregate-content ::= field | method | comment
 aggregate-use-case-type-expression ::= aggregate-use-case ws1 aggregation
 aliased-type-expression ::= (aggregate-use-case)? ws path-identifier
@@ -154,7 +157,7 @@ function ::= "function" ws1 identifier ws1 is ws "{" ws function-body ws "}" ws 
 function-body ::= (func-input)? ws (func-output)? ws function-definitions
 func-input ::= "requires" ws (aggregation | type-ref)
 func-output ::= "returns" ws (aggregation | type-ref)
-function-definitions ::= ("???" | (vital-definition-contents | function | function-include | statement))*
+function-definitions ::= (undefined | (vital-definition-contents | function | function-include | statement))*
 function-include ::= "include" ws1 literal-string
 
 # References
@@ -190,7 +193,7 @@ any-interaction-ref ::= processor-ref | saga-ref | input-ref | output-ref | grou
 
 # Handlers
 handler ::= ("initial")? ws "handler" ws1 identifier ws1 is ws "{" ws handler-body ws "}" ws (with-metadata)?
-handler-body ::= ("???" | handler-contents)*
+handler-body ::= (undefined | handler-contents)*
 handler-contents ::= (on-clause | comment)*
 on-clause ::= on-init-clause | on-other-clause | on-term-clause | on-activate-clause | on-passivate-clause | on-event-clause | on-message-clause
 on-init-clause ::= "on" ws "init" ws1 is ws1 pseudo-code-block ws (with-metadata)?
@@ -260,8 +263,8 @@ morph-statement ::= "morph" ws1 entity-ref ws "to" ws1 state-ref ws "with" ws1 r
 become-statement ::= "become" ws1 entity-ref ws "to" ws1 handler-ref
 
 # Pseudo Code Block
-pseudo-code-block ::= "???" | "{" ws pseudo-code-contents ws "}" | (statement)*
-pseudo-code-contents ::= ("???")? ws (statement)*
+pseudo-code-block ::= undefined | "{" ws pseudo-code-contents ws "}" | (statement)*
+pseudo-code-contents ::= (undefined)? ws (statement)*
 
 # Constants and Invariants
 constant ::= "constant" ws1 identifier ws1 is ws1 type-expression ws "=" ws literal-string ws (with-metadata)?
@@ -279,7 +282,7 @@ relationship-cardinality ::= "1:1" | "1:N" | "N:1" | "N:N"
 
 # Streamlet-related
 as-shape ::= "as" ws ("void" | "source" | "sink" | "flow" | "cascade" | "merge" | "fanin" | "split" | "broadcast" | "fanout" | "router")
-processor ::= "processor" ws1 identifier ws (as-shape)? ws is ws "{" ws ((processor-definition-contents)+ | "???") ws "}" ws (with-metadata)?
+processor ::= "processor" ws1 identifier ws (as-shape)? ws is ws "{" ws ((processor-definition-contents)+ | undefined) ws "}" ws (with-metadata)?
 
 # parse with fastparse but not with this grammar.
 streamlet ::= source | sink | flow | merge | split | router | void | processor
@@ -290,7 +293,7 @@ merge ::= "merge" ws1 identifier ws1 is ws "{" ws streamlet-body ws "}" ws (with
 split ::= "split" ws1 identifier ws1 is ws "{" ws streamlet-body ws "}" ws (with-metadata)?
 router ::= "router" ws1 identifier ws1 is ws "{" ws streamlet-body ws "}" ws (with-metadata)?
 void ::= "void" ws1 identifier ws1 is ws "{" ws streamlet-body ws "}" ws (with-metadata)?
-streamlet-body ::= ("???" | streamlet-definition)*
+streamlet-body ::= (undefined | streamlet-definition)*
 streamlet-definition ::= (inlet | outlet | streamlet-include | processor-definition-contents)*
 streamlet-include ::= "include" ws1 literal-string
 inlet ::= "inlet" ws1 identifier ws1 is ws1 type-ref ws (with-metadata)?
@@ -299,13 +302,13 @@ connector ::= "connector" ws1 identifier ws1 is ws1 connector-definitions ws (wi
 connector-definitions ::= ("{" "from" outlet-ref "to" inlet-ref "}" | "from" outlet-ref "to" inlet-ref)?
 
 # Group-related
-group ::= group-aliases ws1 identifier ws1 is ws "{" ws ("???" | group-definitions)* ws "}" ws (with-metadata)?
+group ::= group-aliases ws1 identifier ws1 is ws "{" ws (undefined | group-definitions)* ws "}" ws (with-metadata)?
 group-definitions ::= (group | contained-group | shown-by | group-output | group-input | comment)*
 contained-group ::= "contains" ws1 identifier ws1 by-as ws1 group-ref ws (with-metadata)?
 group-output ::= output-aliases ws1 identifier ws1 presentation-aliases ws (literal-string | constant-ref | type-ref) ws (output-definitions)? ws (with-metadata)?
 group-input ::= input-aliases ws1 identifier ws1 acquisition-aliases ws1 type-ref ws (input-definitions)? ws (with-metadata)?
-output-definitions ::= (is "{" ("???" | (group-output | type-ref))* "}")?
-input-definitions ::= (is "{" ("???" | group-input)* "}")?
+output-definitions ::= (is "{" (undefined | (group-output | type-ref))* "}")?
+input-definitions ::= (is "{" (undefined | group-input)* "}")?
 group-aliases ::= "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "frame" | "column" | "window" | "section" | "tab" | "flow" | "block"
 output-aliases ::= "output" | "document" | "list" | "table" | "graph" | "animation" | "picture"
 input-aliases ::= "input" | "form" | "text" | "button" | "picklist" | "selector" | "item"
@@ -314,7 +317,7 @@ acquisition-aliases ::= "acquires" | "reads" | "takes" | "accepts" | "admits" | 
 
 # Repository-related
 repository ::= "repository" ws1 identifier ws (as-shape)? ws is ws "{" ws repository-body ws "}" ws (with-metadata)?
-repository-body ::= ("???" | repository-definitions)*
+repository-body ::= (undefined | repository-definitions)*
 repository-definitions ::= (processor-definition-contents | schema | repository-include)*
 repository-include ::= "include" ws1 literal-string
 schema ::= "schema" ws1 identifier ws1 is ws1 schema-kind ws (data)* ws (link)* ws (index)* ws (with-metadata)?
@@ -326,13 +329,13 @@ index ::= "index" ws "on" ws1 field-ref
 # Adaptor-related
 adaptor ::= "adaptor" ws1 identifier ws1 adaptor-direction ws1 context-ref ws (as-shape)? ws is ws "{" ws adaptor-body ws "}" ws (with-metadata)?
 adaptor-direction ::= "from" | "to"
-adaptor-body ::= ("???" | adaptor-contents)*
+adaptor-body ::= (undefined | adaptor-contents)*
 adaptor-contents ::= (processor-definition-contents | handler | adaptor-include)*
 adaptor-include ::= "include" ws1 literal-string
 
 # Projector-related
 projector ::= "projector" ws1 identifier ws (as-shape)? ws is ws "{" ws projector-body ws "}" ws (with-metadata)?
-projector-body ::= ("???" | projector-definitions)*
+projector-body ::= (undefined | projector-definitions)*
 projector-definitions ::= (processor-definition-contents | updates | projector-include)*
 projector-include ::= "include" ws1 literal-string
 updates ::= "updates" ws1 repository-ref
@@ -349,7 +352,7 @@ epic ::= "epic" ws1 identifier ws1 is ws "{" ws epic-body ws "}" ws (with-metada
 epic-body ::= user-story ws (epic-definitions)*
 epic-definitions ::= (vital-definition-contents | use-case | shown-by | epic-include)*
 epic-include ::= "include" ws1 literal-string
-use-case ::= "case" ws1 identifier ws1 is ws "{" ws user-story ws ("???" | interactions)* ws "}" ws (with-metadata)?
+use-case ::= "case" ws1 identifier ws1 is ws "{" ws user-story ws (undefined | interactions)* ws "}" ws (with-metadata)?
 user-story-verb ::= "wants" | "must" | "shall" | "should" | "may" | "will" | "can"
 user-story ::= user-ref ws1 user-story-verb ws ("to")? ws literal-string ws "so" ws ("that")? ws literal-string
 interactions ::= (interaction | comment)*
@@ -373,7 +376,7 @@ vague-step ::= is ws1 literal-string ws1 literal-string ws1 literal-string ws (w
 user ::= "user" ws1 identifier ws1 is ws1 literal-string ws (with-metadata)?
 
 # Author-related
-author ::= "author" ws1 identifier ws1 is ws "{" ws (("???" | ("name" is literal-string "email" is literal-string ("organization" is literal-string)? ("title" is literal-string)? ("url" is http-url)?)))? ws "}" ws (with-metadata)?
+author ::= "author" ws1 identifier ws1 is ws "{" ws ((undefined | ("name" is literal-string "email" is literal-string ("organization" is literal-string)? ("title" is literal-string)? ("url" is http-url)?)))? ws "}" ws (with-metadata)?
 
 # URLs
 http-url ::= ("http" | "https") "://" host-string (":" port-num)? "/" (url-path)?
@@ -382,7 +385,7 @@ port-num ::= [0-9]+
 url-path ::= [A-Za-z0-9_.~!$&'()*+,;=/-]*
 
 # Metadata
-with-metadata ::= ("with" "{" ("???" | (meta-data)*)* "}")?
+with-metadata ::= ("with" "{" (undefined | (meta-data)*)* "}")?
 meta-data ::= brief-description | description | term | option | author-ref | figma-ref | attachment | comment
 brief-description ::= briefly ws1 by-as ws1 literal-string
 description ::= described ws (by-as doc-block | ("at" http-url) | ("in" "file" literal-string))
@@ -393,7 +396,7 @@ option-name ::= [a-z0-9_-]*
 attachment ::= "attachment" ws (ulid-attachment-body | named-attachment-body)
 ulid-attachment-body ::= "ULID" ws1 is ws1 literal-string
 named-attachment-body ::= identifier ws1 is ws1 mime-type ws (("in" "file" literal-string) | (by-as literal-string))
-doc-block ::= "{" (markdown-lines | literal-strings | "???")* "}" | literal-string
+doc-block ::= "{" (markdown-lines | literal-strings | undefined)* "}" | literal-string
 markdown-lines ::= (markdown-line)+
 markdown-line ::= "|" [^\n]* "\n"?
 literal-strings ::= (literal-string)+

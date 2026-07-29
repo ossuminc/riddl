@@ -82,16 +82,16 @@ object RiddlParserInput {
     * A missing file, a directory named where a file belongs, or a binary file are ordinary user
     * mistakes, and each used to arrive at the command-level catch-all as a raw Java exception —
     * `[severe] Exception Thrown:: java.io.FileNotFoundException`. `PlatformContext.loadSafe`
-    * classifies them; this is where that classification becomes a RIDDL message with a
-    * suggestion, which is possible here and not in `utils` because Messages lives in this module.
+    * classifies them; this is where that classification becomes a RIDDL message with a suggestion,
+    * which is possible here and not in `utils` because Messages lives in this module.
     */
   def fromURLSafe(url: URL, purpose: String = "")(using
     io: PlatformContext
   ): Future[Either[Messages, RiddlParserInput]] = {
     implicit val ec: ExecutionContext = io.ec
     io.loadSafe(url).map {
-      case Right(data)     => Right(apply(data, url, purpose))
-      case Left(failure)   => Left(List(loadFailureToMessage(failure)))
+      case Right(data)   => Right(apply(data, url, purpose))
+      case Left(failure) => Left(List(loadFailureToMessage(failure)))
     }
   }
 
