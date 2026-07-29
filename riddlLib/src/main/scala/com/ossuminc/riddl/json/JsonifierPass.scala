@@ -105,7 +105,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     val kids = stack.pop().toSeq
     val outer = consumed
     consumed = java.util.IdentityHashMap[Any, Boolean]()
-    val built = buildContainer(definition, kids)
+    val built = buildContainer(definition, kids).map(withContents(_, kids.flatMap(asContent)))
     for kid <- kids if !consumed.containsKey(kid) do
       dropped += (definition.getClass.getSimpleName -> kindOf(kid))
     end for
@@ -115,6 +115,47 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       case Some(b)                             => add(b)
       case None                                => ()
   end closeContainer
+
+  /** A child, as an entry of the ordered `contents` array.
+    *
+    * `Pass.traverse` walks `contents.foreach`, so `kids` is ALREADY in source order — the per-kind
+    * buckets are precisely where that order was being thrown away. The three tagging wrappers are
+    * unwrapped here, their discriminator moving onto the DTO where the `kind` tag can carry it.
+    */
+  private def asContent(kid: Any): Option[ContentDto] = kid match
+    case MsgChild(uc, dto) => Some(dto.copy(usecase = Some(uc.useCase.toLowerCase())))
+    case InletChild(dto)   => Some(dto.copy(direction = Some(ContentKind.Inlet)))
+    case OutletChild(dto)  => Some(dto.copy(direction = Some(ContentKind.Outlet)))
+    case c: ContentDto     => Some(c)
+    case _                 => None
+
+  /** Attach the ordered children to whichever container DTO was just built.
+    *
+    * Done in one place rather than threaded through the ~180 `k.col` picks at the construction
+    * sites, which stay exactly as they are while both forms are written.
+    */
+  private def withContents(dto: Any, ordered: Seq[ContentDto]): Any = dto match
+    case d: RootDto       => d.copy(contents = ordered)
+    case d: ModuleDto     => d.copy(contents = ordered)
+    case d: DomainDto     => d.copy(contents = ordered)
+    case d: ContextDto    => d.copy(contents = ordered)
+    case d: EntityDto     => d.copy(contents = ordered)
+    case d: StateDto      => d.copy(contents = ordered)
+    case d: HandlerDto    => d.copy(contents = ordered)
+    case d: FunctionDto   => d.copy(contents = ordered)
+    case d: AdaptorDto    => d.copy(contents = ordered)
+    case d: StreamletDto  => d.copy(contents = ordered)
+    case d: ProjectorDto  => d.copy(contents = ordered)
+    case d: RepositoryDto => d.copy(contents = ordered)
+    case d: SagaDto       => d.copy(contents = ordered)
+    case d: EpicDto       => d.copy(contents = ordered)
+    case d: UseCaseDto    => d.copy(contents = ordered)
+    case d: GroupDto      => d.copy(contents = ordered)
+    // A Type (and so a MessageDto) and an OnClause deliberately have NO `contents`: a type's
+    // children are derived from its type expression and already ordered inside `fields`, and an
+    // on-clause body is ordered by `serializeStatements`, which keeps interleaved comments in
+    // place. Giving either one a `contents` array would carry the same children twice.
+    case other => other
 
   /** The reportable name of a child DTO, unwrapping the tagging wrappers. */
   private def kindOf(kid: Any): String = kid match

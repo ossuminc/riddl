@@ -378,12 +378,7 @@ object JsonModel:
       * the bucket supplies it, so the field is deliberately an Option rather than defaulting to
       * "command" and quietly mislabelling an event.
       */
-    usecase: Option[String] = None,
-    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
-      * are the deprecated form, kept readable for documents written against the older schema; they
-      * cannot express order. See [[ContentDto]].
-      */
-    contents: Seq[ContentDto] = Nil
+    usecase: Option[String] = None
   )
 
   case class EntityDto(
@@ -473,12 +468,7 @@ object JsonModel:
     binding: Option[String] = None,
     metadata: Option[MetaDto] = None,
     // An on-clause may be documented like any other definition (`on other { … } with { briefly … }`).
-    brief: Option[String] = None,
-    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
-      * are the deprecated form, kept readable for documents written against the older schema; they
-      * cannot express order. See [[ContentDto]].
-      */
-    contents: Seq[ContentDto] = Nil
+    brief: Option[String] = None
   )
 
   case class MessageRefDto(ref: String, kind: String)
@@ -1824,17 +1814,28 @@ object JsonModel:
     * into `usecase`/`direction` on the way in and stripped on the way out to avoid writing it
     * twice.
     */
+  /** The key a `contents` entry's kind tag lives under.
+    *
+    * `$kind` rather than the more obvious `kind` because two content DTOs — [[OnClauseDto]] and
+    * [[SchemaDto]] — already carry a `kind` FIELD of their own, and a tag under the same key
+    * silently overwrote it (`ujson.Obj.from` keeps the last of a duplicate pair), so an on-clause
+    * went out as `"kind": "message"` and came back an unknown content kind. A `$`-prefixed key
+    * cannot collide with any DTO field, present or future, and mirrors upickle's own `$type` in
+    * reading as structural metadata rather than as model data.
+    */
+  val ContentTag: String = "$kind"
+
   private def readContent(v: ujson.Value): ContentDto =
     val obj = v.obj
     val kind = obj
-      .get("kind")
+      .get(ContentTag)
       .map(_.str)
       .getOrElse(
         throw new IllegalArgumentException(
-          s"A `contents` entry needs a `kind`: ${ujson.write(v).take(120)}"
+          s"A `contents` entry needs a `$ContentTag`: ${ujson.write(v).take(120)}"
         )
       )
-    val body: ujson.Value = ujson.Obj.from(obj.toSeq.filter(_._1 != "kind"))
+    val body: ujson.Value = ujson.Obj.from(obj.toSeq.filter(_._1 != ContentTag))
     kind match
       case ContentKind.Domain         => readJson[DomainDto](body)
       case ContentKind.Module         => readJson[ModuleDto](body)
@@ -1924,7 +1925,7 @@ object JsonModel:
       case d: PortletDto =>
         (d.direction.getOrElse(ContentKind.Inlet), writeJs(d.copy(direction = None)))
     val (kind, body) = tagged
-    ujson.Obj.from(("kind" -> (ujson.Str(kind): ujson.Value)) +: body.obj.toSeq)
+    ujson.Obj.from((ContentTag -> (ujson.Str(kind): ujson.Value)) +: body.obj.toSeq)
   end writeContent
 
   given contentRW: ReadWriter[ContentDto] =

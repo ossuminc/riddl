@@ -86,8 +86,12 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     * longer returns as `record X is {…}`. Only one fixture diverged for that reason ALONE; the
     * others that showed it, such as `dokn.riddl` and `domains/rbbq.riddl`, still diverge on a
     * remaining cause and merely fail later in the file than they did.
+    *
+    * 62 -> 49: SOURCE ORDER. A container's children now travel in one ordered `contents` array
+    * instead of per-kind buckets that were reassembled in a fixed sequence, so a comment written at
+    * the top of a file no longer comes back at the bottom. This was the dominant cause.
     */
-  private val DivergentCeiling: Int = 62
+  private val DivergentCeiling: Int = 49
 
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *

@@ -38,13 +38,18 @@ object JsonAstBuilder:
     val root =
       Root(
         At(),
-        contentsOf[RootContents](
-          domains,
-          modules,
-          version,
-          copyright,
-          authors,
-          comments(dto.comments)
+        childrenOrBuckets[RootContents](
+          dto.contents,
+          "Root",
+          Legal.root,
+          contentsOf[RootContents](
+            domains,
+            modules,
+            version,
+            copyright,
+            authors,
+            comments(dto.comments)
+          )
         )
       )
     if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
@@ -78,32 +83,37 @@ object JsonAstBuilder:
     Module(
       At(),
       ident(m.name),
-      contentsOf[ModuleContents](
-        authors,
-        domains,
-        types,
-        commands,
-        events,
-        queries,
-        results,
-        constants,
-        invariants,
-        users,
-        contexts,
-        entities,
-        adaptors,
-        functions,
-        projectors,
-        repositories,
-        streamlets,
-        sagas,
-        epics,
-        connectors,
-        relationships,
-        modules,
-        version,
-        copyright,
-        comments(m.comments)
+      childrenOrBuckets[ModuleContents](
+        m.contents,
+        "Module",
+        Legal.module,
+        contentsOf[ModuleContents](
+          authors,
+          domains,
+          types,
+          commands,
+          events,
+          queries,
+          results,
+          constants,
+          invariants,
+          users,
+          contexts,
+          entities,
+          adaptors,
+          functions,
+          projectors,
+          repositories,
+          streamlets,
+          sagas,
+          epics,
+          connectors,
+          relationships,
+          modules,
+          version,
+          copyright,
+          comments(m.comments)
+        )
       ),
       meta(m.brief, m.metadata)
     )
@@ -121,11 +131,249 @@ object JsonAstBuilder:
 
   /** Collect heterogeneous child groups (each a subtype of `T`) into a typed `Contents[T]`. `Seq[?
     * <: T]` keeps each call-site group correctly typed.
+    *
+    * This is the DEPRECATED path: concatenating per-kind buckets in a fixed sequence is exactly
+    * what made source order unrecoverable. It survives only to read documents written against the
+    * older schema — see [[childrenOf]], which is the canonical one.
     */
   private def contentsOf[T <: RiddlValue](groups: Seq[? <: T]*): Contents[T] =
     val buf = mutable.ArrayBuffer.empty[T]
     groups.foreach(g => buf ++= g)
     Contents[T](buf.toSeq*)
+
+  // ---------------------------------------------------------------------------
+  // Ordered contents (the canonical form)
+  // ---------------------------------------------------------------------------
+
+  /** Which content kinds each container admits, mirroring the AST's own unions in `AST.scala`.
+    *
+    * A flat array cannot express this the way per-kind buckets did — an `EntityDto` simply had no
+    * `sagas` field — so the constraint moves here rather than being dropped on the floor for
+    * `ValidationPass` to trip over later with a worse message.
+    *
+    * Union members with no [[JsonModel.ContentDto]] of their own (`Statement`, `ShownBy`,
+    * `RepositoryRef`, `Interaction`, `Include`, `BASTImport`) are absent by construction: they are
+    * carried by a dedicated DTO field, not by `contents`.
+    */
+  /** `AST.Set` shadows `scala.Set` in this file's wildcard import of the AST, so the set of legal
+    * kinds is spelled through an alias rather than the plain name.
+    */
+  private type Kinds = scala.collection.immutable.Set[String]
+  private val Kinds = scala.collection.immutable.Set
+
+  private object Legal:
+    import JsonModel.ContentKind as K
+
+    /** `OccursInVitalDefinition` — plus the four message use cases, since a message IS a Type. */
+    private val vital: Kinds = Kinds(K.Type, K.Comment) ++ K.messageKinds
+
+    /** `OccursInProcessor`. */
+    private val processor: Kinds = vital ++ Kinds(
+      K.Constant,
+      K.Invariant,
+      K.Function,
+      K.Handler,
+      K.Streamlet,
+      K.Connector,
+      K.Relationship,
+      K.Inlet,
+      K.Outlet,
+      K.Version,
+      K.Copyright
+    )
+
+    private val nebula: Kinds = Kinds(
+      K.Adaptor,
+      K.Author,
+      K.Connector,
+      K.Constant,
+      K.Context,
+      K.Domain,
+      K.Entity,
+      K.Epic,
+      K.Function,
+      K.Invariant,
+      K.Module,
+      K.Projector,
+      K.Relationship,
+      K.Repository,
+      K.Saga,
+      K.Streamlet,
+      K.Type,
+      K.User,
+      K.Version,
+      K.Copyright
+    ) ++ K.messageKinds
+
+    val root: Kinds = Kinds(K.Domain, K.Author, K.Comment, K.Version, K.Copyright, K.Module)
+    val module: Kinds = nebula + K.Comment
+    val domain: Kinds = vital ++ Kinds(
+      K.Author,
+      K.Context,
+      K.Domain,
+      K.User,
+      K.Epic,
+      K.Saga,
+      K.Repository,
+      K.Connector,
+      K.Version,
+      K.Copyright
+    )
+    val context: Kinds =
+      processor ++ Kinds(K.Entity, K.Adaptor, K.Group, K.Saga, K.Projector, K.Repository)
+    val entity: Kinds = processor + K.State
+    val state: Kinds = Kinds(K.Handler, K.Invariant, K.Comment)
+    val handler: Kinds = Kinds(K.OnClause, K.Comment)
+    val adaptor: Kinds = processor
+    val streamlet: Kinds = processor
+    val projector: Kinds = processor
+    val repository: Kinds = processor + K.Schema
+    val saga: Kinds = vital + K.SagaStep
+    val epic: Kinds = vital + K.UseCase
+    val useCase: Kinds = Kinds(K.Comment)
+    val group: Kinds = Kinds(K.Group, K.ContainedGroup, K.Input, K.Output, K.Comment)
+    val function: Kinds = vital + K.Function
+  end Legal
+
+  /** The kind tag a [[JsonModel.ContentDto]] travels under — the read-side mirror of the emitter's
+    * tagging, used to check a child against its container's [[Legal]] set.
+    */
+  private def kindOf(c: ContentDto): String =
+    import JsonModel.ContentKind as K
+    c match
+      case _: DomainDto         => K.Domain
+      case _: ModuleDto         => K.Module
+      case _: ContextDto        => K.Context
+      case _: EntityDto         => K.Entity
+      case _: TypeDefDto        => K.Type
+      case _: StateDto          => K.State
+      case _: HandlerDto        => K.Handler
+      case _: OnClauseDto       => K.OnClause
+      case _: FunctionDto       => K.Function
+      case _: AdaptorDto        => K.Adaptor
+      case _: StreamletDto      => K.Streamlet
+      case _: ProjectorDto      => K.Projector
+      case _: RepositoryDto     => K.Repository
+      case _: SchemaDto         => K.Schema
+      case _: ConnectorDto      => K.Connector
+      case _: RelationshipDto   => K.Relationship
+      case _: SagaDto           => K.Saga
+      case _: SagaStepDto       => K.SagaStep
+      case _: EpicDto           => K.Epic
+      case _: UseCaseDto        => K.UseCase
+      case _: GroupDto          => K.Group
+      case _: ContainedGroupDto => K.ContainedGroup
+      case _: InputDto          => K.Input
+      case _: OutputDto         => K.Output
+      case _: AuthorDto         => K.Author
+      case _: UserDto           => K.User
+      case _: InvariantDto      => K.Invariant
+      case _: ConstantDto       => K.Constant
+      case _: CommentDto        => K.Comment
+      case _: VersionDto        => K.Version
+      case _: CopyrightDto      => K.Copyright
+      case _: FieldDto          => K.Field
+      case _: MethodDto         => K.Method
+      case _: TermDto           => K.Term
+      case m: MessageDto        => m.usecase.getOrElse(K.Command)
+      case p: PortletDto        => p.direction.getOrElse(K.Inlet)
+
+  /** One ordered child, as its AST node. */
+  private def buildContent(c: ContentDto)(using Ctx): RiddlValue =
+    import JsonModel.ContentKind as K
+    c match
+      case d: DomainDto         => buildDomain(d)
+      case d: ModuleDto         => buildModule(d)
+      case d: ContextDto        => buildContext(d)
+      case d: EntityDto         => buildEntity(d)
+      case d: TypeDefDto        => buildType(d)
+      case d: StateDto          => buildState(d)
+      case d: HandlerDto        => buildHandler(d)
+      case d: OnClauseDto       => buildOnClause(d)
+      case d: FunctionDto       => buildFunction(d)
+      case d: AdaptorDto        => buildAdaptor(d)
+      case d: StreamletDto      => buildStreamlet(d)
+      case d: ProjectorDto      => buildProjector(d)
+      case d: RepositoryDto     => buildRepository(d)
+      case d: SchemaDto         => buildSchema(d)
+      case d: ConnectorDto      => buildConnector(d)
+      case d: RelationshipDto   => buildRelationship(d)
+      case d: SagaDto           => buildSaga(d)
+      case d: SagaStepDto       => buildSagaStep(d)
+      case d: EpicDto           => buildEpic(d)
+      case d: UseCaseDto        => buildUseCase(d)
+      case d: GroupDto          => buildGroup(d)
+      case d: ContainedGroupDto => buildContainedGroup(d)
+      case d: InputDto          => buildInput(d)
+      case d: OutputDto         => buildOutput(d)
+      case d: AuthorDto         => buildAuthor(d)
+      case d: UserDto           => buildUser(d)
+      case d: InvariantDto      => buildInvariant(d)
+      case d: ConstantDto       => buildConstant(d)
+      case d: CommentDto        => comments(Seq(d)).head
+      case d: VersionDto        => buildVersion(d)
+      case d: CopyrightDto      => buildCopyright(d)
+      case d: FieldDto          => buildField(d)
+      case d: MethodDto         => buildMethod(d)
+      case d: TermDto =>
+        Term(At(), ident(d.name), d.definition.map(LiteralString(At(), _)))
+      case d: MessageDto =>
+        buildMessage(d, messageUseCase(d.usecase.getOrElse(K.Command)))
+      case d: PortletDto =>
+        if d.direction.contains(K.Outlet) then buildOutlet(d) else buildInlet(d)
+
+  private def messageUseCase(kind: String): AggregateUseCase =
+    import JsonModel.ContentKind as K
+    kind match
+      case K.Event  => AggregateUseCase.EventCase
+      case K.Query  => AggregateUseCase.QueryCase
+      case K.Result => AggregateUseCase.ResultCase
+      case _        => AggregateUseCase.CommandCase
+
+  /** Rebuild a container's children from the ordered `contents` array, IN ORDER.
+    *
+    * The cast is discharged by the [[Legal]] check immediately above it: a kind in the container's
+    * legal set is by construction a member of that container's AST union, and the unions are erased
+    * at runtime anyway (`Contents[?]` is an `ArrayBuffer`), so no test could be written for `T`
+    * directly.
+    */
+  private def childrenOf[T <: RiddlValue](
+    contents: Seq[ContentDto],
+    container: String,
+    legal: Kinds
+  )(using ctx: Ctx): Contents[T] =
+    val built = contents.flatMap { c =>
+      val kind = kindOf(c)
+      if legal.contains(kind) then Some(buildContent(c).asInstanceOf[T])
+      else
+        ctx.err(s"A $container may not contain a '$kind'")
+        None
+    }
+    Contents[T](built*)
+  end childrenOf
+
+  /** The ordered `contents` array when the document has one, else the deprecated per-kind buckets.
+    *
+    * `legacy` is by-name so the bucket builders are not run when `contents` supplies the children —
+    * they are not merely redundant then, they would double every child.
+    *
+    * `extras` are children of this container that `contents` CANNOT carry because they have no
+    * [[JsonModel.ContentDto]] of their own and live in a dedicated field instead: a use case's
+    * `interactions`, a function's `statements`, a projector's `repository`, an epic's `shownBy`.
+    * Without them the ordered path silently dropped those children the moment anything else — a
+    * single comment — put something in `contents`. They are appended, so their position relative to
+    * the ordered children is not yet faithful; giving each a content kind of its own is what fixes
+    * that, and is the remaining field-level work.
+    */
+  private def childrenOrBuckets[T <: RiddlValue](
+    contents: Seq[ContentDto],
+    container: String,
+    legal: Kinds,
+    legacy: => Contents[T],
+    extras: => Seq[T] = Nil
+  )(using Ctx): Contents[T] =
+    if contents.isEmpty then legacy
+    else Contents[T]((childrenOf[T](contents, container, legal).toSeq ++ extras)*)
 
   /** Build a definition's metadata: a `brief` shorthand plus, optionally, the richer
     * [[JsonModel.MetaDto]] (description, terms, options, author refs, attachments, comments). Pure
@@ -199,23 +447,28 @@ object JsonAstBuilder:
     Domain(
       At(),
       ident(d.name),
-      contentsOf[DomainContents](
-        authors,
-        users,
-        types,
-        sagas,
-        epics,
-        subdomains,
-        contexts,
-        version,
-        copyright,
-        commands,
-        events,
-        queries,
-        results,
-        repositories,
-        connectors,
-        comments(d.comments)
+      childrenOrBuckets[DomainContents](
+        d.contents,
+        "Domain",
+        Legal.domain,
+        contentsOf[DomainContents](
+          authors,
+          users,
+          types,
+          sagas,
+          epics,
+          subdomains,
+          contexts,
+          version,
+          copyright,
+          commands,
+          events,
+          queries,
+          results,
+          repositories,
+          connectors,
+          comments(d.comments)
+        )
       ),
       meta(d.brief, d.metadata)
     )
@@ -284,30 +537,35 @@ object JsonAstBuilder:
     Context(
       At(),
       ident(c.name),
-      contentsOf[ContextContents](
-        types,
-        constants,
-        commands,
-        events,
-        queries,
-        results,
-        entities,
-        functions,
-        adaptors,
-        streamlets,
-        projectors,
-        repositories,
-        connectors,
-        relationships,
-        sagas,
-        groups,
-        handlers,
-        inlets,
-        outlets,
-        version,
-        copyright,
-        invariants,
-        comments(c.comments)
+      childrenOrBuckets[ContextContents](
+        c.contents,
+        "Context",
+        Legal.context,
+        contentsOf[ContextContents](
+          types,
+          constants,
+          commands,
+          events,
+          queries,
+          results,
+          entities,
+          functions,
+          adaptors,
+          streamlets,
+          projectors,
+          repositories,
+          connectors,
+          relationships,
+          sagas,
+          groups,
+          handlers,
+          inlets,
+          outlets,
+          version,
+          copyright,
+          invariants,
+          comments(c.comments)
+        )
       ),
       ascribedShape = parseShape(c.shape),
       intention = parseIntention(c.intention),
@@ -380,25 +638,30 @@ object JsonAstBuilder:
     Entity(
       At(),
       ident(e.name),
-      contentsOf[EntityContents](
-        types,
-        constants,
-        commands,
-        events,
-        queries,
-        results,
-        states,
-        functions,
-        handlers,
-        invariants,
-        inlets,
-        outlets,
-        version,
-        copyright,
-        streamlets,
-        connectors,
-        relationships,
-        comments(e.comments)
+      childrenOrBuckets[EntityContents](
+        e.contents,
+        "Entity",
+        Legal.entity,
+        contentsOf[EntityContents](
+          types,
+          constants,
+          commands,
+          events,
+          queries,
+          results,
+          states,
+          functions,
+          handlers,
+          invariants,
+          inlets,
+          outlets,
+          version,
+          copyright,
+          streamlets,
+          connectors,
+          relationships,
+          comments(e.comments)
+        )
       ),
       ascribedShape = parseShape(e.shape),
       metadata = meta(e.brief, e.metadata)
@@ -412,10 +675,15 @@ object JsonAstBuilder:
       At(),
       ident(s.name),
       RecordRef(At(), pathId(s.recordType)), // A9b: state type is a RecordRef
-      contentsOf[StateContents](
-        s.handlers.map(buildHandler),
-        s.invariants.map(buildInvariant),
-        comments(s.comments)
+      childrenOrBuckets[StateContents](
+        s.contents,
+        "State",
+        Legal.state,
+        contentsOf[StateContents](
+          s.handlers.map(buildHandler),
+          s.invariants.map(buildInvariant),
+          comments(s.comments)
+        )
       ),
       meta(s.brief, s.metadata),
       s.isInitial
@@ -426,7 +694,12 @@ object JsonAstBuilder:
     Handler(
       At(),
       ident(h.name),
-      contentsOf[HandlerContents](clauses, comments(h.comments)),
+      childrenOrBuckets[HandlerContents](
+        h.contents,
+        "Handler",
+        Legal.handler,
+        contentsOf[HandlerContents](clauses, comments(h.comments))
+      ),
       meta(h.brief, h.metadata),
       h.isInitial
     )
@@ -532,7 +805,13 @@ object JsonAstBuilder:
       ident(f.name),
       argOf(f.input),
       argOf(f.output),
-      contentsOf[FunctionContents](types, statements, functions, comments(f.comments)),
+      childrenOrBuckets[FunctionContents](
+        f.contents,
+        "Function",
+        Legal.function,
+        contentsOf[FunctionContents](types, statements, functions, comments(f.comments)),
+        statements
+      ),
       meta(f.brief, f.metadata)
     )
 
@@ -553,7 +832,12 @@ object JsonAstBuilder:
       ident(s.name),
       argOf(s.input),
       argOf(s.output),
-      contentsOf[SagaContents](types, steps, comments(s.comments)),
+      childrenOrBuckets[SagaContents](
+        s.contents,
+        "Saga",
+        Legal.saga,
+        contentsOf[SagaContents](types, steps, comments(s.comments))
+      ),
       meta(s.brief, s.metadata)
     )
 
@@ -666,7 +950,13 @@ object JsonAstBuilder:
       At(),
       ident(u.name),
       buildUserStory(u.userStory),
-      contentsOf[UseCaseContents](u.interactions.map(buildInteraction), comments(u.comments)),
+      childrenOrBuckets[UseCaseContents](
+        u.contents,
+        "UseCase",
+        Legal.useCase,
+        contentsOf[UseCaseContents](u.interactions.map(buildInteraction), comments(u.comments)),
+        u.interactions.map(buildInteraction)
+      ),
       meta(u.brief, u.metadata)
     )
 
@@ -678,7 +968,13 @@ object JsonAstBuilder:
       At(),
       ident(e.name),
       buildUserStory(e.userStory),
-      contentsOf[EpicContents](types, shownBy, useCases, comments(e.comments)),
+      childrenOrBuckets[EpicContents](
+        e.contents,
+        "Epic",
+        Legal.epic,
+        contentsOf[EpicContents](types, shownBy, useCases, comments(e.comments)),
+        shownBy
+      ),
       meta(e.brief, e.metadata)
     )
 
@@ -734,7 +1030,12 @@ object JsonAstBuilder:
       At(),
       g.alias.getOrElse("group"),
       ident(g.name),
-      contentsOf[OccursInGroup](groups, contained, inputs, outputs, comments(g.comments)),
+      childrenOrBuckets[OccursInGroup](
+        g.contents,
+        "Group",
+        Legal.group,
+        contentsOf[OccursInGroup](groups, contained, inputs, outputs, comments(g.comments))
+      ),
       meta(g.brief, g.metadata)
     )
 
@@ -1011,24 +1312,29 @@ object JsonAstBuilder:
       ident(a.name),
       adaptorDirection(a.direction),
       ContextRef(At(), pathId(a.context)),
-      contentsOf[AdaptorContents](
-        types,
-        constants,
-        commands,
-        events,
-        queries,
-        results,
-        functions,
-        handlers,
-        inlets,
-        outlets,
-        version,
-        copyright,
-        invariants,
-        streamlets,
-        connectors,
-        relationships,
-        comments(a.comments)
+      childrenOrBuckets[AdaptorContents](
+        a.contents,
+        "Adaptor",
+        Legal.adaptor,
+        contentsOf[AdaptorContents](
+          types,
+          constants,
+          commands,
+          events,
+          queries,
+          results,
+          functions,
+          handlers,
+          inlets,
+          outlets,
+          version,
+          copyright,
+          invariants,
+          streamlets,
+          connectors,
+          relationships,
+          comments(a.comments)
+        )
       ),
       ascribedShape = parseShape(a.shape),
       metadata = meta(a.brief, a.metadata)
@@ -1080,24 +1386,29 @@ object JsonAstBuilder:
       At(),
       ident(s.name),
       parseShape(s.shape),
-      contentsOf[StreamletContents](
-        types,
-        commands,
-        events,
-        queries,
-        results,
-        inlets,
-        outlets,
-        connectors,
-        handlers,
-        version,
-        copyright,
-        constants,
-        functions,
-        invariants,
-        nested,
-        relationships,
-        comments(s.comments)
+      childrenOrBuckets[StreamletContents](
+        s.contents,
+        "Streamlet",
+        Legal.streamlet,
+        contentsOf[StreamletContents](
+          types,
+          commands,
+          events,
+          queries,
+          results,
+          inlets,
+          outlets,
+          connectors,
+          handlers,
+          version,
+          copyright,
+          constants,
+          functions,
+          invariants,
+          nested,
+          relationships,
+          comments(s.comments)
+        )
       ),
       meta(s.brief, s.metadata)
     )
@@ -1143,25 +1454,31 @@ object JsonAstBuilder:
     Projector(
       At(),
       ident(p.name),
-      contentsOf[ProjectorContents](
-        types,
-        constants,
-        commands,
-        events,
-        queries,
-        results,
-        functions,
-        handlers,
-        repoRefs,
-        inlets,
-        outlets,
-        version,
-        copyright,
-        invariants,
-        streamlets,
-        connectors,
-        relationships,
-        comments(p.comments)
+      childrenOrBuckets[ProjectorContents](
+        p.contents,
+        "Projector",
+        Legal.projector,
+        contentsOf[ProjectorContents](
+          types,
+          constants,
+          commands,
+          events,
+          queries,
+          results,
+          functions,
+          handlers,
+          repoRefs,
+          inlets,
+          outlets,
+          version,
+          copyright,
+          invariants,
+          streamlets,
+          connectors,
+          relationships,
+          comments(p.comments)
+        ),
+        repoRefs
       ),
       ascribedShape = parseShape(p.shape),
       metadata = meta(p.brief, p.metadata)
@@ -1217,25 +1534,30 @@ object JsonAstBuilder:
     Repository(
       At(),
       ident(r.name),
-      contentsOf[RepositoryContents](
-        types,
-        schemas,
-        commands,
-        events,
-        queries,
-        results,
-        handlers,
-        inlets,
-        outlets,
-        version,
-        copyright,
-        constants,
-        functions,
-        invariants,
-        streamlets,
-        connectors,
-        relationships,
-        comments(r.comments)
+      childrenOrBuckets[RepositoryContents](
+        r.contents,
+        "Repository",
+        Legal.repository,
+        contentsOf[RepositoryContents](
+          types,
+          schemas,
+          commands,
+          events,
+          queries,
+          results,
+          handlers,
+          inlets,
+          outlets,
+          version,
+          copyright,
+          constants,
+          functions,
+          invariants,
+          streamlets,
+          connectors,
+          relationships,
+          comments(r.comments)
+        )
       ),
       ascribedShape = parseShape(r.shape),
       metadata = meta(r.brief, r.metadata)
