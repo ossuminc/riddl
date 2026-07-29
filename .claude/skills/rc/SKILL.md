@@ -120,11 +120,31 @@ NOT yet exercised end to end. On the FIRST RC, confirm the dispatch touched only
 `Formula/riddlc@rc.rb` and left `Formula/riddlc.rb` alone before announcing it.
 
 Why a separate formula: Homebrew's `devel` block is deprecated and removed, and
-there is no prerelease flag. A versioned formula plus `conflicts_with` is what
-Homebrew's own maintainers recommend; `brew upgrade` then tracks each line
-independently. The formula NAME is the "experimental" marking — users opt in with
-`brew install ossuminc/tap/riddlc@rc`. (homebrew-core forbids unstable versions,
-but that governs the official tap, not ours.)
+there is no prerelease flag, so a versioned formula is the only way to ship an RC
+without displacing the stable one. `brew upgrade` then tracks each line
+independently, and the formula NAME is the "experimental" marking — users opt in
+with `brew install ossuminc/tap/riddlc@rc`. (homebrew-core forbids unstable
+versions, but that governs the official tap, not ours.)
+
+**We use `conflicts_with`, and Homebrew's guidance says not to.** Its linter
+wants `keg_only :versioned_formula` for a versioned formula:
+
+    FormulaAudit/Conflicts: Versioned formulae should not use conflicts_with.
+    Use keg_only :versioned_formula instead.
+
+This is a DELIBERATE divergence on ergonomics: an RC exists to BE the `riddlc` on
+your PATH while you exercise it, and `keg_only` would leave it unlinked,
+reachable only through
+`$(brew --prefix ossuminc/tap/riddlc@rc)/bin/riddlc`.
+
+The cost is one permanent advisory `FormulaAudit/Conflicts` offense from
+`brew style` on `riddlc@rc.rb`. It cannot be silenced — verified in the tap, not
+assumed: an inline `# rubocop:disable` is banned in formulae by
+`Style/DisableCopsWithinSourceCodeDirective`, and a tap-level `.rubocop.yml`
+exclusion has no effect because Homebrew forces its own `FormulaAudit` config.
+
+**Do not "fix" that offense by switching to `keg_only`** — it would silently
+break the ergonomics the divergence exists for.
 
 ### 5. Stage the binary
 

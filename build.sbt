@@ -240,7 +240,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes", V.scala)(JVM, JS, Nat
   // crashes intermittently when multiple `doc` tasks run concurrently under
   // `publish`. Disabling Native scaladoc avoids the race; Native consumers
   // rarely consult the docs jar.
-  .nativeSettings(Compile / doc / sources := Seq.empty)
+  .nativeConfigure(With.NoDocs)
 val passes = passes_cp.jvm.dependsOn(pDep(utils), pDep(language))
 val passesJS = passes_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS))
 val passesNative = passes_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative))
@@ -326,10 +326,8 @@ lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Na
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
   .nativeConfigure(With.noMiMa)
   // See note on passes_cp re: Scala 3.8.x scaladoc race condition.
-  .nativeSettings(
-    Compile / doc / sources := Seq.empty,
-    libraryDependencies += Dep.upickle_nojvm.value
-  )
+  .nativeConfigure(With.NoDocs)
+  .nativeSettings(libraryDependencies += Dep.upickle_nojvm.value)
 val riddlLib = riddlLib_cp.jvm.dependsOn(pDep(utils), pDep(language), pDep(passes))
 val riddlLibJS = riddlLib_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS), pDep(passesJS))
 val riddlLibNative =
