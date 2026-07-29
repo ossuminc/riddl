@@ -327,6 +327,19 @@ lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Na
       registries = Seq("github")
     )
   )
+  // MUST come after `With.Packaging.npm` above, which sets this key itself — applied before it,
+  // this override is silently discarded.
+  //
+  // The plugin looks for TypeScript definitions at `<baseDirectory>/types`, a convention from the
+  // sbt 1 CrossProject layout where the JS row was based at `riddlLib/js`. Under sbt 2's
+  // projectMatrix the row's baseDirectory is the SYNTHETIC `.sbt/matrix/riddlLibJS`, so the lookup
+  // found nothing and said nothing: `index.d.ts` was never copied into the package, and the
+  // generated package.json omitted `types`, `exports` and `files` — leaving every TypeScript
+  // consumer of @ossuminc/riddl-lib with no types at all. Anchor it at the real source tree.
+  .jsSettings(
+    com.ossuminc.sbt.helpers.NpmPackaging.Keys.npmTypesDir :=
+      Some((ThisBuild / baseDirectory).value / "riddlLib" / "js" / "types")
+  )
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
   .nativeConfigure(With.noMiMa)
   // See note on passes_cp re: Scala 3.8.x scaladoc race condition.
