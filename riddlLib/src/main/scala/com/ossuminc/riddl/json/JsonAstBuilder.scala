@@ -1041,7 +1041,7 @@ object JsonAstBuilder:
       i.nounAlias.getOrElse("input"),
       ident(i.name),
       i.verbAlias.getOrElse("acquires"),
-      TypeRef(At(), "type", pathId(i.takeIn)),
+      TypeRef(At(), i.keyword.getOrElse("type"), pathId(i.takeIn)),
       contentsOf[OccursInInput](i.inputs.map(buildInput)),
       meta(i.brief, i.metadata)
     )
@@ -1395,10 +1395,20 @@ object JsonAstBuilder:
     s.flatMap(Intention.fromKeyword)
 
   private def buildInlet(p: PortletDto)(using Ctx): Inlet =
-    Inlet(At(), ident(p.name), TypeRef(At(), "type", pathId(p.`type`)), meta(p.brief, p.metadata))
+    Inlet(
+      At(),
+      ident(p.name),
+      TypeRef(At(), p.keyword.getOrElse("type"), pathId(p.`type`)),
+      meta(p.brief, p.metadata)
+    )
 
   private def buildOutlet(p: PortletDto)(using Ctx): Outlet =
-    Outlet(At(), ident(p.name), TypeRef(At(), "type", pathId(p.`type`)), meta(p.brief, p.metadata))
+    Outlet(
+      At(),
+      ident(p.name),
+      TypeRef(At(), p.keyword.getOrElse("type"), pathId(p.`type`)),
+      meta(p.brief, p.metadata)
+    )
 
   private def buildConnector(c: ConnectorDto)(using Ctx): Connector =
     Connector(

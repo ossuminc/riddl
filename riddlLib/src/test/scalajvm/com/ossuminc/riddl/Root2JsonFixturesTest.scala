@@ -91,11 +91,14 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     * instead of per-kind buckets that were reassembled in a fixed sequence, so a comment written at
     * the top of a file no longer comes back at the bottom. This was the dominant cause.
     *
+    * 24 -> 14: the TypeRef KEYWORD on a portlet's and an input's type reference. `inlet in is
+    * command Go` was coming back as `inlet in is type Go`.
+    *
     * 49 -> 24: `String` bounds. A bare `String` IS exactly `String(0,255)`, so prettify renders
     * only the bounds that are NOT the defaults and the two spellings of the one type stop
     * disagreeing.
     */
-  private val DivergentCeiling: Int = 24
+  private val DivergentCeiling: Int = 14
 
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *

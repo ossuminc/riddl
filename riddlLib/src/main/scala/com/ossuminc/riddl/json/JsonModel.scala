@@ -758,7 +758,13 @@ object JsonModel:
     `type`: String,
     brief: Option[String] = None,
     metadata: Option[MetaDto] = None,
-    direction: Option[String] = None
+    direction: Option[String] = None,
+    /** The TypeRef's KEYWORD (`command`, `event`, `record`, …). `inlet in is command Go` is not the
+      * same source as `inlet in is type Go`, and dropping it rewrote every ported model's message
+      * references as plain type references. Follows the `PutOutDto.keyword` precedent; absent means
+      * the plain `type`.
+      */
+    keyword: Option[String] = None
   )
 
   /** `{ "name": "C", "from": "<outletPath>", "to": "<inletPath>", "brief"?: ... }` */
@@ -1013,6 +1019,8 @@ object JsonModel:
   case class InputDto(
     name: String,
     takeIn: String,
+    /** The TypeRef keyword of `takeIn` — `acquires command X` rather than `acquires type X`. */
+    keyword: Option[String] = None,
     nounAlias: Option[String] = None,
     verbAlias: Option[String] = None,
     brief: Option[String] = None,

@@ -838,6 +838,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           InputDto(
             in.id.value,
             path(in.takeIn.pathId),
+            Some(in.takeIn.keyword),
             Some(in.nounAlias),
             Some(in.verbAlias),
             briefOf(in.metadata),
@@ -930,13 +931,25 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case i: Inlet =>
       Some(
         InletChild(
-          PortletDto(i.id.value, path(i.type_.pathId), briefOf(i.metadata), metaOf(i.metadata))
+          PortletDto(
+            i.id.value,
+            path(i.type_.pathId),
+            briefOf(i.metadata),
+            metaOf(i.metadata),
+            keyword = Some(i.type_.keyword)
+          )
         )
       )
     case o: Outlet =>
       Some(
         OutletChild(
-          PortletDto(o.id.value, path(o.type_.pathId), briefOf(o.metadata), metaOf(o.metadata))
+          PortletDto(
+            o.id.value,
+            path(o.type_.pathId),
+            briefOf(o.metadata),
+            metaOf(o.metadata),
+            keyword = Some(o.type_.keyword)
+          )
         )
       )
     case c: Connector =>
