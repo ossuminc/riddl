@@ -1132,6 +1132,8 @@ object JsonAstBuilder:
     val functions = p.functions.map(buildFunction)
     val handlers = p.handlers.map(buildHandler)
     val repoRefs = p.repository.toSeq.map(r => RepositoryRef(At(), pathId(r)))
+    val inlets = p.inlets.map(buildInlet)
+    val outlets = p.outlets.map(buildOutlet)
     val version = p.version.map(buildVersion).toSeq
     val copyright = p.copyright.map(buildCopyright).toSeq
     val invariants = p.invariants.map(buildInvariant)
@@ -1151,6 +1153,8 @@ object JsonAstBuilder:
         functions,
         handlers,
         repoRefs,
+        inlets,
+        outlets,
         version,
         copyright,
         invariants,
@@ -1159,6 +1163,7 @@ object JsonAstBuilder:
         relationships,
         comments(p.comments)
       ),
+      ascribedShape = parseShape(p.shape),
       metadata = meta(p.brief, p.metadata)
     )
 
@@ -1199,6 +1204,8 @@ object JsonAstBuilder:
     // both `state` and `states`. root2Json writes the plural and leaves the singular empty, so a
     // round trip cannot duplicate the first schema.
     val schemas = (r.schema.toSeq ++ r.schemas).map(buildSchema)
+    val inlets = r.inlets.map(buildInlet)
+    val outlets = r.outlets.map(buildOutlet)
     val version = r.version.map(buildVersion).toSeq
     val copyright = r.copyright.map(buildCopyright).toSeq
     val constants = r.constants.map(buildConstant)
@@ -1218,6 +1225,8 @@ object JsonAstBuilder:
         queries,
         results,
         handlers,
+        inlets,
+        outlets,
         version,
         copyright,
         constants,
@@ -1228,6 +1237,7 @@ object JsonAstBuilder:
         relationships,
         comments(r.comments)
       ),
+      ascribedShape = parseShape(r.shape),
       metadata = meta(r.brief, r.metadata)
     )
 
