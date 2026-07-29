@@ -72,6 +72,18 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     */
   private val ParsedFloor: Int = 40
 
+  /** A RATCHET, not a target. The prettify-agreement check below found 63 divergent fixtures the
+    * day it was written, across four causes still being worked: top-level comments dropped, a plain
+    * aggregate returning as a `record`, the builder's defaults table filling bounds the source never
+    * wrote (`String` -> `String(0,255)`), and content reordering.
+    *
+    * Fixing them all before landing the check would have meant carrying it unmerged; asserting zero
+    * would have meant landing it red. So it asserts the count does not GROW, and this number comes
+    * down as each cause is fixed. When it reaches 0, delete the constant and assert
+    * `divergent mustBe empty` — the ceiling exists only to make progress irreversible.
+    */
+  private val DivergentCeiling: Int = 63
+
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *
     * This is what makes the round trip a FIDELITY check and not merely an idempotence one. A
@@ -214,6 +226,54 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
       // once is how the statement-list work first went wrong.
       withClue(s"${lossy.size} of $compared fixtures changed node counts in the round trip: ") {
         lostByKind.filter((_, n) => n != 0).toMap mustBe empty
+      }
+    }
+
+    /** The census counts NODES, so it is blind to a lost FIELD: drop `from` off an on-clause, or
+      * the `command` keyword off an inlet's type reference, and every node is still present and
+      * both censuses agree. `json1 == json2` is blinder still — anything dropped consistently in
+      * both directions satisfies it, which is how eleven gaps survived here at once.
+      *
+      * Prettify is RIDDL's other full-fidelity surface: it renders the whole tree back to source,
+      * fields and all, and it is location-independent, so two ASTs that differ only in where they
+      * were read from still render identically. Comparing the rendering of `root0` against the
+      * rendering of `root1` therefore catches field-level loss that neither other check can see.
+      *
+      * The bound is prettify's own fidelity — a construct prettify does not emit is invisible here
+      * too. That is a real limit, but the two surfaces have different gaps, so each covers the
+      * other's blind spots better than either covers its own.
+      */
+    "render identically through prettify before and after the round trip" in {
+      val files = fixtureDirs.flatMap(riddlFiles)
+
+      var compared = 0
+      val divergent = scala.collection.mutable.ListBuffer.empty[String]
+
+      for f <- files do
+        RiddlLib.parseString(read(f), f.getAbsolutePath) match
+          case RiddlResult.Success(root0) =>
+            RiddlLib.parseJson(RiddlLib.root2Json(root0), f.getName) match
+              case RiddlResult.Success(root1) =>
+                compared += 1
+                val before = RiddlLib.root2RiddlSource(root0)
+                val after = RiddlLib.root2RiddlSource(root1)
+                if before != after then divergent += s"${f.getPath}: ${firstDiff(before, after)}"
+              case RiddlResult.Failure(_) => () // reported by the identity case above
+          case RiddlResult.Failure(_) => () // not a standalone model; listed by the case above
+      end for
+
+      info(s"prettify agreement compared=$compared divergent=${divergent.size}")
+      if divergent.nonEmpty then
+        info(s"fixtures whose prettified source changed (${divergent.size}, first 12):")
+        divergent.take(12).foreach(m => info("  " + m))
+      end if
+
+      compared must be >= ParsedFloor
+      withClue(
+        s"${divergent.size} of $compared fixtures render differently after a JSON round trip, " +
+          s"above the ceiling of $DivergentCeiling — the JSON surface lost or altered a field: "
+      ) {
+        divergent.size must be <= DivergentCeiling
       }
     }
   }
