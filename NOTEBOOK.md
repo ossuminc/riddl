@@ -187,11 +187,33 @@ that quietly disagrees with the first:**
   its steps straight off the node rather than from the scope stack, and the
   generic attach-the-kids step replaced them with just the comments.
 
-**Still open:** `Root2JsonCorpusTest` is red by standing policy (2 of 189
-external models fail to re-parse: `reactive-bbq.riddl`, `fund-accounting.riddl`).
-`Include`/`BASTImport`/`Nebula`/`ULIDAttachment` remain unrepresented and are
-still excluded from the census by `NotRepresented` — the last reflectivity hole,
-and the next task.
+**The wrappers are represented too, and `NotRepresented` is GONE.** `Include`
+and `BASTImport` are ordered content entries carrying their already-loaded
+contents nested, so read-back still needs no I/O and stays Native-safe. Two
+traversal notes: `Pass.traverse` deliberately does NOT push a scope for an
+`Include` (its children belong to the enclosing container), so `JsonifierPass`
+overrides `traverse` to give it one; `BASTImport` uses the `openBASTImport` /
+`closeBASTImport` hooks `HierarchyPass` already provides. The census now counts
+every kind with no exclusions and reports `lossy=0`.
+
+`ULIDAttachment` is represented as an ordered metadata item. Note `metaOf`'s
+"is this metadata empty?" guard had to learn about the ordered items, or a block
+containing ONLY a kind with no bucket of its own vanished entirely.
+
+**Still open:**
+
+- `Root2JsonCorpusTest` red by standing policy (2 of 189 external models fail to
+  re-parse: `reactive-bbq.riddl`, `fund-accounting.riddl`).
+- **`Nebula` stays deferred, and the ledger's reason is now the honest one:** it
+  is not a child of any container and never appears in a `Root`, so it is not a
+  fidelity gap at all. Representing it would mean a new top-level document shape
+  (a `parseJsonNebula`), which is a feature, not a reflectivity fix.
+- **`attachment ULID is "…"` appears NOT TO PARSE** (found writing the ULID
+  test). `metaData` tries `attachment` first and that alternative requires a mime
+  type, and the parse fails there rather than backtracking to `ulidAttachment`.
+  The construct has NO fixture and NO test anywhere in the repo, which is why
+  nothing noticed. Not fully diagnosed — the alternation has no visible cut — so
+  it needs a look. The JSON test builds the AST directly to work around it.
 
 ## A55 — optional local name binding for the on-clause message — DONE
 

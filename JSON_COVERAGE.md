@@ -95,9 +95,9 @@ is covered in that construct's phase. The builder emits references as
 | Input | ✅ Phase 8 | |
 | Output | ✅ Phase 8 | |
 | ContainedGroup | ✅ Phase 8 | |
-| Nebula | 🚫 deferred | a parse target, not a self-contained JSON document; Root is the JSON top level |
-| Include | 🚫 deferred | file-reference mechanism; JSON is self-contained and the builder is no-I/O / Native-safe |
-| BASTImport | 🚫 deferred | same reason as Include |
+| Nebula | 🚫 deferred | not a child of ANY container (never in a Root), so it is not a fidelity gap — it is a separate parse target and would need its own top-level document shape |
+| Include | ✅ 2.0 | `$kind: "include"` with `origin` + its already-loaded `contents` NESTED, so read-back needs no I/O and stays Native-safe |
+| BASTImport | ✅ 2.0 | `$kind: "import"` with path/importKind/selector/alias + nested `contents` |
 
 ## Type expressions
 

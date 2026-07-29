@@ -312,6 +312,15 @@ ORDER of definitions within their parent. Per-kind arrays (`domains`, `types`,
 in a fixed sequence, so a comment written at the top of a file comes back at the
 bottom.
 
+An `include` and a BAST `import` are entries like any other, carrying their
+already-loaded contents NESTED inside them — which is what keeps the builder
+free of I/O and so usable on Native:
+
+```jsonc
+{ "$kind": "include", "origin": "file:///…/entities.riddl",
+  "contents": [ { "$kind": "entity", "name": "Order", … } ] }
+```
+
 **The per-kind arrays still load**, so documents written against the older schema
 keep working; they are DEPRECATED and will be removed in a later major.
 `parseJson` accepts them silently; `parseJsonWithMessages` returns a

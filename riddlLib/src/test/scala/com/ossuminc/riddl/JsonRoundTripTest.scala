@@ -7,7 +7,7 @@
 package com.ossuminc.riddl
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Finder
+import com.ossuminc.riddl.language.{At, Contents, Finder, toSeq}
 import com.ossuminc.riddl.passes.Pass
 import com.ossuminc.riddl.utils.{pc, PlatformContext}
 import org.scalatest.wordspec.AnyWordSpec
@@ -271,6 +271,43 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           val (_, messages) = RiddlLib.parseJsonWithMessages(RiddlLib.root2Json(root0))
           messages.filter(_.isDeprecation) mustBe empty
         case RiddlResult.Failure(errors) => fail(s"parse failed: $errors")
+      end match
+    }
+
+    /** A ULID attachment has NO fixture and no test anywhere in the repository, so the census
+      * cannot see whether it survives — and it was silently dropped by `metaItems` until this case
+      * existed.
+      *
+      * The AST is built directly rather than parsed because the surface syntax
+      * `attachment ULID is "…"` does not currently parse: `metaData` tries `attachment` first and
+      * that alternative requires a mime type. See NOTEBOOK. This still exercises exactly what
+      * changed — the JSON emitter and builder.
+      */
+    "round-trip a ULID attachment losslessly" in {
+      val ulid = wvlet.airframe.ulid.ULID.fromString("01ARZ3NDEKTSV4RRFFQ69G5FAV")
+      val root0 = Root(
+        At(),
+        Contents[RootContents](
+          Domain(
+            At(),
+            Identifier(At(), "D"),
+            Contents.empty[DomainContents](),
+            Contents[MetaData](ULIDAttachment(At(), ulid))
+          )
+        )
+      )
+      val json1 = RiddlLib.root2Json(root0)
+      json1 must include("01ARZ3NDEKTSV4RRFFQ69G5FAV")
+      RiddlLib.parseJson(json1) match
+        case RiddlResult.Success(root1) =>
+          RiddlLib.root2Json(root1) mustBe json1
+          Finder(root1)
+            .recursiveFindByType[WithMetaData]
+            .toSeq
+            .flatMap(_.metadata.toSeq)
+            .collect { case u: ULIDAttachment => u.ulid.toString } must
+            contain("01ARZ3NDEKTSV4RRFFQ69G5FAV")
+        case RiddlResult.Failure(errors) => fail(s"parseJson of the ULID JSON failed: $errors")
       end match
     }
 

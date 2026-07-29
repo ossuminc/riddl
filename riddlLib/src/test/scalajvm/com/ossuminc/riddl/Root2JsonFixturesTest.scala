@@ -84,13 +84,6 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     * cases, `foreach` bodies, saga steps) are all included; metadata hangs off definitions rather
     * than living in their contents, so it is gathered separately.
     */
-  /** Kinds the JSON document deliberately does not represent.
-    *
-    * `Include` and `BASTImport` are file-reference mechanisms, and a JSON model is self-contained
-    * and built with no I/O so that it works on Native too (`JSON_COVERAGE.md` records the reason).
-    * Their CONTENTS are inlined, so no model content is lost with them — only the wrapper node.
-    */
-  private val NotRepresented: Set[String] = Set("Include", "BASTImport")
 
   private def census(root: Root): Map[String, Int] =
     val finder = Finder(root)
@@ -98,7 +91,7 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     val metadata = finder.recursiveFindByType[WithMetaData].flatMap(_.metadata.toSeq)
     (nodes ++ metadata)
       .groupBy(_.getClass.getSimpleName)
-      .collect { case (kind, all) if !NotRepresented.contains(kind) => kind -> all.size }
+      .map((kind, all) => kind -> all.size)
   end census
 
   /** The kinds present in one census and missing (or short) in the other, most-lost first. */

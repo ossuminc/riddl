@@ -160,7 +160,7 @@ object JsonModel:
     RepositoryDto | SchemaDto | ConnectorDto | RelationshipDto | SagaDto | SagaStepDto | EpicDto |
     UseCaseDto | GroupDto | ContainedGroupDto | InputDto | OutputDto | AuthorDto | UserDto |
     InvariantDto | ConstantDto | CommentDto | VersionDto | CopyrightDto | PortletDto | FieldDto |
-    MethodDto | TermDto | InteractionContentDto
+    MethodDto | TermDto | InteractionContentDto | IncludeContentDto | BASTImportContentDto
 
   /** The `kind` tag a [[ContentDto]] is written under, and read back by.
     *
@@ -210,6 +210,8 @@ object JsonModel:
     val Method = "method"
     val Term = "term"
     val Interaction = "interaction"
+    val Include = "include"
+    val BASTImport = "import"
 
     /** The four use cases that share [[MessageDto]]. */
     val messageKinds: Set[String] = Set(Command, Event, Query, Result)
@@ -1003,6 +1005,26 @@ object JsonModel:
     */
   case class InteractionContentDto(interaction: InteractionDto)
 
+  /** An `include "file"` wrapper, carrying its ALREADY-LOADED contents nested inside it.
+    *
+    * Nesting the contents rather than the file reference alone is what keeps the builder no-I/O and
+    * so Native-safe: read-back reconstructs the node from the document alone and never touches the
+    * filesystem. Before this the wrapper was dropped and its children inlined into the parent, so a
+    * model lost the fact that it was split across files at all.
+    */
+  case class IncludeContentDto(origin: String, contents: Seq[ContentDto] = Nil)
+
+  /** An `import … from "file.bast"` wrapper, contents nested for the same reason as
+    * [[IncludeContentDto]].
+    */
+  case class BASTImportContentDto(
+    path: String,
+    importKind: Option[String] = None,
+    selector: Option[String] = None,
+    alias: Option[String] = None,
+    contents: Seq[ContentDto] = Nil
+  )
+
   case class UseCaseDto(
     name: String,
     userStory: UserStoryDto,
@@ -1165,6 +1187,7 @@ object JsonModel:
     val Comment = "comment"
     val FigmaRef = "figma"
     val Brief = "briefly"
+    val UlidAttachment = "ulid"
   end MetaKind
 
   case class MetaDto(
@@ -1977,6 +2000,16 @@ object JsonModel:
       case ContentKind.Term   => readJson[TermDto](body)
       case ContentKind.Interaction =>
         InteractionContentDto(readInteraction(body.obj("interaction")))
+      case ContentKind.Include =>
+        IncludeContentDto(body.obj("origin").str, readContents(body.obj.get("contents")))
+      case ContentKind.BASTImport =>
+        BASTImportContentDto(
+          body.obj("path").str,
+          body.obj.get("importKind").map(_.str),
+          body.obj.get("selector").map(_.str),
+          body.obj.get("alias").map(_.str),
+          readContents(body.obj.get("contents"))
+        )
       case k if ContentKind.messageKinds.contains(k) =>
         readJson[MessageDto](body).copy(usecase = Some(k))
       case k @ (ContentKind.Inlet | ContentKind.Outlet) =>
@@ -2024,6 +2057,22 @@ object JsonModel:
       case d: TermDto           => (ContentKind.Term, writeJs(d))
       case d: InteractionContentDto =>
         (ContentKind.Interaction, ujson.Obj("interaction" -> writeInteraction(d.interaction)))
+      case d: IncludeContentDto =>
+        (
+          ContentKind.Include,
+          ujson.Obj("origin" -> ujson.Str(d.origin), "contents" -> writeContents(d.contents))
+        )
+      case d: BASTImportContentDto =>
+        (
+          ContentKind.BASTImport,
+          ujson.Obj.from(
+            Seq[(String, ujson.Value)]("path" -> ujson.Str(d.path))
+              ++ d.importKind.map(k => "importKind" -> (ujson.Str(k): ujson.Value))
+              ++ d.selector.map(k => "selector" -> (ujson.Str(k): ujson.Value))
+              ++ d.alias.map(k => "alias" -> (ujson.Str(k): ujson.Value))
+              ++ Seq("contents" -> (writeContents(d.contents): ujson.Value))
+          )
+        )
       // The tag carries the discriminator, so it is cleared from the body rather than written
       // twice. A message with no use case can only come from a bucketed document; the bucket said
       // which it was, and the emitter always sets it.
@@ -2034,6 +2083,12 @@ object JsonModel:
     val (kind, body) = tagged
     ujson.Obj.from((ContentTag -> (ujson.Str(kind): ujson.Value)) +: body.obj.toSeq)
   end writeContent
+
+  private def readContents(o: Option[ujson.Value]): Seq[ContentDto] =
+    o.map(_.arr.map(readContent).toSeq).getOrElse(Nil)
+
+  private def writeContents(cs: Seq[ContentDto]): ujson.Value =
+    ujson.Arr.from(cs.map(writeContent))
 
   given contentRW: ReadWriter[ContentDto] =
     readwriter[ujson.Value].bimap[ContentDto](writeContent, readContent)

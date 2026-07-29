@@ -57,7 +57,7 @@ object JsonAstBuilder:
         childrenOrBuckets[RootContents](
           dto.contents,
           "Root",
-          Legal.root,
+          Legal.rootW,
           contentsOf[RootContents](
             domains,
             modules,
@@ -117,7 +117,7 @@ object JsonAstBuilder:
       childrenOrBuckets[ModuleContents](
         m.contents,
         "Module",
-        Legal.module,
+        Legal.moduleW,
         contentsOf[ModuleContents](
           authors,
           domains,
@@ -221,7 +221,7 @@ object JsonAstBuilder:
       K.Copyright
     )
 
-    private val nebula: Kinds = Kinds(
+    val nebulaKinds: Kinds = Kinds(
       K.Adaptor,
       K.Author,
       K.Connector,
@@ -245,7 +245,7 @@ object JsonAstBuilder:
     ) ++ K.messageKinds
 
     val root: Kinds = Kinds(K.Domain, K.Author, K.Comment, K.Version, K.Copyright, K.Module)
-    val module: Kinds = nebula + K.Comment
+    val module: Kinds = nebulaKinds + K.Comment
     val domain: Kinds = vital ++ Kinds(
       K.Author,
       K.Context,
@@ -272,6 +272,24 @@ object JsonAstBuilder:
     val useCase: Kinds = Kinds(K.Comment, K.Interaction)
     val group: Kinds = Kinds(K.Group, K.ContainedGroup, K.Input, K.Output, K.Comment)
     val function: Kinds = vital + K.Function
+
+    /** `Include` and `BASTImport` are members of most of the unions above (`RootContents`,
+      * `DomainContents`, `ContextContents`, …). `FunctionContents` is the exception — a function is
+      * self-contained and supports no includes — and a State, Handler, UseCase and Group hold no
+      * includes either.
+      */
+    private val wrappers: Kinds = Kinds(K.Include, K.BASTImport)
+    val rootW: Kinds = root ++ wrappers
+    val moduleW: Kinds = module ++ wrappers
+    val domainW: Kinds = domain ++ wrappers
+    val contextW: Kinds = context ++ wrappers
+    val entityW: Kinds = entity + K.Include
+    val adaptorW: Kinds = adaptor + K.Include
+    val streamletW: Kinds = streamlet + K.Include
+    val projectorW: Kinds = projector + K.Include
+    val repositoryW: Kinds = repository + K.Include
+    val sagaW: Kinds = saga + K.Include
+    val epicW: Kinds = epic + K.Include
   end Legal
 
   /** The kind tag a [[JsonModel.ContentDto]] travels under — the read-side mirror of the emitter's
@@ -315,11 +333,15 @@ object JsonAstBuilder:
       case _: MethodDto             => K.Method
       case _: TermDto               => K.Term
       case _: InteractionContentDto => K.Interaction
+      case _: IncludeContentDto     => K.Include
+      case _: BASTImportContentDto  => K.BASTImport
       case m: MessageDto            => m.usecase.getOrElse(K.Command)
       case p: PortletDto            => p.direction.getOrElse(K.Inlet)
 
   /** One ordered child, as its AST node. */
-  private def buildContent(c: ContentDto)(using Ctx): RiddlValue =
+  private def buildContent(c: ContentDto, container: String, legal: Kinds)(using
+    ctx: Ctx
+  ): RiddlValue =
     import JsonModel.ContentKind as K
     c match
       case d: DomainDto         => buildDomain(d)
@@ -358,6 +380,21 @@ object JsonAstBuilder:
       case d: TermDto =>
         Term(At(), ident(d.name), d.definition.map(LiteralString(At(), _)))
       case d: InteractionContentDto => buildInteraction(d.interaction)
+      // A wrapper holds whatever its PARENT holds, so its nested children are checked against the
+      // same legal set. Its contents are already in the document, which is what keeps the builder
+      // free of I/O and so usable on Native.
+      case d: IncludeContentDto =>
+        import ctx.pc
+        Include[RiddlValue](At(), URL(d.origin), childrenOf(d.contents, container, legal))
+      case d: BASTImportContentDto =>
+        BASTImport(
+          At(),
+          LiteralString(At(), d.path),
+          d.importKind,
+          d.selector.map(ident),
+          d.alias.map(ident),
+          childrenOf[NebulaContents](d.contents, "BASTImport", Legal.nebulaKinds)
+        )
       case d: MessageDto =>
         buildMessage(d, messageUseCase(d.usecase.getOrElse(K.Command)))
       case d: PortletDto =>
@@ -385,7 +422,7 @@ object JsonAstBuilder:
   )(using ctx: Ctx): Contents[T] =
     val built = contents.flatMap { c =>
       val kind = kindOf(c)
-      if legal.contains(kind) then Some(buildContent(c).asInstanceOf[T])
+      if legal.contains(kind) then Some(buildContent(c, container, legal).asInstanceOf[T])
       else
         ctx.err(s"A $container may not contain a '$kind'")
         None
@@ -462,6 +499,8 @@ object JsonAstBuilder:
             val text = i.value.getOrElse("")
             items += (if i.inline then InlineComment(At(), text.split("\n").toSeq)
                       else LineComment(At(), text))
+          case MetaKind.UlidAttachment =>
+            i.value.foreach(u => items += ULIDAttachment(At(), wvlet.airframe.ulid.ULID(u)))
           case MetaKind.Brief =>
             items += BriefDescription(At(), LiteralString(At(), i.value.getOrElse("")))
           case MetaKind.FigmaRef =>
@@ -538,7 +577,7 @@ object JsonAstBuilder:
       childrenOrBuckets[DomainContents](
         d.contents,
         "Domain",
-        Legal.domain,
+        Legal.domainW,
         contentsOf[DomainContents](
           authors,
           users,
@@ -628,7 +667,7 @@ object JsonAstBuilder:
       childrenOrBuckets[ContextContents](
         c.contents,
         "Context",
-        Legal.context,
+        Legal.contextW,
         contentsOf[ContextContents](
           types,
           constants,
@@ -729,7 +768,7 @@ object JsonAstBuilder:
       childrenOrBuckets[EntityContents](
         e.contents,
         "Entity",
-        Legal.entity,
+        Legal.entityW,
         contentsOf[EntityContents](
           types,
           constants,
@@ -925,7 +964,7 @@ object JsonAstBuilder:
       childrenOrBuckets[SagaContents](
         s.contents,
         "Saga",
-        Legal.saga,
+        Legal.sagaW,
         contentsOf[SagaContents](types, steps, comments(s.comments))
       ),
       meta(s.brief, s.metadata)
@@ -1060,7 +1099,7 @@ object JsonAstBuilder:
       childrenOrBuckets[EpicContents](
         e.contents,
         "Epic",
-        Legal.epic,
+        Legal.epicW,
         contentsOf[EpicContents](types, shownBy, useCases, comments(e.comments)),
         shownBy
       ),
@@ -1404,7 +1443,7 @@ object JsonAstBuilder:
       childrenOrBuckets[AdaptorContents](
         a.contents,
         "Adaptor",
-        Legal.adaptor,
+        Legal.adaptorW,
         contentsOf[AdaptorContents](
           types,
           constants,
@@ -1488,7 +1527,7 @@ object JsonAstBuilder:
       childrenOrBuckets[StreamletContents](
         s.contents,
         "Streamlet",
-        Legal.streamlet,
+        Legal.streamletW,
         contentsOf[StreamletContents](
           types,
           commands,
@@ -1556,7 +1595,7 @@ object JsonAstBuilder:
       childrenOrBuckets[ProjectorContents](
         p.contents,
         "Projector",
-        Legal.projector,
+        Legal.projectorW,
         contentsOf[ProjectorContents](
           types,
           constants,
@@ -1636,7 +1675,7 @@ object JsonAstBuilder:
       childrenOrBuckets[RepositoryContents](
         r.contents,
         "Repository",
-        Legal.repository,
+        Legal.repositoryW,
         contentsOf[RepositoryContents](
           types,
           schemas,

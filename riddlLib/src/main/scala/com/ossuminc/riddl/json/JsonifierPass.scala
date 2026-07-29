@@ -76,6 +76,37 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     */
   def droppedKinds: Seq[(String, String)] = dropped.toSeq
 
+  /** `Pass.traverse` deliberately does NOT push a scope for an `Include`: its children belong to
+    * the enclosing container, so they are traversed at the parent's level and the wrapper itself
+    * vanishes. That is right for every other pass and wrong for this one, which has to record that
+    * the model was split across files at all. Giving the include its own frame here collects its
+    * children into a nested wrapper, in the parent's position.
+    */
+  override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit =
+    definition match
+      case include: Include[?] =>
+        stack.push(mutable.ArrayBuffer.empty[Any])
+        include.contents.toSeq.foreach(v => traverse(v, parents))
+        val kids = stack.pop().toSeq
+        add(IncludeContentDto(include.origin.toExternalForm, kids.flatMap(asContent)))
+      case _ => super.traverse(definition, parents)
+
+  /** A BASTImport gets its frame from the hooks `HierarchyPass` already provides for it. */
+  override protected def openBASTImport(bi: BASTImport, parents: Parents): Unit =
+    stack.push(mutable.ArrayBuffer.empty[Any])
+
+  override protected def closeBASTImport(bi: BASTImport, parents: Parents): Unit =
+    val kids = stack.pop().toSeq
+    add(
+      BASTImportContentDto(
+        bi.path.s,
+        bi.kindOpt,
+        bi.selector.map(_.value),
+        bi.alias.map(_.value),
+        kids.flatMap(asContent)
+      )
+    )
+
   override protected def openContainer(definition: Definition, parents: Parents): Unit =
     stack.push(mutable.ArrayBuffer.empty[Any])
 
@@ -1060,8 +1091,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     val comments = items.collect { case c: LineComment => c.text }
     val figmaRefs = items.collect { case fr: FigmaRef => FigmaRefDto(fr.fileKey.s, fr.nodeId.s) }
     val url = items.collectFirst { case u: URLDescription => u.url.toExternalForm }
+    val ordered = metaItems(md)
+    // The guard has to consider the ORDERED items, not just the buckets: a kind that has no bucket
+    // of its own — a ULID attachment — would otherwise make the whole metadata block vanish.
     if descr.isEmpty && terms.isEmpty && options.isEmpty && authors.isEmpty && attachments.isEmpty &&
-      comments.isEmpty && figmaRefs.isEmpty && url.isEmpty
+      comments.isEmpty && figmaRefs.isEmpty && url.isEmpty && ordered.isEmpty
     then None
     else
       Some(
@@ -1125,6 +1159,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         Some(
           MetaItemDto(MetaKind.FigmaRef, fileKey = Some(fr.fileKey.s), nodeId = Some(fr.nodeId.s))
         )
+      case ua: ULIDAttachment =>
+        Some(MetaItemDto(MetaKind.UlidAttachment, value = Some(ua.ulid.toString)))
       case b: BriefDescription => Some(MetaItemDto(MetaKind.Brief, value = Some(b.brief.s)))
       case _                   => None
     }
