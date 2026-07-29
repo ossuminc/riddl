@@ -985,14 +985,17 @@ object JsonAstBuilder:
   /** A generic definition reference for an interaction's from/to. */
   private def buildRef(r: RefDto)(using ctx: Ctx): Reference[Definition] =
     r.kind match
-      case "user"      => UserRef(At(), pathId(r.path))
-      case "entity"    => EntityRef(At(), pathId(r.path))
-      case "context"   => ContextRef(At(), pathId(r.path))
-      case "group"     => GroupRef(At(), r.keyword.getOrElse("group"), pathId(r.path))
-      case "output"    => OutputRef(At(), r.keyword.getOrElse("output"), pathId(r.path))
-      case "input"     => InputRef(At(), r.keyword.getOrElse("input"), pathId(r.path))
-      case "adaptor"   => AdaptorRef(At(), pathId(r.path))
-      case "projector" => ProjectorRef(At(), pathId(r.path))
+      case "user"       => UserRef(At(), pathId(r.path))
+      case "entity"     => EntityRef(At(), pathId(r.path))
+      case "context"    => ContextRef(At(), pathId(r.path))
+      case "group"      => GroupRef(At(), r.keyword.getOrElse("group"), pathId(r.path))
+      case "output"     => OutputRef(At(), r.keyword.getOrElse("output"), pathId(r.path))
+      case "input"      => InputRef(At(), r.keyword.getOrElse("input"), pathId(r.path))
+      case "adaptor"    => AdaptorRef(At(), pathId(r.path))
+      case "projector"  => ProjectorRef(At(), pathId(r.path))
+      case "repository" => RepositoryRef(At(), pathId(r.path))
+      case "saga"       => SagaRef(At(), pathId(r.path))
+      case "streamlet"  => StreamletRef(At(), r.keyword.getOrElse("source"), pathId(r.path))
       case other =>
         ctx.err(s"unknown reference kind '$other' for an interaction")
         UserRef(At(), pathId(r.path))
@@ -1237,18 +1240,25 @@ object JsonAstBuilder:
         TellStatement(At(), buildMsgOperand(message), processorRef(to, processor))
       case YieldStmtDto(message) => YieldStatement(At(), buildMsgOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
-        val cond: LiteralString | Identifier | ValueRef | BooleanExpression = expression match
-          case Some(exprDto) => // A28: boolean expression, or A17: bare boolean value reference
-            buildValue(exprDto) match
-              case be: BooleanExpression => be
-              case vr: ValueRef          => vr // A17
-              case _ =>
-                ctx.err("when 'expression' must be a boolean expression or a value reference")
-                LiteralString(At(), "")
-          case None =>
-            conditionId match
-              case Some(id) => ident(id)
-              case None     => LiteralString(At(), condition.getOrElse(""))
+        val cond: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue =
+          expression match
+            case Some(exprDto) =>
+              buildValue(exprDto) match
+                case be: BooleanExpression => be // A28: structured boolean expression
+                case vr: ValueRef          => vr // A17: bare boolean value reference
+                // `when prompt("…")` — an AI-evaluated condition. The emitter has written this
+                // since `when prompt` landed, but the builder rejected it, so any model using one
+                // produced JSON that could not be read back.
+                case pv: PromptValue => pv
+                case _ =>
+                  ctx.err(
+                    "when 'expression' must be a boolean expression, a value reference or a prompt"
+                  )
+                  LiteralString(At(), "")
+            case None =>
+              conditionId match
+                case Some(id) => ident(id)
+                case None     => LiteralString(At(), condition.getOrElse(""))
         WhenStatement(At(), cond, buildStatements(thenS), buildStatements(elseS), negated)
       case MatchStmtDto(subject, cases, default) =>
         val subj: MatchSubject = buildValue(subject) match // A29: narrow to MatchSubject
@@ -1400,9 +1410,14 @@ object JsonAstBuilder:
       case "projector"  => ProjectorRef(At(), pathId(path))
       case "repository" => RepositoryRef(At(), pathId(path))
       case "adaptor"    => AdaptorRef(At(), pathId(path))
+      // A streamlet reference is named by its SHAPE, which doubles as the discriminator — it
+      // cannot collide with the kinds above.
+      case kw @ ("source" | "sink" | "merge" | "split" | "void") =>
+        StreamletRef(At(), kw, pathId(path))
       case other =>
         ctx.err(
-          s"unknown processor kind '$other' (expected entity|context|projector|repository|adaptor)"
+          s"unknown processor kind '$other' " +
+            "(expected entity|context|projector|repository|adaptor|source|sink|merge|split|void)"
         )
         EntityRef(At(), pathId(path))
 

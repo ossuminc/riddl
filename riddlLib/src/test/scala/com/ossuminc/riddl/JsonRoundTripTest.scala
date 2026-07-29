@@ -311,6 +311,38 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    /** `when prompt("…")` — an AI-evaluated condition. The emitter wrote it into `expression` from
+      * the day `when prompt` landed, but the builder accepted only a BooleanExpression or a
+      * ValueRef, so any model using one produced JSON that could not be read back at all. Two
+      * models in the external corpus were failing on exactly this.
+      */
+    "round-trip a `when prompt(...)` condition losslessly" in {
+      val promptModel =
+        """domain d is { context c is { entity e is {
+          |  handler H is {
+          |    on other is {
+          |      when prompt("the customer looks unhappy") then
+          |        do "apologize"
+          |      end
+          |    }
+          |  }
+          |}}}
+          |""".stripMargin
+      RiddlLib.parseString(promptModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("the customer looks unhappy")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              RiddlLib.root2Json(root1) mustBe json1
+              RiddlLib.root2RiddlSource(root1) mustBe RiddlLib.root2RiddlSource(root0)
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the `when prompt` JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) => fail(s"parse of the prompt model failed: $errors")
+      end match
+    }
+
     "round-trip a mixed-contents Module losslessly" in {
       val moduleModel =
         """module M is {

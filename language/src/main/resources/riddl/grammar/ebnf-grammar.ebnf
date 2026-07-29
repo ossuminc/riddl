@@ -189,7 +189,9 @@ state_ref = "state" path_identifier ;
 context_ref = "context" path_identifier ;
 outlet_ref = "outlet" path_identifier ;
 inlet_ref = "inlet" path_identifier ;
-streamlet_ref = "streamlets" path_identifier ;
+(* The keyword is the streamlet's SHAPE, mirroring Keywords.streamlets in the parser — not the
+   literal word "streamlets", which nothing accepts and no model writes. *)
+streamlet_ref = ("source" | "sink" | "merge" | "split" | "void") path_identifier ;
 projector_ref = "projector" path_identifier ;
 repository_ref = "repository" path_identifier ;
 saga_ref = "saga" path_identifier ;

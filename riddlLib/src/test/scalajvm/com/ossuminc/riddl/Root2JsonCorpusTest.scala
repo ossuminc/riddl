@@ -21,11 +21,12 @@ import scala.io.Source
   *      2. Validation-parity (the weak check): the re-parsed AST introduces no new validation
   *      errors vs the original.
   *
-  * **This suite is EXPECTED RED until the corpus is migrated to 2.0 syntax**, by standing policy,
-  * along with `RiddlModelsRoundTripTest`. It reads a live sibling checkout, so it is a moving
-  * target rather than a signal about this repository. The in-repo counterpart that DOES gate is
-  * `Root2JsonFixturesTest`; a cross-platform idempotence check on inline models lives in the shared
-  * `JsonRoundTripTest`.
+  * **This suite GATES.** It was expected-red by standing policy while `../riddl-models` was being
+  * migrated to 2.0 syntax; that migration is done, the corpus parses 189/189 and round-trips
+  * identically 189/189, so the exemption is lifted. It reads a live sibling checkout, so a failure
+  * here can mean either a regression in this repository OR a corpus that has drifted — read the
+  * reported model names before assuming which. The in-repo counterpart is `Root2JsonFixturesTest`;
+  * a cross-platform idempotence check on inline models lives in the shared `JsonRoundTripTest`.
   *
   * It is driven from RIDDL SOURCE, not from the checked-in `.bast` artifacts. Those artifacts carry
   * whatever `FORMAT_REVISION` was current when they were written, and the reader rejects any
@@ -102,7 +103,11 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
                 val json2 = RiddlLib.root2Json(root1)
                 if json1 == json2 then identical += 1
                 else mismatches += s"${f.getName}: ${firstDiff(json1, json2)}"
-              case RiddlResult.Failure(_) => mismatches += s"${f.getName} [reparse-fail]"
+              case RiddlResult.Failure(errors) =>
+                // Record WHY. A bare "[reparse-fail]" says a model broke without saying how, which
+                // is useless the moment this suite gates rather than being expected-red.
+                mismatches +=
+                  s"${f.getName} [reparse-fail]: ${errors.take(2).map(_.format).mkString("; ")}"
           case RiddlResult.Failure(errors) =>
             unparsed += s"${f.getName}: ${errors.take(1).map(_.format).mkString}"
       end for
@@ -160,9 +165,14 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
       newErrs.toSeq.sortBy(-_._2).take(15).foreach { case (msg, n) => info(f"  $n%4d  $msg") }
       info("failed models: " + failedFiles.take(12).mkString(", "))
 
-      // The percentage is of ALL models, not of the ones that happened to parse, so a corpus that
-      // stops parsing shows up as a falling number instead of a vacuous pass.
-      pct must be >= 95.0
+      // A RATCHET, not a percentage floor. Exactly ONE model is known to differ:
+      // `api-management.riddl` gains "Inlet 'X' is connected by 2 connectors". Its connectors are
+      // NOT duplicated by the round trip — six before, six after — so this is a reference that
+      // resolves differently on the rebuilt tree, not a fidelity loss. Until that is diagnosed the
+      // allowance stays at one and cannot grow; when it is fixed, drop to `mustBe 0`.
+      withClue(s"models introducing new validation errors: ${failedFiles.mkString(", ")}: ") {
+        (reparsed - clean) must be <= 1
+      }
     }
   }
 }

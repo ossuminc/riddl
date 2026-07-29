@@ -1,0 +1,20 @@
+// Corpus fixture for a streamlet REFERENCE in an epic step: `from source X to sink Y`. The EBNF
+// had `streamlet_ref = "streamlets" path_identifier`, a literal nothing accepts, and no internal
+// fixture exercised the rule — only riddl-examples did, so the gap hid here.
+domain Shipping is {
+  user Shopper is "someone who buys things"
+  context Handling is {
+    command AddToCart is { sku: String }
+    processor Requests as source is { outlet out is command Shipping.Handling.AddToCart }
+    processor Intake as sink is { inlet in is command Shipping.Handling.AddToCart }
+    connector Wire is { from outlet Requests.out to inlet Intake.in }
+  }
+  epic Buying is {
+    user Shipping.Shopper wants to "add an item" so that "it can be purchased"
+    case Adding is {
+      user Shipping.Shopper wants to "add an item" so that "it can be purchased"
+      step send command Shipping.Handling.AddToCart from source Shipping.Handling.Requests
+        to sink Shipping.Handling.Intake
+    }
+  }
+}

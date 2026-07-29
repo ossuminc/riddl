@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-29 11:03 UTC
+# Generated: 2026-07-29 13:33 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -175,7 +175,7 @@ state-ref ::= "state" ws1 path-identifier
 context-ref ::= "context" ws1 path-identifier
 outlet-ref ::= "outlet" ws1 path-identifier
 inlet-ref ::= "inlet" ws1 path-identifier
-streamlet-ref ::= "streamlets" ws1 path-identifier
+streamlet-ref ::= ("source" | "sink" | "merge" | "split" | "void") ws path-identifier
 projector-ref ::= "projector" ws1 path-identifier
 repository-ref ::= "repository" ws1 path-identifier
 saga-ref ::= "saga" ws1 path-identifier

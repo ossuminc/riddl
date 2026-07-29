@@ -1451,7 +1451,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ProjectorRef(_, p)  => (path(p), "projector")
     case RepositoryRef(_, p) => (path(p), "repository")
     case AdaptorRef(_, p)    => (path(p), "adaptor")
-    case other               => (path(other.pathId), "entity")
+    // A streamlet reference names its SHAPE (`sink Intake`), and the shape IS the discriminator —
+    // it cannot collide with the kinds above. Falling through to "entity" rewrote `to sink X` as
+    // `to entity X`.
+    case StreamletRef(_, kw, p) => (path(p), kw)
+    // No fallback: with the streamlet arm present the match is EXHAUSTIVE (the compiler says so),
+    // and the `case other => "entity"` that used to sit here is exactly what turned an unhandled
+    // reference into a silently wrong one.
 
   private def portletRef(pr: PortletRef[?]): (String, String) = pr match
     case InletRef(_, p)  => (path(p), "inlet")
@@ -1474,6 +1480,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case InputRef(_, kw, p)  => RefDto("input", path(p), Some(kw))
     case AdaptorRef(_, p)    => RefDto("adaptor", path(p))
     case ProjectorRef(_, p)  => RefDto("projector", path(p))
-    case other               => RefDto("user", path(other.pathId))
+    case RepositoryRef(_, p) => RefDto("repository", path(p))
+    case SagaRef(_, p)       => RefDto("saga", path(p))
+    // The shape is carried in `keyword`, as it is for a group/input/output alias. Without this a
+    // streamlet reference fell through to the `user` fallback below and `from source X` came back
+    // as `from user X`.
+    case StreamletRef(_, kw, p) => RefDto("streamlet", path(p), Some(kw))
+    case other                  => RefDto("user", path(other.pathId))
 
 end JsonifierPass
