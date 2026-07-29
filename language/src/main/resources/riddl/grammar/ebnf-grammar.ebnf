@@ -72,7 +72,7 @@ nebula = {module_content} ;
 
 (* Domain *)
 domain = "domain" identifier is "{" domain_body "}" [with_metadata] ;
-domain_body = domain_definitions | undefined ;
+domain_body = undefined | domain_definitions ;
 domain_definitions = {domain_content}+ ;
 domain_content = vital_definition_contents | author | context | domain | user | epic | saga | repository | connector | version | copyright | bast_import | domain_include | comment ;
 domain_include = "include" literal_string ;
@@ -80,21 +80,21 @@ domain_include = "include" literal_string ;
 (* Context *)
 intention = "application" | "external" | "gateway" | "service" ;
 context = [intention] "context" identifier [as_shape] is "{" context_body "}" [with_metadata] ;
-context_body = context_definitions | undefined ;
+context_body = undefined | context_definitions ;
 context_definitions = {context_definition}+ ;
 context_definition = processor_definition_contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | bast_import | context_include | comment ;
 context_include = "include" literal_string ;
 
 (* Entity *)
 entity = "entity" identifier [as_shape] is "{" entity_body "}" [with_metadata] ;
-entity_body = entity_definitions | undefined ;
+entity_body = undefined | entity_definitions ;
 entity_definitions = {entity_content}+ ;
 entity_content = processor_definition_contents | state | entity_include ;
 (* `of` is the canonical introducer for the record reference. `is` is DEPRECATED and, because
    `is` is itself optional, so is omitting the introducer altogether; both still parse and both
    draw a deprecation. `is` introduces a definition's BODY everywhere else, as state_body shows. *)
 state = ["initial"] "state" identifier ("of" | is) record_ref [state_body] [with_metadata] ;
-state_body = is "{" ({state_content}+ | undefined) "}" ;
+state_body = is "{" (undefined | {state_content}+) "}" ;
 state_content = handler | invariant | comment ;
 entity_include = "include" literal_string ;
 

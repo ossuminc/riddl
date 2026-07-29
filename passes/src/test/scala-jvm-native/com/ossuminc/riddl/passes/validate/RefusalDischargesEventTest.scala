@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.language.toSeq
 import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
@@ -51,22 +52,35 @@ class RefusalDischargesEventTest extends AbstractValidatingTest {
 
   "a comments-only body" should {
 
-    /** `isEmpty` is comment-tolerant now: a container holding nothing but comments has no
-      * DEFINITIONS, so it is a stub. Before this it read as non-empty and slipped past every
-      * "should not be empty" completeness check — a modeller could write `context C is { // TODO }`
-      * and be told it was fine.
+    /** `isEmpty` is comment-tolerant: a container holding nothing but comments has no DEFINITIONS,
+      * so it is a stub. This asserts the PREDICATE, not a diagnostic — there is currently no
+      * validator check for "this container has no definitions", so nothing yet consumes this. The
+      * predicate is the prerequisite for adding one.
       */
-    "be reported as empty" in { (td: TestData) =>
+    "report isEmpty, and no definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
         "domain Dom is {\n  // TODO: describe the contexts\n  ???\n}\n",
         td
       )
-      var msgs = Seq.empty[String]
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
-        msgs = messages.map(_.message).filter(_.contains("empty"))
-        succeed
-      }
-      withClue("a comments-only body must read as empty: ") { msgs mustNot be(empty) }
+      TopLevelParser.parseInput(input) match
+        case Left(msgs) => fail(s"a commented stub must parse:\n${msgs.format}")
+        case Right(root) =>
+          val dom = root.domains.head
+          withClue("a body of comments only holds no definitions: ") {
+            dom.isEmpty mustBe true
+            dom.hasDefinitions mustBe false
+          }
+          // ...and the comment really is there, so this is not vacuous.
+          dom.contents.toSeq.count(_.isComment) mustBe 1
+    }
+
+    "report NOT empty once a definition is present" in { (td: TestData) =>
+      val input = RiddlParserInput("domain Dom is {\n  // note\n  type T is Integer\n}\n", td)
+      TopLevelParser.parseInput(input) match
+        case Left(msgs) => fail(s"must parse:\n${msgs.format}")
+        case Right(root) =>
+          root.domains.head.isEmpty mustBe false
+          root.domains.head.hasDefinitions mustBe true
     }
   }
 

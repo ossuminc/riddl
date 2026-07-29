@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-29 15:48 UTC
+# Generated: 2026-07-29 16:43 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -69,7 +69,7 @@ nebula ::= (module-content)*
 
 # Domain
 domain ::= "domain" ws1 identifier ws1 is ws "{" ws domain-body ws "}" ws (with-metadata)?
-domain-body ::= domain-definitions | undefined
+domain-body ::= undefined | domain-definitions
 domain-definitions ::= (domain-content)+
 domain-content ::= vital-definition-contents | author | context | domain | user | epic | saga | repository | connector | version | copyright | bast-import | domain-include | comment
 domain-include ::= "include" ws1 literal-string
@@ -77,18 +77,18 @@ domain-include ::= "include" ws1 literal-string
 # Context
 intention ::= "application" | "external" | "gateway" | "service"
 context ::= (intention)? ws "context" ws1 identifier ws (as-shape)? ws is ws "{" ws context-body ws "}" ws (with-metadata)?
-context-body ::= context-definitions | undefined
+context-body ::= undefined | context-definitions
 context-definitions ::= (context-definition)+
 context-definition ::= processor-definition-contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | bast-import | context-include | comment
 context-include ::= "include" ws1 literal-string
 
 # Entity
 entity ::= "entity" ws1 identifier ws (as-shape)? ws is ws "{" ws entity-body ws "}" ws (with-metadata)?
-entity-body ::= entity-definitions | undefined
+entity-body ::= undefined | entity-definitions
 entity-definitions ::= (entity-content)+
 entity-content ::= processor-definition-contents | state | entity-include
 state ::= ("initial")? ws "state" ws1 identifier ws ("of" | is) ws record-ref ws (state-body)? ws (with-metadata)?
-state-body ::= is ws "{" ws ((state-content)+ | undefined) ws "}"
+state-body ::= is ws "{" ws (undefined | (state-content)+) ws "}"
 state-content ::= handler | invariant | comment
 entity-include ::= "include" ws1 literal-string
 
