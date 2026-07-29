@@ -106,17 +106,21 @@ with `npm dist-tag add @ossuminc/riddl-lib@<last-stable> latest`.
 
 ### 4. Homebrew — **`riddlc@rc`**
 
-**REQUIREMENT, not yet built.** `ossuminc/homebrew-tap` needs a
-`Formula/riddlc@rc.rb` alongside `Formula/riddlc.rb`, and `release.yml`'s
-`update-homebrew` job must ROUTE to it when the release is a prerelease:
+**Half built. CHECK BEFORE CUTTING THE FIRST RC.**
 
-```yaml
-update-homebrew:
-  # dispatch riddlc@rc for a prerelease, riddlc for a release
-```
+Done here: `release.yml`'s `update-homebrew` job branches on
+`github.event.release.prerelease` and dispatches a `client_payload[formula]` of
+`riddlc@rc` or `riddlc`.
 
-Until that exists, an RC would overwrite the STABLE formula and `brew install
-riddlc` would serve a release candidate. Check before cutting the first RC.
+Still needed in `ossuminc/homebrew-tap` — task filed at
+`homebrew-tap/task/2026-07-29-riddlc-rc-formula.md`:
+
+- `Formula/riddlc@rc.rb`, with `conflicts_with` both ways
+- `update-formula.yml` honouring `client_payload.formula` instead of always
+  rewriting `Formula/riddlc.rb`
+
+Until BOTH land, a prerelease dispatch still rewrites the stable formula and
+`brew install riddlc` serves a release candidate.
 
 Why a separate formula: Homebrew's `devel` block is deprecated and removed, and
 there is no prerelease flag. A versioned formula plus `conflicts_with` is what

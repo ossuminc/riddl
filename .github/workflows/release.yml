@@ -175,14 +175,27 @@ jobs:
         echo "linux_x86=$(shasum -a 256 artifacts/riddlc-linux-x86_64/riddlc-linux-x86_64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
         echo "jvm=$(shasum -a 256 artifacts/riddlc-jvm/riddlc.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
+    # A release candidate updates a SEPARATE formula. `gh release create --prerelease`
+    # still fires this same `release: [created]` workflow, so without routing on
+    # `prerelease` an RC would overwrite the stable formula and `brew install riddlc`
+    # would serve a release candidate. Homebrew has no prerelease flag and its `devel`
+    # block is deprecated; a versioned formula the user opts into by NAME is the
+    # supported pattern, and the name is the "experimental" marking.
     - name: Dispatch formula update to homebrew-tap
       env:
         GH_TOKEN: ${{ secrets.HOMEBREW_TAP_SECRET }}
       run: |
         TAG="${{ github.event.release.tag_name || github.event.inputs.tag }}"
+        if [ "${{ github.event.release.prerelease }}" = "true" ]; then
+          FORMULA="riddlc@rc"
+        else
+          FORMULA="riddlc"
+        fi
+        echo "Dispatching formula update for ${FORMULA} at ${TAG}"
         gh api repos/ossuminc/homebrew-tap/dispatches \
           --method POST \
           -f event_type=update-formula \
+          -f "client_payload[formula]=${FORMULA}" \
           -f "client_payload[version]=${TAG}" \
           -f "client_payload[sha_macos_arm64]=${{ steps.hashes.outputs.macos_arm64 }}" \
           -f "client_payload[sha_linux_x86]=${{ steps.hashes.outputs.linux_x86 }}" \
