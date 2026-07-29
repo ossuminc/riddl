@@ -192,14 +192,15 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     this
   end trimTrailingNewline
 
-  def emitString(s: String_): this.type = {
-    (s.min, s.max) match {
-      case (Some(n), Some(x)) => this.add(s"String($n,$x)")
-      case (None, Some(x))    => this.add(s"String(,$x)")
-      case (Some(n), None)    => this.add(s"String($n)")
-      case (None, None)       => this.add(s"String")
-    }
-  }
+  /** Delegates to `String_.format`, which renders only the NON-default bounds — a bare `String` and
+    * `String(0,255)` are the same type, so rendering them differently made two equal models
+    * disagree under any round-trip check that compares source.
+    *
+    * This also retires a bug in the hand-rolled version that stood here: for a min with no max it
+    * emitted `String(7)`, which does not parse — `TypeParser.stringType` requires the comma (`"(" ~
+    * integer.? ~ "," ~ integer.? ~ ")"`). Prettify must only ever emit source that reads back.
+    */
+  def emitString(s: String_): this.type = this.add(s.format)
 
   def emitConstant(constant: Constant): this.type =
     // `constant <id> is <type> = <value>` — the type expression is part of the surface syntax, so

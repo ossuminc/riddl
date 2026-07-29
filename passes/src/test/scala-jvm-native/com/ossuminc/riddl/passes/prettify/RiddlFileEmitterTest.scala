@@ -78,7 +78,9 @@ class RiddlFileEmitterTest extends AbstractTestingBasis {
       val s4 = String_(At.empty)
       rfe.emitString(s1).toString mustBe "String(3,6)"
       rfe.clear()
-      rfe.emitString(s2).toString mustBe "String(3)"
+      // `String(3)` does not PARSE — the grammar makes the comma mandatory — so the emitter must
+      // not produce it; a min with a default max renders as `String(3,)`.
+      rfe.emitString(s2).toString mustBe "String(3,)"
       rfe.clear()
       rfe.emitString(s3).toString mustBe "String(,6)"
       rfe.clear()

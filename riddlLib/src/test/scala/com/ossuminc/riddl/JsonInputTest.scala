@@ -525,14 +525,23 @@ class JsonInputTest extends AnyWordSpec with Matchers {
   }
 
   "JSON defaults (Phase 1)" should {
-    "String with no bounds renders String(0,255)" in {
-      renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")
+    // The builder still fills the canonical (0,255); what these check is how it RENDERS. A bare
+    // `String` IS exactly `String(0,255)`, so rendering the defaults back out would make two
+    // spellings of one type look different — which is what broke round-trip source comparison.
+    // Only a bound that is NOT the default is written, and the comma stays because the grammar
+    // requires it (`String(5)` does not parse).
+    "String with no bounds renders bare String" in {
+      renderFieldType("""{ "kind": "String" }""") must include("String")
+      renderFieldType("""{ "kind": "String" }""") mustNot include("String(")
     }
-    "String with only max defaults min to 0" in {
-      renderFieldType("""{ "kind": "String", "max": 99 }""") must include("String(0,99)")
+    "String with only max renders just the max" in {
+      renderFieldType("""{ "kind": "String", "max": 99 }""") must include("String(,99)")
     }
-    "String with only min defaults max to 255" in {
-      renderFieldType("""{ "kind": "String", "min": 5 }""") must include("String(5,255)")
+    "String with only min renders just the min, comma and all" in {
+      renderFieldType("""{ "kind": "String", "min": 5 }""") must include("String(5,)")
+    }
+    "String with both bounds renders both" in {
+      renderFieldType("""{ "kind": "String", "min": 5, "max": 99 }""") must include("String(5,99)")
     }
     "Decimal with no args renders Decimal(12,2)" in {
       renderFieldType("""{ "kind": "Decimal" }""") must include("Decimal(12,2)")

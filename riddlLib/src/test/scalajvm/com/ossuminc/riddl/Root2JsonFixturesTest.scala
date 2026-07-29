@@ -90,8 +90,12 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     * 62 -> 49: SOURCE ORDER. A container's children now travel in one ordered `contents` array
     * instead of per-kind buckets that were reassembled in a fixed sequence, so a comment written at
     * the top of a file no longer comes back at the bottom. This was the dominant cause.
+    *
+    * 49 -> 24: `String` bounds. A bare `String` IS exactly `String(0,255)`, so prettify renders
+    * only the bounds that are NOT the defaults and the two spellings of the one type stop
+    * disagreeing.
     */
-  private val DivergentCeiling: Int = 49
+  private val DivergentCeiling: Int = 24
 
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *

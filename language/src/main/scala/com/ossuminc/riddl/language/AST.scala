@@ -2232,14 +2232,40 @@ object AST:
   case class String_(loc: At, min: Option[Long] = None, max: Option[Long] = None)
       extends PredefinedType {
     override inline def kind: String = "String"
+
+    /** Renders only the bounds that are NOT the defaults.
+      *
+      * A bare `String` IS exactly `String(0,255)` — one type, two spellings — so writing the
+      * defaults back out is noise, and worse, it makes two equal types render differently. That
+      * broke round-trip checks that compare rendered source: a model whose author wrote `String`
+      * came back rendered as `String(0,255)` after any surface that canonicalizes the bounds.
+      *
+      * `String(7,)` and not `String(7)` because the comma is MANDATORY in the grammar
+      * (`TypeParser.stringType` is `"(" ~ integer.? ~ "," ~ integer.? ~ ")"`), and this must only
+      * ever emit source that parses back.
+      */
     override def format: String = {
-      if min.isEmpty && max.isEmpty then kind
-      else s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
+      val lo = min.getOrElse(String_.DefaultMin)
+      val hi = max.getOrElse(String_.DefaultMax)
+      if lo == String_.DefaultMin && hi == String_.DefaultMax then kind
+      else
+        val loText = if lo == String_.DefaultMin then "" else lo.toString
+        val hiText = if hi == String_.DefaultMax then "" else hi.toString
+        s"$kind($loText,$hiText)"
+      end if
     }
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]
     }
+  }
+
+  /** The bounds a bare `String` carries. `String` and `String(0,255)` are the SAME type, which is
+    * why [[String_.format]] renders both as `String`.
+    */
+  object String_ {
+    val DefaultMin: Long = 0L
+    val DefaultMax: Long = 255L
   }
 
   /** A type expression for values that ensure a unique identifier for a specific entity.
