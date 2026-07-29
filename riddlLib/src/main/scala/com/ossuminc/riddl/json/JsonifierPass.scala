@@ -1050,7 +1050,67 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     if descr.isEmpty && terms.isEmpty && options.isEmpty && authors.isEmpty && attachments.isEmpty &&
       comments.isEmpty && figmaRefs.isEmpty && url.isEmpty
     then None
-    else Some(MetaDto(descr, terms, options, authors, attachments, comments, figmaRefs, url))
+    else
+      Some(
+        MetaDto(
+          descr,
+          terms,
+          options,
+          authors,
+          attachments,
+          comments,
+          figmaRefs,
+          url,
+          metaItems(md)
+        )
+      )
+
+  /** The `with { … }` entries in SOURCE ORDER.
+    *
+    * `BriefDescription` is skipped: it is carried by the sibling `brief` field, and emitting it
+    * here as well would write it twice.
+    */
+  private def metaItems(md: Contents[MetaData]): Seq[MetaItemDto] =
+    md.toSeq.flatMap {
+      case d: BlockDescription =>
+        Some(MetaItemDto(MetaKind.Description, lines = d.lines.map(_.s)))
+      case u: URLDescription =>
+        Some(MetaItemDto(MetaKind.UrlDescription, value = Some(u.url.toExternalForm)))
+      case t: Term =>
+        Some(
+          MetaItemDto(MetaKind.Term, name = Some(t.id.value), definition = t.definition.map(_.s))
+        )
+      case o: OptionValue =>
+        Some(MetaItemDto(MetaKind.Option_, name = Some(o.name), args = o.args.map(_.s)))
+      case a: AuthorRef => Some(MetaItemDto(MetaKind.AuthorRef, path = Some(path(a.pathId))))
+      case fa: FileAttachment =>
+        Some(
+          MetaItemDto(
+            MetaKind.Attachment,
+            name = Some(fa.id.value),
+            mimeType = Some(fa.mimeType),
+            value = Some(fa.inFile.s),
+            inFile = true
+          )
+        )
+      case sa: StringAttachment =>
+        Some(
+          MetaItemDto(
+            MetaKind.Attachment,
+            name = Some(sa.id.value),
+            mimeType = Some(sa.mimeType),
+            value = Some(sa.value.s)
+          )
+        )
+      case lc: LineComment => Some(MetaItemDto(MetaKind.Comment, value = Some(lc.text)))
+      case ic: InlineComment =>
+        Some(MetaItemDto(MetaKind.Comment, value = Some(ic.lines.mkString("\n")), inline = true))
+      case fr: FigmaRef =>
+        Some(
+          MetaItemDto(MetaKind.FigmaRef, fileKey = Some(fr.fileKey.s), nodeId = Some(fr.nodeId.s))
+        )
+      case _ => None // BriefDescription travels in `brief`
+    }
 
   private def serializeField(f: Field): FieldDto =
     FieldDto(f.id.value, serializeTypeExpr(f.typeEx), briefOf(f.metadata), metaOf(f.metadata))

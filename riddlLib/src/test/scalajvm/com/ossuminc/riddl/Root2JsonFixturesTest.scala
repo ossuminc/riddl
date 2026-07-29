@@ -98,11 +98,15 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     * `None`), and the group/input/output ALIAS on a reference — `to button X` was coming back as
     * `to input X` and `on page X` as `on group X`.
     *
+    * 12 -> 7: metadata ORDER. A `with { … }` block's entries now travel in one ordered array too,
+    * for exactly the reason the contents array exists — bucketing description, terms, options,
+    * authors, attachments and comments separately reordered them.
+    *
     * 49 -> 24: `String` bounds. A bare `String` IS exactly `String(0,255)`, so prettify renders
     * only the bounds that are NOT the defaults and the two spellings of the one type stop
     * disagreeing.
     */
-  private val DivergentCeiling: Int = 12
+  private val DivergentCeiling: Int = 7
 
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *

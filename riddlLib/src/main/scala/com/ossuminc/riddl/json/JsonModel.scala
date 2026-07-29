@@ -1122,6 +1122,40 @@ object JsonModel:
   /** Rich metadata shared by the primary containers (domain/context/entity/type). `brief` remains a
     * convenient top-level shorthand alongside this.
     */
+  /** One entry of a `with { … }` block, in source order.
+    *
+    * `payload` is the entry's own shape, kind-tagged exactly as a [[ContentDto]] is: metadata had
+    * the same defect the container buckets had, one level down — bucketing description, terms,
+    * options, authors, attachments and comments separately means `option kind("device")` written
+    * before `briefly "…"` comes back after it.
+    */
+  case class MetaItemDto(
+    kind: String,
+    lines: Seq[String] = Nil,
+    name: Option[String] = None,
+    definition: Seq[String] = Nil,
+    args: Seq[String] = Nil,
+    path: Option[String] = None,
+    mimeType: Option[String] = None,
+    value: Option[String] = None,
+    inFile: Boolean = false,
+    fileKey: Option[String] = None,
+    nodeId: Option[String] = None,
+    inline: Boolean = false
+  )
+
+  /** The `kind` values a [[MetaItemDto]] takes. */
+  object MetaKind:
+    val Description = "described"
+    val UrlDescription = "describedAt"
+    val Term = "term"
+    val Option_ = "option"
+    val AuthorRef = "byAuthor"
+    val Attachment = "attachment"
+    val Comment = "comment"
+    val FigmaRef = "figma"
+  end MetaKind
+
   case class MetaDto(
     description: Seq[String] = Nil,
     terms: Seq[TermDto] = Nil,
@@ -1131,7 +1165,11 @@ object JsonModel:
     comments: Seq[String] = Nil,
     figmaRefs: Seq[FigmaRefDto] = Nil,
     // A `described at <url>` description, which points at prose kept outside the model.
-    urlDescription: Option[String] = None
+    urlDescription: Option[String] = None,
+    /** The `with { … }` entries in SOURCE ORDER — the canonical form. The buckets above are the
+      * deprecated form, kept readable; they cannot express order.
+      */
+    items: Seq[MetaItemDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -2009,6 +2047,7 @@ object JsonModel:
   given optionDtoRW: ReadWriter[OptionDto] = macroRW
   given attachmentDtoRW: ReadWriter[AttachmentDto] = macroRW
   given figmaRefDtoRW: ReadWriter[FigmaRefDto] = macroRW
+  given metaItemRW: ReadWriter[MetaItemDto] = macroRW
   given metaDtoRW: ReadWriter[MetaDto] = macroRW
   given fieldRW: ReadWriter[FieldDto] = macroRW
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW

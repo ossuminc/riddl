@@ -428,12 +428,49 @@ object JsonAstBuilder:
   ): Contents[MetaData] =
     val items = mutable.ArrayBuffer.empty[MetaData]
     brief.foreach(b => items += BriefDescription(At(), LiteralString(At(), b)))
-    md.foreach { m =>
+    // The ordered `items` array wins when the document has one; the per-kind buckets below are the
+    // deprecated form and cannot express the order entries were written in.
+    md.filter(_.items.nonEmpty).foreach { m =>
+      import ctx.pc
+      m.items.foreach { i =>
+        i.kind match
+          case MetaKind.Description =>
+            items += BlockDescription(At(), i.lines.map(LiteralString(At(), _)))
+          case MetaKind.UrlDescription =>
+            i.value.foreach(u => items += URLDescription(At(), URL(u)))
+          case MetaKind.Term =>
+            items += Term(
+              At(),
+              ident(i.name.getOrElse("")),
+              i.definition.map(LiteralString(At(), _))
+            )
+          case MetaKind.Option_ =>
+            items += OptionValue(At(), i.name.getOrElse(""), i.args.map(LiteralString(At(), _)))
+          case MetaKind.AuthorRef => items += AuthorRef(At(), pathId(i.path.getOrElse("")))
+          case MetaKind.Attachment =>
+            val nm = ident(i.name.getOrElse(""))
+            val mt = i.mimeType.getOrElse("text/plain")
+            val v = LiteralString(At(), i.value.getOrElse(""))
+            items += (if i.inFile then FileAttachment(At(), nm, mt, v)
+                      else StringAttachment(At(), nm, mt, v))
+          case MetaKind.Comment =>
+            val text = i.value.getOrElse("")
+            items += (if i.inline then InlineComment(At(), text.split("\n").toSeq)
+                      else LineComment(At(), text))
+          case MetaKind.FigmaRef =>
+            items += FigmaRef(
+              At(),
+              LiteralString(At(), i.fileKey.getOrElse("")),
+              LiteralString(At(), i.nodeId.getOrElse(""))
+            )
+          case other => ctx.err(s"unknown metadata kind '$other'")
+      }
+    }
+    md.filter(_.items.isEmpty).foreach { m =>
       if m.description.nonEmpty then
         items += BlockDescription(At(), m.description.map(LiteralString(At(), _)))
-      m.terms.foreach(t =>
-        items += Term(At(), ident(t.name), t.definition.map(LiteralString(At(), _)))
-      )
+      m.terms
+        .foreach(t => items += Term(At(), ident(t.name), t.definition.map(LiteralString(At(), _))))
       m.options.foreach(o => items += OptionValue(At(), o.name, o.args.map(LiteralString(At(), _))))
       m.byAuthors.foreach(a => items += AuthorRef(At(), pathId(a)))
       m.attachments.foreach { a =>
