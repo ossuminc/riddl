@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes.prettify
 import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{Contents, *}
-import com.ossuminc.riddl.language.parsing.Keyword
+import com.ossuminc.riddl.language.parsing.{Keyword, Punctuation}
 import com.ossuminc.riddl.utils.{FileBuilder, PlatformContext}
 import fastparse.ParserInputSource.fromReadable
 
@@ -89,6 +89,16 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     definition: Definition
   ): this.type = {
     if definition.nonEmpty then
+      // A body holding nothing but COMMENTS is still an undefined body, and `???` is how RIDDL says
+      // so. `openDef` emits `{ ??? }` only for a body that is entirely empty, so a commented stub —
+      // `domain D is { // what goes here \n ??? }` — came back without its `???`: the marker records
+      // deliberate intent that a bare comment does not, and dropping it is a loss, not a
+      // normalisation. Emitting it here restores the round trip and makes the comments-only body
+      // say explicitly what it always meant.
+      definition match
+        case b: Branch[?] if b.contents.toSeq.forall(_.isComment) =>
+          addLine(Punctuation.undefinedMark)
+        case _ => ()
       decr.addIndent("}")
       emitMetaData(definition.metadata)
       if definition.metadata.isEmpty then nl

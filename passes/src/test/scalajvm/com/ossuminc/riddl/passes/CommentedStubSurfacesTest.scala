@@ -63,8 +63,16 @@ class CommentedStubSurfacesTest extends AnyWordSpec with Matchers {
       withClue(s"prettify dropped the stub's comment:\n$pretty") {
         pretty must include("Describe the bounded contexts here")
       }
-      // ...and what it emitted re-parses with the comment still attached.
-      commentsOf(parse(pretty, "regen")) must have size 1
+      // The `???` must come back too. It records deliberate intent that a bare comment does not,
+      // so dropping it is a LOSS, not a normalisation — `openDef` emits `{ ??? }` only for a wholly
+      // empty body, and a comment makes the body non-empty.
+      withClue(s"prettify dropped the `???` marker:\n$pretty") {
+        pretty must include("???")
+      }
+      // The comment must survive with its TEXT intact, not merely be present. Asserting the COUNT
+      // is what let the missing `???` through the first time: a comment that had swallowed the
+      // marker would still count as one comment.
+      commentsOf(parse(pretty, "regen")) mustBe commentsOf(root)
     }
 
     "survive BAST" in {
