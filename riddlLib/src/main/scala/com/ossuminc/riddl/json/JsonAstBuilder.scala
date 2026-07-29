@@ -269,7 +269,7 @@ object JsonAstBuilder:
     val repository: Kinds = processor + K.Schema
     val saga: Kinds = vital + K.SagaStep
     val epic: Kinds = vital + K.UseCase
-    val useCase: Kinds = Kinds(K.Comment)
+    val useCase: Kinds = Kinds(K.Comment, K.Interaction)
     val group: Kinds = Kinds(K.Group, K.ContainedGroup, K.Input, K.Output, K.Comment)
     val function: Kinds = vital + K.Function
   end Legal
@@ -280,42 +280,43 @@ object JsonAstBuilder:
   private def kindOf(c: ContentDto): String =
     import JsonModel.ContentKind as K
     c match
-      case _: DomainDto         => K.Domain
-      case _: ModuleDto         => K.Module
-      case _: ContextDto        => K.Context
-      case _: EntityDto         => K.Entity
-      case _: TypeDefDto        => K.Type
-      case _: StateDto          => K.State
-      case _: HandlerDto        => K.Handler
-      case _: OnClauseDto       => K.OnClause
-      case _: FunctionDto       => K.Function
-      case _: AdaptorDto        => K.Adaptor
-      case _: StreamletDto      => K.Streamlet
-      case _: ProjectorDto      => K.Projector
-      case _: RepositoryDto     => K.Repository
-      case _: SchemaDto         => K.Schema
-      case _: ConnectorDto      => K.Connector
-      case _: RelationshipDto   => K.Relationship
-      case _: SagaDto           => K.Saga
-      case _: SagaStepDto       => K.SagaStep
-      case _: EpicDto           => K.Epic
-      case _: UseCaseDto        => K.UseCase
-      case _: GroupDto          => K.Group
-      case _: ContainedGroupDto => K.ContainedGroup
-      case _: InputDto          => K.Input
-      case _: OutputDto         => K.Output
-      case _: AuthorDto         => K.Author
-      case _: UserDto           => K.User
-      case _: InvariantDto      => K.Invariant
-      case _: ConstantDto       => K.Constant
-      case _: CommentDto        => K.Comment
-      case _: VersionDto        => K.Version
-      case _: CopyrightDto      => K.Copyright
-      case _: FieldDto          => K.Field
-      case _: MethodDto         => K.Method
-      case _: TermDto           => K.Term
-      case m: MessageDto        => m.usecase.getOrElse(K.Command)
-      case p: PortletDto        => p.direction.getOrElse(K.Inlet)
+      case _: DomainDto             => K.Domain
+      case _: ModuleDto             => K.Module
+      case _: ContextDto            => K.Context
+      case _: EntityDto             => K.Entity
+      case _: TypeDefDto            => K.Type
+      case _: StateDto              => K.State
+      case _: HandlerDto            => K.Handler
+      case _: OnClauseDto           => K.OnClause
+      case _: FunctionDto           => K.Function
+      case _: AdaptorDto            => K.Adaptor
+      case _: StreamletDto          => K.Streamlet
+      case _: ProjectorDto          => K.Projector
+      case _: RepositoryDto         => K.Repository
+      case _: SchemaDto             => K.Schema
+      case _: ConnectorDto          => K.Connector
+      case _: RelationshipDto       => K.Relationship
+      case _: SagaDto               => K.Saga
+      case _: SagaStepDto           => K.SagaStep
+      case _: EpicDto               => K.Epic
+      case _: UseCaseDto            => K.UseCase
+      case _: GroupDto              => K.Group
+      case _: ContainedGroupDto     => K.ContainedGroup
+      case _: InputDto              => K.Input
+      case _: OutputDto             => K.Output
+      case _: AuthorDto             => K.Author
+      case _: UserDto               => K.User
+      case _: InvariantDto          => K.Invariant
+      case _: ConstantDto           => K.Constant
+      case _: CommentDto            => K.Comment
+      case _: VersionDto            => K.Version
+      case _: CopyrightDto          => K.Copyright
+      case _: FieldDto              => K.Field
+      case _: MethodDto             => K.Method
+      case _: TermDto               => K.Term
+      case _: InteractionContentDto => K.Interaction
+      case m: MessageDto            => m.usecase.getOrElse(K.Command)
+      case p: PortletDto            => p.direction.getOrElse(K.Inlet)
 
   /** One ordered child, as its AST node. */
   private def buildContent(c: ContentDto)(using Ctx): RiddlValue =
@@ -356,6 +357,7 @@ object JsonAstBuilder:
       case d: MethodDto         => buildMethod(d)
       case d: TermDto =>
         Term(At(), ident(d.name), d.definition.map(LiteralString(At(), _)))
+      case d: InteractionContentDto => buildInteraction(d.interaction)
       case d: MessageDto =>
         buildMessage(d, messageUseCase(d.usecase.getOrElse(K.Command)))
       case d: PortletDto =>
@@ -1042,8 +1044,7 @@ object JsonAstBuilder:
         u.contents,
         "UseCase",
         Legal.useCase,
-        contentsOf[UseCaseContents](u.interactions.map(buildInteraction), comments(u.comments)),
-        u.interactions.map(buildInteraction)
+        contentsOf[UseCaseContents](u.interactions.map(buildInteraction), comments(u.comments))
       ),
       meta(u.brief, u.metadata)
     )

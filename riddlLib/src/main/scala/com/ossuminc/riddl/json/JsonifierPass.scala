@@ -336,9 +336,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         relationships = Nil,
         comments = Nil
       )
-    case d: SagaDto    => d.copy(contents = ordered, types = Nil, steps = Nil, comments = Nil)
-    case d: EpicDto    => d.copy(contents = ordered, types = Nil, useCases = Nil, comments = Nil)
-    case d: UseCaseDto => d.copy(contents = ordered, comments = Nil)
+    case d: SagaDto => d.copy(contents = ordered, types = Nil, steps = Nil, comments = Nil)
+    case d: EpicDto => d.copy(contents = ordered, types = Nil, useCases = Nil, comments = Nil)
+    // A UseCase is NOT here: it builds its own ordered contents from the node, because its
+    // steps are read straight off `uc.contents` and never pushed as child DTOs. Overwriting
+    // them with the scope stack's children left only the comments.
     case d: GroupDto =>
       d.copy(
         contents = ordered,
@@ -864,6 +866,16 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         val interactions = uc.contents.toSeq.collect { case i: Interaction =>
           serializeInteraction(i)
         }
+        // A use case builds its OWN ordered contents from the node rather than from the scope
+        // stack, because its steps are read straight off `uc.contents` and never pushed as child
+        // DTOs. Walking `uc.contents` once keeps the steps and the comments between them merged.
+        // `UseCaseContents` is `Interaction | Comment`, so this match is exhaustive.
+        val ordered: Seq[ContentDto] = uc.contents.toSeq.map {
+          case i: Interaction    => InteractionContentDto(serializeInteraction(i))
+          case lc: LineComment   => CommentDto(lc.text)
+          case ic: InlineComment => CommentDto(ic.lines.mkString("\n"), inline = true)
+        }
+        k.col[CommentDto] // consume them; `ordered` above is what actually carries them
         Some(
           UseCaseDto(
             uc.id.value,
@@ -871,7 +883,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             interactions,
             briefOf(uc.metadata),
             metaOf(uc.metadata),
-            k.col[CommentDto]
+            Nil,
+            ordered
           )
         )
       case e: Epic =>

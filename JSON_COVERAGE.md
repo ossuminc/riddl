@@ -16,6 +16,15 @@ When RIDDL gains a new construct, add a row here. The
 interaction case class has no ledger entry. (Metadata nodes use category
 names and are tracked manually in the Metadata section.)
 
+> **What ✅ means, and what enforces it.** A ✅ claims the construct survives
+> `root -> JSON -> root` EXACTLY, order included. That is enforced by the
+> prettify-agreement check in `Root2JsonFixturesTest`, which renders both trees
+> back to RIDDL source and requires them identical across every fixture in the
+> repository. `JsonCoverageGuardTest` does NOT enforce it — it only checks that
+> each AST case-class name has a row here, so it cannot detect an overclaiming
+> ✅, which is exactly how Projector/Repository ports were marked supported
+> while the builder ignored them.
+
 **Schema reference:** `JSON_INPUT.md`. **Roadmap:** NOTEBOOK.md
 ("JSON input method — phased roadmap").
 

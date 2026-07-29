@@ -277,6 +277,47 @@ Records may carry `methods` alongside `fields`:
                  "args": [ { "name": "by", "type": { "kind": "Integer" } } ] } ] }
 ```
 
+## Ordered `contents` — the canonical shape
+
+A container's children travel in ONE ordered array, each entry tagged with
+`$kind`, in source order:
+
+```jsonc
+{ "contents": [
+    { "$kind": "comment", "text": "// a header comment" },
+    { "$kind": "domain",  "name": "Ordering", "contents": [ … ] } ] }
+```
+
+The tag key is `$kind`, not `kind`, because some entries carry a `kind` field of
+their own (an on-clause, a schema). Tags are RIDDL keywords: `domain`, `context`,
+`entity`, `type`, `command`, `event`, `query`, `result`, `record`, `state`,
+`handler`, `onClause`, `function`, `adaptor`, `streamlet`, `projector`,
+`repository`, `schema`, `connector`, `relationship`, `saga`, `step`, `epic`,
+`case`, `interaction`, `group`, `containedGroup`, `input`, `output`, `author`,
+`user`, `invariant`, `constant`, `comment`, `version`, `copyright`, `inlet`,
+`outlet`, `field`, `method`, `term`.
+
+A `with { … }` block works the same way, through `metadata.items`:
+
+```jsonc
+{ "metadata": { "items": [
+    { "kind": "option", "name": "kind", "args": ["device"] },
+    { "kind": "briefly", "value": "An order viewer" } ] } }
+```
+
+**Why an array and not per-kind fields.** RIDDL is fully reflective: a model
+written to JSON and read back must recover the EXACT AST, and that includes the
+ORDER of definitions within their parent. Per-kind arrays (`domains`, `types`,
+`handlers`, …) cannot express order — reassembling them concatenates the groups
+in a fixed sequence, so a comment written at the top of a file comes back at the
+bottom.
+
+**The per-kind arrays still load**, so documents written against the older schema
+keep working; they are DEPRECATED and will be removed in a later major.
+`parseJson` accepts them silently; `parseJsonWithMessages` returns a
+`Deprecation` naming the containers that used them. `root2Json` only ever writes
+the ordered form.
+
 ### The aggregate flavour
 
 RIDDL writes an aggregate body several ways, and they are not the same type

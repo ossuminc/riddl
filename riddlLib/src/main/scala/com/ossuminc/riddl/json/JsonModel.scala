@@ -160,7 +160,7 @@ object JsonModel:
     RepositoryDto | SchemaDto | ConnectorDto | RelationshipDto | SagaDto | SagaStepDto | EpicDto |
     UseCaseDto | GroupDto | ContainedGroupDto | InputDto | OutputDto | AuthorDto | UserDto |
     InvariantDto | ConstantDto | CommentDto | VersionDto | CopyrightDto | PortletDto | FieldDto |
-    MethodDto | TermDto
+    MethodDto | TermDto | InteractionContentDto
 
   /** The `kind` tag a [[ContentDto]] is written under, and read back by.
     *
@@ -209,6 +209,7 @@ object JsonModel:
     val Field = "field"
     val Method = "method"
     val Term = "term"
+    val Interaction = "interaction"
 
     /** The four use cases that share [[MessageDto]]. */
     val messageKinds: Set[String] = Set(Command, Event, Query, Result)
@@ -993,6 +994,15 @@ object JsonModel:
 
   /** `{ "name": "Pay", "userStory": <userStory>, "interactions": [<interaction>], "brief"?: ... }`
     */
+  /** An interaction as an entry of a use case's ordered `contents`.
+    *
+    * `UseCaseContents` is `Interaction | Comment`, so the steps and the comments between them share
+    * one ordered list in the AST. Carrying the steps in a separate `interactions` array meant the
+    * two were concatenated rather than merged on the way back, and a comment written between two
+    * steps moved to the front.
+    */
+  case class InteractionContentDto(interaction: InteractionDto)
+
   case class UseCaseDto(
     name: String,
     userStory: UserStoryDto,
@@ -1965,6 +1975,8 @@ object JsonModel:
       // MethodDto has no derived codec — its `args` need the hand-written pair.
       case ContentKind.Method => readMethod(body)
       case ContentKind.Term   => readJson[TermDto](body)
+      case ContentKind.Interaction =>
+        InteractionContentDto(readInteraction(body.obj("interaction")))
       case k if ContentKind.messageKinds.contains(k) =>
         readJson[MessageDto](body).copy(usecase = Some(k))
       case k @ (ContentKind.Inlet | ContentKind.Outlet) =>
@@ -2010,6 +2022,8 @@ object JsonModel:
       case d: FieldDto          => (ContentKind.Field, writeJs(d))
       case d: MethodDto         => (ContentKind.Method, writeMethod(d))
       case d: TermDto           => (ContentKind.Term, writeJs(d))
+      case d: InteractionContentDto =>
+        (ContentKind.Interaction, ujson.Obj("interaction" -> writeInteraction(d.interaction)))
       // The tag carries the discriminator, so it is cleared from the body rather than written
       // twice. A message with no use case can only come from a bucketed document; the bucket said
       // which it was, and the emitter always sets it.

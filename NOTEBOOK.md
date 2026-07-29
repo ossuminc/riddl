@@ -131,34 +131,67 @@ This is a fourth member of the "suite passes without running" family catalogued
 in CLAUDE.md — and the first one where the vacuum was caused by a data file
 going stale rather than by test-framework misuse.
 
-## JSON fidelity ratchet — IN PROGRESS
+## JSON fidelity ratchet — DONE (reached zero)
 
-Follow-on from #70. `Root2JsonFixturesTest` now has a third check —
-**prettify agreement**, `root2RiddlSource(root0) == root2RiddlSource(root1)`
-— which sees lost FIELDS that neither `json1 == json2` (blind to anything
-dropped on both trips) nor the node census (counts nodes by class) can. It
-landed as a RATCHET: `DivergentCeiling` must only ever come down, and when it
-reaches 0 the constant goes away and the assertion becomes `mustBe empty`.
+Follow-on from #70. `Root2JsonFixturesTest` gained a third check —
+**prettify agreement**, `root2RiddlSource(root0) == root2RiddlSource(root1)` —
+which sees lost or reordered FIELDS that neither `json1 == json2` (blind to
+anything dropped on both trips) nor the node census (counts nodes by class) can.
+It landed as a ratchet at 63 divergent fixtures and was driven to **0**; the
+`DivergentCeiling` constant is gone and the suite asserts `divergent mustBe
+empty`. JSON is now RIDDL's fourth fully-reflective surface, alongside prettify,
+BAST and the parser.
 
-**63 → 62: the aggregate flavour.** `JsonifierPass` serialized every
-`AggregateTypeExpression` as a bare `RecordDto` and `JsonAstBuilder` rebuilt
-each one as `RecordCase`, so `type X is {…}` came back as `record X is {…}`
-and `graph`/`table`/`type` came back as `record` too. `RecordDto.aggregate`
-carries the flavour now — `"aggregation"` for a bare `{…}`, otherwise the
-RIDDL type keyword — following the `PutOutDto.keyword` precedent: the emitter
-always writes it, and an absent key still reads as `record` so hand-authored
-JSON is unaffected.
+**The mandate that shaped it:** reflectivity is not a metric to improve, it is a
+binary property. `root -> JSON -> root` recovers the EXACT AST, *including the
+order of definitions within their parent*. A ceiling above zero is a standing
+statement that the surface is not reflective.
 
-Fixing it also exposed a second drop in the same DTO: `TypeExprDto` has a
-hand-written `ReadWriter` rather than the upickle macro, and `writeTypeExpr`
-never wrote `RecordDto.comments`. A comment inside an aggregate body survived
-the pass and died in the ujson layer.
+**What was actually wrong, in the order fixed:**
 
-**Remaining causes**, in the order they are being worked: content reordering
-(the dominant one — the wire schema buckets contents per kind, so source order
-is unrecoverable and top-of-file comments migrate to the end); the builder's
-defaults table filling bounds the source never wrote (`String` →
-`String(0,255)`); and the field-level gaps catalogued in the plan.
+| Cause | Ratchet |
+|---|---|
+| aggregate flavour — `type X is {…}` returned as `record X is {…}` | 63 → 62 |
+| **source order** — per-kind buckets, the dominant cause | 62 → 49 |
+| `String` bounds rendering | 49 → 24 |
+| TypeRef keyword on ports and inputs | 24 → 14 |
+| on-clause `from`; group/input/output alias | 14 → 12 |
+| metadata order (`with { … }` buckets) | 12 → 7 |
+| `briefly`'s position; `refJs` not writing the alias | 7 → 2 |
+| a use case's steps interleaved with its comments | 2 → 0 |
+
+**The shape of the fix.** A container's children travel in ONE ordered
+`contents` array of `$kind`-tagged entries, and a `with { … }` block's entries
+in `metadata.items`. The per-kind buckets are still READ (so older documents
+load) but never written; `parseJsonWithMessages` reports a `Deprecation` naming
+the containers that used them.
+
+**Traps worth remembering — all four are the same shape, a second code path
+that quietly disagrees with the first:**
+
+- **upickle tags sealed hierarchies.** Making the DTOs extend a `sealed trait`
+  silently added `$type` to every object in the schema; the round trip still
+  agreed with ITSELF, so the fixtures test stayed green at 85/85 and only the
+  hand-authored `json-examples` caught it. `ContentDto` is a Scala 3 UNION —
+  which is also how the AST models the same idea — so derivation is untouched
+  and exhaustivity is still checked.
+- **Hand-written codecs drop new fields.** `RecordDto.comments` and
+  `RefDto.keyword` were both added to the case class and both went on being
+  dropped, because `writeTypeExpr` and `refJs` are hand-written rather than
+  derived. Anything in `JsonModel`'s manual codec section needs the field added
+  in two places.
+- **The tag key is `$kind`, not `kind`.** `OnClauseDto` and `SchemaDto` carry a
+  `kind` FIELD of their own and `ujson.Obj.from` keeps the last of a duplicate
+  pair, so the tag silently overwrote the data.
+- **`withContents` overwrote a container that built its own.** A use case reads
+  its steps straight off the node rather than from the scope stack, and the
+  generic attach-the-kids step replaced them with just the comments.
+
+**Still open:** `Root2JsonCorpusTest` is red by standing policy (2 of 189
+external models fail to re-parse: `reactive-bbq.riddl`, `fund-accounting.riddl`).
+`Include`/`BASTImport`/`Nebula`/`ULIDAttachment` remain unrepresented and are
+still excluded from the census by `NotRepresented` — the last reflectivity hole,
+and the next task.
 
 ## A55 — optional local name binding for the on-clause message — DONE
 

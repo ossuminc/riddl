@@ -72,45 +72,6 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     */
   private val ParsedFloor: Int = 40
 
-  /** A RATCHET, not a target. The prettify-agreement check below found 63 divergent fixtures the
-    * day it was written, across four causes still being worked: top-level comments dropped, a plain
-    * aggregate returning as a `record`, the builder's defaults table filling bounds the source
-    * never wrote (`String` -> `String(0,255)`), and content reordering.
-    *
-    * Fixing them all before landing the check would have meant carrying it unmerged; asserting zero
-    * would have meant landing it red. So it asserts the count does not GROW, and this number comes
-    * down as each cause is fixed. When it reaches 0, delete the constant and assert `divergent
-    * mustBe empty` — the ceiling exists only to make progress irreversible.
-    *
-    * 63 -> 62: the aggregate flavour (`RecordDto.aggregate`) is carried now, so `type X is {…}` no
-    * longer returns as `record X is {…}`. Only one fixture diverged for that reason ALONE; the
-    * others that showed it, such as `dokn.riddl` and `domains/rbbq.riddl`, still diverge on a
-    * remaining cause and merely fail later in the file than they did.
-    *
-    * 62 -> 49: SOURCE ORDER. A container's children now travel in one ordered `contents` array
-    * instead of per-kind buckets that were reassembled in a fixed sequence, so a comment written at
-    * the top of a file no longer comes back at the bottom. This was the dominant cause.
-    *
-    * 24 -> 14: the TypeRef KEYWORD on a portlet's and an input's type reference. `inlet in is
-    * command Go` was coming back as `inlet in is type Go`.
-    *
-    * 14 -> 12: the on-clause `from` (absent from the schema entirely, so the builder hardcoded
-    * `None`), and the group/input/output ALIAS on a reference — `to button X` was coming back as
-    * `to input X` and `on page X` as `on group X`.
-    *
-    * 12 -> 7: metadata ORDER. A `with { … }` block's entries now travel in one ordered array too,
-    * for exactly the reason the contents array exists — bucketing description, terms, options,
-    * authors, attachments and comments separately reordered them.
-    *
-    * 7 -> 2: `briefly`'s POSITION (it was prepended outside the ordered items), and the
-    * group/input/output alias on an interaction reference — RefDto had grown a `keyword` but
-    * `refJs`, a HAND-WRITTEN codec rather than the derived one, still did not write it.
-    *
-    * 49 -> 24: `String` bounds. A bare `String` IS exactly `String(0,255)`, so prettify renders
-    * only the bounds that are NOT the defaults and the two spellings of the one type stop
-    * disagreeing.
-    */
-  private val DivergentCeiling: Int = 2
 
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *
@@ -297,11 +258,14 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
       end if
 
       compared must be >= ParsedFloor
+      // No ceiling: RIDDL is fully reflective, so a model written to JSON and read back must
+      // reproduce its source EXACTLY. This started at 63 divergent fixtures and was ratcheted down
+      // to zero; anything above zero now is a regression, not a backlog item.
       withClue(
-        s"${divergent.size} of $compared fixtures render differently after a JSON round trip, " +
-          s"above the ceiling of $DivergentCeiling — the JSON surface lost or altered a field: "
+        s"${divergent.size} of $compared fixtures render differently after a JSON round trip — " +
+          "the JSON surface lost, reordered or altered something: "
       ) {
-        divergent.size must be <= DivergentCeiling
+        divergent mustBe empty
       }
     }
   }
