@@ -3989,7 +3989,12 @@ case class ValidationPass(
               s"has only ${count(fields.size, "field")}",
             suggestion = s"Supply at most ${count(fields.size, "argument")}."
           )
-        else if c.args.nonEmpty && c.args.forall(_.name.isEmpty) && c.args.sizeIs != fields.size
+        // NO `nonEmpty` guard: an EMPTY argument list is a positional arity of zero, and must
+        // still match. `command Checkout()` is legal syntax — a constructor of a message with no
+        // fields — but against a type that HAS fields it is a mistake, and guarding this branch on
+        // `nonEmpty` let exactly that case through silently. Named arguments are exempt because
+        // they may legitimately supply a subset.
+        else if c.args.forall(_.name.isEmpty) && c.args.sizeIs != fields.size
         then
           messages.addError(
             c.loc,
