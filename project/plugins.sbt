@@ -13,4 +13,4 @@ credentials += Credentials(
   sys.env.getOrElse("GITHUB_TOKEN", "")
 )
 
-addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "3.0.3")
+addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "3.1.0")
