@@ -911,6 +911,23 @@ hygiene only).
 
 ## Active Work Queue
 
+0. **`state X is <recordRef>` — deprecate the `is` spelling** (raised
+   2026-07-28). `EntityParser.state` (`EntityParser.scala:29`) reads
+   `identifier ~/ (of | is) ~ recordRef ~/ stateBody.?`, so the record
+   reference may be introduced by EITHER `of` or `is`. Every other
+   definition uses `is` to introduce a BODY, and `stateBody` already
+   does (`is ~ open ~ … ~ close`), so the `is` alternative here means
+   one keyword doing two jobs in one production. The canonical form is
+   `state X of record R is { … }`.
+
+   **Do not simply drop the alternative** — a bazillion tests and the
+   whole external corpus use it. Accept it, `deprecation(...)` it, and
+   let it go in a later major. Note `deprecation` messages now surface
+   under every `riddlc` command (see CLAUDE.md "Parse-time messages now
+   surface"), so `.check` goldens will move. Touches: parser, EBNF
+   grammar (+ regenerate GBNF), and a deprecation test. Prettify already
+   emits `of`, so no emitter change — confirm with a round trip.
+
 1. **riddl-models validation errors** (handed off) — see
    `../riddl-models/TASK-fix-validation-errors.md`. As of last
    check, 45 of 186 entry points fail `riddlc validate`. Error
