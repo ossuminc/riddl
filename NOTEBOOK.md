@@ -131,6 +131,35 @@ This is a fourth member of the "suite passes without running" family catalogued
 in CLAUDE.md — and the first one where the vacuum was caused by a data file
 going stale rather than by test-framework misuse.
 
+## JSON fidelity ratchet — IN PROGRESS
+
+Follow-on from #70. `Root2JsonFixturesTest` now has a third check —
+**prettify agreement**, `root2RiddlSource(root0) == root2RiddlSource(root1)`
+— which sees lost FIELDS that neither `json1 == json2` (blind to anything
+dropped on both trips) nor the node census (counts nodes by class) can. It
+landed as a RATCHET: `DivergentCeiling` must only ever come down, and when it
+reaches 0 the constant goes away and the assertion becomes `mustBe empty`.
+
+**63 → 62: the aggregate flavour.** `JsonifierPass` serialized every
+`AggregateTypeExpression` as a bare `RecordDto` and `JsonAstBuilder` rebuilt
+each one as `RecordCase`, so `type X is {…}` came back as `record X is {…}`
+and `graph`/`table`/`type` came back as `record` too. `RecordDto.aggregate`
+carries the flavour now — `"aggregation"` for a bare `{…}`, otherwise the
+RIDDL type keyword — following the `PutOutDto.keyword` precedent: the emitter
+always writes it, and an absent key still reads as `record` so hand-authored
+JSON is unaffected.
+
+Fixing it also exposed a second drop in the same DTO: `TypeExprDto` has a
+hand-written `ReadWriter` rather than the upickle macro, and `writeTypeExpr`
+never wrote `RecordDto.comments`. A comment inside an aggregate body survived
+the pass and died in the ujson layer.
+
+**Remaining causes**, in the order they are being worked: content reordering
+(the dominant one — the wire schema buckets contents per kind, so source order
+is unrecoverable and top-of-file comments migrate to the end); the builder's
+defaults table filling bounds the source never wrote (`String` →
+`String(0,255)`); and the field-level gaps catalogued in the plan.
+
 ## A55 — optional local name binding for the on-clause message — DONE
 
 `on foo: command Foo { … }` binds an optional local name to the handled

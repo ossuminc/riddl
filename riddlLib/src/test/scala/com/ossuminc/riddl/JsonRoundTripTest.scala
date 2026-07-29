@@ -987,5 +987,51 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           fail(s"parse of the oblivious model failed: $errors")
       end match
     }
+
+    /** #20: every `AggregateTypeExpression` was serialized as `RecordDto` and rebuilt as a
+      * `RecordCase` aggregate, so the aggregate's flavour was lost: a bare `{…}` came back as
+      * `record {…}`, and `graph`/`table`/`type` came back as `record` too. `json1 == json2` cannot
+      * see it (the collapse happens on both trips) so the check is on the prettified source, which
+      * renders the keyword.
+      */
+    "keep each aggregate's flavour through the round trip" in {
+      val aggregates =
+        """domain D is {
+          |  type Bare is { a: Integer }
+          |  record Rec is { b: Integer }
+          |  type Tagged is type { c: Integer }
+          |  graph Nodes is { d: Integer }
+          |  table Grid is { e: Integer }
+          |  type Nested is { inner: { f: Integer } }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(aggregates) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              RiddlLib.root2Json(root1) mustBe json1
+              // The keyword-bearing surface: prettify renders the flavour, the census does not.
+              RiddlLib.root2RiddlSource(root1) mustBe RiddlLib.root2RiddlSource(root0)
+              // And the flavours really are distinct in the rebuilt tree, not merely equal to each
+              // other. A type expression hangs off `Type.typEx` rather than living in `contents`,
+              // so Finder reaches it through the Type, not directly.
+              val flavours = Finder(root1)
+                .recursiveFindByType[Type]
+                .toSeq
+                .map(_.typEx)
+                .map {
+                  case a: AggregateUseCaseTypeExpression => a.usecase.useCase
+                  case _: Aggregation                    => "Aggregation"
+                  case other                             => other.getClass.getSimpleName
+                }
+              flavours must contain allOf ("Aggregation", "Record", "Type", "Graph", "Table")
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the aggregate-flavour JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the aggregate-flavour model failed: $errors")
+      end match
+    }
   }
 }

@@ -850,9 +850,18 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       RecordDto(
         a.fields.map(serializeField),
         a.methods.map(serializeMethod),
-        commentsOf(a.contents)
+        commentsOf(a.contents),
+        Some(aggregateFlavour(a))
       )
     case p: PredefinedType => PredefDto(p.getClass.getSimpleName.replace("$", ""))
+
+  /** What `RecordDto.aggregate` carries: the RIDDL type keyword of a use-case aggregate, or
+    * "aggregation" for a bare `{…}`, which has no keyword. Without this every aggregate read back
+    * as a `record`, so `type X is {…}` returned as `record X is {…}`.
+    */
+  private def aggregateFlavour(a: AggregateTypeExpression): String = a match
+    case aucte: AggregateUseCaseTypeExpression => aucte.usecase.useCase.toLowerCase
+    case _                                     => "aggregation"
 
   /** `Statements` is `Statement | Comment`, so a comment between two statements is part of the list
     * and is serialized in place rather than dropped.

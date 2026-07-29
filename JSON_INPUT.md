@@ -277,6 +277,26 @@ Records may carry `methods` alongside `fields`:
                  "args": [ { "name": "by", "type": { "kind": "Integer" } } ] } ] }
 ```
 
+### The aggregate flavour
+
+RIDDL writes an aggregate body several ways, and they are not the same type
+expression: `type X is { … }` is a bare aggregation, while `record X is { … }`,
+`graph X is { … }` and `table X is { … }` are aggregates tagged with a use case.
+The optional `aggregate` key on a `Record` says which one is meant:
+
+```jsonc
+{ "kind": "Record", "aggregate": "aggregation", "fields": [ … ] }  // type X is { … }
+{ "kind": "Record", "aggregate": "record",      "fields": [ … ] }  // record X is { … }
+{ "kind": "Record", "aggregate": "graph",       "fields": [ … ] }  // graph X is { … }
+```
+
+Accepted values are `aggregation` (a bare `{…}`, no keyword) and the RIDDL type
+keywords `record`, `type`, `graph`, `table`, `command`, `event`, `query` and
+`result`. **Omitting it means `record`**, which is what hand-authored JSON
+usually wants — a `record` is what a `state … of record X` reference resolves
+against. `root2Json` always writes the key explicitly, so a document it produced
+round-trips to the flavour it started with.
+
 ## Phase 4 additions — streaming & integration
 
 New context-level arrays: `adaptors`, `streamlets`, `projectors`,

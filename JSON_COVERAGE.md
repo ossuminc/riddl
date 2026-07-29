@@ -111,8 +111,8 @@ is covered in that construct's phase. The builder emits references as
 | Pattern | ✅ Phase 1 | ≥1 regex required |
 | Enumeration | ✅ Phase 1 | `kind: "Enum"`, ≥1 value required |
 | Alternation | ✅ Phase 1 | `of`: declared type names |
-| AggregateUseCaseTypeExpression | ✅ Phase 1 | record + command/event/query/result |
-| Aggregation | ✅ Phase 1 | exposed via `Record` (mapped to a RecordCase aggregate) |
+| AggregateUseCaseTypeExpression | ✅ Phase 1 | `kind: "Record"`; use case in `aggregate` |
+| Aggregation | ✅ Phase 1 | `kind: "Record"` with `aggregate: "aggregation"` |
 | AliasedTypeExpression | ✅ Phase 1 | `kind: "Alias"` |
 | Optional / ZeroOrMore / OneOrMore | ✅ Phase 1 | `cardinality` wrapper |
 | SpecificRange | ✅ Phase 2 | `cardinality: "range"` with min/max |

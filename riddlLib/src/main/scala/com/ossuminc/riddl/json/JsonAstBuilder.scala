@@ -1245,6 +1245,19 @@ object JsonAstBuilder:
   // Type expressions (with the defaults table applied here, in the builder)
   // ---------------------------------------------------------------------------
 
+  /** The use case a `RecordDto.aggregate` keyword names. An unrecognised or absent keyword reads as
+    * `record`, matching the tolerance the rest of the builder shows hand-authored JSON.
+    */
+  private def aggregateUseCase(keyword: Option[String]): AggregateUseCase = keyword match
+    case Some("type")    => AggregateUseCase.TypeCase
+    case Some("graph")   => AggregateUseCase.GraphCase
+    case Some("table")   => AggregateUseCase.TableCase
+    case Some("command") => AggregateUseCase.CommandCase
+    case Some("event")   => AggregateUseCase.EventCase
+    case Some("query")   => AggregateUseCase.QueryCase
+    case Some("result")  => AggregateUseCase.ResultCase
+    case _               => AggregateUseCase.RecordCase
+
   private def buildTypeExpr(dto: TypeExprDto)(using ctx: Ctx): TypeExpression =
     dto match
       // AI-authored JSON may omit bounds; fill the canonical String(0,255)
@@ -1310,19 +1323,20 @@ object JsonAstBuilder:
         val aliases = of.map(t => AliasedTypeExpression(At(), "type", pathId(t)))
         Alternation(At(), Contents[AliasedTypeExpression](aliases*))
 
-      case RecordDto(fields, methods, cs) =>
-        // A named Record becomes a proper RIDDL `record` (an aggregate tagged
-        // RecordCase), not a bare aggregation, so that a `state ... of record X`
-        // reference resolves (ResolutionPass.handleTypeResolution).
-        AggregateUseCaseTypeExpression(
-          At(),
-          AggregateUseCase.RecordCase,
-          contentsOf[AggregateContents](
-            fields.map(buildField),
-            methods.map(buildMethod),
-            comments(cs)
-          )
+      case RecordDto(fields, methods, cs, aggregate) =>
+        val contents = contentsOf[AggregateContents](
+          fields.map(buildField),
+          methods.map(buildMethod),
+          comments(cs)
         )
+        // "aggregation" is the bare `{ ... }` that carries no keyword; every other flavour is a
+        // use-case aggregate named by its RIDDL keyword. When the flavour is absent — which only
+        // happens in hand-authored JSON, since JsonifierPass always writes it — a Record becomes a
+        // proper RIDDL `record` (an aggregate tagged RecordCase) rather than a bare aggregation, so
+        // that a `state ... of record X` reference resolves (ResolutionPass.handleTypeResolution).
+        aggregate.map(_.toLowerCase) match
+          case Some("aggregation") => Aggregation(At(), contents)
+          case flavour => AggregateUseCaseTypeExpression(At(), aggregateUseCase(flavour), contents)
 
       case AliasDto(ref) => AliasedTypeExpression(At(), "type", pathId(ref))
 

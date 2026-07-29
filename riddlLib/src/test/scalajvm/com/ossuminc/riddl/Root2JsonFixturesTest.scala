@@ -74,15 +74,20 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
 
   /** A RATCHET, not a target. The prettify-agreement check below found 63 divergent fixtures the
     * day it was written, across four causes still being worked: top-level comments dropped, a plain
-    * aggregate returning as a `record`, the builder's defaults table filling bounds the source never
-    * wrote (`String` -> `String(0,255)`), and content reordering.
+    * aggregate returning as a `record`, the builder's defaults table filling bounds the source
+    * never wrote (`String` -> `String(0,255)`), and content reordering.
     *
     * Fixing them all before landing the check would have meant carrying it unmerged; asserting zero
     * would have meant landing it red. So it asserts the count does not GROW, and this number comes
-    * down as each cause is fixed. When it reaches 0, delete the constant and assert
-    * `divergent mustBe empty` — the ceiling exists only to make progress irreversible.
+    * down as each cause is fixed. When it reaches 0, delete the constant and assert `divergent
+    * mustBe empty` — the ceiling exists only to make progress irreversible.
+    *
+    * 63 -> 62: the aggregate flavour (`RecordDto.aggregate`) is carried now, so `type X is {…}` no
+    * longer returns as `record X is {…}`. Only one fixture diverged for that reason ALONE; the
+    * others that showed it, such as `dokn.riddl` and `domains/rbbq.riddl`, still diverge on a
+    * remaining cause and merely fail later in the file than they did.
     */
-  private val DivergentCeiling: Int = 63
+  private val DivergentCeiling: Int = 62
 
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *

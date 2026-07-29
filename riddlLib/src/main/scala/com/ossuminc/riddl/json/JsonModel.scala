@@ -77,11 +77,21 @@ object JsonModel:
     metadata: Option[MetaDto] = None
   )
 
-  /** `{ "kind": "Record", "fields": [ <field> ], "methods"?: [ <method> ] }` -> aggregate. */
+  /** `{ "kind": "Record", "fields": [ <field> ], "methods"?: [ <method> ], "comments"?: [ <comment>
+    * ], "aggregate"?: "record" }` -> aggregate.
+    *
+    * `aggregate` names the aggregate's FLAVOUR, which is what distinguishes `type X is { … }` from
+    * `record X is { … }` from `graph X is { … }`: it is `"aggregation"` for a bare `{…}` carrying
+    * no keyword at all, and otherwise the RIDDL type keyword — `record`, `type`, `graph`, `table`,
+    * `command`, `event`, `query` or `result`. `JsonifierPass` always writes it; when it is absent
+    * (hand-authored JSON) the builder reads `record`, which is the long-standing behaviour and the
+    * one that lets `state … of record X` resolve.
+    */
   case class RecordDto(
     fields: Seq[FieldDto] = Nil,
     methods: Seq[MethodDto] = Nil,
-    comments: Seq[CommentDto] = Nil
+    comments: Seq[CommentDto] = Nil,
+    aggregate: Option[String] = None
   ) extends TypeExprDto
 
   /** `{ "kind": "Alias", "ref": "SomeDeclaredType" }` */
@@ -989,7 +999,9 @@ object JsonModel:
           val fields =
             m.get("fields").map(_.arr.map(j => readJson[FieldDto](j)).toSeq).getOrElse(Nil)
           val methods = m.get("methods").map(_.arr.map(readMethod).toSeq).getOrElse(Nil)
-          RecordDto(fields, methods)
+          val comments =
+            m.get("comments").map(_.arr.map(j => readJson[CommentDto](j)).toSeq).getOrElse(Nil)
+          RecordDto(fields, methods, comments, m.get("aggregate").map(_.str))
         case "Alias"                             => AliasDto(m("ref").str)
         case "URI" | "URL"                       => URIDto(m.get("scheme").map(_.str))
         case "Blob"                              => BlobDto(m.get("blobKind").map(_.str))
@@ -1078,7 +1090,7 @@ object JsonModel:
         )
       case AlternationDto(of) =>
         ujson.Obj("kind" -> ujson.Str("Alternation"), "of" -> ujson.Arr.from(of.map(ujson.Str(_))))
-      case RecordDto(fields, methods, _) =>
+      case RecordDto(fields, methods, comments, aggregate) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)](
             "kind" -> ujson.Str("Record"),
@@ -1086,6 +1098,12 @@ object JsonModel:
           ) ++ (if methods.nonEmpty then
                   Seq[(String, ujson.Value)]("methods" -> ujson.Arr.from(methods.map(writeMethod)))
                 else Nil)
+            ++ (if comments.nonEmpty then
+                  Seq[(String, ujson.Value)](
+                    "comments" -> ujson.Arr.from(comments.map(c => writeJs(c)))
+                  )
+                else Nil)
+            ++ aggregate.map(a => "aggregate" -> (ujson.Str(a): ujson.Value))
         )
       case AliasDto(ref) => ujson.Obj("kind" -> ujson.Str("Alias"), "ref" -> ujson.Str(ref))
       case URIDto(scheme) =>
