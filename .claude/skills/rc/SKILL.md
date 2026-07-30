@@ -240,16 +240,25 @@ once 2.0.0 ships. A plain `riddlc-rc` gives class `RiddlcRc`, and — because it
 not a VERSIONED formula — `conflicts_with` draws no `FormulaAudit/Conflicts`
 offense, so there is no lint divergence to justify.
 
-### 5. Stage the binary
+### 5. Check the native binary reports the RC
 
 ```bash
 sbt "reload; riddlcNative/nativeLink"
+target/out/native0.5/scala-<ver>/riddlc/riddlc info    # MUST say the RC version
 ```
 
 `reload` first: a long-running sbt server computes dynver's version and the
 `gitCommit` BuildInfo key at PROJECT-LOAD time and does not re-read git when HEAD
-moves. Confirm `riddlc info` reports the RC version before copying to
-`~/Code/ossuminc/bin/riddlc`.
+moves. Without it the freshly linked binary cheerfully reports the PREVIOUS
+version — verified on 2.0.0-rc.2, where `show version` returned
+`2.0.0-rc.1-13-<hash>` from a server started before the tag existed.
+
+**Do NOT copy the binary to `~/Code/ossuminc/bin/`.** That staging existed so the
+riddl-models corpus could be corrected against new semantics while compiler work
+continued in parallel; riddl-models is on 2.0 now, so the practice is retired and
+the directory is gone. Anyone wanting the RC binary gets it from the tap:
+`brew upgrade ossuminc/tap/riddlc-rc`. This step is now just a sanity check that
+the tag produced a binary reporting the right version.
 
 ### 6. Soak, then iterate or promote
 
