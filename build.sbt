@@ -138,8 +138,8 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
     libraryDependencies ++= Seq(
       Dep.dom.value,
       Dep.scala_java_time.value,
-      Dep.scalatest_nojvm.value,
-      Dep.scalactic_nojvm.value
+      Dep.scalatest_nojvm.value % Test,
+      Dep.scalactic_nojvm.value % Test
     )
   )
   .nativeConfigure(jvmNativeSrc("utils"))
@@ -165,9 +165,8 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
       Dep.sttp_nojvm.value,
       Dep.java_net_url_stubs.value,
       Dep.scala_java_time.value,
-      Dep.scalactic_nojvm.value,
-      Dep.scalatest_nojvm.value,
-      Dep.scalactic_nojvm.value
+      Dep.scalatest_nojvm.value % Test,
+      Dep.scalactic_nojvm.value % Test
     )
   )
 lazy val utils = utils_cp.jvm
@@ -217,8 +216,8 @@ lazy val language_cp = CrossModule("language", "riddl-language", V.scala)(JVM, J
     libraryDependencies ++= Seq(
       Dep.fastparse_nojvm.value,
       Dep.airframe_ulid_nojvm.value,
-      Dep.scalatest_nojvm.value,
-      Dep.scalactic_nojvm.value
+      Dep.scalatest_nojvm.value % Test,
+      Dep.scalactic_nojvm.value % Test
     )
   )
 

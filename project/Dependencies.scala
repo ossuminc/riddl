@@ -33,7 +33,14 @@ object Dep {
     "org.wvlet.airframe" %% "airframe-ulid" % V.airframe_ulid
   }
 
-  val airframe_json = "org.wvlet.airframe" %% "airframe-json" % V.airframe_json
+  // airframe-json pulls airframe-log, which declares logback-core -- dual-licensed
+  // EPL-1.0 / LGPL-2.1, the only non-permissive license that reached the
+  // distribution, and used by nothing: no riddl source references logback or
+  // slf4j. airframe-log's default backend is java.util.logging and it only binds
+  // logback when the classes are present, so removing them costs nothing and drops
+  // an LGPL obligation from every artifact we ship.
+  val airframe_json = ("org.wvlet.airframe" %% "airframe-json" % V.airframe_json)
+    .exclude("ch.qos.logback", "logback-core")
   val compress = "org.apache.commons" % "commons-compress" % V.compress
   val commons_io = "commons-io" % "commons-io" % V.commons_io
   val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse

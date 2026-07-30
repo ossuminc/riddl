@@ -61,7 +61,6 @@ object ThirdPartyNotices {
       |  sconfig                         © Eric K Richardson and Lightbend, Inc.
       |  Airframe (log, json, ULID)      © Taro L. Saito
       |  sttp (Native)                   © SoftwareMill
-      |  ScalaTest and Scalactic         © Artima, Inc.
       |
       |MIT License — https://opensource.org/licenses/MIT
       |  fastparse                       © Li Haoyi
@@ -77,10 +76,7 @@ object ThirdPartyNotices {
       |  scala-java-locales              © Carlos Quiroz
       |  cldr-api                        © Carlos Quiroz
       |  portable-scala-reflect          © The portable-scala contributors
-      |  Scala Native runtime (Native)   © EPFL
-      |
-      |Eclipse Public License 1.0 / GNU LGPL 2.1
-      |  logback-core (JVM)              © QOS.ch""".stripMargin
+      |  Scala Native runtime (Native)   © EPFL""".stripMargin
 
   /** The attribution block as it appears at the end of `riddlc info`, with pointers to the full
     * texts. Kept separate from [[summary]] so the summary can be embedded elsewhere (a docs page,

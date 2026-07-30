@@ -33,7 +33,7 @@ class ThirdPartyNoticesTest extends AbstractTestingBasis {
       text must include("Scala.js runtime library (JS)")
       text must include("Scala Native runtime (Native)")
       text must include("Apache Commons Codec (JVM)")
-      text must include("logback-core (JVM)")
+      text must include("sttp (Native)")
       // ...and explain what the marks mean, rather than leaving them cryptic.
       text must include("ships only in that distribution")
     }
@@ -55,11 +55,24 @@ class ThirdPartyNoticesTest extends AbstractTestingBasis {
       text must include("Apache License 2.0")
       text must include("MIT License")
       text must include("BSD 3-Clause License")
-      // logback-core arrives transitively through airframe-log and is the only
-      // non-permissive license in the distribution, so it must never be dropped
-      // from the summary by accident.
-      text must include("Eclipse Public License 1.0 / GNU LGPL 2.1")
-      text must include("logback-core")
+    }
+
+    "carry NO copyleft dependency" in {
+      // logback-core (EPL-1.0 / LGPL-2.1) used to reach the distribution transitively
+      // through airframe-json -> airframe-log, referenced by no riddl source. It is
+      // excluded in Dependencies.scala. If it ever returns, this list gains a section
+      // and riddl gains an obligation it does not want -- so assert on the ABSENCE.
+      val text = ThirdPartyNotices.summary
+      text must not include "logback"
+      text must not include "LGPL"
+      text must not include "Eclipse Public License"
+    }
+
+    "not advertise a test framework as a shipped dependency" in {
+      // ScalaTest/Scalactic were runtime deps of the JS and Native artifacts because
+      // `scalatest_nojvm` was added without `% Test`. Now correctly test-scoped, so
+      // they ship in riddl-testkit only -- which is a TEST KIT and not covered here.
+      ThirdPartyNotices.summary must not include "ScalaTest"
     }
 
     "attribute rather than merely list" in {

@@ -45,22 +45,36 @@ Notices print LAST, below the JVM/OS lines. That ordering lives in
 `formatInfo` from `InfoCommand` buries the block mid-output — the bug
 `InfoCommandTest` now guards.
 
-### Two build defects this surfaced — NOT fixed, deliberately
+### Two build defects this surfaced — BOTH NOW FIXED
 
-Both are listed in the notices because they genuinely ship. Fixing
-either REMOVES a line rather than adding one:
+Writing the notices exposed two dependencies that were shipping by
+accident. Both are fixed, and the notices lost a line each.
 
-1. **ScalaTest/Scalactic ship on JS and Native.** `Dep.scalatest_nojvm`
-   (Dependencies.scala:48/51) has no `% Test`, so `build.sbt` lines
-   126/154/205/256+ put a test framework in the native binary and the
-   JS bundle. JVM is correctly test-scoped and unaffected.
-2. **logback-core (EPL-1.0 / LGPL-2.1) arrives via `airframe-log`.** The
-   only non-permissive license in the distribution, and no riddl source
-   references logback or slf4j. An `exclude` would drop the obligation.
+1. **ScalaTest/Scalactic shipped on JS and Native.**
+   `Dep.scalatest_nojvm`/`scalactic_nojvm` were added WITHOUT `% Test`
+   at three sites — utils JS, utils Native, language Native — so a test
+   framework was a runtime dependency of the native binary and the JS
+   bundle (16 artifacts each). Now `% Test`. **`testkit` was left
+   alone on purpose**: its MAIN sources use ScalaTest because it is a
+   test kit exporting test helpers, so compile scope there is correct,
+   and blanket-scoping it would break the published `riddl-testkit`.
+   Nothing in the riddlc/riddl-lib chain depends on testkit, so it does
+   not leak into the distributions.
+2. **logback-core (EPL-1.0 / LGPL-2.1) arrived via
+   `airframe-json` → `airframe-log`.** Excluded in
+   `Dependencies.scala`. JVM distribution went 21 → 20 jars.
+   **This was treated as a runtime risk, not a no-op**: airframe-log
+   can bind logback reflectively, so a missing class would surface only
+   at runtime. Verified with `riddlc info` AND a real
+   `riddlc validate` — airframe-log falls back to `java.util.logging`.
 
-Versions are deliberately omitted from the lines: they differ per
-platform (geny 1.1.0 JVM vs 1.1.1 JS; scala-java-time 2.6.0 Native vs
-2.7.0 JS), so one shared constant cannot state them truthfully.
+**riddl now carries NO copyleft dependency.** Everything is Apache-2.0,
+MIT or BSD-3-Clause. `ThirdPartyNoticesTest` asserts the ABSENCE
+(`must not include "logback"` / `"LGPL"` / `"ScalaTest"`) so a
+regression fails the build rather than quietly re-adding an obligation.
+
+Certified from clean, tri-platform: tJVM 541, tJS 213, tNative 396,
+zero failures.
 
 Filed `ossum.tech/task/publish-riddl-license-page.md` for the web page.
 **The URL is compiled into riddlc**, so it cannot be silently

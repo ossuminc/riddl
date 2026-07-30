@@ -12,6 +12,10 @@ reproduce. Our thanks to every author and maintainer named here.
 A one-line-per-project summary of this file is printed by `riddlc info`. The
 same information is published at https://ossum.tech/riddl/licenses/.
 
+Every license below is permissive. riddl deliberately carries no copyleft
+dependency: logback-core (EPL-1.0 / LGPL-2.1) used to arrive transitively
+through airframe-log, unused by any riddl source, and is now excluded.
+
 Coverage: this file covers the JVM, Scala.js and Scala Native distributions.
 Where a project ships separate artifacts per platform, or several artifacts
 under one name, it is listed once under the name a user would recognise.
@@ -24,8 +28,7 @@ Apache License 2.0
   Scala standard library, scala-collection-compat, scala-xml,
   Scala.js runtime library, Apache Commons Codec, Apache Commons IO,
   Apache Commons Compress, Apache Commons Lang, sconfig,
-  Airframe (log, json, ULID), sttp (client, model, shared), ScalaTest,
-  Scalactic
+  Airframe (log, json, ULID), sttp (client, model, shared)
 
 MIT License
   fastparse, geny, sourcecode, upickle (with ujson and upack), scala-js-dom,
@@ -34,9 +37,6 @@ MIT License
 BSD 3-Clause License
   scala-java-time, scala-java-locales, cldr-api, portable-scala-reflect,
   Scala Native runtime
-
-Eclipse Public License 1.0 / GNU Lesser General Public License 2.1 (dual)
-  logback-core
 
 ================================================================================
 1. APACHE LICENSE 2.0
@@ -111,10 +111,6 @@ specific language governing permissions and limitations under the License.
 --- sttp (client4, model, shared) ----------------------------------------------
     Copyright 2017-2026 SoftwareMill
     https://github.com/softwaremill/sttp
-
---- ScalaTest and Scalactic ----------------------------------------------------
-    Copyright 2001-2024 Artima, Inc.
-    https://github.com/scalatest/scalatest
 
 ================================================================================
 2. MIT LICENSE
@@ -224,23 +220,6 @@ The following components are licensed under the BSD 3-Clause License:
     their POM files. They are Scala Native's repackaging of the Scala standard
     library, which is Apache License 2.0 (see section 1); the Scala Native
     project itself is BSD 3-Clause.
-
-================================================================================
-4. ECLIPSE PUBLIC LICENSE 1.0 / GNU LESSER GENERAL PUBLIC LICENSE 2.1
-================================================================================
-
---- logback-core ---------------------------------------------------------------
-    Copyright (C) 1999-2026 QOS.ch Sarl (Switzerland)
-    https://logback.qos.ch
-
-    logback-core is dual-licensed under the Eclipse Public License 1.0 and the
-    GNU Lesser General Public License 2.1. You may use it under either.
-
-        https://www.eclipse.org/legal/epl-v10.html
-        https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
-
-    logback-core reaches riddl transitively through airframe-log. No riddl
-    source code references logback or slf4j.
 
 ================================================================================
 END OF THIRD-PARTY NOTICES
