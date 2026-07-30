@@ -42,8 +42,8 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
     * Defaults to `main`, which is right once a release has shipped. While a release BRANCH is in
     * flight, the corpus conforming to it lives on a matching branch of riddl-models and `main`
     * still holds the previous major — so CI downloaded 1.x models and failed against the 2.0
-    * grammar, while local runs passed against the developer's checkout. Set
-    * `RIDDL_MODELS_BRANCH` to point CI at the right one; drop it when the corpus merges to `main`.
+    * grammar, while local runs passed against the developer's checkout. Set `RIDDL_MODELS_BRANCH`
+    * to point CI at the right one; drop it when the corpus merges to `main`.
     */
   private val modelsBranch: String =
     Option(System.getenv("RIDDL_MODELS_BRANCH")).filter(_.nonEmpty).getOrElse("main")
