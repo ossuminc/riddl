@@ -129,6 +129,15 @@ stable users.
 Release notes matter as much as for a final release — say what is being trialled
 and what feedback is wanted.
 
+**Each RC records only its DELTA.** The first RC of a line carries the full
+release story; every later one says what changed since the previous RC and links
+back. Do not restate the whole release each time.
+
+**At promotion, MERGE the RC notes.** The final release notes are the rc.1 body
+plus every subsequent delta, folded together into one coherent document — not a
+pointer to a chain of prereleases, which nobody follows. See "Promoting to
+final".
+
 ### 2b. Publish the libraries to GitHub Packages
 
 **Nothing in CI does this** — `release.yml` builds binaries and dispatches, and
@@ -257,6 +266,16 @@ git push origin 1.32.0
 
 dynver picks the most recently created tag when several point at one commit, so
 promoting without new commits works cleanly.
+
+**Merge the RC notes first.** The final release body is rc.1's full release
+story with each later RC's delta folded in where it belongs — a user reading the
+2.0.0 notes should not have to visit three prereleases to learn what shipped.
+Collect them with:
+
+```bash
+gh release list --limit 20 | grep -- -rc.
+gh release view <tag> --json body --jq .body
+```
 
 Then run `/ship` as normal, and move the npm `latest` pointer:
 
