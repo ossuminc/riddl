@@ -17,7 +17,19 @@ object InfoFormatter {
     * @return
     *   Formatted build information string
     */
-  def formatInfo: String = {
+  def formatInfo: String =
+    s"$formatBuildInfo\n\n${ThirdPartyNotices.formatted}"
+
+  /** The build information ALONE, without the third-party notices.
+    *
+    * Callers that append platform-specific lines of their own need this, so the notices can stay at
+    * the very END of the output rather than being buried mid-way. `riddlc info` adds JVM and OS
+    * details, so it composes this with [[ThirdPartyNotices.formatted]] itself.
+    *
+    * @return
+    *   Formatted build information, no attribution block
+    */
+  def formatBuildInfo: String = {
     val lines = Seq(
       "Build information about RIDDL:",
       s"        version: ${RiddlBuildInfo.version}",

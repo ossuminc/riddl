@@ -15,6 +15,59 @@ to the task file and note the disposition below.
 
 ---
 
+## Third-party license notices in `riddlc info` — DONE
+
+`riddlc info` now ends with a one-line-per-project attribution block,
+grouped by license, and every distribution ships
+`THIRD-PARTY-NOTICES.txt` with the full texts. Both the file name and
+`https://ossum.tech/riddl/licenses/` are printed.
+
+**The list is a hand-maintained CONSTANT**
+(`utils/.../ThirdPartyNotices.scala`) — not generated, and not read from
+a file. Only the JVM build has a filesystem; the Native binary has no
+resources at all, and the same text must render in Scala.js. So **it
+goes stale silently when dependencies change.** `ThirdPartyNoticesTest`
+pins the shape (80 columns, every license group, both links) but CANNOT
+know a dependency was added. Regenerate it whenever deps change:
+
+- JVM truth is the staged `riddlc/universal/stage/lib` (what ships).
+- JS/Native from `<mod>/Runtime/fullClasspath`.
+- Licenses from each artifact's POM in `~/Library/Caches/Coursier`,
+  walking to the parent POM when the child declares none.
+- **Do NOT take the copyright holder from `<developer>`** — that is the
+  first committer, not the holder. For Apache projects it is the ASF;
+  read `META-INF/NOTICE` from the jar, which Apache-2.0 §4(d) requires
+  be reproduced anyway.
+
+Notices print LAST, below the JVM/OS lines. That ordering lives in
+`InfoCommand`, not `InfoFormatter`, so `InfoFormatter.formatBuildInfo`
+(no notices) exists alongside `formatInfo` (with them). Calling
+`formatInfo` from `InfoCommand` buries the block mid-output — the bug
+`InfoCommandTest` now guards.
+
+### Two build defects this surfaced — NOT fixed, deliberately
+
+Both are listed in the notices because they genuinely ship. Fixing
+either REMOVES a line rather than adding one:
+
+1. **ScalaTest/Scalactic ship on JS and Native.** `Dep.scalatest_nojvm`
+   (Dependencies.scala:48/51) has no `% Test`, so `build.sbt` lines
+   126/154/205/256+ put a test framework in the native binary and the
+   JS bundle. JVM is correctly test-scoped and unaffected.
+2. **logback-core (EPL-1.0 / LGPL-2.1) arrives via `airframe-log`.** The
+   only non-permissive license in the distribution, and no riddl source
+   references logback or slf4j. An `exclude` would drop the obligation.
+
+Versions are deliberately omitted from the lines: they differ per
+platform (geny 1.1.0 JVM vs 1.1.1 JS; scala-java-time 2.6.0 Native vs
+2.7.0 JS), so one shared constant cannot state them truthfully.
+
+Filed `ossum.tech/task/publish-riddl-license-page.md` for the web page.
+**The URL is compiled into riddlc**, so it cannot be silently
+redirected.
+
+---
+
 ## Corpus-blocking bug reports from riddl-models/riddl-examples — DONE
 
 Four reports arrived while release/2 was being finished, all filed against the

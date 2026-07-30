@@ -2,6 +2,7 @@ import com.ossuminc.sbt.OssumIncPlugin
 import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProblem}
 import sbt.Keys.{description, libraryDependencies, scalacOptions}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
+import com.typesafe.sbt.packager.universal.UniversalPlugin.autoImport.Universal
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass, maintainer)
@@ -14,6 +15,20 @@ enablePlugins(OssumIncPlugin)
 // ride ahead of LTS.
 
 lazy val startYear: Int = 2019
+
+// Ship the third-party license notices INSIDE the distribution, not just on the
+// website: a user who downloads a tarball and never visits ossum.tech is exactly
+// the person the attribution is for, and Apache-2.0 s4(d) asks that the NOTICE
+// content travel WITH the redistribution. `riddlc info` prints a one-line-per-
+// project summary and points at this file by name, so the name must not drift.
+lazy val thirdPartyNotices = Universal / mappings += {
+  // sbt 2 mappings are (HashedVirtualFileRef, String), not (File, String) --
+  // everything goes through the virtual FS, so a plain java.io.File will not
+  // convert implicitly. `fileConverter` is the supported bridge.
+  val conv = fileConverter.value
+  val f = (ThisBuild / baseDirectory).value / "THIRD-PARTY-NOTICES.txt"
+  conv.toVirtualFile(f.toPath) -> "THIRD-PARTY-NOTICES.txt"
+}
 
 // Test sources may still call the deprecated throwing loaders. `fromURL`/`fromPath`
 // are deprecated because THROWING is wrong for user-supplied input: riddlc used to
@@ -298,7 +313,8 @@ lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Na
   )
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon""",
-    libraryDependencies += Dep.upickle
+    libraryDependencies += Dep.upickle,
+    thirdPartyNotices
   )
   .settings(quietCoverageSkips)
   .jsConfigure(With.ScalaJS("RIDDL: riddl-lib"))
@@ -387,7 +403,8 @@ lazy val riddlc_cp = CrossModule("riddlc", "riddlc", V.scala)(JVM, Native)
   )
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon""",
-    libraryDependencies += Dep.sconfig
+    libraryDependencies += Dep.sconfig,
+    thirdPartyNotices
   )
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "application"))
   .nativeConfigure(With.noMiMa)

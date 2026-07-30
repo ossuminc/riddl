@@ -40,15 +40,20 @@ class InfoCommand(using pc: PlatformContext) extends Command[InfoCommand.Options
     options: InfoCommand.Options,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    import com.ossuminc.riddl.utils.InfoFormatter
+    import com.ossuminc.riddl.utils.{InfoFormatter, ThirdPartyNotices}
 
-    // Use the shared InfoFormatter utility
-    InfoFormatter.formatInfo.split("\n").foreach(line => pc.log.info(line))
+    // Build info first -- `formatBuildInfo`, NOT `formatInfo`, because the latter already
+    // appends the notices and would bury them above the JVM lines below.
+    InfoFormatter.formatBuildInfo.split("\n").foreach(line => pc.log.info(line))
 
     // Add JVM-specific info (only available on JVM platform)
     pc.log.info(s"       jvm name: ${System.getProperty("java.vm.name")}")
     pc.log.info(s"    jvm version: ${System.getProperty("java.runtime.version")}")
     pc.log.info(s"  operating sys: ${System.getProperty("os.name")}")
+
+    // Attribution goes LAST, after everything else.
+    pc.log.info("")
+    ThirdPartyNotices.formatted.split("\n").foreach(line => pc.log.info(line))
     Right(PassesResult())
   }
 }
