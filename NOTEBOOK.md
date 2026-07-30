@@ -15,6 +15,32 @@ to the task file and note the disposition below.
 
 ---
 
+## SysLoggerTest flake — FIXED (was an intermittent CI red)
+
+`SysLoggerTest` captures what SysLogger wrote to stdout by swapping the
+**global** `System.out`. sbt runs a module's suites in PARALLEL, so any
+other utils suite printing during that window landed in the capture and
+the assertion failed on "random garbage". It failed CI run 30552046714
+(JVM only; JS and Native fine) on a commit that touched nothing related.
+
+Fixed with `utils / Test / parallelExecution := false`. **The suite's own
+`SequentialNestedSuiteExecution` does NOT cover this** — it orders NESTED
+suites and says nothing about siblings running concurrently. That
+mislead is why the FIXME sat unresolved.
+
+Three tests (severe/warning/info) had been **commented out** rather than
+fixed. They are restored and pass: utils went 137 → 140 tests, clean
+5 runs in a row.
+
+Cost is negligible — utils' suites take seconds — and it beats a release
+gate that fails at random.
+
+**If another module ever grows a stdout-capturing test, it needs the same
+setting.** The pattern to avoid is asserting exclusive ownership of a
+global stream inside a parallel runner.
+
+---
+
 ## sbt-riddl tasks were cached no-ops under sbt 2 — DONE
 
 Reported by the riddl-models session. **`sbt riddlcValidate` reported

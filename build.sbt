@@ -122,7 +122,19 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
-    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
+    // SysLoggerTest asserts on what SysLogger wrote to stdout, which it captures by
+    // swapping the GLOBAL System.out. sbt runs a module's suites in parallel, so any
+    // other suite that printed during that window landed in the capture and the
+    // assertion failed on "random garbage" -- an intermittent CI red that has nothing
+    // to do with the change under test, and which had already cost three of these
+    // tests: they were commented out rather than fixed.
+    //
+    // Serialising utils' suites removes the only source of interference. The suite's
+    // own SequentialNestedSuiteExecution does NOT cover this: it orders nested suites
+    // and says nothing about siblings running concurrently. utils' tests take a few
+    // seconds, so the throughput cost is negligible next to a flaky release gate.
+    Test / parallelExecution := false
   )
   .jsConfigure(With.ScalaJS("RIDDL: utils", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)

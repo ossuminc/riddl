@@ -54,45 +54,49 @@ class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecu
     }
     Thread.`yield`()
   }
-  // FIXME: Figure out the concurrency problem that randomly causes these tests to fail.
-  // FIXME: The comparison with `expected` fails because it captured some random garbage.
-  // "SysLogger for severe" should {
-  //   "print severe message" in {
-  //     val expected = "[severe] asdf\n"
-  //     val result = pc.withLogger(SysLogger()) { (sl: SysLogger) =>
-  //       pc.withOptions(CommonOptions.noANSIMessages) { _ =>
-  //         val captured = capturingStdOut(() => pc.log.severe("asdf"))
-  //         captured._2 mustBe expected
-  //       }
-  //     }
-  //     result
-  //   }
-  //   Thread.`yield`()
-  // }
-  // "SysLogger for warning" should {
-  //   "print warning message" in {
-  //     val expected = "[warning] asdf\n"
-  //     pc.withLogger(SysLogger()) { (sl: SysLogger) =>
-  //       pc.withOptions(CommonOptions.noANSIMessages) { _ =>
-  //         val captured = capturingStdOut(() => pc.log.warn("asdf"))
-  //         captured._2 mustBe expected
-  //       }
-  //     }
-  //   }
-  //   Thread.`yield`()
-  // }
-  // "SysLogger for info" should {
-  //   "print info message" in {
-  //     val expected = "[info] asdf\n"
-  //     pc.withLogger(SysLogger()) { (sl: SysLogger) =>
-  //       pc.withOptions(CommonOptions.noANSIMessages) { _ =>
-  //         val captured = capturingStdOut(() => pc.log.info("asdf"))
-  //         captured._2 mustBe expected
-  //       }
-  //     }
-  //   }
-  //   Thread.`yield`()
-  // }
+  // These three were commented out for an intermittent failure -- the capture
+  // picking up "random garbage" -- which was never a bug in SysLogger. utils'
+  // suites ran in parallel while capturingStdOut swapped the global System.out,
+  // so a concurrent suite's output landed in the capture. `Test /
+  // parallelExecution := false` for utils removes the interference, so they are
+  // back on.
+  "SysLogger for severe" should {
+    "print severe message" in {
+      val expected = "[severe] asdf\n"
+      val result = pc.withLogger(SysLogger()) { (sl: SysLogger) =>
+        pc.withOptions(CommonOptions.noANSIMessages) { _ =>
+          val captured = capturingStdOut(() => pc.log.severe("asdf"))
+          captured._2 mustBe expected
+        }
+      }
+      result
+    }
+    Thread.`yield`()
+  }
+  "SysLogger for warning" should {
+    "print warning message" in {
+      val expected = "[warning] asdf\n"
+      pc.withLogger(SysLogger()) { (sl: SysLogger) =>
+        pc.withOptions(CommonOptions.noANSIMessages) { _ =>
+          val captured = capturingStdOut(() => pc.log.warn("asdf"))
+          captured._2 mustBe expected
+        }
+      }
+    }
+    Thread.`yield`()
+  }
+  "SysLogger for info" should {
+    "print info message" in {
+      val expected = "[info] asdf\n"
+      pc.withLogger(SysLogger()) { (sl: SysLogger) =>
+        pc.withOptions(CommonOptions.noANSIMessages) { _ =>
+          val captured = capturingStdOut(() => pc.log.info("asdf"))
+          captured._2 mustBe expected
+        }
+      }
+    }
+    Thread.`yield`()
+  }
 
   "Logger for deprecation" should {
     "render a distinct [deprecated] label" in {
