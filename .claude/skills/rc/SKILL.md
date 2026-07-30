@@ -113,6 +113,57 @@ stable users.
 Release notes matter as much as for a final release — say what is being trialled
 and what feedback is wanted.
 
+### 2b. Publish the libraries to GitHub Packages
+
+**Nothing in CI does this** — `release.yml` builds binaries and dispatches, and
+`npm-publish.yml` handles npm. The Maven-format artifacts are published from your
+machine, and 2.0.0-rc.1 initially shipped without them because this step did not
+exist: every coordinate still read 1.31.0 while riddlc, npm and Homebrew were all
+on the RC.
+
+**Publish from the TAG, not the branch head.** dynver derives the version from
+`git describe`, so a branch head even one commit past the tag publishes
+`1.32.0-rc.1-1-<hash>` instead of `1.32.0-rc.1`.
+
+```bash
+git status --porcelain                     # MUST be empty; dynver marks a dirty tree
+git checkout 1.32.0-rc.1                   # detached HEAD, on purpose
+sbt -batch "show version"                  # MUST print exactly 1.32.0-rc.1
+sbt -batch "clean; test; publish"
+git checkout release/2                     # or wherever you came from
+```
+
+Never skip `clean` or `test`. Capture the WHOLE log — `| tail -N` throws away the
+test summary and leaves you unable to show that tests ran, and a pipeline's exit
+code is `tail`'s, not sbt's. Confirm sbt's own `[success]` line, and that a
+`Tests: succeeded …` summary is present.
+
+Verify against the registry rather than trusting the log:
+
+```bash
+gh api "/orgs/ossuminc/packages/maven/com.ossuminc.riddl-utils_3/versions?per_page=100" \
+  --jq '[.[].name] | index("1.32.0-rc.1")'      # non-null == published
+```
+
+Expect every aggregated module across all three platforms — `riddl-utils`,
+`riddl-language`, `riddl-passes`, `riddl-testkit`, `riddl-lib` (`_3`,
+`_sjs1_3`, `_native0.5_3`), `riddl-commands` (`_3`, `_native0.5_3`), `riddlc`,
+and the plugin. `diagrams`/`doc`/`prettify`/`stats` are retired or moved to
+riddl-gen and must NOT appear.
+
+**The sbt plugin publishes as `sbt-riddl_sbt2_3`** — an sbt 2 coordinate, since
+this repo builds on sbt 2 and the plugin source is Scala 3 against the sbt 2 API.
+It is therefore NOT consumable by the sbt 1.x consumer repos, which resolve
+`sbt-riddl_2.12_1.0`; that line stops at 1.31.0 and cannot be revived from here
+without maintaining a Scala 2.12 copy of the plugin. Consumers wanting a 2.x
+plugin need their own sbt 2 / sbt-ossuminc 3.x migration first.
+
+Consumers that only need the LIBRARIES are fine either way: those are ordinary
+Scala 3 artifacts and resolve from an sbt 1.x build. And a consumer that just
+wants the new riddlc can set `riddlcVersion := "1.32.0-rc.1"` on whatever
+sbt-riddl it already has — the plugin shells out to a downloaded binary and never
+parses RIDDL itself.
+
 ### 3. npm — automatic, do NOT publish by hand
 
 `npm-publish.yml` triggers on the release and publishes for you, with the
@@ -208,3 +259,9 @@ npm dist-tag add @ossuminc/riddl-lib@1.32.0 latest
   untouched.
 - Retagging an existing RC instead of cutting the next one.
 - Staging a native binary without `reload`, so it reports a stale commit.
+- Publishing libraries from the branch head instead of the tag, yielding
+  `X.Y.Z-rc.N-<n>-<hash>` instead of `X.Y.Z-rc.N`.
+- Skipping step 2b, so riddlc/npm/Homebrew carry the RC while every Maven
+  coordinate still reads the previous release.
+- Piping an sbt publish through `tail`, then reporting a green run you cannot
+  evidence.
