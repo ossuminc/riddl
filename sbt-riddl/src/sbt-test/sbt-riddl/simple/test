@@ -21,3 +21,48 @@
 
 # Prettify via command wrapper
 > prettify
+
+# --- Regression: sbt 2 result caching must not turn these tasks into no-ops ---
+
+# Every riddlc task returns Unit, which sbt 2 CAN cache, while the files they
+# actually read, the .riddl and .conf files, are discovered inside the body by
+# resolveConfs and are therefore never declared as inputs. Without Def.uncached
+# the second invocation is a cached no-op that still reports success, so
+# riddlcValidate prints a success line and nothing else over a corpus that no
+# longer validates. Editing sources, clean, and deleting target all fail to
+# invalidate it, because none of them is an input that sbt knows about.
+
+# Everything above this line runs each task exactly ONCE, which is why the bug
+# shipped: a single invocation always executes. The shape that catches it is
+# run, break, run again.
+
+# First run populates whatever cache exists.
+> riddlcValidate
+
+# Break the model. Missing is undefined, so this fails with an ERROR rather
+# than a warning. riddlc.conf sets hide-warnings, so only a real error can
+# make riddlc exit non-zero.
+$ copy-file changes/broken.riddl src/main/riddl/simple.riddl
+
+# THE ASSERTION. This must fail. Before Def.uncached it returned a cached
+# success and the broken model went unnoticed.
+-> riddlcValidate
+
+# Restore, and confirm the task recovers, proving the failure above came from
+# the model rather than from a task left wedged.
+$ copy-file changes/good.riddl src/main/riddl/simple.riddl
+> riddlcValidate
+
+# riddlcBastify deserves the same guard: it is what keeps committed .bast files
+# in step with sources, so a cached success would leave a stale .bast looking
+# freshly regenerated.
+
+# Note the DIFFERENT fixture. bastify tolerates semantic errors: given
+# broken.riddl, whose Missing path never resolves, it parses the model and
+# writes a BAST with exit 0. Only a model that cannot PARSE makes it fail, so
+# that is what proves this second invocation really ran.
+> riddlcBastify
+$ copy-file changes/unparseable.riddl src/main/riddl/simple.riddl
+-> riddlcBastify
+$ copy-file changes/good.riddl src/main/riddl/simple.riddl
+> riddlcBastify

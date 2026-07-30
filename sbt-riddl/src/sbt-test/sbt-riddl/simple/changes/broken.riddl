@@ -1,0 +1,12 @@
+// A model that MUST fail validation.
+//
+// `Missing` is never defined, so resolution fails with an error rather than a
+// warning -- riddlc.conf sets hide-warnings, so only a real error can make the
+// task exit non-zero and prove the second run actually executed.
+domain simple is {
+  context c is {
+    type T is Missing
+  }
+} with {
+  explained by "Deliberately broken: Missing is not defined anywhere"
+}

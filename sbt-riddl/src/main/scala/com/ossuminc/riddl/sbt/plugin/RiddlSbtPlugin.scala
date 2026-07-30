@@ -533,7 +533,20 @@ object RiddlSbtPlugin extends AutoPlugin {
       checkVersion(binary, riddlcMinVersion.value)
       binary
     },
-    riddlcInfo := {
+    // These six shell out to riddlc and discover their real inputs INSIDE the body
+    // (`resolveConfs` globs .conf/.riddl at run time), so sbt sees only settings as
+    // inputs. They return Unit, which IS serializable, so sbt 2 happily caches the
+    // result and every run after the first becomes a no-op that still reports
+    // success -- `sbt riddlcValidate` printing nothing but `[success]` while the
+    // corpus underneath it is broken. Editing sources, `clean`, and deleting
+    // target/ all fail to invalidate it, because none of them is a declared input.
+    //
+    // Def.uncached is the right lever rather than declaring the model files as
+    // inputs: the discovery is dynamic, and the binary's behaviour depends on file
+    // contents the build does not track, so an accurate input set is hard to state
+    // and easy to get subtly wrong. Validating 187 models costs about 2 seconds, so
+    // caching buys nothing worth a green run that checked nothing.
+    riddlcInfo := Def.uncached {
       val binary = riddlcBinary.value
       val log = streams.value.log
       runRiddlcProcess(
@@ -545,7 +558,7 @@ object RiddlSbtPlugin extends AutoPlugin {
       )
       ()
     },
-    riddlcShowVersion := {
+    riddlcShowVersion := Def.uncached {
       val binary = riddlcBinary.value
       val log = streams.value.log
       runRiddlcProcess(
@@ -557,7 +570,7 @@ object RiddlSbtPlugin extends AutoPlugin {
       )
       ()
     },
-    riddlcValidate := {
+    riddlcValidate := Def.uncached {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
       val exclusions = riddlcConfExclusions.value
@@ -594,7 +607,7 @@ object RiddlSbtPlugin extends AutoPlugin {
         }
       }
     },
-    riddlcParse := {
+    riddlcParse := Def.uncached {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
       val exclusions = riddlcConfExclusions.value
@@ -631,7 +644,7 @@ object RiddlSbtPlugin extends AutoPlugin {
         }
       }
     },
-    riddlcBastify := {
+    riddlcBastify := Def.uncached {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
       val exclusions = riddlcConfExclusions.value
@@ -668,7 +681,7 @@ object RiddlSbtPlugin extends AutoPlugin {
         }
       }
     },
-    riddlcPrettify := {
+    riddlcPrettify := Def.uncached {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
       val exclusions = riddlcConfExclusions.value

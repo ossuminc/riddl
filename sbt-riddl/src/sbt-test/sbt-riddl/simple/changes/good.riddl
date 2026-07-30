@@ -1,0 +1,5 @@
+domain simple is {
+  ???
+} with {
+  explained by "This is about as simple as it gets"
+}

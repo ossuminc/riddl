@@ -15,6 +15,43 @@ to the task file and note the disposition below.
 
 ---
 
+## sbt-riddl tasks were cached no-ops under sbt 2 — DONE
+
+Reported by the riddl-models session. **`sbt riddlcValidate` reported
+success on a corpus it never re-validated.** All six `taskKey[Unit]`
+riddlc tasks return Unit, which sbt 2 caches, while the `.riddl`/`.conf`
+files they read are discovered INSIDE the body by `resolveConfs` and so
+are never declared inputs. Editing sources, `clean`, and deleting
+`target/` all failed to invalidate it. First run in a fresh checkout
+executes, so CI looked fine while local development silently stopped
+checking.
+
+Fixed by wrapping all six in `Def.uncached` — the same lever the compile
+hook already used. `riddlcDownload`/`riddlcBinary` were already opted
+out.
+
+**The scripted test now runs, breaks the model, and runs again**,
+asserting the second run FAILS. The old test invoked each task exactly
+once, and a first invocation always executes — which is precisely why
+this shipped. Proven by reverting the fix: scripted then fails at
+`-> riddlcValidate` with "Command succeeded but failure was expected".
+
+**`bastify` tolerates semantic errors** — given an unresolved path it
+parses and writes a BAST with exit 0. Only a model that cannot PARSE
+makes it fail, so the bastify assertion needs its own
+`changes/unparseable.riddl`. Do not reuse the validate fixture.
+
+Scripted fixtures are checked against riddlc **1.23.0** as well as the
+local build, because `sbt-test/.../build.sbt` pins `riddlcVersion`
+1.13.0 rather than using the local one.
+
+Two claims in the task file were wrong and are corrected in its Results:
+`riddlcDownload`/`riddlcBinary` were never cached, and riddl's own CI
+does NOT use `riddlcValidate` (scala.yml runs `sbt-riddl/scripted`; the
+corpus is checked by `RiddlModelsRoundTripTest`).
+
+---
+
 ## Third-party license notices in `riddlc info` — DONE
 
 `riddlc info` now ends with a one-line-per-project attribution block,
