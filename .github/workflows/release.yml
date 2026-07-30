@@ -201,8 +201,18 @@ jobs:
           -f "client_payload[sha_linux_x86]=${{ steps.hashes.outputs.linux_x86 }}" \
           -f "client_payload[sha_jvm]=${{ steps.hashes.outputs.jvm }}"
 
-  # Notify ossum.ai to create a blog post from release notes
+  # Notify ossum.ai to create a blog post from release notes.
+  #
+  # FULL RELEASES ONLY. Every other channel makes a release candidate opt-in by
+  # name -- a prerelease on GitHub, an `rc` npm dist-tag, a separate `riddlc-rc`
+  # formula -- but a blog post announces itself to everyone. 2.0.0-rc.1 shipped a
+  # live post on ossum.ai because this job, unlike `update-homebrew` below, had no
+  # prerelease guard.
+  #
+  # `workflow_dispatch` leaves `release.prerelease` empty, so a manual run still
+  # posts; that is deliberate, since dispatching by hand is an explicit act.
   notify-blog:
+    if: github.event.release.prerelease != true
     needs: [native-build, jvm-build]
     timeout-minutes: 10
     runs-on: ubuntu-latest

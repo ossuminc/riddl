@@ -12,9 +12,32 @@ to ask for it **by name**, or an RC becomes what people get by accident.
 | Channel | Stable | Release candidate |
 |---|---|---|
 | GitHub | release | release marked **prerelease** |
-| Maven Central / GH Packages | `1.32.0` | `1.32.0-rc.1` (SemVer sorts it BELOW the release) |
+| GitHub Packages (Maven) | `1.32.0` | `1.32.0-rc.1` (SemVer sorts it BELOW the release) |
 | npm | `latest` dist-tag | **`rc`** dist-tag — `npm publish --tag rc` |
 | Homebrew | `Formula/riddlc.rb` | **`Formula/riddlc-rc.rb`** |
+| **ossum.ai blog** | announcement post | **nothing — suppressed entirely** |
+
+**Not Maven Central.** riddl publishes with `With.GithubPublishing`; every
+coordinate lives in GitHub Packages. Do not go looking for a Sonatype step.
+
+**The blog is the exception that proves the rule.** Every other row makes the RC
+reachable but opt-in BY NAME. A blog post has no opt-in — it announces to
+everyone — so the only correct RC behaviour is not to post. 2.0.0-rc.1 published
+a live post because `release.yml`'s `notify-blog` job had no prerelease guard
+while `update-homebrew` did. Guard added:
+
+```yaml
+notify-blog:
+  if: github.event.release.prerelease != true
+```
+
+Boolean `true`, NOT the string `'true'`. GitHub casts mismatched types to a
+number before comparing, so `!= 'true'` evaluates `1 != NaN` — always true, guard
+silently dead.
+
+**When adding any new release channel, decide its RC behaviour at the same
+time** and add a row here. The failure mode is not a channel that does the wrong
+thing; it is a channel nobody thought about.
 
 ## Naming
 
