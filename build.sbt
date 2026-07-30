@@ -487,18 +487,27 @@ addCommandAlias(
 )
 addCommandAlias(
   "tJVM",
-  "; utils/test ; language/test ; passes/test ; testkit/test ; commands/test ; " +
-    "riddlLib/test ; riddlc/test"
+  // `testOnly *`, NOT `test`. In sbt 2 `test` resolves to `testQuick`, which skips
+  // suites it judges unaffected -- and the judgement survives `clean`, because the
+  // action cache does. CI restores target/out from actions/cache on top of that, so
+  // the JS row of a GREEN run was executing 109 of 567 tests: languageJS, passesJS
+  // and testkitJS never ran at all. A release gate that skips three modules and
+  // reports success is worse than no gate. `testOnly *` ignores incremental state.
+  "; utils/testOnly * ; language/testOnly * ; passes/testOnly * ; testkit/testOnly * ; " +
+    "commands/testOnly * ; riddlLib/testOnly * ; riddlc/testOnly *"
 )
 addCommandAlias(
   "tNative",
-  "; utils/test ; language/test ; passesNative/test ; testkit/test ; " +
-    "commands/test ; riddlLib/test ; riddlcNative/test ; riddlcNative/nativeLink"
+  // See tJVM above for why this is `testOnly *` and not `test`.
+  "; utils/testOnly * ; language/testOnly * ; passesNative/testOnly * ; " +
+    "testkit/testOnly * ; commands/testOnly * ; riddlLib/testOnly * ; " +
+    "riddlcNative/testOnly * ; riddlcNative/nativeLink"
 )
 addCommandAlias(
   "tJS",
-  "; utilsJS/test ; languageJS/test ; passesJS/test ; testkitJS/test ; " +
-    "riddlLibJS/test"
+  // See tJVM above. This row is the one the skipping actually bit.
+  "; utilsJS/testOnly * ; languageJS/testOnly * ; passesJS/testOnly * ; " +
+    "testkitJS/testOnly * ; riddlLibJS/testOnly *"
 )
 addCommandAlias(
   "packageArtifacts",

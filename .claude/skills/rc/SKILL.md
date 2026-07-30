@@ -81,6 +81,22 @@ sbt tJS
 sbt tNative
 ```
 
+**Confirm the suites actually RAN.** In sbt 2 `test` resolves to `testQuick`, which
+skips suites it judges unaffected, and that judgement SURVIVES `clean` because the
+action cache does. The `t*` aliases were built on `test` and therefore certified
+nothing for the skipped modules while exiting 0 — this mis-certified 2.0.0-rc.2 on
+its first attempt, and in CI the JS row was running 109 of 567 tests with
+`languageJS`, `passesJS` and `testkitJS` silently skipped. The aliases now use
+`testOnly *`, which ignores incremental state, but VERIFY rather than assume:
+
+```bash
+grep -c "No tests to run" <log>     # MUST be 0
+```
+
+An exit code of 0 is not evidence. Compare the suite COUNT against the previous
+release's; a sudden drop means skipping, not deletion. Expect roughly JVM ~1860 /
+JS ~567 / Native ~1726 as of 2.0.0-rc.2.
+
 Then every validator CI gates on:
 
 ```bash
