@@ -3,9 +3,12 @@ name: Scala Build
 on:
   workflow_dispatch:
   push:
-    branches: [ main, development ]
+    # `release/*` included so a release branch gets CI before it is tagged. The
+    # 2.0 branch ran for months on local runs alone, because it matched nothing
+    # here and every CI run on it had to be dispatched by hand.
+    branches: [ main, development, 'release/*' ]
   pull_request:
-    branches: [ main, development ]
+    branches: [ main, development, 'release/*' ]
     paths-ignore:
       - 'doc/src/main/hugo/**'
       - '.github/workflows/gh-pages.yml'

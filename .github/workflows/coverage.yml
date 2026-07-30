@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set Up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '25'
           distribution: temurin
@@ -31,7 +31,7 @@ jobs:
         uses: sbt/setup-sbt@7e33f738678e47369c83dcb4b1d9c65d66eb3cdd # v1
 
       - name: Coursier Caching
-        uses: coursier/cache-action@2addd381bd2c931f42d4b734b9d0c9b73aac16fb # v6
+        uses: coursier/cache-action@v7
 
       - name: Configure sbt GitHub Packages credentials
         run: |
@@ -50,7 +50,7 @@ jobs:
           sbt "; clean; coverage; utils/Test/compile; language/Test/compile; passes/Test/compile; commands/Test/compile; riddlc/Test/compile; utils/test; language/test; passes/test; commands/test; riddlc/test; coverageAggregate"
 
       - name: Coverage Results Collection
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: code-coverage-report
           retention-days: 30
