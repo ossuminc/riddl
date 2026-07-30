@@ -187,7 +187,7 @@ jobs:
       run: |
         TAG="${{ github.event.release.tag_name || github.event.inputs.tag }}"
         if [ "${{ github.event.release.prerelease }}" = "true" ]; then
-          FORMULA="riddlc@rc"
+          FORMULA="riddlc-rc"
         else
           FORMULA="riddlc"
         fi

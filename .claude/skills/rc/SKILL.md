@@ -14,7 +14,7 @@ to ask for it **by name**, or an RC becomes what people get by accident.
 | GitHub | release | release marked **prerelease** |
 | Maven Central / GH Packages | `1.32.0` | `1.32.0-rc.1` (SemVer sorts it BELOW the release) |
 | npm | `latest` dist-tag | **`rc`** dist-tag — `npm publish --tag rc` |
-| Homebrew | `Formula/riddlc.rb` | **`Formula/riddlc@rc.rb`** |
+| Homebrew | `Formula/riddlc.rb` | **`Formula/riddlc-rc.rb`** |
 
 ## Naming
 
@@ -104,47 +104,39 @@ Blast radius if it happens: `^`/`~` ranges do NOT match prereleases, so pinned
 dependents are unaffected; only fresh unversioned installs are exposed. Recover
 with `npm dist-tag add @ossuminc/riddl-lib@<last-stable> latest`.
 
-### 4. Homebrew — **`riddlc@rc`**
+### 4. Homebrew — **`riddlc-rc`**
 
 **Built on both sides** (riddl `0850570c9`, homebrew-tap `50b2f28`).
 
 - `release.yml`'s `update-homebrew` job branches on
   `github.event.release.prerelease` and sends `client_payload[formula]` of
-  `riddlc@rc` or `riddlc`.
-- The tap has `Formula/riddlc@rc.rb` (class `RiddlcAtRc`) with `conflicts_with`
+  `riddlc-rc` or `riddlc`.
+- The tap has `Formula/riddlc-rc.rb` (class `RiddlcRc`) with `conflicts_with`
   in both directions, and `update-formula.yml` routes on that payload field,
   defaulting to `riddlc` when absent and rejecting any other value before it
   becomes a file path.
 
 NOT yet exercised end to end. On the FIRST RC, confirm the dispatch touched only
-`Formula/riddlc@rc.rb` and left `Formula/riddlc.rb` alone before announcing it.
+`Formula/riddlc-rc.rb` and left `Formula/riddlc.rb` alone before announcing it.
 
 Why a separate formula: Homebrew's `devel` block is deprecated and removed, and
 there is no prerelease flag, so a versioned formula is the only way to ship an RC
 without displacing the stable one. `brew upgrade` then tracks each line
 independently, and the formula NAME is the "experimental" marking — users opt in
-with `brew install ossuminc/tap/riddlc@rc`. (homebrew-core forbids unstable
+with `brew install ossuminc/tap/riddlc-rc`. (homebrew-core forbids unstable
 versions, but that governs the official tap, not ours.)
 
-**We use `conflicts_with`, and Homebrew's guidance says not to.** Its linter
-wants `keg_only :versioned_formula` for a versioned formula:
+**Why `riddlc-rc` and not `riddlc@rc`.** Homebrew derives a formula's class name
+from its filename, and the `@` -> `AT` conversion fires ONLY when `@` is followed
+by a DIGIT (`formulary.rb:453`). `riddlc@rc` therefore resolves to a class named
+`Riddlc@rc`, which is not valid Ruby, so the formula CANNOT BE LOADED — every
+`brew install` failed with "Expected to find class Riddlc@rc". `@`-suffixed names
+are for numeric version lines only.
 
-    FormulaAudit/Conflicts: Versioned formulae should not use conflicts_with.
-    Use keg_only :versioned_formula instead.
-
-This is a DELIBERATE divergence on ergonomics: an RC exists to BE the `riddlc` on
-your PATH while you exercise it, and `keg_only` would leave it unlinked,
-reachable only through
-`$(brew --prefix ossuminc/tap/riddlc@rc)/bin/riddlc`.
-
-The cost is one permanent advisory `FormulaAudit/Conflicts` offense from
-`brew style` on `riddlc@rc.rb`. It cannot be silenced — verified in the tap, not
-assumed: an inline `# rubocop:disable` is banned in formulae by
-`Style/DisableCopsWithinSourceCodeDirective`, and a tap-level `.rubocop.yml`
-exclusion has no effect because Homebrew forces its own `FormulaAudit` config.
-
-**Do not "fix" that offense by switching to `keg_only`** — it would silently
-break the ergonomics the divergence exists for.
+`riddlc@2` would have loaded, but it reads as "the 2.x line" and would mislead
+once 2.0.0 ships. A plain `riddlc-rc` gives class `RiddlcRc`, and — because it is
+not a VERSIONED formula — `conflicts_with` draws no `FormulaAudit/Conflicts`
+offense, so there is no lint divergence to justify.
 
 ### 5. Stage the binary
 
