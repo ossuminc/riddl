@@ -1065,7 +1065,10 @@ hygiene only).
 
 | Date     | Task |
 |----------|------|
-| Nov 2026 | Upgrade CodeQL Action v3 → v4. `.github/workflows/scala.yml` line 182: `github/codeql-action/upload-sarif@v3` → `@v4`. GitHub deprecates v3 in December 2026. |
+| At 2.0.0 final | **Drop `RIDDL_MODELS_BRANCH: release/2` from `scala.yml`** once the riddl-models 2.0 corpus merges to its `main`. The override exists because `RiddlModelsRoundTripTest` falls back to downloading a branch zip when there is no local checkout, and riddl-models `main` still holds 1.x models — so CI failed on the 2.0 grammar while local runs (reading the developer's `release/2` checkout) passed 189/189. The default in the test is `main`, so deleting the line is the whole fix. |
+
+The CodeQL v3 → v4 upgrade that sat here is DONE — `upload-sarif@v4` went in
+with the Node 20 action sweep, well ahead of its December 2026 deadline.
 
 ---
 
