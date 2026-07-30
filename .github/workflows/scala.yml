@@ -22,6 +22,12 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RIDDLC_PATH: target/out/native0.5/scala-3.9.0-RC4/riddlc/riddlc
+      # The corpus conforming to this branch lives on riddl-models `release/2`;
+      # its `main` still holds the 1.x models. Without this the round-trip test
+      # downloads `main` and fails against the 2.0 grammar — while local runs
+      # pass, because they use the developer's own checkout. REMOVE this line
+      # when riddl-models merges to `main` at 2.0.0 final.
+      RIDDL_MODELS_BRANCH: release/2
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
