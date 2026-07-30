@@ -27,8 +27,20 @@ object ThirdPartyNotices {
   /** Where the full license texts live in the distribution. */
   val noticesFile: String = "THIRD-PARTY-NOTICES.txt"
 
-  /** Where the full license texts live online. */
-  val noticesUrl: String = "https://ossum.tech/riddl/licenses/"
+  /** Where the full license texts live online.
+    *
+    * VERSION-PINNED on purpose, and not a stray path segment to be tidied away. These notices
+    * describe the dependencies of THIS release; a `/latest/` page would show someone holding riddlc
+    * 2.0 the notices of a future release that does not describe their artifact, which defeats the
+    * point of shipping notices. ossum.tech versions each product independently
+    * (`/riddl/<version>/…`), so an unversioned `/riddl/licenses/` cannot resolve at all --
+    * `licenses` would have to BE the version.
+    *
+    * Bump this with each documented minor release. The docs site keeps every version, so older
+    * binaries keep resolving. THIRD-PARTY-NOTICES.txt names the same URL in its prose and must be
+    * bumped with it.
+    */
+  val noticesUrl: String = "https://ossum.tech/riddl/2.0/licenses/"
 
   /** One-line-per-project attribution, grouped by license.
     *

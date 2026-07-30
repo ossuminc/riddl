@@ -10,7 +10,7 @@ distributed with riddl, together with the notices those licenses require us to
 reproduce. Our thanks to every author and maintainer named here.
 
 A one-line-per-project summary of this file is printed by `riddlc info`. The
-same information is published at https://ossum.tech/riddl/licenses/.
+same information is published at https://ossum.tech/riddl/2.0/licenses/.
 
 Every license below is permissive. riddl deliberately carries no copyleft
 dependency: logback-core (EPL-1.0 / LGPL-2.1) used to arrive transitively

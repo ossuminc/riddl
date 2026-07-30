@@ -46,7 +46,7 @@ class ThirdPartyNoticesTest extends AbstractTestingBasis {
     }
 
     "point at the published license page" in {
-      ThirdPartyNotices.noticesUrl mustBe "https://ossum.tech/riddl/licenses/"
+      ThirdPartyNotices.noticesUrl mustBe "https://ossum.tech/riddl/2.0/licenses/"
       ThirdPartyNotices.formatted must include(ThirdPartyNotices.noticesUrl)
     }
 
