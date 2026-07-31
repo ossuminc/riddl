@@ -122,16 +122,16 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **1699** | 7 |
-| JS | **591** | 5 |
-| Native | **1565** | 7 |
+| JVM | **1707** | 7 |
+| JS | **599** | 5 |
+| Native | **1573** | 7 |
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks
 reality; never lower them to make a run pass. A number below the floor is a
 skipping bug to find, not a threshold to adjust.
 
-Set as of 2.0.0-rc.4. Local `testOnly *` totals differ from CI's because
+Set as of 2.0.0-rc.5. Local `testOnly *` totals differ from CI's because
 platform-specific suites vary, so compare CI against CI and local against
 local.
 
@@ -342,6 +342,11 @@ npm dist-tag add @ossuminc/riddl-lib@1.32.0 latest
 ## Red flags
 
 - Certifying incrementally instead of from clean, when code HAS changed.
+- Verifying a shared-code change on JVM and JS only. Scala NATIVE is the row
+  that breaks differently: it rejects regex lookahead the other two accept, and
+  a pattern compiled in a `val` fails at class INITIALISATION, surfacing as a
+  Severe message with EMPTY text that names nothing. `passesNative/testOnly *`
+  is one command; rc.5 was pushed twice without it.
 - Lowering the minimum test counts so a run passes, instead of finding the
   skipping bug.
 - Reading `92/113` as "21 failures" — or ignoring a non-empty Unexpected list.
