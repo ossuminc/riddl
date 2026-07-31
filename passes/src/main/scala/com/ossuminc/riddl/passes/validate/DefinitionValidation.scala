@@ -432,8 +432,14 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     * in riddlc beats noticing it in a generator.
     */
   // `AST.Set` shadows `scala.Set` in this file, hence the qualification.
-  private val temporalOptions: scala.collection.immutable.Set[String] =
-    scala.collection.immutable.Set("timeout", "delay")
+  /** Which ARGUMENT of a temporal option states a duration, by option name.
+    *
+    * Not a flat set, because the duration is not always the first argument: `retry("3", "2s")`
+    * takes a COUNT then an optional backoff, so only index 1 is a duration. Mapping name to
+    * index keeps the check honest as options are added.
+    */
+  private val temporalArgIndex: Map[String, Int] =
+    Map("timeout" -> 0, "delay" -> 0)
 
   /** ISO-8601 durations (`PT1M30S`, `P1DT2H`). `java.time.Duration.parse` handles these but is
     * JVM-only, and this validation must behave identically under Scala.js and Native, so the
@@ -455,34 +461,63 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   private def isIso8601Duration(text: String): Boolean =
     iso8601Duration.matches(text) && text.exists(_.isDigit)
 
-  /** Reject a temporal option whose argument is not a PRECISE duration.
+  /** True when an ISO-8601 duration names at least one NON-ZERO component.
     *
-    * A bare number is the case worth catching: `timeout("30")` is ambiguous between seconds and
-    * milliseconds, and every generator has to guess. `scala.concurrent.duration.Duration` rejects
-    * it and accepts `30s`, `1500 ms`, `5 minutes`; ISO-8601 is accepted separately because
-    * riddl-generator already documents that form and rejecting it would break working models.
+    * The shape carries no sign, so a negative ISO duration cannot be written and zero is the
+    * only non-positive case. Checking the digits directly avoids parsing: `PT0S` and `P0D` have
+    * digits but no magnitude, which `isIso8601Duration` alone cannot tell apart from `PT1S`.
+    */
+  private def isPositiveIso8601(text: String): Boolean =
+    text.exists(c => c.isDigit && c != '0')
+
+  /** Reject a temporal option argument that is not a PRECISE, POSITIVE duration.
     *
-    * An ERROR rather than a warning: unlike an unrecognized option name, which a generator can
-    * ignore, an unreadable duration has no sensible fallback -- silently substituting a default
-    * would give the model a bound its author never wrote.
+    * Two distinct defects, two distinct messages, because they need different fixes:
+    *
+    *   - VAGUE: `timeout("30")` is ambiguous between seconds and milliseconds and every
+    *     generator has to guess. `scala.concurrent.duration.Duration` rejects a bare number and
+    *     accepts `30s`, `1500 ms`, `5 minutes`; ISO-8601 is accepted separately because
+    *     riddl-generator documents that form and rejecting it would break working models.
+    *   - NON-POSITIVE: `timeout("0s")` is perfectly readable and still unusable -- a saga
+    *     bounded by zero has expired before its first step starts, and `delay("0s")` says
+    *     nothing that omitting the option does not say better.
+    *
+    * ERRORS rather than warnings in both cases: unlike an unrecognized option NAME, which a
+    * generator can ignore, neither of these has a sensible fallback. Inventing a positive bound
+    * where the author wrote zero hands the model a bound its author never wrote -- the same
+    * objection that made the vague case an error.
     */
   private def validateTemporalArgument(option: OptionValue, identity: String): Unit =
-    if temporalOptions.contains(option.name) then
-      option.args.headOption.foreach { arg =>
+    temporalArgIndex.get(option.name).foreach { index =>
+      option.args.lift(index).foreach { arg =>
         val text = arg.s.trim
-        val readable =
-          scala.util.Try(scala.concurrent.duration.Duration(text)).filter(_.isFinite).isSuccess ||
-            isIso8601Duration(text)
-        check(
-          readable,
-          s"Option '${option.name}' in $identity has a vague duration '$text';" +
-            " it must state a unit",
-          Messages.Error,
-          arg.loc,
-          suggestion = "Use a precise duration such as '30s', '1500ms', '5 minutes' or 'PT1M30S';" +
-            " a bare number is ambiguous between seconds and milliseconds."
-        )
+        val parsed = scala.util.Try(scala.concurrent.duration.Duration(text)).toOption
+          .filter(_.isFinite)
+        val isIso = isIso8601Duration(text)
+        if parsed.isEmpty && !isIso then
+          messages.addError(
+            arg.loc,
+            s"Option '${option.name}' in $identity has a vague duration '$text';" +
+              " it must state a unit",
+            suggestion =
+              "Use a precise duration such as '30s', '1500ms', '5 minutes' or 'PT1M30S';" +
+                " a bare number is ambiguous between seconds and milliseconds."
+          )
+        else
+          val positive =
+            parsed.map(_ > scala.concurrent.duration.Duration.Zero).getOrElse(isPositiveIso8601(text))
+          check(
+            positive,
+            s"Option '${option.name}' in $identity has a non-positive duration '$text';" +
+              " it must be positive",
+            Messages.Error,
+            arg.loc,
+            suggestion = s"Give '${option.name}' a duration greater than zero, or remove the" +
+              " option entirely if no bound is intended."
+          )
+        end if
       }
+    }
   end validateTemporalArgument
 
   private def validateRecognizedOption(

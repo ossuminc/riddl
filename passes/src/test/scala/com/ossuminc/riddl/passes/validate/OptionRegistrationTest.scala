@@ -104,6 +104,43 @@ class OptionRegistrationTest extends AbstractValidatingTest {
     }
   }
 
+  "a non-positive duration" should {
+    // Readable but unusable: a saga bounded by zero has expired before its first step starts.
+    // Distinct message from the vague case, because the fix is different.
+    "reject zero" in { (td: TestData) =>
+      val msgs = messagesFor(sagaWith("""option timeout("0s")"""), td)
+      val nonPositive = msgs.filter(_.message.contains("non-positive duration"))
+      withClue(s"messages were: ${clue(msgs)}") {
+        nonPositive must not be empty
+        nonPositive.head.isError mustBe true
+      }
+    }
+
+    "reject a negative duration" in { (td: TestData) =>
+      val msgs = messagesFor(sagaWith("""option timeout("-1m")"""), td)
+      withClue(s"messages were: ${clue(msgs)}") {
+        msgs.filter(_.message.contains("non-positive duration")) must not be empty
+      }
+    }
+
+    "reject ISO-8601 zero, which the shape check alone admits" in { (td: TestData) =>
+      // PT0S matches the ISO shape and contains a digit, so only a magnitude test catches it.
+      val msgs = messagesFor(sagaWith("""option timeout("PT0S")"""), td)
+      withClue(s"messages were: ${clue(msgs)}") {
+        msgs.filter(_.message.contains("non-positive duration")) must not be empty
+      }
+    }
+
+    "call a vague duration vague, not non-positive" in { (td: TestData) =>
+      // The two defects need different fixes, so they must not share a message.
+      val msgs = messagesFor(sagaWith("""option timeout("30")"""), td)
+      withClue(s"messages were: ${clue(msgs)}") {
+        msgs.filter(_.message.contains("vague duration")) must not be empty
+        msgs.filter(_.message.contains("non-positive duration")) mustBe empty
+      }
+    }
+  }
+
   "readable duration spellings" should {
     // riddl-generator documents all of these, so riddlc must not reject a form that already
     // works in a shipping generator.
@@ -123,6 +160,7 @@ class OptionRegistrationTest extends AbstractValidatingTest {
         val msgs = messagesFor(sagaWith(s"""option timeout("$form")"""), td)
         withClue(s"form '$form' — messages were: ${clue(msgs)}") {
           msgs.filter(_.message.contains("vague duration")) mustBe empty
+          msgs.filter(_.message.contains("non-positive duration")) mustBe empty
         }
       }
       succeed
