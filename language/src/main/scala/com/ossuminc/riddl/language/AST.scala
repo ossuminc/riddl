@@ -41,6 +41,32 @@ object AST:
     /** The point location in the parse at which this RiddlValue occurs */
     def loc: At
 
+    /** The character span this value occupies in its source file, as `(start, end)` offsets.
+      *
+      * `None` when the location is unknown ([[At.empty]]) — a value built programmatically or
+      * rebuilt from a serialization that carried no offsets. Any tool that EDITS RIDDL source in
+      * place needs this, and deriving it by re-scanning the text is how you delete the wrong
+      * range.
+      *
+      * These are character offsets into [[declaringFile]], not line/column: a definition needs a
+      * start AND an end, which costs two integers here and two pairs in line/column form.
+      */
+    def span: Option[(Int, Int)] =
+      if loc == At.empty then None else Some(loc.offset -> loc.endOffset)
+
+    /** The file that DECLARED this value, as an origin string, or `None` if unknown.
+      *
+      * This survives [[com.ossuminc.riddl.passes.FlattenPass]]: it comes from the parser input the
+      * value was parsed from, not from the enclosing `Include` wrapper, so it is still correct
+      * after includes are folded away. That is the property multi-file editing tools need — "which
+      * file do I write this change into?" — and it is why they should NOT reconstruct provenance
+      * from `Include.origin` before flattening, nor key definitions by a synthetic
+      * `(kind, id, line, col)` tuple, which collides across files.
+      */
+    def declaringFile: Option[String] =
+      val o = loc.source.origin
+      if o.isEmpty || o == "empty" then None else Some(o)
+
     /** Provide a string to specify the kind of thing this value is with default derived from class
       * name
       */
@@ -1189,6 +1215,26 @@ object AST:
       * fall back to [[Void]] here rather than crashing.
       */
     def effectiveShape: StreamletShape = ascribedShape.getOrElse(arityShape)
+
+    /** Every port on this processor, inlets and outlets together, in that order.
+      *
+      * A convenience over `inlets ++ outlets` that UI consumers were each writing by hand.
+      */
+    def ports: Seq[Portlet] = inlets ++ outlets
+
+    /** True when [[effectiveShape]] is a [[Source]] — no inlets, one outlet.
+      *
+      * Asks about the EFFECTIVE shape, so an ascribed `as source` and a shape derived from arity
+      * answer the same. Consumers hand-rolling this off `ascribedShape` alone get the wrong answer
+      * for the (common) unascribed case.
+      */
+    def isSource: Boolean = effectiveShape.isInstanceOf[Source]
+
+    /** True when [[effectiveShape]] is a [[Sink]] — one inlet, no outlets. See [[isSource]]. */
+    def isSink: Boolean = effectiveShape.isInstanceOf[Sink]
+
+    /** True when [[effectiveShape]] is a [[Flow]] — one inlet, one outlet. See [[isSource]]. */
+    def isFlow: Boolean = effectiveShape.isInstanceOf[Flow]
   end Processor
 
   ///////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
@@ -1325,60 +1371,22 @@ object AST:
   end Root
   ////////////////////////////////////////////////////////////////////////////////////////// NEBULA
 
-  /** The nebula of arbitrary definitions. This allows any named definition in its contents without
-    * regard to intended structure of those things. This can be used as a general "scratchpad".
+  /** Deprecated alias for [[Module]].
     *
-    * '''Deprecated.''' [[Module]] subsumes this type entirely: as of RIDDL 2.0 a [[Module]] holds
-    * the same wide [[NebulaContents]] union, is likewise a flat collection with no enforced
-    * hierarchy, and is the BAST serialization root. Nothing in RIDDL produces a `Nebula` any more —
-    * the anonymous `nebula` parse entry point yields a [[Module]] with the synthetic id
-    * [[Module.syntheticId]]. The type is retained only so existing source keeps compiling.
+    * `Nebula` was RIDDL 1.x's flat scratchpad of arbitrary definitions. [[Module]] subsumes it
+    * entirely — same wide contents union, same absence of enforced hierarchy, and it is the BAST
+    * serialization root — so nothing in RIDDL has produced a `Nebula` since 2.0: the anonymous
+    * `nebula` parse entry point yields a [[Module]] with [[Module.syntheticId]].
     *
-    * @param contents
-    *   The nebula of unrelated single definitions
+    * It is an ALIAS rather than a deprecated class because a deprecated member of a sealed
+    * hierarchy is a trap for consumers: an exhaustive match over [[Branch]] had to either omit the
+    * case (`[E029] match may not be exhaustive`) or include it (deprecation warning), and under
+    * `-Werror` both are build failures with no clean way out. Synapify and riddl-generator both
+    * hit it. As an alias the name keeps compiling in type positions and stops existing as a
+    * separate case to match — the same treatment [[Abstract]] and [[ReplyStatement]] received.
     */
   @deprecated("Use Module instead; a Module is a flat bag of any top-level definition", "2.0.0")
-  case class Nebula(
-    loc: At,
-    contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
-  ) extends Branch[NebulaContents]
-      with WithAdaptors[NebulaContents]
-      with WithAuthors[NebulaContents]
-      with WithComments[NebulaContents]
-      with WithConstants[NebulaContents]
-      with WithContexts[NebulaContents]
-      with WithDomains[NebulaContents]
-      with WithEntities[NebulaContents]
-      with WithEpics[NebulaContents]
-      with WithFunctions[NebulaContents]
-      with WithInvariants[NebulaContents]
-      with WithModules[NebulaContents]
-      with WithProjectors[NebulaContents]
-      with WithRepositories[NebulaContents]
-      with WithSagas[NebulaContents]
-      with WithStreamlets[NebulaContents]
-      with WithTypes[NebulaContents]
-      with WithUsers[NebulaContents]:
-
-    def metadata: Contents[MetaData] = Contents.empty[MetaData](0)
-
-    override def isRootContainer: Boolean = false
-
-    override def id: Identifier = Identifier(loc, "Nebula")
-
-    override def identify: String = "Nebula"
-
-    override def identifyWithLoc: String = "Nebula"
-
-    def format: String = "Nebula"
-  end Nebula
-
-  @deprecated("Use Module instead", "2.0.0")
-  object Nebula:
-
-    /** The value to use for an empty [[Nebula]] instance */
-    val empty: Nebula = Nebula(At.empty, Contents.empty[NebulaContents]())
-  end Nebula
+  type Nebula = Module
 
   ////////////////////////////////////////////////////////////////////////////////////////// MODULE
 
@@ -1444,7 +1452,12 @@ object AST:
       * wherever a Module-rooted BAST file has to be handed to code that expects a Root.
       */
     def toRoot(module: Module): Root =
-      val items: Seq[RootContents] = module.contents.toSeq.flatMap {
+      // RECURSES into Include wrappers. Without this an `include` at the top level matched the
+      // catch-all below and the entire included file vanished with no diagnostic -- the caller
+      // got a Root that simply lacked those definitions. The Include node itself is kept, so
+      // structure survives for callers that have not flattened yet; its CONTENTS are what needed
+      // lifting into the Root-legal set.
+      def rootItemsOf(values: Seq[RiddlValue]): Seq[RootContents] = values.flatMap {
         case d: Domain      => Some(d: RootContents)
         case m: Module      => Some(m: RootContents)
         case a: Author      => Some(a: RootContents)
@@ -1452,9 +1465,10 @@ object AST:
         case v: Version     => Some(v: RootContents)
         case c: Copyright   => Some(c: RootContents)
         case bi: BASTImport => Some(bi: RootContents)
-        case _              => None // not valid at Root level
+        case inc: Include[?] => rootItemsOf(inc.contents.toSeq)
+        case _              => None // genuinely not valid at Root level
       }
-      Root(module.loc, Contents[RootContents](items*))
+      Root(module.loc, Contents[RootContents](rootItemsOf(module.contents.toSeq)*))
     end toRoot
 
     /** The value to use for an empty [[Module]] instance */
@@ -4136,6 +4150,23 @@ object AST:
       with WithSagas[ContextContents]
       with WithGroups[ContextContents] {
     def format: String = Keyword.context + " " + id.format
+
+    /** True when this context is declared with the `application` intention.
+      *
+      * Reads [[intention]], which is `None` for a plain `context`. UI consumers were each writing
+      * `intention.contains(Intention.Application)` by hand; the predicate is here so the
+      * representation can change without breaking them.
+      */
+    def isApplication: Boolean = intention.contains(Intention.Application)
+
+    /** True when declared with the `external` intention. See [[isApplication]]. */
+    def isExternal: Boolean = intention.contains(Intention.External)
+
+    /** True when declared with the `gateway` intention. See [[isApplication]]. */
+    def isGateway: Boolean = intention.contains(Intention.Gateway)
+
+    /** True when declared with the `service` intention. See [[isApplication]]. */
+    def isService: Boolean = intention.contains(Intention.Service)
   }
 
   @JSExportTopLevel("Context$")

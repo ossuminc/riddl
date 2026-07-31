@@ -268,6 +268,26 @@ trait RiddlLib:
     bytes: Array[Byte]
   )(using PlatformContext): RiddlResult[Root]
 
+  /** Read BAST bytes back into a Root, WITHOUT flattening.
+    *
+    * BAST's serialization root is a [[Module]], but what a consumer serialized was a [[Root]], so
+    * every consumer otherwise has to know which contents are Root-legal AND that top-level
+    * `Include` wrappers must be recursed into — miss that and whole included files vanish with no
+    * diagnostic. That knowledge belongs here, not in each tool.
+    *
+    * Use this rather than [[bast2FlatAST]] when you need the include structure intact — a
+    * multi-file editor deciding which file to write a change into needs the unflattened tree.
+    * Flatten afterwards if you want the single-file view.
+    *
+    * @param bytes
+    *   The BAST binary data
+    * @return
+    *   Success(Root) preserving Include structure, Failure(Messages) on failure
+    */
+  def bast2Root(
+    bytes: Array[Byte]
+  )(using PlatformContext): RiddlResult[Root]
+
   /** Convert a parsed AST Root to RIDDL source text.
     *
     * Runs PrettifyPass with flatten=true to regenerate RIDDL source code from the AST as a single
@@ -848,6 +868,12 @@ object RiddlLib extends RiddlLib:
       flattenAST(Module.toRoot(module))
     }
   end bast2FlatAST
+
+  override def bast2Root(
+    bytes: Array[Byte]
+  )(using PlatformContext): RiddlResult[Root] =
+    RiddlResult.fromEither(BASTReader.read(bytes)).map(Module.toRoot)
+  end bast2Root
 
   override def root2RiddlSource(
     root: Root
