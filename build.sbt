@@ -21,6 +21,39 @@ lazy val startYear: Int = 2019
 // the person the attribution is for, and Apache-2.0 s4(d) asks that the NOTICE
 // content travel WITH the redistribution. `riddlc info` prints a one-line-per-
 // project summary and points at this file by name, so the name must not drift.
+// A module that compiles ZERO sources publishes an EMPTY jar and reports success.
+// riddl-testkit did exactly that in 2.0.0-rc.1 and rc.2: its five "main sources"
+// were committed symlinks still pointing at the pre-restructure <mod>/shared/src
+// layout, so every one dangled, sbt's source scan skipped them, and a 310-byte jar
+// with nothing but a manifest went to GitHub Packages. Nothing failed -- not the
+// tri-platform suite, not CI, not the registry check -- because zero sources is not
+// an error. Synapify found it by trying to compile against it.
+//
+// Guarding on SOURCES rather than class files catches it earlier and states the
+// cause; a module legitimately without sources (an aggregator) simply does not get
+// this setting.
+lazy val nonEmptySources = taskKey[Unit](
+  "Fail the build if this module has no Compile sources, rather than publishing an empty jar"
+)
+
+lazy val guardEmptyModule: Seq[Setting[?]] = Seq(
+  // Def.uncached, for the same reason the riddlc sbt tasks needed it: this returns
+  // Unit, which sbt 2 CAN cache, and its real input is a directory scan. Without it
+  // the guard passes once and is a no-op forever after -- caught by deleting the
+  // sources and watching it still report success.
+  nonEmptySources := Def.uncached {
+    val srcs = (Compile / sources).value
+    if (srcs.isEmpty) {
+      sys.error(
+        s"${moduleName.value}: ZERO Compile sources -- this would publish an empty jar. " +
+          "Most likely a dangling symlink under src/main (check with: " +
+          "find <mod>/src/main -name '*.scala' -exec test -e {} \\; -o -print)."
+      )
+    }
+  },
+  Compile / packageBin := (Compile / packageBin).dependsOn(nonEmptySources).value
+)
+
 lazy val thirdPartyNotices = Universal / mappings += {
   // sbt 2 mappings are (HashedVirtualFileRef, String), not (File, String) --
   // everything goes through the virtual FS, so a plain java.io.File will not
@@ -108,6 +141,7 @@ lazy val quietCoverageSkips = Seq(
 )
 
 lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native)
+  .settings(guardEmptyModule)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -187,6 +221,7 @@ lazy val utilsNative = utils_cp.native
 
 val Language = config("language")
 lazy val language_cp = CrossModule("language", "riddl-language", V.scala)(JVM, JS, Native)
+  .settings(guardEmptyModule)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -239,6 +274,7 @@ lazy val languageNative = language_cp.native.dependsOn(pDep(utilsNative))
 
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes", V.scala)(JVM, JS, Native)
+  .settings(guardEmptyModule)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -272,6 +308,7 @@ val passesJS = passes_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS))
 val passesNative = passes_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative))
 
 lazy val testkit_cp = CrossModule("testkit", "riddl-testkit", V.scala)(JVM, JS, Native)
+  .settings(guardEmptyModule)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -307,6 +344,7 @@ val testkitNative =
   testkit_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
 
 lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Native)
+  .settings(guardEmptyModule)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -362,6 +400,7 @@ val riddlLibNative =
 
 val Commands = config("commands")
 lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, Native)
+  .settings(guardEmptyModule)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
@@ -387,6 +426,7 @@ val commandsNative =
 
 val Riddlc = config("riddlc")
 lazy val riddlc_cp = CrossModule("riddlc", "riddlc", V.scala)(JVM, Native)
+  .settings(guardEmptyModule)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
   .configure(With.noMiMa)
   .settings(

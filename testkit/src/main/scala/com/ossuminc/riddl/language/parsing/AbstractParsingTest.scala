@@ -1,1 +1,1 @@
-../../../../../../../../../../language/shared/src/test/scala/com/ossuminc/riddl/language/parsing/AbstractParsingTest.scala
+../../../../../../../../../language/src/test/scala/com/ossuminc/riddl/language/parsing/AbstractParsingTest.scala

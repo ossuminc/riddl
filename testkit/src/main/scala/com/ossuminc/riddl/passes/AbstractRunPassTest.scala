@@ -1,1 +1,1 @@
-../../../../../../../../../passes/shared/src/test/scala/com/ossuminc/riddl/passes/AbstractRunPassTest.scala
+../../../../../../../../passes/src/test/scala/com/ossuminc/riddl/passes/AbstractRunPassTest.scala
