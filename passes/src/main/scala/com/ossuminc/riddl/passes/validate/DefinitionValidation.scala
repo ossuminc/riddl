@@ -438,9 +438,22 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   /** ISO-8601 durations (`PT1M30S`, `P1DT2H`). `java.time.Duration.parse` handles these but is
     * JVM-only, and this validation must behave identically under Scala.js and Native, so the
     * shape is matched directly.
+    *
+    * NO LOOKAHEAD. The first version used `(?!$)` and `(?=\d)` to reject a bare `P` or `PT`,
+    * which the JVM and Scala.js both accept but Scala NATIVE does not: the pattern is a `val`
+    * compiled at class initialisation, so it threw before any validation ran and surfaced as a
+    * Severe message with EMPTY text -- every predefined-module test failed on the Native row
+    * alone with `Message(empty(0->0), "", Severe, ...)`. The degenerate cases are rejected by
+    * the digit check in [[isIso8601Duration]] instead.
     */
   private val iso8601Duration =
-    """^P(?!$)(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$""".r
+    """^P(\d+D)?(T(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$""".r
+
+  /** True for an ISO-8601 duration carrying at least one component. The digit test is what
+    * rejects a bare `P` or `PT`, which the shape above would otherwise admit.
+    */
+  private def isIso8601Duration(text: String): Boolean =
+    iso8601Duration.matches(text) && text.exists(_.isDigit)
 
   /** Reject a temporal option whose argument is not a PRECISE duration.
     *
@@ -459,7 +472,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         val text = arg.s.trim
         val readable =
           scala.util.Try(scala.concurrent.duration.Duration(text)).filter(_.isFinite).isSuccess ||
-            iso8601Duration.matches(text)
+            isIso8601Duration(text)
         check(
           readable,
           s"Option '${option.name}' in $identity has a vague duration '$text';" +
