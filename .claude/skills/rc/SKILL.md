@@ -300,12 +300,25 @@ moves. Without it the freshly linked binary cheerfully reports the PREVIOUS
 version — verified on 2.0.0-rc.2, where `show version` returned
 `2.0.0-rc.1-13-<hash>` from a server started before the tag existed.
 
-**Do NOT copy the binary to `~/Code/ossuminc/bin/`.** That staging existed so the
-riddl-models corpus could be corrected against new semantics while compiler work
-continued in parallel; riddl-models is on 2.0 now, so the practice is retired and
-the directory is gone. Anyone wanting the RC binary gets it from the tap:
-`brew upgrade ossuminc/tap/riddlc-rc`. This step is now just a sanity check that
-the tag produced a binary reporting the right version.
+**Do not copy the binary to `~/Code/ossuminc/bin/` as a ROUTINE step.** Anyone
+wanting a released RC gets it from the tap: `brew upgrade
+ossuminc/tap/riddlc-rc`. For an ordinary release this step is just a sanity check
+that the tag produced a binary reporting the right version.
+
+**But DO stage one when a consumer needs a rule that has not shipped.** That is
+what the directory is for, and it recurs: riddl-models could not merge its
+duplicate adaptors until it had a riddlc that could FIND them, and no release
+had the check. Build it, `mkdir -p ~/Code/ossuminc/bin`, copy, and verify it
+enforces the new rule before telling anyone it is ready:
+
+```bash
+sbt "reload; riddlcNative/nativeLink"
+cp target/out/native0.5/scala-<ver>/riddlc/riddlc ~/Code/ossuminc/bin/riddlc
+~/Code/ossuminc/bin/riddlc from <a-model-that-violates-it>.conf validate   # must complain
+```
+
+An earlier version of this step said never to stage one at all. That was written
+when the practice was retired and proved too absolute within the day.
 
 ### 6. Soak, then iterate or promote
 
