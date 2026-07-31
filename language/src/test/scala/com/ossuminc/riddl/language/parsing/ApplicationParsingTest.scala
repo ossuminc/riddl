@@ -94,6 +94,55 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
           )
       }
     }
+    "accepts the imperative `activate` alongside `activates`" in { (td: TestData) =>
+      // `button Checkout activate Confirmation` is the reading authors reach for when the
+      // input is a button, and it used to be a bare parse error at the verb. `activate` is the
+      // ONE imperative in an otherwise third-person list -- deliberately, so the neighbours'
+      // imperatives staying rejected is asserted below rather than left to assumption.
+      val input = RiddlParserInput(
+        """
+          |domain foo {
+          |context foo2 {
+          |  page p is {
+          |    button confirm activate String is { ??? }
+          |    button legacy activates String is { ??? }
+          |  }
+          |}
+          |}""".stripMargin,
+        td
+      )
+      parseDefinition[Domain](input) match {
+        case Left(messages: Messages) => fail(messages.format)
+        case Right((dom: Domain, _)) =>
+          val inputs = dom.contexts.head.groups.head.contents.toSeq.collect { case i: Input => i }
+          inputs.map(_.verbAlias) must contain theSameElementsAs Seq("activate", "activates")
+      }
+    }
+
+    "still rejects the imperative forms of the neighbouring verbs" in { (td: TestData) =>
+      // Scope guard. `activate` was added alone; pairing the whole vocabulary would double what
+      // a reader must recognise. If someone later adds `trigger` and friends, this fails and
+      // they must decide deliberately rather than drift into it.
+      Seq("trigger", "start", "submit", "select").foreach { verb =>
+        val input = RiddlParserInput(
+          s"""
+             |domain foo {
+             |context foo2 {
+             |  page p is {
+             |    button b $verb String is { ??? }
+             |  }
+             |}
+             |}""".stripMargin,
+          td
+        )
+        parseDefinition[Domain](input) match {
+          case Left(_)  => succeed
+          case Right(_) => fail(s"'$verb' parsed as an acquisition verb but should not")
+        }
+      }
+      succeed
+    }
+
     "supports 'shown by' in groups" in { (td: TestData) =>
       val input = RiddlParserInput(
         """

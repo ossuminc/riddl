@@ -106,6 +106,14 @@ private[parsing] trait GroupParser extends CommonParser:
     // acquired value is one of a closed set of choices; the rest are entry/workflow verbs.
     // Keep this whitelist in sync with the EBNF `acquisition_aliases` rule and with
     // `UIVerbs.selectionVerbs` used by input validation.
+    //
+    // The list is THIRD-PERSON SINGULAR, with one deliberate exception: `activate`.
+    // `button Checkout activate Confirmation` is the reading most authors reach for when the
+    // input is a button, and the failure was a bare parse error at the verb with no
+    // suggestion. The imperative forms of the neighbours (`trigger`, `start`, `submit`,
+    // `select`, …) are NOT accepted -- pairing the whole vocabulary would double what a reader
+    // must recognise for no gain, since only the button reading is idiomatic. Requested by
+    // ossum.tech, 2026-07-31.
     StringIn(
       "acquires",
       "reads",
@@ -121,6 +129,7 @@ private[parsing] trait GroupParser extends CommonParser:
       "submits",
       "triggers",
       "activates",
+      "activate",
       "starts"
     ).!
   }
