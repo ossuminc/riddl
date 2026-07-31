@@ -93,8 +93,13 @@ object RecognizedOptions:
     // All are simple markers with no arguments.
     "event-sourced" -> OptionSpec(Seq("Entity"), 0, 0),
     "value" -> OptionSpec(Seq("Entity"), 0, 0),
-    "consistent" -> OptionSpec(Seq("Entity"), 0, 0),
-    "available" -> OptionSpec(Seq("Entity"), 0, 0),
+    // CAP markers. Meaningful on a Repository as well as an Entity: the computational model
+    // (§5.6) rules that a Repository is a Processor, so its WRITE side is single-writer by
+    // default and `available` hands write arbitration to the storage engine, permitting
+    // concurrent writes. Queries are side-effect-free and always concurrent either way. Same
+    // "meaningful on both" reasoning as `transient` below.
+    "consistent" -> OptionSpec(Seq("Entity", "Repository"), 0, 0),
+    "available" -> OptionSpec(Seq("Entity", "Repository"), 0, 0),
     "message-queue" -> OptionSpec(Seq("Entity"), 0, 0),
     // `transient` marks state that is NOT durably persisted. That is meaningful both
     // for an Entity and for a Repository (a cache-like, non-durable store).
@@ -102,8 +107,14 @@ object RecognizedOptions:
     // Epic-level marker: the epic's interactions are synchronous.
     "sync" -> OptionSpec(Seq("Epic"), 0, 0),
     // Temporal options (C1)
+    // "Saga" added for A10: a saga-level timeout is the THIRD terminal condition of a
+    // `parallel` saga (computational model §9.8) -- (a) all steps succeed, (b) a failure is
+    // observed and successful steps are compensated, (c) the timeout expires. Condition (c)
+    // had no expression in the language, so a generator had to invent a default and two sagas
+    // in one model could not be given different bounds. The step-level timeout bounds a step,
+    // not the run.
     "timeout" -> OptionSpec(
-      Seq("SagaStep", "Handler", "On Message"),
+      Seq("Saga", "SagaStep", "Handler", "On Message"),
       1,
       1
     ),

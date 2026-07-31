@@ -427,6 +427,51 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     * definition type compatibility. Unrecognized options produce style warnings to keep the system
     * extensible.
     */
+  /** Options whose FIRST argument states a duration. Their values are a contract for code
+    * generators, but a value nobody can read is a defect wherever it is noticed, and noticing it
+    * in riddlc beats noticing it in a generator.
+    */
+  // `AST.Set` shadows `scala.Set` in this file, hence the qualification.
+  private val temporalOptions: scala.collection.immutable.Set[String] =
+    scala.collection.immutable.Set("timeout", "delay")
+
+  /** ISO-8601 durations (`PT1M30S`, `P1DT2H`). `java.time.Duration.parse` handles these but is
+    * JVM-only, and this validation must behave identically under Scala.js and Native, so the
+    * shape is matched directly.
+    */
+  private val iso8601Duration =
+    """^P(?!$)(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$""".r
+
+  /** Reject a temporal option whose argument is not a PRECISE duration.
+    *
+    * A bare number is the case worth catching: `timeout("30")` is ambiguous between seconds and
+    * milliseconds, and every generator has to guess. `scala.concurrent.duration.Duration` rejects
+    * it and accepts `30s`, `1500 ms`, `5 minutes`; ISO-8601 is accepted separately because
+    * riddl-generator already documents that form and rejecting it would break working models.
+    *
+    * An ERROR rather than a warning: unlike an unrecognized option name, which a generator can
+    * ignore, an unreadable duration has no sensible fallback -- silently substituting a default
+    * would give the model a bound its author never wrote.
+    */
+  private def validateTemporalArgument(option: OptionValue, identity: String): Unit =
+    if temporalOptions.contains(option.name) then
+      option.args.headOption.foreach { arg =>
+        val text = arg.s.trim
+        val readable =
+          scala.util.Try(scala.concurrent.duration.Duration(text)).filter(_.isFinite).isSuccess ||
+            iso8601Duration.matches(text)
+        check(
+          readable,
+          s"Option '${option.name}' in $identity has a vague duration '$text';" +
+            " it must state a unit",
+          Messages.Error,
+          arg.loc,
+          suggestion = "Use a precise duration such as '30s', '1500ms', '5 minutes' or 'PT1M30S';" +
+            " a bare number is ambiguous between seconds and milliseconds."
+        )
+      }
+  end validateTemporalArgument
+
   private def validateRecognizedOption(
     option: OptionValue,
     identity: String,
@@ -441,6 +486,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         suggestion = s"Replace option '${option.name}' with ${dep.replacement}."
       )
     }
+    validateTemporalArgument(option, identity)
     RecognizedOptions.registry.get(option.name) match
       case Some(spec) =>
         val argCount = option.args.size

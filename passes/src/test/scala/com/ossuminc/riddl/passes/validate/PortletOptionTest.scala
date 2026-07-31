@@ -77,8 +77,8 @@ class PortletOptionTest extends AbstractValidatingTest {
     *
     * Not `mkString`/`toString`: `Message.toString` goes through `ScalaRunTime._toString`, which
     * under Scala.js throws `TypeError: Cannot convert object to primitive value`. The clue then
-    * blows up while REPORTING a failure, turning every case in this suite red on the JS row for
-    * a reason unrelated to what it tests.
+    * blows up while REPORTING a failure, turning every case in this suite red on the JS row for a
+    * reason unrelated to what it tests.
     */
   private def clue(msgs: Messages): String =
     msgs.map(_.message).mkString("\n")
