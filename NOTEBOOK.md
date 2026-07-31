@@ -15,6 +15,32 @@ to the task file and note the disposition below.
 
 ---
 
+## A10 fully registered + duration positivity (2026-07-31) — DONE
+
+`retry` (Saga added), `undo-retry`, `failure-message` — names chosen by
+riddl-generator after we held them rather than settling by implementing
+first. **That was worth doing**: riddlg pushed back correctly on my
+objection to reusing `retry`, pointing out `timeout` already has exactly
+that one-concept-two-scopes shape.
+
+`retry`'s optional second argument is a backoff duration, so the temporal
+check is now INDEX-AWARE (`temporalArgIndex`) rather than "first argument
+of a temporal option". `retry("3")` must stay valid; a bare `"3"` would be
+flagged vague if the wrong index were read.
+
+**Non-positive durations are errors**, with their OWN message — vague and
+non-positive need different fixes ("state a unit" vs "state a magnitude").
+`PT0S` needed care: the ISO-8601 path matches SHAPE only and never parses
+a value, so positivity there is a non-zero-digit test. The shape carries
+no sign, so zero is the only non-positive ISO case.
+
+**Precedence is a generator contract riddlc does NOT enforce** — a step's
+own `retry`/`timeout` wins, the saga's applies to steps without one, else
+the A10 default. Recorded in the registry comment because writing it down
+is the only way two generators agree.
+
+---
+
 ## `activate` accepted as an acquisition verb (2026-07-31) — DONE
 
 `button Checkout activate Confirmation` used to be a bare parse error.
