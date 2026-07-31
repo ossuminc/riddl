@@ -115,7 +115,7 @@ jobs:
     - name: Package JVM Release Artifacts
       if: matrix.platform == 'JVM'
       run: |
-        sbt "; set every Compile/doc/sources := Seq.empty; riddlc/Universal/packageBin; riddlLib/Universal/packageBin"
+        sbt "; riddlc/Universal/packageBin; riddlLib/Universal/packageBin"
 
     - name: Package Native Release Artifacts
       if: matrix.platform == 'Native'

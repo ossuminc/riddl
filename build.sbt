@@ -303,6 +303,11 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes", V.scala)(JVM, JS, Nat
   // `publish`. Disabling Native scaladoc avoids the race; Native consumers
   // rarely consult the docs jar.
   .nativeConfigure(With.NoDocs)
+  // Also on the JVM row: the release workflow used to blank docs with
+  // `set every Compile/doc/sources := Seq.empty`, which sbt broadened to
+  // Compile/sources ITSELF -- every module then looked source-less and the
+  // empty-module guard fired on all of them. Expressed here instead.
+  .jvmConfigure(With.NoDocs)
 val passes = passes_cp.jvm.dependsOn(pDep(utils), pDep(language))
 val passesJS = passes_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS))
 val passesNative = passes_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative))
@@ -392,6 +397,11 @@ lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Na
   .nativeConfigure(With.noMiMa)
   // See note on passes_cp re: Scala 3.8.x scaladoc race condition.
   .nativeConfigure(With.NoDocs)
+  // Also on the JVM row: the release workflow used to blank docs with
+  // `set every Compile/doc/sources := Seq.empty`, which sbt broadened to
+  // Compile/sources ITSELF -- every module then looked source-less and the
+  // empty-module guard fired on all of them. Expressed here instead.
+  .jvmConfigure(With.NoDocs)
   .nativeSettings(libraryDependencies += Dep.upickle_nojvm.value)
 val riddlLib = riddlLib_cp.jvm.dependsOn(pDep(utils), pDep(language), pDep(passes))
 val riddlLibJS = riddlLib_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS), pDep(passesJS))
