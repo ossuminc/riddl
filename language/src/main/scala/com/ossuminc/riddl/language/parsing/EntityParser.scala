@@ -52,7 +52,9 @@ private[parsing] trait EntityParser {
           s"Use `of` to introduce a state's record reference: `state ${id.value} of " +
             s"${typRef.format} is { … }`. Introducing it with `is` (or with nothing) is deprecated " +
             "and will be removed in a future major version, because `is` introduces a definition's " +
-            "BODY everywhere else in the language."
+            "BODY everywhere else in the language.",
+          code = Option(Messages.DeprecationCode.StateIsRecord),
+          autoFixable = true
         )
       }
       State(

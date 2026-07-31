@@ -32,7 +32,9 @@ private[parsing] trait NebulaParser {
       val loc = at(start, end)
       deprecation(
         loc,
-        "an anonymous 'nebula' of definitions is deprecated; use 'module <id> is { ... }'"
+        "an anonymous 'nebula' of definitions is deprecated; use 'module <id> is { ... }'",
+        code = Option(Messages.DeprecationCode.AnonymousNebula),
+        autoFixable = false
       )
       Module.anonymous(loc, contents.toContents)
     }

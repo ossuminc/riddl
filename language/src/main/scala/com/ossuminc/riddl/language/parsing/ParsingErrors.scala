@@ -63,8 +63,20 @@ trait ParsingErrors {
     addMessage(msg)
   }
 
-  def deprecation(loc: At, message: String, context: String = ""): Unit = {
-    val msg = Messages.Message(loc, message, Messages.Deprecation, context)
+  /** Emit a deprecation.
+    *
+    * `code` should come from [[Messages.DeprecationCode]] so tools can group and count without
+    * regex-matching the prose, and `autoFixable` should be true only when `prettify` rewrites the
+    * construct with no human decision required.
+    */
+  def deprecation(
+    loc: At,
+    message: String,
+    context: String = "",
+    code: Option[String] = None,
+    autoFixable: Boolean = false
+  ): Unit = {
+    val msg = Messages.Message(loc, message, Messages.Deprecation, context, "", code, autoFixable)
     addMessage(msg)
   }
 

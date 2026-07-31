@@ -33,7 +33,8 @@ private[parsing] trait StatementParser {
   private def promptStatement[u: P]: P[PromptStatement] = {
     P(Index ~ Keywords.prompt ~ literalString ~/ Index)./ map { case (start, str, end) =>
       val kwLoc = at(start, start + Keyword.prompt.length)
-      deprecation(kwLoc, "The `prompt` statement is deprecated; use `do` instead")
+      deprecation(kwLoc, "The `prompt` statement is deprecated; use `do` instead",
+        code = Option(Messages.DeprecationCode.PromptStatement), autoFixable = true)
       PromptStatement(at(start, end), str)
     }
   }
@@ -123,7 +124,8 @@ private[parsing] trait StatementParser {
       Index ~ Keywords.reply ~/ messageValue ~/ Index
     )./.map { case (start, msg, end) =>
       val kwLoc = at(start, start + Keyword.reply.length)
-      deprecation(kwLoc, "The `reply` statement is deprecated; use `yield` instead")
+      deprecation(kwLoc, "The `reply` statement is deprecated; use `yield` instead",
+        code = Option(Messages.DeprecationCode.ReplyToYield), autoFixable = true)
       YieldStatement(at(start, end), msg)
     }
   }
@@ -150,7 +152,9 @@ private[parsing] trait StatementParser {
           deprecation(
             ref.loc,
             "send to an inlet is deprecated and will be removed in 3.0; send to your outlet and " +
-              "connect it with a connector, or use `tell` to deliver directly to a processor"
+              "connect it with a connector, or use `tell` to deliver directly to a processor",
+            code = Option(Messages.DeprecationCode.SendToInlet),
+            autoFixable = false
           )
         case _ => ()
       SendStatement(at(start, end), msg, portlet)
@@ -255,7 +259,9 @@ private[parsing] trait StatementParser {
       deprecation(
         at(start, start),
         "A bare string `when` condition is deprecated; use `when prompt(\"...\")` for a condition " +
-          "an AI evaluates, or a boolean expression for one the model decides"
+          "an AI evaluates, or a boolean expression for one the model decides",
+        code = Option(Messages.DeprecationCode.BareStringCondition),
+        autoFixable = false
       )
       ls
     }

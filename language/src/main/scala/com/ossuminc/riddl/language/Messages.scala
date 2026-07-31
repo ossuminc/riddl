@@ -178,12 +178,50 @@ object Messages {
     *   those in `message`.
     */
   @JSExportTopLevel("Message")
+  /** Stable identifiers for the deprecations 2.0 can emit.
+    *
+    * A migration tool needs to GROUP deprecations, count them, and say which ones a mechanical
+    * fixer resolves. With prose only, that means regex-matching message text, which breaks
+    * silently the first time a message is reworded — and messages get reworded.
+    *
+    * These strings are API: once published, a code means the same thing forever. Rewording the
+    * human message is always safe; changing or reusing a code is not.
+    */
+  object DeprecationCode {
+    val StateIsRecord: String = "state-is-record"
+    val PromptStatement: String = "prompt-statement"
+    val ReplyToYield: String = "reply-to-yield"
+    val SendToInlet: String = "send-to-inlet"
+    val BareStringCondition: String = "bare-string-condition"
+    val AnonymousNebula: String = "anonymous-nebula"
+    val ShapeKeyword: String = "shape-keyword"
+    val AbstractType: String = "abstract-type"
+    val SingleAlternation: String = "single-alternation"
+
+    /** Every code, for a consumer building an exhaustive migration report. */
+    val all: Seq[String] = Seq(
+      StateIsRecord, PromptStatement, ReplyToYield, SendToInlet, BareStringCondition,
+      AnonymousNebula, ShapeKeyword, AbstractType, SingleAlternation
+    )
+  }
+
   case class Message(
     loc: At,
     message: String,
     kind: KindOfMessage = Error,
     context: String = "",
-    suggestion: String = ""
+    suggestion: String = "",
+    /** Stable identity for a deprecation — see [[DeprecationCode]]. `None` for every other kind
+      * of message, and for a deprecation that predates the registry.
+      */
+    deprecationCode: Option[String] = None,
+    /** True when `prettify` resolves this deprecation with NO human decision.
+      *
+      * This is what lets a migration UI say "9 of 14 will be fixed automatically" honestly
+      * instead of optimistically. False when the rewrite needs a judgement call — replacing a
+      * bare-string `when` condition means deciding whether it is an AI prompt or a boolean.
+      */
+    autoFixable: Boolean = false
   ) extends Ordered[Message] {
     def isInfo: Boolean = kind.isInfo
     def isTip: Boolean = kind.isTip

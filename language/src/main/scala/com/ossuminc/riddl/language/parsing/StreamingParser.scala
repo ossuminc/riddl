@@ -129,7 +129,9 @@ private[parsing] trait StreamingParser {
         val kwLoc = at(start, start + keyword.length)
         deprecation(
           kwLoc,
-          s"The `$keyword` keyword is deprecated; use `processor ${id.value} as $keyword` instead"
+          s"The `$keyword` keyword is deprecated; use `processor ${id.value} as $keyword` instead",
+          code = Option(Messages.DeprecationCode.ShapeKeyword),
+          autoFixable = true
         )
       end if
       checkForDuplicateIncludes(contents)
