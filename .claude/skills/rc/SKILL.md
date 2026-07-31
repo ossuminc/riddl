@@ -122,16 +122,16 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **1694** | 7 |
-| JS | **586** | 5 |
-| Native | **1560** | 7 |
+| JVM | **1699** | 7 |
+| JS | **591** | 5 |
+| Native | **1565** | 7 |
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks
 reality; never lower them to make a run pass. A number below the floor is a
 skipping bug to find, not a threshold to adjust.
 
-Set as of 2.0.0-rc.3. Local `testOnly *` totals differ from CI's because
+Set as of 2.0.0-rc.4. Local `testOnly *` totals differ from CI's because
 platform-specific suites vary, so compare CI against CI and local against
 local.
 
@@ -143,6 +143,8 @@ cd language/src/test/scalajvm/python
 .venv/bin/python gbnf_validator.py
 .venv/bin/python validate_external_riddl.py --repo ../../../../../riddl-examples
 .venv/bin/python validate_external_riddl.py --repo ../../../../../riddl-models
+# ^ both of these now run in CI's ebnf-grammar-validation job, so a green CI run
+#   covers them and this block is only for the code-changed path.
 ```
 
 Use `.venv/bin/python`, not the Homebrew `python3` on PATH — TatSu is installed
