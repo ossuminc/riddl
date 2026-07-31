@@ -127,6 +127,12 @@ object KnownOption {
     * riddl-generator; riddl only checks the name and arity, the VALUES are the generator's concern.
     */
   final val lowering = "lowering"
+
+  /** A10 saga failure-control options. Registration only -- the semantics are a contract for code
+    * generators, not something riddlc acts on.
+    */
+  final val undo_retry = "undo-retry"
+  final val failure_message = "failure-message"
   final val transient = "transient"
   final val user = "user"
 

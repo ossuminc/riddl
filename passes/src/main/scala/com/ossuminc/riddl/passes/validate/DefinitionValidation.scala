@@ -439,7 +439,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     * index keeps the check honest as options are added.
     */
   private val temporalArgIndex: Map[String, Int] =
-    Map("timeout" -> 0, "delay" -> 0)
+    Map("timeout" -> 0, "delay" -> 0, "retry" -> 1)
 
   /** ISO-8601 durations (`PT1M30S`, `P1DT2H`). `java.time.Duration.parse` handles these but is
     * JVM-only, and this validation must behave identically under Scala.js and Native, so the

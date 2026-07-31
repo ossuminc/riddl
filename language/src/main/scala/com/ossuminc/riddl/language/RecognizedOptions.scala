@@ -118,10 +118,41 @@ object RecognizedOptions:
       1,
       1
     ),
+    // "Saga" added for A10, the same shape `timeout` has: ONE concept at TWO scopes, with the
+    // parent kind disambiguating. On a step it bounds that step; on a saga it bounds every step
+    // that does not state its own. A second name (`step-retry`) was considered and rejected --
+    // it would make one concept look like two and leave the existing SagaStep `retry` needing
+    // to be told apart from it.
+    //
+    // PRECEDENCE, a contract between generators that riddlc does NOT enforce: a step's own
+    // `retry` wins for that step; the saga's applies to steps without one; absent both, the A10
+    // default of 1. Same rule for `timeout`.
+    //
+    // The optional SECOND argument is a backoff duration (`retry("3", "2s")`) and is
+    // duration-validated like `timeout`/`delay`. A backoff STRATEGY is deliberately not
+    // modelled: §9.8 leaves "retry/backoff realization within the option-specified bounds" to
+    // the generator. The bound is the model's business; the curve is not.
     "retry" -> OptionSpec(
-      Seq("SagaStep", "Handler"),
+      Seq("Saga", "SagaStep", "Handler"),
       1,
       2
+    ),
+    // A10. Max retries of a failed UNDO, default 3. Named for the thing being retried: a step
+    // says `reverted by { … }` and every generator and diagram calls that block the undo.
+    // `compensation-retry` would read as retrying the entire compensating walk.
+    "undo-retry" -> OptionSpec(
+      Seq("Saga"),
+      1,
+      1
+    ),
+    // A10. The text reported when undo retries are exhausted or the run is otherwise
+    // unrecoverable. NOT named `error`: that collides with the `error` STATEMENT keyword, which
+    // is a refusal mechanism with its own semantics, so an option of that name would read as
+    // declaring one. The value is not an error; it is the text reported about one.
+    "failure-message" -> OptionSpec(
+      Seq("Saga"),
+      1,
+      1
     ),
     "delay" -> OptionSpec(
       Seq("SagaStep"),

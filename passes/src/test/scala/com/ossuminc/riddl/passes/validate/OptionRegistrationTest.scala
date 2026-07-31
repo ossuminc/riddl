@@ -104,6 +104,47 @@ class OptionRegistrationTest extends AbstractValidatingTest {
     }
   }
 
+  "the remaining A10 saga options" should {
+    // Names chosen by riddl-generator, the consumer. Registration only: riddlc does not act on
+    // the semantics.
+    "accept `retry` on a Saga, the same one-concept-two-scopes shape as `timeout`" in {
+      (td: TestData) =>
+        val msgs = messagesFor(sagaWith("""option retry("3")"""), td)
+        withClue(s"messages were: ${clue(msgs)}") { unrecognized(msgs) mustBe empty }
+    }
+
+    "accept `undo-retry`" in { (td: TestData) =>
+      val msgs = messagesFor(sagaWith("""option undo-retry("3")"""), td)
+      withClue(s"messages were: ${clue(msgs)}") { unrecognized(msgs) mustBe empty }
+    }
+
+    "accept `failure-message`" in { (td: TestData) =>
+      val msgs = messagesFor(sagaWith("""option failure-message("could not undo")"""), td)
+      withClue(s"messages were: ${clue(msgs)}") { unrecognized(msgs) mustBe empty }
+    }
+
+    "accept `retry` with a backoff duration" in { (td: TestData) =>
+      val msgs = messagesFor(sagaWith("""option retry("3", "2s")"""), td)
+      withClue(s"messages were: ${clue(msgs)}") {
+        unrecognized(msgs) mustBe empty
+        msgs.filter(_.message.contains("duration")) mustBe empty
+      }
+    }
+
+    "duration-validate `retry`'s SECOND argument, not its first" in { (td: TestData) =>
+      // The count is arg 0 and must NOT be read as a duration -- `retry("3")` is valid and a
+      // bare "3" would be a vague duration if the wrong index were checked.
+      val bad = messagesFor(sagaWith("""option retry("3", "soon")"""), td)
+      withClue(s"messages were: ${clue(bad)}") {
+        bad.filter(_.message.contains("vague duration")) must not be empty
+      }
+      val good = messagesFor(sagaWith("""option retry("3")"""), td)
+      withClue(s"messages were: ${clue(good)}") {
+        good.filter(_.message.contains("duration")) mustBe empty
+      }
+    }
+  }
+
   "a non-positive duration" should {
     // Readable but unusable: a saga bounded by zero has expired before its first step starts.
     // Distinct message from the vague case, because the fix is different.
