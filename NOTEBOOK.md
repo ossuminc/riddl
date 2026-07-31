@@ -15,6 +15,37 @@ to the task file and note the disposition below.
 
 ---
 
+## CI: two build-gate defects found cutting rc.3 — BOTH FIXED
+
+**1. `target/out` must NOT be cached.** Restoring sbt 2 build outputs into
+a fresh checkout leaves sbt believing the meta-build is already built, so
+`project/Dependencies.scala` never contributes its symbols and `build.sbt`
+collapses with dozens of `Not found: V` / `Not found: Dep` plus an
+`Append` ambiguity on a line nobody edited. The cascade points everywhere
+except the cause.
+
+**A cache written by a GREEN run is just as poisonous as a stale one** —
+#2192 and #2193 restored #2191's successful cache and failed on
+markdown-only commits. Dropping `restore-keys` first did NOT fix it; that
+only made one run cold by accident. The rule that actually held: every
+cold build passed, every cache-restoring build failed. Step removed
+entirely; Coursier/ivy2 dependency caches are separate and fine.
+
+**2. `set every Compile/doc/sources := Seq.empty` blanks
+`Compile/sources` ITSELF.** `set every` does not respect the `Compile /
+doc` scope prefix — sbt logs "Defining Compile / sources, Global /
+sources and 75 others". Harmless until the empty-module guard landed,
+then every module looked source-less and the guard fired on all of them.
+Replaced with `With.NoDocs` on the JVM rows, where the intent is scoped
+correctly and survives a workflow rewrite.
+
+**Diagnostic that settles this class of failure fast:** compare
+suite/test COUNTS between runs, and check whether the run was cold or
+restored a cache. An exit code proves nothing; #2196 is trustworthy
+because its counts rose by exactly the 19 tests added.
+
+---
+
 ## SysLoggerTest flake — FIXED (was an intermittent CI red)
 
 `SysLoggerTest` captures what SysLogger wrote to stdout by swapping the
