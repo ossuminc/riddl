@@ -73,10 +73,20 @@ class PortletOptionTest extends AbstractValidatingTest {
   private def unrecognized(msgs: Messages): Messages =
     msgs.filter(_.message.contains("not a recognized RIDDL option"))
 
+  /** Render messages for a failure clue using their TEXT only.
+    *
+    * Not `mkString`/`toString`: `Message.toString` goes through `ScalaRunTime._toString`, which
+    * under Scala.js throws `TypeError: Cannot convert object to primitive value`. The clue then
+    * blows up while REPORTING a failure, turning every case in this suite red on the JS row for
+    * a reason unrelated to what it tests.
+    */
+  private def clue(msgs: Messages): String =
+    msgs.map(_.message).mkString("\n")
+
   "an unrecognized option on an outlet" should {
     "draw a StyleWarning, as it does on a vital definition" in { (td: TestData) =>
       val msgs = messagesFor(model("""option zzznotanoption("x")"""), td)
-      withClue(s"messages were: ${msgs.mkString("\n")}") {
+      withClue(s"messages were: ${clue(msgs)}") {
         unrecognized(msgs) must not be empty
       }
     }
@@ -86,7 +96,7 @@ class PortletOptionTest extends AbstractValidatingTest {
     "be accepted on an outlet without a StyleWarning" in { (td: TestData) =>
       // riddl-generator's documented placement: it reads the option off the outlet first.
       val msgs = messagesFor(model("""option lowering("emitter")"""), td)
-      withClue(s"messages were: ${msgs.mkString("\n")}") {
+      withClue(s"messages were: ${clue(msgs)}") {
         unrecognized(msgs) mustBe empty
       }
     }
@@ -94,7 +104,7 @@ class PortletOptionTest extends AbstractValidatingTest {
     "be accepted on the processor, the form used to set it once for the whole streamlet" in {
       (td: TestData) =>
         val msgs = messagesFor(processorModel("""option lowering("outgoing")"""), td)
-        withClue(s"messages were: ${msgs.mkString("\n")}") {
+        withClue(s"messages were: ${clue(msgs)}") {
           unrecognized(msgs) mustBe empty
         }
     }
@@ -105,7 +115,7 @@ class PortletOptionTest extends AbstractValidatingTest {
       val arity = msgs.filter { m =>
         m.message.contains("lowering") && !m.message.contains("not a recognized RIDDL option")
       }
-      withClue(s"messages were: ${msgs.mkString("\n")}") {
+      withClue(s"messages were: ${clue(msgs)}") {
         arity must not be empty
       }
     }
@@ -119,7 +129,7 @@ class PortletOptionTest extends AbstractValidatingTest {
       val portletEmpty = msgs.filter { m =>
         m.message.contains("should not be empty") && m.message.contains("Out")
       }
-      withClue(s"messages were: ${msgs.mkString("\n")}") {
+      withClue(s"messages were: ${clue(msgs)}") {
         portletEmpty mustBe empty
       }
     }
