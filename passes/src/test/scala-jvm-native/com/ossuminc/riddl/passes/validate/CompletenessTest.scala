@@ -1019,7 +1019,13 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
-    "accept compensate option on sagas" in { (td: TestData) =>
+    // INVERTED, deliberately. `compensate` was registered as a saga option and is now
+    // deregistered: `SagaParser` requires `reverted by` on every step, so a saga without
+    // compensation cannot be written and the option declared nothing. Asserting the warning
+    // IS raised keeps the removal honest -- a silent re-registration would otherwise go
+    // unnoticed, and one generator already mistook the option for a switch and emitted a
+    // coordinator that abandoned completed steps on failure.
+    "warn that compensate is not a recognized option on sagas" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
@@ -1040,14 +1046,18 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        // compensate should be accepted without "not recognized" or
-        // "not typically used" style warnings
-        msgs.exists(m =>
-          m.message.contains("compensate") &&
-            (m.message.contains("not a recognized") ||
-              m.message.contains("not typically used"))
-        ) mustBe false
+      // Style warnings are pinned ON: the "not a recognized RIDDL option" message is a
+      // StyleWarning, which Messages.Accumulator DROPS when showStyleWarnings is off, and
+      // `pc.options` is global state other suites mutate. The original assertion here was
+      // `mustBe false` and so passed either way; asserting PRESENCE exposes the dependency.
+      pc.withOptions(CommonOptions(showStyleWarnings = true, showWarnings = true)) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          msgs.exists(m =>
+            m.message.contains("compensate") &&
+              (m.message.contains("not a recognized") ||
+                m.message.contains("not typically used"))
+          ) mustBe true
+        }
       }
     }
 

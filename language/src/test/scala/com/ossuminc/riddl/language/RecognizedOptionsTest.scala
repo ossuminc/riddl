@@ -117,8 +117,13 @@ class RecognizedOptionsTest extends AbstractTestingBasis {
       "css",
       "faicon",
       "protocol",
-      "parallel",
-      "compensate"
+      "parallel"
+      // `compensate` was in this baseline and is DELIBERATELY removed. It was registered as a
+      // saga option declaring that failure runs the steps' undo blocks in reverse, but
+      // `SagaParser` requires `reverted by` on EVERY step, so a saga without compensation
+      // cannot be written and the option distinguished nothing. This ratchet exists to catch
+      // ACCIDENTAL loss, so the baseline moves only with a reason recorded -- never to make a
+      // red run go green.
     ),
     "streamlet" -> Seq("technology", "css", "kind", "protocol"),
     "portlet" -> Seq("async")

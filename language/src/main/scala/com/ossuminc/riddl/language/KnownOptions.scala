@@ -85,7 +85,6 @@ object KnownOption {
   final val backstage_lifecycle = "backstage_lifecycle"
   final val backstage_owner = "backstage_owner"
   final val backstage_type = "backstage_type"
-  final val compensate = "compensate"
   final val concept = "concept"
   final val confluence_parent = "confluence_parent"
   final val confluence_space = "confluence_space"

@@ -67,10 +67,9 @@ class OptionRegistrationTest extends AbstractValidatingTest {
        |""".stripMargin
 
   "CAP options on a Repository" should {
-    "accept `available`, which hands write arbitration to the storage engine" in {
-      (td: TestData) =>
-        val msgs = messagesFor(repositoryWith("option available"), td)
-        withClue(s"messages were: ${clue(msgs)}") { unrecognized(msgs) mustBe empty }
+    "accept `available`, which hands write arbitration to the storage engine" in { (td: TestData) =>
+      val msgs = messagesFor(repositoryWith("option available"), td)
+      withClue(s"messages were: ${clue(msgs)}") { unrecognized(msgs) mustBe empty }
     }
 
     "accept `consistent`" in { (td: TestData) =>
@@ -109,7 +108,17 @@ class OptionRegistrationTest extends AbstractValidatingTest {
     // riddl-generator documents all of these, so riddlc must not reject a form that already
     // works in a shipping generator.
     "all be accepted" in { (td: TestData) =>
-      val forms = Seq("30s", "1500ms", "5 minutes", "2 hours", "PT1M30S", "P1DT2H")
+      val forms = Seq(
+        "30s",
+        "1500ms",
+        "5 minutes",
+        "2 hours",
+        "PT1M30S",
+        "P1DT2H",
+        "5m",
+        "2h",
+        "1d"
+      ) // riddlg documents these single-letter forms too
       forms.foreach { form =>
         val msgs = messagesFor(sagaWith(s"""option timeout("$form")"""), td)
         withClue(s"form '$form' — messages were: ${clue(msgs)}") {

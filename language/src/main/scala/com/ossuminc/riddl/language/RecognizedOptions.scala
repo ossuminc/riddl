@@ -128,22 +128,28 @@ object RecognizedOptions:
       1,
       1
     ),
-    // Saga-level failure-control marker (A10). `compensate` is a SAGA option: it declares that,
-    // on failure, the saga automatically runs the accumulated steps' compensation (undo) blocks in
-    // reverse. A Saga's parent-kind is its class simple name ("Saga"), the string the parent-kind
-    // check compares against (cf. "microservice" above). Registration only — no behavioral
-    // validation, mirroring how A7 added `async`.
-    "compensate" -> OptionSpec(
-      Seq("Saga"),
-      0,
-      0
-    ),
+    // DELIBERATELY ABSENT: `compensate`. It was registered here (fbf47a8a1) as a saga option
+    // declaring that failure runs the steps' undo blocks in reverse -- but that is not a
+    // declaration a model gets to make, it is what a Saga IS. `SagaParser.sagaStep` requires
+    // `reverted by` on EVERY step, so a saga without compensation cannot be written, and the
+    // option therefore distinguished no state of the world. The computational model agrees:
+    // §9.8's "must preserve" list names reverse-order compensation and the terminal dichotomy
+    // (succeeded xor compensated) with no option qualifying either.
+    //
+    // The A10 citation in that commit was also wrong: Tools-To-Do-List Part A item 10 asks for
+    // a timeout, step retries, undo retries and an error string -- `compensate` is not among
+    // them and appears nowhere in the to-do list or the computational model.
+    //
+    // It caused a real defect before removal: riddl-generator read the registration as a switch
+    // and emitted a coordinator that abandoned completed steps on failure unless the model
+    // carried the option. Do not re-register it.
     // Saga-level parallelism marker (A11). A saga is SEQUENTIAL by definition; `parallel` declares
     // the exception. The semantics are a contract for the code generator (riddl-gen), NOT something
     // riddlc acts on: all steps start in parallel; the coordinator gathers results asynchronously;
     // when they all succeed the saga succeeds; any one failure triggers compensating actions in
     // REVERSE order of the original sends. Registration only — no behavioral validation, mirroring
-    // how A7 added `async` and A10 added `compensate`.
+    // how A7 added `async`. (An earlier version of this comment credited A10 with `compensate`;
+    // A10 asks for no such option, and `compensate` has since been deregistered.)
     "parallel" -> OptionSpec(
       Seq("Saga"),
       0,
