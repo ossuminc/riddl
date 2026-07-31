@@ -123,6 +123,11 @@ object KnownOption {
   final val value = "value"
   final val wrapper = "wrapper"
   final val technology = "technology"
+
+  /** Selects how a generator lowers an outlet to its target technology. Consumed by
+    * riddl-generator; riddl only checks the name and arity, the VALUES are the generator's concern.
+    */
+  final val lowering = "lowering"
   final val transient = "transient"
   final val user = "user"
 

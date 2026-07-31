@@ -76,6 +76,19 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             case _ =>
           end match
         }
+      // Portlets are Leafs, not VitalDefinitions, so they used to fall past this match
+      // entirely and their options went unvalidated. Contents only -- an inlet or outlet
+      // with no metadata is perfectly normal and must not draw a MissingWarning.
+      // Portlets ONLY, deliberately narrow. They are Leafs, not VitalDefinitions, and --
+      // unlike Constant, Adaptor, Schema and friends -- nothing else calls checkMetadata for
+      // them, so their options went unvalidated entirely: `option zzznotanoption("x")` on an
+      // outlet was accepted in silence while the same typo on a vital definition drew a
+      // StyleWarning. Widening this arm to all WithMetaData double-validates every definition
+      // whose validator already calls checkMetadata, which showed up as doubled FigmaRef
+      // message counts. Contents only: an inlet or outlet with no metadata is normal and must
+      // not draw a MissingWarning.
+      case portlet: Portlet =>
+        val _ = checkMetadataContents(definition.identify, portlet, definition.errorLoc)
       case _ => ()
     end match
 
@@ -157,6 +170,28 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
       suggestion =
         s"Add metadata to $identity, such as 'briefly \"...\"', 'described as { ... }', or 'by author ...'."
     )
+    val hasDescription = checkMetadataContents(identity, definition, loc)
+    check(
+      hasDescription,
+      s"$identity should have a description",
+      MissingWarning,
+      loc,
+      suggestion =
+        s"Add documentation to $identity, e.g. 'briefly \"A short summary\"' or 'described as { | ... | }'."
+    )
+  end checkMetadata
+
+  /** Validate the CONTENTS of a definition's metadata without requiring any to be present.
+    *
+    * Split out of [[checkMetadata]] for definitions that legitimately carry no metadata but must
+    * still have what they DO carry checked. [[AST.Portlet]]s are the case in point: they are
+    * `Leaf`s, not `VitalDefinition`s, so `checkDefinition` fell straight past the metadata branch
+    * and NOTHING validated their options -- `option zzznotanoption("x")` on an outlet was accepted
+    * in silence while the same typo on any vital definition drew a StyleWarning. Calling the full
+    * `checkMetadata` on them instead would emit a "should not be empty" MissingWarning for every
+    * ordinary inlet and outlet in every model, which is why this exists.
+    */
+  def checkMetadataContents(identity: String, definition: WithMetaData, loc: At): Boolean =
     var hasAuthorRef = false
     var hasDescription = false
     for { meta <- definition.metadata.toSeq } do {
@@ -246,15 +281,12 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         s"$identity has multiple 'ULID' metadata; only the first is used",
         suggestion = "Keep a single ULID attachment; remove the extras."
       )
-    check(
-      hasDescription,
-      s"$identity should have a description",
-      MissingWarning,
-      loc,
-      suggestion =
-        s"Add documentation to $identity, e.g. 'briefly \"A short summary\"' or 'described as { | ... | }'."
-    )
-  end checkMetadata
+    // DELIBERATELY NOT HERE: "should have a description". Documentation is expected of
+    // definitions a reader navigates to, not of every field and portlet -- moving it into
+    // this method made 14 suites demand a description on every type and field. It stays in
+    // checkMetadata, which only vital definitions reach.
+    hasDescription
+  end checkMetadataContents
 
   /** A42: the definitions a [[FigmaRef]] may decorate. A Figma frame depicts a piece of user
     * interface, so the reference belongs only where the model describes user interface: the two

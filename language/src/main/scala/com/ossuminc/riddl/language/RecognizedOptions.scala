@@ -67,6 +67,20 @@ object RecognizedOptions:
     "finite-state-machine" -> OptionSpec(Seq("Entity"), 0, 0),
     "persistent" -> OptionSpec(Seq("Connector"), 0, 0),
     "technology" -> OptionSpec(Seq.empty, 1, 1),
+    // riddl-generator's Quarkus generator lowers an outlet to either an `@Outgoing`
+    // method (back-pressured, but a method has ONE return so it fits only a single
+    // unconditional `send`) or an injected `Emitter` (any code may call it, including
+    // a JPA @Entity that cannot host @Outgoing at all -- but no back-pressure). The
+    // generator infers the form; this option lets a modeler override the inference.
+    //
+    // The parent list is spelled out because a Streamlet's `kind` is its SHAPE's simple
+    // name and never "Streamlet", and a portlet's is "Inlet"/"Outlet" and never
+    // "Portlet" -- see the parent-kind note at the top of this file.
+    "lowering" -> OptionSpec(
+      Seq("Outlet", "Source", "Sink", "Flow", "Merge", "Split", "Router", "Void"),
+      1,
+      1
+    ),
     "kind" -> OptionSpec(Seq.empty, 1, 1),
     "color" -> OptionSpec(Seq.empty, 1, 1),
     // Diagram/document styling hint carrying a CSS fragment; consumed by the
