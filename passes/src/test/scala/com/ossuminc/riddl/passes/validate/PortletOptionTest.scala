@@ -24,6 +24,7 @@ class PortletOptionTest extends AbstractValidatingTest {
        |  context Ctx is {
        |    command Thing is { id: Integer } with { briefly "a thing" }
        |    processor F as flow is {
+       |      inlet In is command Dom.Ctx.Thing
        |      outlet Out is command Dom.Ctx.Thing with { $outletOption }
        |    } with { briefly "a flow" }
        |  } with { briefly "a context" }
@@ -58,6 +59,7 @@ class PortletOptionTest extends AbstractValidatingTest {
           |  context Ctx is {
           |    command Thing is { id: Integer } with { briefly "a thing" }
           |    processor F as flow is {
+          |      inlet In is command Dom.Ctx.Thing
           |      outlet Out is command Dom.Ctx.Thing
           |    } with { briefly "a flow" option lowering("outgoing") }
           |  } with { briefly "a context" }
@@ -93,6 +95,7 @@ class PortletOptionTest extends AbstractValidatingTest {
           |  context Ctx is {
           |    command Thing is { id: Integer } with { briefly "a thing" }
           |    processor F as flow is {
+          |      inlet In is command Dom.Ctx.Thing
           |      outlet Out is command Dom.Ctx.Thing
           |    } with { briefly "a flow" }
           |  } with { briefly "a context" }
