@@ -69,6 +69,27 @@ on `release/2` → version `1.32.0-rc.1`, not a snapshot.
 
 ### 1. Certify FROM CLEAN
 
+**First check whether CI already did it.** If a CI run SUCCEEDED on a commit
+whose CODE is identical to what you are about to tag, that run is the
+certification and you may go straight to step 2. Re-running it locally proves
+nothing new.
+
+```bash
+git rev-parse HEAD
+gh run list --branch release/2 --limit 5 \
+  --json number,headSha,conclusion --jq '.[]|"#\(.number) \(.conclusion) \(.headSha[0:9])"'
+# If the green run is not on HEAD, check what actually differs:
+git diff --stat <green-sha>..HEAD
+```
+
+Code means anything the build compiles or reads: `**/*.scala`, `**/*.sbt`,
+`project/**`, `**/*.riddl`, test fixtures, `.github/workflows/**`. Commits that
+touch only `NOTEBOOK.md`, `CLAUDE.md`, `.claude/**` or other prose do NOT
+invalidate a green run — tagging a docs-only commit on top of certified code is
+safe.
+
+Everything below applies when code HAS changed since the last green run.
+
 Incremental runs lie. They have hidden a CI-gating grammar failure and a test
 that only passed against stale classes, both in one afternoon. There is no
 shortcut here.
@@ -93,9 +114,26 @@ its first attempt, and in CI the JS row was running 109 of 567 tests with
 grep -c "No tests to run" <log>     # MUST be 0
 ```
 
-An exit code of 0 is not evidence. Compare the suite COUNT against the previous
-release's; a sudden drop means skipping, not deletion. Expect roughly JVM ~1860 /
-JS ~567 / Native ~1726 as of 2.0.0-rc.2.
+An exit code of 0 is not evidence. Compare the suite COUNT against the MINIMUMS
+below; anything lower means tests were skipped, not deleted, and the run has
+certified nothing.
+
+**Minimum test counts** (a release must meet or exceed these):
+
+| Row | Minimum | Suites |
+|---|---|---|
+| JVM | **1694** | 7 |
+| JS | **586** | 5 |
+| Native | **1560** | 7 |
+
+These are MINIMUMS, not targets — the count only ever goes up as tests are
+added. RAISE them whenever a release certifies higher, so the floor tracks
+reality; never lower them to make a run pass. A number below the floor is a
+skipping bug to find, not a threshold to adjust.
+
+Set as of 2.0.0-rc.3. Local `testOnly *` totals differ from CI's because
+platform-specific suites vary, so compare CI against CI and local against
+local.
 
 Then every validator CI gates on:
 
@@ -294,7 +332,9 @@ npm dist-tag add @ossuminc/riddl-lib@1.32.0 latest
 
 ## Red flags
 
-- Certifying incrementally instead of from clean.
+- Certifying incrementally instead of from clean, when code HAS changed.
+- Lowering the minimum test counts so a run passes, instead of finding the
+  skipping bug.
 - Reading `92/113` as "21 failures" — or ignoring a non-empty Unexpected list.
 - Omitting `--prerelease`, so the workflows treat it as a stable release.
 - Publishing npm by hand — the workflow does it, and a manual publish makes it
