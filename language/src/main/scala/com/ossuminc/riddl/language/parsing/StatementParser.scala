@@ -33,8 +33,12 @@ private[parsing] trait StatementParser {
   private def promptStatement[u: P]: P[PromptStatement] = {
     P(Index ~ Keywords.prompt ~ literalString ~/ Index)./ map { case (start, str, end) =>
       val kwLoc = at(start, start + Keyword.prompt.length)
-      deprecation(kwLoc, "The `prompt` statement is deprecated; use `do` instead",
-        code = Option(Messages.DeprecationCode.PromptStatement), autoFixable = true)
+      deprecation(
+        kwLoc,
+        "The `prompt` statement is deprecated; use `do` instead",
+        code = Option(Messages.DeprecationCode.PromptStatement),
+        autoFixable = true
+      )
       PromptStatement(at(start, end), str)
     }
   }
@@ -124,8 +128,12 @@ private[parsing] trait StatementParser {
       Index ~ Keywords.reply ~/ messageValue ~/ Index
     )./.map { case (start, msg, end) =>
       val kwLoc = at(start, start + Keyword.reply.length)
-      deprecation(kwLoc, "The `reply` statement is deprecated; use `yield` instead",
-        code = Option(Messages.DeprecationCode.ReplyToYield), autoFixable = true)
+      deprecation(
+        kwLoc,
+        "The `reply` statement is deprecated; use `yield` instead",
+        code = Option(Messages.DeprecationCode.ReplyToYield),
+        autoFixable = true
+      )
       YieldStatement(at(start, end), msg)
     }
   }

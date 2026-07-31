@@ -181,8 +181,8 @@ object Messages {
   /** Stable identifiers for the deprecations 2.0 can emit.
     *
     * A migration tool needs to GROUP deprecations, count them, and say which ones a mechanical
-    * fixer resolves. With prose only, that means regex-matching message text, which breaks
-    * silently the first time a message is reworded — and messages get reworded.
+    * fixer resolves. With prose only, that means regex-matching message text, which breaks silently
+    * the first time a message is reworded — and messages get reworded.
     *
     * These strings are API: once published, a code means the same thing forever. Rewording the
     * human message is always safe; changing or reusing a code is not.
@@ -198,10 +198,32 @@ object Messages {
     val AbstractType: String = "abstract-type"
     val SingleAlternation: String = "single-alternation"
 
+    /** Codes whose fix is a pure SPAN REPLACEMENT: the deprecation's `loc` covers exactly the
+      * offending keyword, so replacing that range with this text resolves it and touches nothing
+      * else.
+      *
+      * Deliberately a subset of the auto-fixable set. `shape-keyword` rewrites `flow X is` to
+      * `processor X as flow is` — an insertion at a different place than the keyword — and
+      * `state-is-record` may need to INSERT `of` where nothing stands today. Those need the full
+      * prettify path, and claiming otherwise would corrupt source.
+      */
+    val mechanicalReplacement: Map[String, String] = Map(
+      PromptStatement -> "do",
+      ReplyToYield -> "yield",
+      AbstractType -> "Anything"
+    )
+
     /** Every code, for a consumer building an exhaustive migration report. */
     val all: Seq[String] = Seq(
-      StateIsRecord, PromptStatement, ReplyToYield, SendToInlet, BareStringCondition,
-      AnonymousNebula, ShapeKeyword, AbstractType, SingleAlternation
+      StateIsRecord,
+      PromptStatement,
+      ReplyToYield,
+      SendToInlet,
+      BareStringCondition,
+      AnonymousNebula,
+      ShapeKeyword,
+      AbstractType,
+      SingleAlternation
     )
   }
 
@@ -211,15 +233,15 @@ object Messages {
     kind: KindOfMessage = Error,
     context: String = "",
     suggestion: String = "",
-    /** Stable identity for a deprecation — see [[DeprecationCode]]. `None` for every other kind
-      * of message, and for a deprecation that predates the registry.
+    /** Stable identity for a deprecation — see [[DeprecationCode]]. `None` for every other kind of
+      * message, and for a deprecation that predates the registry.
       */
     deprecationCode: Option[String] = None,
     /** True when `prettify` resolves this deprecation with NO human decision.
       *
-      * This is what lets a migration UI say "9 of 14 will be fixed automatically" honestly
-      * instead of optimistically. False when the rewrite needs a judgement call — replacing a
-      * bare-string `when` condition means deciding whether it is an AI prompt or a boolean.
+      * This is what lets a migration UI say "9 of 14 will be fixed automatically" honestly instead
+      * of optimistically. False when the rewrite needs a judgement call — replacing a bare-string
+      * `when` condition means deciding whether it is an AI prompt or a boolean.
       */
     autoFixable: Boolean = false
   ) extends Ordered[Message] {

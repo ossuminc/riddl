@@ -74,6 +74,32 @@ import scala.util.control.NonFatal
   * All methods require a `PlatformContext` via Scala 3 `using` clause. Each platform provides a
   * default given instance in `com.ossuminc.riddl.utils.pc`.
   */
+/** A single minimal replacement in a source file, as produced by [[RiddlLib.deprecationEdits]].
+  *
+  * Offsets are CHARACTER offsets into the file named by [[file]], half-open `[start, end)` — the
+  * same basis as [[com.ossuminc.riddl.language.AST.RiddlValue.span]], so an editor that already
+  * maps definitions to ranges can apply these without a second convention.
+  *
+  * @param start
+  *   Character offset where the replaced text begins
+  * @param end
+  *   Character offset one past the last replaced character
+  * @param replacement
+  *   Text to put in that range
+  * @param code
+  *   The [[com.ossuminc.riddl.language.Messages.DeprecationCode]] this edit resolves, so a UI can
+  *   group edits and explain what it is about to change
+  * @param file
+  *   The file the offsets refer to
+  */
+case class SourceEdit(
+  start: Int,
+  end: Int,
+  replacement: String,
+  code: String,
+  file: String
+)
+
 trait RiddlLib:
 
   /** Parse a RIDDL source string and return the AST Root.
@@ -301,6 +327,33 @@ trait RiddlLib:
   def root2RiddlSource(
     root: Root
   )(using PlatformContext): String
+
+  /** The MINIMAL edits that resolve mechanically-fixable deprecations, without reformatting.
+    *
+    * [[root2RiddlSource]] is the mechanical fixer, but it rewrites the whole file: a user with
+    * carefully arranged source gets a wholesale reformat as the price of fixing three `reply`
+    * keywords, which makes the offer easy to decline. This returns just the substitutions, so an
+    * editor can apply them through its own edit API and keep undo/redo coherent.
+    *
+    * Edits are returned in DESCENDING start order, so applying them in sequence never invalidates a
+    * later offset. Applying them in ascending order without adjusting offsets corrupts the file.
+    *
+    * Only deprecations in [[Messages.DeprecationCode.mechanicalReplacement]] appear here — those
+    * whose location covers exactly the offending keyword. Deprecations needing an insertion
+    * elsewhere, or a human decision, are deliberately absent rather than guessed at; compare the
+    * result against `justDeprecations` to report what remains as hand work.
+    *
+    * @param source
+    *   The RIDDL source text
+    * @param origin
+    *   A name for the source, used for diagnostics and reported on each edit
+    * @return
+    *   Success(edits) — possibly empty — or Failure(Messages) if the source does not parse
+    */
+  def deprecationEdits(
+    source: String,
+    origin: String
+  )(using PlatformContext): RiddlResult[Seq[SourceEdit]]
 
   /** Serialize an AST Root to the JSON wire schema (the inverse of [[parseJson]]).
     *
@@ -874,6 +927,26 @@ object RiddlLib extends RiddlLib:
   )(using PlatformContext): RiddlResult[Root] =
     RiddlResult.fromEither(BASTReader.read(bytes)).map(Module.toRoot)
   end bast2Root
+
+  override def deprecationEdits(
+    source: String,
+    origin: String
+  )(using PlatformContext): RiddlResult[Seq[SourceEdit]] =
+    val rpi = RiddlParserInput(source, URL.fromCwdPath(origin), "deprecationEdits")
+    TopLevelParser.parseInputWithMessages(rpi) match
+      case Left(errors) => RiddlResult.Failure(errors)
+      case Right((_, msgs)) =>
+        val edits = msgs.justDeprecations.toSeq.flatMap { m =>
+          m.deprecationCode
+            .flatMap(Messages.DeprecationCode.mechanicalReplacement.get)
+            .map { replacement =>
+              SourceEdit(m.loc.offset, m.loc.endOffset, replacement, m.deprecationCode.get, origin)
+            }
+        }
+        // Descending, so applying them in order never shifts an offset still to be used.
+        RiddlResult.Success(edits.sortBy(-_.start))
+    end match
+  end deprecationEdits
 
   override def root2RiddlSource(
     root: Root

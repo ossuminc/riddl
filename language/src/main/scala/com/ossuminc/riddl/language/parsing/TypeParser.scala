@@ -304,8 +304,12 @@ private[parsing] trait TypeParser {
         // `Abstract` is the DEPRECATED spelling of `Anything`; it yields the SAME node and emits
         // one deprecation at the keyword (pattern mirrors `reply` -> `yield` and `prompt` -> `do`).
         case PredefType.Abstract =>
-          deprecation(loc, "The `Abstract` type is deprecated; use `Anything` instead",
-            code = Option(Messages.DeprecationCode.AbstractType), autoFixable = true)
+          deprecation(
+            loc,
+            "The `Abstract` type is deprecated; use `Anything` instead",
+            code = Option(Messages.DeprecationCode.AbstractType),
+            autoFixable = true
+          )
           AST.Anything(loc)
         case PredefType.Location => AST.Location(loc)
         case PredefType.Nothing  => AST.Nothing(loc)

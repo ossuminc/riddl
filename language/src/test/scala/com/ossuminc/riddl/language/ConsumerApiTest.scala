@@ -13,9 +13,9 @@ import com.ossuminc.riddl.utils.{AbstractTestingBasis, URL, pc}
 
 /** Covers the accessors added for library consumers (synapify's 2.0 asks).
   *
-  * Each of these existed as hand-rolled code in a consumer, which is the reason to own them here:
-  * a tool that gets a character span wrong deletes the wrong text, and one that gets provenance
-  * wrong writes a definition into the wrong file.
+  * Each of these existed as hand-rolled code in a consumer, which is the reason to own them here: a
+  * tool that gets a character span wrong deletes the wrong text, and one that gets provenance wrong
+  * writes a definition into the wrong file.
   */
 class ConsumerApiTest extends AbstractTestingBasis {
 

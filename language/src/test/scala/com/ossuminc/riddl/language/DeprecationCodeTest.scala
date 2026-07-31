@@ -49,7 +49,6 @@ class DeprecationCodeTest extends AbstractTestingBasis {
        |}
        |""".stripMargin
 
-
   "a deprecated `reply` statement" should {
     "carry the reply-to-yield code and be auto-fixable" in {
       val deps = deprecationsIn(modelWith("reply event OrderPlaced"))

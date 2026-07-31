@@ -45,8 +45,7 @@ object AST:
       *
       * `None` when the location is unknown ([[At.empty]]) — a value built programmatically or
       * rebuilt from a serialization that carried no offsets. Any tool that EDITS RIDDL source in
-      * place needs this, and deriving it by re-scanning the text is how you delete the wrong
-      * range.
+      * place needs this, and deriving it by re-scanning the text is how you delete the wrong range.
       *
       * These are character offsets into [[declaringFile]], not line/column: a definition needs a
       * start AND an end, which costs two integers here and two pairs in line/column form.
@@ -60,8 +59,8 @@ object AST:
       * value was parsed from, not from the enclosing `Include` wrapper, so it is still correct
       * after includes are folded away. That is the property multi-file editing tools need — "which
       * file do I write this change into?" — and it is why they should NOT reconstruct provenance
-      * from `Include.origin` before flattening, nor key definitions by a synthetic
-      * `(kind, id, line, col)` tuple, which collides across files.
+      * from `Include.origin` before flattening, nor key definitions by a synthetic `(kind, id,
+      * line, col)` tuple, which collides across files.
       */
     def declaringFile: Option[String] =
       val o = loc.source.origin
@@ -1381,9 +1380,9 @@ object AST:
     * It is an ALIAS rather than a deprecated class because a deprecated member of a sealed
     * hierarchy is a trap for consumers: an exhaustive match over [[Branch]] had to either omit the
     * case (`[E029] match may not be exhaustive`) or include it (deprecation warning), and under
-    * `-Werror` both are build failures with no clean way out. Synapify and riddl-generator both
-    * hit it. As an alias the name keeps compiling in type positions and stops existing as a
-    * separate case to match — the same treatment [[Abstract]] and [[ReplyStatement]] received.
+    * `-Werror` both are build failures with no clean way out. Synapify and riddl-generator both hit
+    * it. As an alias the name keeps compiling in type positions and stops existing as a separate
+    * case to match — the same treatment [[Abstract]] and [[ReplyStatement]] received.
     */
   @deprecated("Use Module instead; a Module is a flat bag of any top-level definition", "2.0.0")
   type Nebula = Module
@@ -1458,15 +1457,15 @@ object AST:
       // structure survives for callers that have not flattened yet; its CONTENTS are what needed
       // lifting into the Root-legal set.
       def rootItemsOf(values: Seq[RiddlValue]): Seq[RootContents] = values.flatMap {
-        case d: Domain      => Some(d: RootContents)
-        case m: Module      => Some(m: RootContents)
-        case a: Author      => Some(a: RootContents)
-        case c: Comment     => Some(c: RootContents)
-        case v: Version     => Some(v: RootContents)
-        case c: Copyright   => Some(c: RootContents)
-        case bi: BASTImport => Some(bi: RootContents)
+        case d: Domain       => Some(d: RootContents)
+        case m: Module       => Some(m: RootContents)
+        case a: Author       => Some(a: RootContents)
+        case c: Comment      => Some(c: RootContents)
+        case v: Version      => Some(v: RootContents)
+        case c: Copyright    => Some(c: RootContents)
+        case bi: BASTImport  => Some(bi: RootContents)
         case inc: Include[?] => rootItemsOf(inc.contents.toSeq)
-        case _              => None // genuinely not valid at Root level
+        case _               => None // genuinely not valid at Root level
       }
       Root(module.loc, Contents[RootContents](rootItemsOf(module.contents.toSeq)*))
     end toRoot
