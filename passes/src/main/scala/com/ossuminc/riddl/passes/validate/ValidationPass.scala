@@ -2558,12 +2558,59 @@ case class ValidationPass(
     end if
   }
 
+  /** At most ONE adaptor per (this context, referenced context, DIRECTION).
+    *
+    * Two adaptors in the same context adapting the same direction to the same foreign context
+    * split that context's translation across two places, and nothing says which one handles a
+    * given message -- an ERROR, because the ambiguity has no defensible resolution.
+    *
+    * DIRECTION is part of the key on purpose. The computational model §7.1 is explicit that
+    * "a bidirectional relationship is two adaptors", and an [[AST.Adaptor]] carries exactly one
+    * direction, so an inbound and an outbound adaptor between the same pair is the SANCTIONED
+    * way to say "both ways" -- not duplication. Likewise an adaptor in A referencing B and one
+    * in B referencing A are different owning contexts, each defending its own model, and are
+    * both legal.
+    *
+    * Keyed on the RESOLVED context where resolution succeeded, so two different path
+    * expressions naming the same context are still caught; unresolved refs fall back to the
+    * path text, since a resolution failure is reported elsewhere and should not also suppress
+    * this check.
+    */
+  private def checkAdaptorUniqueness(c: Context): Unit =
+    val adaptors = c.adaptors
+    if adaptors.sizeIs > 1 then
+      adaptors
+        .groupBy { a =>
+          val target: String = resolution.refMap
+            .definitionOf[Context](a.referent.pathId)
+            .map(ctx => symbols.pathOf(ctx).mkString("."))
+            .getOrElse(a.referent.pathId.format)
+          target -> a.direction.format
+        }
+        .collect { case (_, dupes) if dupes.sizeIs > 1 => dupes }
+        .foreach { dupes =>
+          val first = dupes.head
+          dupes.tail.foreach { dupe =>
+            messages.addError(
+              dupe.errorLoc,
+              s"${dupe.identify} duplicates ${first.identify}: ${c.identify} already adapts " +
+                s"${first.direction.format} ${first.referent.format}",
+              suggestion = s"Merge the handlers of ${dupe.identify} into ${first.identify}. " +
+                "A context may adapt to and from another context, but only once in each " +
+                "direction, or it is ambiguous which adaptor handles a given message."
+            )
+          }
+        }
+    end if
+  end checkAdaptorUniqueness
+
   private def validateContext(
     c: Context,
     parents: Parents
   ): Unit = {
     checkContainer(parents, c)
     validateIntention(c)
+    checkAdaptorUniqueness(c)
     val nonEmptyEntities = c.entities.filter(_.nonEmpty)
     if nonEmptyEntities.nonEmpty && c.nonEmpty then {
       // Completeness 4i: context with entities must have a Sink
