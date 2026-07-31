@@ -15,6 +15,52 @@ to the task file and note the disposition below.
 
 ---
 
+## Option registry work for riddl-generator (2026-07-31) — DONE
+
+Three riddlg tasks, shipping in 2.0.0-rc.5.
+
+- **`available`/`consistent` widened to Repository.** Computational model
+  §5.6: a Repository is a Processor, so its WRITE side is single-writer by
+  default and `available` hands arbitration to the storage engine. The
+  registry already had this exact shape for `transient`.
+- **`timeout` widened to Saga** (Tools-To-Do-List Part A item 10). It is
+  the third terminal condition of a `parallel` saga (§9.8) and had no
+  expression in the language.
+- **`compensate` DEREGISTERED** on Reid's ruling. The decisive fact is in
+  the parser: `SagaParser.sagaStep` requires `reverted by`
+  UNCONDITIONALLY, so a saga without compensation cannot be written and
+  the option distinguished nothing. Its A10 citation was also wrong — A10
+  asks for timeout/step-retries/undo-retries/error-string, not this. The
+  registry now carries a DO-NOT-RE-REGISTER note with that history.
+
+**Vague durations are now an ERROR.** A `timeout`/`delay` argument that
+does not state a unit fails validation: `"30"` is ambiguous between
+seconds and milliseconds. Uses `scala.concurrent.duration.Duration`;
+ISO-8601 is matched BY SHAPE because `java.time.Duration.parse` is
+JVM-only and would make riddlc behave differently per platform.
+
+### The recurring hazard, stated once
+
+Three separate tests this session asserted the ABSENCE of a warning and
+passed for the wrong reason:
+
+1. an invalid fixture that never parsed, so there were no messages at all;
+2. `showStyleWarnings` being off — the accumulator DROPS StyleWarnings,
+   and `pc.options` is global state other suites mutate, so a case passed
+   alone and failed in the full suite;
+3. `withClue` interpolating Messages — `Message.toString` is unsafe under
+   Scala.js and `withClue` evaluates eagerly, so every case failed on the
+   JS row while reporting, not asserting.
+
+**A test asserting absence proves nothing until it has been canaried.**
+Revert the change and confirm it goes red.
+
+**`RecognizedOptionsTest` has a no-shrink ratchet** over the former
+hand-written option lists. Move its baseline only with a reason recorded
+inline — never to make a red run green.
+
+---
+
 ## Portlet options were never validated — FIXED
 
 `checkDefinition` validated metadata only under `case vd: VitalDefinition[?]`.
