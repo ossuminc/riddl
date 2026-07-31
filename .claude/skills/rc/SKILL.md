@@ -192,11 +192,18 @@ on the RC.
 git status --porcelain                     # MUST be empty; dynver marks a dirty tree
 git checkout 1.32.0-rc.1                   # detached HEAD, on purpose
 sbt -batch "show version"                  # MUST print exactly 1.32.0-rc.1
-sbt -batch "clean; test; publish"
+sbt -batch "clean; publish"                # add `test` ONLY if step 1 had to run locally
 git checkout release/2                     # or wherever you came from
 ```
 
-Never skip `clean` or `test`. Capture the WHOLE log — `| tail -N` throws away the
+**`clean` always; `test` only when the code is not already certified.** Step 1's
+rule applies here too — re-running the suite against code a green CI run already
+covered proves nothing and costs the better part of an hour. `clean` is NOT
+optional either way: publishing must not pick up stale compiled output. (On
+2.0.0-rc.3 the `test` in this step skipped 10 modules via `testQuick` anyway, so
+it was not even a real suite run.)
+
+Capture the WHOLE log — `| tail -N` throws away the
 test summary and leaves you unable to show that tests ran, and a pipeline's exit
 code is `tail`'s, not sbt's. Confirm sbt's own `[success]` line, and that a
 `Tests: succeeded …` summary is present.

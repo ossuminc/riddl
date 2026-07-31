@@ -15,6 +15,36 @@ to the task file and note the disposition below.
 
 ---
 
+## Portlet options were never validated — FIXED
+
+`checkDefinition` validated metadata only under `case vd: VitalDefinition[?]`.
+`Inlet`/`Outlet` are `Leaf`s, so their options were never checked:
+`option zzznotanoption("x")` on an outlet was accepted in SILENCE while the
+same typo on a vital definition drew a StyleWarning. Found by
+riddl-generator while asking for the `lowering` option — which was the
+smaller half of their report.
+
+**Two constraints, both found by breaking tests, not by reasoning:**
+
+1. **Narrow the arm to `Portlet`.** A broad `WithMetaData` arm
+   double-validates every definition whose validator calls BOTH
+   `checkDefinition` and `checkMetadata` — Constant, Adaptor, Schema and
+   others do. Symptom: doubled FigmaRef message counts.
+2. **Contents only.** `checkMetadataContents` is split out of
+   `checkMetadata` so portlets are checked without inheriting "metadata
+   should not be empty" or "should have a description". Routing the
+   description check through the shared path made **14 suites** demand a
+   description on every type and field.
+
+**Test fixture gotchas** hit while writing the test, worth knowing:
+`AbstractValidatingTest` is a FIXTURE spec, so every case body takes
+`(td: TestData)` and builds inputs as `RiddlParserInput(src, td)`; an
+`outlet` takes a MESSAGE type ref (`command X`), not `type X`; and the bare
+shape keyword `flow F is {…}` **no longer parses** — it is
+`processor F as flow is {…}`.
+
+---
+
 ## CI: two build-gate defects found cutting rc.3 — BOTH FIXED
 
 **1. `target/out` must NOT be cached.** Restoring sbt 2 build outputs into

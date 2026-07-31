@@ -199,6 +199,26 @@ jobs:
         cd language/src/test/scalajvm/python
         python validate_external_riddl.py --repo ${{ github.workspace }}/riddl-examples
 
+    # riddl-models is the LARGER corpus and was validated only by hand until now. It is a
+    # different check from RiddlModelsRoundTripTest: that exercises the fastparse parser and
+    # BAST round-trip, while this checks the DOCUMENTED EBNF grammar accepts the same inputs.
+    # If the two ever diverge the round-trip test stays green while the published grammar is
+    # wrong, which is the whole point of the parser/EBNF synchronisation rule.
+    #
+    # Pinned to release/2 for the same reason RIDDL_MODELS_BRANCH is: riddl-models `main`
+    # still holds the 1.x corpus. Drop the ref when it merges at 2.0.0 final.
+    - name: Checkout riddl-models
+      uses: actions/checkout@v6
+      with:
+        repository: ossuminc/riddl-models
+        ref: release/2
+        path: riddl-models
+
+    - name: Validate EBNF Grammar against riddl-models
+      run: |
+        cd language/src/test/scalajvm/python
+        python validate_external_riddl.py --repo ${{ github.workspace }}/riddl-models
+
     - name: Verify GBNF is up-to-date
       run: |
         cd language/src/test/scalajvm/python
