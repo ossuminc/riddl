@@ -65,30 +65,18 @@ jobs:
         )
         EOF
 
-    - name: Cache SBT Build Outputs
-      uses: actions/cache@v5
-      with:
-        path: |
-          target/out
-          !target/out/**/src_managed
-          !target/out/**/resource_managed
-        key: ${{ runner.os }}-sbt-build-${{ matrix.platform }}-${{ hashFiles('**/*.sbt', 'project/**') }}
-        # NO restore-keys, deliberately. This cache holds target/out -- COMPILED
-        # OUTPUT keyed to the build definition that produced it. On a key miss the
-        # fallback restored a tree built from a DIFFERENT build.sbt, and sbt then
-        # loaded mismatched build state and failed to load the project at all:
-        # "Not found: V", "Not found: Dep", and an Append ambiguity on a line
-        # nobody had touched, while the same commit compiled clean from scratch
-        # locally.
-        #
-        # Worse, it was self-sustaining. The job died before saving a cache under
-        # the new key, so every re-run restored the same poisoned tree. JVM and
-        # Native were stuck across three runs; JS escaped only because it happened
-        # to pass once and save a good cache. Deleting the caches by hand is not a
-        # fix -- the fallback just matches the next stale one.
-        #
-        # A miss now means a cold build: slower after any build-definition change,
-        # and correct every time.
+    # NO target/out CACHE. sbt 2's build outputs are NOT safely portable between runs:
+    # restoring them left sbt believing the meta-build was already built, so
+    # project/Dependencies.scala never contributed its symbols and build.sbt collapsed with
+    # dozens of "Not found: V" / "Not found: Dep" plus an Append ambiguity on a line nobody
+    # had touched. The evidence was unambiguous once the runs were lined up: EVERY cold build
+    # passed and EVERY build that restored this cache failed, including #2192 and #2193, which
+    # restored the cache saved by the SUCCESSFUL #2191 and failed anyway. Dropping restore-keys
+    # first did not fix it -- that only made one run cold by accident.
+    #
+    # Dependency downloads, which are the expensive part, are still cached by the Coursier and
+    # ivy2 steps. What is given up is incremental recompilation between CI runs, which was
+    # never trustworthy here anyway.
 
     - name: Install LLVM and Clang (Native only)
       if: matrix.platform == 'Native'
