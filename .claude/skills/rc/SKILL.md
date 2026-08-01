@@ -122,16 +122,16 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **1726** | 7 |
-| JS | **618** | 5 |
-| Native | **1592** | 7 |
+| JVM | **1735** | 7 |
+| JS | **625** | 5 |
+| Native | **1601** | 7 |
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks
 reality; never lower them to make a run pass. A number below the floor is a
 skipping bug to find, not a threshold to adjust.
 
-Set as of 2.0.0-rc.6. Local `testOnly *` totals differ from CI's because
+Set as of 2.0.0-rc.7. Local `testOnly *` totals differ from CI's because
 platform-specific suites vary, so compare CI against CI and local against
 local.
 
