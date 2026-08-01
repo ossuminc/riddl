@@ -122,17 +122,15 @@ class PredefinedTerminatorsTest extends AbstractValidatingTest {
     }
 
     "hold its processors DIRECTLY, with no domain/context wrapping" in { (td: TestData) =>
-      // Operations joined the two terminators: it is the default destination for hard-error
-      // notifications, so a generator can count on one existing. Listing them exhaustively is
-      // deliberate -- anything added to the standard module is always in every model's scope,
-      // which is a decision that should never happen by accident.
+      // Listing them exhaustively is deliberate: anything added to the standard module is
+      // always in every model's scope, which is a decision that should never happen by
+      // accident. An `Operations` sink was proposed alongside GeneratorError and REJECTED -- a
+      // context that handles alerts is the model's own, not the standard library's. What the
+      // module owes a generator is the SHAPE of the notification; `option error-sink` names its
+      // destination.
       val streamlets = PredefinedModule.module.contents.filter[Streamlet]
       streamlets.map(_.id.value) must contain theSameElementsAs
-        Seq(
-          PredefinedModule.bottomlessPit,
-          PredefinedModule.foreverEmpty,
-          PredefinedModule.operations
-        )
+        Seq(PredefinedModule.bottomlessPit, PredefinedModule.foreverEmpty)
       val pit = streamlets.find(_.id.value == PredefinedModule.bottomlessPit).get
       pit.effectiveShape mustBe a[Sink]
       pit.inlets.size mustBe 1
@@ -141,41 +139,69 @@ class PredefinedTerminatorsTest extends AbstractValidatingTest {
       spring.effectiveShape mustBe a[Source]
       spring.outlets.size mustBe 1
       spring.inlets mustBe empty
+      // The one record: the shape a generator sends. Exhaustive for the same reason.
+      PredefinedModule.module.contents
+        .filter[Type]
+        .filter(_.typEx.isInstanceOf[AggregateUseCaseTypeExpression])
+        .map(_.id.value) mustBe Seq(PredefinedModule.generatorError)
       // `Drain` is the universal type: the dual of `Nothing`.
       PredefinedModule.module.contents.filter[Type].find(_.id.value == "Drain") match
         case Some(drain) => drain.typEx mustBe a[Anything]
         case None        => fail("the predefined `Drain` type was not found")
     }
 
-    "parse AND validate cleanly on its own" in { (td: TestData) =>
-      val result = Pass.runStandardPasses(PredefinedModule.root)
-      if result.messages.nonEmpty then
-        fail(s"the predefined module is not clean:\n${result.messages.format}")
-      end if
+    "parse AND validate cleanly on its own, but for GeneratorError being unused" in {
+      (td: TestData) =>
+        // `GeneratorError` has no predefined receiver ON PURPOSE -- where hard errors go is the
+        // model's to say -- so validating the module ALONE necessarily reports it as unused. That
+        // report is the design working, not a defect: it is the nudge that tells a modeller to
+        // declare an `error-sink`. Everything else must still be silent.
+        val result = Pass.runStandardPasses(PredefinedModule.root)
+        val (unused, rest) = result.messages.partition(_.message.contains("is unused"))
+        withClue(s"unexpected messages:\n${rest.format}") { rest mustBe empty }
+        unused.map(_.message.takeWhile(_ != '\n')) mustBe
+          Seq(s"Record '${PredefinedModule.generatorError}' is unused")
+    }
+
+    "report GeneratorError as USED once a model declares an error-sink inlet of that type" in {
+      (td: TestData) =>
+        // The converse of the case above, and the point of the whole design: the unused warning is
+        // not noise to be suppressed, it is a signal that CLEARS when the modeller does the thing
+        // it is asking for. Asserting only the absence would be vacuous without the pairing --
+        // absence also holds if the model fails to parse, or if usage tracking never sees an
+        // inlet's type at all.
+        val used = validate(PredefinedModule.source + errorSinkUser, td)
+        withClue(used.messages.format) {
+          used.messages.justErrors mustBe empty
+          used.messages.filter(_.message.contains("is unused")) mustBe empty
+        }
+        // ...and the SAME source without that one context still reports it, so the difference is
+        // attributable to the error-sink inlet and nothing else about this fixture.
+        val unused = validate(PredefinedModule.source, td)
+        unused.messages.filter { (m: Messages.Message) =>
+          m.message.contains(PredefinedModule.generatorError) && m.message.contains("is unused")
+        } must not be empty
     }
   }
 
-  "the predefined Operations sink" must {
-
-    "carry an inlet typed by HardError" in { (td: TestData) =>
-      val ops = PredefinedModule.module.contents
-        .filter[Streamlet]
-        .find(_.id.value == PredefinedModule.operations)
-        .getOrElse(fail("the predefined Operations processor was not found"))
-      ops.effectiveShape mustBe a[Sink]
-      ops.inlets.size mustBe 1
-      ops.outlets mustBe empty
-      ops.inlets.head.type_.pathId.format must include(PredefinedModule.hardError)
-    }
-
-    "carry the HardError record it is typed by" in { (td: TestData) =>
-      PredefinedModule.module.contents
-        .filter[Type]
-        .find(_.id.value == PredefinedModule.hardError)
-        .getOrElse(fail("the predefined HardError record was not found"))
-      succeed
-    }
-  }
+  /** A context whose inlet accepts `GeneratorError`, marked as the destination for hard errors.
+    * Appended to the module source so both live in one Root and usage resolution can see across.
+    */
+  private val errorSinkUser: String =
+    """domain Ops is {
+      |  context Alerting is {
+      |    processor Receiver as sink is {
+      |      inlet alerts is record Riddl.GeneratorError with {
+      |        option error-sink
+      |        briefly "Where generators report the unrecoverable"
+      |      }
+      |      handler Record is {
+      |        on other { do "record the failure" } with { briefly "h" }
+      |      } with { briefly "Records what arrives" }
+      |    } with { briefly "Receives hard errors" }
+      |  } with { briefly "Operational alerting" }
+      |} with { briefly "Operations" }
+      |""".stripMargin
 
   "BottomlessPit" must {
 

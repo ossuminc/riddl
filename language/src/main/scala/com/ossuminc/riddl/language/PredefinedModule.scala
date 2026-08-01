@@ -39,11 +39,10 @@ object PredefinedModule {
   /** The name of the predefined source that never produces anything. */
   final val foreverEmpty: String = "ForeverEmpty"
 
-  /** The name of the predefined hard-error notification record. */
-  final val hardError: String = "HardError"
-
-  /** The name of the predefined default destination for hard-error notifications. */
-  final val operations: String = "Operations"
+  /** The record an `error-sink` inlet must accept. Named for its SOURCE: a generator is what
+    * produces it. Models may accept it in an alternation alongside their own error messages.
+    */
+  final val generatorError: String = "GeneratorError"
 
   /** The RIDDL source of the standard module. Definitions live DIRECTLY in the module (no
     * domain/context wrapping) because `ModuleContents` is the wide `NebulaContents` union.
@@ -76,56 +75,31 @@ object PredefinedModule {
       |      | drain into its single inlet.
       |    }
       |  }
-      |  record HardError is {
+      |  record GeneratorError is {
       |    origin: String,
       |    kind: String,
       |    detail: String,
       |    occurredAt: TimeStamp
       |  } with {
-      |    briefly "A notification that something unrecoverable happened"
+      |    briefly "What a generator sends to the error-sink inlet"
       |    described as {
-      |      | The shape every generator uses to report a hard error: a saga whose undo retries
-      |      | were exhausted, an adaptor's dead-lettered message, a projector's poison event.
-      |      | `origin` names the definition that failed, `kind` classifies it, `detail` carries
-      |      | the saga's `failure-message` or the generator's own text.
+      |      | The shape every generator uses to report something unrecoverable: a saga whose
+      |      | undo retries were exhausted, an adaptor's dead-lettered message, a projector's
+      |      | poison event. `origin` names the definition that failed, `kind` classifies it,
+      |      | `detail` carries the saga's `failure-message` or the generator's own text.
+      |      |
+      |      | GeneratorError is for GENERATORS to send; the name states the source. The
+      |      | inlet marked `option error-sink` must
+      |      | accept it -- either typed by GeneratorError directly, or by an alternation
+      |      | including it, so a model may route its own error messages to the same inlet.
       |      |
       |      | Encoded here rather than documented as a convention so that it is ONE definition
       |      | the symbol table resolves: a misspelled field name becomes an error instead of
-      |      | silently matching nothing and losing the detail.
-      |    }
-      |  }
-      |  processor Operations as sink is {
-      |    inlet alerts is record Riddl.HardError with {
-      |      briefly "Where hard errors go when a model names no destination of its own"
-      |    }
-      |    handler Report is {
-      |      on other {
-      |        do "report the hard error to the operator"
-      |      } with {
-      |        briefly "Reports what it receives; the receiving system decides what that means"
-      |      }
-      |    } with {
-      |      briefly "Receives hard-error notifications"
-      |    }
-      |  } with {
-      |    briefly "The default destination for hard-error notifications"
-      |    described as {
-      |      | Where hard errors go when a model declares no destination of its own, so that a
-      |      | generator can COUNT ON one existing. A destination that exists only when the
-      |      | modeller remembered to declare it is one generators cannot rely on, and each
-      |      | would invent its own fallback instead.
+      |      | silently matching nothing and losing the detail it was meant to carry.
       |      |
-      |      | A model redirects hard errors to its own receiver by marking an inlet with
-      |      | `option error-sink`; at most one per domain.
-      |      |
-      |      | Error HANDLING remains outside RIDDL: what an operations context DOES with an
-      |      | alert is ordinary modelled behaviour. Only the destination is stated here,
-      |      | because where hard errors go is a fact about the system's topology.
-      |      |
-      |      | This is NOT the B5 author-notification mechanism. B5 puts "Notify: <author>" in
-      |      | generated error text for a HUMAN to act on, and forbids automatic notification.
-      |      | This is an in-model message to a modelled receiver, which is ordinary system
-      |      | behaviour. The two compose.
+      |      | There is deliberately NO predefined receiver. Where hard errors go is the model's
+      |      | to say, via `option error-sink`; an `Operations` context belongs in the model
+      |      | that wants one, not in this module.
       |    }
       |  }
       |  processor ForeverEmpty as source is {
