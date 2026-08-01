@@ -1004,9 +1004,18 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         val candidates: Definitions =
           head match
             case st: State =>
-              // We found a state so the fields of the state
-              // the contained handlers and the fields of the state's data
-              candidatesFromPathIdentifier[Type](st.typ.pathId, defStack)
+              // A State's OWN contents (handlers, invariants) AND the fields of the record it
+              // is `of`. The comment here previously promised exactly this and the code
+              // returned only the record's members, so a qualified path to a handler declared
+              // inside a state -- `Order.Active.Strict` -- descended into the record and failed
+              // with "not found in Record 'OpenState'", pointing the author at the wrong
+              // definition entirely. The relative form (`handler Strict`) always worked, which
+              // is why it went unnoticed. Reported by riddl-generator against 2.0.0-rc.6.
+              //
+              // State's own definitions come FIRST, so a handler shadows a same-named record
+              // field rather than the other way round: the nearer declaration wins.
+              st.contents.definitions ++
+                candidatesFromPathIdentifier[Type](st.typ.pathId, defStack)
             case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
               // We found an on-clause (message or event); its message's members are the
               // candidates, so push that message's path on the name stack. A55: the guard was
