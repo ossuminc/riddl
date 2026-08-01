@@ -2265,11 +2265,40 @@ case class ValidationPass(
     }
   }
 
+  /** At most ONE `option error-sink` inlet per domain.
+    *
+    * The option redirects hard-error notifications from the predefined `Riddl.Operations` sink
+    * to a receiver the model owns. Two in one domain leave a generator with no way to choose,
+    * so it is an ERROR for the same reason duplicate adaptors are.
+    *
+    * Scoped to the DOMAIN, not the model: several across domains is correct and intended, so
+    * that unrelated concerns do not share an alert stream. Deployment multiplicity -- a sink per
+    * site or region -- is the generator's and the operator's business, not riddlc's.
+    */
+  private def checkErrorSinkUniqueness(domain: Domain): Unit =
+    val sinks = Finder(domain.contents).recursiveFindByType[Inlet].filter { inlet =>
+      inlet.metadata.filter[OptionValue].exists(_.name == "error-sink")
+    }
+    if sinks.sizeIs > 1 then
+      val first = sinks.head
+      sinks.tail.foreach { dupe =>
+        messages.addError(
+          dupe.errorLoc,
+          s"${dupe.identify} is a second 'error-sink' in ${domain.identify}; " +
+            s"${first.identify} already claims it",
+          suggestion = "Keep one error-sink inlet per domain, or move the second to a domain " +
+            "of its own. Two leave a generator no way to choose between them."
+        )
+      }
+    end if
+  end checkErrorSinkUniqueness
+
   private def validateDomain(
     domain: Domain,
     parents: Parents
   ): Unit = {
     checkContainer(parents, domain)
+    checkErrorSinkUniqueness(domain)
     check(
       domain.domains.isEmpty || domain.domains.size > 2,
       "Singly nested domains do not add value",

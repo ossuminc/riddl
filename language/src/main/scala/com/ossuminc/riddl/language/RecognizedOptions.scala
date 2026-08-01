@@ -101,6 +101,12 @@ object RecognizedOptions:
     "consistent" -> OptionSpec(Seq("Entity", "Repository"), 0, 0),
     "available" -> OptionSpec(Seq("Entity", "Repository"), 0, 0),
     "message-queue" -> OptionSpec(Seq("Entity"), 0, 0),
+    // Marks the inlet that receives hard-error notifications, redirecting them from the
+    // predefined `Riddl.Operations` sink to a receiver the model owns. On the INLET rather than
+    // the processor because an inlet names the receiver, the port and the message type in one
+    // place; a processor may have several inlets and a generator would be back to guessing.
+    // At most one per DOMAIN -- see `checkErrorSinkUniqueness` in ValidationPass.
+    "error-sink" -> OptionSpec(Seq("Inlet"), 0, 0),
     // `transient` marks state that is NOT durably persisted. That is meaningful both
     // for an Entity and for a Repository (a cache-like, non-durable store).
     "transient" -> OptionSpec(Seq("Entity", "Repository"), 0, 0),

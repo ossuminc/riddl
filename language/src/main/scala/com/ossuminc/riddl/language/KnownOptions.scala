@@ -133,6 +133,9 @@ object KnownOption {
     */
   final val undo_retry = "undo-retry"
   final val failure_message = "failure-message"
+
+  /** Marks the inlet that receives hard-error notifications, in place of `Riddl.Operations`. */
+  final val error_sink = "error-sink"
   final val transient = "transient"
   final val user = "user"
 

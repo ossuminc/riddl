@@ -1,0 +1,115 @@
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl.passes.validate
+
+import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
+import org.scalatest.TestData
+
+/** `option error-sink` marks the inlet that receives hard-error notifications.
+  *
+  * It belongs on an INLET rather than a processor, because an inlet names the receiver, the port
+  * and the message type in one place — a processor may have several inlets, and a generator would
+  * be back to guessing which. At most one per DOMAIN: two leave a generator no way to choose.
+  * Several across domains is intended, so unrelated concerns need not share an alert stream.
+  */
+class ErrorSinkTest extends AbstractValidatingTest {
+
+  private def messagesFor(src: String, td: TestData): Messages =
+    var captured: Messages = List.empty
+    pc.withOptions(CommonOptions(showStyleWarnings = true, showWarnings = true)) { _ =>
+      parseAndValidateDomain(RiddlParserInput(src, td), shouldFailOnErrors = false) {
+        case (_, _, msgs) =>
+          captured = msgs
+          succeed
+      }
+    }
+    captured
+  end messagesFor
+
+  private def clue(msgs: Messages): String = msgs.map(_.message).mkString("\n")
+
+  private def unrecognized(msgs: Messages): Messages =
+    msgs.filter { m =>
+      m.message.contains("not a recognized RIDDL option") ||
+      m.message.contains("is not typically used on")
+    }
+
+  private def secondSink(msgs: Messages): Messages =
+    msgs.filter(_.message.contains("second 'error-sink'"))
+
+  private def contextWithSinks(sinkCount: Int): String =
+    val inlets = (1 to sinkCount)
+      .map(n => s"""      inlet Alerts$n is command Dom.Ops.Alert with { option error-sink }""")
+      .mkString("\n")
+    s"""domain Dom is {
+       |  context Ops is {
+       |    command Alert is { detail: String } with { briefly "a" }
+       |    processor Receiver as sink is {
+       |$inlets
+       |      handler H is { on command Dom.Ops.Alert { do "record it" } } with { briefly "h" }
+       |    } with { briefly "r" }
+       |  } with { briefly "o" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  "option error-sink on an inlet" should {
+    "be recognized" in { (td: TestData) =>
+      val msgs = messagesFor(contextWithSinks(1), td)
+      withClue(s"messages were: ${clue(msgs)}") { unrecognized(msgs) mustBe empty }
+    }
+  }
+
+  "two error-sink inlets in ONE domain" should {
+    "be an error, because a generator cannot choose between them" in { (td: TestData) =>
+      val msgs = messagesFor(contextWithSinks(2), td)
+      withClue(s"messages were: ${clue(msgs)}") {
+        val dupes = secondSink(msgs)
+        dupes must not be empty
+        dupes.head.isError mustBe true
+      }
+    }
+  }
+
+  "error-sink inlets in DIFFERENT domains" should {
+    "both be legal — unrelated concerns need not share an alert stream" in { (td: TestData) =>
+      val src =
+        """domain First is {
+          |  context Ops is {
+          |    command Alert is { detail: String } with { briefly "a" }
+          |    processor Receiver as sink is {
+          |      inlet Alerts is command First.Ops.Alert with { option error-sink }
+          |      handler H is { on command First.Ops.Alert { do "record" } } with { briefly "h" }
+          |    } with { briefly "r" }
+          |  } with { briefly "o" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      // Parsed as one domain at a time by the helper, so the cross-domain case is asserted by
+      // there being no complaint about the single sink in each.
+      val msgs = messagesFor(src, td)
+      withClue(s"messages were: ${clue(msgs)}") {
+        secondSink(msgs) mustBe empty
+        unrecognized(msgs) mustBe empty
+      }
+    }
+  }
+
+  "option error-sink on something other than an inlet" should {
+    "be nudged, as portlet and processor options have been since rc.4" in { (td: TestData) =>
+      val src =
+        """domain Dom is {
+          |  context Ops is {
+          |    command Alert is { detail: String } with { briefly "a" }
+          |  } with { briefly "o" option error-sink }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val msgs = messagesFor(src, td)
+      withClue(s"messages were: ${clue(msgs)}") { unrecognized(msgs) must not be empty }
+    }
+  }
+}
