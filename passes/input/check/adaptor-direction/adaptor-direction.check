@@ -7,3 +7,6 @@ passes/input/check/adaptor-direction/adaptor-direction.riddl(23:9->34):
 passes/input/check/adaptor-direction/adaptor-direction.riddl(1:1->18):
  Domain 'AdaptorDir' has no author:
  domain AdaptorDir is {
+passes/input/check/adaptor-direction/adaptor-direction.riddl(1:1->18):
+ Domain 'AdaptorDir' declares no 'error-sink' inlet, so hard errors have no destination:
+ domain AdaptorDir is {

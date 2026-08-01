@@ -2267,18 +2267,39 @@ case class ValidationPass(
 
   /** At most ONE `option error-sink` inlet per domain.
     *
-    * The option redirects hard-error notifications from the predefined `Riddl.Operations` sink
-    * to a receiver the model owns. Two in one domain leave a generator with no way to choose,
-    * so it is an ERROR for the same reason duplicate adaptors are.
+    * The option names the inlet that receives hard-error notifications. There is NO predefined
+    * receiver -- an `Operations` context belongs in the model that wants one -- so this option is
+    * the only thing that says where they go. Two in one domain leave a generator with no way to
+    * choose, so it is an ERROR for the same reason duplicate adaptors are.
     *
-    * Scoped to the DOMAIN, not the model: several across domains is correct and intended, so
-    * that unrelated concerns do not share an alert stream. Deployment multiplicity -- a sink per
-    * site or region -- is the generator's and the operator's business, not riddlc's.
+    * Scoped to the DOMAIN, not the model: several across domains is correct and intended, so that
+    * unrelated concerns do not share an alert stream. Deployment multiplicity -- a sink per site or
+    * region -- is the generator's and the operator's business, not riddlc's.
     */
   private def checkErrorSinkUniqueness(domain: Domain): Unit =
     val sinks = Finder(domain.contents).recursiveFindByType[Inlet].filter { inlet =>
       inlet.metadata.filter[OptionValue].exists(_.name == "error-sink")
     }
+    // A domain with no error-sink has nowhere for hard errors to go, and there is no predefined
+    // fallback: `option error-sink` names the destination and NOTHING else does. A generator
+    // asked to emit a failure path for such a model has to invent one or refuse -- riddl-gen
+    // refuses -- so say it here, where it is cheap to fix, rather than at generation time.
+    //
+    // A MISSING warning, deliberately, not a Completeness one. `isIgnorable` is defined as
+    // `severity < CompletenessWarning`, so Completeness asserts the model is structurally
+    // incomplete -- unfed inlets, unreachable sinks, that family. A model with no error-sink is
+    // not incomplete in that sense; it has simply not SAID where hard errors go, which is the
+    // same kind of omission as "has no author" or "should have a description". Raising it to
+    // Completeness made thirteen unrelated suites red for models that were otherwise fine, and
+    // that was the tell.
+    if sinks.isEmpty && domain.nonEmpty then
+      messages.addMissing(
+        domain.errorLoc,
+        s"${domain.identify} declares no 'error-sink' inlet, so hard errors have no destination",
+        suggestion = "Mark the inlet that should receive hard-error notifications with " +
+          "'option error-sink', e.g. 'inlet Alerts is command OpsAlert with { option error-sink }'."
+      )
+    end if
     if sinks.sizeIs > 1 then
       val first = sinks.head
       sinks.tail.foreach { dupe =>
@@ -2291,7 +2312,43 @@ case class ValidationPass(
         )
       }
     end if
+    sinks.foreach(checkErrorSinkAcceptsGeneratorError)
   end checkErrorSinkUniqueness
+
+  /** An `error-sink` inlet must accept [[PredefinedModule.generatorError]].
+    *
+    * That is what a generator SENDS: `GeneratorError` is the shared shape, filled with no knowledge
+    * of the model. An inlet marked `error-sink` but typed by something else is a destination a
+    * generator cannot deliver to, so it is an ERROR rather than a nudge.
+    *
+    * An ALTERNATION including `GeneratorError` is equally acceptable, and is the point of allowing
+    * one: a model may route its own error messages to the same inlet as the generator's, so the
+    * operator has one place to look.
+    */
+  private def checkErrorSinkAcceptsGeneratorError(inlet: Inlet): Unit =
+    resolution.refMap.definitionOf[Type](inlet.type_.pathId) match
+      case None => () // an unresolved type is reported elsewhere; do not pile on
+      case Some(typ) =>
+        val accepts =
+          typ.id.value == PredefinedModule.generatorError || (typ.typEx match
+            case alt: Alternation =>
+              alt.of.toSeq.exists(
+                _.pathId.value.lastOption.contains(PredefinedModule.generatorError)
+              )
+            case _ => false
+          )
+        check(
+          accepts,
+          s"${inlet.identify} is marked 'error-sink' but does not accept " +
+            s"${PredefinedModule.generatorError}",
+          Messages.Error,
+          inlet.errorLoc,
+          suggestion =
+            s"Type the inlet by ${PredefinedModule.generatorError}, or by an alternation " +
+              s"that includes it if the inlet also carries the model's own error messages. " +
+              s"${PredefinedModule.generatorError} is what generators send."
+        )
+  end checkErrorSinkAcceptsGeneratorError
 
   private def validateDomain(
     domain: Domain,
@@ -2589,21 +2646,19 @@ case class ValidationPass(
 
   /** At most ONE adaptor per (this context, referenced context, DIRECTION).
     *
-    * Two adaptors in the same context adapting the same direction to the same foreign context
-    * split that context's translation across two places, and nothing says which one handles a
-    * given message -- an ERROR, because the ambiguity has no defensible resolution.
+    * Two adaptors in the same context adapting the same direction to the same foreign context split
+    * that context's translation across two places, and nothing says which one handles a given
+    * message -- an ERROR, because the ambiguity has no defensible resolution.
     *
-    * DIRECTION is part of the key on purpose. The computational model §7.1 is explicit that
-    * "a bidirectional relationship is two adaptors", and an [[AST.Adaptor]] carries exactly one
-    * direction, so an inbound and an outbound adaptor between the same pair is the SANCTIONED
-    * way to say "both ways" -- not duplication. Likewise an adaptor in A referencing B and one
-    * in B referencing A are different owning contexts, each defending its own model, and are
-    * both legal.
+    * DIRECTION is part of the key on purpose. The computational model §7.1 is explicit that "a
+    * bidirectional relationship is two adaptors", and an [[AST.Adaptor]] carries exactly one
+    * direction, so an inbound and an outbound adaptor between the same pair is the SANCTIONED way
+    * to say "both ways" -- not duplication. Likewise an adaptor in A referencing B and one in B
+    * referencing A are different owning contexts, each defending its own model, and are both legal.
     *
-    * Keyed on the RESOLVED context where resolution succeeded, so two different path
-    * expressions naming the same context are still caught; unresolved refs fall back to the
-    * path text, since a resolution failure is reported elsewhere and should not also suppress
-    * this check.
+    * Keyed on the RESOLVED context where resolution succeeded, so two different path expressions
+    * naming the same context are still caught; unresolved refs fall back to the path text, since a
+    * resolution failure is reported elsewhere and should not also suppress this check.
     */
   private def checkAdaptorUniqueness(c: Context): Unit =
     val adaptors = c.adaptors

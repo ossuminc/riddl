@@ -29,7 +29,13 @@ class ErrorSinkTest extends AbstractValidatingTest {
           succeed
       }
     }
-    captured
+    // Every case below asserts the ABSENCE of some message, which a fixture that fails to parse
+    // satisfies trivially. Two of these cases passed vacuously on a bad alternation until the
+    // third -- the one asserting PRESENCE -- gave it away. Refuse to report on a model that
+    // never parsed.
+    captured.find(_.message.contains("Expected one of")) match
+      case Some(m) => fail(s"fixture did not parse, so any absence proves nothing:\n${m.format}")
+      case None    => captured
   end messagesFor
 
   private def clue(msgs: Messages): String = msgs.map(_.message).mkString("\n")
@@ -43,9 +49,17 @@ class ErrorSinkTest extends AbstractValidatingTest {
   private def secondSink(msgs: Messages): Messages =
     msgs.filter(_.message.contains("second 'error-sink'"))
 
+  private def wrongType(msgs: Messages): Messages =
+    msgs.filter(_.message.contains("does not accept"))
+
   private def contextWithSinks(sinkCount: Int): String =
+    // Typed by GeneratorError because an error-sink inlet MUST accept it -- typing these by the
+    // model's own command would make the fixture illegal under the rule these cases are not
+    // about, and it would pass only because the filters look elsewhere.
     val inlets = (1 to sinkCount)
-      .map(n => s"""      inlet Alerts$n is command Dom.Ops.Alert with { option error-sink }""")
+      .map(n =>
+        s"""      inlet Alerts$n is record Riddl.GeneratorError with { option error-sink }"""
+      )
       .mkString("\n")
     s"""domain Dom is {
        |  context Ops is {
@@ -95,6 +109,48 @@ class ErrorSinkTest extends AbstractValidatingTest {
       withClue(s"messages were: ${clue(msgs)}") {
         secondSink(msgs) mustBe empty
         unrecognized(msgs) mustBe empty
+      }
+    }
+  }
+
+  /** An error-sink inlet typed by `typeClause`, in a model that also defines its own alert. */
+  private def sinkTypedBy(typeClause: String): String =
+    s"""domain Dom is {
+       |  context Ops is {
+       |    command Alert is { detail: String } with { briefly "a" }
+       |    type Alertable is one of { Riddl.GeneratorError or Dom.Ops.Alert } with {
+       |      briefly "either"
+       |    }
+       |    processor Receiver as sink is {
+       |      inlet Alerts is $typeClause with { option error-sink }
+       |      handler H is { on other { do "record it" } } with { briefly "h" }
+       |    } with { briefly "r" }
+       |  } with { briefly "o" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  "an error-sink inlet typed by GeneratorError" should {
+    "be accepted — it is what generators send" in { (td: TestData) =>
+      val msgs = messagesFor(sinkTypedBy("record Riddl.GeneratorError"), td)
+      withClue(s"messages were: ${clue(msgs)}") { wrongType(msgs) mustBe empty }
+    }
+  }
+
+  "an error-sink inlet typed by an ALTERNATION including GeneratorError" should {
+    "be accepted — a model may route its own error messages to the same inlet" in {
+      (td: TestData) =>
+        val msgs = messagesFor(sinkTypedBy("type Dom.Ops.Alertable"), td)
+        withClue(s"messages were: ${clue(msgs)}") { wrongType(msgs) mustBe empty }
+    }
+  }
+
+  "an error-sink inlet typed ONLY by the model's own message" should {
+    "be an ERROR — a generator has nothing it can send there" in { (td: TestData) =>
+      val msgs = messagesFor(sinkTypedBy("command Dom.Ops.Alert"), td)
+      withClue(s"messages were: ${clue(msgs)}") {
+        val wrong = wrongType(msgs)
+        wrong must not be empty
+        wrong.head.isError mustBe true
       }
     }
   }

@@ -68,3 +68,6 @@ passes/input/check/references/bad-pids.riddl(2:3->25):
 passes/input/check/references/bad-pids.riddl(1:1->11):
  Domain 'foo' has no author:
  domain foo {
+passes/input/check/references/bad-pids.riddl(1:1->11):
+ Domain 'foo' declares no 'error-sink' inlet, so hard errors have no destination:
+ domain foo {

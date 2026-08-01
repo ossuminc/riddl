@@ -31,3 +31,6 @@ passes/input/check/handler-types/handler-types.riddl(8:7->24):
 passes/input/check/handler-types/handler-types.riddl(1:1->20):
  Domain 'HandlerTypes' has no author:
  domain HandlerTypes is {
+passes/input/check/handler-types/handler-types.riddl(1:1->20):
+ Domain 'HandlerTypes' declares no 'error-sink' inlet, so hard errors have no destination:
+ domain HandlerTypes is {

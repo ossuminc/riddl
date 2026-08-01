@@ -227,3 +227,6 @@ passes/input/check/everything/everything.riddl(59:13->49):
 passes/input/check/everything/everything.riddl(1:1->18):
  Domain 'Everything' has no author:
  domain Everything is {
+passes/input/check/everything/everything.riddl(1:1->18):
+ Domain 'Everything' declares no 'error-sink' inlet, so hard errors have no destination:
+ domain Everything is {

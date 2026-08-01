@@ -140,3 +140,6 @@ passes/input/check/saga/saga.riddl(21:39->61):
 passes/input/check/saga/saga.riddl(1:1->15):
  Domain 'ignore1' has no author:
  domain ignore1 is {
+passes/input/check/saga/saga.riddl(1:1->15):
+ Domain 'ignore1' declares no 'error-sink' inlet, so hard errors have no destination:
+ domain ignore1 is {
