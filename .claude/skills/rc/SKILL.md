@@ -122,16 +122,16 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **1735** | 7 |
-| JS | **625** | 5 |
-| Native | **1601** | 7 |
+| JVM | **1744** | 7 |
+| JS | **628** | 5 |
+| Native | **1610** | 7 |
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks
 reality; never lower them to make a run pass. A number below the floor is a
 skipping bug to find, not a threshold to adjust.
 
-Set as of 2.0.0-rc.7. Local `testOnly *` totals differ from CI's because
+Set as of 2.0.0-rc.8. Local `testOnly *` totals differ from CI's because
 platform-specific suites vary, so compare CI against CI and local against
 local.
 
@@ -370,6 +370,14 @@ npm dist-tag add @ossuminc/riddl-lib@1.32.0 latest
   untouched.
 - Retagging an existing RC instead of cutting the next one.
 - Staging a native binary without `reload`, so it reports a stale commit.
+- Trusting `sbt -batch` to defeat the frozen-dynver problem. It does NOT. On
+  2.0.0-rc.8, `sbt -batch "show version"` at the freshly-checked-out tag printed
+  `2.0.0-rc.7-3-<hash>` — the PREVIOUS tag, at a commit that was not even HEAD —
+  while `git describe` correctly said `2.0.0-rc.8`. Publishing then would have
+  shipped every coordinate under an rc.7 snapshot version. Put `reload` FIRST in
+  every version-sensitive invocation (`reload; clean; publish`,
+  `reload; riddlcNative/nativeLink`) and confirm `show version` prints the bare
+  tag before publishing anything.
 - Publishing libraries from the branch head instead of the tag, yielding
   `X.Y.Z-rc.N-<n>-<hash>` instead of `X.Y.Z-rc.N`.
 - Skipping step 2b, so riddlc/npm/Homebrew carry the RC while every Maven
