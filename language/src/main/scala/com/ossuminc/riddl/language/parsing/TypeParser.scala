@@ -419,6 +419,31 @@ private[parsing] trait TypeParser {
     }
   }
 
+  /** `A | B` -- the same alternation as `one of { A or B }`, in the infix notation most computer
+    * scientists already read.
+    *
+    * Deliberately NOT the canonical form: PrettifyPass emits `one of { ... }`, because RIDDL is
+    * meant to stay readable by people who are not computer scientists. Both spellings parse to the
+    * IDENTICAL `Alternation`, so a round trip through prettify normalises to the words and loses
+    * nothing.
+    *
+    * Operands are `aliasedTypeExpression`, exactly as inside the braces -- a predefined type is not
+    * a valid alternative in either spelling, so `String | Integer` reports the same unresolved
+    * paths that `one of { String or Integer }` does rather than diverging.
+    *
+    * At least one `|` is REQUIRED, so a lone type expression fails here and falls through to the
+    * ordinary ordering. That is what makes it safe to try first, which in turn is what keeps the
+    * two spellings behaving the same way.
+    */
+  private def infixAlternation[u: P]: P[Alternation] = {
+    P(
+      Index ~ aliasedTypeExpression ~
+        (Punctuation.verticalBar ~ aliasedTypeExpression).rep(1) ~ Index
+    ).map { case (start, first, rest, end) =>
+      Alternation(at(start, end), (first +: rest).toContents)
+    }
+  }
+
   private def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
     P(
       Index ~ Keywords.typeKeywords.? ~ pathIdentifier ~ Index
@@ -433,8 +458,11 @@ private[parsing] trait TypeParser {
   private def fieldTypeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        // GROUP 1: Most common in field definitions (60-70%)
-        predefinedTypes |
+        // GROUP 0: `A | B` -- must precede predefinedTypes so the infix spelling behaves exactly
+        // as `one of { ... }`; it requires a `|` so nothing else is captured by trying it first.
+        infixAlternation |
+          // GROUP 1: Most common in field definitions (60-70%)
+          predefinedTypes |
           // GROUP 2: Keyword-based constructs MUST come before aliasedTypeExpression
           // (otherwise keywords like "any", "one", "mapping", "set", "sequence", "graph", "table", "range", "replica"
           // get matched as type names)
@@ -636,8 +664,10 @@ private[parsing] trait TypeParser {
   private def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        // GROUP 1: Most common - cheap predefined types (40-50% of cases)
-        predefinedTypes |
+        // GROUP 0: `A | B` -- see infixAlternation; tried first, requires a `|`.
+        infixAlternation |
+          // GROUP 1: Most common - cheap predefined types (40-50% of cases)
+          predefinedTypes |
           // GROUP 2: Keyword-based constructs MUST come before aliasedTypeExpression
           // (otherwise keywords like "any", "one", "mapping", "set", "sequence", "graph", "table", "range", "replica"
           // get matched as type names)

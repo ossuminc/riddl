@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-07-31 17:14 UTC
+# Generated: 2026-08-01 18:58 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -104,7 +104,7 @@ aggregate-use-case ::= "type" | "command" | "query" | "event" | "result" | "reco
 
 # Type Expressions
 type-expression ::= ("many" ("optional")? | "optional") ws type-expression-alternatives | type-expression-alternatives ws ("?" | "*" | "+")?
-type-expression-alternatives ::= predefined-types | pattern-type | unique-id-type | enumeration | sequence-type | mapping-from-to | a-set-type | graph-type | table-type | replica-type | range-type | decimal-type | alternation | entity-reference-type | aggregation | aggregate-use-case-type-expression | aliased-type-expression
+type-expression-alternatives ::= infix-alternation | predefined-types | pattern-type | unique-id-type | enumeration | sequence-type | mapping-from-to | a-set-type | graph-type | table-type | replica-type | range-type | decimal-type | alternation | entity-reference-type | aggregation | aggregate-use-case-type-expression | aliased-type-expression
 
 # Predefined Types
 predefined-types ::= string-type | currency-type | url-type | integer-predef-types | real-predef-types | time-predef-types | zoned-predef-types | decimal-type | other-predef-types
@@ -135,6 +135,7 @@ replica-type-expression ::= integer-predef-types | mapping-from-to | a-set-type
 range-type ::= "range" "(" (integer)? "," (integer)? ")"
 decimal-type ::= "Decimal" "(" integer "," integer ")"
 alternation ::= "one" ws ("of")? ws "{" ws alternation-contents ws "}"
+infix-alternation ::= aliased-type-expression ws ("|" aliased-type-expression)+
 alternation-contents ::= undefined | (aliased-type-expression (("|" | "or" | ",") aliased-type-expression)*)?
 entity-reference-type ::= "reference" ws ("to")? ws ("entity")? ws path-identifier
 aggregation ::= "{" ws aggregate-definitions ws "}"
@@ -150,7 +151,7 @@ method ::= identifier ws "(" ws (arguments)? ws ")" ws is ws1 field-type-express
 arguments ::= (method-argument (",")?)*
 method-argument ::= identifier ws ":" ws field-type-expression
 field-type-expression ::= ("many" ("optional")? | "optional") ws field-type-alternatives | field-type-alternatives ws ("?" | "*" | "+")?
-field-type-alternatives ::= predefined-types | pattern-type | unique-id-type | enumeration | sequence-type | mapping-from-to | a-set-type | graph-type | table-type | replica-type | range-type | decimal-type | alternation | aggregation | aliased-type-expression | entity-reference-type
+field-type-alternatives ::= infix-alternation | predefined-types | pattern-type | unique-id-type | enumeration | sequence-type | mapping-from-to | a-set-type | graph-type | table-type | replica-type | range-type | decimal-type | alternation | aggregation | aliased-type-expression | entity-reference-type
 
 # Functions
 function ::= "function" ws1 identifier ws1 is ws "{" ws function-body ws "}" ws (with-metadata)?

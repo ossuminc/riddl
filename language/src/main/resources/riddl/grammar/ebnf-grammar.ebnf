@@ -112,7 +112,7 @@ aggregate_use_case = "type" | "command" | "query" | "event" | "result" | "record
 type_expression =
     ("many" ["optional"] | "optional") type_expression_alternatives |
     type_expression_alternatives ["?" | "*" | "+"] ;
-type_expression_alternatives = predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
+type_expression_alternatives = infix_alternation | predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
     graph_type | table_type | replica_type | range_type | decimal_type | alternation | entity_reference_type |
     aggregation | aggregate_use_case_type_expression | aliased_type_expression ;
 
@@ -147,6 +147,10 @@ replica_type_expression = integer_predef_types | mapping_from_to | a_set_type ;
 range_type = "range" "(" [integer] "," [integer] ")" ;
 decimal_type = "Decimal" "(" integer "," integer ")" ;
 alternation = "one" ["of"] "{" alternation_contents "}" ;
+(* `A | B` is the same Alternation in infix notation. Accepted, but NOT canonical: the
+   prettifier emits the braced form above, so RIDDL stays readable to non-programmers.
+   At least one bar is required, so a lone type reference is not an alternation. *)
+infix_alternation = aliased_type_expression {"|" aliased_type_expression}+ ;
 alternation_contents = undefined | [aliased_type_expression {("|" | "or" | ",") aliased_type_expression}] ;
 entity_reference_type = "reference" ["to"] ["entity"] path_identifier ;
 aggregation = "{" aggregate_definitions "}" ;
@@ -164,7 +168,7 @@ method_argument = identifier ":" field_type_expression ;
 field_type_expression =
     ("many" ["optional"] | "optional") field_type_alternatives |
     field_type_alternatives ["?" | "*" | "+"] ;
-field_type_alternatives = predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
+field_type_alternatives = infix_alternation | predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
     graph_type | table_type | replica_type | range_type | decimal_type | alternation | aggregation |
     aliased_type_expression | entity_reference_type ;
 

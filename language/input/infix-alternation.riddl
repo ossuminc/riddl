@@ -1,0 +1,22 @@
+domain Choices is {
+  type Approved is Integer with { briefly "an approval" }
+  type Rejected is Integer with { briefly "a rejection" }
+  type Deferred is Integer with { briefly "a deferral" }
+
+  // The infix spelling, `A | B`. Accepted because it is the notation most computer
+  // scientists already read; the braced form below is the canonical one, and both
+  // parse to the same Alternation.
+  type Outcome is Choices.Approved | Choices.Rejected with { briefly "either outcome" }
+  type AnyOutcome is Choices.Approved | Choices.Rejected | Choices.Deferred with {
+    briefly "any of three"
+  }
+
+  // The canonical spelling, for comparison. This is what the prettifier emits.
+  type SameThing is one of { Choices.Approved or Choices.Rejected } with {
+    briefly "the braced form"
+  }
+
+  record Decision is {
+    outcome: Choices.Approved | Choices.Rejected
+  } with { briefly "a decision carrying an infix alternation in a field" }
+} with { briefly "Infix and braced alternations side by side" }
