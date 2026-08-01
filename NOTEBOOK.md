@@ -15,6 +15,46 @@ to the task file and note the disposition below.
 
 ---
 
+## GeneratorError + error-sink completed (2026-08-01) — DONE
+
+`Operations` is **withdrawn** from the standard module; `HardError` is renamed
+**`GeneratorError`** (the name should state the SOURCE — a generator produces
+one). riddlg's bug report is the argument for the withdrawal in miniature: the
+predefined sink's self-qualified path failed to resolve and the error pointed at
+a file the modeller cannot see or edit. The standard library owes a generator the
+SHAPE of a notification and a way to NAME its destination — nothing more.
+
+**The unused warning is the design, not a defect.** `GeneratorError` has no
+predefined receiver, so validating the module alone reports `Record
+'GeneratorError' is unused`. Rather than tolerate it, `PredefinedTerminatorsTest`
+asserts it EXACTLY and asserts the converse — a model declaring an error-sink
+inlet of that type clears it. Canaried both ways.
+
+**A missing error-sink is a MISSING warning, not COMPLETENESS.** `isIgnorable`
+is `severity < CompletenessWarning`, so Completeness asserts structural
+incompleteness (unfed inlets, unreachable sinks). "Has not said where hard errors
+go" is the "has no author" family. Emitting it as Completeness turned **thirteen
+unrelated suites red** for models that were otherwise fine — that was the tell,
+and it is the reason to reach for `addMissing` here.
+
+**An error-sink inlet must accept `GeneratorError`** — directly, or via an
+alternation including it so a model can route its own error messages to the same
+inlet. Otherwise Error: a generator has nothing it can send there.
+
+**Vacuous-test trap, twice in one sitting.** Every error-sink case asserts an
+ABSENCE, which a non-parsing fixture satisfies trivially. A `printf "%s"` with a
+literal `\n`, then a bad alternation (`A | B` instead of `one of { A or B }`),
+each produced green cases proving nothing; only the case asserting PRESENCE gave
+it away. `ErrorSinkTest.messagesFor` now FAILS on "Expected one of" rather than
+reporting on a model that never parsed. Worth copying wherever absence is
+asserted.
+
+**Repo-wide:** `sbt scalafmtCheck` is RED on HEAD independent of this work — 7
+committed files reformat (6 in `commands`). Left alone rather than swept into
+these commits.
+
+---
+
 ## A10 fully registered + duration positivity (2026-07-31) — DONE
 
 `retry` (Saga added), `undo-retry`, `failure-message` — names chosen by
