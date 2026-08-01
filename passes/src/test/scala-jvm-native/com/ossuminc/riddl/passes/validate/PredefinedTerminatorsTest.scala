@@ -121,10 +121,18 @@ class PredefinedTerminatorsTest extends AbstractValidatingTest {
       PredefinedModule.module.id.value mustBe PredefinedModule.name
     }
 
-    "hold the two terminators DIRECTLY, with no domain/context wrapping" in { (td: TestData) =>
+    "hold its processors DIRECTLY, with no domain/context wrapping" in { (td: TestData) =>
+      // Operations joined the two terminators: it is the default destination for hard-error
+      // notifications, so a generator can count on one existing. Listing them exhaustively is
+      // deliberate -- anything added to the standard module is always in every model's scope,
+      // which is a decision that should never happen by accident.
       val streamlets = PredefinedModule.module.contents.filter[Streamlet]
       streamlets.map(_.id.value) must contain theSameElementsAs
-        Seq(PredefinedModule.bottomlessPit, PredefinedModule.foreverEmpty)
+        Seq(
+          PredefinedModule.bottomlessPit,
+          PredefinedModule.foreverEmpty,
+          PredefinedModule.operations
+        )
       val pit = streamlets.find(_.id.value == PredefinedModule.bottomlessPit).get
       pit.effectiveShape mustBe a[Sink]
       pit.inlets.size mustBe 1
@@ -144,6 +152,28 @@ class PredefinedTerminatorsTest extends AbstractValidatingTest {
       if result.messages.nonEmpty then
         fail(s"the predefined module is not clean:\n${result.messages.format}")
       end if
+    }
+  }
+
+  "the predefined Operations sink" must {
+
+    "carry an inlet typed by HardError" in { (td: TestData) =>
+      val ops = PredefinedModule.module.contents
+        .filter[Streamlet]
+        .find(_.id.value == PredefinedModule.operations)
+        .getOrElse(fail("the predefined Operations processor was not found"))
+      ops.effectiveShape mustBe a[Sink]
+      ops.inlets.size mustBe 1
+      ops.outlets mustBe empty
+      ops.inlets.head.type_.pathId.format must include(PredefinedModule.hardError)
+    }
+
+    "carry the HardError record it is typed by" in { (td: TestData) =>
+      PredefinedModule.module.contents
+        .filter[Type]
+        .find(_.id.value == PredefinedModule.hardError)
+        .getOrElse(fail("the predefined HardError record was not found"))
+      succeed
     }
   }
 
