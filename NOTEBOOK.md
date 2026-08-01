@@ -15,6 +15,30 @@ to the task file and note the disposition below.
 
 ---
 
+## Infix alternation `A | B` accepted (2026-08-01) — DONE
+
+Accepted as a second spelling of `one of { A or B }`; **not** canonical.
+PrettifyPass still emits the words, so a bar-written document normalises on its
+next round trip. Both spellings produce the identical `Alternation`, which is
+what makes accepting a second spelling safe at all.
+
+**Why `infixAlternation` is tried FIRST, before `predefinedTypes`:** so the two
+spellings behave the same. `one of { String or Integer }` today gives
+`Path 'String' was not resolved` (alternation operands are type REFERENCES, not
+predefined types — verified before choosing). Placing the infix rule later would
+have made `String | Integer` a *parse* error pointing at the bar instead. It is
+safe to try first only because it REQUIRES at least one `|` — lose that guard
+and every lone type reference becomes a one-element Alternation.
+
+`|` is otherwise used only for `described as` margin lines, a different context.
+
+**Reflectivity checklist for a syntax addition** (all done here): parser + EBNF +
+regenerated GBNF + a corpus fixture under `language/input/` so the CI TatSu
+validator exercises it + a prettify round-trip test + all three rows.
+Corpora re-validated: riddl-models 189/189, riddl-examples 9/9.
+
+---
+
 ## GeneratorError + error-sink completed (2026-08-01) — DONE
 
 `Operations` is **withdrawn** from the standard module; `HardError` is renamed
