@@ -33,7 +33,7 @@ domain dokn is {
 
         entity Company is {
 
-            type AddCompany is command {
+            command AddCompany yields event CompanyAdded is {
               mailingAddress: Address,
               primaryContactName: String,
               primaryContactPhone: MobileNumber,
@@ -52,8 +52,10 @@ domain dokn is {
             state CompanyBase of record Company.fields
             handler CompanyBaseHandler is {
                 on command AddCompany {
+                    yield event CompanyAdded
                     send event CompanyAdded to outlet CompanyEvents_out
                 }
+                on event CompanyAdded { ??? }
             }
         } with {
           option event-sourced
@@ -69,10 +71,10 @@ domain dokn is {
 
         entity Driver is {
 
-            type AddDriverToCompany is command  { name: String, mobile: MobileNumber, companyId: CompanyId }
+            command AddDriverToCompany yields event DriverAddedToCompany is  { name: String, mobile: MobileNumber, companyId: CompanyId }
             type DriverAddedToCompany is event { name: String, mobile: MobileNumber, companyId: CompanyId }
 
-            type RemoveDriverFromCompany is command { mobile: MobileNumber, companyId: CompanyId }
+            command RemoveDriverFromCompany yields event DriverRemovedFromCompany is { mobile: MobileNumber, companyId: CompanyId }
             type DriverRemovedFromCompany is event { mobile: MobileNumber, companyId: CompanyId }
 
             type PlaceDriverOnDuty is command { mobile: MobileNumber }
@@ -92,11 +94,15 @@ domain dokn is {
             state DriverBase of record Driver.fields
             handler DriverBaseHandler is {
                 on command AddDriverToCompany {
+                  yield event DriverAddedToCompany
                   send event DriverAddedToCompany to outlet Driver_out
                 }
                 on command RemoveDriverFromCompany {
+                  yield event DriverRemovedFromCompany
                   send event DriverRemovedFromCompany to outlet Driver_out
                 }
+                on event DriverAddedToCompany { ??? }
+                on event DriverRemovedFromCompany { ??? }
             }
         } with {
           option event-sourced option available
@@ -138,18 +144,18 @@ domain dokn is {
     context Locations is {
         entity Location is {
 
-            type AddDeliveryLocation is command  {
+            command AddDeliveryLocation yields event DeliveryLocationAdded is  {
               geohash: Location, label: String
             }
             type DeliveryLocationAdded is event  { ??? }
 
-            type ChangeLocationName is command { newName: String }
+            command ChangeLocationName yields event LocationNameChanged is { newName: String }
             type LocationNameChanged is event { newName: String }
 
-            type ReportTicketReceived is command { ??? }
+            command ReportTicketReceived yields event TicketReportedAtLocation is { ??? }
             type TicketReportedAtLocation is event { ??? }
 
-            type ModifyNotesAtLocation is command { cid: CompanyId, note: String }
+            command ModifyNotesAtLocation yields event NotesForLocationModified is { cid: CompanyId, note: String }
             type NotesForLocationModified is event { note: String }
 
             type LocationAddressReceived is event { newAddress: dokn.Address }
@@ -172,17 +178,25 @@ domain dokn is {
             state LocationBase of record Location.fields
             handler Base is {
               on command Location.AddDeliveryLocation {
+                yield event Location.DeliveryLocationAdded
                 send event Location.DeliveryLocationAdded to outlet CompanyEvents_out
               }
               on command ChangeLocationName {
+                yield event Location.LocationNameChanged
                 send event Location.LocationNameChanged to outlet CompanyEvents_out
               }
               on command ReportTicketReceived {
+                yield event Location.TicketReportedAtLocation
                 send event Location.TicketReportedAtLocation to outlet CompanyEvents_out
               }
               on command ModifyNotesAtLocation {
+                yield event Location.NotesForLocationModified
                 send event Location.NotesForLocationModified to outlet CompanyEvents_out
               }
+              on event Location.DeliveryLocationAdded { ??? }
+              on event Location.LocationNameChanged { ??? }
+              on event Location.TicketReportedAtLocation { ??? }
+              on event Location.NotesForLocationModified { ??? }
               on event Location.LocationAddressReceived {
                 set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"
               }
