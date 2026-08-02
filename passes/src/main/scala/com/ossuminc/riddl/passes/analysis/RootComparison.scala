@@ -294,11 +294,15 @@ object RootComparison {
 
   private def countCosine(perKind: Seq[KindComparison]): Double = {
     val dot = perKind.map(kc => kc.countA.toDouble * kc.countB).sum
-    val magA = math.sqrt(perKind.map(kc => kc.countA.toDouble * kc.countA).sum)
-    val magB = math.sqrt(perKind.map(kc => kc.countB.toDouble * kc.countB).sum)
-    if magA == 0.0 && magB == 0.0 then 1.0
-    else if magA == 0.0 || magB == 0.0 then 0.0
-    else dot / (magA * magB)
+    val sumA = perKind.map(kc => kc.countA.toDouble * kc.countA).sum
+    val sumB = perKind.map(kc => kc.countB.toDouble * kc.countB).sum
+    if sumA == 0.0 && sumB == 0.0 then 1.0
+    else if sumA == 0.0 || sumB == 0.0 then 0.0
+    // Divide by sqrt(sumA * sumB), NOT sqrt(sumA) * sqrt(sumB). The latter loses a ULP for ~47%
+    // of integer magnitudes, so comparing a model against ITSELF returned 0.9999999999999999
+    // instead of 1.0 -- and which models tripped it depended on their definition counts, so
+    // RootComparisonTest passed only by luck until an edit to dokn.riddl changed them.
+    else dot / math.sqrt(sumA * sumB)
   }
 
   // ---- markdown rendering -------------------------------------------------
