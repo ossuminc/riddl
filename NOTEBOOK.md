@@ -31,24 +31,121 @@ tested and canaried — `EntityIntentionRoundTripTest` 13/13,
 **The ITEM is not done.** It cannot ship until these four are finished, and it
 stays here until they are. Full detail in the `entity-intentions` memory.
 
-a. Migrate `language/input/dokn.riddl` — the only in-repo red (`ExamplesTest`).
-   4 event-sourced entities predating the rules. Additive migration: add
-   `yields` to each command type, `yield` alongside the existing `send`, and an
-   `on event` clause per yielded event.
-b. Run `tJS` and `tNative` — not run since the intentions landed. Native breaks
-   differently; do not skip it.
-c. `MESSAGE_SUGGESTIONS.md` + `JSON_COVERAGE.md` entries.
+a. **DONE.** Migrate `language/input/dokn.riddl` — was the only in-repo red
+   (`ExamplesTest`). Now validates with ZERO errors, `should compile dokn` is
+   green, and the prettify round trip preserves every new construct.
+   4 event-sourced entities predating the rules; 7 handled commands violate R1
+   (Company 1, Driver 2, Location 4 — confirmed against the staged binary).
+   R3/R4 are already satisfied: no command clause mutates, and Location's
+   existing `on event` applies an event declared inside it.
+   **Not purely additive, as first assumed.** `yields` exists only on the
+   kind-first type form (`def_of_type_kind_type`, ebnf-grammar.ebnf:112):
+   `command X yields event Y is { … }`. dokn declares commands the type-first
+   way (`type X is command { … }`), which admits no `yields`, so each of the 7
+   must be reshaped to the kind-first form before an `on event Y` clause can be
+   added for it.
+   A FIFTH rule bites at the same time and is easy to miss by reading
+   `checkEventSourcing` alone: `checkYieldConformance` (A19, ValidationPass:788)
+   requires the clause to actually contain `yield event E` once the command
+   declares `yields E`. Keep the existing `send`; add the `yield` beside it.
+   Fallout fixed: `RootComparisonTest` asserted a model scores exactly 1.0
+   against itself, but `countCosine` computed `Σc²/(√Σc²·√Σc²)` and `√x·√x ≠ x`
+   for ~47% of integer magnitudes — it had been passing by luck, and dokn's new
+   counts lost the toss. Reformulated to `dot/√(sumA·sumB)`, exact on 200k
+   random count vectors (RootComparison.scala:295).
+b. **JS DONE, Native in progress.** `tJS` green: 657 tests, 0 failures.
+   `tNative` is NOT a real Native gate — see § 3; the genuinely-native rows are
+   being run explicitly instead.
+c. **DONE.** `MESSAGE_SUGGESTIONS.md` — added the intention-conflict Error and
+   R1/R2/R3+R4, and REMOVED the stale `is event-sourced but this command handler
+   does not emit an event` row, whose check was deleted with this work.
+   `JSON_COVERAGE.md` — Entity row now lists `intentions`.
 d. riddl-models task drop: 11 corpus entities + the event-sourced pattern
-   template violate all four rules.
-e. Then: push, CI, and cut **rc.10** (this is a language change — the deprecated
-   options and the new Errors both want a soak).
+   template violate all four rules. **In motion on their side** — `16eb6ab1`
+   converts six reactive-bbq entities, `aa68cdd6` gives repositories their own
+   persistence commands. They are blocked on the refusing-clause defect in § 2.
+   Until they land, these external-corpus suites are EXPECTED RED and are not
+   internal signal: `RiddlModelsRoundTripTest` (9) and `Root2JsonCorpusTest`
+   (179/189 clean vs a 95% floor).
+d2. **riddl-examples has its own, harder copy of dokn** — task dropped at
+   `../riddl-examples/task/migrate-dokn-to-event-sourcing-rules.md`. Four
+   event-sourced entities (Company, Driver, Note, Medium) with `set` in `on init`
+   and `morph` in command clauses, so it needs the full treatment including the
+   `on init is { yield event X }` idiom. Blocks `RunRiddlcOnLocalTest`
+   "should validate riddl-examples dokn" (7 errors).
+e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC is a
+   slow CI round trip, and this change breaks consumers in ways worth finding
+   before a tag exists. So: `sbt "reload; publishLocal"` for every module and
+   platform plus the `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
+   `~/Code/ossuminc/bin/riddlc`. Consumers use that path EXPLICITLY — it is not
+   on `$PATH`, where bare `riddlc` still resolves to the tap's rc.9.
+   Done 2026-08-02 at **`2.0.0-rc.9-6-46c5968d`** (all 20 rows in `~/.ivy2/local`,
+   binary verified to report it and to reject dokn's 7 R1 violations).
+   Consumers to sweep: riddl-generator, riddl-models, riddl-examples,
+   riddl-idea-plugin, riddl-vscode, synapify. **Exit condition:** riddlg's
+   upgrades complete (expect a few days) — then push, CI, and cut rc.10.
+   Re-publish + re-stage after each riddl commit; the version string changes
+   every time, which is what keeps consumer resolution cache-safe.
 
 ### 2. Queued, designed, not started
+
+- **`yields` conformance forces a refusing clause to yield** — DO THIS FIRST in
+  this section. Task file: `task/yields-conformance-forces-refusing-clauses-to-
+  yield.md` (from riddl-models, 2026-08-02, filed against staged `46c5968dd`).
+  **Blocks 7 reactive-bbq entities / 268 clauses**; the 10 models already
+  carrying `option event-sourced` are single-clause and convert cleanly, so they
+  are unblocked and proceeding.
+  The unexpressible shape is the ordinary one: a command accepted in one state
+  and refused in the others. R1 forces `yields` onto the command, then
+  `checkYieldConformance` demands EVERY `on command` clause yield it — including
+  the clause whose whole purpose is that nothing happened.
+  All claims verified against the code 2026-08-02: no refusal exemption
+  (ValidationPass.scala:799, `if yieldStmts.isEmpty then addError`); yielding the
+  rejection event or an alternation instead is blocked by `dt eq yt` (:811); and
+  the check is NOT event-sourced-gated (called at :541 for every command/query
+  clause), so a fix helps models that never adopt event sourcing.
+  **The fix is a near-copy of an existing precedent:** :509 already computes
+  `refuses = ErrorStatement || RequireStatement`, and its comment (:504-508) sets
+  out this exact principle *and* warns of this exact failure mode — the rule
+  being silenced by adding dead code after the refusal. Apply the same predicate
+  in the `yieldStmts.isEmpty` branch. Semantics become "if this command
+  succeeds, this is what it records", which is what `yields` reads as.
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
   entry with an origin/document basis.
+- **Deprecate `type X is <aggregate_use_case> {…}`** (approved 2026-08-02:
+  deprecate in 2.0, remove in 3.0). Target is ONLY the type-first spelling of an
+  aggregate use case; plain `type` (`type Address = {…}`, `type M is Pattern(…)`,
+  `type L is any of {…}`) is unaffected and stays.
+  **Why it is vestigial, not merely redundant:** it produces the same AST as the
+  kind-first form — verified by prettifying both, which emits `command A is {…}`
+  for each — so the canonical emitter already erases it and a type-first model
+  never round-trips back to its own spelling. It is also strictly LESS expressive
+  at the surface: `yields` exists only on `def_of_type_kind_type`
+  (ebnf-grammar.ebnf:112), which is what blocked the dokn migration.
+  **The corpus has voted:** riddl-models has 9,337 aggregate declarations, all
+  kind-first, zero type-first. All 167 type-first occurrences are pre-1.0
+  fixtures inside this repo.
+  Rejected alternative: adding `yields` to the type-first form — grammar surface
+  spent on a spelling nobody writes and the printer will not emit.
+  **Known cost:** those 167 fixtures start warning, and since parse-time
+  deprecations surface under every command, their `.check` goldens all shift.
+  Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
 
 ### 3. Queued, needs a plan
+- **`tNative` tests the JVM rows for 5 of its 7 modules** — found 2026-08-02.
+  The alias runs `utils`, `language`, `testkit`, `commands`, `riddlLib`, and all
+  five are the `.jvm` projects (build.sbt:218, 271, 346, 406, 433). Only
+  `passesNative` and `riddlcNative` are actually Native. The Native rows exist
+  and are aggregated (`utilsNative`:220, `languageNative`:273,
+  `testkitNative`:349, `riddlLibNative`:409, `commandsNative`:435), so the fix is
+  to name them — but that is exactly why it needs a plan: nothing has gated those
+  rows, so expect a backlog of Native-only reds the moment they run.
+  `tJS` does this correctly (it names `utilsJS`, `languageJS`, `passesJS`,
+  `testkitJS`, `riddlLibJS`), which is what makes the Native asymmetry look like
+  an oversight rather than a decision. Same defect class as the one the `tJVM`
+  comment (build.sbt:540) was written to prevent: "a release gate that skips
+  three modules and reports success is worse than no gate."
 - **`Comment` in a `Group`'s contents cannot be rebuilt** — the parser puts one
   there but `OccursInGroup` admits none. Pinned at 3 occurrences in
   `Root2JsonFixturesTest`. Widen the union or attach as metadata. Needs a
@@ -72,6 +169,13 @@ e. Then: push, CI, and cut **rc.10** (this is a language change — the deprecat
 - ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the
   two silent breaking changes in the migration guide, and docs for the
   `ForeverEmpty.void` error-sink idiom.
+- ossum.tech: the event-sourced **`on init` idiom**. R3 forbids `set` in
+  `on init` and an empty handler body is a parse error, so init cannot simply be
+  dropped — but `yield` is legal there. Working form (from riddl-models):
+  `on init is { yield event ShiftCreated }` paired with
+  `on event ShiftCreated is { morph …; set state ActiveShift to "…" }` —
+  initial state arrives by replaying the creation event. Every event-sourced
+  entity needs this, so it wants an example, not just a rule.
 
 ---
 
