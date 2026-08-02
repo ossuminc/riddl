@@ -44,7 +44,13 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
   @JSExport
   @inline def col: Int = offset - source.offsetOf(line - 1) + 1
 
-  @JSExport
+  // NO @JSExport on toString, deliberately. With it, Scala.js could not coerce an At to a
+  // primitive: `s"... at $loc ..."` compiles to JS `+`, which threw "TypeError: Cannot convert
+  // object to primitive value" and took down the whole validation run. It surfaced as a Severe
+  // message with EMPTY text because the JS ExceptionUtils shim returned no stack trace, so an IDE
+  // showed a blank squiggle on line 1 -- reported by riddl-vscode against 2.0.0-rc.7 as a
+  // "repository needs a schema rule that lost its message". It was a crash, not a missing message.
+  // JS callers get toString from the prototype regardless, so the export bought nothing.
   @inline override def toString: String = { source.origin + toShort }
 
   @JSExport

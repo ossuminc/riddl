@@ -64,7 +64,10 @@ case class URL(scheme: String = "", authority: String = "", basis: String = "", 
     else scheme + "://" + authority + { if basis.isEmpty then "" else "/" + basis }
 
   /** Return the URL in classic string format */
-  @JSExport
+  // NO @JSExport on toString. Exporting an overridden `toString` breaks JS ToPrimitive for this
+  // class: string interpolation compiles to JS `+`, which then throws
+  // "TypeError: Cannot convert object to primitive value". JS callers still get `toString` from
+  // the prototype, so the export bought nothing and cost a crash. See At.scala for the incident.
   override def toString: String =
     if isEmpty then "" else toBasisString + "/" + path
 
