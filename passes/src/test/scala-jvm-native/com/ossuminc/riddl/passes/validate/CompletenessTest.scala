@@ -605,40 +605,12 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
-    "warn when event-sourced entity command handler does not emit event" in { (td: TestData) =>
-      val input = RiddlParserInput(
-        """domain D is {
-          |  context C is {
-          |    type EId is Id(C.E)
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
-          |    type GetData is query { id: String }
-          |    type DataResult is result { data: String }
-          |    entity E is {
-          |      record Fields is { data: String }
-          |      state Main of record E.Fields
-          |      handler H is {
-          |        on init { set field E.Fields.data to "x" }
-          |        on command D.C.Cmd {
-          |          set field E.Fields.data to "updated"
-          |        }
-          |        on query D.C.GetData {
-          |          send result D.C.DataResult to outlet D.C.Events.out
-          |        }
-          |      }
-          |    } with { option event-sourced }
-          |    source Events is { outlet out is type Evt }
-          |    sink Incoming is { inlet in is type Cmd }
-          |  }
-          |}
-          |""".stripMargin,
-        td
-      )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        val cw = completenessWarnings(msgs)
-        cw.exists(_.message.contains("event-sourced")) mustBe true
-      }
-    }
+    // The old check here ("event-sourced but this command handler does not emit an event") was
+    // DELETED in 2.0. It looked for `send`/`tell` of an event and did not recognise `yield`, so it
+    // fired on exactly the models the new event-sourcing rules bless. Those rules -- every handled
+    // command declares `yields`, every yielded event has an `on event` clause, state changes only
+    // while handling one's own event -- subsume it, as Errors rather than warnings, and live in
+    // EventSourcedEntityTest.
 
     "warn when saga step has no tell command" in { (td: TestData) =>
       val input = RiddlParserInput(

@@ -1513,8 +1513,11 @@ case class ValidationPass(
         )
       )
     }
-    // Completeness 4a: each state should have on-init with set statement
-    if entity.states.nonEmpty && !entity.isEmpty then
+    // Completeness 4a: each state should have on-init with set statement.
+    // NOT for an event-sourced entity: R3 forbids `set` outside an `on event` clause, because
+    // initial state must come from replaying an event like any other state change. Asking for a
+    // `set` in `on init` there would demand exactly what checkEventSourcing rejects.
+    if entity.states.nonEmpty && !entity.isEmpty && !entity.isEventSourced then
       entity.states.foreach { state =>
         val allHandlers = state.handlers ++ entity.handlers
         val onInits = allHandlers.flatMap(_.clauses.collect { case oic: OnInitializationClause =>
@@ -1645,33 +1648,8 @@ case class ValidationPass(
         }
       }
     }
-    // Completeness: event-sourced entity must emit events on every command
-    if entity.nonEmpty && entity.hasOption("event-sourced") then {
-      val allHandlers = entity.handlers ++ entity.states.flatMap(_.handlers)
-      val commandClauses = allHandlers.flatMap(_.clauses).collect {
-        case omc: OnMessageClause if omc.msg.messageKind == AggregateUseCase.CommandCase => omc
-      }
-      commandClauses.foreach { omc =>
-        val finder = Finder(omc.contents)
-        val sends = finder.recursiveFindByType[SendStatement]
-        val tells = finder.recursiveFindByType[TellStatement]
-        val emitsEvent =
-          (sends.nonEmpty && sends.exists(s =>
-            operandMessageKind(s.msg) == AggregateUseCase.EventCase
-          )) ||
-            (tells.nonEmpty && tells.exists(t =>
-              operandMessageKind(t.msg) == AggregateUseCase.EventCase
-            ))
-        if !emitsEvent then {
-          messages.addCompleteness(
-            omc.errorLoc,
-            s"${entity.identify} is event-sourced but this command handler does not emit an event",
-            suggestion =
-              "Send or tell an event from this command handler so the event-sourced entity records its state change."
-          )
-        }
-      }
-    }
+    checkEntityIntentions(entity)
+    checkEventSourcing(entity)
     // Completeness: an entity should define command and event types, and its
     // handlers should cover each command. These checks were previously emitted
     // as AIHelperPass tips. They are advisory (message types are often defined
@@ -1713,6 +1691,124 @@ case class ValidationPass(
         end for
     }
   }
+
+  /** Within a group the intention keywords are mutually exclusive.
+    *
+    * `event-sourced` is in the persistence group because it IMPLIES persistent -- writing both is
+    * redundant rather than additive. Reported rather than made a parse error so the model still
+    * builds and the author sees both keywords named.
+    */
+  private def checkEntityIntentions(entity: Entity): Unit =
+    entity.intentions.groupBy(_.group).foreach { case (group, chosen) =>
+      if chosen.sizeIs > 1 then
+        val names = chosen.map(i => s"'${i.keyword}'").mkString(" and ")
+        messages.addError(
+          entity.errorLoc,
+          s"${entity.identify} declares $names, but $group intentions are mutually exclusive",
+          suggestion = s"Keep exactly one $group keyword before 'entity'." +
+            (if chosen.contains(EntityIntention.EventSourced) &&
+               chosen.contains(EntityIntention.Persistent)
+             then " 'event-sourced' already implies 'persistent'."
+             else "")
+        )
+    }
+  end checkEntityIntentions
+
+  /** The preconditions without which an entity cannot be event sourced at all.
+    *
+    * Replay rebuilds state by re-applying the recorded events in order, so the SAME state changes
+    * must occur. That requires: every command says what event it produces (R1), every such event
+    * has a clause that applies it (R2), and no state change happens anywhere but while handling an
+    * event (R3/R4). These are Errors, not warnings: a model failing them is not incompletely
+    * described, it is impossible to event-source.
+    */
+  private def checkEventSourcing(entity: Entity): Unit = {
+    if entity.isEmpty || !entity.isEventSourced then return
+
+    val allClauses = (entity.handlers ++ entity.states.flatMap(_.handlers)).flatMap(_.clauses)
+    val commandClauses = allClauses.collect {
+      case omc: OnMessageClause if omc.msg.messageKind == AggregateUseCase.CommandCase => omc
+    }
+    val eventClauses = allClauses.collect { case oec: OnEventClause => oec }
+
+    // R1 + R2. The must-handle set comes from the `yields` DECLARATION on each handled command's
+    // type -- not from `yield` statements in the body.
+    val handledEventTypes: Seq[Type] =
+      eventClauses.flatMap(oec => resolution.refMap.definitionOf[Type](oec.msg.pathId))
+    commandClauses.foreach { omc =>
+      resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach { commandType =>
+        commandType.typEx match
+          case auc: AggregateUseCaseTypeExpression =>
+            auc.yields match
+              case None =>
+                messages.addError(
+                  omc.errorLoc,
+                  s"${entity.identify} is event-sourced but ${commandType.identify} declares no " +
+                    s"'yields' clause, so there is no event to record",
+                  suggestion = s"Declare the event it produces, e.g. " +
+                    s"'command ${commandType.id.value} yields event SomethingHappened is { ??? }'."
+                )
+              case Some(yielded) =>
+                val yieldedType = resolution.refMap.definitionOf[Type](yielded.pathId)
+                val handled = (yieldedType, handledEventTypes) match
+                  case (Some(yt), handledTypes) => handledTypes.exists(_ eq yt)
+                  case _                        => true // unresolved: reported elsewhere
+                if !handled then
+                  messages.addError(
+                    omc.errorLoc,
+                    s"${entity.identify} is event-sourced and ${commandType.identify} yields " +
+                      s"'${yielded.format}', but no 'on event' clause applies it on replay",
+                    suggestion = s"Add 'on ${yielded.format} { ??? }' to a handler of " +
+                      s"${entity.identify} so the event can be replayed."
+                  )
+          case _ => () // not an aggregate command type; other checks report that
+      }
+    }
+
+    // R3 + R4. A mutation is legal only while applying one of the entity's OWN events.
+    allClauses.foreach { clause =>
+      val ownEventClause = clause match
+        case oec: OnEventClause => isDeclaredInEntity(oec.msg.pathId, entity)
+        case _                  => false
+      if !ownEventClause then
+        val why = clause match
+          case _: OnEventClause =>
+            "an event declared outside it, which must be turned into one of its own events first"
+          case _ => "something other than one of its own events"
+        walkStatements(clause.contents) { stmt =>
+          mutationKeyword(stmt).foreach { kw =>
+            messages.addError(
+              stmt.loc,
+              s"${entity.identify} is event-sourced, so '$kw' may only appear while handling " +
+                s"one of its own events; ${clause.identify} handles $why",
+              suggestion = clause match
+                case _: OnEventClause =>
+                  s"Yield one of ${entity.identify}'s own events here and '$kw' in that event's clause."
+                case _ =>
+                  s"Move the '$kw' into the 'on event' clause for the event this yields, so replay reproduces it."
+            )
+          }
+        }
+    }
+  }
+
+  /** `set`, `morph` and `become` all change what replay must reproduce. */
+  private def mutationKeyword(stmt: Statement): Option[String] = stmt match
+    case _: SetStatement    => Some("set")
+    case _: MorphStatement  => Some("morph")
+    case _: BecomeStatement => Some("become")
+    case _                  => None
+
+  /** Is the referenced type declared INSIDE this entity? Walks past any `Include`, whose contents
+    * belong to the entity that included them even though it is their direct parent.
+    */
+  private def isDeclaredInEntity(pathId: PathIdentifier, entity: Entity): Boolean =
+    resolution.refMap.definitionOf[Type](pathId).exists { typ =>
+      symbols.parentsOf(typ).exists {
+        case e: Entity => e eq entity
+        case _         => false
+      }
+    }
 
   private def validateProjector(
     projector: Projector,
