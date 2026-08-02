@@ -15,6 +15,54 @@ to the task file and note the disposition below.
 
 ---
 
+## Backlog
+
+Work items accumulate here until implemented. Large ones get their own plan
+(`~/.claude/plans/`) before implementation; the plan is discarded once built.
+
+**In flight — entity intentions + event-sourcing rules** (3 unpushed commits on
+`release/2`; see the `entity-intentions` memory for full detail):
+1. Migrate `language/input/dokn.riddl` — the only in-repo red (`ExamplesTest`).
+   4 event-sourced entities predating the rules. Additive migration: add
+   `yields` to each command type, `yield` alongside the existing `send`, and an
+   `on event` clause per yielded event.
+2. Run `tJS` and `tNative` — not run since the intentions landed.
+3. `MESSAGE_SUGGESTIONS.md` + `JSON_COVERAGE.md` entries.
+4. riddl-models task drop: 11 corpus entities + the event-sourced pattern
+   template violate all four rules.
+
+**Queued, designed, not started:**
+- **Carry source locations through the JSON surface** — plan written and
+  approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
+  entry with an origin/document basis.
+
+**Queued, needs a plan:**
+- **`Comment` in a `Group`'s contents cannot be rebuilt** — the parser puts one
+  there but `OccursInGroup` admits none. Pinned at 3 occurrences in
+  `Root2JsonFixturesTest`. Widen the union or attach as metadata. Needs a
+  decision.
+- **Saga reachability** — the usage walk appears not to traverse saga
+  `doStatements`, so a `tell … to context <external>` in a saga step draws no
+  "not reachable" warning while the same statement in a handler does.
+- **`validateArbitraryInteraction`'s refMap path is dead** — interaction refs are
+  keyed under the UseCase. Re-key, or delete and use the symbol table as A39 did.
+- **`PlatformContext.withOptions` lacks try/finally** — a throwing test poisons
+  global options for later sequential suites. One-liner.
+- **`Blob`, `Unknown`, `Range` in the tokenizer tables** are unreachable from the
+  grammar (riddl-vscode). Remove them or make them reachable.
+- **`sbt scalafmtCheck` is red on HEAD** — 7 committed files reformat, 6 in
+  `commands`. Deferred to just before 2.0.0.
+- **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
+  design decision, then FIXED in rc.9. Verify nothing else wants it.
+
+**Owed to other repos:**
+- riddl-vscode: adoption task for `IncrementalValidator` now that rc.9 ships.
+- ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the
+  two silent breaking changes in the migration guide, and docs for the
+  `ForeverEmpty.void` error-sink idiom.
+
+---
+
 ## Four defect fixes from riddl-models + riddl-vscode (2026-08-01) — DONE
 
 **`@JSExport` on an overridden `toString` breaks ToPrimitive in Scala.js.** The
