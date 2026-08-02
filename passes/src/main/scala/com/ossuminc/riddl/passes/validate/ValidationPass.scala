@@ -2275,11 +2275,50 @@ case class ValidationPass(
     * Scoped to the DOMAIN, not the model: several across domains is correct and intended, so that
     * unrelated concerns do not share an alert stream. Deployment multiplicity -- a sink per site or
     * region -- is the generator's and the operator's business, not riddlc's.
+    *
+    * "Domain" means the NEAREST enclosing one, subdomains included. Counting a subdomain's sink
+    * against its parent made the two checks here contradict each other for nested domains -- see
+    * [[errorSinksDeclaredIn]].
     */
-  private def checkErrorSinkUniqueness(domain: Domain): Unit =
-    val sinks = Finder(domain.contents).recursiveFindByType[Inlet].filter { inlet =>
-      inlet.metadata.filter[OptionValue].exists(_.name == "error-sink")
-    }
+  /** The `error-sink` inlets a domain declares ITSELF, not counting its subdomains'.
+    *
+    * A plain recursive find crosses nested `Domain` boundaries, which made the two checks below
+    * contradict each other: the missing check named a subdomain as a domain in its own right while
+    * the uniqueness check folded that subdomain's sink into the root's count, so a model with
+    * nested domains could satisfy neither (reported by riddl-models against 2.0.0-rc.8). A
+    * subdomain is a domain; it owns its sink.
+    *
+    * Descent continues through Include and every other container -- an `include`d file's contents
+    * belong to the domain that included them, which is exactly how the reported model is written.
+    */
+  private def ownContentsOf(domain: Domain): Seq[RiddlValue] =
+    def walk[CV <: RiddlValue](values: Contents[CV]): Seq[RiddlValue] =
+      values.toSeq.flatMap {
+        case _: Domain               => Seq.empty // a subdomain owns its own
+        case container: Container[?] => container +: walk(container.contents)
+        case value                   => Seq(value)
+      }
+    walk(domain.contents)
+  end ownContentsOf
+
+  private def errorSinksDeclaredIn(domain: Domain): Seq[Inlet] =
+    ownContentsOf(domain).collect { case inlet: Inlet if isErrorSink(inlet) => inlet }
+
+  /** Does this domain have anything of its OWN that could produce a hard error?
+    *
+    * A domain holding only subdomains, types or authors has nowhere to put an inlet without
+    * inventing a context, and nothing of its own that can fail at run time, so asking it for an
+    * error-sink is noise. Its subdomains are asked individually, which is where the processors
+    * actually are.
+    */
+  private def hasOwnProcessors(domain: Domain): Boolean =
+    ownContentsOf(domain).exists(_.isInstanceOf[Processor[?]])
+
+  private def isErrorSink(inlet: Inlet): Boolean =
+    inlet.metadata.filter[OptionValue].exists(_.name == "error-sink")
+
+  private def checkErrorSinkUniqueness(domain: Domain, parents: Parents): Unit =
+    val sinks = errorSinksDeclaredIn(domain)
     // A domain with no error-sink has nowhere for hard errors to go, and there is no predefined
     // fallback: `option error-sink` names the destination and NOTHING else does. A generator
     // asked to emit a failure path for such a model has to invent one or refuse -- riddl-gen
@@ -2292,12 +2331,23 @@ case class ValidationPass(
     // same kind of omission as "has no author" or "should have a description". Raising it to
     // Completeness made thirteen unrelated suites red for models that were otherwise fine, and
     // that was the tell.
-    if sinks.isEmpty && domain.nonEmpty then
+    //
+    // An ANCESTOR domain's sink satisfies a subdomain. A root that declares one destination for
+    // its whole tree is the common case and a reasonable thing to say; requiring every subdomain
+    // to declare its own would force four alert destinations on a model that wants one. A
+    // subdomain may still declare its own, and then the NEAREST one wins -- ordinary lexical
+    // scoping, and unambiguous because each domain permits only one.
+    val inheritsSink = parents.exists {
+      case ancestor: Domain => errorSinksDeclaredIn(ancestor).nonEmpty
+      case _                => false
+    }
+    if sinks.isEmpty && !inheritsSink && hasOwnProcessors(domain) then
       messages.addMissing(
         domain.errorLoc,
         s"${domain.identify} declares no 'error-sink' inlet, so hard errors have no destination",
         suggestion = "Mark the inlet that should receive hard-error notifications with " +
-          "'option error-sink', e.g. 'inlet Alerts is command OpsAlert with { option error-sink }'."
+          "'option error-sink', e.g. 'inlet Alerts is command OpsAlert with { option error-sink }'. " +
+          "A sink on an enclosing domain covers its subdomains."
       )
     end if
     if sinks.sizeIs > 1 then
@@ -2355,7 +2405,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, domain)
-    checkErrorSinkUniqueness(domain)
+    checkErrorSinkUniqueness(domain, parents)
     check(
       domain.domains.isEmpty || domain.domains.size > 2,
       "Singly nested domains do not add value",

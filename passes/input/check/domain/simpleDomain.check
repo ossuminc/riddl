@@ -2,6 +2,3 @@ passes/input/check/domain/simpleDomain.riddl(7:5->8:3):
  Term 'Fum''s definition is too short. It must be at least 10 characters':
      term Fum is "Phi-Pho"
    }
-passes/input/check/domain/simpleDomain.riddl(1:1->11):
- Domain 'foo' declares no 'error-sink' inlet, so hard errors have no destination:
- domain foo is {
