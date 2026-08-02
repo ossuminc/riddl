@@ -34,6 +34,10 @@ class IncrementalValidator(using pc: PlatformContext):
     Map.empty
   private var cachedMessages: Map[ContextPath, Messages] =
     Map.empty
+  // Domain-level content is invisible to the Context fingerprints, so it is tracked separately.
+  // Without this an edit outside any Context changed nothing the validator could see.
+  private var previousDomainFingerprints: Map[Seq[String], Long] = Map.empty
+
   private var cachedGlobalMessages: Messages =
     Messages.empty
   private var previousResult: Option[PassesResult] = None
@@ -44,6 +48,7 @@ class IncrementalValidator(using pc: PlatformContext):
   def reset(): Unit =
     previousFingerprints = Map.empty
     cachedMessages = Map.empty
+    previousDomainFingerprints = Map.empty
     cachedGlobalMessages = Messages.empty
     previousResult = None
     isFirstRun = true
@@ -59,10 +64,13 @@ class IncrementalValidator(using pc: PlatformContext):
   def validate(root: Root): PassesResult =
     val currentFingerprints =
       ContextFingerprint.computeAll(root)
+    val currentDomainFingerprints =
+      ContextFingerprint.computeDomainOwnContent(root)
 
     if isFirstRun then
       val result = fullValidation(root)
       cacheResults(result, currentFingerprints, root)
+      previousDomainFingerprints = currentDomainFingerprints
       isFirstRun = false
       result
     else
@@ -80,12 +88,19 @@ class IncrementalValidator(using pc: PlatformContext):
         changedContexts.size + removedContexts.size +
           addedContexts.size
 
-      if totalContexts == 0 || changedCount > totalContexts / 2
+      // A domain-level edit changes no Context fingerprint, so it must be detected separately --
+      // and it forces a FULL validation because incrementalValidation only knows how to
+      // re-validate Contexts. Correctness first: serving a stale result here hides real errors
+      // while the user types, which defeats the point of live feedback.
+      val domainContentChanged = currentDomainFingerprints != previousDomainFingerprints
+
+      if totalContexts == 0 || domainContentChanged || changedCount > totalContexts / 2
       then
         // More than half changed — full validation is
         // likely faster than incremental
         val result = fullValidation(root)
         cacheResults(result, currentFingerprints, root)
+        previousDomainFingerprints = currentDomainFingerprints
         result
       else if changedCount == 0 then
         // Nothing changed — return previous result
@@ -99,6 +114,7 @@ class IncrementalValidator(using pc: PlatformContext):
         val result =
           incrementalValidation(root, affectedContexts)
         cacheResults(result, currentFingerprints, root)
+        previousDomainFingerprints = currentDomainFingerprints
         result
       end if
     end if

@@ -54,6 +54,45 @@ object ContextFingerprint:
     result.toMap
   end computeAll
 
+  /** Fingerprint each domain's OWN content -- everything that is not a Context or a subdomain.
+    *
+    * [[computeAll]] sees only Contexts, so an edit to a definition sitting DIRECTLY in a domain (a
+    * domain-level `type`, say) changed no fingerprint at all and the incremental validator
+    * concluded nothing had changed, silently serving stale messages and hiding real errors. That is
+    * worse than being slow, which is why this exists. Reported by riddl-vscode, which stopped using
+    * the incremental validator because of it.
+    *
+    * Keyed by domain path. Cheap: one source-span hash per domain, not per definition.
+    */
+  def computeDomainOwnContent(root: Root): Map[Seq[String], Long] =
+    val result = scala.collection.mutable.Map.empty[Seq[String], Long]
+    def walkDomains(domains: Seq[Domain], parentPath: Seq[String]): Unit =
+      domains.foreach { domain =>
+        val domainPath = parentPath :+ domain.id.value
+        val ownText = domain.contents.toSeq
+          .collect {
+            case _: Context => "" // covered by computeAll
+            case _: Domain  => "" // covered by its own entry
+            case value      => spanOf(value)
+          }
+          .mkString("\u0000")
+        result(domainPath) = fnv1a64(ownText)
+        walkDomains(domain.domains, domainPath)
+      }
+    end walkDomains
+    walkDomains(root.domains, Seq.empty)
+    result.toMap
+  end computeDomainOwnContent
+
+  /** The source text a value occupies, or its rendered form when the span is not usable. */
+  private def spanOf(value: RiddlValue): String =
+    val source = value.loc.source
+    val start = value.loc.offset
+    val end = value.loc.endOffset
+    if start >= 0 && end > start && end <= source.data.length then source.data.substring(start, end)
+    else value.format
+  end spanOf
+
   /** Hash a Context by its source text span. Uses the FNV-1a hash for fast, cross-platform hashing
     * with good collision resistance for change detection.
     */
