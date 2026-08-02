@@ -20,23 +20,35 @@ to the task file and note the disposition below.
 Work items accumulate here until implemented. Large ones get their own plan
 (`~/.claude/plans/`) before implementation; the plan is discarded once built.
 
-**In flight — entity intentions + event-sourcing rules** (3 unpushed commits on
-`release/2`; see the `entity-intentions` memory for full detail):
-1. Migrate `language/input/dokn.riddl` — the only in-repo red (`ExamplesTest`).
+### 1. Entity intentions + event-sourcing rules — IN FLIGHT, not done
+
+Code is COMPLETE and committed (`c87099520`, `78cefd05c`, `67ede5b3d` on
+`release/2`, unpushed): the six semantic options are now keywords before
+`entity`, and the four event-sourcing rules are enforced as Errors. Implemented,
+tested and canaried — `EntityIntentionRoundTripTest` 13/13,
+`EventSourcedEntityTest` 10/10, JVM row green except item (a).
+
+**The ITEM is not done.** It cannot ship until these four are finished, and it
+stays here until they are. Full detail in the `entity-intentions` memory.
+
+a. Migrate `language/input/dokn.riddl` — the only in-repo red (`ExamplesTest`).
    4 event-sourced entities predating the rules. Additive migration: add
    `yields` to each command type, `yield` alongside the existing `send`, and an
    `on event` clause per yielded event.
-2. Run `tJS` and `tNative` — not run since the intentions landed.
-3. `MESSAGE_SUGGESTIONS.md` + `JSON_COVERAGE.md` entries.
-4. riddl-models task drop: 11 corpus entities + the event-sourced pattern
+b. Run `tJS` and `tNative` — not run since the intentions landed. Native breaks
+   differently; do not skip it.
+c. `MESSAGE_SUGGESTIONS.md` + `JSON_COVERAGE.md` entries.
+d. riddl-models task drop: 11 corpus entities + the event-sourced pattern
    template violate all four rules.
+e. Then: push, CI, and cut **rc.10** (this is a language change — the deprecated
+   options and the new Errors both want a soak).
 
-**Queued, designed, not started:**
+### 2. Queued, designed, not started
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
   entry with an origin/document basis.
 
-**Queued, needs a plan:**
+### 3. Queued, needs a plan
 - **`Comment` in a `Group`'s contents cannot be rebuilt** — the parser puts one
   there but `OccursInGroup` admits none. Pinned at 3 occurrences in
   `Root2JsonFixturesTest`. Widen the union or attach as metadata. Needs a
@@ -55,7 +67,7 @@ Work items accumulate here until implemented. Large ones get their own plan
 - **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
-**Owed to other repos:**
+### 4. Owed to other repos
 - riddl-vscode: adoption task for `IncrementalValidator` now that rc.9 ships.
 - ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the
   two silent breaking changes in the migration guide, and docs for the
