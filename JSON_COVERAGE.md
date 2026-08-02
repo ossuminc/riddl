@@ -46,7 +46,7 @@ is covered in that construct's phase. The builder emits references as
 | Root | ✅ Phase 1 | JSON top level (`{ "domains": [...] }`) |
 | Domain | ✅ Phase 1 | contexts, types, authors; nested subdomains via recursion |
 | Context | ✅ Phase 1 | types, commands/events/queries/results, entities, handlers; opt. `intention`/`shape`/inlets/outlets (2.0) |
-| Entity | ✅ Phase 1 | state, handlers, invariants, types; opt. `shape`/inlets/outlets (2.0) |
+| Entity | ✅ Phase 1 | state, handlers, invariants, types; opt. `intentions`/`shape`/inlets/outlets (2.0) |
 | Type | ✅ Phase 1 | named type with a type expression |
 | Field | ✅ Phase 1 | inside records/messages |
 | State | ✅ Phase 1 | record reference only (RIDDL holds no fields in a state) |

@@ -183,7 +183,10 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${entity} does not define an Id type for its identity` (Completeness) | `Define an Id type for ${entity} in its context, e.g. 'type Id = Id(${id})'.` |
 | `${idType} is defined inside ${entity}; move it to the containing context …` (Completeness) | `Move ${idType} from ${entity} up to the containing context so other entities can reference it.` |
 | `${idType} for ${entity} is defined outside the containing context; …` (Completeness) | `Move ${idType} into ${entity}'s context, and use adaptors for any inter-context references to it.` |
-| `${entity} is event-sourced but this command handler does not emit an event` (Completeness) | Send or tell an event from this command handler so the event-sourced entity records its state change. |
+| `${entity} declares ${kw1} and ${kw2}, but ${group} intentions are mutually exclusive` (Error) | `Keep exactly one ${group} keyword before 'entity'.` — plus `'event-sourced' already implies 'persistent'.` when those two collide. |
+| `${entity} is event-sourced but ${command} declares no 'yields' clause, so there is no event to record` (Error, R1) | `Declare the event it produces, e.g. 'command ${command} yields event SomethingHappened is { ??? }'.` |
+| `${entity} is event-sourced and ${command} yields '${event}', but no 'on event' clause applies it on replay` (Error, R2) | `Add 'on ${event} { ??? }' to a handler of ${entity} so the event can be replayed.` |
+| `${entity} is event-sourced, so '${kw}' may only appear while handling one of its own events; ${clause} handles ${why}` (Error, R3/R4) | For an `on event` clause: `Yield one of ${entity}'s own events here and '${kw}' in that event's clause.` Otherwise: `Move the '${kw}' into the 'on event' clause for the event this yields, so replay reproduces it.` |
 | `${projector} lacks a required ${record} definition.` | `Add a record type to ${projector}, e.g. 'type ${id}Record = record { ??? }'.` |
 | `${projector} must have exactly one Handler but has N` | Define exactly one handler for the projector. |
 | `${projector} does not reference any repository to persist its projection` (Completeness) | `Reference a repository from ${projector}, e.g. 'updates repository SomeRepository'.` |
