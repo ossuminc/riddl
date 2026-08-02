@@ -49,8 +49,8 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     // choice survives round-trip and is refactor-safe. (State's `initial` is emitted in openState.)
     // A Context with an intention emits it as a keyword prefix (e.g. `application context ...`).
     // An Entity emits its intentions the same way, in canonical order regardless of how they were
-    // written. A deprecated `option event-sourced` set the intention at parse time, so it emits
-    // here as the keyword; `metaDataToEmit` drops the superseded option so it is not said twice.
+    // written -- and a deprecated `option event-sourced` was consumed into an intention at parse
+    // time, so it emits here as the keyword and the option is gone.
     val prefix = definition match
       case h: Handler if h.isInitial => s"${Keyword.initial} "
       case c: Context                => c.intention.map(i => s"${i.keyword} ").getOrElse("")
@@ -113,34 +113,11 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       // does not.
       if onlyComments(definition) then addLine(Punctuation.undefinedMark)
       decr.addIndent("}")
-      val meta = metaDataToEmit(definition)
-      emitMetaData(meta)
-      if meta.isEmpty then nl
+      emitMetaData(definition.metadata)
+      if definition.metadata.isEmpty then nl
     end if
     this
   }
-
-  /** A definition's metadata, minus anything a keyword already carries.
-    *
-    * An Entity's deprecated intention options (`option event-sourced`, `option value`, …) are
-    * dropped here: the keyword prefix already says it, so emitting both would duplicate it and a
-    * round trip would never converge. They are NOT removed from the AST at parse time -- doing that
-    * emptied the `with { … }` block of an entity whose only metadata was such an option, and then
-    * "Metadata in Entity 'X' should not be empty" scolded the author for content the parser had
-    * just deleted.
-    */
-  private def metaDataToEmit(definition: Definition): Contents[MetaData] =
-    definition match
-      case entity: Entity if entity.intentions.nonEmpty =>
-        entity.metadata.toSeq.filterNot {
-          case o: OptionValue =>
-            EntityIntention
-              .fromKeyword(o.name)
-              .orElse(Option.when(o.name == "value")(EntityIntention.Persistent))
-              .exists(entity.hasIntention)
-          case _ => false
-        }.toContents
-      case _ => definition.metadata
 
   def emitMetaData(meta: Contents[MetaData]): this.type =
     if meta.nonEmpty then

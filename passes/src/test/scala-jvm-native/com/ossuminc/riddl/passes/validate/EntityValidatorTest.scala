@@ -36,12 +36,11 @@ class EntityValidatorTest extends AbstractValidatingTest {
             names must contain("finite-state-machine")
             names must contain("message-queue")
             // `aggregate`, `transient` and `available` became INTENTIONS in 2.0. The deprecated
-            // options still parse and still set them -- they stay in the metadata so the `with {}`
-            // block is not silently emptied -- but the intention is where the meaning now lives,
-            // and the prettifier emits the keyword rather than the option.
-            names must contain("aggregate")
-            names must contain("transient")
-            names must contain("available")
+            // options still parse and still set them, but they are CONSUMED -- so they are gone
+            // from the metadata and the meaning now lives in `intentions`.
+            names mustNot contain("aggregate")
+            names mustNot contain("transient")
+            names mustNot contain("available")
             entity.intentions must contain(EntityIntention.Aggregate)
             entity.intentions must contain(EntityIntention.Transient)
             entity.intentions must contain(EntityIntention.Available)

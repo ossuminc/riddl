@@ -237,3 +237,6 @@ passes/input/check/everything/everything.riddl(63:24->64:5):
 passes/input/check/everything/everything.riddl(63:7->24):
  'option aggregate' is deprecated; write 'aggregate' before 'entity' instead:
        option aggregate option transient
+passes/input/check/everything/everything.riddl(42:5->21):
+ Metadata in Entity 'Something' should not be empty:
+     entity Something is {

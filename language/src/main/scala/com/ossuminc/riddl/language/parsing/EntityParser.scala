@@ -161,15 +161,17 @@ private[parsing] trait EntityParser {
     "available" -> EntityIntention.Available
   )
 
-  /** Map a deprecated `option` to the intention it became.
+  /** Consume a deprecated `option` into the intention it became, dropping it from the metadata.
     *
-    * The option is LEFT in the metadata. Removing it here was the first attempt and it emptied the
-    * `with { … }` block of any entity whose only metadata was that option -- which then drew
-    * "Metadata in Entity 'X' should not be empty", scolding the author for content the parser had
-    * just deleted. PrettifyPass skips these options instead, so a round trip still converges on the
-    * keyword spelling with no duplication, and nothing complains in between.
+    * Consuming rather than keeping it is what makes a round trip converge: the keyword prefix
+    * already says it, so emitting both would duplicate it. If that leaves the `with { … }` block
+    * empty, the block simply is not emitted, and the entity gets the ordinary "should have
+    * metadata" nudge that any entity without metadata gets -- which after migration it genuinely
+    * is. Same bargain as `prompt` -> `do`.
     */
-  private def intentionsFromDeprecatedOptions(meta: Seq[MetaData]): Seq[EntityIntention] = {
+  private def intentionsFromDeprecatedOptions(
+    meta: Seq[MetaData]
+  ): (Seq[MetaData], Seq[EntityIntention]) = {
     val found = meta.collect {
       case ov: OptionValue if deprecatedIntentionOptions.contains(ov.name) => ov
     }
@@ -182,7 +184,8 @@ private[parsing] trait EntityParser {
         autoFixable = false
       )
     }
-    found.map(ov => deprecatedIntentionOptions(ov.name))
+    val remaining = meta.filterNot(m => found.exists(_ eq m))
+    remaining -> found.map(ov => deprecatedIntentionOptions(ov.name))
   }
 
   def entity[u: P]: P[Entity] = {
@@ -191,14 +194,14 @@ private[parsing] trait EntityParser {
         entityBody ~ close ~ withMetaData ~ Index
     )./ map { case (start, intentions, id, ascribed, contents, meta, end) =>
       checkForDuplicateIncludes(contents)
-      val fromOptions = intentionsFromDeprecatedOptions(meta)
+      val (remainingMeta, fromOptions) = intentionsFromDeprecatedOptions(meta)
       Entity(
         at(start, end),
         id,
         defaultEntityInitials(contents).toContents,
         ascribedShape = ascribed,
         intentions = EntityIntention.canonical(intentions ++ fromOptions),
-        metadata = meta.toContents
+        metadata = remainingMeta.toContents
       )
     }
   }

@@ -114,8 +114,10 @@ class EntityIntentionRoundTripTest extends AbstractValidatingTest {
         case Right((root, msgs)) =>
           entityOf(root).isEventSourced mustBe true
           withClue(s"messages were: ${msgs.map(_.message).mkString("\n")}") {
-            msgs.exists(m => m.message.contains("option event-sourced") &&
-              m.message.contains("deprecated")) mustBe true
+            msgs.exists(m =>
+              m.message.contains("option event-sourced") &&
+                m.message.contains("deprecated")
+            ) mustBe true
           }
     }
 
@@ -138,7 +140,8 @@ class EntityIntentionRoundTripTest extends AbstractValidatingTest {
       var found = Seq.empty[String]
       parseAndValidateDomain(RiddlParserInput(model(prefix), td), shouldFailOnErrors = false) {
         case (_, _, msgs) =>
-          found = msgs.filter(m => m.isError && m.message.contains("mutually exclusive"))
+          found = msgs
+            .filter(m => m.isError && m.message.contains("mutually exclusive"))
             .map(_.message)
           succeed
       }

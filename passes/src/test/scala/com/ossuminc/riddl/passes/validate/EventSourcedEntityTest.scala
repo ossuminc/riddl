@@ -99,7 +99,10 @@ class EventSourcedEntityTest extends AbstractValidatingTest {
     "be an error, because it cannot be replayed" in { (td: TestData) =>
       val src = conforming
         .replace("entity Order", "event-sourced entity Order")
-        .replace("""          on event Order.Placed { set field Main.total to "1" } with { briefly "h2" }""", "")
+        .replace(
+          """          on event Order.Placed { set field Main.total to "1" } with { briefly "h2" }""",
+          ""
+        )
       val msgs = messagesFor(src, td)
       withClue(s"messages were: ${clue(msgs)}") { noReplay(msgs) must not be empty }
     }
@@ -189,8 +192,7 @@ class EventSourcedEntityTest extends AbstractValidatingTest {
         .replace(
           """          on event Order.Placed { set field Main.total to "1" } with { briefly "h2" }""",
           """          on event Order.Placed { set field Main.total to "1" } with { briefly "h2" }
-            |          on event Order.Extra { set field Main.total to "2" } with { briefly "h4" }"""
-            .stripMargin
+            |          on event Order.Extra { set field Main.total to "2" } with { briefly "h4" }""".stripMargin
         )
         .replace(
           """      event Placed is { total: Integer } with { briefly "e" }""",
