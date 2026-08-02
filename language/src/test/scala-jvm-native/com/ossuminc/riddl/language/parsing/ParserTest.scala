@@ -288,10 +288,11 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
                 isInitial = true
               )
             ),
-            metadata = Contents(
-              OptionValue(At(rpi, 134, 153), "transient", Seq.empty),
-              OptionValue(At(rpi, 153, 170), "aggregate", Seq.empty)
-            )
+            // `option transient` and `option aggregate` are deprecated spellings of the
+            // intentions of the same name: the parser folds them into `intentions` (canonically
+            // ordered) and drops them from metadata, so a round trip converges on the keyword
+            // form. That is why no OptionValue survives here.
+            intentions = Seq(EntityIntention.Aggregate, EntityIntention.Transient)
           )
           content mustBe expected
       }

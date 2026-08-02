@@ -434,6 +434,9 @@ object JsonModel:
     metadata: Option[MetaDto] = None,
     // A Processor may carry an optional ascribed shape and inlet/outlet ports.
     shape: Option[String] = None,
+    // Semantic keywords written before `entity` (event-sourced, persistent, transient,
+    // aggregate, consistent, available), in canonical order. Formerly options.
+    intentions: Seq[String] = Nil,
     inlets: Seq[PortletDto] = Nil,
     outlets: Seq[PortletDto] = Nil,
     version: Option[VersionDto] = None,

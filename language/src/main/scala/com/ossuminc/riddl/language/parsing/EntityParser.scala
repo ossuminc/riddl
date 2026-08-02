@@ -127,17 +127,77 @@ private[parsing] trait EntityParser {
     )
   }
 
+  /** Zero or more intention keywords immediately before `entity`, in ANY order.
+    *
+    * Consumes nothing unless one of the words is present; because the enclosing `entity` rule cuts
+    * only after `Keywords.entity`, a prefix not actually followed by `entity` backtracks cleanly,
+    * so no lookahead is needed. Same shape as `ContextParser.intentionPrefix`.
+    *
+    * Keywords are tried longest-first so `persistent` can never be matched as a prefix of a longer
+    * word, and the result is sorted canonically -- ordering is a writing convenience, never a
+    * structural difference.
+    */
+  private def entityIntentionPrefix[u: P]: P[Seq[EntityIntention]] =
+    // Literals, not EntityIntention.keywords: StringIn is a macro and takes only constants.
+    // EntityIntentionKeywordsTest pins the two lists together so they cannot drift.
+    P(
+      StringIn(
+        "event-sourced",
+        "consistent",
+        "persistent",
+        "aggregate",
+        "available",
+        "transient"
+      ).!.rep(0)
+    ).map(kws => EntityIntention.canonical(kws.flatMap(EntityIntention.fromKeyword)))
+
+  /** The options these intentions replaced, mapped to their keyword. */
+  private val deprecatedIntentionOptions: Map[String, EntityIntention] = Map(
+    "event-sourced" -> EntityIntention.EventSourced,
+    "value" -> EntityIntention.Persistent, // renamed: `value` said it less clearly
+    "transient" -> EntityIntention.Transient,
+    "aggregate" -> EntityIntention.Aggregate,
+    "consistent" -> EntityIntention.Consistent,
+    "available" -> EntityIntention.Available
+  )
+
+  /** Map a deprecated `option` to the intention it became.
+    *
+    * The option is LEFT in the metadata. Removing it here was the first attempt and it emptied the
+    * `with { … }` block of any entity whose only metadata was that option -- which then drew
+    * "Metadata in Entity 'X' should not be empty", scolding the author for content the parser had
+    * just deleted. PrettifyPass skips these options instead, so a round trip still converges on the
+    * keyword spelling with no duplication, and nothing complains in between.
+    */
+  private def intentionsFromDeprecatedOptions(meta: Seq[MetaData]): Seq[EntityIntention] = {
+    val found = meta.collect {
+      case ov: OptionValue if deprecatedIntentionOptions.contains(ov.name) => ov
+    }
+    found.foreach { ov =>
+      val intention = deprecatedIntentionOptions(ov.name)
+      deprecation(
+        ov.loc,
+        s"'option ${ov.name}' is deprecated; write '${intention.keyword}' before 'entity' instead",
+        code = Option(Messages.DeprecationCode.EntityOptionToIntention),
+        autoFixable = false
+      )
+    }
+    found.map(ov => deprecatedIntentionOptions(ov.name))
+  }
+
   def entity[u: P]: P[Entity] = {
     P(
-      Index ~ Keywords.entity ~/ identifier ~ asShape ~ is ~ open ~/ entityBody ~ close ~
-        withMetaData ~ Index
-    )./ map { case (start, id, ascribed, contents, meta, end) =>
+      Index ~ entityIntentionPrefix ~ Keywords.entity ~/ identifier ~ asShape ~ is ~ open ~/
+        entityBody ~ close ~ withMetaData ~ Index
+    )./ map { case (start, intentions, id, ascribed, contents, meta, end) =>
       checkForDuplicateIncludes(contents)
+      val fromOptions = intentionsFromDeprecatedOptions(meta)
       Entity(
         at(start, end),
         id,
         defaultEntityInitials(contents).toContents,
         ascribedShape = ascribed,
+        intentions = EntityIntention.canonical(intentions ++ fromOptions),
         metadata = meta.toContents
       )
     }

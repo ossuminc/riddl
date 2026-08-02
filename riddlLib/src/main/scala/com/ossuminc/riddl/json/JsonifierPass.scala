@@ -592,6 +592,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             k.col[InvariantDto],
             metaOf(e.metadata),
             e.ascribedShape.map(_.keyword),
+            e.intentions.map(_.keyword),
             k.col[InletChild].map(_.dto),
             k.col[OutletChild].map(_.dto),
             k.col[VersionDto].headOption,

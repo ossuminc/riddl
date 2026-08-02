@@ -86,7 +86,11 @@ context_definition = processor_definition_contents | entity | adaptor | group | 
 context_include = "include" literal_string ;
 
 (* Entity *)
-entity = "entity" identifier [as_shape] is "{" entity_body "}" [with_metadata] ;
+entity = {entity_intention} "entity" identifier [as_shape] is "{" entity_body "}" [with_metadata] ;
+(* Semantic keywords before `entity`, in ANY order; the prettifier emits them in the
+   canonical order role, consistency, persistence. Within a group they are mutually
+   exclusive (validated, not grammatical). These replaced the options of the same names. *)
+entity_intention = "aggregate" | "consistent" | "available" | "event-sourced" | "persistent" | "transient" ;
 entity_body = undefined | entity_definitions ;
 entity_definitions = {entity_content}+ ;
 entity_content = processor_definition_contents | state | entity_include ;

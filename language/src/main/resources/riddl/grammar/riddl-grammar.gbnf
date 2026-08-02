@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-01 18:58 UTC
+# Generated: 2026-08-02 19:05 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -83,7 +83,8 @@ context-definition ::= processor-definition-contents | entity | adaptor | group 
 context-include ::= "include" ws1 literal-string
 
 # Entity
-entity ::= "entity" ws1 identifier ws (as-shape)? ws is ws "{" ws entity-body ws "}" ws (with-metadata)?
+entity ::= (entity-intention)* ws "entity" ws1 identifier ws (as-shape)? ws is ws "{" ws entity-body ws "}" ws (with-metadata)?
+entity-intention ::= "aggregate" | "consistent" | "available" | "event-sourced" | "persistent" | "transient"
 entity-body ::= undefined | entity-definitions
 entity-definitions ::= (entity-content)+
 entity-content ::= processor-definition-contents | state | entity-include

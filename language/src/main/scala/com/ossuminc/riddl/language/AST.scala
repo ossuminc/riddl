@@ -3964,6 +3964,62 @@ object AST:
 
   ////////////////////////////////////////////////////////////////////////////////////////// ENTITY
 
+  /** A semantic declaration written as a keyword BEFORE `entity`.
+    *
+    * These were options (`with { option event-sourced }`) until 2.0. They are not metadata: they
+    * decide what the model MEANS -- whether state is rebuilt from a log, whether it survives a
+    * restart -- and the event-sourcing rules make some of them decide whether the model is even
+    * legal. A hard error keyed off something the Computational Model calls an instruction "to be
+    * honored if possible" is a category error, so they were promoted into the grammar, where they
+    * are read at the declaration site instead of in a trailing block.
+    *
+    * Three INDEPENDENT groups; within a group the keywords are mutually exclusive (validated, not
+    * encoded in the type, so that a model with two can be reported rather than fail to parse).
+    */
+  enum EntityIntention:
+    case Aggregate, Consistent, Available, EventSourced, Persistent, Transient
+
+    def keyword: String = this match
+      case Aggregate    => "aggregate"
+      case Consistent   => "consistent"
+      case Available    => "available"
+      case EventSourced => "event-sourced"
+      case Persistent   => "persistent"
+      case Transient    => "transient"
+
+    /** Keywords sharing a group are mutually exclusive. `event-sourced` is in the persistence group
+      * because it IMPLIES persistent -- saying both is redundant, not additive.
+      */
+    def group: String = this match
+      case Aggregate                             => "role"
+      case Consistent | Available                => "consistency"
+      case EventSourced | Persistent | Transient => "persistence"
+  end EntityIntention
+
+  object EntityIntention:
+
+    /** The canonical order intentions are emitted in: role, then consistency, then persistence. Any
+      * order is accepted on input; PrettifyPass emits this one.
+      */
+    val canonicalOrder: Seq[EntityIntention] =
+      Seq(Aggregate, Consistent, Available, EventSourced, Persistent, Transient)
+
+    /** All keywords, longest first, so a prefix parser never matches a shorter word that is the
+      * start of a longer one.
+      */
+    val keywords: Seq[String] = canonicalOrder.map(_.keyword).sortBy(-_.length)
+
+    def fromKeyword(kw: String): Option[EntityIntention] =
+      canonicalOrder.find(_.keyword == kw)
+
+    /** Sort into [[canonicalOrder]] and drop duplicates. The parser stores intentions this way so
+      * that the order they were written in can never make two otherwise-identical entities compare
+      * unequal -- `Definition.equals` compares this field.
+      */
+    def canonical(intentions: Seq[EntityIntention]): Seq[EntityIntention] =
+      canonicalOrder.filter(intentions.contains)
+  end EntityIntention
+
   /** Definition of an Entity
     *
     * @param loc
@@ -3972,6 +4028,8 @@ object AST:
     *   The name of the entity
     * @param contents
     *   The definitional content of this entity: handlers, states, functions, invariants, etc.
+    * @param intentions
+    *   Semantic keywords written before `entity`, in [[EntityIntention.canonicalOrder]]
     */
   @JSExportTopLevel("Entity")
   case class Entity(
@@ -3979,10 +4037,16 @@ object AST:
     id: Identifier,
     contents: Contents[EntityContents] = Contents.empty[EntityContents](),
     ascribedShape: Option[StreamletShape] = None,
+    intentions: Seq[EntityIntention] = Seq.empty,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[EntityContents]
       with WithStates[EntityContents]:
     override def format: String = Keyword.entity + " " + id.format
+
+    def hasIntention(intention: EntityIntention): Boolean = intentions.contains(intention)
+
+    /** The entity's state is rebuilt by replaying its events, so the event-sourcing rules apply. */
+    def isEventSourced: Boolean = hasIntention(EntityIntention.EventSourced)
   end Entity
 
   /** A reference to an entity

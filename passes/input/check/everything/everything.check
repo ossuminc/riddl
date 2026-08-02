@@ -230,3 +230,10 @@ passes/input/check/everything/everything.riddl(1:1->18):
 passes/input/check/everything/everything.riddl(1:1->18):
  Domain 'Everything' declares no 'error-sink' inlet, so hard errors have no destination:
  domain Everything is {
+passes/input/check/everything/everything.riddl(63:24->64:5):
+ 'option transient' is deprecated; write 'transient' before 'entity' instead:
+       option aggregate option transient
+     }
+passes/input/check/everything/everything.riddl(63:7->24):
+ 'option aggregate' is deprecated; write 'aggregate' before 'entity' instead:
+       option aggregate option transient

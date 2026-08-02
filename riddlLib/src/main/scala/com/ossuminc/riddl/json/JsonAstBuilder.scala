@@ -869,8 +869,15 @@ object JsonAstBuilder:
         )
       ),
       ascribedShape = parseShape(e.shape),
+      intentions = parseEntityIntentions(e.intentions),
       metadata = meta(e.brief, e.metadata)
     )
+
+  /** Rebuild an Entity's intentions from their keywords, dropping any that are unknown (a document
+    * written against a newer schema stays readable) and canonicalising the order.
+    */
+  private def parseEntityIntentions(keywords: Seq[String]): Seq[EntityIntention] =
+    EntityIntention.canonical(keywords.flatMap(EntityIntention.fromKeyword))
 
   /** A state references a record type and may carry nested handlers (RIDDL entity state machines
     * put per-state handlers inside the state).

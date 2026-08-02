@@ -197,6 +197,7 @@ object Messages {
     val ShapeKeyword: String = "shape-keyword"
     val AbstractType: String = "abstract-type"
     val SingleAlternation: String = "single-alternation"
+    val EntityOptionToIntention: String = "entity-option-to-intention"
 
     /** Codes whose fix is a pure SPAN REPLACEMENT: the deprecation's `loc` covers exactly the
       * offending keyword, so replacing that range with this text resolves it and touches nothing

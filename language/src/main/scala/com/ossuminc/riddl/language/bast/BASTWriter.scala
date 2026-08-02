@@ -434,6 +434,26 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     case None                        => 0
   })
 
+  /** Persist an Entity's intentions as a count followed by one byte each.
+    *
+    * A count rather than a bitmask: the set is open (other processor kinds get their own keywords
+    * later) and a byte-per-intention costs nothing at these sizes. Order is the canonical one the
+    * parser stores, so bytes are stable for identical models.
+    */
+  private def writeEntityIntentions(intentions: Seq[EntityIntention]): Unit = {
+    writer.writeU8(intentions.size)
+    intentions.foreach(i => writer.writeU8(entityIntentionCode(i)))
+  }
+
+  private def entityIntentionCode(i: EntityIntention): Int = i match {
+    case EntityIntention.Aggregate    => 1
+    case EntityIntention.Consistent   => 2
+    case EntityIntention.Available    => 3
+    case EntityIntention.EventSourced => 4
+    case EntityIntention.Persistent   => 5
+    case EntityIntention.Transient    => 6
+  }
+
   def writeContext(c: Context): Unit = {
     writeNodeTag(NODE_CONTEXT, c.metadata.nonEmpty)
     writeLocation(c.loc)
@@ -450,6 +470,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_ENTITY, e.metadata.nonEmpty)
     writeLocation(e.loc)
     writeIdentifierInline(e.id) // Inline - no tag needed
+    writeEntityIntentions(e.intentions)
     writeAscribedShape(e.ascribedShape)
     writeContents(e.contents)
     debugLog(

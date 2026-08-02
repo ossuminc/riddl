@@ -601,14 +601,31 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     Context(loc, id, contents, ascribedShape, intention, metadata)
   }
 
+  /** Mirror of BASTWriter.writeEntityIntentions: a count, then one byte each. */
+  private def readEntityIntentions(): Seq[EntityIntention] = {
+    val count = reader.readU8()
+    (0 until count).toSeq.flatMap { _ =>
+      reader.readU8() match {
+        case 1 => Some(EntityIntention.Aggregate)
+        case 2 => Some(EntityIntention.Consistent)
+        case 3 => Some(EntityIntention.Available)
+        case 4 => Some(EntityIntention.EventSourced)
+        case 5 => Some(EntityIntention.Persistent)
+        case 6 => Some(EntityIntention.Transient)
+        case _ => None
+      }
+    }
+  }
+
   private def readEntityNode(): Entity = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
+    val intentions = readEntityIntentions()
     val ascribedShape = readAscribedShape()
     val contents =
       readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
     val metadata = readMetadataDeferred()
-    Entity(loc, id, contents, ascribedShape, metadata)
+    Entity(loc, id, contents, ascribedShape, intentions, metadata)
   }
 
   private def readModuleNode(): Module = {
