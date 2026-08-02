@@ -15,6 +15,46 @@ to the task file and note the disposition below.
 
 ---
 
+## Four defect fixes from riddl-models + riddl-vscode (2026-08-01) — DONE
+
+**`@JSExport` on an overridden `toString` breaks ToPrimitive in Scala.js.** The
+biggest catch of the batch. Interpolation compiles to JS `+`, so `s"...$loc..."`
+threw `TypeError: Cannot convert object to primitive value` — crashing the whole
+validation run on JS while the JVM passed. `At` and `URL` both carried it. JS
+callers get `toString` from the prototype anyway, so the export bought nothing.
+Guarded by `ToPrimitiveCoercionTest`, which is JS-only **by necessity**: on the
+JVM every assertion in it passes regardless of the annotation, which is precisely
+why it survived. Grep before adding `@JSExport` near any `toString`.
+
+**A swallowed diagnostic hides the bug under it.** The JS `ExceptionUtils` shim
+returned `Array.empty` ("can't get stack traces in JS"), so the pass runner's
+catch-all rendered EVERY JS exception as a Severe with no text — a blank squiggle
+on line 1 in an IDE. riddl-vscode read it as "a rule that lost its message" and
+filtered it defensively. Fixing the shim FIRST is what made the crash
+diagnosable; the stack trace naming `checkNonEmpty` appeared immediately. A
+reporting path that can silently produce nothing is worse than no reporting path.
+
+**The npm template overrides the sbt-ossuminc generator.** `riddlLib/js/
+package.json.template` is what actually ships — proved by the published
+description and `reactive-systems` keyword, which `build.sbt` does not declare.
+The generator was already fixed upstream and it changed nothing. **Check which
+source actually produced the artifact before fixing the one that looks right.**
+
+**Two checks must agree on what a domain is.** rc.8's error-sink checks did not:
+missing ran per-domain, uniqueness used a recursive find crossing nested `Domain`
+boundaries, so a nested model could satisfy NEITHER. Fix: both use the sinks a
+domain declares itself (descend through Include, stop at Domain), an ancestor's
+sink satisfies a subdomain (nearest wins), and a domain with no processors of its
+own is not asked at all.
+
+**Incremental caching must cover everything it claims to validate.**
+`IncrementalValidator` fingerprinted Contexts only, so a domain-level edit
+changed nothing it could see and it served stale results — dropping real errors
+while the user typed. Correctness beat speed: a domain-level change now forces a
+full validation.
+
+---
+
 ## Infix alternation `A | B` accepted (2026-08-01) — DONE
 
 Accepted as a second spelling of `one of { A or B }`; **not** canonical.
