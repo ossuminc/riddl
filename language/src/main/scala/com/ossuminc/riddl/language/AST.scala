@@ -1189,13 +1189,35 @@ object AST:
     /** The shape explicitly ascribed by the author via `as <shape>`, if any. */
     def ascribedShape: Option[StreamletShape]
 
+    /** This processor's inlets, minus any marked `option error-sink`.
+      *
+      * An `error-sink` inlet is infrastructure, not dataflow: it receives failure notifications a
+      * GENERATOR emits at run time, and nothing in the model produces them. A processor ascribed
+      * `as flow` that also hosts its domain's error sink should still BE a flow.
+      *
+      * Deliberately NOT used by [[arityShape]], which reports the honest port counts -- subtracting
+      * there would make a dedicated `as sink` receiver whose only inlet IS the error sink compute
+      * as `void`. Shape VALIDATION accepts either reading; see `validateProcessorShape`.
+      *
+      * It is an ordinary inlet everywhere else: it must be connected, and it is subject to the
+      * usual cardinality rules.
+      */
+    def dataflowInlets: Seq[Inlet] =
+      inlets.filterNot(_.metadata.filter[OptionValue].exists(_.name == "error-sink"))
+
     /** The shape derived purely from arity (the counts of inlets and outlets), ignoring any
       * ascribed shape. Degenerate arities fall back to [[Void]] rather than crashing; arity
       * validation is performed by a later pass.
       */
-    def arityShape: StreamletShape = {
-      val out = outlets.size
-      val in = inlets.size
+    def arityShape: StreamletShape = shapeForArity(outlets.size, inlets.size)
+
+    /** The shape a given (outlet, inlet) arity denotes.
+      *
+      * Extracted so that shape VALIDATION can ask the same question of a second reading -- the
+      * arity excluding `error-sink` inlets -- without restating the mapping and letting the two
+      * drift apart.
+      */
+    def shapeForArity(out: Int, in: Int): StreamletShape = {
       val loc = this.loc
       (out, in) match
         case (0, 0)                     => Void(loc)

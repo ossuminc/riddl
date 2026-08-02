@@ -168,4 +168,41 @@ class ErrorSinkTest extends AbstractValidatingTest {
       withClue(s"messages were: ${clue(msgs)}") { unrecognized(msgs) must not be empty }
     }
   }
+
+  "an ascribed-shape processor hosting the error sink" should {
+
+    /** A `flow` (1 in, 1 out) that also carries the domain's error-sink inlet. */
+    def flowWithSink(extraInlet: String): String =
+      s"""domain Dom is {
+         |  type T is String with { briefly "t" }
+         |  context App as flow is {
+         |    inlet In is type Dom.T with { briefly "in" }
+         |    outlet Out is type Dom.T with { briefly "out" }
+         |$extraInlet
+         |    handler H is { on other { do "x" } } with { briefly "h" }
+         |  } with { briefly "app" }
+         |} with { briefly "d" }
+         |""".stripMargin
+
+    def arity(msgs: Messages): Messages = msgs.filter(_.message.contains("is ascribed"))
+
+    "be legal -- an error-sink inlet is infrastructure, not part of the shape" in {
+      (td: TestData) =>
+        // riddl-models had to move api-management's sink to a sibling context because this
+        // counted toward arity and turned the flow into a merge. There is nothing wrong with an
+        // inlet on a flow; there was something wrong with counting THIS one.
+        val src = flowWithSink(
+          """    inlet Alerts is record Riddl.GeneratorError with { option error-sink }"""
+        )
+        val msgs = messagesFor(src, td)
+        withClue(s"messages were: ${clue(msgs)}") { arity(msgs) mustBe empty }
+    }
+
+    "still reject a second ORDINARY inlet -- the exemption is only for error-sink" in {
+      (td: TestData) =>
+        val src = flowWithSink("""    inlet Also is type Dom.T with { briefly "also" }""")
+        val msgs = messagesFor(src, td)
+        withClue(s"messages were: ${clue(msgs)}") { arity(msgs) must not be empty }
+    }
+  }
 }

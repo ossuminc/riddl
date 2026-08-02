@@ -15,9 +15,9 @@ import org.scalatest.TestData
   *
   * Fingerprints are computed per Context, so a change to a definition sitting directly in a domain
   * changed nothing the validator could see: it concluded "nothing changed" and served the previous
-  * result, hiding a real error. riddl-vscode found this and stopped using the incremental
-  * validator over it — for live IDE feedback, silently dropping errors while the user types is
-  * worse than being slow.
+  * result, hiding a real error. riddl-vscode found this and stopped using the incremental validator
+  * over it — for live IDE feedback, silently dropping errors while the user types is worse than
+  * being slow.
   */
 class IncrementalDomainLevelEditTest extends AbstractTestingBasisWithTestData {
 

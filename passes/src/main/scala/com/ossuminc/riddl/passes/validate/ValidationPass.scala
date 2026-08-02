@@ -2096,7 +2096,18 @@ case class ValidationPass(
       // ascription against the arity once at least one port is declared.
       case Some(ascribed) if numOutlets + numInlets >= 1 =>
         val derived = processor.arityShape
-        if ascribed.keyword != derived.keyword then
+        // An `error-sink` inlet is infrastructure rather than dataflow, so a processor may be
+        // read either way: WITH it (a dedicated `as sink` receiver whose only inlet is the error
+        // sink) or WITHOUT it (an `as flow` that also happens to host its domain's sink). Accept
+        // whichever the author ascribed. riddl-models had to move api-management's sink to a
+        // sibling context because only the first reading was allowed -- there is nothing wrong
+        // with an inlet on a flow.
+        val derivedWithoutErrorSinks =
+          processor.shapeForArity(numOutlets, processor.dataflowInlets.size)
+        val matchesEitherReading =
+          ascribed.keyword == derived.keyword ||
+            ascribed.keyword == derivedWithoutErrorSinks.keyword
+        if !matchesEitherReading then
           messages.addError(
             processor.errorLoc,
             s"${processor.identify} is ascribed 'as ${ascribed.keyword}' but its arity " +
@@ -2341,7 +2352,12 @@ case class ValidationPass(
       case ancestor: Domain => errorSinksDeclaredIn(ancestor).nonEmpty
       case _                => false
     }
-    if sinks.isEmpty && !inheritsSink && hasOwnProcessors(domain) then
+    // Only a LEAF domain is asked. A domain containing subdomains is a scoping and sharing
+    // construct -- it groups, and it holds types the subdomains share -- so the work that can
+    // actually fail lives in the leaves, and they are asked individually. Asking a grouping
+    // domain as well would double-report the same subtree.
+    val isLeafDomain = domain.domains.isEmpty
+    if sinks.isEmpty && !inheritsSink && isLeafDomain && hasOwnProcessors(domain) then
       messages.addMissing(
         domain.errorLoc,
         s"${domain.identify} declares no 'error-sink' inlet, so hard errors have no destination",

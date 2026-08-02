@@ -128,32 +128,52 @@ class NestedDomainErrorSinkTest extends AbstractValidatingTest {
     }
   }
 
-  "a subdomain with no sink anywhere in its ancestry" should {
-    "still be warned about" in { (td: TestData) =>
+  "leaf subdomains with no sink anywhere in the ancestry" should {
+    "each be warned about, and the GROUPING domain not be" in { (td: TestData) =>
       val msgs = messagesFor(model(plainContext("R"), plainContext("1"), plainContext("2")), td)
       withClue(s"messages were: ${clue(msgs)}") {
-        // Root, Sub1 and Sub2 all lack one and none inherits.
-        missing(msgs).size mustBe 3
+        // Sub1 and Sub2 are where the work is. Root groups them, so asking it as well would
+        // double-report the same subtree.
+        missing(msgs).size mustBe 2
+        missing(msgs).exists(_.message.contains("Sub1")) mustBe true
+        missing(msgs).exists(_.message.contains("Sub2")) mustBe true
+        missing(msgs).exists(_.message.contains("'Root'")) mustBe false
       }
     }
   }
 
-  "a domain that is a pure container of subdomains" should {
-    "not be asked for a sink -- it has nowhere to put one and nothing of its own to fail" in {
-      (td: TestData) =>
-        val msgs = messagesFor(model("", sinkContext("1"), sinkContext("2")), td)
-        withClue(s"messages were: ${clue(msgs)}") {
-          missing(msgs).filter(_.message.contains("Root")) mustBe empty
-        }
-    }
-
-    "still be asked once it has a processor of its own" in { (td: TestData) =>
-      // The complement, so the exemption cannot silently swallow a domain that DOES have
-      // something that can fail.
+  "a domain that CONTAINS subdomains" should {
+    "not be asked for a sink even when it has processors of its own" in { (td: TestData) =>
+      // A grouping domain is for scoping and for sharing types; the things that can fail live in
+      // its leaves, which are asked individually.
       val msgs = messagesFor(model(plainContext("R"), sinkContext("1"), sinkContext("2")), td)
       withClue(s"messages were: ${clue(msgs)}") {
-        missing(msgs).filter(_.message.contains("Root")) must not be empty
+        missing(msgs).filter(_.message.contains("'Root'")) mustBe empty
       }
+    }
+  }
+
+  "a LEAF domain with no processors of its own" should {
+    "not be asked either -- it has nowhere to put an inlet and nothing that can fail" in {
+      (td: TestData) =>
+        val src =
+          """domain Solo is {
+            |  type T is String with { briefly "t" }
+            |} with { briefly "solo" }
+            |""".stripMargin
+        val msgs = messagesFor(src, td)
+        withClue(s"messages were: ${clue(msgs)}") { missing(msgs) mustBe empty }
+    }
+
+    "be asked as soon as it HAS a processor -- the exemption must not swallow real cases" in {
+      (td: TestData) =>
+        val src =
+          s"""domain Solo is {
+             |${plainContext("S")}
+             |} with { briefly "solo" }
+             |""".stripMargin
+        val msgs = messagesFor(src, td)
+        withClue(s"messages were: ${clue(msgs)}") { missing(msgs) must not be empty }
     }
   }
 }
