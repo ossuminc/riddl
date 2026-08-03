@@ -2919,9 +2919,26 @@ case class ValidationPass(
       }
     }
     if c.streamlets.nonEmpty && nonEmptyEntities.nonEmpty then {
-      // Completeness 4b: streamlet handlers should dispatch to entities via tell
+      // Completeness 4b: a SINK's handlers should dispatch to entities via tell.
+      //
+      // Restricted to Sink deliberately. A sink is the boundary that carries messages out of the
+      // stream and into entities, so "you handle messages but never dispatch" is a fair question
+      // to ask it. For a split, merge or flow it is not: routing between ports is precisely their
+      // job, and a `tell` there would dispatch into an entity IN ADDITION to fanning out,
+      // duplicating what the downstream contexts already do. riddl-models had four such warnings
+      // with no honest edit available -- the models were right and the check was wrong.
+      //
+      // The check was dormant until accessors saw through includes (c98e33e5e), because its outer
+      // guard keys off `c.entities` and that corpus keeps every entity in an include file. So it
+      // had never actually run against a real model.
+      //
+      // `effectiveShape`, not `ascribedShape`: a shape may be derived from arity rather than
+      // written down, and AST.scala:1249 warns consumers off hand-rolling that.
       c.streamlets.foreach { streamlet =>
-        if streamlet.inlets.nonEmpty && streamlet.handlers.nonEmpty then {
+        val isSink = streamlet.effectiveShape match
+          case _: Sink => true
+          case _       => false
+        if isSink && streamlet.inlets.nonEmpty && streamlet.handlers.nonEmpty then {
           streamlet.handlers.foreach { handler =>
             val messageClauses = handler.clauses.collect { case omc: OnMessageLikeClause => omc }
             if messageClauses.nonEmpty then {

@@ -18,6 +18,68 @@ class CompletenessTest extends AbstractValidatingTest {
   private def completenessWarnings(msgs: Messages.Messages): Messages.Messages =
     msgs.filter(_.isCompleteness)
 
+  /** Completeness 4b, parameterised by streamlet shape. A sink is the boundary that carries
+    * messages out of the stream and into entities, so asking it to dispatch is fair. A split, merge
+    * or flow exists to route between ports; a `tell` there would dispatch into an entity IN
+    * ADDITION to fanning out, duplicating what the downstream contexts do.
+    */
+  private def streamletModel(shape: String, body: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    event Evt is { data: String }
+       |    entity E is {
+       |      record Fields is { data: String }
+       |      state Main of record E.Fields is {
+       |        handler EH is { on event D.C.Evt { set field Main.data to "x" } }
+       |      }
+       |    }
+       |    processor P as $shape is {
+       |      inlet In is event D.C.Evt
+       |      outlet Out is event D.C.Evt
+       |      handler PH is {
+       |        on event D.C.Evt { $body }
+       |      }
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+
+  private val noDispatch = "does not dispatch to any entity via 'tell'"
+
+  "Completeness 4b (streamlet dispatch)" should {
+
+    "not fire for a split, whose job is routing between ports" in { (td: TestData) =>
+      val input = RiddlParserInput(streamletModel("split", "send event D.C.Evt to outlet Out"), td)
+      parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
+        val hits = completenessWarnings(msgs).filter(_.message.contains(noDispatch))
+        if hits.nonEmpty then info(s"Routing streamlet was asked to dispatch:\n${hits.map(_.format).mkString("\n")}")
+        hits mustBe empty
+      }
+    }
+
+    "not fire for a flow" in { (td: TestData) =>
+      val input = RiddlParserInput(streamletModel("flow", "send event D.C.Evt to outlet Out"), td)
+      parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
+        completenessWarnings(msgs).filter(_.message.contains(noDispatch)) mustBe empty
+      }
+    }
+
+    "still fire for a sink that handles messages but never dispatches" in { (td: TestData) =>
+      val input = RiddlParserInput(streamletModel("sink", "do \"nothing useful\""), td)
+      parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
+        completenessWarnings(msgs).exists(_.message.contains(noDispatch)) mustBe true
+      }
+    }
+
+    "not fire for a sink that does dispatch" in { (td: TestData) =>
+      val input =
+        RiddlParserInput(streamletModel("sink", "tell event D.C.Evt to entity D.C.E"), td)
+      parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
+        completenessWarnings(msgs).filter(_.message.contains(noDispatch)) mustBe empty
+      }
+    }
+  }
+
   "CompletenessWarning" should {
     "warn when entity state has no on-init clause" in { (td: TestData) =>
       val input = RiddlParserInput(
