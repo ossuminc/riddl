@@ -151,7 +151,7 @@ inbound stream at all. 185 of ~190 corpus contexts satisfy the check, so the
 convention is real — the question is whether the two outliers are incomplete or
 whether the check should count a connected entity inlet.
 
-**Q5. BASTReader loses line and column.** `task/2026-08-03-bastreader-loses-line-
+**Q5. BASTReader loses line and column — DONE `bd9e0a705`.** `task/2026-08-03-bastreader-loses-line-
 and-column.md` (synapify). Root cause confirmed: `BASTReader.scala:57` sets
 `currentSource = RiddlParserInput.empty`, so every offset resolves against an
 empty source — line becomes 1 and col becomes the absolute offset. Offsets and
@@ -264,6 +264,44 @@ deserialisation touch the filesystem; decide whether that is acceptable.
   `on event ShiftCreated is { morph …; set state ActiveShift to "…" }` —
   initial state arrives by replaying the creation event. Every event-sourced
   entity needs this, so it wants an example, not just a rule.
+
+---
+
+## BAST positions: recoverable, and honest when they are not (2026-08-03) — DONE
+
+`bd9e0a705`. Reported by synapify, which cannot move AnalysisPass off the
+Electron main thread without a redundant re-parse.
+
+**The report's diagnosis was wrong in a way worth remembering.** It said BAST
+cannot carry positions. BAST carries them fine: `BASTWriter.writeLocation`
+delta-encodes the REAL offset, and `DeepASTComparison` already verified offsets
+round-trip exactly. `At` has always derived line/col lazily from
+`source.lineOf(offset)` — it stores only `(source, offset, endOffset)`.
+
+The defect was that the reader attached a `BASTParserInput` whose line index is
+SYNTHETIC (line L starts at L×10000) and then fed it real offsets, so anything
+under offset 10000 landed on line 1 at col = offset. **Two halves of one
+subsystem with contradictory contracts.**
+
+Fix cost nothing structural: `positionsKnown` on `RiddlParserInput` (default
+true, so `At.empty` still reports 1:1 and no golden moved), an optional
+`sources` map on `BASTReader.read`, and deleting a cast to `BASTParserInput`
+that made supplying a real source a ClassCastException. No format change, no
+FORMAT_REVISION bump, no size increase, no filesystem access — which matters
+because BAST is read on JS and Native.
+
+**Three things worth keeping:**
+
+1. **Ask what the code already does before believing it cannot.** The lazy
+   derivation the "fix" would supposedly need was already `At`'s design; the
+   offsets were already preserved. Only the source attachment was wrong.
+2. **A confident wrong answer is worse than an absent one.** The old behaviour
+   returned line 1 with a plausible column — good enough for a Problems pane to
+   point at. Positions now report 0, which is unrepresentable as a 1-based
+   position, so a consumer can detect it.
+3. **`DeepASTComparison` had carried a comment explaining the wrong line/col as
+   a difference in line breaks.** A defect notice written down and lived with,
+   which is why this survived. Corrected.
 
 ---
 
