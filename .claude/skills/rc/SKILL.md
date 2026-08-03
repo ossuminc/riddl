@@ -305,6 +305,24 @@ wanting a released RC gets it from the tap: `brew upgrade
 ossuminc/tap/riddlc-rc`. For an ordinary release this step is just a sanity check
 that the tag produced a binary reporting the right version.
 
+### Publishing has THREE preconditions, not one
+
+Treat them as a checklist. Each has bitten someone, twice in one day on
+2026-08-03:
+
+1. **Clean working tree.** sbt-dynver appends a timestamp
+   (`…-9c922e42-20260803-1238`) when anything tracked is uncommitted, so the
+   published version stops being reproducible from a commit — even when the
+   dirty file is only markdown. Commit or stash FIRST.
+2. **`reload` before `publishLocal`.** A long-running sbt server freezes dynver
+   at project-load time; that is how rc.2 shipped a binary reporting rc.1.
+3. **Wait for `nativeLink` to FINISH before copying the binary.** Copying while
+   the link is still running stages the previous build under the new version's
+   name, which is the worst of both.
+
+Then verify what you actually shipped — `riddlc version` and the ivy paths —
+before telling any consumer a version number.
+
 **But DO stage one when a consumer needs a rule that has not shipped.** That is
 what the directory is for, and it recurs: riddl-models could not merge its
 duplicate adaptors until it had a riddlc that could FIND them, and no release
