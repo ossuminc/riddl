@@ -55,4 +55,15 @@ class IncludeTransparentAccessorsTest extends AbstractTestingBasis {
       found.map(_.id.value) mustBe Seq("Direct")
     }
   }
+
+  "the named accessors" should {
+
+    "make domain.domains see an included subdomain" in {
+      outerWithIncludedDomain.domains.map(_.id.value).sorted mustBe Seq("Direct", "Included")
+    }
+
+    "keep domain.domains from reporting a subdomain's subdomain" in {
+      outerWithNestedDomain.domains.map(_.id.value) mustBe Seq("Inner")
+    }
+  }
 }

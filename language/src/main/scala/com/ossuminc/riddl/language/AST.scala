@@ -541,7 +541,7 @@ object AST:
   sealed trait WithComments[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Comment]] filtered from the contents */
-    def comments: Seq[Comment] = contents.filter[Comment]
+    def comments: Seq[Comment] = contents.filterThroughIncludes[Comment]
   end WithComments
 
   /** Added to definitions that support includes */
@@ -556,7 +556,7 @@ object AST:
   sealed trait WithTypes[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Type]] filtered from the contents */
-    def types: Seq[Type] = contents.filter[Type]
+    def types: Seq[Type] = contents.filterThroughIncludes[Type]
     override def hasTypes: Boolean = types.nonEmpty
   end WithTypes
 
@@ -564,70 +564,70 @@ object AST:
   sealed trait WithConstants[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Constant]] filtered from the contents */
-    def constants: Seq[Constant] = contents.filter[Constant]
+    def constants: Seq[Constant] = contents.filterThroughIncludes[Constant]
   end WithConstants
 
   /** Base trait to use in any [[Definition]] that can define an invariant */
   sealed trait WithInvariants[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Invariant]] filtered from the contents */
-    def invariants: Seq[Invariant] = contents.filter[Invariant]
+    def invariants: Seq[Invariant] = contents.filterThroughIncludes[Invariant]
   end WithInvariants
 
   /** Base trait to use in any [[Definition]] that can define a [[Function]] */
   sealed trait WithFunctions[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Function]] filtered from the contents */
-    def functions: Seq[Function] = contents.filter[Function].toSeq
+    def functions: Seq[Function] = contents.filterThroughIncludes[Function].toSeq
   end WithFunctions
 
   /** Base trait to use in any [[Processor]] because they define [[Handler]]s */
   sealed trait WithHandlers[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Handler]] filtered from the contents */
-    def handlers: Seq[Handler] = contents.filter[Handler]
+    def handlers: Seq[Handler] = contents.filterThroughIncludes[Handler]
   end WithHandlers
 
   /** Base trait to use in any [[Definition]] that can define an [[Inlet]] */
   sealed trait WithInlets[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Inlet]] filtered from the contents */
-    def inlets: Seq[Inlet] = contents.filter[Inlet]
+    def inlets: Seq[Inlet] = contents.filterThroughIncludes[Inlet]
   end WithInlets
 
   /** Base trait to use in any [[Definition]] that can define an [[Outlet]] */
   sealed trait WithOutlets[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Outlet]] filtered from the contents */
-    def outlets: Seq[Outlet] = contents.filter[Outlet]
+    def outlets: Seq[Outlet] = contents.filterThroughIncludes[Outlet]
   end WithOutlets
 
   /** Base trait to use in any [[Definition]] that can define a [[State]] */
   sealed trait WithStates[CV <: RiddlValue] extends Container[?]:
 
     /** A lazily constructed [[Seq]] of [[State]] filtered from the contents */
-    def states: Seq[State] = contents.filter[State]
+    def states: Seq[State] = contents.filterThroughIncludes[State]
   end WithStates
 
   /** Base trait to use in any [[Definition]] that can define a [[Group]] */
   sealed trait WithGroups[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Group]] filtered from the contents */
-    def groups: Seq[Group] = contents.filter[Group]
+    def groups: Seq[Group] = contents.filterThroughIncludes[Group]
   end WithGroups
 
   /** Base trait to use in any [[Definition]] that can define a [[Output]] */
   sealed trait WithOutputs[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Output]] filtered from the contents */
-    def outputs: Seq[Output] = contents.filter[Output]
+    def outputs: Seq[Output] = contents.filterThroughIncludes[Output]
   end WithOutputs
 
   /** Base trait to use in any [[Definition]] that can define a [[Output]] */
   sealed trait WithInputs[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Output]] filtered from the contents */
-    def inputs: Seq[Input] = contents.filter[Input]
+    def inputs: Seq[Input] = contents.filterThroughIncludes[Input]
   end WithInputs
 
   /** Base trait to use to define the [[AST.Statement]]s that form the body of a [[Function]] or
@@ -636,21 +636,21 @@ object AST:
   sealed trait WithStatements[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Statement]] filtered from the contents */
-    def statements: Seq[Statement] = contents.filter[Statement]
+    def statements: Seq[Statement] = contents.filterThroughIncludes[Statement]
   end WithStatements
 
   /** Base trait to use in a [[Domain]] to define the bounded [[Context]] it contains */
   sealed trait WithContexts[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Context]] filtered from the contents */
-    def contexts: Seq[Context] = contents.filter[Context]
+    def contexts: Seq[Context] = contents.filterThroughIncludes[Context]
   end WithContexts
 
   /** Base trait to use in any [[Definition]] that can define [[Author]]s */
   sealed trait WithAuthors[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Author]] filtered from the contents */
-    def authors: Seq[Author] = contents.filter[Author]
+    def authors: Seq[Author] = contents.filterThroughIncludes[Author]
     override def hasAuthors: Boolean = authors.nonEmpty
   end WithAuthors
 
@@ -663,7 +663,7 @@ object AST:
   sealed trait WithVersion[CV <: RiddlValue] extends Container[CV]:
 
     /** Every [[Version]] declared directly in this scope. At most one is legal. */
-    def versions: Seq[Version] = contents.filter[Version]
+    def versions: Seq[Version] = contents.filterThroughIncludes[Version]
 
     /** The [[Version]] this scope declares, if any (the first one, if the model is invalid). */
     def version: Option[Version] = versions.headOption
@@ -678,7 +678,7 @@ object AST:
   sealed trait WithCopyright[CV <: RiddlValue] extends Container[CV]:
 
     /** Every [[Copyright]] declared directly in this scope. At most one is legal. */
-    def copyrights: Seq[Copyright] = contents.filter[Copyright]
+    def copyrights: Seq[Copyright] = contents.filterThroughIncludes[Copyright]
 
     /** The [[Copyright]] this scope declares, if any (the first one, if the model is invalid). */
     def copyright: Option[Copyright] = copyrights.headOption
@@ -688,97 +688,97 @@ object AST:
   sealed trait WithUsers[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[User]] filtered from the contents */
-    def users: Seq[User] = contents.filter[User]
+    def users: Seq[User] = contents.filterThroughIncludes[User]
   end WithUsers
 
   /** Base trait to use in any [[Definition]] that can define [[Epic]]s */
   sealed trait WithEpics[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Epic]] filtered from the contents */
-    def epics: Seq[Epic] = contents.filter[Epic]
+    def epics: Seq[Epic] = contents.filterThroughIncludes[Epic]
   end WithEpics
 
   /** Base trait to use in any [[Definition]] that can define [[Domain]]s */
   sealed trait WithDomains[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Domain]] filtered from the contents */
-    def domains: Seq[Domain] = contents.filter[Domain]
+    def domains: Seq[Domain] = contents.filterThroughIncludes[Domain]
   end WithDomains
 
   /** Base trait to use in any [[Definition]] that can define [[Projector]]s */
   sealed trait WithProjectors[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Projector]] filtered from the contents */
-    def projectors: Seq[Projector] = contents.filter[Projector]
+    def projectors: Seq[Projector] = contents.filterThroughIncludes[Projector]
   end WithProjectors
 
   /** Base trait to use in any [[Definition]] that can define [[Repository]]s */
   sealed trait WithRepositories[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Repository]] filtered from the contents */
-    def repositories: Seq[Repository] = contents.filter[Repository]
+    def repositories: Seq[Repository] = contents.filterThroughIncludes[Repository]
   end WithRepositories
 
   /** Base trait to use in any [[Definition]] that can define [[Entity]]s */
   sealed trait WithEntities[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Entity]] filtered from the contents */
-    def entities: Seq[Entity] = contents.filter[Entity]
+    def entities: Seq[Entity] = contents.filterThroughIncludes[Entity]
   end WithEntities
 
   /** Base trait to use in any [[Definition]] that can define [[Streamlet]]s */
   sealed trait WithStreamlets[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Streamlet]] filtered from the contents */
-    def streamlets: Seq[Streamlet] = contents.filter[Streamlet]
+    def streamlets: Seq[Streamlet] = contents.filterThroughIncludes[Streamlet]
   end WithStreamlets
 
   /** Base trait to use in any [[Definition]] that can define [[Connector]]s */
   sealed trait WithConnectors[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Connector]] filtered from the contents */
-    def connectors: Seq[Connector] = contents.filter[Connector]
+    def connectors: Seq[Connector] = contents.filterThroughIncludes[Connector]
   end WithConnectors
 
   /** Base trait to use in any [[Definition]] that can define [[Adaptor]]s */
   sealed trait WithAdaptors[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Adaptor]] filtered from the contents */
-    def adaptors: Seq[Adaptor] = contents.filter[Adaptor]
+    def adaptors: Seq[Adaptor] = contents.filterThroughIncludes[Adaptor]
   end WithAdaptors
 
   /** Base trait to use in any [[Definition]] that can define [[Saga]]s */
   sealed trait WithSagas[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Saga]] filtered from the contents */
-    def sagas: Seq[Saga] = contents.filter[Saga]
+    def sagas: Seq[Saga] = contents.filterThroughIncludes[Saga]
   end WithSagas
 
   /** Base trait to use in any [[Definition]] that can define [[SagaStep]]s */
   sealed trait WithSagaSteps[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[SagaStep]] filtered from the contents */
-    def sagaSteps: Seq[SagaStep] = contents.filter[SagaStep]
+    def sagaSteps: Seq[SagaStep] = contents.filterThroughIncludes[SagaStep]
   end WithSagaSteps
 
   /** Base trait to use in any [[Definition]] that can define [[UseCase]]s */
   sealed trait WithUseCases[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[UseCase]] filtered from the contents */
-    def cases: Seq[UseCase] = contents.filter[UseCase]
+    def cases: Seq[UseCase] = contents.filterThroughIncludes[UseCase]
   end WithUseCases
 
   /** Base trait to use in any [[Definition]] that can define [[ShownBy]]s */
   sealed trait WithShownBy[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[ShownBy]] filtered from the contents */
-    def shownBy: Seq[ShownBy] = contents.filter[ShownBy]
+    def shownBy: Seq[ShownBy] = contents.filterThroughIncludes[ShownBy]
   end WithShownBy
 
   /** Base trait to use anywhere that can contain [[Module]]s */
   sealed trait WithModules[CV <: RiddlValue] extends Container[CV]:
     /** A lazily constructed [[Contents]] of [[Module]] */
-    def modules: Seq[Module] = contents.filter[Module]
+    def modules: Seq[Module] = contents.filterThroughIncludes[Module]
   end WithModules
 
   ///////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
@@ -2146,10 +2146,10 @@ object AST:
       with WithComments[AggregateContents]:
 
     /** The list of aggregated [[Field]] */
-    def fields: Seq[Field] = contents.filter[Field]
+    def fields: Seq[Field] = contents.filterThroughIncludes[Field]
 
     /** Thelist of aggregated [[Method]] */
-    def methods: Seq[Method] = contents.filter[Method]
+    def methods: Seq[Method] = contents.filterThroughIncludes[Method]
 
     override def format: String = s"{ ${contents.toSeq.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean =
@@ -3898,7 +3898,7 @@ object AST:
   ) extends Branch[HandlerContents] {
     override def isEmpty: Boolean = clauses.isEmpty
 
-    def clauses: Seq[OnClause] = contents.filter[OnClause]
+    def clauses: Seq[OnClause] = contents.filterThroughIncludes[OnClause]
 
     def format: String = s"${Keyword.handler} ${id.format}"
   }
@@ -4164,7 +4164,7 @@ object AST:
     ascribedShape: Option[StreamletShape] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[ProjectorContents]:
-    def repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
+    def repositories: Seq[RepositoryRef] = contents.filterThroughIncludes[RepositoryRef]
     def format: String = Keyword.projector + " " + id.format
   end Projector
 
@@ -5345,7 +5345,7 @@ object AST:
     */
   @JSExport
   def getTopLevelDomains(root: Root): Seq[Domain] = {
-    root.domains ++ root.includes.flatMap(_.contents.filter[Domain])
+    root.domains
   }
 
   /** Get all the first level nested domains of a domain even if they are in include statements
@@ -5356,7 +5356,7 @@ object AST:
     */
   @JSExport
   def getDomains(domain: Domain): Seq[Domain] = {
-    domain.domains ++ domain.includes.flatMap(_.contents.filter[Domain])
+    domain.domains
   }
 
   def getAllDomains(root: Root): Seq[Domain] = {
@@ -5374,7 +5374,7 @@ object AST:
     */
   @JSExport
   def getContexts(domain: Domain): Seq[Context] = {
-    domain.contexts ++ domain.includes.flatMap(_.contents.filter[Context])
+    domain.contexts
   }
 
   /** get all the epics defined in a domain even if they are in includes of that domain
@@ -5386,7 +5386,7 @@ object AST:
     */
   @JSExport
   def getEpics(domain: Domain): Seq[Epic] = {
-    domain.epics ++ domain.includes.flatMap(_.contents.filter[Epic])
+    domain.epics
   }
 
   /** get all the entities defined in a referent even if they are in includes of that domain
@@ -5398,7 +5398,7 @@ object AST:
     */
   @JSExport
   def getEntities(context: Context): Seq[Entity] = {
-    context.entities ++ context.includes.flatMap(_.contents.filter[Entity])
+    context.entities
   }
 
   /** Get all the authors defined in a domain even if they are in includes of that domain
@@ -5410,8 +5410,7 @@ object AST:
     */
   @JSExport
   def getAuthors(domain: Domain): Seq[Author] = {
-    val nested = domain.includes.flatMap(_.contents.filter[Author])
-    domain.authors ++ domain.domains.flatMap(getAuthors) ++ nested
+    domain.authors ++ domain.domains.flatMap(getAuthors)
   }
 
   /** Get all the authors defined in the root node even if they are in includes
@@ -5435,8 +5434,7 @@ object AST:
     */
   @JSExport
   def getUsers(domain: Domain): Seq[User] = {
-    val nested = domain.includes.flatMap(_.contents.filter[User])
-    domain.users ++ domain.domains.flatMap(getUsers) ++ nested
+    domain.users ++ domain.domains.flatMap(getUsers)
   }
 
   /** Get the [[AST.User]] definitions found at the [[AST.Root]] level or in its [[AST.Include]]s
@@ -5447,6 +5445,10 @@ object AST:
     */
   @JSExport
   def getUsers(root: Root): Seq[User] = {
+    // The second term is NOT redundant with include-transparent accessors, unlike the manual
+    // walks the sibling getters used to carry: it collects Users written at ROOT level inside an
+    // include, which `root.domains` cannot reach because they belong to no domain. The two sets
+    // are disjoint, so this does not double count.
     root.domains.flatMap(getUsers) ++ root.includes.flatMap(_.contents.filter[User])
   }
 
