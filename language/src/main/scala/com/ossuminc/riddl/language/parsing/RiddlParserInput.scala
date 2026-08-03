@@ -338,4 +338,36 @@ protected[parsing] case class StringParserInput(
   override def toString: String = {
     super.toString ++ s", data: ${data.length} chars, origin: $origin"
   }
+
+  /** Memoised hash. The generated `hashCode` for this case class hashes [[data]] — the ENTIRE text
+    * of a source file — and that hash is reached constantly: `At` holds a [[RiddlParserInput]],
+    * `Identifier` and `Definition` hold an `At`, and `ReferenceMap.Key` holds a `Definition`, so
+    * every reference-map add and lookup hashed a whole file.
+    *
+    * The JVM and Native never noticed, because both memoise `String.hashCode` into the string
+    * object. Scala.js cannot — a JS string has nowhere to put the field — so it re-walked every
+    * character on every call. Measured on a 139KB source: 14ns (JVM), 1ns (Native), **181,187ns
+    * (Scala.js)**, i.e. 3402x the cost of hashing a short name where the other platforms pay 1.0x.
+    * That single asymmetry, not any algorithmic complexity, is what made ResolutionPass 97x slower
+    * on Scala.js than on the JVM.
+    *
+    * Caching it here restores on every platform the property the JVM already had. It costs one
+    * field per SOURCE FILE and nothing per AST node. The value is deterministic in the fields, so
+    * equal inputs still hash equally.
+    */
+  private lazy val cachedHashCode: Int =
+    scala.util.hashing.MurmurHash3.productHash(this)
+
+  override def hashCode(): Int = cachedHashCode
+
+  /** Overriding `hashCode` on a case class suppresses the compiler-generated `equals` (Scala 3
+    * spec) — the same trap recorded on `AST.Definition` — so it must be written out. The `eq`
+    * fast path is a bonus fix: the generated `equals` compared [[data]] character-by-character,
+    * which was the same O(file) cost on every hash collision.
+    */
+  override def equals(that: Any): Boolean = that match
+    case other: StringParserInput =>
+      (this eq other) || (data == other.data && root == other.root && purpose == other.purpose)
+    case _ => false
+  end equals
 }
