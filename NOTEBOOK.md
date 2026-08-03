@@ -13,20 +13,23 @@ stand and what a fresh session would get wrong.
 **State** — every number below was produced by a command in the session that
 wrote this, not recalled:
 
-- Branch `release/2`, tree clean, **35 commits UNPUSHED**. Nothing is pushed on
+- Branch `release/2`, tree clean, **39 commits UNPUSHED**. Nothing is pushed on
   purpose; the rc.10 exit condition is in BACKLOG.md item 1e.
-- HEAD `7b782ddcc`. Staged build **`2.0.0-rc.9-34-5488fd9d`** at
-  `~/Code/ossuminc/bin/riddlc`, 20 rows in `~/.ivy2/local`. HEAD is 2 commits
-  ahead of the staged build; both are documentation-only, so no re-stage is
-  owed.
-- **All 19 test rows green, zero failures, no external reds.**
+- HEAD `1a376e0cf`.
+- **The staged build is STALE.** `~/Code/ossuminc/bin/riddlc` still reports
+  `2.0.0-rc.9-34-5488fd9d`, which predates the parser-input hashing fix
+  (`496e77c39`). That is a real code change consumers need — synapify cannot
+  verify their benchmark against it until it is restaged. **A restage is OWED**;
+  do not tell any consumer a version number without re-verifying `riddlc
+  version` and the ivy rows first.
+- **All three platforms green after the hashing fix**, run with
+  `<module>/testOnly *`: JVM 248 suites / 2007 tests, Scala.js 60 / 674, Native
+  149 / 1058. **Zero failures.** External corpus reds are unchanged (BACKLOG 1d).
 
-**In flight:** nothing is half-written. The last change (`9c922e42e`, `format`
-renders the declaration) is complete, verified and shipped.
+**In flight:** the saga-comments task (below). Nothing else is half-written.
 
-**Next:** ResolutionPass performance — approved scope is *profile, then fix only
-if the fix is small and low-risk*. Not started. Its starting position, including
-two findings that must NOT be re-derived, is in BACKLOG.md § 2.
+**Next:** restage the local build (it must carry the saga fix), then sweep
+consumers per BACKLOG 1e.
 
 **Traps, all of which have actually bitten someone here:**
 
@@ -39,23 +42,31 @@ two findings that must NOT be re-derived, is in BACKLOG.md § 2.
   Two of the three were violated on 2026-08-03.
 - **Use `<module>/testOnly *`, never `test`** — it resolves to `testQuick` and
   silently skips. **`tNative` is not a Native gate** (BACKLOG.md § 3).
-- **An sbt `;` chain aborts on first failure**, hiding every later module.
-- **Re-run all 19 rows after a late change**, not just the ones you expect to
-  move.
+- **`sbt -batch` runs ONLY THE FIRST command argument** — seven
+  `'module/testOnly *'` args ran one module, printed "All tests passed" and
+  exited 0. Use one `;`-separated argument AND count the `Suites: completed`
+  lines against the modules you asked for. An sbt `;` chain also aborts on
+  first failure, hiding every later module — so a short count means a red OR a
+  skip; either way, look.
+- **Re-run all rows after a late change**, not just the ones you expect to move.
 - **Checks and APIs here fail by being UNGATED, not under-tested.** When a
   check's guard depends on an accessor, ask what happens the day that accessor
   starts returning things.
 - **When a consumer reports duplicating our logic, expose ours** — do not add a
-  second copy on our side. Three defects this week were that shape.
+  second copy on our side.
+- **A platform asymmetry can look exactly like an algorithm.** The 2026-08-03
+  resolution investigation: compare the JVM/JS/Native RATIOS before profiling.
+  Parse cost 3.2x on Scala.js while Resolution cost 97x — uniform overhead is
+  the runtime, a lone outlier is a specific operation.
 
 **Certainty:** the state block is verified. Anything in BACKLOG.md § 3 marked
-"needs a plan" is explicitly unverified. A NOTEBOOK note claiming
-`attachment ULID` does not parse was found STALE on 2026-08-03 and corrected —
-treat old "known bug" notes as claims to re-check, not facts.
+"needs a plan" is explicitly unverified. Two notes were found STALE and
+corrected on 2026-08-03 (an `attachment ULID` parse claim, and a `task/done/`
+file recording work that never happened) — **treat old "known bug" notes, and
+`done/` placement, as claims to re-check rather than facts.**
 
-**`task/` holds 1 file, UNTRIAGED:**
-`2026-08-03-resolution-pass-performance.md` (synapify). It is deliberately not
-triaged here.
+**`task/` holds 1 file:** `2026-08-03-saga-bodies-reject-comments.md`
+(riddl-generator) — in flight this session.
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
 
@@ -72,6 +83,40 @@ to the task file and note the disposition below.
 
 ---
 
+
+## A saga body rejected comments because one rule skipped a shared alternative (2026-08-03) — DONE
+
+`867ab0333`. Reported by riddl-generator: `//` between two saga steps was a
+parse error whose message never mentioned comments.
+
+`sagaDefinitions` was the only container in the VitalDefinition family that did
+not lead with `vitalDefinitionContents` — Domain, Function, Epic and Processor
+all do. Since `OccursInSaga` is `OccursInVitalDefinition | SagaStep`, `Type` and
+`Comment` were ALWAYS legal saga contents; only the parse rule disagreed with
+the AST it fed.
+
+**Three things worth keeping:**
+
+1. **Fix the omission, not the symptom.** Adding `comment` alone would have
+   fixed the report and left `type` broken in the same place, for the same
+   reason — which the reporter had not noticed. Restoring the shared
+   alternative fixed both and made saga consistent with its siblings. When a
+   rule is the odd one out, ask what ELSE the others get that it doesn't.
+2. **A fixture in a skipped file is not coverage.** The obvious home for the
+   new syntax, `language/input/full/context.riddl`, is **skipped by the TatSu
+   validator as an include fragment** — the fixture would have looked like CI
+   coverage and been none. Checking the validator's own output for a `✓` on the
+   file is the only way to know. Same family as the false-green traps: verify
+   the gate ran, don't assume it.
+3. **A `rep(2)` that looks like a semantic guard usually isn't.** It reads as
+   "a saga needs two steps", but the real rule is ValidationPass:2585, which
+   counts `sagaSteps` and emits a proper Error with a suggestion. Relaxing the
+   parser therefore lost no rule and UPGRADED the diagnostic — a parse failure
+   at the wrong token became a validation message that says what is wrong.
+   Worth checking for this shape before assuming a parser cardinality is
+   load-bearing.
+
+---
 
 ## Resolution was never slow; a case class hashed the whole file (2026-08-03) — DONE
 

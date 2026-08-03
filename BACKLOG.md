@@ -111,6 +111,18 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
 
 ### 3. Queued, needs a plan
+- **A keyword-named field reports the error several tokens upstream.** From
+  riddl-generator 2026-08-03, filed here because it is a real diagnostic defect
+  even though they marked it "no action needed". A field in a message
+  aggregation named after a keyword — `command Store is { entity: Order }` —
+  reports `Expected one of ("(" | "yields")` pointing at the `is`, several
+  tokens BEFORE the offending `entity`. The rule (keywords are not field names)
+  is correct; the attribution is what costs time, and it is the same class of
+  cost as the saga-comment defect fixed in `867ab0333` — a message that does not
+  name the thing that is actually wrong. Wants a plan because good attribution
+  here likely means a cut/`~/` placement change in the aggregation rule, and
+  those interact with `rep` termination (see the statement-restriction pattern
+  note in memory). Low priority; a nuisance, not a blocker.
 - **Move ResolutionPass off `ClassTag` for type differentiation.** A measured
   cleanup, NOT a fix for anything currently slow — filed 2026-08-03 after the
   ClassTag hypothesis was tested and refuted as the cause of the Scala.js
