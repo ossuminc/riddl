@@ -538,7 +538,7 @@ case class ValidationPass(
       }
       // A19↔A22 conformance applies to any context (not only entities) whose handled message is a
       // command/query with a `yields` contract.
-      checkYieldConformance(omc)
+      checkYieldConformance(omc, parents)
     } else {}
     omc.from.foreach { (_: Option[Identifier], ref: Reference[Definition]) =>
       checkRef[Definition](ref, parents)
@@ -787,8 +787,26 @@ case class ValidationPass(
     * Skips cleanly when refs don't resolve (those are reported by other checks) and when the
     * handled message is not a command/query (no `yields` contract applies).
     */
-  private def checkYieldConformance(omc: OnMessageLikeClause): Unit = {
+  private def checkYieldConformance(omc: OnMessageLikeClause, parents: Parents): Unit = {
     if omc.msg.isEmpty then return
+    // Enforce the contract only where a `yield` can actually be WRITTEN. `StatementParser` grants
+    // `yieldStatement` to ProcessorKind Entity/Context/Repository and nothing else (`case _ =>
+    // base`), so demanding one from a streamlet clause asks for a statement the parser rejects --
+    // and `on other` is no escape, because A36 then reports an epic step routed through that
+    // streamlet as unwitnessed. There was no satisfiable spelling. These two lists MUST agree: if
+    // `yield` is ever granted to another ProcessorKind, add it here too.
+    //
+    // It is also right on the merits. A streamlet forwarding a command is not the thing that
+    // records the event; the entity that owns the state is, and it is still held to the contract.
+    //
+    // The nearest enclosing Processor, not `parents.head` -- a Handler may sit inside a State
+    // inside an Entity.
+    val enclosing = parents.collectFirst { case p: Processor[?] => p }
+    val canYield = enclosing.exists {
+      case _: Entity | _: Context | _: Repository => true
+      case _                                      => false
+    }
+    if !canYield then return
     resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach { handledType =>
       handledType.typEx match {
         case auc: AggregateUseCaseTypeExpression

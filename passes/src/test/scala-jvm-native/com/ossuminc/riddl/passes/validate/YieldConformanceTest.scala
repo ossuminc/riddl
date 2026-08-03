@@ -33,7 +33,47 @@ class YieldConformanceTest extends AbstractValidatingTest {
        |}
        |""".stripMargin
 
+  /** A sink that FORWARDS a `yields`-declaring command by name. The parser grants `yieldStatement`
+    * to ProcessorKind Entity/Context/Repository only, so this clause physically cannot contain the
+    * yield the rule used to demand -- and `on other` is no escape, because A36 then reports an epic
+    * step routed through the sink as unwitnessed.
+    */
+  private val sinkForwardsModel: String =
+    """domain D is {
+      |  context C is {
+      |    event E is { data: String }
+      |    command Cmd yields event E is { data: String }
+      |    entity Ent is {
+      |      record F is { x: Integer }
+      |      state S of record Ent.F is {
+      |        handler EH is {
+      |          on command D.C.Cmd { yield event E }
+      |          on event D.C.E { set field S.x to "1" }
+      |        }
+      |      }
+      |    }
+      |    processor Intake as sink is {
+      |      inlet In is command D.C.Cmd
+      |      handler IH is {
+      |        on command D.C.Cmd { tell command D.C.Cmd to entity Ent }
+      |      }
+      |    }
+      |  }
+      |}
+      |""".stripMargin
+
   "yield conformance" should {
+
+    "not require a yield from a streamlet clause, which cannot contain one" in { (td: TestData) =>
+      val input = RiddlParserInput(sinkForwardsModel, td)
+      parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
+        val neverYields = errors(msgs).filter(_.message.contains("never yields"))
+        if neverYields.nonEmpty then
+          info(s"Streamlet clause was held to the yield contract:\n${neverYields.map(_.format).mkString("\n")}")
+        neverYields mustBe empty
+      }
+    }
+
 
     "accept a yield that matches the declared yields clause" in { (td: TestData) =>
       val input = RiddlParserInput(model("yield event E"), td)
