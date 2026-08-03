@@ -13,9 +13,12 @@ stand and what a fresh session would get wrong.
 **State** — every number below was produced by a command in the session that
 wrote this, not recalled:
 
-- Branch `release/2`, tree clean, **41 commits UNPUSHED**. Nothing is pushed on
-  purpose; the rc.10 exit condition is in BACKLOG.md item 1e.
-- HEAD `37b0db947`.
+- Branch `release/2`, tree clean, **~42 commits UNPUSHED**. Nothing is pushed on
+  purpose; the rc.10 exit condition is in BACKLOG.md item 1e. The count drifts
+  by one every time this file is committed, so **verify rather than trust it**:
+  `git log --oneline origin/release/2..HEAD | wc -l`.
+- HEAD is the tip of `release/2`; the last code commits are `867ab0333` (saga)
+  and `496e77c39` (hashing).
 - **Staged build is CURRENT: `2.0.0-rc.9-42-37b0db94`** at
   `~/Code/ossuminc/bin/riddlc`, 20 ivy rows under that version. Restaged
   2026-08-03 from a clean tree with `reload`, and the binary was copied only
