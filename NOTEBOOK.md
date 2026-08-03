@@ -79,7 +79,7 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
    platform plus the `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
    `~/Code/ossuminc/bin/riddlc`. Consumers use that path EXPLICITLY — it is not
    on `$PATH`, where bare `riddlc` still resolves to the tap's rc.9.
-   Currently staged: **`2.0.0-rc.9-13-a5494f13`** (all 20 rows in
+   Currently staged: **`2.0.0-rc.9-21-2db8f1d0`** (all 20 rows in
    `~/.ivy2/local`, binary verified to report it). If HEAD is ahead of that, check
    whether the extra commits are documentation-only before re-staging — a
    NOTEBOOK edit does not change the binary. First staged the same day at
@@ -215,6 +215,14 @@ nothing failed. The 35 named accessors now use `filterThroughIncludes`.
    every `Container`, so it over-reports where the accessors under-reported.
 4. **No fixture and no `.check` golden moved.** Validation results are
    unchanged, which confirms the defect was purely on the consumer surface.
+5. **Verified on all 19 rows, not the 6 that had changed.** After the import
+   reversal only `language` and `passes` had been re-run, and the summary still
+   quoted pre-reversal numbers for the rest. Reid caught it. Full matrix:
+   3,934 tests, one pre-existing external failure. `commands` and `riddlc` were
+   the ones that mattered — they carry the external-corpus suites, where a
+   double count would show up as a diff in real model output rather than a unit
+   assertion. **Re-run everything after a late reversal, not just the modules
+   whose tests you expect to move.**
 
 ---
 
