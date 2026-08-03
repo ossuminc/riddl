@@ -79,8 +79,10 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
    platform plus the `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
    `~/Code/ossuminc/bin/riddlc`. Consumers use that path EXPLICITLY — it is not
    on `$PATH`, where bare `riddlc` still resolves to the tap's rc.9.
-   Done 2026-08-02 at **`2.0.0-rc.9-6-46c5968d`** (all 20 rows in `~/.ivy2/local`,
-   binary verified to report it and to reject dokn's 7 R1 violations).
+   Currently staged: **`2.0.0-rc.9-10-8b130bdc`** (all 20 rows in
+   `~/.ivy2/local`, binary verified to report it). First staged the same day at
+   `2.0.0-rc.9-6-46c5968d`, which was verified to reject dokn's 7 R1 violations
+   — that is how riddl-models found the refusing-clause defect in § 2.
    Consumers to sweep: riddl-generator, riddl-models, riddl-examples,
    riddl-idea-plugin, riddl-vscode, synapify. **Exit condition:** riddlg's
    upgrades complete (expect a few days) — then push, CI, and cut rc.10.
