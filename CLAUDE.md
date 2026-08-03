@@ -711,6 +711,33 @@ to the right group rather than appending to a list.
   `PromptStatement`.
 - **walkStatements helper** — private in ValidationPass; walks
   into `WhenStatement` / `MatchStatement` nesting.
+- **Accessors see through `include`; `Finder` sees through everything.**
+  The 35 `contents` accessors (`context.entities`, `domain.contexts`,
+  `handler.clauses`, …) use `Contents.filterThroughIncludes`, which
+  descends `Include` wrappers ONLY — an `include` is textual
+  composition, so a definition means the same thing wherever its text
+  lives. Three rules follow:
+  1. **`Contents.filter` stays literal** ("my direct children"), and
+     `includes` must keep using it, since the wrapper is matched BEFORE
+     the type test. `vitals`/`processors`/`definitions` also stay
+     literal — their callers (DiagramsPass, ResolutionPass, StatsPass)
+     already reach included definitions another way and would double
+     count. Reasons are recorded at each in `Contents.scala`.
+  2. **`BASTImport` is NOT descended**, though `flatten()` removes that
+     wrapper too. S61-2 fixed the contract that imported content stays
+     in the wrapper until an explicit flatten (`IncludeAndImportTest`).
+     Whether imports should be transparent is an open question.
+  3. **Never reach for `Finder.recursiveFindByType` to answer "the X of
+     this container"** — it walks EVERY `Container`, so it returns
+     nested contexts' definitions too. It over-reports exactly where the
+     accessors used to under-report.
+  Before 2026-08-03, `context.entities` was empty whenever the entity
+  lived in an include — silently. That is how riddl-generator produced
+  582 files for reactive-bbq with no entity class among them while the
+  model validated clean. It survived because riddl validates by
+  TRAVERSING and every internal test took that path; the consumer path
+  had no gate at all. `ConsumerReadsIncludedDefinitionsTest` is now that
+  gate — **add to it whenever you add an accessor.**
 - **Definition hashCode/equals override** — `Definition` trait
   overrides both: `hashCode` cheap (id + loc + class); `equals`
   structural via `productEquals`, skipping `Contents` fields.

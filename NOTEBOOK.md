@@ -116,6 +116,17 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
 
 ### 3. Queued, needs a plan
+- **Should `BASTImport` be transparent to the accessors too?** Surfaced by the
+  include-transparency work (2026-08-03). `flatten()` removes both the `Include`
+  and `BASTImport` wrappers, but the accessors now descend only `Include`,
+  because descending imports broke S61-2's deliberate contract that imported
+  content stays in the wrapper until an explicit flatten
+  (`IncludeAndImportTest`, "load the named domain out of the .bast into the
+  wrapper"). The reasoning for the split: an `include` is textual composition
+  of source, while an `import` pulls in a COMPILED artifact — arguably a
+  different claim. But it leaves the family inconsistent, so it wants deciding
+  on its own rather than by whichever change lands first. riddl-generator has
+  been told it is an open question, not a settled no.
 - **A conditionally refusing clause escapes yield conformance** — the residual
   gap left by `0054a8433`. `checkYieldConformance` asks whether a refusal appears
   ANYWHERE in the clause, so a clause that refuses on one branch and forgets to
@@ -168,6 +179,37 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   `on event ShiftCreated is { morph …; set state ActiveShift to "…" }` —
   initial state arrives by replaying the creation event. Every event-sourced
   entity needs this, so it wants an example, not just a rule.
+
+---
+
+## Accessors see through `include` (2026-08-03) — DONE
+
+`2a8b87a6b`, `c98e33e5e`, `dbd350020`, `0d83caabc`. Reported by riddl-generator
+against the staged build; task file in `task/done/` with the full transcript.
+
+`context.entities` was empty whenever the entity was written in an included
+file, while `context.repositories` in the same context answered normally — the
+model giving different answers based only on which file the author typed into.
+riddlg generated 582 files for reactive-bbq with no entity class among them, and
+nothing failed. The 35 named accessors now use `filterThroughIncludes`.
+
+**Four things worth keeping:**
+
+1. **The gap was never "untested", it was UNGATED.** riddl validates by
+   traversing (`HierarchyPass`, `Finder`), so every internal test took that
+   path; the accessor path that consumers use had no test at all. Four of the
+   eight `@JSExport` consumer helpers — `getEntities` among them — had zero test
+   references. Fixing transparency without adding
+   `ConsumerReadsIncludedDefinitionsTest` would have reset the clock on the same
+   bug. **Add to that suite whenever an accessor is added.**
+2. **The compiler contained the same workaround it was being asked about.**
+   Seven helpers in AST.scala were written `x.foo ++ x.includes.flatMap(...)`,
+   which is exactly the "every consumer reimplements the recursion" complaint —
+   and they double counted the moment the accessors worked. Collapsed.
+3. **`recursiveFindByType` is the wrong fix and was riddlg's plan B.** It walks
+   every `Container`, so it over-reports where the accessors under-reported.
+4. **No fixture and no `.check` golden moved.** Validation results are
+   unchanged, which confirms the defect was purely on the consumer surface.
 
 ---
 
