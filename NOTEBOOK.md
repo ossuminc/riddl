@@ -79,7 +79,7 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
    platform plus the `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
    `~/Code/ossuminc/bin/riddlc`. Consumers use that path EXPLICITLY — it is not
    on `$PATH`, where bare `riddlc` still resolves to the tap's rc.9.
-   Currently staged: **`2.0.0-rc.9-21-2db8f1d0`** (all 20 rows in
+   Currently staged: **`2.0.0-rc.9-25-30979985`** (all 20 rows in
    `~/.ivy2/local`, binary verified to report it). If HEAD is ahead of that, check
    whether the extra commits are documentation-only before re-staging — a
    NOTEBOOK edit does not change the binary. First staged the same day at
@@ -97,7 +97,7 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
 against the staged `2.0.0-rc.9-21-2db8f1d0` within hours of it landing. All
 claims verified against the code before listing. Work them in this order.
 
-**Q1. Correct the recursive-find warning — DOING NOW, no code.** riddl-generator
+**Q1. Correct the recursive-find warning — DONE `9bbb8a048`.** riddl-generator
 filed a correction to riddl's own note (`task/done/2026-08-03-nested-contexts-
 cannot-exist.md`). The warning "recursiveFindByType returns entities of nested
 sub-contexts" cites a shape the grammar forbids: `context_definition`
@@ -111,7 +111,7 @@ DO nest, :77) and for `Type` under a Context (types declared inside entities —
 riddlg depends on that difference for state records). Wrong reasoning currently
 sits in CLAUDE.md, NOTEBOOK and the reply already sent to riddlg; fix all three.
 
-**Q2. `yields` is unsatisfiable in a streamlet clause — needs a plan.**
+**Q2. `yields` unsatisfiable in a streamlet clause — DONE `0dba8d26b`.**
 `task/2026-08-03-yields-unsatisfiable-in-streamlet-clause.md` (riddl-examples).
 Three individually-reasonable rules cannot be jointly satisfied: R1 forces
 `yields` onto an event-sourced entity's command; `checkYieldConformance` demands
@@ -124,7 +124,7 @@ REFUSE, and a forwarding clause neither yields nor refuses. Their option 1 —
 scope the rule to clauses where `yield` is legal — looks right: a streamlet
 forwarding a command is not the thing that records the event.
 
-**Q3. Completeness 4b demands `tell` from routing streamlets — needs a plan.**
+**Q3. Completeness 4b demanded `tell` from routing streamlets — DONE `30979985d`.**
 `task/include-transparency-activated-two-dormant-checks.md` (riddl-models), item
 1; 4 of the 6 new warnings. The check (ValidationPass.scala:2903-2911) guards
 only on `streamlet.inlets.nonEmpty && streamlet.handlers.nonEmpty`, with no
@@ -241,6 +241,36 @@ deserialisation touch the filesystem; decide whether that is acceptable.
   `on event ShiftCreated is { morph …; set state ActiveShift to "…" }` —
   initial state arrives by replaying the creation event. Every event-sourced
   entity needs this, so it wants an example, not just a rule.
+
+---
+
+## Two over-broad checks narrowed (2026-08-03) — DONE
+
+`0dba8d26b` (Q2) and `30979985d` (Q3). Reported by riddl-examples and
+riddl-models against the staged build; task files carry the transcripts.
+
+- **Q2** — `checkYieldConformance` demanded a `yield` from clauses that cannot
+  contain one. `StatementParser` grants `yieldStatement` to ProcessorKind
+  Entity/Context/Repository only, so a sink handling a `yields`-declaring
+  command had no satisfiable spelling: `on other` dodged the yield rule but left
+  the epic step unwitnessed under A36. **Our regression** — `0054a8433` scoped
+  the exemption to clauses that REFUSE, and a clause that FORWARDS is a third
+  case nobody thought of. Now enforced only where a yield is legal.
+- **Q3** — Completeness 4b demanded dispatch-to-entity from split/merge/flow,
+  whose job is routing between ports. Restricted to `Sink` via `effectiveShape`.
+
+**The pattern, stated once because it has now happened three times.** Both of
+these, and the four `@JSExport` helpers before them, were not under-tested —
+they were **ungated**. Completeness 4b had zero tests of any kind and could not
+even be reached in the corpus, because its outer guard keys off `c.entities` and
+every entity there lives in an include. Making the accessors include-transparent
+woke it up, and the first thing it did was demand something no model could
+provide. **When a check's guard depends on an accessor, ask what happens the day
+that accessor starts returning things.**
+
+First fully-clean matrix of the session afterwards: 19 rows, 3,946 tests, zero
+failures, no external reds — riddl-examples landed its dokn migration and both
+riddl-models suites pass.
 
 ---
 
