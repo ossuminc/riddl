@@ -6,45 +6,58 @@ GitHub release notes — don't reproduce it here.
 
 ## HANDOFF
 
-Orientation for a session with no memory of this work. Open work lives in
-**`BACKLOG.md`**; durable facts live in `CLAUDE.md`. This section only says
-where things stand and what a fresh session would get wrong.
+Orientation for a session with no memory of this work. **Open work is in
+`BACKLOG.md`**; durable facts are in `CLAUDE.md`. This says only where things
+stand and what a fresh session would get wrong.
 
-**State** (verified 2026-08-03, not recalled):
+**State** — every number below was produced by a command in the session that
+wrote this, not recalled:
 
-- Branch `release/2`, **30 commits UNPUSHED**. Nothing is pushed on purpose —
-  see the rc.10 exit condition in BACKLOG.md item 1e.
-- Staged build: **`2.0.0-rc.9-34-5488fd9d`** at `~/Code/ossuminc/bin/riddlc`
-  (20 rows also in `~/.ivy2/local`). Last shipped release is 2.0.0-rc.9.
-- All 19 test rows green, **no external reds**.
+- Branch `release/2`, tree clean, **35 commits UNPUSHED**. Nothing is pushed on
+  purpose; the rc.10 exit condition is in BACKLOG.md item 1e.
+- HEAD `7b782ddcc`. Staged build **`2.0.0-rc.9-34-5488fd9d`** at
+  `~/Code/ossuminc/bin/riddlc`, 20 rows in `~/.ivy2/local`. HEAD is 2 commits
+  ahead of the staged build; both are documentation-only, so no re-stage is
+  owed.
+- **All 19 test rows green, zero failures, no external reds.**
 
-**In flight:** nothing half-written. The 2026-08-03 consumer queue (Q1-Q5) is
-complete and its items have left BACKLOG.md.
+**In flight:** nothing is half-written. The last change (`9c922e42e`, `format`
+renders the declaration) is complete, verified and shipped.
 
-**Traps that already bit someone here:**
+**Next:** ResolutionPass performance — approved scope is *profile, then fix only
+if the fix is small and low-risk*. Not started. Its starting position, including
+two findings that must NOT be re-derived, is in BACKLOG.md § 2.
 
-- **`~/Code/ossuminc/bin` is NOT on `$PATH`, deliberately.** Consumers use the
+**Traps, all of which have actually bitten someone here:**
+
+- **`~/Code/ossuminc/bin` is deliberately NOT on `$PATH`.** Consumers use the
   explicit path; bare `riddlc` is still the tap's rc.9.
-- **`reload` before any publish** — a long-running sbt server freezes dynver.
-  And **wait for `nativeLink` to finish before copying the binary**; a stale one
-  got staged once by copying too early.
-- **Use `<module>/testOnly *`, never `test`** (resolves to `testQuick`, silently
-  skips). **`tNative` is not a Native gate** — see BACKLOG.md § 3.
-- **An sbt `;` chain aborts on first failure**, so a red in one module hides
-  every later one. Re-run the skipped rows separately.
-- **Re-run all 19 rows after a late change**, not just the modules you expect to
+- **Publishing has THREE preconditions** — clean tree (a dirty one makes dynver
+  stamp a timestamp, so the version stops being reproducible from a commit),
+  `reload` (a long-running sbt server freezes dynver), and `nativeLink`
+  FINISHED before copying the binary. Checklist is in `.claude/skills/rc/`.
+  Two of the three were violated on 2026-08-03.
+- **Use `<module>/testOnly *`, never `test`** — it resolves to `testQuick` and
+  silently skips. **`tNative` is not a Native gate** (BACKLOG.md § 3).
+- **An sbt `;` chain aborts on first failure**, hiding every later module.
+- **Re-run all 19 rows after a late change**, not just the ones you expect to
   move.
-- **Checks here fail by being UNGATED, not under-tested.** When a check's guard
-  depends on an accessor, ask what happens the day that accessor starts
-  returning things.
+- **Checks and APIs here fail by being UNGATED, not under-tested.** When a
+  check's guard depends on an accessor, ask what happens the day that accessor
+  starts returning things.
+- **When a consumer reports duplicating our logic, expose ours** — do not add a
+  second copy on our side. Three defects this week were that shape.
 
-**Certainty:** every number above was produced by a command in the session that
-wrote this. Anything in BACKLOG.md marked "needs a plan" is unverified by
-design.
+**Certainty:** the state block is verified. Anything in BACKLOG.md § 3 marked
+"needs a plan" is explicitly unverified. A NOTEBOOK note claiming
+`attachment ULID` does not parse was found STALE on 2026-08-03 and corrected —
+treat old "known bug" notes as claims to re-check, not facts.
 
-**Run `/ossuminc-skills:check-tasks` in the new session.** One untriaged file is
-waiting (`task/2026-08-03-resolution-pass-performance.md`); this handoff
-deliberately does not triage it.
+**`task/` holds 1 file, UNTRIAGED:**
+`2026-08-03-resolution-pass-performance.md` (synapify). It is deliberately not
+triaged here.
+
+**Run `/ossuminc-skills:check-tasks` in the new session.**
 
 ---
 
@@ -823,12 +836,14 @@ containing ONLY a kind with no bucket of its own vanished entirely.
   is not a child of any container and never appears in a `Root`, so it is not a
   fidelity gap at all. Representing it would mean a new top-level document shape
   (a `parseJsonNebula`), which is a feature, not a reflectivity fix.
-- **`attachment ULID is "…"` appears NOT TO PARSE** (found writing the ULID
-  test). `metaData` tries `attachment` first and that alternative requires a mime
-  type, and the parse fails there rather than backtracking to `ulidAttachment`.
-  The construct has NO fixture and NO test anywhere in the repo, which is why
-  nothing noticed. Not fully diagnosed — the alternation has no visible cut — so
-  it needs a look. The JSON test builds the AST directly to work around it.
+- ~~**`attachment ULID is "…"` appears NOT TO PARSE**~~ — **FIXED since, and
+  this note was stale.** Re-checked 2026-08-03: `CommonParser.scala:360` now
+  factors `attachment` out and alternates the BODIES
+  (`ulidAttachmentBody | namedAttachmentBody`), so there is nothing to backtrack
+  over, and `language/input/attachments.riddl` is a fixture covering all three
+  forms. `riddlc parse` on it reports 0 errors. Left visible rather than deleted
+  because a stale "known bug" is worse than none — it sends the next reader
+  chasing something already repaired.
 
 ## Two parser fixes found by the JSON work — DONE
 
