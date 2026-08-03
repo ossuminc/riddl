@@ -22,11 +22,13 @@ context 'context' is {
   merge merge is { ??? }
   split split is { ??? }
   saga 'saga' is {
+   // a saga body admits comments and types, like every other vital definition
    step a is {
      do "a.1"
    } reverted by {
      do "a_r.1"
    }
+   // compensation runs the completed steps' `reverted by` blocks in reverse order
    step b is {
      do "b.1"
    } reverted by {

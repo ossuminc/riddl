@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-02 19:05 UTC
+# Generated: 2026-08-03 20:49 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -345,7 +345,7 @@ updates ::= "updates" ws1 repository-ref
 # Saga-related
 saga ::= "saga" ws1 identifier ws1 is ws "{" ws saga-body ws "}" ws (with-metadata)?
 saga-body ::= (func-input)? ws (func-output)? ws (saga-definitions)*
-saga-definitions ::= (saga-step | inlet | outlet | function | saga-include)*
+saga-definitions ::= (vital-definition-contents | saga-step | inlet | outlet | function | saga-include)*
 saga-include ::= "include" ws1 literal-string
 saga-step ::= "step" ws1 identifier ws1 is ws1 pseudo-code-block ws "reverted" ws ("by")? ws pseudo-code-block ws (with-metadata)?
 
