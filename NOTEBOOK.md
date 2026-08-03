@@ -93,6 +93,70 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
 
 ### 2. Queued, designed, not started
 
+**Ordered queue from the 2026-08-03 task triage.** Four consumers filed these
+against the staged `2.0.0-rc.9-21-2db8f1d0` within hours of it landing. All
+claims verified against the code before listing. Work them in this order.
+
+**Q1. Correct the recursive-find warning — DOING NOW, no code.** riddl-generator
+filed a correction to riddl's own note (`task/done/2026-08-03-nested-contexts-
+cannot-exist.md`). The warning "recursiveFindByType returns entities of nested
+sub-contexts" cites a shape the grammar forbids: `context_definition`
+(ebnf-grammar.ebnf:85) and `ContextParser.contextDefinition` both omit `context`,
+`entity_content` (:96) omits `entity`, and `processor_definition_contents` has no
+`entity` — so nothing under a Context can hold one, and
+`Finder(ctx).recursiveFindByType[Entity]` == `ctx.entities` exactly.
+The accurate rule: recursive-find and the accessor ANSWER DIFFERENT QUESTIONS.
+They coincide for Entity-under-Context; they diverge under a **Domain** (domains
+DO nest, :77) and for `Type` under a Context (types declared inside entities —
+riddlg depends on that difference for state records). Wrong reasoning currently
+sits in CLAUDE.md, NOTEBOOK and the reply already sent to riddlg; fix all three.
+
+**Q2. `yields` is unsatisfiable in a streamlet clause — needs a plan.**
+`task/2026-08-03-yields-unsatisfiable-in-streamlet-clause.md` (riddl-examples).
+Three individually-reasonable rules cannot be jointly satisfied: R1 forces
+`yields` onto an event-sourced entity's command; `checkYieldConformance` demands
+every clause handling it `yield` it; and `StatementParser` grants
+`yieldStatement` only to `ProcessorKind.Entity`/`.Context`/`.Repository`
+(`case _ => base`), so a sink cannot write one. `on other` dodges it but then A36
+reports the epic step unwitnessed — no satisfiable spelling exists.
+**This is fallout from `0054a8433`**: that scoped the exemption to clauses which
+REFUSE, and a forwarding clause neither yields nor refuses. Their option 1 —
+scope the rule to clauses where `yield` is legal — looks right: a streamlet
+forwarding a command is not the thing that records the event.
+
+**Q3. Completeness 4b demands `tell` from routing streamlets — needs a plan.**
+`task/include-transparency-activated-two-dormant-checks.md` (riddl-models), item
+1; 4 of the 6 new warnings. The check (ValidationPass.scala:2903-2911) guards
+only on `streamlet.inlets.nonEmpty && streamlet.handlers.nonEmpty`, with no
+restriction by streamlet kind, so it demands dispatch-to-entity from
+split/merge/flow whose whole purpose is routing between ports. There is no honest
+model edit that satisfies it. Right for a Sink, wrong for the routing kinds.
+Dormant until include-transparency, because its outer guard keys off
+`c.entities`.
+
+**Q4. Does a context driven by an app connector need a Sink? — DESIGN CALL, no
+code until answered.** Same task file, item 2. Completeness 4i uses
+`hasSinkOrInlet = c.streamlets.exists(_.inlets.nonEmpty)` (:2879), which ignores
+an ENTITY's own connected inlet. `Delivery` looks like a real gap (an adaptor
+tells straight into its entity, past any stream boundary). `Inventory` is driven
+directly by an application connector into the entity's own inlet and has no
+inbound stream at all. 185 of ~190 corpus contexts satisfy the check, so the
+convention is real — the question is whether the two outliers are incomplete or
+whether the check should count a connected entity inlet.
+
+**Q5. BASTReader loses line and column.** `task/2026-08-03-bastreader-loses-line-
+and-column.md` (synapify). Root cause confirmed: `BASTReader.scala:57` sets
+`currentSource = RiddlParserInput.empty`, so every offset resolves against an
+empty source — line becomes 1 and col becomes the absolute offset. Offsets and
+`loc.source.origin` survive; only the derivation is lost. Blocks synapify from
+moving AnalysisPass off the main thread without a redundant re-parse, and exposes
+any consumer that deserialises BAST and reports positions (LSP, diff tools,
+riddlg). Their acceptance criteria explicitly accept "positions cannot be fully
+restored" as an answer IF it is stated as a decision. A suggested cheap fix —
+re-read the source when the origin resolves to a readable path — would make
+deserialisation touch the filesystem; decide whether that is acceptable.
+
+
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
   entry with an origin/document basis.
@@ -211,8 +275,15 @@ nothing failed. The 35 named accessors now use `filterThroughIncludes`.
    Seven helpers in AST.scala were written `x.foo ++ x.includes.flatMap(...)`,
    which is exactly the "every consumer reimplements the recursion" complaint —
    and they double counted the moment the accessors worked. Collapsed.
-3. **`recursiveFindByType` is the wrong fix and was riddlg's plan B.** It walks
-   every `Container`, so it over-reports where the accessors under-reported.
+3. **`recursiveFindByType` was riddlg's plan B, and still the wrong fix — but
+   not for the reason first recorded.** The note said it would return nested
+   sub-contexts' entities; contexts cannot nest, so that shape is a syntax error
+   rather than a rare case, and for `Entity` under a `Context` the two agree
+   exactly. riddlg filed the correction. The accurate rule is that the two
+   ANSWER DIFFERENT QUESTIONS, and they diverge under a Domain (domains nest)
+   and for `Type` under a Context (recursive find reaches types inside
+   entities). Worth remembering as a habit: a caution that sounds right is still
+   worth checking against the grammar before it goes in writing.
 4. **No fixture and no `.check` golden moved.** Validation results are
    unchanged, which confirms the defect was purely on the consumer surface.
 5. **Verified on all 19 rows, not the 6 that had changed.** After the import

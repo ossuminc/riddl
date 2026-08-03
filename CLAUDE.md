@@ -734,10 +734,19 @@ to the right group rather than appending to a list.
      nothing spliced in, and `BASTLoader.getImports` still finds the
      wrapper. Pinned in `BASTImportLoadingTest` and
      `IncludeAndImportTest`.
-  3. **Never reach for `Finder.recursiveFindByType` to answer "the X of
-     this container"** — it walks EVERY `Container`, so it returns
-     nested contexts' definitions too. It over-reports exactly where the
-     accessors used to under-report.
+  3. **`Finder.recursiveFindByType` and the accessors answer DIFFERENT
+     QUESTIONS** — it walks EVERY `Container`, the accessor walks only
+     the provenance wrappers. Where they diverge: under a **Domain**
+     (domains DO nest, `domain_content`, ebnf-grammar.ebnf:77), and for
+     `Type` under a Context, since a recursive find also picks up types
+     declared inside entities — riddl-generator relies on exactly that
+     to emit state records. Where they do NOT diverge: `Entity` under a
+     `Context`, because contexts cannot nest (`context_definition` :85
+     omits `context`, `entity_content` :96 omits `entity`, and
+     `processor_definition_contents` has no `entity`). Pick by the
+     question, not by reflex — an earlier version of this note warned
+     that recursive find "returns nested contexts' entities", which the
+     grammar forbids; riddl-generator caught it.
   Before 2026-08-03, `context.entities` was empty whenever the entity
   lived in an include — silently. That is how riddl-generator produced
   582 files for reactive-bbq with no entity class among them while the
