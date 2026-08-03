@@ -225,7 +225,7 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `A saga step with do statements must also have revert statements, and vice versa` | Provide both 'do' and 'revert' statements for the saga step so its action can be compensated on failure. |
 | `${step} do-step targets ${uncompensated} but the undo-step does not …` (Style) | `Add compensating revert statements targeting ${uncompensated} in the saga step's undo block.` |
 | `${step} do-statements contain no 'tell command' to effect state changes` (Completeness) | Add a 'tell command' statement to the saga step's do-statements to effect a state change. |
-| `${c} has entities but no Sink streamlet …` (Completeness) | `Add a Sink streamlet with an inlet to ${c} to receive and dispatch incoming messages.` |
+| `${c} has entities but no Sink streamlet …` (Completeness) | `Add a Sink streamlet with an inlet to ${c} to receive and dispatch incoming messages.` — plus: an entity's own inlet does NOT satisfy this even when a connector drives it, because driving an entity from outside IS an inbound stream and belongs at the context boundary. |
 | `${handler} in ${streamlet} handles messages but does not dispatch to any entity via 'tell'` (Completeness) | Add 'tell' statements so the streamlet handler dispatches incoming messages to an entity. |
 | `${epic} is missing a user story` (Missing) | `Add a user story to ${epic}, e.g. 'by user SomeUser I want to … so that …'.` |
 | `${user} is missing its role kind ('is a')` (Missing) | `Specify the user's role, e.g. '${id} is a "customer"'.` |

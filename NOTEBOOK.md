@@ -134,8 +134,15 @@ model edit that satisfies it. Right for a Sink, wrong for the routing kinds.
 Dormant until include-transparency, because its outer guard keys off
 `c.entities`.
 
-**Q4. Does a context driven by an app connector need a Sink? — DESIGN CALL, no
-code until answered.** Same task file, item 2. Completeness 4i uses
+**Q4. Does a context driven by an app connector need a Sink? — ANSWERED, yes.**
+The check is correct as written and stays. You cannot drive anything by an
+application connector without an inbound stream; connecting an app straight to
+an entity's inlet IS one, just not modelled, and it hides a context boundary
+inside the entity that happens to be its first target. Both riddl-models
+outliers are real gaps, `Inventory` included, even though closing it means
+modelling a cross-domain replenishment flow. Only change made: the SUGGESTION
+now says an entity's own inlet does not satisfy the check, since that was the
+part the reporter could not tell. Original text follows. Same task file, item 2. Completeness 4i uses
 `hasSinkOrInlet = c.streamlets.exists(_.inlets.nonEmpty)` (:2879), which ignores
 an ENTITY's own connected inlet. `Delivery` looks like a real gap (an adaptor
 tells straight into its entity, past any stream boundary). `Inventory` is driven

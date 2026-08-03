@@ -2900,7 +2900,10 @@ case class ValidationPass(
           c.errorLoc,
           s"${c.identify} has entities but no Sink streamlet to receive and dispatch incoming messages",
           suggestion =
-            s"Add a Sink streamlet with an inlet to ${c.identify} to receive and dispatch incoming messages."
+            s"Add a Sink streamlet with an inlet to ${c.identify} to receive and dispatch incoming messages. " +
+              "An entity's own inlet does not satisfy this even when a connector drives it: driving " +
+              "an entity from outside IS an inbound stream, and it belongs at the context boundary " +
+              "where it can be seen, not hidden inside the entity it happens to target."
         )
       }
       // Completeness: a context with entities should persist them. Entities are
