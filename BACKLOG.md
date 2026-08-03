@@ -88,6 +88,27 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
 
 ### 2. Queued, designed, not started
 
+- **ResolutionPass performance** — `task/2026-08-03-resolution-pass-performance.md`
+  (synapify). They measured Resolution at 4344ms on reactive-bbq, 56% of
+  analysis and 5.3x the parse. **Approved scope: profile, then fix ONLY if the
+  fix is small and low-risk; otherwise report and backlog.** Benchmark runs
+  against `../riddl-models` as-is, accepting the moving target.
+  Established already, so do not re-derive:
+  - **Their numbers are Scala.js.** Independent native measurement 2026-08-03:
+    parse 0.36s, full `validate` 1.47s — so passes cost ~3.1x parse on native
+    versus ~8.4x on Scala.js. The disproportion is real on both, but the
+    headline 9.5s is heavily platform-amplified. Get a JVM per-pass breakdown
+    before touching anything, and correct their criterion 4 accordingly.
+  - **One of their four hypotheses is already ruled out.** `lookupParentage`
+    (SymbolsOutput.scala:164) is keyed by leaf name via `itemsFor` — a map
+    lookup — and only filters that bucket, so it is not an O(model) scan.
+    `resolveAPathId` (ResolutionPass:1196) also short-circuits through
+    `refMap` before doing any search. Look at `findAnchor`,
+    `resolvePathFromAnchor` and whether Validation re-resolves.
+  - **Benchmark constraints:** must degrade gracefully when `../riddl-models`
+    is absent (CI), and must NOT gate on a tight threshold — see the
+    `BASTPerformanceBenchmark` item in § 3 for why.
+
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
   entry with an origin/document basis.
