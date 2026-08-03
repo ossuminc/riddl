@@ -187,6 +187,22 @@ deserialisation touch the filesystem; decide whether that is acceptable.
   Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
 
 ### 3. Queued, needs a plan
+- **`BASTPerformanceBenchmark` is timing-flaky.** It asserts BAST load beats
+  parse (`speedup > 1.0`). Observed on one machine, back to back: 0.9956x (a
+  FAILURE), then 13.0x, 9.3x, 6.1x — and within a single run, parse ranged
+  2.03ms to 33.03ms. The measured effect is real and large; the threshold is
+  simply being compared against a number with more variance than headroom on a
+  loaded machine. It will fail intermittently in CI and teach people to re-run
+  reds. Either warm up and take a median of N, or assert something stable (e.g.
+  a floor well below the real ratio) and report the number without gating on it.
+- **`BASTParserInput`'s synthetic line index is now unreachable dead code.**
+  With `positionsKnown = false`, `At` never consults its `lineOf`/`offsetOf`,
+  and `createAtFromOffsets` lost its last caller when `readLocation` stopped
+  casting. It still fabricates positions on the 10000-chars-per-line scheme for
+  anything calling it DIRECTLY, which is exactly the plausible-looking machinery
+  that caused the original defect. Delete it, after checking for direct callers
+  of `lineOf`/`offsetOf` on a BAST-attached source (message formatting and
+  `annotateErrorLine` are the ones to look at).
 - **Should an imported definition RESOLVE without an explicit flatten?** The
   accessors now report `.bast`-imported definitions (2026-08-03), so
   `domain.types` lists an imported type — but a reference to it still fails to

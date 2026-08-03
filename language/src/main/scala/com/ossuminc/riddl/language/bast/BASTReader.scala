@@ -2561,17 +2561,22 @@ class BASTReader(
 
   // ========== Helper Methods ==========
 
+  /** Build an At against whatever source is currently attached.
+    *
+    * Any RiddlParserInput will do: an At is (source, offset, endOffset) and BAST stores real
+    * offsets, so when the caller supplied the true source the positions resolve exactly, and when
+    * they did not the placeholder reports them unknown. Replaces a cast to BASTParserInput, which
+    * assumed the placeholder was the only possibility and made supplying a real source a
+    * ClassCastException. A method, not a local def -- readLocation runs once per node.
+    */
+  private def atFrom(offset: Int, endOffset: Int): At =
+    At(currentSource, offset, if endOffset < offset then offset else endOffset)
+
   private def readLocation(): At = {
     // Optimized location format (Phase 7):
     // - Source file changes are handled by FILE_CHANGE_MARKER before node tags
     // - Locations just store offset deltas (no flag byte)
     // - Uses zigzag encoding for signed deltas
-    // Any RiddlParserInput will do. An At is just (source, offset, endOffset) and BAST stores real
-    // offsets, so when the caller supplied the true source the positions resolve exactly; when they
-    // did not, the placeholder reports them unknown. The cast this replaces assumed the placeholder
-    // was the only possibility, which made supplying a real source a ClassCastException.
-    def atFrom(offset: Int, endOffset: Int): At =
-      At(currentSource, offset, if endOffset < offset then offset else endOffset)
 
     if !firstLocationRead then
       // First location: read absolute offsets
