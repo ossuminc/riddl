@@ -107,10 +107,15 @@ object DeepASTComparison {
       results += Failure(path + ".loc.origin", loc1.source.origin, loc2.source.origin)
     end if
 
-    // Compare offsets (not line/col) - BAST preserves offsets exactly, but line/col
-    // are computed from offsets using BASTParserInput's synthetic line structure
-    // which differs from the original source's real line breaks.
-    // The actual position data (offsets) is what matters for correctness.
+    // Compare offsets, not line/col. BAST preserves offsets exactly; line and col are DERIVED
+    // from an offset against the attached source, and these round trips deserialise without
+    // supplying one, so both report 0 (unknown) by design -- see At.line and
+    // RiddlParserInput.positionsKnown. Pass the sources to BASTReader.read and they resolve
+    // exactly; BASTLocationFidelityTest pins all three cases.
+    //
+    // This comment previously said line/col "differ from the original source's real line breaks",
+    // which was a defect notice written down and lived with: the reader was decoding real offsets
+    // as synthetic ones and producing confident wrong numbers.
     if loc1.offset != loc2.offset then
       results += Failure(path + ".loc.offset", loc1.offset.toString, loc2.offset.toString)
     end if

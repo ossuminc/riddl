@@ -44,6 +44,13 @@ private[bast] class BASTParserInput(
   // Empty data - BAST has no source text
   override val data: String = ""
 
+  // BAST stores REAL source offsets (BASTWriter.writeLocation delta-encodes loc.offset), and this
+  // input has no text to resolve them against, so it cannot honestly derive line or column. Saying
+  // so makes At report 0/0 instead of the synthetic answer below, which decoded a real offset as
+  // if line L began at L*CHARS_PER_LINE -- putting every offset under 10000 on line 1 at
+  // col = offset. Supply the real source to BASTReader.read to get true positions.
+  override def positionsKnown: Boolean = false
+
   // Build synthetic lineNumberLookup: line N starts at offset (N-1) * CHARS_PER_LINE
   private val syntheticLineNumberLookup: Array[Int] =
     (0 until maxLine).map(_ * CHARS_PER_LINE).toArray :+ (maxLine * CHARS_PER_LINE)

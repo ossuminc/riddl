@@ -30,8 +30,30 @@ object BASTReader {
     * @return
     *   Either errors or the deserialized Module root
     */
-  def read(bytes: Array[Byte])(using pc: PlatformContext): Either[Messages.Messages, Module] = {
-    val reader = new BASTReader(bytes)
+  def read(bytes: Array[Byte])(using pc: PlatformContext): Either[Messages.Messages, Module] =
+    read(bytes, Map.empty)
+
+  /** Deserialize, resolving positions against sources the caller already holds.
+    *
+    * BAST stores real source OFFSETS but no source text, so line and column cannot be derived from
+    * the bytes alone -- `At.line`/`col` report 0 for anything read without a source. Pass the
+    * originals here, keyed by `loc.source.origin`, and locations resolve exactly as they did when
+    * parsed. Anything not in the map keeps the unknown-position source.
+    *
+    * The map is the caller's business deliberately: a host that just parsed the model already has
+    * the text, and deserialisation stays free of filesystem access, which matters because BAST is
+    * read on JS and Native too.
+    *
+    * @param bytes
+    *   The BAST file bytes to deserialize
+    * @param sources
+    *   Origin -> source text, for the files whose positions should be recoverable
+    */
+  def read(
+    bytes: Array[Byte],
+    sources: Map[String, RiddlParserInput]
+  )(using pc: PlatformContext): Either[Messages.Messages, Module] = {
+    val reader = new BASTReader(bytes, sources)
     reader.read()
   }
 }
@@ -46,7 +68,10 @@ object BASTReader {
   * @param pc
   *   Platform context for error reporting
   */
-class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
+class BASTReader(
+  bytes: Array[Byte],
+  suppliedSources: Map[String, RiddlParserInput] = Map.empty
+)(using pc: PlatformContext) {
 
   private val reader = new ByteBufferReader(bytes)
   private var stringTable: StringTable = _
@@ -233,7 +258,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         else if newPath.startsWith("/") then URL.fromFullPath(newPath)
         else URL.fromCwdPath(newPath)
       val originStr = if newPath.isEmpty then "empty" else newPath
-      currentSource = BASTParserInput(url, originStr, 10000)
+      currentSource = suppliedSources.getOrElse(originStr, BASTParserInput(url, originStr, 10000))
       // Reset location tracking for new source - first location will be absolute
       lastLocation = At.empty
       firstLocationRead = false
@@ -359,7 +384,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         else if newPath.startsWith("/") then URL.fromFullPath(newPath)
         else URL.fromCwdPath(newPath)
       val originStr = if newPath.isEmpty then "empty" else newPath
-      currentSource = BASTParserInput(url, originStr, 10000)
+      currentSource = suppliedSources.getOrElse(originStr, BASTParserInput(url, originStr, 10000))
       // Reset location tracking for new source - first location will be absolute
       lastLocation = At.empty
       firstLocationRead = false
@@ -2541,7 +2566,12 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     // - Source file changes are handled by FILE_CHANGE_MARKER before node tags
     // - Locations just store offset deltas (no flag byte)
     // - Uses zigzag encoding for signed deltas
-    val source = currentSource.asInstanceOf[BASTParserInput]
+    // Any RiddlParserInput will do. An At is just (source, offset, endOffset) and BAST stores real
+    // offsets, so when the caller supplied the true source the positions resolve exactly; when they
+    // did not, the placeholder reports them unknown. The cast this replaces assumed the placeholder
+    // was the only possibility, which made supplying a real source a ClassCastException.
+    def atFrom(offset: Int, endOffset: Int): At =
+      At(currentSource, offset, if endOffset < offset then offset else endOffset)
 
     if !firstLocationRead then
       // First location: read absolute offsets
@@ -2549,7 +2579,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       val endOffset = reader.readVarInt()
 
       // Create At directly from offsets
-      val loc = source.createAtFromOffsets(offset, endOffset)
+      val loc = atFrom(offset, endOffset)
       lastLocation = loc
       firstLocationRead = true
       loc
@@ -2561,7 +2591,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       val offset = lastLocation.offset + offsetDelta
       val endOffset = lastLocation.endOffset + endOffsetDelta
 
-      val loc = source.createAtFromOffsets(offset, endOffset)
+      val loc = atFrom(offset, endOffset)
       lastLocation = loc
       loc
   }

@@ -200,6 +200,15 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
   private val lineCache: Array[(Int, Int)] = Array.fill(4)((-1, -1))
   private var lineCachePos: Int = 0
 
+  /** Whether line and column can honestly be derived from an offset against this input.
+    *
+    * False only for an input that carries an origin but no text — a BAST-reconstructed source.
+    * `At.line`/`At.col` then report 0, which is unrepresentable as a real 1-based position, rather
+    * than a plausible wrong number. Supplying the real source to `BASTReader.read` makes them true
+    * again. Defaults to true so `RiddlParserInput.empty` keeps reporting `1:1` as it always has.
+    */
+  def positionsKnown: Boolean = true
+
   private[language] def offsetOf(line: Int): Int = {
     if line < 0 then { lineNumberLookup(line) }
     else if line < lineNumberLookup.length then { lineNumberLookup(line) }

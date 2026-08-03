@@ -35,14 +35,20 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
   @JSExport
   def isEmpty: Boolean = offset == 0 && endOffset == 0 && source == RiddlParserInput.empty
 
+  /** 1-based line, or 0 when the source cannot say. See `RiddlParserInput.positionsKnown`: a
+    * BAST-reconstructed source carries an origin but no text, and a confidently wrong position is
+    * worse than an obviously absent one -- a Problems pane will happily point at line 1.
+    */
   @JSExport
-  @inline def line: Int = source.lineOf(offset) + 1
+  @inline def line: Int = if !source.positionsKnown then 0 else source.lineOf(offset) + 1
 
   @JSExport
   @inline def endLine: Int = source.lineOf(endOffset) + 1
 
+  /** 1-based column, or 0 when the source cannot say. See [[line]]. */
   @JSExport
-  @inline def col: Int = offset - source.offsetOf(line - 1) + 1
+  @inline def col: Int =
+    if !source.positionsKnown then 0 else offset - source.offsetOf(line - 1) + 1
 
   // NO @JSExport on toString, deliberately. With it, Scala.js could not coerce an At to a
   // primitive: `s"... at $loc ..."` compiles to JS `+`, which threw "TypeError: Cannot convert
