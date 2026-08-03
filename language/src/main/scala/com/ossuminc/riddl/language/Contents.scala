@@ -85,6 +85,35 @@ extension [CV <: RiddlValue](container: Contents[CV])
     val theClass = classTag[T].runtimeClass
     container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T]).toSeq
   end filter
+
+  /** Like [[filter]], but descends through `Include` and `BASTImport` wrappers before matching.
+    *
+    * An `include` is TEXTUAL composition: it says where the author put the text, not that the
+    * definition sits one level further from its container. So `context.entities` answers the same
+    * way whether or not the entity was written in an included file.
+    *
+    * It descends through NOTHING ELSE. An entity of a nested context is not an entity of this
+    * context, which is why this is not `Finder.recursiveFindByType` -- that walks every
+    * `Container` and would over-report where this used to under-report.  This is [[flatten]]'s
+    * rule applied without mutating the tree, so include structure survives for the tooling that
+    * needs provenance (PrettifyPass multi-file mode).
+    *
+    * NOTE: wrappers are matched BEFORE the type test, so this is the wrong tool for finding the
+    * wrappers themselves -- [[includes]] deliberately stays on [[filter]].
+    */
+  def filterThroughIncludes[T <: RiddlValue: ClassTag]: Seq[T] =
+    val theClass = classTag[T].runtimeClass
+    def loop(items: Seq[RiddlValue]): Seq[T] =
+      items.flatMap {
+        case inc: Include[?] => loop(inc.contents.toSeq)
+        case bi: BASTImport  => loop(bi.contents.toSeq)
+        case x if theClass.isAssignableFrom(x.getClass) => Seq(x.asInstanceOf[T])
+        case _                                          => Seq.empty
+      }
+    end loop
+    loop(container.toSeq)
+  end filterThroughIncludes
+
   def vitals: Seq[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
   def processors: Seq[Processor[?]] = container.filter[Processor[?]]
   def find(name: String): Option[CV] =
