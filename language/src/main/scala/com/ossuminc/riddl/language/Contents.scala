@@ -122,6 +122,16 @@ extension [CV <: RiddlValue](container: Contents[CV])
     loop(container.toSeq)
   end filterThroughIncludes
 
+  // The next three stay on the LITERAL `filter` deliberately, unlike the 35 named accessors in
+  // AST.scala. They are consumed by riddl's own passes rather than by tools reading a model, and
+  // those callers already reach included definitions by another route -- so making these
+  // include-transparent would double count, not fix anything:
+  //   - `processors`  -> DiagramsPass adds `processor.includes.toContents.processors` itself
+  //   - `definitions` -> ResolutionPass feeds `include.contents.definitions` in as separate
+  //                      candidates, alongside the enclosing scope's own
+  //   - `vitals`      -> StatsPass counts while traversing, which already visits include contents
+  // If one of these ever needs to answer a consumer's question, give it the transparent
+  // treatment AND remove the caller's manual walk in the same change.
   def vitals: Seq[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
   def processors: Seq[Processor[?]] = container.filter[Processor[?]]
   def find(name: String): Option[CV] =
