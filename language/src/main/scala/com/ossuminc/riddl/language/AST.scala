@@ -2778,7 +2778,8 @@ object AST:
       }
     }
 
-    def format: String = ""
+    def format: String =
+      Declaration.typeKeyword(this) + " " + id.format + Declaration.ascription(this)
   end Type
 
   /** A reference to a type definition
@@ -3900,7 +3901,7 @@ object AST:
 
     def clauses: Seq[OnClause] = contents.filterThroughWrappers[OnClause]
 
-    def format: String = s"${Keyword.handler} ${id.format}"
+    def format: String = s"${Declaration.prefix(this)}${Keyword.handler} ${id.format}"
   }
 
   /** A reference to a Handler
@@ -3947,7 +3948,7 @@ object AST:
   ) extends Branch[StateContents]
       with WithHandlers[StateContents]
       with WithInvariants[StateContents]:
-    def format: String = Keyword.state + " " + id.format
+    def format: String = Declaration.prefix(this) + Keyword.state + " " + id.format
   end State
 
   /** A reference to an entity's state definition
@@ -4020,6 +4021,71 @@ object AST:
       canonicalOrder.filter(intentions.contains)
   end EntityIntention
 
+  /** How a definition DECLARES itself -- the parts of the declaration that carry meaning rather
+    * than identity.
+    *
+    * RIDDL 2.0 put semantics into prefixes and suffixes: an entity's intentions, a context's
+    * intention, `initial` on a handler or state, `yields` on a message type, `as <shape>` on a
+    * processor. These are not decoration -- `event-sourced` is the difference between a model that
+    * must satisfy the event-sourcing rules and one that need not.
+    *
+    * This is the ONE implementation. `format` renders it for consumers and the prettifier's
+    * `openDef`/`openState` emit it for round-tripping, so the two cannot drift apart. They did:
+    * `format` used to drop every prefix and render a Streamlet with the shape keyword 2.0
+    * deprecated, while the prettifier normalized that same definition to `processor X as <shape>`.
+    */
+  object Declaration {
+
+    /** Keywords written BEFORE the definition keyword. */
+    def prefix(definition: Definition): String = definition match
+      case h: Handler if h.isInitial => s"${Keyword.initial} "
+      case s: State if s.isInitial   => s"${Keyword.initial} "
+      case c: Context                => c.intention.map(i => s"${i.keyword} ").getOrElse("")
+      // Canonical order regardless of how they were written -- the parser sorts them at parse
+      // time, so the written order is gone before the AST exists. A deprecated
+      // `option event-sourced` was consumed into an intention, so it renders as the keyword.
+      case e: Entity =>
+        EntityIntention.canonical(e.intentions).map(i => s"${i.keyword} ").mkString
+      case _ => ""
+    end prefix
+
+    /** What sits between the identifier and `is`. */
+    def ascription(definition: Definition): String = definition match
+      // Absent means the shape was DERIVED from arity rather than written, and nothing is
+      // emitted -- so a derived-shape processor shows no shape at all, in both surfaces.
+      case p: Processor[?] => p.ascribedShape.map(s => s" as ${s.keyword}").getOrElse("")
+      case t: Type =>
+        t.typEx match
+          case a: AggregateUseCaseTypeExpression =>
+            a.yields.map(y => s" ${Keyword.yields} ${y.format}").getOrElse("")
+          case _ => ""
+      // A55: an on-clause's `from [<name>:] <origin>`.
+      case omc: OnMessageLikeClause =>
+        omc.from
+          .map { case (optId, ref) =>
+            s" ${Keyword.from} " + optId.map(id => s"${id.format}: ").getOrElse("") + ref.format
+          }
+          .getOrElse("")
+      case _ => ""
+    end ascription
+
+    /** The message-type keyword a Type declares itself with. */
+    def typeKeyword(t: Type): String = t.typEx match
+      case AggregateUseCaseTypeExpression(_, useCase, _, _) =>
+        useCase match
+          case AggregateUseCase.CommandCase => Keyword.command
+          case AggregateUseCase.EventCase   => Keyword.event
+          case AggregateUseCase.QueryCase   => Keyword.query
+          case AggregateUseCase.ResultCase  => Keyword.result
+          case AggregateUseCase.RecordCase  => Keyword.record
+          case AggregateUseCase.TypeCase    => Keyword.type_
+          case AggregateUseCase.GraphCase   => Keyword.graph
+          case AggregateUseCase.TableCase   => Keyword.table
+      case _ => Keyword.type_
+    end typeKeyword
+  }
+
+
   /** Definition of an Entity
     *
     * @param loc
@@ -4041,7 +4107,8 @@ object AST:
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[EntityContents]
       with WithStates[EntityContents]:
-    override def format: String = Keyword.entity + " " + id.format
+    override def format: String =
+      Declaration.prefix(this) + Keyword.entity + " " + id.format
 
     def hasIntention(intention: EntityIntention): Boolean = intentions.contains(intention)
 
@@ -4234,7 +4301,7 @@ object AST:
       with WithAdaptors[ContextContents]
       with WithSagas[ContextContents]
       with WithGroups[ContextContents] {
-    def format: String = Keyword.context + " " + id.format
+    def format: String = Declaration.prefix(this) + Keyword.context + " " + id.format
 
     /** True when this context is declared with the `application` intention.
       *
@@ -4444,7 +4511,11 @@ object AST:
   ) extends Processor[StreamletContents] {
     // WithInlets/WithOutlets are now inherited from Processor.
     final override def kind: String = effectiveShape.getClass.getSimpleName
-    def format: String = effectiveShape.keyword + " " + id.format
+    // The canonical `processor` keyword, matching the prettifier. `effectiveShape.keyword`
+    // emitted source/sink/flow -- the spellings 2.0 deprecated -- and showed a shape that may
+    // have been DERIVED from arity rather than declared.
+    def format: String =
+      Keyword.processor + " " + id.format + Declaration.ascription(this)
   }
 
   /** A reference to an referent's projector definition

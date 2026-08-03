@@ -45,43 +45,18 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case omc: OnMessageLikeClause =>
         omc.binding.map(id => s"${id.format}: ").getOrElse("") + omc.msg.format
       case _ => definition.id.format
-    // A handler marked (or defaulted to) the initial/live one emits the `initial` keyword so the
-    // choice survives round-trip and is refactor-safe. (State's `initial` is emitted in openState.)
-    // A Context with an intention emits it as a keyword prefix (e.g. `application context ...`).
-    // An Entity emits its intentions the same way, in canonical order regardless of how they were
-    // written -- and a deprecated `option event-sourced` was consumed into an intention at parse
-    // time, so it emits here as the keyword and the option is gone.
-    val prefix = definition match
-      case h: Handler if h.isInitial => s"${Keyword.initial} "
-      case c: Context                => c.intention.map(i => s"${i.keyword} ").getOrElse("")
-      case e: Entity =>
-        EntityIntention.canonical(e.intentions).map(i => s"${i.keyword} ").mkString
-      case _ => ""
+    // The declaration's meaningful prefix -- a handler's or state's `initial`, a context's
+    // intention, an entity's intentions in canonical order. Shared with `AST.Definition.format`
+    // so the two surfaces cannot drift; they had, and `format` was the one losing information.
+    val prefix = Declaration.prefix(definition)
     // The generic streaming processor emits the canonical `processor` keyword; the deprecated
     // shape keywords (source/sink/flow/…) are normalized away so prettified text re-parses cleanly.
     val kw = definition match
       case _: Streamlet => Keyword.processor
       case _            => keyword(definition)
-    // Any Processor may carry an explicitly ascribed shape, emitted as ` as <shape>` between the
-    // identifier and `is`. When absent (None), the shape is derived from arity and nothing is emitted.
-    val ascription = definition match
-      case p: Processor[?] => p.ascribedShape.map(s => s" as ${s.keyword}").getOrElse("")
-      // A command/query type may declare a `yields <messageRef>` between the identifier and `is`.
-      case t: Type =>
-        t.typEx match
-          case a: AggregateUseCaseTypeExpression =>
-            a.yields.map(y => s" ${Keyword.yields} ${y.format}").getOrElse("")
-          case _ => ""
-      // A55: an on-clause's `from [<name>:] <origin>` sits between the message ref and `is`. This
-      // was never emitted before A55, so every `on … from …` silently lost its origin on a
-      // prettify round-trip.
-      case omc: OnMessageLikeClause =>
-        omc.from
-          .map { case (optId, ref) =>
-            s" ${Keyword.from} " + optId.map(id => s"${id.format}: ").getOrElse("") + ref.format
-          }
-          .getOrElse("")
-      case _ => ""
+    // What sits between the identifier and `is`: a processor's ascribed shape, a message type's
+    // `yields`, an on-clause's `from`. Shared with `format`, same reason as the prefix above.
+    val ascription = Declaration.ascription(definition)
     addIndent(s"$prefix$kw $name$ascription is ")
     if withBrace then
       // STRUCTURAL, not semantic: `isEmpty` is now comment-tolerant, so a comments-only body would

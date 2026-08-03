@@ -372,7 +372,8 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   def openState(riddl_state: State, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      val prefix = if riddl_state.isInitial then s"${Keyword.initial} " else ""
+      // Shared with `State.format` and `openDef` -- one implementation of the declaration.
+      val prefix = Declaration.prefix(riddl_state)
       if riddl_state.contents.isEmpty then
         rfe.addLine(
           s"$prefix${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}"
