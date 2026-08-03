@@ -79,7 +79,7 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
    platform plus the `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
    `~/Code/ossuminc/bin/riddlc`. Consumers use that path EXPLICITLY — it is not
    on `$PATH`, where bare `riddlc` still resolves to the tap's rc.9.
-   Currently staged: **`2.0.0-rc.9-25-30979985`** (all 20 rows in
+   Currently staged: **`2.0.0-rc.9-29-989b7f46`** (all 20 rows in
    `~/.ivy2/local`, binary verified to report it). If HEAD is ahead of that, check
    whether the extra commits are documentation-only before re-staging — a
    NOTEBOOK edit does not change the binary. First staged the same day at
