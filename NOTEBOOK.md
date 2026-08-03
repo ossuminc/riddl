@@ -13,23 +13,30 @@ stand and what a fresh session would get wrong.
 **State** — every number below was produced by a command in the session that
 wrote this, not recalled:
 
-- Branch `release/2`, tree clean, **39 commits UNPUSHED**. Nothing is pushed on
+- Branch `release/2`, tree clean, **41 commits UNPUSHED**. Nothing is pushed on
   purpose; the rc.10 exit condition is in BACKLOG.md item 1e.
-- HEAD `1a376e0cf`.
-- **The staged build is STALE.** `~/Code/ossuminc/bin/riddlc` still reports
-  `2.0.0-rc.9-34-5488fd9d`, which predates the parser-input hashing fix
-  (`496e77c39`). That is a real code change consumers need — synapify cannot
-  verify their benchmark against it until it is restaged. **A restage is OWED**;
-  do not tell any consumer a version number without re-verifying `riddlc
-  version` and the ivy rows first.
-- **All three platforms green after the hashing fix**, run with
-  `<module>/testOnly *`: JVM 248 suites / 2007 tests, Scala.js 60 / 674, Native
-  149 / 1058. **Zero failures.** External corpus reds are unchanged (BACKLOG 1d).
+- HEAD `37b0db947`.
+- **Staged build is CURRENT: `2.0.0-rc.9-42-37b0db94`** at
+  `~/Code/ossuminc/bin/riddlc`, 20 ivy rows under that version. Restaged
+  2026-08-03 from a clean tree with `reload`, and the binary was copied only
+  after `nativeLink` reported `[success]` — all three preconditions met, which
+  is why the version carries no timestamp suffix and is reproducible from
+  `37b0db947`. Verified not just by `riddlc version` but by ENFORCEMENT: the two
+  saga fixtures that were parse errors before now validate with zero errors.
+- **All three platforms green**, run with `<module>/testOnly *`: JVM 248 suites
+  / 2007 tests, Scala.js 60 / 674, Native 149 / 1058 — **zero failures** (counts
+  predate the saga commit, which added 1 suite / 4 tests to `passes`; language
+  643, passes 847, commands 239 were re-run green after it). External corpus
+  reds unchanged (BACKLOG 1d).
 
-**In flight:** the saga-comments task (below). Nothing else is half-written.
+**In flight:** nothing. `task/` is empty; both incoming tasks were completed and
+moved to `task/done/` with Results.
 
-**Next:** restage the local build (it must carry the saga fix), then sweep
-consumers per BACKLOG 1e.
+**Next:** sweep consumers against the new staged build per BACKLOG 1e —
+riddl-generator wants the saga fix, synapify wants the hashing fix and owes a
+re-run of its own `AnalysisPassCostTest` (riddl cannot produce that table; the
+JS `PlatformContext` is `DOMPlatformContext` and loads by `fetch`, so no riddl
+test reads a corpus file under Node).
 
 **Traps, all of which have actually bitten someone here:**
 
