@@ -4,6 +4,50 @@ Records open work, blockers, and design nuances that future AI
 sessions need to know. Release history lives in git tags and
 GitHub release notes — don't reproduce it here.
 
+## HANDOFF
+
+Orientation for a session with no memory of this work. Open work lives in
+**`BACKLOG.md`**; durable facts live in `CLAUDE.md`. This section only says
+where things stand and what a fresh session would get wrong.
+
+**State** (verified 2026-08-03, not recalled):
+
+- Branch `release/2`, **30 commits UNPUSHED**. Nothing is pushed on purpose —
+  see the rc.10 exit condition in BACKLOG.md item 1e.
+- Staged build: **`2.0.0-rc.9-29-989b7f46`** at `~/Code/ossuminc/bin/riddlc`
+  (20 rows also in `~/.ivy2/local`). Last shipped release is 2.0.0-rc.9.
+- All 19 test rows green, **no external reds**.
+
+**In flight:** nothing half-written. The 2026-08-03 consumer queue (Q1-Q5) is
+complete and its items have left BACKLOG.md.
+
+**Traps that already bit someone here:**
+
+- **`~/Code/ossuminc/bin` is NOT on `$PATH`, deliberately.** Consumers use the
+  explicit path; bare `riddlc` is still the tap's rc.9.
+- **`reload` before any publish** — a long-running sbt server freezes dynver.
+  And **wait for `nativeLink` to finish before copying the binary**; a stale one
+  got staged once by copying too early.
+- **Use `<module>/testOnly *`, never `test`** (resolves to `testQuick`, silently
+  skips). **`tNative` is not a Native gate** — see BACKLOG.md § 3.
+- **An sbt `;` chain aborts on first failure**, so a red in one module hides
+  every later one. Re-run the skipped rows separately.
+- **Re-run all 19 rows after a late change**, not just the modules you expect to
+  move.
+- **Checks here fail by being UNGATED, not under-tested.** When a check's guard
+  depends on an accessor, ask what happens the day that accessor starts
+  returning things.
+
+**Certainty:** every number above was produced by a command in the session that
+wrote this. Anything in BACKLOG.md marked "needs a plan" is unverified by
+design.
+
+**Run `/ossuminc-skills:check-tasks` in the new session.** One untriaged file is
+waiting (`task/2026-08-03-resolution-pass-performance.md`); this handoff
+deliberately does not triage it.
+
+---
+
 ## Incoming Tasks
 
 **At session start**, check the `task/` directory for pending work
@@ -15,257 +59,6 @@ to the task file and note the disposition below.
 
 ---
 
-## Backlog
-
-Work items accumulate here until implemented. Large ones get their own plan
-(`~/.claude/plans/`) before implementation; the plan is discarded once built.
-
-### 1. Entity intentions + event-sourcing rules — IN FLIGHT, not done
-
-Code is COMPLETE and committed (`c87099520`, `78cefd05c`, `67ede5b3d` on
-`release/2`, unpushed): the six semantic options are now keywords before
-`entity`, and the four event-sourcing rules are enforced as Errors. Implemented,
-tested and canaried — `EntityIntentionRoundTripTest` 13/13,
-`EventSourcedEntityTest` 10/10, JVM row green except item (a).
-
-**The ITEM is not done.** It cannot ship until these four are finished, and it
-stays here until they are. Full detail in the `entity-intentions` memory.
-
-a. **DONE.** Migrate `language/input/dokn.riddl` — was the only in-repo red
-   (`ExamplesTest`). Now validates with ZERO errors, `should compile dokn` is
-   green, and the prettify round trip preserves every new construct.
-   4 event-sourced entities predating the rules; 7 handled commands violate R1
-   (Company 1, Driver 2, Location 4 — confirmed against the staged binary).
-   R3/R4 are already satisfied: no command clause mutates, and Location's
-   existing `on event` applies an event declared inside it.
-   **Not purely additive, as first assumed.** `yields` exists only on the
-   kind-first type form (`def_of_type_kind_type`, ebnf-grammar.ebnf:112):
-   `command X yields event Y is { … }`. dokn declares commands the type-first
-   way (`type X is command { … }`), which admits no `yields`, so each of the 7
-   must be reshaped to the kind-first form before an `on event Y` clause can be
-   added for it.
-   A FIFTH rule bites at the same time and is easy to miss by reading
-   `checkEventSourcing` alone: `checkYieldConformance` (A19, ValidationPass:788)
-   requires the clause to actually contain `yield event E` once the command
-   declares `yields E`. Keep the existing `send`; add the `yield` beside it.
-   Fallout fixed: `RootComparisonTest` asserted a model scores exactly 1.0
-   against itself, but `countCosine` computed `Σc²/(√Σc²·√Σc²)` and `√x·√x ≠ x`
-   for ~47% of integer magnitudes — it had been passing by luck, and dokn's new
-   counts lost the toss. Reformulated to `dot/√(sumA·sumB)`, exact on 200k
-   random count vectors (RootComparison.scala:295).
-b. **JS DONE, Native in progress.** `tJS` green: 657 tests, 0 failures.
-   `tNative` is NOT a real Native gate — see § 3; the genuinely-native rows are
-   being run explicitly instead.
-c. **DONE.** `MESSAGE_SUGGESTIONS.md` — added the intention-conflict Error and
-   R1/R2/R3+R4, and REMOVED the stale `is event-sourced but this command handler
-   does not emit an event` row, whose check was deleted with this work.
-   `JSON_COVERAGE.md` — Entity row now lists `intentions`.
-d. riddl-models task drop: 11 corpus entities + the event-sourced pattern
-   template violate all four rules. **In motion on their side** — `16eb6ab1`
-   converts six reactive-bbq entities, `aa68cdd6` gives repositories their own
-   persistence commands. They are blocked on the refusing-clause defect in § 2.
-   Until they land, these external-corpus suites are EXPECTED RED and are not
-   internal signal: `RiddlModelsRoundTripTest` (9) and `Root2JsonCorpusTest`
-   (179/189 clean vs a 95% floor).
-d2. **riddl-examples has its own, harder copy of dokn** — task dropped at
-   `../riddl-examples/task/migrate-dokn-to-event-sourcing-rules.md`. Four
-   event-sourced entities (Company, Driver, Note, Medium) with `set` in `on init`
-   and `morph` in command clauses, so it needs the full treatment including the
-   `on init is { yield event X }` idiom. Blocks `RunRiddlcOnLocalTest`
-   "should validate riddl-examples dokn" (7 errors).
-e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC is a
-   slow CI round trip, and this change breaks consumers in ways worth finding
-   before a tag exists. So: `sbt "reload; publishLocal"` for every module and
-   platform plus the `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
-   `~/Code/ossuminc/bin/riddlc`. Consumers use that path EXPLICITLY — it is not
-   on `$PATH`, where bare `riddlc` still resolves to the tap's rc.9.
-   Currently staged: **`2.0.0-rc.9-29-989b7f46`** (all 20 rows in
-   `~/.ivy2/local`, binary verified to report it). If HEAD is ahead of that, check
-   whether the extra commits are documentation-only before re-staging — a
-   NOTEBOOK edit does not change the binary. First staged the same day at
-   `2.0.0-rc.9-6-46c5968d`, which was verified to reject dokn's 7 R1 violations
-   — that is how riddl-models found the refusing-clause defect in § 2.
-   Consumers to sweep: riddl-generator, riddl-models, riddl-examples,
-   riddl-idea-plugin, riddl-vscode, synapify. **Exit condition:** riddlg's
-   upgrades complete (expect a few days) — then push, CI, and cut rc.10.
-   Re-publish + re-stage after each riddl commit; the version string changes
-   every time, which is what keeps consumer resolution cache-safe.
-
-### 2. Queued, designed, not started
-
-**Ordered queue from the 2026-08-03 task triage.** Four consumers filed these
-against the staged `2.0.0-rc.9-21-2db8f1d0` within hours of it landing. All
-claims verified against the code before listing. Work them in this order.
-
-**Q1. Correct the recursive-find warning — DONE `9bbb8a048`.** riddl-generator
-filed a correction to riddl's own note (`task/done/2026-08-03-nested-contexts-
-cannot-exist.md`). The warning "recursiveFindByType returns entities of nested
-sub-contexts" cites a shape the grammar forbids: `context_definition`
-(ebnf-grammar.ebnf:85) and `ContextParser.contextDefinition` both omit `context`,
-`entity_content` (:96) omits `entity`, and `processor_definition_contents` has no
-`entity` — so nothing under a Context can hold one, and
-`Finder(ctx).recursiveFindByType[Entity]` == `ctx.entities` exactly.
-The accurate rule: recursive-find and the accessor ANSWER DIFFERENT QUESTIONS.
-They coincide for Entity-under-Context; they diverge under a **Domain** (domains
-DO nest, :77) and for `Type` under a Context (types declared inside entities —
-riddlg depends on that difference for state records). Wrong reasoning currently
-sits in CLAUDE.md, NOTEBOOK and the reply already sent to riddlg; fix all three.
-
-**Q2. `yields` unsatisfiable in a streamlet clause — DONE `0dba8d26b`.**
-`task/2026-08-03-yields-unsatisfiable-in-streamlet-clause.md` (riddl-examples).
-Three individually-reasonable rules cannot be jointly satisfied: R1 forces
-`yields` onto an event-sourced entity's command; `checkYieldConformance` demands
-every clause handling it `yield` it; and `StatementParser` grants
-`yieldStatement` only to `ProcessorKind.Entity`/`.Context`/`.Repository`
-(`case _ => base`), so a sink cannot write one. `on other` dodges it but then A36
-reports the epic step unwitnessed — no satisfiable spelling exists.
-**This is fallout from `0054a8433`**: that scoped the exemption to clauses which
-REFUSE, and a forwarding clause neither yields nor refuses. Their option 1 —
-scope the rule to clauses where `yield` is legal — looks right: a streamlet
-forwarding a command is not the thing that records the event.
-
-**Q3. Completeness 4b demanded `tell` from routing streamlets — DONE `30979985d`.**
-`task/include-transparency-activated-two-dormant-checks.md` (riddl-models), item
-1; 4 of the 6 new warnings. The check (ValidationPass.scala:2903-2911) guards
-only on `streamlet.inlets.nonEmpty && streamlet.handlers.nonEmpty`, with no
-restriction by streamlet kind, so it demands dispatch-to-entity from
-split/merge/flow whose whole purpose is routing between ports. There is no honest
-model edit that satisfies it. Right for a Sink, wrong for the routing kinds.
-Dormant until include-transparency, because its outer guard keys off
-`c.entities`.
-
-**Q4. Does a context driven by an app connector need a Sink? — ANSWERED, yes.**
-The check is correct as written and stays. You cannot drive anything by an
-application connector without an inbound stream; connecting an app straight to
-an entity's inlet IS one, just not modelled, and it hides a context boundary
-inside the entity that happens to be its first target. Both riddl-models
-outliers are real gaps, `Inventory` included, even though closing it means
-modelling a cross-domain replenishment flow. Only change made: the SUGGESTION
-now says an entity's own inlet does not satisfy the check, since that was the
-part the reporter could not tell. Original text follows. Same task file, item 2. Completeness 4i uses
-`hasSinkOrInlet = c.streamlets.exists(_.inlets.nonEmpty)` (:2879), which ignores
-an ENTITY's own connected inlet. `Delivery` looks like a real gap (an adaptor
-tells straight into its entity, past any stream boundary). `Inventory` is driven
-directly by an application connector into the entity's own inlet and has no
-inbound stream at all. 185 of ~190 corpus contexts satisfy the check, so the
-convention is real — the question is whether the two outliers are incomplete or
-whether the check should count a connected entity inlet.
-
-**Q5. BASTReader loses line and column — DONE `bd9e0a705`.** `task/2026-08-03-bastreader-loses-line-
-and-column.md` (synapify). Root cause confirmed: `BASTReader.scala:57` sets
-`currentSource = RiddlParserInput.empty`, so every offset resolves against an
-empty source — line becomes 1 and col becomes the absolute offset. Offsets and
-`loc.source.origin` survive; only the derivation is lost. Blocks synapify from
-moving AnalysisPass off the main thread without a redundant re-parse, and exposes
-any consumer that deserialises BAST and reports positions (LSP, diff tools,
-riddlg). Their acceptance criteria explicitly accept "positions cannot be fully
-restored" as an answer IF it is stated as a decision. A suggested cheap fix —
-re-read the source when the origin resolves to a readable path — would make
-deserialisation touch the filesystem; decide whether that is acceptable.
-
-
-- **Carry source locations through the JSON surface** — plan written and
-  approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
-  entry with an origin/document basis.
-- **Deprecate `type X is <aggregate_use_case> {…}`** (approved 2026-08-02:
-  deprecate in 2.0, remove in 3.0). Target is ONLY the type-first spelling of an
-  aggregate use case; plain `type` (`type Address = {…}`, `type M is Pattern(…)`,
-  `type L is any of {…}`) is unaffected and stays.
-  **Why it is vestigial, not merely redundant:** it produces the same AST as the
-  kind-first form — verified by prettifying both, which emits `command A is {…}`
-  for each — so the canonical emitter already erases it and a type-first model
-  never round-trips back to its own spelling. It is also strictly LESS expressive
-  at the surface: `yields` exists only on `def_of_type_kind_type`
-  (ebnf-grammar.ebnf:112), which is what blocked the dokn migration.
-  **The corpus has voted:** riddl-models has 9,337 aggregate declarations, all
-  kind-first, zero type-first. All 167 type-first occurrences are pre-1.0
-  fixtures inside this repo.
-  Rejected alternative: adding `yields` to the type-first form — grammar surface
-  spent on a spelling nobody writes and the printer will not emit.
-  **Known cost:** those 167 fixtures start warning, and since parse-time
-  deprecations surface under every command, their `.check` goldens all shift.
-  Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
-
-### 3. Queued, needs a plan
-- **`BASTPerformanceBenchmark` is timing-flaky.** It asserts BAST load beats
-  parse (`speedup > 1.0`). Observed on one machine, back to back: 0.9956x (a
-  FAILURE), then 13.0x, 9.3x, 6.1x — and within a single run, parse ranged
-  2.03ms to 33.03ms. The measured effect is real and large; the threshold is
-  simply being compared against a number with more variance than headroom on a
-  loaded machine. It will fail intermittently in CI and teach people to re-run
-  reds. Either warm up and take a median of N, or assert something stable (e.g.
-  a floor well below the real ratio) and report the number without gating on it.
-- **`BASTParserInput`'s synthetic line index is now unreachable dead code.**
-  With `positionsKnown = false`, `At` never consults its `lineOf`/`offsetOf`,
-  and `createAtFromOffsets` lost its last caller when `readLocation` stopped
-  casting. It still fabricates positions on the 10000-chars-per-line scheme for
-  anything calling it DIRECTLY, which is exactly the plausible-looking machinery
-  that caused the original defect. Delete it, after checking for direct callers
-  of `lineOf`/`offsetOf` on a BAST-attached source (message formatting and
-  `annotateErrorLine` are the ones to look at).
-- **Should an imported definition RESOLVE without an explicit flatten?** The
-  accessors now report `.bast`-imported definitions (2026-08-03), so
-  `domain.types` lists an imported type — but a reference to it still fails to
-  resolve until `FlattenPass` runs, because the symbol table is built by
-  traversal rather than by the accessors. That split is currently pinned by
-  `BASTImportLoadingTest`, and it is defensible (reading is the client's
-  question, resolving is the model's), but it means a model can name a type its
-  own accessors report. Decide whether SymbolsPass should index wrapper
-  contents, or whether the flatten requirement should be stated more loudly.
-- **A conditionally refusing clause escapes yield conformance** — the residual
-  gap left by `0054a8433`. `checkYieldConformance` asks whether a refusal appears
-  ANYWHERE in the clause, so a clause that refuses on one branch and forgets to
-  yield on its success path passes unchecked. The precise rule wants "cannot
-  reach the end of the clause having produced the declared event", i.e.
-  path-sensitive analysis. The sibling check at ValidationPass.scala:509 has the
-  identical weakness, so fixing one should fix both. Not newly introduced and not
-  urgent — but it is the honest limit of the current predicate, so it is written
-  down rather than implied.
-- **`tNative` tests the JVM rows for 5 of its 7 modules** — found 2026-08-02.
-  The alias runs `utils`, `language`, `testkit`, `commands`, `riddlLib`, and all
-  five are the `.jvm` projects (build.sbt:218, 271, 346, 406, 433). Only
-  `passesNative` and `riddlcNative` are actually Native. The Native rows exist
-  and are aggregated (`utilsNative`:220, `languageNative`:273,
-  `testkitNative`:349, `riddlLibNative`:409, `commandsNative`:435), so the fix is
-  to name them — but that is exactly why it needs a plan: nothing has gated those
-  rows, so expect a backlog of Native-only reds the moment they run.
-  `tJS` does this correctly (it names `utilsJS`, `languageJS`, `passesJS`,
-  `testkitJS`, `riddlLibJS`), which is what makes the Native asymmetry look like
-  an oversight rather than a decision. Same defect class as the one the `tJVM`
-  comment (build.sbt:540) was written to prevent: "a release gate that skips
-  three modules and reports success is worse than no gate."
-- **`Comment` in a `Group`'s contents cannot be rebuilt** — the parser puts one
-  there but `OccursInGroup` admits none. Pinned at 3 occurrences in
-  `Root2JsonFixturesTest`. Widen the union or attach as metadata. Needs a
-  decision.
-- **Saga reachability** — the usage walk appears not to traverse saga
-  `doStatements`, so a `tell … to context <external>` in a saga step draws no
-  "not reachable" warning while the same statement in a handler does.
-- **`validateArbitraryInteraction`'s refMap path is dead** — interaction refs are
-  keyed under the UseCase. Re-key, or delete and use the symbol table as A39 did.
-- **`PlatformContext.withOptions` lacks try/finally** — a throwing test poisons
-  global options for later sequential suites. One-liner.
-- **`Blob`, `Unknown`, `Range` in the tokenizer tables** are unreachable from the
-  grammar (riddl-vscode). Remove them or make them reachable.
-- **`sbt scalafmtCheck` is red on HEAD** — 7 committed files reformat, 6 in
-  `commands`. Deferred to just before 2.0.0.
-- **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
-  design decision, then FIXED in rc.9. Verify nothing else wants it.
-
-### 4. Owed to other repos
-- riddl-vscode: adoption task for `IncrementalValidator` now that rc.9 ships.
-- ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the
-  two silent breaking changes in the migration guide, and docs for the
-  `ForeverEmpty.void` error-sink idiom.
-- ossum.tech: the event-sourced **`on init` idiom**. R3 forbids `set` in
-  `on init` and an empty handler body is a parse error, so init cannot simply be
-  dropped — but `yield` is legal there. Working form (from riddl-models):
-  `on init is { yield event ShiftCreated }` paired with
-  `on event ShiftCreated is { morph …; set state ActiveShift to "…" }` —
-  initial state arrives by replaying the creation event. Every event-sourced
-  entity needs this, so it wants an example, not just a rule.
-
----
 
 ## BAST positions: recoverable, and honest when they are not (2026-08-03) — DONE
 
