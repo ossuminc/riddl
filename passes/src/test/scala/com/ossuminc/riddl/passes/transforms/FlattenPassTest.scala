@@ -173,15 +173,21 @@ class FlattenPassTest extends AbstractTestingBasis {
         )
       )
 
-      // Before flattening, only direct child is visible
-      assert(domain.contexts.size == 1)
-      assert(domain.contexts.head.id.value == "DirectCtx")
+      // The accessors are include-transparent, so both contexts are visible BEFORE flattening
+      // too. This assertion used to read `size == 1`, which pinned the defect riddl-generator
+      // reported: an included definition was invisible to `domain.contexts` purely because of
+      // which file it was written in. What flatten changes is the STRUCTURE -- it removes the
+      // Include wrapper -- not what the accessor reports.
+      assert(domain.contexts.size == 2)
+      assert(domain.contexts.map(_.id.value) == Seq("DirectCtx", "IncludedCtx"))
+      assert(domain.includes.size == 1)
 
       domain.flatten()
 
-      // After flattening, both are visible
+      // Same answer from the accessor, but now the wrapper is gone and both are direct children
       assert(domain.contexts.size == 2)
       assert(domain.contexts.map(_.id.value) == Seq("DirectCtx", "IncludedCtx"))
+      assert(domain.includes.isEmpty)
     }
 
     "work on Module (not just Root)" in {
