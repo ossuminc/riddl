@@ -91,27 +91,6 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
 
 ### 2. Queued, designed, not started
 
-- **`yields` conformance forces a refusing clause to yield** — DO THIS FIRST in
-  this section. Task file: `task/yields-conformance-forces-refusing-clauses-to-
-  yield.md` (from riddl-models, 2026-08-02, filed against staged `46c5968dd`).
-  **Blocks 7 reactive-bbq entities / 268 clauses**; the 10 models already
-  carrying `option event-sourced` are single-clause and convert cleanly, so they
-  are unblocked and proceeding.
-  The unexpressible shape is the ordinary one: a command accepted in one state
-  and refused in the others. R1 forces `yields` onto the command, then
-  `checkYieldConformance` demands EVERY `on command` clause yield it — including
-  the clause whose whole purpose is that nothing happened.
-  All claims verified against the code 2026-08-02: no refusal exemption
-  (ValidationPass.scala:799, `if yieldStmts.isEmpty then addError`); yielding the
-  rejection event or an alternation instead is blocked by `dt eq yt` (:811); and
-  the check is NOT event-sourced-gated (called at :541 for every command/query
-  clause), so a fix helps models that never adopt event sourcing.
-  **The fix is a near-copy of an existing precedent:** :509 already computes
-  `refuses = ErrorStatement || RequireStatement`, and its comment (:504-508) sets
-  out this exact principle *and* warns of this exact failure mode — the rule
-  being silenced by adding dead code after the refusal. Apply the same predicate
-  in the `yieldStmts.isEmpty` branch. Semantics become "if this command
-  succeeds, this is what it records", which is what `yields` reads as.
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
   entry with an origin/document basis.
@@ -135,6 +114,15 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
 
 ### 3. Queued, needs a plan
+- **A conditionally refusing clause escapes yield conformance** — the residual
+  gap left by `0054a8433`. `checkYieldConformance` asks whether a refusal appears
+  ANYWHERE in the clause, so a clause that refuses on one branch and forgets to
+  yield on its success path passes unchecked. The precise rule wants "cannot
+  reach the end of the clause having produced the declared event", i.e.
+  path-sensitive analysis. The sibling check at ValidationPass.scala:509 has the
+  identical weakness, so fixing one should fix both. Not newly introduced and not
+  urgent — but it is the honest limit of the current predicate, so it is written
+  down rather than implied.
 - **`tNative` tests the JVM rows for 5 of its 7 modules** — found 2026-08-02.
   The alias runs `utils`, `language`, `testkit`, `commands`, `riddlLib`, and all
   five are the `.jvm` projects (build.sbt:218, 271, 346, 406, 433). Only
@@ -178,6 +166,37 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   `on event ShiftCreated is { morph …; set state ActiveShift to "…" }` —
   initial state arrives by replaying the creation event. Every event-sourced
   entity needs this, so it wants an example, not just a rule.
+
+---
+
+## Refusing a command discharges its `yields` contract (2026-08-02) — DONE
+
+`0054a8433`. Reported by riddl-models against the staged build; task file in
+`task/done/yields-conformance-forces-refusing-clauses-to-yield.md` with the full
+verification transcript.
+
+`checkYieldConformance` required EVERY `on command C` clause to yield C's
+declared event. With R1 making `yields` mandatory on any command an
+event-sourced entity handles, the ordinary shape — a command accepted in one
+state and refused in the others — became unexpressible: each refusing clause had
+to yield the success event it had just declined to produce. Fixed by exempting a
+clause that refuses, using the `ErrorStatement || RequireStatement` predicate the
+sibling check at :509 already had.
+
+**Three things worth keeping:**
+
+1. **The task file proposed keying on `error` alone; that would have fixed half
+   of it.** A `require`-based refusal produced the identical error. Testing the
+   proposal rather than implementing it is what caught this.
+2. **The corpus could not reproduce it.** reactive-bbq reports zero such errors
+   in its committed state, because riddl-models backed the conversion out when it
+   failed. The defect only appears when you construct the condition. A corpus run
+   is not a substitute for building the case.
+3. **R1 and the wrong-type branch were deliberately left alone.** Refusing
+   exempts a clause from having to yield, not from yielding correctly.
+
+Residual gap (conditional refusals) is recorded in § 3 — it is the honest limit
+of the predicate, not an oversight.
 
 ---
 
