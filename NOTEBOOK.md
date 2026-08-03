@@ -14,7 +14,7 @@ where things stand and what a fresh session would get wrong.
 
 - Branch `release/2`, **30 commits UNPUSHED**. Nothing is pushed on purpose —
   see the rc.10 exit condition in BACKLOG.md item 1e.
-- Staged build: **`2.0.0-rc.9-29-989b7f46`** at `~/Code/ossuminc/bin/riddlc`
+- Staged build: **`2.0.0-rc.9-34-5488fd9d`** at `~/Code/ossuminc/bin/riddlc`
   (20 rows also in `~/.ivy2/local`). Last shipped release is 2.0.0-rc.9.
 - All 19 test rows green, **no external reds**.
 
@@ -59,6 +59,37 @@ to the task file and note the disposition below.
 
 ---
 
+
+## `format` renders the declaration (2026-08-03) — DONE
+
+`9c922e42e`. Reported by riddl-generator, whose six line citations were all
+exact; task file in `task/done/` with the transcript.
+
+2.0 put meaning into prefixes and suffixes — entity intentions, a context's
+intention, `initial`, `yields`, `as <shape>` — and `format` rendered none of it,
+so `aggregate consistent event-sourced entity Order` formatted as
+`entity Order`. Streamlet was wrong the other way: it emitted `source Ingest`,
+the spelling 2.0 deprecated, from the DERIVED shape, while the prettifier
+normalizes the same definition to `processor Ingest as source`.
+
+**The fix was never really about `format`.** `RiddlFileEmitter.openDef` already
+held the correct composition; the defect was that a consumer could not reach it,
+so riddlg had started re-deriving it. `AST.Declaration` is now the one
+implementation and `format`, `openDef` and `openState` all use it.
+
+**Two things worth keeping:**
+
+1. **Prove sharing, do not assert it.** Neutralizing the shared prefix reddens
+   the four `format` cases AND the prettify round-trip tests. That is what makes
+   "one implementation" a fact rather than an intention — if they drift, a test
+   fails first.
+2. **This is the third instance of the same shape**, after the include walks and
+   the ungated checks: knowledge that exists in one place, is unreachable from
+   another, and gets re-derived by whoever needs it next. **When a consumer
+   reports duplicating our logic, the fix is to expose ours — not to add a
+   second copy on our side of the line.**
+
+---
 
 ## BAST positions: recoverable, and honest when they are not (2026-08-03) — DONE
 
