@@ -990,6 +990,18 @@ to the right group rather than appending to a list.
   `language/testOnly * ; passes/testOnly *`), which ignores incremental
   state. This is separate from — and additive to — the action-cache
   fixture blindspot.
+- **`sbt -batch` runs only the FIRST command argument** — found
+  2026-08-03. `sbt -batch 'utils/testOnly *' 'language/testOnly *' …`
+  with seven module arguments ran `utils` ONLY, printed
+  "Suites: completed 18 / Tests: succeeded 146 / All tests passed",
+  and **exited 0**. The other six modules never ran and nothing said
+  so. This is the most deceptive member of the false-green family
+  because both the exit code and the word "passed" are honest about
+  the 14% that executed. Put every command in ONE argument separated
+  by `;` — `sbt -batch 'a/testOnly *; b/testOnly *; …'` — and then
+  **count the `Suites: completed` lines against the number of modules
+  you asked for.** (The `;` chain still aborts at the first failure,
+  so a short count means either a red or a skip; either way, look.)
 - **`@JSExport*` annotation placement** — an `@JSExportTopLevel(...)`
   binds to the very next definition. Inserting a new
   `enum`/`object`/class between the annotation and its case class

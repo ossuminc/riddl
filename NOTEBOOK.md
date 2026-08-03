@@ -73,6 +73,76 @@ to the task file and note the disposition below.
 ---
 
 
+## Resolution was never slow; a case class hashed the whole file (2026-08-03) — DONE
+
+Reported by synapify as "ResolutionPass takes 4.3s, likely algorithmic". It is
+not algorithmic and it is not ResolutionPass. On the JVM, all ten analysis
+passes together cost **0.78x one parse**, and Resolution resolves 3730
+references in **44.6ms** — 12µs each.
+
+The real defect: `StringParserInput` is a case class whose first field is
+`data: String`, the entire text of a source file. `At` holds a
+`RiddlParserInput`; `Identifier` and `Definition` hold an `At`;
+`ReferenceMap.Key` holds a `Definition`. So the compiler-generated hashCode
+chain meant **every refMap add and lookup hashed a whole source file** — twice
+per `Definition.hashCode`, once via `id` and once via `loc`.
+
+The JVM and Native never noticed, because both memoise `String.hashCode` into
+the string object. A JS string cannot carry that field. Measured on a 139KB
+source: 14ns (JVM), 1ns (Native), **181,187ns (Scala.js)**. Fix: memoise the
+hash on the parser input — one field per FILE, nothing per node. Scala.js
+`Definition.hashCode` went **384,016ns → 217ns (1,770x)**, now at parity with
+the JVM.
+
+**Four things worth keeping:**
+
+1. **A platform asymmetry can masquerade as an algorithm.** Every hypothesis in
+   the report — and ours — was about complexity: scope walking, candidate
+   rebuilding, linear `Contents` scans. The tell was in the *ratios*, not the
+   totals: parse cost 3.2x on Scala.js while Resolution cost 97x. Ordinary
+   overhead is uniform; when one number is 30x the others on the same runtime,
+   the runtime is doing something different, not the algorithm. **Get the
+   cross-platform ratio before profiling anything.**
+2. **We tested our favourite hypothesis and it was wrong.** ClassTag dispatch
+   was the prime suspect for both of us. Measured, Scala.js runs it **5x faster
+   than the JVM** (~21ns), which accounts for ~0.2% of the time. Had we "fixed"
+   it we would have shipped a plausible refactor across 13 methods and moved
+   nothing. The microbenchmark cost an hour and refuted it in one run.
+3. **Case-class hashCode is a hazard on any node holding bulk data.** Nothing
+   here was written badly; `At`, `Identifier` and `Key` are all ordinary case
+   classes. The cost came from a field three layers away that nobody hashing a
+   `Key` was thinking about. When a case class transitively reaches a `String`
+   that is a *document*, its generated hashCode/equals are O(document).
+4. **`sbt -batch` with several command arguments runs only the FIRST.** Seven
+   `'module/testOnly *'` args ran `utils` alone, printed "All tests passed",
+   and exited 0. Both the exit code and the word "passed" were honest about the
+   14% that ran. Use one `;`-separated argument and **count the `Suites:
+   completed` lines against the modules you asked for.** Recorded in CLAUDE.md
+   beside the other false-green traps — this is the fifth known member of that
+   family, which is itself the point: assume a green suite is evidence only when
+   you know how much of it ran.
+
+Verified after the change: JVM 248 suites / 2007 tests, JS 60 / 674, Native
+149 / 1058 — **0 failures on all three**. `ParserInputHashingTest` (9 cases)
+pins the contract, including `At.isEmpty`'s `source == RiddlParserInput.empty`
+identity. Three benchmarks committed, none asserting a timing threshold (see
+BACKLOG § 3 on why `BASTPerformanceBenchmark`'s ratio assert is a bad pattern).
+
+**Still owed to synapify:** a before/after of *their* table. riddl cannot
+produce it — the Scala.js `PlatformContext` is `DOMPlatformContext`, which loads
+by `fetch`, so no riddl test reads reactive-bbq off disk under Node. They own
+`AnalysisPassCostTest` and should re-run it against the new build. Said so
+explicitly in the task file rather than leaving the criterion quietly unmet.
+
+**Second filing.** The same problem was reported 2026-03-13 at 3.4s and moved to
+`task/done/` with an empty Results section and no work done — no performance
+commit exists in that file's history. Corrected in place. Its sibling from the
+same minute had the identical empty-Results shape but a real fix behind it
+(`367669016`), so the placeholder was never the tell; only `git log` was. **A
+file's presence in `done/` is not evidence that its work happened.**
+
+---
+
 ## `format` renders the declaration (2026-08-03) — DONE
 
 `9c922e42e`. Reported by riddl-generator, whose six line citations were all

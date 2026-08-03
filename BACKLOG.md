@@ -88,27 +88,6 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
 
 ### 2. Queued, designed, not started
 
-- **ResolutionPass performance** — `task/2026-08-03-resolution-pass-performance.md`
-  (synapify). They measured Resolution at 4344ms on reactive-bbq, 56% of
-  analysis and 5.3x the parse. **Approved scope: profile, then fix ONLY if the
-  fix is small and low-risk; otherwise report and backlog.** Benchmark runs
-  against `../riddl-models` as-is, accepting the moving target.
-  Established already, so do not re-derive:
-  - **Their numbers are Scala.js.** Independent native measurement 2026-08-03:
-    parse 0.36s, full `validate` 1.47s — so passes cost ~3.1x parse on native
-    versus ~8.4x on Scala.js. The disproportion is real on both, but the
-    headline 9.5s is heavily platform-amplified. Get a JVM per-pass breakdown
-    before touching anything, and correct their criterion 4 accordingly.
-  - **One of their four hypotheses is already ruled out.** `lookupParentage`
-    (SymbolsOutput.scala:164) is keyed by leaf name via `itemsFor` — a map
-    lookup — and only filters that bucket, so it is not an O(model) scan.
-    `resolveAPathId` (ResolutionPass:1196) also short-circuits through
-    `refMap` before doing any search. Look at `findAnchor`,
-    `resolvePathFromAnchor` and whether Validation re-resolves.
-  - **Benchmark constraints:** must degrade gracefully when `../riddl-models`
-    is absent (CI), and must NOT gate on a tight threshold — see the
-    `BASTPerformanceBenchmark` item in § 3 for why.
-
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
   entry with an origin/document basis.
@@ -132,6 +111,35 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
 
 ### 3. Queued, needs a plan
+- **Move ResolutionPass off `ClassTag` for type differentiation.** A measured
+  cleanup, NOT a fix for anything currently slow — filed 2026-08-03 after the
+  ClassTag hypothesis was tested and refuted as the cause of the Scala.js
+  resolution cost (that was the source-file hashing; see NOTEBOOK).
+  `isSameKind` (ResolutionPass.scala:661) does
+  `classTag[DEF].runtimeClass.isAssignableFrom(d.getClass)`. Measured over
+  168,400 tests by `TypeTestCostBenchmark` (`passes/src/test/scala/`):
+
+  | strategy | JVM | JS | Native |
+  |---|---:|---:|---:|
+  | current (classTag per call) | 19.5 ms | 3.6 ms | 0.9 ms |
+  | hoisted (runtimeClass once) | 17.2 ms | 3.8 ms | 0.2 ms |
+  | predicate (stored lambda) | 2.9 ms | 2.0 ms | 0.5 ms |
+  | direct (isInstanceOf) | 0.9 ms | 0.9 ms | 0.1 ms |
+
+  So ClassTag costs 20x a direct `isInstanceOf` on the JVM, 15x on Native, 4x
+  on JS — worst, in absolute terms, on the platform nobody is complaining
+  about. A stored predicate recovers most of it and adds NO data to any node;
+  Scala 3's `TypeTest[Definition, T]` reaches the `direct` row outright,
+  because at call sites where `T` is statically known the compiler emits a
+  plain `isInstanceOf`.
+  **Why it needs a plan rather than a patch:** ResolutionPass does not only
+  TEST with the ClassTag, it also reads `classTag[T].runtimeClass.getSimpleName`
+  for error messages (:922, :946) and compares exact class identity (:1271,
+  :1275). Moving off ClassTag therefore wants a small `Kind` abstraction
+  carrying both a predicate and a display name, threaded through ~13 generic
+  methods. That is a real refactor for a few milliseconds on the JVM, so it is
+  explicitly LOW priority — do not bundle it with performance work that has a
+  measured user impact.
 - **`BASTPerformanceBenchmark` is timing-flaky.** It asserts BAST load beats
   parse (`speedup > 1.0`). Observed on one machine, back to back: 0.9956x (a
   FAILURE), then 13.0x, 9.3x, 6.1x — and within a single run, parse ranged
