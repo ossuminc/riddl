@@ -36,17 +36,32 @@ class IncludeTransparentAccessorsTest extends AbstractTestingBasis {
   private def outerWithNestedDomain: Domain =
     domain("Outer", Seq(domain("Inner", Seq(domain("Buried")))))
 
-  "filterThroughIncludes" should {
+  "filterThroughWrappers" should {
 
     "see a definition that lives inside an Include" in {
-      val found = outerWithIncludedDomain.contents.filterThroughIncludes[Domain]
+      val found = outerWithIncludedDomain.contents.filterThroughWrappers[Domain]
       found.map(_.id.value).sorted mustBe Seq("Direct", "Included")
+    }
+
+    "see a definition that lives inside a BASTImport" in {
+      // Provenance is riddl's bookkeeping, not the reader's: a client asking what a domain
+      // contains wants the whole list whether a member was written inline, included, or
+      // imported from a compiled .bast.
+      val imported = Contents.empty[NebulaContents]()
+      imported.append(domain("Imported"))
+      val bi = BASTImport(At.empty, LiteralString(At.empty, "lib.bast"), contents = imported)
+      val outer = Contents.empty[DomainContents]()
+      outer.append(bi)
+      outer.append(domain("Direct"))
+      val d = Domain(At.empty, Identifier(At.empty, "Outer"), outer)
+      d.contents.filterThroughWrappers[Domain].map(_.id.value).sorted mustBe
+        Seq("Direct", "Imported")
     }
 
     "NOT descend into containers that are not Include or BASTImport" in {
       // The whole point of not using recursiveFindByType: a domain nested inside a subdomain
       // is not a subdomain of THIS domain. Only "Inner" is, never "Buried".
-      val found = outerWithNestedDomain.contents.filterThroughIncludes[Domain]
+      val found = outerWithNestedDomain.contents.filterThroughWrappers[Domain]
       found.map(_.id.value) mustBe Seq("Inner")
     }
 

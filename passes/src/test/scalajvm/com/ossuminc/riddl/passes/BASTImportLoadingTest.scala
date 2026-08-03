@@ -196,10 +196,16 @@ class BASTImportLoadingTest extends AnyWordSpec with Matchers {
           "flatten"
         )
 
-        // Before flatten the definition lives in the wrapper, NOT in the domain — so a reference
-        // to it does not resolve. THIS IS THE DOCUMENTED CONTRACT: loading fills wrappers, and a
-        // self-contained model requires an explicit flatten.
-        root.domains.head.types.map(_.id.value) mustNot contain("Money")
+        // Two different questions, two different answers, and the split is deliberate.
+        //
+        // READING: `types` reports the imported type. A client asking what types a domain has
+        // wants all of them; whether one arrived inline, by include, or by import is riddl's
+        // bookkeeping, not the client's. (This assertion used to be `mustNot contain`.)
+        root.domains.head.types.map(_.id.value) must contain("Money")
+
+        // RESOLVING: a reference to it still does NOT resolve before flatten. Loading fills
+        // wrappers; a self-contained model requires an explicit flatten. That contract is
+        // unchanged -- the symbol table is built by traversal, not by these accessors.
         Pass
           .runThesePasses(PassInput(root), Pass.standardPasses)
           .messages

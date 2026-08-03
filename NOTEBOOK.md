@@ -116,17 +116,15 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
 
 ### 3. Queued, needs a plan
-- **Should `BASTImport` be transparent to the accessors too?** Surfaced by the
-  include-transparency work (2026-08-03). `flatten()` removes both the `Include`
-  and `BASTImport` wrappers, but the accessors now descend only `Include`,
-  because descending imports broke S61-2's deliberate contract that imported
-  content stays in the wrapper until an explicit flatten
-  (`IncludeAndImportTest`, "load the named domain out of the .bast into the
-  wrapper"). The reasoning for the split: an `include` is textual composition
-  of source, while an `import` pulls in a COMPILED artifact — arguably a
-  different claim. But it leaves the family inconsistent, so it wants deciding
-  on its own rather than by whichever change lands first. riddl-generator has
-  been told it is an open question, not a settled no.
+- **Should an imported definition RESOLVE without an explicit flatten?** The
+  accessors now report `.bast`-imported definitions (2026-08-03), so
+  `domain.types` lists an imported type — but a reference to it still fails to
+  resolve until `FlattenPass` runs, because the symbol table is built by
+  traversal rather than by the accessors. That split is currently pinned by
+  `BASTImportLoadingTest`, and it is defensible (reading is the client's
+  question, resolving is the model's), but it means a model can name a type its
+  own accessors report. Decide whether SymbolsPass should index wrapper
+  contents, or whether the flatten requirement should be stated more loudly.
 - **A conditionally refusing clause escapes yield conformance** — the residual
   gap left by `0054a8433`. `checkYieldConformance` asks whether a refusal appears
   ANYWHERE in the clause, so a clause that refuses on one branch and forgets to
@@ -195,6 +193,13 @@ nothing failed. The 35 named accessors now use `filterThroughIncludes`.
 
 **Four things worth keeping:**
 
+0. **Provenance is riddl's business, not the reader's.** The first cut
+   descended `Include` but not `BASTImport`, reasoning that importing a
+   COMPILED artifact is a different claim from textual composition. Reid
+   overruled it: a client asking what is in a processor wants the full list and
+   does not care how each member got there. Both wrappers are descended; the
+   method is `filterThroughWrappers`, not `...Includes`. Structure and
+   resolution are untouched — see § 3 for the one loose end that leaves.
 1. **The gap was never "untested", it was UNGATED.** riddl validates by
    traversing (`HierarchyPass`, `Finder`), so every internal test took that
    path; the accessor path that consumers use had no test at all. Four of the

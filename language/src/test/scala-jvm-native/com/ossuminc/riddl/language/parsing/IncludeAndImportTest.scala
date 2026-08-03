@@ -132,8 +132,15 @@ class IncludeAndImportTest extends ParsingTest {
       loads.head.contents.toSeq.collect { case d: Domain => d.id.value } must be(
         Seq("NotImplemented")
       )
-      // Wrapper only: nothing is spliced into `foo` without a flatten.
-      foo.domains must be(empty)
+      // The import is still WRAPPED -- `getImports` above found it there, and nothing was spliced
+      // into `foo.contents` without a flatten. That structural contract is unchanged.
+      //
+      // What changed (2026-08-03) is what the ACCESSORS report. A client asking `foo.domains`
+      // wants the domains of `foo`; how each one arrived -- written inline, included, or imported
+      // from a .bast -- is riddl's bookkeeping, not theirs. So the wrapper stays and the accessor
+      // sees through it. This assertion used to read `foo.domains must be(empty)`.
+      foo.contents.filter[Domain] must be(empty)      // structure: still nothing spliced in
+      foo.domains.map(_.id.value) must be(Seq("NotImplemented")) // reporting: the client's answer
     }
   }
 }

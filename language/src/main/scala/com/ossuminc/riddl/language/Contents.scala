@@ -86,41 +86,40 @@ extension [CV <: RiddlValue](container: Contents[CV])
     container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T]).toSeq
   end filter
 
-  /** Like [[filter]], but descends through `Include` wrappers before matching.
+  /** Like [[filter]], but descends through the provenance wrappers -- `Include` and `BASTImport`
+    * -- before matching. The same two [[flatten]] removes.
     *
-    * An `include` is TEXTUAL composition: it says where the author put the text, not that the
-    * definition sits one level further from its container. So `context.entities` answers the same
-    * way whether or not the entity was written in an included file.
+    * HOW a definition got into a container is riddl's business, not its reader's. An author who
+    * writes `include "Campaign.riddl"` or `import domain X from "lib.bast"` is saying where the
+    * text or artifact lives, not that `Campaign` is one level further from the context than its
+    * siblings. A tool asking "what is in this context" wants the whole list; asking it to
+    * distinguish direct from included from imported is asking it to care about a distinction it
+    * has no stake in.
     *
-    * It descends through NOTHING ELSE, and the two exclusions are deliberate:
+    * It descends through NOTHING ELSE. An entity of a nested context is not an entity of THIS
+    * context, which is why this is not `Finder.recursiveFindByType` -- that walks every
+    * `Container` and would over-report where this used to under-report.
     *
-    *   - Not arbitrary containers. An entity of a nested context is not an entity of THIS
-    *     context, which is why this is not `Finder.recursiveFindByType` -- that walks every
-    *     `Container` and would over-report where this used to under-report.
-    *   - Not `BASTImport`, though [[flatten]] does remove that wrapper too. An import of a
-    *     COMPILED artifact is a different claim from textual composition, and S61-2 fixed the
-    *     contract that imported content stays in the wrapper until an explicit flatten splices
-    *     it (see `IncludeAndImportTest`, "load the named domain out of the .bast into the
-    *     wrapper"). Making imports transparent is a separate decision, not a side effect of
-    *     this one.
+    * The tree is never mutated, so the wrappers survive for the tooling that DOES have a stake in
+    * provenance: PrettifyPass multi-file mode writes definitions back to the files they came from,
+    * and `BASTLoader.getImports` still finds imports in their wrapper. Reporting and structure are
+    * separate concerns -- this changes what is reported, [[flatten]] changes what is there.
     *
-    * The tree is never mutated, so include structure survives for tooling that needs provenance
-    * -- PrettifyPass multi-file mode writes definitions back to the files they came from.
-    *
-    * NOTE: the wrapper is matched BEFORE the type test, so this is the wrong tool for finding
-    * includes themselves -- [[includes]] deliberately stays on [[filter]].
+    * NOTE: a wrapper is matched BEFORE the type test, so this is the wrong tool for finding the
+    * wrappers themselves -- [[includes]] deliberately stays on [[filter]].
     */
-  def filterThroughIncludes[T <: RiddlValue: ClassTag]: Seq[T] =
+  def filterThroughWrappers[T <: RiddlValue: ClassTag]: Seq[T] =
     val theClass = classTag[T].runtimeClass
     def loop(items: Seq[RiddlValue]): Seq[T] =
       items.flatMap {
         case inc: Include[?]                            => loop(inc.contents.toSeq)
+        case bi: BASTImport                             => loop(bi.contents.toSeq)
         case x if theClass.isAssignableFrom(x.getClass) => Seq(x.asInstanceOf[T])
         case _                                          => Seq.empty
       }
     end loop
     loop(container.toSeq)
-  end filterThroughIncludes
+  end filterThroughWrappers
 
   // The next three stay on the LITERAL `filter` deliberately, unlike the 35 named accessors in
   // AST.scala. They are consumed by riddl's own passes rather than by tools reading a model, and

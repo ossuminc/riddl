@@ -711,22 +711,29 @@ to the right group rather than appending to a list.
   `PromptStatement`.
 - **walkStatements helper** — private in ValidationPass; walks
   into `WhenStatement` / `MatchStatement` nesting.
-- **Accessors see through `include`; `Finder` sees through everything.**
-  The 35 `contents` accessors (`context.entities`, `domain.contexts`,
-  `handler.clauses`, …) use `Contents.filterThroughIncludes`, which
-  descends `Include` wrappers ONLY — an `include` is textual
-  composition, so a definition means the same thing wherever its text
-  lives. Three rules follow:
+- **Accessors see through the provenance wrappers; `Finder` sees
+  through everything.** The 35 `contents` accessors (`context.entities`,
+  `domain.contexts`, `handler.clauses`, …) use
+  `Contents.filterThroughWrappers`, which descends **`Include` AND
+  `BASTImport`** — the same two `flatten()` removes. HOW a definition
+  reached a container is riddl's bookkeeping; a client asking what is in
+  a context wants the whole list and has no stake in whether a member
+  was written inline, included, or imported. Three rules follow:
   1. **`Contents.filter` stays literal** ("my direct children"), and
      `includes` must keep using it, since the wrapper is matched BEFORE
      the type test. `vitals`/`processors`/`definitions` also stay
      literal — their callers (DiagramsPass, ResolutionPass, StatsPass)
      already reach included definitions another way and would double
      count. Reasons are recorded at each in `Contents.scala`.
-  2. **`BASTImport` is NOT descended**, though `flatten()` removes that
-     wrapper too. S61-2 fixed the contract that imported content stays
-     in the wrapper until an explicit flatten (`IncludeAndImportTest`).
-     Whether imports should be transparent is an open question.
+  2. **READING and RESOLVING answer differently for imports, on
+     purpose.** `domain.types` reports a `.bast`-imported type, but a
+     reference to it does NOT resolve until an explicit `flatten` — the
+     symbol table is built by traversal, not by these accessors, and
+     S61-2's contract that loading only fills wrappers is unchanged.
+     Structure is likewise untouched: `contents.filter` still shows
+     nothing spliced in, and `BASTLoader.getImports` still finds the
+     wrapper. Pinned in `BASTImportLoadingTest` and
+     `IncludeAndImportTest`.
   3. **Never reach for `Finder.recursiveFindByType` to answer "the X of
      this container"** — it walks EVERY `Container`, so it returns
      nested contexts' definitions too. It over-reports exactly where the
