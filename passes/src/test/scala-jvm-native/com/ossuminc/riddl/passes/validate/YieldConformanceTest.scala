@@ -60,6 +60,38 @@ class YieldConformanceTest extends AbstractValidatingTest {
       }
     }
 
+    // A clause that refuses discharges the contract by declining. Without these exemptions the
+    // ordinary event-sourcing shape -- a command accepted in one state and refused in the others --
+    // is unexpressible, because each refusing clause would have to yield the event it just refused.
+    "exempt a clause that refuses with 'error' from the never-yields rule" in { (td: TestData) =>
+      val input = RiddlParserInput(model("error \"cannot do that in this state\""), td)
+      parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
+        val neverYields = errors(msgs).filter(_.message.contains("never yields"))
+        if neverYields.nonEmpty then
+          info(s"Refusing clause was not exempt:\n${neverYields.map(_.format).mkString("\n")}")
+        neverYields mustBe empty
+      }
+    }
+
+    "exempt a clause that refuses with 'require' from the never-yields rule" in { (td: TestData) =>
+      val input = RiddlParserInput(model("require \"the order is open\""), td)
+      parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
+        val neverYields = errors(msgs).filter(_.message.contains("never yields"))
+        if neverYields.nonEmpty then
+          info(s"Refusing clause was not exempt:\n${neverYields.map(_.format).mkString("\n")}")
+        neverYields mustBe empty
+      }
+    }
+
+    "still reject a refusing clause that yields the WRONG event" in { (td: TestData) =>
+      // Refusing exempts only the never-yields rule. A clause that DOES yield is still held to
+      // the declared type, so the exemption cannot be used to smuggle in a mismatched yield.
+      val input = RiddlParserInput(model("error \"nope\"\n      yield event Other"), td)
+      parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
+        errors(msgs).exists(_.message.contains("does not match declared")) mustBe true
+      }
+    }
+
     "allow a yield when the command declares no yields clause (yields is optional)" in {
       (td: TestData) =>
         val input = RiddlParserInput(model("yield event E", yieldsClause = ""), td)

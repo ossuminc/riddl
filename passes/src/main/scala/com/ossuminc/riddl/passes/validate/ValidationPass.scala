@@ -776,7 +776,9 @@ case class ValidationPass(
     *   - a command/query that declares `yields M` must be handled by a clause that yields `M` (same
     *     kind + same resolved Type);
     *   - a yield whose message does not match the declared `yields` is an error;
-    *   - a command/query that declares `yields` but whose handler never yields it is an error.
+    *   - a command/query that declares `yields` but whose handler never yields it is an error,
+    *     UNLESS that clause refuses the message (`error`/`require`), which discharges the contract
+    *     by declining rather than by recording.
     *
     * `yields` is optional (A19): yielding in a handler whose command/query declares no `yields` is
     * allowed and unchecked — conformance is enforced only when the author opts in with a `yields`
@@ -792,17 +794,31 @@ case class ValidationPass(
         case auc: AggregateUseCaseTypeExpression
             if auc.usecase == AggregateUseCase.CommandCase ||
               auc.usecase == AggregateUseCase.QueryCase =>
-          val yieldStmts = Finder(omc.contents).recursiveFindByType[YieldStatement]
+          val finder = Finder(omc.contents)
+          val yieldStmts = finder.recursiveFindByType[YieldStatement]
+          // A clause that REFUSES discharges the contract by declining. `yields` declares what the
+          // command records WHEN IT SUCCEEDS, not that every clause mentioning it must record one.
+          // Without this, the ordinary event-sourcing shape -- a command accepted in one state and
+          // refused in the others -- is unexpressible: each refusing clause would have to yield the
+          // very event it just declined to produce. Same predicate as the sibling completeness
+          // check above, which carries the fuller rationale; `require` refuses as surely as
+          // `error`, so both count.
+          val refuses = finder.recursiveFindByType[ErrorStatement].nonEmpty ||
+            finder.recursiveFindByType[RequireStatement].nonEmpty
           auc.yields match {
             case Some(declaredYield) =>
               val declaredType = resolution.refMap.definitionOf[Type](declaredYield.pathId)
               if yieldStmts.isEmpty then
-                messages.addError(
-                  omc.errorLoc,
-                  s"${handledType.identify} declares 'yields ${declaredYield.format}' but " +
-                    s"${omc.identify} never yields it",
-                  suggestion = s"Add a 'yield ${declaredYield.format}' statement to this handler."
-                )
+                if !refuses then
+                  messages.addError(
+                    omc.errorLoc,
+                    s"${handledType.identify} declares 'yields ${declaredYield.format}' but " +
+                      s"${omc.identify} never yields it",
+                    suggestion =
+                      s"Add a 'yield ${declaredYield.format}' statement to this handler." +
+                        " A clause that refuses the message (with 'error' or 'require') is exempt."
+                  )
+                end if
               else
                 yieldStmts.foreach { ys =>
                   val kindOk = operandMessageKind(ys.msg) == declaredYield.messageKind

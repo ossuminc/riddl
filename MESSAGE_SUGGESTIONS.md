@@ -183,6 +183,8 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${entity} does not define an Id type for its identity` (Completeness) | `Define an Id type for ${entity} in its context, e.g. 'type Id = Id(${id})'.` |
 | `${idType} is defined inside ${entity}; move it to the containing context …` (Completeness) | `Move ${idType} from ${entity} up to the containing context so other entities can reference it.` |
 | `${idType} for ${entity} is defined outside the containing context; …` (Completeness) | `Move ${idType} into ${entity}'s context, and use adaptors for any inter-context references to it.` |
+| `${type} declares 'yields ${msg}' but ${clause} never yields it` (Error, A19) | `Add a 'yield ${msg}' statement to this handler. A clause that refuses the message (with 'error' or 'require') is exempt.` |
+| `yielded '${msg}' does not match declared 'yields ${declared}' of ${type}` (Error, A19) | `Yield the declared response: 'yield ${declared}'.` |
 | `${entity} declares ${kw1} and ${kw2}, but ${group} intentions are mutually exclusive` (Error) | `Keep exactly one ${group} keyword before 'entity'.` — plus `'event-sourced' already implies 'persistent'.` when those two collide. |
 | `${entity} is event-sourced but ${command} declares no 'yields' clause, so there is no event to record` (Error, R1) | `Declare the event it produces, e.g. 'command ${command} yields event SomethingHappened is { ??? }'.` |
 | `${entity} is event-sourced and ${command} yields '${event}', but no 'on event' clause applies it on replay` (Error, R2) | `Add 'on ${event} { ??? }' to a handler of ${entity} so the event can be replayed.` |
