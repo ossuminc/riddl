@@ -13,17 +13,20 @@ stand and what a fresh session would get wrong.
 **State** — every number below was produced by a command in the session that
 wrote this, not recalled:
 
-- Branch `release/2`, tree clean, **~46 commits UNPUSHED**. Nothing is pushed on
-  purpose; the rc.10 exit condition is in BACKLOG.md item 1e. The count drifts
-  by one every time this file is committed, so **verify rather than trust it**:
+- Branch `release/2`, tree clean, **PUSHED** — 47 commits went up on 2026-08-04
+  (`e5926d418..fdc5c1718`), ending the hold-everything-local period. CI runs on
+  `release/*` (scala.yml:9), so pushes here now build. Verify rather than trust:
   `git log --oneline origin/release/2..HEAD | wc -l`.
 - HEAD is the tip of `release/2`; the last code commit is the requires/returns
   move (below), on top of `867ab0333` (saga) and `496e77c39` (hashing).
-- **Staged build is `2.0.0-rc.9-42-37b0db94`** at `~/Code/ossuminc/bin/riddlc`,
-  20 ivy rows under that version. Staged 2026-08-03 from a clean tree with
-  `reload`, binary copied only after `nativeLink` reported `[success]` — all
-  three preconditions met, so the version carries no timestamp suffix and is
-  reproducible from `37b0db947`. **It is now STALE** — see below.
+- **Staged build is CURRENT: `2.0.0-rc.9-48-fdc5c171`** at
+  `~/Code/ossuminc/bin/riddlc`, 20 ivy rows under that version from
+  `publishLocal`. Staged 2026-08-04 from a clean tree with `reload`, binary
+  copied only after `nativeLink` reported `[success]` — all three preconditions
+  met, so the version carries no timestamp suffix and is reproducible from
+  `fdc5c1718`. Verified by ENFORCEMENT, not just `riddlc version`: a function
+  with a comment above `requires` validates clean here and is a PARSE ERROR
+  under the tap's `/opt/homebrew/bin/riddlc`.
 - **All three platforms green**, re-run in full on 2026-08-04 AFTER the
   requires/returns work with `<module>/testOnly *`, one `;`-separated argument,
   `Suites: completed` lines counted against modules requested: **JVM 249 suites
@@ -39,9 +42,11 @@ content". The `Option[TypeRef]` narrowing is deliberately NOT done — it requir
 dropping the deprecated inline aggregation, filed in BACKLOG § 2 with its
 verified cost.
 
-**The staged build at `~/Code/ossuminc/bin/riddlc` is now STALE** — it predates
-this change, so it neither accepts a comment above `requires` nor writes
-`FORMAT_REVISION` 4. Restage before handing anything to a consumer.
+**Consumers can pick this up now** — `2.0.0-rc.9-48-fdc5c171` is both staged at
+`~/Code/ossuminc/bin/riddlc` and in `~/.ivy2/local` (20 rows). It is the first
+build that accepts a comment above `requires` and the first that writes BAST
+`FORMAT_REVISION` 4, so any `.bast` written by an earlier riddlc is rejected
+with "regenerate .bast files with the current riddlc" — expected, not a bug.
 
 **Formatting is not a gate before 2.0.** The whole codebase gets one `scalafmt`
 pass just before the release ships. Do not run `scalafmtCheckAll`, do not report
