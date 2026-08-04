@@ -90,6 +90,23 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       decr.addIndent("}")
       emitMetaData(definition.metadata)
       if definition.metadata.isEmpty then nl
+    else
+      // A `???` body still carries metadata, and it must still be written.
+      //
+      // `openDef` SELF-CLOSED this one as `{ ??? }`, so there is no brace to close — but the old
+      // guard skipped `emitMetaData` along with the brace, silently deleting the `with { … }` of
+      // every childless container. Prettify is meant to be lossless; this made it lossy in the
+      // way that is hardest to notice, since the output still parses and only degrades into
+      // "missing description" warnings on the NEXT validate.
+      //
+      // Fixed here rather than at the call sites because `closeDef` is shared by 13 containers,
+      // so all of them had the bug. `closeState` carries a local version of this fix predating
+      // the diagnosis (PrettifyVisitor.closeState) — harmless now, since a body-less state takes
+      // the `contents.nonEmpty` branch there and never reaches this method.
+      if definition.metadata.nonEmpty then
+        trimTrailingNewline()
+        emitMetaData(definition.metadata)
+      end if
     end if
     this
   }
