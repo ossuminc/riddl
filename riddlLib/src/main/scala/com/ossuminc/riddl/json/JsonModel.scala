@@ -523,13 +523,29 @@ object JsonModel:
   /** `condition` holds an opaque pseudo-code string; A28's structured BooleanExpression condition
     * is carried in `expression` (with `condition` empty). At most one is populated.
     */
+  /** An invariant.
+    *
+    * `condition` carries the literal-string form; `expression` the structured boolean; `block` the
+    * statements-plus-predicate form. Exactly one is populated.
+    *
+    * `requires` is not decoration — it decides WHERE the invariant applies (§15.2 of the
+    * computational model), so a document that drops it describes a different model. `requiresKind`
+    * discriminates `"state"` from `"type"`, which the ref string alone cannot: `state Open` and a
+    * type named `Open` render differently but a bare path would not say which was meant.
+    */
   case class InvariantDto(
     name: String,
     condition: String,
     brief: Option[String] = None,
     expression: Option[ValueDto] = None,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    requires: Option[String] = None,
+    requiresKind: Option[String] = None,
+    block: Option[InvariantBlockDto] = None
   )
+
+  /** The block condition: pure statements then the boolean that is the predicate. */
+  case class InvariantBlockDto(statements: Seq[StatementDto] = Nil, predicate: ValueDto)
 
   /** A53: a scope's version component — `{ "name": "Garibaldi" }` for the named form or `{ "name":
     * "4", "numeric": true }` for the numeric one. `name` always carries the RENDERED component;
@@ -630,10 +646,14 @@ object JsonModel:
   /** `{ "kind": "require", "condition": "..." }`, `{ ..., "invariant": "<name>" }`, or A28's
     * structured `{ ..., "expression": <value> }`. At most one is populated.
     */
+  /** `argument` is the `with <expr>` value handed to an invariant declaring `requires <type>` --
+    * semantic, not decoration, so it round-trips like any other operand.
+    */
   case class RequireStmtDto(
     condition: Option[String],
     invariant: Option[String],
-    expression: Option[ValueDto] = None
+    expression: Option[ValueDto] = None,
+    argument: Option[ValueDto] = None
   ) extends StatementDto
 
   /** A54: a message operand — a bare message ref or an inline constructor value. */
@@ -1651,7 +1671,8 @@ object JsonModel:
             RequireStmtDto(
               m.get("condition").map(_.str),
               m.get("invariant").map(_.str),
-              m.get("expression").map(readValue)
+              m.get("expression").map(readValue),
+              m.get("argument").map(readValue)
             )
           case "set" =>
             SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), readValue(m("value")))
@@ -1726,12 +1747,13 @@ object JsonModel:
           "language" -> ujson.Str(language),
           "body" -> ujson.Str(body)
         )
-      case RequireStmtDto(condition, invariant, expression) =>
+      case RequireStmtDto(condition, invariant, expression, argument) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("require"))
             ++ condition.map(x => "condition" -> (ujson.Str(x): ujson.Value))
             ++ invariant.map(x => "invariant" -> (ujson.Str(x): ujson.Value))
             ++ expression.map(x => "expression" -> (writeValue(x): ujson.Value))
+            ++ argument.map(x => "argument" -> (writeValue(x): ujson.Value))
         )
       case SetStmtDto(field, state, value) =>
         ujson.Obj.from(
@@ -2222,6 +2244,7 @@ object JsonModel:
   // a ReadWriter for macroRW derivation.
   given valueDtoRW: ReadWriter[ValueDto] =
     readwriter[ujson.Value].bimap[ValueDto](writeValue, readValue)
+  given invariantBlockRW: ReadWriter[InvariantBlockDto] = macroRW
   given invariantRW: ReadWriter[InvariantDto] = macroRW
   given versionRW: ReadWriter[VersionDto] = macroRW
   given copyrightRW: ReadWriter[CopyrightDto] = macroRW

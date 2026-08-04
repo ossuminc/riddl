@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-04 17:54 UTC
+# Generated: 2026-08-04 23:35 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -256,7 +256,7 @@ prompt-statement ::= ("do" | "prompt") ws literal-string
 code-statement ::= "```" ("scala" | "java" | "python" | "mojo") code-contents "```"
 code-contents ::= (any-char-except-triple-backtick)*
 error-statement ::= "error" ws1 literal-string
-require-statement ::= "require" ws (literal-string | invariant-ref | boolean-expression)
+require-statement ::= "require" ws (literal-string | invariant-ref | boolean-expression) ws ("with" value)?
 invariant-ref ::= "invariant" ws1 path-identifier
 
 # Entity state transitions. A54: the morph value is a bare record ref or an inline constructor.
@@ -270,7 +270,9 @@ pseudo-code-contents ::= (undefined)? ws (statement)*
 
 # Constants and Invariants
 constant ::= "constant" ws1 identifier ws1 is ws1 type-expression ws "=" ws literal-string ws (with-metadata)?
-invariant ::= "invariant" ws1 identifier ws1 is ws (literal-string | boolean-expression)? ws (with-metadata)?
+invariant ::= "invariant" ws1 identifier ws ("requires" (state-ref | type-ref))? ws is ws (invariant-condition)? ws (with-metadata)?
+invariant-condition ::= literal-string | boolean-expression | invariant-block
+invariant-block ::= "{" ws (statement)* ws boolean-expression ws "}"
 
 # precise version, e.g. Garibaldi.4.3. At most one version per scope.
 version ::= "version" ws (natural | identifier) ws (with-metadata)?

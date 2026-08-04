@@ -315,7 +315,9 @@ prompt_statement = ("do" | "prompt") literal_string ;
 code_statement = "```" ("scala" | "java" | "python" | "mojo") code_contents "```" ;
 code_contents = {any_char_except_triple_backtick} ;
 error_statement = "error" literal_string ;
-require_statement = "require" (literal_string | invariant_ref | boolean_expression) ; (* A28 *)
+(* `with <value>` hands a value to an invariant declaring `requires <type_ref>` -- the one
+   invariant form ambient scope cannot supply. The clause gathers; the invariant receives. *)
+require_statement = "require" (literal_string | invariant_ref | boolean_expression) ["with" value] ;
 invariant_ref = "invariant" path_identifier ;
 
 (* Entity state transitions. A54: the morph value is a bare record ref or an inline constructor. *)
@@ -329,7 +331,14 @@ pseudo_code_contents = [undefined] {statement} ;
 
 (* Constants and Invariants *)
 constant = "constant" identifier is type_expression "=" literal_string [with_metadata] ;
-invariant = "invariant" identifier is [literal_string | boolean_expression] [with_metadata] ; (* A28 *)
+(* An invariant applies IMPLICITLY across every clause of its declaring scope, as a precondition.
+   `requires state S` narrows an entity-level invariant to one state and stays implicit;
+   `requires <type_ref>` makes it explicit-only (see require_statement). No `returns`: the
+   condition ends in a boolean, so the result type is fixed by construction.
+   The block form admits the statements a pure function may contain, ending in that boolean. *)
+invariant = "invariant" identifier ["requires" (state_ref | type_ref)] is [invariant_condition] [with_metadata] ;
+invariant_condition = literal_string | boolean_expression | invariant_block ;
+invariant_block = "{" {statement} boolean_expression "}" ;
 
 (* Version - A53: a scope's version component is EITHER a name OR a natural number, never both. *)
 (* Composing a definition's versioned ancestors root-to-leaf and joining with "." yields its    *)

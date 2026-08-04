@@ -192,10 +192,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       // positives.
       case inv: Invariant =>
         // A28: resolve operand refs inside a structured BooleanExpression condition (a LiteralString
-        // condition has none).
+        // condition has none). A block condition carries BOTH statements and a predicate, and the
+        // statements are where a `let` or a `call` puts references — resolving only the predicate
+        // would leave those dangling.
         inv.condition.foreach {
           case be: BooleanExpression => resolveValue(be, parents)
           case _: LiteralString      => ()
+          case blk: InvariantBlock =>
+            blk.statements.toSeq.foreach {
+              case st: Statement => resolveStatement(st, parents)
+              case _: Comment    => () // a comment holds no references
+            }
+            resolveValue(blk.predicate, parents)
+        }
+        // `requires state S` / `requires <type>` name real definitions and must resolve, or the
+        // scope the invariant claims is unchecked.
+        inv.requires.foreach {
+          case sr: StateRef => resolveARef[State](sr, parents)
+          case tr: TypeRef  => resolveATypeRef(tr, parents)
         }
       // A BASTImport holds no references of its own. Its .bast file was already read by
       // BASTLoader at parse time (TopLevelParser.loadBASTImports) and its contents are traversed

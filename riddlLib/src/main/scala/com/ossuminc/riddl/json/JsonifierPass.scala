@@ -1002,13 +1002,34 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         )
       )
     case i: Invariant =>
-      // A28: a LiteralString condition serializes to the `condition` string; a BooleanExpression to
-      // the structured `expression` field (with `condition` empty).
-      val (condStr, condExpr) = i.condition match
-        case Some(ls: LiteralString)     => (ls.s, None)
-        case Some(be: BooleanExpression) => ("", Some(serializeValue(be)))
-        case None                        => ("", None)
-      Some(InvariantDto(i.id.value, condStr, briefOf(i.metadata), condExpr, metaOf(i.metadata)))
+      // A28 + 2026-08-04: a LiteralString condition serializes to the `condition` string, a
+      // BooleanExpression to the structured `expression` field, and a block to `block` — exactly
+      // one is populated.
+      val (condStr, condExpr, condBlock) = i.condition match
+        case Some(ls: LiteralString)     => (ls.s, None, None)
+        case Some(be: BooleanExpression) => ("", Some(serializeValue(be)), None)
+        case Some(blk: InvariantBlock) =>
+          val stmts = blk.statements.toSeq.collect { case st: Statement => serializeStatement(st) }
+          ("", None, Some(InvariantBlockDto(stmts, serializeValue(blk.predicate))))
+        case None => ("", None, None)
+      // `requires` decides where the invariant applies, so it must survive. The kind tag is what
+      // tells a reader whether `Open` meant `state Open` or a type named Open.
+      val (reqRef, reqKind) = i.requires match
+        case Some(sr: StateRef) => (Some(sr.pathId.format), Some("state"))
+        case Some(tr: TypeRef)  => (Some(tr.format), Some("type"))
+        case None               => (None, None)
+      Some(
+        InvariantDto(
+          i.id.value,
+          condStr,
+          briefOf(i.metadata),
+          condExpr,
+          metaOf(i.metadata),
+          reqRef,
+          reqKind,
+          condBlock
+        )
+      )
     // A53: `name` is the rendered component; `numeric` records whether it was written as a number.
     case v: Version =>
       Some(VersionDto(v.component, v.isNumeric, briefOf(v.metadata), metaOf(v.metadata)))
@@ -1300,11 +1321,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case LetStatement(_, id, tr, e) =>
       LetStmtDto(id.value, tr.map(t => path(t.pathId)), serializeValue(e))
     case CodeStatement(_, lang, body) => CodeStmtDto(lang.s, body)
-    case RequireStatement(_, cond) =>
+    case RequireStatement(_, cond, arg) =>
+      val a = arg.map(serializeValue)
       cond match
-        case ls: LiteralString     => RequireStmtDto(Some(ls.s), None)
-        case ir: InvariantRef      => RequireStmtDto(None, Some(path(ir.pathId)))
-        case be: BooleanExpression => RequireStmtDto(None, None, Some(serializeValue(be))) // A28
+        case ls: LiteralString     => RequireStmtDto(Some(ls.s), None, None, a)
+        case ir: InvariantRef      => RequireStmtDto(None, Some(path(ir.pathId)), None, a)
+        case be: BooleanExpression => RequireStmtDto(None, None, Some(serializeValue(be)), a) // A28
     case SetStatement(_, field, value) =>
       field match
         case fr: FieldRef => SetStmtDto(Some(path(fr.pathId)), None, serializeValue(value))

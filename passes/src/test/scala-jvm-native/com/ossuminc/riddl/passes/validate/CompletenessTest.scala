@@ -972,7 +972,12 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
-    "warn when invariant is not referenced by require" in { (td: TestData) =>
+    // Rewritten 2026-08-04. This case used to assert that an entity invariant no `require` named
+    // draws a usage warning. Under the new semantics that invariant is applied IMPLICITLY to every
+    // clause of its entity (§15.2), so NOT being named is the norm and warning about it would be
+    // wrong. Only the one form that cannot be implicit — `requires <type>`, whose value ambient
+    // scope cannot supply — is inert when nothing invokes it, so that is what is asserted now.
+    "not warn about an entity invariant, which applies implicitly" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
@@ -995,10 +1000,36 @@ class CompletenessTest extends AbstractValidatingTest {
       )
       pc.withOptions(CommonOptions.default) { _ =>
         parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-          val usageWarnings = msgs.filter(_.isUsage)
-          usageWarnings.exists(
-            _.message.contains("DataNotEmpty")
-          ) mustBe true
+          msgs.filter(_.isUsage).exists(_.message.contains("DataNotEmpty")) mustBe false
+        }
+      }
+    }
+
+    "warn when a `requires <type>` invariant is never applied" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type Evt is event { data: String }
+          |    record Limits is { ceiling: Integer, used: Integer }
+          |    entity E is {
+          |      record Fields is { data: String }
+          |      invariant UnderLimit requires record D.C.Limits is used <= ceiling
+          |      state Main of record E.Fields
+          |      handler H is {
+          |        on init { set field E.Fields.data to "x" }
+          |        on event D.C.Evt {
+          |          set field E.Fields.data to "updated"
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          msgs.filter(_.isUsage).exists(_.message.contains("UnderLimit")) mustBe true
         }
       }
     }

@@ -1,0 +1,57 @@
+// Corpus fixture for the 2026-08-04 invariant semantics: implicit scope, the `requires` clause,
+// the block condition, and `require invariant X with <expr>`. Exercised by both the fastparse
+// parser and the EBNF/TatSu grammar so the two accept the same input.
+//
+// NOTE: operands are value references, not numeric literals — the A28 boolean sub-language has no
+// numeric literal atom (see `language/input/values.riddl:104`, `count == total`). That limitation
+// predates this fixture.
+domain d is {
+  context c is {
+    record Balance is { amount: Integer, floor: Integer, owner: String, anon: String }
+    record Limits is { ceiling: Integer, used: Integer }
+    command Deposit is { by: Integer }
+    event Deposited is { by: Integer }
+
+    entity Account is {
+      state Open of record Balance
+      state Frozen of record Balance
+
+      // Entity-level, no `requires`: applies to every clause of the entity. Under the
+      // intersection rule it may read only fields present in EVERY state record — `amount` and
+      // `floor` are in both Open's and Frozen's record, so this is legal.
+      invariant NonNegative is amount >= floor
+
+      // Entity-level but scoped to one state: implicit, and applies only while in Open.
+      invariant OpenIsOwned requires state Open is owner != anon
+
+      // The block form: pure statements ending in the boolean that IS the predicate.
+      invariant WithinCeiling requires state Open is {
+        let headroom = floor
+        headroom <= amount
+      }
+
+      handler Behaviour is {
+        on command Deposit {
+          // The implicit invariants above are checked here as preconditions, before any effect,
+          // with nothing written at this site.
+          set field Account.Open.amount to "amount + 1"
+        }
+        on event Deposited {
+          // Implicit invariants apply here too; a violation is a FAULT, not a refusal, so the
+          // event is not refused and A16 is intact.
+          set field Account.Open.amount to "amount + 1"
+        }
+      }
+    }
+
+    // A stateless processor has no ambient data, so its invariant must declare a type and be
+    // handed the value — an invariant never acquires, it only receives.
+    invariant UnderLimit requires record Limits is used <= ceiling
+
+    handler ContextRules is {
+      on command Deposit {
+        require invariant UnderLimit with record Limits(ceiling = "10", used = "1")
+      }
+    }
+  }
+}

@@ -704,8 +704,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_INVARIANT, i.metadata.nonEmpty)
     writeLocation(i.loc)
     writeIdentifierInline(i.id) // Inline - no tag needed
-    // A28: condition is Option[LiteralString | BooleanExpression]; a sub-flag byte (0=literal,
-    // 1=boolean-expression) selects the arm inside the option.
+    // A28 + 2026-08-04: condition is Option[LiteralString | BooleanExpression | InvariantBlock];
+    // a sub-flag byte (0=literal, 1=boolean-expression, 2=block) selects the arm in the option.
     writeOption(i.condition) {
       case ls: LiteralString =>
         writer.writeU8(0)
@@ -713,6 +713,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case be: BooleanExpression =>
         writer.writeU8(1)
         writeValue(be)
+      case blk: InvariantBlock =>
+        writer.writeU8(2)
+        writeLocation(blk.loc)
+        writeContents(blk.statements)
+        writeValue(blk.predicate)
+    }
+    // `requires` decides where the invariant applies, so losing it would change the model's
+    // meaning rather than merely its text. Sub-flag: 0=state ref, 1=type ref.
+    writeOption(i.requires) {
+      case sr: StateRef =>
+        writer.writeU8(0)
+        writeStateRef(sr)
+      case tr: TypeRef =>
+        writer.writeU8(1)
+        writeTypeRef(tr)
     }
   }
 
@@ -1056,6 +1071,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(2) // A28: structured boolean-expression condition
         writeValue(be)
     }
+    // The `with <expr>` argument handed to an invariant declaring `requires <type>`.
+    writeOption(s.argument)(writeValue)
   }
 
   def writeYieldStatement(s: YieldStatement): Unit = {

@@ -75,7 +75,7 @@ package object bast {
     * that real files carry.
     */
   val FORMAT_REVISION: Short =
-    4 // `requires`/`returns` moved from Function/Saga fields into contents as Requires/Returns
+    5 // Invariant gained `requires` + a block condition; RequireStatement gained `with <expr>`
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

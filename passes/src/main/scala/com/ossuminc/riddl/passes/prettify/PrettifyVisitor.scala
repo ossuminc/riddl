@@ -242,11 +242,19 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
       rfe
         .addIndent("invariant ")
         .add(invariant.id.format)
+        // `requires` decides WHERE the invariant applies, so dropping it changes the model rather
+        // than its formatting: `requires state Open` would silently widen to the whole entity.
+        .add(invariant.requires.map(r => " requires " + r.format).getOrElse(""))
         .add(" is ")
-        // A28: condition is Option[LiteralString | BooleanExpression]; both arms are RiddlValues
-        // with `.format` (the Option[LiteralString] `.format` extension no longer applies).
+        // A28 + block form: every arm is a RiddlValue with `.format` (the Option[LiteralString]
+        // `.format` extension no longer applies).
         .add(invariant.condition.map(_.format).getOrElse("N/A"))
-        .emitMetaData(invariant.metadata)
+      // An invariant is a one-line leaf with nothing following it on the line, so it must
+      // terminate its own line when there is no `with { ... }` block to do it — the same rule
+      // `doVersion` and `doCopyright` already carry. Without this a metadata-less invariant ran
+      // into whatever followed it, which is why `invariant X is a >= b      // comment` and
+      // `... }      handler H is {` came out on one line.
+      if invariant.metadata.isEmpty then rfe.nl else rfe.emitMetaData(invariant.metadata)
     }
   end doInvariant
 

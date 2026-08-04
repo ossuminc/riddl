@@ -1035,21 +1035,19 @@ class BASTReader(
 
       case 14 => // Require
         val conditionKind = reader.readU8()
-        conditionKind match {
-          case 0 => // literal string
-            val condition = readLiteralString()
-            RequireStatement(loc, condition)
-          case 1 => // invariant ref
-            val pathId = readPathIdentifierInline()
-            RequireStatement(loc, InvariantRef(loc, pathId))
+        val condition: LiteralString | InvariantRef | BooleanExpression = conditionKind match {
+          case 0 => readLiteralString() // literal string
+          case 1 => InvariantRef(loc, readPathIdentifierInline()) // invariant ref
           case 2 => // A28: structured boolean-expression condition
             readValue() match
-              case be: BooleanExpression => RequireStatement(loc, be)
+              case be: BooleanExpression => be
               case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
-          case _ =>
-            val condition = readLiteralString()
-            RequireStatement(loc, condition)
+          case _ => readLiteralString()
         }
+        // The `with <expr>` argument. Read AFTER the condition, matching the writer — the two
+        // orders must stay in step or the byte stream misaligns downstream.
+        val argument: Option[Value] = readOption(readValue())
+        RequireStatement(loc, condition, argument)
 
       case 15 => // Yield (formerly Reply — wire format unchanged)
         val msg = readMessageOperand() // A54: bare ref or constructor
@@ -1096,18 +1094,32 @@ class BASTReader(
   private def readInvariantNode(): Invariant = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    // A28: a sub-flag byte (0=literal, 1=boolean-expression) selects the arm inside the option.
-    val condition: Option[LiteralString | BooleanExpression] = readOption {
+    // A28 + 2026-08-04: a sub-flag byte (0=literal, 1=boolean-expression, 2=block) selects the arm.
+    val condition: Option[LiteralString | BooleanExpression | InvariantBlock] = readOption {
       reader.readU8() match
         case 0 => readLiteralString()
         case 1 =>
           readValue() match
             case be: BooleanExpression => be
             case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
+        case 2 =>
+          val blkLoc = readLocation()
+          val statements = readContentsDeferred[Statements]()
+          readValue() match
+            case be: BooleanExpression => InvariantBlock(blkLoc, statements, be)
+            case other =>
+              throw new RuntimeException(s"Expected block predicate BooleanExpression, got: $other")
         case k => throw new RuntimeException(s"Invalid invariant condition kind: $k")
     }
+    // `requires` decides where the invariant applies; sub-flag 0=state ref, 1=type ref.
+    val requires: Option[StateRef | TypeRef] = readOption {
+      reader.readU8() match
+        case 0 => readStateRef()
+        case 1 => readTypeRef()
+        case k => throw new RuntimeException(s"Invalid invariant requires kind: $k")
+    }
     val metadata = readMetadataDeferred()
-    Invariant(loc, id, condition, metadata)
+    Invariant(loc, id, condition, requires, metadata)
   }
 
   /** A53: a Version leaf — mirror of BASTWriter.writeVersion. The numeric flag re-derives the

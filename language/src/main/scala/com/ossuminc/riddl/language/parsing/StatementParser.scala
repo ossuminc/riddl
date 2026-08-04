@@ -60,12 +60,12 @@ private[parsing] trait StatementParser {
         literalString |
           (Keywords.invariant ~ pathIdentifier).map { case pid => pid } |
           booleanExprOnly
-      ) ~/ Index
+      ) ~ (Keywords.`with` ~ value).? ~/ Index
     )./.map {
-      case (start, str: LiteralString, end) => RequireStatement(at(start, end), str)
-      case (start, pid: PathIdentifier, end) =>
-        RequireStatement(at(start, end), InvariantRef(at(start, end), pid))
-      case (start, be: BooleanExpression, end) => RequireStatement(at(start, end), be)
+      case (start, str: LiteralString, arg, end) => RequireStatement(at(start, end), str, arg)
+      case (start, pid: PathIdentifier, arg, end) =>
+        RequireStatement(at(start, end), InvariantRef(at(start, end), pid), arg)
+      case (start, be: BooleanExpression, arg, end) => RequireStatement(at(start, end), be, arg)
     }
   }
 
@@ -77,15 +77,43 @@ private[parsing] trait StatementParser {
   // to `booleanExprOnly` first would fail the filter behind that cut (no backtrack). A quoted string
   // and an unquoted expression never share a first token, so trying `literalString` first is safe:
   // `invariant X is "…"` stays a LiteralString, `invariant X is a > b` becomes a BooleanExpression.
-  def invariant[u: P]: P[Invariant] = {
+  /** The optional `requires` clause: a STATE ref or a TYPE ref, never an inline aggregation.
+    *
+    * `requires state S` narrows an entity-level invariant to one state and stays IMPLICIT.
+    * `requires <type>` makes it explicit-only, since nothing in ambient scope can supply the value.
+    * `stateRef` is tried first because `state` is a keyword `typeRef` would not claim.
+    */
+  private def invariantRequires[u: P]: P[StateRef | TypeRef] =
+    P(Keywords.requires ~/ (stateRef | typeRef)).asInstanceOf[P[StateRef | TypeRef]]
+
+  /** The block condition: pure statements then the boolean that IS the predicate.
+    *
+    * Reuses `StatementsSet.FunctionStatements` rather than defining a new set — A26 already makes
+    * that set pure (send/tell/set banned in `base`; morph/become/yield/reply rejected with a
+    * message), which is exactly the purity an invariant needs.
+    */
+  private def invariantBlock[u: P]: P[InvariantBlock] = {
     P(
-      Index ~ Keywords.invariant ~ identifier ~/ is ~ (
-        undefined(Option.empty[LiteralString | BooleanExpression]) |
-          literalString.map(ls => Some(ls): Option[LiteralString | BooleanExpression]) |
-          booleanExprOnly.map(be => Some(be): Option[LiteralString | BooleanExpression])
+      Index ~ open ~ statement(StatementsSet.FunctionStatements).rep(0) ~ booleanExprOnly ~ close ~
+        Index
+    ).map { case (start, stmts, predicate, end) =>
+      InvariantBlock(at(start, end), stmts.toContents, predicate)
+    }
+  }
+
+  def invariant[u: P]: P[Invariant] = {
+    type Cond = Option[LiteralString | BooleanExpression | InvariantBlock]
+    P(
+      Index ~ Keywords.invariant ~ identifier ~/ invariantRequires.? ~ is ~ (
+        undefined(Option.empty[LiteralString | BooleanExpression | InvariantBlock]) |
+          // ORDER: the block form leads because it is the only arm starting with `{`, and
+          // `booleanExprOnly` would otherwise try (and fail behind a cut) on the brace.
+          invariantBlock.map(b => Some(b): Cond) |
+          literalString.map(ls => Some(ls): Cond) |
+          booleanExprOnly.map(be => Some(be): Cond)
       ) ~ withMetaData ~/ Index
-    ).map { case (off1, id, condition, metas, off2) =>
-      Invariant(at(off1, off2), id, condition, metas.toContents)
+    ).map { case (off1, id, requires, condition, metas, off2) =>
+      Invariant(at(off1, off2), id, condition, requires, metas.toContents)
     }
   }
 

@@ -794,7 +794,7 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression | Call | Requires | Returns
+    GetValue | PromptValue | BooleanExpression | Call | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3209,13 +3209,21 @@ object AST:
   @JSExportTopLevel("RequireStatement")
   case class RequireStatement(
     loc: At,
-    condition: LiteralString | InvariantRef | BooleanExpression
+    condition: LiteralString | InvariantRef | BooleanExpression,
+    /** The value handed to an invariant that declares `requires <type>` — the `with <expr>` part.
+      *
+      * Only meaningful with an [[InvariantRef]] condition, and only for an invariant whose
+      * `requires` is a [[TypeRef]]: that is the one form the ambient scope cannot supply, so the
+      * clause gathers the value (where sending IS legal) and hands it in.
+      */
+    argument: Option[Value] = None
   ) extends Statement {
     override def kind: String = "Require Statement"
+    private def arg: String = argument.map(a => s" with ${a.format}").getOrElse("")
     def format: String = condition match {
-      case ls: LiteralString     => s"require ${ls.format}"
-      case ir: InvariantRef      => s"require ${ir.format}"
-      case be: BooleanExpression => s"require ${be.format}" // A28
+      case ls: LiteralString     => s"require ${ls.format}$arg"
+      case ir: InvariantRef      => s"require ${ir.format}$arg"
+      case be: BooleanExpression => s"require ${be.format}$arg" // A28
     }
   }
 
@@ -3755,7 +3763,9 @@ object AST:
     * @param id
     *   The name of the invariant
     * @param condition
-    *   The string representation of the condition that ought to be true
+    *   The condition that ought to be true
+    * @param requires
+    *   The data the invariant reads, and thereby where it applies. See [[Invariant]].
     * @param metadata
     *   The list of meta data for the invariant
     */
@@ -3763,14 +3773,62 @@ object AST:
   case class Invariant(
     loc: At,
     id: Identifier,
-    // A28: a condition is either an opaque pseudo-code LiteralString or a structured BooleanExpression
-    condition: Option[LiteralString | BooleanExpression] =
-      Option.empty[LiteralString | BooleanExpression],
+    // A28: a condition is an opaque pseudo-code LiteralString, a structured BooleanExpression, or
+    // (2026-08-04) a block of pure statements ending in a boolean.
+    condition: Option[LiteralString | BooleanExpression | InvariantBlock] =
+      Option.empty[LiteralString | BooleanExpression | InvariantBlock],
+    /** What this invariant reads, which is also WHERE it applies.
+      *
+      * `None` -- scope comes from the declaration site: declared in an Entity it applies to every
+      * clause of that entity and may read only fields present in EVERY state record (the
+      * intersection rule); declared inside a State it applies to that state's handlers.
+      *
+      * `Some(StateRef)` -- declared at entity level but scoped to that one state; applies while
+      * the entity is in it.
+      *
+      * `Some(TypeRef)` -- reads only the value handed to it, so it is NEVER implicit; it must be
+      * invoked by `require invariant X with <expr>`, where the CLAUSE does any gathering. This is
+      * the only form available to a stateless processor, and it is why an invariant needs no
+      * `send`: an invariant never acquires, it only receives.
+      */
+    requires: Option[StateRef | TypeRef] = Option.empty[StateRef | TypeRef],
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf {
     override def isEmpty: Boolean = condition.isEmpty
-    def format: String = Keyword.invariant + " " + id.format + condition.map(_.format)
+
+    /** Whether this invariant is applied implicitly at the head of every clause in its scope, as
+      * opposed to only where a `require invariant` names it. A declared `TypeRef` is the one form
+      * that cannot be implicit -- nothing in ambient scope can supply its value.
+      */
+    def isImplicit: Boolean = requires match
+      case Some(_: TypeRef) => false
+      case _                => true
+
+    def format: String = Keyword.invariant + " " + id.format +
+      requires.map(r => " requires " + r.format).getOrElse("") +
+      condition.map(" is " + _.format).getOrElse("")
   }
+
+  /** A block-form invariant condition: pure statements followed by the boolean that IS the
+    * predicate.
+    *
+    * The statements are exactly those a pure [[Function]] may contain (A26) -- no state writes, no
+    * `send`/`tell`, no `morph`/`become`/`yield`/`reply` -- so with the no-loops rule the block is
+    * structurally terminating. That matters more than it looks: an invariant runs as a precondition
+    * before every effect, so it must be synchronous, total, deterministic and terminating. A `send`
+    * would satisfy "does not mutate" while breaking all four.
+    *
+    * The value is what a string condition cannot express: `let` bindings and calls to pure
+    * functions, checkable rather than left to an AI to interpret the same way twice.
+    */
+  case class InvariantBlock(
+    loc: At,
+    statements: Contents[Statements] = Contents.empty[Statements](),
+    predicate: BooleanExpression
+  ) extends RiddlValue:
+    def format: String =
+      "{ " + (statements.toSeq.map(_.format) :+ predicate.format).mkString(" ") + " }"
+  end InvariantBlock
 
   /////////////////////////////////////////////////////////////////////////////////////// ON CLAUSE
 

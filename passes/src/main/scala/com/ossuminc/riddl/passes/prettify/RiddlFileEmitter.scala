@@ -446,11 +446,15 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         // closing fence supplies its own newline and indent.
         val trimmed = body.reverse.dropWhile(_.isWhitespace).reverse
         addIndent(s"```${lang.s}").add(trimmed).nl.addIndent("```")
-      case RequireStatement(_, condition) =>
+      case RequireStatement(_, condition, argument) =>
+        // The `with <expr>` argument is SEMANTIC — it is the value an invariant declaring
+        // `requires <type>` is checked against — so dropping it on a round trip would change the
+        // model, not merely its formatting.
+        val arg = argument.map(a => s" with ${a.format}").getOrElse("")
         condition match {
-          case ls: LiteralString     => addLine(s"require ${ls.format}")
-          case ir: InvariantRef      => addLine(s"require ${ir.format}")
-          case be: BooleanExpression => addLine(s"require ${be.format}") // A28
+          case ls: LiteralString     => addLine(s"require ${ls.format}$arg")
+          case ir: InvariantRef      => addLine(s"require ${ir.format}$arg")
+          case be: BooleanExpression => addLine(s"require ${be.format}$arg") // A28
         }
       case statement: Statement => addLine(statement.format)
       case comment: Comment     => emitComment(comment)

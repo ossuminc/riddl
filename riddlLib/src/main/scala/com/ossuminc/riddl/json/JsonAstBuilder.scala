@@ -815,18 +815,23 @@ object JsonAstBuilder:
   /** A9: rebuild a Function/Saga `requires`/`returns` value from its ArgDto — a `TypeRef` from the
     * "keyword path" string (preferred), or a deprecated inline `Aggregation` from a field list.
     */
+  /** A `TypeRef` from its rendered "keyword path" form (`record Args`, `command Go`, or a bare
+    * path, which means `type`). Shared by every place a type ref arrives as one string.
+    */
+  private def typeRefOf(s: String)(using Ctx): TypeRef =
+    val trimmed = s.trim
+    val spaceIdx = trimmed.indexOf(' ')
+    val (kw, p) =
+      if spaceIdx > 0 then (trimmed.substring(0, spaceIdx), trimmed.substring(spaceIdx + 1).trim)
+      else ("type", trimmed)
+    TypeRef(curAt, kw, pathId(p))
+  end typeRefOf
+
   private def argOf(arg: Option[ArgDto])(using Ctx): Option[TypeRef | Aggregation] =
     arg.flatMap { a =>
       a.ref match
-        case Some(s) =>
-          val trimmed = s.trim
-          val spaceIdx = trimmed.indexOf(' ')
-          val (kw, p) =
-            if spaceIdx > 0 then
-              (trimmed.substring(0, spaceIdx), trimmed.substring(spaceIdx + 1).trim)
-            else ("type", trimmed)
-          Some(TypeRef(curAt, kw, pathId(p)))
-        case None => aggregationOf(a.fields)
+        case Some(s) => Some(typeRefOf(s))
+        case None    => aggregationOf(a.fields)
     }
 
   private def buildMethod(m: MethodDto)(using Ctx): Method =
@@ -1008,15 +1013,36 @@ object JsonAstBuilder:
   private def buildInvariant(i: InvariantDto)(using ctx: Ctx): Invariant =
     // A28: a structured `expression` rebuilds a BooleanExpression; otherwise the `condition` string
     // rebuilds a LiteralString (preserving the legacy always-Some behavior).
-    val cond: Option[LiteralString | BooleanExpression] = i.expression match
-      case Some(exprDto) =>
-        buildValue(exprDto) match
-          case be: BooleanExpression => Some(be)
+    val cond: Option[LiteralString | BooleanExpression | InvariantBlock] = i.block match
+      // The block form wins when present: it carries statements the other two arms cannot express.
+      case Some(blk) =>
+        buildValue(blk.predicate) match
+          case be: BooleanExpression =>
+            Some(InvariantBlock(curAt, blk.statements.map(buildStatement).toContents, be))
           case _ =>
-            ctx.err("invariant 'expression' must be a boolean expression")
+            ctx.err("invariant 'block.predicate' must be a boolean expression")
             Some(LiteralString(curAt, ""))
-      case None => Some(LiteralString(curAt, i.condition))
-    Invariant(curAt, ident(i.name), cond, meta(i.brief, i.metadata))
+      case None =>
+        i.expression match
+          case Some(exprDto) =>
+            buildValue(exprDto) match
+              case be: BooleanExpression => Some(be)
+              case _ =>
+                ctx.err("invariant 'expression' must be a boolean expression")
+                Some(LiteralString(curAt, ""))
+          case None => Some(LiteralString(curAt, i.condition))
+    // `requiresKind` is the discriminator: a bare path cannot say whether `Open` meant the state
+    // or a type of that name, and the two put the invariant in different scopes.
+    val requires: Option[StateRef | TypeRef] = i.requires.map { ref =>
+      i.requiresKind match
+        case Some("state") => StateRef(curAt, pathId(ref))
+        case Some("type")  => typeRefOf(ref)
+        case Some(other) =>
+          ctx.err(s"unknown invariant requiresKind '$other' (expected state|type)")
+          typeRefOf(ref)
+        case None => typeRefOf(ref)
+    }
+    Invariant(curAt, ident(i.name), cond, requires, meta(i.brief, i.metadata))
 
   // ---------------------------------------------------------------------------
   // Functions and statements (Phase 3)
@@ -1310,7 +1336,7 @@ object JsonAstBuilder:
           buildValue(expression)
         )
       case CodeStmtDto(language, body) => CodeStatement(curAt, LiteralString(curAt, language), body)
-      case RequireStmtDto(condition, invariant, expression) =>
+      case RequireStmtDto(condition, invariant, expression, argument) =>
         val cond: LiteralString | InvariantRef | BooleanExpression = expression match
           case Some(exprDto) => // A28: structured boolean-expression condition
             buildValue(exprDto) match
@@ -1327,7 +1353,7 @@ object JsonAstBuilder:
                   case None =>
                     ctx.err("require statement needs a 'condition', 'invariant', or 'expression'")
                     LiteralString(curAt, "")
-        RequireStatement(curAt, cond)
+        RequireStatement(curAt, cond, argument.map(buildValue))
       case SetStmtDto(field, state, value) =>
         val target: FieldRef | StateRef = (field, state) match
           case (Some(f), _)     => FieldRef(curAt, pathId(f))

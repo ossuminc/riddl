@@ -298,26 +298,40 @@ case class ValidationPass(
         )
       }
     }
-    // #23: Invariants not referenced by any require statement
+    // #23: an invariant that can never run.
+    //
+    // Rewritten 2026-08-04. It used to warn about EVERY invariant no `require` named, which is now
+    // wrong for the common case: an invariant is applied IMPLICITLY across its declaring scope
+    // (§15.2), so not being named is the norm rather than a defect. Only the one form that cannot
+    // be implicit -- `requires <type>`, whose value ambient scope cannot supply -- is inert when
+    // nothing invokes it.
+    //
+    // The old version matched `ir.pathId.value.lastOption`, i.e. by LAST-COMPONENT NAME. That is
+    // the pattern A54 was burned by (it let `garbage.nonsense.realField` validate) and which
+    // CLAUDE.md now forbids; two same-named invariants under different parents were
+    // indistinguishable, so referencing one silenced the warning for both. Resolution goes through
+    // the refMap, by identity.
     if collectedInvariants.nonEmpty then {
-      // Collect all invariant refs from require statements across all handlers
-      val referencedInvariantNames = mutable.Set.empty[String]
-      handlerParents.foreach { case (handler, _) =>
+      val applied = mutable.Set.empty[Invariant]
+      handlerParents.foreach { case (handler, handlerParents) =>
         handler.clauses.foreach { clause =>
           walkStatements(clause.contents) {
-            case RequireStatement(_, ir: InvariantRef) =>
-              referencedInvariantNames += ir.pathId.value.lastOption.getOrElse("")
+            case RequireStatement(_, ir: InvariantRef, _) =>
+              resolution.refMap
+                .definitionOf[Invariant](ir.pathId, handler)
+                .foreach(applied.add)
             case _ => ()
           }
         }
       }
       collectedInvariants.foreach { case (inv, _) =>
-        if inv.nonEmpty && !referencedInvariantNames.contains(inv.id.value) then {
+        if inv.nonEmpty && !inv.isImplicit && !applied.exists(_ eq inv) then {
           messages.addUsage(
             inv.errorLoc,
-            s"${inv.identify} is defined but not referenced by any 'require invariant' statement",
-            suggestion =
-              s"Reference ${inv.identify} from a handler with 'require invariant ${inv.id.value}', or remove it if unused."
+            s"${inv.identify} declares 'requires <type>' so it is never applied implicitly, and " +
+              "no 'require invariant' statement applies it either — it will never be checked",
+            suggestion = s"Apply it with 'require invariant ${inv.id.value} with <expr>', or drop " +
+              "its 'requires' clause so it applies implicitly across its scope."
           )
         }
       }
@@ -726,7 +740,7 @@ case class ValidationPass(
           loc,
           suggestion = "Provide a non-empty code body, or remove the empty code statement."
         )
-      case RequireStatement(loc, condition) =>
+      case RequireStatement(loc, condition, argument) =>
         condition match {
           case ls: LiteralString =>
             checkNonEmptyValue(
@@ -738,7 +752,9 @@ case class ValidationPass(
               required = true
             )
           case ir: InvariantRef =>
-            checkRef[Invariant](ir, parents)
+            checkRef[Invariant](ir, parents).foreach { inv =>
+              checkRequireArgument(inv, argument, loc)
+            }
           case _: BooleanExpression => () // A28: type-checked in checkStatementScopes
         }
       case YieldStatement(_, msg) =>
@@ -951,19 +967,99 @@ case class ValidationPass(
     }
   }
 
+  /** The `with <expr>` argument must be present exactly when the invariant declares a TYPE it
+    * cannot get from ambient scope, and absent otherwise.
+    *
+    * Getting this wrong in either direction is silent otherwise: a missing argument leaves the
+    * predicate with nothing to read, and a superfluous one reads as if it were being checked when
+    * the invariant never looks at it.
+    */
+  private def checkRequireArgument(inv: Invariant, argument: Option[Value], loc: At): Unit =
+    inv.requires match
+      case Some(tr: TypeRef) if argument.isEmpty =>
+        messages.addError(
+          loc,
+          s"${inv.identify} declares 'requires ${tr.format}', so it must be given a value here",
+          suggestion = s"Write 'require invariant ${inv.id.value} with <expr>'."
+        )
+      case Some(_: TypeRef) => () // present, as required
+      case _ if argument.nonEmpty =>
+        messages.addWarning(
+          loc,
+          s"${inv.identify} declares no 'requires <type>', so the 'with' value is ignored",
+          suggestion = "Remove the 'with' clause, or give the invariant a 'requires <type>'."
+        )
+      case _ => ()
+    end match
+  end checkRequireArgument
+
   private def validateInvariant(
     i: Invariant,
     parents: Parents
   ): Unit = {
     checkDefinition(parents, i)
     checkNonEmpty(i.condition.toList, "Condition", i, Messages.MissingWarning)
-    // A28: type-check a structured BooleanExpression condition (invariants have no `let` scope).
+    // A28: type-check a structured BooleanExpression condition. A block form DOES have a `let`
+    // scope -- that is most of why it exists -- so its statements are threaded, unlike the bare
+    // expression form which has none.
     i.condition.foreach {
       case be: BooleanExpression => validateValue(be, parents, Seq.empty[LetStatement])
       case _: LiteralString      => ()
+      case blk: InvariantBlock =>
+        val lets = blk.statements.toSeq.collect { case l: LetStatement => l }
+        validateValue(blk.predicate, parents, lets)
     }
+    i.requires.foreach {
+      case sr: StateRef => checkRef[State](sr, parents)
+      case tr: TypeRef  => checkRef[Type](tr, parents)
+    }
+    checkInvariantScope(i, parents)
     checkMetadata(i)
   }
+
+  /** The scope rules of §15.2: where an invariant may be declared, and what it may read there.
+    *
+    * A stateless processor has no ambient data, so an implicit invariant on one could never read
+    * anything -- it must declare a type and be handed the value. Saying so is the point: an
+    * invariant that can never run is exactly the inert-constraint defect this work removes, and
+    * this repo's recurring failure mode is checks that fail by being UNGATED rather than untested.
+    */
+  private def checkInvariantScope(i: Invariant, parents: Parents): Unit =
+    val enclosingEntity = parents.collectFirst { case e: Entity => e }
+    val inState = parents.exists(_.isInstanceOf[State])
+    i.requires match
+      case Some(_: StateRef) if enclosingEntity.isEmpty =>
+        messages.addError(
+          i.errorLoc,
+          s"${i.identify} declares 'requires state', which is only meaningful inside an Entity",
+          suggestion = "Move it into an Entity, or declare 'requires <type>' and apply it with " +
+            "'require invariant ... with <expr>'."
+        )
+      case Some(_: StateRef) if inState =>
+        messages.addWarning(
+          i.errorLoc,
+          s"${i.identify} is already scoped to its enclosing State; 'requires state' is redundant",
+          suggestion = "Drop the 'requires state' clause."
+        )
+      case None if enclosingEntity.isEmpty && !inState =>
+        // Declared on a Context/Adaptor/Projector/Streamlet/Repository/Module: no state to read,
+        // so it can never be applied implicitly and nothing can invoke it either.
+        //
+        // A USAGE WARNING rather than an Error, deliberately: this is the same defect as the
+        // never-applied `requires <type>` case in postProcess (#23) — an inert invariant — and
+        // that one is a warning by ruling. Two severities for one defect would be arbitrary, and
+        // an Error here would reject existing models whose invariants were already inert under
+        // the old require-only rule (`language/input/module/mixed-module.riddl:14`).
+        messages.addUsage(
+          i.errorLoc,
+          s"${i.identify} is declared where there is no state to read, so it cannot be applied " +
+            "implicitly and will never be checked",
+          suggestion = "Give it 'requires <type>' and apply it with " +
+            s"'require invariant ${i.id.value} with <expr>', or move it into an Entity or State."
+        )
+      case _ => ()
+    end match
+  end checkInvariantScope
 
   private def validateInlet(
     inlet: Inlet,
