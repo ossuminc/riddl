@@ -32,8 +32,55 @@ wrote this, not recalled:
   643, passes 847, commands 239 were re-run green after it). External corpus
   reds unchanged (BACKLOG 1d).
 
-**In flight:** nothing. `task/` is empty; both incoming tasks were completed and
-moved to `task/done/` with Results.
+**In flight — READ THIS FIRST.** `1f93cc517` is a **deliberately incomplete
+checkpoint**: `requires`/`returns` are being moved out of `Function`/`Saga`
+fields and into their `contents`. **Main sources compile; TEST SOURCES DO NOT.**
+Do not publish, stage or ship from this commit. Full state below.
+
+**Why:** riddl-generator found that once a comment became a legal saga
+definition (`867ab0333`), a comment above `requires` consumed the definitions
+slot and `requires` was rejected — the body grammar was
+`[func_input] [func_output] {definitions}`, a fixed PREFIX, so the working rule
+became "requires/returns must be the very first tokens of the body", exactly
+where a reader wants a comment explaining them. `Function` has the identical
+prefix and the identical defect (verified, not assumed).
+
+**Already decided — do NOT relitigate:**
+
+- **Zero-or-one of each, enforced by the PARSER.** A body may contain no
+  `requires` and no `returns`, or one of each, and never two. The parser is the
+  place that guarantees it, so that everything downstream can assume it rather
+  than defend against it.
+- **The accessors own the optionality.** `Saga.input`/`output` and
+  `Function.input`/`output` stay as derived accessors returning an `Option`,
+  reading the clause out of contents. Keeping them is what held the blast radius
+  to 5 test sites instead of ~56, and it keeps the read API stable for riddlg
+  and riddl-gen. **Open question the next session must settle:** the node
+  currently carries `TypeRef | Aggregation` because A9 still permits the
+  deprecated inline aggregation. Reid asked for `Option[TypeRef]`. Decide
+  whether that means finally dropping the deprecated inline form (a real
+  language decision with corpus fallout) or just narrowing the accessor and
+  leaving the node wider. Do not silently pick one.
+- **PrettifyVisitor gets SIMPLER, not smarter.** It must stop emitting the
+  clauses from the accessors in `openSaga`/`openFunction` — that is now a source
+  of double emission and, worse, it reimposes the very ordering we just removed.
+  Deal with the `openDef` overrides and then just walk the contents, emitting
+  what is there in the order it is there, comments included. Emission order
+  becomes a property of the AST rather than of the printer.
+
+**Still to do:** the parser cardinality rule; the accessor/`Aggregation`
+decision above; PrettifyVisitor; the JSON EMIT side plus `JSON_COVERAGE.md` (the
+build side is done); EBNF `saga_body`/`function_body` + GBNF regen; the 5 broken
+test sites (`language/ASTTest.scala:227,228,229,360` and
+`language/parsing/ParserTest.scala:337` — all old-arity pattern matches);
+round-trip tests proving a comment survives ABOVE `requires`; and the
+three-platform run.
+
+**Verified so far:** main sources compile on JVM. Nothing else is verified —
+treat every test count in this file as predating the checkpoint.
+
+`task/` is empty; both earlier incoming tasks are in `task/done/` with Results.
+**A third is owed to synapify** — see the re-analysis note in BACKLOG § 4.
 
 **Next:** sweep consumers against the new staged build per BACKLOG 1e —
 riddl-generator wants the saga fix, synapify wants the hashing fix and owes a

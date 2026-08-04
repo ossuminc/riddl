@@ -88,6 +88,30 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
 
 ### 2. Queued, designed, not started
 
+- **Re-analyse `task/2026-08-03-root2riddlsource-omits-field-separators.md`
+  (synapify) — MY FIRST ANALYSIS WAS WRONG, do not build on it.** I concluded
+  the blocker was riddl emitting 2.0-only `initial` markers at a riddlg whose
+  embedded riddl was stale at 1.16.5. That conclusion came from testing
+  `/opt/homebrew/bin/riddlg` — the SHIPPED binary — and then generalising to
+  riddlg's pipeline. **riddlg's `release/1` branch (checked out at
+  `../riddl-generator`, worked for over a week) builds against
+  `2.0.0-rc.9-42-37b0db94`**, the same version we stage. So the rejection I
+  measured says something about a binary I picked, not about what riddlg runs.
+  Redo it with that as an AXIOM, and look at `../riddl-generator` rather than
+  inferring another worker's environment.
+  What IS independently verified and can be reused: the printer omits aggregate
+  field separators and doubles the space after `is`; `root2RiddlSource` is a
+  thin wrapper over PrettifyPass (`RiddlLib.scala:951`), so `riddlc prettify`,
+  `flatten` and `unbastify` share any defect; optional commas date to
+  2023-12-07, before tag 1.12.0; `initial` on states/handlers landed
+  `f3ef8f77a`, 2026-07-25, and `git merge-base` puts it outside 1.16.5;
+  prettify is idempotent; and `initial` is emitted on the FIRST state/handler
+  of a container when none is explicitly marked, which is defensible
+  normalization rather than drift.
+  **Decided by Reid:** field separators **stay optional in the grammar and stay
+  unemitted by PrettifyPass**. So acceptance criteria 1 and 2 as filed are
+  declined; the task needs a rewritten set based on the real cause.
+
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
   entry with an origin/document basis.
