@@ -19,18 +19,18 @@ wrote this, not recalled:
   `git log --oneline origin/release/2..HEAD | wc -l`.
 - HEAD is the tip of `release/2`; the last code commit is the requires/returns
   move (below), on top of `867ab0333` (saga) and `496e77c39` (hashing).
-- **Staged build is CURRENT: `2.0.0-rc.9-48-fdc5c171`** at
+- **Staged build is CURRENT: `2.0.0-rc.9-52-b33decf2`** at
   `~/Code/ossuminc/bin/riddlc`, 20 ivy rows under that version from
   `publishLocal`. Staged 2026-08-04 from a clean tree with `reload`, binary
   copied only after `nativeLink` reported `[success]` — all three preconditions
   met, so the version carries no timestamp suffix and is reproducible from
-  `fdc5c1718`. Verified by ENFORCEMENT, not just `riddlc version`: a function
-  with a comment above `requires` validates clean here and is a PARSE ERROR
+  `b33decf25`. Verified by ENFORCEMENT, not just `riddlc version`:
+  `language/input/invariant-scope.riddl` parses clean here and is a PARSE ERROR
   under the tap's `/opt/homebrew/bin/riddlc`.
-- **All three platforms green**, re-run in full on 2026-08-04 AFTER the
-  requires/returns work with `<module>/testOnly *`, one `;`-separated argument,
-  `Suites: completed` lines counted against modules requested: **JVM 249 suites
-  / 2016 tests** (7 modules), **Scala.js 60 / 674** (5), **Native 170 / 1304**
+- **All three platforms green**, re-run in full on 2026-08-04 after the
+  invariant work with `<module>/testOnly *`, one `;`-separated argument,
+  `Suites: completed` lines counted against modules requested: **JVM 252 suites
+  / 2029 tests** (7 modules), **Scala.js 60 / 674** (5), **Native 173 / 1317**
   (6) — zero failures. External corpus reds unchanged (BACKLOG 1d).
 
 **The requires/returns move is DONE and green** — `1f93cc517`'s incomplete
@@ -42,11 +42,12 @@ content". The `Option[TypeRef]` narrowing is deliberately NOT done — it requir
 dropping the deprecated inline aggregation, filed in BACKLOG § 2 with its
 verified cost.
 
-**Consumers can pick this up now** — `2.0.0-rc.9-48-fdc5c171` is both staged at
-`~/Code/ossuminc/bin/riddlc` and in `~/.ivy2/local` (20 rows). It is the first
-build that accepts a comment above `requires` and the first that writes BAST
-`FORMAT_REVISION` 4, so any `.bast` written by an earlier riddlc is rejected
-with "regenerate .bast files with the current riddlc" — expected, not a bug.
+**Consumers can pick this up now** — `2.0.0-rc.9-52-b33decf2` is both staged at
+`~/Code/ossuminc/bin/riddlc` and in `~/.ivy2/local` (20 rows). It carries the
+requires/returns move, `canContain`, the prettify metadata fix and the new
+invariant semantics. BAST `FORMAT_REVISION` is now **5**, so any `.bast` written
+by an earlier riddlc is rejected with "regenerate .bast files with the current
+riddlc" — expected, not a bug.
 
 **Formatting is not a gate before 2.0.** The whole codebase gets one `scalafmt`
 pass just before the release ships. Do not run `scalafmtCheckAll`, do not report
@@ -115,6 +116,56 @@ to the task file and note the disposition below.
 
 ---
 
+
+## Invariants apply implicitly now (2026-08-04) — DONE
+
+`b33decf25`. Requested by riddl-generator: an invariant did nothing unless some
+clause wrote `require invariant X`, so a model could carry a constraint that
+read as enforced and was inert. Semantics are in
+`ossuminc/RIDDL-Computational-Model.md` §15 (rewritten) — **that is the
+authority; don't re-derive from here.**
+
+**The design turn worth remembering.** riddlg's open question was "a pure block
+cannot `send`, so a stateless processor cannot gather data", with three options,
+all of which were about whether to permit effects. The answer was none of them:
+an invariant DECLARES what it reads, and that declaration also decides where it
+applies. Nothing became inexpressible and no new machinery appeared beyond one
+optional clause.
+
+The reasoning generalizes: **"does not mutate" is the wrong axis for anything
+that runs before an effect.** A read-only query satisfies it while breaking the
+four properties a precondition actually needs — synchronous, total,
+deterministic, terminating. When something must run in a refusal window, check
+those four, not purity-as-non-mutation.
+
+**Four things worth keeping:**
+
+1. **A severity has to match its sibling.** I made "invariant on a stateless
+   processor" an Error while the analogous "declared but never applied" case was
+   a Warning by Reid's ruling. Same defect — an inert invariant — so two
+   severities was arbitrary, and the Error rejected an existing fixture
+   (`module/mixed-module.riddl:14`) that had been inert under the old rule
+   anyway. Downgraded. **When adding a diagnostic, find the nearest existing one
+   and match it, or justify why not.**
+2. **A test that encodes the old rule fails correctly.** `CompletenessTest`'s
+   "warn when invariant is not referenced by require" went red because not
+   warning is now right. Rewritten to assert the new rule rather than patched to
+   pass — and the case it used to cover is now covered by a second case for the
+   `requires <type>` form.
+3. **Scala 3 sealed-hierarchy exhaustivity does the finding for you.** Adding
+   `InvariantBlock` as a `RiddlValue` broke four unrelated matches in
+   SymbolsPass/ResolutionPass/ValidationPass at COMPILE time. Adding it to
+   `NonDefinitionValues` fixed all four — the same lever that worked for
+   `Requires`/`Returns` the same day. New non-definition AST node ⇒ put it in
+   that union.
+4. **Two silent prettify defects surfaced only because a fixture had no
+   metadata.** `doInvariant` never terminated its line, so a metadata-less
+   invariant ran into whatever followed it — output that still re-parsed, which
+   is why nobody noticed. Most fixtures carry `with { … }`, whose emission
+   supplied the newline by accident. **A fixture without optional decoration is
+   a different test than one with it.**
+
+---
 
 ## `requires`/`returns` became content, and `???` came with them (2026-08-04) — DONE
 
