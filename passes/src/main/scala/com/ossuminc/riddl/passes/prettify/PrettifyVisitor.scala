@@ -105,20 +105,9 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def openFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
       rfe.addIndent(s"${keyword(function)} ${function.id.format} is { ").nl.incr
-      function.input.foreach(emitRequiresReturns(rfe, "requires ", _))
-      function.output.foreach(emitRequiresReturns(rfe, "returns  ", _))
     }
   end openFunction
 
-  // A9: `requires`/`returns` emit a TypeRef (preferred) or a deprecated inline Aggregation.
-  private def emitRequiresReturns(
-    rfe: RiddlFileEmitter,
-    kw: String,
-    value: TypeRef | Aggregation
-  ): Unit = value match {
-    case tr: TypeRef      => rfe.addIndent(kw).add(tr.format).nl
-    case agg: Aggregation => rfe.addIndent(kw).emitAggregation(agg)
-  }
   def closeFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
       rfe.decr.addIndent("}")
@@ -127,12 +116,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     }
   end closeFunction
 
-  def openSaga(saga: Saga, parents: Parents): Unit =
-    state.withCurrent { rfe =>
-      rfe.openDef(saga)
-      saga.input.foreach(emitRequiresReturns(rfe, "requires ", _))
-      saga.output.foreach(emitRequiresReturns(rfe, "returns  ", _))
-    }
+  def openSaga(saga: Saga, parents: Parents): Unit = open(saga)
   def closeSaga(saga: Saga, parents: Parents): Unit = close(saga)
 
   def openStreamlet(streamlet: Streamlet, parents: Parents): Unit = open(streamlet)
@@ -438,6 +422,28 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def doComment(comment: Comment): Unit =
     state.withCurrent(_.emitComment(comment))
   end doComment
+
+  /** `requires`/`returns` are emitted HERE, from the contents, not from `openFunction`/`openSaga`
+    * via the `input`/`output` accessors as they were before the clauses became content.
+    *
+    * Emitting them from the accessors would reimpose the very ordering the move removed: they would
+    * always be printed first, so a comment the author wrote above `requires` would come out below
+    * it — a round trip that changes the document. Order is now a property of the AST rather than of
+    * the printer, which is also why this method got simpler instead of smarter.
+    *
+    * A9: the value is a [[TypeRef]] (preferred) or a deprecated inline [[Aggregation]].
+    */
+  private def emitRequiresReturns(kw: String, value: TypeRef | Aggregation): Unit =
+    state.withCurrent { rfe =>
+      value match
+        case tr: TypeRef      => rfe.addIndent(kw).add(tr.format).nl
+        case agg: Aggregation => rfe.addIndent(kw).emitAggregation(agg)
+      end match
+    }
+  end emitRequiresReturns
+
+  def doRequires(requires: Requires): Unit = emitRequiresReturns("requires ", requires.what)
+  def doReturns(returns: Returns): Unit = emitRequiresReturns("returns  ", returns.what)
 
   def doAuthorRef(authorRef: AuthorRef): Unit =
     state.withCurrent { rfe =>

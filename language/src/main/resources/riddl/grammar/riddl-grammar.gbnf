@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-03 20:49 UTC
+# Generated: 2026-08-04 17:54 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -156,10 +156,10 @@ field-type-alternatives ::= infix-alternation | predefined-types | pattern-type 
 
 # Functions
 function ::= "function" ws1 identifier ws1 is ws "{" ws function-body ws "}" ws (with-metadata)?
-function-body ::= (func-input)? ws (func-output)? ws function-definitions
+function-body ::= function-definitions
 func-input ::= "requires" ws (aggregation | type-ref)
 func-output ::= "returns" ws (aggregation | type-ref)
-function-definitions ::= (undefined | (vital-definition-contents | function | function-include | statement))*
+function-definitions ::= (undefined | (vital-definition-contents | func-input | func-output | function | function-include | statement))*
 function-include ::= "include" ws1 literal-string
 
 # References
@@ -344,8 +344,8 @@ updates ::= "updates" ws1 repository-ref
 
 # Saga-related
 saga ::= "saga" ws1 identifier ws1 is ws "{" ws saga-body ws "}" ws (with-metadata)?
-saga-body ::= (func-input)? ws (func-output)? ws (saga-definitions)*
-saga-definitions ::= (vital-definition-contents | saga-step | inlet | outlet | function | saga-include)*
+saga-body ::= saga-definitions
+saga-definitions ::= (undefined | (vital-definition-contents | func-input | func-output | saga-step | inlet | outlet | function | saga-include))*
 saga-include ::= "include" ws1 literal-string
 saga-step ::= "step" ws1 identifier ws1 is ws1 pseudo-code-block ws "reverted" ws ("by")? ws pseudo-code-block ws (with-metadata)?
 

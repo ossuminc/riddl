@@ -566,6 +566,13 @@ trait PassVisitor:
   def doInteraction(interaction: Interaction): Unit
   def doOptionValue(optionValue: OptionValue): Unit
 
+  /** A [[Function]]'s or [[Saga]]'s `requires`/`returns` clause. These are content rather than
+    * fields on their container, so a visitor sees them in the position the author wrote them —
+    * which is the whole point of the move, since a comment may now sit above or between them.
+    */
+  def doRequires(requires: Requires): Unit
+  def doReturns(returns: Returns): Unit
+
 /** An abstract Pass that uses the Visitor pattern
   * (https://refactoring.guru/design-patterns/visitor)
   * @param input
@@ -678,6 +685,10 @@ abstract class VisitingPass[VT <: PassVisitor](
         visitor.doOptionValue(optionValue)
       case enumerator: Enumerator =>
         visitor.doEnumerator(enumerator)
+      case requires: Requires =>
+        visitor.doRequires(requires)
+      case returns: Returns =>
+        visitor.doReturns(returns)
       case _ => ()
     end match
   end processValue

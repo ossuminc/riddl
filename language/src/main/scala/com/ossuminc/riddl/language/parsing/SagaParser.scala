@@ -59,10 +59,20 @@ private[parsing] trait SagaParser {
     ).asInstanceOf[P[SagaContents]]./.rep(1)
   }
 
-  private def sagaBody[u: P]: P[Seq[SagaContents]] = {
+  /** `???` is CONTENT rather than an alternative to the whole body — see `FunctionParser` for why
+    * the two clauses dragged it in with them.
+    */
+  private def sagaContent[u: P]: P[Seq[SagaContents]] = {
     P(
-      undefined(Seq.empty[SagaContents]) | sagaDefinitions
+      undefined(Seq.empty[SagaContents]) | (
+        vitalDefinitionContents | funcInput | funcOutput | sagaStep | inlet | outlet | function |
+          sagaInclude
+      ).asInstanceOf[P[SagaContents]]./.map(Seq(_))
     )
+  }
+
+  private def sagaBody[u: P]: P[Seq[SagaContents]] = {
+    P(sagaContent.rep(1).map(_.flatten))
   }
 
   def saga[u: P]: P[Saga] = {
@@ -70,6 +80,7 @@ private[parsing] trait SagaParser {
       Index ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~ withMetaData ~ Index
     ).map { case (start, identifier, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
+      checkRequiresReturnsCardinality(contents, "Saga")
       Saga(at(start, end), identifier, contents.toContents, descriptives.toContents)
     }
   }

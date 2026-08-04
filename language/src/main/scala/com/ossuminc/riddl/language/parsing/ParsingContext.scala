@@ -189,6 +189,33 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     }
   }
 
+  /** A [[Function]] or [[Saga]] body may hold no `requires` and no `returns`, or one of each, and
+    * never two of either.
+    *
+    * Since the move of these clauses out of the body PREFIX and into ordinary content, the grammar
+    * itself no longer bounds them — a `rep` will happily accept `requires A requires B`. The bound
+    * is enforced HERE, at the one place that sees a whole body, so that everything downstream may
+    * ASSUME it rather than defend against it: `Function.input` / `Saga.input` take `headOption`,
+    * and that is a complete answer only because of this check.
+    *
+    * It counts through the provenance wrappers, matching the accessors — two `requires` are two
+    * `requires` whether or not an `include` separates them.
+    */
+  def checkRequiresReturnsCardinality[CT <: RiddlValue](contents: Seq[CT], kind: String): Unit = {
+    def check[T <: RiddlValue: scala.reflect.ClassTag](keyword: String): Unit =
+      val found = contents.toContents.filterThroughWrappers[T]
+      if found.sizeIs > 1 then
+        error(
+          found(1).loc,
+          s"A $kind may have at most one '$keyword' clause, but ${found.size} were found",
+          s"in $kind body"
+        )
+      end if
+    end check
+    check[Requires]("requires")
+    check[Returns]("returns")
+  }
+
   def checkForDuplicateIncludes[CT <: RiddlValue](contents: Seq[CT]): Unit = {
     import com.ossuminc.riddl.language.Finder
     val allIncludes = Finder(contents.toContents).findByType[Include[?]]

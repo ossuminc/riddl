@@ -67,7 +67,7 @@ is covered in that construct's phase. The builder emits references as
 | User | ✅ Phase 2 | at domain level |
 | Term | ✅ Phase 9 | glossary entry (metadata; see Metadata section) |
 | Method | ✅ Phase 3 | aggregate method with args |
-| Function | ✅ Phase 3 | requires/returns as `ArgDto` (type ref or deprecated inline agg) + body + nested |
+| Function | ✅ Phase 3 | `requires`/`returns` as ordered `Requires`/`Returns` contents + body + nested |
 | Adaptor | ✅ Phase 4 | direction + ContextRef; opt. `shape`/inlets/outlets (2.0) |
 | Projector | ✅ Phase 4 | RepositoryRef; opt. `shape`/inlets/outlets (2.0) |
 | Repository | ✅ Phase 4 | Schema; opt. `shape`/inlets/outlets (2.0) |
@@ -77,8 +77,10 @@ is covered in that construct's phase. The builder emits references as
 | Outlet | ✅ Phase 4 | |
 | Connector | ✅ Phase 4 | OutletRef → InletRef |
 | Relationship | ✅ Phase 4 | ProcessorRef + cardinality |
-| Saga | ✅ Phase 5 | requires/returns as `ArgDto` (type ref or deprecated inline agg) + steps |
+| Saga | ✅ Phase 5 | `requires`/`returns` as ordered `Requires`/`Returns` contents + steps |
 | SagaStep | ✅ Phase 5 | do/undo statements |
+| Requires | ✅ A9 / rev 4 | `$kind: "requires"` content entry holding an `ArgDto` (type ref, or deprecated inline agg). Also written to the deprecated `input` field so older readers keep working; the content entry is what carries its POSITION among the comments around it. |
+| Returns | ✅ A9 / rev 4 | `$kind: "returns"`; mirrors `Requires`, deprecated field is `output`. |
 | Module | ✅ S61-1 | FLAT bag: authors, domains, types + message groups, constants, invariants, users, contexts, entities, adaptors, functions, projectors, repositories, streamlets, sagas, epics, connectors, relationships, nested modules, metadata |
 | Epic | ✅ Phase 7 | user story + use cases + shownBy |
 | UseCase | ✅ Phase 7 | user story + interactions |

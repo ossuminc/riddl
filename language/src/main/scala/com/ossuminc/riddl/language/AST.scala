@@ -3685,12 +3685,19 @@ object AST:
     final override def kind: String = "Function"
 
     /** A9: the `requires` clause, now stored as [[Requires]] content. Derived so that every reader
-      * predating the move keeps working unchanged.
+      * predating the move keeps working unchanged — the type is exactly what the constructor field
+      * used to hold.
+      *
+      * `filterThroughWrappers`, like the other content accessors: a `requires` written in an
+      * included fragment is still this function's `requires`. The parser guarantees at most one
+      * (`checkRequiresReturnsCardinality`), so `headOption` is the whole answer, not a truncation.
       */
-    def input: Option[TypeRef | Aggregation] = contents.filter[Requires].headOption.map(_.what)
+    def input: Option[TypeRef | Aggregation] =
+      contents.filterThroughWrappers[Requires].headOption.map(_.what)
 
     /** A9: the `returns` clause, now stored as [[Returns]] content. */
-    def output: Option[TypeRef | Aggregation] = contents.filter[Returns].headOption.map(_.what)
+    def output: Option[TypeRef | Aggregation] =
+      contents.filterThroughWrappers[Returns].headOption.map(_.what)
 
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty && output.isEmpty
   }
@@ -4639,12 +4646,8 @@ object AST:
     *   The location of the Saga definition
     * @param id
     *   The name of the saga
-    * @param input
-    *   A definition of the aggregate input values needed to invoke the saga, if any.
-    * @param output
-    *   A definition of the aggregate output values resulting from invoking the saga, if any.
     * @param contents
-    *   The definitional content for this Context
+    *   The definitional content for this Saga, including its [[Requires]] and [[Returns]] clauses
     * @param metadata
     *   The metadata for the Saga
     */
@@ -4659,12 +4662,16 @@ object AST:
     override def format: String = Keyword.saga + " " + id.format
 
     /** A9: the `requires` clause, now stored as [[Requires]] content. Derived so that every reader
-      * predating the move keeps working unchanged.
+      * predating the move keeps working unchanged. See [[Function.input]] for why this descends
+      * through the provenance wrappers — a Saga body may contain an `include`, so this one can
+      * actually differ from the literal filter.
       */
-    def input: Option[TypeRef | Aggregation] = contents.filter[Requires].headOption.map(_.what)
+    def input: Option[TypeRef | Aggregation] =
+      contents.filterThroughWrappers[Requires].headOption.map(_.what)
 
     /** A9: the `returns` clause, now stored as [[Returns]] content. */
-    def output: Option[TypeRef | Aggregation] = contents.filter[Returns].headOption.map(_.what)
+    def output: Option[TypeRef | Aggregation] =
+      contents.filterThroughWrappers[Returns].headOption.map(_.what)
 
     override def isEmpty: Boolean = super.isEmpty && input.isEmpty && output.isEmpty
   }

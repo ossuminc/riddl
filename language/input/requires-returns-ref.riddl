@@ -22,5 +22,22 @@ domain d is {
       returns { ok: Boolean }
       ???
     }
+    // `requires`/`returns` are ordinary CONTENT, not a fixed body prefix, so a comment may sit
+    // above, between or below them. It used to be a parse error to explain a `requires` on the
+    // line above it, which is where a reader most wants the explanation.
+    function Commented is {
+      // what it needs
+      requires record Args
+      // and what it gives back
+      returns record Result
+      // that's the whole signature
+    }
+    saga CommentedSaga is {
+      // what the saga needs
+      requires record Args
+      returns record Result
+      step One is { do "the thing" } reverted by { do "undo the thing" }
+      step Two is { do "the other" } reverted by { do "undo the other" }
+    }
   }
 }

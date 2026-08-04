@@ -706,7 +706,11 @@ class BASTRoundTripTest extends AnyWordSpec {
           |  command Go is { x: Integer }
           |  command UndoGo is { x: Integer }
           |  entity e is { sink t is { inlet in is command Go } }
-          |  function f is { requires record Args returns result Res ??? }
+          |  function f is {
+          |    // what it needs
+          |    requires record Args
+          |    returns result Res
+          |  }
           |  function g is { requires { b: Boolean } returns { r: Integer } ??? }
           |  saga s is {
           |    requires record Args
@@ -737,6 +741,14 @@ class BASTRoundTripTest extends AnyWordSpec {
               )
               val g = funcs.find(_.id.value == "g").get
               assert(g.input.get.isInstanceOf[Aggregation], "inline requires flipped in BAST")
+              // The clauses are CONTENTS, so BAST has to carry their position, not just their
+              // value: a comment written above `requires` must come back above it.
+              import com.ossuminc.riddl.language.toSeq
+              assert(
+                f.contents.toSeq.map(_.getClass.getSimpleName) ==
+                  Seq("LineComment", "Requires", "Returns"),
+                s"clause order lost in BAST: ${f.contents.toSeq.map(_.getClass.getSimpleName)}"
+              )
             case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
           }
         case Left(messages) => fail(s"Parse failed: ${messages.format}")

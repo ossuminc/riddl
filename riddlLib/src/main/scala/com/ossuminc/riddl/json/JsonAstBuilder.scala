@@ -337,11 +337,15 @@ object JsonAstBuilder:
     val streamlet: Kinds = processor
     val projector: Kinds = processor
     val repository: Kinds = processor + K.Schema
-    val saga: Kinds = vital + K.SagaStep
+    /** A saga's and a function's `requires`/`returns` are ordinary contents, so they are legal
+      * children here rather than fields lifted out of the body.
+      */
+    private val clauses: Kinds = Kinds(K.Requires, K.Returns)
+    val saga: Kinds = vital ++ clauses + K.SagaStep
     val epic: Kinds = vital + K.UseCase
     val useCase: Kinds = Kinds(K.Comment, K.Interaction)
     val group: Kinds = Kinds(K.Group, K.ContainedGroup, K.Input, K.Output, K.Comment)
-    val function: Kinds = vital + K.Function
+    val function: Kinds = vital ++ clauses + K.Function
 
     /** `Include` and `BASTImport` are members of most of the unions above (`RootContents`,
       * `DomainContents`, `ContextContents`, …). `FunctionContents` is the exception — a function is
@@ -402,6 +406,8 @@ object JsonAstBuilder:
       case _: FieldDto              => K.Field
       case _: MethodDto             => K.Method
       case _: TermDto               => K.Term
+      case _: RequiresDto           => K.Requires
+      case _: ReturnsDto            => K.Returns
       case _: InteractionContentDto => K.Interaction
       case _: IncludeContentDto     => K.Include
       case _: BASTImportContentDto  => K.BASTImport
@@ -449,6 +455,12 @@ object JsonAstBuilder:
       case d: MethodDto         => buildMethod(d)
       case d: TermDto =>
         Term(curAt, ident(d.name), d.definition.map(LiteralString(curAt, _)))
+      // `argOf` returns None only for an arg that is neither a ref nor a field list; a clause must
+      // have a value, so an empty aggregation is the honest fallback rather than dropping it.
+      case d: RequiresDto =>
+        Requires(curAt, argOf(Some(d.arg)).getOrElse(Aggregation(curAt)))
+      case d: ReturnsDto =>
+        Returns(curAt, argOf(Some(d.arg)).getOrElse(Aggregation(curAt)))
       case d: InteractionContentDto => buildInteraction(d.interaction)
       // A wrapper holds whatever its PARENT holds, so its nested children are checked against the
       // same legal set. Its contents are already in the document, which is what keeps the builder
@@ -1014,11 +1026,15 @@ object JsonAstBuilder:
     val types = f.types.map(buildType)
     val statements = f.statements.map(buildStatement)
     val functions = f.functions.map(buildFunction)
-    // A9 / revision 4: `requires`/`returns` are CONTENTS now, so they are rebuilt as Requires and
-    // Returns nodes and prepended rather than passed as constructor fields.
+    // A9 / revision 4: `requires`/`returns` are CONTENTS now, so they rebuild as Requires/Returns
+    // nodes. An ordered document carries them IN PLACE (see RequiresDto), so the bucketed
+    // `input`/`output` fields are read only on the legacy path -- reading both would emit each
+    // clause twice, and prepending them would undo the very ordering the contents array preserves.
     val clauses: Seq[FunctionContents] =
-      argOf(f.input).map(v => Requires(curAt, v)).toSeq ++
-        argOf(f.output).map(v => Returns(curAt, v)).toSeq
+      if f.contents.nonEmpty then Nil
+      else
+        argOf(f.input).map(v => Requires(curAt, v)).toSeq ++
+          argOf(f.output).map(v => Returns(curAt, v)).toSeq
     val body = childrenOrBuckets[FunctionContents](
       f.contents,
       "Function",
@@ -1045,10 +1061,13 @@ object JsonAstBuilder:
   private def buildSaga(s: SagaDto)(using Ctx): Saga =
     val types = s.types.map(buildType)
     val steps = s.steps.map(buildSagaStep)
-    // A9 / revision 4: see buildFunction — the clauses are contents, not fields.
+    // A9 / revision 4: see buildFunction — the clauses are contents, not fields, and the bucketed
+    // fields are the legacy-only path.
     val clauses: Seq[SagaContents] =
-      argOf(s.input).map(v => Requires(curAt, v)).toSeq ++
-        argOf(s.output).map(v => Returns(curAt, v)).toSeq
+      if s.contents.nonEmpty then Nil
+      else
+        argOf(s.input).map(v => Requires(curAt, v)).toSeq ++
+          argOf(s.output).map(v => Returns(curAt, v)).toSeq
     val body = childrenOrBuckets[SagaContents](
       s.contents,
       "Saga",

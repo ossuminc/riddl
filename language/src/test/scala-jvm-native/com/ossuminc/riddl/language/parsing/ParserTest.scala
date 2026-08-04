@@ -333,33 +333,35 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right((function: Function, _)) =>
-          function match
-            case Function(
-                  _,
-                  Identifier(_, "foo"),
-                  Some(Aggregation(_, firstAggrContents)),
-                  Some(Aggregation(_, secondAggrContents)),
-                  _,
-                  _
-                ) =>
-              val firstExpected =
-                Field(
-                  At(rpi, 32, 43),
-                  Identifier(At(rpi, 32, 34), "b"),
-                  Bool(At(rpi, 36, 43)),
-                  Contents.empty()
-                )
-              firstAggrContents.head must be(firstExpected)
-              val secondExpected =
-                Field(
-                  At(rpi, 57, 68),
-                  Identifier(At(rpi, 57, 59), "i"),
-                  Integer(At(rpi, 61, 68)),
-                  Contents.empty()
-                )
-              secondAggrContents.head must be(secondExpected)
-          end match
-
+          function.id.value must be("foo")
+          // `requires`/`returns` are CONTENT now, not constructor fields, so they are matched out
+          // of the contents. `input`/`output` still read them back for every pre-existing reader.
+          val Seq(requires) = function.contents.filter[Requires]
+          val Seq(returns) = function.contents.filter[Returns]
+          function.input must be(Some(requires.what))
+          function.output must be(Some(returns.what))
+          val firstAggrContents = requires.what match
+            case Aggregation(_, contents) => contents
+            case tr: TypeRef              => fail(s"expected an Aggregation, got ${tr.format}")
+          val secondAggrContents = returns.what match
+            case Aggregation(_, contents) => contents
+            case tr: TypeRef              => fail(s"expected an Aggregation, got ${tr.format}")
+          val firstExpected =
+            Field(
+              At(rpi, 32, 43),
+              Identifier(At(rpi, 32, 34), "b"),
+              Bool(At(rpi, 36, 43)),
+              Contents.empty()
+            )
+          firstAggrContents.head must be(firstExpected)
+          val secondExpected =
+            Field(
+              At(rpi, 57, 68),
+              Identifier(At(rpi, 57, 59), "i"),
+              Integer(At(rpi, 61, 68)),
+              Contents.empty()
+            )
+          secondAggrContents.head must be(secondExpected)
       }
     }
     "handle a comment" in { (td: TestData) =>

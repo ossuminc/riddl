@@ -165,7 +165,9 @@ class PassTest extends AbstractTestingBasisWithTestData {
             val (opens, closes, leaves, values) = hp.processForTest(result.root, ParentStack.empty)
             opens.must(be(closes))
             opens.must(be(58))
-            values.must(be(26))
+            // 26 before `requires`/`returns` became contents; everything_full.riddl declares two
+            // of each, so the traversal reaches four more values.
+            values.must(be(30))
             leaves.must(be(17))
       }
       Await.result(future, 10.seconds)

@@ -66,6 +66,16 @@ class FoldingTest extends AbstractParsingTest {
     List("Root", "Domain 'one'", "// foo"),
     List("Root", "Domain 'one'", "Context 'two'"),
     List("Root", "Domain 'one'", "Context 'two'", "Function 'foo'"),
+    // `requires`/`returns` are contents of the function now, so a fold over the model reaches
+    // them where before they were fields it could not see.
+    List(
+      "Root",
+      "Domain 'one'",
+      "Context 'two'",
+      "Function 'foo'",
+      "requires { a: Integer, b: String }"
+    ),
+    List("Root", "Domain 'one'", "Context 'two'", "Function 'foo'", "returns {  }"),
     List("Root", "Domain 'one'", "Context 'two'", "Type 'oneState'"),
     List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'"),
     List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'", "State 'entityState'"),
@@ -101,7 +111,7 @@ class FoldingTest extends AbstractParsingTest {
                 case rv: RiddlValue     => track :+ (previous :+ rv.format)
               }
           }
-          val expectedCount = 23
+          val expectedCount = 25
           result.length must be(expectedCount)
           result mustBe expectedResult
       end match

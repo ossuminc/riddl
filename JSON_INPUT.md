@@ -268,6 +268,24 @@ Functions live in context/entity `functions`; `input`/`output` are field lists
 }
 ```
 
+`input`/`output` are the DEPRECATED bucketed form of a function's or saga's
+`requires`/`returns`. Both clauses are ordinary contents in RIDDL, so a comment
+may sit above, between or below them — and a field, having no position, cannot
+say where. The canonical form is a `requires`/`returns` entry in the ordered
+`contents` array, whose `arg` is a type-ref string (preferred) or a bare field
+array (the deprecated inline aggregation):
+
+```jsonc
+{ "$kind": "function", "name": "calc", "contents": [
+    { "$kind": "comment",  "text": "// what it needs" },
+    { "$kind": "requires", "arg": "type Args" },
+    { "$kind": "returns",  "arg": [ { "name": "r", "type": { "kind": "Integer" } } ] } ] }
+```
+
+`root2Json` writes both forms; a document that has ordered `contents` is read
+from those alone, so the fields never double the clauses. A function or saga may
+carry at most one of each — the RIDDL parser enforces it.
+
 Records may carry `methods` alongside `fields`:
 
 ```jsonc
@@ -295,7 +313,7 @@ their own (an on-clause, a schema). Tags are RIDDL keywords: `domain`, `context`
 `repository`, `schema`, `connector`, `relationship`, `saga`, `step`, `epic`,
 `case`, `interaction`, `group`, `containedGroup`, `input`, `output`, `author`,
 `user`, `invariant`, `constant`, `comment`, `version`, `copyright`, `inlet`,
-`outlet`, `field`, `method`, `term`.
+`outlet`, `field`, `method`, `term`, `requires`, `returns`.
 
 A `with { … }` block works the same way, through `metadata.items`:
 

@@ -89,35 +89,36 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
         // info(errors.format)
         errors mustBe empty
         context.functions.size mustBe 1
-        val expected = Function(
-          (2, 2, rpi),
-          Identifier((2, 11, rpi), "fun"),
-          input = Some(
-            Aggregation(
-              (3, 12, rpi),
-              Contents(
-                Field(
-                  (3, 14, rpi),
-                  Identifier((3, 14, rpi), "i"),
-                  Integer((3, 17, rpi))
-                )
-              )
-            )
-          ),
-          output = Some(
-            Aggregation(
-              (4, 11, rpi),
-              Contents(
-                Field(
-                  (4, 13, rpi),
-                  Identifier((4, 13, rpi), "o"),
-                  Integer((4, 16, rpi))
-                )
+        val function = context.functions.head
+        function mustBe Function((2, 2, rpi), Identifier((2, 11, rpi), "fun"))
+        // The `mustBe` above deliberately says nothing about `requires`/`returns`. They are
+        // Contents now rather than constructor fields, and `Definition.equals` SKIPS Contents
+        // fields (AST.scala:1038) to avoid O(subtree) comparison -- so they need assertions of
+        // their own, where before they rode along as product elements.
+        function.input mustBe Some(
+          Aggregation(
+            (3, 12, rpi),
+            Contents(
+              Field(
+                (3, 14, rpi),
+                Identifier((3, 14, rpi), "i"),
+                Integer((3, 17, rpi))
               )
             )
           )
         )
-        context.functions.head mustBe expected
+        function.output mustBe Some(
+          Aggregation(
+            (4, 11, rpi),
+            Contents(
+              Field(
+                (4, 13, rpi),
+                Identifier((4, 13, rpi), "o"),
+                Integer((4, 16, rpi))
+              )
+            )
+          )
+        )
       }
     }
     "allow entities" in { (td: TestData) =>

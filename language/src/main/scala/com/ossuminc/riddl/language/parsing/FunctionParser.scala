@@ -42,17 +42,30 @@ private[parsing] trait FunctionParser {
     }
   }
 
-  private def functionDefinitions[u: P]: P[Seq[FunctionContents]] = {
+  /** `???` is a CONTENT item here, not an alternative to the whole content list.
+    *
+    * Every other container spells its body `undefined | definitions`, which reads as "either the
+    * body is unspecified or it has content". That was fine while `requires`/`returns` sat OUTSIDE
+    * that choice as a prefix, because `requires X returns Y ???` — signature known, body not yet
+    * written — still parsed. It is in the corpus (`everything_full.riddl:72`). Moving the clauses
+    * into the content list would have made that shape a parse error, so `???` moves with them: it
+    * is one more thing a body may contain, contributing nothing to the contents.
+    *
+    * This is the same dissolution the clauses themselves underwent, for the same reason — a fixed
+    * body shape forced an ordering nobody asked for.
+    */
+  private def functionContent[u: P]: P[Seq[FunctionContents]] = {
     P(
       undefined(Seq.empty[FunctionContents]) | (
         vitalDefinitionContents | funcInput | funcOutput | function | statement(
           StatementsSet.FunctionStatements
         )
-      ).asInstanceOf[P[FunctionContents]]./.rep(0)
+      ).asInstanceOf[P[FunctionContents]]./.map(Seq(_))
     )
   }
 
-  private def functionBody[u: P]: P[Seq[FunctionContents]] = functionDefinitions
+  private def functionBody[u: P]: P[Seq[FunctionContents]] =
+    P(functionContent.rep(0).map(_.flatten))
 
   /** Parses function literals, i.e.
     *
@@ -68,6 +81,7 @@ private[parsing] trait FunctionParser {
     P(
       Index ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~ close ~ withMetaData ~/ Index
     )./.map { case (start, id, contents, descriptives, end) =>
+      checkRequiresReturnsCardinality(contents, "Function")
       Function(at(start, end), id, contents.toContents, descriptives.toContents)
     }
   }

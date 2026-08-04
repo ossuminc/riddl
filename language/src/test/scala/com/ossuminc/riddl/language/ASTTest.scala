@@ -224,8 +224,6 @@ class ASTTest extends AbstractTestingBasis {
     Function(
       At.empty,
       Identifier(At(), "Lambda"),
-      None,
-      None,
       statements.asInstanceOf[Contents[FunctionContents]],
       (brief.toSeq ++ description.toSeq).toContents.asInstanceOf[Contents[MetaData]]
     )
@@ -356,8 +354,7 @@ class ASTTest extends AbstractTestingBasis {
         val functions = Contents(
           Function(
             At(),
-            Identifier(At(), "my_func"),
-            None
+            Identifier(At(), "my_func")
           )
         )
 

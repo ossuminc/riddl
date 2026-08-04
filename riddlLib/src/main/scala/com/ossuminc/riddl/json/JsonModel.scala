@@ -160,7 +160,8 @@ object JsonModel:
     RepositoryDto | SchemaDto | ConnectorDto | RelationshipDto | SagaDto | SagaStepDto | EpicDto |
     UseCaseDto | GroupDto | ContainedGroupDto | InputDto | OutputDto | AuthorDto | UserDto |
     InvariantDto | ConstantDto | CommentDto | VersionDto | CopyrightDto | PortletDto | FieldDto |
-    MethodDto | TermDto | InteractionContentDto | IncludeContentDto | BASTImportContentDto
+    MethodDto | TermDto | InteractionContentDto | IncludeContentDto | BASTImportContentDto |
+    RequiresDto | ReturnsDto
 
   /** One entry of an ordered `contents` array: a child, and where it came from.
     *
@@ -241,6 +242,8 @@ object JsonModel:
     val Interaction = "interaction"
     val Include = "include"
     val BASTImport = "import"
+    val Requires = "requires"
+    val Returns = "returns"
 
     /** The four use cases that share [[MessageDto]]. */
     val messageKinds: Set[String] = Set(Command, Event, Query, Result)
@@ -561,6 +564,20 @@ object JsonModel:
     * (`fields`). Exactly one is populated.
     */
   case class ArgDto(ref: Option[String] = None, fields: Seq[FieldDto] = Nil)
+
+  /** A function's or saga's `requires` clause as an ORDERED CONTENT ENTRY.
+    *
+    * `FunctionDto.input` / `SagaDto.input` carry the same value as a named field, and still do —
+    * but a field has no position, and these clauses now sit in their container's contents where an
+    * author may write a comment above, between or below them. Reconstructing from the fields alone
+    * always yields "clauses first, comments after", which is a different document from the one that
+    * was read. So the clause travels as a content entry like every other child, and the fields stay
+    * as the deprecated bucketed form for documents written against the older schema.
+    */
+  case class RequiresDto(arg: ArgDto)
+
+  /** A function's or saga's `returns` clause as an ordered content entry. See [[RequiresDto]]. */
+  case class ReturnsDto(arg: ArgDto)
 
   /** A function: `input`/`output` are `requires`/`returns` args (a type ref or, deprecated, an
     * inline field list), `statements` is the body, `functions` are nested. (Phase 3)
@@ -2033,6 +2050,8 @@ object JsonModel:
       // MethodDto has no derived codec — its `args` need the hand-written pair.
       case ContentKind.Method => readMethod(body)
       case ContentKind.Term   => readJson[TermDto](body)
+      case ContentKind.Requires => RequiresDto(readArg(body.obj("arg")))
+      case ContentKind.Returns  => ReturnsDto(readArg(body.obj("arg")))
       case ContentKind.Interaction =>
         InteractionContentDto(readInteraction(body.obj("interaction")))
       case ContentKind.Include =>
@@ -2090,6 +2109,8 @@ object JsonModel:
       case d: FieldDto          => (ContentKind.Field, writeJs(d))
       case d: MethodDto         => (ContentKind.Method, writeMethod(d))
       case d: TermDto           => (ContentKind.Term, writeJs(d))
+      case d: RequiresDto => (ContentKind.Requires, ujson.Obj("arg" -> writeArg(d.arg)))
+      case d: ReturnsDto  => (ContentKind.Returns, ujson.Obj("arg" -> writeArg(d.arg)))
       case d: InteractionContentDto =>
         (ContentKind.Interaction, ujson.Obj("interaction" -> writeInteraction(d.interaction)))
       case d: IncludeContentDto =>
@@ -2165,6 +2186,8 @@ object JsonModel:
   given epicRW: ReadWriter[EpicDto] = macroRW
   given argRW: ReadWriter[ArgDto] =
     readwriter[ujson.Value].bimap[ArgDto](writeArg, readArg)
+  given requiresDtoRW: ReadWriter[RequiresDto] = macroRW
+  given returnsDtoRW: ReadWriter[ReturnsDto] = macroRW
   given functionRW: ReadWriter[FunctionDto] = macroRW
   given portletRW: ReadWriter[PortletDto] = macroRW
   given connectorDtoRW: ReadWriter[ConnectorDto] = macroRW

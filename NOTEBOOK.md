@@ -13,71 +13,40 @@ stand and what a fresh session would get wrong.
 **State** — every number below was produced by a command in the session that
 wrote this, not recalled:
 
-- Branch `release/2`, tree clean, **~42 commits UNPUSHED**. Nothing is pushed on
+- Branch `release/2`, tree clean, **~46 commits UNPUSHED**. Nothing is pushed on
   purpose; the rc.10 exit condition is in BACKLOG.md item 1e. The count drifts
   by one every time this file is committed, so **verify rather than trust it**:
   `git log --oneline origin/release/2..HEAD | wc -l`.
-- HEAD is the tip of `release/2`; the last code commits are `867ab0333` (saga)
-  and `496e77c39` (hashing).
-- **Staged build is CURRENT: `2.0.0-rc.9-42-37b0db94`** at
-  `~/Code/ossuminc/bin/riddlc`, 20 ivy rows under that version. Restaged
-  2026-08-03 from a clean tree with `reload`, and the binary was copied only
-  after `nativeLink` reported `[success]` — all three preconditions met, which
-  is why the version carries no timestamp suffix and is reproducible from
-  `37b0db947`. Verified not just by `riddlc version` but by ENFORCEMENT: the two
-  saga fixtures that were parse errors before now validate with zero errors.
-- **All three platforms green**, run with `<module>/testOnly *`: JVM 248 suites
-  / 2007 tests, Scala.js 60 / 674, Native 149 / 1058 — **zero failures** (counts
-  predate the saga commit, which added 1 suite / 4 tests to `passes`; language
-  643, passes 847, commands 239 were re-run green after it). External corpus
-  reds unchanged (BACKLOG 1d).
+- HEAD is the tip of `release/2`; the last code commit is the requires/returns
+  move (below), on top of `867ab0333` (saga) and `496e77c39` (hashing).
+- **Staged build is `2.0.0-rc.9-42-37b0db94`** at `~/Code/ossuminc/bin/riddlc`,
+  20 ivy rows under that version. Staged 2026-08-03 from a clean tree with
+  `reload`, binary copied only after `nativeLink` reported `[success]` — all
+  three preconditions met, so the version carries no timestamp suffix and is
+  reproducible from `37b0db947`. **It is now STALE** — see below.
+- **All three platforms green**, re-run in full on 2026-08-04 AFTER the
+  requires/returns work with `<module>/testOnly *`, one `;`-separated argument,
+  `Suites: completed` lines counted against modules requested: **JVM 249 suites
+  / 2016 tests** (7 modules), **Scala.js 60 / 674** (5), **Native 170 / 1304**
+  (6) — zero failures. External corpus reds unchanged (BACKLOG 1d).
 
-**In flight — READ THIS FIRST.** `1f93cc517` is a **deliberately incomplete
-checkpoint**: `requires`/`returns` are being moved out of `Function`/`Saga`
-fields and into their `contents`. **Main sources compile; TEST SOURCES DO NOT.**
-Do not publish, stage or ship from this commit. Full state below.
+**The requires/returns move is DONE and green** — `1f93cc517`'s incomplete
+checkpoint is finished. `requires`/`returns` are `Requires`/`Returns` CONTENT on
+`Function` and `Saga`; `input`/`output` remain as derived accessors returning
+`Option[TypeRef | Aggregation]`, the exact type the constructor fields had.
+Details, and the five lessons, are in NOTEBOOK § "`requires`/`returns` became
+content". The `Option[TypeRef]` narrowing is deliberately NOT done — it requires
+dropping the deprecated inline aggregation, filed in BACKLOG § 2 with its
+verified cost.
 
-**Why:** riddl-generator found that once a comment became a legal saga
-definition (`867ab0333`), a comment above `requires` consumed the definitions
-slot and `requires` was rejected — the body grammar was
-`[func_input] [func_output] {definitions}`, a fixed PREFIX, so the working rule
-became "requires/returns must be the very first tokens of the body", exactly
-where a reader wants a comment explaining them. `Function` has the identical
-prefix and the identical defect (verified, not assumed).
+**The staged build at `~/Code/ossuminc/bin/riddlc` is now STALE** — it predates
+this change, so it neither accepts a comment above `requires` nor writes
+`FORMAT_REVISION` 4. Restage before handing anything to a consumer.
 
-**Already decided — do NOT relitigate:**
-
-- **Zero-or-one of each, enforced by the PARSER.** A body may contain no
-  `requires` and no `returns`, or one of each, and never two. The parser is the
-  place that guarantees it, so that everything downstream can assume it rather
-  than defend against it.
-- **The accessors own the optionality.** `Saga.input`/`output` and
-  `Function.input`/`output` stay as derived accessors returning an `Option`,
-  reading the clause out of contents. Keeping them is what held the blast radius
-  to 5 test sites instead of ~56, and it keeps the read API stable for riddlg
-  and riddl-gen. **Open question the next session must settle:** the node
-  currently carries `TypeRef | Aggregation` because A9 still permits the
-  deprecated inline aggregation. Reid asked for `Option[TypeRef]`. Decide
-  whether that means finally dropping the deprecated inline form (a real
-  language decision with corpus fallout) or just narrowing the accessor and
-  leaving the node wider. Do not silently pick one.
-- **PrettifyVisitor gets SIMPLER, not smarter.** It must stop emitting the
-  clauses from the accessors in `openSaga`/`openFunction` — that is now a source
-  of double emission and, worse, it reimposes the very ordering we just removed.
-  Deal with the `openDef` overrides and then just walk the contents, emitting
-  what is there in the order it is there, comments included. Emission order
-  becomes a property of the AST rather than of the printer.
-
-**Still to do:** the parser cardinality rule; the accessor/`Aggregation`
-decision above; PrettifyVisitor; the JSON EMIT side plus `JSON_COVERAGE.md` (the
-build side is done); EBNF `saga_body`/`function_body` + GBNF regen; the 5 broken
-test sites (`language/ASTTest.scala:227,228,229,360` and
-`language/parsing/ParserTest.scala:337` — all old-arity pattern matches);
-round-trip tests proving a comment survives ABOVE `requires`; and the
-three-platform run.
-
-**Verified so far:** main sources compile on JVM. Nothing else is verified —
-treat every test count in this file as predating the checkpoint.
+**Pre-existing, not mine:** `sbt scalafmtCheckAll` fails at HEAD with the same
+23 module lines it fails with now — the formatting debt is older than this work
+and was left alone rather than swept into an unrelated diff. Verified by
+stashing and re-running.
 
 `task/` is empty; both earlier incoming tasks are in `task/done/` with Results.
 **A third is owed to synapify** — see the re-analysis note in BACKLOG § 4.
@@ -123,7 +92,8 @@ file recording work that never happened) — **treat old "known bug" notes, and
 `done/` placement, as claims to re-check rather than facts.**
 
 **`task/` holds 1 file:** `2026-08-03-saga-bodies-reject-comments.md`
-(riddl-generator) — in flight this session.
+(riddl-generator). The comment-above-`requires` half is now fixed; append
+results and move it to `task/done/` once the restage lets you demonstrate it.
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
 
@@ -140,6 +110,68 @@ to the task file and note the disposition below.
 
 ---
 
+
+## `requires`/`returns` became content, and `???` came with them (2026-08-04) — DONE
+
+The follow-on to the saga-comments fix below. Fixing that one made a comment a
+legal saga definition, which promptly exposed a second defect it had been
+hiding: a comment written ABOVE `requires` consumed the definitions slot and
+`requires` was then rejected. The body grammar was
+`[func_input] [func_output] {definitions}` — a fixed PREFIX — so the working
+rule was "`requires`/`returns` must be the very first tokens of the body",
+exactly where a reader wants a comment explaining them. `Function` had the
+identical prefix and the identical defect.
+
+`requires`/`returns` are now ORDINARY CONTENT: new `Requires`/`Returns` AST
+nodes in `OccursInSaga`, `OccursInFunction` and `NonDefinitionValues`.
+`Function.input`/`output` and `Saga.input`/`output` survive as derived
+accessors returning `Option[TypeRef | Aggregation]` — **the exact type the
+constructor fields had**, which is why the blast radius was 5 test sites rather
+than the ~56 first estimated, and why riddlg and riddl-gen needed no change.
+
+**Five things worth keeping:**
+
+1. **Fixing a prefix means fixing the WHOLE prefix.** Moving the two clauses
+   into the content list broke `requires X returns Y ???` — a shape in the
+   corpus (`everything_full.riddl:72`) — because every container spells its
+   body `undefined | definitions`, so `???` was an alternative to the whole
+   list rather than a member of it. It worked before only because the clauses
+   sat OUTSIDE that choice. `???` is now a content item too. The lesson: when
+   you dissolve a fixed prefix, enumerate everything the prefix's position was
+   silently permitting, or you narrow the language while thinking you widened
+   it. 23 language tests went red before this was found.
+2. **A grammar closure cannot bound cardinality — say so somewhere.** `rep`
+   accepts `requires A requires B` happily. `checkRequiresReturnsCardinality`
+   in `ParsingContext` enforces zero-or-one AFTER the parse, which is the only
+   reason `Function.input`'s `headOption` is a complete answer rather than a
+   silent truncation. Same shape as `checkForDuplicateIncludes` beside it.
+3. **`Definition.equals` SKIPS Contents fields, so moving a field into
+   contents removes it from equality.** `ContextValidationTest` asserted a
+   whole `Function` with `mustBe`; after the move that assertion could no
+   longer see `requires`/`returns` at all and would have passed with them
+   missing. The clauses needed assertions of their own. **Any field-to-contents
+   move has this consequence — check every `mustBe` on the container.**
+4. **The printer got SIMPLER, not smarter.** `PrettifyVisitor` stopped emitting
+   from the `input`/`output` accessors in `openFunction`/`openSaga` and now
+   emits `doRequires`/`doReturns` as the contents are walked. Emitting from the
+   accessors would have reimposed the very ordering the move removed — the
+   clause first, the author's comment after it. **Order is now a property of
+   the AST rather than of the printer.**
+5. **A named field cannot carry a position, so JSON needed a content kind.**
+   `FunctionDto.input` round-trips the VALUE fine and always did; it cannot say
+   the comment came first. `$kind: "requires"`/`"returns"` entries now travel in
+   the ordered `contents` array, the bucketed fields are read only when a
+   document has no ordered contents (reading both would double the clause), and
+   both are still written. All four reflective surfaces — parse, prettify, BAST
+   (`FORMAT_REVISION` 3 → 4), JSON — now carry position, each with a test that
+   asserts ORDER and not merely presence.
+
+**Left open on purpose:** the node stays `TypeRef | Aggregation`. Reid's
+`Option[TypeRef]` is the wanted end state but it means dropping the deprecated
+inline aggregation, which is a language change with corpus fallout — filed in
+BACKLOG § 2 with the verified cost.
+
+---
 
 ## A saga body rejected comments because one rule skipped a shared alternative (2026-08-03) — DONE
 

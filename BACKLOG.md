@@ -134,6 +134,27 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   deprecations surface under every command, their `.check` goldens all shift.
   Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
 
+- **Drop the deprecated inline aggregation from `requires`/`returns`, then
+  narrow the accessors to `Option[TypeRef]`.** Decided by Reid 2026-08-04 while
+  moving the clauses into contents: `Option[TypeRef]` is the wanted END state,
+  but it is a language change, not a type tidy-up, so it does not ride along.
+  Today `Requires.what` / `Returns.what` are `TypeRef | Aggregation` and
+  `Function.input` / `Saga.input` return `Option[TypeRef | Aggregation]` —
+  **exactly the type the constructor fields had**, which is why the move cost
+  consumers nothing.
+  **Do NOT narrow the accessor while the node stays wide.** A saga written
+  `requires { a: Integer }` would then read as having no input at all, and any
+  check gated on `input.isEmpty` fires wrongly — the ungated-accessor failure
+  mode this repo keeps rediscovering.
+  **Verified cost of doing it properly** (checked 2026-08-04, not estimated):
+  4 fixtures use the inline form — `language/input/everything_full.riddl:72,97`,
+  `language/input/module/mixed-module.riddl:17`,
+  `language/input/requires-returns-ref.riddl` — plus two tests that ASSERT the
+  deprecation fires (`FunctionValidatorTest:106`, `SagaValidatorTest:56`), the
+  `aggregation` alternative in `func_input`/`func_output` in the EBNF + a GBNF
+  regen, the `ArgDto.fields` read path in JSON, and an external-corpus re-run.
+  Sequence: deprecate loudly for a release, then remove.
+
 ### 3. Queued, needs a plan
 - **A keyword-named field reports the error several tokens upstream.** From
   riddl-generator 2026-08-03, filed here because it is a real diagnostic defect

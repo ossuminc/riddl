@@ -143,7 +143,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         case lc: LineComment => add(CommentDto(lc.text), lc.loc)
         case ic: InlineComment =>
           add(CommentDto(ic.lines.mkString("\n"), inline = true), ic.loc)
-    case _ => ()
+    // A function's/saga's `requires`/`returns` arrive here for the same reason a Comment does: they
+    // are `RiddlValue` contents, not Leaves. Pushing them makes them ordered children, so their
+    // position relative to the comments around them survives the round trip. `FunctionDto.input`
+    // and `output` still carry the same values as bucketed fields, which is why the builders below
+    // consume these without reading them.
+    case r: Requires => add(RequiresDto(argDtoOf(r.what)), r.loc)
+    case r: Returns  => add(ReturnsDto(argDtoOf(r.what)), r.loc)
+    case _           => ()
 
   /** Whether this comment hangs off the parent's METADATA rather than sitting in its contents.
     * Metadata comments are already carried by `metaOf`, so counting them here as well would write
@@ -858,6 +865,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
               )
             )
       case s: Saga =>
+        // The bucketed `input`/`output` fields come from the accessors, as they always have. The
+        // pushed RequiresDto/ReturnsDto carry the same values in their SOURCE POSITION and are
+        // consumed here only so the drop guard sees them accounted for; `ordered` is what actually
+        // writes them out.
+        k.col[RequiresDto]
+        k.col[ReturnsDto]
         Some(
           SagaDto(
             s.id.value,
@@ -871,6 +884,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           )
         )
       case f: Function =>
+        k.col[RequiresDto]
+        k.col[ReturnsDto]
         Some(
           FunctionDto(
             f.id.value,
@@ -1216,7 +1231,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
 
   // A9: a Function/Saga `requires`/`returns` value becomes an ArgDto — a type ref (preferred) or
   // a deprecated inline field list.
-  private def argDto(value: Option[TypeRef | Aggregation]): Option[ArgDto] = value.map {
+  private def argDto(value: Option[TypeRef | Aggregation]): Option[ArgDto] = value.map(argDtoOf)
+
+  private def argDtoOf(value: TypeRef | Aggregation): ArgDto = value match {
     case tr: TypeRef      => ArgDto(ref = Some(tr.format))
     case agg: Aggregation => ArgDto(fields = agg.fields.map(serializeField))
   }

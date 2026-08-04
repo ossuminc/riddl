@@ -178,10 +178,13 @@ field_type_alternatives = infix_alternation | predefined_types | pattern_type | 
 
 (* Functions *)
 function = "function" identifier is "{" function_body "}" [with_metadata] ;
-function_body = [func_input] [func_output] function_definitions ;
+function_body = function_definitions ;
+(* `requires`/`returns` are ordinary content, not a body prefix: a comment may precede,
+   separate or follow them. At most one of each -- a cardinality the RIDDL parser enforces
+   after the parse, since a grammar closure cannot bound it. *)
 func_input = "requires" ( aggregation | type_ref ) ;
 func_output = "returns" ( aggregation | type_ref ) ;
-function_definitions = {undefined | (vital_definition_contents | function | function_include | statement)} ;
+function_definitions = {undefined | (vital_definition_contents | func_input | func_output | function | function_include | statement)} ;
 function_include = "include" literal_string ;
 
 (* References *)
@@ -406,8 +409,8 @@ updates = "updates" repository_ref ;
 
 (* Saga-related *)
 saga = "saga" identifier is "{" saga_body "}" [with_metadata] ;
-saga_body = [func_input] [func_output] {saga_definitions} ;
-saga_definitions = {vital_definition_contents | saga_step | inlet | outlet | function | saga_include} ;
+saga_body = saga_definitions ;
+saga_definitions = {undefined | (vital_definition_contents | func_input | func_output | saga_step | inlet | outlet | function | saga_include)} ;
 saga_include = "include" literal_string ;
 saga_step = "step" identifier is pseudo_code_block "reverted" ["by"] pseudo_code_block [with_metadata] ;
 

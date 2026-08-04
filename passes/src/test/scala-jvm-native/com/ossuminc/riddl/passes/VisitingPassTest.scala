@@ -42,7 +42,9 @@ class VisitingPassTest extends ParsingTest {
           //      |""".stripMargin)
           visitor.depth must be(0)
           visitor.leaves must be(17)
-          visitor.values must be(25)
+          // 25 before `requires`/`returns` became contents. everything_full.riddl declares two of
+          // each (lines 72-73 and 97-98) and the visitor now reaches all four as values.
+          visitor.values must be(29)
           visitor.opens must be(visitor.closes)
       end match
     }
@@ -146,5 +148,7 @@ class TestVisitor extends PassVisitor:
   def doStatement(statement: Statements): Unit = value(statement)
   def doInteraction(interaction: Interaction): Unit = value(interaction)
   def doOptionValue(optionValue: OptionValue): Unit = value(optionValue)
+  def doRequires(requires: Requires): Unit = value(requires)
+  def doReturns(returns: Returns): Unit = value(returns)
   def doUserStory(userStory: UserStory): Unit = value(userStory)
 end TestVisitor
