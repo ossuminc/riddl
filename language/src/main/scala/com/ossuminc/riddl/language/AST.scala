@@ -1058,6 +1058,39 @@ object AST:
     // definitions in it.
     override def hasDefinitions: Boolean = !isEmpty
     opaque type ContentType <: RiddlValue = CV
+
+    /** May `content` be a DIRECT child of this container?
+      *
+      * Answered from [[Containment]], which derives it from the very `XContents` union the parser
+      * is checked against — so this cannot disagree with what riddlc accepts. Every structural
+      * editor (Synapify's drag-and-drop, the IDEA plugin, the VS Code extension) previously kept a
+      * hand-written copy of these rules; each copy drifts the moment the grammar gains a
+      * construct, and Synapify's was wrong in two ways before anyone noticed.
+      *
+      * DIRECT containment only: a Domain cannot contain an Entity, even though it can contain a
+      * Context that can. Kind-level only: names, duplicates and reference validity are not
+      * considered — a caller wanting "and the name is free" layers that on top.
+      *
+      * Cheap enough to call per animation frame: no parse, no pass, no IO, no allocation — a class
+      * walk over a small precomputed `Set`.
+      */
+    final def canContain(content: RiddlValue): Boolean = content match
+      // `Include` and `BASTImport` are PROVENANCE, not structure: a container that can hold X can
+      // hold an include wrapping X. So the wrapper is transparent and the question descends to
+      // what it carries, matching how the content accessors read through them. An empty wrapper is
+      // legal anywhere, which is what `forall` on an empty list says.
+      case i: Include[?] => i.contents.toSeq.forall(canContain)
+      case b: BASTImport => b.contents.toSeq.forall(canContain)
+      case other         => Containment.of(this)(other)
+    end canContain
+
+    /** As [[canContain]], by simple kind name, for a caller holding no instance — a palette
+      * offering definitions the user has not created yet. Case-insensitive.
+      */
+    final def canContainKind(kind: String): Boolean = Containment.of(this).named(kind)
+
+    /** Every kind this container admits directly, sorted — for a palette or a diagnostic. */
+    final def containableKinds: Seq[String] = Containment.of(this).kinds
   end Branch
 
   /** A leaf node in the hierarchy of definitions. Leaves have no content, unlike [[Branch]]. They
@@ -5614,4 +5647,71 @@ object AST:
       case pt: PredefinedType => pt.kind
     end match
   end errorDescription
+
+  /** What each container may hold, derived from the containment unions themselves.
+    *
+    * The rules live in exactly one place already — the `OccursInX` / `XContents` aliases above,
+    * which are what the parser's return types are checked against. `utils.UnionMembers.contains` expands
+    * one of those unions into a membership test at COMPILE time, so every entry below is a
+    * restatement of nothing: add a member to `ContextContents` and `context.canContain` gains it
+    * with no edit here.
+    *
+    * **The match deliberately has no default case.** `Branch` is sealed and this build runs with
+    * `-Werror`, so adding a container without deciding what it may hold is a BUILD FAILURE rather
+    * than a predicate that quietly answers `false`. That is the property that makes centralising
+    * this worth anything — a hand-written list would have been shorter and would have reintroduced
+    * exactly the drift it was meant to remove.
+    *
+    * Generic containers are absent on purpose. `Include[CT]`, `SimpleContainer[CV]` and the
+    * accessor traits take their content type as a PARAMETER, so they have no union of their own to
+    * consult and the question is ill-posed for them — an `Include` may hold whatever its parent
+    * may, which is why [[Branch.canContain]] treats it as transparent and asks the parent instead.
+    */
+  private[language] object Containment:
+    import com.ossuminc.riddl.utils.UnionMembers.{Contains, contains}
+
+    private lazy val rootIn = contains[RootContents]
+    private lazy val moduleIn = contains[ModuleContents]
+    private lazy val domainIn = contains[DomainContents]
+    private lazy val contextIn = contains[ContextContents]
+    private lazy val entityIn = contains[EntityContents]
+    private lazy val adaptorIn = contains[AdaptorContents]
+    private lazy val repositoryIn = contains[RepositoryContents]
+    private lazy val projectorIn = contains[ProjectorContents]
+    private lazy val streamletIn = contains[StreamletContents]
+    private lazy val functionIn = contains[FunctionContents]
+    private lazy val sagaIn = contains[SagaContents]
+    private lazy val epicIn = contains[EpicContents]
+    private lazy val useCaseIn = contains[UseCaseContents]
+    private lazy val typeIn = contains[TypeContents]
+    private lazy val handlerIn = contains[HandlerContents]
+    private lazy val stateIn = contains[StateContents]
+    private lazy val groupIn = contains[OccursInGroup]
+    private lazy val outputIn = contains[OccursInOutput]
+    private lazy val inputIn = contains[OccursInInput]
+    private lazy val onClauseIn = contains[Statements]
+
+    def of(branch: Branch[?]): Contains = branch match
+      case _: Root       => rootIn
+      case _: Module     => moduleIn
+      case _: Domain     => domainIn
+      case _: Context    => contextIn
+      case _: Entity     => entityIn
+      case _: Adaptor    => adaptorIn
+      case _: Repository => repositoryIn
+      case _: Projector  => projectorIn
+      case _: Streamlet  => streamletIn
+      case _: Function   => functionIn
+      case _: Saga       => sagaIn
+      case _: Epic       => epicIn
+      case _: UseCase    => useCaseIn
+      case _: Type       => typeIn
+      case _: Handler    => handlerIn
+      case _: State      => stateIn
+      case _: Group      => groupIn
+      case _: Output     => outputIn
+      case _: Input      => inputIn
+      case _: OnClause   => onClauseIn
+    end of
+  end Containment
 end AST
