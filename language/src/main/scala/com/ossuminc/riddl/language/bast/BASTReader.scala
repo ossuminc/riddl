@@ -314,6 +314,8 @@ class BASTReader(
     case NODE_DESCRIPTION       => "Description"
     case NODE_BLOCK_DESCRIPTION => "BlockDescription"
     case NODE_COMMENT           => "Comment"
+    case NODE_REQUIRES          => "Requires"
+    case NODE_RETURNS           => "Returns"
     case NODE_BLOCK_COMMENT     => "BlockComment"
     case NODE_IDENTIFIER        => "Identifier"
     case NODE_PATH_IDENTIFIER   => "PathIdentifier"
@@ -458,6 +460,8 @@ class BASTReader(
         case NODE_DESCRIPTION       => readDescriptionOrOptionOrAttachment()
         case NODE_BLOCK_DESCRIPTION => readBlockDescriptionNode()
         case NODE_COMMENT           => readLineCommentNode()
+        case NODE_REQUIRES          => readRequiresNode()
+        case NODE_RETURNS           => readReturnsNode()
         case NODE_BLOCK_COMMENT     => readInlineCommentNode()
 
         // Simple values
@@ -759,26 +763,36 @@ class BASTReader(
     }
   }
 
+  /** A9 / revision 4: the `requires` clause, read as an ordinary contents node. */
+  private def readRequiresNode(): Requires = {
+    val loc = readLocation()
+    Requires(loc, readRequiresReturns())
+  }
+
+  /** A9 / revision 4: the `returns` clause, read as an ordinary contents node. */
+  private def readReturnsNode(): Returns = {
+    val loc = readLocation()
+    Returns(loc, readRequiresReturns())
+  }
+
   private def readFunctionNode(): Function = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val input = readOption(readRequiresReturns())
-    val output = readOption(readRequiresReturns())
-    val contents = readContentsDeferred[OccursInVitalDefinition | Statement | Function]()
+    // Revision 4: `requires`/`returns` arrive inside contents as Requires/Returns nodes.
+    val contents = readContentsDeferred[FunctionContents]()
       .asInstanceOf[Contents[FunctionContents]]
     val metadata = readMetadataDeferred()
-    Function(loc, id, input, output, contents, metadata)
+    Function(loc, id, contents, metadata)
   }
 
   private def readSagaNode(): Saga = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
-    val input = readOption(readRequiresReturns())
-    val output = readOption(readRequiresReturns())
-    val contents = readContentsDeferred[OccursInVitalDefinition | SagaStep]()
+    // Revision 4: `requires`/`returns` arrive inside contents as Requires/Returns nodes.
+    val contents = readContentsDeferred[SagaContents]()
       .asInstanceOf[Contents[SagaContents]]
     val metadata = readMetadataDeferred()
-    Saga(loc, id, input, output, contents, metadata)
+    Saga(loc, id, contents, metadata)
   }
 
   private def readProjectorNode(): Projector = {

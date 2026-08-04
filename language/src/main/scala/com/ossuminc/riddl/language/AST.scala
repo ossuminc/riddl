@@ -794,7 +794,7 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression | Call
+    GetValue | PromptValue | BooleanExpression | Call | Requires | Returns
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -927,8 +927,12 @@ object AST:
   /** Type of definitions that occur in an [[Adaptor]] with [[Include]] */
   type AdaptorContents = OccursInAdaptor | Include[OccursInAdaptor]
 
-  /** Type of definitions that occur in a [[Saga]] without [[Include]] */
-  private type OccursInSaga = OccursInVitalDefinition | SagaStep
+  /** Type of definitions that occur in a [[Saga]] without [[Include]].
+    *
+    * [[Requires]] and [[Returns]] are content rather than fields on [[Saga]] so that comments may
+    * precede or separate them; see [[Requires]].
+    */
+  private type OccursInSaga = OccursInVitalDefinition | SagaStep | Requires | Returns
 
   /** Type of definitions that occur in a [[Saga]] with [[Include]] */
   type SagaContents = OccursInSaga | Include[OccursInSaga]
@@ -966,7 +970,8 @@ object AST:
   type RepositoryContents = OccursInRepository | Include[OccursInRepository]
 
   /** Type of definitions that occur in a [[Function]] */
-  private type OccursInFunction = OccursInVitalDefinition | Statement | Function
+  /** [[Requires]] and [[Returns]] are content rather than fields on [[Function]]; see [[Requires]]. */
+  private type OccursInFunction = OccursInVitalDefinition | Statement | Function | Requires | Returns
 
   /** Type of definitions that occur in a [[Function]]. Functions are self-contained and do not
     * support includes.
@@ -3622,19 +3627,47 @@ object AST:
 
   //////////////////////////////////////////////////////////////////////////////////////// FUNCTION
 
+  /** The `requires` clause of a [[Function]] or [[Saga]].
+    *
+    * A9: it names a [[TypeRef]] (preferred) or, deprecated, an inline [[Aggregation]].
+    *
+    * This is CONTENT, not a field. It began as `Function.input` / `Saga.input`, which meant the
+    * grammar had to spell the body as `[func_input] [func_output] {definitions}` — a fixed prefix.
+    * Once a comment became a legal definition (867ab0333), a comment written ABOVE `requires`
+    * consumed the definitions slot and `requires` was then rejected, so the working rule became
+    * "`requires`/`returns` must be the very first tokens of the body" — exactly where a reader most
+    * wants a comment explaining them. Making the clause ordinary content dissolves the prefix and
+    * lets comments sit anywhere.
+    *
+    * [[Function.input]] and [[Saga.input]] remain as derived accessors, so every existing reader
+    * (ValidationPass, BASTWriter, PrettifyVisitor) is unaffected.
+    */
+  case class Requires(loc: At, what: TypeRef | Aggregation) extends RiddlValue:
+    def format: String = "requires " + (what match
+      case tr: TypeRef      => tr.format
+      case agg: Aggregation => agg.format
+    )
+  end Requires
+
+  /** The `returns` clause of a [[Function]] or [[Saga]]. See [[Requires]] for why it is content
+    * rather than a field.
+    */
+  case class Returns(loc: At, what: TypeRef | Aggregation) extends RiddlValue:
+    def format: String = "returns " + (what match
+      case tr: TypeRef      => tr.format
+      case agg: Aggregation => agg.format
+    )
+  end Returns
+
   /** A function definition which can be part of a bounded referent or an entity.
     *
     * @param loc
     *   The location of the function definition
     * @param id
     *   The identifier that names the function
-    * @param input
-    *   An optional type expression that names and types the fields of the input of the function
-    * @param output
-    *   An optional type expression that names and types the fields of the output of the function
     * @param contents
     *   The set of types, functions, statements, authors, includes and terms that define this
-    *   FUnction
+    *   Function, including its [[Requires]] and [[Returns]] clauses
     * @param metadata
     *   The set of descriptive values for this function
     */
@@ -3642,9 +3675,6 @@ object AST:
   case class Function(
     loc: At,
     id: Identifier,
-    // A9: `requires`/`returns` name a Type (preferred) or, deprecated, an inline Aggregation.
-    input: Option[TypeRef | Aggregation] = None,
-    output: Option[TypeRef | Aggregation] = None,
     contents: Contents[FunctionContents] = Contents.empty[FunctionContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[FunctionContents]
@@ -3653,6 +3683,15 @@ object AST:
       with WithStatements[FunctionContents] {
     override def format: String = Keyword.function + " " + id.format
     final override def kind: String = "Function"
+
+    /** A9: the `requires` clause, now stored as [[Requires]] content. Derived so that every reader
+      * predating the move keeps working unchanged.
+      */
+    def input: Option[TypeRef | Aggregation] = contents.filter[Requires].headOption.map(_.what)
+
+    /** A9: the `returns` clause, now stored as [[Returns]] content. */
+    def output: Option[TypeRef | Aggregation] = contents.filter[Returns].headOption.map(_.what)
+
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty && output.isEmpty
   }
 
@@ -4613,16 +4652,21 @@ object AST:
   case class Saga(
     loc: At,
     id: Identifier,
-    // A9: `requires`/`returns` name a Type (preferred) or, deprecated, an inline Aggregation.
-    input: Option[TypeRef | Aggregation] = None,
-    output: Option[TypeRef | Aggregation] = None,
     contents: Contents[SagaContents] = Contents.empty[SagaContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[SagaContents]
       with WithSagaSteps[SagaContents] {
     override def format: String = Keyword.saga + " " + id.format
-    override def isEmpty: Boolean = super.isEmpty && input.isEmpty && output.isEmpty
 
+    /** A9: the `requires` clause, now stored as [[Requires]] content. Derived so that every reader
+      * predating the move keeps working unchanged.
+      */
+    def input: Option[TypeRef | Aggregation] = contents.filter[Requires].headOption.map(_.what)
+
+    /** A9: the `returns` clause, now stored as [[Returns]] content. */
+    def output: Option[TypeRef | Aggregation] = contents.filter[Returns].headOption.map(_.what)
+
+    override def isEmpty: Boolean = super.isEmpty && input.isEmpty && output.isEmpty
   }
 
   @JSExportTopLevel("SagaRef")

@@ -54,29 +54,23 @@ private[parsing] trait SagaParser {
     */
   private[parsing] def sagaDefinitions[u: P]: P[Seq[SagaContents]] = {
     P(
-      vitalDefinitionContents | sagaStep | inlet | outlet | function | sagaInclude
-    ).asInstanceOf[P[SagaContents]]./.rep(2)
+      vitalDefinitionContents | funcInput | funcOutput | sagaStep | inlet | outlet | function |
+        sagaInclude
+    ).asInstanceOf[P[SagaContents]]./.rep(1)
   }
 
-  private type SagaBodyType = (
-    Option[TypeRef | Aggregation],
-    Option[TypeRef | Aggregation],
-    Seq[SagaContents]
-  )
-
-  private def sagaBody[u: P]: P[SagaBodyType] = {
+  private def sagaBody[u: P]: P[Seq[SagaContents]] = {
     P(
-      undefined((None, None, Seq.empty[SagaContents])) |
-        (funcInput.? ~ funcOutput.? ~ sagaDefinitions)
+      undefined(Seq.empty[SagaContents]) | sagaDefinitions
     )
   }
 
   def saga[u: P]: P[Saga] = {
     P(
       Index ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~ withMetaData ~ Index
-    ).map { case (start, identifier, (input, output, contents), descriptives, end) =>
+    ).map { case (start, identifier, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Saga(at(start, end), identifier, input, output, contents.toContents, descriptives.toContents)
+      Saga(at(start, end), identifier, contents.toContents, descriptives.toContents)
     }
   }
 }

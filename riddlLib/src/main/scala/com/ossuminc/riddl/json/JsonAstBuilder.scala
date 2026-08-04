@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.json
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, Contents, toSeq}
+import com.ossuminc.riddl.language.{At, Contents, toSeq, toContents}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.Messages.{Message, Messages}
@@ -1014,18 +1014,22 @@ object JsonAstBuilder:
     val types = f.types.map(buildType)
     val statements = f.statements.map(buildStatement)
     val functions = f.functions.map(buildFunction)
+    // A9 / revision 4: `requires`/`returns` are CONTENTS now, so they are rebuilt as Requires and
+    // Returns nodes and prepended rather than passed as constructor fields.
+    val clauses: Seq[FunctionContents] =
+      argOf(f.input).map(v => Requires(curAt, v)).toSeq ++
+        argOf(f.output).map(v => Returns(curAt, v)).toSeq
+    val body = childrenOrBuckets[FunctionContents](
+      f.contents,
+      "Function",
+      Legal.function,
+      contentsOf[FunctionContents](types, statements, functions, comments(f.comments)),
+      statements
+    )
     Function(
       curAt,
       ident(f.name),
-      argOf(f.input),
-      argOf(f.output),
-      childrenOrBuckets[FunctionContents](
-        f.contents,
-        "Function",
-        Legal.function,
-        contentsOf[FunctionContents](types, statements, functions, comments(f.comments)),
-        statements
-      ),
+      (clauses ++ body.toSeq).toContents,
       meta(f.brief, f.metadata)
     )
 
@@ -1041,17 +1045,20 @@ object JsonAstBuilder:
   private def buildSaga(s: SagaDto)(using Ctx): Saga =
     val types = s.types.map(buildType)
     val steps = s.steps.map(buildSagaStep)
+    // A9 / revision 4: see buildFunction — the clauses are contents, not fields.
+    val clauses: Seq[SagaContents] =
+      argOf(s.input).map(v => Requires(curAt, v)).toSeq ++
+        argOf(s.output).map(v => Returns(curAt, v)).toSeq
+    val body = childrenOrBuckets[SagaContents](
+      s.contents,
+      "Saga",
+      Legal.sagaW,
+      contentsOf[SagaContents](types, steps, comments(s.comments))
+    )
     Saga(
       curAt,
       ident(s.name),
-      argOf(s.input),
-      argOf(s.output),
-      childrenOrBuckets[SagaContents](
-        s.contents,
-        "Saga",
-        Legal.sagaW,
-        contentsOf[SagaContents](types, steps, comments(s.comments))
-      ),
+      (clauses ++ body.toSeq).toContents,
       meta(s.brief, s.metadata)
     )
 

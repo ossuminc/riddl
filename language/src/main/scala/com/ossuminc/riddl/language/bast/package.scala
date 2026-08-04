@@ -75,7 +75,7 @@ package object bast {
     * that real files carry.
     */
   val FORMAT_REVISION: Short =
-    3 // entity intentions (event-sourced/persistent/transient/aggregate/consistent/available)
+    4 // `requires`/`returns` moved from Function/Saga fields into contents as Requires/Returns
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)
@@ -234,6 +234,13 @@ package object bast {
 
   /** A42: a FigmaRef metadata item. */
   val NODE_FIGMA_REF: Byte = 105
+
+  /** A9: the `requires` clause of a [[AST.Function]] or [[AST.Saga]]. These used to be written as
+    * two optional FIELDS ahead of the contents; they are now ordinary contents nodes, so that
+    * comments may sit before or between them. Revision 4.
+    */
+  val NODE_REQUIRES: Byte = 106
+  val NODE_RETURNS: Byte = 107
 
   /** Flag bit indicating metadata presence in node tag
     *

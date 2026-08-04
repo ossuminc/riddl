@@ -308,6 +308,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case term: Term           => writeTerm(term)
       case fr: FigmaRef         => writeFigmaRef(fr)
 
+      // A9 / revision 4: the `requires`/`returns` clauses of a Function or Saga, now contents.
+      case r: Requires => writeRequires(r)
+      case r: Returns  => writeReturns(r)
+
       // Attachments
       case a: FileAttachment   => writeFileAttachment(a)
       case a: StringAttachment => writeStringAttachment(a)
@@ -496,8 +500,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_FUNCTION, f.metadata.nonEmpty)
     writeLocation(f.loc)
     writeIdentifierInline(f.id) // Inline - no tag needed
-    writeOption(f.input)(writeRequiresReturns)
-    writeOption(f.output)(writeRequiresReturns)
+    // Revision 4: `requires`/`returns` are contents nodes, not fields ahead of the contents.
     writeContents(f.contents)
   }
 
@@ -506,6 +509,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   private def writeRequiresReturns(value: TypeRef | Aggregation): Unit = value match {
     case tr: TypeRef      => writer.writeU8(0); writeTypeRefInline(tr)
     case agg: Aggregation => writer.writeU8(1); writeTypeExpression(agg)
+  }
+
+  def writeRequires(r: Requires): Unit = {
+    writeNodeTag(NODE_REQUIRES, hasMetadata = false)
+    writeLocation(r.loc)
+    writeRequiresReturns(r.what)
+  }
+
+  def writeReturns(r: Returns): Unit = {
+    writeNodeTag(NODE_RETURNS, hasMetadata = false)
+    writeLocation(r.loc)
+    writeRequiresReturns(r.what)
   }
 
   def writeAdaptor(a: Adaptor): Unit = {
@@ -525,8 +540,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_SAGA, s.metadata.nonEmpty)
     writeLocation(s.loc)
     writeIdentifierInline(s.id) // Inline - no tag needed
-    writeOption(s.input)(writeRequiresReturns)
-    writeOption(s.output)(writeRequiresReturns)
+    // Revision 4: `requires`/`returns` are contents nodes, not fields ahead of the contents.
     writeContents(s.contents)
   }
 

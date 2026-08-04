@@ -465,7 +465,11 @@ object TopLevelParser:
       val loc =
         if contents.nonEmpty then contents.head.loc
         else At.empty
-      Saga(loc, Identifier.empty, sagaInput, sagaOutput, contents.toContents)
+      // Revision: `requires`/`returns` are contents now, so a caller-supplied input/output is
+      // prepended as Requires/Returns rather than passed as fields.
+      val prefix: Seq[SagaContents] =
+        sagaInput.map(v => Requires(At.empty, v)).toSeq ++ sagaOutput.map(v => Returns(At.empty, v)).toSeq
+      Saga(loc, Identifier.empty, (prefix ++ contents).toContents)
     }
   end parseAsSaga
 
