@@ -43,10 +43,10 @@ verified cost.
 this change, so it neither accepts a comment above `requires` nor writes
 `FORMAT_REVISION` 4. Restage before handing anything to a consumer.
 
-**Pre-existing, not mine:** `sbt scalafmtCheckAll` fails at HEAD with the same
-23 module lines it fails with now — the formatting debt is older than this work
-and was left alone rather than swept into an unrelated diff. Verified by
-stashing and re-running.
+**Formatting is not a gate before 2.0.** The whole codebase gets one `scalafmt`
+pass just before the release ships. Do not run `scalafmtCheckAll`, do not report
+it, do not format files incrementally (it drags unrelated files into focused
+diffs). Reid's call, 2026-08-04.
 
 `task/` is empty; both earlier incoming tasks are in `task/done/` with Results.
 **A third is owed to synapify** — see the re-analysis note in BACKLOG § 4.
