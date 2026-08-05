@@ -74,10 +74,11 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
    platform plus the `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
    `~/Code/ossuminc/bin/riddlc`. Consumers use that path EXPLICITLY — it is not
    on `$PATH`, where bare `riddlc` still resolves to the tap's rc.9.
-   Currently staged: **`2.0.0-rc.9-34-5488fd9d`** (all 20 rows in
-   `~/.ivy2/local`, binary verified to report it). If HEAD is ahead of that, check
-   whether the extra commits are documentation-only before re-staging — a
-   NOTEBOOK edit does not change the binary. First staged the same day at
+   Currently staged: **`2.0.0-rc.9-54-64b7b413`** (all 20 rows in
+   `~/.ivy2/local`, binary verified to report it, 2026-08-04 22:35). If HEAD is
+   ahead of that, check whether the extra commits are documentation-only before
+   re-staging — a NOTEBOOK edit does not change the binary. As of `b163d3c85`
+   the only diff from the staged commit is NOTEBOOK.md, so no restage is owed. First staged the same day at
    `2.0.0-rc.9-6-46c5968d`, which was verified to reject dokn's 7 R1 violations
    — that is how riddl-models found the refusing-clause defect in § 2.
    Consumers to sweep: riddl-generator, riddl-models, riddl-examples,
@@ -87,30 +88,6 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
    every time, which is what keeps consumer resolution cache-safe.
 
 ### 2. Queued, designed, not started
-
-- **Re-analyse `task/2026-08-03-root2riddlsource-omits-field-separators.md`
-  (synapify) — MY FIRST ANALYSIS WAS WRONG, do not build on it.** I concluded
-  the blocker was riddl emitting 2.0-only `initial` markers at a riddlg whose
-  embedded riddl was stale at 1.16.5. That conclusion came from testing
-  `/opt/homebrew/bin/riddlg` — the SHIPPED binary — and then generalising to
-  riddlg's pipeline. **riddlg's `release/1` branch (checked out at
-  `../riddl-generator`, worked for over a week) builds against
-  `2.0.0-rc.9-42-37b0db94`**, the same version we stage. So the rejection I
-  measured says something about a binary I picked, not about what riddlg runs.
-  Redo it with that as an AXIOM, and look at `../riddl-generator` rather than
-  inferring another worker's environment.
-  What IS independently verified and can be reused: the printer omits aggregate
-  field separators and doubles the space after `is`; `root2RiddlSource` is a
-  thin wrapper over PrettifyPass (`RiddlLib.scala:951`), so `riddlc prettify`,
-  `flatten` and `unbastify` share any defect; optional commas date to
-  2023-12-07, before tag 1.12.0; `initial` on states/handlers landed
-  `f3ef8f77a`, 2026-07-25, and `git merge-base` puts it outside 1.16.5;
-  prettify is idempotent; and `initial` is emitted on the FIRST state/handler
-  of a container when none is explicitly marked, which is defensible
-  normalization rather than drift.
-  **Decided by Reid:** field separators **stay optional in the grammar and stay
-  unemitted by PrettifyPass**. So acceptance criteria 1 and 2 as filed are
-  declined; the task needs a rewritten set based on the real cause.
 
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
@@ -257,12 +234,37 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   global options for later sequential suites. One-liner.
 - **`Blob`, `Unknown`, `Range` in the tokenizer tables** are unreachable from the
   grammar (riddl-vscode). Remove them or make them reachable.
+- **`riddl_grammar.lark` is stale AND dead — delete it or revive it.** Verified
+  2026-08-04 (flagged unverified by ossum.tech; both halves confirmed here).
+  `language/src/test/scalajvm/python/riddl_grammar.lark:369` still carries the
+  pre-A28 invariant rule (`literal_string` only — no boolean expression, no
+  `requires`, no block form) and has no `boolean_atom`/`comparand` rules at all.
+  Its ONLY consumer is `ebnf_validator.py`, and **CI does not run that**:
+  `.github/workflows/scala.yml:189,230` run `ebnf_tatsu_validator.py` and
+  `gbnf_validator.py` only. So it is not a gate that has gone quiet — it is a
+  trap for the next reader who assumes it is authoritative. Deleting is the
+  cheap option; reviving means maintaining a third grammar.
+- **Rule on same-named invariants at entity and state scope.** With implicit
+  application (§15.2) an entity-level `invariant X` and a state-level
+  `invariant X` both apply inside that state. Nothing special-cases it today —
+  ordinary duplicate-name rules apply. My recommendation in the approved plan
+  was Error rather than shadowing, on the grounds that silently shadowing a
+  CHECK is the failure mode the whole implicit-invariant change exists to
+  remove. Not built, and not urgent; needs Reid's ruling first.
 - **`sbt scalafmtCheck` is red on HEAD** — 7 committed files reformat, 6 in
   `commands`. Deferred to just before 2.0.0.
 - **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 4. Owed to other repos
+- **Sweep consumers onto `2.0.0-rc.9-54-64b7b413`.** riddl-generator currently
+  pins `2.0.0-rc.9-48-fdc5c171` (`../riddl-generator/project/Dependencies.scala:53`,
+  verified 2026-08-04) so it predates `canContain`, the prettify metadata fix,
+  the invariant semantics and the `when invariant X` work. Others to check:
+  riddl-models, riddl-examples, riddl-idea-plugin, riddl-vscode, synapify.
+  **BAST `FORMAT_REVISION` is 6**, so any checked-in `.bast` from an earlier
+  build is rejected with "regenerate .bast files with the current riddlc" —
+  expected, not a bug, but worth saying in each bump task.
 - riddl-vscode: adoption task for `IncrementalValidator` now that rc.9 ships.
 - ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the
   two silent breaking changes in the migration guide, and docs for the

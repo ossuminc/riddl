@@ -10,96 +10,70 @@ Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`. This says only where things
 stand and what a fresh session would get wrong.
 
-**State** — every number below was produced by a command in the session that
-wrote this, not recalled:
+**State** — every line below was produced by a command in the session that wrote
+it, not recalled:
 
-- Branch `release/2`, tree clean, **PUSHED** — 47 commits went up on 2026-08-04
-  (`e5926d418..fdc5c1718`), ending the hold-everything-local period. CI runs on
-  `release/*` (scala.yml:9), so pushes here now build. Verify rather than trust:
-  `git log --oneline origin/release/2..HEAD | wc -l`.
-- HEAD is the tip of `release/2`; the last code commit is the requires/returns
-  move (below), on top of `867ab0333` (saga) and `496e77c39` (hashing).
-- **Staged build is CURRENT: `2.0.0-rc.9-54-64b7b413`** at
-  `~/Code/ossuminc/bin/riddlc`, 20 ivy rows under that version from
-  `publishLocal`. Staged 2026-08-04 from a clean tree with `reload`, binary
-  copied only after `nativeLink` reported `[success]` — all three preconditions
-  met, so the version carries no timestamp suffix and is reproducible from
-  `64b7b4134`. Verified by ENFORCEMENT, not just `riddlc version`:
-  `language/input/invariant-scope.riddl` parses clean here and is a PARSE ERROR
-  under the tap's `/opt/homebrew/bin/riddlc`.
-- **All three platforms green**, re-run in full on 2026-08-04 after the
-  invariant work with `<module>/testOnly *`, one `;`-separated argument,
-  `Suites: completed` lines counted against modules requested: **JVM 253 suites
-  / 2032 tests** (7 modules), **Scala.js 60 / 674** (5), **Native 173 / 1318**
-  (6) — zero failures. External corpus reds unchanged (BACKLOG 1d).
+- Branch `release/2`, **tree clean, 0 unpushed** (`git status --short` empty;
+  `git log --oneline origin/release/2..HEAD | wc -l` = 0). HEAD `b163d3c85`.
+  CI builds `release/*` (scala.yml:9), so pushes here run.
+- **Staged build: `2.0.0-rc.9-54-64b7b413`** at `~/Code/ossuminc/bin/riddlc`
+  (binary mtime 2026-08-04 22:35), 20 ivy rows under that version in
+  `~/.ivy2/local`. `git diff --name-only 64b7b4134..HEAD` = `NOTEBOOK.md` only,
+  so **binary and source agree** and no restage is owed.
+- **All three platforms green**, run with `<module>/testOnly *` in ONE
+  `;`-separated argument, `Suites: completed` counted against modules asked for:
+  **JVM 253 / 2032**, **Scala.js 60 / 674**, **Native 173 / 1318**, zero
+  failures. External-corpus reds unchanged and expected (BACKLOG § 1d).
+- **BAST `FORMAT_REVISION` is 6.** Any `.bast` from an earlier build is rejected
+  with "regenerate .bast files with the current riddlc" — expected, not a bug.
 
-**The requires/returns move is DONE and green** — `1f93cc517`'s incomplete
-checkpoint is finished. `requires`/`returns` are `Requires`/`Returns` CONTENT on
-`Function` and `Saga`; `input`/`output` remain as derived accessors returning
-`Option[TypeRef | Aggregation]`, the exact type the constructor fields had.
-Details, and the five lessons, are in NOTEBOOK § "`requires`/`returns` became
-content". The `Option[TypeRef]` narrowing is deliberately NOT done — it requires
-dropping the deprecated inline aggregation, filed in BACKLOG § 2 with its
-verified cost.
+**Nothing is in flight.** No half-finished change, no uncommitted work, no
+failing test. The last four pieces of work all closed cleanly: the
+requires/returns move, `canContain`, implicit invariant semantics, and
+`invariant X` in conditions. What each *taught* is in this NOTEBOOK's body;
+what is still *open* is in BACKLOG.md.
 
-**Consumers can pick this up now** — `2.0.0-rc.9-54-64b7b413` is both staged at
-`~/Code/ossuminc/bin/riddlc` and in `~/.ivy2/local` (20 rows). It carries the
-requires/returns move, `canContain`, the prettify metadata fix and the new
-invariant semantics. BAST `FORMAT_REVISION` is now **6**, so any `.bast` written
-by an earlier riddlc is rejected with "regenerate .bast files with the current
-riddlc" — expected, not a bug.
+**Traps, each of which has actually bitten someone here:**
 
-**Formatting is not a gate before 2.0.** The whole codebase gets one `scalafmt`
-pass just before the release ships. Do not run `scalafmtCheckAll`, do not report
-it, do not format files incrementally (it drags unrelated files into focused
-diffs). Reid's call, 2026-08-04.
-
-`task/` is empty; both earlier incoming tasks are in `task/done/` with Results.
-**A third is owed to synapify** — see the re-analysis note in BACKLOG § 4.
-
-**Next:** sweep consumers against the new staged build per BACKLOG 1e —
-riddl-generator wants the saga fix, synapify wants the hashing fix and owes a
-re-run of its own `AnalysisPassCostTest` (riddl cannot produce that table; the
-JS `PlatformContext` is `DOMPlatformContext` and loads by `fetch`, so no riddl
-test reads a corpus file under Node).
-
-**Traps, all of which have actually bitten someone here:**
-
-- **`~/Code/ossuminc/bin` is deliberately NOT on `$PATH`.** Consumers use the
-  explicit path; bare `riddlc` is still the tap's rc.9.
+- **`~/Code/ossuminc/bin` is deliberately NOT on `$PATH`.** Bare `riddlc` is the
+  Homebrew tap's older release and will reject current syntax. Consumers and
+  test commands must use the explicit path.
 - **Publishing has THREE preconditions** — clean tree (a dirty one makes dynver
   stamp a timestamp, so the version stops being reproducible from a commit),
   `reload` (a long-running sbt server freezes dynver), and `nativeLink`
-  FINISHED before copying the binary. Checklist is in `.claude/skills/rc/`.
-  Two of the three were violated on 2026-08-03.
-- **Use `<module>/testOnly *`, never `test`** — it resolves to `testQuick` and
-  silently skips. **`tNative` is not a Native gate** (BACKLOG.md § 3).
-- **`sbt -batch` runs ONLY THE FIRST command argument** — seven
-  `'module/testOnly *'` args ran one module, printed "All tests passed" and
-  exited 0. Use one `;`-separated argument AND count the `Suites: completed`
-  lines against the modules you asked for. An sbt `;` chain also aborts on
-  first failure, hiding every later module — so a short count means a red OR a
-  skip; either way, look.
-- **Re-run all rows after a late change**, not just the ones you expect to move.
-- **Checks and APIs here fail by being UNGATED, not under-tested.** When a
-  check's guard depends on an accessor, ask what happens the day that accessor
-  starts returning things.
-- **When a consumer reports duplicating our logic, expose ours** — do not add a
-  second copy on our side.
-- **A platform asymmetry can look exactly like an algorithm.** The 2026-08-03
-  resolution investigation: compare the JVM/JS/Native RATIOS before profiling.
-  Parse cost 3.2x on Scala.js while Resolution cost 97x — uniform overhead is
-  the runtime, a lone outlier is a specific operation.
+  FINISHED before copying the binary. Checklist in `.claude/skills/rc/`.
+- **`sbt -batch` runs only the FIRST command argument.** Put everything in one
+  `;`-separated argument AND count `Suites: completed` against the modules you
+  asked for. `test`/`tJVM` resolve to `testQuick` and silently skip — use
+  `<module>/testOnly *`. `tNative` is not a Native gate (BACKLOG § 3).
+- **Two BAST path-identifier codecs, only one pairing is correct.**
+  `writePathIdentifier` emits a leading `NODE_PATH_IDENTIFIER` tag;
+  `readPathIdentifierInline` consumes none. Pair them and the stream misaligns
+  AFTER the path, surfacing as "Invalid string table index" somewhere else
+  entirely. That exact bug sat in `require invariant X` undetected until
+  2026-08-04. Use `writePathIdentifierInline`.
+- **A new non-definition AST node must join `NonDefinitionValues`**
+  (`AST.scala:792`), or four exhaustivity warnings appear in Symbols/Resolution/
+  Validation and `-Werror` fails the build. That is the fix, not a `case _`.
+- **Formatting is not a gate before 2.0.** One `scalafmt` pass just before the
+  release. Do not run `scalafmtCheckAll`, do not report it, do not format
+  incrementally. Reid's call, 2026-08-04.
 
-**Certainty:** the state block is verified. Anything in BACKLOG.md § 3 marked
-"needs a plan" is explicitly unverified. Two notes were found STALE and
-corrected on 2026-08-03 (an `attachment ULID` parse claim, and a `task/done/`
-file recording work that never happened) — **treat old "known bug" notes, and
-`done/` placement, as claims to re-check rather than facts.**
+**Certainty.** The State block is verified by command this session. Traps are
+from observed failures, not inference. Anything in BACKLOG § 3 marked "needs a
+plan" is explicitly unverified. Treat old "known bug" notes and `task/done/`
+placement as claims to re-check: two notes were found stale on 2026-08-03, and
+on 2026-08-04 an incoming report's headline claim ("invariants unusable in
+`when` conditions") was wrong — the reporter rewrote their own file. **Verify
+the report, not just the code it points at.**
 
-**`task/` holds 1 file:** `2026-08-03-saga-bodies-reject-comments.md`
-(riddl-generator). The comment-above-`requires` half is now fixed; append
-results and move it to `task/done/` once the restage lets you demonstrate it.
+**`task/` holds 1 file, UNTRIAGED:** `2026-08-04-security.md` — Reid's own WIP
+draft, marked "do not act on this". Everything else filed this session is in
+`task/done/` with Results, and **nothing is owed outward**: ossum.tech has
+already consumed `rc.9-54` and corrected its own pages (verified —
+`sites/riddl/docs/concepts/handler.md:123` and `concepts/invariant.md:284` both
+say "Verified against `2.0.0-rc.9-54`", and the stale "checking gap" and
+"does not parse" admonitions are gone). Their `task/` is empty.
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
 
