@@ -22,8 +22,19 @@ it, not recalled:
   so **binary and source agree** and no restage is owed.
 - **All three platforms green**, run with `<module>/testOnly *` in ONE
   `;`-separated argument, `Suites: completed` counted against modules asked for:
-  **JVM 253 / 2032**, **Scala.js 60 / 674**, **Native 173 / 1318**, zero
-  failures. External-corpus reds unchanged and expected (BACKLOG § 1d).
+  **JVM 253 / 2032**, **Scala.js 60 / 674**, zero failures.
+  **Native: 176 suites / 1339 tests, zero failures** — this is the seven REAL
+  Native rows named explicitly (2026-08-05), not the `tNative` alias. An earlier
+  handoff recorded "Native 173 / 1318" from `tNative`, which runs the JVM rows
+  for 5 of its 7 modules (BACKLOG § 3) and so never measured Native at all. The
+  numbers are close because the rows share their test sources; the difference is
+  which runtime executed them. **Do not quote a `tNative` number as a Native
+  result.**
+- **External-corpus suites are green and are internal signal again** — they are
+  no longer expected-red. `RiddlModelsRoundTripTest` 189/189 and
+  `Root2JsonCorpusTest` `cleanRoundTrip=189 (100.0%)`; all 189 riddl-models entry
+  points validate with zero errors, and riddl-examples dokn does too (BACKLOG
+  § 1d / § 1d2).
 - **BAST `FORMAT_REVISION` is 6.** Any `.bast` from an earlier build is rejected
   with "regenerate .bast files with the current riddlc" — expected, not a bug.
 
@@ -90,6 +101,62 @@ to the task file and note the disposition below.
 
 ---
 
+
+## A skip list outlived its reason (2026-08-05) — DONE
+
+Both corpus migrations (BACKLOG § 1d, § 1d2) turned out to be finished on the
+consumers' side, and verifying that turned up a sixth member of this repo's
+false-green family.
+
+`RiddlModelsRoundTripTest.pendingModels` held 6 models excluded as "pre-existing
+validation errors … redefine built-in type names", with the comment **"Remove
+after fixing in riddl-models"**. They had been fixed. The suite reported
+`succeeded 183, failed 0` and looked completely green while silently skipping 6
+round trips. Emptying the set: **189 succeeded, 0 pending, 0 failed.**
+
+The catch was not cleverness — it was refusing to accept two numbers that
+disagreed. An independent sweep of all 189 `.conf` entry points with the staged
+binary said zero errors everywhere; the skip list said 6 models had validation
+errors. Both could not be true. **A skip carries a claim about the world, and
+claims go stale exactly like the task files and NOTEBOOK notes this repo has
+already been burned by.** An exclusion whose comment says "remove after X" is a
+dated cheque — re-present it periodically rather than reading past it.
+
+Method note, since it cost a re-run: I piped a background `sbt` to `tail -60`,
+so the output FILE kept only the last 60 lines and the first two suites'
+results were destroyed rather than merely unread. The `Suites: completed`
+count is the required check (CLAUDE.md), and it cannot be done on a truncated
+log. **Redirect the whole log; filter when reading, never when capturing.**
+
+### The Native gate had never measured Native (same day)
+
+BACKLOG § 1b said "Native in progress"; § HANDOFF said all three platforms green
+at "Native 173/1318". Both were written honestly, and they could not both be
+answering the same question. They weren't: the handoff number came from the
+`tNative` alias, which runs the **JVM** rows for 5 of its 7 modules. It had never
+been a Native measurement, so "Native green" had never been established — by
+anyone, at any point.
+
+Naming the seven real rows and running them: **176 suites / 1339 tests, zero
+failures.** § 3 had predicted "a backlog of Native-only reds the moment they
+run", and that was the stated reason the fix needed a plan. There are none. The
+alias fix is now mechanical.
+
+Two things worth keeping:
+
+1. **The numbers were nearly identical** — 173/1318 vs 176/1339 — because the
+   rows share their test sources; only the executing runtime differs. A wrong
+   measurement that lands next to the right one is the hardest kind to notice,
+   and averages and totals will not reveal it. Only asking *what ran* does.
+2. **Scope was narrower than the § 3 entry implied**, which is why the reds never
+   appeared: `cNative` already names all seven rows, so Native code has always
+   COMPILED in CI. Only execution fell back to the JVM. The exposure was Native
+   *runtime* behaviour in five modules — real, but much smaller than "five
+   ungated modules" sounds. **State what a broken gate did still cover**, or the
+   next reader over-estimates the risk and defers the cheap fix again.
+
+CI inherits it (`scala.yml:97` runs `c$PLATFORM; t$PLATFORM`), so the Native
+matrix leg has been reporting green off JVM rows.
 
 ## Two latent bugs surfaced by writing one test (2026-08-04) — DONE
 

@@ -23,8 +23,17 @@ Code is COMPLETE and committed (`c87099520`, `78cefd05c`, `67ede5b3d` on
 tested and canaried — `EntityIntentionRoundTripTest` 13/13,
 `EventSourcedEntityTest` 10/10, JVM row green except item (a).
 
-**The ITEM is not done.** It cannot ship until these four are finished, and it
-stays here until they are. Full detail in the `entity-intentions` memory.
+**The ITEM is not done, but only (e) remains.** As of 2026-08-05 (a), (b), (c),
+(d) and (d2) are all closed and verified; the item stays here until **(e), the
+soak / rc.10**, lands. Full detail in the `entity-intentions` memory.
+
+Note on (b), since the record disagreed with itself for a day: it read "Native
+in progress" while NOTEBOOK § HANDOFF claimed all three platforms green at
+"Native 173/1318". Both were honest — the HANDOFF number came from the `tNative`
+alias, which is 5/7 JVM rows (§ 3), so it was never a Native measurement. The
+seven real rows have now been run explicitly: 176 suites / 1339 tests, zero
+failures. **When two lines of the record disagree, the alias is usually the
+liar.**
 
 a. **DONE.** Migrate `language/input/dokn.riddl` — was the only in-repo red
    (`ExamplesTest`). Now validates with ZERO errors, `should compile dokn` is
@@ -48,26 +57,65 @@ a. **DONE.** Migrate `language/input/dokn.riddl` — was the only in-repo red
    for ~47% of integer magnitudes — it had been passing by luck, and dokn's new
    counts lost the toss. Reformulated to `dot/√(sumA·sumB)`, exact on 200k
    random count vectors (RootComparison.scala:295).
-b. **JS DONE, Native in progress.** `tJS` green: 657 tests, 0 failures.
-   `tNative` is NOT a real Native gate — see § 3; the genuinely-native rows are
-   being run explicitly instead.
+b. **DONE — JS and Native both verified.** `tJS` green: 657 tests, 0 failures.
+   Native was the open half, because `tNative` is not a real Native gate (§ 3).
+   All **seven genuine Native rows** were named explicitly and run 2026-08-05 in
+   one `;`-separated argument, with `Suites: completed` counted against the seven
+   modules asked for — **7 lines for 7 modules, 0 failures**:
+
+   | row | suites | tests |
+   |---|---:|---:|
+   | `utilsNative` | 7 | 108 |
+   | `languageNative` | 32 | 337 |
+   | `passesNative` | 118 | 723 |
+   | `testkitNative` | 1 | 1 |
+   | `riddlLibNative` | 4 | 102 |
+   | `commandsNative` | 11 | 47 |
+   | `riddlcNative` | 3 | 21 |
+   | **total** | **176** | **1339** |
+
+   The single `pending` is `institutional-commerce`, explicitly `pending` at
+   `RunRiddlcOnLocalTest.scala:50` — not a skip. `riddl-examples dokn` passes on
+   Native too.
+   **The feared Native-only backlog does not exist** (§ 3 predicted one). Log
+   kept at `scratchpad/native.log`.
 c. **DONE.** `MESSAGE_SUGGESTIONS.md` — added the intention-conflict Error and
    R1/R2/R3+R4, and REMOVED the stale `is event-sourced but this command handler
    does not emit an event` row, whose check was deleted with this work.
    `JSON_COVERAGE.md` — Entity row now lists `intentions`.
-d. riddl-models task drop: 11 corpus entities + the event-sourced pattern
-   template violate all four rules. **In motion on their side** — `16eb6ab1`
-   converts six reactive-bbq entities, `aa68cdd6` gives repositories their own
-   persistence commands. They are blocked on the refusing-clause defect in § 2.
-   Until they land, these external-corpus suites are EXPECTED RED and are not
-   internal signal: `RiddlModelsRoundTripTest` (9) and `Root2JsonCorpusTest`
-   (179/189 clean vs a 95% floor).
-d2. **riddl-examples has its own, harder copy of dokn** — task dropped at
-   `../riddl-examples/task/migrate-dokn-to-event-sourcing-rules.md`. Four
-   event-sourced entities (Company, Driver, Note, Medium) with `set` in `on init`
-   and `morph` in command clauses, so it needs the full treatment including the
-   `on init is { yield event X }` idiom. Blocks `RunRiddlcOnLocalTest`
-   "should validate riddl-examples dokn" (7 errors).
+d. **DONE — riddl-models has landed its migration.** Verified 2026-08-05 against
+   the live checkout at `f3ff0ade` (clean tree), not against the task file:
+   - Full independent sweep of **all 189 `.conf` entry points** with the staged
+     `~/Code/ossuminc/bin/riddlc` (`2.0.0-rc.9-54-64b7b413`): **189/189 with zero
+     errors**.
+   - 27 entities still carry the `event-sourced` keyword (reactive-bbq's 13, the
+     `patterns/entity/event-sourced/` template and example, …), so the four rules
+     ARE being enforced against them — this is conformance, not evasion by
+     dropping the intention.
+   - **The two expected-red suites are green** and are internal signal again:
+     `RiddlModelsRoundTripTest` 189/189, `Root2JsonCorpusTest` reports
+     `models=189 reparsed=189 cleanRoundTrip=189 (100.0%)` against a 95% floor
+     (was 179/189).
+   Fallout fixed here: `RiddlModelsRoundTripTest.pendingModels` excluded 6 models
+   for "pre-existing validation errors … redefine built-in type names", carrying
+   the comment "Remove after fixing in riddl-models". That reason no longer held
+   — each validates with 0 errors — so 6 round-trip tests were being skipped
+   inside a suite that read as green. Set emptied; the suite went 183 succeeded
+   + 6 pending → **189 succeeded, 0 pending, 0 failed**, with all six named
+   individually in the log.
+d2. **DONE — riddl-examples dokn is migrated.** Verified 2026-08-05:
+   `riddlc from src/riddl/dokn/dokn.conf validate` reports **0 errors** (warnings
+   only — unreachable `tell` targets, which are a different backlog item), and
+   `RunRiddlcOnLocalTest` "should validate riddl-examples dokn" passes. Five
+   event-sourced entities now, not four — Company, Driver, Note, Medium **and
+   Location** — all spelled `event-sourced available entity`, none reverted to a
+   plain `entity`. The suite's `succeeded 3, pending 1` is not a skip of dokn:
+   the pending one is `institutional-commerce`, explicitly `pending` at
+   `RunRiddlcOnLocalTest.scala:50`.
+   **Still owed on their side:** the task file
+   `../riddl-examples/task/migrate-dokn-to-event-sourcing-rules.md` is still in
+   `task/` with no `## Results` section, so their repo does not record its own
+   completion. That is theirs to close, not ours.
 e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC is a
    slow CI round trip, and this change breaks consumers in ways worth finding
    before a tag exists. So: `sbt "reload; publishLocal"` for every module and
@@ -208,14 +256,25 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   identical weakness, so fixing one should fix both. Not newly introduced and not
   urgent — but it is the honest limit of the current predicate, so it is written
   down rather than implied.
-- **`tNative` tests the JVM rows for 5 of its 7 modules** — found 2026-08-02.
-  The alias runs `utils`, `language`, `testkit`, `commands`, `riddlLib`, and all
-  five are the `.jvm` projects (build.sbt:218, 271, 346, 406, 433). Only
-  `passesNative` and `riddlcNative` are actually Native. The Native rows exist
-  and are aggregated (`utilsNative`:220, `languageNative`:273,
-  `testkitNative`:349, `riddlLibNative`:409, `commandsNative`:435), so the fix is
-  to name them — but that is exactly why it needs a plan: nothing has gated those
-  rows, so expect a backlog of Native-only reds the moment they run.
+- **`tNative` tests the JVM rows for 5 of its 7 modules** — found 2026-08-02,
+  **still true, but no longer risky to fix** (verified 2026-08-05). The alias
+  (build.sbt:552) runs `utils`, `language`, `testkit`, `commands`, `riddlLib`,
+  and all five are the `.jvm` projects (build.sbt:218, 271, 346, 406, 433). Only
+  `passesNative` and `riddlcNative` are actually Native.
+  **The blocker is gone.** This wanted a plan because "nothing has gated those
+  rows, so expect a backlog of Native-only reds the moment they run." They have
+  now been run — all seven, 176 suites / 1339 tests, **zero failures** (§ 1b).
+  So the fix is the mechanical one: replace the five JVM names with
+  `utilsNative`, `languageNative`, `testkitNative`, `commandsNative`,
+  `riddlLibNative`. No plan needed; no reds to work through first.
+  **Scope is narrower than it looks:** `cNative` (build.sbt:527) already names
+  all seven Native rows, so Native code does COMPILE everywhere in CI. Only test
+  EXECUTION falls back to the JVM. What has never been gated is Native *runtime*
+  behaviour in those five modules — which is precisely what the 2026-08-05 run
+  exercised and found clean.
+  **CI inherits this**: `scala.yml:97` runs `sbt "; clean; c${platform};
+  t${platform}"`, so the Native matrix leg has been reporting green off the JVM
+  rows.
   `tJS` does this correctly (it names `utilsJS`, `languageJS`, `passesJS`,
   `testkitJS`, `riddlLibJS`), which is what makes the Native asymmetry look like
   an oversight rather than a decision. Same defect class as the one the `tJVM`
@@ -257,11 +316,19 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 4. Owed to other repos
-- **Sweep consumers onto `2.0.0-rc.9-54-64b7b413`.** riddl-generator currently
-  pins `2.0.0-rc.9-48-fdc5c171` (`../riddl-generator/project/Dependencies.scala:53`,
-  verified 2026-08-04) so it predates `canContain`, the prettify metadata fix,
-  the invariant semantics and the `when invariant X` work. Others to check:
-  riddl-models, riddl-examples, riddl-idea-plugin, riddl-vscode, synapify.
+- **Sweep consumers onto `2.0.0-rc.9-54-64b7b413`.** Pins verified 2026-08-05:
+  - **riddl-models — already current** (`build.sbt:21` `riddlVersion =
+    "2.0.0-rc.9-54-64b7b413"`, driving `riddlcVersion` and all three test deps).
+    Nothing owed.
+  - **riddl-generator — behind** at `2.0.0-rc.9-48-fdc5c171`
+    (`../riddl-generator/project/Dependencies.scala:53`).
+  - **riddl-examples — behind** at the same `2.0.0-rc.9-48-fdc5c171`
+    (`../riddl-examples/build.sbt:21`, `With.Riddl.library`). Its *models* are
+    already conformant (§ 1d2); this is only the dependency pin.
+
+  Both laggards predate `canContain`, the prettify metadata fix, the invariant
+  semantics and the `when invariant X` work. Still to check:
+  riddl-idea-plugin, riddl-vscode, synapify.
   **BAST `FORMAT_REVISION` is 6**, so any checked-in `.bast` from an earlier
   build is rejected with "regenerate .bast files with the current riddlc" —
   expected, not a bug, but worth saying in each bump task.

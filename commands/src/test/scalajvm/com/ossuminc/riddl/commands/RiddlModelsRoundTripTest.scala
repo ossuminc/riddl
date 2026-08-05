@@ -84,14 +84,7 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
 
   // Models that redefine built-in type names (UserId, Location,
   // Currency). Remove after fixing in riddl-models.
-  private val pendingModels: Set[String] = Set(
-    "technology/saas/tenant-provisioning",
-    "entertainment/media/content-management",
-    "construction/field-operations/equipment-tracking",
-    "construction/field-operations/job-site-management",
-    "finance/payments/digital-wallet",
-    "telecommunications/billing/usage-billing"
-  )
+  private val pendingModels: Set[String] = Set.empty
 
   "BAST round-trip" should {
     val confFiles = discoverModels(riddlModelsDir)
