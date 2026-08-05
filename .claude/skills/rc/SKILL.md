@@ -122,18 +122,37 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **1758** | 7 |
-| JS | **647** | 5 |
-| Native | **1624** | 7 |
+| JVM | **1846** | 7 |
+| JS | **674** | 5 |
+| Native | **1339** | 7 |
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks
 reality; never lower them to make a run pass. A number below the floor is a
 skipping bug to find, not a threshold to adjust.
 
-Set as of 2.0.0-rc.9. Local `testOnly *` totals differ from CI's because
+Set as of 2.0.0-rc.10. Local `testOnly *` totals differ from CI's because
 platform-specific suites vary, so compare CI against CI and local against
 local.
+
+**The Native floor went DOWN at rc.10 (1624 → 1339), and that is not a softened
+gate.** It is the one case the "never lower" rule does not cover: the metric
+changed definition. Until 2026-08-05 `tNative` named the `.jvm` rows for 5 of
+its 7 modules, so the Native floor had been calibrated against a leg that was
+mostly measuring JVM. Fixing the alias to name the real `*Native` rows dropped
+the count by 368, and the drop is fully accounted for:
+
+- The two rows that were ALREADY Native — `passesNative` (723) and
+  `riddlcNative` (21) — are bit-identical before and after. Every row that
+  CHANGED dropped.
+- Those five modules hold 45 test files under `src/test/scalajvm`, which Scala
+  Native cannot compile or run. `language` alone has 18, matching its −311.
+- No coverage was lost: those suites run in the JVM leg, which certified 1846.
+
+So the gate got more honest and the number got smaller; those are the same
+event. **If a Native floor ever drops again, this is the standard of proof** —
+per-row before/after, with the unchanged rows shown unchanged. Absent that, a
+drop is a skipping bug.
 
 Then every validator CI gates on:
 
