@@ -196,8 +196,12 @@ plan is discarded once built.
   - **riddl-generator** — `project/Dependencies.scala:64` at
     `"2.0.0-rc.9-54-64b7b413"`.
   - **riddl-examples** — `build.sbt:21` (`With.Riddl.library`) at
-    `"2.0.0-rc.9-48-fdc5c171"`, one step further behind. Its models already
-    conform; this is only the dependency pin.
+    `"2.0.0-rc.9-54-64b7b413"`, matching riddl-models. Its models already
+    conform; this is only the dependency pin. (Recorded here as rc.9-48 earlier
+    on 2026-08-05 and corrected the same day: they pushed `946d54c` "Pin riddl
+    library to the staged rc.9-54 compiler" between the two readings. The
+    earlier line was right when written and stale within hours — re-read a
+    consumer pin before quoting it.)
   - Still to check: riddl-idea-plugin, riddl-vscode, synapify.
 
   **Local publishing and the staged `~/Code/ossuminc/bin/riddlc` CONTINUE** —

@@ -116,6 +116,31 @@ to the task file and note the disposition below.
 ---
 
 
+## Epic witnessing confirmed by riddl-examples (2026-08-05) — CLOSED
+
+`task/done/2026-08-05-epic-witnessing-confirmed.md`. The residual question from
+the yields-in-streamlets fix — does an epic step sending such a command to a sink
+actually get witnessed? — is answered yes, with no second defect behind it. dokn
+had no epics, which is why neither side could demonstrate it; it has one now.
+
+**They ran a positive control before believing their own green**, misdirecting
+the step to the wrong sink and confirming `UseCaseWitnessPass` fired, then
+restoring it. That is the same discipline this repo calls canarying, arriving
+unprompted from a consumer. It reproduced exactly here, on both the rc.9-54 and
+rc.10-2 binaries. **A report that carries its own positive control can be closed
+in one pass** — there was nothing left to doubt.
+
+The substantive finding is a distinction worth stating: **it was SUBSTITUTING
+`on other` for a named clause that left steps unwitnessed, never the clause
+itself.** Ten `on other` clauses remain in dokn as trailing catch-alls beside
+named clauses, and witnessing is satisfied. In the pass this is structural but
+unstated — `UseCaseWitnessPass:117-123` matches `OnMessageLikeClause` and lets
+everything else fall through `case _ => ()`, and `OnOtherClause` carries no `msg`
+to resolve, so it contributes nothing to the witness index.
+
+Also: they validated against the staged `~/Code/ossuminc/bin/riddlc`. A consumer
+was actively depending on it at the moment I wrote that practice off as retired.
+
 ## 2.0.0-rc.10 shipped the entity-intentions work (2026-08-05) — DONE
 
 Tagged at `fc4e54c1b`. 59 commits since rc.9 and the largest RC of the 2.0 line:
