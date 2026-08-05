@@ -13,36 +13,45 @@ stand and what a fresh session would get wrong.
 **State** — every line below was produced by a command in the session that wrote
 it, not recalled:
 
-- Branch `release/2`, **tree clean, 0 unpushed** (`git status --short` empty;
-  `git log --oneline origin/release/2..HEAD | wc -l` = 0). HEAD `b163d3c85`.
-  CI builds `release/*` (scala.yml:9), so pushes here run.
-- **Staged build: `2.0.0-rc.9-54-64b7b413`** at `~/Code/ossuminc/bin/riddlc`
-  (binary mtime 2026-08-04 22:35), 20 ivy rows under that version in
-  `~/.ivy2/local`. `git diff --name-only 64b7b4134..HEAD` = `NOTEBOOK.md` only,
-  so **binary and source agree** and no restage is owed.
-- **All three platforms green**, run with `<module>/testOnly *` in ONE
-  `;`-separated argument, `Suites: completed` counted against modules asked for:
-  **JVM 253 / 2032**, **Scala.js 60 / 674**, zero failures.
-  **Native: 176 suites / 1339 tests, zero failures** — this is the seven REAL
-  Native rows named explicitly (2026-08-05), not the `tNative` alias. An earlier
-  handoff recorded "Native 173 / 1318" from `tNative`, which runs the JVM rows
-  for 5 of its 7 modules (BACKLOG § 3) and so never measured Native at all. The
-  numbers are close because the rows share their test sources; the difference is
-  which runtime executed them. **Do not quote a `tNative` number as a Native
-  result.**
-- **External-corpus suites are green and are internal signal again** — they are
-  no longer expected-red. `RiddlModelsRoundTripTest` 189/189 and
-  `Root2JsonCorpusTest` `cleanRoundTrip=189 (100.0%)`; all 189 riddl-models entry
-  points validate with zero errors, and riddl-examples dokn does too (BACKLOG
-  § 1d / § 1d2).
+- Branch `release/2`, **tree clean, 0 unpushed**. CI builds `release/*`
+  (scala.yml:9), so pushes here run.
+- **`2.0.0-rc.10` IS PUBLISHED** (2026-08-05), tagged at `fc4e54c1b`. This
+  replaces the staged-binary soak: rc.10 is a real version consumers resolve
+  normally. Verified end to end, each by command —
+  GitHub prerelease `isPrerelease: true`; **all 20 Maven coordinates** present in
+  GitHub Packages; npm published under dist-tag **`rc`** with `latest` unmoved;
+  Homebrew `Formula/riddlc-rc.rb` at 2.0.0-rc.10 with the rc.10 commit touching
+  **only** that file, stable `riddlc.rb` untouched at 1.31.0; `notify-blog`
+  correctly **skipped**; the native binary reports `2.0.0-rc.10`.
+- **`~/Code/ossuminc/bin/riddlc` is now SUPERSEDED and should not be quoted to
+  consumers.** It was a soak device for rules that had not shipped; they have
+  shipped. Point people at `brew install ossuminc/tap/riddlc-rc` or
+  `riddlcVersion := "2.0.0-rc.10"`.
+- **All three platforms green in CI** on the tagged code (run `31016483924`,
+  every job success): **JVM 1846**, **JS 674**, **Native 1339** tests, each
+  checked against its floor in `.claude/skills/rc/`.
+- **The Native floor moved DOWN at rc.10, 1624 → 1339, and that is correct.**
+  `tNative` used to name the `.jvm` rows for 5 of its 7 modules, so the old floor
+  was calibrated against a leg that mostly measured JVM. The alias is fixed; the
+  gate got more honest and the number got smaller. The proof standard for any
+  future drop is recorded beside the table in the `/rc` skill. **Do not "restore"
+  the old floor.**
+- **External-corpus suites are green and are internal signal again** — no longer
+  expected-red. `RiddlModelsRoundTripTest` 189/189, `Root2JsonCorpusTest`
+  `cleanRoundTrip=189 (100.0%)`; all 189 riddl-models entry points validate with
+  zero errors, and riddl-examples dokn does too.
 - **BAST `FORMAT_REVISION` is 6.** Any `.bast` from an earlier build is rejected
   with "regenerate .bast files with the current riddlc" — expected, not a bug.
 
 **Nothing is in flight.** No half-finished change, no uncommitted work, no
-failing test. The last four pieces of work all closed cleanly: the
-requires/returns move, `canContain`, implicit invariant semantics, and
-`invariant X` in conditions. What each *taught* is in this NOTEBOOK's body;
-what is still *open* is in BACKLOG.md.
+failing test. The entity-intentions item — the largest thing on this branch — is
+**complete and shipped in rc.10**, and has left BACKLOG.md; its durable
+semantics are in CLAUDE.md and what it taught is in this NOTEBOOK's body.
+
+**The next step is soak, not more building.** rc.10 is the first RC carrying the
+event-sourcing rules, which REJECT models that validated under rc.9. Expect
+consumer reports; that is the point. Promotion to 2.0.0 final comes from `main`,
+not this branch.
 
 **Traps, each of which has actually bitten someone here:**
 
@@ -101,6 +110,32 @@ to the task file and note the disposition below.
 
 ---
 
+
+## 2.0.0-rc.10 shipped the entity-intentions work (2026-08-05) — DONE
+
+Tagged at `fc4e54c1b`. 59 commits since rc.9 and the largest RC of the 2.0 line:
+entity intentions, the four event-sourcing rules, implicit invariant scope and
+`invariant X` as a boolean atom, accessors that see through `include`/`import`,
+`requires`/`returns` in contents, `canContain`, and the `tNative` fix.
+
+Two things worth keeping from cutting it.
+
+**A floor can be wrong in the honest direction.** The `/rc` skill says a count
+below the minimum is "a skipping bug to find, not a threshold to adjust" — and
+rc.10 certified Native at 1339 against a floor of 1624. The rule was right and
+still did not apply, because the rule assumes the metric means the same thing
+either side of the comparison. Fixing `tNative` changed what "Native tests"
+counts. The tell was per-row: the two rows that were ALREADY Native came back
+bit-identical (723 and 21) while every row that CHANGED dropped, which is the
+signature of JVM-only suites leaving, not of tests being skipped. **When a gate
+fails, check whether the gate or its definition moved before doing either.** The
+proof standard now lives beside the table so the next drop has to earn it.
+
+**The staged-binary practice has ended, and that should be said out loud.**
+`~/Code/ossuminc/bin/riddlc` existed because consumers needed rules that had not
+shipped; rc.10 ships them. A soak device that outlives its reason becomes the
+next stale artifact someone quotes — the same shape as the skip list below, and
+as the `tNative` alias. Point consumers at the tap or the version.
 
 ## A skip list outlived its reason (2026-08-05) — DONE
 

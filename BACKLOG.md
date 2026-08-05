@@ -15,127 +15,7 @@ them as items are touched rather than in one sweep.
 Large items get their own plan (`~/.claude/plans/`) before implementation; the
 plan is discarded once built.
 
-### 1. Entity intentions + event-sourcing rules — IN FLIGHT, not done
-
-Code is COMPLETE and committed (`c87099520`, `78cefd05c`, `67ede5b3d` on
-`release/2`, unpushed): the six semantic options are now keywords before
-`entity`, and the four event-sourcing rules are enforced as Errors. Implemented,
-tested and canaried — `EntityIntentionRoundTripTest` 13/13,
-`EventSourcedEntityTest` 10/10, JVM row green except item (a).
-
-**The ITEM is not done, but only (e) remains.** As of 2026-08-05 (a), (b), (c),
-(d) and (d2) are all closed and verified; the item stays here until **(e), the
-soak / rc.10**, lands. Full detail in the `entity-intentions` memory.
-
-Note on (b), since the record disagreed with itself for a day: it read "Native
-in progress" while NOTEBOOK § HANDOFF claimed all three platforms green at
-"Native 173/1318". Both were honest — the HANDOFF number came from the `tNative`
-alias, which is 5/7 JVM rows (§ 3), so it was never a Native measurement. The
-seven real rows have now been run explicitly: 176 suites / 1339 tests, zero
-failures. **When two lines of the record disagree, the alias is usually the
-liar.**
-
-a. **DONE.** Migrate `language/input/dokn.riddl` — was the only in-repo red
-   (`ExamplesTest`). Now validates with ZERO errors, `should compile dokn` is
-   green, and the prettify round trip preserves every new construct.
-   4 event-sourced entities predating the rules; 7 handled commands violate R1
-   (Company 1, Driver 2, Location 4 — confirmed against the staged binary).
-   R3/R4 are already satisfied: no command clause mutates, and Location's
-   existing `on event` applies an event declared inside it.
-   **Not purely additive, as first assumed.** `yields` exists only on the
-   kind-first type form (`def_of_type_kind_type`, ebnf-grammar.ebnf:112):
-   `command X yields event Y is { … }`. dokn declares commands the type-first
-   way (`type X is command { … }`), which admits no `yields`, so each of the 7
-   must be reshaped to the kind-first form before an `on event Y` clause can be
-   added for it.
-   A FIFTH rule bites at the same time and is easy to miss by reading
-   `checkEventSourcing` alone: `checkYieldConformance` (A19, ValidationPass:788)
-   requires the clause to actually contain `yield event E` once the command
-   declares `yields E`. Keep the existing `send`; add the `yield` beside it.
-   Fallout fixed: `RootComparisonTest` asserted a model scores exactly 1.0
-   against itself, but `countCosine` computed `Σc²/(√Σc²·√Σc²)` and `√x·√x ≠ x`
-   for ~47% of integer magnitudes — it had been passing by luck, and dokn's new
-   counts lost the toss. Reformulated to `dot/√(sumA·sumB)`, exact on 200k
-   random count vectors (RootComparison.scala:295).
-b. **DONE — JS and Native both verified.** `tJS` green: 657 tests, 0 failures.
-   Native was the open half, because `tNative` is not a real Native gate (§ 3).
-   All **seven genuine Native rows** were named explicitly and run 2026-08-05 in
-   one `;`-separated argument, with `Suites: completed` counted against the seven
-   modules asked for — **7 lines for 7 modules, 0 failures**:
-
-   | row | suites | tests |
-   |---|---:|---:|
-   | `utilsNative` | 7 | 108 |
-   | `languageNative` | 32 | 337 |
-   | `passesNative` | 118 | 723 |
-   | `testkitNative` | 1 | 1 |
-   | `riddlLibNative` | 4 | 102 |
-   | `commandsNative` | 11 | 47 |
-   | `riddlcNative` | 3 | 21 |
-   | **total** | **176** | **1339** |
-
-   The single `pending` is `institutional-commerce`, explicitly `pending` at
-   `RunRiddlcOnLocalTest.scala:50` — not a skip. `riddl-examples dokn` passes on
-   Native too.
-   **The feared Native-only backlog does not exist** (§ 3 predicted one). Log
-   kept at `scratchpad/native.log`.
-c. **DONE.** `MESSAGE_SUGGESTIONS.md` — added the intention-conflict Error and
-   R1/R2/R3+R4, and REMOVED the stale `is event-sourced but this command handler
-   does not emit an event` row, whose check was deleted with this work.
-   `JSON_COVERAGE.md` — Entity row now lists `intentions`.
-d. **DONE — riddl-models has landed its migration.** Verified 2026-08-05 against
-   the live checkout at `f3ff0ade` (clean tree), not against the task file:
-   - Full independent sweep of **all 189 `.conf` entry points** with the staged
-     `~/Code/ossuminc/bin/riddlc` (`2.0.0-rc.9-54-64b7b413`): **189/189 with zero
-     errors**.
-   - 27 entities still carry the `event-sourced` keyword (reactive-bbq's 13, the
-     `patterns/entity/event-sourced/` template and example, …), so the four rules
-     ARE being enforced against them — this is conformance, not evasion by
-     dropping the intention.
-   - **The two expected-red suites are green** and are internal signal again:
-     `RiddlModelsRoundTripTest` 189/189, `Root2JsonCorpusTest` reports
-     `models=189 reparsed=189 cleanRoundTrip=189 (100.0%)` against a 95% floor
-     (was 179/189).
-   Fallout fixed here: `RiddlModelsRoundTripTest.pendingModels` excluded 6 models
-   for "pre-existing validation errors … redefine built-in type names", carrying
-   the comment "Remove after fixing in riddl-models". That reason no longer held
-   — each validates with 0 errors — so 6 round-trip tests were being skipped
-   inside a suite that read as green. Set emptied; the suite went 183 succeeded
-   + 6 pending → **189 succeeded, 0 pending, 0 failed**, with all six named
-   individually in the log.
-d2. **DONE — riddl-examples dokn is migrated.** Verified 2026-08-05:
-   `riddlc from src/riddl/dokn/dokn.conf validate` reports **0 errors** (warnings
-   only — unreachable `tell` targets, which are a different backlog item), and
-   `RunRiddlcOnLocalTest` "should validate riddl-examples dokn" passes. Five
-   event-sourced entities now, not four — Company, Driver, Note, Medium **and
-   Location** — all spelled `event-sourced available entity`, none reverted to a
-   plain `entity`. The suite's `succeeded 3, pending 1` is not a skip of dokn:
-   the pending one is `institutional-commerce`, explicitly `pending` at
-   `RunRiddlcOnLocalTest.scala:50`.
-   **Still owed on their side:** the task file
-   `../riddl-examples/task/migrate-dokn-to-event-sourcing-rules.md` is still in
-   `task/` with no `## Results` section, so their repo does not record its own
-   completion. That is theirs to close, not ours.
-e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC is a
-   slow CI round trip, and this change breaks consumers in ways worth finding
-   before a tag exists. So: `sbt "reload; publishLocal"` for every module and
-   platform plus the `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
-   `~/Code/ossuminc/bin/riddlc`. Consumers use that path EXPLICITLY — it is not
-   on `$PATH`, where bare `riddlc` still resolves to the tap's rc.9.
-   Currently staged: **`2.0.0-rc.9-54-64b7b413`** (all 20 rows in
-   `~/.ivy2/local`, binary verified to report it, 2026-08-04 22:35). If HEAD is
-   ahead of that, check whether the extra commits are documentation-only before
-   re-staging — a NOTEBOOK edit does not change the binary. As of `b163d3c85`
-   the only diff from the staged commit is NOTEBOOK.md, so no restage is owed. First staged the same day at
-   `2.0.0-rc.9-6-46c5968d`, which was verified to reject dokn's 7 R1 violations
-   — that is how riddl-models found the refusing-clause defect in § 2.
-   Consumers to sweep: riddl-generator, riddl-models, riddl-examples,
-   riddl-idea-plugin, riddl-vscode, synapify. **Exit condition:** riddlg's
-   upgrades complete (expect a few days) — then push, CI, and cut rc.10.
-   Re-publish + re-stage after each riddl commit; the version string changes
-   every time, which is what keeps consumer resolution cache-safe.
-
-### 2. Queued, designed, not started
+### 1. Queued, designed, not started
 
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
@@ -180,7 +60,7 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   regen, the `ArgDto.fields` read path in JSON, and an external-corpus re-run.
   Sequence: deprecate loudly for a release, then remove.
 
-### 3. Queued, needs a plan
+### 2. Queued, needs a plan
 - **A keyword-named field reports the error several tokens upstream.** From
   riddl-generator 2026-08-03, filed here because it is a real diagnostic defect
   even though they marked it "no action needed". A field in a message
@@ -305,23 +185,30 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
 - **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
-### 4. Owed to other repos
-- **Sweep consumers onto `2.0.0-rc.9-54-64b7b413`.** Pins verified 2026-08-05:
-  - **riddl-models — already current** (`build.sbt:21` `riddlVersion =
-    "2.0.0-rc.9-54-64b7b413"`, driving `riddlcVersion` and all three test deps).
-    Nothing owed.
-  - **riddl-generator — behind** at `2.0.0-rc.9-48-fdc5c171`
-    (`../riddl-generator/project/Dependencies.scala:53`).
-  - **riddl-examples — behind** at the same `2.0.0-rc.9-48-fdc5c171`
-    (`../riddl-examples/build.sbt:21`, `With.Riddl.library`). Its *models* are
-    already conformant (§ 1d2); this is only the dependency pin.
+### 3. Owed to other repos
+- **Sweep consumers onto `2.0.0-rc.10`** — a real published version now, not a
+  locally-staged snapshot, so consumers resolve it from GitHub Packages without
+  a `publishLocal`. All 20 Maven coordinates verified present in the registry
+  2026-08-05. This supersedes the `rc.9-54-64b7b413` staging line entirely.
+  Pins as of 2026-08-05, all pre-rc.10:
+  - **riddl-models** — `build.sbt:21` `riddlVersion = "2.0.0-rc.9-54-64b7b413"`,
+    driving `riddlcVersion` and all three test deps. Its models already conform.
+  - **riddl-generator** — `project/Dependencies.scala:64` at
+    `"2.0.0-rc.9-54-64b7b413"`.
+  - **riddl-examples** — `build.sbt:21` (`With.Riddl.library`) at
+    `"2.0.0-rc.9-48-fdc5c171"`, one step further behind. Its models already
+    conform; this is only the dependency pin.
+  - Still to check: riddl-idea-plugin, riddl-vscode, synapify.
 
-  Both laggards predate `canContain`, the prettify metadata fix, the invariant
-  semantics and the `when invariant X` work. Still to check:
-  riddl-idea-plugin, riddl-vscode, synapify.
+  **The staged `~/Code/ossuminc/bin/riddlc` is now superseded** — anyone wanting
+  the RC should `brew install ossuminc/tap/riddlc-rc` (formula updated to
+  2.0.0-rc.10, verified) or set `riddlcVersion := "2.0.0-rc.10"`. The staged
+  binary was a soak device for unreleased rules; that need is over.
   **BAST `FORMAT_REVISION` is 6**, so any checked-in `.bast` from an earlier
   build is rejected with "regenerate .bast files with the current riddlc" —
   expected, not a bug, but worth saying in each bump task.
+  **npm consumers**: `@ossuminc/riddl-lib@rc` (dist-tag `rc`, confirmed; `latest`
+  did not move).
 - riddl-vscode: adoption task for `IncrementalValidator` now that rc.9 ships.
 - ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the
   two silent breaking changes in the migration guide, and docs for the

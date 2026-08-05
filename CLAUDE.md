@@ -683,6 +683,32 @@ to the right group rather than appending to a list.
   `id`/`format` stay derived from `msg`. Bare `foo` denotes the whole
   message; `foo.field` is an ordinary path walk. See "Validation
   Specifics" for how it resolves.
+- **Entity intentions (2.0.0-rc.10)** — six keywords written BEFORE `entity`, in
+  three INDEPENDENT groups, mutually exclusive within a group: role
+  (`aggregate`), consistency (`consistent` | `available`), persistence
+  (`event-sourced` | `persistent` | `transient`). `Entity.intentions:
+  Seq[EntityIntention]`; enum + companion at `AST.scala:4144`.
+  **They are grammar, not options, on purpose.** They were `with { option
+  event-sourced }` until 2.0, but the Computational Model §4.2 calls options
+  advisory ("honored if possible"), and a hard Error keyed off advisory metadata
+  is a category error — see `checkEventSourcing`. The old `option` spellings
+  still parse, deprecated. `persistent` replaces the uninformative `value`.
+  Two from one group is an **Error, not a parse failure**, so the message can
+  name both. `event-sourced` sits in the persistence group because it IMPLIES
+  persistent. Any order parses; the parser stores them via
+  `EntityIntention.canonical` because **`Definition.equals` compares this
+  field** — write order must never make two identical entities compare unequal.
+  Prettify emits `canonicalOrder`.
+  **Four event-sourcing rules are Errors** (`ValidationPass.scala:1865`), because
+  replay must reproduce the same state changes: R1 every handled command declares
+  `yields`; R2 every yielded event has an `on event` clause; R3/R4 no `set`/
+  `morph` outside handling one of the entity's OWN events. R1/R2 read the
+  `yields` DECLARATION on the command's type, never `yield` statements in a body.
+  Two traps when migrating a model: `yields` exists ONLY on the kind-first form
+  (`command X yields event Y is {…}`), so type-first commands must be reshaped;
+  and R3 forbids `set` in `on init` while an empty body is a parse error, so the
+  idiom is `on init is { yield event Created }` plus an `on event Created` clause
+  that does the mutation.
 - **Unified processor model (2026-07-26, release/2)** — every
   `Processor` (Context/Entity/Projector/Repository/Adaptor + the
   generic `processor` keyword) is port-bearing: `Inlet`/`Outlet` are in
