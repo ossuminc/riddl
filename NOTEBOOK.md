@@ -19,18 +19,18 @@ wrote this, not recalled:
   `git log --oneline origin/release/2..HEAD | wc -l`.
 - HEAD is the tip of `release/2`; the last code commit is the requires/returns
   move (below), on top of `867ab0333` (saga) and `496e77c39` (hashing).
-- **Staged build is CURRENT: `2.0.0-rc.9-52-b33decf2`** at
+- **Staged build is CURRENT: `2.0.0-rc.9-54-64b7b413`** at
   `~/Code/ossuminc/bin/riddlc`, 20 ivy rows under that version from
   `publishLocal`. Staged 2026-08-04 from a clean tree with `reload`, binary
   copied only after `nativeLink` reported `[success]` — all three preconditions
   met, so the version carries no timestamp suffix and is reproducible from
-  `b33decf25`. Verified by ENFORCEMENT, not just `riddlc version`:
+  `64b7b4134`. Verified by ENFORCEMENT, not just `riddlc version`:
   `language/input/invariant-scope.riddl` parses clean here and is a PARSE ERROR
   under the tap's `/opt/homebrew/bin/riddlc`.
 - **All three platforms green**, re-run in full on 2026-08-04 after the
   invariant work with `<module>/testOnly *`, one `;`-separated argument,
-  `Suites: completed` lines counted against modules requested: **JVM 252 suites
-  / 2029 tests** (7 modules), **Scala.js 60 / 674** (5), **Native 173 / 1317**
+  `Suites: completed` lines counted against modules requested: **JVM 253 suites
+  / 2032 tests** (7 modules), **Scala.js 60 / 674** (5), **Native 173 / 1318**
   (6) — zero failures. External corpus reds unchanged (BACKLOG 1d).
 
 **The requires/returns move is DONE and green** — `1f93cc517`'s incomplete
@@ -42,10 +42,10 @@ content". The `Option[TypeRef]` narrowing is deliberately NOT done — it requir
 dropping the deprecated inline aggregation, filed in BACKLOG § 2 with its
 verified cost.
 
-**Consumers can pick this up now** — `2.0.0-rc.9-52-b33decf2` is both staged at
+**Consumers can pick this up now** — `2.0.0-rc.9-54-64b7b413` is both staged at
 `~/Code/ossuminc/bin/riddlc` and in `~/.ivy2/local` (20 rows). It carries the
 requires/returns move, `canContain`, the prettify metadata fix and the new
-invariant semantics. BAST `FORMAT_REVISION` is now **5**, so any `.bast` written
+invariant semantics. BAST `FORMAT_REVISION` is now **6**, so any `.bast` written
 by an earlier riddlc is rejected with "regenerate .bast files with the current
 riddlc" — expected, not a bug.
 
@@ -116,6 +116,40 @@ to the task file and note the disposition below.
 
 ---
 
+
+## Two latent bugs surfaced by writing one test (2026-08-04) — DONE
+
+`64b7b4134`. Three ossum.tech reports, filed while they documented the new
+invariant semantics. The headline change is small — `invariant X` and
+`invariant X with <expr>` are boolean atoms now, so `when not invariant X`
+parses. The value was in what it dragged out.
+
+1. **`require invariant X` had been corrupting BAST**, and nothing had ever
+   noticed because nothing had ever round-tripped one. `writeRequireStatement`
+   used `writePathIdentifier` (emits a leading `NODE_PATH_IDENTIFIER` tag)
+   against `readPathIdentifierInline` (consumes none), so every byte after the
+   path shifted by one — surfacing as "Invalid string table index" far
+   downstream, exactly the hazard CLAUDE.md warns about. **Found by writing the
+   round-trip test the NEW feature needed, not by looking for it.** The lesson
+   is cheap to reuse: when adding a variant to a serialized construct,
+   round-trip the EXISTING variants too — the new test is the first one they
+   have ever had.
+2. **Removing a guard revealed a bug it was masking.** The duplicate-`initial`
+   check was gated on `states.sizeIs <= 1`, so adding a state hid the error.
+   Removing that gate exposed a second defect: DEFAULTING counted states
+   literally while VALIDATION counted them through includes, so an entity with
+   one inline and one included state was defaulted as single-state and then
+   validated as multi-state — riddlc auto-marking a handler and then reporting
+   the author's own marked handler as the duplicate. **A guard that suppresses
+   a check also suppresses evidence of everything downstream of it.**
+
+Also: I reported a defect to Reid using the reporter's first framing ("the model
+doc promises something the compiler rejects") and had to correct it after
+verifying — A17 was satisfied all along by the BARE spelling, and only the
+keyword-qualified one failed. **The reporter rewrote their own file to walk it
+back before I acted.** Verify the report, not just the code it points at.
+
+---
 
 ## Invariants apply implicitly now (2026-08-04) — DONE
 
