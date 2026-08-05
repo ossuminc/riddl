@@ -1066,7 +1066,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeLiteralString(ls)
       case ir: InvariantRef =>
         writer.writeU8(1) // invariant reference condition
-        writePathIdentifier(ir.pathId)
+        // INLINE, not `writePathIdentifier`. The tagged form writes a leading
+        // NODE_PATH_IDENTIFIER byte that the reader's `readPathIdentifierInline` never consumes,
+        // so every byte after the path shifted by one -- surfacing far downstream as "Invalid
+        // string table index" rather than as an error at the path. Latent since the statement was
+        // written; nothing round-tripped a `require invariant` through BAST until now.
+        writePathIdentifierInline(ir.pathId)
       case be: BooleanExpression =>
         writer.writeU8(2) // A28: structured boolean-expression condition
         writeValue(be)
@@ -1316,6 +1321,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(3)
         writeLocation(ne.loc)
         writeValue(ne.expr)
+      case ic: InvariantCondition =>
+        writer.writeU8(5)
+        writer.writeU8(4)
+        writeLocation(ic.loc)
+        // INLINE, not `writePathIdentifier`: the tagged form emits a NODE_PATH_IDENTIFIER byte
+        // that `readPathIdentifierInline` does not consume, which misaligns the stream.
+        writePathIdentifierInline(ic.ref.pathId)
+        writeOption(ic.argument)(writeValue)
   }
 
   /** A28: a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef). A leading

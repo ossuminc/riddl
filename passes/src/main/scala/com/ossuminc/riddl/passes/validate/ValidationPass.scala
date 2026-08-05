@@ -1557,17 +1557,27 @@ case class ValidationPass(
           s"one initial (starting) state",
         suggestion = "Mark only one state 'initial' (or none, to default to the first declared)."
       )
-    // When the entity has a single state, its entity-scope handlers follow the same rule.
-    if entity.states.sizeIs <= 1 then
-      val initialHandlers = entity.handlers.filter(_.isInitial)
-      if initialHandlers.sizeIs > 1 then
-        messages.addError(
-          initialHandlers(1).loc,
-          s"${entity.identify} marks ${initialHandlers.size} handlers 'initial'; only one handler " +
-            s"may be the initial (live) one",
-          suggestion =
-            "Mark only one entity-scope handler 'initial' (or none, to default to the first)."
-        )
+    // Entity-scope handlers follow the same rule, at ANY number of states.
+    //
+    // This used to be guarded by `entity.states.sizeIs <= 1`, so adding a second state made the
+    // error disappear. The guard was carried over from the DEFAULTING rule in
+    // `EntityParser.defaultEntityInitials`, where single-state genuinely is the right condition --
+    // but defaulting and duplicate-detection are different rules and only the first is about state
+    // count. It also encoded the pre-2026-08-04 model, in which an entity-scope handler under
+    // multiple states was a common part merged into each state's set and `initial` on it meant
+    // nothing. Under §17.2 an entity-scope `initial` is the initial handler for every state that
+    // does not define one, so an ambiguous marker with several states is WORSE than with one -- it
+    // silently picks live behavior for an unbounded set of states. The case the guard admitted was
+    // the one where the ambiguity mattered least.
+    val initialHandlers = entity.handlers.filter(_.isInitial)
+    if initialHandlers.sizeIs > 1 then
+      messages.addError(
+        initialHandlers(1).loc,
+        s"${entity.identify} marks ${initialHandlers.size} handlers 'initial'; only one handler " +
+          s"may be the initial (live) one",
+        suggestion =
+          "Mark only one entity-scope handler 'initial' (or none, to default to the first)."
+      )
     if entity.states.isEmpty && !entity.isEmpty then {
       messages.add(
         Message(
@@ -4002,6 +4012,15 @@ case class ValidationPass(
         gv.source match
           case ir: InputRef => checkRef[Input](ir, parents)
           case sr: StateRef => checkRef[State](sr, parents)
+      case ic: InvariantCondition =>
+        // The invariant must exist; naming an unknown one is an Error rather than becoming a
+        // reference to a value that does not exist.
+        checkRef[Invariant](ic.ref, parents)
+        ic.argument.foreach(a => validateValue(a, parents, lets))
+      // NOT checked: whether the invariant declares `requires <type>` and whether a `with` was
+      // supplied. Author's ruling 2026-08-04 — a CONDITION asks whether the rule holds and is
+      // never rejected either way, unlike `require invariant X`, which APPLIES the rule and so
+      // must be handed what the rule reads (`checkRequireArgument`).
       case _: BooleanLiteral        => ()
       case ce: ComparisonExpression =>
         // A28: operands are ref-only Comparands; validate each resolves, then enforce type-safety.

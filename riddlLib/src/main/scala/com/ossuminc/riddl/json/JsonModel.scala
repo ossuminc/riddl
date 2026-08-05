@@ -780,6 +780,12 @@ object JsonModel:
   /** `{ "value": "not", "expr": <value> }` — logical negation (A28). */
   case class NotDto(expr: ValueDto) extends ValueDto
 
+  /** `{ "value": "invariantCondition", "invariant": "<path>", "argument"?: <value> }` — an
+    * invariant named in a `when`/`match` condition. `argument` is the optional `with <expr>`.
+    */
+  case class InvariantConditionDto(invariant: String, argument: Option[ValueDto] = None)
+      extends ValueDto
+
   /** `{ "name"?: "<field>", "value": <value> }` — a positional or named constructor argument. */
   case class ConstructorArgDto(name: Option[String], value: ValueDto)
 
@@ -1552,6 +1558,8 @@ object JsonModel:
       case "comparison"  => ComparisonDto(m("op").str, readValue(m("left")), readValue(m("right")))
       case "logical"     => LogicalDto(m("op").str, readValue(m("left")), readValue(m("right")))
       case "not"         => NotDto(readValue(m("expr")))
+      case "invariantCondition" =>
+        InvariantConditionDto(m("invariant").str, m.get("argument").map(readValue))
       case "constructor" =>
         val args = m
           .get("args")
@@ -1612,6 +1620,13 @@ object JsonModel:
         )
       case NotDto(expr) =>
         ujson.Obj("value" -> ujson.Str("not"), "expr" -> writeValue(expr))
+      case InvariantConditionDto(inv, argument) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "value" -> ujson.Str("invariantCondition"),
+            "invariant" -> ujson.Str(inv)
+          ) ++ argument.map(a => "argument" -> (writeValue(a): ujson.Value))
+        )
       case ConstructorValueDto(refKind, ref, args) =>
         ujson.Obj(
           "value" -> ujson.Str("constructor"),

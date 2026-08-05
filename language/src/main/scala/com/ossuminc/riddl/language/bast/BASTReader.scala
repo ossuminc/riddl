@@ -2424,6 +2424,10 @@ class BASTReader(
           case 3 => // NotExpression
             val loc = readLocation()
             NotExpression(loc, readValue())
+          case 4 => // InvariantCondition -- `invariant X [with <expr>]` in a condition
+            val loc = readLocation()
+            val pid = readPathIdentifierInline()
+            InvariantCondition(loc, InvariantRef(loc, pid), readOption(readValue()))
           case sub => throw new RuntimeException(s"Invalid boolean-expression sub-tag: $sub")
       case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
   }

@@ -1432,6 +1432,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case le: LogicalExpression =>
       LogicalDto(le.op.symbol, serializeValue(le.left), serializeValue(le.right))
     case ne: NotExpression => NotDto(serializeValue(ne.expr))
+    case ic: InvariantCondition =>
+      InvariantConditionDto(path(ic.ref.pathId), ic.argument.map(serializeValue))
 
   // A29: a match-case pattern -> MatchPatternDto.
   private def serializeMatchPattern(p: MatchPattern): MatchPatternDto = p match

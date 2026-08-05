@@ -407,6 +407,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         gv.source match
           case ir: InputRef => associateUsage[Input](parents.head, resolveARef[Input](ir, parents))
           case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
+      case ic: InvariantCondition =>
+        // `when invariant X [with <expr>]` — resolve the named invariant, and the handed value if
+        // there is one. Without this the reference would sit unresolved and validation could only
+        // report it as an unknown VALUE name, which is the mis-parse this construct replaced.
+        associateUsage[Invariant](parents.head, resolveARef[Invariant](ic.ref, parents))
+        ic.argument.foreach(a => resolveValue(a, parents))
       // A28: recurse into boolean-expression operands so any nested ValueRef/GetValue/Constructor
       // atoms resolve (a BooleanLiteral has no references).
       case _: BooleanLiteral        => ()

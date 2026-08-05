@@ -83,14 +83,40 @@ private[parsing] trait EntityParser {
     }
   }
 
+  /** Every `T` in `contents`, descending through `Include`/`BASTImport` wrappers.
+    *
+    * The wrappers' contents are already populated at this point (an include is parsed eagerly), and
+    * this must agree with `entity.states` / `entity.handlers`, which use `filterThroughWrappers`.
+    * When it did not, DEFAULTING counted an entity's states literally while VALIDATION counted them
+    * through includes — so an entity with one inline state and one included state was defaulted as
+    * single-state (auto-marking an entity-scope handler `initial`) and then validated as
+    * multi-state. With the duplicate-`initial` guard removed, that surfaced as riddlc auto-marking
+    * one handler and then reporting the author's OWN explicitly-marked handler as the duplicate.
+    */
+  private def throughWrappers[T <: RiddlValue: scala.reflect.ClassTag](
+    contents: Seq[EntityContents]
+  ): Seq[T] =
+    val theClass = scala.reflect.classTag[T].runtimeClass
+    def loop(items: Seq[RiddlValue]): Seq[T] = items.flatMap {
+      case inc: Include[?]                            => loop(inc.contents.toSeq)
+      case bi: BASTImport                             => loop(bi.contents.toSeq)
+      case x if theClass.isAssignableFrom(x.getClass) => Seq(x.asInstanceOf[T])
+      case _                                          => Seq.empty
+    }
+    loop(contents)
+  end throughWrappers
+
   /** Supply the historical "first-declared is initial" default for an entity: mark the first
     * [[State]] if none is marked, and — only when the entity has a single state — mark the first
     * entity-scope [[Handler]] if none is marked. Refactor-safety comes from the explicit `initial`
-    * keyword; this only preserves prior semantics for unmarked models. States/handlers nested in
-    * includes are not reached here (they are resolved later).
+    * keyword; this only preserves prior semantics for unmarked models.
+    *
+    * COUNTING sees through includes (so it agrees with validation); MARKING still only rewrites
+    * this entity's own direct contents, since an included fragment is shared and must not be
+    * rewritten on behalf of one includer.
     */
   private def defaultEntityInitials(contents: Seq[EntityContents]): Seq[EntityContents] = {
-    val states = contents.collect { case s: State => s }
+    val states = throughWrappers[State](contents)
     val withState =
       if states.isEmpty || states.exists(_.isInitial) then contents
       else {
@@ -100,8 +126,8 @@ private[parsing] trait EntityParser {
           case other             => other
         }
       }
-    val handlers = withState.collect { case h: Handler => h }
-    val singleState = withState.collect { case s: State => s }.sizeIs == 1
+    val handlers = throughWrappers[Handler](withState)
+    val singleState = throughWrappers[State](withState).sizeIs == 1
     if singleState && handlers.nonEmpty && !handlers.exists(_.isInitial) then {
       var done = false
       withState.map {

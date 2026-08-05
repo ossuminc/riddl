@@ -111,6 +111,29 @@ class InitialMarkerTest extends AbstractValidatingTest {
         }
     }
 
+    // Reported by ossum.tech 2026-08-04. The duplicate check was guarded on
+    // `entity.states.sizeIs <= 1`, so ADDING a second state made the error disappear. The guard
+    // came from the DEFAULTING rule above, where single-state is right, but defaulting and
+    // duplicate-detection are different rules and only the first is about state count. Under
+    // §17.2 an ambiguous entity-scope `initial` is worse with several states, not better: it picks
+    // the live behavior for every state that does not define its own.
+    "error on duplicate entity-scope initial handlers even with MULTIPLE states" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain d is { context c is { entity e is {
+          |  type Data is { x: Integer }
+          |  initial handler E1 is { on other is { do "c" } }
+          |  initial handler E2 is { on other is { do "d" } }
+          |  initial state First of record d.c.e.Data
+          |  state Second of record d.c.e.Data
+          |}}}""".stripMargin,
+          td
+        )
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          msgs.justErrors.exists(_.message.contains("marks 2 handlers 'initial'")) mustBe true
+        }
+    }
+
     "error when more than one handler in a state is marked initial" in { (td: TestData) =>
       entity(
         """domain d is { context c is { entity e is {

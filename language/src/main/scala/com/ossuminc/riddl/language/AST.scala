@@ -3078,6 +3078,33 @@ object AST:
     */
   sealed trait BooleanExpression extends RiddlValue
 
+  /** An invariant named in a condition: `invariant X`, or `invariant X with <expr>`.
+    *
+    * A17 was already satisfied by the BARE spelling — `when not NonNegative then` resolves the name
+    * to the Invariant through the ordinary `ValueRef` route and has worked all along. What did NOT
+    * work was the keyword-qualified spelling an author naturally writes after learning `require
+    * invariant X`, which mis-parsed: `invariant` was consumed as a bare value name and the parser
+    * then asked for a comparison operator, pointing PAST the real problem. This node makes the two
+    * statements spell a reference the same way.
+    *
+    * It extends [[BooleanExpression]] rather than merely being a [[Value]] because an invariant IS
+    * a boolean by construction — that is what lets `when invariant X then` stand alone, since
+    * `booleanExprOnly` admits only real boolean expressions and a bare atom backtracks out of it.
+    *
+    * `argument` is the same `with <expr>` the `require` statement takes. It is OPTIONAL here even
+    * for an invariant declaring `requires <type>` (author's ruling, 2026-08-04): a condition asks
+    * whether the rule holds, and is never rejected for omitting the value — unlike `require
+    * invariant X`, which APPLIES the rule and so must be handed what the rule reads.
+    */
+  case class InvariantCondition(
+    loc: At,
+    ref: InvariantRef,
+    argument: Option[Value] = None
+  ) extends BooleanExpression:
+    override def kind: String = "Invariant Condition"
+    def format: String = ref.format + argument.map(a => s" with ${a.format}").getOrElse("")
+  end InvariantCondition
+
   /** A28: a boolean constant (`true` / `false`). Matched only within the boolean-expression rules
     * so `true`/`false` remain legal identifiers elsewhere.
     */

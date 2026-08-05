@@ -1454,6 +1454,8 @@ object JsonAstBuilder:
           .getOrElse { ctx.err(s"unknown logical operator '$op'"); LogicalOperator.And }
         LogicalExpression(curAt, lop, buildValue(left), buildValue(right))
       case NotDto(expr) => NotExpression(curAt, buildValue(expr))
+      case InvariantConditionDto(inv, argument) =>
+        InvariantCondition(curAt, InvariantRef(curAt, pathId(inv)), argument.map(buildValue))
 
   // A28: ValueDto -> AST Comparand (ValueRef | GetValue | ConstantRef). Comparison operands are
   // ref-only; any other DTO is a malformed comparand (reported), degraded to a bare ValueRef.

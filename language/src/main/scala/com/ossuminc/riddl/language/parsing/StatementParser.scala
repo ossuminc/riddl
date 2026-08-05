@@ -530,11 +530,27 @@ private[parsing] trait StatementParser {
   // `booleanLiteral` precedes `valueRef` so `true`/`false` are literals here; `valueRef` stays last
   // (permissive bare path). Non-boolean value atoms (literal strings, constructors, prompt values)
   // are handled by `value` directly, before the boolean sub-language, so they never reach here.
+  /** `invariant X` / `invariant X with <expr>` as a boolean atom.
+    *
+    * MUST precede `valueRef` below: `valueRef` would happily take `invariant` as an ordinary
+    * identifier, which is exactly the mis-parse this fixes — the author got "expected a comparison
+    * operator" pointing at the END of the keyword.
+    */
+  private def invariantCondition[u: P]: P[InvariantCondition] = {
+    P(
+      Index ~ Keywords.invariant ~/ pathIdentifier ~ (Keywords.`with` ~ value).? ~ Index
+    ).map { case (start, pid, arg, end) =>
+      val loc = at(start, end)
+      InvariantCondition(loc, InvariantRef(loc, pid), arg)
+    }
+  }
+
   private def booleanAtom[u: P]: P[Value] = {
     P(
       booleanLiteral.map(bl => bl: Value) |
         (Punctuation.roundOpen ~ booleanExpr ~ Punctuation.roundClose) |
         getValue.map(gv => gv: Value) |
+        invariantCondition.map(ic => ic: Value) |
         valueRef.map(vr => vr: Value)
     )
   }

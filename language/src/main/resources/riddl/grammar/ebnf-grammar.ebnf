@@ -302,7 +302,12 @@ not_expression = "not" not_expression | comparison ;
 comparison = comparand comparison_operator comparand | boolean_atom ;
 comparand = get_value | constant_ref | value_ref ;
 comparison_operator = "==" | "!=" | "<=" | ">=" | "<" | ">" ;
-boolean_atom = boolean_literal | "(" boolean_expression ")" | get_value | value_ref ;
+(* `invariant X [with <value>]` names an invariant in a condition. It MUST precede value_ref:
+   without it, `invariant` is taken as an ordinary identifier and the parser then demands a
+   comparison operator, pointing past the real problem. The bare spelling (`when X`) also works,
+   via value_ref, and always has. *)
+boolean_atom = boolean_literal | "(" boolean_expression ")" | get_value | invariant_test | value_ref ;
+invariant_test = "invariant" path_identifier ["with" value] ;
 boolean_literal = "true" | "false" ;
 
 (* A45/A57: boundary value operations. `put` (application/context handlers only) publishes a value
