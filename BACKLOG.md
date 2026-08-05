@@ -200,10 +200,15 @@ plan is discarded once built.
     conform; this is only the dependency pin.
   - Still to check: riddl-idea-plugin, riddl-vscode, synapify.
 
-  **The staged `~/Code/ossuminc/bin/riddlc` is now superseded** — anyone wanting
-  the RC should `brew install ossuminc/tap/riddlc-rc` (formula updated to
-  2.0.0-rc.10, verified) or set `riddlcVersion := "2.0.0-rc.10"`. The staged
-  binary was a soak device for unreleased rules; that need is over.
+  **Local publishing and the staged `~/Code/ossuminc/bin/riddlc` CONTINUE** —
+  Reid's ruling 2026-08-05, correcting the assumption that cutting an RC retires
+  them. 2.0 is a long way from shipping and the consumer repos still need locally
+  built and staged assets to work against. Re-publish and re-stage after each
+  riddl commit they need; the version string changes every time, which is what
+  keeps consumer resolution cache-safe. The published RC is an ADDITIONAL option
+  for consumers who want a resolvable version (`brew install
+  ossuminc/tap/riddlc-rc`, formula verified at 2.0.0-rc.10, or `riddlcVersion :=
+  "2.0.0-rc.10"`) — not a replacement for the staged build.
   **BAST `FORMAT_REVISION` is 6**, so any checked-in `.bast` from an earlier
   build is rejected with "regenerate .bast files with the current riddlc" —
   expected, not a bug, but worth saying in each bump task.

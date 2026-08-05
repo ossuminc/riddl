@@ -15,18 +15,23 @@ it, not recalled:
 
 - Branch `release/2`, **tree clean, 0 unpushed**. CI builds `release/*`
   (scala.yml:9), so pushes here run.
-- **`2.0.0-rc.10` IS PUBLISHED** (2026-08-05), tagged at `fc4e54c1b`. This
-  replaces the staged-binary soak: rc.10 is a real version consumers resolve
-  normally. Verified end to end, each by command —
+- **`2.0.0-rc.10` IS PUBLISHED** (2026-08-05), tagged at `fc4e54c1b`. Verified
+  end to end, each by command —
   GitHub prerelease `isPrerelease: true`; **all 20 Maven coordinates** present in
   GitHub Packages; npm published under dist-tag **`rc`** with `latest` unmoved;
   Homebrew `Formula/riddlc-rc.rb` at 2.0.0-rc.10 with the rc.10 commit touching
   **only** that file, stable `riddlc.rb` untouched at 1.31.0; `notify-blog`
   correctly **skipped**; the native binary reports `2.0.0-rc.10`.
-- **`~/Code/ossuminc/bin/riddlc` is now SUPERSEDED and should not be quoted to
-  consumers.** It was a soak device for rules that had not shipped; they have
-  shipped. Point people at `brew install ossuminc/tap/riddlc-rc` or
-  `riddlcVersion := "2.0.0-rc.10"`.
+- **Local publishing and `~/Code/ossuminc/bin/riddlc` CONTINUE. Cutting an RC did
+  not retire either** — Reid's ruling, 2026-08-05, correcting exactly that
+  inference. 2.0 is a long way from shipping and the consumer repos still need
+  locally built and staged assets to work against. So the standing practice is
+  unchanged: `sbt "reload; publishLocal"` for every module and platform plus the
+  `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
+  `~/Code/ossuminc/bin/riddlc`, after each riddl commit consumers need. That path
+  is deliberately NOT on `$PATH`; bare `riddlc` is the tap's older build.
+  Publishing an RC is additive — it gives consumers a resolvable version when
+  they want one. It is not a replacement for the staged build.
 - **All three platforms green in CI** on the tagged code (run `31016483924`,
   every job success): **JVM 1846**, **JS 674**, **Native 1339** tests, each
   checked against its floor in `.claude/skills/rc/`.
@@ -131,11 +136,19 @@ signature of JVM-only suites leaving, not of tests being skipped. **When a gate
 fails, check whether the gate or its definition moved before doing either.** The
 proof standard now lives beside the table so the next drop has to earn it.
 
-**The staged-binary practice has ended, and that should be said out loud.**
-`~/Code/ossuminc/bin/riddlc` existed because consumers needed rules that had not
-shipped; rc.10 ships them. A soak device that outlives its reason becomes the
-next stale artifact someone quotes — the same shape as the skip list below, and
-as the `tNative` alias. Point consumers at the tap or the version.
+**A shipped RC did not end the staged-binary practice — I assumed it had, and
+Reid corrected it.** Having spent the day finding three artifacts that outlived
+their reasons (the skip list, the `tNative` alias, a stale floor), I reached for
+the same shape a fourth time and misapplied it: publishing rc.10 is ADDITIVE, and
+says nothing about whether consumers still need locally built assets. They do —
+2.0 is a long way from shipping, and the consumer repos work against
+`publishLocal` output and `~/Code/ossuminc/bin/riddlc`, which continue unchanged.
+
+The lesson is about the pattern, not the fact. "X outlived its reason" is a
+conclusion that needs the same evidence as any other, and the evidence is
+someone stating the reason is gone — not my noticing that a superficially similar
+thing has changed. **Pattern-matching earned by three real findings is exactly
+when it starts firing on the fourth case that does not fit.**
 
 ## A skip list outlived its reason (2026-08-05) — DONE
 
