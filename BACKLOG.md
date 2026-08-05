@@ -256,30 +256,20 @@ e. **rc.10 is deferred — we soak via a locally staged build instead.** An RC i
   identical weakness, so fixing one should fix both. Not newly introduced and not
   urgent — but it is the honest limit of the current predicate, so it is written
   down rather than implied.
-- **`tNative` tests the JVM rows for 5 of its 7 modules** — found 2026-08-02,
-  **still true, but no longer risky to fix** (verified 2026-08-05). The alias
-  (build.sbt:552) runs `utils`, `language`, `testkit`, `commands`, `riddlLib`,
-  and all five are the `.jvm` projects (build.sbt:218, 271, 346, 406, 433). Only
-  `passesNative` and `riddlcNative` are actually Native.
-  **The blocker is gone.** This wanted a plan because "nothing has gated those
-  rows, so expect a backlog of Native-only reds the moment they run." They have
-  now been run — all seven, 176 suites / 1339 tests, **zero failures** (§ 1b).
-  So the fix is the mechanical one: replace the five JVM names with
-  `utilsNative`, `languageNative`, `testkitNative`, `commandsNative`,
-  `riddlLibNative`. No plan needed; no reds to work through first.
-  **Scope is narrower than it looks:** `cNative` (build.sbt:527) already names
-  all seven Native rows, so Native code does COMPILE everywhere in CI. Only test
-  EXECUTION falls back to the JVM. What has never been gated is Native *runtime*
-  behaviour in those five modules — which is precisely what the 2026-08-05 run
-  exercised and found clean.
-  **CI inherits this**: `scala.yml:97` runs `sbt "; clean; c${platform};
-  t${platform}"`, so the Native matrix leg has been reporting green off the JVM
-  rows.
-  `tJS` does this correctly (it names `utilsJS`, `languageJS`, `passesJS`,
-  `testkitJS`, `riddlLibJS`), which is what makes the Native asymmetry look like
-  an oversight rather than a decision. Same defect class as the one the `tJVM`
-  comment (build.sbt:540) was written to prevent: "a release gate that skips
-  three modules and reports success is worse than no gate."
+- **DONE (2026-08-05) — `tNative` tested the JVM rows for 5 of its 7 modules.**
+  Found 2026-08-02, fixed once the feared reds were shown not to exist. The alias
+  now names all seven `*Native` rows; `tNative` runs green end to end (176 suites
+  / 1339 tests, 0 failures, 218 s warm) including the trailing
+  `riddlcNative/nativeLink`.
+  **One thing left to watch, in CI rather than here:** the Native leg now links
+  and runs 5 additional native test binaries. Compilation cost is unchanged
+  (`cNative` always named all seven), but native LINKING is the expensive step
+  and `scala.yml` caps the job at `timeout-minutes: 60`. The 218 s local figure
+  does not transfer — CI runs `clean` first, so it is cold. **If the Native leg
+  starts timing out, raise the timeout; do not revert the gate.**
+  Also unclosed by design: this was verified on macOS ARM64 and CI is
+  ubuntu-latest x86_64, so Scala Native could still diverge there. `fail-fast:
+  false` means a Native red will not take the JVM and JS legs with it.
 - **`Comment` in a `Group`'s contents cannot be rebuilt** — the parser puts one
   there but `OccursInGroup` admits none. Pinned at 3 occurrences in
   `Root2JsonFixturesTest`. Widen the union or attach as metadata. Needs a

@@ -549,8 +549,17 @@ addCommandAlias(
 addCommandAlias(
   "tNative",
   // See tJVM above for why this is `testOnly *` and not `test`.
-  "; utils/testOnly * ; language/testOnly * ; passesNative/testOnly * ; " +
-    "testkit/testOnly * ; commands/testOnly * ; riddlLib/testOnly * ; " +
+  //
+  // Every row here MUST be a `*Native` project. Until 2026-08-05 five of them
+  // named the `.jvm` rows (`utils`, `language`, `testkit`, `commands`,
+  // `riddlLib`), so this alias -- and CI's Native matrix leg, which runs
+  // `cNative; tNative` -- reported Native green while re-running JVM tests the
+  // JVM leg had already run. Native runtime behaviour in those five modules had
+  // never been executed by any gate. It was clean when finally run (176 suites /
+  // 1339 tests), but that was luck, not coverage. `cNative` always named all
+  // seven, so only test EXECUTION was affected, never compilation.
+  "; utilsNative/testOnly * ; languageNative/testOnly * ; passesNative/testOnly * ; " +
+    "testkitNative/testOnly * ; commandsNative/testOnly * ; riddlLibNative/testOnly * ; " +
     "riddlcNative/testOnly * ; riddlcNative/nativeLink"
 )
 addCommandAlias(
