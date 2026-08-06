@@ -395,6 +395,7 @@ case class ValidationPass(
         checkDefinition(parentsAsSeq, opc)
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
+        checkOnOtherBinding(ooc, parentsAsSeq) // A57
         if ooc.statements.isEmpty then {
           messages.addCompleteness(
             ooc.errorLoc,
@@ -619,6 +620,58 @@ case class ValidationPass(
           case auc: AggregateUseCaseTypeExpression => Some(auc.usecase)
           case _                                   => None
         )
+
+  /** A57: the envelope type named by the nearest `option message_envelope` in scope, if any.
+    *
+    * The option is SCOPE-INHERITED: declared on a context it covers every entity in it, so this
+    * walks UP the parent chain and takes the FIRST it finds, letting an inner declaration override
+    * an outer one the same way every other walked-up option behaves.
+    */
+  private def envelopeInScope(parents: Parents): Option[String] =
+    parents.iterator
+      .collectFirst {
+        case wo: WithMetaData if wo.getOptionValue("message_envelope").nonEmpty =>
+          wo.getOptionValue("message_envelope").get
+      }
+      .flatMap(_.args.headOption.map(_.s))
+
+  /** A57: the two rules for `on other as x [: <envelope>]`, both of which Reid specified.
+    *
+    * The binding is only meaningful when an envelope exists to type it, and the ascription is an
+    * optional RESTATEMENT of the option rather than a per-clause override — a clause that could
+    * contradict its scope would mean reading one clause tells you nothing about its siblings, which
+    * is exactly what scope inheritance exists to prevent.
+    */
+  private def checkOnOtherBinding(ooc: OnOtherClause, parents: Parents): Unit =
+    val inScope = envelopeInScope(parents)
+    (ooc.binding, ooc.envelopeType, inScope) match
+      case (None, None, _) => () // plain `on other`, unchanged by A57
+      case (_, Some(t), None) =>
+        messages.addError(
+          t.loc,
+          s"'on other' names the envelope type '${t.pathId.format}', but no " +
+            s"'option message_envelope' is in scope, so there is no envelope to type",
+          suggestion = s"Declare 'option message_envelope(\"${t.pathId.format}\")' on this " +
+            s"definition or an enclosing one, or drop the ': ${t.pathId.format}' ascription."
+        )
+      case (Some(b), None, None) =>
+        messages.addError(
+          ooc.loc,
+          s"'on other as ${b.value}' has no envelope to bind: no 'option message_envelope' is in " +
+            s"scope, and without one '${b.value}' would have no type",
+          suggestion = "Declare 'option message_envelope(\"Riddl.Envelope\")' on this definition " +
+            "or an enclosing one, or drop the binding and write 'on other'."
+        )
+      case (_, Some(t), Some(named)) if t.pathId.format != named =>
+        messages.addError(
+          t.loc,
+          s"'on other' names the envelope type '${t.pathId.format}', but 'option " +
+            s"message_envelope' in scope names '$named'; the ascription restates the option, it " +
+            s"does not override it",
+          suggestion = s"Change the ascription to ': $named', or drop it — it is optional and is " +
+            s"inferred from the option."
+        )
+      case _ => () // binding with an envelope in scope, agreeing ascription, or no binding
 
   /** A56: check a bound `tell`/`send` operand — `tell p to entity F`.
     *

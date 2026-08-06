@@ -771,10 +771,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 "message",
                 Some(messageRefDto(omc.msg)),
                 statements,
-                omc.binding.map(_.value),
-                onFromDto(omc.from),
-                metaOf(omc.metadata),
-                briefOf(omc.metadata)
+                binding = omc.binding.map(_.value),
+                from = onFromDto(omc.from),
+                metadata = metaOf(omc.metadata),
+                brief = briefOf(omc.metadata)
               )
             )
           case oec: OnEventClause =>
@@ -783,10 +783,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 "event",
                 Some(messageRefDto(oec.msg)),
                 statements,
-                oec.binding.map(_.value),
-                onFromDto(oec.from),
-                metaOf(oec.metadata),
-                briefOf(oec.metadata)
+                binding = oec.binding.map(_.value),
+                from = onFromDto(oec.from),
+                metadata = metaOf(oec.metadata),
+                brief = briefOf(oec.metadata)
               )
             )
           case _: OnInitializationClause =>
@@ -829,14 +829,18 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 brief = briefOf(oc.metadata)
               )
             )
-          case _ =>
+          case ooc: OnOtherClause =>
+            // A57: `on other as x [: <envelope>]`. Explicit arm rather than the wildcard below,
+            // so the binding is carried instead of silently dropped on the way to JSON.
             Some(
               OnClauseDto(
                 "other",
                 None,
                 statements,
-                metadata = metaOf(oc.metadata),
-                brief = briefOf(oc.metadata)
+                binding = ooc.binding.map(_.value),
+                envelope = ooc.envelopeType.map(_.pathId.format),
+                metadata = metaOf(ooc.metadata),
+                brief = briefOf(ooc.metadata)
               )
             )
       case t: Type =>

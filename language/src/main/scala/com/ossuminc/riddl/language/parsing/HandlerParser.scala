@@ -16,11 +16,26 @@ private[parsing] trait HandlerParser
     with ReferenceParser
     with StatementParser {
 
+  /** A57: `as <name> [: <envelope-type>]`, the optional envelope binding on `on other`.
+    *
+    * The type is named BARE after the colon, with no `type` keyword. The colon already says a type
+    * follows, so a keyword would add nothing a reader did not have — and the two candidates were
+    * `message` (untrue: an envelope is not a message) and `type` (correct only because it is
+    * vacuous). Both spellings are legal elsewhere in RIDDL, so this is a choice about meaning
+    * rather than consistency.
+    */
+  private def onOtherBinding[u: P]: P[(Option[Identifier], Option[TypeRef])] = {
+    P((as ~/ identifier ~ (Punctuation.colon ~/ typeRef).?).?).map {
+      case Some((id: Identifier, typ: Option[TypeRef])) => Option(id) -> typ
+      case None                                         => None -> None
+    }
+  }
+
   private def onOtherClause[u: P](set: StatementsSet): P[OnOtherClause] = {
     P(
-      Index ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
-    )./ map { case (start, statements, descriptives, end) =>
-      OnOtherClause(at(start, end), statements.toContents, descriptives.toContents)
+      Index ~ Keywords.onOther ~ onOtherBinding ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
+    )./ map { case (start, (binding, envelope), statements, descriptives, end) =>
+      OnOtherClause(at(start, end), binding, envelope, statements.toContents, descriptives.toContents)
     }
   }
 

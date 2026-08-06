@@ -766,6 +766,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(3) // Other clause type
     writeLocation(oc.loc)
+    // A57: the optional envelope binding and its optional explicit type. Written BEFORE contents,
+    // matching the order the OnMessageClause/OnEventClause arms use for their own binding.
+    writeOption(oc.binding)(writeIdentifier)
+    writeOption(oc.envelopeType)(writeTypeRef)
     writeContents(oc.contents)
   }
 

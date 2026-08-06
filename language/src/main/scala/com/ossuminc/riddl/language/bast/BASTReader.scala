@@ -1182,9 +1182,13 @@ class BASTReader(
         OnMessageClause(loc, msg, from, binding, contents, metadata)
 
       case 3 => // Other
+        // A57 (rev 8): the optional envelope binding and its optional explicit type. Mirrors
+        // `writeOnOtherClause` exactly -- tagged `readTypeRef` against tagged `writeTypeRef`.
+        val binding = readOption(readIdentifier())
+        val envelopeType = readOption(readTypeRef())
         val contents = readContentsDeferred[Statements]()
         val metadata = readMetadataDeferred()
-        OnOtherClause(loc, contents, metadata)
+        OnOtherClause(loc, binding, envelopeType, contents, metadata)
 
       case 4 => // Event — like Message but its own node
         val msg = readMessageRef()
@@ -1210,7 +1214,7 @@ class BASTReader(
         OnPassivationClause(loc, contents, metadata)
 
       case _ =>
-        OnOtherClause(loc, Contents.empty[Statements](), Contents.empty[MetaData]())
+        OnOtherClause(loc, None, None, Contents.empty[Statements](), Contents.empty[MetaData]())
     }
   }
 

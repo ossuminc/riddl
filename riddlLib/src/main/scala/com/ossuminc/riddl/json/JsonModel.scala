@@ -511,7 +511,13 @@ object JsonModel:
     kind: String,
     message: Option[MessageRefDto] = None,
     statements: Seq[StatementDto] = Nil,
+    // A55 for a message-like clause (the handled message's local name); A57 for `on other`, where
+    // it names the ENVELOPE rather than a message. One field, because both are "the local name
+    // this clause binds" and the `kind` already says which meaning applies.
     binding: Option[String] = None,
+    // A57: `on other as x: <envelope>` -- the optional explicit envelope type. Only meaningful
+    // alongside a binding on an `other` clause.
+    envelope: Option[String] = None,
     from: Option[OnFromDto] = None,
     metadata: Option[MetaDto] = None,
     // An on-clause may be documented like any other definition (`on other { … } with { briefly … }`).

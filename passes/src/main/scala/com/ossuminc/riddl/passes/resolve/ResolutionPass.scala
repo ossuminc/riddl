@@ -496,6 +496,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     * A `let`-local matches none of these and fails quietly — by design; see [[quiet]]. No new
     * traversal machinery is written here: every hop already existed for ordinary references.
     */
+  /** A57: the path of the envelope type an `on other` binding denotes — the clause's own ascription
+    * when it wrote one, else the type named by the nearest `option message_envelope` in scope.
+    *
+    * Returns None when neither exists, which is not silent: `ValidationPass.checkOnOtherBinding`
+    * reports a binding with no envelope in scope as an Error, so the resolver simply has nothing to
+    * do here.
+    */
+  private def envelopePathFor(ooc: OnOtherClause, parents: Parents): Option[PathIdentifier] =
+    ooc.envelopeType.map(_.pathId).orElse {
+      parents.iterator
+        .collectFirst {
+          case wo: WithMetaData if wo.getOptionValue("message_envelope").nonEmpty =>
+            wo.getOptionValue("message_envelope").get
+        }
+        .flatMap(_.args.headOption)
+        .map(ls => PathIdentifier(ls.loc, ls.s.split('.').toSeq))
+    }
+
   private def resolveValueRef(vr: ValueRef, parents: Parents): Unit =
     val names = vr.path.value
     if names.nonEmpty && parents.nonEmpty then
@@ -521,13 +539,36 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               )
             end if
           case None =>
-            valueScopeField(head, parents) match
-              case Some(field) if names.sizeIs == 1 =>
-                refMap.add[Field](vr.path, parent, field)
-                associateUsage(parent, field)
-              case Some(field) =>
-                resolvePathFromAnchor[Definition](vr.path, parents, field, symbols.parentsOf(field))
-              case None => resolveAPathId[Definition](vr.path, parents)
+            // A57: an `on other as x [: <envelope>]` binding. `x` denotes the message's ENVELOPE,
+            // whose type is the clause's ascription when written, else the one `option
+            // message_envelope` names in scope. Resolving to that Type makes both `x` and
+            // `x.source` work through the machinery already here.
+            parents.collectFirst {
+              case ooc: OnOtherClause if ooc.binding.exists(_.value == head) => ooc
+            } match
+              case Some(ooc) =>
+                envelopePathFor(ooc, parents).flatMap(refMap.definitionOf[Type](_, ooc)).foreach {
+                  t =>
+                    if names.sizeIs == 1 then
+                      refMap.add[Type](vr.path, parent, t)
+                      associateUsage(parent, t)
+                    else
+                      resolvePathFromAnchor[Definition](vr.path, parents, t, symbols.parentsOf(t))
+                    end if
+                }
+              case None =>
+                valueScopeField(head, parents) match
+                  case Some(field) if names.sizeIs == 1 =>
+                    refMap.add[Field](vr.path, parent, field)
+                    associateUsage(parent, field)
+                  case Some(field) =>
+                    resolvePathFromAnchor[Definition](
+                      vr.path,
+                      parents,
+                      field,
+                      symbols.parentsOf(field)
+                    )
+                  case None => resolveAPathId[Definition](vr.path, parents)
         end match
       }
     end if

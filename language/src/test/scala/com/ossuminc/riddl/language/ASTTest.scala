@@ -231,7 +231,7 @@ class ASTTest extends AbstractTestingBasis {
   val onClauses: Contents[OnClause] = Contents(
     OnInitializationClause(At.empty, statements),
     OnMessageClause(At.empty, messageRef, None, None, statements),
-    OnOtherClause(At.empty, statements),
+    OnOtherClause(At.empty, None, None, statements),
     OnTerminationClause(At.empty, statements)
   )
   val handler: Handler =
@@ -478,11 +478,11 @@ class ASTTest extends AbstractTestingBasis {
   }
   "OnOtherClause" should {
     "have a test" in {
-      val ooc = OnOtherClause(At.empty, statements)
+      val ooc = OnOtherClause(At.empty, None, None, statements)
       ooc.id.value mustBe "other"
       ooc.kind mustBe "On Other"
       ooc.statements mustBe statements
-      OnOtherClause(At.empty).statements mustBe empty
+      OnOtherClause(At.empty, None, None).statements mustBe empty
     }
   }
   "Outlet" should {

@@ -56,7 +56,7 @@ is covered in that construct's phase. The builder emits references as
 | OnInitializationClause | ✅ Phase 1 | `kind: "init"` |
 | OnActivationClause | ✅ 2.0 | `kind: "activate"` |
 | OnPassivationClause | ✅ 2.0 | `kind: "passivate"` |
-| OnOtherClause | ✅ Phase 1 | `kind: "other"` |
+| OnOtherClause | ✅ Phase 1 / A57 | `kind: "other"`; A57 binding + `envelope` (the optional explicit envelope type) |
 | OnTerminationClause | ✅ Phase 1 | `kind: "term"` |
 | Invariant | ✅ Phase 1 / A28 s2 / 2026-08-04 | string `condition`, structured `expression`, or a `block` (statements + predicate) — exactly one. Plus `requires` + `requiresKind` (`state`/`type`), which decide WHERE the invariant applies, so dropping them describes a different model. |
 | Author | ✅ Phase 1 | at domain level |

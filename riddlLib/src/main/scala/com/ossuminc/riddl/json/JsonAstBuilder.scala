@@ -987,7 +987,15 @@ object JsonAstBuilder:
               md
             )
       case "init"      => OnInitializationClause(curAt, statements, md)
-      case "other"     => OnOtherClause(curAt, statements, md)
+      case "other" =>
+        // A57: rebuild the optional envelope binding and its optional explicit type.
+        OnOtherClause(
+          curAt,
+          binding,
+          oc.envelope.map(e => TypeRef(curAt, "type", pathId(e))),
+          statements,
+          md
+        )
       case "term"      => OnTerminationClause(curAt, statements, md)
       case "activate"  => OnActivationClause(curAt, statements, md)
       case "passivate" => OnPassivationClause(curAt, statements, md)
@@ -995,7 +1003,7 @@ object JsonAstBuilder:
         ctx.err(
           s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate)"
         )
-        OnOtherClause(curAt, statements, md)
+        OnOtherClause(curAt, None, None, statements, md)
     end match
   end buildOnClause
 

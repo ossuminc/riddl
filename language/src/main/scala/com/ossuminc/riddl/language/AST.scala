@@ -3907,14 +3907,31 @@ object AST:
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses.
     * OnOtherClause corresponds to the "other" case of an [[Handler]].
     *
+    * A57: `on other as x [: <envelope>]` optionally binds the residual message's ENVELOPE. Unlike
+    * an [[OnMessageLikeClause]] binding, `x` does not denote a message — the clause names none — it
+    * denotes the metadata the message travelled in, whose type comes from `option
+    * message_envelope` in scope. The ascription is an OPTIONAL restatement of that option, checked
+    * against it, so the type can be pulled to the use site where a reader benefits without being
+    * repeated everywhere. Validation owns both rules: an ascription that contradicts the option,
+    * and either form used with no envelope in scope.
+    *
+    * `binding` and `envelopeType` carry NO defaults and precede `contents`, because
+    * `@JSExportTopLevel` requires a case class's defaulted parameters to be TRAILING.
+    *
     * @param loc
     *   THe location of the "on other" clause
+    * @param binding
+    *   A57: the optional local name bound to the message's envelope
+    * @param envelopeType
+    *   A57: the optional explicit envelope type; must agree with `option message_envelope`
     * @param contents
     *   A set of examples that define the behavior when a message doesn't match
     */
   @JSExportTopLevel("OnOtherClause")
   case class OnOtherClause(
     loc: At,
+    binding: Option[Identifier],
+    envelopeType: Option[TypeRef],
     contents: Contents[Statements] = Contents.empty[Statements](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {
@@ -3922,7 +3939,10 @@ object AST:
 
     override def kind: String = "On Other"
 
-    override def format: String = ""
+    /** A57: the binding is rendered by `Declaration.ascription`, which `openDef` and
+      * `Definition.format` both read — one implementation, so the two surfaces cannot drift.
+      */
+    override def format: String = Declaration.ascription(this)
   }
 
   /** Defines the actions to be taken when the component this OnClause occurs in is initialized.
@@ -4251,6 +4271,16 @@ object AST:
         omc.from
           .map { case (optId, ref) =>
             s" ${Keyword.from} " + optId.map(id => s"${id.format}: ").getOrElse("") + ref.format
+          }
+          .getOrElse("")
+      // A57: `on other as <name> [: <envelope>]`. It lives HERE, not in the clause's own `format`,
+      // because this is the one implementation both surfaces read: `openDef` emits it for
+      // round-tripping and `format` renders it for consumers. Putting it anywhere else is how the
+      // two drift, and the prettifier silently dropped this binding until it moved here.
+      case ooc: OnOtherClause =>
+        ooc.binding
+          .map { id =>
+            s" as ${id.format}" + ooc.envelopeType.map(t => s": ${t.pathId.format}").getOrElse("")
           }
           .getOrElse("")
       case _ => ""

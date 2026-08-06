@@ -75,7 +75,7 @@ package object bast {
     * that real files carry.
     */
   val FORMAT_REVISION: Short =
-    7 // A56: `tell`/`send` message operand gains a ValueRef arm (discriminator 2)
+    8 // A57: `on other as x [: <envelope>]` -- optional binding + type on OnOtherClause
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)
