@@ -566,13 +566,17 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     * (resolved via [[resolveValue]]). Shared by send/tell/yield (message) and morph (record).
     */
   private def resolveMessageOperand(
-    m: MessageRef | RecordRef | Constructor,
+    m: MessageRef | RecordRef | Constructor | ValueRef,
     parents: Parents
   ): Unit =
     m match
       case ref: (MessageRef | RecordRef) =>
         associateUsage[Type](parents.head, resolveARef[Type](ref, parents))
       case c: Constructor => resolveValue(c, parents)
+      // A56: a `tell`/`send` operand naming an on-clause binding. Deferred like every other
+      // ValueRef rather than resolved here: its anchor is the enclosing on-clause, and
+      // `resolveValueRef` already knows how to reach the handled message's Type from there.
+      case vr: ValueRef => deferValueRef(vr, parents)
 
   /** Resolve the collection FieldRefs of every [[ForeachStatement]] nested anywhere within `stmts`.
     * `parents` is held constant (its head is the enclosing on-clause/function) so the refMap keys

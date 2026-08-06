@@ -1116,10 +1116,22 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   /** A54: a message operand — discriminator 0=MessageRef, 1=Constructor. Reader mirrors this. */
-  def writeMessageOperand(m: MessageRef | Constructor): Unit = m match {
+  /** A54/A56: a message operand — discriminator 0=MessageRef, 1=Constructor, 2=ValueRef (a `tell`/
+    * `send` operand naming an on-clause binding). Reader mirrors this.
+    *
+    * The ValueRef arm uses `writePathIdentifierInline`, NOT `writePathIdentifier`: the latter emits
+    * a leading NODE_PATH_IDENTIFIER tag that `readPathIdentifierInline` does not consume, and the
+    * resulting one-byte skew surfaces as "Invalid string table index" far downstream. Same pairing
+    * as every other ValueRef arm in this file.
+    */
+  def writeMessageOperand(m: MessageRef | Constructor | ValueRef): Unit = m match {
     case c: Constructor =>
       writer.writeU8(1)
       writeConstructor(c)
+    case vr: ValueRef =>
+      writer.writeU8(2)
+      writeLocation(vr.loc)
+      writePathIdentifierInline(vr.path)
     case mr: MessageRef =>
       writer.writeU8(0)
       writeMessageRef(mr)

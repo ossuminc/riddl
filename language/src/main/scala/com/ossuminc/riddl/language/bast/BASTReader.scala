@@ -1050,7 +1050,18 @@ class BASTReader(
         RequireStatement(loc, condition, argument)
 
       case 15 => // Yield (formerly Reply — wire format unchanged)
-        val msg = readMessageOperand() // A54: bare ref or constructor
+        // A56: `yield` shares the operand codec but NOT the widened operand — only `tell`/`send`
+        // accept a bound name. A ValueRef here means the stream is malformed (or was written by a
+        // build whose `yield` accepted one), so say that plainly rather than widening
+        // YieldStatement to a shape its parser never produces.
+        val msg: MessageRef | Constructor = readMessageOperand() match
+          case mr: MessageRef => mr
+          case c: Constructor => c
+          case vr: ValueRef =>
+            throw new RuntimeException(
+              s"Yield statement has a bound-name operand '${vr.path.format}', which `yield` does " +
+                s"not accept; only `tell` and `send` do"
+            )
         YieldStatement(loc, msg)
 
       case 16 => // Foreach
@@ -2481,10 +2492,14 @@ class BASTReader(
       case other => throw new RuntimeException(s"Invalid match pattern discriminator: $other")
 
   /** A54: mirror of [[BASTWriter.writeMessageOperand]]. */
-  private def readMessageOperand(): MessageRef | Constructor =
+  private def readMessageOperand(): MessageRef | Constructor | ValueRef =
     reader.readU8() match
-      case 0     => readMessageRef()
-      case 1     => readConstructor()
+      case 0 => readMessageRef()
+      case 1 => readConstructor()
+      case 2 => // A56: a bound name — `tell p to entity F`
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ValueRef(loc, pid)
       case other => throw new RuntimeException(s"Invalid message operand discriminator: $other")
 
   /** A54: mirror of [[BASTWriter.writeRecordOperand]]. */

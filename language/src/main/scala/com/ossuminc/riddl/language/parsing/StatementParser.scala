@@ -117,6 +117,23 @@ private[parsing] trait StatementParser {
     }
   }
 
+  /** A56: a bare path naming a binding introduced by the enclosing on-clause — `on p: command Ping
+    * is { tell p to entity F }`.
+    *
+    * Tried only AFTER [[messageRef]], which is keyword-led (`command`/`event`/`query`/`result`) and
+    * carries no cut at the keyword, so this alternative can never shadow `tell command Foo` — the
+    * same backtracking bargain [[HandlerParser.maybeName]] relies on.
+    *
+    * The `!to` guard matters because `anyIdentifier` does NOT exclude keywords: without it, a
+    * missing operand (`tell to entity F`) would consume `to` AS the operand and then report the
+    * failure a token late, against the definition rather than the omission.
+    */
+  private def boundMessageValue[u: P]: P[ValueRef] = {
+    P(Index ~ !to ~ pathIdentifier ~~ Index).map { case (start, pid, end) =>
+      ValueRef(at(start, end), pid)
+    }
+  }
+
   // A54: a message operand — a bare message ref `E` or a constructor `E(args)`. The ref is parsed
   // ONCE, then an OPTIONAL parenthesized arg list decides ref-vs-constructor. (Trying `constructor`
   // first would commit the ref parse via its internal cut and prevent the bare-ref fallback.)
@@ -129,6 +146,17 @@ private[parsing] trait StatementParser {
       case (_, ref, None, _)             => ref: MessageRef | Constructor
       case (start, ref, Some(args), end) => Constructor(at(start, end), ref, args.toSeq)
     }
+  }
+
+  /** A56: the operand accepted by `tell` and `send` — [[messageValue]] widened with a bound name.
+    *
+    * Deliberately NOT used by `yield`. A56 was scoped to delivery: `yield p` would interact with
+    * yield conformance (A19), which compares the yielded operand against the clause's DECLARED
+    * `yields`, and that is a separate decision from being able to forward a message you were handed.
+    * Keeping `messageValue` narrow leaves `yield` exactly as it was.
+    */
+  private def deliverableMessageValue[u: P]: P[MessageRef | Constructor | ValueRef] = {
+    P(messageValue | boundMessageValue)
   }
 
   // A54: a record operand for `morph … with` — a bare record ref `R` or a constructor `R(args)`.
@@ -181,7 +209,7 @@ private[parsing] trait StatementParser {
   // still parse; the inlet branch emits a deprecation at the ref (mirrors reply -> yield, prompt).
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
-      Index ~ Keywords.send ~/ messageValue ~/ to ~ (outletRef | inletRef) ~/ Index
+      Index ~ Keywords.send ~/ deliverableMessageValue ~/ to ~ (outletRef | inletRef) ~/ Index
     )./.map { case (start, msg, portlet, end) =>
       portlet match
         case ref: InletRef =>
@@ -199,7 +227,7 @@ private[parsing] trait StatementParser {
 
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
-      Index ~ Keywords.tell ~/ messageValue ~/ to ~ processorRef ~/ Index
+      Index ~ Keywords.tell ~/ deliverableMessageValue ~/ to ~ processorRef ~/ Index
     )./.map { (start, msg, proc, end) => TellStatement(at(start, end), msg, proc) }
   }
 

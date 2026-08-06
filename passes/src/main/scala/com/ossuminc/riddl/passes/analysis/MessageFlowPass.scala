@@ -151,7 +151,7 @@ case class MessageFlowPass(
     tells.foreach { tell =>
       val maybeTarget =
         refMap.definitionOf[Processor[?]](tell.processorRef, omc)
-      val maybeType = refMap.definitionOf[Type](tell.msg.operandPathId, omc)
+      val maybeType = refMap.definitionOf[Type](tell.msg.deliverableOperandPathId, omc)
       (maybeTarget, maybeType) match
         case (Some(target), Some(msgType)) =>
           collectedEdges.addOne(
@@ -180,7 +180,7 @@ case class MessageFlowPass(
     sends.foreach { send =>
       val maybePortlet =
         refMap.definitionOf[Portlet](send.portlet, omc)
-      val maybeType = refMap.definitionOf[Type](send.msg.operandPathId, omc)
+      val maybeType = refMap.definitionOf[Type](send.msg.deliverableOperandPathId, omc)
       (maybePortlet, maybeType) match
         case (Some(portlet), Some(msgType)) =>
           val portletParent = symTab.parentOf(portlet).collect { case p: Processor[?] =>

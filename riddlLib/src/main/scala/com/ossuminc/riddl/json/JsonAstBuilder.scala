@@ -1363,7 +1363,7 @@ object JsonAstBuilder:
             FieldRef(curAt, PathIdentifier.empty)
         SetStatement(curAt, target, buildValue(value))
       case SendStmtDto(message, to, portlet) =>
-        SendStatement(curAt, buildMsgOperand(message), portletRef(to, portlet))
+        SendStatement(curAt, buildDeliverableOperand(message), portletRef(to, portlet))
       case MorphStmtDto(entity, state, value) =>
         MorphStatement(
           curAt,
@@ -1374,7 +1374,7 @@ object JsonAstBuilder:
       case BecomeStmtDto(entity, handler) =>
         BecomeStatement(curAt, EntityRef(curAt, pathId(entity)), HandlerRef(curAt, pathId(handler)))
       case TellStmtDto(message, to, processor) =>
-        TellStatement(curAt, buildMsgOperand(message), processorRef(to, processor))
+        TellStatement(curAt, buildDeliverableOperand(message), processorRef(to, processor))
       case YieldStmtDto(message) => YieldStatement(curAt, buildMsgOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
         val cond: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue =
@@ -1504,6 +1504,17 @@ object JsonAstBuilder:
   private def buildMsgOperand(o: MsgOperandDto)(using ctx: Ctx): MessageRef | Constructor = o match
     case c: ConstructorValueDto => buildConstructor(c)
     case m: MessageRefDto       => messageRef(m)
+
+  /** A56: the widened `tell`/`send` operand. Mirror of
+    * `JsonifierPass.serializeDeliverableOperand` — the reserved kind `"bound"` rebuilds a
+    * [[ValueRef]] naming an on-clause binding. Deliberately separate from [[buildMsgOperand]], so
+    * `yield` (which shares the DTO but not the widened operand) cannot acquire one.
+    */
+  private def buildDeliverableOperand(
+    o: MsgOperandDto
+  )(using ctx: Ctx): MessageRef | Constructor | ValueRef = o match
+    case m: MessageRefDto if m.kind == "bound" => ValueRef(curAt, pathId(m.ref))
+    case other                                 => buildMsgOperand(other)
 
   // A54: a record operand for `morph … with` — a bare record ref or an inline constructor.
   private def buildRecordOperand(o: MsgOperandDto)(using ctx: Ctx): RecordRef | Constructor =

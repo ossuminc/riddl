@@ -305,10 +305,21 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
         case r: MessageRef => r
         case r: RecordRef  => r
 
+  // A56: the same, for the widened `tell`/`send` operand. A ValueRef is not a Reference, so a bound
+  // operand yields None rather than being forced into one.
+  private def operandRefOpt(
+    m: MessageRef | Constructor | ValueRef
+  ): Option[Reference[Definition]] = m match
+    case _: ValueRef                       => None
+    case other: (MessageRef | Constructor) => Some(operandRef(other))
+
   private def getStatementReferences(statement: Statements): Seq[Reference[Definition]] = {
     statement match
-      case SendStatement(_, msg, portlet)          => Seq(operandRef(msg), portlet)
-      case TellStatement(_, msg, processor)        => Seq(operandRef(msg), processor)
+      // A56: a bound operand (`tell p to …`) contributes no Reference of its own — `p` is a local
+      // name, not a reference to a definition. The message it denotes is already reachable through
+      // the on-clause that declared it, so the diagram loses nothing by taking only the target.
+      case SendStatement(_, msg, portlet)   => operandRefOpt(msg).toSeq :+ portlet
+      case TellStatement(_, msg, processor) => operandRefOpt(msg).toSeq :+ processor
       case YieldStatement(_, msg)                  => Seq(operandRef(msg))
       case SetStatement(_, field, _)               => Seq(field)
       case MorphStatement(_, entity, state, value) => Seq(entity, state, operandRef(value))

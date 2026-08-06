@@ -3172,6 +3172,25 @@ object AST:
       case c: Constructor                => c.ref.messageKind
   end extension
 
+  /** A56: the path of a `tell`/`send` operand, which may additionally be a [[ValueRef]] naming an
+    * on-clause binding.
+    *
+    * For a binding the path is the LOCAL name (`p`), which is exactly the key
+    * `ResolutionPass.resolveValueRef` registers in the refMap against the handled message's Type —
+    * so `refMap.definitionOf[Type](…)` works unchanged for all three arms.
+    *
+    * Only the path generalizes. There is deliberately no `operandMessageKind` counterpart here: a
+    * ref carries its kind syntactically but a binding's kind is only known once resolved, so asking
+    * for it without a resolver would force a wrong answer. Use
+    * `ValidationPass.operandMessageKind`, which returns an Option.
+    */
+  extension (m: MessageRef | Constructor | ValueRef)
+    def deliverableOperandPathId: PathIdentifier = m match
+      case ref: MessageRef => ref.pathId
+      case c: Constructor  => c.ref.pathId
+      case vr: ValueRef    => vr.path
+  end extension
+
   ////////////////////////////////////////////////////////////////////////////////////// STATEMENTS
 
   /** Base trait of all Statements that can occur in [[OnClause]]s */
@@ -3287,7 +3306,8 @@ object AST:
   case class SendStatement(
     loc: At,
     // A54: the message operand is a bare ref or a constructor that builds the message value.
-    msg: MessageRef | Constructor,
+    // A56: it may also be a [[ValueRef]] naming an on-clause binding. See [[TellStatement]].
+    msg: MessageRef | Constructor | ValueRef,
     portlet: PortletRef[Portlet]
   ) extends Statement {
     override def kind: String = "Send Statement"
@@ -3354,7 +3374,10 @@ object AST:
   case class TellStatement(
     loc: At,
     // A54: the message operand is a bare ref or a constructor that builds the message value.
-    msg: MessageRef | Constructor,
+    // A56: it may also be a [[ValueRef]] naming an on-clause binding -- `on p: command Ping is {
+    // tell p to entity F }`. The binding is DECLARED by the enclosing clause, so both the Type and
+    // the message kind are recovered from `omc.msg`; see `operandMessageKind`.
+    msg: MessageRef | Constructor | ValueRef,
     processorRef: ProcessorRef[Processor[?]]
   ) extends Statement {
     override def kind: String = "Tell Statement"

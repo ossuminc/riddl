@@ -155,10 +155,10 @@ is covered in that construct's phase. The builder emits references as
 | CodeStatement | ✅ Phase 3 | |
 | RequireStatement | ✅ Phase 3 / A28 s2 | condition widened: string, `invariant` name, or structured `expression` (ValueDto) |
 | SetStatement | ✅ Phase 3 / A54 | FieldRef/StateRef; value widened to ValueDto |
-| SendStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; + PortletRef |
+| SendStatement | ✅ Phase 3 / A54 / A56 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); + PortletRef |
 | MorphStatement | ✅ Phase 3 / A54 | value = RecordRef or Constructor |
 | BecomeStatement | ✅ Phase 3 | |
-| TellStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor |
+| TellStatement | ✅ Phase 3 / A54 / A56 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`) |
 | YieldStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; reads legacy "reply" |
 | WhenStatement | ✅ Phase 3 / A28 s2 | nested statements; condition widened: string, identifier, or structured `expression` (ValueDto) |
 | MatchStatement / MatchCase | ✅ Phase 3 / A29 | subject = ValueDto (valueRef/get/literal); each case: structured `pattern` (type/comparison/literal MatchPatternDto) + optional `guard` (ValueDto) + nested statements |

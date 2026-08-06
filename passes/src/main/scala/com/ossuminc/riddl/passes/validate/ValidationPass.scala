@@ -258,15 +258,11 @@ case class ValidationPass(
             val sends = finder.recursiveFindByType[SendStatement]
             val tells = finder.recursiveFindByType[TellStatement]
             sends
-              .filter(s => operandMessageKind(s.msg) == AggregateUseCase.EventCase)
-              .foreach(s =>
-                producedEventNames += operandPathId(s.msg).value.lastOption.getOrElse("")
-              )
+              .filter(s => operandMessageKind(s.msg).contains(AggregateUseCase.EventCase))
+              .foreach(s => producedEventNames += operandMessageName(s.msg))
             tells
-              .filter(t => operandMessageKind(t.msg) == AggregateUseCase.EventCase)
-              .foreach(t =>
-                producedEventNames += operandPathId(t.msg).value.lastOption.getOrElse("")
-              )
+              .filter(t => operandMessageKind(t.msg).contains(AggregateUseCase.EventCase))
+              .foreach(t => producedEventNames += operandMessageName(t.msg))
           }
         }
         events.foreach { evt =>
@@ -510,11 +506,11 @@ case class ValidationPass(
             val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
             val yields: Seq[YieldStatement] = finder.recursiveFindByType[YieldStatement]
             val foundSend = sends.nonEmpty &&
-              sends.exists(s => operandMessageKind(s.msg) == AggregateUseCase.EventCase)
+              sends.exists(s => operandMessageKind(s.msg).contains(AggregateUseCase.EventCase))
             val foundTell = tells.nonEmpty &&
-              tells.exists(t => operandMessageKind(t.msg) == AggregateUseCase.EventCase)
+              tells.exists(t => operandMessageKind(t.msg).contains(AggregateUseCase.EventCase))
             val foundYield = yields.nonEmpty &&
-              yields.exists(y => operandMessageKind(y.msg) == AggregateUseCase.EventCase)
+              yields.exists(y => operandMessageKind(y.msg).contains(AggregateUseCase.EventCase))
             // Refusing a command IS processing it: the clause decided, it declined, and there is
             // nothing to record, so there is no event to send. Without this the rule was inverted —
             // it flagged the honest refusal-only clause, and was SILENCED by adding a send after
@@ -535,11 +531,11 @@ case class ValidationPass(
             val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
             val yields: Seq[YieldStatement] = finder.recursiveFindByType[YieldStatement]
             val foundSend = sends.nonEmpty &&
-              sends.exists(s => operandMessageKind(s.msg) == AggregateUseCase.ResultCase)
+              sends.exists(s => operandMessageKind(s.msg).contains(AggregateUseCase.ResultCase))
             val foundTell = tells.nonEmpty &&
-              tells.exists(t => operandMessageKind(t.msg) == AggregateUseCase.ResultCase)
+              tells.exists(t => operandMessageKind(t.msg).contains(AggregateUseCase.ResultCase))
             val foundYield = yields.nonEmpty &&
-              yields.exists(y => operandMessageKind(y.msg) == AggregateUseCase.ResultCase)
+              yields.exists(y => operandMessageKind(y.msg).contains(AggregateUseCase.ResultCase))
             if !(foundSend || foundTell || foundYield) then
               messages.addCompleteness(
                 omc.errorLoc,
@@ -595,12 +591,65 @@ case class ValidationPass(
     end if
   end checkLocalName
 
-  /** A54: the [[AggregateUseCase]] of a widened message operand — a bare ref or a constructor whose
-    * ref names the constructed message/record.
+  /** A56: the message [[Type]] behind any operand shape, when it can be resolved.
+    *
+    * For a [[ValueRef]] this is the on-clause binding's type: `ResolutionPass.resolveValueRef` has
+    * already keyed the binding's path to the handled message's Type, so no new lookup rule is
+    * needed here — only the extra case.
     */
-  private def operandMessageKind(m: MessageRef | Constructor): AggregateUseCase = m match
-    case mr: MessageRef => mr.messageKind
-    case c: Constructor => c.ref.messageKind
+  private def operandType(m: MessageRef | Constructor | ValueRef): Option[Type] = m match
+    case mr: MessageRef => resolution.refMap.definitionOf[Type](mr.pathId)
+    case c: Constructor => resolution.refMap.definitionOf[Type](c.ref.pathId)
+    case vr: ValueRef   => resolution.refMap.definitionOf[Type](vr.path)
+
+  /** A54/A56: the [[AggregateUseCase]] of a widened message operand — a bare ref, a constructor
+    * whose ref names the constructed message/record, or a binding named by the enclosing on-clause.
+    *
+    * **Optional on purpose.** A keyword-led ref carries its kind syntactically, but a binding's kind
+    * is only known once resolved, and [[AggregateUseCase]] has no "unknown" member to fall back to.
+    * Returning a wrong kind here would silently mis-answer the event-sourcing rules, so an
+    * unresolved binding answers `None` and every caller's `contains` reads it as "not that kind".
+    */
+  private def operandMessageKind(m: MessageRef | Constructor | ValueRef): Option[AggregateUseCase] =
+    m match
+      case mr: MessageRef => Some(mr.messageKind)
+      case c: Constructor => Some(c.ref.messageKind)
+      case _: ValueRef =>
+        operandType(m).flatMap(_.typEx match
+          case auc: AggregateUseCaseTypeExpression => Some(auc.usecase)
+          case _                                   => None
+        )
+
+  /** A56: check a bound `tell`/`send` operand — `tell p to entity F`.
+    *
+    * `p` must name a binding introduced by an enclosing on-clause, which `ResolutionPass` has keyed
+    * to the handled message's Type. Nothing else can supply a message value, so an unresolved name
+    * here is an Error rather than a warning: the statement names a message that does not exist.
+    *
+    * This check is owned by validation, not the resolver, for the reason recorded in
+    * `ResolutionPass.quietly` — a ValueRef may legitimately fail to resolve there (a `let`-local is
+    * lexical and invisible to the symbol table), so the resolver stays quiet and the diagnostic is
+    * issued here where the operand's meaning is known.
+    */
+  private def checkBoundMessageOperand(vr: ValueRef, statement: String): Unit =
+    if resolution.refMap.definitionOf[Type](vr.path).isEmpty then
+      messages.addError(
+        vr.loc,
+        s"'${vr.path.format}' in this '$statement' does not name a message bound by an enclosing " +
+          s"'on' clause, so there is no message to deliver",
+        suggestion = s"Bind the handled message first, e.g. " +
+          s"'on ${vr.path.format}: command SomeCommand is { $statement ${vr.path.format} to … }', " +
+          s"or name the message explicitly, e.g. '$statement command SomeCommand to …'."
+      )
+
+  /** A54/A56: the NAME of the message an operand denotes. For a ref or constructor that is the last
+    * path component; for a binding it is the resolved Type's id, since the binding's own path names
+    * the local (`p`), not the message.
+    */
+  private def operandMessageName(m: MessageRef | Constructor | ValueRef): String = m match
+    case vr: ValueRef => operandType(vr).map(_.id.value).getOrElse("")
+    case other: (MessageRef | Constructor) =>
+      operandPathId(other).value.lastOption.getOrElse("")
 
   /** A54: the [[PathIdentifier]] of a widened message operand (the bare ref's, or the constructor
     * ref's).
@@ -644,6 +693,7 @@ case class ValidationPass(
         msg match
           case ref: MessageRef => checkRef[Type](ref, parents)
           case _: Constructor  => ()
+          case vr: ValueRef    => checkBoundMessageOperand(vr, "send") // A56
         checkRef[Portlet](portlet, parents)
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
@@ -672,6 +722,7 @@ case class ValidationPass(
               checkCrossContextReference(ref.pathId, typ, onClause, parents)
             }
           case _: Constructor => ()
+          case vr: ValueRef   => checkBoundMessageOperand(vr, "tell") // A56
       case WhenStatement(loc, condition, thenStatements, elseStatements, _) =>
         condition match {
           case ls: LiteralString =>
@@ -855,7 +906,7 @@ case class ValidationPass(
                 end if
               else
                 yieldStmts.foreach { ys =>
-                  val kindOk = operandMessageKind(ys.msg) == declaredYield.messageKind
+                  val kindOk = operandMessageKind(ys.msg).contains(declaredYield.messageKind)
                   val yieldedType = resolution.refMap.definitionOf[Type](operandPathId(ys.msg))
                   val typeOk = (declaredType, yieldedType) match {
                     case (Some(dt), Some(yt)) => dt eq yt
@@ -2751,9 +2802,13 @@ case class ValidationPass(
     * appear in the result.
     */
   private def statementReferencedDefs(s: Statement): Seq[(PathIdentifier, Definition)] =
-    def msgRefs(m: MessageRef | Constructor): Seq[(PathIdentifier, Definition)] = m match
+    def msgRefs(m: MessageRef | Constructor | ValueRef): Seq[(PathIdentifier, Definition)] = m match
       case mr: MessageRef =>
         resolution.refMap.definitionOf[Type](mr.pathId).map(mr.pathId -> _).toSeq
+      // A56: a bound operand contributes the message Type it resolves to, keyed by the binding's
+      // own path -- which is the key ResolutionPass registered for it.
+      case vr: ValueRef =>
+        resolution.refMap.definitionOf[Type](vr.path).map(vr.path -> _).toSeq
       case c: Constructor =>
         val direct = c.ref match
           case mr: MessageRef => resolution.refMap.definitionOf[Type](mr.pathId).map(mr.pathId -> _)
@@ -2867,7 +2922,7 @@ case class ValidationPass(
     if s.doStatements.nonEmpty then {
       var hasTellCommand = false
       walkStatements(s.doStatements) {
-        case t: TellStatement if operandMessageKind(t.msg) == AggregateUseCase.CommandCase =>
+        case t: TellStatement if operandMessageKind(t.msg).contains(AggregateUseCase.CommandCase) =>
           hasTellCommand = true
         case _ => ()
       }

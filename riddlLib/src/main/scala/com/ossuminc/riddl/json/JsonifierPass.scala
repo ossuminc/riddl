@@ -1332,7 +1332,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         case fr: FieldRef => SetStmtDto(Some(path(fr.pathId)), None, serializeValue(value))
         case sr: StateRef => SetStmtDto(None, Some(path(sr.pathId)), serializeValue(value))
     case SendStatement(_, msg, portlet) =>
-      val (pp, pk) = portletRef(portlet); SendStmtDto(serializeMsgOperand(msg), pp, pk)
+      val (pp, pk) = portletRef(portlet); SendStmtDto(serializeDeliverableOperand(msg), pp, pk)
     case MorphStatement(_, entity, state, value) =>
       // A9b/A54: morph value is a RecordRef (serialized as a record-kinded MessageRefDto) or a
       // Constructor.
@@ -1340,7 +1340,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case BecomeStatement(_, entity, handler) =>
       BecomeStmtDto(path(entity.pathId), path(handler.pathId))
     case TellStatement(_, msg, proc) =>
-      val (pp, pk) = processorRef(proc); TellStmtDto(serializeMsgOperand(msg), pp, pk)
+      val (pp, pk) = processorRef(proc); TellStmtDto(serializeDeliverableOperand(msg), pp, pk)
     case YieldStatement(_, msg) => YieldStmtDto(serializeMsgOperand(msg))
     case WhenStatement(_, cond, thenS, elseS, negated) =>
       cond match
@@ -1477,6 +1477,15 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   private def serializeMsgOperand(m: MessageRef | Constructor): MsgOperandDto = m match
     case mr: MessageRef => messageRefDto(mr)
     case c: Constructor => serializeConstructor(c)
+
+  /** A56: the widened `tell`/`send` operand. A bound name reuses [[MessageRefDto]] with the
+    * reserved kind `"bound"` — no message kind is spelled that way, so the reader can tell them
+    * apart without a new DTO shape or a JSON schema change.
+    */
+  private def serializeDeliverableOperand(m: MessageRef | Constructor | ValueRef): MsgOperandDto =
+    m match
+      case vr: ValueRef                      => MessageRefDto(path(vr.path), "bound")
+      case other: (MessageRef | Constructor) => serializeMsgOperand(other)
 
   // A54: a record operand for `morph … with` — a bare record ref or an inline constructor.
   private def serializeRecordOperand(m: RecordRef | Constructor): MsgOperandDto = m match

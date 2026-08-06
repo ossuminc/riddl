@@ -265,11 +265,17 @@ foreach_statement = "foreach" identifier "in" (field_ref | identifier) "{" {stat
 
 (* Message operations. A54: the message operand is a bare ref or an inline constructor. *)
 message_value = constructor | message_ref ;
+(* A56: `tell` and `send` additionally accept a bare name bound by the enclosing on-clause --
+   `on p: command Ping is { tell p to entity F }` -- so a handler can forward the message it was
+   given. Ordered AFTER message_value because message_ref is keyword-led; a bare path is only
+   tried once `command`/`event`/`query`/`result` has failed. NOT accepted by yield_statement,
+   whose operand is compared against the clause's declared `yields`. *)
+deliverable_message_value = message_value | path_identifier ;
 (* A30: `outlet` is the canonical `send` target (emit on your own outlet; a connector routes it
    to a downstream inlet). The `inlet_ref` form is DEPRECATED (soft, removed in 3.0) but still
    parses; use `tell` for direct delivery to a processor. *)
-send_statement = "send" message_value "to" (outlet_ref | inlet_ref) ;
-tell_statement = "tell" message_value "to" processor_ref ;
+send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref) ;
+tell_statement = "tell" deliverable_message_value "to" processor_ref ;
 yield_statement = "yield" message_value ;
 (* `reply` is the deprecated synonym for `yield`; both parse to the same node *)
 reply_statement = "reply" message_value ;
