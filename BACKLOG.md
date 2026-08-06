@@ -17,43 +17,6 @@ plan is discarded once built.
 
 ### 1. Queued, designed, not started
 
-- **Let a bound message be used as a `tell`/`send` operand — `tell p to entity F`.**
-  Approved by Reid 2026-08-06. **NEXT UP; start here.**
-  **Verified 2026-08-06 against the staged binary, not inferred:**
-  - `on p: command Ping is { set field St.seen to p.note }` → **validates clean.**
-    A55 bindings already work in VALUE positions.
-  - `on p: command Ping is { tell p to entity F }` → **parse error**,
-    `Expected one of ("become" | "command" | "event" | "morph" | "query" |
-    "reply" | "result" | "yield")`.
-  - `on p: command Ping is { tell command C.Ping to entity C.F }` → **parses, 0
-    errors.** So `tell` IS permitted in that clause; the operand is what fails.
-    (An earlier reading of the error as a statement restriction was tested and
-    disproved — test the alternation, don't read it.)
-  **Cause:** `TellStatement.msg` / `SendStatement.msg` are
-  `MessageRef | Constructor` (AST.scala:3357, :3290) and every `MessageRef` is
-  keyword-led (`messageRef = commandRef | eventRef | queryRef | resultRef`,
-  ReferenceParser.scala:58). A bare binding matches none of them.
-  **No type hazard here** — Reid's point, and it holds: `p` is declared in the
-  enclosing on-clause (`on p: command Ping`), so both the Type and the message
-  KIND are recoverable from `omc.msg`. Contrast the untyped `on other as x` case
-  below, where they are not.
-  **The one design decision to make first:**
-  - *(a) Widen the operand union* to `MessageRef | Constructor | ValueRef`.
-    `ValueRef` already exists and `ResolutionPass.resolveValueRef` (:499-522)
-    ALREADY resolves a bare binding to the message's Type via the on-clause
-    anchor. Cheapest by far; adds no `MessageRef` subclass.
-  - *(b) A new `BoundMessageRef extends MessageRef`.* Reads better at the AST
-    level but breaks exhaustivity everywhere: `AST.scala:2699` records that
-    `MessageRef.empty` was made a `CommandRef` specifically "so that sealed
-    matches over the four MessageRef subclasses stay exhaustive". A fifth
-    subclass pays that cost at every such match.
-  Recommendation: **(a)**.
-  **Full reflective contract applies** — parser, ResolutionPass, the validation
-  sites that read `msg` to check the receiver handles it, PrettifyPass emit +
-  round-trip test, BAST writer/reader + `FORMAT_REVISION` bump, JSON
-  (`JSON_COVERAGE.md`), EBNF + GBNF regen, and a run on all three platforms.
-  Wants a plan before implementation given that spread.
-
 - **`message_envelope` option — opt-in message envelopes (e.g. CloudEvents).**
   Reid's ruling 2026-08-06, after rejecting a REQUIRED envelope. RIDDL specifies
   meaning, not representation, so mandating a wire envelope would pick a
@@ -132,16 +95,22 @@ plan is discarded once built.
   Recorded so the reasoning is not re-derived:
   - `x` names no message, so it has **no type and no fields** — `x.field` cannot
     resolve through the ValueRef machinery, unlike a typed A55 binding.
-  - `x` cannot be forwarded either, for the same reason `tell p` fails today
-    (§ 1). So with neither introspection nor forwarding, **nothing could consume
-    it.**
+  - `x` could not be forwarded either, for the same reason `tell p` failed.
+    So with neither introspection nor forwarding, **nothing could consume it.**
   - My original argument FOR it — that `on other` cannot dead-letter a message to
-    `BottomlessPit.hole` — was **half wrong**: the blocker is the message-operand
+    `BottomlessPit.hole` — was **half wrong**: the blocker was the message-operand
     grammar, not the missing name. A binding is necessary but not sufficient.
-  **It becomes worth doing only after one of two other things lands:** the
-  operand widening in § 1 (makes `x` forwardable), or `message_envelope` with a
-  predefined `Envelope` type (makes `x` inspectable, which is the stronger of the
-  two and is why Reid's CloudEvents instinct pointed here). Revisit then.
+  **A56 has since landed (`897b474bf`) and does NOT unblock this** — checked, not
+  assumed. `tell`/`send` now accept a bound name, but `checkBoundMessageOperand`
+  requires the operand to RESOLVE to a message Type, and an untyped catch-all
+  binding has none, so `tell x` would draw the new "does not name a message bound
+  by an enclosing 'on' clause" Error. The operand widening was necessary for this
+  and is still not sufficient.
+  **`message_envelope` with a predefined `Envelope` type is the real unblocker**,
+  because it gives `x` a type — which makes it inspectable (`x.source` through the
+  existing ValueRef machinery) AND, as a consequence, forwardable through A56.
+  That is one change enabling both halves, and it is why Reid's CloudEvents
+  instinct pointed here. Revisit after it lands, not before.
   Whatever the spelling, `OnOtherClause` must NOT join `OnMessageLikeClause` —
   keep the structural guarantee that it cannot witness a use-case step
   (`UseCaseWitnessPass:117`, comment at `732b0dece`).

@@ -45,8 +45,11 @@ it, not recalled:
   expected-red. `RiddlModelsRoundTripTest` 189/189, `Root2JsonCorpusTest`
   `cleanRoundTrip=189 (100.0%)`; all 189 riddl-models entry points validate with
   zero errors, and riddl-examples dokn does too.
-- **BAST `FORMAT_REVISION` is 6.** Any `.bast` from an earlier build is rejected
-  with "regenerate .bast files with the current riddlc" — expected, not a bug.
+- **BAST `FORMAT_REVISION` is 7** (bumped from 6 by A56, `897b474bf`). Any
+  `.bast` from an earlier build — including any published rc.10 artifact — is
+  rejected with "regenerate .bast files with the current riddlc". Expected, not a
+  bug. When bumping again, keep the PREVIOUS revision's binary to `unbastify` the
+  checked-in fixtures before re-emitting them.
 
 **Nothing is in flight.** No half-finished change, no uncommitted work, no
 failing test. The entity-intentions item — the largest thing on this branch — is
@@ -174,6 +177,47 @@ conclusion that needs the same evidence as any other, and the evidence is
 someone stating the reason is gone — not my noticing that a superficially similar
 thing has changed. **Pattern-matching earned by three real findings is exactly
 when it starts firing on the fourth case that does not fit.**
+
+## A56: forwarding a bound message (2026-08-06) — DONE
+
+`897b474bf`. `on p: command Ping is { tell p to entity F }` now works. Three
+things worth keeping.
+
+**A misleading error alternation cost a wrong diagnosis — mine.** `tell p` failed
+with `Expected one of ("become" | "command" | "event" | "morph" | "query" |
+"reply" | "result" | "yield")`, which mixes STATEMENT keywords with MESSAGE-KIND
+keywords and so reads like `tell` is banned in that clause. Reid read it that
+way; I had read it the other way. The settling move was neither argument but a
+three-line experiment: `tell command C.Ping to entity C.F` in the SAME clause
+parses with 0 errors, so `tell` is permitted and the operand was the problem.
+**Test the alternation, don't read it** — fastparse aggregates the failure set at
+the furthest position, which is not the same as "what is allowed here".
+
+**A binding is necessary but not sufficient.** I had argued for `on other as x`
+on the grounds that a catch-all cannot dead-letter what it catches. True, but the
+blocker was the message-operand GRAMMAR, not the missing name — so the binding I
+recommended would have been inert on arrival. Worth remembering when a feature is
+justified by a use case: check that the use case actually becomes reachable, not
+just less blocked. (A56 landing still does not unblock `on other as x`, for the
+same reason one level down: the operand must RESOLVE to a message Type, and an
+untyped catch-all binding has none.)
+
+**`-Werror` did the design review.** Widening the operand union turned every
+exhaustive match on `msg` into a compile error, which is how the four passes that
+interpret an operand — validation, resolution, message-flow, diagrams — each got
+an explicit decision instead of an accidental default. Two were substantive:
+`operandMessageKind` had to become an `Option`, because a keyword-led ref carries
+its kind syntactically while a binding's is only known once resolved and
+`AggregateUseCase` has no "unknown" member — returning a wrong kind would have
+silently mis-answered the event-sourcing rules. And `DiagramsPass` had to answer
+that a bound operand contributes no `Reference` at all. **A widened union is a
+question asked at every call site, and -Werror makes sure each one answers.**
+
+Also: the `FORMAT_REVISION` 6→7 bump reddened `IncludeAndImportTest`, because the
+checked-in `NotImplemented.bast` was written at revision 6. The fix has a trick
+worth reusing — the STAGED binary was still at revision 6, so it could recover
+the fixture's source (`unbastify`) for the new build to re-emit. Keep a
+last-revision binary around when bumping.
 
 ## A skip list outlived its reason (2026-08-05) — DONE
 
