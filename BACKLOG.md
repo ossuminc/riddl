@@ -17,6 +17,71 @@ plan is discarded once built.
 
 ### 1. Queued, designed, not started
 
+- **Let a bound message be used as a `tell`/`send` operand — `tell p to entity F`.**
+  Approved by Reid 2026-08-06. **NEXT UP; start here.**
+  **Verified 2026-08-06 against the staged binary, not inferred:**
+  - `on p: command Ping is { set field St.seen to p.note }` → **validates clean.**
+    A55 bindings already work in VALUE positions.
+  - `on p: command Ping is { tell p to entity F }` → **parse error**,
+    `Expected one of ("become" | "command" | "event" | "morph" | "query" |
+    "reply" | "result" | "yield")`.
+  - `on p: command Ping is { tell command C.Ping to entity C.F }` → **parses, 0
+    errors.** So `tell` IS permitted in that clause; the operand is what fails.
+    (An earlier reading of the error as a statement restriction was tested and
+    disproved — test the alternation, don't read it.)
+  **Cause:** `TellStatement.msg` / `SendStatement.msg` are
+  `MessageRef | Constructor` (AST.scala:3357, :3290) and every `MessageRef` is
+  keyword-led (`messageRef = commandRef | eventRef | queryRef | resultRef`,
+  ReferenceParser.scala:58). A bare binding matches none of them.
+  **No type hazard here** — Reid's point, and it holds: `p` is declared in the
+  enclosing on-clause (`on p: command Ping`), so both the Type and the message
+  KIND are recoverable from `omc.msg`. Contrast the untyped `on other as x` case
+  below, where they are not.
+  **The one design decision to make first:**
+  - *(a) Widen the operand union* to `MessageRef | Constructor | ValueRef`.
+    `ValueRef` already exists and `ResolutionPass.resolveValueRef` (:499-522)
+    ALREADY resolves a bare binding to the message's Type via the on-clause
+    anchor. Cheapest by far; adds no `MessageRef` subclass.
+  - *(b) A new `BoundMessageRef extends MessageRef`.* Reads better at the AST
+    level but breaks exhaustivity everywhere: `AST.scala:2699` records that
+    `MessageRef.empty` was made a `CommandRef` specifically "so that sealed
+    matches over the four MessageRef subclasses stay exhaustive". A fifth
+    subclass pays that cost at every such match.
+  Recommendation: **(a)**.
+  **Full reflective contract applies** — parser, ResolutionPass, the validation
+  sites that read `msg` to check the receiver handles it, PrettifyPass emit +
+  round-trip test, BAST writer/reader + `FORMAT_REVISION` bump, JSON
+  (`JSON_COVERAGE.md`), EBNF + GBNF regen, and a run on all three platforms.
+  Wants a plan before implementation given that spread.
+
+- **`message_envelope` option — opt-in message envelopes (e.g. CloudEvents).**
+  Reid's ruling 2026-08-06, after rejecting a REQUIRED envelope. RIDDL specifies
+  meaning, not representation, so mandating a wire envelope would pick a
+  transport for every consumer — including models with no bus at all — and would
+  duplicate provenance the model already knows structurally and checkably
+  (connectors, `from`, MessageFlowPass) with an unchecked runtime string.
+  **Decided semantics:** an option, opt-in, and **scope-inherited like other
+  options — declared at context scope it applies to all messaging in that
+  context, including every entity in it.** Name `message_envelope` is agreed.
+  Registration is the documented ~3-edit pattern (`KnownOption` constant,
+  `KnownOptions.*` list, `RecognizedOptions.registry`, plus a `CompletenessTest`
+  case); pick `validParents` per the rule in CLAUDE.md — `Seq.empty` here, since
+  the value is resolved by walking UP the parent chain.
+  Open: what the envelope's fields are and whether a predefined `Envelope` type
+  joins the `Riddl` standard module beside `Drain`/`BottomlessPit` so
+  `x.source` resolves through the existing ValueRef machinery. That is what would
+  make a bound catch-all value useful without touching the message operand.
+
+- **Research an Akka-style asynchronous `ask` statement**, so `reply` is paired
+  with a genuine ask. Reid, 2026-08-06 — **research/feasibility only; wants its
+  own plan-mode session before anything is built.** Today `reply` exists without
+  a counterpart that establishes who is waiting for it. The interesting questions
+  are what the ask's completion is in a fully asynchronous model (a correlation,
+  a future-like value, a second clause?), how it interacts with `yields`/yield
+  conformance and the refusal path, whether it needs a timeout in the language or
+  only in generated code, and what it means for handler completeness and
+  witnessing. Do not start building; revisit in plan mode.
+
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
   entry with an origin/document basis.
@@ -61,6 +126,25 @@ plan is discarded once built.
   Sequence: deprecate loudly for a release, then remove.
 
 ### 2. Queued, needs a plan
+- **`on other as x` — bind the residual message in a catch-all. NOT APPROVED;
+  parked deliberately.** Reid liked the shape and I recommended it, then testing
+  showed the binding would be **inert**, and he agreed the objection may hold.
+  Recorded so the reasoning is not re-derived:
+  - `x` names no message, so it has **no type and no fields** — `x.field` cannot
+    resolve through the ValueRef machinery, unlike a typed A55 binding.
+  - `x` cannot be forwarded either, for the same reason `tell p` fails today
+    (§ 1). So with neither introspection nor forwarding, **nothing could consume
+    it.**
+  - My original argument FOR it — that `on other` cannot dead-letter a message to
+    `BottomlessPit.hole` — was **half wrong**: the blocker is the message-operand
+    grammar, not the missing name. A binding is necessary but not sufficient.
+  **It becomes worth doing only after one of two other things lands:** the
+  operand widening in § 1 (makes `x` forwardable), or `message_envelope` with a
+  predefined `Envelope` type (makes `x` inspectable, which is the stronger of the
+  two and is why Reid's CloudEvents instinct pointed here). Revisit then.
+  Whatever the spelling, `OnOtherClause` must NOT join `OnMessageLikeClause` —
+  keep the structural guarantee that it cannot witness a use-case step
+  (`UseCaseWitnessPass:117`, comment at `732b0dece`).
 - **A keyword-named field reports the error several tokens upstream.** From
   riddl-generator 2026-08-03, filed here because it is a real diagnostic defect
   even though they marked it "no action needed". A field in a message
