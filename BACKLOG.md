@@ -170,20 +170,6 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   identical weakness, so fixing one should fix both. Not newly introduced and not
   urgent — but it is the honest limit of the current predicate, so it is written
   down rather than implied.
-- **DONE (2026-08-05) — `tNative` tested the JVM rows for 5 of its 7 modules.**
-  Found 2026-08-02, fixed once the feared reds were shown not to exist. The alias
-  now names all seven `*Native` rows; `tNative` runs green end to end (176 suites
-  / 1339 tests, 0 failures, 218 s warm) including the trailing
-  `riddlcNative/nativeLink`.
-  **One thing left to watch, in CI rather than here:** the Native leg now links
-  and runs 5 additional native test binaries. Compilation cost is unchanged
-  (`cNative` always named all seven), but native LINKING is the expensive step
-  and `scala.yml` caps the job at `timeout-minutes: 60`. The 218 s local figure
-  does not transfer — CI runs `clean` first, so it is cold. **If the Native leg
-  starts timing out, raise the timeout; do not revert the gate.**
-  Also unclosed by design: this was verified on macOS ARM64 and CI is
-  ubuntu-latest x86_64, so Scala Native could still diverge there. `fail-fast:
-  false` means a Native red will not take the JVM and JS legs with it.
 - **`Comment` in a `Group`'s contents cannot be rebuilt** — the parser puts one
   there but `OccursInGroup` admits none. Pinned at 3 occurrences in
   `Root2JsonFixturesTest`. Widen the union or attach as metadata. Needs a
@@ -218,7 +204,12 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
-- **Sweep consumers onto `2.0.0-rc.10`** — a real published version now, not a
+- **Sweep consumers onto the current build.** Two options now: the published
+  `2.0.0-rc.10` (resolves from GitHub Packages, no publishLocal needed) or the
+  staged `2.0.0-rc.10-15-3df5cf44`, which is 15 commits ahead and carries A56,
+  A57, `Riddl.Envelope`, `message_envelope`, the option split and the
+  external-context exemption. Consumers wanting any of those need the STAGED
+  build; rc.10 predates all of them. — a real published version now, not a
   locally-staged snapshot, so consumers resolve it from GitHub Packages without
   a `publishLocal`. All 20 Maven coordinates verified present in the registry
   2026-08-05. This supersedes the `rc.9-54-64b7b413` staging line entirely.
@@ -245,8 +236,9 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   for consumers who want a resolvable version (`brew install
   ossuminc/tap/riddlc-rc`, formula verified at 2.0.0-rc.10, or `riddlcVersion :=
   "2.0.0-rc.10"`) — not a replacement for the staged build.
-  **BAST `FORMAT_REVISION` is 6**, so any checked-in `.bast` from an earlier
-  build is rejected with "regenerate .bast files with the current riddlc" —
+  **BAST `FORMAT_REVISION` is 8** (6 -> 7 by A56, 7 -> 8 by A57, both 2026-08-06),
+  so any checked-in `.bast` from an earlier build -- including one made by rc.10
+  itself -- is rejected with "regenerate .bast files with the current riddlc" —
   expected, not a bug, but worth saying in each bump task.
   **npm consumers**: `@ossuminc/riddl-lib@rc` (dist-tag `rc`, confirmed; `latest`
   did not move).
