@@ -664,6 +664,22 @@ to the right group rather than appending to a list.
   the shared maps leaks the standard library into "all X in the model".
   A user definition with a colliding name wins structurally (the user's
   table is consulted first) — no ambiguity, no message.
+  It also holds **`Envelope`** (2.0.0-rc.10+), the record carrying a message's
+  metadata, selected by `option message_envelope("Riddl.Envelope")`. Fields are
+  the **CloudEvents v1.0 context attributes**, with ONE forced deviation:
+  CloudEvents `id` is spelled **`messageId`**, because RIDDL requires
+  identifiers of >= 3 chars and `id` draws a StyleWarning — and the standard
+  module must validate clean. There is deliberately **no `data` field**: in
+  RIDDL the payload IS the message, already modelled and typed, so Envelope is
+  the metadata AROUND a message rather than a wrapper containing one. The
+  option is **scope-inherited** (`Seq.empty` validParents — resolved by walking
+  UP the parent chain), so declaring it on a context covers every entity in it.
+  Opt-in by design: RIDDL specifies meaning, not representation, so how the
+  attributes ride (CloudEvents JSON, Kafka headers, gRPC metadata, or nothing
+  for an in-process call) stays the generator's choice.
+  Both records are legitimately **unused inside the module** — that is the
+  design, not a defect — so `PredefinedTerminatorsTest` asserts exactly which
+  ones are unused; widen that list when adding another, never loosen it.
   All exemptions (A31 cardinality, unattached/isolated/reachability,
   handler completeness) test REFERENCE IDENTITY via
   `PredefinedModule.isPredefined`, never a name. A port typed `Anything`

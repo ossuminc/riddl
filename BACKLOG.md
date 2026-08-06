@@ -17,24 +17,6 @@ plan is discarded once built.
 
 ### 1. Queued, designed, not started
 
-- **`message_envelope` option — opt-in message envelopes (e.g. CloudEvents).**
-  Reid's ruling 2026-08-06, after rejecting a REQUIRED envelope. RIDDL specifies
-  meaning, not representation, so mandating a wire envelope would pick a
-  transport for every consumer — including models with no bus at all — and would
-  duplicate provenance the model already knows structurally and checkably
-  (connectors, `from`, MessageFlowPass) with an unchecked runtime string.
-  **Decided semantics:** an option, opt-in, and **scope-inherited like other
-  options — declared at context scope it applies to all messaging in that
-  context, including every entity in it.** Name `message_envelope` is agreed.
-  Registration is the documented ~3-edit pattern (`KnownOption` constant,
-  `KnownOptions.*` list, `RecognizedOptions.registry`, plus a `CompletenessTest`
-  case); pick `validParents` per the rule in CLAUDE.md — `Seq.empty` here, since
-  the value is resolved by walking UP the parent chain.
-  Open: what the envelope's fields are and whether a predefined `Envelope` type
-  joins the `Riddl` standard module beside `Drain`/`BottomlessPit` so
-  `x.source` resolves through the existing ValueRef machinery. That is what would
-  make a bound catch-all value useful without touching the message operand.
-
 - **Research an Akka-style asynchronous `ask` statement**, so `reply` is paired
   with a genuine ask. Reid, 2026-08-06 — **research/feasibility only; wants its
   own plan-mode session before anything is built.** Today `reply` exists without
@@ -106,11 +88,18 @@ plan is discarded once built.
   binding has none, so `tell x` would draw the new "does not name a message bound
   by an enclosing 'on' clause" Error. The operand widening was necessary for this
   and is still not sufficient.
-  **`message_envelope` with a predefined `Envelope` type is the real unblocker**,
-  because it gives `x` a type — which makes it inspectable (`x.source` through the
-  existing ValueRef machinery) AND, as a consequence, forwardable through A56.
-  That is one change enabling both halves, and it is why Reid's CloudEvents
-  instinct pointed here. Revisit after it lands, not before.
+  **Its unblocker has now LANDED** (`4de206ed8`): `Riddl.Envelope` is in the
+  standard module and `option message_envelope` selects it. Giving `x` an
+  Envelope type would make it inspectable (`x.source`, `x.messageType` through
+  the existing ValueRef machinery) AND, as a consequence, forwardable through
+  A56 — one type enabling both halves, which is why Reid's CloudEvents instinct
+  pointed here.
+  **So this is now actionable, and needs a decision rather than a blocker:** does
+  `on other as x` type `x` as `Riddl.Envelope` ALWAYS, only when
+  `message_envelope` is in scope, or by naming the type at the binding? The
+  middle option is the coherent one but makes a clause's meaning depend on an
+  option declared far away, which is the kind of action-at-a-distance the
+  intentions work moved AWAY from. Wants a plan.
   Whatever the spelling, `OnOtherClause` must NOT join `OnMessageLikeClause` —
   keep the structural guarantee that it cannot witness a use-case step
   (`UseCaseWitnessPass:117`, comment at `732b0dece`).
