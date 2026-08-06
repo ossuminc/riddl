@@ -7,112 +7,80 @@ GitHub release notes — don't reproduce it here.
 ## HANDOFF
 
 Orientation for a session with no memory of this work. **Open work is in
-`BACKLOG.md`**; durable facts are in `CLAUDE.md`. This says only where things
-stand and what a fresh session would get wrong.
+`BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in
+this NOTEBOOK's body. This says only where things stand and what a cold session
+would get wrong.
 
-**State** — every line below was produced by a command in the session that wrote
-it, not recalled:
+**State — every line produced by a command in the session that wrote it:**
 
-- Branch `release/2`, **tree clean, 0 unpushed**. CI builds `release/*`
-  (scala.yml:9), so pushes here run.
-- **`2.0.0-rc.10` IS PUBLISHED** (2026-08-05), tagged at `fc4e54c1b`. Verified
-  end to end, each by command —
-  GitHub prerelease `isPrerelease: true`; **all 20 Maven coordinates** present in
-  GitHub Packages; npm published under dist-tag **`rc`** with `latest` unmoved;
-  Homebrew `Formula/riddlc-rc.rb` at 2.0.0-rc.10 with the rc.10 commit touching
-  **only** that file, stable `riddlc.rb` untouched at 1.31.0; `notify-blog`
-  correctly **skipped**; the native binary reports `2.0.0-rc.10`.
-- **Local publishing and `~/Code/ossuminc/bin/riddlc` CONTINUE. Cutting an RC did
-  not retire either** — Reid's ruling, 2026-08-05, correcting exactly that
-  inference. 2.0 is a long way from shipping and the consumer repos still need
-  locally built and staged assets to work against. So the standing practice is
-  unchanged: `sbt "reload; publishLocal"` for every module and platform plus the
-  `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
-  `~/Code/ossuminc/bin/riddlc`, after each riddl commit consumers need. That path
-  is deliberately NOT on `$PATH`; bare `riddlc` is the tap's older build.
-  **Currently staged: `2.0.0-rc.10-15-3df5cf44`** (2026-08-06) — binary reports
-  it, all 20 ivy rows present. Verified to deliver A56 AND A57 and to reject
-  their negatives, six checks in all: `tell p to entity …` validates while `tell
-  nosuch` errors; `on other as env` and `on other as env: Riddl.Envelope`
-  validate under `option message_envelope`, while a binding with no option, an
-  ascription with no option, and an ascription naming a different type each
-  produce exactly one Error.
-  Publishing an RC is additive — it gives consumers a resolvable version when
-  they want one. It is not a replacement for the staged build.
-- **All three platforms green in CI** on the tagged code (run `31016483924`,
-  every job success): **JVM 1846**, **JS 674**, **Native 1339** tests, each
-  checked against its floor in `.claude/skills/rc/`.
-- **The Native floor moved DOWN at rc.10, 1624 → 1339, and that is correct.**
-  `tNative` used to name the `.jvm` rows for 5 of its 7 modules, so the old floor
-  was calibrated against a leg that mostly measured JVM. The alias is fixed; the
-  gate got more honest and the number got smaller. The proof standard for any
-  future drop is recorded beside the table in the `/rc` skill. **Do not "restore"
-  the old floor.**
-- **External-corpus suites are green and are internal signal again** — no longer
-  expected-red. `RiddlModelsRoundTripTest` 189/189, `Root2JsonCorpusTest`
-  `cleanRoundTrip=189 (100.0%)`; all 189 riddl-models entry points validate with
-  zero errors, and riddl-examples dokn does too.
-- **BAST `FORMAT_REVISION` is 8** (6 to 7 by A56 `897b474bf`, 7 to 8 by A57 `4208946d2`). Any
-  `.bast` from an earlier build — including any published rc.10 artifact — is
-  rejected with "regenerate .bast files with the current riddlc". Expected, not a
-  bug. When bumping again, keep the PREVIOUS revision's binary to `unbastify` the
-  checked-in fixtures before re-emitting them.
+- Branch `release/2`, **clean, 0 unpushed**, HEAD `961b45e01`. CI builds
+  `release/*` (scala.yml:9), so pushes here run.
+- **`2.0.0-rc.10` is published** (2026-08-05) and verified on all six channels.
+- **Staged build: `2.0.0-rc.10-15-3df5cf44`** at `~/Code/ossuminc/bin/riddlc`,
+  all 20 ivy rows in `~/.ivy2/local`. HEAD is 5 commits ahead but
+  `git diff --name-only 3df5cf44f..HEAD` is **BACKLOG.md + NOTEBOOK.md only**, so
+  binary and source agree on code — **no restage owed.**
+- **BAST `FORMAT_REVISION` is 8** (6→7 by A56 `897b474bf`, 7→8 by A57
+  `4208946d2`). Any earlier `.bast` is rejected, including one made by published
+  rc.10, which shipped at revision 6.
+- Last full run, all three platforms, 0 failures: **JVM 259/2066, JS 60/674,
+  Native 182/1367** (suites/tests).
 
 **Nothing is in flight.** No half-finished change, no uncommitted work, no
-failing test. The entity-intentions item — the largest thing on this branch — is
-**complete and shipped in rc.10**, and has left BACKLOG.md; its durable
-semantics are in CLAUDE.md and what it taught is in this NOTEBOOK's body.
+failing test. Last session shipped A56, A57, `Riddl.Envelope` +
+`option message_envelope`, the recognized-options split, and the
+external-context unused exemption.
 
-**The next step is soak, not more building.** rc.10 is the first RC carrying the
-event-sourcing rules, which REJECT models that validated under rc.9. Expect
-consumer reports; that is the point. Promotion to 2.0.0 final comes from `main`,
-not this branch.
+**Next up, and both want their own session** (sized in BACKLOG § 1):
+JSON source locations — the plan is written and executable at
+`~/.claude/plans/toasty-cuddling-goose.md`, which now holds nothing else — and
+the type-first `type X is <aggregate_use_case>` deprecation. Awaiting Reid's
+ruling: the `ask`-statement recommendation (BACKLOG § 1, research done).
 
-**Traps, each of which has actually bitten someone here:**
+**Traps. Every one of these bit someone, most of them on 2026-08-06:**
 
 - **`~/Code/ossuminc/bin` is deliberately NOT on `$PATH`.** Bare `riddlc` is the
-  Homebrew tap's older release and will reject current syntax. Consumers and
-  test commands must use the explicit path.
-- **Publishing has THREE preconditions** — clean tree (a dirty one makes dynver
-  stamp a timestamp, so the version stops being reproducible from a commit),
-  `reload` (a long-running sbt server freezes dynver), and `nativeLink`
-  FINISHED before copying the binary. Checklist in `.claude/skills/rc/`.
-- **`sbt -batch` runs only the FIRST command argument.** Put everything in one
-  `;`-separated argument AND count `Suites: completed` against the modules you
-  asked for. `test`/`tJVM` resolve to `testQuick` and silently skip — use
-  `<module>/testOnly *`. `tNative` is not a Native gate (BACKLOG § 3).
-- **Two BAST path-identifier codecs, only one pairing is correct.**
-  `writePathIdentifier` emits a leading `NODE_PATH_IDENTIFIER` tag;
-  `readPathIdentifierInline` consumes none. Pair them and the stream misaligns
-  AFTER the path, surfacing as "Invalid string table index" somewhere else
-  entirely. That exact bug sat in `require invariant X` undetected until
-  2026-08-04. Use `writePathIdentifierInline`.
-- **A new non-definition AST node must join `NonDefinitionValues`**
-  (`AST.scala:792`), or four exhaustivity warnings appear in Symbols/Resolution/
-  Validation and `-Werror` fails the build. That is the fix, not a `case _`.
-- **Formatting is not a gate before 2.0.** One `scalafmt` pass just before the
-  release. Do not run `scalafmtCheckAll`, do not report it, do not format
-  incrementally. Reid's call, 2026-08-04.
+  tap's older build and rejects current syntax. Use the explicit path.
+- **Bumping `FORMAT_REVISION`? Regenerate `language/input/import/
+  NotImplemented.bast` FIRST.** Otherwise `IncludeAndImportTest` reddens in
+  `language`, which aborts the `;` chain BEFORE the modules you actually changed,
+  and the run looks far worse than it is. Happened twice in one day. Keep the
+  previous revision's binary to `unbastify` the fixture's source.
+- **`parseAndValidate` DISCARDS parse-time messages** — it uses
+  `TopLevelParser.parseInput`. Deprecations are emitted at parse time, so a test
+  asserting one on that helper fails for a reason unrelated to the code. Use
+  `parseInputWithMessages`.
+- **Prettify reads `Declaration.ascription`, NOT a node's `format`.** Put a new
+  declaration-site rendering on `format` alone and prettify silently DROPS it on
+  every round trip. A round-trip test asserting only AST survival will pass —
+  assert the emitted TEXT.
+- **Measuring riddl-models through its `.conf` files reports ZERO usage
+  warnings**, because every one sets `show-usage-warnings = false`. Validate the
+  entry `.riddl` directly, or you will conclude a consumer report is wrong.
+- **`sbt -batch` runs only the FIRST command argument**, and `test`/`tJVM`
+  resolve to `testQuick`, which silently skips. Put everything in ONE
+  `;`-separated argument, use `<module>/testOnly *`, and COUNT the
+  `Suites: completed` lines against the modules you asked for.
+- **Publishing has three preconditions**: clean tree, `reload` first, and
+  `nativeLink` FINISHED before copying. Checklist in `.claude/skills/rc/`.
+- **The Native test floor moved DOWN at rc.10 (1624 → 1339) deliberately** — the
+  old figure was measured through a `tNative` that ran JVM rows. **Do not
+  "restore" it.** Proof standard for any future drop sits beside the table in
+  `.claude/skills/rc/`.
 
-**Certainty.** The State block is verified by command this session. Traps are
-from observed failures, not inference. Anything in BACKLOG § 3 marked "needs a
-plan" is explicitly unverified. Treat old "known bug" notes and `task/done/`
-placement as claims to re-check: two notes were found stale on 2026-08-03, and
-on 2026-08-04 an incoming report's headline claim ("invariants unusable in
-`when` conditions") was wrong — the reporter rewrote their own file. **Verify
-the report, not just the code it points at.**
+**Certainty.** The State block is verified by command. Traps are from observed
+failures. Two BACKLOG items were found STALE on 2026-08-06 by checking rather
+than trusting (a `Comment`-in-`Group` defect that no longer exists, and a
+`tNative` item left marked DONE) — **treat old entries as claims, not facts.**
+BACKLOG § 2's saga item was re-sized the same way: filed as a missing warning, it
+is actually a silent hole where saga step statements are never validated at all.
 
-**`task/` holds 1 file, UNTRIAGED:** `2026-08-04-security.md` — Reid's own WIP
-draft, marked "do not act on this". Everything else filed this session is in
-`task/done/` with Results, and **nothing is owed outward**: ossum.tech has
-already consumed `rc.9-54` and corrected its own pages (verified —
-`sites/riddl/docs/concepts/handler.md:123` and `concepts/invariant.md:284` both
-say "Verified against `2.0.0-rc.9-54`", and the stale "checking gap" and
-"does not parse" admonitions are gone). Their `task/` is empty.
+**`task/` holds 1 file, UNTRIAGED:** `2026-08-04-security.md` — Reid's own RBAC
+draft, marked "do not act on this". Three consumer bump tasks were dropped
+outward (riddl-models, riddl-examples, riddl-idea-plugin); riddl-vscode was
+deliberately NOT swept (BACKLOG § 0).
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
-
----
 
 ## Incoming Tasks
 

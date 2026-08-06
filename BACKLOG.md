@@ -106,9 +106,22 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
      than to statements? The interaction model already describes two-party
      exchanges, and that may be the more natural home.
 
-- **Carry source locations through the JSON surface** — plan written and
-  approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
-  entry with an origin/document basis.
+- **Carry source locations through the JSON surface** — **the plan is written,
+  detailed, and approved-pending: `~/.claude/plans/toasty-cuddling-goose.md`,
+  which now holds NOTHING ELSE.** Read it before starting; it already settles the
+  design decisions and is executable as written.
+  In one line: every JSON-built node has `At.empty`, so `$at: [offset,
+  endOffset]` joins `$kind` on each contents entry, with a document-level
+  `locations: { origin, basis }` saying whether offsets index the origin RIDDL
+  file or the JSON document itself.
+  **Two harms it fixes**, both worth knowing before judging the size: diagnostics
+  about JSON-sourced models say `empty(1:1->1)` and cannot quote a line; and
+  because `Definition.equals`/`hashCode` include `loc`, two same-named siblings
+  with empty locs compare EQUAL — the hazard behind the `checkPortletCardinality`
+  miscount fixed at `f95a27bac`.
+  **Size: LARGE.** ~300 `At()` sites in `JsonAstBuilder` (mechanical,
+  script-applied per the plan), plus the codec, emitter, `RiddlLib.parseJson`,
+  two docs, and three-platform verification. Wants its own session.
 - **Deprecate `type X is <aggregate_use_case> {…}`** (approved 2026-08-02:
   deprecate in 2.0, remove in 3.0). Target is ONLY the type-first spelling of an
   aggregate use case; plain `type` (`type Address = {…}`, `type M is Pattern(…)`,
