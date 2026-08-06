@@ -185,6 +185,41 @@ someone stating the reason is gone — not my noticing that a superficially simi
 thing has changed. **Pattern-matching earned by three real findings is exactly
 when it starts firing on the fourth case that does not fit.**
 
+## Two consumer reports, both exactly right (2026-08-06) — DONE
+
+`7e4c25b94`. synapify's option-picker report and riddl-models' external-context
+report, closed together. Both reproduced to the number — synapify's 24 options
+reconciled once `message_envelope` was accounted for, riddl-models' 139 unused
+and 5 repository findings matched exactly.
+
+**A consumer's diagnosis can be right and their proposed FIX still slightly
+wrong.** synapify asked for a name-keyed deprecated list. That would have been
+wrong: `consistent`/`available`/`transient` are deprecated on an Entity, where
+they became intentions, and CURRENT on a Repository, which has none. Deprecation
+is per (option, kind). They also asked whether `persistent` should join Entity's
+list; it should not — it is registered for Connector and means something else,
+and adding it would re-introduce the intention-as-option shape 2.0 removed.
+**Implement the diagnosis, not the patch.**
+
+**`parseAndValidate` silently discards parse-time messages**, because it uses
+`TopLevelParser.parseInput` rather than `parseInputWithMessages`. A drift-guard
+test asserting "every option the registry calls deprecated actually deprecates"
+reported `aggregate` as undeprecated while riddlc plainly deprecates it. **The
+test helper was the liar, not the compiler.** Any test asserting a deprecation —
+they are emitted at PARSE time — must use `parseInputWithMessages`. This is the
+same family as the false-green traps in CLAUDE.md, but inverted: a test that
+fails for a reason that has nothing to do with the code under test.
+
+**Measuring the corpus has a trap of its own.** Validating riddl-models through
+its `.conf` files reports ZERO unused warnings, because every one sets
+`show-usage-warnings = false`. I briefly concluded the report was wrong on that
+basis. Validate the entry `.riddl` directly.
+
+Every suppression shipped with the case that must STAY reported. A test proving
+only that warnings disappeared cannot distinguish a targeted exemption from a
+broken check — and this change removed 54 warnings, which is exactly the size of
+mistake that looks like success.
+
 ## A57: the envelope binding, and a keyword that wanted not to exist (2026-08-06) — DONE
 
 `4208946d2`. `on other as x [: <envelope>]`, with `Riddl.Envelope` and
