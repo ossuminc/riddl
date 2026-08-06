@@ -215,13 +215,45 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   identical weakness, so fixing one should fix both. Not newly introduced and not
   urgent — but it is the honest limit of the current predicate, so it is written
   down rather than implied.
-- **`Comment` in a `Group`'s contents cannot be rebuilt** — the parser puts one
-  there but `OccursInGroup` admits none. Pinned at 3 occurrences in
-  `Root2JsonFixturesTest`. Widen the union or attach as metadata. Needs a
-  decision.
-- **Saga reachability** — the usage walk appears not to traverse saga
-  `doStatements`, so a `tell … to context <external>` in a saga step draws no
-  "not reachable" warning while the same statement in a handler does.
+- ~~`Comment` in a `Group`'s contents cannot be rebuilt~~ — **STALE, resolved
+  somewhere along the way; removed after verifying 2026-08-06.** Both halves of
+  the claim are now false: `OccursInGroup` DOES include `Comment`
+  (`AST.scala:900`) and `GroupParser.groupDefinitions` accepts it
+  (`GroupParser.scala:28`). The "3 pinned occurrences" are gone —
+  `Root2JsonFixturesTest` reports `identical=91`, `lossy=0`, `divergent=0`, and
+  the test carries no Comment allowance. No decision needed; nothing to do.
+- **Saga step statements are NEVER VALIDATED — not just reachability.** Filed as
+  "saga reachability", VERIFIED 2026-08-06 and it is materially worse than that.
+  **Promoted: this is a silent correctness hole, not a missing warning.**
+
+  Repro, one file, both statements identical in shape:
+
+      entity Caller is { handler H is {
+        on command Dom.Ours.Doit is {
+          tell command Dom.Ours.NoSuchCommand to entity Dom.Ours.NoSuchEntity } } }
+      saga Flow is {
+        step One is {
+          tell command Dom.Ours.AlsoBogus to entity Dom.Ours.AlsoMissing
+        } reverted by { do "undo" } }
+
+  riddlc reports `NoSuchCommand` and `NoSuchEntity` as unresolved. It reports
+  **nothing at all** about `AlsoBogus` or `AlsoMissing`. A saga step can name
+  definitions that do not exist and validate clean. The reachability warning is
+  just the symptom that happened to get noticed.
+
+  **Root cause, and it is a known shape:** `SagaStep extends Leaf`
+  (`AST.scala:4802-4808`) with `doStatements` / `undoStatements` as FIELDS beside
+  `contents` rather than in it, so no `HierarchyPass` traversal ever descends
+  into them — which is exactly the defect `3e4af6801` fixed for
+  `requires`/`returns` by moving those clauses INTO contents.
+
+  **Not small, despite where it was filed.** The correct fix is the same move —
+  make `SagaStep` a `Branch` carrying its statements as contents — which is an
+  AST change touching parser, prettify, BAST (+ `FORMAT_REVISION`), JSON and
+  resolution. And it will newly subject every saga statement in every model to
+  validation that has never run on them, so expect a wave of findings on first
+  run, in this repo's fixtures and in riddl-models. Budget for that, not for a
+  one-line filter. Wants a plan.
 - **`validateArbitraryInteraction`'s refMap path is dead** — interaction refs are
   keyed under the UseCase. Re-key, or delete and use the symbol table as A39 did.
 - **`PlatformContext.withOptions` lacks try/finally** — a throwing test poisons
@@ -249,44 +281,28 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
-- **Sweep consumers onto the current build.** Two options now: the published
-  `2.0.0-rc.10` (resolves from GitHub Packages, no publishLocal needed) or the
-  staged `2.0.0-rc.10-15-3df5cf44`, which is 15 commits ahead and carries A56,
-  A57, `Riddl.Envelope`, `message_envelope`, the option split and the
-  external-context exemption. Consumers wanting any of those need the STAGED
-  build; rc.10 predates all of them. — a real published version now, not a
-  locally-staged snapshot, so consumers resolve it from GitHub Packages without
-  a `publishLocal`. All 20 Maven coordinates verified present in the registry
-  2026-08-05. This supersedes the `rc.9-54-64b7b413` staging line entirely.
-  Pins as of 2026-08-05, all pre-rc.10:
-  - **riddl-models** — `build.sbt:21` `riddlVersion = "2.0.0-rc.9-54-64b7b413"`,
-    driving `riddlcVersion` and all three test deps. Its models already conform.
-  - **riddl-generator** — `project/Dependencies.scala:64` at
-    `"2.0.0-rc.9-54-64b7b413"`.
-  - **riddl-examples** — `build.sbt:21` (`With.Riddl.library`) at
-    `"2.0.0-rc.9-54-64b7b413"`, matching riddl-models. Its models already
-    conform; this is only the dependency pin. (Recorded here as rc.9-48 earlier
-    on 2026-08-05 and corrected the same day: they pushed `946d54c` "Pin riddl
-    library to the staged rc.9-54 compiler" between the two readings. The
-    earlier line was right when written and stale within hours — re-read a
-    consumer pin before quoting it.)
-  - Still to check: riddl-idea-plugin, riddl-vscode, synapify.
+- **Consumer sweep — task files DROPPED 2026-08-06, four repos.** Pins read from
+  each repo's build file after `git fetch`, not from memory:
+  - **riddl-generator** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT**, matching the
+    staged build exactly. Nothing owed.
+  - **synapify** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT.** Nothing owed.
+  - riddl-models — `build.sbt:21` at `2.0.0-rc.10-2-ff3a59b4`, 13 commits behind.
+  - riddl-examples — `build.sbt:21` at `2.0.0-rc.9-54-64b7b413`.
+  - riddl-idea-plugin — `project/Dependencies.scala:7` at `2.0.0-rc.9-42-37b0db94`.
+  - riddl-vscode — `package.json:128` at `2.0.0-rc.9`.
 
-  **Local publishing and the staged `~/Code/ossuminc/bin/riddlc` CONTINUE** —
-  Reid's ruling 2026-08-05, correcting the assumption that cutting an RC retires
-  them. 2.0 is a long way from shipping and the consumer repos still need locally
-  built and staged assets to work against. Re-publish and re-stage after each
-  riddl commit they need; the version string changes every time, which is what
-  keeps consumer resolution cache-safe. The published RC is an ADDITIONAL option
-  for consumers who want a resolvable version (`brew install
-  ossuminc/tap/riddlc-rc`, formula verified at 2.0.0-rc.10, or `riddlcVersion :=
-  "2.0.0-rc.10"`) — not a replacement for the staged build.
-  **BAST `FORMAT_REVISION` is 8** (6 -> 7 by A56, 7 -> 8 by A57, both 2026-08-06),
-  so any checked-in `.bast` from an earlier build -- including one made by rc.10
-  itself -- is rejected with "regenerate .bast files with the current riddlc" —
-  expected, not a bug, but worth saying in each bump task.
-  **npm consumers**: `@ossuminc/riddl-lib@rc` (dist-tag `rc`, confirmed; `latest`
-  did not move).
+  **riddl-vscode cannot take the staged build at all** — it consumes via npm,
+  which carries only PUBLISHED releases, and `publishLocal` does not reach npm.
+  The most it can take today is `2.0.0-rc.10`, which predates A56/A57/`Envelope`
+  entirely. Its task file says so and offers to cut rc.11 if they need the new
+  work. **If any npm consumer needs current riddl, that forces an RC** — worth
+  knowing before assuming a restage covers everyone.
+
+  Each task file names the target, what changed since that repo's pin, and the
+  BAST hazard below. Waiting on their sessions; nothing further owed from here.
+  **BAST `FORMAT_REVISION` is 8** (6 -> 7 by A56, 7 -> 8 by A57, both
+  2026-08-06), so any checked-in `.bast` is rejected — **including one produced
+  by the published rc.10 itself**, which shipped at revision 6.
 - riddl-vscode: adoption task for `IncrementalValidator` now that rc.9 ships.
 - ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the
   two silent breaking changes in the migration guide, and docs for the
