@@ -30,7 +30,7 @@ it, not recalled:
   `sbt-riddl` plugin, and `riddlcNative/nativeLink` copied to
   `~/Code/ossuminc/bin/riddlc`, after each riddl commit consumers need. That path
   is deliberately NOT on `$PATH`; bare `riddlc` is the tap's older build.
-  **Currently staged: `2.0.0-rc.10-12-4245136b`** (2026-08-06) — binary reports
+  **Currently staged: `2.0.0-rc.10-15-3df5cf44`** (2026-08-06) — binary reports
   it, all 20 ivy rows present. Verified to deliver A56 AND A57 and to reject
   their negatives, six checks in all: `tell p to entity …` validates while `tell
   nosuch` errors; `on other as env` and `on other as env: Riddl.Envelope`
