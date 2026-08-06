@@ -23,6 +23,16 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   2026-08-04); do not run `scalafmtCheckAll`, report it, or format
   incrementally. `sbt scalafmtCheck` is red on HEAD — 7 committed files
   reformat, 6 in `commands`.
+- **Upgrade riddl-vscode.** Reid, 2026-08-06 — deferred here deliberately, not
+  overlooked. It consumes `@ossuminc/riddl-lib` via npm, which carries only
+  PUBLISHED releases, so it cannot take a staged build at all and chasing it
+  between RCs means cutting an RC for its benefit. It is on `2.0.0-rc.9`
+  (`package.json:128`); bring it to 2.0.0 when 2.0.0 exists.
+- **Regenerate every checked-in `.bast`.** Reid, 2026-08-06 — same reasoning:
+  `FORMAT_REVISION` has moved twice in one day (6 -> 7 -> 8) and may move again
+  before 2.0, so regenerating now buys nothing. riddl-models is the known holder.
+  In-repo fixtures are NOT deferred — `language/input/import/NotImplemented.bast`
+  must be regenerated at each bump or `IncludeAndImportTest` reddens.
 - **Update `../RIDDL-Computational-Model.md` with everything `release/2`
   changed.** Reid, 2026-08-06. That document is the authority for any lowering
   decision — what a conforming generator MUST preserve versus may freely choose
@@ -281,29 +291,20 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
-- **Consumer sweep — task files DROPPED 2026-08-06, four repos.** Pins read from
-  each repo's build file after `git fetch`, not from memory:
+- **Consumer sweep — task files dropped 2026-08-06 in THREE repos.** Pins read
+  from each build file after `git fetch`, not from memory:
   - **riddl-generator** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT**, matching the
     staged build exactly. Nothing owed.
   - **synapify** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT.** Nothing owed.
-  - riddl-models — `build.sbt:21` at `2.0.0-rc.10-2-ff3a59b4`, 13 commits behind.
+  - riddl-models — `build.sbt:21` at `2.0.0-rc.10-2-ff3a59b4`, 13 behind.
   - riddl-examples — `build.sbt:21` at `2.0.0-rc.9-54-64b7b413`.
   - riddl-idea-plugin — `project/Dependencies.scala:7` at `2.0.0-rc.9-42-37b0db94`.
-  - riddl-vscode — `package.json:128` at `2.0.0-rc.9`.
+  - **riddl-vscode — deliberately NOT swept**; deferred to release, see § 0.
 
-  **riddl-vscode cannot take the staged build at all** — it consumes via npm,
-  which carries only PUBLISHED releases, and `publishLocal` does not reach npm.
-  The most it can take today is `2.0.0-rc.10`, which predates A56/A57/`Envelope`
-  entirely. Its task file says so and offers to cut rc.11 if they need the new
-  work. **If any npm consumer needs current riddl, that forces an RC** — worth
-  knowing before assuming a restage covers everyone.
-
-  Each task file names the target, what changed since that repo's pin, and the
-  BAST hazard below. Waiting on their sessions; nothing further owed from here.
-  **BAST `FORMAT_REVISION` is 8** (6 -> 7 by A56, 7 -> 8 by A57, both
-  2026-08-06), so any checked-in `.bast` is rejected — **including one produced
-  by the published rc.10 itself**, which shipped at revision 6.
-- riddl-vscode: adoption task for `IncrementalValidator` now that rc.9 ships.
+  Each task names the target and what changed since that repo's pin, and tells
+  them to LEAVE `.bast` files alone (§ 0). Waiting on their sessions.
+- riddl-vscode: adoption task for `IncrementalValidator` — hold until the 2.0
+  upgrade above, so they take one change rather than two.
 - ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the
   two silent breaking changes in the migration guide, and docs for the
   `ForeverEmpty.void` error-sink idiom.
