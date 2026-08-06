@@ -119,6 +119,19 @@ case class UseCaseWitnessPass(
           lookupOne[Type](omc.msg.pathId).foreach { t =>
             acc.getOrElseUpdate(t, mutable.HashSet.empty[Processor[?]]).add(p)
           }
+        // `on other` / `on init` / `on term` deliberately do NOT witness a step, and this
+        // wildcard is where that is decided. `OnOtherClause` names no message -- it has no
+        // `msg` to resolve -- so it can only say "something arrived", never "THIS arrived",
+        // which is not evidence that a step's specific message is realized.
+        //
+        // The practical distinction, learned from riddl-examples 2026-08-05: a trailing
+        // `on other` catch-all sitting BESIDE a named clause is fine and witnessing still
+        // passes; SUBSTITUTING `on other` for the named clause is what leaves steps
+        // unwitnessed. The clause is never the problem, the substitution is.
+        //
+        // So if `on other` ever gains a bound value (e.g. a `Anything`-typed binding), it
+        // must still not land in this index. Anything that matches every type would witness
+        // every step, silently turning a catch-all into a universal completeness silencer.
         case _ => ()
       }
     }
