@@ -41,15 +41,60 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **Research an Akka-style asynchronous `ask` statement**, so `reply` is paired
-  with a genuine ask. Reid, 2026-08-06 — **research/feasibility only; wants its
-  own plan-mode session before anything is built.** Today `reply` exists without
-  a counterpart that establishes who is waiting for it. The interesting questions
-  are what the ask's completion is in a fully asynchronous model (a correlation,
-  a future-like value, a second clause?), how it interacts with `yields`/yield
-  conformance and the refusal path, whether it needs a timeout in the language or
-  only in generated code, and what it means for handler completeness and
-  witnessing. Do not start building; revisit in plan mode.
+- **An Akka-style asynchronous `ask` statement**, so `yield` is paired with a
+  genuine ask. Reid, 2026-08-06. **RESEARCH DONE 2026-08-06; wants Reid's ruling
+  on the recommendation below, then a plan. Nothing built.**
+
+  **What the language has today, verified in the code, not recalled:**
+  - `yields` on a message type declares WHAT handling it produces
+    (`AggregateUseCaseTypeExpression.yields`), and `checkYieldConformance`
+    (ValidationPass:910) enforces that a clause actually produces it.
+  - `yield` produces that value but names **no destination**. "The sender" is
+    implicit.
+  - `tell` delivers to a processor and says nothing about a reply.
+  - **There is no correlation concept anywhere in the language** — grep for
+    `correlation` in `language/src/main` returns nothing.
+
+  So the gap is NOT "we cannot send a request". It is that **riddl cannot say two
+  messages are two halves of one interaction.** `yields` describes the callee's
+  obligation; nothing describes the caller's expectation, so a generator cannot
+  tell a fire-and-forget `tell` from a request whose reply the caller awaits.
+
+  **Recommendation: `ask` declares a CORRELATION, not a mechanism.** RIDDL
+  specifies meaning and leaves representation to generators (the same line that
+  settled `message_envelope`), so `ask` must not imply a Future, a temp actor, a
+  correlation-id field, or a blocking call — all four are lowerings a generator
+  should be free to choose between. What the language should add is the FACT that
+  a reply is expected and which clause consumes it.
+
+  Sketch, to be argued rather than assumed correct:
+
+      ask command Pay of entity Ledger        // the reply is Pay's declared `yields`
+
+  and the reply is consumed by an ordinary `on <that result>` clause in the
+  asking processor. `ask` is then `tell` plus a declared expectation, and the
+  existing machinery does the rest: yield conformance already guarantees the
+  callee produces it, and A36 witnessing already checks a receiver has a clause
+  for a message.
+
+  **Open questions, in the order they need answering:**
+  1. **Does `ask` need a completion value at all**, or is "reply arrives as a
+     message handled by an on-clause" the whole of it? The latter is far cheaper
+     and stays honest about asynchrony; the former re-introduces a call stack
+     into a language that deliberately has none.
+  2. **Timeout: language or generated code?** Leaning generated code — a timeout
+     is a deployment property, and putting a duration in the model invites it to
+     be wrong everywhere at once. But a modeller may legitimately want to say
+     "this interaction is bounded".
+  3. **What does an ask that is never answered mean for handler completeness?**
+     There is a real check to be had here: `ask M of P` where P has no clause for
+     M, or where M declares no `yields`, is a defect riddl could catch today.
+  4. **The refusal path.** `checkYieldConformance` already treats a refusing
+     clause as discharging the contract. An ask whose callee refuses gets no
+     reply — is that a modelling error, or the expected shape?
+  5. Does `ask` belong to Epics/UseCases (an interaction-level concept) rather
+     than to statements? The interaction model already describes two-party
+     exchanges, and that may be the more natural home.
 
 - **Carry source locations through the JSON surface** — plan written and
   approved-pending. Every JSON-built node has `At.empty`; adds `$at` per contents
