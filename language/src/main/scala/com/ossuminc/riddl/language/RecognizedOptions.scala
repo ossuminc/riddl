@@ -286,6 +286,14 @@ object RecognizedOptions:
     // Version pinning for EventCatalog generation; valid on domains,
     // contexts and message types alike, hence no validParents
     "event_catalog_version" -> OptionSpec(Seq.empty, 1, 1),
+    // Message envelope selection. Names the record carrying each message's metadata --
+    // `option message_envelope("Riddl.Envelope")` for the predefined CloudEvents-shaped
+    // record, or a model's own. SCOPE-INHERITED: declared on a context it applies to all
+    // messaging in that context, including every entity within it, so it is resolved by
+    // walking UP the parent chain and is therefore valid anywhere (no validParents).
+    // Opt-in by design -- RIDDL specifies meaning, not representation, so an envelope is
+    // never imposed on a model that has no bus to carry one.
+    "message_envelope" -> OptionSpec(Seq.empty, 1, 1),
     // SQL DDL generation options; sql_dialect is resolved by walking up
     // the parent chain, so it is valid on entities, repositories,
     // contexts and domains alike, hence no validParents

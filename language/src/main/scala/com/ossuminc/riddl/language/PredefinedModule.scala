@@ -44,6 +44,11 @@ object PredefinedModule {
     */
   final val generatorError: String = "GeneratorError"
 
+  /** The record carrying a message's metadata, selected by `option message_envelope`. Its fields
+    * are the CloudEvents v1.0 context attributes, verbatim.
+    */
+  final val envelope: String = "Envelope"
+
   /** The RIDDL source of the standard module. Definitions live DIRECTLY in the module (no
     * domain/context wrapping) because `ModuleContents` is the wide `NebulaContents` union.
     */
@@ -100,6 +105,43 @@ object PredefinedModule {
       |      | There is deliberately NO predefined receiver. Where hard errors go is the model's
       |      | to say, via `option error-sink`; an `Operations` context belongs in the model
       |      | that wants one, not in this module.
+      |    }
+      |  }
+      |  record Envelope is {
+      |    messageId: String,
+      |    source: URL,
+      |    specversion: String,
+      |    type: String,
+      |    subject: String?,
+      |    time: TimeStamp?,
+      |    datacontenttype: String?,
+      |    dataschema: URL?
+      |  } with {
+      |    briefly "The metadata carried alongside a message; the CloudEvents context attributes"
+      |    described as {
+      |      | The envelope a message travels in, selected by `option message_envelope`. Field
+      |      | names are the CloudEvents v1.0 CONTEXT ATTRIBUTES, so a generator emitting
+      |      | CloudEvents maps them one-for-one instead of guessing. The four
+      |      | CloudEvents-REQUIRED attributes are non-optional here; the four optional ones carry
+      |      | `?`.
+      |      |
+      |      | ONE deviation, and it is forced: CloudEvents `id` is spelled `messageId`, because
+      |      | RIDDL requires identifiers of at least three characters and `id` draws a style
+      |      | warning. A generator must map `messageId` -> `id` on the wire. Every other
+      |      | attribute is verbatim, including `type` and `source`, which are RIDDL keywords
+      |      | elsewhere but are accepted as field names.
+      |      |
+      |      | There is deliberately no `data` field. CloudEvents puts the payload in `data`, but
+      |      | in RIDDL the payload IS the message -- it is already modelled, named and typed.
+      |      | Duplicating it here would create a second, weaker description of something the
+      |      | model already states precisely. This record is the metadata AROUND a message, not
+      |      | a wrapper containing one.
+      |      |
+      |      | Declaring the envelope does not impose a wire format. RIDDL specifies meaning, not
+      |      | representation: `option message_envelope` says these attributes accompany the
+      |      | messages in its scope, and how they are carried -- CloudEvents JSON, Kafka headers,
+      |      | a gRPC metadata map, or nothing at all for an in-process call -- stays the
+      |      | generator's choice.
       |    }
       |  }
       |  processor ForeverEmpty as source is {

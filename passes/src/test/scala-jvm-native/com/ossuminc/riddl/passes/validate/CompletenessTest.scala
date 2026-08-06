@@ -1233,6 +1233,35 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept message_envelope at every scope, and resolve the predefined Envelope" in {
+      (td: TestData) =>
+        // Scope-inherited like sql_dialect: declared on a domain or context it covers all the
+        // messaging within, so it must be accepted at every level rather than pinned to one.
+        // The context-level declaration names `Riddl.Envelope`, which also proves the predefined
+        // record is REACHABLE by path from a user model without an import.
+        val input = RiddlParserInput(
+          """domain D is {
+            |  context C is {
+            |    command DoIt is { a: Integer }
+            |    entity Order is {
+            |      handler H is { on command D.C.DoIt is { do "handle" } }
+            |    } with {
+            |      option message_envelope("Riddl.Envelope")
+            |    }
+            |  } with { option message_envelope("Riddl.Envelope") }
+            |} with { option message_envelope("Riddl.Envelope") }
+            |""".stripMargin,
+          td
+        )
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          msgs.exists(m =>
+            m.message.contains("message_envelope") &&
+              (m.message.contains("not a recognized") ||
+                m.message.contains("not typically used"))
+          ) mustBe false
+        }
+    }
+
     "accept sql_dialect and sql_table options on entities and their parents" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

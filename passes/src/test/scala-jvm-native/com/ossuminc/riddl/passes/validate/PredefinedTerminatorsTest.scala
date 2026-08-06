@@ -139,28 +139,35 @@ class PredefinedTerminatorsTest extends AbstractValidatingTest {
       spring.effectiveShape mustBe a[Source]
       spring.outlets.size mustBe 1
       spring.inlets mustBe empty
-      // The one record: the shape a generator sends. Exhaustive for the same reason.
+      // The records: the shape a generator sends, and the metadata a message travels with.
+      // Exhaustive for the same reason — adding one to the standard module is a decision, and
+      // this list is where it has to be made deliberately.
       PredefinedModule.module.contents
         .filter[Type]
         .filter(_.typEx.isInstanceOf[AggregateUseCaseTypeExpression])
-        .map(_.id.value) mustBe Seq(PredefinedModule.generatorError)
+        .map(_.id.value) mustBe Seq(PredefinedModule.generatorError, PredefinedModule.envelope)
       // `Drain` is the universal type: the dual of `Nothing`.
       PredefinedModule.module.contents.filter[Type].find(_.id.value == "Drain") match
         case Some(drain) => drain.typEx mustBe a[Anything]
         case None        => fail("the predefined `Drain` type was not found")
     }
 
-    "parse AND validate cleanly on its own, but for GeneratorError being unused" in {
+    "parse AND validate cleanly on its own, but for its two records being unused" in {
       (td: TestData) =>
         // `GeneratorError` has no predefined receiver ON PURPOSE -- where hard errors go is the
         // model's to say -- so validating the module ALONE necessarily reports it as unused. That
         // report is the design working, not a defect: it is the nudge that tells a modeller to
-        // declare an `error-sink`. Everything else must still be silent.
+        // declare an `error-sink`. `Envelope` is unused for the same reason and by the same
+        // design: it is opted into with `option message_envelope`, never imposed. Everything else
+        // must still be silent.
         val result = Pass.runStandardPasses(PredefinedModule.root)
         val (unused, rest) = result.messages.partition(_.message.contains("is unused"))
         withClue(s"unexpected messages:\n${rest.format}") { rest mustBe empty }
         unused.map(_.message.takeWhile(_ != '\n')) mustBe
-          Seq(s"Record '${PredefinedModule.generatorError}' is unused")
+          Seq(
+            s"Record '${PredefinedModule.generatorError}' is unused",
+            s"Record '${PredefinedModule.envelope}' is unused"
+          )
     }
 
     "report GeneratorError as USED once a model declares an error-sink inlet of that type" in {
@@ -173,7 +180,12 @@ class PredefinedTerminatorsTest extends AbstractValidatingTest {
         val used = validate(PredefinedModule.source + errorSinkUser, td)
         withClue(used.messages.format) {
           used.messages.justErrors mustBe empty
-          used.messages.filter(_.message.contains("is unused")) mustBe empty
+          // Scoped to GeneratorError deliberately. `Envelope` is still unused in this fixture,
+          // which is correct -- nothing here opts into `message_envelope` -- so asserting "no
+          // unused messages at all" would couple this test to an unrelated definition.
+          used.messages.filter { (m: Messages.Message) =>
+            m.message.contains(PredefinedModule.generatorError) && m.message.contains("is unused")
+          } mustBe empty
         }
         // ...and the SAME source without that one context still reports it, so the difference is
         // attributable to the error-sink inlet and nothing else about this fixture.

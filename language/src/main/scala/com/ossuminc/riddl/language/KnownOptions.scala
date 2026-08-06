@@ -98,6 +98,7 @@ object KnownOption {
   final val finite_state_machine = "finite-state-machine"
   final val gateway = "gateway"
   final val kind = "kind"
+  final val message_envelope = "message_envelope"
   final val message_queue = "message-queue"
   final val namespace = "namespace"
   final val package_ = "package"
