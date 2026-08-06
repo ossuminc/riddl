@@ -19,8 +19,40 @@ package com.ossuminc.riddl.language
 case class OptionSpec(
   validParents: Seq[String],
   minArgs: Int = 0,
-  maxArgs: Int = 0
+  maxArgs: Int = 0,
+  /** The parent kinds for which this option is DEPRECATED, which is not always all of them.
+    *
+    * Deprecation is per (option, kind), not per name: `consistent`, `available` and `transient`
+    * became entity INTENTIONS in 2.0 and are deprecated on an Entity, while remaining perfectly
+    * current on a Repository, which has no intentions. A flat "this name is deprecated" table
+    * would wrongly condemn the Repository spelling.
+    *
+    * Empty means not deprecated anywhere. The name still parses and is still RECOGNIZED either
+    * way — this marks the AUTHORING surface only.
+    */
+  deprecatedFor: Seq[String] = Seq.empty,
+  /** What to write instead, phrased for a human. Present whenever `deprecatedFor` is non-empty. */
+  replacement: Option[String] = None
 )
+
+/** The current and deprecated option names for one definition kind, together.
+  *
+  * Returned as one structure rather than two independent calls because an authoring tool needs
+  * BOTH and they must agree: the picker offers `current`, but a model already using a deprecated
+  * spelling must still be RECOGNIZED when rendered, or the tool reports "not a recognized RIDDL
+  * option" about a name RIDDL accepts. Two calls let a consumer use one and forget the other.
+  * (Asked for by synapify, 2026-08-05, whose option picker was offering the deprecated spellings
+  * and then flagging the deprecation it had just invited.)
+  */
+case class RecognizedOptionSet(
+  current: Seq[String],
+  deprecated: Seq[String],
+  /** Deprecated name -> what to write instead. Keys match `deprecated` exactly. */
+  replacements: Map[String, String]
+):
+  /** Every recognized name for the kind, deprecated ones included — what `optionsFor` returns. */
+  def all: Seq[String] = (current ++ deprecated).sorted
+end RecognizedOptionSet
 
 /** Registry of deprecated option names and their replacements. Used to generate deprecation
   * warnings while maintaining backward compatibility.
@@ -62,7 +94,7 @@ end DeprecatedOptions
 object RecognizedOptions:
   val registry: Map[String, OptionSpec] = Map(
     // Existing well-known options
-    "aggregate" -> OptionSpec(Seq("Entity"), 0, 0),
+    "aggregate" -> OptionSpec(Seq("Entity"), 0, 0, Seq("Entity"), Some("write `aggregate` before `entity`")),
     "auto-id" -> OptionSpec(Seq("Entity"), 0, 0),
     "finite-state-machine" -> OptionSpec(Seq("Entity"), 0, 0),
     "persistent" -> OptionSpec(Seq("Connector"), 0, 0),
@@ -91,15 +123,15 @@ object RecognizedOptions:
     // options that were published by KnownOptions.entity but never registered here,
     // so every use of one drew a spurious "not a recognized RIDDL option" warning.
     // All are simple markers with no arguments.
-    "event-sourced" -> OptionSpec(Seq("Entity"), 0, 0),
-    "value" -> OptionSpec(Seq("Entity"), 0, 0),
+    "event-sourced" -> OptionSpec(Seq("Entity"), 0, 0, Seq("Entity"), Some("write `event-sourced` before `entity`")),
+    "value" -> OptionSpec(Seq("Entity"), 0, 0, Seq("Entity"), Some("write `persistent` before `entity`")),
     // CAP markers. Meaningful on a Repository as well as an Entity: the computational model
     // (§5.6) rules that a Repository is a Processor, so its WRITE side is single-writer by
     // default and `available` hands write arbitration to the storage engine, permitting
     // concurrent writes. Queries are side-effect-free and always concurrent either way. Same
     // "meaningful on both" reasoning as `transient` below.
-    "consistent" -> OptionSpec(Seq("Entity", "Repository"), 0, 0),
-    "available" -> OptionSpec(Seq("Entity", "Repository"), 0, 0),
+    "consistent" -> OptionSpec(Seq("Entity", "Repository"), 0, 0, Seq("Entity"), Some("write `consistent` before `entity`")),
+    "available" -> OptionSpec(Seq("Entity", "Repository"), 0, 0, Seq("Entity"), Some("write `available` before `entity`")),
     "message-queue" -> OptionSpec(Seq("Entity"), 0, 0),
     // Marks the inlet that receives hard-error notifications, redirecting them from the
     // predefined `Riddl.Operations` sink to a receiver the model owns. On the INLET rather than
@@ -109,7 +141,7 @@ object RecognizedOptions:
     "error-sink" -> OptionSpec(Seq("Inlet"), 0, 0),
     // `transient` marks state that is NOT durably persisted. That is meaningful both
     // for an Entity and for a Repository (a cache-like, non-durable store).
-    "transient" -> OptionSpec(Seq("Entity", "Repository"), 0, 0),
+    "transient" -> OptionSpec(Seq("Entity", "Repository"), 0, 0, Seq("Entity"), Some("write `transient` before `entity`")),
     // Epic-level marker: the epic's interactions are synchronous.
     "sync" -> OptionSpec(Seq("Epic"), 0, 0),
     // Temporal options (C1)
@@ -325,14 +357,29 @@ object RecognizedOptions:
     *   Every registry key whose `validParents` contains `parentKind`, PLUS every universal option
     *   (`validParents` empty), sorted for stable output.
     */
-  def optionsFor(parentKind: String): Seq[String] =
-    registry
-      .collect {
-        case (name, spec) if spec.validParents.isEmpty || spec.validParents.contains(parentKind) =>
-          name
-      }
-      .toSeq
-      .sorted
+  def optionsFor(parentKind: String): Seq[String] = optionSetFor(parentKind).all
+
+  /** The recognized options for a kind, SPLIT into those still current and those deprecated there.
+    *
+    * This is the authoring-surface answer: a tool offers `current` in an "add option" picker and
+    * keeps recognizing `deprecated` when rendering a model that already uses one. [[optionsFor]] is
+    * `all` of this, so the flat list and the split cannot drift — the whole reason this repo keeps
+    * one registry rather than two tables.
+    *
+    * A name deprecated for one kind may be current for another; see [[OptionSpec.deprecatedFor]].
+    */
+  def optionSetFor(parentKind: String): RecognizedOptionSet =
+    val applicable = registry.collect {
+      case (name, spec) if spec.validParents.isEmpty || spec.validParents.contains(parentKind) =>
+        name -> spec
+    }
+    val (dep, cur) = applicable.partition(_._2.deprecatedFor.contains(parentKind))
+    RecognizedOptionSet(
+      current = cur.keys.toSeq.sorted,
+      deprecated = dep.keys.toSeq.sorted,
+      replacements = dep.collect { case (n, s) if s.replacement.nonEmpty => n -> s.replacement.get }
+    )
+  end optionSetFor
 
   /** The union of [[optionsFor]] over several kinds. Needed for the definition families whose kind
     * string varies: a Streamlet (seven shape names) and a Portlet (Inlet/Outlet).

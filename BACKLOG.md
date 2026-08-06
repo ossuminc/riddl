@@ -15,6 +15,30 @@ them as items are touched rather than in one sweep.
 Large items get their own plan (`~/.claude/plans/`) before implementation; the
 plan is discarded once built.
 
+### 0. Just before 2.0.0 is released
+
+Things deliberately deferred to the release itself, not to be done piecemeal.
+
+- **Run one `scalafmt` pass.** Formatting is not a gate before 2.0 (Reid,
+  2026-08-04); do not run `scalafmtCheckAll`, report it, or format
+  incrementally. `sbt scalafmtCheck` is red on HEAD — 7 committed files
+  reformat, 6 in `commands`.
+- **Update `../RIDDL-Computational-Model.md` with everything `release/2`
+  changed.** Reid, 2026-08-06. That document is the authority for any lowering
+  decision — what a conforming generator MUST preserve versus may freely choose
+  — so a language change that does not reach it leaves generator authors working
+  from a stale contract. This branch has changed a lot of what it describes:
+  entity intentions and the four event-sourcing rules, the unified processor
+  model, implicit invariant scope, `requires`/`returns` in contents,
+  `Riddl.Envelope` + `option message_envelope`, A56 (`tell p`) and A57
+  (`on other as x`). Work from `git log 2.0.0-rc.1..HEAD` rather than memory.
+- **Update the ossum.tech documentation site** with the same syntax changes,
+  **plus a LIGHTER treatment of the implied syntax.** Reid, 2026-08-06 — the
+  reference currently spells out more of the implicit forms than a reader needs,
+  and the balance should shift toward what someone actually writes. Same source
+  of truth: the commits on this branch, not recollection.
+  (ossum.tech is a separate repo; this is a task DROP, not work done here.)
+
 ### 1. Queued, designed, not started
 
 - **Research an Akka-style asynchronous `ask` statement**, so `reply` is paired
@@ -190,8 +214,6 @@ plan is discarded once built.
   was Error rather than shadowing, on the grounds that silently shadowing a
   CHECK is the failure mode the whole implicit-invariant change exists to
   remove. Not built, and not urgent; needs Reid's ruling first.
-- **`sbt scalafmtCheck` is red on HEAD** — 7 committed files reformat, 6 in
-  `commands`. Deferred to just before 2.0.0.
 - **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 

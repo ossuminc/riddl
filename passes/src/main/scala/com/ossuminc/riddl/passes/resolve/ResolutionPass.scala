@@ -122,7 +122,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: OnPassivationClause    => ()
       case _: OnOtherClause          => ()
       case e: Entity =>
-        addEntity(e)
+        addEntity(e, parents)
       case s: State =>
         // A9b: state.typ is a RecordRef; resolve generically (record-kind check is in validation).
         associateUsage(s, resolveARef[Type](s.typ, parents))
@@ -144,7 +144,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case p: Projector =>
         p.repositories.foreach { ref => associateUsage(p, resolveARef[Repository](ref, parents)) }
       case r: Repository =>
-        addRepository(r)
+        addRepository(r, parents)
       case s: Saga =>
         // A9: resolve saga requires/returns (previously unresolved).
         s.input.foreach(resolveRequiresReturns(s, _, parents))
@@ -231,7 +231,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   end resolveAuthorRefs
 
   private def resolveFunction(f: Function, parents: Parents): Unit = {
-    addFunction(f)
+    addFunction(f, parents)
     f.authorRefs.foreach { item => associateUsage[Author](f, resolveARef[Author](item, parents)) }
     f.input.foreach(resolveRequiresReturns(f, _, parents))
     f.output.foreach(resolveRequiresReturns(f, _, parents))
@@ -249,7 +249,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   }
 
   private def resolveType(typ: Type, parents: Parents): Resolution[Type] = {
-    addType(typ)
+    addType(typ, parents)
     resolveTypeExpression(typ, typ.typEx, parents)
   }
 
