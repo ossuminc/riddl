@@ -50,7 +50,7 @@ it, not recalled:
   expected-red. `RiddlModelsRoundTripTest` 189/189, `Root2JsonCorpusTest`
   `cleanRoundTrip=189 (100.0%)`; all 189 riddl-models entry points validate with
   zero errors, and riddl-examples dokn does too.
-- **BAST `FORMAT_REVISION` is 7** (bumped from 6 by A56, `897b474bf`). Any
+- **BAST `FORMAT_REVISION` is 8** (6 to 7 by A56 `897b474bf`, 7 to 8 by A57 `4208946d2`). Any
   `.bast` from an earlier build — including any published rc.10 artifact — is
   rejected with "regenerate .bast files with the current riddlc". Expected, not a
   bug. When bumping again, keep the PREVIOUS revision's binary to `unbastify` the
@@ -182,6 +182,40 @@ conclusion that needs the same evidence as any other, and the evidence is
 someone stating the reason is gone — not my noticing that a superficially similar
 thing has changed. **Pattern-matching earned by three real findings is exactly
 when it starts firing on the fourth case that does not fit.**
+
+## A57: the envelope binding, and a keyword that wanted not to exist (2026-08-06) — DONE
+
+`4208946d2`. `on other as x [: <envelope>]`, with `Riddl.Envelope` and
+`option message_envelope` landing just before it.
+
+**The syntax question answered itself once we noticed the keyword carried no
+information.** Reid was choosing between `as x: type Riddl.Envelope` and
+`as x: message Riddl.Envelope`, uneasy about both — `message` is untrue (an
+envelope is not a message) and `type` is correct only because it says nothing.
+Testing showed RIDDL already accepts bare AND keyword-led type names in both
+positions, so there was no consistency argument either way. **When a decision is
+between two spellings of nothing, the thing to question is whether the syntax
+belongs there at all.** Making the ascription OPTIONAL dissolved it: no keyword
+to choose, and the two validation rules became the payoff for using the explicit
+form rather than the price of using the feature.
+
+**Prettify silently dropped the binding, and only a text assertion caught it.**
+The rendering went on `OnOtherClause.format`, which reads correctly and is not
+what the prettifier consults for a clause header — `openDef` reads
+`Declaration.ascription`. So parse → prettify → re-parse produced a valid model
+that had quietly lost `as env: Riddl.Envelope`. Two lessons:
+1. **`Declaration` exists BECAUSE these two surfaces drift**, and its docstring
+   says so. I read that docstring earlier in the same session and still put the
+   code in the wrong place. Reading the warning is not the same as applying it.
+2. **A round-trip test that asserts only AST survival would have passed**, since
+   the AST was fine going in. It has to assert the emitted TEXT. Canaried by
+   neutering `ascription`: both binding cases go red, the plain case stays green.
+
+**A revision bump has a fixed tax.** Second `.bast` fixture regeneration in one
+day (7→8 after 6→7). It is mechanical, but it fails the suite in `language`
+BEFORE the modules whose tests you actually changed, so the `;` chain aborts and
+the run looks like a much bigger problem than it is. Regenerate the fixture
+first when bumping.
 
 ## A56: forwarding a bound message (2026-08-06) — DONE
 

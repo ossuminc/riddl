@@ -71,38 +71,6 @@ plan is discarded once built.
   Sequence: deprecate loudly for a release, then remove.
 
 ### 2. Queued, needs a plan
-- **`on other as x` — bind the residual message in a catch-all. NOT APPROVED;
-  parked deliberately.** Reid liked the shape and I recommended it, then testing
-  showed the binding would be **inert**, and he agreed the objection may hold.
-  Recorded so the reasoning is not re-derived:
-  - `x` names no message, so it has **no type and no fields** — `x.field` cannot
-    resolve through the ValueRef machinery, unlike a typed A55 binding.
-  - `x` could not be forwarded either, for the same reason `tell p` failed.
-    So with neither introspection nor forwarding, **nothing could consume it.**
-  - My original argument FOR it — that `on other` cannot dead-letter a message to
-    `BottomlessPit.hole` — was **half wrong**: the blocker was the message-operand
-    grammar, not the missing name. A binding is necessary but not sufficient.
-  **A56 has since landed (`897b474bf`) and does NOT unblock this** — checked, not
-  assumed. `tell`/`send` now accept a bound name, but `checkBoundMessageOperand`
-  requires the operand to RESOLVE to a message Type, and an untyped catch-all
-  binding has none, so `tell x` would draw the new "does not name a message bound
-  by an enclosing 'on' clause" Error. The operand widening was necessary for this
-  and is still not sufficient.
-  **Its unblocker has now LANDED** (`4de206ed8`): `Riddl.Envelope` is in the
-  standard module and `option message_envelope` selects it. Giving `x` an
-  Envelope type would make it inspectable (`x.source`, `x.messageType` through
-  the existing ValueRef machinery) AND, as a consequence, forwardable through
-  A56 — one type enabling both halves, which is why Reid's CloudEvents instinct
-  pointed here.
-  **So this is now actionable, and needs a decision rather than a blocker:** does
-  `on other as x` type `x` as `Riddl.Envelope` ALWAYS, only when
-  `message_envelope` is in scope, or by naming the type at the binding? The
-  middle option is the coherent one but makes a clause's meaning depend on an
-  option declared far away, which is the kind of action-at-a-distance the
-  intentions work moved AWAY from. Wants a plan.
-  Whatever the spelling, `OnOtherClause` must NOT join `OnMessageLikeClause` —
-  keep the structural guarantee that it cannot witness a use-case step
-  (`UseCaseWitnessPass:117`, comment at `732b0dece`).
 - **A keyword-named field reports the error several tokens upstream.** From
   riddl-generator 2026-08-03, filed here because it is a real diagnostic defect
   even though they marked it "no action needed". A field in a message

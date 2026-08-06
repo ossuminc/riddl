@@ -688,6 +688,29 @@ to the right group rather than appending to a list.
   copy so the CI grammar validators cover it; `PredefinedModuleSourceTest`
   fails if the copy drifts from the constant.
 
+- **`on other as x [: <envelope>]` (A57)** — binds the residual message's
+  ENVELOPE, not a message: the clause names none. `OnOtherClause` gains
+  `binding: Option[Identifier]` and `envelopeType: Option[TypeRef]`, both
+  declared BEFORE `contents` and WITHOUT defaults (`@JSExportTopLevel` needs
+  defaulted params trailing — same rule as A55). `x`'s type is the ascription
+  when written, else whatever `option message_envelope` names in scope
+  (`ResolutionPass.envelopePathFor`), so `x` and `x.source` both resolve.
+  **The ascription RESTATES the option, it never overrides it.** Three Errors in
+  `checkOnOtherBinding`: a binding with no envelope in scope, an ascription with
+  no envelope in scope, and an ascription that contradicts the option. A
+  per-clause override would mean reading one clause tells you nothing about its
+  siblings — exactly what scope inheritance prevents.
+  **The type is BARE after the colon** — no keyword. `message` would be untrue
+  and `type` is correct only because it is vacuous; the colon already says a
+  type follows. Both spellings parse elsewhere in RIDDL, so this is a choice
+  about meaning, not consistency.
+  **`OnOtherClause` must NOT join `OnMessageLikeClause`** — that is what keeps
+  it out of `UseCaseWitnessPass`'s index (see its comment); a clause matching
+  every type would witness every step.
+  **Rendering lives in `Declaration.ascription`, NOT in the clause's `format`.**
+  The prettifier reads the former via `openDef`; putting it on `format` alone
+  makes prettify silently DROP the binding on every round trip. That shipped as
+  a bug for exactly one commit and is what `OnOtherEnvelopeRoundTripTest` pins.
 - **On-clause message binding (A55, release/2)** — `on foo: command
   Foo { … }` optionally binds a local name to the handled message.
   The `:` is ordinary TYPE ASCRIPTION (same rule as `let x: T = …`
