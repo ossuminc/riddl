@@ -6,129 +6,67 @@
 
 package com.ossuminc.riddl.language.bast
 
-import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{URL, PlatformContext}
 
-/** A RiddlParserInput implementation for BAST deserialization that doesn't have source text.
+/** A [[RiddlParserInput]] for BAST deserialization, which carries an origin but NO source text.
   *
-  * Uses a synthetic lineNumberLookup with fixed line width to enable correct line/col calculation
-  * from offsets. This allows At locations to work correctly even without source text.
+  * It exists to give a BAST-reconstructed [[com.ossuminc.riddl.language.At]] an origin string for
+  * messages. It deliberately does NOT try to derive line or column: `positionsKnown` is false, so
+  * `At.line`/`col`/`endLine` all report 0.
   *
-  * Strategy:
-  *   - Each line is assumed to be CHARS_PER_LINE characters wide (default 10000)
-  *   - Line L starts at offset (L-1) * CHARS_PER_LINE
-  *   - For location at line=L, col=C, offset = (L-1)*CHARS_PER_LINE + (C-1)
-  *   - At.line and At.col calculations then produce correct values
+  * HISTORY, so the machinery is not helpfully reinvented. This class used to fabricate positions
+  * from a synthetic line index on a fixed 10000-chars-per-line scheme -- `lineOf`/`offsetOf`
+  * overrides, a `syntheticLineNumberLookup` array, a `maxLine` parameter, and `createAt` /
+  * `createAtFromOffsets` builders. All of it was WRONG, not merely unused: BAST stores REAL source
+  * offsets (`BASTWriter.writeLocation` delta-encodes `loc.offset`), so decoding one as though line
+  * L began at L*10000 put every offset under 10000 on line 1 at col = offset -- a confidently
+  * wrong position, which a Problems pane renders as a squiggle on the wrong line. An absent
+  * position is strictly better than a plausible fiction.
+  *
+  * To get TRUE positions, supply the real source to `BASTReader.read` via its `suppliedSources`
+  * map; that substitutes a genuine [[RiddlParserInput]] and this class is never constructed.
   *
   * @param root
   *   The URL of the original source file
   * @param originPath
-  *   The origin path (for origin string) - should be root.path
-  * @param maxLine
-  *   Maximum line number expected (used to size lineNumberLookup)
+  *   The origin path (for the origin string) - should be root.path
   */
 private[bast] class BASTParserInput(
   val root: URL,
-  originPath: String,
-  maxLine: Int = 10000
+  originPath: String
 )(using pc: PlatformContext)
     extends RiddlParserInput {
 
   // Override origin to return just the path, not the full URL
   override val origin: String = originPath
 
-  // Fixed characters per line for synthetic offset calculation
-  private val CHARS_PER_LINE = 10000
-
   // Empty data - BAST has no source text
   override val data: String = ""
 
-  // BAST stores REAL source offsets (BASTWriter.writeLocation delta-encodes loc.offset), and this
-  // input has no text to resolve them against, so it cannot honestly derive line or column. Saying
-  // so makes At report 0/0 instead of the synthetic answer below, which decoded a real offset as
-  // if line L began at L*CHARS_PER_LINE -- putting every offset under 10000 on line 1 at
-  // col = offset. Supply the real source to BASTReader.read to get true positions.
+  // Cannot honestly derive line or column from an offset with no text to resolve it against. This
+  // is what makes At report 0 rather than a fabricated position; see the class comment.
   override def positionsKnown: Boolean = false
-
-  // Build synthetic lineNumberLookup: line N starts at offset (N-1) * CHARS_PER_LINE
-  private val syntheticLineNumberLookup: Array[Int] =
-    (0 until maxLine).map(_ * CHARS_PER_LINE).toArray :+ (maxLine * CHARS_PER_LINE)
-
-  // Override lineOf to use synthetic lookup
-  // Note: Can't use private[language] from bast package, but these are inherited as protected
-  override def lineOf(index: Int): Int = {
-    // Binary search in synthetic lookup
-    val result = syntheticLineNumberLookup.search(index)
-    result match {
-      case scala.collection.Searching.Found(foundIndex) => foundIndex
-      case scala.collection.Searching.InsertionPoint(insertionPoint) =>
-        if insertionPoint > 0 then insertionPoint - 1 else 0
-    }
-  }
-
-  // Override offsetOf to use synthetic lookup
-  override def offsetOf(line: Int): Int = {
-    if line < 0 then 0
-    else if line < syntheticLineNumberLookup.length then syntheticLineNumberLookup(line)
-    else syntheticLineNumberLookup(syntheticLineNumberLookup.length - 1)
-  }
-
-  /** Create an At location with explicit line/col values.
-    *
-    * Calculates synthetic offset: (line-1) * CHARS_PER_LINE + (col-1) This offset will produce
-    * correct line/col when At.line and At.col are called.
-    *
-    * @deprecated
-    *   Use createAtFromOffsets instead - line/col are no longer stored in BAST
-    */
-  def createAt(line: Int, col: Int): At = {
-    val offset = (line - 1) * CHARS_PER_LINE + (col - 1)
-    At(this, offset, offset)
-  }
-
-  /** Create an At location directly from offset values.
-    *
-    * This is the preferred method for BAST v1.1+ where we store offsets directly instead of
-    * line/col. The At.line and At.col properties will compute approximate values based on the
-    * synthetic line scheme (10000 chars per line).
-    *
-    * @param offset
-    *   The start offset in the source
-    * @param endOffset
-    *   The end offset in the source
-    * @return
-    *   An At location with the given offsets
-    */
-  def createAtFromOffsets(offset: Int, endOffset: Int): At = {
-    // Ensure endOffset >= offset to satisfy At's requirement
-    val safeEndOffset = if endOffset < offset then offset else endOffset
-    At(this, offset, safeEndOffset)
-  }
 }
 
 /** Companion object for BASTParserInput */
 object BASTParserInput {
 
-  /** Create a BASTParserInput from a URL
+  /** Create a BASTParserInput from a URL, using its path as the origin string
     * @param url
     *   The URL of the original source file
-    * @param maxLine
-    *   Maximum line number expected (default 10000)
     */
-  def apply(url: URL, maxLine: Int = 10000)(using PlatformContext): BASTParserInput = {
-    new BASTParserInput(url, url.path, maxLine)
+  def apply(url: URL)(using PlatformContext): BASTParserInput = {
+    new BASTParserInput(url, url.path)
   }
 
-  /** Create a BASTParserInput with explicit origin string
+  /** Create a BASTParserInput with an explicit origin string
     * @param url
     *   The URL of the original source file
     * @param origin
     *   The origin string for error messages
-    * @param maxLine
-    *   Maximum line number expected
     */
-  def apply(url: URL, origin: String, maxLine: Int)(using PlatformContext): BASTParserInput = {
-    new BASTParserInput(url, origin, maxLine)
+  def apply(url: URL, origin: String)(using PlatformContext): BASTParserInput = {
+    new BASTParserInput(url, origin)
   }
 }

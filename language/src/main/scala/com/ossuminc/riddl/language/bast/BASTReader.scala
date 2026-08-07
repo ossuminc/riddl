@@ -258,7 +258,7 @@ class BASTReader(
         else if newPath.startsWith("/") then URL.fromFullPath(newPath)
         else URL.fromCwdPath(newPath)
       val originStr = if newPath.isEmpty then "empty" else newPath
-      currentSource = suppliedSources.getOrElse(originStr, BASTParserInput(url, originStr, 10000))
+      currentSource = suppliedSources.getOrElse(originStr, BASTParserInput(url, originStr))
       // Reset location tracking for new source - first location will be absolute
       lastLocation = At.empty
       firstLocationRead = false
@@ -386,7 +386,7 @@ class BASTReader(
         else if newPath.startsWith("/") then URL.fromFullPath(newPath)
         else URL.fromCwdPath(newPath)
       val originStr = if newPath.isEmpty then "empty" else newPath
-      currentSource = suppliedSources.getOrElse(originStr, BASTParserInput(url, originStr, 10000))
+      currentSource = suppliedSources.getOrElse(originStr, BASTParserInput(url, originStr))
       // Reset location tracking for new source - first location will be absolute
       lastLocation = At.empty
       firstLocationRead = false

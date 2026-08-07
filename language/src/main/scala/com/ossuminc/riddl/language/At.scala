@@ -42,8 +42,12 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
   @JSExport
   @inline def line: Int = if !source.positionsKnown then 0 else source.lineOf(offset) + 1
 
+  /** 1-based end line, or 0 when the source cannot say. Guarded exactly as [[line]] is: without it
+    * a BAST-reconstructed At reported an honest `0` start line beside a FABRICATED end line, so a
+    * message formatted as `(0:0->1:N)` -- half-admitting it did not know.
+    */
   @JSExport
-  @inline def endLine: Int = source.lineOf(endOffset) + 1
+  @inline def endLine: Int = if !source.positionsKnown then 0 else source.lineOf(endOffset) + 1
 
   /** 1-based column, or 0 when the source cannot say. See [[line]]. */
   @JSExport
@@ -69,7 +73,11 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
   @inline def toLong: String = {
     val sLine = line
     val eLine = endLine
-    val endCol = endOffset - source.offsetOf(endLine - 1) + 1
+    // MUST be guarded, not merely for consistency: with `endLine` now 0 on a positionless source,
+    // `offsetOf(-1)` indexes the lookup array negatively and THROWS (the very
+    // ArrayIndexOutOfBoundsException `RiddlParserInputTest` intercepts) -- from inside message
+    // formatting, which is the one place an exception must never originate.
+    val endCol = if !source.positionsKnown then 0 else endOffset - source.offsetOf(eLine - 1) + 1
     if sLine == eLine then s"($sLine:$col->$endCol)"
     else s"($sLine:$col->$eLine:$endCol)"
   }
