@@ -32,7 +32,16 @@ case class OptionSpec(
     */
   deprecatedFor: Seq[String] = Seq.empty,
   /** What to write instead, phrased for a human. Present whenever `deprecatedFor` is non-empty. */
-  replacement: Option[String] = None
+  replacement: Option[String] = None,
+  /** Severity of a `validParents` violation for THIS option.
+    *
+    * StyleWarning by default, because most misplaced options are a tidiness matter: the option is
+    * simply ignored where it sits. It is `Error` when putting the option there asserts something
+    * about the model that is not true, which no generator could honour and no reader should
+    * believe -- see `persistent` below. Per-option on purpose: promoting every violation to an
+    * Error would be a corpus-wide behaviour change nobody asked for.
+    */
+  severity: Messages.KindOfMessage = Messages.StyleWarning
 )
 
 /** The current and deprecated option names for one definition kind, together.
@@ -97,7 +106,25 @@ object RecognizedOptions:
     "aggregate" -> OptionSpec(Seq("Entity"), 0, 0, Seq("Entity"), Some("write `aggregate` before `entity`")),
     "auto-id" -> OptionSpec(Seq("Entity"), 0, 0),
     "finite-state-machine" -> OptionSpec(Seq("Entity"), 0, 0),
-    "persistent" -> OptionSpec(Seq("Connector"), 0, 0),
+    // `persistent` states DOMAIN DURABILITY, so it is only meaningful where there is state to
+    // persist -- and a Connector is the only definition that takes it as an OPTION. An Entity says
+    // persistence with an intention keyword (`persistent entity X`), and a Repository is persistent
+    // by implication, so neither wants it here. Everything else, a Context above all, holds no state
+    // of its own: §3 of the computational model has domain state living in the Entities,
+    // Repositories and Projectors a Context CONTAINS, never in the Context itself.
+    //
+    // Hence Error rather than the default StyleWarning (Reid, 2026-08-07). The distinction is not
+    // severity for its own sake: a misplaced option is usually ignorable, but `persistent` on a
+    // stateless definition ASSERTS durability that nothing can provide, so it is a modelling
+    // mistake rather than a weaker-but-legitimate choice. Contrast A35's cross-boundary connector
+    // warning, deliberately a warning because the in-memory downgrade is a legitimate deployment
+    // decision -- there is no equivalent reading here.
+    //
+    // Filed by riddl-generator for the `gateway` case; the ruling generalised past it. The option
+    // itself is on its way out: BACKLOG § 1 has connector INTENTIONS (`persistent` plus
+    // `at-least-once` | `at-most-once`) replacing it, after which this entry retires. It must keep
+    // working until then -- all 426 uses across riddl-models are on connectors.
+    "persistent" -> OptionSpec(Seq("Connector"), 0, 0, severity = Messages.Error),
     "technology" -> OptionSpec(Seq.empty, 1, 1),
     // riddl-generator's Quarkus generator lowers an outlet to either an `@Outgoing`
     // method (back-pressured, but a method has ONE return so it fits only a single

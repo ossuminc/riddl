@@ -119,23 +119,6 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Repository is deliberately NOT included — Reid: "persistent by implication, so
   it doesn't need the option or the intention."
 
-- **Make a misplaced `persistent` option an ERROR** (Reid, 2026-08-07; task file
-  `task/2026-08-06-persistent-should-error-on-gateway-context.md`). Connector is
-  the only valid parent and stays so; Entity expresses persistence as an
-  INTENTION and Repository by implication, so neither takes the option.
-  **The task's premise needs correcting and the file says so:** it claims
-  `option persistent` on a context is "accepted like any other option", but it
-  already draws a StyleWarning today — `RecognizedOptions.scala:100` registers
-  `persistent` with `validParents = Seq("Connector")`. The change is therefore
-  severity, not scope: StyleWarning → Error.
-  **Mechanism:** `validateRecognizedOption`
-  (`DefinitionValidation.scala:553`) hardcodes `StyleWarning` for every
-  validParents violation, so this needs a per-option severity on `OptionSpec`.
-  Do NOT promote ALL misplaced options to Error — that was not ruled on and
-  would be a corpus-wide behaviour change.
-  **Verified cost: none.** All 426 corpus uses are on connectors, as is the one
-  in-repo fixture (`language/input/domain-connector.riddl:10`).
-
 - **Drop the deprecated inline aggregation from `requires`/`returns`, then
   narrow the accessors to `Option[TypeRef]`.** Decided by Reid 2026-08-04 while
   moving the clauses into contents: `Option[TypeRef]` is the wanted END state,

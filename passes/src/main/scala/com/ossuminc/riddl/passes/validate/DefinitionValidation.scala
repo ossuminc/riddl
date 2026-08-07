@@ -555,11 +555,17 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           val isValid = spec.validParents.exists { vp =>
             vp == parentKind || identity.startsWith(vp)
           }
+          // Severity comes from the SPEC, not from this call site: for most options a misplaced
+          // name is merely ignored (StyleWarning), but a few assert something untrue about the
+          // model where they sit and must be Errors. See `OptionSpec.severity`.
+          val wording =
+            if spec.severity == Error then "is not valid on"
+            else "is not typically used on"
           check(
             isValid,
-            s"Option '${option.name}' is not typically used on ${identity.split(" ").head} definitions" +
+            s"Option '${option.name}' $wording ${identity.split(" ").head} definitions" +
               s" (expected: ${spec.validParents.mkString(", ")})",
-            StyleWarning,
+            spec.severity,
             option.loc,
             suggestion =
               s"Move option '${option.name}' to one of: ${spec.validParents.mkString(", ")}, or remove it here."

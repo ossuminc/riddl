@@ -23,9 +23,17 @@ would get wrong.
 - **BAST `FORMAT_REVISION` is 8** (6→7 by A56 `897b474bf`, 7→8 by A57
   `4208946d2`). Any earlier `.bast` is rejected, including one made by published
   rc.10, which shipped at revision 6.
-- Last full run, all three platforms, 0 failures: **JVM 260/2074, JS 60/674,
-  Native 183/1374** (suites/tests), measured 2026-08-06 after the
-  include-transparent `definitions` change.
+- Last full run, all three platforms, 0 failures: **JVM 260/2081, JS 60/674,
+  Native 183/1384** (suites/tests), measured 2026-08-07 after the `persistent`
+  severity change.
+- **Grammar CI is a SEPARATE gate the Scala suites do not touch.** Run
+  `language/src/test/scalajvm/python/.venv/bin/python ebnf_tatsu_validator.py`
+  (exit 0, 98/121 — the rest are declared fragments/expected failures) plus
+  `ebnf_to_gbnf.py --check` and `gbnf_validator.py --skip-freshness` before
+  calling grammar or fixture work verified. A new `.riddl` fixture that is an
+  include fragment needs an `INCLUDE_FRAGMENTS` entry, or this job goes red
+  while every Scala platform stays green — which is exactly what happened at
+  `564b17b3f` and was only caught a commit later.
 
 **Nothing is in flight.** No half-finished change, no uncommitted work, no
 failing test. Last session shipped A56, A57, `Riddl.Envelope` +
@@ -96,6 +104,42 @@ to the task file and note the disposition below.
 
 ---
 
+
+## `persistent` where there is no state to persist (2026-08-07) — DONE
+
+`task/done/2026-08-06-persistent-should-error-on-gateway-context.md`. Misplacing
+`option persistent` is now an Error, not a StyleWarning. Connector is the only
+definition that takes it.
+
+**The filed ask was smaller than the rule that came out of it, in both
+directions.** riddl-generator asked for an Error on a *gateway* context. Checking
+the premise first showed the task's central claim was wrong — it said the option
+was "accepted like any other option", but it already warned, on every context
+identically. So the change was never scope, only severity. Then Reid widened the
+principle past gateways ("everything else has no state to persist") and, on being
+shown that an Entity carries persistence as an INTENTION and a Repository is
+persistent by implication, narrowed it again to Connector alone. The delivered
+rule matches neither the task nor the first ruling; the task file records both
+divergences rather than quietly satisfying the newest one.
+
+**Severity is per-option, and that was the design decision.** `OptionSpec` gained
+`severity`, defaulting to StyleWarning. The tempting move — make every
+`validParents` violation an Error — was never ruled on and would be a
+corpus-wide behaviour change. A test pins the boundary by asserting a misplaced
+`auto-id` stays a warning; without it, a later "simplification" that drops the
+field would pass every other test in the suite.
+
+**Why this one is an Error at all** is worth keeping: a misplaced option is
+usually just ignored, but `persistent` on a stateless definition ASSERTS
+durability nothing can provide. Contrast A35's cross-boundary connector warning,
+deliberately a warning because the in-memory downgrade is a legitimate deployment
+choice. Severity tracks whether the model is saying something untrue, not how
+annoyed we are.
+
+**426 corpus uses rode on this option**, all on connectors — which is why the
+follow-on (connector intentions replacing it) is sequenced in BACKLOG as add,
+deprecate, migrate, remove. Changing severity was safe precisely because the
+corpus was measured first, not assumed.
 
 ## The type-first aggregate is deprecated (2026-08-07) — DONE
 
