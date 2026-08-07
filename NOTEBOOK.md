@@ -32,10 +32,12 @@ failing test. Last session shipped A56, A57, `Riddl.Envelope` +
 `option message_envelope`, the recognized-options split, and the
 external-context unused exemption.
 
-**Next up, and both want their own session** (sized in BACKLOG § 1):
-JSON source locations — the plan is written and executable at
-`~/.claude/plans/toasty-cuddling-goose.md`, which now holds nothing else — and
-the type-first `type X is <aggregate_use_case>` deprecation. Awaiting Reid's
+**Next up** (sized in BACKLOG § 1): the type-first
+`type X is <aggregate_use_case>` deprecation, which wants its own session.
+The plan file `~/.claude/plans/toasty-cuddling-goose.md` is now EMPTY —
+JSON source locations, which it described as not started, had in fact
+shipped on 2026-07-29 (`84c1b5124`). Verify a plan against the code before
+executing it. Awaiting Reid's
 ruling: the `ask`-statement recommendation (BACKLOG § 1, research done).
 
 **Traps. Every one of these bit someone, most of them on 2026-08-06:**
@@ -94,6 +96,33 @@ to the task file and note the disposition below.
 
 ---
 
+
+## A plan for work that was already done (2026-08-06) — CLOSED
+
+BACKLOG § 1 carried "Carry source locations through the JSON surface" as **NOT
+STARTED**, with a detailed plan called "executable as written" and sized LARGE
+(own session). It shipped **eight days earlier**, on 2026-07-29, in
+`84c1b5124` — on this branch the whole time. BACKLOG, the plan file, and
+NOTEBOOK's own HANDOFF all repeated the claim, each citing the others.
+
+**What caught it was checking the cheapest falsifiable number in the plan
+before starting.** The plan sized the work as "~300 `At()` sites in
+`JsonAstBuilder`". `grep -c 'At()'` returned **0** — because `Ctx` already
+carries `source`/`current`/`locOf`, exactly what the plan proposed adding. From
+there every other element was already present: `ContentEntry`, `LocationsDto`,
+`$at`, `basis: origin|document`, and both stated verification tests
+(`JsonRoundTripTest:388` and `:445`).
+
+Had I started from the plan's narrative instead, the first hour would have gone
+into re-deriving why the code did not look like the plan said.
+
+**A plan file cannot notice the work happening.** Neither can a BACKLOG entry.
+The repo already knows this about `task/` files — `/ossuminc-skills:check-tasks`
+exists precisely to verify a sender's claims against the world — and the same
+discipline was simply never extended to our own plans. It is now recorded at the
+top of the plan file. The generalisable move is cheap: **pick the plan's most
+specific factual claim and test that one first**, because a stale plan is
+usually stale in a way a single grep exposes.
 
 ## A comment that prescribed the wrong fix (2026-08-06) — DONE
 
