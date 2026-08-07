@@ -198,6 +198,7 @@ object Messages {
     val AbstractType: String = "abstract-type"
     val SingleAlternation: String = "single-alternation"
     val EntityOptionToIntention: String = "entity-option-to-intention"
+    val TypeFirstAggregate: String = "type-first-aggregate"
 
     /** Codes whose fix is a pure SPAN REPLACEMENT: the deprecation's `loc` covers exactly the
       * offending keyword, so replacing that range with this text resolves it and touches nothing
@@ -224,7 +225,11 @@ object Messages {
       AnonymousNebula,
       ShapeKeyword,
       AbstractType,
-      SingleAlternation
+      SingleAlternation,
+      // Added 2026-08-06: this one was DEFINED but never listed, so an "exhaustive" migration
+      // report silently omitted every entity option-to-intention deprecation since 2.0.0-rc.10.
+      EntityOptionToIntention,
+      TypeFirstAggregate
     )
   }
 

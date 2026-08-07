@@ -68,6 +68,56 @@ class DeprecationCodeTest extends AbstractTestingBasis {
     }
   }
 
+  "a type-first aggregate declaration" should {
+
+    /** `type X is command { … }` produces the SAME AST as `command X is { … }`, and PrettifyPass
+      * already emits the kind-first form for both — so the old spelling never round-trips back to
+      * itself. It is also strictly less expressive: `yields` exists only on the kind-first rule.
+      */
+    "carry the type-first-aggregate code and be auto-fixable" in {
+      val deps = deprecationsIn(
+        """domain D is {
+          |  context C is {
+          |    type Pay is command { amount: Integer }
+          |  }
+          |}
+          |""".stripMargin
+      )
+      val m = deps
+        .find(_.deprecationCode.contains(DeprecationCode.TypeFirstAggregate))
+        .getOrElse(fail(s"no type-first-aggregate deprecation; got:\n${deps.map(_.format).mkString("\n")}"))
+      m.autoFixable mustBe true
+    }
+
+    "say nothing for the kind-first spelling" in {
+      // The other half of the contract. Without this, a deprecation that fired on EVERY aggregate
+      // would pass the case above and nobody would notice until the corpus lit up.
+      val deps = deprecationsIn(
+        """domain D is {
+          |  context C is {
+          |    command Pay is { amount: Integer }
+          |  }
+          |}
+          |""".stripMargin
+      )
+      deps.flatMap(_.deprecationCode) mustNot contain(DeprecationCode.TypeFirstAggregate)
+    }
+
+    "say nothing for a plain type whose expression is not an aggregate use case" in {
+      // Scope guard: `type` itself is not deprecated, only the aggregate-use-case spelling of it.
+      val deps = deprecationsIn(
+        """domain D is {
+          |  context C is {
+          |    type Address is { street: String }
+          |    type Name is String
+          |  }
+          |}
+          |""".stripMargin
+      )
+      deps.flatMap(_.deprecationCode) mustNot contain(DeprecationCode.TypeFirstAggregate)
+    }
+  }
+
   "the code registry" should {
     "list every code it defines" in {
       DeprecationCode.all must contain(DeprecationCode.ReplyToYield)

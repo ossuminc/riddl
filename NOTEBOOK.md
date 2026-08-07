@@ -97,6 +97,63 @@ to the task file and note the disposition below.
 ---
 
 
+## The type-first aggregate is deprecated (2026-08-07) — DONE
+
+`type X is command {…}` now emits one `[deprecated]`, code `type-first-aggregate`,
+`autoFixable = true`. Removed in 3.0. Two commits: migrate the fixtures, then
+deprecate.
+
+**Where the deprecation fires is the whole design.** It is emitted in
+`TypeParser.defOfType`, NOT in `aggregateUseCaseTypeExpression`. Only an
+aggregate use case standing as the DIRECT type expression of a `type` definition
+is the type-first spelling; the same expression reached through a FIELD's type
+(`f: command { … }`) is a different construct and is deliberately untouched. Put
+the deprecation one level lower and it would fire on both.
+
+**A 305-site rewrite that moved no test counts is the proof it was a spelling
+change.** JVM stayed at 260 suites/2074 tests and JS+Native at 243/2048 across
+41 files. Three things did move, none of them meaning: two `.check` goldens
+(they quote the offending source line AND encode its column span, so any rewrite
+of that line shifts them) and two hardcoded token counts, because
+`type X is command {` is five tokens and `command X is {` is four.
+
+**Only 2 of the 4 fixtures carrying the form had goldens that noticed.** Predicting
+which goldens shift by grepping fixtures over-predicts — a golden only moves if a
+message actually points at a rewritten line.
+
+**BACKLOG's numbers were wrong in both directions**, found by counting rather
+than trusting: 158 occurrences, not 167; and it omitted 151 more embedded in
+`.scala` test-fixture strings, which is nearly half the real work. Its
+"9,337 kind-first declarations" is also unreproducible. The directional claim it
+rested on — zero type-first in riddl-models and riddl-examples — is exact.
+
+**`DeprecationCode.all` was missing `EntityOptionToIntention`**, defined since
+rc.10 but never listed, so the "exhaustive migration report" its own doc promises
+had silently omitted every entity option-to-intention deprecation. Found only
+because adding a code meant reading the list.
+
+## A green Scala suite says nothing about the Python grammar CI (2026-08-07)
+
+The include-transparency commit (`564b17b3f`) shipped a **broken
+`ebnf-grammar-validation` job**. Its two new include fixtures are fragments —
+`entity Thing is {…}` at top level cannot parse standalone — and they were never
+added to `ebnf_tatsu_validator.py`'s `INCLUDE_FRAGMENTS` allowlist, so the
+validator exited 1.
+
+**It was reported as green on all three platforms, and that was true and
+irrelevant.** `tJVM`/`tJS`/`tNative` do not run the Python validators; CI runs
+them as a separate job. So the evidence gathered never covered the thing that
+broke. It surfaced a commit later only because the next task happened to touch
+the grammar and thus ran them.
+
+**Adding a `.riddl` fixture is a grammar-surface change, not just a test
+change.** Any new fixture that is an include fragment or intentionally invalid
+needs an allowlist entry, and the validators must be run —
+`.venv/bin/python ebnf_tatsu_validator.py` — before calling the work verified.
+The lesson generalises past this repo: "all tests pass" is a claim about the
+tests you ran, and the gates that live outside the test runner are exactly the
+ones a green run cannot speak for.
+
 ## A plan for work that was already done (2026-08-06) — CLOSED
 
 BACKLOG § 1 carried "Carry source locations through the JSON surface" as **NOT

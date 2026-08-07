@@ -106,24 +106,35 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
      than to statements? The interaction model already describes two-party
      exchanges, and that may be the more natural home.
 
-- **Deprecate `type X is <aggregate_use_case> {…}`** (approved 2026-08-02:
-  deprecate in 2.0, remove in 3.0). Target is ONLY the type-first spelling of an
-  aggregate use case; plain `type` (`type Address = {…}`, `type M is Pattern(…)`,
-  `type L is any of {…}`) is unaffected and stays.
-  **Why it is vestigial, not merely redundant:** it produces the same AST as the
-  kind-first form — verified by prettifying both, which emits `command A is {…}`
-  for each — so the canonical emitter already erases it and a type-first model
-  never round-trips back to its own spelling. It is also strictly LESS expressive
-  at the surface: `yields` exists only on `def_of_type_kind_type`
-  (ebnf-grammar.ebnf:112), which is what blocked the dokn migration.
-  **The corpus has voted:** riddl-models has 9,337 aggregate declarations, all
-  kind-first, zero type-first. All 167 type-first occurrences are pre-1.0
-  fixtures inside this repo.
-  Rejected alternative: adding `yields` to the type-first form — grammar surface
-  spent on a spelling nobody writes and the printer will not emit.
-  **Known cost:** those 167 fixtures start warning, and since parse-time
-  deprecations surface under every command, their `.check` goldens all shift.
-  Wants its own plan and its own soak; do NOT bolt it onto the intentions work.
+- **Connector intentions: `persistent` plus `at-least-once` | `at-most-once`.**
+  Reid, 2026-08-07, while ruling on where persistence is valid. A connector's
+  durability and delivery guarantee belong in the GRAMMAR as intentions, the way
+  entity intentions do, not as `option persistent` — options are advisory
+  ("honored if possible") and a delivery guarantee is not advisory. Same
+  category error the entity-intentions work fixed at 2.0.0-rc.10.
+  **Sequence matters:** the option must keep working until the intentions exist,
+  because **426 `option persistent()` uses across riddl-models are all on
+  connectors** (verified 2026-08-07) and would have nowhere to go. So: add the
+  intentions, deprecate the option, migrate the corpus, then remove.
+  Repository is deliberately NOT included — Reid: "persistent by implication, so
+  it doesn't need the option or the intention."
+
+- **Make a misplaced `persistent` option an ERROR** (Reid, 2026-08-07; task file
+  `task/2026-08-06-persistent-should-error-on-gateway-context.md`). Connector is
+  the only valid parent and stays so; Entity expresses persistence as an
+  INTENTION and Repository by implication, so neither takes the option.
+  **The task's premise needs correcting and the file says so:** it claims
+  `option persistent` on a context is "accepted like any other option", but it
+  already draws a StyleWarning today — `RecognizedOptions.scala:100` registers
+  `persistent` with `validParents = Seq("Connector")`. The change is therefore
+  severity, not scope: StyleWarning → Error.
+  **Mechanism:** `validateRecognizedOption`
+  (`DefinitionValidation.scala:553`) hardcodes `StyleWarning` for every
+  validParents violation, so this needs a per-option severity on `OptionSpec`.
+  Do NOT promote ALL misplaced options to Error — that was not ruled on and
+  would be a corpus-wide behaviour change.
+  **Verified cost: none.** All 426 corpus uses are on connectors, as is the one
+  in-repo fixture (`language/input/domain-connector.riddl:10`).
 
 - **Drop the deprecated inline aggregation from `requires`/`returns`, then
   narrow the accessors to `Option[TypeRef]`.** Decided by Reid 2026-08-04 while

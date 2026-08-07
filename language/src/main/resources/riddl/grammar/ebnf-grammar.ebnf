@@ -160,6 +160,12 @@ entity_reference_type = "reference" ["to"] ["entity"] path_identifier ;
 aggregation = "{" aggregate_definitions "}" ;
 aggregate_definitions = undefined | {aggregate_content [","]} ;
 aggregate_content = field | method | comment ;
+(* When this stands as the DIRECT type_expression of a def_of_type -- the "type-first" spelling
+   `type Pay is command { ... }` -- it is DEPRECATED in 2.0 and removed in 3.0. It still parses and
+   yields the SAME node as the kind-first `command Pay is { ... }` (def_of_type_kind_type), which is
+   why prettify emits kind-first for both and a type-first model never round-trips to its own
+   spelling. It is also strictly less expressive: `yields` exists only on def_of_type_kind_type.
+   Nested uses -- an aggregate use case as a FIELD's type expression -- are not affected. *)
 aggregate_use_case_type_expression = aggregate_use_case aggregation ;
 aliased_type_expression = [aggregate_use_case] path_identifier ;
 scala_aggregate_definition = "(" {field [","]} ")" ;

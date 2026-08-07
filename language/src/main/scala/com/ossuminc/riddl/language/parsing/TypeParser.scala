@@ -719,7 +719,32 @@ private[parsing] trait TypeParser {
     P(
       Index ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ withMetaData ~/ Index
     )./.map { case (start, id, typ, descriptives, end) =>
-      Type(at(start, end), id, typ, descriptives.toContents)
+      val loc = at(start, end)
+      // The TYPE-FIRST spelling of an aggregate use case -- `type Pay is command { … }` -- is
+      // deprecated in 2.0, removed in 3.0. It yields the SAME AST as the kind-first
+      // `command Pay is { … }` (see defOfTypeKindType), and PrettifyPass already emits kind-first
+      // for both, so a type-first model never round-trips back to its own spelling. It is also
+      // strictly less expressive: `yields` exists ONLY on the kind-first rule
+      // (ebnf-grammar.ebnf:112), which is what blocked the dokn migration.
+      //
+      // Emitting HERE, rather than in `aggregateUseCaseTypeExpression`, is what scopes this to the
+      // spelling being retired. A nested `f: command { … }` inside an aggregation reaches that
+      // expression through `field`'s own `typeExpression` and is deliberately untouched; only an
+      // aggregate use case standing as the DIRECT type expression of a `type` definition is the
+      // type-first form.
+      typ match
+        case ate: AggregateUseCaseTypeExpression =>
+          val kw = ate.usecase.useCase
+          deprecation(
+            loc,
+            s"Declaring `${id.value}` as `type ${id.value} is $kw { … }` is deprecated; " +
+              s"write `$kw ${id.value} is { … }` instead",
+            code = Option(Messages.DeprecationCode.TypeFirstAggregate),
+            autoFixable = true
+          )
+        case _ => ()
+      end match
+      Type(loc, id, typ, descriptives.toContents)
     }
   }
 
