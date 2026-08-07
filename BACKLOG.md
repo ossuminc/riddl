@@ -182,22 +182,19 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   methods. That is a real refactor for a few milliseconds on the JVM, so it is
   explicitly LOW priority — do not bundle it with performance work that has a
   measured user impact.
-- **`BASTPerformanceBenchmark` is timing-flaky.** It asserts BAST load beats
-  parse (`speedup > 1.0`). Observed on one machine, back to back: 0.9956x (a
-  FAILURE), then 13.0x, 9.3x, 6.1x — and within a single run, parse ranged
-  2.03ms to 33.03ms. The measured effect is real and large; the threshold is
-  simply being compared against a number with more variance than headroom on a
-  loaded machine. It will fail intermittently in CI and teach people to re-run
-  reds. Either warm up and take a median of N, or assert something stable (e.g.
-  a floor well below the real ratio) and report the number without gating on it.
-- **`BASTParserInput`'s synthetic line index is now unreachable dead code.**
-  With `positionsKnown = false`, `At` never consults its `lineOf`/`offsetOf`,
-  and `createAtFromOffsets` lost its last caller when `readLocation` stopped
-  casting. It still fabricates positions on the 10000-chars-per-line scheme for
-  anything calling it DIRECTLY, which is exactly the plausible-looking machinery
-  that caused the original defect. Delete it, after checking for direct callers
-  of `lineOf`/`offsetOf` on a BAST-attached source (message formatting and
-  `annotateErrorLine` are the ones to look at).
+- ~~`BASTPerformanceBenchmark` is timing-flaky~~ — **DONE 2026-08-07,
+  `5c3d5cbc8`.** Cold single-shot measurement now reported, not asserted; the
+  warmed 50-iteration benchmark gates on the MEDIAN rather than the mean.
+- ~~`BASTParserInput`'s synthetic line index is unreachable dead code~~ — **DONE
+  2026-08-07, `307812fa8`, but the premise here was FALSE and cost a wrong
+  first move.** This entry claimed "with `positionsKnown = false`, `At` never
+  consults its `lineOf`/`offsetOf`". It did: `At.endLine` and the `endCol`
+  inside `At.toLong` were UNGUARDED, so the 10000-chars-per-line scheme was
+  live, and every BAST-sourced message formatted as `(0:0->1:N)` — honest start
+  line, fabricated end line. It was wrong OUTPUT, not dead code. Deleting the
+  overrides under the stated premise would have moved the fabrication into the
+  base class instead of removing it. Guarding `endLine`/`endCol` came first;
+  only then was the machinery genuinely dead.
 - **Should an imported definition RESOLVE without an explicit flatten?** The
   accessors now report `.bast`-imported definitions (2026-08-03), so
   `domain.types` lists an imported type — but a reference to it still fails to
@@ -257,20 +254,34 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   one-line filter. Wants a plan.
 - **`validateArbitraryInteraction`'s refMap path is dead** — interaction refs are
   keyed under the UseCase. Re-key, or delete and use the symbol table as A39 did.
-- **`PlatformContext.withOptions` lacks try/finally** — a throwing test poisons
-  global options for later sequential suites. One-liner.
-- **`Blob`, `Unknown`, `Range` in the tokenizer tables** are unreachable from the
-  grammar (riddl-vscode). Remove them or make them reachable.
-- **`riddl_grammar.lark` is stale AND dead — delete it or revive it.** Verified
-  2026-08-04 (flagged unverified by ossum.tech; both halves confirmed here).
-  `language/src/test/scalajvm/python/riddl_grammar.lark:369` still carries the
-  pre-A28 invariant rule (`literal_string` only — no boolean expression, no
-  `requires`, no block form) and has no `boolean_atom`/`comparand` rules at all.
-  Its ONLY consumer is `ebnf_validator.py`, and **CI does not run that**:
-  `.github/workflows/scala.yml:189,230` run `ebnf_tatsu_validator.py` and
-  `gbnf_validator.py` only. So it is not a gate that has gone quiet — it is a
-  trap for the next reader who assumes it is authoritative. Deleting is the
-  cheap option; reviving means maintaining a third grammar.
+- ~~`PlatformContext.withOptions` lacks try/finally~~ — **STALE; `withOptions`
+  was fixed at `2eefeec52` (2026-07-27), eight days before this entry was last
+  read.** The unfixed twin was `withLogger`, directly above it, with the same
+  failure mode: a throwing body leaves the swapped-in logger installed globally,
+  so a later sequential suite writes into a dead test's capture buffer. **DONE
+  2026-08-07, `359949e83`.**
+- **`Blob`, `Unknown`, `Range` are RESERVED BUT UNUSABLE.** Verified 2026-08-07
+  by three `riddlc` probes, correcting an earlier reading of this entry that
+  treated tokenizing as evidence of parseability — it is not. For all three,
+  `type X is <Name>` fails with "Path '<Name>' was not resolved", AND defining
+  your own type by that name fails with "redefines built-in type" — unusable in
+  both directions. The cause is two tables that drifted apart:
+  `PredefType.allPredefTypes` (reserves names; read by `ValidationPass:1268`)
+  and `PredefTypes.anyPredefType` (tokenizer only; read by `TokenParser:61`).
+  Neither is the REAL type parser, which is `TypeParser.predefinedTypes:327`.
+  **Reid ruled 2026-08-07 — three different jobs, not one cleanup:**
+  1. **Add `Blob` to the parser.** It is a legitimate type missing only its
+     syntax: `AST.Blob(loc, BlobKind)` exists, the `BlobKind` enum exists,
+     BASTWriter/Reader round-trip it and `ASTTest:117-124` tests its `format`.
+     Grammar-surface change — parser rule + EBNF + GBNF regen + prettify +
+     round-trip test + corpus re-run.
+  2. **Drop capitalized `Range`, keep `range(n,m)`.** The working type is the
+     LOWERCASE `range(1,10)` (`TypeParser:617` via `Keywords.range`,
+     `Keyword.range = "range"`, verified validating clean). Capitalized `Range`
+     is a phantom that only reserves the name and mis-highlights it; dropping
+     it frees `Range` for users.
+  3. **Drop `Unknown`.** Nothing behind it — no AST node, no parser rule, just
+     the reservation and a tokenizer entry.
 - **Rule on same-named invariants at entity and state scope.** With implicit
   application (§15.2) an entity-level `invariant X` and a state-level
   `invariant X` both apply inside that state. Nothing special-cases it today —
@@ -283,13 +294,15 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 3. Owed to other repos
 
-- **Restage `~/Code/ossuminc/bin/riddlc`.** Verified 2026-08-07: it reports
-  `2.0.0-rc.10-15-3df5cf44`, **6 commits behind HEAD**, so it has neither the
-  type-first deprecation nor the `persistent` Error. Consumers (riddl-generator,
-  synapify, dokn) validate with this binary and will not see either diagnostic
-  until it moves. `sbt reload` FIRST — dynver freezes at load, and a stale
-  version string on a fresh binary is how a restage gets believed without having
-  happened.
+- ~~Restage `~/Code/ossuminc/bin/riddlc`~~ — **DONE 2026-08-07.** Now
+  `2.0.0-rc.10-28-a355e52a`, matching HEAD at the time. It is the NATIVE binary
+  (`target/out/native0.5/scala-3.9.0-RC4/riddlc/riddlc`, via
+  `riddlcNative/nativeLink`), not the JVM stage — a plain `riddlc/stage` would
+  have produced a launcher script, not this file. Both new diagnostics were
+  probed live rather than inferred from the version string: the `persistent`-on-
+  Entity Error and the `type-first-aggregate` deprecation both fire.
+  **It is stale again as of the four commits after `a355e52ab`** — restage when
+  the current run of language work settles, `sbt reload` first.
 - **Consumer sweep — task files dropped 2026-08-06 in THREE repos.** Pins read
   from each build file after `git fetch`, not from memory:
   - **riddl-generator** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT**, matching the
