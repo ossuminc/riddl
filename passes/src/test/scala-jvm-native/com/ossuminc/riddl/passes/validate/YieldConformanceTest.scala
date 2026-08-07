@@ -96,7 +96,10 @@ class YieldConformanceTest extends AbstractValidatingTest {
     "reject a handler that never yields for a yields-declaring command" in { (td: TestData) =>
       val input = RiddlParserInput(model("prompt \"do nothing\""), td)
       parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
-        errors(msgs).exists(_.message.contains("never yields")) mustBe true
+        // Wording moved from "never yields it" to "does not yield it on every path" when the
+        // check became path-sensitive. "Never" is no longer accurate: the error now also fires
+        // for a clause that yields on SOME path and falls through on another.
+        errors(msgs).exists(_.message.contains("does not yield it on every path")) mustBe true
       }
     }
 

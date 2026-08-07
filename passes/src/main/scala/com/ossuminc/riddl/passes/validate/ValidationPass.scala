@@ -502,24 +502,23 @@ case class ValidationPass(
         val entity = maybeEntity.get
         omc.msg.messageKind match {
           case AggregateUseCase.CommandCase =>
-            val finder = Finder(omc.contents)
-            val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
-            val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
-            val yields: Seq[YieldStatement] = finder.recursiveFindByType[YieldStatement]
-            val foundSend = sends.nonEmpty &&
-              sends.exists(s => operandMessageKind(s.msg).contains(AggregateUseCase.EventCase))
-            val foundTell = tells.nonEmpty &&
-              tells.exists(t => operandMessageKind(t.msg).contains(AggregateUseCase.EventCase))
-            val foundYield = yields.nonEmpty &&
-              yields.exists(y => operandMessageKind(y.msg).contains(AggregateUseCase.EventCase))
             // Refusing a command IS processing it: the clause decided, it declined, and there is
             // nothing to record, so there is no event to send. Without this the rule was inverted —
             // it flagged the honest refusal-only clause, and was SILENCED by adding a send after
             // the refusal, which A23's refusals-before-effects ordering makes unreachable. It was
             // rewarding exactly the dead code a modeller should avoid.
-            val refuses = finder.recursiveFindByType[ErrorStatement].nonEmpty ||
-              finder.recursiveFindByType[RequireStatement].nonEmpty
-            if !(foundSend || foundTell || foundYield || refuses) then
+            //
+            // Checked on EVERY path, for the same reason as `checkYieldConformance` — this check
+            // shared the identical "anywhere in the clause" weakness, so a conditional refusal
+            // silenced it too. See `dischargesOnEveryPath`.
+            val emitted = dischargesOnEveryPath(omc.contents) {
+              case _: ErrorStatement | _: RequireStatement => true
+              case s: SendStatement  => operandMessageKind(s.msg).contains(AggregateUseCase.EventCase)
+              case t: TellStatement  => operandMessageKind(t.msg).contains(AggregateUseCase.EventCase)
+              case y: YieldStatement => operandMessageKind(y.msg).contains(AggregateUseCase.EventCase)
+              case _                 => false
+            }
+            if !emitted then
               messages.addCompleteness(
                 omc.errorLoc,
                 s"Command processing in ${entity.identify} should result in sending an event",
@@ -938,27 +937,49 @@ case class ValidationPass(
           // command records WHEN IT SUCCEEDS, not that every clause mentioning it must record one.
           // Without this, the ordinary event-sourcing shape -- a command accepted in one state and
           // refused in the others -- is unexpressible: each refusing clause would have to yield the
-          // very event it just declined to produce. Same predicate as the sibling completeness
-          // check above, which carries the fuller rationale; `require` refuses as surely as
-          // `error`, so both count.
-          val refuses = finder.recursiveFindByType[ErrorStatement].nonEmpty ||
-            finder.recursiveFindByType[RequireStatement].nonEmpty
+          // very event it just declined to produce. `require` refuses as surely as `error`, so
+          // both count.
+          //
+          // The obligation must be settled on EVERY path, not merely somewhere in the clause: a
+          // refusal buried in one branch of a `when` used to exempt the whole clause while the
+          // other branch produced nothing. See `dischargesOnEveryPath`.
+          // EMITTING ANY MESSAGE settles a path, not just yielding the declared one or refusing
+          // with error/require. An event-sourced entity often declines by RECORDING the refusal:
+          //
+          //   on command RedeemPoints is {           // declares `yields event PointsRedeemed`
+          //     when prompt("balance >= points") then
+          //       yield event PointsRedeemed
+          //     else
+          //       send event RedeemPointsRejected to outlet ...
+          //     end }
+          //
+          // (riddl-models reactive-bbq LoyaltyAccount.riddl:579). That `else` has decided and
+          // recorded its decision; it has not fallen through. Which message is the RIGHT one is a
+          // modelling judgment validation cannot make -- the `yields` type conformance loop below
+          // still checks every `yield`. What this predicate exists to catch is a path that does
+          // nothing at all, and `set`/`do`/an empty branch still fail it.
+          val settled = dischargesOnEveryPath(omc.contents) {
+            case _: ErrorStatement | _: RequireStatement => true
+            case _: YieldStatement | _: SendStatement | _: TellStatement => true
+            case _                                       => false
+          }
           auc.yields match {
             case Some(declaredYield) =>
               val declaredType = resolution.refMap.definitionOf[Type](declaredYield.pathId)
-              if yieldStmts.isEmpty then
-                if !refuses then
-                  messages.addError(
-                    omc.errorLoc,
-                    s"${handledType.identify} declares 'yields ${declaredYield.format}' but " +
-                      s"${omc.identify} never yields it",
-                    suggestion =
-                      s"Add a 'yield ${declaredYield.format}' statement to this handler." +
-                        " A clause that refuses the message (with 'error' or 'require') is exempt."
-                  )
-                end if
-              else
-                yieldStmts.foreach { ys =>
+              if !settled then
+                messages.addError(
+                  omc.errorLoc,
+                  s"${handledType.identify} declares 'yields ${declaredYield.format}' but " +
+                    s"${omc.identify} does not yield it on every path",
+                  suggestion =
+                    s"Yield '${declaredYield.format}' (or refuse with 'error'/'require') on every " +
+                      "path through this handler. A 'when' with no 'else', a 'match' with no " +
+                      "'default', and a 'foreach' all leave a path that does neither."
+                )
+              end if
+              // Independent of `settled`: a clause may discharge by refusing on every path and
+              // STILL yield the wrong thing somewhere, which is its own error.
+              yieldStmts.foreach { ys =>
                   val kindOk = operandMessageKind(ys.msg).contains(declaredYield.messageKind)
                   val yieldedType = resolution.refMap.definitionOf[Type](operandPathId(ys.msg))
                   val typeOk = (declaredType, yieldedType) match {
@@ -3702,6 +3723,54 @@ case class ValidationPass(
       case _ => () // skip Comments
     }
   end walkStatements
+
+  /** Does EVERY execution path through `contents` settle the clause's obligation?
+    *
+    * The obligation differs per caller (`settles` says what discharges it), but the shape of the
+    * question does not: a clause handling a command must, on every path, either produce what the
+    * command declares or refuse it.
+    *
+    * This replaced a much weaker predicate that asked only "does a refusal appear ANYWHERE in
+    * this clause?", via `Finder.recursiveFindByType`. Because that searches the whole nested
+    * tree, ONE refusal in ONE branch exempted the entire clause, so this validated clean despite
+    * producing nothing on the `amt > 0` path:
+    * {{{
+    * on command Pay is {            // Pay declares `yields event Paid`
+    *   when "amt <= 0" then { error "refused" } end
+    * }
+    * }}}
+    *
+    * `exists` is the right combinator over a sequence: execution passes through every statement
+    * in it, so one statement that settles the obligation settles the whole block. The nested
+    * cases are where "every path" actually bites:
+    *
+    *   - a `when` needs BOTH branches, and an absent `else` is an escape path, not a discharge;
+    *   - a `match` needs every case AND a `default`, since without one an unmatched value
+    *     escapes (RIDDL cannot know a pattern set is exhaustive);
+    *   - a `foreach` NEVER discharges -- its body may iterate zero times.
+    *
+    * Making `else`/`default` mandatory in the grammar was considered and rejected (Reid,
+    * 2026-08-07): it would break ~56 sites across three repos and would NOT close this hole
+    * anyway, since an empty or non-discharging `else` still escapes. The analysis is what
+    * closes it.
+    */
+  private def dischargesOnEveryPath[CV <: RiddlValue](
+    contents: Contents[CV]
+  )(settles: Statement => Boolean): Boolean =
+    contents.toSeq.exists {
+      case WhenStatement(_, _, thenStatements, elseStatements, _) =>
+        dischargesOnEveryPath(thenStatements)(settles) &&
+        elseStatements.nonEmpty &&
+        dischargesOnEveryPath(elseStatements)(settles)
+      case MatchStatement(_, _, cases, default) =>
+        cases.forall(mc => dischargesOnEveryPath(mc.statements)(settles)) &&
+        default.nonEmpty &&
+        dischargesOnEveryPath(default)(settles)
+      case _: ForeachStatement => false // the body may iterate ZERO times
+      case s: Statement        => settles(s)
+      case _                   => false // Comments and the like settle nothing
+    }
+  end dischargesOnEveryPath
 
   /** A12: count embedded [[Call]] / [[GetValue]] nodes anywhere within a value-expression subtree.
     * Each `call` (a pure function call — A24) and each `get from input/state` (A45) is its own
