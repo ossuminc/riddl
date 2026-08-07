@@ -59,6 +59,7 @@ object PredefTypes {
 
   def Abstract[u: P]: P[Unit] = keyword("Abstract") // deprecated spelling of Anything
   def Anything[u: P]: P[Unit] = keyword("Anything")
+  def Blob[u: P]: P[Unit] = keyword("Blob")
   def Boolean[u: P]: P[Unit] = keyword("Boolean")
   def Current[u: P]: P[Unit] = keyword("Current") // in amperes
   def Currency[u: P]: P[Unit] = keyword("Currency") // for some nation
@@ -77,23 +78,27 @@ object PredefTypes {
   def Natural[u: P]: P[Unit] = keyword("Natural")
   def Number[u: P]: P[Unit] = keyword("Number")
   def Pattern[u: P]: P[Unit] = keyword("Pattern")
-  def Range[u: P]: P[Unit] = keyword("Range")
   def Real[u: P]: P[Unit] = keyword("Real")
   def String_[u: P]: P[Unit] = keyword("String")
   def Temperature[u: P]: P[Unit] = keyword("Temperature") // in Kelvin
   def Time[u: P]: P[Unit] = keyword("Time")
   def TimeStamp[u: P]: P[Unit] = keyword("TimeStamp")
-  def Unknown[u: P]: P[Unit] = keyword("Unknown")
   def URL[u: P]: P[Unit] = keyword("URL")
   def UserId[u: P]: P[Unit] = keyword("UserId")
   def UUID[u: P]: P[Unit] = keyword("UUID")
   def Whole[u: P]: P[Unit] = keyword("Whole")
 
+  /** The TOKENIZER's view of "a predefined type name" -- `TokenParser` uses it to classify a word
+    * as [[AST.Token.Predefined]] for syntax highlighting. It is NOT the type parser; that is
+    * `TypeParser.predefinedTypes`. Keeping a name here that the type parser cannot build makes an
+    * editor highlight something a model cannot actually write, which is how `Range` and `Unknown`
+    * came to be highlighted-but-unusable. Add a name here only alongside a real parser rule.
+    */
   def anyPredefType[u: P]: P[Unit] =
     P(
-      realTypes | integerTypes | timeTypes | otherTypes | Abstract | Anything | Boolean | Current | Currency | Date |
-        DateTime | Decimal | Duration | Id | Integer | Location | Length | Luminosity | Mass | Mole | Nothing |
-        Natural | Number | Pattern | Range | Real | String_ | Temperature | Time | TimeStamp | Unknown | URL |
+      realTypes | integerTypes | timeTypes | otherTypes | Abstract | Anything | Blob | Boolean | Current | Currency |
+        Date | DateTime | Decimal | Duration | Id | Integer | Location | Length | Luminosity | Mass | Mole | Nothing |
+        Natural | Number | Pattern | Real | String_ | Temperature | Time | TimeStamp | URL |
         UserId | UUID | Whole
     )
 }
@@ -122,13 +127,17 @@ object PredefType {
   final val Natural = "Natural"
   final val Number = "Number"
   final val Pattern = "Pattern"
-  final val Range = "Range"
+  // NO capitalized `Range`. The range type is spelled LOWERCASE -- `range(1,10)`, parsed by
+  // `TypeParser.rangeType` off `Keyword.range`. A capitalized `Range` lived here until 2.0 and was
+  // a phantom: it reserved the name against user definitions and highlighted it as a built-in,
+  // while `type X is Range` failed to resolve. `Range` is now an ordinary name a model may use.
   final val Real = "Real"
   final val String = "String"
   final val Temperature = "Temperature" // in Kelvin
   final val Time = "Time"
   final val TimeStamp = "TimeStamp"
-  final val Unknown = "Unknown"
+  // NO `Unknown`. It had no AST node and no parser rule -- only a name reservation and a tokenizer
+  // entry -- so it was purely vestigial. Removed in 2.0; `Unknown` is now an ordinary name.
   final val URL = "URL"
   final val UserId = "UserId"
   final val UUID = "UUID"
@@ -159,13 +168,11 @@ object PredefType {
     Natural,
     Number,
     Pattern,
-    Range,
     Real,
     String,
     Temperature,
     Time,
     TimeStamp,
-    Unknown,
     URL,
     UserId,
     UUID,

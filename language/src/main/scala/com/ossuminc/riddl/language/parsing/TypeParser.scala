@@ -331,7 +331,7 @@ private[parsing] trait TypeParser {
         // GROUP 2: Common temporal types (10-15%)
         timePredefTypes |
         // GROUP 3: Less common types (5-10%)
-        otherPredefTypes | decimalType |
+        otherPredefTypes | decimalType | blobType |
         // GROUP 4: Rare specialized types (1-5%)
         currencyType | urlType | zonedPredefTypes
     )./
@@ -343,6 +343,28 @@ private[parsing] trait TypeParser {
         integer ~ Punctuation.comma ~ integer ~
         Punctuation.roundClose ~/ Index
     ).map { case (start, whole, fractional, end) => Decimal(at(start, end), whole, fractional) }
+  }
+
+  /** `Blob(<kind>)` -- a predefined type for opaque bulk content of a declared kind.
+    *
+    * The spelling matches `AST.Blob.format` (`s"$kind($blobKind)"`), which is what PrettifyPass
+    * emits for every [[PredefinedType]], so parse and emit agree without a prettify case. Until
+    * 2.0, `AST.Blob`, its `BlobKind` enum, BAST read/write and the JSON `BlobDto` all existed with
+    * NO way to write one in RIDDL source: `Blob` sat in the reserved-name list, so `type B is Blob`
+    * failed to resolve AND `type Blob is ...` was rejected as redefining a built-in.
+    */
+  private def blobType[u: P]: P[Blob] = {
+    P(
+      Index ~ PredefType.Blob ~/ Punctuation.roundOpen ~
+        blobKind ~ Punctuation.roundClose ~/ Index
+    ).map { case (start, bk, end) => Blob(at(start, end), bk) }
+  }
+
+  private def blobKind[u: P]: P[BlobKind] = {
+    // StringIn is a trie, so shared prefixes are handled regardless of order.
+    P(
+      StringIn("Text", "XML", "JSON", "Image", "Audio", "Video", "CSV", "FileSystem").!
+    ).map(BlobKind.valueOf)
   }
 
   private def patternType[u: P]: P[Pattern] = {

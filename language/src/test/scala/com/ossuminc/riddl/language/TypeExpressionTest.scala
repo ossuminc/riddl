@@ -218,7 +218,10 @@ class TypeExpressionTest extends AbstractTestingBasis {
     "support Range" in {
       range.isEmpty mustBe true
       range.isContainer mustBe false
-      range.kind mustBe PredefType.Range
+      // A LITERAL, not `PredefType.Range`, which no longer exists: capitalized `Range` was dropped
+      // from the predefined-type tables in 2.0 (the writable spelling is lowercase `range(n,m)`).
+      // `RangeType.kind` is a display label used by `errorDescription`, not a parseable name.
+      range.kind mustBe "Range"
       AST.errorDescription(range) mustBe "Range(2,4)"
       range.format mustBe "Range(2,4)"
     }

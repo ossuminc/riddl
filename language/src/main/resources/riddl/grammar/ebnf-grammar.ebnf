@@ -121,7 +121,7 @@ type_expression_alternatives = infix_alternation | predefined_types | pattern_ty
     aggregation | aggregate_use_case_type_expression | aliased_type_expression ;
 
 (* Predefined Types *)
-predefined_types = string_type | currency_type | url_type | integer_predef_types | real_predef_types | time_predef_types | zoned_predef_types | decimal_type | other_predef_types ;
+predefined_types = string_type | currency_type | url_type | integer_predef_types | real_predef_types | time_predef_types | zoned_predef_types | decimal_type | blob_type | other_predef_types ;
 string_type = "String" ["(" [integer] "," [integer] ")"] ;
 currency_type = "Currency" "(" iso_country_code ")" ;
 url_type = "URL" ["(" literal_string ")"] ;
@@ -150,6 +150,11 @@ replica_type = "replica" "of" replica_type_expression ;
 replica_type_expression = integer_predef_types | mapping_from_to | a_set_type ;
 range_type = "range" "(" [integer] "," [integer] ")" ;
 decimal_type = "Decimal" "(" integer "," integer ")" ;
+(* Opaque bulk content of a declared kind. NOTE the capitalization contrast with `range_type`
+   above: `Blob(...)` is a predefined TYPE and capitalized like its peers, while `range(n,m)` is
+   lowercase because it is keyword-introduced. A capitalized `Range` is NOT a type. *)
+blob_type = "Blob" "(" blob_kind ")" ;
+blob_kind = "Text" | "XML" | "JSON" | "Image" | "Audio" | "Video" | "CSV" | "FileSystem" ;
 alternation = "one" ["of"] "{" alternation_contents "}" ;
 (* `A | B` is the same Alternation in infix notation. Accepted, but NOT canonical: the
    prettifier emits the braced form above, so RIDDL stays readable to non-programmers.

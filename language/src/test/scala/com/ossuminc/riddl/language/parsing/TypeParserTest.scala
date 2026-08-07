@@ -558,6 +558,29 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
       checkDefinition[Type, Type](rpi, expected, identity)
     }
 
+    "allow a Blob of each declared kind" in { (td: TestData) =>
+      // `Blob` had an AST node, a BlobKind enum, BAST read/write and a JSON DTO -- but NO parser
+      // rule -- until 2.0. It was in the reserved-name list, so `type B is Blob` failed to resolve
+      // AND `type Blob is ...` was rejected as redefining a built-in: unusable in both directions.
+      BlobKind.values.foreach { kind =>
+        val rpi = RiddlParserInput(s"type b1 = Blob($kind)", td)
+        val expected = Type(
+          At(rpi, 0, 15 + kind.toString.length),
+          Identifier(At(rpi, 5, 8), "b1"),
+          Blob(At(rpi, 10, 15 + kind.toString.length), kind)
+        )
+        checkDefinition[Type, Type](rpi, expected, identity)
+      }
+    }
+
+    "reject a Blob of an unknown kind" in { (td: TestData) =>
+      val rpi = RiddlParserInput("type b2 = Blob(Hologram)", td)
+      parseDefinition[Type](rpi) match {
+        case Left(errors) => errors mustNot be(empty)
+        case Right(_)     => fail("Blob(Hologram) must not parse -- Hologram is not a BlobKind")
+      }
+    }
+
     "keep the sign on a negative range bound" in { (td: TestData) =>
       // `integer` used to match a leading `+`/`-` and DISCARD it, so `range(-5,5)` silently
       // parsed as `range(5,5)`.
