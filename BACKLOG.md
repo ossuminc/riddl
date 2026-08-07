@@ -260,7 +260,11 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   failure mode: a throwing body leaves the swapped-in logger installed globally,
   so a later sequential suite writes into a dead test's capture buffer. **DONE
   2026-08-07, `359949e83`.**
-- **`Blob`, `Unknown`, `Range` are RESERVED BUT UNUSABLE.** Verified 2026-08-07
+- ~~**`Blob`, `Unknown`, `Range` are RESERVED BUT UNUSABLE.**~~ — **DONE
+  2026-08-07, `f41cf399f`**, all three parts. Left below because the DIAGNOSIS
+  is the durable part: three tables that look authoritative, two of which are
+  not. Two residues were filed rather than fixed — see the two entries after
+  this one. Original analysis, verified 2026-08-07
   by three `riddlc` probes, correcting an earlier reading of this entry that
   treated tokenizing as evidence of parseability — it is not. For all three,
   `type X is <Name>` fails with "Path '<Name>' was not resolved", AND defining
@@ -282,6 +286,32 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
      it frees `Range` for users.
   3. **Drop `Unknown`.** Nothing behind it — no AST node, no parser rule, just
      the reservation and a tokenizer entry.
+
+- **`RangeType.kind` is `"Range"`, a spelling that now parses as nothing.**
+  Filed 2026-08-07 out of `f41cf399f`, deliberately not fixed there: it is a
+  display label, not a type name, so changing it exceeded "drop Range".
+  `AST.scala:2471` has `kind = "Range"` and `format = s"$kind($min,$max)"`, so
+  `AST.errorDescription` prints `Range(2,4)` while the only writable spelling is
+  lowercase `range(2,4)` — which is also what PrettifyPass emits
+  (`RiddlFileEmitter:358` hardcodes it). Before 2.0 the capitalized form at
+  least matched a reserved name; now it matches nothing. **Cheap but not
+  zero-risk:** no `.check` golden references it (verified, count 0), but
+  `"Range"` is ALSO the JSON DTO discriminator at `JsonModel.scala:1345,1437`
+  and appears in `JsonInputTest:129,446,550` — those are a wire format and must
+  NOT move with the display label. Needs Reid's ruling: align the label to
+  `range(n,m)`, or leave it and accept that error text shows a non-spelling.
+
+- **`TypeParserTest` has never run on Native.** Found 2026-08-07 while checking
+  where new tests executed. It is `abstract class TypeParserTest` with concrete
+  subclasses ONLY in `language/src/test/scalajvm/.../JVMTests.scala:22` and
+  `language/src/test/scalajs/.../JSTests.scala:22` — there is no Native one, so
+  ScalaTest never instantiates it there. This is CLAUDE.md's documented trap #2
+  (abstract spec with no concrete subclass: cases never appear in the log at
+  all, not even as skipped). Pre-existing, NOT introduced by the Blob work.
+  **Do not just add the subclass and assume green** — it would newly execute a
+  large parser suite on a platform that has never run it, and this repo's own
+  history says to expect findings on a first run. Worth checking whether other
+  `language` suites have the same gap; the audit is the task, not the one-liner.
 - **Rule on same-named invariants at entity and state scope.** With implicit
   application (§15.2) an entity-level `invariant X` and a state-level
   `invariant X` both apply inside that state. Nothing special-cases it today —
