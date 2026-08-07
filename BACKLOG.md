@@ -282,6 +282,14 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
+
+- **Restage `~/Code/ossuminc/bin/riddlc`.** Verified 2026-08-07: it reports
+  `2.0.0-rc.10-15-3df5cf44`, **6 commits behind HEAD**, so it has neither the
+  type-first deprecation nor the `persistent` Error. Consumers (riddl-generator,
+  synapify, dokn) validate with this binary and will not see either diagnostic
+  until it moves. `sbt reload` FIRST — dynver freezes at load, and a stale
+  version string on a fresh binary is how a restage gets believed without having
+  happened.
 - **Consumer sweep — task files dropped 2026-08-06 in THREE repos.** Pins read
   from each build file after `git fetch`, not from memory:
   - **riddl-generator** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT**, matching the
