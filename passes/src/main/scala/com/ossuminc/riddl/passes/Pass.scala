@@ -308,6 +308,22 @@ abstract class Pass(
           // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
           include.contents.foreach { value => traverse(value, parents) }
         end if
+      case sagaStep: SagaStep =>
+        // MUST precede `case leaf: Leaf`. A SagaStep is a Leaf whose statements live in the
+        // `doStatements`/`undoStatements` FIELDS rather than in `contents`, so the Leaf case
+        // below processes the step and never descends -- which meant saga statements were
+        // never resolved and never reached `validateStatement`. A saga step could name
+        // definitions that do not exist and validate completely clean.
+        //
+        // NO push/pop, deliberately: `ParentStack.push` takes a `Branch[?]` and a SagaStep is
+        // a Leaf, so it cannot be pushed without making it a Branch. Traversing without
+        // pushing is exactly what Include and BASTImport do above -- their contents
+        // "logically belong to the parent container" -- and it is also RIGHT here:
+        // `parents.head` stays the Saga, which is the correct resolution scope for a step's
+        // statements and is a Branch as `type Parents = Seq[Branch[?]]` requires.
+        process(sagaStep, parents)
+        sagaStep.doStatements.foreach { value => traverse(value, parents) }
+        sagaStep.undoStatements.foreach { value => traverse(value, parents) }
       case leaf: Leaf =>
         process(leaf, parents)
       case branch: Branch[?] =>

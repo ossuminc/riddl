@@ -116,12 +116,6 @@ passes/input/check/saga/saga.riddl(13:7->20):
 passes/input/check/saga/saga.riddl(13:26->34):
  Inlet 'in' is not connected:
        sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(12:5->16):
- Entity 'blah' is unused:
-     entity blah is {
-passes/input/check/saga/saga.riddl(4:5->26):
- Command 'UndoSomething' is unused:
-     command UndoSomething = { ??? }
 passes/input/check/saga/saga.riddl(5:5->26):
  Function 'AnotherThing' is unused:
      function AnotherThing {
