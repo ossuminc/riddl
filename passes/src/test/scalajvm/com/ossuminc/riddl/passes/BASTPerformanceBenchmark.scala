@@ -72,8 +72,14 @@ class BASTPerformanceBenchmark extends AbstractTestingBasisWithTestData {
                   // Verify we got a valid result
                   module.contents.toSeq must not be empty
 
-                  // The speedup should be positive (load faster than parse)
-                  speedup must be > 1.0
+                  // DELIBERATELY NOT GATED ON TIMING. This is one COLD, unwarmed parse against one
+                  // cold load, so it measures JIT warmup as much as it measures either operation.
+                  // Observed back-to-back on one machine: 0.9956x (a RED), then 13.0x, 9.3x, 6.1x,
+                  // with parse alone ranging 2.03ms to 33.03ms within a single run. The effect is
+                  // real and large; this measurement simply has more variance than headroom, so
+                  // gating it here only teaches people to re-run reds. The warmed, 50-iteration
+                  // benchmark below is what asserts the speedup.
+                  info(f"Cold single-shot speedup: $speedup%.1fx (reported, not asserted)")
 
                   true
 
@@ -160,12 +166,29 @@ class BASTPerformanceBenchmark extends AbstractTestingBasisWithTestData {
               println(f"  Min:     $minLoadMs%8.2f ms")
               println(f"  Max:     $maxLoadMs%8.2f ms")
               println()
+              // Gate on the MEDIAN, not the mean. A single scheduling hiccup (parse was observed
+              // spiking 2ms -> 33ms mid-run) drags the mean but not the median, and this assertion
+              // exists to catch a real regression -- BAST loading ceasing to beat parsing -- not to
+              // report machine load.
+              def medianMs(times: Array[Long]): Double =
+                val sorted = times.sorted
+                val n = sorted.length
+                val mid =
+                  if n % 2 == 1 then sorted(n / 2).toDouble
+                  else (sorted(n / 2 - 1) + sorted(n / 2)) / 2.0
+                mid / 1_000_000.0
+              end medianMs
+
+              val medianSpeedup = medianMs(parseTimes) / medianMs(loadTimes)
+
               println(f"Average speedup: $avgSpeedup%6.1fx")
+              println(f"Median speedup:  $medianSpeedup%6.1fx")
               println(f"Best case:       $bestSpeedup%6.1fx")
               println(f"Worst case:      $worstSpeedup%6.1fx")
 
-              // Should have meaningful speedup
-              avgSpeedup must be > 1.0
+              // The real warmed ratio runs 6x-13x, so 1.0 is a floor with an order of magnitude of
+              // headroom: it fails only if the speedup genuinely disappears.
+              medianSpeedup must be > 1.0
 
               true
 
