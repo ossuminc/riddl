@@ -27,9 +27,11 @@ trait PlatformContext {
   def withLogger[T, L <: Logger](newLogger: L)(doIt: (L) => T): T = synchronized {
     val save = logger
     logger = newLogger
-    val result = doIt(newLogger)
-    logger = save
-    result
+    // Restore in a `finally` for the same reason `withOptions` does (2eefeec52): a throwing body
+    // otherwise leaves the swapped-in logger installed globally, so every LATER sequential suite
+    // writes into a dead test's capture buffer. The failure lands on an innocent test.
+    try doIt(newLogger)
+    finally logger = save
   }
 
   /** The default CommonOptions to use on this platform but not publicly available */
