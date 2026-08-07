@@ -786,10 +786,28 @@ to the right group rather than appending to a list.
   was written inline, included, or imported. Three rules follow:
   1. **`Contents.filter` stays literal** ("my direct children"), and
      `includes` must keep using it, since the wrapper is matched BEFORE
-     the type test. `vitals`/`processors`/`definitions` also stay
-     literal — their callers (DiagramsPass, ResolutionPass, StatsPass)
-     already reach included definitions another way and would double
-     count. Reasons are recorded at each in `Contents.scala`.
+     the type test. `vitals`/`processors` also stay literal — their
+     callers (DiagramsPass, StatsPass) already reach included
+     definitions another way and would double count. Reasons are
+     recorded at each in `Contents.scala`.
+     **`definitions` was the third of those and is transparent as of
+     2026-08-06** (synapify's task), with `directDefinitions` added as
+     the literal form. That change disproved the rule the old comment
+     stated — "make it transparent AND delete the caller's manual
+     walk". ResolutionPass's walk descends `Include` and deliberately
+     NOT `BASTImport`, and `filterThroughWrappers` cannot express
+     "includes but not imports", so **ResolutionPass keeps its walk and
+     reads `directDefinitions`** (7 sites). Making it transparent would
+     have made imports resolve, breaking rule 2 below.
+     Three validation checks read `definitions` and moved with it:
+     `checkContents` and `checkIncludeHygiene` stopped emitting two
+     FALSE warnings (a container whose content all arrived by include
+     was told it "should have content"), and `checkUniqueContent`
+     STARTED reporting duplicate sibling names across an include
+     boundary — a real ambiguity, approved as a deliberate tightening
+     (Reid, 2026-08-06). It cost the corpus nothing: 189/189 riddl-models
+     validate with zero errors. Pinned by
+     `IncludeTransparentValidationTest`.
   2. **READING and RESOLVING answer differently for imports, on
      purpose.** `domain.types` reports a `.bast`-imported type, but a
      reference to it does NOT resolve until an explicit `flatten` — the

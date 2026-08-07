@@ -1079,7 +1079,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               //
               // State's own definitions come FIRST, so a handler shadows a same-named record
               // field rather than the other way round: the nearer declaration wins.
-              st.contents.definitions ++
+              st.contents.directDefinitions ++
                 candidatesFromPathIdentifier[Type](st.typ.pathId, defStack)
             case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
               // We found an on-clause (message or event); its message's members are the
@@ -1101,7 +1101,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             case outlet: Outlet =>
               candidatesFromPathIdentifier[Type](outlet.type_.pathId, defStack)
             case include: Include[?] =>
-              candidatesFromContents(include.contents.definitions.toContents)
+              candidatesFromContents(include.contents.directDefinitions.toContents)
                 .asInstanceOf[Definitions]
             case function: Function =>
               // A9: only the deprecated inline Aggregation form contributes inline Field candidates;
@@ -1112,15 +1112,15 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                 function.output
                   .collect { case agg: Aggregation => agg.contents.filter[Field] }
                   .asInstanceOf[Definitions] ++
-                function.contents.definitions
+                function.contents.directDefinitions
             case vital: VitalDefinition[?] =>
               vital.contents.toSeq.flatMap {
-                case include: Include[RiddlValue] @unchecked => include.contents.definitions
+                case include: Include[RiddlValue] @unchecked => include.contents.directDefinitions
                 case value: Definition                       => Seq(value)
                 case _                                       => Seq.empty[Definition]
               }
             case p: Branch[?] =>
-              p.contents.definitions
+              p.contents.directDefinitions
             case _ =>
               // No match so no candidates
               Seq.empty[Definition]
@@ -1388,7 +1388,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         definition match
           case foundType: Branch[?] =>
             defStack.push(foundType)
-            foundType.contents.definitions
+            foundType.contents.directDefinitions
           case definition: T =>
             Seq(definition)
         end match
@@ -1432,7 +1432,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         // NOTE: will not be picked up by contents.includes because it would be inside another definition.
         // NOTE: So we take the WithIdentifiers from the contents as well as from the includes
         val nested = candidatesFromContents(contents.includes.toContents)
-        val current = contents.definitions
+        val current = contents.directDefinitions
         current ++ nested.toSeq
       case definition: Definition =>
         Seq(definition)

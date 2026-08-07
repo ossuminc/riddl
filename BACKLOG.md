@@ -316,6 +316,12 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
   Each task names the target and what changed since that repo's pin, and tells
   them to LEAVE `.bast` files alone (§ 0). Waiting on their sessions.
+- **synapify: `flattenAST` workaround can be dropped.** `Contents.definitions`
+  became include- and import-transparent on 2026-08-06 (their task file, now in
+  `task/done/`), so their 33 `.definitions` sites no longer need the tree
+  physically flattened first. Nothing owed until they take a build containing
+  it — worth folding into the next consumer sweep rather than a task of its own,
+  since the change is source-compatible and their current code stays correct.
 - riddl-vscode: adoption task for `IncrementalValidator` — hold until the 2.0
   upgrade above, so they take one change rather than two.
 - ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the

@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST, Messages, flatten}
+import com.ossuminc.riddl.language.{AST, Messages, definitions, directDefinitions, flatten}
 import com.ossuminc.riddl.utils.{Await, PathUtils, URL, ec, pc}
 import org.scalatest.TestData
 
@@ -67,6 +67,43 @@ class ConsumerReadsIncludedDefinitionsTest extends ParsingTest {
       domain.flatten()
       domain.contexts.map(_.id.value).sorted mustBe beforeFlatten
       domain.includes mustBe empty
+    }
+  }
+
+  "Contents.definitions" should {
+
+    "descend includes, like the 35 named accessors beside it" in { (_: TestData) =>
+      // Synapify asked for this (task 2026-08-06): it walks `.definitions` at 33 sites and had to
+      // call `flattenAST` first because this one accessor stopped at the wrapper while its
+      // siblings did not. `Everything` declares no context directly -- all three are included.
+      val names = everythingDomain.contents.definitions.map(_.id.value)
+      names must contain("APlant")
+      names must contain("full")
+      names must contain("Whatever")
+    }
+
+    "still report the container's own direct definitions" in { (_: TestData) =>
+      // Transparency must ADD the included ones, not replace the direct ones.
+      val names = everythingDomain.contents.definitions.map(_.id.value)
+      names must contain("SomeType")
+      names must contain("DoAThing")
+    }
+
+    "not descend into a nested context's contents" in { (_: TestData) =>
+      // filterThroughWrappers descends the provenance wrappers and NOTHING else. `Something` is an
+      // entity of context `full`, so it is not a definition of the domain.
+      everythingDomain.contents.definitions.map(_.id.value) must not contain "Something"
+    }
+  }
+
+  "Contents.directDefinitions" should {
+
+    "stay literal, so the callers with a stake in provenance keep it" in { (_: TestData) =>
+      // ResolutionPass reads this: it must descend includes but NOT imports, and the transparent
+      // form cannot express that. Criterion 3 of the synapify task.
+      val names = everythingDomain.contents.directDefinitions.map(_.id.value)
+      names must contain("SomeType")
+      names must not contain "APlant"
     }
   }
 

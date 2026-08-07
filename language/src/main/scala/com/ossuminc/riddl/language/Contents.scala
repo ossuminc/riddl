@@ -121,16 +121,16 @@ extension [CV <: RiddlValue](container: Contents[CV])
     loop(container.toSeq)
   end filterThroughWrappers
 
-  // The next three stay on the LITERAL `filter` deliberately, unlike the 35 named accessors in
+  // These two stay on the LITERAL `filter` deliberately, unlike the 35 named accessors in
   // AST.scala. They are consumed by riddl's own passes rather than by tools reading a model, and
   // those callers already reach included definitions by another route -- so making these
   // include-transparent would double count, not fix anything:
   //   - `processors`  -> DiagramsPass adds `processor.includes.toContents.processors` itself
-  //   - `definitions` -> ResolutionPass feeds `include.contents.definitions` in as separate
-  //                      candidates, alongside the enclosing scope's own
   //   - `vitals`      -> StatsPass counts while traversing, which already visits include contents
   // If one of these ever needs to answer a consumer's question, give it the transparent
-  // treatment AND remove the caller's manual walk in the same change.
+  // treatment AND remove the caller's manual walk in the same change. `definitions` was the third
+  // member of this list until 2026-08-06; see the note on it below for how that went, because the
+  // instruction above turned out to be too simple.
   def vitals: Seq[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
   def processors: Seq[Processor[?]] = container.filter[Processor[?]]
   def find(name: String): Option[CV] =
@@ -143,7 +143,39 @@ extension [CV <: RiddlValue](container: Contents[CV])
       .map(_.asInstanceOf[WithIdentifier])
       .toSeq
   def includes: Seq[Include[?]] = container.filter[Include[?]].map(_.asInstanceOf[Include[?]])
-  def definitions: Definitions = container.filter[Definition].map(_.asInstanceOf[Definition])
+
+  /** Every definition directly inside this container, descending `Include` and `BASTImport` -- the
+    * same treatment the 35 named accessors get, and for the same reason: a tool asking what is in a
+    * container has no stake in whether a member was written inline, included, or imported.
+    *
+    * Made transparent 2026-08-06 at synapify's request, which walks this at 33 sites and had to
+    * call `flattenAST` first purely because this accessor stopped where its siblings did not.
+    *
+    * Use [[directDefinitions]] when provenance MATTERS. It matters more than the old comment above
+    * suggested: that comment said the fix was to make an accessor transparent and delete the
+    * caller's manual walk, but ResolutionPass's walk descends `Include` and deliberately NOT
+    * `BASTImport` -- an imported definition does not resolve until an explicit `flatten` (pinned by
+    * `BASTImportLoadingTest` and `IncludeAndImportTest`). The transparent form cannot express
+    * "includes but not imports", so ResolutionPass keeps its walk and reads `directDefinitions`.
+    * Reading and resolving genuinely answer differently here; that is not an oversight.
+    *
+    * Three VALIDATION checks read this and changed behaviour with it, which is the part that is not
+    * obvious from the call site (see `IncludeTransparentValidationTest`): `checkContents` and
+    * `checkIncludeHygiene` stopped emitting two false warnings, and `checkUniqueContent` STARTED
+    * reporting duplicate sibling names across an include boundary -- a real ambiguity, since
+    * ResolutionPass is itself include-transparent. That last one was approved as a deliberate
+    * tightening (Reid, 2026-08-06) and cost the riddl-models corpus nothing: 189/189 still validate
+    * with zero errors.
+    */
+  def definitions: Definitions = container.filterThroughWrappers[Definition]
+
+  /** This container's own direct definitions, stopping at `Include` and `BASTImport` wrappers.
+    *
+    * The literal reading, for callers with a stake in provenance -- chiefly ResolutionPass, which
+    * must descend includes but not imports and so does its own walk over these.
+    */
+  def directDefinitions: Definitions = container.filter[Definition].map(_.asInstanceOf[Definition])
+
   def parents: Seq[Branch[CV]] = container.filter[Branch[CV]]
 end extension
 

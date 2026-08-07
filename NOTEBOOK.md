@@ -23,8 +23,9 @@ would get wrong.
 - **BAST `FORMAT_REVISION` is 8** (6→7 by A56 `897b474bf`, 7→8 by A57
   `4208946d2`). Any earlier `.bast` is rejected, including one made by published
   rc.10, which shipped at revision 6.
-- Last full run, all three platforms, 0 failures: **JVM 259/2066, JS 60/674,
-  Native 182/1367** (suites/tests).
+- Last full run, all three platforms, 0 failures: **JVM 260/2074, JS 60/674,
+  Native 183/1374** (suites/tests), measured 2026-08-06 after the
+  include-transparent `definitions` change.
 
 **Nothing is in flight.** No half-finished change, no uncommitted work, no
 failing test. Last session shipped A56, A57, `Riddl.Envelope` +
@@ -93,6 +94,44 @@ to the task file and note the disposition below.
 
 ---
 
+
+## A comment that prescribed the wrong fix (2026-08-06) — DONE
+
+`task/done/2026-08-06-include-transparent-definitions.md`. Synapify asked for
+`Contents.definitions` to descend `Include`/`BASTImport` like its 35 siblings.
+It does now, with `directDefinitions` as the literal form.
+
+**The lesson is about the instruction we left ourselves, not the accessor.**
+`Contents.scala` carried a note naming three accessors that stay literal and
+telling a future reader how to promote one: *"give it the transparent treatment
+AND remove the caller's manual walk in the same change."* Followed literally,
+that breaks imports. ResolutionPass's walk descends `Include` and deliberately
+NOT `BASTImport`, because an imported definition must not resolve before an
+explicit `flatten` — and `filterThroughWrappers` cannot express "includes but
+not imports". There are **three** semantics; the note assumed two. So the walk
+STAYS and reads `directDefinitions`, and the comment now says why it is a
+permanent exception rather than unfinished work. A future-instruction comment is
+a hypothesis about a change nobody has attempted — it deserves the same doubt as
+a stale BACKLOG entry.
+
+**Two false warnings fell out, both real.** `checkContents` told a container
+whose content arrived entirely by include that it "should have content" —
+reproduced, not reasoned: `domain d is { include "types" }` draws
+`Domain 'd' in Root should have content` while having two types. And an include
+contributing through a further include was reported as contributing nothing.
+Nobody filed either; they surfaced only because the accessor they shared moved.
+
+**`checkUniqueContent` got stricter and it cost nothing.** `type Thing` beside
+an included `entity Thing` is now an Error. It was always ambiguous — the
+resolver is include-transparent — merely invisible. Reid approved taking a
+corpus hit; there was none, 189/189 riddl-models still validate clean.
+**That zero needed its own measurement.** `Root2JsonCorpusTest` compares the
+original AST against the re-parsed one, so an error appearing in BOTH leaves
+parity at 100% — the suite is structurally incapable of noticing a new
+always-on error. Validating the corpus directly with a staged `riddlc`, plus a
+positive control on a colliding fixture to prove the search worked, is what
+made the claim worth anything. Green suites answer the question they were
+built to ask, and this was not it.
 
 ## Epic witnessing confirmed by riddl-examples (2026-08-05) — CLOSED
 

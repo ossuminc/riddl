@@ -225,6 +225,32 @@ class BASTImportLoadingTest extends AnyWordSpec with Matchers {
         again.messages.filter(_.kind.isError) mustBe empty
       }
     }
+
+    // `definitions` joined the include-transparent accessors on 2026-08-06 (synapify's task), so
+    // it now answers the READING question above for imports as well, exactly like `types` does.
+    // `directDefinitions` is the literal reading that ResolutionPass keeps -- which is what lets
+    // the resolve-side contract pinned just above stay true while the read side changes.
+    "report an imported definition through definitions but not directDefinitions" in {
+      withLibrary("transparent") { lib =>
+        val root = parse(
+          s"""domain App is {
+             |  $kw type Money from "${lib.toAbsolutePath}"
+             |}
+             |""".stripMargin,
+          "transparent"
+        )
+        val app = root.domains.head
+
+        // READING: transparent, so the imported type is a definition of the domain.
+        app.contents.definitions.map(_.id.value) must contain("Money")
+
+        // PROVENANCE: literal, so only the wrapper is a direct child -- nothing inside it.
+        app.contents.directDefinitions.map(_.id.value) mustNot contain("Money")
+
+        // And the wrapper is still there for the tooling that cares which is which.
+        BASTLoader.getImports(app) mustNot be(empty)
+      }
+    }
   }
 
   "A model containing a load directive" should {
