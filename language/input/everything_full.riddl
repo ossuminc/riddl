@@ -111,7 +111,7 @@ context full is {
   }
 
   entity SomeOtherThing is {
-    type ItHappened is event { aField: String }
+    event ItHappened is { aField: String }
     record otherThingData is { aField: String }
     state otherThingState of record SomeOtherThing.otherThingData
     handler fee is {

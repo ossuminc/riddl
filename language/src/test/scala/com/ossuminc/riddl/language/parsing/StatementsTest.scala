@@ -250,7 +250,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       val input = RiddlParserInput(
         """domain LetTest is {
           |  context LetTest is {
-          |    type MyCommand is command { field: String }
+          |    command MyCommand is { field: String }
           |    handler h is {
           |      on init {
           |        let myVar: MyCommand = "MyCommand(field = hello)"
@@ -378,7 +378,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       val input = RiddlParserInput(
         """domain ForeachTest2 is {
           |  context ForeachTest2 is {
-          |    type Order is record { id: String }
+          |    record Order is { id: String }
           |    type OrderList is many Order
           |    handler h is {
           |      on init {
@@ -442,7 +442,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       val input = RiddlParserInput(
         """domain PutTest is {
           |  application context UI is {
-          |    type Greeting is record { text: String }
+          |    record Greeting is { text: String }
           |    command Refresh is { ??? }
           |    group Main is {
           |      form Entry acquires type Greeting
@@ -477,7 +477,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       val input = RiddlParserInput(
         """domain RetTest is {
           |  context Calc is {
-          |    type Sum is record { total: Integer }
+          |    record Sum is { total: Integer }
           |    function Add is {
           |      returns record Sum
           |      return record Sum(total = "the total")

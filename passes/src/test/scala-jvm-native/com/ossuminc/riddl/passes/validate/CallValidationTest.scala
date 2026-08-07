@@ -29,9 +29,9 @@ class CallValidationTest extends AbstractValidatingTest {
     s"""domain d is {
        |  context Calc is {
        |    type Amount is Integer
-       |    type Args is record { a: Amount, b: Amount }
-       |    type Sum is record { total: Integer }
-       |    type Diff is record { d: Integer }
+       |    record Args is { a: Amount, b: Amount }
+       |    record Sum is { total: Integer }
+       |    record Diff is { d: Integer }
        |    function Add is {
        |      requires record Args
        |      returns record Sum
@@ -59,8 +59,8 @@ class CallValidationTest extends AbstractValidatingTest {
   private def ent(body: String): String =
     s"""domain d is {
        |  context Calc is {
-       |    type Args is record { a: Integer, b: Integer }
-       |    type Sum is record { total: Integer }
+       |    record Args is { a: Integer, b: Integer }
+       |    record Sum is { total: Integer }
        |    command Go is { ??? }
        |    function Add is {
        |      requires record Args

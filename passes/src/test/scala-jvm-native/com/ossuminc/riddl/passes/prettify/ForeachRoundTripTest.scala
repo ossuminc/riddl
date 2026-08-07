@@ -42,9 +42,9 @@ class ForeachRoundTripTest extends AbstractValidatingTest {
 
   private val src =
     """domain d is { context c is {
-      |  type Order is record { id: Integer }
+      |  record Order is { id: Integer }
       |  type OrderList is many Order
-      |  type Batch is command { orders: OrderList }
+      |  command Batch is { orders: OrderList }
       |  handler h is {
       |    on command Batch {
       |      let batch: OrderList = "orders"

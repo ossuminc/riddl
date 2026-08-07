@@ -148,7 +148,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain foo is {
           |context bar is {
-          |  type DoIt = command { ??? }
+          |  command DoIt = { ??? }
           |  event Message is { a: Integer }
           |
           |  entity Hamburger  is {

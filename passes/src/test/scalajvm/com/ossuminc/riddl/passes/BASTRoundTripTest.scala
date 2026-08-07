@@ -248,9 +248,9 @@ class BASTRoundTripTest extends AnyWordSpec {
       // let-local collection round-trip, and the nested body survives.
       val riddlSource =
         """domain d is { context c is {
-          |  type Order is record { id: Integer }
+          |  record Order is { id: Integer }
           |  type OrderList is many Order
-          |  type Batch is command { orders: OrderList }
+          |  command Batch is { orders: OrderList }
           |  handler h is {
           |    on command Batch {
           |      let batch: OrderList = "orders"
@@ -297,14 +297,14 @@ class BASTRoundTripTest extends AnyWordSpec {
       val riddlSource =
         """domain d is {
           |  context Calc is {
-          |    type Sum is record { total: Integer }
+          |    record Sum is { total: Integer }
           |    function Add is {
           |      returns record Sum
           |      return record Sum(total = "the total")
           |    }
           |  }
           |  application context UI is {
-          |    type Greeting is record { text: String }
+          |    record Greeting is { text: String }
           |    command Refresh is { ??? }
           |    group Main is {
           |      form Entry acquires type Greeting
@@ -358,8 +358,8 @@ class BASTRoundTripTest extends AnyWordSpec {
       val riddlSource =
         """domain d is {
           |  context Calc is {
-          |    type Args is record { a: Integer, b: Integer }
-          |    type Sum is record { total: Integer }
+          |    record Args is { a: Integer, b: Integer }
+          |    record Sum is { total: Integer }
           |    function Add is {
           |      requires record Args
           |      returns record Sum

@@ -581,8 +581,8 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       val callModel =
         """domain d is {
           |  context Calc is {
-          |    type Args is record { a: Integer, b: Integer }
-          |    type Sum is record { total: Integer }
+          |    record Args is { a: Integer, b: Integer }
+          |    record Sum is { total: Integer }
           |    function Add is {
           |      requires record Args
           |      returns record Sum
@@ -661,9 +661,9 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
     "round-trip a `foreach` statement (A25) losslessly" in {
       val feModel =
         """domain FE is { context c is {
-          |  type Order is record { id: Integer }
+          |  record Order is { id: Integer }
           |  type OrderList is many Order
-          |  type Batch is command { orders: OrderList }
+          |  command Batch is { orders: OrderList }
           |  handler h is {
           |    on command Batch is {
           |      let batch: OrderList = "orders"
@@ -695,14 +695,14 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       val vModel =
         """domain VD is {
           |  context Calc is {
-          |    type Sum is record { total: Integer }
+          |    record Sum is { total: Integer }
           |    function Add is {
           |      returns record Sum
           |      return record Sum(total = "the total")
           |    }
           |  }
           |  application context UI is {
-          |    type Greeting is record { text: String }
+          |    record Greeting is { text: String }
           |    command Refresh is { ??? }
           |    group Main is {
           |      form Entry acquires type Greeting

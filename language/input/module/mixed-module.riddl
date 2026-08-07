@@ -20,7 +20,7 @@ module MixedBag is {
   }
 
   context Ordering is {
-    type Placed is event { when: TimeStamp }
+    event Placed is { when: TimeStamp }
     entity Order is {
       handler Orders is { ??? }
     }

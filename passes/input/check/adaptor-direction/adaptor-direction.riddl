@@ -1,7 +1,7 @@
 domain AdaptorDir is {
   context SourceCtx is {
-    type DoIt is command { data: String }
-    type ItDone is event { what: String }
+    command DoIt is { data: String }
+    event ItDone is { what: String }
   } with {
     explained as "Source context with message types"
   }

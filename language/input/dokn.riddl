@@ -72,12 +72,12 @@ domain dokn is {
         entity Driver is {
 
             command AddDriverToCompany yields event DriverAddedToCompany is  { name: String, mobile: MobileNumber, companyId: CompanyId }
-            type DriverAddedToCompany is event { name: String, mobile: MobileNumber, companyId: CompanyId }
+            event DriverAddedToCompany is { name: String, mobile: MobileNumber, companyId: CompanyId }
 
             command RemoveDriverFromCompany yields event DriverRemovedFromCompany is { mobile: MobileNumber, companyId: CompanyId }
-            type DriverRemovedFromCompany is event { mobile: MobileNumber, companyId: CompanyId }
+            event DriverRemovedFromCompany is { mobile: MobileNumber, companyId: CompanyId }
 
-            type PlaceDriverOnDuty is command { mobile: MobileNumber }
+            command PlaceDriverOnDuty is { mobile: MobileNumber }
 
             type DriverCommands is one of { AddDriverToCompany,
                 RemoveDriverFromCompany, PlaceDriverOnDuty }
@@ -147,24 +147,24 @@ domain dokn is {
             command AddDeliveryLocation yields event DeliveryLocationAdded is  {
               geohash: Location, label: String
             }
-            type DeliveryLocationAdded is event  { ??? }
+            event DeliveryLocationAdded is { ??? }
 
             command ChangeLocationName yields event LocationNameChanged is { newName: String }
-            type LocationNameChanged is event { newName: String }
+            event LocationNameChanged is { newName: String }
 
             command ReportTicketReceived yields event TicketReportedAtLocation is { ??? }
-            type TicketReportedAtLocation is event { ??? }
+            event TicketReportedAtLocation is { ??? }
 
             command ModifyNotesAtLocation yields event NotesForLocationModified is { cid: CompanyId, note: String }
-            type NotesForLocationModified is event { note: String }
+            event NotesForLocationModified is { note: String }
 
-            type LocationAddressReceived is event { newAddress: dokn.Address }
+            event LocationAddressReceived is { newAddress: dokn.Address }
 
-            type getLocationDetails is query  { ??? }
-            type LocationDetails is result  { ??? }
+            query getLocationDetails is { ??? }
+            result LocationDetails is { ??? }
 
-            type getLocationNotes is query { cid: CompanyId }
-            type LocationNotes is result { notes: NoteList }
+            query getLocationNotes is { cid: CompanyId }
+            result LocationNotes is { notes: NoteList }
 
             record fields is {
               locationId: type LocationId,

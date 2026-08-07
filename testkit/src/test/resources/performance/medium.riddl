@@ -19,9 +19,9 @@ domain MediumDomain is {
 
   context CustomerManagement is {
     entity Customer is {
-      type CreateCustomer is command { name: String, email: EmailAddress, phone: PhoneNumber }
-      type UpdateCustomer is command { customerId: CustomerId, name: String }
-      type DeleteCustomer is command { customerId: CustomerId }
+      command CreateCustomer is { name: String, email: EmailAddress, phone: PhoneNumber }
+      command UpdateCustomer is { customerId: CustomerId, name: String }
+      command DeleteCustomer is { customerId: CustomerId }
 
       event CustomerCreated is { customerId: CustomerId, name: String }
       event CustomerUpdated is { customerId: CustomerId, name: String }
@@ -65,10 +65,10 @@ domain MediumDomain is {
 
   context ProductCatalog is {
     entity Product is {
-      type CreateProduct is command { name: String, description: String, price: Money }
-      type UpdateProduct is command { productId: ProductId, name: String, price: Money }
-      type AdjustInventory is command { productId: ProductId, quantity: Quantity }
-      type DiscontinueProduct is command { productId: ProductId }
+      command CreateProduct is { name: String, description: String, price: Money }
+      command UpdateProduct is { productId: ProductId, name: String, price: Money }
+      command AdjustInventory is { productId: ProductId, quantity: Quantity }
+      command DiscontinueProduct is { productId: ProductId }
 
       event ProductCreated is { productId: ProductId, name: String }
       event ProductUpdated is { productId: ProductId, name: String }
@@ -102,9 +102,9 @@ domain MediumDomain is {
     }
 
     entity Category is {
-      type CreateCategory is command { name: String, description: String }
-      type AddProductToCategory is command { categoryId: Id(Category), productId: ProductId }
-      type RemoveProductFromCategory is command { categoryId: Id(Category), productId: ProductId }
+      command CreateCategory is { name: String, description: String }
+      command AddProductToCategory is { categoryId: Id(Category), productId: ProductId }
+      command RemoveProductFromCategory is { categoryId: Id(Category), productId: ProductId }
 
       event CategoryCreated is { categoryId: Id(Category), name: String }
       event ProductAddedToCategory is { categoryId: Id(Category), productId: ProductId }
@@ -145,11 +145,11 @@ domain MediumDomain is {
 
   context OrderManagement is {
     entity Order is {
-      type CreateOrder is command { customerId: CustomerId, items: OrderItem* }
-      type ConfirmOrder is command { orderId: OrderId }
-      type ShipOrder is command { orderId: OrderId, shipmentId: ShipmentId }
-      type DeliverOrder is command { orderId: OrderId }
-      type CancelOrder is command { orderId: OrderId, reason: String }
+      command CreateOrder is { customerId: CustomerId, items: OrderItem* }
+      command ConfirmOrder is { orderId: OrderId }
+      command ShipOrder is { orderId: OrderId, shipmentId: ShipmentId }
+      command DeliverOrder is { orderId: OrderId }
+      command CancelOrder is { orderId: OrderId, reason: String }
 
       event OrderCreated is { orderId: OrderId, customerId: CustomerId }
       event OrderConfirmed is { orderId: OrderId }
@@ -200,10 +200,10 @@ domain MediumDomain is {
 
   context PaymentProcessing is {
     entity Payment is {
-      type InitiatePayment is command { orderId: OrderId, amount: Money, method: PaymentMethod }
-      type ProcessPayment is command { paymentId: PaymentId }
-      type CompletePayment is command { paymentId: PaymentId, transactionId: String }
-      type FailPayment is command { paymentId: PaymentId, errorMessage: String }
+      command InitiatePayment is { orderId: OrderId, amount: Money, method: PaymentMethod }
+      command ProcessPayment is { paymentId: PaymentId }
+      command CompletePayment is { paymentId: PaymentId, transactionId: String }
+      command FailPayment is { paymentId: PaymentId, errorMessage: String }
 
       event PaymentInitiated is { paymentId: PaymentId, orderId: OrderId, amount: Money }
       event PaymentProcessing is { paymentId: PaymentId }
@@ -246,9 +246,9 @@ domain MediumDomain is {
 
   context ShippingManagement is {
     entity Shipment is {
-      type CreateShipment is command { orderId: OrderId, customerId: CustomerId, items: ShipmentItem* }
-      type ShipPackage is command { shipmentId: ShipmentId, trackingNumber: String, carrier: String }
-      type DeliverPackage is command { shipmentId: ShipmentId, signedBy: String }
+      command CreateShipment is { orderId: OrderId, customerId: CustomerId, items: ShipmentItem* }
+      command ShipPackage is { shipmentId: ShipmentId, trackingNumber: String, carrier: String }
+      command DeliverPackage is { shipmentId: ShipmentId, signedBy: String }
 
       event ShipmentCreated is { shipmentId: ShipmentId, orderId: OrderId }
       event ShipmentInTransit is { shipmentId: ShipmentId, trackingNumber: String }
@@ -290,10 +290,10 @@ domain MediumDomain is {
 
   context InvoiceManagement is {
     entity Invoice is {
-      type CreateInvoice is command { orderId: OrderId, customerId: CustomerId, amount: Money, items: InvoiceItem* }
-      type SendInvoice is command { invoiceId: InvoiceId }
-      type MarkInvoicePaid is command { invoiceId: InvoiceId, paymentId: PaymentId }
-      type VoidInvoice is command { invoiceId: InvoiceId, reason: String }
+      command CreateInvoice is { orderId: OrderId, customerId: CustomerId, amount: Money, items: InvoiceItem* }
+      command SendInvoice is { invoiceId: InvoiceId }
+      command MarkInvoicePaid is { invoiceId: InvoiceId, paymentId: PaymentId }
+      command VoidInvoice is { invoiceId: InvoiceId, reason: String }
 
       event InvoiceCreated is { invoiceId: InvoiceId, orderId: OrderId, amount: Money }
       event InvoiceSent is { invoiceId: InvoiceId }

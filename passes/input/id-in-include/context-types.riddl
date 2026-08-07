@@ -1,6 +1,6 @@
 // Types defined in an included file within the context
 type ReservationId is Id(FrontOfHouse.Reservation)
-type MakeReservation is command { partySize: Number }
-type ReservationMade is event { partySize: Number }
+command MakeReservation is { partySize: Number }
+event ReservationMade is { partySize: Number }
 query GetReservation yields result ReservationResult is { id: String }
-type ReservationResult is result { partySize: Number }
+result ReservationResult is { partySize: Number }

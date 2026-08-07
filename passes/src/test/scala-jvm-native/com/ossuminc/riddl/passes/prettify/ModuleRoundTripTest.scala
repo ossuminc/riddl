@@ -33,7 +33,7 @@ class ModuleRoundTripTest extends AbstractValidatingTest {
       |  invariant Positive is "the limit is positive"
       |  function Compute is { ??? }
       |  context Ordering is {
-      |    type Placed is event { when: TimeStamp }
+      |    event Placed is { when: TimeStamp }
       |  }
       |  entity Loose is { handler Anything is { ??? } }
       |  adaptor FromOrdering from context Ordering is { ??? }

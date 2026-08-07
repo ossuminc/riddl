@@ -361,8 +361,8 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
         """domain TestDomain is {
           |  context TestContext is {
           |    entity TestEntity is {
-          |      type TestCmd = command { data: String }
-          |      type TestEvt = event { data: String }
+          |      command TestCmd = { data: String }
+          |      event TestEvt = { data: String }
           |      state TestState of record TestStateData is {
           |        handler TestHandler is {
           |          on command TestCmd {

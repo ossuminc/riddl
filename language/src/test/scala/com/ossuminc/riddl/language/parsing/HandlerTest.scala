@@ -27,8 +27,8 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
     "be allowed in contexts" in { (td: TestData) =>
       val input = RiddlParserInput(
         """context Foo is {
-          |  type DoFoo is command { flux: Integer }
-          |  type FooDone is event { flux: Integer }
+          |  command DoFoo is { flux: Integer }
+          |  event FooDone is { flux: Integer }
           |  handler FooHandler is {
           |    on command FooMessage {
           |      send event FooDone to outlet begone
@@ -61,18 +61,18 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
         """domain foo is {
           |context Members is {
           |
-          |    type RegisterMember is command {}
-          |    type MemberRegistered is event {}
-          |    type RegisterMemberList is command {}
-          |    type MemberListRegistered is event {}
-          |    type UpdateMemberInfo is command {}
-          |    type MemberInfoUpdated is event {}
-          |    type UpdateMemberStatus is command {}
-          |    type MemberStatusUpdated is event {}
-          |    type GetMemberData is query {}
-          |    type MemberData is result {}
-          |    type GetMembersByMetaInfo is query {}
-          |    type MemberListResult is result {}
+          |    command RegisterMember is {}
+          |    event MemberRegistered is {}
+          |    command RegisterMemberList is {}
+          |    event MemberListRegistered is {}
+          |    command UpdateMemberInfo is {}
+          |    event MemberInfoUpdated is {}
+          |    command UpdateMemberStatus is {}
+          |    event MemberStatusUpdated is {}
+          |    query GetMemberData is {}
+          |    result MemberData is {}
+          |    query GetMembersByMetaInfo is {}
+          |    result MemberListResult is {}
           |
           |    entity Member is {
           |        option is aggregate

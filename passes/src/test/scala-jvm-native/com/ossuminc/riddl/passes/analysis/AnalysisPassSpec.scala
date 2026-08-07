@@ -29,7 +29,7 @@ class AnalysisPassSpec extends AnyWordSpec with Matchers {
     |  context Orders {
     |    type OrderId = Id(Orders.Order)
     |    type CustomerId = Id(Customers.Customer)
-    |    type OrderState = record { orderId: OrderId, customerId: CustomerId }
+    |    record OrderState = { orderId: OrderId, customerId: CustomerId }
     |
     |    entity Order {
     |      state main of record OrderState
@@ -38,7 +38,7 @@ class AnalysisPassSpec extends AnyWordSpec with Matchers {
     |
     |  context Customers {
     |    type CustomerId = Id(Customers.Customer)
-    |    type CustomerState = record { id: CustomerId, name: String }
+    |    record CustomerState = { id: CustomerId, name: String }
     |
     |    entity Customer {
     |      state main of record CustomerState
@@ -208,10 +208,10 @@ class AnalysisPassSpec extends AnyWordSpec with Matchers {
       val msgModel = """
         |domain MsgDomain {
         |  context MsgContext {
-        |    type CreateOrder = command { orderId: Id(MsgContext), item: String }
-        |    type OrderCreated = event { orderId: Id(MsgContext), item: String }
-        |    type GetOrder = query { orderId: Id(MsgContext) }
-        |    type OrderResult = result { orderId: Id(MsgContext), item: String }
+        |    command CreateOrder = { orderId: Id(MsgContext), item: String }
+        |    event OrderCreated = { orderId: Id(MsgContext), item: String }
+        |    query GetOrder = { orderId: Id(MsgContext) }
+        |    result OrderResult = { orderId: Id(MsgContext), item: String }
         |  }
         |}
         |""".stripMargin

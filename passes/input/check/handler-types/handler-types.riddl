@@ -1,8 +1,8 @@
 domain HandlerTypes is {
   context TypeCtx is {
-    type SomeEvent is event { what: String }
-    type SomeCommand is command { data: String }
-    type RecordType is record { field1: String }
+    event SomeEvent is { what: String }
+    command SomeCommand is { data: String }
+    record RecordType is { field1: String }
 
     repository EventRepo is {
       schema RepoSchema is flat
@@ -19,7 +19,7 @@ domain HandlerTypes is {
     }
 
     projector EventProjector is {
-      type ProjRecord is record { field1: String }
+      record ProjRecord is { field1: String }
       handler EventProjHandler is {
         on event SomeEvent {
           do "handling event in projector"

@@ -3,9 +3,9 @@
 // message's collection field) and a bare identifier naming a `let`-bound local.
 domain Foreach is {
   context Orders is {
-    type Order is record { id: Integer }
+    record Order is { id: Integer }
     type OrderList is many Order
-    type PlaceBatch is command { orders: OrderList }
+    command PlaceBatch is { orders: OrderList }
     handler Batching is {
       on command PlaceBatch {
         let localBatch: OrderList = "the orders to process"

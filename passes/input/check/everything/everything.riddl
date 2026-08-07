@@ -1,7 +1,7 @@
 domain Everything is {
 
   type SomeType is String
-  type DoAThing is command { thingField: Integer }
+  command DoAThing is { thingField: Integer }
 
   context APlant is {
     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
@@ -65,7 +65,7 @@ domain Everything is {
 
     entity SomeOtherThing is {
       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-      type ItHappened is event { when: String }
+      event ItHappened is { when: String }
       state otherThingState of record Everything.StateType
       handler fee is {
         on event ItHappened {

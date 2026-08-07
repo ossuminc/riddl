@@ -90,7 +90,7 @@ domain Everything is {
     }
 
     entity SomeOtherThing is {
-      type ItHappened is event { field: String }
+      event ItHappened is { field: String }
       record fields is { field: String }
       state otherThingState of record SomeOtherThing.fields
       handler fee is {

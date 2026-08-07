@@ -8,9 +8,9 @@ domain SmallDomain is {
 
   context UserManagement is {
     entity User is {
-      type CreateUser is command { name: UserName, email: EmailAddress }
-      type UpdateUser is command { userId: UserId, name: UserName }
-      type DeleteUser is command { userId: UserId }
+      command CreateUser is { name: UserName, email: EmailAddress }
+      command UpdateUser is { userId: UserId, name: UserName }
+      command DeleteUser is { userId: UserId }
 
       event UserCreated is { userId: UserId, name: UserName }
       event UserUpdated is { userId: UserId, name: UserName }
@@ -45,7 +45,7 @@ domain SmallDomain is {
 
   context NotificationService is {
     entity Notification is {
-      type SendNotification is command { userId: UserId, message: String }
+      command SendNotification is { userId: UserId, message: String }
       event NotificationSent is { userId: UserId, message: String }
 
       record NotificationData is {

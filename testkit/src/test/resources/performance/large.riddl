@@ -43,11 +43,11 @@ domain EnterprisePlatform is {
   context IdentityManagement is {
 
     entity Tenant is {
-      type CreateTenant is command { name: String, plan: TenantPlan }
-      type UpdateTenant is command { tenantId: TenantId, name: String }
-      type SuspendTenant is command { tenantId: TenantId, reason: String }
-      type ReactivateTenant is command { tenantId: TenantId }
-      type DeleteTenant is command { tenantId: TenantId }
+      command CreateTenant is { name: String, plan: TenantPlan }
+      command UpdateTenant is { tenantId: TenantId, name: String }
+      command SuspendTenant is { tenantId: TenantId, reason: String }
+      command ReactivateTenant is { tenantId: TenantId }
+      command DeleteTenant is { tenantId: TenantId }
 
       event TenantCreated is { tenantId: TenantId, name: String, plan: TenantPlan }
       event TenantUpdated is { tenantId: TenantId, name: String }
@@ -95,12 +95,12 @@ domain EnterprisePlatform is {
     }
 
     entity User is {
-      type InviteUser is command { tenantId: TenantId, email: EmailAddress, roles: RoleId* }
-      type AcceptInvite is command { userId: UserId, password: String }
-      type UpdateUser is command { userId: UserId, profile: UserProfile }
-      type LockUser is command { userId: UserId, reason: String }
-      type UnlockUser is command { userId: UserId }
-      type DeleteUser is command { userId: UserId }
+      command InviteUser is { tenantId: TenantId, email: EmailAddress, roles: RoleId* }
+      command AcceptInvite is { userId: UserId, password: String }
+      command UpdateUser is { userId: UserId, profile: UserProfile }
+      command LockUser is { userId: UserId, reason: String }
+      command UnlockUser is { userId: UserId }
+      command DeleteUser is { userId: UserId }
 
       event UserInvited is { userId: UserId, tenantId: TenantId, email: EmailAddress }
       event UserActivated is { userId: UserId }
@@ -161,9 +161,9 @@ domain EnterprisePlatform is {
     }
 
     entity Role is {
-      type CreateRole is command { tenantId: TenantId, name: String, permissions: PermissionId* }
-      type UpdateRole is command { roleId: RoleId, name: String, permissions: PermissionId* }
-      type DeleteRole is command { roleId: RoleId }
+      command CreateRole is { tenantId: TenantId, name: String, permissions: PermissionId* }
+      command UpdateRole is { roleId: RoleId, name: String, permissions: PermissionId* }
+      command DeleteRole is { roleId: RoleId }
 
       event RoleCreated is { roleId: RoleId, name: String }
       event RoleUpdated is { roleId: RoleId, name: String }
@@ -194,9 +194,9 @@ domain EnterprisePlatform is {
     }
 
     entity Session is {
-      type CreateSession is command { userId: UserId, tenantId: TenantId, ipAddress: String }
-      type RefreshSession is command { sessionId: SessionId }
-      type RevokeSession is command { sessionId: SessionId, reason: String }
+      command CreateSession is { userId: UserId, tenantId: TenantId, ipAddress: String }
+      command RefreshSession is { sessionId: SessionId }
+      command RevokeSession is { sessionId: SessionId, reason: String }
 
       event SessionCreated is { sessionId: SessionId, userId: UserId }
       event SessionRefreshed is { sessionId: SessionId }
@@ -228,8 +228,8 @@ domain EnterprisePlatform is {
     }
 
     entity ApiKey is {
-      type CreateApiKey is command { tenantId: TenantId, userId: UserId, name: String, scopes: String* }
-      type RevokeApiKey is command { apiKeyId: ApiKeyId }
+      command CreateApiKey is { tenantId: TenantId, userId: UserId, name: String, scopes: String* }
+      command RevokeApiKey is { apiKeyId: ApiKeyId }
 
       event ApiKeyCreated is { apiKeyId: ApiKeyId, name: String }
       event ApiKeyRevoked is { apiKeyId: ApiKeyId }
@@ -287,7 +287,7 @@ domain EnterprisePlatform is {
   context AuditCompliance is {
 
     entity AuditEntry is {
-      type RecordAudit is command {
+      command RecordAudit is {
         tenantId: TenantId,
         userId: UserId,
         action: String,
@@ -328,10 +328,10 @@ domain EnterprisePlatform is {
     }
 
     entity ComplianceReport is {
-      type RequestReport is command { tenantId: TenantId, reportType: ReportType, startDate: Date, endDate: Date }
-      type GenerateReport is command { reportId: Id(ComplianceReport) }
-      type CompleteReport is command { reportId: Id(ComplianceReport), fileId: FileId }
-      type FailReport is command { reportId: Id(ComplianceReport), errorMessage: String }
+      command RequestReport is { tenantId: TenantId, reportType: ReportType, startDate: Date, endDate: Date }
+      command GenerateReport is { reportId: Id(ComplianceReport) }
+      command CompleteReport is { reportId: Id(ComplianceReport), fileId: FileId }
+      command FailReport is { reportId: Id(ComplianceReport), errorMessage: String }
 
       event ReportRequested is { reportId: Id(ComplianceReport), reportType: ReportType }
       event ReportGenerating is { reportId: Id(ComplianceReport), progress: Percentage }
@@ -389,11 +389,11 @@ domain EnterprisePlatform is {
   context FileManagement is {
 
     entity File is {
-      type UploadFile is command { tenantId: TenantId, folderId: FolderId, name: String, mimeType: String, size: Number }
-      type UpdateFile is command { fileId: FileId, name: String }
-      type MoveFile is command { fileId: FileId, targetFolderId: FolderId }
-      type ShareFile is command { fileId: FileId, userId: UserId, access: AccessLevel }
-      type DeleteFile is command { fileId: FileId }
+      command UploadFile is { tenantId: TenantId, folderId: FolderId, name: String, mimeType: String, size: Number }
+      command UpdateFile is { fileId: FileId, name: String }
+      command MoveFile is { fileId: FileId, targetFolderId: FolderId }
+      command ShareFile is { fileId: FileId, userId: UserId, access: AccessLevel }
+      command DeleteFile is { fileId: FileId }
 
       event FileUploaded is { fileId: FileId, name: String, size: Number }
       event FileUpdated is { fileId: FileId, name: String }
@@ -454,10 +454,10 @@ domain EnterprisePlatform is {
     }
 
     entity Folder is {
-      type CreateFolder is command { tenantId: TenantId, parentId: FolderId, name: String }
-      type RenameFolder is command { folderId: FolderId, name: String }
-      type MoveFolder is command { folderId: FolderId, targetParentId: FolderId }
-      type DeleteFolder is command { folderId: FolderId }
+      command CreateFolder is { tenantId: TenantId, parentId: FolderId, name: String }
+      command RenameFolder is { folderId: FolderId, name: String }
+      command MoveFolder is { folderId: FolderId, targetParentId: FolderId }
+      command DeleteFolder is { folderId: FolderId }
 
       event FolderCreated is { folderId: FolderId, name: String }
       event FolderRenamed is { folderId: FolderId, name: String }
@@ -507,10 +507,10 @@ domain EnterprisePlatform is {
   context Collaboration is {
 
     entity Comment is {
-      type AddComment is command { tenantId: TenantId, resourceType: String, resourceId: String, authorId: UserId, content: MarkdownText }
-      type EditComment is command { commentId: CommentId, content: MarkdownText }
-      type AddReaction is command { commentId: CommentId, userId: UserId, emoji: String }
-      type DeleteComment is command { commentId: CommentId }
+      command AddComment is { tenantId: TenantId, resourceType: String, resourceId: String, authorId: UserId, content: MarkdownText }
+      command EditComment is { commentId: CommentId, content: MarkdownText }
+      command AddReaction is { commentId: CommentId, userId: UserId, emoji: String }
+      command DeleteComment is { commentId: CommentId }
 
       event CommentAdded is { commentId: CommentId, resourceType: String, resourceId: String }
       event CommentEdited is { commentId: CommentId }
@@ -556,9 +556,9 @@ domain EnterprisePlatform is {
     }
 
     entity Tag is {
-      type CreateTag is command { tenantId: TenantId, name: String, color: String }
-      type UpdateTag is command { tagId: TagId, name: String, color: String }
-      type DeleteTag is command { tagId: TagId }
+      command CreateTag is { tenantId: TenantId, name: String, color: String }
+      command UpdateTag is { tagId: TagId, name: String, color: String }
+      command DeleteTag is { tagId: TagId }
 
       event TagCreated is { tagId: TagId, name: String }
       event TagUpdated is { tagId: TagId, name: String }
@@ -604,9 +604,9 @@ domain EnterprisePlatform is {
   context WorkflowManagement is {
 
     entity Workflow is {
-      type CreateWorkflow is command { tenantId: TenantId, name: String, stages: WorkflowStage* }
-      type UpdateWorkflow is command { workflowId: WorkflowId, name: String, stages: WorkflowStage* }
-      type ArchiveWorkflow is command { workflowId: WorkflowId }
+      command CreateWorkflow is { tenantId: TenantId, name: String, stages: WorkflowStage* }
+      command UpdateWorkflow is { workflowId: WorkflowId, name: String, stages: WorkflowStage* }
+      command ArchiveWorkflow is { workflowId: WorkflowId }
 
       event WorkflowCreated is { workflowId: WorkflowId, name: String }
       event WorkflowUpdated is { workflowId: WorkflowId, name: String }
@@ -654,12 +654,12 @@ domain EnterprisePlatform is {
     }
 
     entity Task is {
-      type CreateTask is command { tenantId: TenantId, projectId: ProjectId, title: String, description: MarkdownText, priority: TaskPriority }
-      type UpdateTask is command { taskId: TaskId, title: String, description: MarkdownText }
-      type AssignTask is command { taskId: TaskId, assigneeId: UserId }
-      type StartTask is command { taskId: TaskId }
-      type CompleteTask is command { taskId: TaskId }
-      type CancelTask is command { taskId: TaskId, reason: String }
+      command CreateTask is { tenantId: TenantId, projectId: ProjectId, title: String, description: MarkdownText, priority: TaskPriority }
+      command UpdateTask is { taskId: TaskId, title: String, description: MarkdownText }
+      command AssignTask is { taskId: TaskId, assigneeId: UserId }
+      command StartTask is { taskId: TaskId }
+      command CompleteTask is { taskId: TaskId }
+      command CancelTask is { taskId: TaskId, reason: String }
 
       event TaskCreated is { taskId: TaskId, projectId: ProjectId, title: String }
       event TaskUpdated is { taskId: TaskId, title: String }
@@ -711,11 +711,11 @@ domain EnterprisePlatform is {
     }
 
     entity Project is {
-      type CreateProject is command { tenantId: TenantId, teamId: TeamId, name: String, description: MarkdownText }
-      type UpdateProject is command { projectId: ProjectId, name: String, description: MarkdownText }
-      type AddProjectMember is command { projectId: ProjectId, userId: UserId, role: ProjectRole }
-      type RemoveProjectMember is command { projectId: ProjectId, userId: UserId }
-      type ArchiveProject is command { projectId: ProjectId }
+      command CreateProject is { tenantId: TenantId, teamId: TeamId, name: String, description: MarkdownText }
+      command UpdateProject is { projectId: ProjectId, name: String, description: MarkdownText }
+      command AddProjectMember is { projectId: ProjectId, userId: UserId, role: ProjectRole }
+      command RemoveProjectMember is { projectId: ProjectId, userId: UserId }
+      command ArchiveProject is { projectId: ProjectId }
 
       event ProjectCreated is { projectId: ProjectId, teamId: TeamId, name: String }
       event ProjectUpdated is { projectId: ProjectId, name: String }
@@ -795,11 +795,11 @@ domain EnterprisePlatform is {
   context Communication is {
 
     entity Team is {
-      type CreateTeam is command { tenantId: TenantId, name: String, description: String }
-      type UpdateTeam is command { teamId: TeamId, name: String, description: String }
-      type AddTeamMember is command { teamId: TeamId, userId: UserId, role: TeamRole }
-      type RemoveTeamMember is command { teamId: TeamId, userId: UserId }
-      type ArchiveTeam is command { teamId: TeamId }
+      command CreateTeam is { tenantId: TenantId, name: String, description: String }
+      command UpdateTeam is { teamId: TeamId, name: String, description: String }
+      command AddTeamMember is { teamId: TeamId, userId: UserId, role: TeamRole }
+      command RemoveTeamMember is { teamId: TeamId, userId: UserId }
+      command ArchiveTeam is { teamId: TeamId }
 
       event TeamCreated is { teamId: TeamId, name: String }
       event TeamUpdated is { teamId: TeamId, name: String }
@@ -855,11 +855,11 @@ domain EnterprisePlatform is {
     }
 
     entity Channel is {
-      type CreateChannel is command { teamId: TeamId, name: String, channelType: ChannelType }
-      type UpdateChannel is command { channelId: ChannelId, name: String, description: String }
-      type AddChannelMember is command { channelId: ChannelId, userId: UserId }
-      type RemoveChannelMember is command { channelId: ChannelId, userId: UserId }
-      type ArchiveChannel is command { channelId: ChannelId }
+      command CreateChannel is { teamId: TeamId, name: String, channelType: ChannelType }
+      command UpdateChannel is { channelId: ChannelId, name: String, description: String }
+      command AddChannelMember is { channelId: ChannelId, userId: UserId }
+      command RemoveChannelMember is { channelId: ChannelId, userId: UserId }
+      command ArchiveChannel is { channelId: ChannelId }
 
       event ChannelCreated is { channelId: ChannelId, teamId: TeamId, name: String }
       event ChannelUpdated is { channelId: ChannelId, name: String }
@@ -910,10 +910,10 @@ domain EnterprisePlatform is {
     }
 
     entity Message is {
-      type SendMessage is command { channelId: ChannelId, authorId: UserId, content: MarkdownText }
-      type EditMessage is command { messageId: MessageId, content: MarkdownText }
-      type AddMessageReaction is command { messageId: MessageId, userId: UserId, emoji: String }
-      type DeleteMessage is command { messageId: MessageId }
+      command SendMessage is { channelId: ChannelId, authorId: UserId, content: MarkdownText }
+      command EditMessage is { messageId: MessageId, content: MarkdownText }
+      command AddMessageReaction is { messageId: MessageId, userId: UserId, emoji: String }
+      command DeleteMessage is { messageId: MessageId }
 
       event MessageSent is { messageId: MessageId, channelId: ChannelId, authorId: UserId }
       event MessageEdited is { messageId: MessageId }
@@ -977,9 +977,9 @@ domain EnterprisePlatform is {
   context NotificationService is {
 
     entity Notification is {
-      type CreateNotification is command { tenantId: TenantId, userId: UserId, notificationType: NotificationType, title: String, body: String }
-      type DeliverNotification is command { notificationId: NotificationId }
-      type MarkNotificationRead is command { notificationId: NotificationId }
+      command CreateNotification is { tenantId: TenantId, userId: UserId, notificationType: NotificationType, title: String, body: String }
+      command DeliverNotification is { notificationId: NotificationId }
+      command MarkNotificationRead is { notificationId: NotificationId }
 
       event NotificationCreated is { notificationId: NotificationId, userId: UserId, notificationType: NotificationType }
       event NotificationDelivered is { notificationId: NotificationId }
@@ -1018,10 +1018,10 @@ domain EnterprisePlatform is {
     }
 
     entity Webhook is {
-      type CreateWebhook is command { tenantId: TenantId, url: String, events: String*, secret: String }
-      type UpdateWebhook is command { webhookId: WebhookId, url: String, events: String* }
-      type DisableWebhook is command { webhookId: WebhookId, reason: String }
-      type EnableWebhook is command { webhookId: WebhookId }
+      command CreateWebhook is { tenantId: TenantId, url: String, events: String*, secret: String }
+      command UpdateWebhook is { webhookId: WebhookId, url: String, events: String* }
+      command DisableWebhook is { webhookId: WebhookId, reason: String }
+      command EnableWebhook is { webhookId: WebhookId }
 
       event WebhookCreated is { webhookId: WebhookId, url: String }
       event WebhookUpdated is { webhookId: WebhookId, url: String }
@@ -1083,10 +1083,10 @@ domain EnterprisePlatform is {
   context BillingManagement is {
 
     entity Customer is {
-      type CreateBillingCustomer is command { tenantId: TenantId, name: String, email: EmailAddress }
-      type UpdateBillingCustomer is command { customerId: CustomerId, name: String, email: EmailAddress }
-      type AddPaymentMethod is command { customerId: CustomerId, methodType: PaymentMethodType, last4: String }
-      type RemovePaymentMethod is command { customerId: CustomerId, methodId: String }
+      command CreateBillingCustomer is { tenantId: TenantId, name: String, email: EmailAddress }
+      command UpdateBillingCustomer is { customerId: CustomerId, name: String, email: EmailAddress }
+      command AddPaymentMethod is { customerId: CustomerId, methodType: PaymentMethodType, last4: String }
+      command RemovePaymentMethod is { customerId: CustomerId, methodId: String }
 
       event BillingCustomerCreated is { customerId: CustomerId, name: String }
       event BillingCustomerUpdated is { customerId: CustomerId, name: String }
@@ -1144,10 +1144,10 @@ domain EnterprisePlatform is {
     }
 
     entity Invoice is {
-      type CreateInvoice is command { tenantId: TenantId, customerId: CustomerId, items: InvoiceLineItem* }
-      type SendInvoice is command { invoiceId: InvoiceId }
-      type MarkInvoicePaid is command { invoiceId: InvoiceId, paymentId: PaymentId }
-      type VoidInvoice is command { invoiceId: InvoiceId, reason: String }
+      command CreateInvoice is { tenantId: TenantId, customerId: CustomerId, items: InvoiceLineItem* }
+      command SendInvoice is { invoiceId: InvoiceId }
+      command MarkInvoicePaid is { invoiceId: InvoiceId, paymentId: PaymentId }
+      command VoidInvoice is { invoiceId: InvoiceId, reason: String }
 
       event InvoiceCreated is { invoiceId: InvoiceId, customerId: CustomerId, total: Money }
       event InvoiceSent is { invoiceId: InvoiceId }
@@ -1196,11 +1196,11 @@ domain EnterprisePlatform is {
     }
 
     entity Payment is {
-      type InitiatePayment is command { tenantId: TenantId, customerId: CustomerId, invoiceId: InvoiceId, amount: Money }
-      type ProcessPayment is command { paymentId: PaymentId }
-      type ConfirmPayment is command { paymentId: PaymentId, transactionId: String }
-      type FailPayment is command { paymentId: PaymentId, failureCode: String, failureMessage: String }
-      type RefundPayment is command { paymentId: PaymentId, amount: Money, reason: String }
+      command InitiatePayment is { tenantId: TenantId, customerId: CustomerId, invoiceId: InvoiceId, amount: Money }
+      command ProcessPayment is { paymentId: PaymentId }
+      command ConfirmPayment is { paymentId: PaymentId, transactionId: String }
+      command FailPayment is { paymentId: PaymentId, failureCode: String, failureMessage: String }
+      command RefundPayment is { paymentId: PaymentId, amount: Money, reason: String }
 
       event PaymentInitiated is { paymentId: PaymentId, customerId: CustomerId, amount: Money }
       event PaymentProcessing is { paymentId: PaymentId }
@@ -1241,10 +1241,10 @@ domain EnterprisePlatform is {
     }
 
     entity Product is {
-      type CreateProduct is command { tenantId: TenantId, name: String, description: String }
-      type UpdateProduct is command { productId: ProductId, name: String, description: String }
-      type AddPricing is command { productId: ProductId, amount: Money, interval: BillingInterval }
-      type ArchiveProduct is command { productId: ProductId }
+      command CreateProduct is { tenantId: TenantId, name: String, description: String }
+      command UpdateProduct is { productId: ProductId, name: String, description: String }
+      command AddPricing is { productId: ProductId, amount: Money, interval: BillingInterval }
+      command ArchiveProduct is { productId: ProductId }
 
       event ProductCreated is { productId: ProductId, name: String }
       event ProductUpdated is { productId: ProductId, name: String }

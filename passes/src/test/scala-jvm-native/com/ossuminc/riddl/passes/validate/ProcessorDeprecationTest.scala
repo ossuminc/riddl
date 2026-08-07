@@ -25,7 +25,7 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
   private def flowModel(header: String): String =
     s"""domain D is {
        |  context C is {
-       |    type Cmd = command { x: Integer }
+       |    command Cmd = { x: Integer }
        |    $header is {
        |      inlet i is command Cmd
        |      outlet o is command Cmd
@@ -39,7 +39,7 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
   private def sendModel(target: String): String =
     s"""domain D is {
        |  context C is {
-       |    type Cmd = command { x: Integer }
+       |    command Cmd = { x: Integer }
        |    processor P as flow is {
        |      inlet i is command Cmd
        |      outlet o is command Cmd

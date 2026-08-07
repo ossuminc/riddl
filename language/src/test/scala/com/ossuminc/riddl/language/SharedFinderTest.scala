@@ -61,11 +61,11 @@ class SharedFinderTest extends AbstractTestingBasis {
     "findInParents finds definitions in ancestor chain" in {
       val content2 =
         """domain D {
-          |  type DomainCmd is command { ??? }
+          |  command DomainCmd is { ??? }
           |  context C {
-          |    type CtxCmd is command { ??? }
+          |    command CtxCmd is { ??? }
           |    entity E {
-          |      type EntCmd is command { ??? }
+          |      command EntCmd is { ??? }
           |      handler H { ??? }
           |    }
           |  }

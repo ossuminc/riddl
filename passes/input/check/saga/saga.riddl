@@ -1,7 +1,7 @@
 domain ignore1 is {
   context ignore2 is {
-    type Something = command { ??? }
-    type UndoSomething = command { ??? }
+    command Something = { ??? }
+    command UndoSomething = { ??? }
     function AnotherThing {
       requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
     } with { explained as "A simple function for another" }

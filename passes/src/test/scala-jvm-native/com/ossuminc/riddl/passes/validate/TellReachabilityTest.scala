@@ -20,7 +20,7 @@ class TellReachabilityTest extends AbstractValidatingTest {
   private def model(connector: String): String =
     s"""domain d is {
        |  context c is {
-       |    type Cmd is command { x: Integer }
+       |    command Cmd is { x: Integer }
        |    entity E is {
        |      inlet ein is command Cmd
        |      handler eh is { on command Cmd { ??? } }

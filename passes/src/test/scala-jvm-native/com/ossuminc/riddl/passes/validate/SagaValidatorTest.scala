@@ -66,8 +66,8 @@ class SagaValidatorTest extends AbstractValidatingTest {
   private def stepModel(stepOneDo: String): String =
     s"""domain d is {
        |  context c is {
-       |    type Args is record { a: Integer, b: Integer }
-       |    type Sum is record { total: Integer }
+       |    record Args is { a: Integer, b: Integer }
+       |    record Sum is { total: Integer }
        |    command Go is { xfield: Integer }
        |    command UndoGo is { xfield: Integer }
        |    function Add is {

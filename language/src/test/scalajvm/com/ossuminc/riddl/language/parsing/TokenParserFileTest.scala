@@ -54,7 +54,10 @@ class TokenParserFileTest extends AbstractParsingTest {
         case Left(messages) =>
           fail(messages.format)
         case Right(tokens) =>
-          tokens.length must be(409) // A9b: +2 tokens (record keyword on migrated states)
+          // A9b: +2 tokens (record keyword on migrated states). 2026-08-06: -1, because the
+          // fixture's one type-first aggregate moved to kind-first -- `type X is command {` is
+          // five tokens, `command X is {` is four.
+          tokens.length must be(408)
           val tasStr = tokens.toString
           tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
           tasStr must include("LiteralCode")

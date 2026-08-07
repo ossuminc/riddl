@@ -105,7 +105,7 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
         """domain D is {
           |  user U is "a user"
           |  application context UI is {
-          |    type Greeting is record { text: String }
+          |    record Greeting is { text: String }
           |    command Refresh is { ??? }
           |    group Main is {
           |      form Entry acquires type Greeting
@@ -136,7 +136,7 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
         """domain D is {
           |  user U is "a user"
           |  application context UI is {
-          |    type Greeting is record { text: String }
+          |    record Greeting is { text: String }
           |    group Main is {
           |      output Panel presents type Greeting
           |    }
@@ -162,7 +162,7 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
         """domain D is {
           |  user U is "a user"
           |  application context UI is {
-          |    type Greeting is record { text: String }
+          |    record Greeting is { text: String }
           |    command Refresh is { ??? }
           |    group Main is {
           |      form Entry acquires type Greeting
@@ -193,7 +193,7 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
         """domain D is {
           |  user U is "a user"
           |  application context UI is {
-          |    type Greeting is record { text: String }
+          |    record Greeting is { text: String }
           |    group Main is {
           |      form Entry acquires type Greeting
           |    }
@@ -217,7 +217,7 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
         """domain D is {
           |  user U is "a user"
           |  application context UI is {
-          |    type Greeting is record { text: String }
+          |    record Greeting is { text: String }
           |    group Main is {
           |      output Panel presents type Greeting
           |    }

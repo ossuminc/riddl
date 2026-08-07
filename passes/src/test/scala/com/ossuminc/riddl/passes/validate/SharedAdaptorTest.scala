@@ -36,7 +36,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
         """domain ignore is {
           |  context Target is {???}
           |  context Foo is {
-          |    type ItHappened = event { abc: String } with { described as "abc" }
+          |    event ItHappened = { abc: String } with { described as "abc" }
           |    adaptor PaymentAdapter to context Target is {
           |      handler sendAMessage is {
           |        on event ItHappened {
@@ -66,7 +66,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
         """domain ignore is {
           | context Target is {???}
           | context Foo is {
-          |  type ItWillHappen = command { abc: String } with { described as "abc" }
+          |  command ItWillHappen = { abc: String } with { described as "abc" }
           |  command  LetsDoIt is { bcd: String with { described as "abc" } } with { described as "?" }
           |
           |  entity MyEntity is {

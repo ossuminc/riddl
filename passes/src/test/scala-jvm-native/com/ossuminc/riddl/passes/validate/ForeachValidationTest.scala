@@ -18,11 +18,11 @@ class ForeachValidationTest extends AbstractValidatingTest {
   private def model(body: String, extra: String = ""): String =
     s"""domain d is {
        |  context c is {
-       |    type Order is record { id: String }
+       |    record Order is { id: String }
        |    type OrderList is many Order
-       |    type Batch is command { orders: OrderList }
-       |    type Single is command { count: Integer }
-       |    type Other is record { items: OrderList }
+       |    command Batch is { orders: OrderList }
+       |    command Single is { count: Integer }
+       |    record Other is { items: OrderList }
        |    $extra
        |    handler h is {
        |      on command Batch {

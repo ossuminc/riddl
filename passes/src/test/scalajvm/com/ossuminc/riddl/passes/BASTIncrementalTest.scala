@@ -242,7 +242,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         "source-sink",
         """domain D is {
         context C is {
-          type Msg is command { data: String }
+          command Msg is { data: String }
           source S is { outlet out is type Msg }
           sink K is { inlet in is type Msg }
         }
@@ -255,7 +255,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         "connector",
         """domain D is {
         context C is {
-          type Msg is command { data: String }
+          command Msg is { data: String }
           source S is { outlet out is type Msg }
           sink K is { inlet in is type Msg }
           connector Conn from outlet S.out to inlet K.in
@@ -403,7 +403,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         "flow-io",
         """domain D is {
         context C is {
-          type Msg is event { data: String }
+          event Msg is { data: String }
           flow F is {
             inlet in is type Msg
             outlet out is type Msg
@@ -418,7 +418,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         "flow-connector",
         """domain D is {
         context C is {
-          type Msg is event { data: String }
+          event Msg is { data: String }
           flow F is {
             inlet in is type Msg
             outlet out is type Msg
@@ -469,8 +469,8 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         "event-cmd",
         """domain D is {
         context C is {
-          type AddCmd is command { name: String }
-          type AddedEvt is event { when: TimeStamp }
+          command AddCmd is { name: String }
+          event AddedEvt is { when: TimeStamp }
           type CmdEvtUnion is one of { type AddCmd or type AddedEvt }
         }
       }"""
@@ -483,10 +483,10 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
         "entity-events",
         """domain D is {
         context C is {
-          type Added is event { when: TimeStamp }
+          event Added is { when: TimeStamp }
           source EventSource is { outlet out is type Added }
           entity E is {
-            type Add is command { name: String }
+            command Add is { name: String }
             record Fields is { name: String }
             state S of record E.Fields
             handler H is {
@@ -556,7 +556,7 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
           }
 
           entity Company is {
-            type AddCompany is command { address: Address }
+            command AddCompany is { address: Address }
             event CompanyAdded is { when: TimeStamp }
             type CompanyEvent is one of { event CompanyAdded }
 

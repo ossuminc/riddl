@@ -102,7 +102,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
         """domain entityTest is {
           |context EntityContext is {
           |entity Hamburger is {
-          |  type EntityCommand is command { foo: String }
+          |  command EntityCommand is { foo: String }
           |  record Fields is { field1: String }
           |  state HamburgerState of record Fields
           |  handler doit is {

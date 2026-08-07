@@ -42,14 +42,14 @@ class ValueRoundTripTest extends AbstractValidatingTest {
   private val src =
     """domain d is {
       |  context Calc is {
-      |    type Sum is record { total: Integer }
+      |    record Sum is { total: Integer }
       |    function Add is {
       |      returns record Sum
       |      return record Sum(total = "the total")
       |    }
       |  }
       |  application context UI is {
-      |    type Greeting is record { text: String }
+      |    record Greeting is { text: String }
       |    command Refresh is { ??? }
       |    group Main is {
       |      form Entry acquires type Greeting
@@ -169,8 +169,8 @@ class ValueRoundTripTest extends AbstractValidatingTest {
       val callSrc =
         """domain d is {
           |  context Calc is {
-          |    type Args is record { a: Integer, b: Integer }
-          |    type Sum is record { total: Integer }
+          |    record Args is { a: Integer, b: Integer }
+          |    record Sum is { total: Integer }
           |    function Add is {
           |      requires record Args
           |      returns record Sum

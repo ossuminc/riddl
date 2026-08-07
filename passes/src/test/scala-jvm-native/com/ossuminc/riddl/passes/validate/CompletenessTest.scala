@@ -85,8 +85,8 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -99,7 +99,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    type GetData is query { id: String }
+          |    query GetData is { id: String }
           |    source Events is { outlet out is type Evt }
           |    sink Incoming is { inlet in is type Cmd }
           |  }
@@ -117,8 +117,8 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -134,7 +134,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    type GetData is query { id: String }
+          |    query GetData is { id: String }
           |    source Events is { outlet out is type Evt }
           |    sink Incoming is { inlet in is type Cmd }
           |  }
@@ -152,8 +152,8 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -169,7 +169,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    type GetData is query { id: String }
+          |    query GetData is { id: String }
           |    source Events is { outlet out is type Evt }
           |    sink Incoming is { inlet in is type Cmd }
           |  }
@@ -187,7 +187,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { data: String }
+          |    command Cmd is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -201,7 +201,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    type GetData is query { id: String }
+          |    query GetData is { id: String }
           |    sink Incoming is { inlet in is type Cmd }
           |  }
           |}
@@ -222,8 +222,8 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -237,7 +237,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    type GetData is query { id: String }
+          |    query GetData is { id: String }
           |    source Events is { outlet out is type Evt }
           |    sink Incoming is { inlet in is type Cmd }
           |  }
@@ -259,8 +259,8 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Qry is query { id: String }
-          |    type Evt is event { data: String }
+          |    query Qry is { id: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -292,9 +292,9 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    projector P is {
-          |      type ProjRecord is record { data: String }
+          |      record ProjRecord is { data: String }
           |      handler H is {
           |        on event D.C.Evt {
           |          do "handle event"
@@ -320,7 +320,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    repository Repo is {
           |      schema S is flat of records as type D.C.RecType
           |      handler RH is {
@@ -329,10 +329,10 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    type Store is command { data: String }
-          |    type RecType is record { data: String }
+          |    command Store is { data: String }
+          |    record RecType is { data: String }
           |    projector P is {
-          |      type ProjRecord is record { data: String }
+          |      record ProjRecord is { data: String }
           |      updates repository Repo
           |      handler H is {
           |        on event D.C.Evt {
@@ -359,7 +359,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -386,7 +386,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -415,8 +415,8 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -448,8 +448,8 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { data: String }
-          |    type GetData is query { id: String }
+          |    command Cmd is { data: String }
+          |    query GetData is { id: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -483,9 +483,9 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
-          |    type GetData is query { id: String }
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
+          |    query GetData is { id: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -537,10 +537,10 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
-          |    type GetData is query { id: String }
-          |    type DataResult is result { data: String }
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
+          |    query GetData is { id: String }
+          |    result DataResult is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -572,7 +572,7 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context FrontOfHouse is {
           |    type ReservationId is Id(FrontOfHouse.Reservation)
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    entity Reservation is {
           |      record Fields is { data: String }
           |      state Main of record Reservation.Fields
@@ -617,7 +617,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      type EId is Id(E)
           |      record Fields is { data: String }
@@ -645,7 +645,7 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  type EId is Id(C.E)
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -678,7 +678,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    saga S is {
           |      requires { data: String }
           |      returns { result: String }
@@ -708,7 +708,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -744,7 +744,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    type SomeEvent is event { data: String }
+          |    event SomeEvent is { data: String }
           |  }
           |}
           |""".stripMargin,
@@ -769,7 +769,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    type SomeEvent is event { data: String }
+          |    event SomeEvent is { data: String }
           |  }
           |}
           |""".stripMargin,
@@ -786,11 +786,11 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context C is {
           |    type EId is Id(C.E)
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
-          |    type OrphanEvent is event { info: String }
-          |    type GetData is query { id: String }
-          |    type DataResult is result { data: String }
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
+          |    event OrphanEvent is { info: String }
+          |    query GetData is { id: String }
+          |    result DataResult is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -823,7 +823,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type GetData is query { id: String }
+          |    query GetData is { id: String }
           |  }
           |}
           |""".stripMargin,
@@ -839,7 +839,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type DataResult is result { data: String }
+          |    result DataResult is { data: String }
           |  }
           |}
           |""".stripMargin,
@@ -856,9 +856,9 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context C is {
           |    type EId is Id(C.E)
-          |    type Cmd is command { data: String }
-          |    type Evt is event { data: String }
-          |    type DataResult is result { data: String }
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
+          |    result DataResult is { data: String }
           |    query GetData yields result D.C.DataResult is { id: String }
           |
           |    entity E is {
@@ -912,7 +912,7 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context C is {
           |    type EId is Id(C.E)
-          |    type DataResult is result { data: String }
+          |    result DataResult is { data: String }
           |    query GetData yields result D.C.DataResult is { id: String }
           |    entity E is {
           |      record Fields is { data: String }
@@ -940,8 +940,8 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context C is {
           |    type EId is Id(C.E)
-          |    type Cmd is command { amount: Number }
-          |    type Evt is event { amount: Number }
+          |    command Cmd is { amount: Number }
+          |    event Evt is { amount: Number }
           |    entity E is {
           |      record Fields is { balance: Number }
           |      invariant BalanceNonNegative is "balance >= 0"
@@ -981,7 +981,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      invariant DataNotEmpty is "data.nonEmpty"
@@ -1009,7 +1009,7 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    record Limits is { ceiling: Integer, used: Integer }
           |    entity E is {
           |      record Fields is { data: String }
@@ -1039,7 +1039,7 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context C is {
           |    type EId is Id(C.E)
-          |    type Evt is event { data: String }
+          |    event Evt is { data: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields

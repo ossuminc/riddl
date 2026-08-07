@@ -68,10 +68,10 @@ class MessageFlowPassTest extends AbstractValidatingTest {
             |        }
             |      }
             |    }
-            |    type DoSomething is command { ??? }
+            |    command DoSomething is { ??? }
             |  }
             |  context Target is {
-            |    type DoSomething is command { ??? }
+            |    command DoSomething is { ??? }
             |  }
             |}
             |""".stripMargin
@@ -129,8 +129,8 @@ class MessageFlowPassTest extends AbstractValidatingTest {
       runMessageFlowPass(
         """domain D is {
           |  context C is {
-          |    type Cmd is command { ??? }
-          |    type Evt is event { ??? }
+          |    command Cmd is { ??? }
+          |    event Evt is { ??? }
           |    entity Sender is {
           |      handler H is {
           |        on command D.C.Cmd is {

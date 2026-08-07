@@ -119,9 +119,9 @@ passes/input/check/saga/saga.riddl(13:26->34):
 passes/input/check/saga/saga.riddl(12:5->16):
  Entity 'blah' is unused:
      entity blah is {
-passes/input/check/saga/saga.riddl(4:5->23):
+passes/input/check/saga/saga.riddl(4:5->26):
  Command 'UndoSomething' is unused:
-     type UndoSomething = command { ??? }
+     command UndoSomething = { ??? }
 passes/input/check/saga/saga.riddl(5:5->26):
  Function 'AnotherThing' is unused:
      function AnotherThing {

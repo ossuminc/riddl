@@ -21,8 +21,8 @@ class ValueValidationTest extends AbstractValidatingTest {
   private def app(body: String, extra: String = ""): String =
     s"""domain d is {
        |  application context UI is {
-       |    type Greeting is record { text: String }
-       |    type Other is record { n: Integer }
+       |    record Greeting is { text: String }
+       |    record Other is { n: Integer }
        |    command Refresh is { ??? }
        |    $extra
        |    group Main is {
@@ -41,8 +41,8 @@ class ValueValidationTest extends AbstractValidatingTest {
   private def func(body: String, returns: String = "record Sum"): String =
     s"""domain d is {
        |  context Calc is {
-       |    type Sum is record { total: Integer }
-       |    type Diff is record { d: Integer }
+       |    record Sum is { total: Integer }
+       |    record Diff is { d: Integer }
        |    function Add is {
        |      returns $returns
        |      $body

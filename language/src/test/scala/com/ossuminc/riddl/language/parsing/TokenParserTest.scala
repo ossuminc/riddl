@@ -195,7 +195,7 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
         |  }
         |
         |  entity SomeOtherThing is {
-        |    type ItHappened is event { aField: String }
+        |    event ItHappened is { aField: String }
         |    record otherThingData is { aField: String }
         |    state otherThingState of record SomeOtherThing.otherThingData
         |    handler fee is {
@@ -222,7 +222,10 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
       case Left(messages) =>
         fail(messages.format)
       case Right(list) =>
-        list.length must be(406) // A9b: +2 tokens (record keyword on migrated states)
+        // A9b: +2 tokens (record keyword on migrated states). 2026-08-06: -1, because the
+        // fixture's one type-first aggregate moved to kind-first -- `type X is command {` is five
+        // tokens, `command X is {` is four.
+        list.length must be(405)
         list.head mustBe ("Keyword(context)")
         list(1) mustBe ("Identifier(full)")
     end match
