@@ -4075,6 +4075,90 @@ case class ValidationPass(
     * [[LiteralString]]) or cannot be determined. Used for best-effort type-compatibility checks;
     * `None` means "skip the check", so type errors are only raised when both sides resolve.
     */
+  /** The [[Type]] an `ask` answers with: the query's declared `replies result X`.
+    *
+    * Two hops, both through the refMap: the [[QueryRef]] names a query [[Type]], whose
+    * [[AggregateUseCaseTypeExpression.yields]] holds the declared result reference. `None` only
+    * when the query does not resolve or declares no `replies` -- both of which `validateAsk`
+    * reports, so a caller seeing `None` has already been told why.
+    */
+  private def askResultType(ask: Ask): Option[Type] =
+    resolution.refMap.definitionOf[Type](ask.query.pathId).flatMap { queryType =>
+      queryType.typEx match
+        case auc: AggregateUseCaseTypeExpression =>
+          auc.yields.flatMap(r => resolution.refMap.definitionOf[Type](r.pathId))
+        case _ => None
+    }
+
+  /** The three ways an `ask` can be wrong, all of them decidable here.
+    *
+    * `ask` declares a correlation between two halves of one interaction, so validation's job is to
+    * check the interaction can actually happen: the thing asked must be answerable, must say what
+    * it answers with, and must be asked of something that handles it.
+    */
+  private def validateAsk(ask: Ask, parents: Parents): Unit =
+    // 1. The target must resolve, and it must be a query. The ref TYPE makes the kind structural
+    //    -- a QueryRef cannot name a command -- so this catches an unresolved or mis-kinded path.
+    val queryType = checkRef[Type](ask.query, parents)
+    val target = checkRef[Processor[?]](ask.processor, parents)
+
+    // 3. The processor asked must actually handle the query, or the ask can never be answered.
+    //    Checked directly rather than through UseCaseWitnessPass's `handledBy` index, which is
+    //    built in a later pass and is not reachable from here.
+    //
+    //    Deliberately CONSERVATIVE: an `on other` clause handles every message, and a State's
+    //    handlers count as the entity's (an Entity may hold its handlers under a State). Silent
+    //    when either side is unresolved -- ref-integrity already reports that, and piling a
+    //    "does not handle" error on top of a "not resolved" one helps nobody.
+    for
+      qt <- queryType
+      proc <- target
+    do
+      val stateHandlers = proc match
+        case e: Entity => e.states.flatMap(_.handlers)
+        case _         => Seq.empty
+      val clauses = (proc.handlers ++ stateHandlers).flatMap(_.clauses)
+      val handlesAnything = clauses.exists(_.isInstanceOf[OnOtherClause])
+      val handlesThis = clauses.exists {
+        case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+          resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(_ eq qt)
+        case _ => false
+      }
+      if !handlesThis && !handlesAnything then
+        messages.addError(
+          ask.loc,
+          s"${proc.identify} has no clause handling ${qt.identify}, so this `ask` cannot be " +
+            "answered",
+          suggestion = s"Add `on query ${ask.query.pathId.format} is { … }` to ${proc.identify}, " +
+            s"or ask a processor that handles it."
+        )
+      end if
+    end for
+
+    queryType.foreach { qt =>
+      qt.typEx match
+        case auc: AggregateUseCaseTypeExpression if auc.usecase == AggregateUseCase.QueryCase =>
+          // 2. It must declare what it answers with, or the answer has no type. `replies` is
+          //    OPTIONAL in general -- this is the one place that makes it mandatory, which is why
+          //    the requirement lives at the ASK site rather than on every query.
+          if auc.yields.isEmpty then
+            messages.addError(
+              ask.loc,
+              s"${qt.identify} declares no `${Keyword.replies}`, so `ask` has no answer to bind",
+              suggestion = s"Declare what it answers with — `query ${qt.id.value} " +
+                s"${Keyword.replies} result <SomeResult> is { … }` — or use `tell` if no answer " +
+                "is expected."
+            )
+        case _ =>
+          messages.addError(
+            ask.query.loc,
+            s"`ask` takes a query, but ${qt.identify} is not one",
+            suggestion = "Ask a query. A command, event, result or record is not answerable — " +
+              "use `tell` to deliver one."
+          )
+    }
+  end validateAsk
+
   private def valueType(v: Value, parents: Parents, lets: Seq[LetStatement]): Option[Type] =
     v match
       case _: LiteralString => None // pseudo-code, untyped
@@ -4088,6 +4172,12 @@ case class ValidationPass(
             case Some(tr: TypeRef) => resolution.refMap.definitionOf[Type](tr.pathId)
             case _                 => None
         }
+      case ask: Ask =>
+        // ALWAYS derivable, never unknown: resolve the query, read the `replies result X` it
+        // declares, resolve THAT. A query with no `replies` has no answer type -- which is why
+        // `validateValue` reports it as an Error at the ask site rather than leaving a `let`
+        // untyped. Mirrors the Call arm, which reads a function's declared `output`.
+        askResultType(ask)
       case vr: ValueRef => valueRefType(vr, parents, lets)
       case gv: GetValue =>
         gv.source match
@@ -4262,6 +4352,7 @@ case class ValidationPass(
       case _: PromptValue   => () // literal AI prompt, nothing to resolve
       case c: Constructor   => validateConstructor(c, parents, lets)
       case call: Call       => validateCall(call, parents, lets)
+      case ask: Ask         => validateAsk(ask, parents)
       case vr: ValueRef =>
         if !valueRefResolves(vr, parents, lets) then
           messages.addError(

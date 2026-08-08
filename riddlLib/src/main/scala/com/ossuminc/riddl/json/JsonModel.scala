@@ -765,6 +765,12 @@ object JsonModel:
     */
   case class CallValueDto(function: String, args: Seq[ConstructorArgDto]) extends ValueDto
 
+  /** `{ "value": "ask", "query": "<path>", "processor": "<path>" }` -- the correlation `ask`
+    * declares. No answer type is carried: it is the query's declared `replies result X`, so
+    * storing it would be a second place for the same fact to go stale.
+    */
+  case class AskValueDto(query: String, processor: String, processorKind: String) extends ValueDto
+
   /** `{ "value": "valueRef", "path": "<path>" }` */
   case class ValueRefDto(path: String) extends ValueDto
 
@@ -1593,6 +1599,8 @@ object JsonModel:
           )
           .getOrElse(Nil)
         CallValueDto(m("function").str, args)
+      case "ask" =>
+        AskValueDto(m("query").str, m("processor").str, m("processorKind").str)
       case other => throw new IllegalArgumentException(s"Unknown value kind: '$other'")
   end readValueObj
 
@@ -1651,6 +1659,13 @@ object JsonModel:
                 ++ Seq("value" -> (writeValue(a.value): ujson.Value))
             )
           })
+        )
+      case AskValueDto(query, processor, processorKind) =>
+        ujson.Obj(
+          "value" -> ujson.Str("ask"),
+          "query" -> ujson.Str(query),
+          "processor" -> ujson.Str(processor),
+          "processorKind" -> ujson.Str(processorKind)
         )
       case CallValueDto(function, args) =>
         ujson.Obj(

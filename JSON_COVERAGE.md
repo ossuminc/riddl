@@ -180,6 +180,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | PromptValue | ✅ A54 | `{ "value": "prompt", "prompt": ... }` — AI-computed value |
 | Constructor / ConstructorArg | ✅ A54 | refKind command/event/query/result/record; positional + named args |
 | Call | ✅ A24 | `{ "value": "call", "function": "<path>", "args": [<arg>] }` — call a pure function to get a result |
+| Ask | ✅ 2.0 | `{ "value": "ask", "query": "<path>", "processor": "<path>", "processorKind": "<kind>" }` — a query correlated with the processor asked. No answer type is carried: it is the query's declared `replies result X`, so storing it would be a second place for the same fact to drift |
 | ValueRef | ✅ A54 | `{ "value": "valueRef", "path": ... }` |
 | GetValue | ✅ A54 | `{ "value": "get", "source": "input"\|"state", "ref": ... }` |
 | BooleanLiteral | ✅ A28 | `{ "value": "boolLiteral", "bool": true\|false }` |

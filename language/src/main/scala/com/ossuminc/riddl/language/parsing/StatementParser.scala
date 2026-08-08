@@ -445,6 +445,7 @@ private[parsing] trait StatementParser {
       literalString.map(ls => ls: Value) |
         promptValue.map(pv => pv: Value) |
         callValue.map(c => c: Value) | // A24: `call function F(args)` (keyword-led)
+        askValue.map(a => a: Value) | // `ask query Q of <processor>` (keyword-led)
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
         booleanExpr
@@ -613,6 +614,19 @@ private[parsing] trait StatementParser {
     )./.map { case (start, fnRef, args, end) =>
       Call(at(start, end), fnRef, args.toSeq)
     }
+  }
+
+  /** `ask query Foo of entity Bar` -- a request whose answer is a value.
+    *
+    * The operand is a `queryRef` SPECIFICALLY, not a general messageRef, so "ask takes a query" is
+    * structural: asking a command cannot be built, only mis-parsed, and the resulting message
+    * names the shape the author actually wrote. Validation still reports an unresolved query and a
+    * query that declares no `replies`, since neither is decidable here.
+    */
+  private def askValue[u: P]: P[Ask] = {
+    P(
+      Index ~ Keywords.ask ~/ queryRef ~ of ~/ processorRef ~/ Index
+    )./.map { case (start, qRef, pRef, end) => Ask(at(start, end), qRef, pRef) }
   }
 
   // A45/A45b: `get from (input <ref> | state <ref>)`. The ref parsers already consume their leading

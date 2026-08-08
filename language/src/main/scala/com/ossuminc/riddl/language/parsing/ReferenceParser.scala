@@ -33,7 +33,9 @@ private[parsing] trait ReferenceParser {
     }
   }
 
-  private def queryRef[u: P]: P[QueryRef] = {
+  // Non-private so StatementParser can build an `ask`, whose operand is a QUERY specifically --
+  // that is what makes the query-only restriction structural rather than a validation check.
+  def queryRef[u: P]: P[QueryRef] = {
     P(Index ~ Keywords.query ~ pathIdentifier ~~ Index).map { case (start, pid, end) =>
       QueryRef(at(start, end), pid)
     }

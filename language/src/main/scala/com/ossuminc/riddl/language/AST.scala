@@ -794,7 +794,7 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression | Call | Requires | Returns | InvariantBlock
+    GetValue | PromptValue | BooleanExpression | Call | Ask | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -2911,7 +2911,8 @@ object AST:
     * `.loc` are available on the union directly.
     */
   type Value =
-    LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call
+    LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
+      Ask
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -2987,6 +2988,45 @@ object AST:
     override def kind: String = "Call"
     def format: String = s"call ${function.format}(${args.map(_.format).mkString(", ")})"
   end Call
+
+  /** `ask query Foo of entity Bar` -- a request whose ANSWER is a value.
+    *
+    * RIDDL could already send a message (`tell`) and declare what handling one produces
+    * (`yields`/`replies`). What it could not say is that two messages are two halves of ONE
+    * interaction: `yield` names no destination, `tell` says nothing about a reply, and the word
+    * `correlation` appeared nowhere in the language. A generator therefore could not tell
+    * fire-and-forget from a request whose answer the caller awaits.
+    *
+    * `ask` declares that CORRELATION and nothing more. It deliberately implies no mechanism -- not
+    * a Future, not a temp actor, not a correlation-id field, not a blocking call. All four are
+    * lowerings a generator should be free to choose between, on the same principle that settled
+    * `message_envelope`: RIDDL specifies meaning and leaves representation to generators.
+    *
+    * QUERIES ONLY (Reid, 2026-08-08). Asking a command, event, result or record is an Error: a
+    * query is the message kind that exists to be answered, and its declared `replies result X` is
+    * what gives the answer a type. That is why this could not be built before the `yield`/`reply`
+    * split -- there was no per-query declaration to look the type up from.
+    *
+    * It is a [[Value]] rather than a Statement so `let answer = ask query Foo of entity Bar` works
+    * through the EXISTING [[LetStatement]], whose `expression` is already a `Value`. [[Call]] set
+    * the precedent for a Value that names an effect.
+    *
+    * @param loc
+    *   The location of the ask in the source
+    * @param query
+    *   The query being asked. A [[QueryRef]] specifically, so the kind restriction is structural.
+    * @param processor
+    *   The processor being asked
+    */
+  @JSExportTopLevel("Ask")
+  case class Ask(
+    loc: At,
+    query: QueryRef,
+    processor: ProcessorRef[Processor[?]]
+  ) extends RiddlValue:
+    override def kind: String = "Ask"
+    def format: String = s"ask ${query.format} of ${processor.format}"
+  end Ask
 
   /** A54: a reference to a named value in scope. Resolved (at validation time) from one of four
     * sources: a `let`-bound local, a field of the handled on-clause message, a field of the

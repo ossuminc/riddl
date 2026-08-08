@@ -2413,6 +2413,15 @@ class BASTReader(
         readConstructor()
       case 6 => // A24: Call
         readCall()
+      case 7 => // Ask -- a query correlated with the processor asked
+        val askLoc = readLocation()
+        val q = readMessageRef() match
+          case qr: QueryRef => qr
+          case other =>
+            throw new RuntimeException(
+              s"Ask names a ${other.getClass.getSimpleName}, but `ask` takes a query"
+            )
+        Ask(askLoc, q, readProcessorRef())
       case 2 => // ValueRef
         val loc = readLocation()
         val pid = readPathIdentifierInline()

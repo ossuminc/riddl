@@ -404,6 +404,15 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         // A24: resolve the called function and recurse into argument values.
         associateUsage[Function](parents.head, resolveARef[Function](call.function, parents))
         call.args.foreach(arg => resolveValue(arg.value, parents))
+      case ask: Ask =>
+        // Both halves of the correlation: the QUERY being asked and the PROCESSOR being asked of.
+        // The answer's type is NOT resolved here -- it is the query's declared `replies result X`,
+        // read in ValidationPass.valueType where every other value's type is decided.
+        associateUsage[Type](parents.head, resolveARef[Type](ask.query, parents))
+        associateUsage[Processor[?]](
+          parents.head,
+          resolveARef[Processor[?]](ask.processor, parents)
+        )
       case vr: ValueRef => deferValueRef(vr, parents)
       case gv: GetValue =>
         gv.source match

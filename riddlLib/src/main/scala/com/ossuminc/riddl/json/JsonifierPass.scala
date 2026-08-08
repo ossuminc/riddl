@@ -1431,6 +1431,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         case sr: StateRef => GetValueDto("state", None, path(sr.pathId))
     case c: Constructor     => serializeConstructor(c)
     case call: Call         => serializeCall(call) // A24
+    case ask: Ask =>
+      val (pp, pk) = processorRef(ask.processor)
+      AskValueDto(path(ask.query.pathId), pp, pk)
     case bl: BooleanLiteral => BooleanLiteralDto(bl.value)
     case ce: ComparisonExpression =>
       ComparisonDto(ce.op.symbol, serializeComparand(ce.left), serializeComparand(ce.right))

@@ -1288,7 +1288,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   /** A54/A28: self-contained value codec. A leading discriminator byte selects the arm
     * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue, 5=BooleanExpression,
-    * 6=Call); the reader mirrors this exactly. Discriminator 5 is followed by a sub-tag byte
+    * 6=Call, 7=Ask); the reader mirrors this exactly. Discriminator 5 is followed by a sub-tag byte
     * selecting the boolean node (0=BooleanLiteral, 1=Comparison, 2=Logical, 3=Not); operator enums
     * are stored by ordinal.
     */
@@ -1308,6 +1308,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case call: Call =>
         writer.writeU8(6)
         writeCall(call)
+      case ask: Ask =>
+        writer.writeU8(7)
+        writeAsk(ask)
       case vr: ValueRef =>
         writer.writeU8(2)
         writeLocation(vr.loc)
@@ -1417,6 +1420,15 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   /** A24: mirror in [[BASTReader.readCall]]. `writeFunctionRef` emits its own NODE_FUNCTION_REF
     * tag; args are framed exactly like [[writeConstructor]]'s.
     */
+  // `ask query Q of <processor>`. Only the two REFS are stored: the answer's type is the query's
+  // declared `replies result X`, so writing it here would be a second place for the same fact to
+  // drift.
+  def writeAsk(a: Ask): Unit = {
+    writeLocation(a.loc)
+    writeMessageRef(a.query)
+    writeProcessorRef(a.processor)
+  }
+
   def writeCall(c: Call): Unit = {
     writeLocation(c.loc)
     writeFunctionRef(c.function)

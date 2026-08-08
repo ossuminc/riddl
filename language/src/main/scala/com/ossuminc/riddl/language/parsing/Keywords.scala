@@ -283,6 +283,7 @@ object Keywords {
 
   def replica[u: P]: P[Unit] = keyword(Keyword.replica)
 
+  def ask[u: P]: P[Unit] = keyword(Keyword.ask)
   def replies[u: P]: P[Unit] = keyword(Keyword.replies)
   def reply[u: P]: P[Unit] = keyword(Keyword.reply)
 
@@ -479,6 +480,7 @@ object Keywords {
           Keyword.relationship,
           Keyword.remove,
           Keyword.replica,
+          Keyword.ask,
           Keyword.replies,
           Keyword.reply,
           Keyword.repository,
@@ -643,6 +645,7 @@ object Keyword {
   final val relationship = "relationship"
   final val remove = "remove"
   final val replica = "replica"
+  final val ask = "ask"
   final val replies = "replies"
   final val reply = "reply"
   final val repository = "repository"
@@ -804,6 +807,7 @@ object Keyword {
     relationship,
     remove,
     replica,
+    ask,
     replies,
     reply,
     repository,
