@@ -3311,7 +3311,13 @@ case class ValidationPass(
     checkDefinition(parents, uc)
     if uc.userStory.nonEmpty then checkRef[User](uc.userStory.user, parents)
     if uc.contents.nonEmpty then {
-      uc.contents.foreach {
+      // RECURSIVE over interaction groups. Each container's contents get exactly the validation
+      // its siblings get one level out. Before this, the three container arms checked only
+      // EMPTINESS and never descended, so a step inside `sequence`/`parallel`/`optional` was
+      // never validated -- and, with ResolutionPass dropping the same contents, never resolved
+      // either. A model could name definitions that do not exist and validate green. Recursion
+      // also covers nesting (a `sequence` inside a `parallel`), which a flat pass would not.
+      def validateInteractions(items: Seq[InteractionContainerContents]): Unit = items.foreach {
         case seq: SequentialInteractions =>
           if seq.contents.isEmpty then {
             messages.addMissing(
@@ -3319,7 +3325,7 @@ case class ValidationPass(
               "Sequential interactions should not be empty",
               suggestion = "Add interactions to the sequential block, or remove the empty block."
             )
-          }
+          } else validateInteractions(seq.contents.toSeq)
         case par: ParallelInteractions =>
           if par.contents.isEmpty then {
             messages.addMissing(
@@ -3327,7 +3333,7 @@ case class ValidationPass(
               "Parallel interaction should not be empty",
               suggestion = "Add interactions to the parallel block, or remove the empty block."
             )
-          }
+          } else validateInteractions(par.contents.toSeq)
         case opt: OptionalInteractions =>
           if opt.contents.isEmpty then {
             messages.addMissing(
@@ -3335,7 +3341,7 @@ case class ValidationPass(
               "Optional interaction should not be empty",
               suggestion = "Add interactions to the optional block, or remove the empty block."
             )
-          }
+          } else validateInteractions(opt.contents.toSeq)
         case gi: GenericInteraction =>
           // Use comprehensive validateInteraction instead of inline validation. Pass `uc`
           // explicitly: interaction references are keyed in the resolution refMap under the
@@ -3357,6 +3363,7 @@ case class ValidationPass(
           }
         case _: BriefDescription | _: Description | _: Term | _: Comment | _: AuthorRef => ()
       }
+      validateInteractions(uc.contents.toSeq)
     }
     if uc.nonEmpty then {
       if uc.contents.isEmpty then

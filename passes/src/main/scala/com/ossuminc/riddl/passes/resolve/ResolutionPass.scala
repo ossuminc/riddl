@@ -708,10 +708,25 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           associateUsage[Definition](useCase, resolveARef[Definition](from, parentsAsSeq))
           associateUsage[Definition](useCase, resolveAMessageRef(message, parentsAsSeq))
           associateUsage[Definition](useCase, resolveARef[Definition](to, parentsAsSeq))
-        case _: VagueInteraction       => () // no references
-        case _: OptionalInteractions   => () // no references
-        case _: ParallelInteractions   => () // no references
-        case _: SequentialInteractions => () // no references
+        case _: VagueInteraction => () // no references
+        case ic: InteractionContainer =>
+          // These three used to be `() // no references`, and that comment was FALSE in the way
+          // that matters: the CONTAINER carries none, but its CONTENTS do, and returning unit
+          // dropped every one of them. A step inside `sequence`/`parallel`/`optional` was never
+          // resolved at all, so a model could name commands, entities, groups and users that DO
+          // NOT EXIST and validate green -- exit 0, zero diagnostics -- while the identical step
+          // one level out errored correctly. Reported by ossum.tech 2026-08-08, whose docs-fence
+          // gate was reporting hollow passes because of it.
+          //
+          // `InteractionContainer` is a `Container` but NOT a `Branch` (its base `Interaction` is
+          // a RiddlValue, not a Definition), so the generic traversal cannot descend into it
+          // either -- the same shape as the SagaStep hole. Recursion here handles nesting
+          // (a `sequence` inside a `parallel`) for free.
+          //
+          // `useCase` stays the anchor rather than the container: interaction refs are keyed in
+          // the refMap under the enclosing UseCase (see 55d5dc6d9), and nesting must not change
+          // that key or validation's lookups would miss.
+          resolveInteractions(useCase, ic.contents.filter[Interaction], parentsAsSeq)
       }
     }
   }
