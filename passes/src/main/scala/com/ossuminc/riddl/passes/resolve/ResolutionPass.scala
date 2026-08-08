@@ -940,6 +940,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           if isLastPathElement then
             // The soughtName is the last one in the pathId, no point continuing the loop
             continue = false
+            checkPrivateNestedFunction(pathId, definition, stack.headOption, parents)
             // Since we are on the last element, let's try to find the match
             resolution = checkMatch[T](pathId, definition, parents)
           else
@@ -1017,6 +1018,41 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     end if
 
   end wrongType
+
+  /** A function nested inside another function is that function's PRIVATE IMPLEMENTATION.
+    *
+    * Reaching one by path from outside its enclosing function resolves -- it is a real definition
+    * and the model still works -- but it couples a caller to the internals of something that chose
+    * to hide them, which is what makes it a style problem rather than an error (Reid, 2026-08-08).
+    *
+    * Deliberately scoped to calls from OUTSIDE. A function calling its own nested helper is the
+    * entire point of nesting; warning on that would make the feature unusable. "Outside" is
+    * decided by whether the enclosing function appears in the REFERENCE SITE's parents, not by
+    * name, so a same-named function elsewhere cannot suppress it.
+    *
+    * Runs under the same `quiet` guard as `notResolved`: the A55 ValueRef walk resolves
+    * speculatively, and a style nag from a probe that was never a real reference is noise.
+    */
+  private def checkPrivateNestedFunction(
+    pathId: PathIdentifier,
+    resolved: Definition,
+    enclosing: Option[Definition],
+    parents: Parents
+  ): Unit =
+    if quiet then return
+    (resolved, enclosing) match
+      case (nested: Function, Some(owner: Function)) if !parents.exists(_ eq owner) =>
+        messages.addStyle(
+          pathId.loc,
+          s"${nested.identify} is nested inside ${owner.identify} and is private to it; " +
+            s"calling it from outside couples this caller to that function's implementation",
+          suggestion =
+            s"Move '${nested.id.value}' out to the enclosing context if it is meant to be called " +
+              s"from elsewhere, or call '${owner.id.value}' instead and let it use its own helper."
+        )
+      case _ => ()
+    end match
+  end checkPrivateNestedFunction
 
   private def notResolved[T <: Definition: ClassTag](
     pathId: PathIdentifier,
@@ -1121,12 +1157,21 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             case function: Function =>
               // A9: only the deprecated inline Aggregation form contributes inline Field candidates;
               // a TypeRef's fields live in the referenced type, resolved separately.
+              //
+              // `getOrElse(Seq.empty)`, NOT `asInstanceOf[Definitions]`. `Function.input`/`output`
+              // are `Option[TypeRef | Aggregation]`, so `.collect` yields an OPTION, and casting an
+              // Option to `Definitions` (= `Seq[Definition]`) threw ClassCastException for ANY path
+              // descending into a Function -- reliably, before any name comparison, which is why a
+              // nonexistent target failed identically to a real one. It surfaced as a bare
+              // `[severe] empty(1:1->1):` with no text at all (see the NonFatal handler in
+              // Pass.scala). Reported by ossum.tech 2026-08-08. No cast is needed in the first
+              // place: `filter[Field]` already returns `Seq[Field]`, and Seq is covariant.
               function.input
                 .collect { case agg: Aggregation => agg.contents.filter[Field] }
-                .asInstanceOf[Definitions] ++
+                .getOrElse(Seq.empty) ++
                 function.output
                   .collect { case agg: Aggregation => agg.contents.filter[Field] }
-                  .asInstanceOf[Definitions] ++
+                  .getOrElse(Seq.empty) ++
                 function.contents.directDefinitions
             case vital: VitalDefinition[?] =>
               vital.contents.toSeq.flatMap {
