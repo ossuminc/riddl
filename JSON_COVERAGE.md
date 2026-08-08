@@ -159,7 +159,8 @@ is covered in that construct's phase. The builder emits references as
 | MorphStatement | ✅ Phase 3 / A54 | value = RecordRef or Constructor |
 | BecomeStatement | ✅ Phase 3 | |
 | TellStatement | ✅ Phase 3 / A54 / A56 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`) |
-| YieldStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; reads legacy "reply" |
+| YieldStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; `"kind": "yield"` |
+| ReplyStatement | ✅ 2.0 | msg = MessageRef or Constructor; `"kind": "reply"`. Its own node and DTO since `reply` stopped being a deprecated synonym for `yield` — a command yields an event, a query replies a result |
 | WhenStatement | ✅ Phase 3 / A28 s2 | nested statements; condition widened: string, identifier, or structured `expression` (ValueDto) |
 | MatchStatement / MatchCase | ✅ Phase 3 / A29 | subject = ValueDto (valueRef/get/literal); each case: structured `pattern` (type/comparison/literal MatchPatternDto) + optional `guard` (ValueDto) + nested statements |
 | MatchPattern (Type/Comparison/Literal) | ✅ A29 | `{ "kind": "type", "path", "keyword"? }` / `{ "kind": "comparison", "op", "comparand": <value> }` / `{ "kind": "literal", "text" }` |

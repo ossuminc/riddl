@@ -44,7 +44,7 @@ class YieldsRoundTripTest extends AbstractValidatingTest {
       |  event OrderPlaced is { id: Integer }
       |  result OrderFound is { id: Integer }
       |  command PlaceOrder yields event OrderPlaced is { id: Integer }
-      |  query FindOrder yields result OrderFound is { id: Integer }
+      |  query FindOrder replies result OrderFound is { id: Integer }
       |  command CancelOrder is { id: Integer }
       |}}
       |""".stripMargin
@@ -53,7 +53,7 @@ class YieldsRoundTripTest extends AbstractValidatingTest {
     "round-trip a command/query yields clause through prettify" in { (td: TestData) =>
       val pretty = prettify(parse(src, "src"))
       pretty must include("yields event OrderPlaced")
-      pretty must include("yields result OrderFound")
+      pretty must include("replies result OrderFound")
 
       val types = Finder(parse(pretty, "regen")).recursiveFindByType[Type]
 
@@ -78,7 +78,7 @@ class YieldsRoundTripTest extends AbstractValidatingTest {
       |  event OrderPlaced is { id: Integer }
       |  result OrderFound is { id: Integer }
       |  command PlaceOrder yields event OrderPlaced is { id: Integer }
-      |  query FindOrder yields result OrderFound is { id: Integer }
+      |  query FindOrder replies result OrderFound is { id: Integer }
       |  entity Order is {
       |    record F is { id: Integer }
       |    state S of record Order.F
@@ -92,17 +92,21 @@ class YieldsRoundTripTest extends AbstractValidatingTest {
       |""".stripMargin
 
   "yield statement" should {
-    "emit `yield` and normalize the deprecated `reply` to `yield` through prettify" in {
+    "emit `yield` for a command and `reply` for a query through prettify" in {
       (td: TestData) =>
+        // Prettify no longer NORMALISES one to the other: they are different statements as of
+        // 2.0, and emitting `yield` for a query would produce source that does not re-parse.
         val pretty = prettify(parse(stmtSrc, "stmt"))
         pretty must include("yield event OrderPlaced")
-        // `reply` is the deprecated synonym; prettify canonicalizes it to `yield`.
-        pretty must include("yield result OrderFound")
-        pretty must not include "reply"
+        pretty must include("reply result OrderFound")
 
-        val yields = Finder(parse(pretty, "regen2")).recursiveFindByType[YieldStatement]
-        yields.map(_.msg.operandPathId.value.last).toSet mustBe
-          scala.collection.immutable.Set("OrderPlaced", "OrderFound")
+        val regen = parse(pretty, "regen2")
+        Finder(regen).recursiveFindByType[YieldStatement]
+          .map(_.msg.operandPathId.value.last).toSet mustBe
+          scala.collection.immutable.Set("OrderPlaced")
+        Finder(regen).recursiveFindByType[ReplyStatement]
+          .map(_.msg.operandPathId.value.last).toSet mustBe
+          scala.collection.immutable.Set("OrderFound")
     }
   }
 }

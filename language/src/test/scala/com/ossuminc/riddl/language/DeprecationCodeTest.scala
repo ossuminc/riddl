@@ -49,17 +49,10 @@ class DeprecationCodeTest extends AbstractTestingBasis {
        |}
        |""".stripMargin
 
-  "a deprecated `reply` statement" should {
-    "carry the reply-to-yield code and be auto-fixable" in {
-      val deps = deprecationsIn(modelWith("reply event OrderPlaced"))
-      val m = deps
-        .find(_.deprecationCode.contains(DeprecationCode.ReplyToYield))
-        .getOrElse(fail(s"no reply-to-yield code; got ${deps.map(_.deprecationCode)}"))
-      // prettify rewrites `reply` to `yield` with no decision to make, so a migration UI may
-      // promise this one will be fixed for the user.
-      m.autoFixable mustBe true
-    }
-  }
+  // The `reply-to-yield` case that lived here is GONE with its deprecation. `reply` was a
+  // deprecated synonym for `yield` until 2.0; it is now its own statement, required for a query's
+  // result, and `reply event` is an ERROR rather than a deprecation. A code naming a deprecation
+  // that can never fire is the vestigial shape this repo keeps removing.
 
   "a deprecated `prompt` statement" should {
     "carry the prompt-statement code" in {
@@ -120,7 +113,6 @@ class DeprecationCodeTest extends AbstractTestingBasis {
 
   "the code registry" should {
     "list every code it defines" in {
-      DeprecationCode.all must contain(DeprecationCode.ReplyToYield)
       DeprecationCode.all must contain(DeprecationCode.StateIsRecord)
       DeprecationCode.all.distinct.size mustBe DeprecationCode.all.size
     }

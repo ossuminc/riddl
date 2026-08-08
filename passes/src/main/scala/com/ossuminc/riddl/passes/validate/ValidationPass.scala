@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.PredefType
+import com.ossuminc.riddl.language.parsing.{Keyword, PredefType}
 import com.ossuminc.riddl.language.{Contents, Finder, Messages, *}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -529,19 +529,30 @@ case class ValidationPass(
             val finder = Finder(omc.contents)
             val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
             val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
-            val yields: Seq[YieldStatement] = finder.recursiveFindByType[YieldStatement]
+            // REPLIES, not yields. A query answers with `reply` as of 2.0, so looking only for
+            // YieldStatement here made the canonical spelling invisible and reported a
+            // well-formed handler as incomplete. Both are accepted: a `yield result` is already
+            // an Error from `checkResponsePairing`, and reporting it twice helps nobody.
+            val replies: Seq[Statement] =
+              finder.recursiveFindByType[ReplyStatement] ++
+                finder.recursiveFindByType[YieldStatement]
             val foundSend = sends.nonEmpty &&
               sends.exists(s => operandMessageKind(s.msg).contains(AggregateUseCase.ResultCase))
             val foundTell = tells.nonEmpty &&
               tells.exists(t => operandMessageKind(t.msg).contains(AggregateUseCase.ResultCase))
-            val foundYield = yields.nonEmpty &&
-              yields.exists(y => operandMessageKind(y.msg).contains(AggregateUseCase.ResultCase))
-            if !(foundSend || foundTell || foundYield) then
+            val foundReply = replies.exists { st =>
+              val operand = st match
+                case r: ReplyStatement => r.msg
+                case y: YieldStatement => y.msg
+                case _                 => MessageRef.empty
+              operandMessageKind(operand).contains(AggregateUseCase.ResultCase)
+            }
+            if !(foundSend || foundTell || foundReply) then
               messages.addCompleteness(
                 omc.errorLoc,
                 s"Query processing in ${entity.identify} should result in a reply or sending a result",
                 suggestion =
-                  "Yield a result or send a result type from this query handler, e.g. 'yield result QueryResult'."
+                  "Yield a result or send a result type from this query handler, e.g. 'reply result QueryResult'."
               )
           case _ =>
         }
@@ -619,6 +630,45 @@ case class ValidationPass(
           case auc: AggregateUseCaseTypeExpression => Some(auc.usecase)
           case _                                   => None
         )
+
+  /** `yield` emits an EVENT; `reply` answers with a RESULT. Enforce the pairing.
+    *
+    * RIDDL has two message pairings -- command/event and query/result -- and until 2.0 `yield`
+    * spelled both while `reply` was a deprecated synonym for it. Reid split them (2026-08-08) so a
+    * handler body says which half of the language it is in, and so `ask` has something to name:
+    * the value an `ask` produces is the one a `reply` provides.
+    *
+    * Checked here rather than in the parser because the two statements are structurally identical
+    * -- only the message KIND differs -- and `operandMessageKind` reads that kind from the ref
+    * subclass (`EventRef`/`ResultRef`/...), so no resolution is needed but the message can still
+    * name both halves. A `Constructor` operand carries its kind through `c.ref.messageKind`, so
+    * this covers both operand shapes.
+    *
+    * `None` means the kind is not recoverable (a ValueRef whose type has not resolved); stay
+    * silent there rather than guess -- other checks report the unresolved reference.
+    */
+  private def checkResponsePairing(
+    msg: MessageRef | Constructor,
+    keyword: String,
+    wanted: AggregateUseCase
+  ): Unit =
+    operandMessageKind(msg).foreach { actual =>
+      if actual != wanted then
+        val other = if wanted == AggregateUseCase.EventCase then Keyword.reply else Keyword.yield_
+        val otherWanted =
+          if wanted == AggregateUseCase.EventCase then AggregateUseCase.ResultCase
+          else AggregateUseCase.EventCase
+        messages.addError(
+          msg match { case mr: MessageRef => mr.loc; case c: Constructor => c.loc },
+          s"`$keyword` takes ${article(wanted.useCase)}, but ${msg.format} is " +
+            s"${article(actual.useCase)}",
+          suggestion =
+            s"Use `$keyword` for a ${wanted.useCase} and `$other` for a ${otherWanted.useCase} — " +
+              s"a command yields an event, a query replies a result."
+        )
+      end if
+    }
+  end checkResponsePairing
 
   /** A57: the envelope type named by the nearest `option message_envelope` in scope, if any.
     *
@@ -865,6 +915,14 @@ case class ValidationPass(
         msg match
           case ref: MessageRef => checkRef[Type](ref, parents)
           case _: Constructor  => ()
+        checkResponsePairing(msg, Keyword.yield_, AggregateUseCase.EventCase)
+      case ReplyStatement(_, msg) =>
+        // Mirrors YieldStatement: a bare ref is checked here, a Constructor in
+        // checkStatementScopes. The pairing check is what keeps the two spellings honest.
+        msg match
+          case ref: MessageRef => checkRef[Type](ref, parents)
+          case _: Constructor  => ()
+        checkResponsePairing(msg, Keyword.reply, AggregateUseCase.ResultCase)
       case _: PutStatement | _: ReturnStatement =>
         // A45/A57: value/type/scope validation runs in checkStatementScopes (which threads in-scope
         // `let` locals and reaches nested statements). Nothing to check per-statement here.
@@ -932,7 +990,16 @@ case class ValidationPass(
             if auc.usecase == AggregateUseCase.CommandCase ||
               auc.usecase == AggregateUseCase.QueryCase =>
           val finder = Finder(omc.contents)
-          val yieldStmts = finder.recursiveFindByType[YieldStatement]
+          // TWO pairings, parameterised rather than duplicated: a command declares `yields event`
+          // and settles with `yield`; a query declares `replies result` and settles with `reply`.
+          // Split at 2.0 when `reply` stopped being a deprecated synonym for `yield`.
+          val isQuery = auc.usecase == AggregateUseCase.QueryCase
+          val declKeyword = if isQuery then Keyword.replies else Keyword.yields
+          val stmtKeyword = if isQuery then Keyword.reply else Keyword.yield_
+          val verb = if isQuery then "reply" else "yield"
+          val responseStmts: Seq[Statement] =
+            if isQuery then finder.recursiveFindByType[ReplyStatement]
+            else finder.recursiveFindByType[YieldStatement]
           // A clause that REFUSES discharges the contract by declining. `yields` declares what the
           // command records WHEN IT SUCCEEDS, not that every clause mentioning it must record one.
           // Without this, the ordinary event-sourcing shape -- a command accepted in one state and
@@ -960,7 +1027,11 @@ case class ValidationPass(
           // nothing at all, and `set`/`do`/an empty branch still fail it.
           val settled = dischargesOnEveryPath(omc.contents) {
             case _: ErrorStatement | _: RequireStatement => true
-            case _: YieldStatement | _: SendStatement | _: TellStatement => true
+            // BOTH response statements settle a path. Counting only the pairing-correct one would
+            // report the same mistake twice -- `checkResponsePairing` already names a `yield` in a
+            // query clause, and a second "does not reply on every path" adds nothing.
+            case _: YieldStatement | _: ReplyStatement                   => true
+            case _: SendStatement | _: TellStatement                     => true
             case _                                       => false
           }
           auc.yields match {
@@ -969,19 +1040,24 @@ case class ValidationPass(
               if !settled then
                 messages.addError(
                   omc.errorLoc,
-                  s"${handledType.identify} declares 'yields ${declaredYield.format}' but " +
-                    s"${omc.identify} does not yield it on every path",
+                  s"${handledType.identify} declares '$declKeyword ${declaredYield.format}' " +
+                    s"but ${omc.identify} does not $verb it on every path",
                   suggestion =
-                    s"Yield '${declaredYield.format}' (or refuse with 'error'/'require') on every " +
-                      "path through this handler. A 'when' with no 'else', a 'match' with no " +
-                      "'default', and a 'foreach' all leave a path that does neither."
+                    s"Use '$stmtKeyword ${declaredYield.format}' (or refuse with " +
+                      "'error'/'require') on every path through this handler. A 'when' with no " +
+                      "'else', a 'match' with no 'default', and a 'foreach' all leave a path " +
+                      "that does neither."
                 )
               end if
               // Independent of `settled`: a clause may discharge by refusing on every path and
               // STILL yield the wrong thing somewhere, which is its own error.
-              yieldStmts.foreach { ys =>
-                  val kindOk = operandMessageKind(ys.msg).contains(declaredYield.messageKind)
-                  val yieldedType = resolution.refMap.definitionOf[Type](operandPathId(ys.msg))
+              responseStmts.foreach { ys =>
+                  val operand = ys match
+                    case y: YieldStatement => y.msg
+                    case r: ReplyStatement => r.msg
+                    case _                 => MessageRef.empty
+                  val kindOk = operandMessageKind(operand).contains(declaredYield.messageKind)
+                  val yieldedType = resolution.refMap.definitionOf[Type](operandPathId(operand))
                   val typeOk = (declaredType, yieldedType) match {
                     case (Some(dt), Some(yt)) => dt eq yt
                     case _                    => true // unresolved — reported by other checks
@@ -989,12 +1065,16 @@ case class ValidationPass(
                   if !(kindOk && typeOk) then
                     messages.addError(
                       ys.loc,
-                      s"yielded '${ys.msg.format}' does not match declared 'yields " +
+                      s"'${operand.format}' does not match declared '$declKeyword " +
                         s"${declaredYield.format}' of ${handledType.identify}",
-                      suggestion = s"Yield the declared response: 'yield ${declaredYield.format}'."
+                      suggestion =
+                        s"Use the declared response: '$stmtKeyword ${declaredYield.format}'."
                     )
                 }
-            case None => () // `yields` is optional; yielding without a declared clause is allowed
+            // `yields`/`replies` are OPTIONAL, so producing without a declared clause is allowed.
+            // Phase B changes this only for `ask`: asking a query that declares no `replies` is an
+            // error at the ASK site, since there is no type for the answer to have.
+            case None => ()
           }
         case _ => () // not a command/query, or unresolved — no 'yields' contract to enforce
       }

@@ -109,7 +109,9 @@ vital_definition_contents = type_def | comment ;
 (* Type Definition *)
 type_def = def_of_type | def_of_type_kind_type ;
 def_of_type = "type" identifier is type_expression [with_metadata] ;
-def_of_type_kind_type = aggregate_use_case identifier ["yields" message_ref] (scala_aggregate_definition | (is (aliased_type_expression | aggregation))) [with_metadata] ;
+(* A command declares its response with "yields" and a query with "replies"; the pairing is an
+   Error, not a parse failure, so the message can name both the keyword and the use case. *)
+def_of_type_kind_type = aggregate_use_case identifier [("yields" | "replies") message_ref] (scala_aggregate_definition | (is (aliased_type_expression | aggregation))) [with_metadata] ;
 aggregate_use_case = "type" | "command" | "query" | "event" | "result" | "record" | "graph" | "table" ;
 
 (* Type Expressions *)
@@ -291,8 +293,10 @@ deliverable_message_value = message_value | path_identifier ;
    parses; use `tell` for direct delivery to a processor. *)
 send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref) ;
 tell_statement = "tell" deliverable_message_value "to" processor_ref ;
+(* `yield` emits a command's declared EVENT; `reply` answers a query with its declared RESULT.
+   Until 2.0 `reply` was a deprecated synonym for `yield` and both parsed to one node. They are
+   now distinct statements, and the wrong pairing (`yield result` / `reply event`) is an Error. *)
 yield_statement = "yield" message_value ;
-(* `reply` is the deprecated synonym for `yield`; both parse to the same node *)
 reply_statement = "reply" message_value ;
 
 (* Variable operations. A54: `set`/`let` operands are now full value expressions. *)

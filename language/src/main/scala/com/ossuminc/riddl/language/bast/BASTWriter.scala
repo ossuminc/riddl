@@ -256,6 +256,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: ErrorStatement   => writeErrorStatement(s)
       case s: RequireStatement => writeRequireStatement(s)
       case s: YieldStatement   => writeYieldStatement(s)
+      case s: ReplyStatement   => writeReplyStatement(s)
       case s: SetStatement     => writeSetStatement(s)
       case s: SendStatement    => writeSendStatement(s)
       case s: MorphStatement   => writeMorphStatement(s)
@@ -1089,6 +1090,17 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(15) // Yield statement (formerly Reply — wire format unchanged)
     writeLocation(s.loc)
     writeMessageOperand(s.msg) // A54: bare ref or constructor
+  }
+
+  // `reply` answers a QUERY with its declared result, where `yield` emits an EVENT from a command.
+  // Tag 19, not a reuse of 15: until 2.0 `reply` was a deprecated synonym parsing to
+  // YieldStatement, so revision-8 streams carrying tag 15 may legitimately have been WRITTEN from
+  // `reply` source. Reusing the tag would make those indistinguishable from real yields.
+  def writeReplyStatement(s: ReplyStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(19) // Reply statement
+    writeLocation(s.loc)
+    writeMessageOperand(s.msg) // bare ref or constructor
   }
 
   def writeSetStatement(s: SetStatement): Unit = {

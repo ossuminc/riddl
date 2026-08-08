@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-07 16:10 UTC
+# Generated: 2026-08-08 21:39 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -100,7 +100,7 @@ vital-definition-contents ::= type-def | comment
 # Type Definition
 type-def ::= def-of-type | def-of-type-kind-type
 def-of-type ::= "type" ws1 identifier ws1 is ws1 type-expression ws (with-metadata)?
-def-of-type-kind-type ::= aggregate-use-case ws1 identifier ws ("yields" message-ref)? ws (scala-aggregate-definition | (is (aliased-type-expression | aggregation))) ws (with-metadata)?
+def-of-type-kind-type ::= aggregate-use-case ws1 identifier ws (("yields" | "replies") message-ref)? ws (scala-aggregate-definition | (is (aliased-type-expression | aggregation))) ws (with-metadata)?
 aggregate-use-case ::= "type" | "command" | "query" | "event" | "result" | "record" | "graph" | "table"
 
 # Type Expressions
@@ -227,8 +227,6 @@ deliverable-message-value ::= message-value | path-identifier
 send-statement ::= "send" ws1 deliverable-message-value ws "to" ws (outlet-ref | inlet-ref)
 tell-statement ::= "tell" ws1 deliverable-message-value ws "to" ws1 processor-ref
 yield-statement ::= "yield" ws1 message-value
-
-# `reply` is the deprecated synonym for `yield`; both parse to the same node
 reply-statement ::= "reply" ws1 message-value
 
 # Variable operations. A54: `set`/`let` operands are now full value expressions.

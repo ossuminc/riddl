@@ -2241,8 +2241,11 @@ object AST:
     * @param contents
     *   The contents of the message's aggregation
     * @param yields
-    *   For a command/query use case, an optional reference to the message it produces in response
-    *   (a command yields an event; a query yields a result). None for other use cases.
+    *   For a command/query use case, an optional reference to the message it produces in response.
+    *   ONE field, TWO keywords: a command declares it with `yields` and a query with `replies`
+    *   (2.0), because a command yields an EVENT and a query replies a RESULT. Which keyword is
+    *   legal follows from `usecase`, so a second field would always be None. The field keeps its
+    *   original name to avoid churning the JSON DTO for no semantic gain. None for other use cases.
     */
   @JSExportTopLevel("AggregateUseCaseTypeExpression")
   case class AggregateUseCaseTypeExpression(
@@ -2251,9 +2254,16 @@ object AST:
     contents: Contents[AggregateContents] = Contents.empty[AggregateContents](),
     yields: Option[MessageRef] = None
   ) extends AggregateTypeExpression(contents):
+    /** The keyword this use case declares its response with: `replies` for a query, `yields` for
+      * a command. Emitting `yields` for a query would produce source that no longer PARSES, which
+      * is how a prettify round trip caught this.
+      */
+    def responseKeyword: String =
+      if usecase == AggregateUseCase.QueryCase then "replies" else "yields"
+
     override def format: String =
       usecase.useCase.toLowerCase() +
-        yields.map(y => " yields " + y.format).getOrElse("") + " " + super.format
+        yields.map(y => s" $responseKeyword " + y.format).getOrElse("") + " " + super.format
   end AggregateUseCaseTypeExpression
 
   /** A type expression whose value is a reference to an instance of an entity.
@@ -3404,11 +3414,41 @@ object AST:
     def format: String = s"yield ${msg.format}"
   }
 
-  /** Deprecated synonym for [[YieldStatement]]. The `reply` statement was renamed to `yield` in the
-    * A22 work; source references to `ReplyStatement` continue to compile through the 2.x line.
+  /** Answer a QUERY with its declared result.
+    *
+    * The counterpart to [[YieldStatement]], and deliberately a separate node rather than a synonym
+    * for it. RIDDL has two message pairings, and until 2.0 the syntax did not distinguish them:
+    *
+    * {{{
+    *   command Pay yields  event  Paid   ->  yield event Paid
+    *   query   Ask replies result Answer ->  reply result Answer
+    * }}}
+    *
+    * `yield` served BOTH halves while `reply` was a deprecated alias pointing at it
+    * (`type ReplyStatement = YieldStatement`), so nothing in a handler body told a reader which
+    * half of the language they were in. Reid un-deprecated `reply` and restricted `yield` to
+    * events (2026-08-08).
+    *
+    * They are genuinely different operations, not two spellings: emitting an event as a
+    * consequence of a command is not the same act as answering a question, and a generator lowers
+    * them differently -- which is why this is a distinct case class and not a kind test on
+    * [[YieldStatement]]. It is also what makes `ask` expressible: the value an `ask` produces is
+    * the one a `reply` provides.
+    *
+    * Pairing is enforced in ValidationPass, not the parser: `reply event X` and `yield result X`
+    * are Errors that can name BOTH the keyword and the message kind, where a parse failure could
+    * only point at the keyword.
     */
-  @deprecated("use YieldStatement", "3.0.0")
-  type ReplyStatement = YieldStatement
+  @JSExportTopLevel("ReplyStatement")
+  case class ReplyStatement(
+    loc: At,
+    // Same operand shape as YieldStatement: a bare ref or a constructor building the message.
+    msg: MessageRef | Constructor
+  ) extends Statement {
+    override def kind: String = "Reply Statement"
+    override def canFail: Boolean = true // answering the asker may fail, as yielding may
+    def format: String = s"reply ${msg.format}"
+  }
 
   /** A conditional statement for branching logic
     *
@@ -4264,7 +4304,7 @@ object AST:
       case t: Type =>
         t.typEx match
           case a: AggregateUseCaseTypeExpression =>
-            a.yields.map(y => s" ${Keyword.yields} ${y.format}").getOrElse("")
+            a.yields.map(y => s" ${a.responseKeyword} ${y.format}").getOrElse("")
           case _ => ""
       // A55: an on-clause's `from [<name>:] <origin>`.
       case omc: OnMessageLikeClause =>

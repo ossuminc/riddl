@@ -190,7 +190,6 @@ object Messages {
   object DeprecationCode {
     val StateIsRecord: String = "state-is-record"
     val PromptStatement: String = "prompt-statement"
-    val ReplyToYield: String = "reply-to-yield"
     val SendToInlet: String = "send-to-inlet"
     val BareStringCondition: String = "bare-string-condition"
     val AnonymousNebula: String = "anonymous-nebula"
@@ -211,7 +210,6 @@ object Messages {
       */
     val mechanicalReplacement: Map[String, String] = Map(
       PromptStatement -> "do",
-      ReplyToYield -> "yield",
       AbstractType -> "Anything"
     )
 
@@ -219,7 +217,6 @@ object Messages {
     val all: Seq[String] = Seq(
       StateIsRecord,
       PromptStatement,
-      ReplyToYield,
       SendToInlet,
       BareStringCondition,
       AnonymousNebula,

@@ -438,6 +438,8 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         addLine(s"tell ${msg.format} to ${to.format}")
       case YieldStatement(_, msg) =>
         addLine(s"yield ${msg.format}")
+      case ReplyStatement(_, msg) =>
+        addLine(s"reply ${msg.format}")
       case CodeStatement(_, lang, body) =>
         // The parser captures the body up to (but not including) the closing "```" fence, so it
         // retains the newline and indent that precede that fence. Emitting the body verbatim and

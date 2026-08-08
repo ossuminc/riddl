@@ -265,7 +265,7 @@ class TypeValidatorTest extends AbstractValidatingTest {
             |  event E is { id: Integer }
             |  result R is { id: Integer }
             |  command C yields event E is { id: Integer }
-            |  query Q yields result R is { id: Integer }
+            |  query Q replies result R is { id: Integer }
             |}
             |""".stripMargin,
           td
@@ -300,7 +300,7 @@ class TypeValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain foo is {
           |  event E is { id: Integer }
-          |  query Q yields event E is { id: Integer }
+          |  query Q replies event E is { id: Integer }
           |}
           |""".stripMargin,
         td

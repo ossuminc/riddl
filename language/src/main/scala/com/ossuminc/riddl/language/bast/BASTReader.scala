@@ -1064,6 +1064,19 @@ class BASTReader(
             )
         YieldStatement(loc, msg)
 
+      case 19 => // Reply -- answers a query with its declared result (2.0)
+        // Same operand restriction as `yield`: `reply` never accepts a bound name, so a ValueRef
+        // here means a malformed stream rather than a shape to widen ReplyStatement for.
+        val replyMsg: MessageRef | Constructor = readMessageOperand() match
+          case mr: MessageRef => mr
+          case c: Constructor => c
+          case vr: ValueRef =>
+            throw new RuntimeException(
+              s"Reply statement has a bound-name operand '${vr.path.format}', which `reply` does " +
+                s"not accept; only `tell` and `send` do"
+            )
+        ReplyStatement(loc, replyMsg)
+
       case 16 => // Foreach
         val element = readIdentifierInline()
         val collectionType = reader.readU8()

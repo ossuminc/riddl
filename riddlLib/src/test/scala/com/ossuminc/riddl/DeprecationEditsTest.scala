@@ -35,7 +35,7 @@ class DeprecationEditsTest extends AbstractTestingBasis {
       |      record Fields is { id: Integer }
       |      state Current of record E.Fields
       |      handler H is {
-      |        on command PlaceOrder { reply event OrderPlaced }
+      |        on command PlaceOrder { prompt "note it" yield event OrderPlaced }
       |      }
       |    }
       |  }
@@ -49,35 +49,38 @@ class DeprecationEditsTest extends AbstractTestingBasis {
         case Left(msgs) => fail(msgs.format)
         case Right(es)  => es
       edits must not be empty
-      edits.map(_.code) must contain(DeprecationCode.ReplyToYield)
+      // Sample deprecation moved from `reply`->`yield` to `prompt`->`do` at 2.0: `reply` stopped
+      // being deprecated when it became the query-result statement, so its code no longer exists.
+      edits.map(_.code) must contain(DeprecationCode.PromptStatement)
 
       val fixed = applyEdits(deprecated, edits)
-      fixed must include("yield event OrderPlaced")
-      fixed must not include "reply event"
+      fixed must include("""do "note it"""")
+      fixed must not include "prompt \"note it\""
       // The load-bearing assertion: everything else is untouched. Comparing the two texts with
       // the one keyword normalised proves no reformatting crept in.
-      fixed mustBe deprecated.replace("reply event", "yield event")
+      fixed mustBe deprecated.replace("""prompt "note it"""", """do "note it"""")
     }
 
     "produce source that no longer reports the deprecation" in {
       val edits = RiddlLib.deprecationEdits(deprecated, "dep.riddl").toEither.toOption.get
       val fixed = applyEdits(deprecated, edits)
       val remaining = RiddlLib.deprecationEdits(fixed, "dep.riddl").toEither.toOption.get
-      remaining.map(_.code) must not contain DeprecationCode.ReplyToYield
+      remaining.map(_.code) must not contain DeprecationCode.PromptStatement
     }
 
     "return edits in descending start order so naive application is safe" in {
       // Two deprecations in one file: applying ascending without offset adjustment would place
       // the second edit at a stale offset.
       val two = deprecated.replace(
-        "on command PlaceOrder { reply event OrderPlaced }",
-        "on command PlaceOrder { reply event OrderPlaced\n          prompt \"tell someone\" }"
+        """on command PlaceOrder { prompt "note it" yield event OrderPlaced }""",
+        "on command PlaceOrder { prompt \"note it\"\n          prompt \"tell someone\"\n" +
+          "          yield event OrderPlaced }"
       )
       val edits = RiddlLib.deprecationEdits(two, "two.riddl").toEither.toOption.get
       edits.size must be >= 2
       edits.map(_.start) mustBe edits.map(_.start).sorted.reverse
       val fixed = applyEdits(two, edits)
-      fixed must include("yield event OrderPlaced")
+      fixed must include("do \"note it\"")
       fixed must include("do \"tell someone\"")
     }
 

@@ -345,6 +345,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         }
       case YieldStatement(_, msg) =>
         resolveMessageOperand(msg, parents)
+      case ReplyStatement(_, msg) =>
+        resolveMessageOperand(msg, parents)
       case ws: WhenStatement =>
         // A28: a BooleanExpression condition may carry operand refs; the LiteralString/Identifier
         // forms have none. A17: a bare boolean ValueRef condition is resolved via resolveValue (its
@@ -669,6 +671,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           associateUsage(parents.head, resolveARef[Processor[?]](s.processorRef, parents))
         }
       case s: YieldStatement =>
+        s.msg match { case c: Constructor => resolveValue(c, parents); case _ => () }
+      case s: ReplyStatement =>
         s.msg match { case c: Constructor => resolveValue(c, parents); case _ => () }
       case s: MorphStatement =>
         s.value match { case c: Constructor => resolveValue(c, parents); case _ => () }

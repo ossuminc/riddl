@@ -48,7 +48,7 @@ class WidenedValueRoundTripTest extends AbstractValidatingTest {
       |    command Add is { sku: String }
       |    event Added is { sku: String }
       |    result Res is { ok: String }
-      |    query Ask yields result Res is { q: String }
+      |    query Ask replies result Res is { q: String }
       |    outlet outp is event Added
       |    entity E is {
       |      record Data is { line: Line }
@@ -61,7 +61,7 @@ class WidenedValueRoundTripTest extends AbstractValidatingTest {
       |          morph entity E to state E.S with record Data(line = record Line(sku = "y", qty = "2"))
       |        }
       |        on query Ask {
-      |          yield result Res(ok = "done")
+      |          reply result Res(ok = "done")
       |        }
       |      }
       |    }
@@ -120,11 +120,12 @@ class WidenedValueRoundTripTest extends AbstractValidatingTest {
             c.args.head.value.isInstanceOf[Constructor] mustBe true // nested Line(...)
           case other => fail(s"expected a Constructor morph value, got $other")
 
-        // yield a result built by a constructor
+        // REPLY a result built by a constructor -- `reply`, not `yield`, since 2.0 gives a
+        // query's result its own statement.
         val yld = Finder(regen)
-          .recursiveFindByType[YieldStatement]
+          .recursiveFindByType[ReplyStatement]
           .headOption
-          .getOrElse(fail("yield statement lost"))
+          .getOrElse(fail("reply statement lost"))
         yld.msg match
           case c: Constructor =>
             c.ref.isInstanceOf[ResultRef] mustBe true

@@ -757,8 +757,9 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
           }
       }
     }
-    "parse a query with a yields result clause" in { (td: TestData) =>
-      val rpi = RiddlParserInput("query Q yields result R is { id: Integer }", td)
+    "parse a query with a replies result clause" in { (td: TestData) =>
+      // `replies`, not `yields`: a query declares its result with its own keyword as of 2.0.
+      val rpi = RiddlParserInput("query Q replies result R is { id: Integer }", td)
       parseDefinition[Type](rpi) match {
         case Left(errors) => fail(errors.map(_.format).mkString("\n"))
         case Right((typ, _)) =>

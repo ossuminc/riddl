@@ -66,13 +66,16 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
       }
     }
 
-    "emit a Deprecation for the `reply` statement (A22: `yield` is canonical)" in {
+    // INVERTED at 2.0. `reply` was a deprecated synonym for `yield`; it is now the REQUIRED
+    // statement for a query's result, so drawing a deprecation would be actively wrong. The case
+    // is kept, pointing the other way, so the un-deprecation cannot silently regress.
+    "emit NO deprecation for the `reply` statement (2.0: `reply` answers a query)" in {
       (td: TestData) =>
         val rpi = RiddlParserInput(
           """domain D is {
           |  context C is {
           |    result Res is { ok: Boolean }
-          |    query Ask yields result Res is { q: Integer }
+          |    query Ask replies result Res is { q: Integer }
           |    handler H is {
           |      on query Ask { reply result Res }
           |    }
@@ -87,9 +90,8 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
             val deprecations = result.messages.justDeprecations
             info(deprecations.format)
             deprecations.exists { (m: Messages.Message) =>
-              m.message.contains("`reply` statement is deprecated") &&
-              m.message.contains("yield")
-            } must be(true)
+              m.message.contains("`reply` statement is deprecated")
+            } must be(false)
         }
     }
 

@@ -858,7 +858,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |    command Add is { sku: String }
           |    event Added is { sku: String }
           |    result Res is { ok: String }
-          |    query Ask yields result Res is { q: String }
+          |    query Ask replies result Res is { q: String }
           |    outlet outp is event Added
           |    entity E is {
           |      record Data is { line: Line }
@@ -871,7 +871,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |          morph entity E to state E.S with record Data(line = record Line(sku = "y", qty = "2"))
           |        }
           |        on query Ask is {
-          |          yield result Res(ok = "done")
+          |          reply result Res(ok = "done")
           |        }
           |      }
           |    }
@@ -900,7 +900,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |    event OrderPlaced is { id: Integer }
           |    result Found is { id: Integer }
           |    command PlaceOrder yields event OrderPlaced is { id: Integer }
-          |    query FindOrder yields result Found is { id: Integer }
+          |    query FindOrder replies result Found is { id: Integer }
           |  }
           |}
           |""".stripMargin

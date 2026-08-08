@@ -712,12 +712,50 @@ private[parsing] trait TypeParser {
     }
   }
 
+  /** `command X yields event E` / `query X replies result R`.
+    *
+    * TWO keywords, one AST field. A command can only yield and a query can only reply, so which
+    * keyword is legal follows from `useCase` -- a second `Option` field would always be None. What
+    * the keyword buys is READABILITY: until 2.0 both pairings were spelled `yields`, so a
+    * declaration did not say which half of the language it belonged to.
+    *
+    * The pairing is checked HERE rather than in ValidationPass because both facts are known at
+    * parse time and neither needs resolution, and because `error(...)` in this rule is non-fatal
+    * and accumulating -- the sibling type-alias check just below has emitted errors this way all
+    * along. A parse FAILURE would be the wrong tool: it could only point at the keyword, where
+    * this can name the keyword and the use case together.
+    */
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
-      Index ~ aggregateUseCase ~/ identifier ~ (Keywords.yields ~ messageRef).? ~
+      Index ~ aggregateUseCase ~/ identifier ~
+        ((Keywords.yields.map(_ => Keyword.yields) | Keywords.replies.map(_ => Keyword.replies)) ~
+          messageRef).? ~
         (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withMetaData ~/ Index
-    )./.map { case (start, useCase, id, yields, ateOrAgg, descriptives, end) =>
+    )./.map { case (start, useCase, id, declared, ateOrAgg, descriptives, end) =>
       val loc = at(start, end)
+      val yields = declared.map(_._2)
+      declared.foreach { case (keyword, _) =>
+        val wanted = useCase match
+          case AggregateUseCase.CommandCase => Some(Keyword.yields)
+          case AggregateUseCase.QueryCase   => Some(Keyword.replies)
+          case _                            => None // events and results declare no response
+        wanted match
+          case Some(expected) if keyword != expected =>
+            error(
+              loc,
+              s"a ${useCase.useCase} declares its response with `$expected`, not `$keyword`. " +
+                s"`${Keyword.yields}` pairs a command with an event; " +
+                s"`${Keyword.replies}` pairs a query with a result"
+            )
+          // NOT checked here: a response clause on a kind that declares none (`record R yields
+          // ...`). ValidationPass already reports that, with a better message, and a parse-time
+          // `error` would PREEMPT it -- parse errors stop the pass chain, so whatever the parser
+          // says is the ONLY thing the author sees. The parser therefore keeps exactly the check
+          // validation cannot make: `usecase` is in the AST, but which KEYWORD was written is not.
+          case None => ()
+          case _    => () // correct pairing
+        end match
+      }
       ateOrAgg match {
         case agg: Aggregation =>
           val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.contents, yields)
@@ -726,7 +764,7 @@ private[parsing] trait TypeParser {
           if yields.nonEmpty then
             error(
               loc,
-              "`yields` requires an aggregate command/query body, not a type alias"
+              "`yields`/`replies` requires an aggregate command/query body, not a type alias"
             )
           Type(loc, id, ate, descriptives.toContents)
         case _ =>

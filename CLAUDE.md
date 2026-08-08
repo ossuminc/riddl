@@ -927,6 +927,29 @@ to the right group rather than appending to a list.
 
 ### Validation Specifics
 
+- **A parse-time `error()` PREEMPTS validation — the pass chain never runs.**
+  So whatever the parser says is the ONLY thing the author sees, and any
+  more specific diagnostic ValidationPass would have produced for that input
+  is silently lost. Learned 2026-08-08 adding the `yields`/`replies` pairing:
+  checking it in the parser looked equivalent to checking it in validation and
+  is not — it killed three existing A19 messages ("should be one of these
+  message types", "Only command and query types may declare") because those
+  inputs stopped reaching the pass that emits them.
+  **Rule: put a check in the parser ONLY when validation cannot make it**, and
+  the test is whether the evidence survives into the AST. The keyword/use-case
+  pairing qualifies: `usecase` is in the AST but which KEYWORD was written is
+  not, so by validation time the evidence is gone. Everything else belongs in
+  ValidationPass.
+  Two corollaries:
+  - A parser `error()` is otherwise NON-FATAL and accumulating (see
+    `defOfTypeKindType`'s type-alias check), so it looks harmless in isolation.
+    The damage is to the passes that never run, not to parsing.
+  - Parse-time messages travel a DIFFERENT channel:
+    `parseInputWithMessages` → `PassInput.parseMessages` →
+    `PassesResult.additionalMessages`. They reach users under every `riddlc`
+    command, but `parseAndValidate` in tests DISCARDS them — assert them with
+    `TopLevelParser.parseInputWithMessages` (pattern:
+    `RecognizedOptionSetTest:98`).
 - **`ValueRef` resolves in the RESOLVER (A55), not in validation.**
   `ResolutionPass` queues every `ValueRef` and resolves it in
   `postProcess` (its anchors are reached through other references,

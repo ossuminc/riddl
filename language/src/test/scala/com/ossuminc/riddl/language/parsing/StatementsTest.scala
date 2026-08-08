@@ -140,10 +140,17 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       s.kind must be("Yield Statement")
       s.format must be(s"yield ${value.format}")
       checkStatement(s)
-      // Source-compat: the deprecated `ReplyStatement` alias resolves to `YieldStatement`.
-      @annotation.nowarn("cat=deprecation")
-      val alias: AST.ReplyStatement = s
-      alias.kind must be("Yield Statement")
+    }
+    "check Reply Statement" in { td =>
+      // `ReplyStatement` was `type ReplyStatement = YieldStatement`, a deprecated alias, until
+      // 2.0. It is now its own node: `yield` emits an EVENT from a command, `reply` answers a
+      // QUERY with its result. The alias assertion that lived here is gone with the alias.
+      val pathId = PathIdentifier(At.empty, Seq("foo"))
+      val value = ResultRef(At.empty, pathId)
+      val s = ReplyStatement(At.empty, value)
+      s.kind must be("Reply Statement")
+      s.format must be(s"reply ${value.format}")
+      checkStatement(s)
     }
     "check When Statement" in { td =>
       val condition = LiteralString(At.empty, "condition")

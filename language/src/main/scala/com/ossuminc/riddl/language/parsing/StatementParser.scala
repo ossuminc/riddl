@@ -177,21 +177,16 @@ private[parsing] trait StatementParser {
     )./.map { case (start, msg, end) => YieldStatement(at(start, end), msg) }
   }
 
-  // `reply` is the deprecated synonym for `yield`; it parses to the SAME YieldStatement and emits a
-  // deprecation at the keyword (pattern mirrors StreamingParser's deprecated shape keywords).
-  private def replyStatement[u: P]: P[YieldStatement] = {
+  // `reply` was a DEPRECATED synonym for `yield` until 2.0, parsing to the same YieldStatement.
+  // It is now un-deprecated and builds its own node: `reply` answers a QUERY with its declared
+  // result, where `yield` emits an EVENT from a command. Two pairings, two spellings -- see
+  // AST.ReplyStatement. The pairing itself (`reply result` / `yield event`) is enforced in
+  // ValidationPass, which can name both the keyword and the message kind; a parse failure here
+  // could only point at the keyword.
+  private def replyStatement[u: P]: P[ReplyStatement] = {
     P(
       Index ~ Keywords.reply ~/ messageValue ~/ Index
-    )./.map { case (start, msg, end) =>
-      val kwLoc = at(start, start + Keyword.reply.length)
-      deprecation(
-        kwLoc,
-        "The `reply` statement is deprecated; use `yield` instead",
-        code = Option(Messages.DeprecationCode.ReplyToYield),
-        autoFixable = true
-      )
-      YieldStatement(at(start, end), msg)
-    }
+    )./.map { case (start, msg, end) => ReplyStatement(at(start, end), msg) }
   }
 
   private def theSetStatement[u: P]: P[SetStatement] = {

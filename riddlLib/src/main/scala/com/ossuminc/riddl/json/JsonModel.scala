@@ -685,9 +685,16 @@ object JsonModel:
     */
   case class TellStmtDto(message: MsgOperandDto, to: String, processor: String) extends StatementDto
 
-  /** `{ "kind": "yield", "message": <msgRef|constructor> }` (also reads legacy `"kind": "reply"`)
-    */
+  /** `{ "kind": "yield", "message": <msgRef|constructor> }` -- a command emitting its event. */
   case class YieldStmtDto(message: MsgOperandDto) extends StatementDto
+
+  /** `{ "kind": "reply", "message": <msgRef|constructor> }` -- a query answering with its result.
+    *
+    * Until 2.0 `"kind": "reply"` was read as a LEGACY ALIAS for yield, because `reply` was a
+    * deprecated synonym in the language. It is now its own statement, so the two kinds are
+    * distinct on the wire as well as in the AST.
+    */
+  case class ReplyStmtDto(message: MsgOperandDto) extends StatementDto
 
   /** `{ "kind": "when", "condition"|"conditionIdentifier"|"expression": ..., "negated"?: bool,
     * "then": [<stmt>], "else"?: [<stmt>] }`. A28's structured BooleanExpression condition is
@@ -1703,7 +1710,8 @@ object JsonModel:
           case "become" => BecomeStmtDto(m("entity").str, m("handler").str)
           case "tell" =>
             TellStmtDto(readMsgOperand(m("message")), m("to").str, m("processor").str)
-          case "yield" | "reply" => YieldStmtDto(readMsgOperand(m("message")))
+          case "yield" => YieldStmtDto(readMsgOperand(m("message")))
+          case "reply" => ReplyStmtDto(readMsgOperand(m("message")))
           case "when" =>
             WhenStmtDto(
               m.get("condition").map(_.str),
@@ -1812,6 +1820,8 @@ object JsonModel:
         )
       case YieldStmtDto(message) =>
         ujson.Obj("kind" -> ujson.Str("yield"), "message" -> writeMsgOperand(message))
+      case ReplyStmtDto(message) =>
+        ujson.Obj("kind" -> ujson.Str("reply"), "message" -> writeMsgOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("when"))

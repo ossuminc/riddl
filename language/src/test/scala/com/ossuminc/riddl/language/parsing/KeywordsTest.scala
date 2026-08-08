@@ -12,9 +12,11 @@ class KeywordsTest extends AbstractTestingBasis {
 
   "Keyword" should {
     "produce all keywords" in {
-      // 156, not 152: `get`, `put`, `refuses` and `require_` were declared as Keyword constants
-      // but omitted from allKeywords, so anything driven by that list silently under-counted.
-      Keyword.allKeywords.size must be(156)
+      // 157, not 156: `replies` joined at 2.0, when a query's declared result stopped sharing
+      // the command's `yields` keyword. Before that, 156 rather than 152 because `get`, `put`,
+      // `refuses` and `require_` were declared as Keyword constants but omitted from allKeywords,
+      // so anything driven by that list silently under-counted.
+      Keyword.allKeywords.size must be(157)
     }
   }
 

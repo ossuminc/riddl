@@ -214,13 +214,13 @@ class BASTRoundTripTest extends AnyWordSpec {
       val riddlSource =
         """domain d is { context c is {
           |  result Res is { ok: Boolean }
-          |  query Ask yields result Res is { q: Integer }
+          |  query Ask replies result Res is { q: Integer }
           |  entity e is {
           |    record F is { q: Integer }
           |    state S of record e.F
           |    handler H is {
           |      on init { set field e.F.q to "0" }
-          |      on query Ask { yield result Res }
+          |      on query Ask { reply result Res }
           |    }
           |  }
           |}}
@@ -234,9 +234,11 @@ class BASTRoundTripTest extends AnyWordSpec {
           BASTReader.read(output.bytes) match {
             case Right(module) =>
               assert(compareRoots(originalRoot, module), "yield-statement round trip: ASTs differ")
-              val ys = Finder(module.contents).recursiveFindByType[AST.YieldStatement]
-              assert(ys.size == 1, s"expected one YieldStatement, found ${ys.size}")
-              assert(ys.head.msg.operandPathId.value.last == "Res", "yield target lost in BAST")
+              // ReplyStatement, not Yield: the fixture answers a QUERY, and as of 2.0 that is
+              // `reply`. This also exercises BAST statement tag 19, added with the node.
+              val ys = Finder(module.contents).recursiveFindByType[AST.ReplyStatement]
+              assert(ys.size == 1, s"expected one ReplyStatement, found ${ys.size}")
+              assert(ys.head.msg.operandPathId.value.last == "Res", "reply target lost in BAST")
             case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
           }
         case Left(messages) => fail(s"Parse failed: ${messages.format}")
@@ -639,7 +641,7 @@ class BASTRoundTripTest extends AnyWordSpec {
           |    command Add is { sku: String }
           |    event Added is { sku: String }
           |    result Res is { ok: String }
-          |    query Ask yields result Res is { q: String }
+          |    query Ask replies result Res is { q: String }
           |    outlet outp is event Added
           |    entity E is {
           |      record Data is { line: Line }
@@ -652,7 +654,7 @@ class BASTRoundTripTest extends AnyWordSpec {
           |          morph entity E to state E.S with record Data(line = record Line(sku = "y", qty = "2"))
           |        }
           |        on query Ask {
-          |          yield result Res(ok = "done")
+          |          reply result Res(ok = "done")
           |        }
           |      }
           |    }
@@ -688,10 +690,10 @@ class BASTRoundTripTest extends AnyWordSpec {
                   assert(c.ref.isInstanceOf[RecordRef])
                   assert(c.args.head.value.isInstanceOf[Constructor])
                 case other => fail(s"expected Constructor morph value, got $other")
-              val yields = Finder(module.contents).recursiveFindByType[YieldStatement]
-              yields.head.msg match
+              val replies = Finder(module.contents).recursiveFindByType[ReplyStatement]
+              replies.head.msg match
                 case c: Constructor => assert(c.ref.isInstanceOf[ResultRef])
-                case other          => fail(s"expected Constructor yield msg, got $other")
+                case other          => fail(s"expected Constructor reply msg, got $other")
             case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
           }
         case Left(messages) => fail(s"Parse failed: ${messages.format}")

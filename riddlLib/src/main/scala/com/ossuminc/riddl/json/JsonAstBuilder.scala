@@ -1384,6 +1384,7 @@ object JsonAstBuilder:
       case TellStmtDto(message, to, processor) =>
         TellStatement(curAt, buildDeliverableOperand(message), processorRef(to, processor))
       case YieldStmtDto(message) => YieldStatement(curAt, buildMsgOperand(message))
+      case ReplyStmtDto(message) => ReplyStatement(curAt, buildMsgOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
         val cond: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue =
           expression match

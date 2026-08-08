@@ -859,7 +859,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    command Cmd is { data: String }
           |    event Evt is { data: String }
           |    result DataResult is { data: String }
-          |    query GetData yields result D.C.DataResult is { id: String }
+          |    query GetData replies result D.C.DataResult is { id: String }
           |
           |    entity E is {
           |      record Fields is { data: String }
@@ -872,7 +872,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |          send event D.C.Evt to outlet D.C.Events.out
           |        }
           |        on query D.C.GetData {
-          |          yield result D.C.DataResult
+          |          reply result D.C.DataResult
           |        }
           |      }
           |    }
@@ -907,13 +907,13 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
-    "accept the deprecated reply statement in query handlers" in { (td: TestData) =>
+    "accept a `reply` statement as satisfying a query handler" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
           |    type EId is Id(C.E)
           |    result DataResult is { data: String }
-          |    query GetData yields result D.C.DataResult is { id: String }
+          |    query GetData replies result D.C.DataResult is { id: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields

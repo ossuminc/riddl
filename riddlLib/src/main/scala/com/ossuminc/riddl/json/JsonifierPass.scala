@@ -1346,6 +1346,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case TellStatement(_, msg, proc) =>
       val (pp, pk) = processorRef(proc); TellStmtDto(serializeDeliverableOperand(msg), pp, pk)
     case YieldStatement(_, msg) => YieldStmtDto(serializeMsgOperand(msg))
+    case ReplyStatement(_, msg) => ReplyStmtDto(serializeMsgOperand(msg))
     case WhenStatement(_, cond, thenS, elseS, negated) =>
       cond match
         case ls: LiteralString =>
