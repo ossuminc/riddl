@@ -30,6 +30,12 @@ import scala.jdk.StreamConverters.*
   *
   * Uses local ../riddl-models if available (faster for local dev), otherwise downloads from GitHub
   * (for CI).
+  *
+  * LEAVES THE MODELS REPO EXACTLY AS FOUND. Step 2 necessarily writes a .bast beside the source
+  * .riddl (see `roundTripTest` for why it cannot be redirected), so each model's prior .bast --
+  * content if it was checked in, absence if it was not -- is captured before and restored in a
+  * `finally`. Without that, a single suite run rewrote all 189 checked-in .bast files in the
+  * sibling checkout.
   */
 class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
@@ -174,23 +180,40 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
       case Right(_) => // ok
     }
 
-    // Step 2: Bastify
-    val bastifyArgs =
-      commonArgs ++ Array("bastify", riddlPath)
-    Commands.runMainForTest(bastifyArgs) match {
-      case Left(messages) =>
-        fail(
-          s"Step 2 (bastify) failed:\n" +
-            s"${messages.format}"
-        )
-      case Right(_) =>
-        assert(
-          Files.exists(Path.of(bastPath)),
-          s"BAST file not created: $bastPath"
-        )
-    }
+    // This test WRITES INTO THE MODELS REPO and must put it back exactly as found.
+    //
+    // `bastify` has no output-path option: `BastifyCommand.Options.outputDir` is derived from
+    // `inputFile.getParent`, and `overrideOptions` deliberately ignores an override, so the .bast
+    // lands beside the source .riddl -- inside ../riddl-models when a local checkout is used.
+    // Left alone, one suite run rewrote all 189 checked-in .bast files in that sibling repo,
+    // which is a surprising side effect of running riddl's own tests and defeats BACKLOG § 0's
+    // decision to defer .bast regeneration to release.
+    //
+    // Redirecting the output is NOT an option here. Bastifying somewhere else would mean copying
+    // the model first, and a model's `include` paths are relative -- the copy would not resolve
+    // them, so the test would stop exercising the real shape. /dev/null does not work either:
+    // step 3 reads the file back. So bastify writes where it must, and we restore afterwards.
+    val bastFile = Path.of(bastPath)
+    val preExistingBast: Option[Array[Byte]] =
+      if Files.exists(bastFile) then Some(Files.readAllBytes(bastFile)) else None
 
     try {
+      // Step 2: Bastify
+      val bastifyArgs =
+        commonArgs ++ Array("bastify", riddlPath)
+      Commands.runMainForTest(bastifyArgs) match {
+        case Left(messages) =>
+          fail(
+            s"Step 2 (bastify) failed:\n" +
+              s"${messages.format}"
+          )
+        case Right(_) =>
+          assert(
+            Files.exists(bastFile),
+            s"BAST file not created: $bastPath"
+          )
+      }
+
       // Step 3: Unbastify
       val unbastifyArgs = commonArgs ++ Array(
         "unbastify",
@@ -281,6 +304,13 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
       end if
     } finally {
       deleteRecursively(tempDir)
+      // Restore the models repo. In a `finally` so a FAILING model does not leave the file
+      // rewritten either -- a red run is exactly when someone is least likely to notice a dirty
+      // sibling working tree, and most likely to re-run and compound it.
+      preExistingBast match {
+        case Some(bytes) => Files.write(bastFile, bytes) // was checked in: put the bytes back
+        case None        => Files.deleteIfExists(bastFile) // was not there: leave no trace
+      }
     }
   }
 
