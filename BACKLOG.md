@@ -204,15 +204,33 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   question, resolving is the model's), but it means a model can name a type its
   own accessors report. Decide whether SymbolsPass should index wrapper
   contents, or whether the flatten requirement should be stated more loudly.
-- **A conditionally refusing clause escapes yield conformance** — the residual
-  gap left by `0054a8433`. `checkYieldConformance` asks whether a refusal appears
-  ANYWHERE in the clause, so a clause that refuses on one branch and forgets to
-  yield on its success path passes unchecked. The precise rule wants "cannot
-  reach the end of the clause having produced the declared event", i.e.
-  path-sensitive analysis. The sibling check at ValidationPass.scala:509 has the
-  identical weakness, so fixing one should fix both. Not newly introduced and not
-  urgent — but it is the honest limit of the current predicate, so it is written
-  down rather than implied.
+- ~~**A conditionally refusing clause escapes yield conformance**~~ — **DONE
+  2026-08-07, `1d87a109a`**, at BOTH sites (Reid's call): the Error in
+  `checkYieldConformance` and its CompletenessWarning sibling.
+  `dischargesOnEveryPath` replaces "does a refusal appear ANYWHERE in the
+  clause". A `when` needs both branches, a `match` needs every case AND a
+  `default`, a `foreach` never discharges. Error wording moved to "does not
+  yield it on every path" — "never" stopped being true.
+  **Two findings worth keeping:**
+  1. **Emitting ANY message settles a path**, not just yielding the declared
+     event or refusing with `error`/`require`. The first version assumed
+     declining means `error`/`require`, and NO in-repo fixture could have
+     contradicted it, because every fixture shared the assumption. riddl-models
+     reactive-bbq (`LoyaltyAccount.riddl:579`) declines by RECORDING a rejection
+     event — the more faithful design for an event-sourced entity. The external
+     corpus was the only thing that could catch this.
+  2. **An empty `else { }` is a PARSE ERROR** — an empty pseudo-code block does
+     not parse. So the escape is not an empty else but a NON-EMPTY one that
+     neither yields nor refuses. Making `else`/`default` mandatory in the
+     grammar was considered and REJECTED (Reid, 2026-08-07): ~56 sites across
+     three repos, and it would not have closed the hole anyway.
+- **The QueryCase completeness check shares the "anywhere in the clause"
+  shape.** Filed 2026-08-07 out of `1d87a109a`, deliberately not changed there —
+  it was not the approved hole, and it has no refusal exemption, so the
+  conditional-refusal escape does not apply to it in the same way. QueryCase
+  still asks whether a result-emitting statement appears anywhere rather than on
+  every path. Decide whether it should use `dischargesOnEveryPath` too; if so,
+  expect the same kind of corpus correction the command case needed.
 - ~~`Comment` in a `Group`'s contents cannot be rebuilt~~ — **STALE, resolved
   somewhere along the way; removed after verifying 2026-08-06.** Both halves of
   the claim are now false: `OccursInGroup` DOES include `Comment`
@@ -241,19 +259,34 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
   **Root cause, and it is a known shape:** `SagaStep extends Leaf`
   (`AST.scala:4802-4808`) with `doStatements` / `undoStatements` as FIELDS beside
-  `contents` rather than in it, so no `HierarchyPass` traversal ever descends
-  into them — which is exactly the defect `3e4af6801` fixed for
-  `requires`/`returns` by moving those clauses INTO contents.
+  `contents` rather than in it, so the traversal never descends into them.
 
-  **Not small, despite where it was filed.** The correct fix is the same move —
-  make `SagaStep` a `Branch` carrying its statements as contents — which is an
-  AST change touching parser, prettify, BAST (+ `FORMAT_REVISION`), JSON and
-  resolution. And it will newly subject every saga statement in every model to
-  validation that has never run on them, so expect a wave of findings on first
-  run, in this repo's fixtures and in riddl-models. Budget for that, not for a
-  one-line filter. Wants a plan.
-- **`validateArbitraryInteraction`'s refMap path is dead** — interaction refs are
-  keyed under the UseCase. Re-key, or delete and use the symbol table as A39 did.
+  **DONE 2026-08-07, `a1bce0d50` — but NOT the way this entry proposed, and the
+  reason is kept so it is not re-proposed.** This entry called for the
+  `3e4af6801` treatment: make `SagaStep` a `Branch`, statements into `contents`.
+  **That precedent does not transfer:** it moved two SINGLETON clauses into one
+  ordered list, whereas a SagaStep has TWO distinct blocks, and
+  `JsonModel.SagaStepDto` exposes them as separate `do` and `undo` arrays.
+  Merging them loses a distinction the JSON wire format — read by synapify and
+  riddl-gen — depends on, and forces a BAST `FORMAT_REVISION` bump.
+
+  What was done instead: one `SagaStep` case in the base `Pass.traverse`,
+  descending into both statement lists WITHOUT pushing (`ParentStack.push` takes
+  a `Branch[?]`; Include and BASTImport already traverse this way, and
+  `parents.head` staying the Saga is the correct resolution scope). No AST, JSON
+  or BAST change. ~12 `Pass`-derived passes now see saga statements;
+  `HierarchyPass` overrides `traverse` entirely, so Prettify, BASTWriter,
+  Outline and Tree were untouched.
+
+  The predicted "wave of findings" did not materialise — 23 saga steps across
+  all three corpora, and the only golden change was the REMOVAL of two FALSE
+  `is unused` warnings (`blah` and `UndoSomething` are named by a step's `send`
+  statements, so they were never unused, only unseen).
+- ~~**`validateArbitraryInteraction`'s refMap path is dead**~~ — **ALREADY FIXED
+  at `55d5dc6d9` (2026-07-27), "Fix arbitrary-interaction ref resolution (was
+  dead — wrong refMap key)".** Discovered 2026-08-07 while planning to implement
+  it: the call site already resolves with `useCase` as the scope and carries a
+  comment saying so. This entry sat open for eleven days after the work shipped.
 - ~~`PlatformContext.withOptions` lacks try/finally~~ — **STALE; `withOptions`
   was fixed at `2eefeec52` (2026-07-27), eight days before this entry was last
   read.** The unfixed twin was `withLogger`, directly above it, with the same
