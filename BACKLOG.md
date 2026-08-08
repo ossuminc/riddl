@@ -396,3 +396,15 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   `on event ShiftCreated is { morph …; set state ActiveShift to "…" }` —
   initial state arrives by replaying the creation event. Every event-sourced
   entity needs this, so it wants an example, not just a rule.
+- ossum.tech: **paths into Functions, and the new privacy warning.** Owed out of
+  their 2026-08-08 task (results appended, file in `task/done/`). Two things to
+  document: a path identifier MAY descend into a Function to reach a nested
+  definition (settled by Reid 2026-08-07); and a function nested inside another
+  is that function's private implementation, so calling it from OUTSIDE now
+  draws a StyleWarning — new in `7c8c83ca0`, after their report, so they have
+  not seen it. `ebnf-grammar.ebnf` needs NO change and was verified so, not
+  assumed: `dotted_path_identifier` (:24) is generic and `function_definitions`
+  (:198) already includes `function`. Their `concepts/interaction.md` is
+  ACCURATE about `parallel`/`optional` analysis and must not be "corrected" —
+  `UseCaseTracePass` really does recurse and really does run the cross-order
+  check.

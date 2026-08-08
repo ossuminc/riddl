@@ -124,6 +124,63 @@ to the task file and note the disposition below.
 ---
 
 
+## Three silent holes, and a test that checked nothing (2026-08-08) — DONE
+
+Two task files from ossum.tech, both reproduced on the CURRENT build before any
+work started. They had tested `2.0.0-rc.9-54`; ours was `rc.10-39`. The gap
+changed nothing, but checking cost a minute and would have saved an afternoon
+had it.
+
+**Order mattered more than any individual fix.** The empty-`[severe]` reporting
+defect was the smallest of the three and looked like the least important. Fixed
+FIRST, it turned ossum.tech's silent failure into a named `ClassCastException`
+with a file and line — converting the second bug from a hypothesis they had
+inferred by reading into a fact confirmed by execution, before any of that work
+began. Their own framing argued for it ("worth more than the specific fix");
+they were right.
+
+**`// no references` was false, and the comment is why it survived.**
+`ResolutionPass.resolveInteractions` dismissed all three interaction containers
+with that comment. The container carries none; its CONTENTS do. A step inside
+`sequence`/`parallel`/`optional` was never resolved AND never validated — two
+independent gaps, either sufficient — so a model could name definitions that do
+not exist and validate green. A confident comment is how a hole stays open:
+nobody re-derives what a comment already asserts.
+
+**The recurring shape, now three for three.** `InteractionContainer` is a
+`Container` but NOT a `Branch`, so the generic traversal cannot descend into it
+— exactly like `SagaStep` (`a1bce0d50`) and `BASTImport` before it. When a node
+holds children outside `contents`, or is a Container without being a Branch,
+assume the traversal does not reach it and prove otherwise.
+
+**A passing test that checked nothing.** `PathThroughFunctionTest` passed in
+isolation and on JVM, and failed on NATIVE only, because `pc.options` is global
+mutable state and a different suite ordering there had left `showStyleWarnings`
+clear. `Messages.Accumulator` DROPS StyleWarnings when it is, so the message
+list came back EMPTY — and five of the seven cases assert `mustBe empty` against
+`justErrors`, which an empty list satisfies. Five tests were passing while
+observing nothing; only the one assertion looking for a PRESENT string exposed
+it.
+
+Two lessons, the second sharper than the first:
+
+- Pin options with `withOptions` whenever a diagnostic's visibility depends on
+  them. Already documented at `PortletOptionTest.scala:22`, which had learned
+  this and written it down — and which was read too late.
+- **A canary does not catch this.** The canary proves a body EXECUTES; it says
+  nothing about whether the body OBSERVES anything. An assertion of the form "no
+  errors" is vacuous whenever the message set can be empty for unrelated
+  reasons. Prefer at least one assertion per suite that requires something to be
+  PRESENT.
+
+**Verified before claiming their last criterion.** ossum.tech asked whether the
+documented `parallel`/`optional` analysis actually runs on grouped steps. It
+does — `UseCaseTracePass.walkSteps` recurses and `checkParallel` does the
+cross-order check. We nearly told them it had been starved by the resolution
+bug; it had not. `lookupOne` goes through the SYMBOL TABLE, not the refMap, so
+that analysis was unaffected all along. The guess was plausible, wrong, and one
+grep from being found out.
+
 ## `persistent` where there is no state to persist (2026-08-07) — DONE
 
 `task/done/2026-08-06-persistent-should-error-on-gateway-context.md`. Misplacing
