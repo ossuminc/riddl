@@ -855,7 +855,22 @@ object Pass {
       PassesResult(input, outputs, input.parseMessages)
     } catch {
       case NonFatal(exception) =>
-        val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n")
+        // NEVER emit an empty message. `getRootCauseStackTrace` can render to nothing -- observed
+        // for a ClassCastException thrown inside ResolutionPass, and earlier for a regex throwing
+        // at class-initialisation under Scala Native (see the note at
+        // DefinitionValidation.scala:451). Both surfaced as a bare `[severe] empty(1:1->1):` with
+        // no text, no source line and no location, which says only "something threw somewhere".
+        // ossum.tech spent about half an hour bisecting a model by hand to find one.
+        //
+        // This is the LAST-RESORT reporter for every in-pass exception, so whatever it prints is
+        // all the author gets. `exception.toString` at minimum names the exception class and its
+        // message, which is enough to start.
+        val stackTrace = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n")
+        val message =
+          if stackTrace.trim.nonEmpty then stackTrace
+          else
+            val described = Option(exception.toString).map(_.trim).filter(_.nonEmpty)
+            described.getOrElse(s"${exception.getClass.getName} (no message, no stack trace)")
         val messages: Messages.Messages = List(Messages.severe(message, At.empty))
         PassesResult(input, outputs, messages ++ input.parseMessages)
     }
