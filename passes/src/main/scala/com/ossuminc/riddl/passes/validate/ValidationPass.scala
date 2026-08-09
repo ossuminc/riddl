@@ -3982,6 +3982,28 @@ case class ValidationPass(
         resolution.refMap.definitionOf[Type](ate.pathId).exists(t => isCollectionType(t.typEx))
       case _ => false
 
+  /** A25: the ELEMENT type a collection yields, the dual of [[isCollectionType]].
+    *
+    * Needed so a `foreach` element is not merely in scope but TYPED: without it `line` resolves
+    * and `line.sku` still does not, which is the whole point of iterating. `Mapping` yields None
+    * deliberately -- iterating a map produces pairs, and RIDDL has no pair type to name, so
+    * saying "unknown" is honest where guessing `to` would silently mistype every key access.
+    */
+  private def collectionElementType(te: TypeExpression): Option[TypeExpression] =
+    te match
+      case s: Sequence           => Some(s.of)
+      case s: AST.Set            => Some(s.of)
+      case g: Graph              => Some(g.of)
+      case t: Table              => Some(t.of)
+      case r: Replica            => Some(r.of)
+      case z: ZeroOrMore         => Some(z.typeExp)
+      case o: OneOrMore          => Some(o.typeExp)
+      case sr: SpecificRange     => Some(sr.typeExp)
+      case _: Mapping            => None
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => collectionElementType(t.typEx))
+      case _ => None
+
   /** A25: the set of fields a `foreach ... in field <path>` may legally iterate — the fields of the
     * enclosing entity's state record(s), of the handled message, and of the enclosing function's
     * `requires` input. Membership is tested by identity against the resolved field.
@@ -4021,7 +4043,7 @@ case class ValidationPass(
   private def validateForeachCollection(
     fs: ForeachStatement,
     inScopeLets: Seq[LetStatement],
-    inScopeElements: scala.collection.immutable.Set[String],
+    inScopeElements: Map[String, TypeExpression],
     parents: Parents
   ): Unit =
     fs.collection match
@@ -4287,10 +4309,16 @@ case class ValidationPass(
   private def valueRefTypeExpr(
     vr: ValueRef,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression] = Map.empty
   ): Option[TypeExpression] =
     val names = vr.path.value
     if names.isEmpty then None
+    // A25: a `foreach` element is typed by the collection it iterates, and the remaining path
+    // components walk that type exactly as they walk a `let`'s. Checked BEFORE lets so an element
+    // shadows an outer local of the same name, matching the lexical rule `let` already follows.
+    else if elements.contains(names.head) then
+      typeExprOfPath(elements(names.head), names.tail)
     else
       val idx = letIndexOf(names.head, lets)
       if idx >= 0 then
@@ -4354,24 +4382,42 @@ case class ValidationPass(
   private def valueRefResolves(
     vr: ValueRef,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression] = Map.empty
   ): Boolean =
     val names = vr.path.value
-    names.nonEmpty &&
-    (letIndexOf(names.head, lets) >= 0 || valueRefDefinition(vr, parents).nonEmpty)
+    names.nonEmpty && {
+      elements.get(names.head) match
+        // A25: the head naming an element is NOT enough -- the REST of the path must walk that
+        // element's type, or `line.nosuch` resolves as happily as `line.sku`. That is the
+        // last-component-matching defect A54 removed, and it would have been reintroduced here.
+        //
+        // `Anything` is the deliberate exception: it is what the element binds to when the
+        // collection itself did not resolve, and that error is already reported at the loop
+        // header. Demanding a walk through an unknown type would blame the body for it.
+        case Some(_: Anything) => true
+        case Some(te)          => typeExprOfPath(te, names.tail).nonEmpty
+        case None =>
+          letIndexOf(names.head, lets) >= 0 || valueRefDefinition(vr, parents).nonEmpty
+    }
 
   /** A54: validate a [[Value]] — recurse constructors, and confirm value references resolve. Get
     * sources are checked for existence via [[checkRef]].
     */
-  private def validateValue(v: Value, parents: Parents, lets: Seq[LetStatement]): Unit =
+  private def validateValue(
+    v: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression] = Map.empty
+  ): Unit =
     v match
       case _: LiteralString => ()
       case _: PromptValue   => () // literal AI prompt, nothing to resolve
-      case c: Constructor   => validateConstructor(c, parents, lets)
+      case c: Constructor   => validateConstructor(c, parents, lets, elements)
       case call: Call       => validateCall(call, parents, lets)
       case ask: Ask         => validateAsk(ask, parents)
       case vr: ValueRef =>
-        if !valueRefResolves(vr, parents, lets) then
+        if !valueRefResolves(vr, parents, lets, elements) then
           messages.addError(
             vr.loc,
             s"Value reference '${vr.path.format}' is not a 'let'-local, a field of the handled " +
@@ -4754,7 +4800,8 @@ case class ValidationPass(
     fields: Seq[Field],
     fieldNoun: String,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression] = Map.empty
   ): Unit =
     args.zipWithIndex.foreach { case (arg, idx) =>
       val fieldOpt: Option[Field] = arg.name match
@@ -4786,7 +4833,8 @@ case class ValidationPass(
   private def validateConstructor(
     c: Constructor,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression] = Map.empty
   ): Unit =
     resolution.refMap.definitionOf[Type](c.ref.pathId) match
       case Some(typ) =>
@@ -4837,9 +4885,11 @@ case class ValidationPass(
             suggestion =
               s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset."
           )
-        checkArgumentTypes(c.args, fields, "field", parents, lets)
-        // Recurse into argument values (nested constructors, value refs).
-        c.args.foreach(arg => validateValue(arg.value, parents, lets))
+        checkArgumentTypes(c.args, fields, "field", parents, lets, elements)
+        // Recurse into argument values (nested constructors, value refs), CARRYING the foreach
+        // elements: `send event Shipped(sku = line.sku)` is the shape the whole feature exists
+        // for, and dropping them here left the element unresolvable exactly where it is used.
+        c.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
       case None => () // unresolved constructor ref reported by ResolutionPass
   end validateConstructor
 
@@ -4979,15 +5029,17 @@ case class ValidationPass(
     stmts: Seq[Statement],
     inScopeLets: Seq[LetStatement],
     parents: Parents,
-    inScopeElements: scala.collection.immutable.Set[String] =
-      scala.collection.immutable.Set.empty[String]
+    // A25: `foreach` elements in scope, WITH their element type. It was a Set[String] -- names
+    // only -- which was enough for the one consumer that existed (a nested `foreach` over an outer
+    // element) but left the body unable to dereference: `line` was known, `line.sku` was not.
+    inScopeElements: Map[String, TypeExpression] = Map.empty
   ): Unit =
     var lets = inScopeLets
     stmts.foreach {
       case ls: LetStatement =>
         // A54: validate the bound expression with the scope BEFORE this let (a let can't see itself),
         // then check its type against a declared `let x: T = …`.
-        validateValue(ls.expression, parents, lets)
+        validateValue(ls.expression, parents, lets, inScopeElements)
         checkLocalName(ls.identifier, "'let' local", parents) // A55
         ls.typeRef.foreach { tr =>
           val expected = resolution.refMap.definitionOf[Type](tr.pathId)
@@ -5003,7 +5055,7 @@ case class ValidationPass(
         lets = lets :+ ls
       case ss: SetStatement =>
         // A54: validate the value expression, then check it against the target field/state type.
-        validateValue(ss.value, parents, lets)
+        validateValue(ss.value, parents, lets, inScopeElements)
         val expected: Option[Type] = ss.field match
           case fr: FieldRef =>
             resolution.refMap.definitionOf[Field](fr.pathId).flatMap { f =>
@@ -5017,27 +5069,39 @@ case class ValidationPass(
               .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
         checkValueType(expected, ss.value, parents, lets, ss.loc, s"'set ${ss.field.format}'")
       case s: SendStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets); case _ => () }
+        s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
       case s: TellStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets); case _ => () }
+        s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
       case s: YieldStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets); case _ => () }
+        s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
       case s: MorphStatement =>
-        s.value match { case c: Constructor => validateValue(c, parents, lets); case _ => () }
+        s.value match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
       case fs: ForeachStatement =>
         validateForeachCollection(fs, lets, inScopeElements, parents)
+        // Bind the element to the collection's ELEMENT type for the body's scope. `None` (an
+        // unresolvable collection, or a Mapping) still binds the NAME so the body's references
+        // resolve -- the collection error is already reported above, and piling "unknown value
+        // reference" on top of it would blame the body for a defect in the header.
+        val elementType: Option[TypeExpression] = fs.collection match
+          case fr: FieldRef =>
+            resolution.refMap.definitionOf[Field](fr.pathId).flatMap(f => collectionElementType(f.typeEx))
+          case id: Identifier =>
+            val idx = letIndexOf(id.value, lets)
+            if idx >= 0 then
+              letType(lets(idx), lets.take(idx), parents).flatMap(t => collectionElementType(t.typEx))
+            else inScopeElements.get(id.value).flatMap(collectionElementType)
         checkStatementScopes(
           fs.doStatements.toSeq.collect { case s: Statement => s },
           lets,
           parents,
-          inScopeElements + fs.element.value
+          inScopeElements + (fs.element.value -> elementType.getOrElse(Anything(fs.loc)))
         )
       case ws: WhenStatement =>
         // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
         // the LiteralString/Identifier forms have no expression to check here. A17: a bare boolean
         // ValueRef condition must resolve to a Boolean-typed value.
         ws.condition match
-          case be: BooleanExpression => validateValue(be, parents, lets)
+          case be: BooleanExpression => validateValue(be, parents, lets, inScopeElements)
           case vr: ValueRef          => checkWhenValueRef(vr, parents, lets) // A17
           case _                     => ()
         checkStatementScopes(
@@ -5056,7 +5120,7 @@ case class ValidationPass(
         // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
         // the LiteralString/InvariantRef forms are checked in validateStatement.
         rs.condition match
-          case be: BooleanExpression => validateValue(be, parents, lets)
+          case be: BooleanExpression => validateValue(be, parents, lets, inScopeElements)
           case _                     => ()
       case ms: MatchStatement =>
         validateMatch(
