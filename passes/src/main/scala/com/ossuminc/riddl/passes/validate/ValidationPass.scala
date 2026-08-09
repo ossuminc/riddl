@@ -3870,6 +3870,11 @@ case class ValidationPass(
     */
   private def countValueFailPoints(v: RiddlValue): Int = v match
     case call: Call               => 1 + call.args.map(a => countValueFailPoints(a.value)).sum
+    // A12: the census extends to failure-bearing VALUES, not only statements (Reid, 2026-08-09).
+    // An `ask` can fail exactly as a `call` can -- more obviously, since no answer may ever
+    // arrive -- and `Call` was already counted here, so omitting `ask` would have let a saga
+    // step hide a second failure point behind a `let`.
+    case _: Ask                   => 1
     case _: GetValue              => 1
     case c: Constructor           => c.args.map(a => countValueFailPoints(a.value)).sum
     case le: LogicalExpression    => countValueFailPoints(le.left) + countValueFailPoints(le.right)

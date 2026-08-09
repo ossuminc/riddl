@@ -31,7 +31,15 @@ class SagaValidatorTest extends AbstractValidatingTest {
        |    result Res is { okfield: Boolean }
        |    command Go is { xfield: Integer }
        |    command UndoGo is { xfield: Integer }
+       |    result Answer is { v: Integer }
+       |    query Ask replies result Answer is { q: Integer }
+       |    record QState is { total: Integer }
        |    entity e is { sink tank is { inlet inn is command Go } }
+       |    entity q is {
+       |      state S of record d.c.QState is {
+       |        handler H is { on query d.c.Ask is { reply result d.c.Answer } }
+       |      }
+       |    }
        |    saga sag is {
        |      $requires
        |      $returns
@@ -106,6 +114,28 @@ class SagaValidatorTest extends AbstractValidatingTest {
     "not warn on a step with ONE failure point (one embedded call)" in { (td: TestData) =>
       stepCheck("""let r = call function Add(a = "1", b = "2")""", td) { messages =>
         a12Warnings(messages) mustBe empty
+      }
+    }
+
+    // A12 counts failure-bearing VALUES, not only statements (Reid, 2026-08-09). `call` and `get`
+    // were already counted this way; `ask` joins them, and it fails more obviously than either --
+    // no answer may ever arrive. Without this an `ask` could hide a second failure point behind a
+    // `let`, which is precisely what a saga step's all-or-nothing contract forbids.
+    "not warn on a step with ONE failure point (one ask)" in { (td: TestData) =>
+      stepCheck("""let a = ask query d.c.Ask of entity d.c.q""", td) { messages =>
+        a12Warnings(messages) mustBe empty
+      }
+    }
+
+    "warn on a step with TWO failure points (ask + send)" in { (td: TestData) =>
+      stepCheck(
+        """let a = ask query d.c.Ask of entity d.c.q
+          |        send command Go to inlet d.c.e.tank.inn""".stripMargin,
+        td
+      ) { messages =>
+        val warns = a12Warnings(messages)
+        warns.size mustBe 1
+        warns.head.message must include("has 2 potential failure points")
       }
     }
 
