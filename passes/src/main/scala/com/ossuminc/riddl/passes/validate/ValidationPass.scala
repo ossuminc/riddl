@@ -2972,6 +2972,7 @@ case class ValidationPass(
       case snd: SendStatement  => msgRefs(snd.msg)
       case tel: TellStatement  => msgRefs(tel.msg)
       case yld: YieldStatement => msgRefs(yld.msg)
+      case rpl: ReplyStatement => msgRefs(rpl.msg)
       case mor: MorphStatement =>
         resolution.refMap
           .definitionOf[Entity](mor.entity.pathId)
@@ -3891,6 +3892,7 @@ case class ValidationPass(
       case snd: SendStatement    => countValueFailPoints(snd.msg)
       case tel: TellStatement    => countValueFailPoints(tel.msg)
       case yld: YieldStatement   => countValueFailPoints(yld.msg)
+      case rpl: ReplyStatement   => countValueFailPoints(rpl.msg)
       case mor: MorphStatement   => countValueFailPoints(mor.value)
       case req: RequireStatement => countValueFailPoints(req.condition)
       case whn: WhenStatement    => countValueFailPoints(whn.condition)
@@ -5080,9 +5082,15 @@ case class ValidationPass(
 
       handler.clauses.foreach { clause =>
         walkStatements(clause.contents) {
-          case _: TellStatement | _: SendStatement | _: YieldStatement | _: MorphStatement |
-              _: SetStatement | _: BecomeStatement | _: ErrorStatement | _: CodeStatement |
-              _: PutStatement =>
+          // `reply` is as executable as `yield`: it answers a query with its declared result,
+          // which is exactly the work a query handler exists to do. Omitting it after the 2.0
+          // yield/reply split produced 27 false warnings across 22 riddl-models models -- in two
+          // flavours the arithmetic predicts exactly: a `do`+`reply` handler counted as
+          // PromptOnly, a `reply`-only handler as Empty. The Empty branch's own suggestion
+          // already names `reply` as a fix, so a user could follow the advice and still be warned.
+          case _: TellStatement | _: SendStatement | _: YieldStatement | _: ReplyStatement |
+              _: MorphStatement | _: SetStatement | _: BecomeStatement | _: ErrorStatement |
+              _: CodeStatement | _: PutStatement =>
             // A45: `put` publishes to a UI output — an executable effect. (ReturnStatement is not
             // added here: it only occurs in function bodies, which are classified by
             // validateFunction's statement-non-empty check, not classifyHandlers.)
