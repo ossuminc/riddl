@@ -58,19 +58,23 @@ class ForeachValidationTest extends AbstractValidatingTest {
       }
     }
 
-    "reject a foreach over a field outside the entity state, message, or function input" in {
-      (td: TestData) =>
-        parseAndValidate(
-          model("""foreach o in field Other.items { do "process" }"""),
-          td.name,
-          shouldFailOnErrors = false
-        ) { case (_, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "must be a field of the enclosing entity's"
-          )
-        }
+    // REVERSED 2026-08-09. This case formerly asserted an Error here, on the ground that
+    // `Other.items` is not a field of the entity state, the handled message, or a function input.
+    // That restriction was never a decision — it fell out of an allow-list tested by identity
+    // against those three roots' DIRECT fields, which also (and more visibly) rejected the
+    // perfectly ordinary `foreach line in field order.lines`.
+    //
+    // Cardinality is the whole question. If the path resolves and the type it lands on is a
+    // collection, it iterates; where the field sits is the resolver's business and it has already
+    // answered. An unresolvable path still errors — from the resolver, saying so precisely.
+    "accept a foreach over any resolvable collection field, wherever it sits" in { (td: TestData) =>
+      parseAndValidate(
+        model("""foreach o in field Other.items { do "process" }"""),
+        td.name,
+        shouldFailOnErrors = false
+      ) { case (_, _, msgs: Messages) =>
+        hasForeachError(msgs) mustBe false
+      }
     }
 
     "accept a foreach over a let-bound collection local" in { (td: TestData) =>

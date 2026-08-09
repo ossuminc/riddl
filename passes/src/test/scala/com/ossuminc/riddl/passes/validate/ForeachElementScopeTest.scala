@@ -33,8 +33,9 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
        |  author A is { name is "A" email is "a@b.c" }
        |  context C is {
        |    record Line is { sku is String }
+       |    record Order is { entries is many Line, ref is String }
        |    record St is { lines is many Line, note is String }
-       |    command Cmd is { note is String }
+       |    command Cmd is { order is Order, note is String }
        |    event Shipped is { sku is String }
        |    outlet Out is event Shipped
        |    entity E is {
@@ -99,6 +100,27 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
       val errors = errorsFor("foreach line in field lines { set field St.note to line.nosuch }", td)
       withClue(clue(errors)) {
         errors.exists(_.message.contains("line.nosuch")) mustBe true
+      }
+    }
+
+    // A dotted collection path. This was rejected until 2026-08-09, not by decision but by an
+    // allow-list that tested the resolved field for identity against the DIRECT fields of the state
+    // record, handled message and function input. `lines` belongs to `Order`, so no path through a
+    // nested record could satisfy it. Cardinality is the whole question: the path resolves and
+    // lands on a collection, so it iterates.
+
+    "iterate a dotted path into the handled message" in { (td: TestData) =>
+      val errors = errorsFor(
+        "foreach line in field order.entries { send event Shipped(sku = line.sku) to outlet Out }",
+        td
+      )
+      errors mustBe empty
+    }
+
+    "reject a dotted path landing on a scalar" in { (td: TestData) =>
+      val errors = errorsFor("""foreach x in field order.ref { do "x" }""", td)
+      withClue(clue(errors)) {
+        errors.exists(_.message.contains("is not a collection type")) mustBe true
       }
     }
 

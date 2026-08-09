@@ -568,7 +568,7 @@ case class ValidationPass(
     // A55: a binding may legally collide with a field of the message or the entity state — bare
     // `foo` is the binding and `foo.foo` reaches the field — but that overload is easy to misread.
     omc.binding.foreach { id =>
-      if foreachAllowedFields(omc +: parents).exists(_.id.value == id.value) then
+      if fieldsInScope(omc +: parents).exists(_.id.value == id.value) then
         messages.addWarning(
           id.loc,
           s"on-clause binding '${id.value}' has the same name as a field of the handled message " +
@@ -4004,11 +4004,17 @@ case class ValidationPass(
         resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => collectionElementType(t.typEx))
       case _ => None
 
-  /** A25: the set of fields a `foreach ... in field <path>` may legally iterate — the fields of the
-    * enclosing entity's state record(s), of the handled message, and of the enclosing function's
-    * `requires` input. Membership is tested by identity against the resolved field.
+  /** The fields directly in scope at a statement: those of the enclosing entity's state record(s),
+    * of the handled message, and of the enclosing function's `requires` input.
+    *
+    * This is a NAMING aid only — it answers "would a reader take this bare name for a field?", which
+    * is what the on-clause binding's shadow warning asks. It is NOT an allow-list. It once gated
+    * `foreach ... in field <path>` by identity, which rejected `foreach line in field order.lines`
+    * for no better reason than that `lines` belongs to `Order` rather than to the message directly.
+    * Cardinality is the whole of that question: if the path resolves and lands on a collection, it
+    * is iterable, wherever it sits.
     */
-  private def foreachAllowedFields(parents: Parents): Seq[Field] =
+  private def fieldsInScope(parents: Parents): Seq[Field] =
     def aggFields(t: Type): Seq[Field] =
       t.typEx match
         case ate: AggregateTypeExpression => ate.fields
@@ -4035,7 +4041,7 @@ case class ValidationPass(
         }
       }
     stateFields ++ messageFields ++ functionFields
-  end foreachAllowedFields
+  end fieldsInScope
 
   /** A25: validate a single `foreach` collection against the in-scope `let` locals and foreach
     * element names threaded to this point.
@@ -4094,15 +4100,11 @@ case class ValidationPass(
                   "Iterate a collection-typed field (Sequence/Set/Graph/Table/Replica/Mapping or a " +
                     "'many'/'1+'/range cardinality)."
               )
-            else if !foreachAllowedFields(parents).exists(_ eq field) then
-              messages.addError(
-                fs.loc,
-                s"'foreach' field '${fr.pathId.format}' must be a field of the enclosing entity's " +
-                  "state, the handled message, or a function input",
-                suggestion =
-                  "Reference a collection field of the entity state, the on-clause's message, or a " +
-                    "function 'requires' input."
-              )
+            end if
+            // There is deliberately NO second check that the field be a DIRECT field of the entity
+            // state, handled message, or function input. Cardinality is the whole question: if the
+            // path resolves and the type it lands on is a collection, it is iterable. Where the
+            // field sits is the resolver's business, and it has already answered.
           case None => () // unresolved field — ResolutionPass already reported it
   end validateForeachCollection
 
