@@ -327,15 +327,35 @@ object AST:
     * @param loc
     *   The location in the parse source where this description occurs
     * @param url
-    *   The URL for the file content that is the description.
+    *   The path EXACTLY AS THE AUTHOR WROTE IT -- `"ReactiveSummit.md"`, not the absolute
+    *   `file:///Users/.../ReactiveSummit.md` it resolves to.
     */
-  case class URLDescription(loc: At, url: URL)(using urlLoader: PlatformContext)
+  case class URLDescription(loc: At, path: String)(using urlLoader: PlatformContext)
       extends Description:
+
+    /** The URL this path denotes, computed AT USE rather than stored.
+      *
+      * The parser used to resolve `described in file "X.md"` against the source root and store
+      * the absolute result, which destroyed the authored string: prettify then emitted
+      * `file:///Users/reid/...`, so the round trip produced a model that would not resolve on any
+      * other checkout, in CI, or for another developer. Reid ruled (2026-08-09) that the authored
+      * string is what the AST holds and the URL is derived on demand.
+      *
+      * The basis comes from `loc.source.root` -- the At already carries the input the path was
+      * written in, so nothing extra needs storing to resolve it later. An already-absolute path
+      * (`described at https://...`) is used as-is; only a relative one is resolved.
+      */
+    def toURL: URL =
+      if path.matches("^(file|https?)://.*") then URL(path)
+      else loc.source.root.resolve(path)
+
     lazy val lines: Seq[LiteralString] = {
-      val future = urlLoader.load(url).map(_.split("\n").toSeq.map(LiteralString(loc, _)))
+      val future = urlLoader.load(toURL).map(_.split("\n").toSeq.map(LiteralString(loc, _)))
       Await.result(future, 10)
     }
-    override def format: String = url.toExternalForm
+
+    /** The AUTHORED path, so a round trip reproduces what was written. */
+    override def format: String = path
   end URLDescription
 
   sealed trait Attachment extends Meta with WithIdentifier

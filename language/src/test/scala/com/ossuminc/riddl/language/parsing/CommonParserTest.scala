@@ -56,7 +56,7 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
             metadata = Contents(
               URLDescription(
                 (1, 30),
-                URL("https://www.wordnik.com/words/phi")
+                "https://www.wordnik.com/words/phi"
               )
             )
           )

@@ -1101,7 +1101,15 @@ class BASTReader(
         ReturnStatement(loc, v)
 
       case _ =>
-        PromptStatement(loc, LiteralString(loc, s"<unknown statement $stmtType>"))
+        // THROW, do not fabricate. This arm used to return a PromptStatement carrying
+        // "<unknown statement N>", so an unreadable tag decoded into a PLAUSIBLE model that
+        // validated and prettified like any other -- the corruption survived as content. A tag
+        // with no reader arm means the stream was written by a newer build or is damaged; either
+        // way the honest answer is to fail, not to invent a statement the author never wrote.
+        throw new IllegalStateException(
+          s"BAST statement tag $stmtType has no reader arm at ${loc.format}; the file may be " +
+            "from a newer build or corrupt"
+        )
     }
   }
 
@@ -1518,9 +1526,8 @@ class BASTReader(
         val brief = readLiteralString()
         BriefDescription(loc, brief)
 
-      case 2 => // URL
-        val url = readURL()
-        URLDescription(loc, url)
+      case 2 => // URL description -- the AUTHORED path
+        URLDescription(loc, readString())
 
       case 10 => // Option
         val name = readString()

@@ -705,7 +705,21 @@ abstract class VisitingPass[VT <: PassVisitor](
         visitor.doRequires(requires)
       case returns: Returns =>
         visitor.doReturns(returns)
-      case _ => ()
+      // A Reference reaches here when it is a container's own field rather than a child of a
+      // definition -- a Repository's RepositoryRef is the case that occurs. There is nothing for
+      // a visitor to do with it: references are visited as part of the definition that holds
+      // them, and resolution reads them from the refMap. Enumerated rather than absorbed by a
+      // catch-all, so a value kind nobody anticipated fails loudly instead of being skipped.
+      // Values a visitor has nothing to do with, enumerated rather than absorbed. A Reference
+      // reaches here when it is a container's own field (a Repository's RepositoryRef); a ShownBy
+      // when an Epic carries one. Both are read by the definition that holds them, so there is no
+      // visit to make -- but they are LISTED, so a kind nobody anticipated still fails loudly.
+      case _: Reference[?] | _: ShownBy => ()
+      case _ =>
+        throw new IllegalStateException(
+          s"processValue has no arm for ${value.getClass.getSimpleName} at ${value.loc}; add one " +
+            "-- silently skipping it would drop the node from every visiting pass"
+        )
     end match
   end processValue
 

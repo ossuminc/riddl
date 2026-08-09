@@ -220,10 +220,13 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
       ) ~ Index
     ).map {
       case (off1, strings: Seq[LiteralString], off2) => BlockDescription(at(off1, off2), strings)
-      case (off1, url: URL, off2)                    => URLDescription(at(off1, off2), url)
-      case (off1, file: LiteralString, off2) =>
-        val url = ctx.input.asInstanceOf[RiddlParserInput].root.resolve(file.s)
-        URLDescription(at(off1, off2), url)
+      // `described at <httpUrl>` is already absolute, so its text IS the path.
+      case (off1, url: URL, off2) => URLDescription(at(off1, off2), url.toExternalForm)
+      // `described in file "X.md"` keeps the AUTHORED string. It used to be resolved here against
+      // the source root, which destroyed the relative form the author wrote and made prettify emit
+      // a machine-specific absolute path. Resolution now happens in `URLDescription.toURL`, which
+      // gets the basis from `loc.source.root` at the moment the content is actually loaded.
+      case (off1, file: LiteralString, off2) => URLDescription(at(off1, off2), file.s)
     }
 
   def maybeDescription[u: P]: P[Option[Description]] =

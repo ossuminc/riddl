@@ -566,7 +566,7 @@ object JsonAstBuilder:
           case MetaKind.Description =>
             items += BlockDescription(curAt, i.lines.map(LiteralString(curAt, _)))
           case MetaKind.UrlDescription =>
-            i.value.foreach(u => items += URLDescription(curAt, URL(u)))
+            i.value.foreach(u => items += URLDescription(curAt, u))
           case MetaKind.Term =>
             items += Term(
               curAt,
@@ -620,7 +620,7 @@ object JsonAstBuilder:
         items += FigmaRef(curAt, LiteralString(curAt, fr.fileKey), LiteralString(curAt, fr.nodeId))
       )
       import ctx.pc
-      m.urlDescription.foreach(u => items += URLDescription(curAt, URL(u)))
+      m.urlDescription.foreach(u => items += URLDescription(curAt, u))
     }
     Contents[MetaData](items.toSeq*)
   end meta

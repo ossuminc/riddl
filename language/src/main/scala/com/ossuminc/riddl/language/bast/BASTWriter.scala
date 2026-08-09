@@ -355,9 +355,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case sc: SimpleContainer[?] => writeSimpleContainer(sc)
 
       case _ =>
-        // Log unhandled types for debugging
-        println(
-          s"Unhandled node type in BASTWriter: ${value.getClass.getSimpleName} at ${value.loc}"
+        // THROW, do not drop. This arm used to `println` and continue, which meant an AST node
+        // with no writer arm was silently OMITTED from the .bast file -- the reader then produced
+        // a model missing content, with nothing anywhere saying so. A serializer's contract is
+        // total: every node it is handed must be representable, and a node it cannot write is a
+        // defect in the writer, not an input to route around.
+        throw new IllegalStateException(
+          s"BASTWriter has no arm for ${value.getClass.getSimpleName} at ${value.loc}; " +
+            "add one -- silently omitting it would corrupt the stream"
         )
     }
   }
@@ -1731,7 +1736,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_DESCRIPTION)
     writer.writeU8(2) // URL type
     writeLocation(ud.loc)
-    writeURL(ud.url)
+    // The AUTHORED path, not a resolved URL. An absolute path written by an older build still
+    // decodes correctly: `toURL` uses it as-is when it carries a scheme.
+    writeString(ud.path)
   }
 
   def writeLineComment(c: LineComment): Unit = {

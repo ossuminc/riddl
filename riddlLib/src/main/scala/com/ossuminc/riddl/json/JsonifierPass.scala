@@ -1168,7 +1168,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     }
     val comments = items.collect { case c: LineComment => c.text }
     val figmaRefs = items.collect { case fr: FigmaRef => FigmaRefDto(fr.fileKey.s, fr.nodeId.s) }
-    val url = items.collectFirst { case u: URLDescription => u.url.toExternalForm }
+    // The AUTHORED path, so JSON round-trips what was written rather than a resolved URL.
+    val url = items.collectFirst { case u: URLDescription => u.path }
     val ordered = metaItems(md)
     // The guard has to consider the ORDERED items, not just the buckets: a kind that has no bucket
     // of its own — a ULID attachment — would otherwise make the whole metadata block vanish.
@@ -1203,7 +1204,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       case d: BlockDescription =>
         Some(MetaItemDto(MetaKind.Description, lines = d.lines.map(_.s)))
       case u: URLDescription =>
-        Some(MetaItemDto(MetaKind.UrlDescription, value = Some(u.url.toExternalForm)))
+        Some(MetaItemDto(MetaKind.UrlDescription, value = Some(u.path)))
       case t: Term =>
         Some(
           MetaItemDto(MetaKind.Term, name = Some(t.id.value), definition = t.definition.map(_.s))

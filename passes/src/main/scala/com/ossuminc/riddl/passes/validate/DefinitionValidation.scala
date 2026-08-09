@@ -226,8 +226,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           hasDescription = true
         case ud: URLDescription =>
           check(
-            ud.url.isValid,
-            s"For $identity, description at ${ud.loc.format} has an invalid URL: ${ud.url}",
+            ud.toURL.isValid,
+            s"For $identity, description at ${ud.loc.format} has an invalid URL: ${ud.path}",
             Error,
             ud.loc,
             suggestion =

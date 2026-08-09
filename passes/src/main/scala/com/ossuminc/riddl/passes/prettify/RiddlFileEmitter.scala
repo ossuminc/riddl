@@ -161,21 +161,20 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         }
         decr
         addLine("}")
-      case URLDescription(_, url) =>
+      case ud: URLDescription =>
+        // Emits the AUTHORED path, so `described in file "X.md"` round-trips to itself instead of
+        // to a machine-specific absolute URL.
+        //
         // QUOTING DIFFERS BY SCHEME, and getting it uniform either way emits source that will not
         // parse. `described in file` takes a `literalString` (CommonParser:219), so its path MUST
         // be quoted -- emitting it bare produced output that failed to re-parse with
         // `Expected ("\"")`, reported by riddl-examples against rc.10-45. `described at` takes a
         // bare `httpUrl` (NoWhiteSpaceParsers:141), so quoting THAT would break it instead.
         addIndent("described ")
-        url.scheme match
-          case "file" =>
-            add("in file ")
-            add("\"" + url.toExternalForm + "\"").nl
-          case "http" | "https" =>
-            add("at ")
-            add(url.toExternalForm).nl
-        end match
+        if ud.path.startsWith("http://") || ud.path.startsWith("https://") then
+          add("at ").add(ud.path).nl
+        else add("in file ").add("\"" + ud.path + "\"").nl
+        end if
       case _ => // ignore
     end match
     this

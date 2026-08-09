@@ -3880,7 +3880,17 @@ case class ValidationPass(
     case le: LogicalExpression    => countValueFailPoints(le.left) + countValueFailPoints(le.right)
     case ne: NotExpression        => countValueFailPoints(ne.expr)
     case ce: ComparisonExpression => countValueFailPoints(ce.left) + countValueFailPoints(ce.right)
-    case _                        => 0
+    // A bare message REFERENCE carries no failure point of its own -- the statement holding it
+    // does, and that statement is counted by its own arm. Enumerated rather than absorbed by a
+    // `case _ => 0`, because that catch-all is precisely how `ask` went uncounted: a new
+    // failure-bearing value read as "contributes nothing" instead of failing the build.
+    case _: Reference[?]          => 0
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => 0
+    case other =>
+      throw new IllegalStateException(
+        s"countValueFailPoints has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
+          "decide whether it can fail rather than assuming it cannot"
+      )
   end countValueFailPoints
 
   /** A12: the number of potential failure points contributed by a SINGLE statement (not recursing
@@ -5102,7 +5112,15 @@ case class ValidationPass(
             executableCount += 1
           case _: PromptStatement =>
             promptCount += 1
-          case _ => ()
+          // ENUMERATED, not a catch-all. These are the statements that are neither an effect nor
+          // a prompt: control flow, binding, refusal, and `return` (function bodies only, checked
+          // by validateFunction instead). Listing them means a NEW statement kind breaks this
+          // build under -Werror rather than silently counting as neither -- which is exactly how
+          // `reply` produced 27 false warnings after the 2.0 yield/reply split. `Statement` is
+          // sealed, so the compiler can hold this promise.
+          case _: WhenStatement | _: MatchStatement | _: ForeachStatement | _: LetStatement |
+              _: RequireStatement | _: ReturnStatement =>
+            ()
         }
       }
 

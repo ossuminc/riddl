@@ -41,8 +41,10 @@ class JVMNativeASTTest extends AbstractTestingBasis {
   }
   "have useful FileDescription" in {
     import com.ossuminc.riddl.utils.URL
-    val fd = URLDescription(At(), URL("file:///."))
-    fd.format must include("/")
-    fd.format must include(".")
+    // URLDescription holds the AUTHORED path now, and `format` reproduces it verbatim so a
+    // round trip yields what was written rather than a machine-specific absolute URL.
+    val fd = URLDescription(At(), "file:///.")
+    fd.format must be("file:///.")
+    fd.toURL.toExternalForm must include(".")
   }
 }
