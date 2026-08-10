@@ -124,6 +124,61 @@ to the task file and note the disposition below.
 ---
 
 
+## A restriction nobody chose (2026-08-09) — DONE
+
+ossum.tech reported two `foreach` defects. The first was plainly a bug: the
+loop variable was bound for the header's own check and nowhere else, so every
+body that dereferenced the element was an Error, and `foreach` admitted only
+bodies that ignored what they iterated. Fixed at `3b2af9049` by carrying the
+element's **type** rather than its name — binding the name alone would accept
+`line.nosuch` as readily as `line.sku`, which is the last-component-matching
+defect A54 removed from `ValueRef` resolution generally, and no better for
+being local.
+
+The second is the one worth recording, and it is about **how to read a
+diagnostic**.
+
+`foreach line in field order.lines` was rejected with:
+
+> 'foreach' field 'order.lines' must be a field of the enclosing entity's
+> state, the handled message, or a function input
+
+The reporter read that as "a considered restriction" and asked us to confirm
+so they could document it. I read it the same way, traced it to
+`foreachAllowedFields(parents).exists(_ eq field)`, established that the check
+was *satisfiable in principle* by anchoring dotted paths at one of those three
+roots, and brought Reid a three-option ruling about how far to widen it.
+
+All of that was the wrong shape of question. Reid's correction: **cardinality
+is the whole question.** Resolve the path, look at the type it lands on,
+iterate iff it has cardinality. Where the field sits is the resolver's
+business and the resolver has already answered. The allow-list went away
+entirely (`ca495d67e`); it never earned its place.
+
+**The lesson: a message that enumerates conditions may be enumerating intent,
+or it may be enumerating the contents of a data structure.** This one listed
+the entity state, the handled message and the function input because those are
+what `foreachAllowedFields` happened to concatenate — not because anyone
+decided depth was forbidden. It read like a rule because error messages are
+written in the voice of rules. Before treating a restriction as a design
+decision to be documented or negotiated, find the commit that introduced it
+and the reason given; absent a reason, it is an artifact, and the question is
+whether to delete it rather than how far to relax it.
+
+The corollary for asking Reid anything: a question offering three ways to
+preserve a mechanism presumes the mechanism. That presumption was the error,
+and no amount of care inside the options would have surfaced it.
+
+Two loose ends recorded rather than hidden: a `Mapping` is iterable but binds
+its element to `Anything`, since RIDDL has no pair type to name the element
+with, so members of the element go unchecked. A `Graph` binds the node type
+and is fully checked. `ForeachValidationTest`'s third case was **reversed, not
+deleted** — it asserted the Error this work removed, and the reversal is worth
+reading in the diff.
+
+---
+
+
 ## Three silent holes, and a test that checked nothing (2026-08-08) — DONE
 
 Two task files from ossum.tech, both reproduced on the CURRENT build before any
