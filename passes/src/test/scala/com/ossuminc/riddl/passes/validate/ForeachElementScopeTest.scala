@@ -33,8 +33,9 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
        |  author A is { name is "A" email is "a@b.c" }
        |  context C is {
        |    record Line is { sku is String }
+       |    record Entry is { code is String }
        |    record Order is { entries is many Line, ref is String }
-       |    record St is { lines is many Line, byId is mapping from Integer to Line, note is String }
+       |    record St is { lines is many Line, byId is mapping from Integer to Entry, note is String }
        |    command Cmd is { order is Order, note is String }
        |    event Shipped is { sku is String }
        |    outlet Out is event Shipped
@@ -129,9 +130,14 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
     // bound one name to `Anything`, and `e.whatever` passed unchecked -- which is the hole these
     // four cases exist to keep closed.
 
+    // `Entry` is referenced ONLY by the mapping's `to`, deliberately. The first version of these
+    // cases typed the mapping's value as `Line`, which a sibling `lines is many Line` field also
+    // named -- and since the refMap is keyed by path, that one resolved occurrence covered for the
+    // mapping's own unresolved reference. They passed without the code under test working. See
+    // "reject an unresolvable type in a mapping's value position" below for the bug that hid there.
     "type the key and the value of a destructured mapping" in { (td: TestData) =>
       val errors =
-        errorsFor("foreach k, v in field byId { set field St.note to v.sku }", td)
+        errorsFor("foreach k, v in field byId { set field St.note to v.code }", td)
       errors mustBe empty
     }
 
@@ -154,6 +160,27 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
       val errors = errorsFor("""foreach a, b in field lines { do "x" }""", td)
       withClue(clue(errors)) {
         errors.exists(_.message.contains("second name only over a mapping")) mustBe true
+      }
+    }
+
+    "reject an unresolvable type in a mapping's value position" in { (td: TestData) =>
+      // ResolutionPass discarded a Mapping's `to` until 2026-08-10, so this validated CLEAN while
+      // the identical name in the key position errored. Not a foreach bug -- foreach is only how
+      // it was found, because it is the first thing that needed to see through `to`.
+      var captured: Messages = List.empty
+      val src =
+        """domain D is {
+          |  author A is { name is "A" email is "a@b.c" }
+          |  context C is { record St is { bad is mapping from Integer to Nonexistent } }
+          |}
+          |""".stripMargin
+      pc.withOptions(CommonOptions(showStyleWarnings = false, showWarnings = false)) { _ =>
+        parseAndValidateDomain(RiddlParserInput(src, td), shouldFailOnErrors = false) {
+          case (_, _, msgs) => captured = msgs; succeed
+        }
+      }
+      withClue(clue(captured)) {
+        captured.filter(_.isError).exists(_.message.contains("Nonexistent")) mustBe true
       }
     }
 

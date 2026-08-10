@@ -288,7 +288,17 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         None
       case Sequence(_, of) =>
         resolveTypeExpression(user, of, parents)
-      case Mapping(_, from, _) =>
+      case Mapping(_, from, to) =>
+        // BOTH halves must resolve. `to` was discarded here until 2026-08-10, so a mapping's VALUE
+        // type reference never entered the refMap: `mapping from Integer to Nonexistent` validated
+        // clean while the same name in the key position errored, and nothing downstream could see
+        // through the alias to the record it named. Found because `foreach k, v` typed `v` from
+        // `to` and worked only when some OTHER field happened to reference the same type -- the
+        // refMap is keyed by path, so one resolved occurrence silently covered for the missing one.
+        //
+        // The `from` resolution is what is RETURNED, unchanged: the caller associates usage with
+        // it, and widening that is a separate question from resolving the reference at all.
+        resolveTypeExpression(user, to, parents)
         resolveTypeExpression(user, from, parents)
       case Set(_, of) =>
         resolveTypeExpression(user, of, parents)
