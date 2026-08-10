@@ -122,6 +122,75 @@ to the task file and note the disposition below.
 ---
 
 
+## Three fixes from two task files, and a near-miss (2026-08-10) — DONE
+
+Closing out riddl-models' two 2026-08-10 tasks produced three changes and one
+lesson that was nearly a disaster.
+
+**The near-miss: I had the diagnosis backwards, and Reid's warning caught it.**
+The saga task carried an undiagnosed observation — `expression in Saga 'S' … must
+not be empty` alongside `let x = ask …`. I isolated it to `RiddlValue.isEmpty`
+defaulting to `true` with `Call`/`Ask` not overriding it, filed it as "concrete
+case classes are missing overrides", and was about to add those overrides. Reid
+stopped me: *"Empty means there are no contents, it doesn't mean all the optional
+fields are None,"* and *"this has bitten ME many times."*
+
+He was right, and the contract says so **in the source I had already read**:
+`AST.scala:98` documents `isEmpty` as *"non-containers are always empty"*. Every
+`Value` except `LiteralString` is a non-container, so `isEmpty == true` is
+CORRECT for them. Adding overrides would have redefined emptiness from
+*contentless* to *present* — a different question, and the one traversal and
+flatten depend on.
+
+**The real bug was the CALLER asking the wrong question.**
+`checkNonEmptyValue` is meaningful only for a `LiteralString`; eight of its ten
+call sites in ValidationPass already guarded on exactly that, and two —
+`let`'s expression and `set`'s value — passed an arbitrary Value and therefore
+fired on correct code. The generalizable rule, now in CLAUDE.md § Emptiness:
+**when a check misfires on correct code, suspect the question before you change
+what is being asked.** Fixed at the two callers; the AST was not touched.
+
+**A ruling that changed no behaviour.** Reid ruled that paths must not descend
+through optional fields, extended to `*` and `+`. Testing first showed all three
+ALREADY refused — the rule was the rule; what was missing was any way to learn
+it, since the message claimed the name "was not found" when the name is right
+there in the type. So the change was purely diagnostic. **Check whether the
+behaviour you have been asked to implement already exists**; here it turned a
+resolver change into a message change.
+
+**The corpus is not a gate for everything, and saying which is part of the
+result.** riddl-models has EIGHT `let` statements and 901 `set` statements, and
+every one has a literal-string right-hand side — so it exercises only the path
+the emptiness fix does not touch. "Corpus unchanged" was expected and proves
+nothing there. Same shape as the `foreach` blindspot already recorded below.
+The saga and cardinality fixes are likewise exact no-ops on the corpus (0 errors,
+byte-identical per-model tally), which is a real result only because the fixtures
+carry the actual coverage.
+
+**Four of my own measurements were wrong before one was right**, all in the same
+family — a measurement that reports "nothing" because it was built wrong:
+- `sbt … | tail` buffers until sbt exits, so the log looked hung for ten minutes.
+- A wait condition on `^\[error\]` matched riddlc validation output printed
+  INSIDE passing tests, so I read a mid-run log and nearly reported an abort.
+- The first corpus script counted `[missing]` when the message prints
+  `[completeness]`, while `riddlc from <conf> validate` suppressed the rest —
+  the corpus `.conf` files set `show-style-warnings = false`, silencing exactly
+  the messages under investigation. It reported all-zeros.
+- `grep "let "` counted 10,589 statements by matching **out**let and **in**let.
+  The real number is 8.
+**A measurement built to find something that finds nothing is a bug report about
+the measurement**, not a result.
+
+**Publishing: two ways to ship something unreproducible.** A warm sbt server
+serves the version it resolved at startup, so `publishLocal` labelled new code
+`2.0.0-rc.10-57-e012ebb9` — overwriting what that version already meant, which is
+worse than a stale artifact. Then a tree with one uncommitted file produced
+`…-64-3635a3f8-20260810-1624`, whose timestamp suffix is dynver saying no commit
+can reproduce it. Both are now impossible: `scripts/publish-and-stage.sh` refuses
+a dirty tree before sbt starts, runs `reload; publishLocal; riddlc/stage` in ONE
+invocation so both halves move together, and verifies the staged binary's version
+against `git describe`. Reid deleted both bad artifact sets from `~/.ivy2/local`.
+
 ## A "contradiction" that was an unfinished migration (2026-08-10) — DONE
 
 A task file from riddl-models reported that two streaming checks contradicted
