@@ -117,25 +117,32 @@ class SagaValidatorTest extends AbstractValidatingTest {
       }
     }
 
-    // A12 counts failure-bearing VALUES, not only statements (Reid, 2026-08-09). `call` and `get`
-    // were already counted this way; `ask` joins them, and it fails more obviously than either --
-    // no answer may ever arrive. Without this an `ask` could hide a second failure point behind a
-    // `let`, which is precisely what a saga step's all-or-nothing contract forbids.
-    "not warn on a step with ONE failure point (one ask)" in { (td: TestData) =>
+    // A12 counts failure-bearing VALUES, not only statements (Reid, 2026-08-09), and `ask` was
+    // added to that census alongside `call` and `get`.
+    //
+    // SUPERSEDED for sagas by Reid's 2026-08-10 ruling: a saga may not `ask` AT ALL, not even as a
+    // value, because a saga must not depend on dynamic state or the same inputs could yield
+    // different transaction results at different times. So these two cases no longer assert a
+    // failure-point COUNT — they assert the prohibition, and the count is deliberately suppressed
+    // when an ask is present (its remedy, "split into multiple steps", produces an ask-only step
+    // that then fails the mandatory-'tell' rule; the advice could not be taken).
+    //
+    // The two-failure-point counting itself is still covered, by the `send + embedded call` case
+    // below. Full coverage of the prohibition lives in SagaAskProhibitedTest.
+    "reject a lone ask outright, rather than counting it" in { (td: TestData) =>
       stepCheck("""let a = ask query d.c.Ask of entity d.c.q""", td) { messages =>
-        a12Warnings(messages) mustBe empty
+        messages.filter(_.kind == Messages.Error).exists(_.message.contains("may not 'ask'")) mustBe true
       }
     }
 
-    "warn on a step with TWO failure points (ask + send)" in { (td: TestData) =>
+    "reject ask + send as a prohibition, not as a failure-point count" in { (td: TestData) =>
       stepCheck(
         """let a = ask query d.c.Ask of entity d.c.q
           |        send command Go to inlet d.c.e.tank.inn""".stripMargin,
         td
       ) { messages =>
-        val warns = a12Warnings(messages)
-        warns.size mustBe 1
-        warns.head.message must include("has 2 potential failure points")
+        messages.filter(_.kind == Messages.Error).exists(_.message.contains("may not 'ask'")) mustBe true
+        a12Warnings(messages) mustBe empty
       }
     }
 

@@ -3105,7 +3105,39 @@ case class ValidationPass(
     // must have AT MOST ONE potential failure point. Count statement-level failure points
     // (send/tell/yield/put via Statement.canFail) plus every embedded Call/GetValue in value
     // expressions, across nested when/match/foreach bodies (walkStatements recurses into those).
-    if s.doStatements.nonEmpty then {
+    // A saga may not 'ask', not even as a value (Reid, 2026-08-10). A saga must not depend on
+    // dynamic state, or the same inputs could yield different transaction results at different
+    // times; and compensation cannot re-read what the forward action saw. Checked across BOTH
+    // do- and undo-statements, since a revert that reads dynamic state has exactly the problem
+    // the rule exists to prevent.
+    val asks: Seq[Ask] =
+      val found = mutable.ListBuffer.empty[Ask]
+      walkStatements(s.doStatements) { st => statementValues(st).foreach(v => found ++= asksIn(v)) }
+      walkStatements(s.undoStatements) { st =>
+        statementValues(st).foreach(v => found ++= asksIn(v))
+      }
+      found.toSeq
+    asks.foreach { ask =>
+      messages.addError(
+        ask.loc,
+        s"saga step '${s.id.value}' may not 'ask'; a saga must not depend on dynamic state, or " +
+          "the same inputs could yield different transaction results at different times",
+        suggestion =
+          "Acquire the value in a handler and pass it into the saga through the saga's 'requires', " +
+            "so the saga is closed over its inputs and compensation sees the same data the " +
+            "forward action saw."
+      )
+    }
+    // A12: a saga step's do-block is all-or-nothing (undo assumes all-or-none of it happened), so it
+    // must have AT MOST ONE potential failure point. Count statement-level failure points
+    // (send/tell/yield/put via Statement.canFail) plus every embedded Call/GetValue in value
+    // expressions, across nested when/match/foreach bodies (walkStatements recurses into those).
+    //
+    // SKIPPED when the step contains an 'ask'. An `ask` is itself a failure point, so it always
+    // pushes a conforming step over budget -- and this message's remedy ("split into multiple
+    // steps") produces an ask-only step, which then fails the mandatory-'tell' rule instead. The
+    // advice could not be taken, so the ask error above stands alone.
+    if s.doStatements.nonEmpty && asks.isEmpty then {
       var failPoints = 0
       walkStatements(s.doStatements) { st => failPoints += countStatementFailPoints(st) }
       if failPoints > 1 then
@@ -3910,22 +3942,55 @@ case class ValidationPass(
     * in the statement's value expression(s).
     */
   private def countStatementFailPoints(s: Statement): Int =
-    val embedded = s match
-      case set: SetStatement     => countValueFailPoints(set.value)
-      case let: LetStatement     => countValueFailPoints(let.expression)
-      case put: PutStatement     => countValueFailPoints(put.value)
-      case ret: ReturnStatement  => countValueFailPoints(ret.value)
-      case snd: SendStatement    => countValueFailPoints(snd.msg)
-      case tel: TellStatement    => countValueFailPoints(tel.msg)
-      case yld: YieldStatement   => countValueFailPoints(yld.msg)
-      case rpl: ReplyStatement   => countValueFailPoints(rpl.msg)
-      case mor: MorphStatement   => countValueFailPoints(mor.value)
-      case req: RequireStatement => countValueFailPoints(req.condition)
-      case whn: WhenStatement    => countValueFailPoints(whn.condition)
-      case mat: MatchStatement   => countValueFailPoints(mat.expression)
-      case _                     => 0
-    (if s.canFail then 1 else 0) + embedded
+    (if s.canFail then 1 else 0) + statementValues(s).map(countValueFailPoints).sum
   end countStatementFailPoints
+
+  /** The value expression(s) a single statement evaluates, NOT recursing into nested when/match/
+    * foreach bodies — callers walk those with `walkStatements`.
+    *
+    * Factored out so the A12 failure-point census and the saga `ask` prohibition ask the same
+    * question of a statement. When they each carried their own copy of this mapping, a statement
+    * kind added to one and missed in the other would silently go unexamined by the other check.
+    */
+  private def statementValues(s: Statement): Seq[RiddlValue] =
+    s match
+      case set: SetStatement     => Seq(set.value)
+      case let: LetStatement     => Seq(let.expression)
+      case put: PutStatement     => Seq(put.value)
+      case ret: ReturnStatement  => Seq(ret.value)
+      case snd: SendStatement    => Seq(snd.msg)
+      case tel: TellStatement    => Seq(tel.msg)
+      case yld: YieldStatement   => Seq(yld.msg)
+      case rpl: ReplyStatement   => Seq(rpl.msg)
+      case mor: MorphStatement   => Seq(mor.value)
+      case req: RequireStatement => Seq(req.condition)
+      case whn: WhenStatement    => Seq(whn.condition)
+      case mat: MatchStatement   => Seq(mat.expression)
+      case _                     => Seq.empty
+  end statementValues
+
+  /** Every [[Ask]] embedded in a value expression, at any depth.
+    *
+    * Enumerated over the same arms as `countValueFailPoints` rather than absorbed by a catch-all:
+    * a new value kind that can CONTAIN an ask must fail the build here, not quietly hide one
+    * inside a saga.
+    */
+  private def asksIn(v: RiddlValue): Seq[Ask] = v match
+    case ask: Ask                 => Seq(ask)
+    case call: Call               => call.args.toSeq.flatMap(a => asksIn(a.value))
+    case c: Constructor           => c.args.toSeq.flatMap(a => asksIn(a.value))
+    case le: LogicalExpression    => asksIn(le.left) ++ asksIn(le.right)
+    case ne: NotExpression        => asksIn(ne.expr)
+    case ce: ComparisonExpression => asksIn(ce.left) ++ asksIn(ce.right)
+    case _: GetValue              => Seq.empty
+    case _: Reference[?]          => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
+    case other =>
+      throw new IllegalStateException(
+        s"asksIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
+          "decide whether it can contain an 'ask' rather than assuming it cannot"
+      )
+  end asksIn
 
   /** A23: is `s` an EFFECT statement — one that mutates state, changes behavior, or emits a
     * message? This is the shared A23 effect set: A26's pure-function bans
