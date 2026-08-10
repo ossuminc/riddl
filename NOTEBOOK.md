@@ -122,6 +122,74 @@ to the task file and note the disposition below.
 ---
 
 
+## A "contradiction" that was an unfinished migration (2026-08-10) — DONE
+
+A task file from riddl-models reported that two streaming checks contradicted
+each other: Rule 5 advises putting an adaptor between an external context and a
+processor in another context, and doing so then triggered `Sink 'X' is a sink
+but has no upstream path from any source`. It offered three options and asked
+riddl to RULE among them. I relayed that framing to Reid as "blocked on your
+call". **He had made no call, and there was none to make** — that was the whole
+lesson of the session.
+
+**Read the file, then read the code, then believe the code.** `check-tasks`
+says exactly this and I half-did it: I verified the file's line references and
+the `Adaptor`-is-not-a-`Streamlet` type relationship, then carried its
+CONCLUSION across unexamined. The tell was in my own output — a grep for
+`trait Streamlet` returned nothing and I reported the conclusion anyway. That
+empty grep was the finding: `Streamlet` is a concrete case class
+(`AST.scala:4842`), one of six sibling `Processor` kinds, never the supertype
+meaning "port-bearing thing". The unified processor model raised the CAPABILITY
+into `Processor` and left the NAME on a leaf.
+
+So there was no contradiction between two rules. There was one unfinished
+migration: `StreamingValidation`'s graph stayed typed over that leaf, and
+`collect { case s: Streamlet => s }` silently dropped five of six kinds. The
+decisive evidence was inside the same file — `checkUnattachedOutlets` and
+`checkPortletCardinality` read the `inlets`/`outlets` buffers, which
+`validateInlet`/`validateOutlet` fill for EVERY owner. One half of the file
+already treated an adaptor's ports as real when asking "is this connected?",
+the other refused when asking "where does data flow?".
+
+**A control isolates a cause; a reproduction only confirms a symptom.** Four
+minimal models, one variable changed at a time. `adaptor` vs `processor as
+flow` in the same position — same topology, ports and connectors, differing
+only in processor KIND — pinned the cause to the type filter and nothing else.
+The `entity` model (no external context, no adaptor, so Rule 5 absent
+entirely) proved it was never adaptor-specific. The `flow` model found
+something the task file had missed: the advisory clears only for an `Adaptor`
+and reachability worked only for a `Streamlet`, so NO kind satisfied both.
+
+**Three of my own measurements were false before one was true.** A `| tail`
+on a background sbt run buffers everything, so the log stayed empty for ten
+minutes and looked hung. A wait-condition of `^\[error\]` matched riddlc
+validation output printed INSIDE passing tests, so I read a mid-run log and
+nearly reported 4-of-7 modules as an abort. And the first corpus script counted
+`[missing]` when the message kind prints `[completeness]`, while
+`riddlc from <conf> validate` was suppressing the rest — the corpus .conf files
+set `show-style-warnings = false`, so the run reported all-zeros for exactly
+the messages under investigation. **All-zeros on a measurement built to find
+something is a bug report about the measurement.**
+
+**The corpus consequence was worth the measurement.** Errors 0 → 0, the 7
+advisories unchanged, and 3 new completeness warnings. Two are repositories
+whose chain traces back to an `application context … as router` with no
+`Source`-SHAPED processor anywhere — literally true, and it raises a real
+question (filed, not decided): should reachability demand a Source-shaped head,
+or a node with no inbound edge? The third is a context ascribed `as sink` that
+declares no ports; **`effectiveShape` honours the ascription over arity**, so
+my claim to Reid that portless processors are bounded out as `Void` held only
+for UNASCRIBED ones.
+
+Fixed in `70b0f527a`. `ByIdentity` keys the graph (Reid's call) because
+`Definition.equals` is structural and `loc` is what distinguishes two
+same-named processors — the same trap `checkPortletCardinality` documents.
+`ValidationOutput.streamlets` keeps its published `Seq[Streamlet]` type by
+narrowing at the construction site: widening a buffer is not a licence to widen
+a published type. Remaining `Streamlet`-narrowed sites in `AnalysisResult`,
+`MessageFlowPass`, `DiagramsPass` and `StatsPass` are filed in BACKLOG, not
+swept — `AnalysisResult.streamlets` is public API whose MEANING would change.
+
 ## Destructuring a mapping, and a census of one (2026-08-10) — DONE
 
 `foreach` over a mapping bound one name to `Anything`, so the body could write

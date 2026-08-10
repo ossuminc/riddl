@@ -109,21 +109,42 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Start with `grep -rn "case _ =>" --include=*.scala passes/ language/ | wc -l`
   to size it before committing to a plan.
 
-- **Adaptor advisory conflicts with the sink-upstream check** (riddl-models,
-  `task/2026-08-09-adaptor-advisory-conflicts-with-sink-upstream-check.md`).
-  **Awaits Reid's ruling among three options; nothing built.** Carried here
-  because the diagnosis was done and would otherwise have to be redone.
+- **Finish the `Streamlet` → `Processor` migration in the remaining passes.**
+  Filed by Reid 2026-08-10 when the same defect was fixed in
+  `StreamingValidation` (`70b0f527a`). These sites narrow to the concrete
+  `Streamlet` case class the same way the streaming graph did, so they see one
+  of the six processor kinds and silently ignore the rest:
 
-  **Verified in code, not recalled:** `Adaptor` extends `Processor`, NOT
-  `Streamlet`. The reachability BFS is typed over `Streamlet`, so an adaptor in
-  the middle of a path SEVERS it — the sink downstream is then reported as
-  having no upstream, while the advisory simultaneously suggests introducing the
-  very adaptor that breaks it. The two messages contradict each other on the
-  same model.
+  - `AnalysisResult.scala:179` — `symbols.parentage.keys.collect { case s:
+    Streamlet => s }`. **Public API whose MEANING would change**, so it needs a
+    decision, not just an edit: does `AnalysisResult.streamlets` mean "the
+    Streamlet definitions" or "the port-bearing processors"? Adding a second
+    accessor is the additive option the compatibility policy prefers.
+  - `MessageFlowPass.scala:291,303`
+  - `DiagramsPass.scala:193,216,394,450,456`
+  - `StatsPass.scala:171`
 
-  The three options are in the task file. The choice is a language-semantics
-  call (is an adaptor a streamlet for reachability purposes?), which is why it
-  is a ruling rather than a fix.
+  Out of scope deliberately in `70b0f527a` — different consumers, and the
+  public-API question above. `Pass.scala`'s `openStreamlet`/`closeStreamlet`
+  and `RiddlFileEmitter`/`PrettifyVisitor`'s uses are NOT in this list: those
+  are legitimately about the case class (visitor hooks, keyword emission).
+
+- **Decide whether stream reachability should require a `Source`-SHAPED head.**
+  Surfaced by the corpus A/B for `70b0f527a`, not theorised. With the graph
+  widened, two reactive-bbq repositories now report `is a sink but has no
+  upstream path from any source`. The message is LITERALLY true — tracing
+  `TableOrderRepository` upstream gives `TableOrderEventSplit` (split) ←
+  `TableOrder` (`event-sourced entity … as flow`) ← `RestaurantApp`
+  (`application context … as router`) — there is no `Source`-shaped processor
+  anywhere in the chain. Data enters that pipeline through an application
+  context fed by users, not from a `source`.
+
+  So `originates` (`StreamingValidation.scala`) asks "is this Source-shaped?"
+  when the useful question may be "does this have no inbound edge in the
+  graph?". Changing it is a semantics call about what a pipeline's origin IS,
+  which is why it was not folded into the fix. Related hole in the arity
+  mapping: `shapeForArity` sends (out ≥ 2, in = 0) to `Void` as degenerate, so
+  a multi-outlet, no-inlet processor is neither a Source nor reported.
 
 - **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10, syntax his
   suggestion. Wants a plan. Filed out of the `foreach`-over-a-mapping question:
