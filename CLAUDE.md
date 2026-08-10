@@ -871,6 +871,47 @@ Known-total today: `Pass.processValue`, `classifyHandlers` (all 17 `Statement`
 kinds), `countValueFailPoints`, BASTWriter/BASTReader statement dispatch. The
 remaining ~140 catch-alls are unaudited — see BACKLOG § 2.
 
+### Emptiness — `isEmpty` means NO CONTENTS, never "absent"
+
+**Reid has been bitten by this repeatedly while developing RIDDL, and it can make
+EVERYTHING fail if implemented wrong. Read this before touching `isEmpty` or
+before "fixing" a spurious emptiness warning.**
+
+- **The contract**: `RiddlValue.isEmpty` defaults to **`true`**, documented at
+  `AST.scala:98` as *"non-containers are always empty"*. Emptiness asks whether a
+  node HAS CONTENTS. It does **not** ask whether the author supplied it, and it
+  does **not** mean "all optional fields are None".
+- **Overrides belong on CONCRETE case classes** that genuinely have contents, and
+  should fold in their parents' `isEmpty` result. Traits with no members of their
+  own generally need nothing — auditing every subclass is the wrong sweep.
+- **`Statement` deliberately inherits the `true` default.** Statements have no
+  bodies, so they are ALWAYS empty, and it never matters: they are leaves that
+  traversal never descends into.
+- **Among the `Value` kinds, only `LiteralString` overrides it** (`:181`,
+  `s.isEmpty`) — the one Value whose emptiness is a real question, because an
+  empty string IS the author writing nothing. `Call`, `Ask`, `Constructor`,
+  `ValueRef`, `GetValue` and `BooleanLiteral` are non-containers and correctly
+  report empty ALWAYS.
+
+**The gotcha this produces.** `checkNonEmptyValue` (`BasicValidation.scala:279`)
+asks `value.nonEmpty`, so it is meaningful ONLY for a `LiteralString`. Eight of
+its ten call sites in `ValidationPass` honour that — they pass a `LiteralString`
+field (`PromptStatement.what`, `ErrorStatement.message`, `CodeStatement.language`,
+`LiteralPattern.literal`, `PromptValue.prompt`) or guard with `case ls:
+LiteralString =>` and explicitly skip `ValueRef`/`BooleanExpression`. Two sites
+passed an arbitrary `Value` unguarded and therefore fired on correct code:
+`let`'s expression and `set`'s value, so `let q = call function F(…)` and `set
+field S.flag to true` were both reported "must not be empty". Fixed 2026-08-10 by
+guarding both on `LiteralString`; pinned by `ValueEmptinessCheckTest`.
+
+**The trap to avoid.** The tempting "fix" is to override `isEmpty` on `Call`/
+`Constructor`/`ValueRef`/`BooleanLiteral` so they report non-empty. That
+REDEFINES emptiness from *contentless* to *present*, which is a different
+question and the one the whole traversal/flatten layer depends on. **When an
+emptiness check misfires, the bug is almost always in the CALLER asking the wrong
+question, not in the node's `isEmpty`.** Non-literal values get their real
+validation — resolution and type-checking — in `checkStatementScopes`.
+
 ### Pass Framework & Standard Passes
 
 - **OutlinePass / TreePass** — lightweight `HierarchyPass`

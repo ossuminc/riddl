@@ -51,36 +51,10 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **Concrete `RiddlValue` case classes are missing `isEmpty` overrides, so almost
-  every `let` draws a spurious "must not be empty" warning.** Found 2026-08-10
-  while diagnosing the secondary observation in the saga-`ask` task; the
-  reporters saw it only in a saga, but it has nothing to do with sagas.
-
-  **Rule (Reid, 2026-08-10):** *"subclasses of RiddlValue are supposed to check
-  their emptiness in overrides of `isEmpty` and include parents' `isEmpty`
-  results"* — and *"not all of the subclasses need overrides, especially traits
-  with no members, so the concrete case classes are mostly the ones that need to
-  be checked."* So the `true` default at `AST.scala:99` is intended; the missing
-  overrides are the defect.
-
-  **Measured, not assumed** — `let q = <expr>` in an ordinary on-clause, counting
-  `must not be empty` messages from the staged binary:
-
-  | expression | spurious message? |
-  |---|---|
-  | `"a literal"` (LiteralString, overrides at `:181`) | no |
-  | `call function C.F(a = "1")` | **yes** |
-  | `record C.Sum(total = "t")` (Constructor) | **yes** |
-  | `Pay.amount` (ValueRef) | **yes** |
-  | `true` (BooleanLiteral) | **yes** |
-
-  Path: `LetStatement` validation calls `checkNonEmptyValue(expression, …)`
-  (`ValidationPass.scala:897`), which asks `value.nonEmpty`.
-
-  Not corpus-visible: riddl-models is at 0 errors and this is a MissingWarning,
-  and the corpus `.conf` files show missing warnings, so it is likely present but
-  drowned — worth counting when the fix lands. Scope the work by auditing the
-  CONCRETE case classes rather than the traits.
+*(The "missing `isEmpty` overrides" item filed here on 2026-08-10 was based on a
+WRONG diagnosis and is gone — the defaults were correct and the bug was in two
+callers. Fixed; the durable rule is in CLAUDE.md § "Emptiness". Kept as a note
+only because deleting it silently would invite the same wrong conclusion again.)*
 
 - **Connector intentions: `persistent` plus `at-least-once` | `at-most-once`.**
   Reid, 2026-08-07, while ruling on where persistence is valid. A connector's
