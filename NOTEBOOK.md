@@ -163,6 +163,29 @@ the second NAME rather than whole-model equality. A fixed-point check compares
 two sides that can both be missing it, which is exactly how A57's binding
 shipped broken for a commit.
 
+**A silent hole fell out of it.** `foreach k, v` was the first thing in RIDDL
+that ever needed to READ a mapping's `to`, and it did not work — except when it
+did. The destructuring tests passed only because the fixture's `byId: mapping
+from Integer to Line` sat beside an unrelated `lines: many Line`; the refMap is
+keyed by PATH, so that one resolved occurrence covered for the mapping's own
+missing one. Deleting the sibling field broke `v.sku`.
+
+The cause was `case Mapping(_, from, _)` in `ResolutionPass` discarding the
+value half, so `mapping from Integer to Nonexistent` validated CLEAN while the
+same name in the key position errored correctly (`b307909b5`). Pre-existing and
+unrelated to `foreach` — a wildcard in a pattern that quietly declined to do
+half the work.
+
+**Two lessons, and the second is the general one.** A test that passes because
+of a neighbouring line is worse than one that fails, and the tell here was
+cheap: the same assertion behaved differently in two fixtures that differed
+only in an unrelated field. When that happens, isolate before celebrating — the
+fixtures are now built so the mapping's value type is referenced ONLY by the
+mapping, and the fix was verified by reverting it and watching two cases go
+red. More generally, **adding the first consumer of a piece of data is when you
+discover nobody was producing it**; expect that, rather than assuming the
+existing surface works because it compiles.
+
 Two mechanical notes worth reusing:
 
 - **The positional parameter was deliberate.** `valueElement` went in as a
