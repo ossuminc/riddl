@@ -51,32 +51,6 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **`foreach k, v in <mapping>` — destructuring a mapping's iteration.** Reid
-  ruled 2026-08-10; **design settled, nothing built.** A mapping is iterable
-  today but binds its element to `Anything`, so members of the element are
-  accepted unchecked — `e.whatever` passes. Two names bind the key and the
-  value directly over the loop body.
-
-  Chosen over the alternative of synthesizing an anonymous `{ key, value }`
-  record element because it needs no record, touches neither the `Riddl`
-  standard module nor generics (RIDDL has none, so a named `Entry` could not be
-  typed), and does not depend on the lookup feature above.
-
-  **Arity is the rule to settle in the plan:** two names for a `Mapping` and
-  one for every other collection, each wrong count an Error naming the right
-  form — rather than letting one name over a mapping silently bind `Anything`
-  again, which is the defect being closed.
-
-  **Surfaces, enumerated because this is a grammar change and RIDDL is fully
-  reflective:** `ForeachStatement` gains a second identifier (declared BEFORE
-  `doStatements` and WITHOUT a default — the `@JSExportTopLevel` trailing-
-  default rule, same as A55/A57); `StatementParser.scala:412`;
-  `ebnf-grammar.ebnf:281` plus a corpus fixture so the TatSu job actually
-  covers it; PrettifyPass and a round-trip test; `BASTWriter.scala:1453` /
-  `BASTReader.scala:1080` plus a `FORMAT_REVISION` bump; the JSON surface; and
-  the `inScopeElements` map in ValidationPass, which already carries element
-  types and would carry two entries.
-
 - **An Akka-style asynchronous `ask` statement**, so `yield` is paired with a
   genuine ask. Reid, 2026-08-06. **RESEARCH DONE 2026-08-06; wants Reid's ruling
   on the recommendation below, then a plan. Nothing built.**

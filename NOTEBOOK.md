@@ -124,6 +124,61 @@ to the task file and note the disposition below.
 ---
 
 
+## Destructuring a mapping, and a census of one (2026-08-10) — DONE
+
+`foreach` over a mapping bound one name to `Anything`, so the body could write
+`e.whatever` and be believed. Two candidate fixes, both sound:
+
+1. bind one name to a synthesized anonymous `{ key, value }` record;
+2. bind two names, `foreach k, v in m`.
+
+Reid took 2, and the reasoning is worth keeping because it generalizes: RIDDL
+has **no generics**, so a named entry type in the predefined `Riddl` module
+could not be typed against an arbitrary mapping's `from`/`to` — a standard
+module holds concrete definitions, and this is inherently parameterized. Option
+1 dodged that by staying anonymous (`collectionElementType` returns a
+`TypeExpression`, not a `Type`), but two names need no type at all.
+
+**Iterating keys and looking the value up was rejected on a fact, not taste.**
+The `Value` union is `LiteralString | PromptValue | Constructor | ValueRef |
+GetValue | BooleanExpression | Call | Ask` (AST.scala:2933) and nothing in it
+indexes; `GetValue` is `get from <inlet|state>`, not a subscript. So binding
+only the key would strand the value — the very defect just fixed, rebuilt on
+purpose. That absence is now filed as its own feature (`<mapping|array> at
+<index>`, BACKLOG § 2), because a mapping is otherwise write-only outside a
+loop.
+
+**Arity is strict both ways**, and the "one name over a mapping" case is the
+load-bearing half: leaving it legal would leave the `Anything` hole open, which
+is what the work was for. The corpus made that free — `foreach` and `mapping`
+each appear **zero** times across riddl-models AND riddl-examples, so a
+tightening that would normally need a deprecation cycle broke nothing.
+
+That zero is the entry's real lesson. **Nothing in either corpus exercises
+`foreach` at all**, which is why the loop-variable bug of 2026-08-09 had to be
+reported by a docs writer rather than caught here, and why neither corpus can
+be counted as a gate for this statement. The fixtures are the only gate, so
+they carry the whole load — hence a test per reflection surface, each asserting
+the second NAME rather than whole-model equality. A fixed-point check compares
+two sides that can both be missing it, which is exactly how A57's binding
+shipped broken for a commit.
+
+Two mechanical notes worth reusing:
+
+- **The positional parameter was deliberate.** `valueElement` went in as a
+  required positional field, not a defaulted trailing one, so `-Werror` named
+  all four stale pattern sites (`Finder`, two in ValidationPass, one test). A
+  default would have compiled everywhere and silently dropped the name.
+- **The `FORMAT_REVISION` 9→10 bump reddened `IncludeAndImportTest`** exactly
+  as the HANDOFF warns. The documented recovery worked verbatim: the staged
+  `~/Code/ossuminc/bin/riddlc` was still at revision 9, so `unbastify` recovered
+  the fixture's source for the new build to re-emit. **Keep a last-revision
+  binary until the bump is finished** — restaging first destroys the only tool
+  that can read the old fixture.
+
+---
+
+
 ## A restriction nobody chose (2026-08-09) — DONE
 
 ossum.tech reported two `foreach` defects. The first was plainly a bug: the
