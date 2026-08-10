@@ -51,6 +51,32 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **`foreach k, v in <mapping>` — destructuring a mapping's iteration.** Reid
+  ruled 2026-08-10; **design settled, nothing built.** A mapping is iterable
+  today but binds its element to `Anything`, so members of the element are
+  accepted unchecked — `e.whatever` passes. Two names bind the key and the
+  value directly over the loop body.
+
+  Chosen over the alternative of synthesizing an anonymous `{ key, value }`
+  record element because it needs no record, touches neither the `Riddl`
+  standard module nor generics (RIDDL has none, so a named `Entry` could not be
+  typed), and does not depend on the lookup feature above.
+
+  **Arity is the rule to settle in the plan:** two names for a `Mapping` and
+  one for every other collection, each wrong count an Error naming the right
+  form — rather than letting one name over a mapping silently bind `Anything`
+  again, which is the defect being closed.
+
+  **Surfaces, enumerated because this is a grammar change and RIDDL is fully
+  reflective:** `ForeachStatement` gains a second identifier (declared BEFORE
+  `doStatements` and WITHOUT a default — the `@JSExportTopLevel` trailing-
+  default rule, same as A55/A57); `StatementParser.scala:412`;
+  `ebnf-grammar.ebnf:281` plus a corpus fixture so the TatSu job actually
+  covers it; PrettifyPass and a round-trip test; `BASTWriter.scala:1453` /
+  `BASTReader.scala:1080` plus a `FORMAT_REVISION` bump; the JSON surface; and
+  the `inScopeElements` map in ValidationPass, which already carries element
+  types and would carry two entries.
+
 - **An Akka-style asynchronous `ask` statement**, so `yield` is paired with a
   genuine ask. Reid, 2026-08-06. **RESEARCH DONE 2026-08-06; wants Reid's ruling
   on the recommendation below, then a plan. Nothing built.**
@@ -141,6 +167,34 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Sequence: deprecate loudly for a release, then remove.
 
 ### 2. Queued, needs a plan
+- **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10, syntax his
+  suggestion. Wants a plan. Filed out of the `foreach`-over-a-mapping question:
+  the destructuring form below covers the loop body, but **outside a loop a
+  mapping is currently write-only** — there is no way to name the value stored
+  at a key, so a model can declare a mapping and never read it. The same holds
+  inside a loop for any key other than the one being iterated.
+
+  **Verified absent, not assumed.** The `Value` union is `LiteralString |
+  PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
+  Ask` (AST.scala:2933) — nothing indexes. `GetValue` (AST.scala:3081) is `get
+  from <inlet|state>`, a read of a port or state, not a subscript. The grammar
+  has no subscript form either; `index on <field>` (ebnf-grammar.ebnf:439) is
+  schema metadata.
+
+  **Design questions the plan must answer:**
+  - **What it yields when the key is absent** — the hard one. An Optional
+    result needs a way to interrogate it, which RIDDL has no syntax for; an
+    Error is untrue, since a missing key is ordinary; a total function needs a
+    default nobody declared. Most likely `canFail = true` and let the value's
+    existing failure machinery carry it, which is what `countValueFailPoints`
+    already does for `send`/`tell`/`call`/`yield`/`reply`/`put`/`get`.
+  - **What it applies to.** `Mapping` by key is the motivating case. A
+    `Sequence`/`Table` by ordinal is the "array" half of Reid's syntax, and
+    `Set`/`Graph` have no index at all, so this is not simply "any collection".
+  - **The result type** — `to` for a Mapping, the element type for a sequence.
+    `collectionElementType` (ValidationPass) already computes the latter.
+  - Whether `at` reads well in a `when` guard, its most likely home.
+
 - **A keyword-named field reports the error several tokens upstream.** From
   riddl-generator 2026-08-03, filed here because it is a real diagnostic defect
   even though they marked it "no action needed". A field in a message
