@@ -799,7 +799,14 @@ case class ValidationPass(
         field match
           case fr: FieldRef => checkRef[Field](fr, parents)
           case sr: StateRef => checkRef[State](sr, parents)
-        checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
+        // Only a LiteralString can answer "are you empty?" meaningfully: `isEmpty` means NO
+        // CONTENTS and every other Value kind is a non-container, so it always says yes. Asking
+        // unguarded reported `set field S.flag to true` as an empty value. Non-literal values get
+        // their real validation (resolution + type check) in `checkStatementScopes`.
+        value match
+          case ls: LiteralString =>
+            checkNonEmptyValue(ls, "value to set", onClause, loc, MissingWarning, required = true)
+          case _ => ()
       case SendStatement(_, msg, portlet) =>
         // A54: a bare ref is checked here; a Constructor is validated in checkStatementScopes (needs
         // the threaded `let` scope for its args).
@@ -894,7 +901,12 @@ case class ValidationPass(
           identifier.loc,
           suggestion = "Use an identifier of at least 3 characters in the 'let' statement."
         )
-        checkNonEmptyValue(expression, "expression", onClause, loc, MissingWarning, required = true)
+        // See the `set` case above: only a LiteralString's emptiness is a real question. Asking
+        // unguarded reported every `let x = call/record/ref/true` in the language as empty.
+        expression match
+          case ls: LiteralString =>
+            checkNonEmptyValue(ls, "expression", onClause, loc, MissingWarning, required = true)
+          case _ => ()
       case CodeStatement(loc, language, body) =>
         checkNonEmptyValue(language, "language", onClause, loc, MissingWarning, required = true)
         check(
