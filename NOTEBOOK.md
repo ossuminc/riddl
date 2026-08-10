@@ -47,6 +47,19 @@ Reid's ruling: the `ask`-statement recommendation (research done, nothing built)
 
 **Traps. Every one of these bit someone:**
 
+- **`publishLocal`'s npm half publishes a STALE tarball** (found 2026-08-10).
+  `npmPack` globs `target/out/sjs1/.../riddl-lib/npm-packages/*.tgz` and takes
+  `.head` — an arbitrary entry from every version ever built there, not the one
+  npm just made. `npmPublishLocal` then puts that stale file under the CORRECT
+  version's directory, so `~/.ivy2/local/npm/ossuminc/riddl-lib/<current>/`
+  contained a tarball ten commits old whose own `package.json` said so. The
+  Scala/ivy artifacts are fine; only npm is affected, and the real registry
+  publish is NOT (it runs from `npmPrepare`'s dir). **Check the tarball's
+  filename against `version.value` after any publishLocal**, and copy the right
+  one in by hand until sbt-ossuminc is fixed (task filed there
+  2026-08-10). Neither `reload` nor `Def.uncached` helps — it is a wrong file
+  being picked, not a stale setting.
+
 - **A green `tJVM`/`tJS`/`tNative` says NOTHING about the Python grammar CI.**
   They are a separate CI job. Adding a `.riddl` fixture is a grammar-surface
   change: an include fragment or intentionally-invalid file needs an entry in
