@@ -1405,17 +1405,24 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         ),
         serializeStatements(default)
       )
-    case ForeachStatement(_, element, collection, doStatements) =>
+    case ForeachStatement(_, element, valueElement, collection, doStatements) =>
       collection match
         case fr: FieldRef =>
           ForeachStmtDto(
             element.value,
+            valueElement.map(_.value),
             Some(path(fr.pathId)),
             None,
             serializeStatements(doStatements)
           )
         case id: Identifier =>
-          ForeachStmtDto(element.value, None, Some(id.value), serializeStatements(doStatements))
+          ForeachStmtDto(
+            element.value,
+            valueElement.map(_.value),
+            None,
+            Some(id.value),
+            serializeStatements(doStatements)
+          )
     case PutStatement(_, value, output) =>
       PutStmtDto(serializeValue(value), path(output.pathId))
     case ReturnStatement(_, value) =>

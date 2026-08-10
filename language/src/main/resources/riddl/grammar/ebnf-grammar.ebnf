@@ -277,8 +277,11 @@ match_subject = get_value | literal_string | value_ref ;
 match_case = "case" match_pattern ["when" boolean_expression] "{" {statement} "}" ;
 match_pattern = comparison_operator comparand | literal_string | type_ref ;
 (* A25: `foreach <element> in <collection> { <statements> }`; `field <path>` collection is a
-   FieldRef, a bare identifier is a `let`-bound local *)
-foreach_statement = "foreach" identifier "in" (field_ref | identifier) "{" {statement} "}" ;
+   FieldRef, a bare identifier is a `let`-bound local. The optional second identifier destructures
+   a mapping into key and value; arity against the collection's type is a validation rule, not a
+   grammatical one, so both forms parse here. *)
+foreach_statement = "foreach" identifier ["," identifier] "in" (field_ref | identifier)
+                    "{" {statement} "}" ;
 
 (* Message operations. A54: the message operand is a bare ref or an inline constructor. *)
 message_value = constructor | message_ref ;

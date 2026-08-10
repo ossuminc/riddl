@@ -1420,14 +1420,20 @@ object JsonAstBuilder:
           cases.map(buildMatchCase),
           buildStatements(default)
         )
-      case ForeachStmtDto(element, field, local, doStatements) =>
+      case ForeachStmtDto(element, valueElement, field, local, doStatements) =>
         val collection: FieldRef | Identifier = (field, local) match
           case (Some(f), _)    => FieldRef(curAt, pathId(f))
           case (None, Some(l)) => ident(l)
           case (None, None) =>
             ctx.err("foreach statement needs a 'field' or a 'local' collection")
             FieldRef(curAt, PathIdentifier.empty)
-        ForeachStatement(curAt, ident(element), collection, buildStatements(doStatements))
+        ForeachStatement(
+          curAt,
+          ident(element),
+          valueElement.map(ident),
+          collection,
+          buildStatements(doStatements)
+        )
       case PutStmtDto(value, output) =>
         PutStatement(curAt, buildValue(value), OutputRef(curAt, "output", pathId(output)))
       case ReturnStmtDto(value) =>

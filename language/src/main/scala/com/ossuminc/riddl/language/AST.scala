@@ -3687,10 +3687,25 @@ object AST:
     * binding each element to a local `element` identifier that is visible to the nested body
     * statements.
     *
+    * A [[Mapping]] is iterated in the DESTRUCTURING form, `foreach k, v in m`, binding the key and
+    * the value separately. The alternative was to bind one name to a synthesized `{ key, value }`
+    * record; two names were chosen because they need no record type, no addition to the predefined
+    * `Riddl` module, and no generics — which RIDDL does not have, so a single named `Entry` could
+    * not be typed against an arbitrary mapping's `from`/`to`.
+    *
+    * Arity is STRICT in both directions, checked in ValidationPass (never in the parser, where an
+    * `error()` would preempt the pass chain): exactly two names for a mapping, exactly one for
+    * every other collection. Permitting one name over a mapping is what previously bound the
+    * element to `Anything` and let `e.whatever` pass unchecked — the hole this closes.
+    *
     * @param loc
     *   The location of the statement in the model
     * @param element
-    *   The local identifier bound to each element of the collection during iteration
+    *   The local identifier bound to each element of the collection during iteration. For a
+    *   mapping this is the KEY.
+    * @param valueElement
+    *   The local identifier bound to the VALUE of each mapping entry, present only for the
+    *   destructuring form. `None` for every non-mapping collection.
     * @param collection
     *   The collection being traversed. Disambiguated at parse time by the `field` keyword: a
     *   [[FieldRef]] (`foreach o in field X.Y { … }`) names a collection-typed field of the
@@ -3700,10 +3715,14 @@ object AST:
     * @param doStatements
     *   The statements to execute for each element of the collection
     */
+  // `valueElement` is declared BEFORE `doStatements` and WITHOUT a default: @JSExportTopLevel
+  // requires defaulted parameters to be TRAILING, the same rule that shaped A55's `binding` and
+  // A57's `envelopeType`.
   @JSExportTopLevel("ForeachStatement")
   case class ForeachStatement(
     loc: At,
     element: Identifier,
+    valueElement: Option[Identifier],
     collection: FieldRef | Identifier,
     doStatements: Contents[Statements]
   ) extends Statement {
@@ -3712,7 +3731,8 @@ object AST:
       val collectionStr = collection match
         case fr: FieldRef   => fr.format
         case id: Identifier => id.format
-      s"foreach ${element.format} in $collectionStr { … }"
+      val elements = valueElement.fold(element.format)(v => s"${element.format}, ${v.format}")
+      s"foreach $elements in $collectionStr { … }"
   }
 
   /** A45: a statement that publishes a [[Value]] to a UI [[Output]] (`put <value> to output

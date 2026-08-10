@@ -1079,6 +1079,7 @@ class BASTReader(
 
       case 16 => // Foreach
         val element = readIdentifierInline()
+        val valueElement = readOption(readIdentifierInline())
         val collectionType = reader.readU8()
         val collection: FieldRef | Identifier = collectionType match {
           case 0 =>
@@ -1089,7 +1090,7 @@ class BASTReader(
           case _ => throw new RuntimeException(s"Invalid foreach collection type: $collectionType")
         }
         val doStatements = readContentsDeferred[Statements]()
-        ForeachStatement(loc, element, collection, doStatements)
+        ForeachStatement(loc, element, valueElement, collection, doStatements)
 
       case 17 => // Put (A45)
         val v = readValue()

@@ -927,7 +927,7 @@ case class ValidationPass(
         // A45/A57: value/type/scope validation runs in checkStatementScopes (which threads in-scope
         // `let` locals and reaches nested statements). Nothing to check per-statement here.
         ()
-      case ForeachStatement(loc, element, _, doStatements) =>
+      case ForeachStatement(loc, element, _, _, doStatements) =>
         // Collection scoping/collection-type checks run in checkStatementScopes (which threads
         // in-scope `let` locals). Here we only enforce the local structural checks.
         check(
@@ -3805,7 +3805,7 @@ case class ValidationPass(
           case MatchStatement(_, _, cases, default) =>
             cases.foreach(mc => walkStatements(mc.statements)(f))
             walkStatements(default)(f)
-          case ForeachStatement(_, _, _, doStatements) =>
+          case ForeachStatement(_, _, _, _, doStatements) =>
             walkStatements(doStatements)(f)
           case _ => ()
       case _ => () // skip Comments
@@ -3986,8 +3986,9 @@ case class ValidationPass(
     *
     * Needed so a `foreach` element is not merely in scope but TYPED: without it `line` resolves
     * and `line.sku` still does not, which is the whole point of iterating. `Mapping` yields None
-    * deliberately -- iterating a map produces pairs, and RIDDL has no pair type to name, so
-    * saying "unknown" is honest where guessing `to` would silently mistype every key access.
+    * because a map has no single element type -- it is DESTRUCTURED into two names instead, by
+    * [[foreachBindings]], which reads `from` and `to` directly. Guessing `to` here would silently
+    * mistype every key access.
     */
   private def collectionElementType(te: TypeExpression): Option[TypeExpression] =
     te match
@@ -4003,6 +4004,81 @@ case class ValidationPass(
       case ate: AliasedTypeExpression =>
         resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => collectionElementType(t.typEx))
       case _ => None
+
+  /** Follow [[AliasedTypeExpression]] hops to the type expression underneath. An unresolvable alias
+    * returns itself rather than None, so callers see "some type I cannot see through" instead of
+    * "no type", which are different facts.
+    */
+  private def dealias(te: TypeExpression): TypeExpression =
+    te match
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).map(t => dealias(t.typEx)).getOrElse(te)
+      case other => other
+
+  /** The COLLECTION's own type expression — what a `foreach` is about to iterate. Distinct from
+    * [[collectionElementType]], which answers what that collection yields. The arity rule needs the
+    * container itself, since only a `Mapping` takes two names.
+    */
+  private def foreachCollectionType(
+    fs: ForeachStatement,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression],
+    parents: Parents
+  ): Option[TypeExpression] =
+    val raw: Option[TypeExpression] = fs.collection match
+      case fr: FieldRef  => resolution.refMap.definitionOf[Field](fr.pathId).map(_.typeEx)
+      case id: Identifier =>
+        val idx = letIndexOf(id.value, lets)
+        if idx >= 0 then letType(lets(idx), lets.take(idx), parents).map(_.typEx)
+        else elements.get(id.value)
+    raw.map(dealias)
+  end foreachCollectionType
+
+  /** The names a `foreach` binds over its body, with their types, and the arity diagnostics.
+    *
+    * Arity is STRICT both ways — exactly two names for a mapping, exactly one otherwise — and is
+    * checked HERE rather than in the parser, because a parse-time `error()` preempts the whole pass
+    * chain, and because only this pass knows the collection's type. Letting one name stand for a
+    * mapping is what used to bind it to `Anything` and wave `e.whatever` through; that hole is the
+    * reason the destructuring form exists.
+    *
+    * A collection that did not resolve binds every name to `Anything` and reports NO arity error:
+    * the header's own failure is already reported, and a second message about the shape of a type
+    * nobody could find would blame the author twice for one mistake.
+    */
+  private def foreachBindings(
+    fs: ForeachStatement,
+    collectionType: Option[TypeExpression]
+  ): Map[String, TypeExpression] =
+    val anything = Anything(fs.loc)
+    collectionType match
+      case Some(m: Mapping) =>
+        fs.valueElement match
+          case Some(v) => Map(fs.element.value -> m.from, v.value -> m.to)
+          case None =>
+            messages.addError(
+              fs.loc,
+              s"'foreach' over a mapping binds a key AND a value, so it needs two names, " +
+                s"but only '${fs.element.value}' was given",
+              suggestion = s"Write 'foreach ${fs.element.value}, <value> in ...' — the first name " +
+                "binds the key, the second the value."
+            )
+            Map(fs.element.value -> m.from)
+      case Some(other) =>
+        val elementType = collectionElementType(other).getOrElse(anything)
+        fs.valueElement match
+          case None => Map(fs.element.value -> elementType)
+          case Some(v) =>
+            messages.addError(
+              v.loc,
+              s"'foreach' binds a second name only over a mapping, and ${other.format} is not one",
+              suggestion =
+                s"Drop the second name: 'foreach ${fs.element.value} in ...'."
+            )
+            Map(fs.element.value -> elementType, v.value -> anything)
+      case None =>
+        Map(fs.element.value -> anything) ++ fs.valueElement.map(_.value -> anything)
+  end foreachBindings
 
   /** The fields directly in scope at a statement: those of the enclosing entity's state record(s),
     * of the handled message, and of the enclosing function's `requires` input.
@@ -5080,23 +5156,17 @@ case class ValidationPass(
         s.value match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
       case fs: ForeachStatement =>
         validateForeachCollection(fs, lets, inScopeElements, parents)
-        // Bind the element to the collection's ELEMENT type for the body's scope. `None` (an
-        // unresolvable collection, or a Mapping) still binds the NAME so the body's references
-        // resolve -- the collection error is already reported above, and piling "unknown value
-        // reference" on top of it would blame the body for a defect in the header.
-        val elementType: Option[TypeExpression] = fs.collection match
-          case fr: FieldRef =>
-            resolution.refMap.definitionOf[Field](fr.pathId).flatMap(f => collectionElementType(f.typeEx))
-          case id: Identifier =>
-            val idx = letIndexOf(id.value, lets)
-            if idx >= 0 then
-              letType(lets(idx), lets.take(idx), parents).flatMap(t => collectionElementType(t.typEx))
-            else inScopeElements.get(id.value).flatMap(collectionElementType)
+        // Bind the loop's name(s) to their TYPES for the body's scope -- not merely the names.
+        // Without the types `line` resolves and `line.sku` does not, which is the whole point of
+        // iterating. An unresolvable collection still binds the names (to `Anything`), because the
+        // header's error is already reported and piling "unknown value reference" on top of it
+        // would blame the body for a defect above it.
+        val collType = foreachCollectionType(fs, lets, inScopeElements, parents)
         checkStatementScopes(
           fs.doStatements.toSeq.collect { case s: Statement => s },
           lets,
           parents,
-          inScopeElements + (fs.element.value -> elementType.getOrElse(Anything(fs.loc)))
+          inScopeElements ++ foreachBindings(fs, collType)
         )
       case ws: WhenStatement =>
         // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);

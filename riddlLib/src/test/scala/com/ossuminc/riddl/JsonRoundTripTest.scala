@@ -691,6 +691,40 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip a destructuring `foreach k, v` losslessly" in {
+      // A whole-model fixed-point check can pass with the value name missing from BOTH sides, so
+      // the `valueElement` key is asserted PRESENT before the fixed point is asserted at all.
+      val feModel =
+        """domain FE is { context c is {
+          |  record Line is { sku: String }
+          |  type ById is mapping from Integer to Line
+          |  command Cmd is { byId: ById }
+          |  handler h is {
+          |    on command Cmd is {
+          |      foreach k, v in field Cmd.byId { do "process the entry" }
+          |    }
+          |  }
+          |}}
+          |""".stripMargin
+      RiddlLib.parseString(feModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"foreach\"")
+          json1 must include("\"valueElement\"")
+          json1 must include("\"v\"")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              val json2 = RiddlLib.root2Json(root1)
+              json2 must include("\"valueElement\"")
+              json2 mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the destructuring foreach JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the destructuring foreach model failed: $errors")
+      end match
+    }
+
     "round-trip `put`/`return` value expressions (A45/A54/A57) losslessly" in {
       val vModel =
         """domain VD is {

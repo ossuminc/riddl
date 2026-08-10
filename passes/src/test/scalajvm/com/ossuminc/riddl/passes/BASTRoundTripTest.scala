@@ -287,6 +287,61 @@ class BASTRoundTripTest extends AnyWordSpec {
               inner.collection match
                 case id: Identifier => assert(id.value == "batch")
                 case other          => fail(s"expected Identifier, got $other")
+              // Neither loop destructures, so neither may come back carrying a value name. The
+              // presence flag is written unconditionally at FORMAT_REVISION 10; if it were skipped
+              // for `None`, the collection's own type flag would be read in its place and every
+              // byte after it would be misaligned.
+              assert(fes.forall(_.valueElement.isEmpty), "a single-name foreach grew a value name")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
+    "serialize and deserialize a destructuring `foreach k, v` (FORMAT_REVISION 10)" in {
+      // The mapping form binds TWO names. The second is an Option written inline before the
+      // collection, so a reader that does not know about it misreads everything downstream --
+      // which is what the revision bump gates.
+      val riddlSource =
+        """domain d is { context c is {
+          |  record Line is { sku: String }
+          |  type ById is mapping from Integer to Line
+          |  command Cmd is { byId: ById }
+          |  handler h is {
+          |    on command Cmd {
+          |      foreach k, v in field Cmd.byId { do "process the entry" }
+          |    }
+          |  }
+          |}}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-foreach-destructuring")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(module) =>
+              assert(
+                compareRoots(originalRoot, module),
+                "destructuring foreach round trip: ASTs differ"
+              )
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.{FieldRef, ForeachStatement}
+              val fes = Finder(module.contents).recursiveFindByType[ForeachStatement]
+              assert(fes.size == 1, s"expected one ForeachStatement, found ${fes.size}")
+              val fs = fes.head
+              assert(fs.element.value == "k", s"key name lost: ${fs.element.value}")
+              assert(
+                fs.valueElement.map(_.value).contains("v"),
+                s"value name lost: ${fs.valueElement.map(_.value)}"
+              )
+              // The collection must still be read correctly AFTER the new optional field --
+              // the alignment check that makes the two assertions above mean something.
+              fs.collection match
+                case fr: FieldRef => assert(fr.pathId.value == Seq("Cmd", "byId"))
+                case other        => fail(s"expected FieldRef, got $other")
+              assert(fs.doStatements.toSeq.size == 1, "loop body lost")
             case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
           }
         case Left(messages) => fail(s"Parse failed: ${messages.format}")

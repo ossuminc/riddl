@@ -720,6 +720,7 @@ object JsonModel:
     */
   case class ForeachStmtDto(
     element: String,
+    valueElement: Option[String],
     field: Option[String],
     local: Option[String],
     doStatements: Seq[StatementDto]
@@ -1755,6 +1756,7 @@ object JsonModel:
           case "foreach" =>
             ForeachStmtDto(
               m("element").str,
+              m.get("valueElement").map(_.str),
               m.get("field").map(_.str),
               m.get("local").map(_.str),
               readStmts(m.get("do"))
@@ -1866,12 +1868,13 @@ object JsonModel:
           ),
           "default" -> stmtArr(default)
         )
-      case ForeachStmtDto(element, field, local, doStatements) =>
+      case ForeachStmtDto(element, valueElement, field, local, doStatements) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)](
             "kind" -> ujson.Str("foreach"),
             "element" -> ujson.Str(element)
           )
+            ++ valueElement.map(x => "valueElement" -> (ujson.Str(x): ujson.Value))
             ++ field.map(x => "field" -> (ujson.Str(x): ujson.Value))
             ++ local.map(x => "local" -> (ujson.Str(x): ujson.Value))
             ++ Seq("do" -> (stmtArr(doStatements): ujson.Value))

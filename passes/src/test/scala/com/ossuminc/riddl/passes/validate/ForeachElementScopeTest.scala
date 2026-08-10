@@ -34,7 +34,7 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
        |  context C is {
        |    record Line is { sku is String }
        |    record Order is { entries is many Line, ref is String }
-       |    record St is { lines is many Line, note is String }
+       |    record St is { lines is many Line, byId is mapping from Integer to Line, note is String }
        |    command Cmd is { order is Order, note is String }
        |    event Shipped is { sku is String }
        |    outlet Out is event Shipped
@@ -121,6 +121,39 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
       val errors = errorsFor("""foreach x in field order.ref { do "x" }""", td)
       withClue(clue(errors)) {
         errors.exists(_.message.contains("is not a collection type")) mustBe true
+      }
+    }
+
+    // A mapping has no single element type, so it is DESTRUCTURED: `foreach k, v in m` binds the
+    // key to the mapping's `from` and the value to its `to`. Before that form existed a mapping
+    // bound one name to `Anything`, and `e.whatever` passed unchecked -- which is the hole these
+    // four cases exist to keep closed.
+
+    "type the key and the value of a destructured mapping" in { (td: TestData) =>
+      val errors =
+        errorsFor("foreach k, v in field byId { set field St.note to v.sku }", td)
+      errors mustBe empty
+    }
+
+    "reject a member the mapping's value type does not have" in { (td: TestData) =>
+      val errors =
+        errorsFor("foreach k, v in field byId { set field St.note to v.nosuch }", td)
+      withClue(clue(errors)) {
+        errors.exists(_.message.contains("v.nosuch")) mustBe true
+      }
+    }
+
+    "require two names over a mapping" in { (td: TestData) =>
+      val errors = errorsFor("""foreach e in field byId { do "x" }""", td)
+      withClue(clue(errors)) {
+        errors.exists(_.message.contains("needs two names")) mustBe true
+      }
+    }
+
+    "reject a second name over a non-mapping" in { (td: TestData) =>
+      val errors = errorsFor("""foreach a, b in field lines { do "x" }""", td)
+      withClue(clue(errors)) {
+        errors.exists(_.message.contains("second name only over a mapping")) mustBe true
       }
     }
 

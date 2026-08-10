@@ -410,11 +410,16 @@ private[parsing] trait StatementParser {
   }
 
   private def foreachStatement[u: P](set: StatementsSet): P[ForeachStatement] = {
+    // `foreach k, v in m` destructures a mapping into key and value. The comma cannot collide:
+    // RIDDL separates statements by whitespace, never by punctuation, so nothing else could be
+    // starting here. ARITY IS NOT CHECKED HERE -- a parser `error()` preempts the whole pass chain,
+    // so the "one name for a mapping" / "two for anything else" diagnostics live in ValidationPass,
+    // which is also the only place that knows the collection's type.
     P(
-      Index ~ Keywords.foreach ~/ identifier ~ in ~ foreachCollection ~
-        open ~/ setOfStatements(set) ~ close ~/ Index
-    )./.map { case (start, element, collection, statements, end) =>
-      ForeachStatement(at(start, end), element, collection, statements.toContents)
+      Index ~ Keywords.foreach ~/ identifier ~ (Punctuation.comma ~ identifier).? ~ in ~
+        foreachCollection ~ open ~/ setOfStatements(set) ~ close ~/ Index
+    )./.map { case (start, element, valueElement, collection, statements, end) =>
+      ForeachStatement(at(start, end), element, valueElement, collection, statements.toContents)
     }
   }
 

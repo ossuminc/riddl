@@ -346,7 +346,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
     "check Foreach Statement" in { td =>
       val element = Identifier(At.empty, "item")
       val collection = FieldRef(At.empty, PathIdentifier(At.empty, Seq("State", "orders")))
-      val s = ForeachStatement(At.empty, element, collection, Contents.empty())
+      val s = ForeachStatement(At.empty, element, None, collection, Contents.empty())
       s.kind must be("Foreach Statement")
       s.format must be(s"foreach ${element.format} in ${collection.format} { … }")
       checkStatement(s)

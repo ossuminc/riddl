@@ -1455,6 +1455,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(16) // Foreach statement
     writeLocation(s.loc)
     writeIdentifierInline(s.element)
+    // The mapping-destructuring value name. Added at FORMAT_REVISION 10 -- an older reader would
+    // take this flag byte for the collection's type flag and misalign everything after it, which
+    // is precisely what the revision gate exists to prevent.
+    writeOption(s.valueElement)((v: Identifier) => writeIdentifierInline(v))
     // Write collection with a type flag (0 = FieldRef, 1 = Identifier local)
     s.collection match {
       case fr: FieldRef =>
