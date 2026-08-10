@@ -952,12 +952,19 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       // didn't match the sought name.
       findMatchingCandidate(soughtName, stack) match
         case None =>
-          // None of the candidates match the name we're seeking, so this PathId doesn't match the model
-          notResolved[T](
-            pathId,
-            stack.headOption,
-            s"the name '$soughtName' was not found in ${stack.head.identify}"
-          )
+          // None of the candidates match the name we're seeking, so this PathId doesn't match the
+          // model. When the head is a field whose cardinality is what stopped the walk, say THAT:
+          // the name is in the type, and "not found" sends the author hunting a typo that is not
+          // there.
+          cardinalityRefusal(stack.headOption, soughtName) match
+            case Some((why, fix)) =>
+              notResolved[T](pathId, stack.headOption, why, Some(fix))
+            case None =>
+              notResolved[T](
+                pathId,
+                stack.headOption,
+                s"the name '$soughtName' was not found in ${stack.head.identify}"
+              )
           continue = false
         case Some(definition) =>
           if isLastPathElement then
@@ -1080,7 +1087,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private def notResolved[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     container: Option[Definition],
-    why: String = ""
+    why: String = "",
+    // When the cause is known precisely (see `cardinalityRefusal`), the generic "define one, or
+    // correct the path" advice is wrong -- the path names a real field and defining another would
+    // not help. Overriding it keeps the suggestion actionable.
+    suggestionOverride: Option[String] = None
   ): Unit =
     val tc = classTag[T].runtimeClass
     val message = container match
@@ -1100,9 +1111,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           if referTo.nonEmpty then s"and it should refer to ${article(referTo)}"
           else ""
         },
-        suggestion =
+        suggestion = suggestionOverride.getOrElse(
           s"Define ${article(referTo)} named by '${pathId.value.mkString(".")}', or correct the path so it names " +
             s"an existing $referTo reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
+        )
       )
     if io.options.debug then println(s"Unresolved: ${pathId.format} ==> ???")
   end notResolved
@@ -1499,11 +1511,57 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         candidatesFromPathIdentifier[Type](pid, parentStack)
       case EntityReferenceTypeExpression(_, entityRef) =>
         candidatesFromPathIdentifier[Entity](entityRef, parentStack)
+      case _: Cardinality =>
+        // Deliberately NOT descended into. A path reaches through a field to name something
+        // inside its type, which is only meaningful when the field denotes EXACTLY ONE value.
+        // `?` may be absent, `*`/`+` are many -- there is no single value to reach through.
+        // `cardinalityRefusal` turns this empty result into a diagnostic that says so, instead
+        // of the caller's generic "the name was not found".
+        Seq.empty[Definition]
       case _ =>
         // We cannot descend into any other type expression
         Seq.empty[Definition]
     }
   }
+
+  /** Why a path could not descend through `container`, when the reason is the field's cardinality
+    * rather than a missing name.
+    *
+    * Returns None for every other cause, leaving the ordinary "name not found" wording in place --
+    * that message is right whenever the name genuinely is not there.
+    */
+  private def cardinalityRefusal(
+    container: Option[Definition],
+    soughtName: String
+  ): Option[(String, String)] =
+    container match
+      case Some(f: Field) =>
+        val (why, fix) = f.typeEx match
+          case _: Optional =>
+            (
+              "is optional",
+              "establish the value is present before naming something inside it"
+            )
+          case _: ZeroOrMore | _: OneOrMore =>
+            (
+              "holds many values",
+              "iterate it with 'foreach x in field <path>' and name the field on the element"
+            )
+          case _: SpecificRange =>
+            (
+              "holds many values",
+              "iterate it with 'foreach x in field <path>' and name the field on the element"
+            )
+          case _ => ("", "")
+        if why.isEmpty then None
+        else
+          Some(
+            s"${f.identify} $why, so there is no single value to descend through to reach " +
+              s"'$soughtName'",
+            s"A path may only descend through a field that denotes exactly one value. Here, $fix."
+          )
+      case _ => None
+  end cardinalityRefusal
 
   private def candidatesFromContents(
     contents: Contents[RiddlValue]
