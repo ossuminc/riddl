@@ -51,61 +51,6 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **An Akka-style asynchronous `ask` statement**, so `yield` is paired with a
-  genuine ask. Reid, 2026-08-06. **RESEARCH DONE 2026-08-06; wants Reid's ruling
-  on the recommendation below, then a plan. Nothing built.**
-
-  **What the language has today, verified in the code, not recalled:**
-  - `yields` on a message type declares WHAT handling it produces
-    (`AggregateUseCaseTypeExpression.yields`), and `checkYieldConformance`
-    (ValidationPass:910) enforces that a clause actually produces it.
-  - `yield` produces that value but names **no destination**. "The sender" is
-    implicit.
-  - `tell` delivers to a processor and says nothing about a reply.
-  - **There is no correlation concept anywhere in the language** — grep for
-    `correlation` in `language/src/main` returns nothing.
-
-  So the gap is NOT "we cannot send a request". It is that **riddl cannot say two
-  messages are two halves of one interaction.** `yields` describes the callee's
-  obligation; nothing describes the caller's expectation, so a generator cannot
-  tell a fire-and-forget `tell` from a request whose reply the caller awaits.
-
-  **Recommendation: `ask` declares a CORRELATION, not a mechanism.** RIDDL
-  specifies meaning and leaves representation to generators (the same line that
-  settled `message_envelope`), so `ask` must not imply a Future, a temp actor, a
-  correlation-id field, or a blocking call — all four are lowerings a generator
-  should be free to choose between. What the language should add is the FACT that
-  a reply is expected and which clause consumes it.
-
-  Sketch, to be argued rather than assumed correct:
-
-      ask command Pay of entity Ledger        // the reply is Pay's declared `yields`
-
-  and the reply is consumed by an ordinary `on <that result>` clause in the
-  asking processor. `ask` is then `tell` plus a declared expectation, and the
-  existing machinery does the rest: yield conformance already guarantees the
-  callee produces it, and A36 witnessing already checks a receiver has a clause
-  for a message.
-
-  **Open questions, in the order they need answering:**
-  1. **Does `ask` need a completion value at all**, or is "reply arrives as a
-     message handled by an on-clause" the whole of it? The latter is far cheaper
-     and stays honest about asynchrony; the former re-introduces a call stack
-     into a language that deliberately has none.
-  2. **Timeout: language or generated code?** Leaning generated code — a timeout
-     is a deployment property, and putting a duration in the model invites it to
-     be wrong everywhere at once. But a modeller may legitimately want to say
-     "this interaction is bounded".
-  3. **What does an ask that is never answered mean for handler completeness?**
-     There is a real check to be had here: `ask M of P` where P has no clause for
-     M, or where M declares no `yields`, is a defect riddl could catch today.
-  4. **The refusal path.** `checkYieldConformance` already treats a refusing
-     clause as discharging the contract. An ask whose callee refuses gets no
-     reply — is that a modelling error, or the expected shape?
-  5. Does `ask` belong to Epics/UseCases (an interaction-level concept) rather
-     than to statements? The interaction model already describes two-party
-     exchanges, and that may be the more natural home.
-
 - **Connector intentions: `persistent` plus `at-least-once` | `at-most-once`.**
   Reid, 2026-08-07, while ruling on where persistence is valid. A connector's
   durability and delivery guarantee belong in the GRAMMAR as intentions, the way
@@ -141,6 +86,45 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Sequence: deprecate loudly for a release, then remove.
 
 ### 2. Queued, needs a plan
+- **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
+  rule.** Reid ruled 2026-08-09: *"There must be no non-sealed matches — it is
+  okay to fall through to generate an error or exception but not okay to not
+  select anything and then carry on as if nothing happened."* Offered as a
+  follow-up and never answered, so it is filed rather than lost.
+
+  **What is already done** (do not redo): the total dispatches were fixed at
+  `286ef8157` and around it — `Pass.processValue` now throws on an unhandled
+  `Value` rather than returning unit, `BASTWriter`/`BASTReader` throw instead of
+  a `println`-and-drop and a placeholder `PromptStatement`, `classifyHandlers`
+  enumerates all 17 `Statement` kinds with no catch-all, and
+  `countValueFailPoints` enumerates the rest.
+
+  **What is NOT done:** roughly 140 remaining `case _ => ()` sites across the
+  codebase, most of which are legitimately "not interested in this node" rather
+  than "silently gave up". The work is to separate those two, not to delete the
+  arm — a mechanical sweep would be wrong. Suggested order: `passes/` first
+  (where a miss changes validation results), then `language/`, then the
+  serialization surfaces, which are already done.
+
+  Start with `grep -rn "case _ =>" --include=*.scala passes/ language/ | wc -l`
+  to size it before committing to a plan.
+
+- **Adaptor advisory conflicts with the sink-upstream check** (riddl-models,
+  `task/2026-08-09-adaptor-advisory-conflicts-with-sink-upstream-check.md`).
+  **Awaits Reid's ruling among three options; nothing built.** Carried here
+  because the diagnosis was done and would otherwise have to be redone.
+
+  **Verified in code, not recalled:** `Adaptor` extends `Processor`, NOT
+  `Streamlet`. The reachability BFS is typed over `Streamlet`, so an adaptor in
+  the middle of a path SEVERS it — the sink downstream is then reported as
+  having no upstream, while the advisory simultaneously suggests introducing the
+  very adaptor that breaks it. The two messages contradict each other on the
+  same model.
+
+  The three options are in the task file. The choice is a language-semantics
+  call (is an adaptor a streamlet for reachability purposes?), which is why it
+  is a ruling rather than a fix.
+
 - **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10, syntax his
   suggestion. Wants a plan. Filed out of the `foreach`-over-a-mapping question:
   the destructuring form below covers the loop body, but **outside a loop a
@@ -384,6 +368,27 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
+- **Tell consumers about two BREAKING changes landed 2026-08-10.** Nothing has
+  been sent; flagged to Reid, who has not yet said to send it. Both affect any
+  repo pinning riddl as a library, and neither is announced by a version bump
+  they would notice (still `2.0.0-rc.10-*`).
+
+  1. **BAST `FORMAT_REVISION` is now 10.** Every `.bast` written by an earlier
+     build is REJECTED outright, with a message telling the reader to
+     regenerate. Consumers holding cached `.bast` files (riddl-gen, synapify)
+     must regenerate rather than debug the rejection. This repo's own fixture
+     needed exactly that — see the trap in NOTEBOOK § HANDOFF about keeping a
+     last-revision binary to `unbastify` with.
+  2. **A mapping's VALUE type is now resolved** (`b307909b5`). A model with
+     `mapping from K to Nonexistent` used to validate CLEAN and now errors.
+     riddl-models is 189/189 so nothing observed is affected, but this is a
+     validation TIGHTENING, not an addition, and a consumer with an
+     unresolvable mapping value type will see a new Error.
+
+  Also worth including, as it changes what parses rather than what validates:
+  `foreach k, v in <mapping>` is now required for mappings (one name is an
+  Error), and `foreach` accepts dotted collection paths.
+
 
 - ~~Restage `~/Code/ossuminc/bin/riddlc`~~ — **DONE 2026-08-07.** Now
   `2.0.0-rc.10-28-a355e52a`, matching HEAD at the time. It is the NATIVE binary

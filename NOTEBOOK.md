@@ -11,117 +11,96 @@ Orientation for a session with no memory of this work. **Open work is in
 this NOTEBOOK's body. This says only where things stand and what a cold session
 would get wrong.
 
-**State — every line produced by a command in the session that wrote it:**
+**State — every line below was produced by a command in the session that wrote
+it (2026-08-10):**
 
-- Branch `release/2`, **clean, 0 unpushed**, HEAD `f22fd9bf9`, pushed
-  2026-08-07. CI builds `release/*` (scala.yml:9), so that push is running.
-  **CI result was NOT observed** — check it.
-- **`2.0.0-rc.10` is published** (2026-08-05) and verified on all six channels.
-- **The shared staged binary is STALE.** `~/Code/ossuminc/bin/riddlc` reports
-  `2.0.0-rc.10-15-3df5cf44` (Aug 6 12:10) — **6 commits behind HEAD, missing two
-  new diagnostics** (the type-first deprecation and the `persistent` Error).
-  Consumers validate with this binary, so they will not see either until it is
-  restaged: `sbt reload` then `riddlc/stage`, then copy. **A restage IS owed** —
-  this is the line that was true and is no longer.
-- The repo-local `target/out/jvm/.../stage/bin/riddlc` has CURRENT code but
-  reports `rc.10-23-e2f54419` — a **frozen-dynver string**, not its real
-  contents. sbt freezes dynver at load; `reload` before trusting any version a
-  staged binary prints.
-- **BAST `FORMAT_REVISION` is 8**. Any earlier `.bast` is rejected, including one
-  made by published rc.10, which shipped at revision 6.
-- Last full run, all three platforms, 0 failures: **JVM 260/2081, JS 60/674,
-  Native 183/1384** (suites/tests), 2026-08-07 after the `persistent` change.
-- Grammar CI green locally 2026-08-07: TatSu exit 0 at 98/121, GBNF `--check`
-  up-to-date, `gbnf_validator --skip-freshness` passed, riddl-models 189/189,
-  riddl-examples 9/9.
+- Branch `release/2`, **clean, 0 unpushed, 0 behind**, HEAD `e012ebb91`.
+  CI builds `release/*` (scala.yml:9), so that push is running. **CI result was
+  NOT observed** — check it.
+- **`2.0.0-rc.10` is the published release** (2026-08-05, six channels).
+- **Local artifacts, staged binary and HEAD all agree at
+  `2.0.0-rc.10-57-e012ebb9`** — ivy (all 19 modules), the npm tarball, and
+  `~/Code/ossuminc/bin/riddlc`. Verified the published `riddl-language_3.jar`
+  actually contains the new code rather than trusting timestamps.
+- **BAST `FORMAT_REVISION` is 10.** Any earlier `.bast` is rejected outright.
+- Tests, all three platforms, **0 failures** at `b307909b5` — the last commit
+  that touched code; the two after it are NOTEBOOK-only. JVM totals confirmed at
+  **271 suites / 2154 tests**. JS and Native reported no failures but my capture
+  was truncated, so **their totals are not cited here** rather than guessed.
+- Corpus: riddl-models **189/189** clean. riddl-examples **7/8** —
+  `FooBarSameDomain` fails identically on the pre-change binary (the deliberate
+  `checkUniqueContent` tightening of 2026-08-06), so it is not a regression.
+- Grammar: TatSu **98/121**, GBNF regenerated and `--check` clean,
+  `gbnf_validator --skip-freshness` passed.
 
 **Nothing is in flight.** No half-finished change, no uncommitted work, no
-failing test. This session shipped six commits: include/import-transparent
-`Contents.definitions` + `directDefinitions`; the type-first aggregate
-deprecation (fixtures migrated first, 305 sites); a misplaced `persistent`
-option becoming an Error; and a repair to the grammar CI job.
+failing test.
 
-**Next up:** BACKLOG § 1 — connector intentions (`persistent` +
-`at-least-once`/`at-most-once`), newly filed and sized there. Still awaiting
-Reid's ruling: the `ask`-statement recommendation (research done, nothing built).
+**Next up:** BACKLOG § 0 is the pre-2.0 gate. § 3 now carries an unsent consumer
+notice about two breaking changes (BAST revision 10; mapping value types now
+resolved) — Reid has not said to send it.
 
-**Traps. Every one of these bit someone:**
+**Traps most likely to bite next. The rest are in CLAUDE.md § "Subtle Patterns
+and Gotchas"; every one below cost someone real time.**
 
-- **`publishLocal`'s npm half publishes a STALE tarball** (found 2026-08-10).
-  `npmPack` globs `target/out/sjs1/.../riddl-lib/npm-packages/*.tgz` and takes
-  `.head` — an arbitrary entry from every version ever built there, not the one
-  npm just made. `npmPublishLocal` then puts that stale file under the CORRECT
-  version's directory, so `~/.ivy2/local/npm/ossuminc/riddl-lib/<current>/`
-  contained a tarball ten commits old whose own `package.json` said so. The
-  Scala/ivy artifacts are fine; only npm is affected, and the real registry
-  publish is NOT (it runs from `npmPrepare`'s dir). **Check the tarball's
-  filename against `version.value` after any publishLocal**, and copy the right
-  one in by hand until sbt-ossuminc is fixed (task filed there
-  2026-08-10). Neither `reload` nor `Def.uncached` helps — it is a wrong file
-  being picked, not a stale setting.
-
+- **`publishLocal` and restaging `~/Code/ossuminc/bin/riddlc` are ONE
+  operation** (Reid, 2026-08-10). Library consumers read the first, CLI
+  consumers the second; doing one leaves the two halves disagreeing about what
+  the language accepts, which surfaces as a confusing failure in a consumer.
+- **`publishLocal`'s npm half publishes a STALE tarball.** `npmPack` globs
+  `.../npm-packages/*.tgz` and returns `.head` — an arbitrary entry from every
+  version ever built there. It lands under the CORRECT version's directory, so
+  the mislabelling is invisible. **Compare the tarball's filename to
+  `version.value` after every publishLocal** and copy the right one in by hand.
+  Fixed in neither `reload` nor `Def.uncached` — it is a wrong file, not a stale
+  setting. Task filed in `sbt-ossuminc/task/` 2026-08-10; ivy artifacts and the
+  real registry publish are unaffected.
+- **Bumping `FORMAT_REVISION`? Regenerate `language/input/import/
+  NotImplemented.bast` FIRST**, or `IncludeAndImportTest` reddens and aborts the
+  `;` chain before the modules you changed. **Keep the last-revision binary
+  until you are done** — `unbastify` on the OLD build is what recovers the
+  fixture's source for the new one to re-emit. Restaging first destroys the only
+  tool that can read it.
 - **A green `tJVM`/`tJS`/`tNative` says NOTHING about the Python grammar CI.**
-  They are a separate CI job. Adding a `.riddl` fixture is a grammar-surface
-  change: an include fragment or intentionally-invalid file needs an entry in
-  `ebnf_tatsu_validator.py`'s `INCLUDE_FRAGMENTS`/`EXPECTED_FAILURES`, or that
-  job goes red while every Scala platform stays green. Exactly what shipped at
-  `564b17b3f` and was caught only a commit later. Run
+  Separate job. A new `.riddl` fixture is a grammar-surface change; run
   `language/src/test/scalajvm/python/.venv/bin/python ebnf_tatsu_validator.py`
   (that `.venv` — never Homebrew python3) before calling such work verified.
-- **`~/Code/ossuminc/bin` is deliberately NOT on `$PATH`.** Bare `riddlc` is the
-  tap's older build and rejects current syntax. Use the explicit path.
 - **`sbt -batch` runs only the FIRST command argument**, and `test`/`tJVM`
-  resolve to `testQuick`, which silently skips. Put everything in ONE
-  `;`-separated argument, use `<module>/testOnly *`, and COUNT the
-  `Suites: completed` lines against the modules you asked for (7 JVM / 5 JS /
-  7 Native).
+  resolve to `testQuick`, which silently skips. One `;`-separated argument, use
+  `<module>/testOnly *`, and COUNT `Suites: completed` lines against the modules
+  you asked for (7 JVM / 5 JS / 7 Native).
+- **`~/Code/ossuminc/bin` is deliberately NOT on `$PATH`.** Bare `riddlc` is the
+  tap's older build and rejects current syntax.
 - **`parseAndValidate` defaults to `shouldFailOnErrors = true`** and aborts
-  before your assertion, so a test ABOUT producing an error fails with an
-  unrelated message dump. Pass `shouldFailOnErrors = false`. Separately, it
-  DISCARDS parse-time messages (`TopLevelParser.parseInput`), so assert
+  before your assertion; it also DISCARDS parse-time messages, so assert
   deprecations via `parseInputWithMessages`.
-- **`.check` goldens quote the offending source line AND encode its column
-  span**, so any edit to a fixture line shifts them. `CheckMessagesTest` is exact
-  set equality of formatted messages.
-- **Bumping `FORMAT_REVISION`? Regenerate `language/input/import/
-  NotImplemented.bast` FIRST**, or `IncludeAndImportTest` reddens in `language`
-  and aborts the `;` chain before the modules you changed.
-- **Prettify reads `Declaration.ascription`, NOT a node's `format`.** Assert the
-  emitted TEXT, not just AST survival.
-- **Measuring riddl-models through its `.conf` files reports ZERO usage
-  warnings** (every one sets `show-usage-warnings = false`). Validate the entry
-  `.riddl` directly.
-- **The Native test floor moved DOWN at rc.10 (1624 → 1339) deliberately.** Do
-  not "restore" it.
+- **The Native test floor moved DOWN at rc.10 (1624 → 1339) deliberately.**
 
-**Certainty.** The State block is verified by command in this session. Traps are
-from observed failures.
-
-**Treat every plan and backlog entry as a claim, not a fact — this cost real
-time.** The JSON-source-locations plan sat marked "NOT STARTED, approved-pending,
-LARGE" for eight days after the work had shipped (`84c1b5124`); one `grep -c` on
-its own sizing claim exposed it. BACKLOG's type-first numbers were wrong in both
-directions (158 not 167, and it omitted 151 more sites in `.scala` fixture
-strings). **Test a plan's cheapest falsifiable number before executing it.**
-`~/.claude/plans/` also holds stale files for SHIPPED work —
-`structured-kindling-curry` (entity intentions) and `staged-swimming-quasar`
-(the skills plugin) among them.
+**Treat every plan and backlog entry as a claim, not a fact.** Proved again
+2026-08-10: BACKLOG's `ask` item still read "wants Reid's ruling … Nothing
+built" when `ask` had SHIPPED at `a50496e06` — a cold session would have
+reimplemented it. Earlier instances: a JSON plan marked NOT STARTED eight days
+after the work shipped, and type-first counts wrong in both directions. **Test a
+plan's cheapest falsifiable number before executing it.** `~/.claude/plans/`
+also holds stale files for shipped work, including `zazzy-strolling-crane`
+(the Part A doc reconciliation, fully enacted).
 
 **Corpus checks need a positive control.** `Root2JsonCorpusTest` compares
 original against re-parsed, so a new always-on diagnostic appears in BOTH and
-parity stays 100% — it cannot see one. Validate the corpus directly with a
-staged `riddlc`, and prove the search works on a fixture that should trip it.
+parity stays 100%. Worse for `foreach` specifically: **it appears ZERO times in
+riddl-models AND riddl-examples**, so neither corpus is a gate for that
+statement — the fixtures carry the whole load.
 
-**`task/` holds 2 files, BOTH UNTRIAGED:**
+**Certainty.** The State block is verified by command in this session, with the
+one gap named explicitly (JS/Native test totals). Traps are from observed
+failures, not theory.
+
+**`task/` holds 2 files, BOTH AWAITING TRIAGE — not triaged here, that is
+check-tasks' job:**
 - `2026-08-04-security.md` — Reid's RBAC draft, marked "do not act on this".
-- `2026-08-06-include-transparent-definitions.md` — synapify's acknowledgement
-  of work already DELIVERED tonight (original + results in `task/done/`).
-  Bookkeeping only: it repeats the "remove ResolutionPass's manual walk"
-  instruction that was DISPROVED (removing it would make `.bast` imports
-  resolve). Append that correction and move it to `done/`.
-
-Synapify has NOT been told directly that the accessor shipped; BACKLOG § 3
-carries the note that they can drop their `flattenAST` workaround.
+- `2026-08-09-adaptor-advisory-conflicts-with-sink-upstream-check.md` — awaits
+  Reid's ruling among three options. The diagnosis is already done and is
+  carried in BACKLOG § 2 so it survives even if the file is not read.
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
 

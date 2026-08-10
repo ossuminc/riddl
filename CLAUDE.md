@@ -844,6 +844,33 @@ to the right group rather than appending to a list.
   Opaque type `Contents[?]` erases to `ArrayBuffer` at runtime,
   so `case (_: Contents[?], …)` matches correctly.
 
+### Total Dispatch — no silent fall-through
+
+**Reid's standing rule (2026-08-09): "There must be no non-sealed matches — it
+is okay to fall through to generate an error or exception but not okay to not
+select anything and then carry on as if nothing happened."**
+
+A `case _ => ()` on a SEALED hierarchy is the failure mode: it compiles, it
+silences the exhaustivity warning that `-Werror` would otherwise raise, and when
+a new node type is added the code quietly does nothing for it. Every symptom
+then appears far from the cause — an empty output, a dropped statement, a
+model that validates clean and means something else.
+
+- **Enumerate the cases.** Let `-Werror` tell you when the hierarchy grows; that
+  warning is the whole safety net and a catch-all disables it.
+- **When a branch genuinely cannot be reached, `throw`** rather than return
+  unit. `Pass.processValue` does this; so do `BASTWriter`/`BASTReader`, which
+  previously used a `println`-and-drop and a placeholder `PromptStatement`
+  respectively — both of which produced corrupt output instead of a failure.
+- **`case _ => ()` remains correct for "not interested in this node"** — a
+  visitor that handles three of forty types. The test is whether the arm means
+  *"nothing to do here"* or *"I do not know what this is"*. Only the second is
+  the bug.
+
+Known-total today: `Pass.processValue`, `classifyHandlers` (all 17 `Statement`
+kinds), `countValueFailPoints`, BASTWriter/BASTReader statement dispatch. The
+remaining ~140 catch-alls are unaudited — see BACKLOG § 2.
+
 ### Pass Framework & Standard Passes
 
 - **OutlinePass / TreePass** — lightweight `HierarchyPass`
