@@ -99,7 +99,10 @@ case class ValidationPass(
       inlets.toSeq,
       outlets.toSeq,
       connectors.toSeq,
-      streamlets.toSeq,
+      // `ValidationOutput.streamlets` is public API typed `Seq[Streamlet]` and keeps its exact
+      // meaning: the Streamlet definitions in the model. The graph's node buffer is now wider
+      // (every Processor kind), so narrow it back here rather than changing what callers get.
+      processors.collect { case s: Streamlet => s }.toSeq,
       computedHandlerCompleteness
     )
   }
@@ -339,9 +342,17 @@ case class ValidationPass(
     // Task 10 (A32): shape/arity ascription check runs for EVERY processor kind
     // (context/entity/projector/repository/adaptor/streamlet), so it is dispatched here
     // rather than duplicated in each per-kind validate method.
+    //
+    // Registration into the streaming graph rides the same dispatch, and for the same reason:
+    // ports and stream shape live on Processor, so every kind is a potential node of a stream
+    // path. Registering here rather than in validateStreamlet is what stops the graph seeing
+    // only one of the six kinds and reporting a sink downstream of an adaptor or entity as
+    // having no upstream source.
     value match {
-      case p: Processor[?] => validateProcessorShape(p)
-      case _               => ()
+      case p: Processor[?] =>
+        validateProcessorShape(p)
+        addProcessor(p)
+      case _ => ()
     }
     // A53: a scope may declare AT MOST ONE version. Dispatched generically here so all five
     // version-bearing scopes (Root, Module, Domain, Context, Entity) are covered in one place.
@@ -2575,7 +2586,7 @@ case class ValidationPass(
     streamlet: Streamlet,
     parents: Parents
   ): Unit = {
-    addStreamlet(streamlet)
+    // NOT registered into the streaming graph here — `process` does that for every Processor kind.
     checkContainer(parents, streamlet)
     if streamlet.nonEmpty then
       val numInlets = streamlet.inlets.size

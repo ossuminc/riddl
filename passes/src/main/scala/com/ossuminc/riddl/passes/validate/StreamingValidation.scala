@@ -32,7 +32,22 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
   def addInlet(inlet: Inlet): Unit = inlets.addOne(inlet)
   def addOutlet(outlet: Outlet): Unit = outlets.addOne(outlet)
-  def addStreamlet(streamlet: Streamlet): Unit = streamlets.addOne(streamlet)
+
+  /** Register a [[Processor]] as a node of the streaming graph.
+    *
+    * EVERY processor kind participates, not just [[Streamlet]]: since the unified processor model,
+    * ports and stream shape live on [[Processor]], so an Adaptor, Entity, Projector, Repository or
+    * Context that declares ports is a genuine node in a stream path. A processor with no ports has
+    * a [[Void]] shape and is excluded by the checks themselves, so registering it costs nothing.
+    */
+  def addProcessor(processor: Processor[?]): Unit = processors.addOne(processor)
+
+  @deprecated(
+    "Use addProcessor: the streaming graph covers every Processor kind, not only Streamlet",
+    "2.0.0"
+  )
+  def addStreamlet(streamlet: Streamlet): Unit = addProcessor(streamlet)
+
   def addConnector(connector: Connector): Unit = connectors.addOne(connector)
 
   def checkStreaming(root: PassRoot): Unit = {
@@ -119,53 +134,69 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
   protected val inlets: mutable.ListBuffer[Inlet] = mutable.ListBuffer.empty
   protected val outlets: mutable.ListBuffer[Outlet] = mutable.ListBuffer.empty
-  protected val streamlets: mutable.ListBuffer[Streamlet] = mutable.ListBuffer.empty
+  protected val processors: mutable.ListBuffer[Processor[?]] = mutable.ListBuffer.empty
   protected val connectors: mutable.ListBuffer[Connector] = mutable.ListBuffer.empty
 
+  /** A node of the streaming graph, keyed by IDENTITY.
+    *
+    * Never key these collections on the processor itself. `Definition.equals` is structural and
+    * `hashCode` is (id, loc, class), so it is `loc` that distinguishes two same-named processors —
+    * by accident. On a tree built WITHOUT locations (one read back from JSON, where every `loc` is
+    * `At.empty`) two distinct processors sharing a name collapse into ONE key, silently merging
+    * their edges and producing reachability answers for a graph the model does not contain. This is
+    * the same hazard, and the same remedy, as [[ByIdentity]] in `checkPortletCardinality`.
+    */
+  private type Node = ByIdentity[Processor[?]]
+
   private def checkStreamingUsage(root: PassRoot): Unit = {
-    if streamlets.nonEmpty then {
-      // Build a map from each streamlet to its connected streamlets via connectors
-      // First, resolve all connector endpoints to their parent streamlets
-      val connectedStreamlets = mutable.Set.empty[Streamlet]
-      // Adjacency list: streamlet → set of downstream streamlets (outlet→inlet direction)
-      val adjacency = mutable.Map.empty[Streamlet, mutable.Set[Streamlet]]
+    if processors.nonEmpty then {
+      def node(p: Processor[?]): Node = ByIdentity(p)
+
+      // Build a map from each processor to its connected processors via connectors.
+      // First, resolve all connector endpoints to their owning processors. EVERY Processor kind is
+      // a node: a port's owner may be an Adaptor, Context, Entity, Projector or Repository just as
+      // readily as a Streamlet, and each conveys data through the path exactly the same way.
+      val connectedProcessors = mutable.Set.empty[Node]
+      // Adjacency list: processor → set of downstream processors (outlet→inlet direction)
+      val adjacency = mutable.Map.empty[Node, mutable.Set[Node]]
 
       connectors.filterNot(_.isEmpty).foreach { connector =>
         val connParents = symbols.parentsOf(connector)
         val maybeOutlet = resolvePath[Outlet](connector.from.pathId, connParents)
         val maybeInlet = resolvePath[Inlet](connector.to.pathId, connParents)
 
-        val maybeFromStreamlet = maybeOutlet.flatMap { outlet =>
-          symbols.parentOf(outlet).collect { case s: Streamlet => s }
+        val maybeFromProcessor = maybeOutlet.flatMap { outlet =>
+          symbols.parentOf(outlet).collect { case p: Processor[?] => p }
         }
-        val maybeToStreamlet = maybeInlet.flatMap { inlet =>
-          symbols.parentOf(inlet).collect { case s: Streamlet => s }
+        val maybeToProcessor = maybeInlet.flatMap { inlet =>
+          symbols.parentOf(inlet).collect { case p: Processor[?] => p }
         }
 
-        (maybeFromStreamlet, maybeToStreamlet) match {
-          case (Some(fromSl), Some(toSl)) =>
-            connectedStreamlets += fromSl
-            connectedStreamlets += toSl
-            adjacency.getOrElseUpdate(fromSl, mutable.Set.empty) += toSl
-          case (Some(fromSl), None) =>
-            connectedStreamlets += fromSl
-          case (None, Some(toSl)) =>
-            connectedStreamlets += toSl
+        (maybeFromProcessor, maybeToProcessor) match {
+          case (Some(from), Some(to)) =>
+            connectedProcessors += node(from)
+            connectedProcessors += node(to)
+            adjacency.getOrElseUpdate(node(from), mutable.Set.empty) += node(to)
+          case (Some(from), None) =>
+            connectedProcessors += node(from)
+          case (None, Some(to)) =>
+            connectedProcessors += node(to)
           case _ => ()
         }
       }
 
-      // Check 1: Isolated streamlets (non-Void, not connected to any connector)
-      streamlets.filterNot(isPredefined).foreach { streamlet =>
-        streamlet.effectiveShape match {
-          case _: Void => () // Void streamlets are excluded
+      // Check 1: Isolated processors (non-Void, not connected to any connector). A processor with
+      // no ports has a Void shape, so every portless context/entity/repository is excluded here.
+      processors.filterNot(isPredefined).foreach { processor =>
+        processor.effectiveShape match {
+          case _: Void => () // Void processors (no ports) are excluded
           case _ =>
-            if !connectedStreamlets.contains(streamlet) then
+            if !connectedProcessors.contains(node(processor)) then
               messages.addCompleteness(
-                streamlet.errorLoc,
-                s"${streamlet.identify} has no connections to any connector",
+                processor.errorLoc,
+                s"${processor.identify} has no connections to any connector",
                 suggestion =
-                  s"Connect ${streamlet.identify} to another streamlet with a connector, " +
+                  s"Connect ${processor.identify} to another processor with a connector, " +
                     "e.g. 'connector c is { from outlet ThisOutlet to inlet ThatInlet }'."
               )
         }
@@ -174,30 +205,36 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       // Check 2: Source→Sink reachability via BFS. Reaching the predefined `BottomlessPit`
       // TERMINATES a pipeline just as a modelled sink does — that is the whole point of it — so
       // it satisfies reachability without being reported on itself.
-      val modelStreamlets = streamlets.filterNot(isPredefined)
-      val sources = modelStreamlets.filter(_.effectiveShape.isInstanceOf[Source])
-      val sinks = modelStreamlets.filter(_.effectiveShape.isInstanceOf[Sink]).toSet
-      val sourceSet = sources.toSet
+      val modelProcessors = processors.filterNot(isPredefined)
+      val sources = modelProcessors.filter(_.effectiveShape.isInstanceOf[Source])
+      val sinks = modelProcessors.filter(_.effectiveShape.isInstanceOf[Sink])
+      val sinkNodes = sinks.map(node).toSet
+      val sourceNodes = sources.map(node).toSet
       // A pipeline that ends in `BottomlessPit` IS terminated, and one that begins at
       // `ForeverEmpty` IS fed; the predefined terminators satisfy reachability for the model
-      // streamlets they touch, while never being reported on themselves.
-      def terminates(s: Streamlet): Boolean =
-        sinks.contains(s) || (isPredefined(s) && s.effectiveShape.isInstanceOf[Sink])
-      def originates(s: Streamlet): Boolean =
-        sourceSet.contains(s) || (isPredefined(s) && s.effectiveShape.isInstanceOf[Source])
+      // processors they touch, while never being reported on themselves.
+      def terminates(n: Node): Boolean =
+        sinkNodes.contains(n) ||
+          (isPredefined(n.value) && n.value.effectiveShape.isInstanceOf[Sink])
+      def originates(n: Node): Boolean =
+        sourceNodes.contains(n) ||
+          (isPredefined(n.value) && n.value.effectiveShape.isInstanceOf[Source])
 
       sources.foreach { source =>
-        if adjacency.contains(source) then {
+        val start = node(source)
+        // A source with no outgoing edge at all is Check 1's concern ("no connections"), so it is
+        // skipped here rather than reported twice.
+        if adjacency.contains(start) then {
           // BFS from this source
-          val visited = mutable.Set.empty[Streamlet]
-          val queue = mutable.Queue.empty[Streamlet]
-          queue.enqueue(source)
-          visited += source
+          val visited = mutable.Set.empty[Node]
+          val queue = mutable.Queue.empty[Node]
+          queue.enqueue(start)
+          visited += start
           var reachesSink = false
 
           while queue.nonEmpty && !reachesSink do
             val current = queue.dequeue()
-            if terminates(current) && current != source then reachesSink = true
+            if terminates(current) && !(current.value eq source) then reachesSink = true
             else
               adjacency.getOrElse(current, mutable.Set.empty).foreach { neighbor =>
                 if !visited.contains(neighbor) then
@@ -217,7 +254,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       }
 
       // Check 3: Sink←Source reverse reachability via BFS
-      val reverseAdjacency = mutable.Map.empty[Streamlet, mutable.Set[Streamlet]]
+      val reverseAdjacency = mutable.Map.empty[Node, mutable.Set[Node]]
       adjacency.foreach { case (from, toSet) =>
         toSet.foreach { to =>
           reverseAdjacency.getOrElseUpdate(to, mutable.Set.empty) += from
@@ -225,11 +262,12 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       }
 
       sinks.foreach { sink =>
-        if connectedStreamlets.contains(sink) then {
-          val visited = mutable.Set.empty[Streamlet]
-          val queue = mutable.Queue.empty[Streamlet]
-          queue.enqueue(sink)
-          visited += sink
+        val start = node(sink)
+        if connectedProcessors.contains(start) then {
+          val visited = mutable.Set.empty[Node]
+          val queue = mutable.Queue.empty[Node]
+          queue.enqueue(start)
+          visited += start
           var reachedBySource = false
 
           while queue.nonEmpty && !reachedBySource do
@@ -433,8 +471,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     * ONE StyleWarning per such pipeline.
     *
     * A "pipeline" is a connected component of portlets under union-find over two kinds of edges:
-    * (a) each connector joins its `from` outlet and its `to` inlet; (b) each streamlet's own
-    * inlets+outlets are joined (a streamlet's ports are part of one flow). Because connectors are
+    * (a) each connector joins its `from` outlet and its `to` inlet; (b) each processor's own
+    * inlets+outlets are joined (a processor's ports are part of one flow). Because connectors are
     * accumulated across the whole model (including domain-scoped cross-context connectors, per
     * A31), a pipeline that spans contexts is analyzed as a single component. Only components with
     * ≥2 portlets warn (a lone async port is a legitimate single boundary), and only when ALL
@@ -473,9 +511,11 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
         found
       }
 
-      // Edge kind (b): a streamlet's own inlets+outlets belong to the same pipeline.
-      streamlets.foreach { streamlet =>
-        val portIdxs = (streamlet.inlets ++ streamlet.outlets).map(indexOf).filter(_ >= 0)
+      // Edge kind (b): a processor's own inlets+outlets belong to the same pipeline. Every
+      // Processor kind, not just Streamlet — an adaptor or entity mid-pipeline joins its ports
+      // into the same component exactly as a streamlet does.
+      processors.foreach { processor =>
+        val portIdxs = (processor.inlets ++ processor.outlets).map(indexOf).filter(_ >= 0)
         portIdxs.headOption.foreach { head =>
           portIdxs.tail.foreach(union(head, _))
         }
