@@ -14,14 +14,20 @@ would get wrong.
 **State — every line below was produced by a command in the session that wrote
 it (2026-08-10):**
 
-- Branch `release/2`, **clean, 0 unpushed, 0 behind**, HEAD `e012ebb91`.
-  CI builds `release/*` (scala.yml:9), so that push is running. **CI result was
-  NOT observed** — check it.
+- Branch `release/2`, **clean, 0 unpushed, 0 behind**. CI builds `release/*`
+  (scala.yml:9), so the push is running. **CI result was NOT observed** — check
+  it.
 - **`2.0.0-rc.10` is the published release** (2026-08-05, six channels).
-- **Local artifacts, staged binary and HEAD all agree at
-  `2.0.0-rc.10-57-e012ebb9`** — ivy (all 19 modules), the npm tarball, and
-  `~/Code/ossuminc/bin/riddlc`. Verified the published `riddl-language_3.jar`
-  actually contains the new code rather than trusting timestamps.
+- **The local artifacts and the staged binary agree, both built from
+  `e012ebb91` as `2.0.0-rc.10-57-e012ebb9`** — ivy (all 19 modules), the npm
+  tarball, and `~/Code/ossuminc/bin/riddlc`. Verified the published
+  `riddl-language_3.jar` actually contains the new code rather than trusting
+  timestamps.
+- **The last CODE commit is `b307909b5`**; everything after it is
+  NOTEBOOK/BACKLOG only. So HEAD sitting a doc commit or two ahead of the built
+  version is expected and does NOT mean a rebuild is owed — compare against the
+  last code commit, not against HEAD. A rebuild IS owed the moment anything
+  under `*/src/` or the grammar resources changes.
 - **BAST `FORMAT_REVISION` is 10.** Any earlier `.bast` is rejected outright.
 - Tests, all three platforms, **0 failures** at `b307909b5` — the last commit
   that touched code; the two after it are NOTEBOOK-only. JVM totals confirmed at
