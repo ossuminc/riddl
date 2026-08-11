@@ -1046,6 +1046,17 @@ validation — resolution and type-checking — in `checkStatementScopes`.
 
 ### Validation Specifics
 
+- **`???` is a body that says "known to be incomplete" — validation must EXEMPT
+  it** (Reid's ruling, 2026-08-11). Any definition whose body is `???` earns at
+  most a **Missing** warning saying the body should be provided. Every other
+  check — structural requirements, completeness, wiring, cross-references — is
+  skipped for it, because the author has already said *don't expect much*.
+  This is why a check must not reason from what a `???` body does NOT contain:
+  `repository R is { ??? }` is not missing its handlers, it is unwritten, and a
+  rule that fires on it will fire on nearly every stub in the corpus. When
+  adding a check, guard it on `nonEmpty` (see the streamlet shape check, which
+  already does exactly this) rather than reporting the stub.
+
 - **A parse-time `error()` PREEMPTS validation — the pass chain never runs.**
   So whatever the parser says is the ONLY thing the author sees, and any
   more specific diagnostic ValidationPass would have produced for that input

@@ -71,12 +71,16 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
     So the check is: resolve the projector's `updates repository R`; for each
     of R's handlers, collect the `on command C` clauses; a correlation
     yielding record `T` is satisfied when some such `C` has a field whose type
-    resolves to `T`. Unresolved cases to settle while building it: whether a
-    repository with NO handlers at all (`repository R is { ??? }`, common in
-    the corpus) should be exempt or reported — exempting it is what keeps the
-    check from firing on every stub model, and is probably right for 2.0 —
-    and whether "holds" means a direct field of `C` or any nested reachable
-    field.
+    resolves to `T`.
+
+    **A `???` repository is EXEMPT** (Reid, 2026-08-11) — and not as a special
+    case for this check. `???` means "known to be incomplete, don't expect
+    much" for ANY definition, so the most it earns is a Missing warning that
+    the body should be provided, and every other rule skips it. Now recorded in
+    CLAUDE.md § "Validation Specifics"; guard on `nonEmpty` when building this.
+
+    Still to settle: whether "holds" means a direct field of `C` or any nested
+    reachable field.
   - **Warning — handled events that nothing emits anywhere.** Needs
     MessageFlow analysis; `MessageFlowPass` already exists.
   - **Warning — earlier `set`s to a field that are definitely overridden.**
@@ -89,26 +93,29 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   duration test; the effect ban binds FOLDS only and `CorrelationTest` pins
   both sides of that line.
 
-- **Decide whether a projector must declare a Record of its own.** A
-  PRE-EXISTING Error, untouched by A70, surfaced by Reid's question about
-  correlation-free projectors (2026-08-11). Verified by probe, not inferred: a
-  projector that only translates events to commands 1-for-1 —
-  `projector Translate is { updates repository Store; handler T is { on event
-  OrderPlaced is { tell command RecordOrder to repository Store } } }` — is
-  rejected with *"Projector 'Translate' lacks a required Record definition."*
-  (`ValidationPass.scala`, the `projector.types.exists(… RecordCase …)` check).
+- **Fix "Projector X lacks a required Record definition" — it looks in the
+  wrong place.** A PRE-EXISTING Error, untouched by A70, surfaced by Reid's
+  question about correlation-free projectors and then RULED ON (2026-08-11).
+  Verified by probe, not inferred: a projector that only translates events to
+  commands 1-for-1 — `projector Translate is { updates repository Store;
+  handler T is { on event OrderPlaced is { tell command RecordOrder to
+  repository Store } } }` — is rejected, though the model is correct.
 
-  Reid's framing is the argument against it: "some projectors just translate
-  events to commands and are 1-for-1". Such a projector has nothing to shape,
-  and forcing a record it never uses is ceremony. Note the rule already has an
-  exemption for correlating projectors, which name their target with `yields
-  record` instead — so the requirement now holds only for the translator case,
-  which is the case with the weakest need for it.
+  **Reid's ruling:** the projector's record IS `RecordOrder`, the thing being
+  sent to `repository Store`. It does not have to be declared inside the
+  projector; **it needs to be defined on the Repository, or in the same
+  Context.** The current check
+  (`ValidationPass.scala`, `projector.types.exists(… RecordCase …)`) only ever
+  looks at the projector's OWN `types`, which is why a correct translator is
+  rejected — it is asking the wrong question, not asking too much.
 
-  Options: drop the Error; downgrade it to a CompletenessWarning; or keep it
-  and exempt a projector whose handler bodies contain no `set`. **Reid's call
-  — no code written pending it.** `CorrelationTest` pins the WITH-record
-  translator as valid either way.
+  So: widen it to look for the sent command/record on the referenced repository
+  or in the enclosing context, rather than dropping it. Two things to respect
+  while doing so — a `???` repository is exempt (see the item above and
+  CLAUDE.md § "Validation Specifics"), and correlating projectors already
+  bypass this check since they name their target with `yields record`.
+  `CorrelationTest` pins the WITH-record translator as valid, which will stay
+  true either way; add the record-LESS translator as a case when this is fixed.
 
 *(The "missing `isEmpty` overrides" item filed here on 2026-08-10 was based on a
 WRONG diagnosis and is gone — the defaults were correct and the bug was in two
