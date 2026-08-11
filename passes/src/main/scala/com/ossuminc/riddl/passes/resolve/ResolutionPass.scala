@@ -126,6 +126,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case s: State =>
         // A9b: state.typ is a RecordRef; resolve generically (record-kind check is in validation).
         associateUsage(s, resolveARef[Type](s.typ, parents))
+      case c: Correlation =>
+        // A70: `yields` is a FIELD, so nothing resolves it as part of traversing contents -- the
+        // same reason State.typ is resolved here. Without this the completeness check could not
+        // reach the target record's fields at all.
+        associateUsage(c, resolveARef[Type](c.yields, parents))
       case f: Function =>
         resolveFunction(f, parents)
       case i: Inlet =>
@@ -324,11 +329,38 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage[Definition](mc, resolution)
   }
 
+  /** A70: the [[Field]] a bare `set field <name>` denotes inside a [[Correlation]]'s fold.
+    *
+    * A70 chose the bare form deliberately, and its rationale is the scoping: the enclosing
+    * Correlation says which record the name belongs to. That matters most where a qualified name
+    * could not help — two correlations in one projector yielding the SAME record type keyed
+    * differently are told apart by which correlation the fold sits in, not by the field's path.
+    *
+    * Only a SINGLE-component path is claimed here. A qualified `set field Some.Other.field` keeps
+    * the ordinary symbol-table route, so nothing that resolved before resolves differently, and a
+    * bare name that is not a field of the target falls through to the ordinary route too — where it
+    * gets the usual "not resolved" diagnostic rather than being silently accepted.
+    */
+  private def correlationTargetField(fr: FieldRef, parents: Parents): Option[Field] =
+    if fr.pathId.value.sizeIs != 1 then None
+    else
+      parents.collectFirst { case c: Correlation => c }.flatMap { correlation =>
+        refMap.definitionOf[Type](correlation.yields.pathId).flatMap { typ =>
+          typ.typEx match
+            case ate: AggregateTypeExpression => ate.fields.find(_.id.value == fr.pathId.value.head)
+            case _                            => None
+        }
+      }
+  end correlationTargetField
+
   private def resolveStatement(statement: Statement, parents: Parents): Unit = {
     statement match {
       case SetStatement(_, field, value) =>
         field match
-          case fr: FieldRef => associateUsage[Field](parents.head, resolveARef[Field](fr, parents))
+          case fr: FieldRef =>
+            correlationTargetField(fr, parents) match
+              case Some(target) => refMap.add[Field](fr.pathId, parents.head, target)
+              case None => associateUsage[Field](parents.head, resolveARef[Field](fr, parents))
           case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
         // A54: resolve the value expression (constructor refs, get sources).
         resolveValue(value, parents)

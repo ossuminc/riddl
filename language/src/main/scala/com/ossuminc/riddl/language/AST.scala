@@ -978,10 +978,18 @@ object AST:
   type InteractionContainerContents = Interaction | Comment
 
   /** Type of definitions that occur in a [[Projector]] without [[Include]] */
-  private type OccursInProjector = OccursInProcessor | RepositoryRef
+  private type OccursInProjector = OccursInProcessor | RepositoryRef | Correlation
 
   /** Type of definitions that occur in a [[Projector]] with [[Include]] */
   type ProjectorContents = OccursInProjector | Include[OccursInProjector]
+
+  /** Type of definitions that occur in a [[Correlation]] (A70).
+    *
+    * A Correlation holds exactly one [[Handler]] whose on-clauses are its folds. It is the same
+    * shape as [[StateContents]] minus [[Invariant]]: a projector cannot refuse an event, so an
+    * invariant-as-guard has nothing to mean here.
+    */
+  type CorrelationContents = Handler | Comment
 
   /** Type of definitions that occur in a [[Repository]] without [[Include]] */
   private type OccursInRepository = OccursInProcessor | Schema
@@ -4560,6 +4568,59 @@ object AST:
     * @param contents
     *   The content of this Projectors' definition
     */
+  /** A70: a named, keyed accumulation of several events into one record the [[Repository]] stores.
+    *
+    * A projection frequently must join facts arriving from different entities at different times —
+    * an order placed here, a payment taken there, a shipment somewhere else — and a [[Projector]]
+    * otherwise has nowhere to hold the partial join while it waits.
+    *
+    * Written as:
+    * {{{
+    *   correlation Fulfillment by customerId, orderId yields record Sales.Fulfillment is {
+    *     handler Collect is { on event Sales.OrderPlaced is { set field orderedAt to occurredAt } }
+    *   } times out after "30 days" { tell command Ops.ReportStalled to entity Ops.Monitor }
+    * }}}
+    *
+    * The semantics are specified in `RIDDL-Computational-Model.md` §6.2 and §6.5–§6.8, which is the
+    * authority for any lowering decision; they are deliberately not restated here.
+    *
+    * @param keys
+    *   The correlation key, ordered AS WRITTEN. It is deliberately NOT canonicalized: §6.5 makes
+    *   identity the full tuple, and component order can matter to a generator's composite index or
+    *   partition key. Contrast [[EntityIntention.canonical]], which canonicalizes for the opposite
+    *   reason — there, write order must never make two identical entities compare unequal, whereas
+    *   here a different order IS a different declaration.
+    * @param yields
+    *   The target record, named as declared. Partiality never appears in the model: that the
+    *   accumulator holds a partly-filled version is a realization concern (§6.5).
+    * @param timeout
+    *   The mandatory bound on the accumulation, as a [[LiteralString]] so neither ISO-8601 nor
+    *   Scala `Duration` syntax enters the grammar. It is duration-VALIDATED in `ValidationPass`;
+    *   dropping that check would let `times out after "banana"` compile.
+    * @param timeoutStatements
+    *   What to do when the bound expires with the correlation incomplete. Required and non-empty.
+    *   Unlike a fold, this block MAY have effects — it exists to have one (§6.7).
+    */
+  @JSExportTopLevel("Correlation")
+  case class Correlation(
+    loc: At,
+    id: Identifier,
+    // These three precede `contents` because they have no defaults and @JSExportTopLevel requires
+    // defaulted parameters to be TRAILING -- the same rule A55's `binding` and A57's `envelopeType`
+    // follow. Source order is different (`timeout` is written after the body) and that is fine;
+    // declaration order here is a Scala.js constraint, not a statement about the syntax.
+    keys: Seq[Identifier],
+    yields: RecordRef,
+    timeout: LiteralString,
+    contents: Contents[CorrelationContents] = Contents.empty[CorrelationContents](),
+    timeoutStatements: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends Branch[CorrelationContents]
+      with WithHandlers[CorrelationContents]:
+    def format: String = Keyword.correlation + " " + id.format
+    override def isEmpty: Boolean = super.isEmpty && timeoutStatements.isEmpty
+  end Correlation
+
   @JSExportTopLevel("Projector")
   case class Projector(
     loc: At,
@@ -4569,6 +4630,12 @@ object AST:
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[ProjectorContents]:
     def repositories: Seq[RepositoryRef] = contents.filterThroughWrappers[RepositoryRef]
+
+    /** A70: the [[Correlation]]s this projector declares. Descends the provenance wrappers, as
+      * every other `contents` accessor does — a client asking what a projector correlates has no
+      * stake in whether the correlation was written inline or arrived by `include`.
+      */
+    def correlations: Seq[Correlation] = contents.filterThroughWrappers[Correlation]
     def format: String = Keyword.projector + " " + id.format
   end Projector
 
@@ -5944,6 +6011,7 @@ object AST:
     private lazy val typeIn = contains[TypeContents]
     private lazy val handlerIn = contains[HandlerContents]
     private lazy val stateIn = contains[StateContents]
+    private lazy val correlationIn = contains[CorrelationContents]
     private lazy val groupIn = contains[OccursInGroup]
     private lazy val outputIn = contains[OccursInOutput]
     private lazy val inputIn = contains[OccursInInput]
@@ -5964,8 +6032,9 @@ object AST:
       case _: Epic       => epicIn
       case _: UseCase    => useCaseIn
       case _: Type       => typeIn
-      case _: Handler    => handlerIn
-      case _: State      => stateIn
+      case _: Handler     => handlerIn
+      case _: State       => stateIn
+      case _: Correlation => correlationIn
       case _: Group      => groupIn
       case _: Output     => outputIn
       case _: Input      => inputIn

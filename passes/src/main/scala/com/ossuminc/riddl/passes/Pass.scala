@@ -326,6 +326,18 @@ abstract class Pass(
         sagaStep.undoStatements.foreach { value => traverse(value, parents) }
       case leaf: Leaf =>
         process(leaf, parents)
+      case correlation: Correlation =>
+        // A70. MUST precede `case branch: Branch[?]` for the same reason SagaStep precedes `Leaf`
+        // above: a Correlation's timeout statements live in the `timeoutStatements` FIELD, not in
+        // `contents`, so the generic Branch arm would traverse its handler and silently skip them
+        // -- and a `tell` in an unreached block resolves nothing, naming definitions that need not
+        // exist while the model validates clean. Unlike SagaStep, a Correlation IS a Branch, so it
+        // is pushed: it is the right resolution scope for both its folds and its timeout block.
+        process(correlation, parents)
+        parents.push(correlation)
+        correlation.contents.foreach { (value: RiddlValue) => traverse(value, parents) }
+        correlation.timeoutStatements.foreach { (value: RiddlValue) => traverse(value, parents) }
+        parents.pop()
       case branch: Branch[?] =>
         process(branch, parents)
         parents.push(branch)
@@ -529,6 +541,7 @@ trait PassVisitor:
   def openOutput(output: Output, parents: Parents): Unit
   def openInput(input: Input, parents: Parents): Unit
   def openState(state: State, parents: Parents): Unit
+  def openCorrelation(correlation: Correlation, parents: Parents): Unit
   def openInclude(include: Include[?], parents: Parents): Unit
   def openBASTImport(bi: BASTImport, parents: Parents): Unit
 
@@ -552,6 +565,7 @@ trait PassVisitor:
   def closeOutput(output: Output, parents: Parents): Unit
   def closeInput(input: Input, parents: Parents): Unit
   def closeState(state: State, parents: Parents): Unit
+  def closeCorrelation(correlation: Correlation, parents: Parents): Unit
   def closeInclude(include: Include[?], parents: Parents): Unit
   def closeBASTImport(bi: BASTImport, parents: Parents): Unit
 
@@ -620,6 +634,7 @@ abstract class VisitingPass[VT <: PassVisitor](
       case handler: Handler       => visitor.openHandler(handler, parents)
       case onClause: OnClause     => visitor.openOnClause(onClause, parents)
       case state: State           => visitor.openState(state, parents)
+      case corr: Correlation      => visitor.openCorrelation(corr, parents)
       case group: Group           => visitor.openGroup(group, parents)
       case output: Output         => visitor.openOutput(output, parents)
       case input: Input           => visitor.openInput(input, parents)
@@ -651,6 +666,7 @@ abstract class VisitingPass[VT <: PassVisitor](
       case handler: Handler       => visitor.closeHandler(handler, parents)
       case onClause: OnClause     => visitor.closeOnClause(onClause, parents)
       case state: State           => visitor.closeState(state, parents)
+      case corr: Correlation      => visitor.closeCorrelation(corr, parents)
       case group: Group           => visitor.closeGroup(group, parents)
       case output: Output         => visitor.closeOutput(output, parents)
       case input: Input           => visitor.closeInput(input, parents)

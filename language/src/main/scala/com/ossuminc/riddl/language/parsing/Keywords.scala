@@ -104,7 +104,21 @@ object Keywords {
 
   def copyright[u: P]: P[Unit] = keyword(Keyword.copyright)
 
+  def correlation[u: P]: P[Unit] = keyword(Keyword.correlation)
+
   def create[u: P]: P[Unit] = keyword(Keyword.create)
+
+  /** A70: the three-word phrase introducing a [[AST.Correlation]]'s mandatory timeout clause,
+    * `times out after "30 days" { … }`.
+    *
+    * One combinator rather than three exported keywords, for the same reason `reverted by` is
+    * spelled as a keyword plus a readability word: the words are particles of one phrase, not
+    * independently meaningful. They ARE registered in [[anyKeyword]] so the tokenizer colours them,
+    * but deliberately NOT in [[definitionKeywords]] — `out`, `after` and `times` are ordinary
+    * English and must remain legal identifiers.
+    */
+  def timesOutAfter[u: P]: P[Unit] =
+    P(keyword(Keyword.times) ~ keyword(Keyword.out) ~ keyword(Keyword.after))
 
   def default[u: P]: P[Unit] = keyword(Keyword.default_)
 
@@ -386,6 +400,7 @@ object Keywords {
           Keyword.acquires,
           Keyword.activate,
           Keyword.adaptor,
+          Keyword.after,
           Keyword.all,
           Keyword.any,
           Keyword.append,
@@ -407,6 +422,7 @@ object Keywords {
           Keyword.contains,
           Keyword.context,
           Keyword.copyright,
+          Keyword.correlation,
           Keyword.create,
           Keyword.described,
           Keyword.details,
@@ -464,6 +480,7 @@ object Keywords {
           Keyword.optional,
           Keyword.options,
           Keyword.other,
+          Keyword.out,
           Keyword.outlet,
           Keyword.outlets,
           Keyword.output,
@@ -516,6 +533,7 @@ object Keywords {
           Keyword.tell,
           Keyword.term,
           Keyword.then_,
+          Keyword.times,
           Keyword.title,
           Keyword.type_,
           Keyword.url,
@@ -539,6 +557,7 @@ object Keyword {
   final val acquires = "acquires"
   final val activate = "activate"
   final val adaptor = "adaptor"
+  final val after = "after"
   final val all = "all"
   final val any = "any"
   final val append = "append"
@@ -561,6 +580,7 @@ object Keyword {
   final val contains = "contains"
   final val context = "context"
   final val copyright = "copyright"
+  final val correlation = "correlation"
   final val create = "create"
   final val default_ = "default"
   final val described = "described"
@@ -628,6 +648,7 @@ object Keyword {
   final val optional = "optional"
   final val options = "options"
   final val other = "other"
+  final val out = "out"
   final val outlet = "outlet"
   final val outlets = "outlets"
   final val output = "output"
@@ -681,6 +702,7 @@ object Keyword {
   final val tell = "tell"
   final val term = "term"
   final val then_ = "then"
+  final val times = "times"
   final val title = "title"
   final val type_ = "type"
   final val url = "url"
@@ -703,10 +725,14 @@ object Keyword {
     require_,
     activate,
     adaptor,
+    after,
     all,
     any,
     append,
     attachment,
+    correlation,
+    times,
+    out,
     author,
     become,
     benefit,
@@ -882,7 +908,11 @@ object Keyword {
     repository,
     streamlet,
     handler,
-    function
+    function,
+    // A70. `times`, `out` and `after` deliberately do NOT join this set even though they are
+    // keywords: they are particles of the `times out after` phrase, they never introduce a
+    // definition, and they are ordinary English words a model may legitimately want as a name.
+    correlation
   )
 
 }

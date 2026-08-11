@@ -426,6 +426,8 @@ case class ValidationPass(
         validateConstant(c, parentsAsSeq)
       case s: State =>
         validateState(s, parentsAsSeq)
+      case c: Correlation =>
+        validateCorrelation(c, parentsAsSeq)
       case f: Function =>
         validateFunction(f, parentsAsSeq)
       case i: Inlet =>
@@ -2178,13 +2180,94 @@ case class ValidationPass(
       }
     }
 
+  /** A70. The check that earns correlations: every REQUIRED non-key field of the yielded record is
+    * `set` by at least one fold.
+    *
+    * It turns "this correlation can never complete" from a production mystery into a compile-time
+    * fact, exactly as the event-sourcing rules did for entities. Completion is TYPE-DERIVED
+    * (Computational Model §6.5) — nothing in the source states a completion condition, so nothing
+    * can drift out of sync with the record.
+    *
+    * Key fields are EXEMPT: §6.5 populates them implicitly from the correlation key, so demanding a
+    * fold set them would reject every correct correlation. `Optional` (`?`) and `ZeroOrMore` (`*`)
+    * fields are not required — both admit "nothing there" — while `OneOrMore` (`+`) is.
+    */
+  private def validateCorrelation(
+    correlation: Correlation,
+    parents: Parents
+  ): Unit = {
+    checkDefinition(parents, correlation)
+    checkMetadata(correlation)
+
+    // Every field name reached by a `set` in any fold. Uses walkStatements so a `set` nested in
+    // when/match/foreach still counts -- it is reachable, which is all this check asks.
+    // `Set[String]` is spelled out: AST.Set (the statement) shadows scala.Set in this file.
+    val setFieldNames: scala.collection.immutable.Set[String] =
+      val names = scala.collection.mutable.Set.empty[String]
+      correlation.handlers.foreach { handler =>
+        handler.clauses.foreach { clause =>
+          walkStatements(clause.contents) {
+            case SetStatement(_, fr: FieldRef, _) => names += fr.pathId.value.last
+            case _                                => ()
+          }
+        }
+      }
+      names.toSet
+    end setFieldNames
+
+    val keyNames: scala.collection.immutable.Set[String] = correlation.keys.map(_.value).toSet
+
+    checkRefAndExamine[Type](correlation.yields, parents) { (typ: Type) =>
+      // Same rule, and same reason, as State vs. its record type: sharing the name makes the path
+      // ambiguous, and the resulting "Path reference 'X' is ambiguous" says nothing about how to
+      // fix it. Found by writing the tests for this feature, which hit it immediately.
+      check(
+        typ.id.value != correlation.id.value,
+        s"${correlation.identify} and ${typ.identify} must not have the same name so path " +
+          s"resolution can succeed",
+        Messages.Error,
+        correlation.loc,
+        suggestion = s"Rename either the correlation or the record so they do not share the name " +
+          s"'${correlation.id.value}'."
+      )
+      typ.typEx match
+        case agg: AggregateTypeExpression =>
+          val unset = agg.fields.filter { field =>
+            val isOptional = field.typeEx match
+              case _: Optional | _: ZeroOrMore => true
+              case _                           => false
+            !isOptional && !keyNames.contains(field.id.value) &&
+            !setFieldNames.contains(field.id.value)
+          }
+          if unset.nonEmpty then
+            messages.addError(
+              correlation.errorLoc,
+              s"${correlation.identify} can never complete: ${typ.identify} requires " +
+                s"${unset.map(_.id.value).mkString("'", "', '", "'")}, which no fold sets",
+              suggestion = s"Add an 'on event ... is { set field ${unset.head.id.value} to ... }' " +
+                s"clause to ${correlation.identify}, or make the field optional."
+            )
+          end if
+        case _ => () // a non-aggregate target is reported by the record-ref check itself
+      end match
+    }
+  }
+  end validateCorrelation
+
   private def validateProjector(
     projector: Projector,
     parents: Parents
   ): Unit = {
     checkContainer(parents, projector)
+    // A70: both checks below predate correlations and assume a projector's folds live in one
+    // top-level handler over a record the projector itself declares. A correlating projector does
+    // neither -- its folds live inside its Correlations, and `yields record X` names a record that
+    // normally lives in the enclosing Context. Left unrelaxed, these two would reject every
+    // correlation-only projector, so each is skipped when correlations are present rather than
+    // deleted: a projector WITHOUT correlations is validated exactly as before.
+    val hasCorrelations = projector.correlations.nonEmpty
     check(
-      projector.types.exists { (typ: Type) =>
+      hasCorrelations || projector.types.exists { (typ: Type) =>
         typ.typEx match {
           case auc: AggregateUseCaseTypeExpression =>
             auc.usecase == AggregateUseCase.RecordCase
@@ -2198,7 +2281,7 @@ case class ValidationPass(
         s"Add a record type to ${projector.identify}, e.g. 'type ${projector.id.value}Record = record { ??? }'."
     )
     check(
-      projector.handlers.length == 1,
+      if hasCorrelations then projector.handlers.length <= 1 else projector.handlers.length == 1,
       s"${projector.identify} must have exactly one Handler but has ${projector.handlers.length}",
       Messages.Error,
       projector.errorLoc,

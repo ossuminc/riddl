@@ -22,9 +22,64 @@ private[parsing] trait ProjectorParser {
   private def updates[u: P]: P[RepositoryRef] =
     P(Keywords.updates ~ repositoryRef)
 
+  private def correlationContent[u: P]: P[CorrelationContents] =
+    P(handler(StatementsSet.ProjectorStatements) | comment).asInstanceOf[P[CorrelationContents]]
+
+  private def correlationBody[u: P]: P[Seq[CorrelationContents]] =
+    P(is ~ open ~ (undefined(Seq.empty[CorrelationContents]) | correlationContent.rep(1)) ~ close)
+
+  /** A70: the mandatory timeout clause, `times out after "30 days" { … }`.
+    *
+    * Mandatory on purpose (author's ruling, 2026-08-11): a correlation with no bound was the one
+    * case the earlier optional design could not answer, and requiring it makes the unbounded state
+    * unrepresentable rather than diagnosed. The duration is an ordinary [[literalString]] so
+    * neither ISO-8601 nor Scala `Duration` syntax enters the grammar; `ValidationPass` checks that
+    * it parses as a duration, so `times out after "banana"` is an Error rather than accepted.
+    *
+    * The body takes UNRESTRICTED projector statements. Unlike a fold it MAY have effects — it
+    * exists to have one (Computational Model §6.7) — so banning them here would leave it unable to
+    * do anything. [[pseudoCodeBlock]] brackets itself (its brace-wrapped form is one of its own
+    * alternatives, as `saga_step` uses it), so it must NOT be wrapped in `open`/`close` here — that
+    * would demand doubled braces. It admits `???` and requires at least one statement otherwise, so
+    * an empty `{ }` is a parse error; `do "nothing"` is the idiom when discarding really is right.
+    */
+  private def correlationTimeout[u: P]: P[(LiteralString, Seq[Statements])] =
+    P(Keywords.timesOutAfter ~/ literalString ~ pseudoCodeBlock(StatementsSet.ProjectorStatements))
+
+  /** A70: a named, keyed accumulation of several events into one record the Repository stores.
+    *
+    * {{{
+    *   correlation Fulfillment by customerId, orderId yields record Sales.Fulfillment is {
+    *     handler Collect is { on event Sales.OrderPlaced is { set field orderedAt to occurredAt } }
+    *   } times out after "30 days" { tell command Ops.ReportStalled to entity Ops.Monitor }
+    * }}}
+    *
+    * The keys are kept in WRITTEN order and are not sorted: §6.5 makes identity the full tuple, and
+    * component order can matter to a generator's composite index. Since `Definition.equals` is
+    * structural, sorting them here would silently make two differently-ordered declarations equal.
+    */
+  private def correlation[u: P]: P[Correlation] = {
+    P(
+      Index ~ Keywords.correlation ~/ identifier ~ by ~ identifier.rep(1, Punctuation.comma) ~
+        Keywords.yields ~ recordRef ~ correlationBody ~ correlationTimeout ~ withMetaData ~ Index
+    )./.map { case (start, id, keys, record, contents, (timeout, onTimeout), descriptives, end) =>
+      Correlation(
+        at(start, end),
+        id,
+        keys,
+        record,
+        timeout,
+        contents.toContents,
+        onTimeout.toContents,
+        descriptives.toContents
+      )
+    }
+  }
+
   private def projectorDefinitions[u: P]: P[Seq[ProjectorContents]] = {
     P(
-      processorDefinitionContents(StatementsSet.ProjectorStatements) | updates | projectorInclude
+      processorDefinitionContents(StatementsSet.ProjectorStatements) | updates | correlation |
+        projectorInclude
     ).asInstanceOf[P[ProjectorContents]]./.rep(1)
   }
 

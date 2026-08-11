@@ -451,9 +451,18 @@ adaptor_include = "include" literal_string ;
 (* Projector-related *)
 projector = "projector" identifier [as_shape] is "{" projector_body "}" [with_metadata] ;
 projector_body = {undefined | projector_definitions} ;
-projector_definitions = {processor_definition_contents | updates | projector_include} ;
+projector_definitions = {processor_definition_contents | updates | correlation | projector_include} ;
 projector_include = "include" literal_string ;
 updates = "updates" repository_ref ;
+
+(* A70: a keyed accumulation of several events into one record the repository stores. The timeout
+   clause is mandatory -- a correlation with no bound is a syntax error -- and its duration is an
+   ordinary literal_string so no duration syntax enters the grammar. *)
+correlation = "correlation" identifier "by" identifier {"," identifier} "yields" record_ref
+              correlation_body correlation_timeout [with_metadata] ;
+correlation_body = is "{" (undefined | {correlation_content}+) "}" ;
+correlation_content = handler | comment ;
+correlation_timeout = "times" "out" "after" literal_string pseudo_code_block ;
 
 (* Saga-related *)
 saga = "saga" identifier is "{" saga_body "}" [with_metadata] ;
