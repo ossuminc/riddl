@@ -11,116 +11,98 @@ Orientation for a session with no memory of this work. **Open work is in
 this NOTEBOOK's body. This says only where things stand and what a cold session
 would get wrong.
 
-**State — every line below was produced by a command in the session that wrote
-it (2026-08-10):**
+**State — every line verified by a command in the session that wrote it
+(2026-08-11):**
 
-- Branch `release/2`, **clean, 0 unpushed, 0 behind**. CI run **#2248 green on
-  the tagged commit** `8c1dad05c` — observed, not assumed.
-- **`2.0.0-rc.11` is the published release** (2026-08-10, all six channels),
-  tagged at `8c1dad05c`. Verified BY QUERY, not from logs: 20/20 Maven
-  coordinates present and the 4 retired modules absent; npm on the **`rc`**
-  dist-tag with `latest` unmoved; 3 release assets; `prerelease=true` so the
-  blog stayed silent; homebrew-tap touched only `Formula/riddlc-rc.rb`, leaving
-  `riddlc.rb` on 1.31.0.
-- **sbt is pinned to 2.0.6** (security). A warm sbt server IGNORES this — run
-  `sbt -batch shutdown` then `show sbtVersion` before trusting any build.
-- **`~/Code/ossuminc/bin/riddlc` is at `2.0.0-rc.10-68-cd9d2835`, one code
-  commit BEHIND the RC.** It was staged before the sbt-2.0.6 pin and the RC tag.
-  Re-run `scripts/publish-and-stage.sh` (which refuses a dirty tree and does
-  publishLocal+stage in ONE sbt invocation) if a consumer needs the RC locally;
-  the released RC is better obtained via `brew upgrade ossuminc/tap/riddlc-rc`.
-- **BAST `FORMAT_REVISION` is 10.** Any earlier `.bast` is rejected outright.
-- Certification from clean under sbt 2.0.6, all rows above floor, zero skips,
-  zero failures: **JVM 7 modules / 2177 tests**, **JS 5 / 704**, **Native 7 /
-  1473**. Floors are 1846 / 674 / 1339.
-- Corpus: riddl-models **189/189, 0 errors**. Grammar: TatSu **98/121 with zero
-  UNEXPECTED failures**, GBNF passed and fresh, riddl-examples 9/9,
-  riddl-models 189/189.
+- Branch `release/2`, **clean, 0 unpushed, 0 behind**, HEAD `b23062717`.
+  CI green on `92a75e8e4`; the two commits above it are BACKLOG/NOTEBOOK only.
+- **`2.0.0-rc.11` is the published release**, tagged at `8c1dad05c`,
+  `prerelease=true`. Verified BY QUERY: 20/20 Maven coordinates present (4
+  retired modules absent), npm on the **`rc`** dist-tag with `latest` unmoved,
+  3 release assets, homebrew-tap touched only `Formula/riddlc-rc.rb` leaving
+  `riddlc.rb` on 1.31.0, blog suppressed.
+- **`~/Code/ossuminc/bin/riddlc` reports `2.0.0-rc.11`** and local ivy has all
+  20 modules at that version — both built FROM THE TAG in one sbt invocation, so
+  they cannot disagree. Confirmed functionally, not by label: the four fixtures
+  in the scratchpad exercise the streaming, cardinality, saga-`ask` and
+  emptiness changes.
+- **sbt is pinned to 2.0.6** (security). BAST `FORMAT_REVISION` is **10**.
+- Certification from clean under 2.0.6, zero skips, zero failures: **JVM 7
+  modules / 2177 tests**, **JS 5 / 704**, **Native 7 / 1473** (floors 1846 /
+  674 / 1339). Grammar: TatSu zero UNEXPECTED failures, GBNF fresh,
+  riddl-examples 9/9, riddl-models 189/189 with 0 errors.
 
-**Nothing is in flight.** No half-finished change, no uncommitted work, no
-failing test.
+**Nothing is in flight in THIS repo.** No half-finished change, no uncommitted
+work, no failing test.
 
-**Next up:** BACKLOG § 0 is the pre-2.0 gate. Soak rc.11, then either iterate to
-rc.12 or promote from `main`. § 3 carries an unsent consumer notice about
-breaking changes (BAST revision 10; mapping value types resolved;
-`Contents.definitions` now include/import-transparent) — Reid has not said to
-send it.
+**AT RISK OF BEING LOST — the one thing to deal with first.** The
+`~/Code/ossuminc` directory is itself a git repo, and **two documents are
+modified there and NOT committed**:
+
+- `RIDDL-Computational-Model.md` — §6 (Projector) rewritten for correlations
+- `RIDDL-Tools-To-Do-List.md` — new Part A item 70
+
+They are the authority for the next task (below) and BACKLOG points AT them, so
+losing them would strand that item. Reid was asked whether to commit them and
+had not answered when the session ended. **Check `git -C ~/Code/ossuminc status`
+first thing.**
+
+**Next up: implement Correlations in Projectors.** Designed in full 2026-08-11,
+nothing built. BACKLOG § 1 carries the pointer; the design is in the two
+documents above and is deliberately NOT duplicated anywhere. Read both before
+starting — §6 held three claims correlations invalidate (projectors are
+stateless, scale round-robin, are write-only toward the Repository) and all
+three were amended in place.
 
 **Traps most likely to bite next. The rest are in CLAUDE.md § "Subtle Patterns
 and Gotchas"; every one below cost someone real time.**
 
-- **A warm sbt server IGNORES a changed `sbt.version`** and says so only in a
-  passing `[warn] sbt version mismatch … use 'reboot'` that scrolls by. `reload`
-  does NOT fix it. This certified a whole tree under the wrong sbt during the
-  rc.11 cut. **`sbt -batch shutdown` then `show sbtVersion`** before trusting
-  any build, especially after a toolchain bump.
+- **A warm sbt server IGNORES a changed `sbt.version`**, warning only in a
+  passing `[warn] sbt version mismatch … use 'reboot'` line. `reload` does NOT
+  fix it. This certified an entire tree under the wrong sbt during the rc.11
+  cut. Run **`sbt -batch shutdown` then `show sbtVersion`** before trusting any
+  build, especially after a toolchain bump.
 - **`git status` prints paths RELATIVE TO CWD**, and this repo has TWO
   `build.properties` — the root pin and a vestigial stub under
-  `language/src/test/scalajvm/python/project/`. A shell left in the python dir
-  after running the validators reports the wrong one, which cost several turns
-  on 2026-08-10. **Use `git -C <repo>` or absolute paths** in release work.
-- **`publishLocal` and restaging `~/Code/ossuminc/bin/riddlc` are ONE
-  operation** (Reid, 2026-08-10). Library consumers read the first, CLI
-  consumers the second; doing one leaves the two halves disagreeing about what
-  the language accepts, which surfaces as a confusing failure in a consumer.
-  **Use `scripts/publish-and-stage.sh`** — it refuses a dirty tree before sbt
-  starts, runs `reload; publishLocal; riddlc/stage` in ONE invocation so both
-  halves move together, and checks the staged binary's version against
-  `git describe`.
-- **`publishLocal`'s npm half publishes a STALE tarball.** `npmPack` globs
-  `.../npm-packages/*.tgz` and returns `.head` — an arbitrary entry from every
-  version ever built there. It lands under the CORRECT version's directory, so
-  the mislabelling is invisible. **Compare the tarball's filename to
-  `version.value` after every publishLocal** and copy the right one in by hand.
-  Fixed in neither `reload` nor `Def.uncached` — it is a wrong file, not a stale
-  setting. Task filed in `sbt-ossuminc/task/` 2026-08-10; ivy artifacts and the
-  real registry publish are unaffected.
+  `language/src/test/scalajvm/python/project/`. A shell left in the python
+  directory after running the validators reports the wrong one. Use
+  `git -C <repo>` or absolute paths.
+- **`publishLocal` and restaging are ONE operation.** Use
+  `scripts/publish-and-stage.sh`: it refuses a dirty tree before sbt starts,
+  runs `reload; publishLocal; riddlc/stage` in one invocation, and checks the
+  staged version against `git describe` (including the at-a-tag case).
 - **Bumping `FORMAT_REVISION`? Regenerate `language/input/import/
-  NotImplemented.bast` FIRST**, or `IncludeAndImportTest` reddens and aborts the
-  `;` chain before the modules you changed. **Keep the last-revision binary
-  until you are done** — `unbastify` on the OLD build is what recovers the
-  fixture's source for the new one to re-emit. Restaging first destroys the only
-  tool that can read it.
+  NotImplemented.bast` FIRST**, and keep the last-revision binary until done —
+  `unbastify` on the OLD build is what recovers the fixture's source.
 - **A green `tJVM`/`tJS`/`tNative` says NOTHING about the Python grammar CI.**
-  Separate job. A new `.riddl` fixture is a grammar-surface change; run
-  `language/src/test/scalajvm/python/.venv/bin/python ebnf_tatsu_validator.py`
-  (that `.venv` — never Homebrew python3) before calling such work verified.
+  Separate job; use `language/src/test/scalajvm/python/.venv/bin/python`, never
+  Homebrew python3.
 - **`sbt -batch` runs only the FIRST command argument**, and `test`/`tJVM`
-  resolve to `testQuick`, which silently skips. One `;`-separated argument, use
-  `<module>/testOnly *`, and COUNT `Suites: completed` lines against the modules
-  you asked for (7 JVM / 5 JS / 7 Native).
+  resolve to `testQuick`, which silently skips. One `;`-separated argument, and
+  COUNT `Suites: completed` against the modules asked for (7 JVM / 5 JS / 7
+  Native).
 - **`~/Code/ossuminc/bin` is deliberately NOT on `$PATH`.** Bare `riddlc` is the
-  tap's older build and rejects current syntax.
-- **`parseAndValidate` defaults to `shouldFailOnErrors = true`** and aborts
-  before your assertion; it also DISCARDS parse-time messages, so assert
-  deprecations via `parseInputWithMessages`.
-- **The Native test floor moved DOWN at rc.10 (1624 → 1339) deliberately.**
+  tap's older build.
+- **`parseAndValidate` defaults to `shouldFailOnErrors = true`** and DISCARDS
+  parse-time messages; assert deprecations via `parseInputWithMessages`.
 
-**Treat every plan and backlog entry as a claim, not a fact.** Proved again
-2026-08-10: BACKLOG's `ask` item still read "wants Reid's ruling … Nothing
-built" when `ask` had SHIPPED at `a50496e06` — a cold session would have
-reimplemented it. Earlier instances: a JSON plan marked NOT STARTED eight days
-after the work shipped, and type-first counts wrong in both directions. **Test a
-plan's cheapest falsifiable number before executing it.** `~/.claude/plans/`
-also holds stale files for shipped work, including `zazzy-strolling-crane`
-(the Part A doc reconciliation, fully enacted).
+**A green run can certify nothing — three ways, all seen here.** testQuick
+skipping, the action cache surviving `clean`, and a warm sbt server running the
+wrong toolchain. Treat an exit code of 0 as evidence only when you know how much
+actually ran.
 
-**Corpus checks need a positive control.** `Root2JsonCorpusTest` compares
-original against re-parsed, so a new always-on diagnostic appears in BOTH and
-parity stays 100%. Worse for `foreach` specifically: **it appears ZERO times in
-riddl-models AND riddl-examples**, so neither corpus is a gate for that
-statement — the fixtures carry the whole load.
+**Treat every plan and backlog entry as a claim, not a fact.** `~/.claude/plans/`
+holds stale files for shipped work (`zazzy-strolling-crane` among them). Test a
+plan's cheapest falsifiable number before executing it.
 
-**Certainty.** The State block is verified by command in this session, with the
-one gap named explicitly (JS/Native test totals). Traps are from observed
-failures, not theory.
+**Certainty.** Every line of the State block was produced by a command in this
+session. The one thing NOT verified: CI on `b23062717` itself, which is
+BACKLOG-only and had not finished.
 
-**`task/` holds 2 files, BOTH AWAITING TRIAGE — not triaged here, that is
+**`task/` holds 1 file, AWAITING TRIAGE — not triaged here, that is
 check-tasks' job:**
-- `2026-08-04-security.md` — Reid's RBAC draft, marked "do not act on this".
-- `2026-08-09-adaptor-advisory-conflicts-with-sink-upstream-check.md` — awaits
-  Reid's ruling among three options. The diagnosis is already done and is
-  carried in BACKLOG § 2 so it survives even if the file is not read.
+- `2026-08-04-security.md` — Reid's RBAC draft, marked "do not act on this", and
+  he asked on 2026-08-10 that it not be reported on until he says otherwise.
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
 

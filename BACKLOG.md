@@ -78,6 +78,17 @@ WRONG diagnosis and is gone — the defaults were correct and the bug was in two
 callers. Fixed; the durable rule is in CLAUDE.md § "Emptiness". Kept as a note
 only because deleting it silently would invite the same wrong conclusion again.)*
 
+- **Delete the vestigial `language/src/test/scalajvm/python/project/`.** It holds
+  exactly one tracked file, `build.properties`, and nothing else — no
+  `build.sbt`, no sources. Its only effect is to pin an sbt version for anyone
+  who runs sbt inside the Python validator directory, which nothing does. It sat
+  at 2.0.0 while the root was on 2.0.2, and was bumped to 2.0.6 at `8c1dad05c`
+  only so it would not pin a vulnerable sbt. Verify nothing reads it, then
+  delete the directory. Trivial, but it is a trap: `git status` paths are
+  relative to cwd, so a shell left in that directory reports it as
+  `project/build.properties` and it reads as the ROOT pin. That cost real time
+  during the rc.11 cut.
+
 - **Connector intentions: `persistent` plus `at-least-once` | `at-most-once`.**
   Reid, 2026-08-07, while ruling on where persistence is valid. A connector's
   durability and delivery guarantee belong in the GRAMMAR as intentions, the way
