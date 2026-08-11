@@ -39,17 +39,26 @@ class CorrelationTest extends AbstractValidatingTest {
   private def errorsFor(src: String, origin: String): String =
     diagnostics(src, origin).justErrors.map(_.message).mkString("\n")
 
-  /** One model, parameterised on the record's fields and the folds that fill them. */
+  /** One model, parameterised on the record's fields and the folds that fill them.
+    *
+    * The events carry `customerId`/`orderId` so the key-reachability rule is satisfied by default;
+    * the case that tests that rule overrides the event declarations.
+    */
   private def model(
     fields: String = "customerId: String, orderId: String, paidAmount: Number",
     folds: String = "on e: event PaymentTaken is { set field paidAmount to e.amount }",
-    keys: String = "customerId, orderId"
+    keys: String = "customerId, orderId",
+    timeout: String = "30 days",
+    eventFields: String = "customerId: String, orderId: String, amount: Number, confirmed: Boolean"
   ): String =
     s"""domain D is {
        |  context C is {
        |    record Fulfillment is { $fields } with { briefly "the joined record" }
-       |    event PaymentTaken is { amount: Number, confirmed: Boolean } with { briefly "payment" }
+       |    event PaymentTaken is { $eventFields } with { briefly "payment" }
        |    command ReportStalled is { why: String } with { briefly "alert" }
+       |    entity Monitor is {
+       |      handler M is { on command ReportStalled is { do "record it" } }
+       |    } with { briefly "monitor" }
        |    repository Store is { ??? } with { briefly "store" }
        |    projector FulfillmentView is {
        |      updates repository Store
@@ -57,7 +66,7 @@ class CorrelationTest extends AbstractValidatingTest {
        |        handler Collect is {
        |          $folds
        |        } with { briefly "folds" }
-       |      } times out after "30 days" {
+       |      } times out after "$timeout" {
        |        do "escalate to operations"
        |      } with { briefly "the correlation" }
        |    } with { briefly "the projector" }
@@ -117,6 +126,78 @@ class CorrelationTest extends AbstractValidatingTest {
                         |          }""".stripMargin),
         "correlation-nested-set"
       ) must not(include("can never complete"))
+    }
+  }
+
+  /** The rules that make a correlation's RESULT well-defined, rather than its completion possible. */
+  "Correlation soundness" should {
+
+    "reject a vague timeout duration" in { (td: TestData) =>
+      // The bound left metadata for the grammar (A70); the duration check must not have been left
+      // behind with it, or `times out after "banana"` would compile.
+      errorsFor(model(timeout = "banana"), "correlation-vague-timeout") must include(
+        "vague duration"
+      )
+    }
+
+    "reject a non-positive timeout" in { (td: TestData) =>
+      errorsFor(model(timeout = "0s"), "correlation-zero-timeout") must include(
+        "non-positive duration"
+      )
+    }
+
+    "reject two clauses writing the same field" in {  (td: TestData) =>
+      // A race: arrival order across sources is not guaranteed, so the completed record would
+      // differ between runs over identical events. §6.6 rejects it rather than describing it.
+      val errors = errorsFor(
+        model(folds = """on e: event PaymentTaken is { set field paidAmount to e.amount }
+                        |          on f: event PaymentTaken is { set field paidAmount to f.amount }
+                        |""".stripMargin),
+        "correlation-race"
+      )
+      errors must include("more than one clause")
+      errors must include("arrival order")
+    }
+
+    "reject a fold that sets nothing" in { (td: TestData) =>
+      errorsFor(
+        model(folds = """on e: event PaymentTaken is { set field paidAmount to e.amount }
+                        |          on f: event PaymentTaken is { do "look busy" }
+                        |""".stripMargin),
+        "correlation-no-set"
+      ) must include("must terminate in a 'set'")
+    }
+
+    "reject an effect inside a fold" in { (td: TestData) =>
+      // Purity is what makes re-running a fold safe (§6.5), so this is an Error and not a style
+      // warning. The same statement is legal in the timeout block, which the next case pins.
+      errorsFor(
+        model(folds = """on e: event PaymentTaken is {
+                        |            set field paidAmount to e.amount
+                        |            tell command ReportStalled to entity Monitor
+                        |          }""".stripMargin),
+        "correlation-effect-in-fold"
+      ) must include("may not 'tell'")
+    }
+
+    "allow the same effect in the timeout block" in { (td: TestData) =>
+      // §6.7: the timeout block EXISTS to have an effect. Banning effects there would leave it
+      // unable to do anything, so the ban must bind folds only -- this is the case that proves the
+      // previous one is not simply banning `tell` everywhere in a projector.
+      val src = model().replace(
+        """do "escalate to operations"""",
+        "tell command ReportStalled to entity Monitor"
+      )
+      errorsFor(src, "correlation-effect-in-timeout") must be("")
+    }
+
+    "reject a key component missing from a handled event" in { (td: TestData) =>
+      // §6.6 makes the key the distribution key, so an event without it could not be routed to the
+      // instance holding that tuple's partial in the first place.
+      errorsFor(
+        model(eventFields = "customerId: String, amount: Number, confirmed: Boolean"),
+        "correlation-key-missing"
+      ) must include("every key component must be present on every handled event")
     }
   }
 }

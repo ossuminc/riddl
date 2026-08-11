@@ -487,35 +487,52 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     * where the author wrote zero hands the model a bound its author never wrote -- the same
     * objection that made the vague case an error.
     */
+  /** The duration test itself, independent of where the literal came from.
+    *
+    * Extracted from [[validateTemporalArgument]] for A70: a correlation's `times out after` states
+    * a duration in the GRAMMAR rather than in an option, and it needs exactly these two checks.
+    * Leaving metadata must not mean leaving the validation behind, or `times out after "banana"`
+    * would compile.
+    *
+    * @param subject
+    *   names the thing carrying the duration, e.g. "Option 'timeout' in Saga 'S'".
+    * @param zeroHint
+    *   what to do instead when the duration is zero; the two callers differ, because an option can
+    *   simply be removed and a mandatory clause cannot.
+    */
+  protected def checkPreciseDuration(arg: LiteralString, subject: String, zeroHint: String): Unit =
+    val text = arg.s.trim
+    val parsed = scala.util.Try(scala.concurrent.duration.Duration(text)).toOption.filter(_.isFinite)
+    val isIso = isIso8601Duration(text)
+    if parsed.isEmpty && !isIso then
+      messages.addError(
+        arg.loc,
+        s"$subject has a vague duration '$text'; it must state a unit",
+        suggestion = "Use a precise duration such as '30s', '1500ms', '5 minutes' or 'PT1M30S';" +
+          " a bare number is ambiguous between seconds and milliseconds."
+      )
+    else
+      val positive =
+        parsed.map(_ > scala.concurrent.duration.Duration.Zero).getOrElse(isPositiveIso8601(text))
+      check(
+        positive,
+        s"$subject has a non-positive duration '$text'; it must be positive",
+        Messages.Error,
+        arg.loc,
+        suggestion = zeroHint
+      )
+    end if
+  end checkPreciseDuration
+
   private def validateTemporalArgument(option: OptionValue, identity: String): Unit =
     temporalArgIndex.get(option.name).foreach { index =>
       option.args.lift(index).foreach { arg =>
-        val text = arg.s.trim
-        val parsed = scala.util.Try(scala.concurrent.duration.Duration(text)).toOption
-          .filter(_.isFinite)
-        val isIso = isIso8601Duration(text)
-        if parsed.isEmpty && !isIso then
-          messages.addError(
-            arg.loc,
-            s"Option '${option.name}' in $identity has a vague duration '$text';" +
-              " it must state a unit",
-            suggestion =
-              "Use a precise duration such as '30s', '1500ms', '5 minutes' or 'PT1M30S';" +
-                " a bare number is ambiguous between seconds and milliseconds."
-          )
-        else
-          val positive =
-            parsed.map(_ > scala.concurrent.duration.Duration.Zero).getOrElse(isPositiveIso8601(text))
-          check(
-            positive,
-            s"Option '${option.name}' in $identity has a non-positive duration '$text';" +
-              " it must be positive",
-            Messages.Error,
-            arg.loc,
-            suggestion = s"Give '${option.name}' a duration greater than zero, or remove the" +
-              " option entirely if no bound is intended."
-          )
-        end if
+        checkPreciseDuration(
+          arg,
+          s"Option '${option.name}' in $identity",
+          s"Give '${option.name}' a duration greater than zero, or remove the" +
+            " option entirely if no bound is intended."
+        )
       }
     }
   end validateTemporalArgument

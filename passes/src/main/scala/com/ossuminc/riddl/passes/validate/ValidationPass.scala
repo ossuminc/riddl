@@ -2199,18 +2199,60 @@ case class ValidationPass(
     checkDefinition(parents, correlation)
     checkMetadata(correlation)
 
-    // Every field name reached by a `set` in any fold. Uses walkStatements so a `set` nested in
-    // when/match/foreach still counts -- it is reachable, which is all this check asks.
+    // The bound is grammar rather than an option (A70), but it needs the SAME test an option's
+    // duration gets -- otherwise `times out after "banana"` would compile. There is no "remove it"
+    // advice here, unlike for an option: the clause is mandatory.
+    checkPreciseDuration(
+      correlation.timeout,
+      s"The timeout of ${correlation.identify}",
+      "Give the correlation a bound greater than zero; a correlation that expires immediately " +
+        "can never complete."
+    )
+
+    // Every field name reached by a `set` in any fold, plus the two per-clause defects. Uses
+    // walkStatements so a `set` nested in when/match/foreach still counts -- it is reachable,
+    // which is all these checks ask.
     // `Set[String]` is spelled out: AST.Set (the statement) shadows scala.Set in this file.
     val setFieldNames: scala.collection.immutable.Set[String] =
       val names = scala.collection.mutable.Set.empty[String]
+      val writerOf = scala.collection.mutable.Map.empty[String, OnClause]
+      val raced = scala.collection.mutable.Map.empty[String, OnClause]
       correlation.handlers.foreach { handler =>
         handler.clauses.foreach { clause =>
+          var setsSomething = false
           walkStatements(clause.contents) {
-            case SetStatement(_, fr: FieldRef, _) => names += fr.pathId.value.last
-            case _                                => ()
+            case SetStatement(_, fr: FieldRef, _) =>
+              val name = fr.pathId.value.last
+              setsSomething = true
+              names += name
+              writerOf.get(name) match
+                case Some(other) if !(other eq clause) => raced.getOrElseUpdate(name, clause)
+                case _                                 => writerOf.put(name, clause)
+            case _ => ()
           }
+          // A fold that never `set`s contributes nothing to the join. That is always a mistake
+          // rather than a style choice, so it is an Error and not a warning.
+          check(
+            setsSomething,
+            s"${clause.identify} in ${correlation.identify} sets no field of " +
+              s"${correlation.yields.format}; every fold must terminate in a 'set'",
+            Messages.Error,
+            clause.loc,
+            suggestion = s"End ${clause.identify} with 'set field <name> to <value>', or remove " +
+              "the clause if the event contributes nothing to this correlation."
+          )
         }
+      }
+      // Two clauses writing one field make the completed record depend on arrival order, which
+      // across sources is not guaranteed. §6.6 REJECTS the race rather than reporting it: the
+      // alternative is a model whose result differs between runs over identical events.
+      raced.foreach { (name, clause) =>
+        messages.addError(
+          clause.loc,
+          s"Field '$name' of ${correlation.yields.format} is set by more than one clause of " +
+            s"${correlation.identify}; the completed record would depend on arrival order",
+          suggestion = s"Set '$name' from exactly one event, or give each source its own field."
+        )
       }
       names.toSet
     end setFieldNames
@@ -2250,6 +2292,68 @@ case class ValidationPass(
           end if
         case _ => () // a non-aggregate target is reported by the record-ref check itself
       end match
+
+      // Every key component must exist on every handled event, or the events bearing it could not
+      // be routed to one correlation instance in the first place (§6.6 makes the key the
+      // distribution key). Checked against the DECLARED message type of each clause.
+      typ.typEx match
+        case _: AggregateTypeExpression =>
+          correlation.handlers.foreach { handler =>
+            handler.clauses.foreach {
+              case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+                resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach { msgType =>
+                  msgType.typEx match
+                    case msgAgg: AggregateTypeExpression =>
+                      val present = msgAgg.fields.map(_.id.value).toSet
+                      val missing = correlation.keys.map(_.value).filterNot(present.contains)
+                      if missing.nonEmpty then
+                        messages.addError(
+                          omc.loc,
+                          s"${omc.identify} in ${correlation.identify} handles " +
+                            s"${msgType.identify}, which has no " +
+                            s"${missing.mkString("'", "', '", "'")}; every key component must be " +
+                            s"present on every handled event",
+                          suggestion = s"Add ${missing.mkString("'", "', '", "'")} to " +
+                            s"${msgType.identify}, or key the correlation on fields every handled " +
+                            "event carries."
+                        )
+                      end if
+                    case _ => () // a non-aggregate message cannot carry a key; reported elsewhere
+                  end match
+                }
+              case _ => () // non-message clauses cannot appear in a fold
+            }
+          }
+        case _ => ()
+      end match
+    }
+
+    // Purity of the folds is what makes re-running them safe (§6.5), so an effect inside one is an
+    // Error. This binds FOLDS ONLY: the timeout block is an effect block by design (§6.7) and
+    // banning effects there would leave it unable to do anything.
+    correlation.handlers.foreach { handler =>
+      handler.clauses.foreach { clause =>
+        walkStatements(clause.contents) { statement =>
+          val effect: Option[String] = statement match
+            case _: TellStatement   => Some("tell")
+            case _: SendStatement   => Some("send")
+            case _: YieldStatement  => Some("yield")
+            case _: ReplyStatement  => Some("reply")
+            case _: PutStatement    => Some("put")
+            case _: MorphStatement  => Some("morph")
+            case _: BecomeStatement => Some("become")
+            case _                  => None
+          effect.foreach { kw =>
+            messages.addError(
+              statement.loc,
+              s"A fold of ${correlation.identify} may not '$kw': folds must be free of effects so " +
+                s"re-running them over the same events is safe",
+              suggestion = s"Move the '$kw' into the correlation's 'times out after' block, or " +
+                "into an ordinary handler on the projector."
+            )
+          }
+        }
+      }
     }
   }
   end validateCorrelation
