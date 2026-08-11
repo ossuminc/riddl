@@ -136,6 +136,8 @@ class TestVisitor extends PassVisitor:
   def doSchema(schema: Schema): Unit = leaf(schema)
   def openState(state: State, parents: Parents): Unit = incr(state)
   def closeState(state: State, parents: Parents): Unit = decr(state)
+  def openCorrelation(correlation: Correlation, parents: Parents): Unit = incr(correlation)
+  def closeCorrelation(correlation: Correlation, parents: Parents): Unit = decr(correlation)
   def doRelationship(relationship: Relationship): Unit = leaf(relationship)
   def doContainedGroup(containedGroup: ContainedGroup): Unit = leaf(containedGroup)
 

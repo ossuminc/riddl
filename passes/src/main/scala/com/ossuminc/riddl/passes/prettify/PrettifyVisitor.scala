@@ -387,6 +387,44 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     }
   end openState
 
+  /** A70. `correlation C by k1, k2 yields record R is {` — the whole declaration, since everything
+    * before the body must survive a round trip.
+    *
+    * Keys are emitted in their STORED order, which the parser kept as written: §6.5 makes identity
+    * the full tuple and forbids canonicalizing, so re-ordering them here would silently change what
+    * the model declares.
+    */
+  def openCorrelation(correlation: Correlation, parents: Parents): Unit =
+    state.withCurrent { rfe =>
+      val keys = correlation.keys.map(_.format).mkString(", ")
+      rfe
+        .addLine(
+          s"${keyword(correlation)} ${correlation.id.format} by $keys " +
+            s"yields ${correlation.yields.format} is {"
+        )
+        .incr
+    }
+  end openCorrelation
+
+  /** A70. Closes the fold body, then emits the mandatory timeout clause.
+    *
+    * The timeout lives in FIELDS (`timeout`, `timeoutStatements`) rather than in `contents`, so
+    * nothing emits it unless this does — the same reason `doSagaStep` emits `reverted by` itself.
+    * That is the A57 trap in a different disguise: a declaration rendered only via `format` and not
+    * here is silently DROPPED on every round trip, and the model comes back meaning something else.
+    * `CorrelationRoundTripTest` is what holds this honest.
+    */
+  def closeCorrelation(correlation: Correlation, parents: Parents): Unit =
+    state.withCurrent { rfe =>
+      rfe.decr
+        .addIndent("}")
+        .add(s" times out after ${correlation.timeout.format}")
+        .emitCodeBlock(correlation.timeoutStatements.toSeq)
+      rfe.emitMetaData(correlation.metadata)
+      if correlation.metadata.isEmpty then rfe.nl
+    }
+  end closeCorrelation
+
   def closeState(riddl_state: State, parents: Parents): Unit =
     state.withCurrent { rfe =>
       if riddl_state.contents.nonEmpty then rfe.closeDef(riddl_state)
@@ -609,6 +647,7 @@ def keyword(definition: Definition): String =
     case _: Saga        => Keyword.saga
     case _: SagaStep    => Keyword.step
     case _: State       => Keyword.state
+    case _: Correlation => Keyword.correlation
     case _: Epic        => Keyword.epic
     case _: Term        => Keyword.term
     case typ: Type =>
