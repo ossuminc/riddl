@@ -203,8 +203,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case saga: Saga       => writeSaga(saga)
 
       // Handler components
-      case h: Handler     => writeHandler(h)
-      case st: State      => writeState(st)
+      case h: Handler       => writeHandler(h)
+      case st: State        => writeState(st)
+      case corr: Correlation => writeCorrelation(corr)
       case inv: Invariant => writeInvariant(inv)
 
       // OnClauses
@@ -704,6 +705,19 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeRecordRefInline(s.typ) // A9b: state type is a RecordRef; inline - position known
     writer.writeU8(if s.isInitial then 1 else 0)
     writeContents(s.contents)
+  }
+
+  /** A70. `contents` and `timeoutStatements` are NOT written here: like [[writeSagaStep]], the
+    * Pass's traverse override interleaves count-then-items for each list in turn, so writing either
+    * count here would put it at the wrong offset and misalign every byte after it.
+    */
+  def writeCorrelation(c: Correlation): Unit = {
+    writeNodeTag(NODE_CORRELATION, c.metadata.nonEmpty)
+    writeLocation(c.loc)
+    writeIdentifierInline(c.id) // Inline - no tag needed
+    writeSeq(c.keys)(writeIdentifierInline) // ordered as written; never canonicalized (§6.5)
+    writeRecordRefInline(c.yields) // inline - position known
+    writeLiteralString(c.timeout)
   }
 
   def writeInvariant(i: Invariant): Unit = {

@@ -75,7 +75,7 @@ package object bast {
     * that real files carry.
     */
   val FORMAT_REVISION: Short =
-    10 // `foreach` gains an optional second element identifier (mapping destructuring)
+    11 // A70: NODE_CORRELATION, a keyed accumulation of events inside a Projector
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)
@@ -241,6 +241,9 @@ package object bast {
     */
   val NODE_REQUIRES: Byte = 106
   val NODE_RETURNS: Byte = 107
+
+  /** A70: a [[AST.Correlation]] inside a [[AST.Projector]]. */
+  val NODE_CORRELATION: Byte = 108
 
   /** Flag bit indicating metadata presence in node tag
     *

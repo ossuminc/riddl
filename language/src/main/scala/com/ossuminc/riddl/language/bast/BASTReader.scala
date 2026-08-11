@@ -298,6 +298,7 @@ class BASTReader(
     case NODE_HANDLER           => "Handler"
     case NODE_SAGA_STEP         => "SagaStep"
     case NODE_STATE             => "State"
+    case NODE_CORRELATION       => "Correlation"
     case NODE_INVARIANT         => "Invariant"
     case NODE_VERSION           => "Version"
     case NODE_COPYRIGHT         => "Copyright"
@@ -433,7 +434,8 @@ class BASTReader(
         case NODE_HANDLER   => readHandlerNode()
         case NODE_STATEMENT => readStatementNode()
         case NODE_SAGA_STEP => readSagaStepNode()
-        case NODE_STATE     => readStateNode()
+        case NODE_STATE       => readStateNode()
+        case NODE_CORRELATION => readCorrelationNode()
         case NODE_INVARIANT => readInvariantNode()
         case NODE_VERSION   => readVersionNode()
         case NODE_COPYRIGHT => readCopyrightNode()
@@ -896,6 +898,24 @@ class BASTReader(
     val stmtType = reader.readU8()
     val loc = readLocation()
     readStatement(loc, stmtType)
+  }
+
+  /** A70. Mirrors [[BASTWriter.writeCorrelation]] plus the two deferred lists the Pass interleaves.
+    *
+    * The read ORDER is the contract: keys, yields, timeout, then contents, then timeoutStatements,
+    * then metadata. Reading any two of those out of order misaligns every byte that follows, which
+    * surfaces far away as "Invalid string table index" rather than as a decode error here.
+    */
+  private def readCorrelationNode(): Correlation = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val keys = readSeq(() => readIdentifierInline())
+    val yields = readRecordRefInline() // inline - position known
+    val timeout = readLiteralString()
+    val contents = readContentsDeferred[CorrelationContents]()
+    val timeoutStatements = readContentsDeferred[Statements]()
+    val metadata = readMetadataDeferred()
+    Correlation(loc, id, keys, yields, timeout, contents, timeoutStatements, metadata)
   }
 
   private def readSagaStepNode(): SagaStep = {

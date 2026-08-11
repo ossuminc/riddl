@@ -80,6 +80,7 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.pop()
 
       // Nodes with multiple Contents fields
+      case c: Correlation       => traverseCorrelation(c, parents)
       case ss: SagaStep         => traverseSagaStep(ss, parents)
       case ws: WhenStatement    => traverseWhenStatement(ws, parents)
       case ms: MatchStatement   => traverseMatchStatement(ms, parents)
@@ -122,6 +123,21 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
       case _ =>
         super.traverse(definition, parents)
     }
+  }
+
+  /** A70. Two Contents fields, so the counts must interleave with their items exactly as
+    * [[traverseSagaStep]] does — folds first, then the timeout block. Unlike a SagaStep a
+    * Correlation IS a Branch, so its contents are traversed with it pushed as the parent.
+    */
+  private def traverseCorrelation(c: Correlation, parents: ParentStack): Unit = {
+    process(c, parents)
+    bastWriter.writeContents(c.contents)
+    parents.push(c)
+    c.contents.foreach { value => traverse(value, parents) }
+    bastWriter.writeContents(c.timeoutStatements)
+    c.timeoutStatements.toSeq.foreach { value => traverse(value, parents) }
+    parents.pop()
+    if c.metadata.nonEmpty then bastWriter.writeMetadataCount(c.metadata)
   }
 
   private def traverseSagaStep(ss: SagaStep, parents: ParentStack): Unit = {
