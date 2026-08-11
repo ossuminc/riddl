@@ -140,7 +140,9 @@ utils → language → passes → commands → riddlc
 - **Cross-platform**: JVM, JS, Native
 - **Pass**: `passes/shared/.../BASTWriterPass.scala`
 - **CLI**: `riddlc bastify <file.riddl>` (write);
-  `riddlc unbastify` (read — pending)
+  `riddlc unbastify` (read — **implemented**; `UnbastifyCommand`, and
+  `RiddlModelsRoundTripTest` exercises it over the whole corpus. This line
+  said "pending" until 2026-08-11.)
 - **Format docs**: live at ossum.tech/riddl, not in this repo
 
 **Key files** in the bast package:
@@ -711,6 +713,55 @@ to the right group rather than appending to a list.
   The prettifier reads the former via `openDef`; putting it on `format` alone
   makes prettify silently DROP the binding on every round trip. That shipped as
   a bug for exactly one commit and is what `OnOtherEnvelopeRoundTripTest` pins.
+- **Correlations in projectors (A70, release/2)** — `correlation <id> by <k>[,
+  <k>…] yields record <T> is { <handler> } times out after "<duration>" {
+  <statements> } [with { … }]`. A keyed accumulation of several events into one
+  record the Repository stores. **Semantics live in
+  `../RIDDL-Computational-Model.md` §6.2 and §6.5–§6.8 and are NOT restated in
+  the code** — that document is the authority for any lowering decision.
+  **The timeout clause is MANDATORY and is grammar, not metadata.** It was
+  designed as an optional `else` block plus `option timeout(…)`, which left one
+  question unanswerable — what an unbounded correlation means — and needed three
+  warnings to paper over it. Reid's ruling made it mandatory, which deletes all
+  three states instead of diagnosing them. The reasoning is entity intentions
+  again: §4.2 calls options *advisory*, and a bound that MUST fire a block is
+  not. Consequences: **no timeout inheritance from the Projector** (nothing is
+  left to default, so `RecognizedOptions` is untouched by this feature), the
+  duration is a `LiteralString` still duration-VALIDATED via
+  `DefinitionValidation.checkPreciseDuration` (shared with the `timeout` option,
+  so `times out after "banana"` is an Error), and an empty block is a parse
+  error — `do "nothing"` is the discard idiom.
+  **Keys are stored AS WRITTEN and never canonicalized**: `Definition.equals` is
+  structural and §6.5 makes identity the full tuple, so sorting them would
+  silently equate two different declarations. This is the exact OPPOSITE of
+  `EntityIntention.canonical`, which sorts so that write order cannot make two
+  identical entities compare unequal. Prettify, BAST and JSON all preserve order
+  and each has a test asserting it.
+  **The effect ban binds FOLDS only.** Fold purity is what makes re-runs safe
+  (§6.5); the timeout block exists to have an effect (§6.7), so banning effects
+  there would leave it useless. `CorrelationTest` pins both sides — without the
+  "legal in the timeout block" case, a ban wrongly applied to the whole
+  correlation would still look green.
+  Two pre-existing projector checks (needs its own record type; exactly one
+  handler) assumed folds live in one top-level handler and are SKIPPED when
+  correlations are present; a projector without them validates as before.
+
+- **A new `Branch` node breaks three things silently** — all found building A70,
+  none caught by the compiler:
+  1. **`Containment.of`** (`AST.scala`) is an exhaustive match over `Branch`
+     with no fallback arm → runtime `MatchError`, not a compile error.
+  2. **`Pass.traverse`'s generic `case branch: Branch[?]` walks `contents`
+     ONLY.** Statements held in a FIELD (as `Correlation.timeoutStatements` and
+     `SagaStep.do/undoStatements` are) need their own case BEFORE that arm, or
+     they are never resolved and never validated — the model validates clean
+     while naming definitions that need not exist. `HierarchyPass` deliberately
+     does NOT do this: its visitors emit field-held statements themselves, in
+     the position the syntax requires.
+  3. **`VisitingPass.openContainer`/`closeContainer` end in `case _: Definition
+     => ()`**, so a new node falls through in silence.
+  Also remember `PrettifyVisitor.keyword`, whose fallback is the string
+  `"unknown"`.
+
 - **On-clause message binding (A55, release/2)** — `on foo: command
   Foo { … }` optionally binds a local name to the handled message.
   The `:` is ordinary TYPE ASCRIPTION (same rule as `let x: T = …`

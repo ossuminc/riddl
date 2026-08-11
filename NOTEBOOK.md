@@ -118,6 +118,69 @@ to the task file and note the disposition below.
 ---
 
 
+## Correlations, and a design fixed by deleting the question (2026-08-11)
+
+A70 built: `correlation <id> by <keys> yields record <T> is { <handler> }
+times out after "<duration>" { <statements> }` inside a projector. Syntax,
+resolution, six of eight validation rules, and all four reflectivity surfaces
+(prettify, BAST rev 11, JSON). Remaining rules are in BACKLOG § 1 with the
+reason each was deferred.
+
+**The design changed mid-plan, and the change is the lesson.** Planning surfaced
+a question the committed design could not answer: what does a correlation with
+no `timeout` mean? The first answer was a ruling — retained forever, the
+implementation deals with it — which then needed a StyleWarning to make the cost
+visible. Reid replaced that with a structural fix: make the timeout **mandatory
+and syntactic**, dropping the `else` keyword in favour of `times out after`.
+
+That deleted **three** planned diagnostics rather than implementing them —
+forever-retention, no-timeout-in-scope, and a block that can never fire were all
+consequences of optionality. **When a plan starts accumulating warnings about a
+state, check whether the state should exist.** The same move also removed the
+A10-style timeout inheritance from the Projector, since nothing is left to
+default, so `RecognizedOptions` was untouched by the whole feature.
+
+Promoting `timeout` out of metadata is the **entity-intentions argument again**
+(rc.10): §4.2 calls options advisory, and a bound that MUST fire a block is not
+advisory. Two precedents now point the same way; treat "this option drives hard
+behaviour" as a smell that it should be grammar.
+
+**Three things a new Branch node silently breaks**, all found by building this:
+
+1. **`Containment.of`** (`AST.scala`) is an exhaustive match over `Branch` with
+   no fallback — a missing arm is a runtime `MatchError`, not a compile error.
+2. **`Pass.traverse`'s generic `Branch` arm walks `contents` only.** A
+   Correlation's `timeoutStatements` is a FIELD, so it needed its own case
+   BEFORE that arm — exactly the defect SagaStep was fixed for, where an
+   unreached block resolves nothing and the model validates clean while naming
+   definitions that need not exist.
+3. **`PassVisitor.openContainer` ends in `case _: Definition => ()`**, so a new
+   node falls through in silence rather than failing.
+
+**Two pre-existing projector checks assumed the old shape** — folds in one
+top-level handler, over a record the projector itself declares. A correlating
+projector does neither, so each is now skipped when correlations are present. A
+projector without them validates exactly as before.
+
+**Writing the tests found a real gap.** The first test model named the
+correlation and its record both `Fulfillment`, and got "Path reference
+'Fulfillment' is ambiguous" — which says nothing about how to fix it. State has
+an explicit same-name Error for exactly this; correlations now do too.
+
+**A stale CLAUDE.md line cost a small decision.** It said `riddlc unbastify` was
+"pending"; it is implemented (`UnbastifyCommand`, exercised over the whole
+corpus by `RiddlModelsRoundTripTest`). That reasoning appears in the BAST commit
+message and is wrong there. The decision it fed — checking in
+`language/input/import/NotImplemented.riddl` as the fixture's source — stands on
+its own: regenerating from a checked-in source beats recovering it from the
+binary either way. Line corrected.
+
+**What was deliberately NOT built**: the "yielded record is handled by the
+referenced Repository" Error. A70 states the rule but not the mechanism, and
+repositories in the corpus are commonly `{ ??? }` with no handlers, so a guessed
+shape would have fired on correct models. Filed with the open design question
+rather than implemented on a guess.
+
 ## 2.0.0-rc.11, and two ways a green run can certify nothing (2026-08-10) — DONE
 
 The largest RC of the 2.0 line — 70 commits — shipped to all six channels.

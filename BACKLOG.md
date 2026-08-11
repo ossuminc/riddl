@@ -51,27 +51,32 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **Implement Correlations in Projectors.** Designed in full 2026-08-11 (Reid +
-  Claude); nothing built. **The design is NOT repeated here** — it lives in the
-  two authority documents and would only rot in a third place:
+- **Finish the correlation validation rules (A70).** The feature itself is
+  BUILT and green on 2026-08-11: syntax, all four reflectivity surfaces
+  (prettify / BAST rev 11 / JSON), and six of A70's eight rules. The design
+  authority remains `../RIDDL-Tools-To-Do-List.md` **A70** and
+  `../RIDDL-Computational-Model.md` **§6.2, §6.5–§6.8** — note that both were
+  AMENDED on 2026-08-11 to make the timeout mandatory and syntactic
+  (`times out after "<duration>" { … }`), replacing the earlier optional
+  `else` + `option timeout(…)` design. Three items remain:
 
-  - **Syntax, validation rules and rationale**: `../RIDDL-Tools-To-Do-List.md`
-    **Part A, item 70**.
-  - **Semantics**: `../RIDDL-Computational-Model.md` **§6.2** (structural
-    position), **§6.5** (correlation semantics in full), **§6.6** (key-based
-    distribution, cross-fold determinism), **§6.7** (the one sanctioned
-    Repository read; fold vs `else` replay behaviour), **§6.8** (degrees of
-    freedom).
+  - **Error — "the yielded record is handled by the referenced Repository's
+    handlers."** Deliberately not guessed at. A70 states the rule but not the
+    mechanism, and repositories in the corpus are commonly `repository R is
+    { ??? }` with no handlers at all, so an invented shape (e.g. requiring an
+    `on record X` clause) would fire on correct models. **Needs a design
+    answer first: how does a repository declare that it accepts a record?**
+  - **Warning — handled events that nothing emits anywhere.** Needs
+    MessageFlow analysis; `MessageFlowPass` already exists.
+  - **Warning — earlier `set`s to a field that are definitely overridden.**
+    Must be path-sensitive through `when/then/else/end` and reported only when
+    overridden on EVERY path; a merely possible override is noise.
 
-  Read both before starting — §6 contained three claims that correlations
-  invalidate (projectors are stateless, scale round-robin, and are write-only
-  toward the Repository), and all three were amended rather than left to
-  contradict the new feature.
-
-  Sequencing note: the Errors are the point of the feature. The one that earns
-  it is "every required non-key field is set by some fold", which makes *this
-  correlation can never complete* a compile-time fact. Build that check with
-  the syntax, not after it.
+  Verified while building, so do not re-derive: `validateCorrelation` is in
+  `ValidationPass.scala`; `checkPreciseDuration` was extracted into
+  `DefinitionValidation.scala` so the clause and the `timeout` option share one
+  duration test; the effect ban binds FOLDS only and `CorrelationTest` pins
+  both sides of that line.
 
 *(The "missing `isEmpty` overrides" item filed here on 2026-08-10 was based on a
 WRONG diagnosis and is gone — the defaults were correct and the bug was in two
