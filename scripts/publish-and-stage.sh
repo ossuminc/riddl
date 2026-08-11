@@ -43,7 +43,17 @@ fi
 # `git describe` renders the commit as `-g<hash>` with a variable-length hash; dynver drops the
 # `g` and uses 8 characters. Compare on that normalised form -- an earlier version of this check
 # compared the two raw strings and cried wolf over a perfectly good build.
-EXPECTED="$(git describe --tags --long | sed -E 's/-g([0-9a-f]{8})[0-9a-f]*$/-\1/')"
+#
+# AT an exact tag, dynver emits the BARE tag (`2.0.0-rc.11`) while `git describe --long` always
+# appends `-0-g<hash>`. Staging a release candidate is exactly that case, so special-case it or
+# the check fails on the one build most worth getting right.
+DESCRIBE="$(git describe --tags --long)"
+if [[ "$DESCRIBE" =~ ^(.+)-0-g[0-9a-f]+$ ]]; then
+  EXPECTED="${BASH_REMATCH[1]}"
+  echo "==> at tag $EXPECTED exactly (distance 0)"
+else
+  EXPECTED="$(printf '%s' "$DESCRIBE" | sed -E 's/-g([0-9a-f]{8})[0-9a-f]*$/-\1/')"
+fi
 echo "==> expecting version $EXPECTED (from git describe, tree clean)"
 
 echo "==> reload + publishLocal + riddlc/stage (one invocation; both or neither)"
