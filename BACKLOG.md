@@ -51,6 +51,28 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **Implement Correlations in Projectors.** Designed in full 2026-08-11 (Reid +
+  Claude); nothing built. **The design is NOT repeated here** — it lives in the
+  two authority documents and would only rot in a third place:
+
+  - **Syntax, validation rules and rationale**: `../RIDDL-Tools-To-Do-List.md`
+    **Part A, item 70**.
+  - **Semantics**: `../RIDDL-Computational-Model.md` **§6.2** (structural
+    position), **§6.5** (correlation semantics in full), **§6.6** (key-based
+    distribution, cross-fold determinism), **§6.7** (the one sanctioned
+    Repository read; fold vs `else` replay behaviour), **§6.8** (degrees of
+    freedom).
+
+  Read both before starting — §6 contained three claims that correlations
+  invalidate (projectors are stateless, scale round-robin, and are write-only
+  toward the Repository), and all three were amended rather than left to
+  contradict the new feature.
+
+  Sequencing note: the Errors are the point of the feature. The one that earns
+  it is "every required non-key field is set by some fold", which makes *this
+  correlation can never complete* a compile-time fact. Build that check with
+  the syntax, not after it.
+
 *(The "missing `isEmpty` overrides" item filed here on 2026-08-10 was based on a
 WRONG diagnosis and is gone — the defaults were correct and the bug was in two
 callers. Fixed; the durable rule is in CLAUDE.md § "Emptiness". Kept as a note
