@@ -332,10 +332,13 @@ object JsonAstBuilder:
       processor ++ Kinds(K.Entity, K.Adaptor, K.Group, K.Saga, K.Projector, K.Repository)
     val entity: Kinds = processor + K.State
     val state: Kinds = Kinds(K.Handler, K.Invariant, K.Comment)
+    // A70: a correlation holds its folds in one handler; it has no invariants, because a projector
+    // cannot refuse an event and an invariant-as-guard would have nothing to mean.
+    val correlation: Kinds = Kinds(K.Handler, K.Comment)
     val handler: Kinds = Kinds(K.OnClause, K.Comment)
     val adaptor: Kinds = processor
     val streamlet: Kinds = processor
-    val projector: Kinds = processor
+    val projector: Kinds = processor + K.Correlation
     val repository: Kinds = processor + K.Schema
     /** A saga's and a function's `requires`/`returns` are ordinary contents, so they are legal
       * children here rather than fields lifted out of the body.
@@ -379,6 +382,7 @@ object JsonAstBuilder:
       case _: TypeDefDto            => K.Type
       case _: StateDto              => K.State
       case _: HandlerDto            => K.Handler
+      case _: CorrelationDto        => K.Correlation
       case _: OnClauseDto           => K.OnClause
       case _: FunctionDto           => K.Function
       case _: AdaptorDto            => K.Adaptor
@@ -426,6 +430,7 @@ object JsonAstBuilder:
       case d: EntityDto         => buildEntity(d)
       case d: TypeDefDto        => buildType(d)
       case d: StateDto          => buildState(d)
+      case d: CorrelationDto    => buildCorrelation(d)
       case d: HandlerDto        => buildHandler(d)
       case d: OnClauseDto       => buildOnClause(d)
       case d: FunctionDto       => buildFunction(d)
@@ -916,6 +921,31 @@ object JsonAstBuilder:
       ),
       meta(s.brief, s.metadata),
       s.isInitial
+    )
+
+  /** A70: a keyed accumulation of events into one record, inside a projector.
+    *
+    * `keys` is rebuilt in document order and never sorted — §6.5 makes identity the full tuple, so
+    * reordering here would silently change what the model declares.
+    */
+  private def buildCorrelation(c: CorrelationDto)(using Ctx): Correlation =
+    Correlation(
+      curAt,
+      ident(c.name),
+      c.keys.map(ident),
+      RecordRef(curAt, pathId(c.yieldsRecord)),
+      LiteralString(curAt, c.timeout),
+      childrenOrBuckets[CorrelationContents](
+        c.contents,
+        "Correlation",
+        Legal.correlation,
+        contentsOf[CorrelationContents](
+          c.handlers.map(buildHandler),
+          comments(c.comments)
+        )
+      ),
+      buildStatements(c.timeoutStatements),
+      meta(c.brief, c.metadata)
     )
 
   private def buildHandler(h: HandlerDto)(using Ctx): Handler =

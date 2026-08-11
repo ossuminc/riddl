@@ -50,6 +50,7 @@ is covered in that construct's phase. The builder emits references as
 | Type | ✅ Phase 1 | named type with a type expression |
 | Field | ✅ Phase 1 | inside records/messages |
 | State | ✅ Phase 1 | record reference only (RIDDL holds no fields in a state) |
+| Correlation | ✅ 2.0 (A70) | ordered `keys`, `yieldsRecord`, mandatory `timeout` + `timeoutStatements` |
 | Handler | ✅ Phase 1 | on-clauses |
 | OnMessageClause | ✅ Phase 1 | command/query/result/record refs |
 | OnEventClause | ✅ 2.0 | `kind: "event"`, event ref |

@@ -746,6 +746,24 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
             k.col[CommentDto]
           )
         )
+      case c: Correlation =>
+        // A70. `keys` order is significant and is emitted as written -- §6.5 makes identity the
+        // full tuple and forbids canonicalizing. `timeoutStatements` comes from the FIELD rather
+        // than from `k` (the visited children), because generic traversal never reaches it; the
+        // same reason SagaStep serializes its two lists directly.
+        Some(
+          CorrelationDto(
+            c.id.value,
+            c.keys.map(_.value),
+            path(c.yields.pathId),
+            c.timeout.s,
+            serializeStatements(c.timeoutStatements),
+            k.col[HandlerDto],
+            briefOf(c.metadata),
+            metaOf(c.metadata),
+            k.col[CommentDto]
+          )
+        )
       case h: Handler =>
         Some(
           HandlerDto(

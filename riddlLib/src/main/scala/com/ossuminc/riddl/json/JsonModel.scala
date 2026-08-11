@@ -156,7 +156,8 @@ object JsonModel:
     * which is the whole reason not to use a bare `Any`.
     */
   type ContentDto = DomainDto | ModuleDto | ContextDto | EntityDto | TypeDefDto | MessageDto |
-    StateDto | HandlerDto | OnClauseDto | FunctionDto | AdaptorDto | StreamletDto | ProjectorDto |
+    StateDto | CorrelationDto | HandlerDto | OnClauseDto | FunctionDto | AdaptorDto | StreamletDto |
+    ProjectorDto |
     RepositoryDto | SchemaDto | ConnectorDto | RelationshipDto | SagaDto | SagaStepDto | EpicDto |
     UseCaseDto | GroupDto | ContainedGroupDto | InputDto | OutputDto | AuthorDto | UserDto |
     InvariantDto | ConstantDto | CommentDto | VersionDto | CopyrightDto | PortletDto | FieldDto |
@@ -209,6 +210,7 @@ object JsonModel:
     val Query = "query"
     val Result = "result"
     val State = "state"
+    val Correlation = "correlation"
     val Handler = "handler"
     val OnClause = "onClause"
     val Function = "function"
@@ -473,6 +475,29 @@ object JsonModel:
     invariants: Seq[InvariantDto] = Nil,
     brief: Option[String] = None,
     isInitial: Boolean = false,
+    metadata: Option[MetaDto] = None,
+    comments: Seq[CommentDto] = Nil,
+    /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
+      * are the deprecated form, kept readable for documents written against the older schema; they
+      * cannot express order. See [[ContentDto]].
+      */
+    contents: Seq[ContentEntry] = Nil
+  )
+
+  /** A70: a keyed accumulation of several events into one record, inside a projector.
+    *
+    * `keys` is a JSON ARRAY and its order is significant — §6.5 makes identity the full tuple and
+    * forbids canonicalizing, so a consumer must not sort it. `timeout` is the duration as written
+    * (`"30 days"`, or ISO-8601); it is mandatory in the language, hence not an Option here.
+    */
+  case class CorrelationDto(
+    name: String,
+    keys: Seq[String],
+    yieldsRecord: String,
+    timeout: String,
+    timeoutStatements: Seq[StatementDto] = Nil,
+    handlers: Seq[HandlerDto] = Nil,
+    brief: Option[String] = None,
     metadata: Option[MetaDto] = None,
     comments: Seq[CommentDto] = Nil,
     /** This container's children, in SOURCE ORDER — the canonical form. The per-kind buckets above
@@ -2092,6 +2117,7 @@ object JsonModel:
       case ContentKind.Entity         => readJson[EntityDto](body)
       case ContentKind.Type           => readJson[TypeDefDto](body)
       case ContentKind.State          => readJson[StateDto](body)
+      case ContentKind.Correlation    => readJson[CorrelationDto](body)
       case ContentKind.Handler        => readJson[HandlerDto](body)
       case ContentKind.OnClause       => readJson[OnClauseDto](body)
       case ContentKind.Function       => readJson[FunctionDto](body)
@@ -2152,6 +2178,7 @@ object JsonModel:
       case d: EntityDto         => (ContentKind.Entity, writeJs(d))
       case d: TypeDefDto        => (ContentKind.Type, writeJs(d))
       case d: StateDto          => (ContentKind.State, writeJs(d))
+      case d: CorrelationDto    => (ContentKind.Correlation, writeJs(d))
       case d: HandlerDto        => (ContentKind.Handler, writeJs(d))
       case d: OnClauseDto       => (ContentKind.OnClause, writeJs(d))
       case d: FunctionDto       => (ContentKind.Function, writeJs(d))
@@ -2300,6 +2327,7 @@ object JsonModel:
   given constantRW: ReadWriter[ConstantDto] = macroRW
   given userRW: ReadWriter[UserDto] = macroRW
   given stateRW: ReadWriter[StateDto] = macroRW
+  given correlationRW: ReadWriter[CorrelationDto] = macroRW
   given messageRW: ReadWriter[MessageDto] = macroRW
   given typeDefRW: ReadWriter[TypeDefDto] = macroRW
   given entityRW: ReadWriter[EntityDto] = macroRW
