@@ -12,10 +12,32 @@ this NOTEBOOK's body. This says only where things stand and what a cold session
 would get wrong.
 
 **State — every line verified by a command in the session that wrote it
-(2026-08-11):**
+(2026-08-11, second session):**
 
-- Branch `release/2`, **clean, 0 unpushed, 0 behind**, HEAD `b23062717`.
-  CI green on `92a75e8e4`; the two commits above it are BACKLOG/NOTEBOOK only.
+- Branch `release/2`, clean, **8 commits UNPUSHED**, 0 behind. CI has not seen
+  any of them.
+- **Correlations in projectors (A70) are BUILT and certified.** Syntax,
+  resolution, six of eight validation rules, and all four reflectivity surfaces
+  (prettify, BAST **revision 11**, JSON). What remains is in BACKLOG § 1: one
+  Error whose mechanism A70 never specified, and two Warnings.
+- Certified from `clean` under sbt 2.0.6 (verified by `shutdown` then `show
+  sbtVersion`), zero failures: **JVM 7 modules / 2201**, **JS 5 / 711**,
+  **Native 7 / 1492**. Each delta over the rc.11 actuals (2177 / 704 / 1473) is
+  EXACTLY the number of tests added for that platform — +24 / +7 / +19 — which
+  is stronger evidence than "0 failures" that nothing was skipped.
+- Grammar: TatSu zero unexpected failures with `✓ language/input/correlation.riddl`
+  among them; GBNF regenerated (315 rules) and reported fresh; riddl-examples 9/9.
+- **The two authority documents in `~/Code/ossuminc/` are COMMITTED** (`4b652af`,
+  `b1f9395`, `4d3d56a`) — they were the at-risk item at the last handoff.
+  A task file for the language reference is dropped in `ossum.tech/task/`.
+- **Design change to know about:** the correlation timeout is MANDATORY and is
+  grammar, not metadata (`times out after "<duration>" { … }`). The `else`
+  keyword is gone. Anything recalling the optional `else` + `option timeout(…)`
+  design is stale.
+
+**Previous state (still true):**
+
+- CI green on `92a75e8e4`.
 - **`2.0.0-rc.11` is the published release**, tagged at `8c1dad05c`,
   `prerelease=true`. Verified BY QUERY: 20/20 Maven coordinates present (4
   retired modules absent), npm on the **`rc`** dist-tag with `latest` unmoved,
@@ -26,33 +48,19 @@ would get wrong.
   they cannot disagree. Confirmed functionally, not by label: the four fixtures
   in the scratchpad exercise the streaming, cardinality, saga-`ask` and
   emptiness changes.
-- **sbt is pinned to 2.0.6** (security). BAST `FORMAT_REVISION` is **10**.
-- Certification from clean under 2.0.6, zero skips, zero failures: **JVM 7
-  modules / 2177 tests**, **JS 5 / 704**, **Native 7 / 1473** (floors 1846 /
-  674 / 1339). Grammar: TatSu zero UNEXPECTED failures, GBNF fresh,
-  riddl-examples 9/9, riddl-models 189/189 with 0 errors.
+- **sbt is pinned to 2.0.6** (security). BAST `FORMAT_REVISION` is now **11**
+  (A70 raised it from 10). The rc.11 certification numbers this block used to
+  quote are superseded by the current ones above.
 
 **Nothing is in flight in THIS repo.** No half-finished change, no uncommitted
-work, no failing test.
+work, no failing test. The only thing not done is **pushing**.
 
-**AT RISK OF BEING LOST — the one thing to deal with first.** The
-`~/Code/ossuminc` directory is itself a git repo, and **two documents are
-modified there and NOT committed**:
-
-- `RIDDL-Computational-Model.md` — §6 (Projector) rewritten for correlations
-- `RIDDL-Tools-To-Do-List.md` — new Part A item 70
-
-They are the authority for the next task (below) and BACKLOG points AT them, so
-losing them would strand that item. Reid was asked whether to commit them and
-had not answered when the session ended. **Check `git -C ~/Code/ossuminc status`
-first thing.**
-
-**Next up: implement Correlations in Projectors.** Designed in full 2026-08-11,
-nothing built. BACKLOG § 1 carries the pointer; the design is in the two
-documents above and is deliberately NOT duplicated anywhere. Read both before
-starting — §6 held three claims correlations invalidate (projectors are
-stateless, scale round-robin, are write-only toward the Repository) and all
-three were amended in place.
+**Next up.** Either push and let CI see the eight commits, or pick up BACKLOG
+§ 1 (the three remaining A70 rules). The first of those needs a DESIGN ANSWER
+before any code: A70 requires the yielded record to be "handled by the
+referenced Repository's handlers" but never says how a repository declares that
+it accepts a record, and repositories in the corpus are commonly `{ ??? }` — so
+a guessed shape would fire on correct models.
 
 **Traps most likely to bite next. The rest are in CLAUDE.md § "Subtle Patterns
 and Gotchas"; every one below cost someone real time.**
