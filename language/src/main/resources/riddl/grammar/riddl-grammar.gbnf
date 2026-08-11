@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-10 14:26 UTC
+# Generated: 2026-08-11 21:31 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -343,9 +343,13 @@ adaptor-include ::= "include" ws1 literal-string
 # Projector-related
 projector ::= "projector" ws1 identifier ws (as-shape)? ws is ws "{" ws projector-body ws "}" ws (with-metadata)?
 projector-body ::= (undefined | projector-definitions)*
-projector-definitions ::= (processor-definition-contents | updates | projector-include)*
+projector-definitions ::= (processor-definition-contents | updates | correlation | projector-include)*
 projector-include ::= "include" ws1 literal-string
 updates ::= "updates" ws1 repository-ref
+correlation ::= "correlation" ws1 identifier ws "by" ws1 identifier ws ("," identifier)* ws "yields" ws1 record-ref ws1 correlation-body ws1 correlation-timeout ws (with-metadata)?
+correlation-body ::= is ws "{" ws (undefined | (correlation-content)+) ws "}"
+correlation-content ::= handler | comment
+correlation-timeout ::= "times" ws "out" ws "after" ws1 literal-string ws1 pseudo-code-block
 
 # Saga-related
 saga ::= "saga" ws1 identifier ws1 is ws "{" ws saga-body ws "}" ws (with-metadata)?
