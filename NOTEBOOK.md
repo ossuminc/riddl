@@ -14,45 +14,59 @@ would get wrong.
 **State — every line below was produced by a command in the session that wrote
 it (2026-08-10):**
 
-- Branch `release/2`, **clean, 0 unpushed, 0 behind**. CI builds `release/*`
-  (scala.yml:9), so the push is running. **CI result was NOT observed** — check
-  it.
-- **`2.0.0-rc.10` is the published release** (2026-08-05, six channels).
-- **The local artifacts and the staged binary agree, both built from
-  `e012ebb91` as `2.0.0-rc.10-57-e012ebb9`** — ivy (all 19 modules), the npm
-  tarball, and `~/Code/ossuminc/bin/riddlc`. Verified the published
-  `riddl-language_3.jar` actually contains the new code rather than trusting
-  timestamps.
-- **The last CODE commit is `b307909b5`**; everything after it is
-  NOTEBOOK/BACKLOG only. So HEAD sitting a doc commit or two ahead of the built
-  version is expected and does NOT mean a rebuild is owed — compare against the
-  last code commit, not against HEAD. A rebuild IS owed the moment anything
-  under `*/src/` or the grammar resources changes.
+- Branch `release/2`, **clean, 0 unpushed, 0 behind**. CI run **#2248 green on
+  the tagged commit** `8c1dad05c` — observed, not assumed.
+- **`2.0.0-rc.11` is the published release** (2026-08-10, all six channels),
+  tagged at `8c1dad05c`. Verified BY QUERY, not from logs: 20/20 Maven
+  coordinates present and the 4 retired modules absent; npm on the **`rc`**
+  dist-tag with `latest` unmoved; 3 release assets; `prerelease=true` so the
+  blog stayed silent; homebrew-tap touched only `Formula/riddlc-rc.rb`, leaving
+  `riddlc.rb` on 1.31.0.
+- **sbt is pinned to 2.0.6** (security). A warm sbt server IGNORES this — run
+  `sbt -batch shutdown` then `show sbtVersion` before trusting any build.
+- **`~/Code/ossuminc/bin/riddlc` is at `2.0.0-rc.10-68-cd9d2835`, one code
+  commit BEHIND the RC.** It was staged before the sbt-2.0.6 pin and the RC tag.
+  Re-run `scripts/publish-and-stage.sh` (which refuses a dirty tree and does
+  publishLocal+stage in ONE sbt invocation) if a consumer needs the RC locally;
+  the released RC is better obtained via `brew upgrade ossuminc/tap/riddlc-rc`.
 - **BAST `FORMAT_REVISION` is 10.** Any earlier `.bast` is rejected outright.
-- Tests, all three platforms, **0 failures** at `b307909b5` — the last commit
-  that touched code; the two after it are NOTEBOOK-only. JVM totals confirmed at
-  **271 suites / 2154 tests**. JS and Native reported no failures but my capture
-  was truncated, so **their totals are not cited here** rather than guessed.
-- Corpus: riddl-models **189/189** clean. riddl-examples **7/8** —
-  `FooBarSameDomain` fails identically on the pre-change binary (the deliberate
-  `checkUniqueContent` tightening of 2026-08-06), so it is not a regression.
-- Grammar: TatSu **98/121**, GBNF regenerated and `--check` clean,
-  `gbnf_validator --skip-freshness` passed.
+- Certification from clean under sbt 2.0.6, all rows above floor, zero skips,
+  zero failures: **JVM 7 modules / 2177 tests**, **JS 5 / 704**, **Native 7 /
+  1473**. Floors are 1846 / 674 / 1339.
+- Corpus: riddl-models **189/189, 0 errors**. Grammar: TatSu **98/121 with zero
+  UNEXPECTED failures**, GBNF passed and fresh, riddl-examples 9/9,
+  riddl-models 189/189.
 
 **Nothing is in flight.** No half-finished change, no uncommitted work, no
 failing test.
 
-**Next up:** BACKLOG § 0 is the pre-2.0 gate. § 3 now carries an unsent consumer
-notice about two breaking changes (BAST revision 10; mapping value types now
-resolved) — Reid has not said to send it.
+**Next up:** BACKLOG § 0 is the pre-2.0 gate. Soak rc.11, then either iterate to
+rc.12 or promote from `main`. § 3 carries an unsent consumer notice about
+breaking changes (BAST revision 10; mapping value types resolved;
+`Contents.definitions` now include/import-transparent) — Reid has not said to
+send it.
 
 **Traps most likely to bite next. The rest are in CLAUDE.md § "Subtle Patterns
 and Gotchas"; every one below cost someone real time.**
 
+- **A warm sbt server IGNORES a changed `sbt.version`** and says so only in a
+  passing `[warn] sbt version mismatch … use 'reboot'` that scrolls by. `reload`
+  does NOT fix it. This certified a whole tree under the wrong sbt during the
+  rc.11 cut. **`sbt -batch shutdown` then `show sbtVersion`** before trusting
+  any build, especially after a toolchain bump.
+- **`git status` prints paths RELATIVE TO CWD**, and this repo has TWO
+  `build.properties` — the root pin and a vestigial stub under
+  `language/src/test/scalajvm/python/project/`. A shell left in the python dir
+  after running the validators reports the wrong one, which cost several turns
+  on 2026-08-10. **Use `git -C <repo>` or absolute paths** in release work.
 - **`publishLocal` and restaging `~/Code/ossuminc/bin/riddlc` are ONE
   operation** (Reid, 2026-08-10). Library consumers read the first, CLI
   consumers the second; doing one leaves the two halves disagreeing about what
   the language accepts, which surfaces as a confusing failure in a consumer.
+  **Use `scripts/publish-and-stage.sh`** — it refuses a dirty tree before sbt
+  starts, runs `reload; publishLocal; riddlc/stage` in ONE invocation so both
+  halves move together, and checks the staged binary's version against
+  `git describe`.
 - **`publishLocal`'s npm half publishes a STALE tarball.** `npmPack` globs
   `.../npm-packages/*.tgz` and returns `.head` — an arbitrary entry from every
   version ever built there. It lands under the CORRECT version's directory, so
@@ -121,6 +135,49 @@ to the task file and note the disposition below.
 
 ---
 
+
+## 2.0.0-rc.11, and two ways a green run can certify nothing (2026-08-10) — DONE
+
+The largest RC of the 2.0 line — 70 commits — shipped to all six channels.
+Getting there took two false certifications, both green, both worthless.
+
+**A warm sbt server ignores a changed `sbt.version`.** Reid bumped sbt to 2.0.6
+for a critical vulnerability mid-cut. My certification had already run — clean,
+all three platforms, every floor exceeded — under the sbt the server booted with.
+The only signal is one line that scrolls past in a batch log: `[warn] sbt version
+mismatch, using: 2.0.2, in build.properties: "2.0.6", use 'reboot' to use the new
+value`. **`reload` does not fix it; only `shutdown`/`reboot` does.** The `/rc`
+skill now shuts the server down and asserts `show sbtVersion` before certifying.
+This is the same family as the testQuick and action-cache traps already recorded
+here: a run that is green about the wrong thing.
+
+**`git status` paths are relative to cwd.** The shell had wandered into
+`language/src/test/scalajvm/python` to run the grammar validators, and stayed
+there. So `git status --porcelain` reported `M project/build.properties` for the
+NESTED stub in that directory, not the root pin — and I spent several turns
+diagnosing a file I had not meant to touch, concluding a phantom "something is
+rewriting this file" when `git checkout --` appeared not to work. It worked
+fine; it was restoring a different file from a staged blob. **Use `git -C <repo>`
+or absolute paths in release steps.** Two `build.properties` exist here and only
+the root one pins the build.
+
+**An unreleased tag is not a published tag.** I tagged rc.11, then found the sbt
+problem before `gh release create`. Because every downstream channel triggers off
+that release, nothing existed: no GitHub release, no Maven coordinates, no npm,
+no Homebrew — verified by query, not assumed. So the "never retag" rule did not
+apply and Reid had the tag deleted and the number reused. **The rule protects
+consumers of published artifacts; check whether any exist before burning an RC
+number.**
+
+**Corrected in the skill:** the Homebrew RC path was marked "NOT yet exercised
+end to end" — stale, since rc.9, rc.10 and rc.11 each updated only
+`Formula/riddlc-rc.rb` while `riddlc.rb` stayed on 1.31.0.
+
+**What shipped**, all verified against the registry rather than the logs: 20/20
+Maven coordinates (and the four retired modules confirmed ABSENT), npm under the
+`rc` dist-tag with `latest` unmoved, three release assets, the prerelease flag
+set so the blog stayed silent. Certification under sbt 2.0.6: JVM 2177 / JS 704 /
+Native 1473, zero skips, zero failures, all four grammar validators clean.
 
 ## Three fixes from two task files, and a near-miss (2026-08-10) — DONE
 

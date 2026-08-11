@@ -94,6 +94,22 @@ Incremental runs lie. They have hidden a CI-gating grammar failure and a test
 that only passed against stale classes, both in one afternoon. There is no
 shortcut here.
 
+**Shut the sbt server down FIRST, and confirm the sbt VERSION.** A warm server
+keeps running the sbt it booted with and IGNORES a changed `project/
+build.properties`, mentioning it only as a passing `[warn] sbt version mismatch,
+using: X, in build.properties: "Y", use 'reboot' to use the new value` that
+scrolls past in a batch log. On 2.0.0-rc.11 this certified the whole tree under
+the OLD sbt after a security bump to 2.0.6 — green, above every floor, and
+against the wrong toolchain. `reload` does NOT fix it; only `shutdown` (or
+`reboot`) does.
+
+```bash
+sbt -batch shutdown                       # stop any warm server
+sbt -batch "show sbtVersion"              # MUST equal project/build.properties
+```
+
+Then certify:
+
 ```bash
 sbt clean
 sbt "cJVM; cJS; cNative"
@@ -284,8 +300,15 @@ resolve it.
   defaulting to `riddlc` when absent and rejecting any other value before it
   becomes a file path.
 
-NOT yet exercised end to end. On the FIRST RC, confirm the dispatch touched only
-`Formula/riddlc-rc.rb` and left `Formula/riddlc.rb` alone before announcing it.
+**Exercised end to end and working** — rc.9, rc.10 and rc.11 each updated
+`Formula/riddlc-rc.rb` and nothing else, leaving `Formula/riddlc.rb` on the
+stable 1.31.0. Still worth the one-line check per RC, since it is cheap and the
+failure would be silent:
+
+```bash
+git -C ../homebrew-tap fetch origin
+git -C ../homebrew-tap show --stat --oneline origin/main   # must touch ONLY riddlc-rc.rb
+```
 
 Why a separate formula: Homebrew's `devel` block is deprecated and removed, and
 there is no prerelease flag, so a versioned formula is the only way to ship an RC
@@ -333,6 +356,13 @@ Treat them as a checklist. Each has bitten someone, twice in one day on
    (`…-9c922e42-20260803-1238`) when anything tracked is uncommitted, so the
    published version stops being reproducible from a commit — even when the
    dirty file is only markdown. Commit or stash FIRST.
+
+   **Check it with `git -C <repo>` or an absolute path.** `git status` prints
+   paths RELATIVE TO THE CURRENT DIRECTORY, and a shell that has wandered — say
+   into `language/src/test/scalajvm/python` to run the validators — reports
+   `M project/build.properties` for a DIFFERENT file of that name. On
+   2.0.0-rc.11 that sent me diagnosing the wrong file, including "fixing" it.
+   Two `build.properties` exist in this repo; only the root one pins the build.
 2. **`reload` before `publishLocal`.** A long-running sbt server freezes dynver
    at project-load time; that is how rc.2 shipped a binary reporting rc.1.
 3. **Wait for `nativeLink` to FINISH before copying the binary.** Copying while
@@ -392,6 +422,11 @@ npm dist-tag add @ossuminc/riddl-lib@1.32.0 latest
 ## Red flags
 
 - Certifying incrementally instead of from clean, when code HAS changed.
+- Certifying without `sbt -batch shutdown` and a `show sbtVersion` check, so a
+  warm server runs the OLD sbt and the whole green run certifies the wrong
+  toolchain. The mismatch is a single `[warn]` line in a batch log.
+- Reading `git status` from a shell that has wandered out of the repo root. Its
+  paths are relative to cwd, so it can name a different file than you think.
 - Verifying a shared-code change on JVM and JS only. Scala NATIVE is the row
   that breaks differently: it rejects regex lookahead the other two accept, and
   a pattern compiled in a `val` fails at class INITIALISATION, surfacing as a
