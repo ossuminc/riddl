@@ -61,11 +61,22 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   `else` + `option timeout(…)` design. Three items remain:
 
   - **Error — "the yielded record is handled by the referenced Repository's
-    handlers."** Deliberately not guessed at. A70 states the rule but not the
-    mechanism, and repositories in the corpus are commonly `repository R is
-    { ??? }` with no handlers at all, so an invented shape (e.g. requiring an
-    `on record X` clause) would fire on correct models. **Needs a design
-    answer first: how does a repository declare that it accepts a record?**
+    handlers."** The mechanism was the open question; **Reid answered it
+    2026-08-11**: a repository does NOT declare that it accepts a record. It is
+    **INFERRED** — the repository has a handler with an `on command` clause for
+    a command that *holds* the record. The corollary is a modelling rule worth
+    stating in its own right: **a correlation's output ought to be a command on
+    the Repository**, not the bare record.
+
+    So the check is: resolve the projector's `updates repository R`; for each
+    of R's handlers, collect the `on command C` clauses; a correlation
+    yielding record `T` is satisfied when some such `C` has a field whose type
+    resolves to `T`. Unresolved cases to settle while building it: whether a
+    repository with NO handlers at all (`repository R is { ??? }`, common in
+    the corpus) should be exempt or reported — exempting it is what keeps the
+    check from firing on every stub model, and is probably right for 2.0 —
+    and whether "holds" means a direct field of `C` or any nested reachable
+    field.
   - **Warning — handled events that nothing emits anywhere.** Needs
     MessageFlow analysis; `MessageFlowPass` already exists.
   - **Warning — earlier `set`s to a field that are definitely overridden.**
@@ -77,6 +88,27 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   `DefinitionValidation.scala` so the clause and the `timeout` option share one
   duration test; the effect ban binds FOLDS only and `CorrelationTest` pins
   both sides of that line.
+
+- **Decide whether a projector must declare a Record of its own.** A
+  PRE-EXISTING Error, untouched by A70, surfaced by Reid's question about
+  correlation-free projectors (2026-08-11). Verified by probe, not inferred: a
+  projector that only translates events to commands 1-for-1 —
+  `projector Translate is { updates repository Store; handler T is { on event
+  OrderPlaced is { tell command RecordOrder to repository Store } } }` — is
+  rejected with *"Projector 'Translate' lacks a required Record definition."*
+  (`ValidationPass.scala`, the `projector.types.exists(… RecordCase …)` check).
+
+  Reid's framing is the argument against it: "some projectors just translate
+  events to commands and are 1-for-1". Such a projector has nothing to shape,
+  and forcing a record it never uses is ceremony. Note the rule already has an
+  exemption for correlating projectors, which name their target with `yields
+  record` instead — so the requirement now holds only for the translator case,
+  which is the case with the weakest need for it.
+
+  Options: drop the Error; downgrade it to a CompletenessWarning; or keep it
+  and exempt a projector whose handler bodies contain no `set`. **Reid's call
+  — no code written pending it.** `CorrelationTest` pins the WITH-record
+  translator as valid either way.
 
 *(The "missing `isEmpty` overrides" item filed here on 2026-08-10 was based on a
 WRONG diagnosis and is gone — the defaults were correct and the bug was in two

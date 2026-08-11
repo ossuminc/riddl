@@ -191,6 +191,33 @@ class CorrelationTest extends AbstractValidatingTest {
       errorsFor(src, "correlation-effect-in-timeout") must be("")
     }
 
+    "leave a correlation-free projector validated exactly as before" in { (td: TestData) =>
+      // Reid, 2026-08-11: zero correlations is NOT an error. Plenty of projectors just translate
+      // events to commands 1-for-1 and have nothing to accumulate. Correlations RELAXED two
+      // projector rules; this pins that the relaxation is one-way, so the translator shape below
+      // is judged by the pre-existing rules and not by anything A70 added.
+      val translator =
+        """domain D is {
+          |  context C is {
+          |    event OrderPlaced is { orderId: String } with { briefly "e" }
+          |    command RecordOrder is { orderId: String } with { briefly "cm" }
+          |    record View is { orderId: String } with { briefly "r" }
+          |    repository Store is {
+          |      handler S is { on command RecordOrder is { do "store it" } }
+          |    } with { briefly "store" }
+          |    projector Translate is {
+          |      updates repository Store
+          |      record Mirror is { orderId: String } with { briefly "rec" }
+          |      handler T is {
+          |        on event OrderPlaced is { tell command RecordOrder to repository Store }
+          |      } with { briefly "h" }
+          |    } with { briefly "p" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      errorsFor(translator, "projector-no-correlation") must be("")
+    }
+
     "reject a key component missing from a handled event" in { (td: TestData) =>
       // §6.6 makes the key the distribution key, so an event without it could not be routed to the
       // instance holding that tuple's partial in the first place.

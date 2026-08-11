@@ -2261,8 +2261,11 @@ case class ValidationPass(
 
     checkRefAndExamine[Type](correlation.yields, parents) { (typ: Type) =>
       // Same rule, and same reason, as State vs. its record type: sharing the name makes the path
-      // ambiguous, and the resulting "Path reference 'X' is ambiguous" says nothing about how to
-      // fix it. Found by writing the tests for this feature, which hit it immediately.
+      // ambiguous. The generic message is NOT deficient -- `ResolutionPass` lists every matching
+      // definition with its location and suggests fully qualifying the path. This check earns its
+      // place by being specific instead: it fires on the DECLARATION rather than on each use, and
+      // names the one fix that actually applies here (rename one of the two), where the generic
+      // advice to fully-qualify would work but leaves the collision in place.
       check(
         typ.id.value != correlation.id.value,
         s"${correlation.identify} and ${typ.identify} must not have the same name so path " +
