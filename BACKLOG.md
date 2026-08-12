@@ -51,29 +51,6 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **Two `external`-exemption sites test the OPTION only, not the intention.**
-  Found 2026-08-12 while rewriting #17, where the same gap produced 1120 false
-  warnings across riddl-models before it was caught by a corpus A/B.
-  `external context Foo` sets `Context.intention`; `with { option external }`
-  sets an option; `hasOption("external")` sees only the second, and the corpus
-  uses the FIRST almost exclusively.
-
-  Correct form, already present at `StreamingValidation.scala:66` and now at
-  `ValidationPass.scala:182`:
-  `c.intention.contains(Intention.External) || c.hasOption("external")`.
-
-  Still option-only, so an `external context` is not exempt from either:
-  - `ValidationPass.scala:248` — `checkCompletenessPostProcess`'s `isExternal`,
-    which suppresses the empty/`do`-only handler warnings.
-  - `ValidationPass.scala:581` — `validateOnMessageClause`'s
-    `isExternalContext`, which suppresses the command→event and query→result
-    completeness checks for entities in an external context.
-
-  **Each needs its own corpus A/B and they are not one change** — widening an
-  exemption REMOVES warnings, so the risk is the opposite of #17's: it may hide
-  something real. Expect the delta to be negative and account for every message
-  that disappears.
-
 - **Connector intentions: `persistent` plus `at-least-once` | `at-most-once`.**
   Reid, 2026-08-07, while ruling on where persistence is valid. A connector's
   durability and delivery guarantee belong in the GRAMMAR as intentions, the way
@@ -442,45 +419,25 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   `riddlcNative/nativeLink` in ONE sbt invocation, because the ivy artifacts and
   the CLI must never disagree about what the language accepts. Use the script;
   do not stage by hand.
-- **Consumer sweep — task files dropped 2026-08-06 in THREE repos.** Pins read
-  from each build file after `git fetch`, not from memory:
-  - **riddl-generator** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT**, matching the
-    staged build exactly. Nothing owed.
-  - **synapify** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT.** Nothing owed.
-  - riddl-models — `build.sbt:21` at `2.0.0-rc.10-2-ff3a59b4`, 13 behind.
-  - riddl-examples — `build.sbt:21` at `2.0.0-rc.9-54-64b7b413`.
-  - riddl-idea-plugin — `project/Dependencies.scala:7` at `2.0.0-rc.9-42-37b0db94`.
-  - **riddl-vscode — deliberately NOT swept**; deferred to release, see § 0.
-
-  Each task names the target and what changed since that repo's pin, and tells
-  them to LEAVE `.bast` files alone (§ 0). Waiting on their sessions.
 - **synapify: `flattenAST` workaround can be dropped.** `Contents.definitions`
   became include- and import-transparent on 2026-08-06 (their task file, now in
   `task/done/`), so their 33 `.definitions` sites no longer need the tree
   physically flattened first. Nothing owed until they take a build containing
-  it — worth folding into the next consumer sweep rather than a task of its own,
-  since the change is source-compatible and their current code stays correct.
+  it — worth folding into whatever upgrade task they get next rather than a task of
+  its own, since the change is source-compatible and their current code stays
+  correct. (The standing 'consumer sweep' item was removed 2026-08-12 — Reid:
+  riddl-generator is on rc.12 and building its own rc.1, and the rest are not
+  worth tracking here.)
 - riddl-vscode: adoption task for `IncrementalValidator` — hold until the 2.0
   upgrade above, so they take one change rather than two.
-- ossum.tech: `/riddl/2.0/licenses/` (the URL `riddlc info` prints is a 404), the
-  two silent breaking changes in the migration guide, and docs for the
-  `ForeverEmpty.void` error-sink idiom.
-- ossum.tech: the event-sourced **`on init` idiom**. R3 forbids `set` in
-  `on init` and an empty handler body is a parse error, so init cannot simply be
-  dropped — but `yield` is legal there. Working form (from riddl-models):
-  `on init is { yield event ShiftCreated }` paired with
-  `on event ShiftCreated is { morph …; set state ActiveShift to "…" }` —
-  initial state arrives by replaying the creation event. Every event-sourced
-  entity needs this, so it wants an example, not just a rule.
-- ossum.tech: **paths into Functions, and the new privacy warning.** Owed out of
-  their 2026-08-08 task (results appended, file in `task/done/`). Two things to
-  document: a path identifier MAY descend into a Function to reach a nested
-  definition (settled by Reid 2026-08-07); and a function nested inside another
-  is that function's private implementation, so calling it from OUTSIDE now
-  draws a StyleWarning — new in `7c8c83ca0`, after their report, so they have
-  not seen it. `ebnf-grammar.ebnf` needs NO change and was verified so, not
-  assumed: `dotted_path_identifier` (:24) is generic and `function_definitions`
-  (:198) already includes `function`. Their `concepts/interaction.md` is
-  ACCURATE about `parallel`/`optional` analysis and must not be "corrected" —
-  `UseCaseTracePass` really does recurse and really does run the cross-order
-  check.
+- ~~ossum.tech doc debts~~ — **DROPPED as a task 2026-08-12** into
+  `../ossum.tech/task/2026-08-12-riddl-2.0-doc-debts.md`, so it is tracked there
+  now, not here. It carries the `ForeverEmpty`/`BottomlessPit` error-sink idiom,
+  the event-sourced `on init` idiom, paths-into-Functions plus the new
+  function-privacy StyleWarning, and the rc.12 language changes (`yields
+  command`, the `set`/`get from state` scope rules, the reworded `do`-statements
+  warning, `FORMAT_REVISION` 12, and the two previously-silent breaking changes).
+  **One item was CANCELLED as stale, verified not recalled:** the
+  `/riddl/2.0/licenses/` 404 no longer exists — `riddlc info` prints
+  `github.com/ossuminc/riddl` and `opensource.org/license/apache-2-0`, neither of
+  which is an ossum.tech URL.

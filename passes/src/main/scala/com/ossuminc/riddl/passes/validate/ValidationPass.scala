@@ -173,15 +173,10 @@ case class ValidationPass(
     */
   private def isUnwrittenOrigin(typ: Type): Boolean =
     symbols.parentsOf(typ).exists {
-      // BOTH spellings of external. `external context Foo` sets `intention`, while
-      // `context Foo is { with { option external } }` sets an option -- and the corpus uses the
-      // INTENTION form almost exclusively. Testing only `hasOption` missed every one of them,
-      // which is most of why rewriting this check first produced 1120 new warnings across
-      // riddl-models: the events live in `external context` blocks describing systems the model
-      // deliberately does not implement.
-      case c: Context => c.intention.contains(Intention.External) || c.hasOption("external") ||
-          c.isEmpty
-      case _ => false
+      // `isExternalContext` asks BOTH spellings; see its comment for why asking one is a bug that
+      // has been made three times.
+      case c: Context => isExternalContext(c) || c.isEmpty
+      case _          => false
     }
 
   /** A6: `tell <msg> to <procRef>` is sugar for a send on the outlet connected to the target's
@@ -244,8 +239,17 @@ case class ValidationPass(
   private def checkCompletenessPostProcess(): Unit = {
     // Completeness 4e: handlers that are empty or prompt-only
     computedHandlerCompleteness.foreach { hc =>
-      val isExternal = hc.parent match {
-        case c: Context => c.hasOption("external")
+      // WALKS UP to the enclosing Context; `hc.parent` alone is not enough. A handler inside an
+      // ENTITY has the Entity as its parent, so a `case c: Context` on `hc.parent` matched only
+      // handlers declared directly in a context -- and an entity's handler, which is the common
+      // case, was never exempt no matter how the context was marked. Found 2026-08-12 by a test
+      // written to prove the exemption worked; the corpus had not shown it, because widening the
+      // exemption removes warnings and a corpus A/B only shows what CHANGED.
+      //
+      // `isExternalContext` asks both spellings of external -- the intention (`external context
+      // Foo`, what models write) and the legacy option.
+      val isExternal = (hc.parent +: symbols.parentsOf(hc.handler)).exists {
+        case c: Context => isExternalContext(c)
         case _          => false
       }
       // The predefined terminators' handlers are intentionally behavior-free: consuming
@@ -576,9 +580,12 @@ case class ValidationPass(
     checkDefinition(parents, omc)
     validateOnClause(omc)
     val maybeEntity: Option[Entity] = parents.collectFirst { case e: Entity => e }
+    // Shadows the inherited method name deliberately -- this is the boolean for THIS clause. It
+    // now asks both spellings of external, so an entity inside an `external context` is exempt
+    // from the command->event and query->result completeness checks as intended.
     val isExternalContext: Boolean = parents
       .collectFirst { case c: Context => c }
-      .exists(_.hasOption("external"))
+      .exists(c => this.isExternalContext(c))
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, parents, Seq(omc.msg.messageKind))
       // Command→event and query→result checks apply only to entities

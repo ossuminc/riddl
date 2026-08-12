@@ -61,8 +61,14 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
   /** A context is "external" if it carries the External intention or (during deprecation) the
     * legacy `external` option.
+    *
+    * PROTECTED, not private, because asking only one of those two questions is a bug that has been
+    * made three times. `external context Foo` sets the INTENTION and is what models actually
+    * write; `with { option external }` sets the option. Testing `hasOption` alone missed every
+    * corpus use and produced 1120 false warnings in a single run (2026-08-12). Every external
+    * exemption goes through this method — do not re-inline either half.
     */
-  private def isExternalContext(c: Context): Boolean =
+  protected def isExternalContext(c: Context): Boolean =
     c.intention.contains(Intention.External) || c.hasOption("external")
 
   /** A37 (connector-dependent rules): for every connector touching a portlet owned by an external
