@@ -431,15 +431,17 @@ only because deleting it silently would invite the same wrong conclusion again.)
   now errors. The second needed no ruling on BEHAVIOUR at any point — it is a
   correct tightening — only on whether to notify, which is what is now closed.
 
-- ~~Restage `~/Code/ossuminc/bin/riddlc`~~ — **DONE 2026-08-07.** Now
-  `2.0.0-rc.10-28-a355e52a`, matching HEAD at the time. It is the NATIVE binary
-  (`target/out/native0.5/scala-3.9.0-RC4/riddlc/riddlc`, via
-  `riddlcNative/nativeLink`), not the JVM stage — a plain `riddlc/stage` would
-  have produced a launcher script, not this file. Both new diagnostics were
-  probed live rather than inferred from the version string: the `persistent`-on-
-  Entity Error and the `type-first-aggregate` deprecation both fire.
-  **It is stale again as of the four commits after `a355e52ab`** — restage when
-  the current run of language work settles, `sbt reload` first.
+- ~~Restage `~/Code/ossuminc/bin/riddlc`~~ — **DONE 2026-08-12**, at
+  `2.0.0-rc.11-17-dd5f539f`, matching HEAD. Verified live, not from the version
+  string: `riddlc validate language/input/correlation.riddl` accepts `yields
+  command` and fires the new fold warnings.
+  **Two corrections to what this entry used to say.** It is now the **JVM stage
+  launcher**, not the native binary — `~/Code/ossuminc/bin/riddlc` is a symlink
+  to `../riddlc-dist/bin/riddlc`, and `scripts/publish-and-stage.sh` copies
+  `target/out/jvm/…/riddlc/universal/stage`. And restaging is no longer a
+  standalone act: that script runs `publishLocal` and `riddlc/stage` in ONE sbt
+  invocation, because the ivy artifacts and the CLI must never disagree about
+  what the language accepts. Use the script; do not stage by hand.
 - **Consumer sweep — task files dropped 2026-08-06 in THREE repos.** Pins read
   from each build file after `git fetch`, not from memory:
   - **riddl-generator** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT**, matching the
