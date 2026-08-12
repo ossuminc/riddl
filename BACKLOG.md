@@ -432,16 +432,22 @@ only because deleting it silently would invite the same wrong conclusion again.)
   correct tightening — only on whether to notify, which is what is now closed.
 
 - ~~Restage `~/Code/ossuminc/bin/riddlc`~~ — **DONE 2026-08-12**, at
-  `2.0.0-rc.11-17-dd5f539f`, matching HEAD. Verified live, not from the version
-  string: `riddlc validate language/input/correlation.riddl` accepts `yields
-  command` and fires the new fold warnings.
-  **Two corrections to what this entry used to say.** It is now the **JVM stage
-  launcher**, not the native binary — `~/Code/ossuminc/bin/riddlc` is a symlink
-  to `../riddlc-dist/bin/riddlc`, and `scripts/publish-and-stage.sh` copies
-  `target/out/jvm/…/riddlc/universal/stage`. And restaging is no longer a
-  standalone act: that script runs `publishLocal` and `riddlc/stage` in ONE sbt
-  invocation, because the ivy artifacts and the CLI must never disagree about
-  what the language accepts. Use the script; do not stage by hand.
+  `2.0.0-rc.12-4-092ec2be`. Verified by BEHAVIOUR, not by version string: the
+  two `when invariant X` reproducers that threw on rc.12 now validate clean.
+  **`bin/riddlc` is the NATIVE binary, a REAL FILE** (Reid, 2026-08-12) — the
+  same shape as `bin/riddlg`. It is not a symlink and not the JVM launcher, and
+  `scripts/publish-and-stage.sh` now installs and verifies that exact path.
+  **The arrangement this replaced is worth remembering, because it failed
+  silently.** `bin/riddlc` used to be a hand-made symlink into `../riddlc-dist`,
+  created a day before the script existed and invisible to git (`bin/` is
+  ignored). The script wrote and verified `riddlc-dist/bin/riddlc` while its own
+  header promised something about `bin/riddlc` — so the rule was enforced
+  nowhere, and any change to the symlink would have left it reporting success
+  over a frozen binary. `riddlc-dist/` is deleted; nothing references it.
+  Restaging is still not a standalone act: the script runs `publishLocal` and
+  `riddlcNative/nativeLink` in ONE sbt invocation, because the ivy artifacts and
+  the CLI must never disagree about what the language accepts. Use the script;
+  do not stage by hand.
 - **Consumer sweep — task files dropped 2026-08-06 in THREE repos.** Pins read
   from each build file after `git fetch`, not from memory:
   - **riddl-generator** — `2.0.0-rc.10-15-3df5cf44`. **CURRENT**, matching the
