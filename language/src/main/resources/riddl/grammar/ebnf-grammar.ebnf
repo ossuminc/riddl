@@ -455,10 +455,12 @@ projector_definitions = {processor_definition_contents | updates | correlation |
 projector_include = "include" literal_string ;
 updates = "updates" repository_ref ;
 
-(* A70: a keyed accumulation of several events into one record the repository stores. The timeout
-   clause is mandatory -- a correlation with no bound is a syntax error -- and its duration is an
-   ordinary literal_string so no duration syntax enters the grammar. *)
-correlation = "correlation" identifier "by" identifier {"," identifier} "yields" record_ref
+(* A70: a keyed accumulation of several events into one command the repository handles. A COMMAND,
+   not a record: a projector's only output is a change to a repository, and a repository is changed
+   by handling a command, so `yields record R` is deliberately not derivable. The timeout clause is
+   mandatory -- a correlation with no bound is a syntax error -- and its duration is an ordinary
+   literal_string so no duration syntax enters the grammar. *)
+correlation = "correlation" identifier "by" identifier {"," identifier} "yields" command_ref
               correlation_body correlation_timeout [with_metadata] ;
 correlation_body = is "{" (undefined | {correlation_content}+) "}" ;
 correlation_content = handler | comment ;

@@ -86,6 +86,13 @@ case class ValidationPass(
   private val collectedTells: mutable.ListBuffer[(TellStatement, Processor[?])] =
     mutable.ListBuffer.empty
 
+  /** A70: accumulated correlations, for the post-pass that asks whether anything in the model emits
+    * the events their folds handle. That question is model-wide, so it cannot be answered while
+    * visiting one correlation.
+    */
+  private val collectedCorrelations: mutable.ListBuffer[Correlation] =
+    mutable.ListBuffer.empty
+
   /** Generate the output of this Pass. This will only be called after all the calls to process have
     * completed.
     *
@@ -116,9 +123,70 @@ case class ValidationPass(
     if mode == ValidationMode.Full then
       checkStreaming(root)
       checkTellReachability()
+      checkCorrelationEventSources(root)
       computedHandlerCompleteness = classifyHandlers()
       checkCompletenessPostProcess()
     end if
+  }
+
+  /** A70: warn when a correlation folds an event that NOTHING in the model emits. Such a fold can
+    * never run, so the correlation can never complete — the same class of defect as a required
+    * field no fold sets, found from the other direction.
+    *
+    * Answered here rather than by depending on `MessageFlowPass`: adding that dependency would
+    * reorder the standard passes, and the question only needs the set of emitted types, which one
+    * sweep of the root supplies. The sweep is GATED on a correlation existing, so a model without
+    * one pays nothing.
+    *
+    * An event is considered emitted when some `send`/`tell`/`yield`/`reply` names it, or when an
+    * `Outlet` is DECLARED to carry it. The outlet case matters: a source whose body is `???` but
+    * which declares `outlet o is event Shipped` has said it produces `Shipped`, and warning there
+    * would be reasoning from an unwritten body — exactly what the `???` ruling forbids. Adaptor
+    * translations deliberately do not count; an adaptor is routing, not an origin.
+    */
+  private def checkCorrelationEventSources(root: PassRoot): Unit = {
+    if collectedCorrelations.isEmpty then return
+
+    val finder = Finder(root.contents)
+    val emitted: mutable.Set[Type] = mutable.Set.empty
+    def note(t: Option[Type]): Unit = t.foreach(emitted.addOne)
+
+    finder.recursiveFindByType[SendStatement].foreach(s => note(operandType(s.msg)))
+    finder.recursiveFindByType[TellStatement].foreach(s => note(operandType(s.msg)))
+    finder.recursiveFindByType[YieldStatement].foreach(s => note(operandType(s.msg)))
+    finder.recursiveFindByType[ReplyStatement].foreach(s => note(operandType(s.msg)))
+    finder
+      .recursiveFindByType[Outlet]
+      .foreach(o => note(resolution.refMap.definitionOf[Type](o.type_.pathId)))
+
+    // An event declared in an `external` context, or in one whose body is `???`, is produced by
+    // something the model does not describe. Reporting it would be reporting the absence of a
+    // body the author already said is absent.
+    def isUnwritten(event: Type): Boolean =
+      symbols.parentsOf(event).exists {
+        case c: Context => c.hasOption("external") || c.isEmpty
+        case _          => false
+      }
+
+    collectedCorrelations.foreach { correlation =>
+      correlation.handlers.foreach { handler =>
+        handler.clauses.foreach {
+          case omc: OnMessageLikeClause
+              if omc.msg.nonEmpty && omc.msg.messageKind == AggregateUseCase.EventCase =>
+            resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach { event =>
+              if !emitted.exists(_ eq event) && !isUnwritten(event) then
+                messages.addWarning(
+                  omc.errorLoc,
+                  s"${omc.identify} in ${correlation.identify} folds ${event.identify}, which " +
+                    s"nothing in the model emits, so this fold can never run",
+                  suggestion = s"Emit ${event.identify} from the definition that produces it " +
+                    s"(a 'send', 'tell' or 'yield'), or remove the clause."
+                )
+            }
+          case _ => () // non-event clauses are reported by the projector's own event-only rule
+        }
+      }
+    }
   }
 
   /** A6: `tell <msg> to <procRef>` is sugar for a send on the outlet connected to the target's
@@ -2214,12 +2282,69 @@ case class ValidationPass(
     * fold set them would reject every correct correlation. `Optional` (`?`) and `ZeroOrMore` (`*`)
     * fields are not required — both admit "nothing there" — while `OneOrMore` (`+`) is.
     */
+  /** A70: warn about a `set` inside a fold that a later `set` to the SAME field overrides on EVERY
+    * path. The earlier value can never reach the yielded command, so writing it is dead work and
+    * usually a mistake about which event should win.
+    *
+    * Reported only when the override is CERTAIN. `dischargesOnEveryPathSeq` supplies exactly that
+    * standard — a `when` needs both branches, a `match` needs a `default`, and a `foreach` body
+    * never counts because it may iterate zero times — so a merely POSSIBLE override stays silent,
+    * which is the whole difference between this warning and noise.
+    *
+    * `continuation` is what executes after `statements` finishes: recursing into a `when`'s branch
+    * passes the rest of the enclosing block, so a `set` in a branch that a later statement
+    * overrides is caught too. Without it the check would only see straight-line lists.
+    *
+    * The CROSS-clause case is not here: two different folds writing one field is a race and
+    * already an Error (see `raced` above), because arrival order across sources is not guaranteed.
+    * This is the within-one-fold complement, where order IS guaranteed and the defect is
+    * therefore only dead work.
+    */
+  private def checkOverriddenSets(
+    statements: Seq[RiddlValue],
+    continuation: Seq[RiddlValue],
+    correlation: Correlation,
+    clause: OnClause
+  ): Unit =
+    statements.zipWithIndex.foreach { (value, index) =>
+      lazy val rest: Seq[RiddlValue] = statements.drop(index + 1) ++ continuation
+      value match
+        case ss @ SetStatement(_, fr: FieldRef, _) =>
+          val name = fr.pathId.value.last
+          val overridden = dischargesOnEveryPathSeq(rest) {
+            case SetStatement(_, other: FieldRef, _) => other.pathId.value.last == name
+            case _                                   => false
+          }
+          if overridden then
+            messages.addWarning(
+              ss.loc,
+              s"'$name' is set here and set again on every path before ${clause.identify} ends, " +
+                s"so this value never reaches ${correlation.yields.format}",
+              suggestion = s"Remove this 'set', or move the later one into the branch where it " +
+                s"should win."
+            )
+        case w: WhenStatement =>
+          checkOverriddenSets(w.thenStatements.toSeq, rest, correlation, clause)
+          checkOverriddenSets(w.elseStatements.toSeq, rest, correlation, clause)
+        case m: MatchStatement =>
+          m.cases.foreach(mc => checkOverriddenSets(mc.statements.toSeq, rest, correlation, clause))
+          checkOverriddenSets(m.default.toSeq, rest, correlation, clause)
+        case f: ForeachStatement =>
+          // The body's own continuation is `rest`: whether the loop repeats or exits, `rest`
+          // eventually runs, so a `set` in the body that `rest` overrides is still dead work.
+          checkOverriddenSets(f.doStatements.toSeq, rest, correlation, clause)
+        case _ => () // every other statement writes no field
+      end match
+    }
+  end checkOverriddenSets
+
   private def validateCorrelation(
     correlation: Correlation,
     parents: Parents
   ): Unit = {
     checkDefinition(parents, correlation)
     checkMetadata(correlation)
+    collectedCorrelations.addOne(correlation)
 
     // The bound is grammar rather than an option (A70), but it needs the SAME test an option's
     // duration gets -- otherwise `times out after "banana"` would compile. There is no "remove it"
@@ -2252,6 +2377,8 @@ case class ValidationPass(
                 case _                                 => writerOf.put(name, clause)
             case _ => ()
           }
+          // A70: within THIS fold, a `set` the rest of the fold certainly overrides is dead work.
+          checkOverriddenSets(clause.contents.toSeq, Seq.empty, correlation, clause)
           // A fold that never `set`s contributes nothing to the join. That is always a mistake
           // rather than a style choice, so it is an Error and not a warning.
           check(
@@ -2297,8 +2424,29 @@ case class ValidationPass(
         suggestion = s"Rename either the correlation or the record so they do not share the name " +
           s"'${correlation.id.value}'."
       )
+      // A70 (Reid, 2026-08-12): the grammar already rejects the wrong KEYWORD -- `yields record R`
+      // does not parse -- but only here is the referent resolved, so only here can `yields command
+      // Foo` naming an event, result, query or plain record be caught. Validation owns it for the
+      // usual reason: a parse-time error() would preempt the whole pass chain, and the evidence
+      // (the resolved Type) survives into the AST.
+      val yieldsACommand: Boolean = typ.typEx match
+        case auc: AggregateUseCaseTypeExpression => auc.usecase == AggregateUseCase.CommandCase
+        case _                                   => false
+      check(
+        yieldsACommand,
+        s"${correlation.identify} must yield a command but ${typ.identify} is not one; a " +
+          "projector's only output is a change to a repository, and a repository is changed by " +
+          "handling a command",
+        Messages.Error,
+        correlation.yields.pathId.loc,
+        suggestion = s"Declare '${typ.id.value}' as a command, or yield a command the repository " +
+          s"handles."
+      )
+
+      // Gated on the kind: reporting which fields "no fold sets" against a type that was never a
+      // valid target compounds one mistake into two, and the second is derived from a wrong premise.
       typ.typEx match
-        case agg: AggregateTypeExpression =>
+        case agg: AggregateTypeExpression if yieldsACommand =>
           val unset = agg.fields.filter { field =>
             val isOptional = field.typeEx match
               case _: Optional | _: ZeroOrMore => true
@@ -2351,6 +2499,49 @@ case class ValidationPass(
           }
         case _ => ()
       end match
+    }
+
+    // A70 (Reid, 2026-08-12): the yielded command should be one the projector's repository actually
+    // handles. Since `yields` names a COMMAND, this is plain identity -- the earlier design had to
+    // INFER acceptance from a command that "held" the yielded record, because a record was not
+    // nameable by any `on` clause (A9b). Naming the command deleted the inference.
+    //
+    // COMPLETENESS, not an Error (Reid's ruling; A70 had specified an Error). A repository lacking
+    // the handler is under-specified rather than self-contradictory, and it sits beside the other
+    // projector completeness warnings below.
+    val yieldedCommand: Option[Type] = resolution.refMap.definitionOf[Type](correlation.yields.pathId)
+    parents.collectFirst { case p: Projector => p }.foreach { projector =>
+      yieldedCommand.foreach { yielded =>
+        projector.repositories.foreach { repoRef =>
+          resolution.refMap
+            .definitionOf[Repository](repoRef.pathId)
+            // `???` says "known to be incomplete", so it earns a Missing warning about its body and
+            // nothing else (Reid, 2026-08-11). This mirrors `validateRepository`, which likewise
+            // declines to tell an empty repository that it needs a handler.
+            .filter(_.nonEmpty)
+            .foreach { repo =>
+              val handled: Boolean = repo.handlers.exists { handler =>
+                handler.clauses.exists {
+                  case omc: OnMessageLikeClause
+                      if omc.msg.nonEmpty &&
+                        omc.msg.messageKind == AggregateUseCase.CommandCase =>
+                    // Compared by resolved definition identity, not by name: two contexts may each
+                    // declare a `RecordFulfillment`, and only one of them is this one.
+                    resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(_ eq yielded)
+                  case _ => false
+                }
+              }
+              if !handled then
+                messages.addCompleteness(
+                  correlation.errorLoc,
+                  s"${repo.identify} has no handler for ${yielded.identify}, which " +
+                    s"${correlation.identify} yields",
+                  suggestion = s"Add an 'on command ${yielded.id.value}' clause to a handler of " +
+                    s"${repo.identify}, so the correlation's result is actually stored."
+                )
+            }
+        }
+      }
     }
 
     // Purity of the folds is what makes re-running them safe (§6.5), so an effect inside one is an
@@ -4159,7 +4350,19 @@ case class ValidationPass(
   private def dischargesOnEveryPath[CV <: RiddlValue](
     contents: Contents[CV]
   )(settles: Statement => Boolean): Boolean =
-    contents.toSeq.exists {
+    dischargesOnEveryPathSeq(contents.toSeq)(settles)
+
+  /** The [[dischargesOnEveryPath]] analysis over a plain `Seq`, so a caller can ask the question of
+    * a statement list it BUILT rather than one that exists in the AST.
+    *
+    * A70's overridden-`set` check needs exactly that: "is this `set` overridden later?" means
+    * testing the suffix after it CONCATENATED with the enclosing block's continuation, and no such
+    * `Contents` exists anywhere in the tree.
+    */
+  private def dischargesOnEveryPathSeq(
+    statements: Seq[RiddlValue]
+  )(settles: Statement => Boolean): Boolean =
+    statements.exists {
       case WhenStatement(_, _, thenStatements, elseStatements, _) =>
         dischargesOnEveryPath(thenStatements)(settles) &&
         elseStatements.nonEmpty &&
@@ -4172,7 +4375,7 @@ case class ValidationPass(
       case s: Statement        => settles(s)
       case _                   => false // Comments and the like settle nothing
     }
-  end dischargesOnEveryPath
+  end dischargesOnEveryPathSeq
 
   /** A12: count embedded [[Call]] / [[GetValue]] nodes anywhere within a value-expression subtree.
     * Each `call` (a pure function call — A24) and each `get from input/state` (A45) is its own

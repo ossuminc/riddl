@@ -51,48 +51,6 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **Finish the correlation validation rules (A70).** The feature itself is
-  BUILT and green on 2026-08-11: syntax, all four reflectivity surfaces
-  (prettify / BAST rev 11 / JSON), and six of A70's eight rules. The design
-  authority remains `../RIDDL-Tools-To-Do-List.md` **A70** and
-  `../RIDDL-Computational-Model.md` **§6.2, §6.5–§6.8** — note that both were
-  AMENDED on 2026-08-11 to make the timeout mandatory and syntactic
-  (`times out after "<duration>" { … }`), replacing the earlier optional
-  `else` + `option timeout(…)` design. Three items remain:
-
-  - **Error — "the yielded record is handled by the referenced Repository's
-    handlers."** The mechanism was the open question; **Reid answered it
-    2026-08-11**: a repository does NOT declare that it accepts a record. It is
-    **INFERRED** — the repository has a handler with an `on command` clause for
-    a command that *holds* the record. The corollary is a modelling rule worth
-    stating in its own right: **a correlation's output ought to be a command on
-    the Repository**, not the bare record.
-
-    So the check is: resolve the projector's `updates repository R`; for each
-    of R's handlers, collect the `on command C` clauses; a correlation
-    yielding record `T` is satisfied when some such `C` has a field whose type
-    resolves to `T`.
-
-    **A `???` repository is EXEMPT** (Reid, 2026-08-11) — and not as a special
-    case for this check. `???` means "known to be incomplete, don't expect
-    much" for ANY definition, so the most it earns is a Missing warning that
-    the body should be provided, and every other rule skips it. Now recorded in
-    CLAUDE.md § "Validation Specifics"; guard on `nonEmpty` when building this.
-
-    Still to settle: whether "holds" means a direct field of `C` or any nested
-    reachable field.
-  - **Warning — handled events that nothing emits anywhere.** Needs
-    MessageFlow analysis; `MessageFlowPass` already exists.
-  - **Warning — earlier `set`s to a field that are definitely overridden.**
-    Must be path-sensitive through `when/then/else/end` and reported only when
-    overridden on EVERY path; a merely possible override is noise.
-
-  Verified while building, so do not re-derive: `validateCorrelation` is in
-  `ValidationPass.scala`; `checkPreciseDuration` was extracted into
-  `DefinitionValidation.scala` so the clause and the `timeout` option share one
-  duration test; the effect ban binds FOLDS only and `CorrelationTest` pins
-  both sides of that line.
-
 *(The "missing `isEmpty` overrides" item filed here on 2026-08-10 was based on a
 WRONG diagnosis and is gone — the defaults were correct and the bug was in two
 callers. Fixed; the durable rule is in CLAUDE.md § "Emptiness". Kept as a note

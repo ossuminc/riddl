@@ -48,7 +48,7 @@ class CorrelationRoundTripTest extends AbstractValidatingTest {
   private val src: String =
     """domain D is {
       |  context C is {
-      |    record Fulfillment is { customerId: String, orderId: String, paidAmount: Number }
+      |    command RecordFulfillment is { customerId: String, orderId: String, paidAmount: Number }
       |    event PaymentTaken is { amount: Number }
       |    command ReportStalled is { why: String }
       |    entity Monitor is {
@@ -57,7 +57,7 @@ class CorrelationRoundTripTest extends AbstractValidatingTest {
       |    repository Store is { ??? }
       |    projector FulfillmentView is {
       |      updates repository Store
-      |      correlation FulfillmentJoin by customerId, orderId yields record Fulfillment is {
+      |      correlation FulfillmentJoin by customerId, orderId yields command RecordFulfillment is {
       |        handler Collect is {
       |          on e: event PaymentTaken is { set field paidAmount to e.amount }
       |        }
@@ -79,7 +79,7 @@ class CorrelationRoundTripTest extends AbstractValidatingTest {
     "emit the whole declaration" in { (td: TestData) =>
       val pretty = prettify(parse(src, "src"))
       pretty must include("correlation FulfillmentJoin by customerId, orderId")
-      pretty must include("yields record Fulfillment")
+      pretty must include("yields command RecordFulfillment")
       // The clause that a `format`-only implementation would have dropped.
       pretty must include("""times out after "30 days"""")
       pretty must include("tell command ReportStalled to entity Monitor")

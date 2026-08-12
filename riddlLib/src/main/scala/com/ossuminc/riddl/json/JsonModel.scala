@@ -484,16 +484,21 @@ object JsonModel:
     contents: Seq[ContentEntry] = Nil
   )
 
-  /** A70: a keyed accumulation of several events into one record, inside a projector.
+  /** A70: a keyed accumulation of several events into one command, inside a projector.
     *
     * `keys` is a JSON ARRAY and its order is significant — §6.5 makes identity the full tuple and
     * forbids canonicalizing, so a consumer must not sort it. `timeout` is the duration as written
     * (`"30 days"`, or ISO-8601); it is mandatory in the language, hence not an Option here.
+    *
+    * `yieldsCommand` is a bare path (`Sales.RecordFulfillment`); the `command` kind is implied by
+    * the field, as it is by the position in the grammar. It was `yieldsRecord` until 2026-08-12,
+    * when a correlation's target became a command — the value's SHAPE never changed, only what it
+    * truthfully names.
     */
   case class CorrelationDto(
     name: String,
     keys: Seq[String],
-    yieldsRecord: String,
+    yieldsCommand: String,
     timeout: String,
     timeoutStatements: Seq[StatementDto] = Nil,
     handlers: Seq[HandlerDto] = Nil,

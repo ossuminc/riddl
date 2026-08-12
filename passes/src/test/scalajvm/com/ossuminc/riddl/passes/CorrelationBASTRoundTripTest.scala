@@ -30,7 +30,7 @@ class CorrelationBASTRoundTripTest extends AnyWordSpec with Matchers {
   private val source: String =
     """domain D is {
       |  context C is {
-      |    record Fulfillment is { customerId: String, orderId: String, paidAmount: Number }
+      |    command Fulfillment is { customerId: String, orderId: String, paidAmount: Number }
       |    event PaymentTaken is { amount: Number }
       |    command ReportStalled is { why: String }
       |    entity Monitor is {
@@ -39,7 +39,7 @@ class CorrelationBASTRoundTripTest extends AnyWordSpec with Matchers {
       |    repository Store is { ??? }
       |    projector FulfillmentView is {
       |      updates repository Store
-      |      correlation FulfillmentJoin by customerId, orderId yields record Fulfillment is {
+      |      correlation FulfillmentJoin by customerId, orderId yields command Fulfillment is {
       |        handler Collect is {
       |          on e: event PaymentTaken is { set field paidAmount to e.amount }
       |        }

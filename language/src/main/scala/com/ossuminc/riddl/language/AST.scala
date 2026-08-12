@@ -4620,7 +4620,13 @@ object AST:
     // follow. Source order is different (`timeout` is written after the body) and that is fine;
     // declaration order here is a Scala.js constraint, not a statement about the syntax.
     keys: Seq[Identifier],
-    yields: RecordRef,
+    // A COMMAND, not a record (Reid, 2026-08-12). A projector's only output is a change to a
+    // repository, and a repository is changed by handling a command -- so the thing a correlation
+    // yields must be nameable by a repository handler. A `record` never was: `messageRef` is the
+    // four real messages only (A9b), so `yields record R` named a type no `on` clause could
+    // mention, which is why the first design had to INFER acceptance from a command that "holds"
+    // the record. Naming the command directly deletes the inference.
+    yields: CommandRef,
     timeout: LiteralString,
     contents: Contents[CorrelationContents] = Contents.empty[CorrelationContents](),
     timeoutStatements: Contents[Statements] = Contents.empty[Statements](),

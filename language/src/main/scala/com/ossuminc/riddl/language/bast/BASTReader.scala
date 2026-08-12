@@ -910,7 +910,7 @@ class BASTReader(
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
     val keys = readSeq(() => readIdentifierInline())
-    val yields = readRecordRefInline() // inline - position known
+    val yields = readCommandRefInline() // inline - position known
     val timeout = readLiteralString()
     val contents = readContentsDeferred[CorrelationContents]()
     val timeoutStatements = readContentsDeferred[Statements]()
@@ -2098,6 +2098,13 @@ class BASTReader(
     val loc = readLocation()
     val pathId = readPathIdentifierInline()
     RecordRef(loc, pathId)
+  }
+
+  // A70: inverse of writeCommandRefInline (correlation.yields) — loc + pathId, no keyword.
+  private def readCommandRefInline(): CommandRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    CommandRef(loc, pathId)
   }
 
   private def readFieldRefOrConstantRef(): FieldRef | ConstantRef = {

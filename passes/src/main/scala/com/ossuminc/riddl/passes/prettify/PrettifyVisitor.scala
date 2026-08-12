@@ -387,8 +387,11 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     }
   end openState
 
-  /** A70. `correlation C by k1, k2 yields record R is {` — the whole declaration, since everything
+  /** A70. `correlation C by k1, k2 yields command X is {` — the whole declaration, since everything
     * before the body must survive a round trip.
+    *
+    * The `command` keyword is not spelled here: `AggregateRef.format` derives it from the ref's
+    * `messageKind`, which is why the 2026-08-12 record→command change needed no edit to this line.
     *
     * Keys are emitted in their STORED order, which the parser kept as written: §6.5 makes identity
     * the full tuple and forbids canonicalizing, so re-ordering them here would silently change what

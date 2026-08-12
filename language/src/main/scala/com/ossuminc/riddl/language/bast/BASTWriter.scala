@@ -716,7 +716,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(c.loc)
     writeIdentifierInline(c.id) // Inline - no tag needed
     writeSeq(c.keys)(writeIdentifierInline) // ordered as written; never canonicalized (§6.5)
-    writeRecordRefInline(c.yields) // inline - position known
+    writeCommandRefInline(c.yields) // inline - position known
     writeLiteralString(c.timeout)
   }
 
@@ -1512,6 +1512,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     * morph.value). No keyword (a RecordRef's keyword is always "record").
     */
   def writeRecordRefInline(r: RecordRef): Unit = {
+    writeLocation(r.loc)
+    writePathIdentifierInline(r.pathId)
+  }
+
+  /** A70: write a CommandRef without tag - used where the position implies a command
+    * (correlation.yields). No keyword (a CommandRef's keyword is always "command").
+    *
+    * Byte-identical to [[writeRecordRefInline]] on purpose: only the ref TYPE reconstructed on the
+    * read side differs. Kept as its own method rather than reusing the record one so the call site
+    * states which ref it means, and so a future keyword byte can be added to one without the other.
+    */
+  def writeCommandRefInline(r: CommandRef): Unit = {
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }

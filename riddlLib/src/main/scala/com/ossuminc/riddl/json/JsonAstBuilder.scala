@@ -933,7 +933,7 @@ object JsonAstBuilder:
       curAt,
       ident(c.name),
       c.keys.map(ident),
-      RecordRef(curAt, pathId(c.yieldsRecord)),
+      CommandRef(curAt, pathId(c.yieldsCommand)),
       LiteralString(curAt, c.timeout),
       childrenOrBuckets[CorrelationContents](
         c.contents,

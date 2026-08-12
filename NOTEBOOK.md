@@ -134,13 +134,57 @@ delegates to `format`, so there is one source of truth and it cannot drift
 again. The JSON discriminator is still `"Range"` and is deliberately NOT tied to
 either: it is a wire format, hardcoded at both the read and write sites.
 
+## A rule that could not be written told us the grammar was wrong (2026-08-12)
+
+A70's last three rules are built, and the first of them changed the language
+rather than being added to it.
+
+**Building a check is a test of the design.** The rule read *"every
+correlation's yielded record is handled by the referenced Repository's
+handlers."* It cannot be written. `yields` took a `recordRef`, while a handler
+clause takes a `messageRef` — the four real messages only (A9b) — so **no
+repository handler could name what a correlation produced.** The 2026-08-11
+ruling had already felt this and worked around it, inferring acceptance from "a
+command that *holds* the record", and left "does *holds* mean a direct field or
+any nested one?" open. That open question was the design failing, not a detail
+awaiting a decision.
+
+Reid's ruling deleted it: **`yields` names a COMMAND**, because a projector's
+only output is a change to a repository and a repository is changed by handling
+a command. The check collapses from a reachability search to `eq` on a resolved
+`Type`. The same shape as the timeout ruling one day earlier — make the bad
+state unrepresentable instead of diagnosing it.
+
+**Worth remembering: the ruling's own corollary was the answer.** It said "a
+correlation's output ought to be a command on the Repository" while the grammar
+said `yields record`. When a design note and the grammar disagree, the note is
+usually where the thinking got to and the grammar is where it stopped.
+
+**Enforced in two places, deliberately.** The wrong KEYWORD dies in the parser
+(`commandRef`, so `yields record R` does not parse); a `command` naming a
+non-command is an Error in `ValidationPass`, the only place holding the resolved
+referent — and a parse-time `error()` there would preempt the whole pass chain.
+
+**Severity was Reid's call too:** the repository-accepts-it rule is a
+**Completeness warning**, not the Error A70 specified. A repository missing the
+handler is under-specified, not self-contradictory.
+
+**A recorded baseline is not a measured one.** The handoff's JVM baseline of
+2201 was stale; the tree actually measured 2205, so the +13 that first appeared
+looked like 4 unexplained tests. Stashing and re-running gave the real number
+and the delta came out at exactly +9. The per-platform split is the useful part:
+JVM +9, JS +1, Native +8 — because `CorrelationTest` is `scala-jvm-native` (so
+no JS) and `ProjectorTest` is abstract with concrete runners only in `JVMTests`
+and `JSTests` (so no Native). **Three different deltas, all correct.** When they
+do not reconcile, measure the baseline rather than adjusting the expectation.
+
 ## Correlations, and a design fixed by deleting the question (2026-08-11)
 
-A70 built: `correlation <id> by <keys> yields record <T> is { <handler> }
+A70 built: `correlation <id> by <keys> yields command <C> is { <handler> }
 times out after "<duration>" { <statements> }` inside a projector. Syntax,
-resolution, six of eight validation rules, and all four reflectivity surfaces
-(prettify, BAST rev 11, JSON). Remaining rules are in BACKLOG § 1 with the
-reason each was deferred.
+resolution, all eight validation rules, and all four reflectivity surfaces
+(prettify, BAST rev 12, JSON). (It read `yields record <T>` until 2026-08-12 —
+see the entry above.)
 
 **The design changed mid-plan, and the change is the lesson.** Planning surfaced
 a question the committed design could not answer: what does a correlation with

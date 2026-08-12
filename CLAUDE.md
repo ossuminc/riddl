@@ -714,11 +714,23 @@ to the right group rather than appending to a list.
   makes prettify silently DROP the binding on every round trip. That shipped as
   a bug for exactly one commit and is what `OnOtherEnvelopeRoundTripTest` pins.
 - **Correlations in projectors (A70, release/2)** — `correlation <id> by <k>[,
-  <k>…] yields record <T> is { <handler> } times out after "<duration>" {
+  <k>…] yields command <C> is { <handler> } times out after "<duration>" {
   <statements> } [with { … }]`. A keyed accumulation of several events into one
-  record the Repository stores. **Semantics live in
+  command the Repository handles. **Semantics live in
   `../RIDDL-Computational-Model.md` §6.2 and §6.5–§6.8 and are NOT restated in
   the code** — that document is the authority for any lowering decision.
+  **`yields` names a COMMAND** (Reid, 2026-08-12; it was `yields record <T>`
+  for one day). A projector's only output is a change to a repository, and a
+  repository is changed by handling a command. The record form could never
+  work: a handler clause takes a `messageRef`, which is the four real messages
+  only (A9b), so **no `on` clause could name what the correlation produced** —
+  which is why the first design had to INFER acceptance from a command that
+  *held* the record. Naming the command deletes the inference. Enforced in two
+  places on purpose: the wrong KEYWORD dies in the grammar (`commandRef` in
+  `ProjectorParser`, so `yields record R` does not parse), while `yields
+  command Foo` naming a non-command is an Error from `ValidationPass` — the
+  only place with the resolved referent, and a parse-time `error()` there would
+  preempt the whole pass chain.
   **The timeout clause is MANDATORY and is grammar, not metadata.** It was
   designed as an optional `else` block plus `option timeout(…)`, which left one
   question unanswerable — what an unbounded correlation means — and needed three
@@ -745,6 +757,17 @@ to the right group rather than appending to a list.
   Two pre-existing projector checks (needs its own record type; exactly one
   handler) assumed folds live in one top-level handler and are SKIPPED when
   correlations are present; a projector without them validates as before.
+  **The repository-accepts-it rule is a COMPLETENESS warning, not an Error**
+  (Reid, 2026-08-12, overriding A70 as written): a repository lacking the
+  `on command` clause is under-specified, not self-contradictory. A `???`
+  repository is exempt, per the standing `???` ruling. Because `yields` names a
+  command, the test is plain identity on the resolved `Type` (`eq`, not by
+  name — two contexts may each declare a `RecordFulfillment`).
+  **The unemitted-event warning does NOT use `MessageFlowPass`** — depending on
+  it would reorder the standard passes. `checkCorrelationEventSources` sweeps
+  the root once in `postProcess`, GATED on a correlation existing. An `Outlet`
+  typed with the event counts as emitting it, so a `???` source that declares
+  the port is not reported; adaptor translations deliberately do not count.
 
 - **A new `Branch` node breaks three things silently** — all found building A70,
   none caught by the compiler:

@@ -46,13 +46,19 @@ private[parsing] trait ProjectorParser {
   private def correlationTimeout[u: P]: P[(LiteralString, Seq[Statements])] =
     P(Keywords.timesOutAfter ~/ literalString ~ pseudoCodeBlock(StatementsSet.ProjectorStatements))
 
-  /** A70: a named, keyed accumulation of several events into one record the Repository stores.
+  /** A70: a named, keyed accumulation of several events into one command the Repository handles.
     *
     * {{{
-    *   correlation Fulfillment by customerId, orderId yields record Sales.Fulfillment is {
+    *   correlation Fulfillment by customerId, orderId yields command Sales.RecordFulfillment is {
     *     handler Collect is { on event Sales.OrderPlaced is { set field orderedAt to occurredAt } }
     *   } times out after "30 days" { tell command Ops.ReportStalled to entity Ops.Monitor }
     * }}}
+    *
+    * A [[commandRef]], not a [[recordRef]] (author's ruling, 2026-08-12): a projector's output is
+    * ALWAYS a change to a repository, and a repository is changed by handling a command. Writing
+    * `yields record R` therefore no longer parses at all — the wrong KEYWORD dies here, while a
+    * `command` naming something that is not a command is left to `ValidationPass`, which is the
+    * only place with the resolved referent to judge it.
     *
     * The keys are kept in WRITTEN order and are not sorted: §6.5 makes identity the full tuple, and
     * component order can matter to a generator's composite index. Since `Definition.equals` is
@@ -61,13 +67,13 @@ private[parsing] trait ProjectorParser {
   private def correlation[u: P]: P[Correlation] = {
     P(
       Index ~ Keywords.correlation ~/ identifier ~ by ~ identifier.rep(1, Punctuation.comma) ~
-        Keywords.yields ~ recordRef ~ correlationBody ~ correlationTimeout ~ withMetaData ~ Index
-    )./.map { case (start, id, keys, record, contents, (timeout, onTimeout), descriptives, end) =>
+        Keywords.yields ~ commandRef ~ correlationBody ~ correlationTimeout ~ withMetaData ~ Index
+    )./.map { case (start, id, keys, command, contents, (timeout, onTimeout), descriptives, end) =>
       Correlation(
         at(start, end),
         id,
         keys,
-        record,
+        command,
         timeout,
         contents.toContents,
         onTimeout.toContents,

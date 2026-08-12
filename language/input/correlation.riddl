@@ -8,7 +8,9 @@
 // legal there, and an Error inside a fold.
 domain Fulfillment is {
   context Sales is {
-    record Joined is {
+    // A correlation yields a COMMAND, never a bare record: a projector's only output is a change
+    // to a repository, and a repository is changed by handling a command.
+    command RecordJoined is {
       customerId: String,
       orderId: String,
       orderedAt: String,
@@ -30,7 +32,7 @@ domain Fulfillment is {
     projector JoinView is {
       updates repository Store
 
-      correlation OrderPayment by customerId, orderId yields record Joined is {
+      correlation OrderPayment by customerId, orderId yields command RecordJoined is {
         handler Collect is {
           // A bare field name: resolved against the handled event's fields.
           on event OrderPlaced is { set field orderedAt to occurredAt }

@@ -20,7 +20,10 @@ private[parsing] trait ReferenceParser {
     }
   }
 
-  private def commandRef[u: P]: P[CommandRef] = {
+  // A70: non-private so ProjectorParser can require a command for `correlation … yields`, which is
+  // what makes "a projector's output is always a repository change" structural rather than a
+  // validation check — the same reasoning that opened up `queryRef` for `ask`.
+  def commandRef[u: P]: P[CommandRef] = {
     P(Index ~ Keywords.command ~ pathIdentifier ~~ Index).map { case (start, pid, end) =>
       CommandRef(at(start, end), pid)
     }

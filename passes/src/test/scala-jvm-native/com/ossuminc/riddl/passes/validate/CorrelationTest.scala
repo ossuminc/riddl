@@ -39,10 +39,14 @@ class CorrelationTest extends AbstractValidatingTest {
   private def errorsFor(src: String, origin: String): String =
     diagnostics(src, origin).justErrors.map(_.message).mkString("\n")
 
-  /** One model, parameterised on the record's fields and the folds that fill them.
+  /** One model, parameterised on the yielded command's fields and the folds that fill them.
     *
     * The events carry `customerId`/`orderId` so the key-reachability rule is satisfied by default;
     * the case that tests that rule overrides the event declarations.
+    *
+    * `repository Store is { ??? }` keeps the repository EXEMPT from the "has no handler for the
+    * yielded command" completeness warning, so the cases below see only the rule each is about.
+    * The two cases that exercise that warning declare a repository with a real body instead.
     */
   private def model(
     fields: String = "customerId: String, orderId: String, paidAmount: Number",
@@ -53,7 +57,7 @@ class CorrelationTest extends AbstractValidatingTest {
   ): String =
     s"""domain D is {
        |  context C is {
-       |    record Fulfillment is { $fields } with { briefly "the joined record" }
+       |    command RecordFulfillment is { $fields } with { briefly "the joined write" }
        |    event PaymentTaken is { $eventFields } with { briefly "payment" }
        |    command ReportStalled is { why: String } with { briefly "alert" }
        |    entity Monitor is {
@@ -62,7 +66,7 @@ class CorrelationTest extends AbstractValidatingTest {
        |    repository Store is { ??? } with { briefly "store" }
        |    projector FulfillmentView is {
        |      updates repository Store
-       |      correlation FulfillmentJoin by $keys yields record Fulfillment is {
+       |      correlation FulfillmentJoin by $keys yields command RecordFulfillment is {
        |        handler Collect is {
        |          $folds
        |        } with { briefly "folds" }
@@ -95,6 +99,22 @@ class CorrelationTest extends AbstractValidatingTest {
       // §6.5 populates key fields implicitly from the correlation key. Demanding a fold set them
       // would reject every correct correlation, so this case would fail if the exemption were lost.
       errorsFor(model(), "correlation-keys-exempt") must not(include("customerId"))
+    }
+
+    "reject a `yields` naming something that is not a command" in { (td: TestData) =>
+      // Reid, 2026-08-12: a projector's only output is a change to a repository, and a repository
+      // is changed by handling a command. The GRAMMAR rejects the wrong keyword -- `yields record
+      // R` no longer parses -- but only validation has the resolved referent, so `yields command
+      // Foo` where Foo was declared an event has to be caught here. Without this the model would
+      // name a target no repository handler could ever accept.
+      // Anchored on the leading indentation so it rewrites the DECLARATION only: the `yields`
+      // clause names the same type on one line, and an unanchored replace would rewrite that too,
+      // turning the case into a parse failure that proves nothing about validation.
+      val src = model().replace(
+        "    command RecordFulfillment is {",
+        "    event RecordFulfillment is {"
+      )
+      errorsFor(src, "correlation-yields-non-command") must include("must yield a command")
     }
 
     "not require an optional field to be set by a fold" in { (td: TestData) =>
@@ -280,6 +300,132 @@ class CorrelationTest extends AbstractValidatingTest {
         model(eventFields = "customerId: String, amount: Number, confirmed: Boolean"),
         "correlation-key-missing"
       ) must include("every key component must be present on every handled event")
+    }
+  }
+
+  /** The three rules finished on 2026-08-12: whether the repository actually accepts what the
+    * correlation yields, whether anything emits the events it folds, and whether a fold writes a
+    * value that a later write certainly discards.
+    */
+  "Correlation completeness, continued" should {
+
+    /** As [[model]] but with a REAL repository, so the "no handler for the yielded command" rule is
+      * in play; `???` would exempt it. `emitter` lets a case declare something that actually
+      * produces `PaymentTaken`, which the unemitted-event rule otherwise reports.
+      */
+    def stored(repoHandles: String, emitter: String = "", folds: String = ""): String =
+      s"""domain D is {
+         |  context C is {
+         |    command RecordFulfillment is {
+         |      customerId: String, orderId: String, paidAmount: Number
+         |    } with { briefly "the joined write" }
+         |    command Unrelated is { why: String } with { briefly "other" }
+         |    event PaymentTaken is {
+         |      customerId: String, orderId: String, amount: Number, confirmed: Boolean
+         |    } with { briefly "payment" }
+         |    $emitter
+         |    repository Store is {
+         |      handler S is { on command $repoHandles is { do "store it" } }
+         |    } with { briefly "store" }
+         |    projector FulfillmentView is {
+         |      updates repository Store
+         |      correlation FulfillmentJoin by customerId, orderId
+         |        yields command RecordFulfillment is {
+         |        handler Collect is {
+         |          ${if folds.isEmpty then "on e: event PaymentTaken is { set field paidAmount to e.amount }"
+          else folds}
+         |        } with { briefly "folds" }
+         |      } times out after "30 days" {
+         |        do "escalate to operations"
+         |      } with { briefly "the correlation" }
+         |    } with { briefly "the projector" }
+         |  } with { briefly "c" }
+         |} with { briefly "d" }
+         |""".stripMargin
+
+    "warn when the repository has no handler for the yielded command" in { (td: TestData) =>
+      // Reid, 2026-08-12: a Completeness warning, not an Error -- a repository missing the handler
+      // is under-specified, not self-contradictory. This is plain identity because `yields` names
+      // a COMMAND; the earlier design had to infer acceptance from a command that "held" a record,
+      // since a record is nameable by no `on` clause at all (A9b).
+      val msgs = diagnostics(stored("Unrelated"), "correlation-repo-missing-handler")
+      msgs.justErrors.map(_.message).mkString("\n") must be("")
+      msgs.map(_.message).mkString("\n") must include("has no handler for")
+      msgs.map(_.message).mkString("\n") must include("RecordFulfillment")
+    }
+
+    "stay silent when the repository handles the yielded command" in { (td: TestData) =>
+      diagnostics(stored("RecordFulfillment"), "correlation-repo-handles")
+        .map(_.message)
+        .mkString("\n") must not(include("has no handler for"))
+    }
+
+    "exempt a `???` repository from the handler requirement" in { (td: TestData) =>
+      // Reid's standing ruling: `???` says "known to be incomplete", so it earns a Missing warning
+      // about its body and nothing else. A check that reasons from what a `???` body does NOT
+      // contain fires on nearly every stub in the corpus.
+      diagnostics(model(), "correlation-repo-unwritten")
+        .map(_.message)
+        .mkString("\n") must not(include("has no handler for"))
+    }
+
+    "warn when a folded event is emitted by nothing in the model" in { (td: TestData) =>
+      // The mirror image of "can never complete": a fold that can never RUN. Nothing in `stored`
+      // sends, tells or yields `PaymentTaken`, and no outlet carries it.
+      val msgs = diagnostics(stored("RecordFulfillment"), "correlation-event-unemitted")
+      msgs.justErrors.map(_.message).mkString("\n") must be("")
+      msgs.map(_.message).mkString("\n") must include("nothing in the model emits")
+    }
+
+    "count an outlet declaration as emitting the event" in { (td: TestData) =>
+      // A source whose body is `???` but which declares `outlet o is event PaymentTaken` has SAID
+      // it produces the event. Warning there would be reasoning from an unwritten body.
+      val src = stored(
+        "RecordFulfillment",
+        emitter = """source Feed is {
+                    |      outlet o is event PaymentTaken
+                    |    } with { briefly "feed" }""".stripMargin
+      )
+      diagnostics(src, "correlation-event-from-outlet")
+        .map(_.message)
+        .mkString("\n") must not(include("nothing in the model emits"))
+    }
+
+    "warn about a `set` that a later `set` overrides on every path" in { (td: TestData) =>
+      // Dead work: the first value can never reach the yielded command. Within ONE fold, unlike
+      // the cross-clause case, statement order IS guaranteed -- which is why this is a Warning
+      // about waste rather than the Error about a race.
+      val msgs = diagnostics(
+        stored(
+          "RecordFulfillment",
+          folds = """on e: event PaymentTaken is {
+                    |            set field paidAmount to e.amount
+                    |            set field paidAmount to e.amount
+                    |          }""".stripMargin
+        ),
+        "correlation-set-overridden"
+      )
+      msgs.justErrors.map(_.message).mkString("\n") must be("")
+      msgs.map(_.message).mkString("\n") must include("set again on every path")
+    }
+
+    "stay silent when the later `set` is only conditional" in { (td: TestData) =>
+      // A `when` with no `else` is an escape path, so the first write may well survive. Reporting a
+      // merely POSSIBLE override is the noise this rule exists to avoid, and `dischargesOnEveryPath`
+      // is what draws the line.
+      val msgs = diagnostics(
+        stored(
+          "RecordFulfillment",
+          folds = """on e: event PaymentTaken is {
+                    |            set field paidAmount to e.amount
+                    |            when e.confirmed then
+                    |              set field paidAmount to e.amount
+                    |            end
+                    |          }""".stripMargin
+        ),
+        "correlation-set-conditional"
+      )
+      msgs.map(_.message).mkString("\n") must not(include("set again on every path"))
     }
   }
 }

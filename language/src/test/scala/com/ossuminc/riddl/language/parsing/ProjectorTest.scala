@@ -126,7 +126,7 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
 
     "parse the full shape with a compound key" in { (td: TestData) =>
       parseCorrelation(
-        """      correlation Fulfillment by customerId, orderId yields record Fulfillment is {
+        """      correlation Fulfillment by customerId, orderId yields command Fulfillment is {
           |        handler Collect is {
           |          on e: event PaymentTaken is { set field paidAmount to e.amount }
           |        }
@@ -150,11 +150,30 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
           c.handlers.size must be(1)
     }
 
+    "reject `yields record`, which the grammar no longer admits" in { (td: TestData) =>
+      // Reid, 2026-08-12: a projector's only output is a change to a repository, and a repository
+      // is changed by handling a COMMAND. Making `yields` take a command_ref puts that rule in the
+      // grammar, so the wrong keyword dies here rather than being diagnosed later -- and a record
+      // could never have worked anyway, since `messageRef` is the four real messages only (A9b),
+      // leaving no `on` clause able to name what the correlation produced.
+      parseCorrelation(
+        """      correlation Fulfillment by customerId yields record Fulfillment is {
+          |        handler Collect is {
+          |          on e: event PaymentTaken is { set field paidAmount to e.amount }
+          |        }
+          |      } times out after "30 days" { do "escalate" }""".stripMargin,
+        td
+      ) match
+        case Left(messages) =>
+          if messages.justErrors.isEmpty then fail("expected a parse error") else succeed
+        case Right(_, _) => fail("'yields record' must not parse")
+    }
+
     "reject a correlation with no timeout clause" in { (td: TestData) =>
       // The timeout is mandatory ON PURPOSE (Reid, 2026-08-11): it is what makes an unbounded
       // correlation unrepresentable rather than something validation has to diagnose.
       parseCorrelation(
-        """      correlation Fulfillment by customerId yields record Fulfillment is {
+        """      correlation Fulfillment by customerId yields command Fulfillment is {
           |        handler Collect is {
           |          on e: event PaymentTaken is { set field paidAmount to e.amount }
           |        }
@@ -170,7 +189,7 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
       // `do "nothing"` is the idiom when discarding really is correct; an empty block is a parse
       // error here exactly as it is everywhere else in RIDDL.
       parseCorrelation(
-        """      correlation Fulfillment by customerId yields record Fulfillment is {
+        """      correlation Fulfillment by customerId yields command Fulfillment is {
           |        handler Collect is {
           |          on e: event PaymentTaken is { set field paidAmount to e.amount }
           |        }
