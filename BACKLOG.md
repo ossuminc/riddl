@@ -57,16 +57,79 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   entity intentions do, not as `option persistent` — options are advisory
   ("honored if possible") and a delivery guarantee is not advisory. Same
   category error the entity-intentions work fixed at 2.0.0-rc.10.
-  **Sequence matters:** the option must keep working until the intentions exist,
-  because **426 `option persistent()` uses across riddl-models are all on
-  connectors** (verified 2026-08-07) and would have nowhere to go. So: add the
-  intentions, deprecate the option, migrate the corpus, then remove.
   Repository is deliberately NOT included — Reid: "persistent by implication, so
   it doesn't need the option or the intention."
 
-- **Drop the deprecated inline aggregation from `requires`/`returns`, then
-  narrow the accessors to `Option[TypeRef]`.** Decided by Reid 2026-08-04 while
-  moving the clauses into contents: `Option[TypeRef]` is the wanted END state,
+  **PLAN, mapped against the code 2026-08-12** (Reid asked for a plan, not
+  execution). Nothing below is estimated; each site was opened.
+
+  **Shape.** Two INDEPENDENT groups, mutually exclusive within a group, mirroring
+  `EntityIntention` (`AST.scala:4325`) — which is the template to copy, including
+  `keyword`, `group`, `canonicalOrder`, `fromKeyword` and `canonical`:
+  - durability: `persistent`
+  - delivery: `at-least-once` | `at-most-once`
+
+  Surface: `[<intentions>] connector <id> is from <outlet> to <inlet>`.
+
+  **AST.** `Connector` (`AST.scala:4823`) is a `Leaf` with no intentions field;
+  add `intentions: Seq[ConnectorIntention]`. **It participates in structural
+  `Definition.equals`, so store via `canonical` and keep every `loc` at
+  `At.empty`** on parser, BAST and JSON — the rule shape/intention already
+  follow, and the reason is that write order must not make two identical
+  connectors compare unequal.
+
+  **Parser.** `StreamingParser.scala:42`. The prefix goes before
+  `Keywords.connector`, exactly as `entityIntentionPrefix`
+  (`EntityParser.scala:166`) does — note its comment: use STRING LITERALS in
+  `StringIn`, not `ConnectorIntention.keywords`, because `StringIn` is a macro
+  taking constants only, and pin the two lists together with a test the way
+  `EntityIntentionKeywordsTest` does.
+
+  **Two-in-a-group is an ERROR, not a parse failure**, so the message can name
+  both — same ruling as entity intentions.
+
+  **Validation — the trap.** THREE sites gate on `connector.hasOption("persistent")`
+  and each must accept the intention too, or every migrated model breaks:
+  - `StreamingValidation.scala:98` — A37, connectors touching an external context
+    MUST be persistent (Error)
+  - `:359` — Rule 4, cross-context connector lacking persistent
+  - `:382` — same-context connector that declares persistent (Warning: not needed)
+
+  **This is the identical shape as the `external` bug fixed 2026-08-12** — a
+  question asked of one spelling when two exist. Add ONE predicate
+  (`isPersistentConnector`) next to `isExternalContext` in `StreamingValidation`
+  and route all three through it; do not inline the disjunction three times.
+
+  **Reflectivity, per the standing rule:** parser + EBNF (`connector` rule) with
+  a GBNF regen, PrettifyVisitor round-trip, BASTWriter/BASTReader with a
+  **`FORMAT_REVISION` bump** (and `NotImplemented.bast` regenerated), and JSON
+  (`ConnectorDto` + `JsonAstBuilder`).
+
+  **Sequence — the option must keep working throughout.** 426 `option
+  persistent()` uses across riddl-models are all on connectors (verified
+  2026-08-07). So: add the intentions → deprecate the option (keep it parsing,
+  warn) → migrate the corpus → remove the option in a LATER major, per the same
+  compatibility policy that blocks the `requires`/`returns` item below.
+
+  **Corpus migration is mechanical but not free**: `option persistent()` on a
+  connector becomes a `persistent` prefix. Do it with the same measured A/B used
+  today — capture the message baseline first, and expect the delta to be exactly
+  the deprecation warnings appearing, then disappearing after migration.
+
+  **Open design question to settle BEFORE building:** what a connector with NO
+  delivery intention means. Entity intentions have no default and say so; if
+  `at-least-once` is the implied default it should be stated in the Computational
+  Model rather than left to a generator, and if there is no default then a
+  connector without one may deserve a completeness warning.
+
+- **BLOCKED UNTIL 3.0 — drop the deprecated inline aggregation from
+  `requires`/`returns`, then narrow the accessors to `Option[TypeRef]`.**
+  **Reid, 2026-08-12: wait for 3.0.** Removing a deprecated form is a breaking
+  change, and the compatibility policy in `CLAUDE.md` allows it only in the next
+  MAJOR release — the inline form was deprecated during 2.x development, so 2.0
+  is not where it goes. Do not start this against `release/2`; the detail below
+  is kept because it was verified and would otherwise be re-derived in a year.
+  Originally decided by Reid 2026-08-04 while moving the clauses into contents: `Option[TypeRef]` is the wanted END state,
   but it is a language change, not a type tidy-up, so it does not ride along.
   Today `Requires.what` / `Returns.what` are `TypeRef | Aggregation` and
   `Function.input` / `Saga.input` return `Option[TypeRef | Aggregation]` —
