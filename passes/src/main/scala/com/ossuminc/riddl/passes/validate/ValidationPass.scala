@@ -4492,6 +4492,10 @@ case class ValidationPass(
     case le: LogicalExpression    => countValueFailPoints(le.left) + countValueFailPoints(le.right)
     case ne: NotExpression        => countValueFailPoints(ne.expr)
     case ce: ComparisonExpression => countValueFailPoints(ce.left) + countValueFailPoints(ce.right)
+    // A17's ASK form contributes NOTHING of its own -- consulting an invariant is a test, not an
+    // action that can fail -- but its `with` operand is a full Value and is counted, exactly as a
+    // comparison contributes nothing while its operands count.
+    case ic: InvariantCondition   => ic.argument.map(countValueFailPoints).getOrElse(0)
     // A bare message REFERENCE carries no failure point of its own -- the statement holding it
     // does, and that statement is counted by its own arm. Enumerated rather than absorbed by a
     // `case _ => 0`, because that catch-all is precisely how `ask` went uncounted: a new
@@ -4563,6 +4567,10 @@ case class ValidationPass(
     case le: LogicalExpression    => stateReadsIn(le.left) ++ stateReadsIn(le.right)
     case ne: NotExpression        => stateReadsIn(ne.expr)
     case ce: ComparisonExpression => stateReadsIn(ce.left) ++ stateReadsIn(ce.right)
+    // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
+    // CAN hold a state read and this must recurse rather than stop. `ref` needs no arm -- an
+    // InvariantRef is a Reference and the arm below covers it.
+    case ic: InvariantCondition   => ic.argument.toSeq.flatMap(stateReadsIn)
     // An `ask` holds only a QueryRef and a ProcessorRef -- no nested value -- so it cannot contain
     // a state read. (A saga's `ask` is separately banned outright; see `asksIn`.)
     case _: Ask                   => Seq.empty
@@ -4603,6 +4611,9 @@ case class ValidationPass(
     case le: LogicalExpression    => asksIn(le.left) ++ asksIn(le.right)
     case ne: NotExpression        => asksIn(ne.expr)
     case ce: ComparisonExpression => asksIn(ce.left) ++ asksIn(ce.right)
+    // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
+    // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
+    case ic: InvariantCondition   => ic.argument.toSeq.flatMap(asksIn)
     case _: GetValue              => Seq.empty
     case _: Reference[?]          => Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty

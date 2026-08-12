@@ -128,6 +128,47 @@ delegates to `format`, so there is one source of truth and it cannot drift
 again. The JSON discriminator is still `"Range"` and is deliberately NOT tied to
 either: it is a wire format, hardcoded at both the read and write sites.
 
+## The soak worked, and it caught me enumerating from memory (2026-08-12)
+
+Four hours after `2.0.0-rc.12` shipped, riddl-generator reported that
+`when invariant X` — A17's ask form — **aborts `ValidationPass`** with
+`IllegalStateException: stateReadsIn has no arm for InvariantCondition`. That is
+the first real soak result this branch has had, and it arrived only because a
+consumer was exercising a form nothing in the corpus uses.
+
+**The throw was correct. The enumeration was not.** These three functions —
+`stateReadsIn`, `asksIn`, `countValueFailPoints` — deliberately end in a `throw`
+rather than a catch-all, so an unhandled node fails loudly instead of silently
+returning "nothing here". That design did exactly its job. What went wrong is
+that I enumerated `BooleanExpression`'s subtypes **from the ones I happened to
+see in nearby code** rather than from the sealed hierarchy, and then wrote a
+message telling the next reader to *"decide whether it can contain a `get from
+state` rather than assuming it cannot"* while having done precisely that
+assuming.
+
+**The lesson is mechanical, so it is worth stating mechanically:** when writing a
+total dispatch over a sealed type, read the hierarchy — `grep "extends
+BooleanExpression"` — and tick the arms off against it. `Value` is a union of 8,
+`BooleanExpression` has exactly 5 members, and all three functions covered
+everything except `InvariantCondition`.
+
+**Two of the three gaps were older than the bug report suggested.** The report
+attributed it to my rc.12 commit, which is right for `stateReadsIn` — but
+`git tag --contains` puts `asksIn` in **rc.11** and `countValueFailPoints`
+before **rc.1**. So it was one blind spot replicated across three siblings, two
+of them latent for releases. riddlg hit it now only because its spec uses
+`when invariant X` in an ENTITY handler, which reaches the newest of the three;
+the saga path reaching `asksIn` is rarer and nothing had exercised it.
+
+**Canary-check a regression test that is supposed to assert recursion.** The
+obvious wrong fix here is `case ic: InvariantCondition => Seq.empty` — it stops
+the crash and is still wrong. Tests that only assert "no longer throws" pass
+against it. So the two tests that matter hide a `get from state` and an `ask`
+inside the invariant's `with` operand, and I verified the property by stubbing
+both arms and confirming those two go RED while the crash-only cases stay
+green. Assert the behaviour that distinguishes the real fix from the plausible
+one, then prove the assertion can fail.
+
 ## The corpus was arguing with itself, and the warning was wrong (2026-08-12)
 
 Three statement-scope holes from ossum.tech: `set` accepted in a context handler
