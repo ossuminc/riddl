@@ -369,12 +369,18 @@ class CorrelationTest extends AbstractValidatingTest {
         .mkString("\n") must not(include("has no handler for"))
     }
 
+    // A70's "handled events that nothing emits" rule is satisfied by the MODEL-WIDE check #17
+    // (`… is defined but nothing in the model emits it`), not by a correlation-scoped one. A twin
+    // scoped to folds shipped for one day and was deleted: it reported the same defect as #17 in
+    // different words, so a correlation folding an unemitted event drew two messages for one fact.
+    // These two cases stay because a correlation is still the sharpest way to exercise the rule --
+    // they now assert the surviving message.
     "warn when a folded event is emitted by nothing in the model" in { (td: TestData) =>
       // The mirror image of "can never complete": a fold that can never RUN. Nothing in `stored`
       // sends, tells or yields `PaymentTaken`, and no outlet carries it.
       val msgs = diagnostics(stored("RecordFulfillment"), "correlation-event-unemitted")
       msgs.justErrors.map(_.message).mkString("\n") must be("")
-      msgs.map(_.message).mkString("\n") must include("nothing in the model emits")
+      msgs.map(_.message).mkString("\n") must include("nothing in the model emits it")
     }
 
     "count an outlet declaration as emitting the event" in { (td: TestData) =>
@@ -388,7 +394,26 @@ class CorrelationTest extends AbstractValidatingTest {
       )
       diagnostics(src, "correlation-event-from-outlet")
         .map(_.message)
-        .mkString("\n") must not(include("nothing in the model emits"))
+        .mkString("\n") must not(include("nothing in the model emits it"))
+    }
+
+    "count a `yield` as emitting the event, which the old check did not" in { (td: TestData) =>
+      // The defect that made rewriting #17 worth doing rather than merely de-duplicating: it
+      // counted only `send` and `tell`, so `yield event X` -- the canonical spelling in an
+      // event-sourced entity -- was reported as produced by nothing.
+      val src = stored(
+        "RecordFulfillment",
+        emitter = """command Pay is { customerId: String, orderId: String, amount: Number }
+                    |    entity Payer is {
+                    |      record PS is { total: Number }
+                    |      state St of record PS is {
+                    |        handler H is { on command Pay is { yield event PaymentTaken } }
+                    |      }
+                    |    } with { briefly "payer" }""".stripMargin
+      )
+      diagnostics(src, "correlation-event-from-yield")
+        .map(_.message)
+        .mkString("\n") must not(include("nothing in the model emits it"))
     }
 
     "warn about a `set` that a later `set` overrides on every path" in { (td: TestData) =>

@@ -1069,6 +1069,25 @@ validation — resolution and type-checking — in `checkStatementScopes`.
 
 ### Validation Specifics
 
+- **`external context Foo` is an INTENTION, not `option external` — test both.**
+  `Context.intention: Option[Intention]` (Application/External/Gateway/Service)
+  is set by the keyword form `external context Foo is {…}`, which is what
+  riddl-models uses almost exclusively. `hasOption("external")` is the OTHER
+  spelling (`with { option external }`) and does NOT see it. A check that
+  exempts external contexts must ask for both:
+  `c.intention.contains(Intention.External) || c.hasOption("external")`.
+  Testing only the option cost 1120 false warnings across the corpus in one run
+  — every event declared in an `external context` block, i.e. exactly the
+  systems a model deliberately does not implement, reported as emitted by
+  nothing.
+  **The correct idiom was already in the codebase** at
+  `StreamingValidation.scala:66`, which has always asked for both; it just was
+  not copied. Two sites still ask for the option ONLY —
+  `ValidationPass.scala:248` (`checkCompletenessPostProcess`) and `:581`
+  (`validateOnMessageClause`) — so an `external context` is NOT exempt from
+  those two. Filed in BACKLOG; each needs its own corpus A/B, since widening an
+  exemption changes which models escape a different check.
+
 - **Statement scope: `set` and `get from state` need something that OWNS state**
   (Reid, 2026-08-12). `set` is legal only in an **Entity** (which owns its
   `State`) or a **Projector** (which owns the read-model record its folds build —

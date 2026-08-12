@@ -86,13 +86,6 @@ case class ValidationPass(
   private val collectedTells: mutable.ListBuffer[(TellStatement, Processor[?])] =
     mutable.ListBuffer.empty
 
-  /** A70: accumulated correlations, for the post-pass that asks whether anything in the model emits
-    * the events their folds handle. That question is model-wide, so it cannot be answered while
-    * visiting one correlation.
-    */
-  private val collectedCorrelations: mutable.ListBuffer[Correlation] =
-    mutable.ListBuffer.empty
-
   /** Generate the output of this Pass. This will only be called after all the calls to process have
     * completed.
     *
@@ -117,13 +110,19 @@ case class ValidationPass(
   private var computedHandlerCompleteness: Seq[HandlerCompleteness] =
     Seq.empty
 
+  /** Every message type something in the model emits. Empty until `postProcess` fills it — the
+    * question is model-wide, so it cannot be answered while visiting one definition.
+    */
+  private var emittedEventTypes: mutable.Set[Type] = mutable.Set.empty
+
   override def postProcess(root: PassRoot): Unit = {
     checkOverloads()
     checkTermConsistency()
     if mode == ValidationMode.Full then
       checkStreaming(root)
       checkTellReachability()
-      checkCorrelationEventSources(root)
+      // MUST precede checkCompletenessPostProcess, which asks whether each event is emitted.
+      emittedEventTypes = emittedMessageTypes(root)
       computedHandlerCompleteness = classifyHandlers()
       checkCompletenessPostProcess()
     end if
@@ -144,13 +143,21 @@ case class ValidationPass(
     * would be reasoning from an unwritten body — exactly what the `???` ruling forbids. Adaptor
     * translations deliberately do not count; an adaptor is routing, not an origin.
     */
-  private def checkCorrelationEventSources(root: PassRoot): Unit = {
-    if collectedCorrelations.isEmpty then return
-
+  /** Every message [[Type]] that something in the model EMITS.
+    *
+    * Emission is a `send`, `tell`, `yield` or `reply` naming the type, or an [[Outlet]] DECLARED to
+    * carry it. The outlet case matters: a source whose body is `???` but which declares
+    * `outlet o is event Shipped` has said it produces `Shipped`, and reporting it would be
+    * reasoning from a body the author already said is absent. Adaptor translations deliberately do
+    * NOT count — an adaptor is routing, not an origin.
+    *
+    * Computed ONCE over the whole root, and compared by resolved-definition identity rather than by
+    * name: two contexts may each declare a `Paid`, and emitting one says nothing about the other.
+    */
+  private def emittedMessageTypes(root: PassRoot): mutable.Set[Type] = {
     val finder = Finder(root.contents)
     val emitted: mutable.Set[Type] = mutable.Set.empty
     def note(t: Option[Type]): Unit = t.foreach(emitted.addOne)
-
     finder.recursiveFindByType[SendStatement].foreach(s => note(operandType(s.msg)))
     finder.recursiveFindByType[TellStatement].foreach(s => note(operandType(s.msg)))
     finder.recursiveFindByType[YieldStatement].foreach(s => note(operandType(s.msg)))
@@ -158,36 +165,24 @@ case class ValidationPass(
     finder
       .recursiveFindByType[Outlet]
       .foreach(o => note(resolution.refMap.definitionOf[Type](o.type_.pathId)))
-
-    // An event declared in an `external` context, or in one whose body is `???`, is produced by
-    // something the model does not describe. Reporting it would be reporting the absence of a
-    // body the author already said is absent.
-    def isUnwritten(event: Type): Boolean =
-      symbols.parentsOf(event).exists {
-        case c: Context => c.hasOption("external") || c.isEmpty
-        case _          => false
-      }
-
-    collectedCorrelations.foreach { correlation =>
-      correlation.handlers.foreach { handler =>
-        handler.clauses.foreach {
-          case omc: OnMessageLikeClause
-              if omc.msg.nonEmpty && omc.msg.messageKind == AggregateUseCase.EventCase =>
-            resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach { event =>
-              if !emitted.exists(_ eq event) && !isUnwritten(event) then
-                messages.addWarning(
-                  omc.errorLoc,
-                  s"${omc.identify} in ${correlation.identify} folds ${event.identify}, which " +
-                    s"nothing in the model emits, so this fold can never run",
-                  suggestion = s"Emit ${event.identify} from the definition that produces it " +
-                    s"(a 'send', 'tell' or 'yield'), or remove the clause."
-                )
-            }
-          case _ => () // non-event clauses are reported by the projector's own event-only rule
-        }
-      }
-    }
+    emitted
   }
+
+  /** A message declared in an `external` context, or in one whose body is `???`, is produced by
+    * something the model does not describe, so its absence is not evidence of anything.
+    */
+  private def isUnwrittenOrigin(typ: Type): Boolean =
+    symbols.parentsOf(typ).exists {
+      // BOTH spellings of external. `external context Foo` sets `intention`, while
+      // `context Foo is { with { option external } }` sets an option -- and the corpus uses the
+      // INTENTION form almost exclusively. Testing only `hasOption` missed every one of them,
+      // which is most of why rewriting this check first produced 1120 new warnings across
+      // riddl-models: the events live in `external context` blocks describing systems the model
+      // deliberately does not implement.
+      case c: Context => c.intention.contains(Intention.External) || c.hasOption("external") ||
+          c.isEmpty
+      case _ => false
+    }
 
   /** A6: `tell <msg> to <procRef>` is sugar for a send on the outlet connected to the target's
     * inlet. Warn when the resolved target processor has no inlet reached by any modeled connector.
@@ -327,34 +322,32 @@ case class ValidationPass(
           case _ => ()
         }
       }
-      // #17: Event type not produced by any command handler
-      if events.nonEmpty && context.entities.exists(_.nonEmpty) then {
-        val allHandlers = context.entities.flatMap { e =>
-          e.handlers ++ e.states.flatMap(_.handlers)
-        }
-        val producedEventNames = mutable.Set.empty[String]
-        allHandlers.foreach { handler =>
-          handler.clauses.foreach { clause =>
-            val finder = Finder(clause.contents)
-            val sends = finder.recursiveFindByType[SendStatement]
-            val tells = finder.recursiveFindByType[TellStatement]
-            sends
-              .filter(s => operandMessageKind(s.msg).contains(AggregateUseCase.EventCase))
-              .foreach(s => producedEventNames += operandMessageName(s.msg))
-            tells
-              .filter(t => operandMessageKind(t.msg).contains(AggregateUseCase.EventCase))
-              .foreach(t => producedEventNames += operandMessageName(t.msg))
-          }
-        }
-        events.foreach { evt =>
-          if !producedEventNames.contains(evt.id.value) then {
-            messages.addCompleteness(
-              evt.errorLoc,
-              s"${evt.identify} is defined but no handler produces it",
-              suggestion =
-                s"Send or tell ${evt.identify} from a command handler so the event is produced, or remove the unused event."
-            )
-          }
+      // #17: an event nothing in the model emits. Answered from `emittedEventTypes`, which is
+      // computed ONCE over the whole root in postProcess; see `emittedMessageTypes`.
+      //
+      // Rewritten 2026-08-12 (Reid). The original asked the question four ways wrong, and every
+      // one of them produced FALSE positives on correct models:
+      //   - it scanned only entity and state handlers IN THIS CONTEXT, so an event emitted from
+      //     another context read as unproduced;
+      //   - it counted only `send` and `tell`, so a `yield event X` -- the canonical spelling for
+      //     an event-sourced entity -- read as unproduced;
+      //   - it matched by NAME, so two contexts each declaring `Paid` silenced each other;
+      //   - it was gated on `context.entities.exists(_.nonEmpty)`, so a context with no entities
+      //     was never checked at all (a false NEGATIVE, and the reason the gate is gone).
+      // It also now exempts an event whose origin is an `external` or `???` context, for the same
+      // reason every other check does.
+      //
+      // This subsumed a correlation-scoped twin added the day before, which reported the same fact
+      // about a folded event in different words -- two messages, one defect. That check is gone;
+      // A70's "handled events that nothing emits" rule is satisfied by this one.
+      events.foreach { evt =>
+        if !emittedEventTypes.exists(_ eq evt) && !isUnwrittenOrigin(evt) then {
+          messages.addCompleteness(
+            evt.errorLoc,
+            s"${evt.identify} is defined but nothing in the model emits it",
+            suggestion = s"Emit ${evt.identify} with a 'send', 'tell', 'yield' or 'reply' from the " +
+              s"definition that produces it, declare an outlet carrying it, or remove the unused event."
+          )
         }
       }
       // #18: Query without corresponding result (and vice versa)
@@ -2439,7 +2432,6 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, correlation)
     checkMetadata(correlation)
-    collectedCorrelations.addOne(correlation)
 
     // The bound is grammar rather than an option (A70), but it needs the SAME test an option's
     // duration gets -- otherwise `times out after "banana"` would compile. There is no "remove it"

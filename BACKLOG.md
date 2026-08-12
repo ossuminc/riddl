@@ -51,34 +51,28 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **Reconcile the two "nobody emits this event" checks.** Found 2026-08-12 while
-  finishing A70: `riddlc validate language/input/correlation.riddl` now reports
-  the same fact twice — once as *"Event 'PaymentTaken' is defined but no handler
-  produces it"* and once as *"…folds Event 'PaymentTaken', which nothing in the
-  model emits"*. Different locations (the event vs. the fold) and different
-  framings (the type is unproduced vs. this fold is dead), so it is noise rather
-  than a defect — but it should be one check.
+- **Two `external`-exemption sites test the OPTION only, not the intention.**
+  Found 2026-08-12 while rewriting #17, where the same gap produced 1120 false
+  warnings across riddl-models before it was caught by a corpus A/B.
+  `external context Foo` sets `Context.intention`; `with { option external }`
+  sets an option; `hasOption("external")` sees only the second, and the corpus
+  uses the FIRST almost exclusively.
 
-  **They are NOT equivalent, and the older one is the weaker.** `#17` at
-  `ValidationPass.scala:320` is gated on `context.entities.exists(_.nonEmpty)`,
-  scans only entity and state handlers **in that one context**, matches by
-  **name**, and counts only `send`/`tell`. So it produces FALSE positives for an
-  event emitted from another context, emitted by `yield`/`reply`, or carried by
-  a declared `Outlet`. `checkCorrelationEventSources` (added 2026-08-12) is
-  model-wide, compares resolved `Type` identity, counts `send`/`tell`/`yield`/
-  `reply` plus outlet declarations, and exempts events from `external` or `???`
-  contexts.
+  Correct form, already present at `StreamingValidation.scala:66` and now at
+  `ValidationPass.scala:182`:
+  `c.intention.contains(Intention.External) || c.hasOption("external")`.
 
-  Preferred fix: bring `#17` up to that standard, then DELETE the
-  correlation-scoped one as redundant. **This changes a model-wide check, so it
-  needs a corpus A/B** — unlike the A70 rules, which were free (no corpus model
-  declares a correlation). Expect it to REMOVE warnings rather than add them,
-  since every difference above is a false-positive source.
+  Still option-only, so an `external context` is not exempt from either:
+  - `ValidationPass.scala:248` — `checkCompletenessPostProcess`'s `isExternal`,
+    which suppresses the empty/`do`-only handler warnings.
+  - `ValidationPass.scala:581` — `validateOnMessageClause`'s
+    `isExternalContext`, which suppresses the command→event and query→result
+    completeness checks for entities in an external context.
 
-*(The "missing `isEmpty` overrides" item filed here on 2026-08-10 was based on a
-WRONG diagnosis and is gone — the defaults were correct and the bug was in two
-callers. Fixed; the durable rule is in CLAUDE.md § "Emptiness". Kept as a note
-only because deleting it silently would invite the same wrong conclusion again.)*
+  **Each needs its own corpus A/B and they are not one change** — widening an
+  exemption REMOVES warnings, so the risk is the opposite of #17's: it may hide
+  something real. Expect the delta to be negative and account for every message
+  that disappears.
 
 - **Connector intentions: `persistent` plus `at-least-once` | `at-most-once`.**
   Reid, 2026-08-07, while ruling on where persistence is valid. A connector's

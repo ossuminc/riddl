@@ -57,7 +57,13 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
         td
       )
       parseAndValidateDomain(input) { (_, _, messages) =>
-        messages.isOnlyIgnorable mustBe true
+        // `ItHappened` is declared and handled here but never emitted, which #17 correctly reports
+        // -- this fixture is a focused adaptor test, not a complete model. Giving it a real emitter
+        // was tried and is worse: an entity drags in the entity-completeness rules (needs a state,
+        // a sink, a repository) and a source drags in the connector ones (outlet not connected).
+        // So the one expected message is excluded by name rather than the assertion weakened.
+        val unrelated = messages.filterNot(_.message.contains("nothing in the model emits it"))
+        unrelated.isOnlyIgnorable mustBe true
       }
     }
 

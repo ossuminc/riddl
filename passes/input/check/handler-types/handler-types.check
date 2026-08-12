@@ -1,3 +1,6 @@
+passes/input/check/handler-types/handler-types.riddl(3:5->20):
+ Event 'SomeEvent' is defined but nothing in the model emits it:
+     event SomeEvent is { what: String }
 passes/input/check/handler-types/handler-types.riddl(12:7->27):
  Handler 'EventHandler' in Repository 'EventRepo' handles events; repositories typically handle commands and queries, not events:
        handler EventHandler is {

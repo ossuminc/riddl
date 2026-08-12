@@ -814,7 +814,7 @@ class CompletenessTest extends AbstractValidatingTest {
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
         val cw = completenessWarnings(msgs)
         cw.exists(m =>
-          m.message.contains("OrphanEvent") && m.message.contains("no handler produces it")
+          m.message.contains("OrphanEvent") && m.message.contains("nothing in the model emits it")
         ) mustBe true
       }
     }

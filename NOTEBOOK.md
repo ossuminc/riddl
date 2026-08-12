@@ -128,6 +128,50 @@ delegates to `format`, so there is one source of truth and it cannot drift
 again. The JSON discriminator is still `"Range"` and is deliberately NOT tied to
 either: it is a wire format, hardcoded at both the read and write sites.
 
+## I predicted the direction of a corpus change, and was wrong by 1120 (2026-08-12)
+
+Two checks reported the same defect in different words: the pre-existing #17
+(*"Event X is defined but no handler produces it"*) and a correlation-scoped twin
+I had added the day before. Reid ruled: fix #17 properly, then delete the twin.
+
+**#17 asked the question four ways wrong**, each a false-positive source: it
+scanned only entity and state handlers IN ONE CONTEXT; counted only `send` and
+`tell`, so `yield event X` — the canonical spelling in an event-sourced entity —
+read as unproduced; matched by NAME, so two contexts declaring `Paid` silenced
+each other; and was gated on the context having entities, which was a false
+NEGATIVE that skipped whole contexts.
+
+**So I predicted the rewrite would REMOVE warnings. It added 1120.** Corpus went
+884 → 2004. That number was not a corpus finding; it was a bug in my own fix.
+
+**`external context Foo` and `option external` are different things, and only one
+of them is `hasOption("external")`.** The corpus writes the INTENTION form
+(`Context.intention`, four values: Application/External/Gateway/Service), and my
+exemption tested only the option. So every event declared in an `external
+context` — exactly the blocks describing systems a model deliberately does not
+implement — was reported as emitted by nothing. Testing both spellings took the
+delta to **zero**: 884 messages, byte-identical to baseline.
+
+**The lesson is about the order, not the bug.** I wrote "expected direction is
+fewer warnings" into a BACKLOG entry as a reason the change was safe. Had I
+trusted that and skipped the A/B, this would have shipped 1120 false warnings
+across 189 models. Predicting a delta is fine; *citing the prediction as
+evidence* is not. Measure, then explain the number you actually got.
+
+Worth checking whether other `hasOption("external")` sites have the same gap —
+`validateOnMessageClause` and `checkCompletenessPostProcess` both use it, and
+neither consults `intention`.
+
+**A test fixture that legitimately warns is not always worth "fixing".** Three
+in-repo fixtures began warning once the false-negative gate was gone. Two were
+goldens and simply gained a line. The third asserted `isOnlyIgnorable`, and both
+attempts to satisfy it structurally made it worse: adding an entity pulled in the
+entity-completeness rules (needs a state, a sink, a repository) and adding a
+source pulled in the connector ones (outlet not connected). A focused fixture is
+allowed to be an incomplete model — excluding the one expected message by name,
+with the reason written down, beats inflating the fixture until it stops
+complaining.
+
 ## The soak worked, and it caught me enumerating from memory (2026-08-12)
 
 Four hours after `2.0.0-rc.12` shipped, riddl-generator reported that

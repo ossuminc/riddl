@@ -1,3 +1,6 @@
+passes/input/check/adaptor-direction/adaptor-direction.riddl(4:5->17):
+ Event 'ItDone' is defined but nothing in the model emits it:
+     event ItDone is { what: String }
 passes/input/check/adaptor-direction/adaptor-direction.riddl(12:9->34):
  Inbound Adaptor 'BadInbound' handles Command 'SourceCtx.DoIt' from Context 'SourceCtx', but inbound adaptors should handle events and results (the target's output):
          on command SourceCtx.DoIt {
