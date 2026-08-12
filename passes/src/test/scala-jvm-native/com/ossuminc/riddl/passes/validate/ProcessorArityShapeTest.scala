@@ -159,6 +159,54 @@ class ProcessorArityShapeTest extends AbstractValidatingTest {
     }
   }
 
+  "the fan-in / fan-out BOUNDARY" should {
+
+    // Widening `sink` and `source` to any port count must not weaken the rule that makes them
+    // sinks and sources at all: a sink has NO outlets, a source has NO inlets. Those assertions
+    // live in `validateStreamlet` -- a THIRD encoding of the arity rules, separate from
+    // `shapeForArity` and the parser's per-shape limits -- and were not covered when the widening
+    // landed. Reid asked for them by name.
+
+    "reject a sink that also has an outlet" in { (td: TestData) =>
+      val src =
+        """domain D is {
+          |  context C is {
+          |    command A is { a: String } with { briefly "c" }
+          |    event E is { e: String } with { briefly "e" }
+          |    sink Drain is {
+          |      inlet one is command A
+          |      inlet two is command A
+          |      outlet leak is event E
+          |    } with { briefly "s" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val errors = errorsFor(src, "sink-with-outlet")
+      // The boundary rule itself, from validateStreamlet.
+      errors must include("is a sink but has 1 outlets; sinks must have none")
+      // And the ascription check agrees independently: (1 outlet, 2 inlets) is a merge.
+      errors must include("is merge")
+    }
+
+    "reject a source that also has an inlet" in { (td: TestData) =>
+      val src =
+        """domain D is {
+          |  context C is {
+          |    event A is { a: String } with { briefly "e" }
+          |    command B is { b: String } with { briefly "c" }
+          |    source Feed is {
+          |      outlet one is event A
+          |      outlet two is event A
+          |      inlet back is command B
+          |    } with { briefly "s" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val errors = errorsFor(src, "source-with-inlet")
+      errors must include("sources must have none")
+    }
+  }
+
   "the rest of the arity space" should {
 
     "still derive flow, merge, split and router unchanged" in { (td: TestData) =>
