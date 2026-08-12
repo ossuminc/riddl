@@ -51,6 +51,30 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **Reconcile the two "nobody emits this event" checks.** Found 2026-08-12 while
+  finishing A70: `riddlc validate language/input/correlation.riddl` now reports
+  the same fact twice — once as *"Event 'PaymentTaken' is defined but no handler
+  produces it"* and once as *"…folds Event 'PaymentTaken', which nothing in the
+  model emits"*. Different locations (the event vs. the fold) and different
+  framings (the type is unproduced vs. this fold is dead), so it is noise rather
+  than a defect — but it should be one check.
+
+  **They are NOT equivalent, and the older one is the weaker.** `#17` at
+  `ValidationPass.scala:320` is gated on `context.entities.exists(_.nonEmpty)`,
+  scans only entity and state handlers **in that one context**, matches by
+  **name**, and counts only `send`/`tell`. So it produces FALSE positives for an
+  event emitted from another context, emitted by `yield`/`reply`, or carried by
+  a declared `Outlet`. `checkCorrelationEventSources` (added 2026-08-12) is
+  model-wide, compares resolved `Type` identity, counts `send`/`tell`/`yield`/
+  `reply` plus outlet declarations, and exempts events from `external` or `???`
+  contexts.
+
+  Preferred fix: bring `#17` up to that standard, then DELETE the
+  correlation-scoped one as redundant. **This changes a model-wide check, so it
+  needs a corpus A/B** — unlike the A70 rules, which were free (no corpus model
+  declares a correlation). Expect it to REMOVE warnings rather than add them,
+  since every difference above is a false-positive source.
+
 *(The "missing `isEmpty` overrides" item filed here on 2026-08-10 was based on a
 WRONG diagnosis and is gone — the defaults were correct and the bug was in two
 callers. Fixed; the durable rule is in CLAUDE.md § "Emptiness". Kept as a note
