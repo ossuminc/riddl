@@ -11,108 +11,80 @@ Orientation for a session with no memory of this work. **Open work is in
 this NOTEBOOK's body. This says only where things stand and what a cold session
 would get wrong.
 
-**State — every line verified by a command in the session that wrote it
-(2026-08-11, second session):**
+**State — every line produced by a command in the session that wrote it
+(2026-08-12):**
 
-- Branch `release/2`, clean, **8 commits UNPUSHED**, 0 behind. CI has not seen
-  any of them.
-- **Correlations in projectors (A70) are BUILT and certified.** Syntax,
-  resolution, six of eight validation rules, and all four reflectivity surfaces
-  (prettify, BAST **revision 11**, JSON). What remains is in BACKLOG § 1: one
-  Error whose mechanism A70 never specified, and two Warnings.
+- Branch `release/2`, **clean, 0 unpushed, 0 behind**, HEAD `78b952723`.
+- **CI on HEAD was still RUNNING when this was written** — unverified. The
+  commit below it (`Record two rulings…`) is green, and the last full run
+  checked job-by-job was green on all five jobs (dependency-check,
+  ebnf-grammar-validation, scala-build JVM/JS/Native). **Check `gh run list`
+  first.**
+- **Correlations in projectors (A70) are BUILT.** Syntax, resolution, all four
+  reflectivity surfaces (prettify, BAST **revision 11**, JSON), and **six of
+  eight** validation rules. The remaining two Warnings and one Error are in
+  BACKLOG § 1 with their designs settled.
 - Certified from `clean` under sbt 2.0.6 (verified by `shutdown` then `show
-  sbtVersion`), zero failures: **JVM 7 modules / 2201**, **JS 5 / 711**,
-  **Native 7 / 1492**. Each delta over the rc.11 actuals (2177 / 704 / 1473) is
-  EXACTLY the number of tests added for that platform — +24 / +7 / +19 — which
-  is stronger evidence than "0 failures" that nothing was skipped.
-- Grammar: TatSu zero unexpected failures with `✓ language/input/correlation.riddl`
-  among them; GBNF regenerated (315 rules) and reported fresh; riddl-examples 9/9.
-- **The two authority documents in `~/Code/ossuminc/` are COMMITTED** (`4b652af`,
-  `b1f9395`, `4d3d56a`) — they were the at-risk item at the last handoff.
-  A task file for the language reference is dropped in `ossum.tech/task/`.
-- **Design change to know about:** the correlation timeout is MANDATORY and is
-  grammar, not metadata (`times out after "<duration>" { … }`). The `else`
-  keyword is gone. Anything recalling the optional `else` + `option timeout(…)`
-  design is stale.
+  sbtVersion`), zero failures: **JVM 2201 → 1013 in `passes` after later
+  additions**, **JS 711**, **Native 1496**. Each delta over the rc.11 actuals
+  (2177 / 704 / 1473) equals exactly the tests added for that platform — that
+  arithmetic is better evidence than "0 failures" that nothing was skipped.
+- Grammar: TatSu zero unexpected failures (incl. `language/input/correlation.riddl`),
+  GBNF regenerated (315 rules) and fresh, riddl-examples 9/9.
 
-**Previous state (still true):**
+**`~/Code/ossuminc/bin/riddlc` IS STALE — the most likely thing to mislead
+you.** It reports `2.0.0-rc.11` and is **15 commits behind HEAD**
+(`git describe` = `2.0.0-rc.11-15-g78b952723`). Proven functionally, not by
+label: `riddlc validate language/input/correlation.riddl` FAILS on it, listing
+the keywords it accepts, and `correlation` is not among them. Local ivy is at
+the same version, since publishLocal and staging are one operation. **Restage
+with `scripts/publish-and-stage.sh` before probing any 2.0 language behaviour**
+— a task file already in `task/` was written against this stale build.
 
-- CI green on `92a75e8e4`.
-- **`2.0.0-rc.11` is the published release**, tagged at `8c1dad05c`,
-  `prerelease=true`. Verified BY QUERY: 20/20 Maven coordinates present (4
-  retired modules absent), npm on the **`rc`** dist-tag with `latest` unmoved,
-  3 release assets, homebrew-tap touched only `Formula/riddlc-rc.rb` leaving
-  `riddlc.rb` on 1.31.0, blog suppressed.
-- **`~/Code/ossuminc/bin/riddlc` reports `2.0.0-rc.11`** and local ivy has all
-  20 modules at that version — both built FROM THE TAG in one sbt invocation, so
-  they cannot disagree. Confirmed functionally, not by label: the four fixtures
-  in the scratchpad exercise the streaming, cardinality, saga-`ask` and
-  emptiness changes.
-- **sbt is pinned to 2.0.6** (security). BAST `FORMAT_REVISION` is now **11**
-  (A70 raised it from 10). The rc.11 certification numbers this block used to
-  quote are superseded by the current ones above.
+**Nothing is in flight.** No half-finished change, no uncommitted work, no
+failing test. Work stopped at a clean, pushed, certified point.
 
-**Nothing is in flight in THIS repo.** No half-finished change, no uncommitted
-work, no failing test. The only thing not done is **pushing**.
+**`task/` — TWO files await triage. Do not assume they are handled.**
 
-**Next up.** Either push and let CI see the eight commits, or pick up BACKLOG
-§ 1 (the three remaining A70 rules). The first of those needs a DESIGN ANSWER
-before any code: A70 requires the yielded record to be "handled by the
-referenced Repository's handlers" but never says how a repository declares that
-it accepts a record, and repositories in the corpus are commonly `{ ??? }` — so
-a guessed shape would fire on correct models.
+- `2026-08-11-statement-scope-holes.md` — **arrived 16:46 DURING the last
+  session and was never triaged.** From ossum.tech: three missing
+  statement-scope rules (`set` / `get from state` accepted where there is no
+  state), each backed by a per-pair probe. Probed against rc.11.
+- `2026-08-04-security.md` — RBAC/`role` syntax, Issue #535, marked
+  *"Status: Draft (do not act on this)"*. Low priority.
 
-**Traps most likely to bite next. The rest are in CLAUDE.md § "Subtle Patterns
-and Gotchas"; every one below cost someone real time.**
+**Traps most likely to bite. The rest are in CLAUDE.md § "Subtle Patterns and
+Gotchas"; every one below cost someone real time.**
 
-- **A warm sbt server IGNORES a changed `sbt.version`**, warning only in a
-  passing `[warn] sbt version mismatch … use 'reboot'` line. `reload` does NOT
-  fix it. This certified an entire tree under the wrong sbt during the rc.11
-  cut. Run **`sbt -batch shutdown` then `show sbtVersion`** before trusting any
-  build, especially after a toolchain bump.
-- **`git status` prints paths RELATIVE TO CWD**, and this repo has TWO
-  `build.properties` — the root pin and a vestigial stub under
-  `language/src/test/scalajvm/python/project/`. A shell left in the python
-  directory after running the validators reports the wrong one. Use
-  `git -C <repo>` or absolute paths.
-- **`publishLocal` and restaging are ONE operation.** Use
-  `scripts/publish-and-stage.sh`: it refuses a dirty tree before sbt starts,
-  runs `reload; publishLocal; riddlc/stage` in one invocation, and checks the
-  staged version against `git describe` (including the at-a-tag case).
-- **Bumping `FORMAT_REVISION`? Regenerate `language/input/import/
-  NotImplemented.bast` FIRST**, and keep the last-revision binary until done —
-  `unbastify` on the OLD build is what recovers the fixture's source.
-- **A green `tJVM`/`tJS`/`tNative` says NOTHING about the Python grammar CI.**
-  Separate job; use `language/src/test/scalajvm/python/.venv/bin/python`, never
-  Homebrew python3.
+- **A new `Branch` AST node breaks three things with NO compile error** —
+  `Containment.of` (no fallback arm → runtime MatchError), `Pass.traverse`'s
+  generic `Branch` case (walks `contents` only, so statements held in FIELDS are
+  never visited/resolved), and `VisitingPass.open/closeContainer` (catch-all
+  `case _: Definition => ()`). See CLAUDE.md for the list.
+- **A warm sbt server IGNORES a changed `sbt.version`.** `sbt -batch shutdown`
+  then `show sbtVersion` before trusting a build.
 - **`sbt -batch` runs only the FIRST command argument**, and `test`/`tJVM`
   resolve to `testQuick`, which silently skips. One `;`-separated argument, and
   COUNT `Suites: completed` against the modules asked for (7 JVM / 5 JS / 7
-  Native).
-- **`~/Code/ossuminc/bin` is deliberately NOT on `$PATH`.** Bare `riddlc` is the
-  tap's older build.
-- **`parseAndValidate` defaults to `shouldFailOnErrors = true`** and DISCARDS
-  parse-time messages; assert deprecations via `parseInputWithMessages`.
+  Native). **Also do not pipe the run through `tail`** — it discards the earlier
+  modules' summaries and makes a two-module run look like one.
+- **A duplicated display label WILL drift.** `RangeType.kind` was lowered to
+  `range` and the error text did not change, because `AST.errorDescription` held
+  a second hardcoded copy. Grep for a second home before assuming one edit does it.
+- Also live, detail in CLAUDE.md: a `FORMAT_REVISION` bump needs
+  `NotImplemented.bast` regenerated (its source is now checked in beside it, so
+  it is just `riddlc bastify`); and a green `tJVM`/`tJS`/`tNative` says nothing
+  about the Python grammar CI, which is a separate job run from
+  `language/src/test/scalajvm/python/.venv/bin/python`.
 
-**A green run can certify nothing — three ways, all seen here.** testQuick
-skipping, the action cache surviving `clean`, and a warm sbt server running the
-wrong toolchain. Treat an exit code of 0 as evidence only when you know how much
-actually ran.
+**Certainty.** Everything in State was run this session. **Not verified: CI on
+HEAD** (still running). Treat every BACKLOG entry as a claim — one of them
+(saga-step statements) is flagged as probably already fixed by `a1bce0d50`, with
+the command that showed it.
 
-**Treat every plan and backlog entry as a claim, not a fact.** `~/.claude/plans/`
-holds stale files for shipped work (`zazzy-strolling-crane` among them). Test a
-plan's cheapest falsifiable number before executing it.
+**Run `/ossuminc-skills:check-tasks` in the new session** — there are two
+untriaged files and triage is the driver's call, not the handoff's.
 
-**Certainty.** Every line of the State block was produced by a command in this
-session. The one thing NOT verified: CI on `b23062717` itself, which is
-BACKLOG-only and had not finished.
-
-**`task/` holds 1 file, AWAITING TRIAGE — not triaged here, that is
-check-tasks' job:**
-- `2026-08-04-security.md` — Reid's RBAC draft, marked "do not act on this", and
-  he asked on 2026-08-10 that it not be reported on until he says otherwise.
-
-**Run `/ossuminc-skills:check-tasks` in the new session.**
 
 ## Incoming Tasks
 

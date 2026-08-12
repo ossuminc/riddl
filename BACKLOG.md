@@ -331,8 +331,20 @@ only because deleting it silently would invite the same wrong conclusion again.)
   (`GroupParser.scala:28`). The "3 pinned occurrences" are gone —
   `Root2JsonFixturesTest` reports `identical=91`, `lossy=0`, `divergent=0`, and
   the test carries no Comment allowance. No decision needed; nothing to do.
-- **Saga step statements are NEVER VALIDATED — not just reachability.** Filed as
-  "saga reachability", VERIFIED 2026-08-06 and it is materially worse than that.
+- **Saga step statements are NEVER VALIDATED — not just reachability.**
+  **⚠ LIKELY ALREADY FIXED — verify and close before doing any work here.**
+  Found 2026-08-11: `git log -S "case sagaStep: SagaStep =>" -- passes/…/Pass.scala`
+  gives **`a1bce0d50` (2026-08-07) "Traverse saga step statements, which were
+  never validated at all"** — one day AFTER this item was filed. `Pass.traverse`
+  now has a `SagaStep` case ahead of `case leaf: Leaf` that traverses
+  `doStatements`/`undoStatements`, which is exactly the root cause described
+  below. Re-run the repro before treating any of the following as true; if it is
+  green, delete this item and keep only the reachability question if that
+  survives. Not deleted outright because the entry has several sub-claims and
+  only the traversal one was checked.
+
+  Filed as "saga reachability", VERIFIED 2026-08-06 and it is materially worse
+  than that.
   **Promoted: this is a silent correctness hole, not a missing warning.**
 
   Repro, one file, both statements identical in shape:
