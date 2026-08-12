@@ -51,50 +51,6 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **BUG: `shapeForArity` reports `void` for a fan-in sink or a fan-out source.**
-  Found 2026-08-12 from a live synapify Domain Model Wizard run against
-  `~/Documents/vending-machine/vendingmachinecontrol`, where it was the LAST
-  remaining error and the repair loop would have "fixed" a correct model to
-  satisfy it.
-
-  `Processor.shapeForArity` (`AST.scala:1286`) defines `Sink` as exactly
-  `(0 outlets, 1 inlet)` and `Source` as exactly `(1, 0)`. So:
-
-  - `(0 outlets, 2 inlets)` falls to `case _ => Void` — a repository ascribed
-    `as sink` with two inlets is rejected as `void`
-  - `(2 outlets, 0 inlets)` likewise — a processor ascribed `as source` with two
-    outlets is rejected as `void`
-
-  Both reproduced directly. The catch-all's comment calls these "degenerate;
-  validated later"; they are not degenerate, they are ordinary fan-in and fan-out.
-
-  **Fix** — the table needs the general arms, ordered before the specific ones or
-  written to subsume them:
-
-  ```scala
-  case (0, 0)                     => Void
-  case (0, i) if i >= 1           => Sink      // any number of inlets
-  case (o, 0) if o >= 1           => Source    // any number of outlets
-  case (1, 1)                     => Flow
-  case (1, i) if i >= 2           => Merge
-  case (o, 1) if o >= 2           => Split
-  case (o, i) if o >= 2 && i >= 2 => Router
-  ```
-
-  Then the catch-all is genuinely unreachable and should THROW rather than return
-  `Void`, per the no-silent-fallthrough rule — returning a wrong shape is how this
-  surfaced as a confident, incorrect error message.
-
-  **Corpus A/B required**, and expect the delta to be NEGATIVE (errors
-  disappearing) — which is the direction that can hide something, so account for
-  every message that goes away. Also check `validateProcessorShape`
-  (`ValidationPass.scala:3098`), whose no-ascription branch SUGGESTS
-  `as ${arityShape.keyword}`: today it would advise `as void` for a fan-in sink,
-  so the same bug is emitting bad advice as well as bad errors.
-
-  Tests must cover both directions and both arities — `(0,2)` as sink, `(2,0)` as
-  source, plus the existing exact cases as controls.
-
 - **Connector intentions: `persistent` plus `at-least-once` | `at-most-once`.**
   Reid, 2026-08-07, while ruling on where persistence is valid. A connector's
   durability and delivery guarantee belong in the GRAMMAR as intentions, the way

@@ -1272,8 +1272,8 @@ object AST:
       inlets.filterNot(_.metadata.filter[OptionValue].exists(_.name == "error-sink"))
 
     /** The shape derived purely from arity (the counts of inlets and outlets), ignoring any
-      * ascribed shape. Degenerate arities fall back to [[Void]] rather than crashing; arity
-      * validation is performed by a later pass.
+      * ascribed shape. [[shapeForArity]] is TOTAL over non-negative arities, so there is no
+      * fallback and no arity this cannot name.
       */
     def arityShape: StreamletShape = shapeForArity(outlets.size, inlets.size)
 
@@ -1287,13 +1287,28 @@ object AST:
       val loc = this.loc
       (out, in) match
         case (0, 0)                     => Void(loc)
-        case (1, 0)                     => Source(loc)
-        case (0, 1)                     => Sink(loc)
+        // A SINK is any pure drain and a SOURCE any pure origin, whatever the port count (Reid,
+        // 2026-08-12). Both used to be pinned to exactly one port, which left `(0, >=2)` and
+        // `(>=2, 0)` -- an ordinary fan-in drain and fan-out origin -- with no shape at all. They
+        // fell to a catch-all returning Void, so `repository R as sink` with two inlets was
+        // rejected with "its arity is void": a confident, wrong diagnosis for a correct model.
+        // A31 already says fan-in/out is modelled by declaring MULTIPLE ports, so these arities
+        // were always meant to be expressible.
+        case (0, i) if i >= 1           => Sink(loc)
+        case (o, 0) if o >= 1           => Source(loc)
         case (1, 1)                     => Flow(loc)
-        case (o, i) if o >= 2 && i >= 2 => Router(loc)
-        case (o, 1) if o >= 2           => Split(loc)
         case (1, i) if i >= 2           => Merge(loc)
-        case _                          => Void(loc) // degenerate; validated later
+        case (o, 1) if o >= 2           => Split(loc)
+        case (o, i) if o >= 2 && i >= 2 => Router(loc)
+        // TOTAL over non-negative arities -- every (out, in) is named above, so this arm is
+        // reachable only for a negative count, which a `.size` cannot produce. It THROWS rather
+        // than returning a shape, because returning one is exactly how the old catch-all turned a
+        // gap in the vocabulary into a wrong answer that validation then reported as fact.
+        case (o, i) =>
+          throw new IllegalStateException(
+            s"shapeForArity received a negative arity ($o outlets, $i inlets); port counts come " +
+              "from collection sizes and cannot be negative"
+          )
       end match
     }
 

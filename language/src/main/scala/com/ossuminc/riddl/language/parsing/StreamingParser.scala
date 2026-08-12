@@ -142,11 +142,13 @@ private[parsing] trait StreamingParser {
   private val MaxStreamlets = 100
 
   def source[u: P]: P[Streamlet] = {
-    streamletTemplate(Keyword.source, minOutlets = 1, maxOutlets = 1)
+    // A source may publish on SEVERAL outlets (Reid, 2026-08-12); see AST.shapeForArity.
+    streamletTemplate(Keyword.source, minOutlets = 1, maxOutlets = MaxStreamlets)
   }
 
   def sink[u: P]: P[Streamlet] = {
-    streamletTemplate(Keyword.sink, minInlets = 1, maxInlets = 1)
+    // A sink may drain SEVERAL inlets (Reid, 2026-08-12); see AST.shapeForArity.
+    streamletTemplate(Keyword.sink, minInlets = 1, maxInlets = MaxStreamlets)
   }
 
   def flow[u: P]: P[Streamlet] = {

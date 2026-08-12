@@ -128,6 +128,46 @@ delegates to `format`, so there is one source of truth and it cannot drift
 again. The JSON discriminator is still `"Range"` and is deliberately NOT tied to
 either: it is a wire format, hardcoded at both the read and write sites.
 
+## Two implementations agreeing is not evidence they are right (2026-08-12)
+
+`repository MachineRegistry as sink` with two inlets and no outlets was rejected:
+*"its arity (0 outlets, 2 inlets) is void"*. The model was correct; riddlc was
+wrong. Found not by the corpus but by a **synapify Domain Model Wizard run** —
+the last remaining error in a generated model, which the repair loop would have
+"fixed" by damaging something valid.
+
+**The vocabulary had a hole and a catch-all hid it.** `shapeForArity` named
+`sink` as exactly `(0, 1)` and `source` as exactly `(1, 0)`, so `(0, >=2)` and
+`(>=2, 0)` — an ordinary fan-in drain and fan-out origin — matched no arm and
+fell to `case _ => Void`. A gap in the shape vocabulary became a confident wrong
+answer that validation then reported as fact.
+
+**The comment promised a safety net that did not exist.** It read *"degenerate
+arities fall back to Void rather than crashing; arity validation is performed by
+a later pass"*. There is no later pass: `validateProcessorShape` IS the check,
+and it consumes `arityShape`, so it inherited the wrong value. When a fallback
+says "someone else will catch this", find the someone else before believing it.
+
+**What made it invisible for so long: the parser enforced the same restriction
+independently.** `streamletTemplate(Keyword.sink, maxInlets = 1)` and the
+`(0, 1)` arm agreed with each other, so nothing looked inconsistent. But they
+were not two checks confirming a rule — they were **two encodings of the same
+assumption**, and agreement between them carried no information. Meanwhile A31's
+own comment said the opposite: *"fan-in/out is modeled by declaring MULTIPLE
+ports"*.
+
+**The corpus could not have found it.** riddl-models is written against riddlc,
+so nobody wrote a fan-in sink — it would have errored. A restriction that is
+wrong makes its own counter-examples unwritable, which is exactly the class of
+defect only a CONSUMER generating fresh models can surface. Both of today's real
+finds came from consumers (riddlg's `when invariant X` crash, synapify's fan-in
+sink); the corpus found neither.
+
+Reid widened both shapes: a SINK is any pure drain and a SOURCE any pure origin,
+whatever the port count. `shapeForArity` is now **total over non-negative
+arities** and its final arm THROWS, because returning a plausible shape is
+precisely how the old one turned a gap into a lie.
+
 ## I predicted the direction of a corpus change, and was wrong by 1120 (2026-08-12)
 
 Two checks reported the same defect in different words: the pre-existing #17

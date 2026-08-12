@@ -1069,6 +1069,32 @@ validation — resolution and type-checking — in `checkStatementScopes`.
 
 ### Validation Specifics
 
+- **The stream-shape arity table is TOTAL, and `sink`/`source` take ANY port
+  count** (Reid, 2026-08-12). `Processor.shapeForArity` maps every non-negative
+  `(outlets, inlets)`:
+
+  | shape | outlets | inlets |
+  |---|---|---|
+  | `void` | 0 | 0 |
+  | `sink` | 0 | **≥1** |
+  | `source` | **≥1** | 0 |
+  | `flow` | 1 | 1 |
+  | `merge` | 1 | ≥2 |
+  | `split` | ≥2 | 1 |
+  | `router` | ≥2 | ≥2 |
+
+  `sink` and `source` were pinned to exactly one port until 2026-08-12, which
+  left `(0, ≥2)` and `(≥2, 0)` unnamed; they fell to a catch-all returning
+  `Void`, so `repository R as sink` with two inlets was rejected as "its arity is
+  void". **The final arm now THROWS** — it is reachable only for a negative
+  count — because returning a plausible shape is how the gap became a confident
+  wrong diagnosis that `validateProcessorShape` reported as fact.
+  **Two places encode this and both must move together:** the table above, and
+  the parser's per-shape `minInlets`/`maxInlets`/`minOutlets`/`maxOutlets` in
+  `StreamingParser` (`sink R` and `repository R as sink` must agree about what a
+  sink is). Their prior agreement was not corroboration — it was one assumption
+  written twice.
+
 - **`external context Foo` is an INTENTION, not `option external` — test both.**
   `Context.intention: Option[Intention]` (Application/External/Gateway/Service)
   is set by the keyword form `external context Foo is {…}`, which is what
