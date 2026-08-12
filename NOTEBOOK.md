@@ -134,6 +134,46 @@ delegates to `format`, so there is one source of truth and it cannot drift
 again. The JSON discriminator is still `"Range"` and is deliberately NOT tied to
 either: it is a wire format, hardcoded at both the read and write sites.
 
+## The corpus was arguing with itself, and the warning was wrong (2026-08-12)
+
+Three statement-scope holes from ossum.tech: `set` accepted in a context handler
+and a saga step, `get from state` accepted in a saga step and outside the owning
+entity. All four re-probed live before any work — they still held.
+
+**Measuring the corpus reframed the task.** It was filed as three keyword bans,
+with an acceptance criterion braced for fallout "as the `as type T` tightening
+did (202 errors across 186 of 187)". Measured: `set` in a context handler **0**,
+in a saga step **0**, `get from state` anywhere **0**. The two rules that looked
+expensive were free.
+
+**What was NOT free was the rule nobody proposed.** `set` appeared 97 times in
+REPOSITORY handlers, which would have made "set belongs to entities" break real
+models. Reid knew why: riddl-models added them to silence *"contains only prompt
+statements"*. The corpus was not evidence that repositories write state — it was
+evidence that a riddlc warning was wrong, laundered through a workaround into
+something that looked like usage. **When the corpus contradicts a rule you
+believe, check whether an earlier diagnostic taught it to.**
+
+So the fix was two-sided and had to land together: exempt repositories from the
+warning (their on-clauses legitimately hold one `do` standing in for SQL), and
+only then ban `set` there. Landing the ban alone would have re-created exactly
+the pressure that produced the workaround. The warning also stopped saying
+`prompt` — `do` is the canonical spelling, so it had been telling authors to look
+for something their models did not contain.
+
+**The corpus A/B is the part worth keeping.** Before: 884 messages, 0 errors.
+After the riddlc change: 884 + exactly 97 errors, every other line byte-identical
+once sorted (the first diff looked alarming and was pure output ordering). After
+deleting the 97 workaround lines from riddl-models: **884 again, byte-identical
+once line numbers are stripped**. Three measurements, each predicting the next.
+The corpus test went 189/189 with `pendingModels` still `Set.empty`.
+
+**A trap for the next scope rule.** `checkStatementScopes` is NOT the hook it
+looks like — it is wired only to on-clauses and function bodies, never saga
+steps, which is precisely why hole 2 existed. `validateStatement` is the one
+every statement reaches, and for a saga step `parents.head` is the **Saga**,
+because a SagaStep is a Leaf that `Pass.traverse` deliberately never pushes.
+
 ## A rule that could not be written told us the grammar was wrong (2026-08-12)
 
 A70's last three rules are built, and the first of them changed the language

@@ -68,7 +68,7 @@ class ReplyIsExecutableTest extends AbstractValidatingTest {
        |""".stripMargin
 
   private val noExecutable = "has no executable statements"
-  private val promptOnly = "contains only prompt statements"
+  private val promptOnly = "contains only 'do' statements"
 
   "a handler whose only statement is a `reply`" should {
     "classify as Executable, not Empty" in { (td: TestData) =>

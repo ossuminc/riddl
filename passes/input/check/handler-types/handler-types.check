@@ -1,7 +1,4 @@
 passes/input/check/handler-types/handler-types.riddl(12:7->27):
- Handler 'EventHandler' in Repository 'EventRepo' contains only prompt statements; executable statements (tell, send, morph, set, etc.) are needed:
-       handler EventHandler is {
-passes/input/check/handler-types/handler-types.riddl(12:7->27):
  Handler 'EventHandler' in Repository 'EventRepo' handles events; repositories typically handle commands and queries, not events:
        handler EventHandler is {
 passes/input/check/handler-types/handler-types.riddl(21:5->29):
@@ -14,7 +11,7 @@ passes/input/check/handler-types/handler-types.riddl(22:7->24):
  Record 'ProjRecord' is unused:
        record ProjRecord is { field1: String }
 passes/input/check/handler-types/handler-types.riddl(23:7->31):
- Handler 'EventProjHandler' in Projector 'EventProjector' contains only prompt statements; executable statements (tell, send, morph, set, etc.) are needed:
+ Handler 'EventProjHandler' in Projector 'EventProjector' contains only 'do' statements; executable statements (tell, send, morph, set, etc.) are needed:
        handler EventProjHandler is {
 passes/input/check/handler-types/handler-types.riddl(4:5->24):
  Command 'SomeCommand' is unused:

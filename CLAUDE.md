@@ -1069,6 +1069,44 @@ validation — resolution and type-checking — in `checkStatementScopes`.
 
 ### Validation Specifics
 
+- **Statement scope: `set` and `get from state` need something that OWNS state**
+  (Reid, 2026-08-12). `set` is legal only in an **Entity** (which owns its
+  `State`) or a **Projector** (which owns the read-model record its folds build —
+  A70 REQUIRES it). It is an Error in a Context (§3.5: state lives in contained
+  entities/repositories/projectors, "never in the Context itself"), a Saga (§9.5:
+  a saga's state is housekeeping with "no domain-specific value"), a Repository,
+  an Adaptor and the streamlets. A **Function** is deliberately not reported here
+  — A26 already rejects `set` at the keyword, and a second message would
+  double-report.
+  **A Repository is banned despite the corpus appearing to disagree.** 97 `set`s
+  across reactive-bbq and two pattern templates were added to silence *"contains
+  only prompt statements"* — evidence about that warning, not about what a
+  repository does. The warning now **exempts repositories** (most of their
+  on-clauses legitimately hold one `do` standing in for SQL) and says **`do`**,
+  not `prompt` (`do` is canonical; `prompt` is the deprecated synonym, and
+  `prompt(…)` with parens is a VALUE). Do not re-admit `set` in a repository
+  without re-reading that ruling — the two halves must move together.
+  `get from state` is legal only inside the entity that OWNS the state: outside
+  any entity there is nothing to read (and in a saga step this is the rule the
+  `ask` ban already states, which reading state directly would otherwise bypass),
+  and inside a *different* entity it crosses §4.6's encapsulation rule. That
+  second half is why the whole rule lives in **validation, not the parser** — it
+  needs the resolved `State` and its owner. **`get from input` is untouched**:
+  `GetValue.source` is `InputRef | StateRef`, and inputs are confined to
+  application contexts indirectly, because A41 pins UI groups there, so an
+  `input` reference outside one has nothing to resolve against. Giving it a
+  dedicated message was considered and REJECTED (2026-08-12) — but know the
+  tradeoff that accepts: what the author actually sees is the GENERIC
+  *"Path 'Screen.NameField' was not resolved"* (verified, not assumed), **not**
+  A41's message, which fires on a misplaced group declaration rather than on this.
+  It is correct and it is unhelpful. Revisit if it confuses anyone in practice;
+  the reason to leave it is that `get from input` outside an application context
+  is nearly always a symptom of a missing group, which A41 does report well.
+  Hooked in `validateStatement`, which every statement reaches WITH its parents —
+  including saga-step statements, whose `parents.head` is the **Saga** (a SagaStep
+  is a Leaf and is never pushed; see `Pass.traverse`). Note `checkStatementScopes`
+  is NOT that hook: it is wired only to on-clauses and function bodies.
+
 - **`???` is a body that says "known to be incomplete" — validation must EXEMPT
   it** (Reid's ruling, 2026-08-11). Any definition whose body is `???` earns at
   most a **Missing** warning saying the body should be provided. Every other

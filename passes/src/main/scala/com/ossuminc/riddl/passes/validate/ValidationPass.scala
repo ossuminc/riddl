@@ -265,14 +265,24 @@ case class ValidationPass(
               suggestion =
                 "Add executable statements (tell, send, set, morph, become, reply) to the handler's on-clauses."
             )
-          case BehaviorCategory.PromptOnly =>
+          // A REPOSITORY is exempt (Reid, 2026-08-12). Most of a repository's on-clauses legitimately
+          // hold a single `do` standing in for the SQL that will implement them -- naming the
+          // persistence step IS the modelling, and there is no further executable statement to add.
+          // Nagging them had a real cost: reactive-bbq added 97 `set` statements to repository
+          // handlers purely to silence this, which is what made `set` look like something a
+          // repository does. Do not reinstate this without also un-banning `set` there.
+          case BehaviorCategory.PromptOnly if !hc.parent.isInstanceOf[Repository] =>
             messages.addCompleteness(
               hc.handler.errorLoc,
-              s"${hc.handler.identify} in ${hc.parent.identify} contains only prompt statements; " +
+              // `do`, NOT `prompt`. `do` is the canonical spelling and `prompt` is a deprecated
+              // synonym, so naming `prompt` sent authors looking for something their model does not
+              // contain. (`prompt(…)` with parens is a VALUE, a different thing again.)
+              s"${hc.handler.identify} in ${hc.parent.identify} contains only 'do' statements; " +
                 "executable statements (tell, send, morph, set, etc.) are needed",
               suggestion =
-                "Add executable statements (tell, send, set, morph) alongside the 'prompt' statements so the handler does real work."
+                "Add executable statements (tell, send, set, morph) alongside the 'do' statements so the handler does real work."
             )
+          case BehaviorCategory.PromptOnly => () // a Repository: see above
           case BehaviorCategory.Executable => ()
         }
       }
@@ -841,11 +851,95 @@ case class ValidationPass(
     case mr: MessageRef => mr.pathId
     case c: Constructor => c.ref.pathId
 
+  /** A statement that WRITES state is legal only where the container owns state (Reid, 2026-08-12).
+    *
+    * An [[AST.Entity]] owns its [[AST.State]]; a [[AST.Projector]] owns the read-model record its
+    * folds build, and A70's correlations REQUIRE `set` there. Everything else owns nothing:
+    * Computational Model §3.5 puts a Context's state in its contained entities, repositories and
+    * projectors "never in the Context itself", and §9.5 says a saga's state is housekeeping with
+    * "no domain-specific value".
+    *
+    * A REPOSITORY is banned despite 97 uses across reactive-bbq. Those were added to silence
+    * "contains only prompt statements", which is a riddlc defect now fixed by exempting
+    * repositories from that warning — so they are evidence about the warning, not about what a
+    * repository does. Do not re-admit `set` here without re-reading that ruling.
+    *
+    * A [[AST.Function]] is deliberately not reported: A26 already rejects `set` in a function body
+    * at the keyword, so a second message here would double-report the same mistake.
+    */
+  private def checkSetScope(ss: SetStatement, parents: Parents): Unit =
+    enclosingWriteScope(parents) match
+      case Some(_: Entity) | Some(_: Projector) => () // owns the data being written
+      case Some(_: Function)                    => () // A26 already rejected it at the keyword
+      case Some(owner) =>
+        messages.addError(
+          ss.loc,
+          s"'set' is not allowed in ${owner.identify}, which owns no state to write",
+          suggestion = owner match
+            case _: Saga =>
+              "A saga coordinates by sending commands; 'tell' the command to the entity that owns " +
+                "the state, so the step's compensation can reverse it."
+            case _: Context =>
+              "State lives in a context's entities, repositories and projectors, never in the " +
+                "context itself; move the 'set' into the entity's handler."
+            case _: Repository =>
+              "A repository's on-clause describes persistence — a 'do' statement standing in for " +
+                "the storage operation is the modelling, and needs no 'set'."
+            case _ =>
+              "Move the 'set' into the handler of the entity that owns the state."
+        )
+      case None => () // no enclosing processor at all; nothing meaningful to say
+  end checkSetScope
+
+  /** A70/§4.6: `get from state` reads an entity's state directly, so it is legal ONLY inside the
+    * entity that owns that state.
+    *
+    * Two distinct wrongs, one rule. Outside any entity there is no state to read — and in a saga
+    * step this is the rule the `ask` ban already states (§9.5: a saga must not depend on dynamic
+    * state), which reading state directly would otherwise bypass by spelling it differently.
+    * Inside a DIFFERENT entity it crosses §4.6's encapsulation rule: an entity's data "is 100%
+    * encapsulated by the entity and acted upon only by the entity's handlers", so only a message
+    * may cross that boundary.
+    *
+    * The second half is why this rule cannot live in the parser: it needs the resolved [[AST.State]]
+    * and its owner, neither of which exists at parse time.
+    */
+  private def checkStateReadScope(statement: Statement, parents: Parents): Unit =
+    val reads = statementValues(statement).flatMap(stateReadsIn)
+    if reads.nonEmpty then
+      val enclosingEntity: Option[Entity] = parents.collectFirst { case e: Entity => e }
+      reads.foreach { (gv, sr) =>
+        enclosingEntity match
+          case None =>
+            messages.addError(
+              gv.loc,
+              s"'${gv.format}' is not allowed here; state may be read only inside the entity that " +
+                "owns it",
+              suggestion = "Send a message to the entity that owns the state and let its handler " +
+                "reply, rather than reading the state directly."
+            )
+          case Some(entity) =>
+            resolution.refMap.definitionOf[State](sr.pathId).foreach { state =>
+              if !symbols.parentsOf(state).exists(_ eq entity) then
+                messages.addError(
+                  gv.loc,
+                  s"'${gv.format}' reads ${state.identify}, which ${entity.identify} does not own; " +
+                    "an entity's state is encapsulated by that entity",
+                  suggestion = s"Send a message to the entity owning ${state.identify} and let its " +
+                    "handler reply, rather than reading its state directly."
+                )
+            }
+      }
+  end checkStateReadScope
+
   private def validateStatement(
     statement: Statement,
     parents: Parents
   ): Unit =
     val onClause: Branch[?] = parents.head
+    // Scope rules that apply to EVERY statement kind, checked before the per-kind match so a new
+    // statement carrying a value cannot skip them.
+    checkStateReadScope(statement, parents)
     statement match
       case PromptStatement(loc, what) =>
         checkNonEmptyValue(
@@ -865,7 +959,8 @@ case class ValidationPass(
           MissingWarning,
           required = true
         )
-      case SetStatement(loc, field, value) =>
+      case ss @ SetStatement(loc, field, value) =>
+        checkSetScope(ss, parents)
         field match
           case fr: FieldRef => checkRef[Field](fr, parents)
           case sr: StateRef => checkRef[State](sr, parents)
@@ -4449,6 +4544,58 @@ case class ValidationPass(
     * a new value kind that can CONTAIN an ask must fail the build here, not quietly hide one
     * inside a saga.
     */
+  /** Every `get from state` embedded in a value expression, at any depth.
+    *
+    * `get from input` is deliberately EXCLUDED: reading a UI input is not a state read, and it is
+    * already confined to application contexts indirectly (A41 pins UI groups there, so the
+    * reference cannot resolve elsewhere). [[AST.GetValue.source]] separates the two cleanly.
+    *
+    * Enumerated over the same arms as `asksIn` and for the same reason: a new value kind that can
+    * CONTAIN a state read must fail the build here rather than quietly hide one.
+    */
+  private def stateReadsIn(v: RiddlValue): Seq[(GetValue, StateRef)] = v match
+    case gv: GetValue =>
+      gv.source match
+        case sr: StateRef => Seq(gv -> sr)
+        case _: InputRef  => Seq.empty
+    case call: Call               => call.args.toSeq.flatMap(a => stateReadsIn(a.value))
+    case c: Constructor           => c.args.toSeq.flatMap(a => stateReadsIn(a.value))
+    case le: LogicalExpression    => stateReadsIn(le.left) ++ stateReadsIn(le.right)
+    case ne: NotExpression        => stateReadsIn(ne.expr)
+    case ce: ComparisonExpression => stateReadsIn(ce.left) ++ stateReadsIn(ce.right)
+    // An `ask` holds only a QueryRef and a ProcessorRef -- no nested value -- so it cannot contain
+    // a state read. (A saga's `ask` is separately banned outright; see `asksIn`.)
+    case _: Ask                   => Seq.empty
+    case _: Reference[?]          => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
+    case other =>
+      throw new IllegalStateException(
+        s"stateReadsIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
+          "decide whether it can contain a 'get from state' rather than assuming it cannot"
+      )
+  end stateReadsIn
+
+  /** The definition whose data a `set` in this statement position would write — the INNERMOST
+    * enclosing processor, since `parents` runs innermost-first.
+    *
+    * A `State`'s handlers resolve to the enclosing [[AST.Entity]], and a [[AST.Correlation]]'s
+    * folds to the enclosing [[AST.Projector]], which is what makes both legal without a special
+    * case. [[AST.Function]] is listed so a function body reports as a Function rather than falling
+    * through to whatever contains it — though `set` never reaches here from one, since A26 rejects
+    * it at the keyword (`StatementParser.setStatements`).
+    */
+  private def enclosingWriteScope(parents: Parents): Option[Definition] =
+    parents.collectFirst {
+      case e: Entity     => e
+      case p: Projector  => p
+      case r: Repository => r
+      case s: Saga       => s
+      case a: Adaptor    => a
+      case st: Streamlet => st
+      case f: Function   => f
+      case c: Context    => c
+    }
+
   private def asksIn(v: RiddlValue): Seq[Ask] = v match
     case ask: Ask                 => Seq(ask)
     case call: Call               => call.args.toSeq.flatMap(a => asksIn(a.value))

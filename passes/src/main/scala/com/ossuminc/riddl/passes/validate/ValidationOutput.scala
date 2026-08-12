@@ -19,7 +19,12 @@ enum BehaviorCategory:
     */
   case Executable
 
-  /** Handler contains only prompt statements (natural language descriptions of intended behavior)
+  /** Handler contains only `do` statements (natural language descriptions of intended behavior).
+    *
+    * The NAME predates the `do`/`prompt` split: `do` is the canonical spelling and `prompt` is a
+    * deprecated synonym for the same [[com.ossuminc.riddl.language.AST.PromptStatement]]. It is
+    * kept as `PromptOnly` because this enum is public API and the compatibility policy is to add
+    * rather than change; the diagnostic it drives says `do`.
     */
   case PromptOnly
 

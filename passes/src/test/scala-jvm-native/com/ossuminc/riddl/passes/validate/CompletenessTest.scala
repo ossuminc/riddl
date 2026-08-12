@@ -405,7 +405,7 @@ class CompletenessTest extends AbstractValidatingTest {
         val cw = completenessWarnings(msgs)
         cw.exists(
           _.message.contains(
-            "contains only prompt statements"
+            "contains only 'do' statements"
           )
         ) mustBe true
       }
