@@ -1257,6 +1257,28 @@ case class ValidationPass(
   private def checkInvariantScope(i: Invariant, parents: Parents): Unit =
     val enclosingEntity = parents.collectFirst { case e: Entity => e }
     val inState = parents.exists(_.isInstanceOf[State])
+
+    // Reid's ruling, 2026-08-11: overloading an invariant name is a WARNING, and the INNERMOST
+    // declaration takes precedence. Under §15.2's implicit application an entity-level invariant
+    // already applies inside every state, so a state-level one of the same name is a deliberate
+    // narrowing often enough to be legal -- but silently shadowing a CHECK is the failure mode
+    // this whole area exists to remove, so it must be said out loud.
+    //
+    // `Entity.invariants` descends only the provenance wrappers, never a State, so this compares
+    // entity-level declarations against a state-level one and cannot match `i` against itself.
+    if inState then
+      enclosingEntity.foreach { entity =>
+        entity.invariants.find(_.id.value == i.id.value).foreach { outer =>
+          messages.addWarning(
+            i.errorLoc,
+            s"${i.identify} shadows ${outer.identify} declared on ${entity.identify}; the " +
+              s"innermost declaration takes precedence inside this state",
+            suggestion = s"Rename one of them if both were meant to apply, or drop the outer one " +
+              s"if the state-level '${i.id.value}' is the only rule you want here."
+          )
+        }
+      }
+    end if
     i.requires match
       case Some(_: StateRef) if enclosingEntity.isEmpty =>
         messages.addError(
@@ -2373,8 +2395,40 @@ case class ValidationPass(
     // correlation-only projector, so each is skipped when correlations are present rather than
     // deleted: a projector WITHOUT correlations is validated exactly as before.
     val hasCorrelations = projector.correlations.nonEmpty
+
+    // Reid's ruling, 2026-08-11: a projector's record is the type it SENDS to its repository --
+    // `tell command RecordOrder to repository Store` -- and WHERE that type is defined does not
+    // affect whether the requirement is met. The old check only ever inspected `projector.types`,
+    // so a correct 1-for-1 event->command translator was rejected for not declaring a record it
+    // would never use. It was asking the wrong question, not asking too much.
+    val repositoriesOf: Seq[Repository] =
+      projector.repositories.flatMap(rr => resolution.refMap.definitionOf[Repository](rr.pathId))
+
+    val sentToRepository: Seq[(Type, Repository, Statement)] =
+      val found = scala.collection.mutable.ListBuffer.empty[(Type, Repository, Statement)]
+      projector.handlers.foreach { handler =>
+        handler.clauses.foreach { clause =>
+          walkStatements(clause.contents) {
+            case ts: TellStatement =>
+              resolution.refMap
+                .definitionOf[Repository](ts.processorRef.pathId)
+                .filter(repo => repositoriesOf.exists(_ eq repo))
+                .foreach { repo =>
+                  val sentType = ts.msg match
+                    case mr: MessageRef => resolution.refMap.definitionOf[Type](mr.pathId)
+                    case c: Constructor => resolution.refMap.definitionOf[Type](c.ref.pathId)
+                    case _: ValueRef    => None // type comes from the clause; not a declaration here
+                  sentType.foreach(t => found += ((t, repo, ts)))
+                }
+            case _ => ()
+          }
+        }
+      }
+      found.toSeq
+    end sentToRepository
+
     check(
-      hasCorrelations || projector.types.exists { (typ: Type) =>
+      hasCorrelations || sentToRepository.nonEmpty || projector.types.exists { (typ: Type) =>
         typ.typEx match {
           case auc: AggregateUseCaseTypeExpression =>
             auc.usecase == AggregateUseCase.RecordCase
@@ -2384,9 +2438,24 @@ case class ValidationPass(
       s"${projector.identify} lacks a required ${AggregateUseCase.RecordCase.useCase} definition.",
       Messages.Error,
       projector.errorLoc,
-      suggestion =
-        s"Add a record type to ${projector.identify}, e.g. 'type ${projector.id.value}Record = record { ??? }'."
+      suggestion = s"Send a message to ${projector.identify}'s repository (e.g. 'tell command " +
+        s"SomeCommand to repository R'), or add a record type to ${projector.identify}."
     )
+
+    // WHERE the sent type lives is a Warning, not an Error: the type is what populates the
+    // database, so it belongs WITH the repository even though defining it elsewhere works.
+    // A `???` repository is exempt -- `???` says "known to be incomplete", so it earns a Missing
+    // warning about its body and nothing else (Reid, 2026-08-11).
+    sentToRepository.foreach { (typ, repo, stmt) =>
+      if repo.nonEmpty && !symbols.parentsOf(typ).exists(_ eq repo) then
+        messages.addWarning(
+          stmt.loc,
+          s"${typ.identify} populates ${repo.identify} but is not defined in it",
+          suggestion = s"Move ${typ.identify} into ${repo.identify}, so the data that populates " +
+            s"the repository is associated with it."
+        )
+      end if
+    }
     check(
       if hasCorrelations then projector.handlers.length <= 1 else projector.handlers.length == 1,
       s"${projector.identify} must have exactly one Handler but has ${projector.handlers.length}",

@@ -218,6 +218,61 @@ class CorrelationTest extends AbstractValidatingTest {
       errorsFor(translator, "projector-no-correlation") must be("")
     }
 
+    "accept a translator whose record is only the type it sends to the repository" in {
+      (td: TestData) =>
+        // Reid's ruling, 2026-08-11: the projector's record is the type it SENDS -- here the
+        // command `RecordOrder` going to `repository Store` -- and it does NOT have to be declared
+        // inside the projector. This model previously drew "lacks a required Record definition".
+        // `RecordOrder` IS defined inside Store, so the placement Warning must stay silent.
+        val src =
+          """domain D is {
+            |  context C is {
+            |    event OrderPlaced is { orderId: String } with { briefly "e" }
+            |    repository Store is {
+            |      command RecordOrder is { orderId: String } with { briefly "cm" }
+            |      handler S is { on command RecordOrder is { do "store it" } }
+            |    } with { briefly "store" }
+            |    projector Translate is {
+            |      updates repository Store
+            |      handler T is {
+            |        on event OrderPlaced is { tell command Store.RecordOrder to repository Store }
+            |      } with { briefly "h" }
+            |    } with { briefly "p" }
+            |  } with { briefly "c" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val msgs = diagnostics(src, "translator-record-in-repo")
+        msgs.justErrors.map(_.message).mkString("\n") must be("")
+        msgs.map(_.message).mkString("\n") must not(include("is not defined in it"))
+    }
+
+    "warn when the type populating the repository is defined elsewhere" in { (td: TestData) =>
+      // Same model, but the command lives in the context rather than in the repository. That is
+      // legal -- hence a Warning, not an Error -- but the data that populates the database ought
+      // to be associated with the repository.
+      val src =
+        """domain D is {
+          |  context C is {
+          |    event OrderPlaced is { orderId: String } with { briefly "e" }
+          |    command RecordOrder is { orderId: String } with { briefly "cm" }
+          |    repository Store is {
+          |      handler S is { on command RecordOrder is { do "store it" } }
+          |    } with { briefly "store" }
+          |    projector Translate is {
+          |      updates repository Store
+          |      handler T is {
+          |        on event OrderPlaced is { tell command RecordOrder to repository Store }
+          |      } with { briefly "h" }
+          |    } with { briefly "p" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val msgs = diagnostics(src, "translator-record-outside-repo")
+      msgs.justErrors.map(_.message).mkString("\n") must be("")
+      msgs.map(_.message).mkString("\n") must include("populates")
+      msgs.map(_.message).mkString("\n") must include("is not defined in it")
+    }
+
     "reject a key component missing from a handled event" in { (td: TestData) =>
       // §6.6 makes the key the distribution key, so an event without it could not be routed to the
       // instance holding that tuple's partial in the first place.

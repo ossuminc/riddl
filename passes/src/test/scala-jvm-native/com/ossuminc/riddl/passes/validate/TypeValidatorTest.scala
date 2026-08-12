@@ -155,7 +155,7 @@ class TypeValidatorTest extends AbstractValidatingTest {
             r.typEx.isInstanceOf[Replica] must be(true)
             r.typEx.asInstanceOf[Replica].format must be("replica of Integer")
             rng.typEx.isInstanceOf[RangeType] must be(true)
-            rng.typEx.asInstanceOf[RangeType].format must be("Range(23,42)")
+            rng.typEx.asInstanceOf[RangeType].format must be("range(23,42)")
             c.typEx.isInstanceOf[AggregateUseCaseTypeExpression] must be(true)
             c.typEx.asInstanceOf[AggregateUseCaseTypeExpression].format must be(
               "command { int: Integer, str: String }"

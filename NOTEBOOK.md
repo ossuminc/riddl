@@ -126,6 +126,42 @@ to the task file and note the disposition below.
 ---
 
 
+## Four rulings, and a label with two homes (2026-08-11)
+
+Reid ruled on a batch of open items; four are built and out of BACKLOG.
+
+**A projector's record is what it SENDS.** "Projector X lacks a required Record
+definition" fired on a correct 1-for-1 event→command translator. The check only
+ever inspected `projector.types`, so it was asking the wrong question rather
+than asking too much. It now discovers the type from the `tell` statement
+targeting the repository, and **where that type is defined does not affect
+whether the requirement is met** — that is a separate Warning: *"T populates R
+but is not defined in it"*, because the data that populates the database
+belongs with the repository. Warning, not Error: defining it elsewhere works.
+
+**`???` is a body that says "don't expect much", so validation must EXEMPT it.**
+Reid's ruling, and it is general rather than a carve-out for one check: any
+definition with a `???` body earns at most a Missing warning about the body and
+skips every other rule. The practical form is that a check must not reason from
+what a `???` body does NOT contain — `repository R is { ??? }` is not missing
+its handlers, it is unwritten, and a rule that fires on it fires on nearly every
+stub in the corpus. Now in CLAUDE.md § "Validation Specifics" because it
+constrains every check anyone adds.
+
+**Invariant shadowing is a Warning, innermost wins.** Legal, because narrowing a
+rule inside one state is a real intent — but silently shadowing a CHECK is the
+failure mode the implicit-invariant work exists to remove, so it is said out
+loud. It lives in `checkInvariantScope`, which already has the parent chain.
+
+**A display label that lived in two places drifted, exactly as you'd expect.**
+`RangeType.kind` was `"Range"` while the only parseable spelling is
+`range(2,4)`. Lowering `kind` did NOT fix the error text, because
+`AST.errorDescription` held a SECOND hardcoded copy — `case RangeType(_, min,
+max) => s"Range($min,$max)"`. The test caught it. `errorDescription` now
+delegates to `format`, so there is one source of truth and it cannot drift
+again. The JSON discriminator is still `"Range"` and is deliberately NOT tied to
+either: it is a wire format, hardcoded at both the read and write sites.
+
 ## Correlations, and a design fixed by deleting the question (2026-08-11)
 
 A70 built: `correlation <id> by <keys> yields record <T> is { <handler> }

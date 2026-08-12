@@ -2506,7 +2506,17 @@ object AST:
   @JSExportTopLevel("RangeType")
   case class RangeType(loc: At, min: Long, max: Long) extends IntegerTypeExpression {
     override def format: String = s"$kind($min,$max)"
-    inline override def kind: String = "Range"
+
+    /** Lower case so `format` yields `range(2,4)` — the ONLY spelling that parses, and the one
+      * `PrettifyPass` already emits. It was `"Range"`, so `AST.errorDescription` printed
+      * `Range(2,4)`: before 2.0 that at least matched a reserved name, and after it matched
+      * nothing, so error text named a form no author could have written.
+      *
+      * This is a DISPLAY label only. The JSON discriminator is the string literal `"Range"`,
+      * hardcoded at both ends (`JsonModel.scala` read `:1384` / write `:1476`) rather than derived
+      * from here, and it is a WIRE FORMAT that must NOT move with this.
+      */
+    inline override def kind: String = "range"
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
@@ -5965,7 +5975,10 @@ object AST:
         s"Reference to entity ${entity.format}"
       case p: Pattern              => p.format
       case Decimal(_, whl, frac)   => s"Decimal($whl,$frac)"
-      case RangeType(_, min, max)  => s"Range($min,$max)"
+      // Delegated rather than re-spelled: this line held a SECOND copy of the label, which is how
+      // it kept saying `Range(2,4)` after `RangeType.kind` was lowered to the spelling that
+      // actually parses. One source of truth means it cannot drift again.
+      case rt: RangeType           => rt.format
       case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
       case m @ AggregateUseCaseTypeExpression(_, messageKind, _, _) =>
         s"${messageKind.useCase} of ${m.fields.size} fields and ${m.methods.size} methods"

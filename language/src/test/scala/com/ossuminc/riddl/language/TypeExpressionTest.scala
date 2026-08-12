@@ -220,10 +220,13 @@ class TypeExpressionTest extends AbstractTestingBasis {
       range.isContainer mustBe false
       // A LITERAL, not `PredefType.Range`, which no longer exists: capitalized `Range` was dropped
       // from the predefined-type tables in 2.0 (the writable spelling is lowercase `range(n,m)`).
-      // `RangeType.kind` is a display label used by `errorDescription`, not a parseable name.
-      range.kind mustBe "Range"
-      AST.errorDescription(range) mustBe "Range(2,4)"
-      range.format mustBe "Range(2,4)"
+      // `RangeType.kind` is a display label used by `errorDescription`. It is LOWER CASE so it
+      // matches the only spelling that parses -- it was "Range", which before 2.0 at least matched
+      // a reserved name and after it matched nothing. The JSON discriminator is still "Range" and
+      // is deliberately NOT tied to this (JsonModel read :1384 / write :1476).
+      range.kind mustBe "range"
+      AST.errorDescription(range) mustBe "range(2,4)"
+      range.format mustBe "range(2,4)"
     }
     "support String" in {
       string.kind mustBe PredefType.String
@@ -319,7 +322,7 @@ class TypeExpressionTest extends AbstractTestingBasis {
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
         "number: Number, real: Real, temperature: Temperature, time: Time, " +
         "timestamp: TimeStamp, url: URL(\"https\"), uuid: UUID, " +
-        "pattern: Pattern(\"^$\"), range: Range(2,4), string: String(42,), " +
+        "pattern: Pattern(\"^$\"), range: range(2,4), string: String(42,), " +
         "id: Id(a.b) }"
       aggregation.isEmpty mustBe false
       aggregation.isContainer mustBe true
@@ -362,7 +365,7 @@ class TypeExpressionTest extends AbstractTestingBasis {
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
         "number: Number, real: Real, temperature: Temperature, time: Time, " +
         "timestamp: TimeStamp, url: URL(\"https\"), uuid: UUID, " +
-        "pattern: Pattern(\"^$\"), range: Range(2,4), string: String(42,), " +
+        "pattern: Pattern(\"^$\"), range: range(2,4), string: String(42,), " +
         "id: Id(a.b) }"
       message.isEmpty mustBe false
       message.isContainer mustBe true

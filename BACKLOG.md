@@ -93,45 +93,10 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   duration test; the effect ban binds FOLDS only and `CorrelationTest` pins
   both sides of that line.
 
-- **Fix "Projector X lacks a required Record definition" — it looks in the
-  wrong place.** A PRE-EXISTING Error, untouched by A70, surfaced by Reid's
-  question about correlation-free projectors and then RULED ON (2026-08-11).
-  Verified by probe, not inferred: a projector that only translates events to
-  commands 1-for-1 — `projector Translate is { updates repository Store;
-  handler T is { on event OrderPlaced is { tell command RecordOrder to
-  repository Store } } }` — is rejected, though the model is correct.
-
-  **Reid's ruling:** the projector's record IS `RecordOrder`, the thing being
-  sent to `repository Store`. It does not have to be declared inside the
-  projector; **it needs to be defined on the Repository, or in the same
-  Context.** The current check
-  (`ValidationPass.scala`, `projector.types.exists(… RecordCase …)`) only ever
-  looks at the projector's OWN `types`, which is why a correct translator is
-  rejected — it is asking the wrong question, not asking too much.
-
-  So: widen it to look for the sent command/record on the referenced repository
-  or in the enclosing context, rather than dropping it. Two things to respect
-  while doing so — a `???` repository is exempt (see the item above and
-  CLAUDE.md § "Validation Specifics"), and correlating projectors already
-  bypass this check since they name their target with `yields record`.
-  `CorrelationTest` pins the WITH-record translator as valid, which will stay
-  true either way; add the record-LESS translator as a case when this is fixed.
-
 *(The "missing `isEmpty` overrides" item filed here on 2026-08-10 was based on a
 WRONG diagnosis and is gone — the defaults were correct and the bug was in two
 callers. Fixed; the durable rule is in CLAUDE.md § "Emptiness". Kept as a note
 only because deleting it silently would invite the same wrong conclusion again.)*
-
-- **Delete the vestigial `language/src/test/scalajvm/python/project/`.** It holds
-  exactly one tracked file, `build.properties`, and nothing else — no
-  `build.sbt`, no sources. Its only effect is to pin an sbt version for anyone
-  who runs sbt inside the Python validator directory, which nothing does. It sat
-  at 2.0.0 while the root was on 2.0.2, and was bumped to 2.0.6 at `8c1dad05c`
-  only so it would not pin a vulnerable sbt. Verify nothing reads it, then
-  delete the directory. Trivial, but it is a trap: `git status` paths are
-  relative to cwd, so a shell left in that directory reports it as
-  `project/build.properties` and it reads as the ROOT pin. That cost real time
-  during the rc.11 cut.
 
 - **Connector intentions: `persistent` plus `at-least-once` | `at-most-once`.**
   Reid, 2026-08-07, while ruling on where persistence is valid. A connector's
@@ -223,10 +188,23 @@ only because deleting it silently would invite the same wrong conclusion again.)
 
   So `originates` (`StreamingValidation.scala`) asks "is this Source-shaped?"
   when the useful question may be "does this have no inbound edge in the
-  graph?". Changing it is a semantics call about what a pipeline's origin IS,
-  which is why it was not folded into the fix. Related hole in the arity
-  mapping: `shapeForArity` sends (out ≥ 2, in = 0) to `Void` as degenerate, so
-  a multi-outlet, no-inlet processor is neither a Source nor reported.
+  graph?". Related hole in the arity mapping: `shapeForArity` sends
+  (out ≥ 2, in = 0) to `Void` as degenerate, so a multi-outlet, no-inlet
+  processor is neither a Source nor reported.
+
+  **Reid ruled 2026-08-11: a head must be OUTLET-shaped, not `Source`-shaped.**
+  Any outlet whose type matches the Connector's will do, and the processor may
+  have MORE outlets besides — which is exactly what `Source`-shaped rules out
+  and why reactive-bbq trips today. So `originates` becomes "has an outlet of
+  the connector's type", not "is a Source".
+
+  He also asked a question this item must answer before the change lands:
+  *"sink with no upstream source probably means no connector connected?"* —
+  i.e. whether the two reported repositories are genuinely UNWIRED (no
+  connector reaching them at all), in which case the message is right and only
+  its WORDING is wrong, or wired-but-not-from-a-`Source`, in which case the
+  rule is wrong. **Determine which before writing code** — they need opposite
+  fixes, and the corpus is the evidence.
 
 - **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10, syntax his
   suggestion. Wants a plan. Filed out of the `foreach`-over-a-mapping question:
@@ -435,20 +413,6 @@ only because deleting it silently would invite the same wrong conclusion again.)
   3. **Drop `Unknown`.** Nothing behind it — no AST node, no parser rule, just
      the reservation and a tokenizer entry.
 
-- **`RangeType.kind` is `"Range"`, a spelling that now parses as nothing.**
-  Filed 2026-08-07 out of `f41cf399f`, deliberately not fixed there: it is a
-  display label, not a type name, so changing it exceeded "drop Range".
-  `AST.scala:2471` has `kind = "Range"` and `format = s"$kind($min,$max)"`, so
-  `AST.errorDescription` prints `Range(2,4)` while the only writable spelling is
-  lowercase `range(2,4)` — which is also what PrettifyPass emits
-  (`RiddlFileEmitter:358` hardcodes it). Before 2.0 the capitalized form at
-  least matched a reserved name; now it matches nothing. **Cheap but not
-  zero-risk:** no `.check` golden references it (verified, count 0), but
-  `"Range"` is ALSO the JSON DTO discriminator at `JsonModel.scala:1345,1437`
-  and appears in `JsonInputTest:129,446,550` — those are a wire format and must
-  NOT move with the display label. Needs Reid's ruling: align the label to
-  `range(n,m)`, or leave it and accept that error text shows a non-spelling.
-
 - **`TypeParserTest` has never run on Native.** Found 2026-08-07 while checking
   where new tests executed. It is `abstract class TypeParserTest` with concrete
   subclasses ONLY in `language/src/test/scalajvm/.../JVMTests.scala:22` and
@@ -460,38 +424,18 @@ only because deleting it silently would invite the same wrong conclusion again.)
   large parser suite on a platform that has never run it, and this repo's own
   history says to expect findings on a first run. Worth checking whether other
   `language` suites have the same gap; the audit is the task, not the one-liner.
-- **Rule on same-named invariants at entity and state scope.** With implicit
-  application (§15.2) an entity-level `invariant X` and a state-level
-  `invariant X` both apply inside that state. Nothing special-cases it today —
-  ordinary duplicate-name rules apply. My recommendation in the approved plan
-  was Error rather than shadowing, on the grounds that silently shadowing a
-  CHECK is the failure mode the whole implicit-invariant change exists to
-  remove. Not built, and not urgent; needs Reid's ruling first.
 - **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
-- **Tell consumers about two BREAKING changes landed 2026-08-10.** Nothing has
-  been sent; flagged to Reid, who has not yet said to send it. Both affect any
-  repo pinning riddl as a library, and neither is announced by a version bump
-  they would notice (still `2.0.0-rc.10-*`).
-
-  1. **BAST `FORMAT_REVISION` is now 10.** Every `.bast` written by an earlier
-     build is REJECTED outright, with a message telling the reader to
-     regenerate. Consumers holding cached `.bast` files (riddl-gen, synapify)
-     must regenerate rather than debug the rejection. This repo's own fixture
-     needed exactly that — see the trap in NOTEBOOK § HANDOFF about keeping a
-     last-revision binary to `unbastify` with.
-  2. **A mapping's VALUE type is now resolved** (`b307909b5`). A model with
-     `mapping from K to Nonexistent` used to validate CLEAN and now errors.
-     riddl-models is 189/189 so nothing observed is affected, but this is a
-     validation TIGHTENING, not an addition, and a consumer with an
-     unresolvable mapping value type will see a new Error.
-
-  Also worth including, as it changes what parses rather than what validates:
-  `foreach k, v in <mapping>` is now required for mappings (one name is an
-  Error), and `foreach` accepts dotted collection paths.
-
+- ~~**Tell consumers about two BREAKING changes landed 2026-08-10.**~~
+  **CLOSED 2026-08-11 by Reid: no announcement needed**, for either half.
+  Recorded so it is not re-raised: (1) BAST `FORMAT_REVISION`, now **11**, so
+  every `.bast` from an earlier build is rejected with a message telling the
+  reader to regenerate; (2) a mapping's VALUE type is now resolved
+  (`b307909b5`), so `mapping from K to Nonexistent` used to validate clean and
+  now errors. The second needed no ruling on BEHAVIOUR at any point — it is a
+  correct tightening — only on whether to notify, which is what is now closed.
 
 - ~~Restage `~/Code/ossuminc/bin/riddlc`~~ — **DONE 2026-08-07.** Now
   `2.0.0-rc.10-28-a355e52a`, matching HEAD at the time. It is the NATIVE binary

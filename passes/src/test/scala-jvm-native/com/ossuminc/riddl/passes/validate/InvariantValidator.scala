@@ -76,6 +76,29 @@ class InvariantValidator extends AbstractValidatingTest {
         assert(msgs.justErrors.isEmpty, s"unexpected errors:\n${msgs.format}")
       }
     }
+    "warn when a state invariant shadows an entity one of the same name" in { (td: TestData) =>
+      // Reid's ruling, 2026-08-11: overloading an invariant name is legal -- the innermost
+      // declaration takes precedence -- but silently shadowing a CHECK is the failure mode the
+      // implicit-invariant work exists to remove, so it is said out loud.
+      parseAndValidateInContext[AST.Entity]("""
+                                              |entity user is {
+                                              | type Data is { x: Integer } with { briefly "d" }
+                                              | invariant positive is "true" with { briefly "outer" }
+                                              | state S of record user.Data is {
+                                              |   invariant positive is "true" with { briefly "inner" }
+                                              |   handler H is { on other is { do "n" } }
+                                              | } with { briefly "s" }
+                                              |} with { briefly "e" }
+                                              |""".stripMargin) { (_, _, msgs) =>
+        val text = msgs.map(_.message).mkString("\n")
+        assert(text.contains("shadows"), s"expected a shadowing warning, got:\n${msgs.format}")
+        assert(
+          text.contains("innermost declaration takes precedence"),
+          s"the warning must state which one wins:\n${msgs.format}"
+        )
+        assert(msgs.justErrors.isEmpty, s"shadowing is a warning, not an error:\n${msgs.format}")
+      }
+    }
     "allow arbitrary conditional" in { (td: TestData) =>
       parseAndValidateInContext[AST.Entity]("""
                                               |entity user is {
