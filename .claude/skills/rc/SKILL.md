@@ -138,16 +138,16 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2229** | 7 |
+| JVM | **2230** | 7 |
 | JS | **712** | 5 |
-| Native | **1519** | 7 |
+| Native | **1520** | 7 |
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks
 reality; never lower them to make a run pass. A number below the floor is a
 skipping bug to find, not a threshold to adjust.
 
-**Raised at 2.0.0-rc.13** (2225 / 712 / 1515 at rc.12; 1846 / 674 / 1339 at rc.10). These are
+**Raised 2026-08-12, post-rc.12** (2229 / 712 / 1519 earlier the same day; 2225 / 712 / 1515 at rc.12; 1846 / 674 / 1339 at rc.10). These are
 LOCAL `testOnly *` totals, measured under a throwaway `--sbt-cache`. Local
 totals differ from CI's because platform-specific suites vary, so compare CI
 against CI and local against local.
