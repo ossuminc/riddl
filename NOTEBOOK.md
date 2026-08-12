@@ -14,77 +14,71 @@ would get wrong.
 **State — every line produced by a command in the session that wrote it
 (2026-08-12):**
 
-- Branch `release/2`, **clean, 0 unpushed, 0 behind**, HEAD `78b952723`.
-- **CI on HEAD was still RUNNING when this was written** — unverified. The
-  commit below it (`Record two rulings…`) is green, and the last full run
-  checked job-by-job was green on all five jobs (dependency-check,
-  ebnf-grammar-validation, scala-build JVM/JS/Native). **Check `gh run list`
-  first.**
-- **Correlations in projectors (A70) are BUILT.** Syntax, resolution, all four
-  reflectivity surfaces (prettify, BAST **revision 11**, JSON), and **six of
-  eight** validation rules. The remaining two Warnings and one Error are in
-  BACKLOG § 1 with their designs settled.
-- Certified from `clean` under sbt 2.0.6 (verified by `shutdown` then `show
-  sbtVersion`), zero failures: **JVM 2201 → 1013 in `passes` after later
-  additions**, **JS 711**, **Native 1496**. Each delta over the rc.11 actuals
-  (2177 / 704 / 1473) equals exactly the tests added for that platform — that
-  arithmetic is better evidence than "0 failures" that nothing was skipped.
-- Grammar: TatSu zero unexpected failures (incl. `language/input/correlation.riddl`),
-  GBNF regenerated (315 rules) and fresh, riddl-examples 9/9.
+- Branch `release/2`, **clean, 0 unpushed**, HEAD `6ccc0bf64`, tagged
+  **`2.0.0-rc.12`** and published as a GitHub **prerelease**.
+- **CI green on `0f06d85d9`**, all five jobs, checked job-by-job. The one commit
+  above it is `.claude/**` prose, which the `/rc` skill states does not
+  invalidate a green run.
+- **`~/Code/ossuminc/bin/riddlc` is CURRENT at `2.0.0-rc.12`**, and local ivy
+  matches it (one `scripts/publish-and-stage.sh` run — the two must never
+  disagree). Verified by BEHAVIOUR, not by version string: it rejects all four
+  statement-scope probes and validates reactive-bbq with 0 errors.
+- Certified from clean under a **throwaway `--sbt-cache`**, which is the part
+  that matters: `clean` alone leaves sbt 2's shared action cache serving prior
+  results, and that is what had hidden a failing `riddlc` module for most of a
+  session. **JVM 2225, JS 712, Native 1515**, 19/19 module summaries, 0
+  failures, `No tests to run` = 0. Floors in the `/rc` skill raised to match.
+- All 11 Maven coordinates published from the TAG; npm went out `with tag rc`;
+  homebrew-tap touched only `Formula/riddlc-rc.rb`; `notify-blog` **skipped**.
+- Grammar: TatSu zero unexpected failures, GBNF fresh, riddl-examples 9/9,
+  riddl-models 189/189.
 
-**`~/Code/ossuminc/bin/riddlc` IS STALE — the most likely thing to mislead
-you.** It reports `2.0.0-rc.11` and is **15 commits behind HEAD**
-(`git describe` = `2.0.0-rc.11-15-g78b952723`). Proven functionally, not by
-label: `riddlc validate language/input/correlation.riddl` FAILS on it, listing
-the keywords it accepts, and `correlation` is not among them. Local ivy is at
-the same version, since publishLocal and staging are one operation. **Restage
-with `scripts/publish-and-stage.sh` before probing any 2.0 language behaviour**
-— a task file already in `task/` was written against this stale build.
+**What shipped in rc.12 — both are TIGHTENINGS that reject rc.11-valid models.**
 
-**Nothing is in flight.** No half-finished change, no uncommitted work, no
-failing test. Work stopped at a clean, pushed, certified point.
+- **A70 is complete.** `correlation … yields` now names a **COMMAND**, not a
+  record (a projector's only output is a repository change, and a repository is
+  changed by handling a command). BAST `FORMAT_REVISION` is **12**.
+- **`set` and `get from state` now require a container that owns state.** `set`
+  is legal only in an Entity or a Projector; `get from state` only inside the
+  entity that owns it.
 
-**`task/` — TWO files await triage. Do not assume they are handled.**
+**The trap most likely to bite: the repository warning and the repository `set`
+ban are ONE change and must stay together.** riddl-models and riddl-examples had
+126 `set` statements in repository handlers that existed *only* to silence
+riddlc's "contains only prompt statements". That warning now exempts
+repositories. Re-admitting `set` there without restoring the warning — or the
+reverse — re-creates exactly the problem. See CLAUDE.md § "Validation Specifics".
 
-- `2026-08-11-statement-scope-holes.md` — **arrived 16:46 DURING the last
-  session and was never triaged.** From ossum.tech: three missing
-  statement-scope rules (`set` / `get from state` accepted where there is no
-  state), each backed by a per-pair probe. Probed against rc.11.
-- `2026-08-04-security.md` — RBAC/`role` syntax, Issue #535, marked
-  *"Status: Draft (do not act on this)"*. Low priority.
+**Sibling repos are migrated and pushed** — riddl-models (97 sites removed) and
+riddl-examples (29 sites; 25 became `do` statements because the `set` was the
+clause's only statement and deleting it is a parse error). Both were fixed HERE
+with Reid's approval rather than via task files, because riddl's own gates
+validate them.
 
-**Traps most likely to bite. The rest are in CLAUDE.md § "Subtle Patterns and
-Gotchas"; every one below cost someone real time.**
+**Other traps, all of which cost real time; the rest are in CLAUDE.md.**
 
+- **A green suite proves nothing about how much of it ran.** `clean` does not
+  clear the action cache; `test`/`tJVM` resolve to `testQuick`; `sbt -batch`
+  runs only the FIRST command argument. Count `Suites: completed` against 7 JVM
+  / 5 JS / 7 Native, and reconcile the per-row DELTA — a suite in
+  `scala-jvm-native` moves JVM and Native but not JS, and an abstract suite with
+  runners only in `JVMTests`/`JSTests` moves JVM and JS but not Native.
+- **`clean` deletes the staged riddlc.** A probe run afterwards reports "0
+  errors" from a binary that does not exist, because `grep -c` counts zero
+  happily. Re-stage before believing any probe.
 - **A new `Branch` AST node breaks three things with NO compile error** —
-  `Containment.of` (no fallback arm → runtime MatchError), `Pass.traverse`'s
-  generic `Branch` case (walks `contents` only, so statements held in FIELDS are
-  never visited/resolved), and `VisitingPass.open/closeContainer` (catch-all
-  `case _: Definition => ()`). See CLAUDE.md for the list.
-- **A warm sbt server IGNORES a changed `sbt.version`.** `sbt -batch shutdown`
-  then `show sbtVersion` before trusting a build.
-- **`sbt -batch` runs only the FIRST command argument**, and `test`/`tJVM`
-  resolve to `testQuick`, which silently skips. One `;`-separated argument, and
-  COUNT `Suites: completed` against the modules asked for (7 JVM / 5 JS / 7
-  Native). **Also do not pipe the run through `tail`** — it discards the earlier
-  modules' summaries and makes a two-module run look like one.
-- **A duplicated display label WILL drift.** `RangeType.kind` was lowered to
-  `range` and the error text did not change, because `AST.errorDescription` held
-  a second hardcoded copy. Grep for a second home before assuming one edit does it.
-- Also live, detail in CLAUDE.md: a `FORMAT_REVISION` bump needs
-  `NotImplemented.bast` regenerated (its source is now checked in beside it, so
-  it is just `riddlc bastify`); and a green `tJVM`/`tJS`/`tNative` says nothing
-  about the Python grammar CI, which is a separate job run from
-  `language/src/test/scalajvm/python/.venv/bin/python`.
+  `Containment.of`, `Pass.traverse`'s generic `Branch` case (walks `contents`
+  only, so FIELD-held statements are never visited), and
+  `VisitingPass.open/closeContainer`.
+- **A warm sbt server IGNORES a changed `sbt.version`.** `shutdown`, then
+  `show sbtVersion`.
 
-**Certainty.** Everything in State was run this session. **Not verified: CI on
-HEAD** (still running). Treat every BACKLOG entry as a claim — one of them
-(saga-step statements) is flagged as probably already fixed by `a1bce0d50`, with
-the command that showed it.
+**Certainty.** Everything in State was run this session. Nothing is in flight;
+work stopped at a clean, tagged, published point.
 
-**Run `/ossuminc-skills:check-tasks` in the new session** — there are two
-untriaged files and triage is the driver's call, not the handoff's.
-
+**Run `/ossuminc-skills:check-tasks` in the new session.** `task/` holds one
+file, `2026-08-04-security.md`, still marked *"Draft (do not act on this)"* —
+triage is the driver's call, not the handoff's.
 
 ## Incoming Tasks
 
