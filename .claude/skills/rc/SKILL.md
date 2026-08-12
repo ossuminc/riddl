@@ -138,18 +138,26 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **1846** | 7 |
-| JS | **674** | 5 |
-| Native | **1339** | 7 |
+| JVM | **2225** | 7 |
+| JS | **712** | 5 |
+| Native | **1515** | 7 |
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks
 reality; never lower them to make a run pass. A number below the floor is a
 skipping bug to find, not a threshold to adjust.
 
-Set as of 2.0.0-rc.10. Local `testOnly *` totals differ from CI's because
-platform-specific suites vary, so compare CI against CI and local against
-local.
+**Raised at 2.0.0-rc.12** (from 1846 / 674 / 1339, set at rc.10). These are
+LOCAL `testOnly *` totals, measured under a throwaway `--sbt-cache`. Local
+totals differ from CI's because platform-specific suites vary, so compare CI
+against CI and local against local.
+
+**A delta that does not reconcile is the signal, not the total.** At rc.12 the
+same 11 new cases moved JVM and Native by +11 and JS by **0** — correct,
+because the suite lives in `src/test/scala-jvm-native`. Work out what each row
+SHOULD move by before running, and treat a mismatch as a skipping bug. The
+reverse trap is just as real: a suite in `src/test/scala` that is abstract with
+concrete runners only in `JVMTests`/`JSTests` moves JVM and JS but not Native.
 
 **The Native floor went DOWN at rc.10 (1624 → 1339), and that is not a softened
 gate.** It is the one case the "never lower" rule does not cover: the metric
