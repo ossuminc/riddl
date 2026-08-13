@@ -62,6 +62,24 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **BUG (shipped in rc.13): statement-scope checks miss nested statements.**
+  Found 2026-08-13 by a code review of unrelated work. `checkStateReadScope` is
+  wired into `validateStatement`, which only sees statements the pass dispatcher
+  visits. `Statement extends RiddlValue`, NOT `Branch`, so `Pass.traverse`'s
+  final `case value: RiddlValue` arm never descends into
+  `WhenStatement.thenStatements`, `MatchCase.statements` or
+  `ForeachStatement.doStatements` — those are FIELDS, the same hazard
+  `Pass.scala:311-326` (SagaStep) and `:329-340` (Correlation) each needed a
+  special case for. `statementValues` does not recurse either.
+  **So the `set` and `get from state` scope rules from `0f06d85d9` silently do
+  not apply inside `when` / `match` / `foreach`.** A `set` in a context handler
+  is an Error at statement top level and accepted one `when` deeper.
+  The depth-complete hook already exists and is the fix: `checkStatementScopes`
+  (`ValidationPass.scala:5967`) recurses at `:6026` and `:6040` and calls
+  `validateValue` at any depth. Move the check there, keeping ONE call site.
+  Needs a corpus A/B — this can only ADD messages, and the models that were
+  silently passing may be numerous.
+
 - **Processor instance identity — DESIGNED 2026-08-13, ready to plan.**
   Spec: `docs/superpowers/specs/
   2026-08-13-processor-instance-identity-design.md`.
