@@ -156,4 +156,22 @@ domain Values is {
       }
     }
   }
+  // `self` -- the running processor instance -- and `self.<field>` on its synthesized record.
+  // `self` MUST precede value_ref in the grammar (it is not a definition keyword), so this
+  // exercises that ordering as well as the field access and the indirect `let x = self; x.id` form.
+  context Identity is {
+    command Go is { why: String }
+    record R is { total: Integer }
+    entity Order is {
+      state S of record R
+      handler H is {
+        on command Go {
+          let mine = self.id
+          let v = self.version
+          let me = self
+          let mineToo = me.id
+        }
+      }
+    }
+  }
 }

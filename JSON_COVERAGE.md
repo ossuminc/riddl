@@ -188,6 +188,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | ComparisonExpression | ✅ A28 | `{ "value": "comparison", "op": "=="\|..., "left": <value>, "right": <value> }` |
 | LogicalExpression | ✅ A28 | `{ "value": "logical", "op": "and"\|"or", "left": <value>, "right": <value> }` |
 | NotExpression | ✅ A28 | `{ "value": "not", "expr": <value> }` |
+| SelfValue | ✅ 2.0 | `{ "value": "self", "field"?: "id"\|"version" }` — the running processor instance. The type is a SYNTHESIZED Aggregation (see `AST.SelfValue`), so nothing here names a path |
 
 ## Metadata
 

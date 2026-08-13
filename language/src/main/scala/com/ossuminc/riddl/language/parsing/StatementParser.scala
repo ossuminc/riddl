@@ -580,6 +580,7 @@ private[parsing] trait StatementParser {
         (Punctuation.roundOpen ~ booleanExpr ~ Punctuation.roundClose) |
         getValue.map(gv => gv: Value) |
         invariantCondition.map(ic => ic: Value) |
+        selfValue.map(sv => sv: Value) | // before valueRef: `self` is a keyword, not a path
         valueRef.map(vr => vr: Value)
     )
   }
@@ -641,6 +642,18 @@ private[parsing] trait StatementParser {
       Index ~ Keywords.get ~/ from ~/ (inputRef.map(ir => ir: InputRef | StateRef) |
         stateRef.map(sr => sr: InputRef | StateRef)) ~/ Index
     )./.map { case (start, source, end) => GetValue(at(start, end), source) }
+  }
+
+  // `self` -- the running processor instance. `self.id` is parsed as ONE value rather than as a
+  // path walk, because the anchor is a keyword and not a name in scope; the FIELD then types
+  // through the synthesized aggregation, which is what lets `let me = self; me.id` work.
+  // MUST precede `valueRef` in `booleanAtom`: `self` is not a `definitionKeywords` entry, so
+  // `valueRef`'s permissive bare-path parser would otherwise happily consume it as an ordinary
+  // identifier.
+  private def selfValue[u: P]: P[SelfValue] = {
+    P(
+      Index ~ Keywords.self ~ (Punctuation.dot ~ identifier).? ~ Index
+    )./.map { case (start, field, end) => SelfValue(at(start, end), field) }
   }
 
   // A54: a bare path identifier naming a value in scope. Resolved to a let-local, message field,

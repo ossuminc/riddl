@@ -814,7 +814,8 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression | Call | Ask | Requires | Returns | InvariantBlock
+    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Requires | Returns |
+    InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -2979,7 +2980,7 @@ object AST:
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
-      Ask
+      Ask | SelfValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -3094,6 +3095,41 @@ object AST:
     override def kind: String = "Ask"
     def format: String = s"ask ${query.format} of ${processor.format}"
   end Ask
+
+  /** `self` -- the currently executing processor instance, and `self.<field>` on it.
+    *
+    * Its TYPE is a synthesized [[Aggregation]] rather than a bespoke node. That is deliberate
+    * and load-bearing: because the type is an ordinary record, `let me = self` followed by
+    * `me.id` resolves through the SAME `ValueRef` path walk every other value uses, so no
+    * resolution rule anywhere needs to know `self` exists.
+    *
+    * The type cannot be user-nameable -- `self.id` is `Id(Order)` in an Order handler and
+    * `Id(Shipping)` in a Shipping one -- so `let me: T = self` has no `T` to write, and `self`
+    * itself is not assignable into a message field. Pass `self.id`.
+    */
+  @JSExportTopLevel("SelfValue")
+  case class SelfValue(loc: At, field: Option[Identifier] = None) extends RiddlValue:
+    override def kind: String = "Self"
+    def format: String = s"self${field.map("." + _.format).getOrElse("")}"
+  end SelfValue
+
+  object SelfValue:
+    /** The CLOSED set of fields. Adding one is a language change, not a detail: see the
+      * admission principle in the design spec -- `self` carries what cannot be known
+      * statically, which is why `version` is here and `isClustered` is not.
+      */
+    val fieldNames: Seq[String] = Seq("id", "version")
+
+    /** The synthesized record type of `self` within `p`. */
+    def aggregation(p: Processor[?], path: PathIdentifier): Aggregation =
+      Aggregation(
+        At.empty,
+        Contents(
+          Field(At.empty, Identifier(At.empty, "id"), UniqueId(At.empty, path)),
+          Field(At.empty, Identifier(At.empty, "version"), String_(At.empty))
+        )
+      )
+  end SelfValue
 
   /** A54: a reference to a named value in scope. Resolved (at validation time) from one of four
     * sources: a `let`-bound local, a field of the handled on-clause message, a field of the

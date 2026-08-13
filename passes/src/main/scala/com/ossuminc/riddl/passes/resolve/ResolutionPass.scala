@@ -463,6 +463,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         gv.source match
           case ir: InputRef => associateUsage[Input](parents.head, resolveARef[Input](ir, parents))
           case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
+      // `self`/`self.<field>` names no PathIdentifier -- it is a keyword, not a reference -- so
+      // there is nothing here for the resolver to resolve. Its type is synthesized entirely in
+      // ValidationPass (see SelfValue.aggregation), which is the whole point of the design: no
+      // resolution rule needs to know `self` exists.
+      case _: SelfValue => ()
       case ic: InvariantCondition =>
         // `when invariant X [with <expr>]` — resolve the named invariant, and the handed value if
         // there is one. Without this the reference would sit unresolved and validation could only

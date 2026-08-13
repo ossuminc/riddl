@@ -840,6 +840,12 @@ object JsonModel:
   case class InvariantConditionDto(invariant: String, argument: Option[ValueDto] = None)
       extends ValueDto
 
+  /** `{ "value": "self", "field"?: "id"|"version" }` — the running processor instance, and
+    * `self.<field>` on it. The type is synthesized (see `AST.SelfValue`), so nothing here names a
+    * path.
+    */
+  case class SelfValueDto(field: Option[String] = None) extends ValueDto
+
   /** `{ "name"?: "<field>", "value": <value> }` — a positional or named constructor argument. */
   case class ConstructorArgDto(name: Option[String], value: ValueDto)
 
@@ -1641,6 +1647,7 @@ object JsonModel:
         CallValueDto(m("function").str, args)
       case "ask" =>
         AskValueDto(m("query").str, m("processor").str, m("processorKind").str)
+      case "self" => SelfValueDto(m.get("field").map(_.str))
       case other => throw new IllegalArgumentException(s"Unknown value kind: '$other'")
   end readValueObj
 
@@ -1717,6 +1724,11 @@ object JsonModel:
                 ++ Seq("value" -> (writeValue(a.value): ujson.Value))
             )
           })
+        )
+      case SelfValueDto(field) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("value" -> ujson.Str("self"))
+            ++ field.map(f => "field" -> (ujson.Str(f): ujson.Value))
         )
   end writeValue
 

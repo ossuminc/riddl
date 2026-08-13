@@ -932,6 +932,98 @@ case class ValidationPass(
       }
   end checkStateReadScope
 
+  /** The innermost enclosing [[Processor]], the same "instance" `self` names.
+    *
+    * `Function` is a TERMINATING case, not merely absent from the match -- mirroring
+    * `enclosingWriteScope`'s exact pattern. A25's `call function F(...)` carries no processor
+    * operand, so a pure function has no bound instance even when it is lexically nested inside a
+    * Context/Entity (A24 functions commonly are, for organization). Without this, `collectFirst`
+    * would walk PAST the Function to the enclosing Context and let `self` leak in from a scope the
+    * function is not part of. A Saga needs no such case: the CM calls a saga step "a phase of a
+    * saga execution instance" rather than an instance in its own right, and the grammar never
+    * nests a Saga inside a Processor, so `self` inside one already falls through to `None`
+    * naturally.
+    */
+  private def enclosingProcessorOf(parents: Parents): Option[Processor[?]] =
+    parents
+      .collectFirst {
+        case p: Processor[?] => Some(p)
+        case _: Function      => None
+      }
+      .flatten
+
+  /** The fully-qualified [[PathIdentifier]] naming `p`, in the natural root-to-leaf written order
+    * (`Dom.Ctx.Order`). [[SymbolsOutput.pathOf]] returns the SAME chain leaf-to-root (it is a
+    * symbol-table lookup key, not a path to render), so it is reversed here. No prior caller
+    * needed to build a path FROM a definition -- every other [[PathIdentifier]] in the codebase is
+    * either parsed from source or split from a dotted string -- so this is written fresh for
+    * [[SelfValue.aggregation]]'s synthesized `Id(...)` field.
+    */
+  private def pathOf(p: Processor[?]): PathIdentifier =
+    PathIdentifier(At.empty, symbols.pathOf(p).reverse)
+
+  /** `self` is legal only where a Processor encloses it, and only `id`/`version` exist on it.
+    *
+    * A Saga is NOT a Processor -- the CM calls a saga step "a phase of a saga execution
+    * instance" rather than an instance -- so `self` there is an Error naming that reason
+    * rather than silently resolving to the enclosing context.
+    */
+  private def checkSelfValues(statement: Statement, parents: Parents): Unit =
+    val enclosing: Option[Processor[?]] = enclosingProcessorOf(parents)
+    statementValues(statement).foreach { v =>
+      selfValuesIn(v).foreach { sv =>
+        enclosing match
+          case None =>
+            messages.addError(
+              sv.loc,
+              "'self' names the running processor instance, so it is only meaningful inside a " +
+                "processor (context, entity, projector, repository, streamlet or adaptor)",
+              suggestion = "Remove the 'self' reference, or move this into a processor's handler."
+            )
+          case Some(_) =>
+            sv.field.foreach { f =>
+              if !SelfValue.fieldNames.contains(f.value) then
+                messages.addError(
+                  f.loc,
+                  s"'self' has no field '${f.value}'; it carries " +
+                    SelfValue.fieldNames.map("'" + _ + "'").mkString(" and "),
+                  suggestion = s"Use ${SelfValue.fieldNames.map("self." + _).mkString(" or ")}."
+                )
+            }
+      }
+    }
+  end checkSelfValues
+
+  /** Every `self`/`self.<field>` embedded in a value expression, at any depth.
+    *
+    * Enumerated over the same arms as `stateReadsIn`/`asksIn` and for the same reason: a new value
+    * kind that can CONTAIN a `self` reference must fail the build here rather than quietly hide
+    * one. `statementValues` yields a domain WIDER than `Value` (see `stateReadsIn`'s note on
+    * `Identifier`), which is why that arm is here too even though `self` cannot appear inside one.
+    */
+  private def selfValuesIn(v: RiddlValue): Seq[SelfValue] = v match
+    case sv: SelfValue            => Seq(sv)
+    case call: Call                => call.args.toSeq.flatMap(a => selfValuesIn(a.value))
+    case c: Constructor            => c.args.toSeq.flatMap(a => selfValuesIn(a.value))
+    case le: LogicalExpression     => selfValuesIn(le.left) ++ selfValuesIn(le.right)
+    case ne: NotExpression         => selfValuesIn(ne.expr)
+    case ce: ComparisonExpression  => selfValuesIn(ce.left) ++ selfValuesIn(ce.right)
+    case ic: InvariantCondition    => ic.argument.toSeq.flatMap(selfValuesIn)
+    case _: Ask                    => Seq.empty
+    case _: GetValue               => Seq.empty
+    case _: Reference[?]           => Seq.empty
+    // An IDENTIFIER is a NAME, not an expression; see `stateReadsIn`'s note. It is here because
+    // `statementValues` yields a domain WIDER than `Value` (`WhenStatement.condition` includes a
+    // bare `Identifier` for the legacy `when !isValid` form), and auditing `Value` alone misses it.
+    case _: Identifier              => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
+    case other =>
+      throw new IllegalStateException(
+        s"selfValuesIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
+          "decide whether it can contain a 'self' reference rather than assuming it cannot"
+      )
+  end selfValuesIn
+
   private def validateStatement(
     statement: Statement,
     parents: Parents
@@ -940,6 +1032,7 @@ case class ValidationPass(
     // Scope rules that apply to EVERY statement kind, checked before the per-kind match so a new
     // statement carrying a value cannot skip them.
     checkStateReadScope(statement, parents)
+    checkSelfValues(statement, parents)
     statement match
       case PromptStatement(loc, what) =>
         checkNonEmptyValue(
@@ -4520,6 +4613,9 @@ case class ValidationPass(
     case _: Reference[?]          => 0
     // A name cannot fail; see the note in `stateReadsIn`.
     case _: Identifier            => 0
+    // `self`/`self.<field>` is a keyword-anchored value, not an effect -- reading the running
+    // instance's own identity cannot fail the way a call, ask, or get can.
+    case _: SelfValue             => 0
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => 0
     case other =>
       throw new IllegalStateException(
@@ -4605,6 +4701,9 @@ case class ValidationPass(
     // the InvariantCondition fix did on 2026-08-12) misses exactly this, which is how
     // `when !isValid` -- documented syntax that validated on rc.11 -- came to throw on rc.13.
     case _: Identifier            => Seq.empty
+    // `self`/`self.<field>` holds no nested value -- an optional bare field Identifier, not a
+    // sub-expression -- so it cannot contain a state read.
+    case _: SelfValue             => Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
     case other =>
       throw new IllegalStateException(
@@ -4648,6 +4747,8 @@ case class ValidationPass(
     case _: Reference[?]          => Seq.empty
     // A name contains nothing; see the note in `stateReadsIn`.
     case _: Identifier            => Seq.empty
+    // `self`/`self.<field>` holds no nested value; see the same note in `stateReadsIn`.
+    case _: SelfValue             => Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
     case other =>
       throw new IllegalStateException(
@@ -5047,6 +5148,10 @@ case class ValidationPass(
               .definitionOf[State](sr.pathId)
               .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
       case _: BooleanExpression => None // A28: a boolean expression denotes no named Type
+      // `self`'s type is a SYNTHESIZED Aggregation, not a named Type -- there is no declaration to
+      // return here. `valueTypeExpr` computes the real TypeExpression (see its `SelfValue` arm);
+      // this arm exists only so the match stays exhaustive.
+      case _: SelfValue         => None
 
   /** A28: the broad category of a [[Value]] for best-effort boolean/comparison checks: `"boolean"`,
     * `"numeric"`, or `"string"`; `None` when it cannot be determined (skip the check). A
@@ -5166,6 +5271,17 @@ case class ValidationPass(
   ): Option[TypeExpression] =
     v match
       case vr: ValueRef => valueRefTypeExpr(vr, parents, lets)
+      // A55/`self`: the SYNTHESIZED Aggregation is the only place `self`'s type is materialized.
+      // `let me = self` then `me.id` reaches this ARM through `valueRefTypeExpr`'s
+      // `valueTypeExpr(ls.expression, …)` fallback, walked by `typeExprOfPath` exactly like any
+      // other let's inferred type -- no special casing needed there.
+      case sv: SelfValue =>
+        enclosingProcessorOf(parents).map { p =>
+          val agg = SelfValue.aggregation(p, pathOf(p))
+          sv.field match
+            case None    => agg
+            case Some(f) => agg.fields.find(_.id.value == f.value).map(_.typeEx).getOrElse(agg)
+        }
       case _            => valueType(v, parents, lets).map(_.typEx)
 
   /** A54/A55: the named [[Type]] a [[ValueRef]] resolves to, if determinable. A bare on-clause
@@ -5248,6 +5364,11 @@ case class ValidationPass(
         gv.source match
           case ir: InputRef => checkRef[Input](ir, parents)
           case sr: StateRef => checkRef[State](sr, parents)
+      // Legality (must be inside a Processor) and the closed `id`/`version` field set are both
+      // checked by `checkSelfValues`, wired into `validateStatement` beside `checkStateReadScope`
+      // -- nothing further to validate here. `self` names no external definition, so there is no
+      // existence check analogous to `checkRef` above.
+      case _: SelfValue => ()
       case ic: InvariantCondition =>
         // The invariant must exist; naming an unknown one is an Error rather than becoming a
         // reference to a value that does not exist.

@@ -2576,6 +2576,10 @@ class BASTReader(
             val pid = readPathIdentifierInline()
             InvariantCondition(loc, InvariantRef(loc, pid), readOption(readValue()))
           case sub => throw new RuntimeException(s"Invalid boolean-expression sub-tag: $sub")
+      case 9 => // SelfValue -- `self` / `self.<field>`
+        val loc = readLocation()
+        val field = readOption(readIdentifierInline())
+        SelfValue(loc, field)
       case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
   }
 

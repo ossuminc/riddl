@@ -1320,9 +1320,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   /** A54/A28: self-contained value codec. A leading discriminator byte selects the arm
     * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue, 5=BooleanExpression,
-    * 6=Call, 7=Ask); the reader mirrors this exactly. Discriminator 5 is followed by a sub-tag byte
-    * selecting the boolean node (0=BooleanLiteral, 1=Comparison, 2=Logical, 3=Not); operator enums
-    * are stored by ordinal.
+    * 6=Call, 7=Ask, 9=SelfValue); the reader mirrors this exactly. Discriminator 5 is followed by a
+    * sub-tag byte selecting the boolean node (0=BooleanLiteral, 1=Comparison, 2=Logical, 3=Not);
+    * operator enums are stored by ordinal.
     */
   def writeValue(v: Value): Unit = {
     v match
@@ -1392,6 +1392,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         // that `readPathIdentifierInline` does not consume, which misaligns the stream.
         writePathIdentifierInline(ic.ref.pathId)
         writeOption(ic.argument)(writeValue)
+      case sv: SelfValue =>
+        writer.writeU8(9)
+        writeLocation(sv.loc)
+        writeOption(sv.field)(writeIdentifierInline)
   }
 
   /** A28: a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef). A leading

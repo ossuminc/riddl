@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-13 19:21 UTC
+# Generated: 2026-08-13 20:20 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -249,9 +249,10 @@ not-expression ::= "not" ws1 not-expression | comparison
 comparison ::= comparand ws1 comparison-operator ws1 comparand | boolean-atom
 comparand ::= get-value | constant-ref | value-ref
 comparison-operator ::= "==" | "!=" | "<=" | ">=" | "<" | ">"
-boolean-atom ::= boolean-literal | "(" ws boolean-expression ws ")" | get-value | invariant-test | value-ref
+boolean-atom ::= boolean-literal | "(" ws boolean-expression ws ")" | get-value | invariant-test | self-value | value-ref
 invariant-test ::= "invariant" ws1 path-identifier ws ("with" value)?
 boolean-literal ::= "true" | "false"
+self-value ::= "self" ws ("." identifier)?
 put-statement ::= "put" ws1 value ws "to" ws1 output-ref
 return-statement ::= "return" ws1 value
 

@@ -329,6 +329,8 @@ object Keywords {
 
   def schema[u: P]: P[Unit] = keywords(Keyword.schema)
 
+  def self[u: P]: P[Unit] = keyword(Keyword.self)
+
   def selects[u: P]: P[Unit] = keyword(Keyword.selects)
 
   def send[u: P]: P[Unit] = keyword(Keyword.send)
@@ -683,6 +685,7 @@ object Keyword {
   final val router = "router"
   final val saga = "saga"
   final val schema = "schema"
+  final val self = "self"
   final val selects = "selects"
   final val send = "send"
   final val sequence = "sequence"
@@ -848,6 +851,7 @@ object Keyword {
     router,
     saga,
     schema,
+    self,
     selects,
     send,
     sequence,
