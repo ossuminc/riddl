@@ -92,6 +92,89 @@ to the task file and note the disposition below.
 ---
 
 
+## Two consumer-found defects the corpus could not have found (2026-08-13)
+
+riddl-models and ossum.tech each reported a bug the same day. Neither could have
+been caught by any gate this repo runs, and for the SAME structural reason both
+times: **the corpus cannot contain a counter-example to a rule it has been
+edited to satisfy.**
+
+- riddl-models had already **deleted** the offending `constant` from
+  reactive-bbq so their `.bast` files stayed readable. So our
+  `RiddlModelsRoundTripTest`, which bastifies their live checkout, was green
+  over a corpus with the failing construct removed from it.
+- ossum.tech's `when !isValid` fence is in their docs, not our test inputs. No
+  `.riddl` under `language/input/` uses `!`.
+
+This is the third instance of the pattern in a week (synapify's fan-in sink was
+the second). It is worth naming: **a green corpus is evidence about the corpus,
+not about the language.** When a rule tightens, the models that violated it get
+edited, and the evidence that the rule was wrong disappears with them.
+
+### `constant` corrupted every byte after itself in BAST
+
+`writeConstant` and `writeMethod` both wrote `NODE_FIELD` — "similar to fields",
+said the comments. But a Constant appends its literal VALUE and a Method appends
+its ARGUMENT LIST, and the reader, having read a Field, left those bytes in the
+stream. Everything downstream was misread.
+
+**The reader had said so, in a comment:** *"This is ambiguous … For now, assume
+Field. Writer should disambiguate better."* That is the part worth keeping. A
+known-ambiguous decode is not a rough edge to revisit; it is a corruption that
+has not been triggered yet. The rule is now in CLAUDE.md: two node kinds may
+share a tag only if they write byte-identical payloads.
+
+**The error message was actively misleading, and could not be otherwise.**
+One constant surfaced as `Invalid string table index` in a 13-node model and as
+`Invalid invariant condition kind: 67` in a 9618-node one — sending both
+riddl-models and this session to bisect an innocent invariant. A desynchronised
+byte stream names where it DERAILED, never what derailed it; by detection time
+the evidence is gone. We fixed what was fixable (the reader's context stack now
+knows Constant and Method, so it stops blaming Field) and told the reporter
+plainly that the general property is not achievable.
+
+Fixed with `NODE_CONSTANT` (109) / `NODE_METHOD` (110) and `FORMAT_REVISION` 14.
+`Method` had the identical defect with no repro and was fixed alongside it.
+
+### `when !isValid` threw, and the "enumerate the hierarchy" rule did not help
+
+`stateReadsIn` had no arm for `Identifier`, so a documented form that validated
+on rc.11 threw on rc.13. The tempting lesson — *enumerate the sealed
+hierarchy* — is wrong, because that rule was already in force and WAS
+followed: the InvariantCondition fix the day before audited `Value`
+exhaustively.
+
+The actual trap is that `statementValues` yields a domain **wider than
+`Value`**. `WhenStatement.condition` is `LiteralString | Identifier | ValueRef |
+BooleanExpression | PromptValue`, and `Identifier` is in no other member. So an
+exhaustive audit of the nearest-looking type still misses it. **Enumerate the
+domain of the FUNCTION.** The throw did its job; the enumeration was aimed at
+the wrong hierarchy.
+
+### A ruling: `not` is the only general-purpose negation
+
+`!` is accepted in exactly one position — `when !<bare-identifier>` — and will
+not be extended to paths or to `require`/`let`. It buys no expressiveness and
+costs four surfaces (parser, EBNF, GBNF, prettify) plus a second spelling
+authors must choose between; RIDDL's operators are words and `!` is the
+outlier. It is KEPT rather than deprecated, since it parses today and models
+use it.
+
+The ruling is only defensible while `not` genuinely covers the same ground, so
+that is asserted rather than assumed — `when not isValid` has a test.
+
+### Process notes, both self-inflicted
+
+- **Certification was restarted three times** because the tree kept moving under
+  it: a fixture regeneration, a stale reader comment, a missing `Method` case.
+  Settle the tree, THEN certify. Each restart cost ~5 minutes and the last one
+  nearly cost a false certification.
+- **Regenerate `NotImplemented.bast` from its OWN directory.** Run from the repo
+  root it bakes `language/input/import/…` into the file instead of the bare
+  filename — 93 bytes becomes 115 and the diff stops being a one-field revision
+  bump. Recipe in BACKLOG § 0. `sbt clean` deletes the stage, so regenerate
+  BEFORE certifying.
+
 ## Four rulings, and a label with two homes (2026-08-11)
 
 Reid ruled on a batch of open items; four are built and out of BACKLOG.
