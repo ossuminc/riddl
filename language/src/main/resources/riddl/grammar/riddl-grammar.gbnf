@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-13 21:59 UTC
+# Generated: 2026-08-13 22:42 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -211,7 +211,7 @@ on-message-clause ::= "on" ws (identifier ":")? ws message-ref ws ("from" (ident
 message-origins ::= inlet-ref | processor-ref | user-ref | epic-ref
 
 # Core statements available in all contexts
-statement ::= when-statement | match-statement | foreach-statement | send-statement | tell-statement | yield-statement | reply-statement | the-set-statement | let-statement | put-statement | return-statement | prompt-statement | code-statement | error-statement | require-statement | morph-statement | become-statement | comment
+statement ::= when-statement | match-statement | foreach-statement | send-statement | tell-statement | yield-statement | reply-statement | the-set-statement | let-statement | put-statement | return-statement | terminate-statement | prompt-statement | code-statement | error-statement | require-statement | morph-statement | become-statement | comment
 
 # Control flow
 when-statement ::= "when" ws1 when-condition ws "then" ws1 pseudo-code-block ws ("else" pseudo-code-block)? ws "end"
@@ -256,6 +256,7 @@ boolean-literal ::= "true" | "false"
 self-value ::= "self" ws ("." identifier)?
 put-statement ::= "put" ws1 value ws "to" ws1 output-ref
 return-statement ::= "return" ws1 value
+terminate-statement ::= "terminate" ws1 processor-ref ws ("(" (constructor-arg ("," constructor-arg)*)? ")")?
 
 # General statements. A54: `do` is canonical; the `prompt` statement is a deprecated synonym.
 prompt-statement ::= ("do" | "prompt") ws literal-string

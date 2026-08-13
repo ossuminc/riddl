@@ -3884,6 +3884,32 @@ object AST:
     def format: String = s"return ${value.format}"
   }
 
+  /** `terminate <processor>(id, args)` -- end an instance by invoking its `on term`.
+    *
+    * A STATEMENT, not a value: termination produces nothing. It can fail (it may race a
+    * passivation), so it joins the can-fail census alongside send/tell/call/yield/put/get.
+    *
+    * @param loc
+    *   The location of the `terminate` statement in the source
+    * @param processor
+    *   The processor whose instance is being terminated
+    * @param args
+    *   The arguments supplied to the target's `on term` parameters (empty when `on term` takes
+    *   none, in which case the parentheses are omitted -- mirrors [[Initiate]])
+    */
+  @JSExportTopLevel("TerminateStatement")
+  case class TerminateStatement(
+    loc: At,
+    processor: ProcessorRef[Processor[?]],
+    args: Seq[ConstructorArg]
+  ) extends Statement {
+    override def kind: String = "Terminate Statement"
+    override def canFail: Boolean = true
+    def format: String =
+      val argList = if args.isEmpty then "" else args.map(_.format).mkString("(", ", ", ")")
+      s"terminate ${processor.format}$argList"
+  }
+
   ///////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
   /** A trait that is the base trait of Adaptor directions */

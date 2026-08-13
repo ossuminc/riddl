@@ -1472,6 +1472,12 @@ object JsonAstBuilder:
         PutStatement(curAt, buildValue(value), OutputRef(curAt, "output", pathId(output)))
       case ReturnStmtDto(value) =>
         ReturnStatement(curAt, buildValue(value))
+      case TerminateStmtDto(processor, processorKind, args) => // A70/instance-identity
+        TerminateStatement(
+          curAt,
+          processorRef(processor, processorKind),
+          args.map(a => ConstructorArg(curAt, a.name.map(ident), buildValue(a.value)))
+        )
   end buildStatement
 
   // A54: ValueDto -> AST Value.

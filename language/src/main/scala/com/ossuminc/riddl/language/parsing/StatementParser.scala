@@ -696,6 +696,23 @@ private[parsing] trait StatementParser {
     )./.map { case (start, v, end) => ReturnStatement(at(start, end), v) }
   }
 
+  /** `terminate <processor>[(args)]` -- end an instance by invoking its `on term`.
+    *
+    * Mirrors `initiateValue`'s shape exactly: parens are OPTIONAL and present exactly when there
+    * are arguments. ARITY IS NOT CHECKED HERE -- a parser error() preempts the whole pass chain,
+    * so the argument diagnostics live in ValidationPass, which is also the only place that has
+    * resolved `on term`.
+    */
+  private def terminateStatement[u: P]: P[TerminateStatement] = {
+    P(
+      Index ~ Keywords.terminate ~/ processorRef ~
+        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~/ Index
+    )./.map { case (start, pRef, args, end) =>
+      TerminateStatement(at(start, end), pRef, args.map(_.toSeq).getOrElse(Seq.empty))
+    }
+  }
+
   private def backTickEllipsis[u: P]: P[Unit] = { P("```") }
 
   private def codeStatement[u: P]: P[CodeStatement] = {
@@ -775,7 +792,7 @@ private[parsing] trait StatementParser {
         // GROUP 3: Variable operations (set is banned in a pure Function body — see setStatements)
         setStatements(set) | letStatement |
         // GROUP 3b: Boundary value operations, scope-gated (A45 put -> Context; A57 return -> Function)
-        putStatements(set) | returnStatements(set) |
+        putStatements(set) | returnStatements(set) | terminateStatement |
         // GROUP 4: General statements (`do` is canonical; `prompt` is a deprecated synonym)
         doStatement | promptStatement | codeStatement |
         // GROUP 5: Error handling and preconditions (suppressed under EventClause)

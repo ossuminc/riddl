@@ -466,8 +466,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           case ir: InvariantRef      => addLine(s"require ${ir.format}$arg")
           case be: BooleanExpression => addLine(s"require ${be.format}$arg") // A28
         }
-      case statement: Statement => addLine(statement.format)
-      case comment: Comment     => emitComment(comment)
+      case ts: TerminateStatement => addLine(ts.format)
+      case statement: Statement   => addLine(statement.format)
+      case comment: Comment       => emitComment(comment)
     end match
   end emitStatement
 

@@ -109,29 +109,44 @@ class InitiateTerminateTest extends AbstractValidatingTest {
     }
   }
 
-  // Task 5: `terminate` does not exist yet (TerminateStatement is Task 5's deliverable). Left
-  // commented out per task-4-brief.md's instruction rather than left failing, so this suite's run
-  // is unambiguously 4/4 green until Task 5 lands.
-  //
-  // "terminate" should {
-  //   "accept a leading id argument" in { (td: TestData) =>
-  //     diagnostics(
-  //       model("""on init is { do "start" }
-  //               |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
-  //             """let oid = initiate entity Order
-  //                 |            terminate entity Order(oid)""".stripMargin),
-  //       "terminate-ok"
-  //     ).justErrors mustBe empty
-  //   }
-  //
-  //   "REJECT arguments that do not match on term" in { (td: TestData) =>
-  //     val text = diagnostics(
-  //       model("""on init is { do "start" }
-  //               |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
-  //             """terminate entity Order"""),
-  //       "terminate-arity"
-  //     ).justErrors.map(_.message).mkString("\n")
-  //     text must include("1")
-  //   }
-  // }
+  "terminate" should {
+    "accept a leading id argument" in { (td: TestData) =>
+      diagnostics(
+        model("""on init is { do "start" }
+                |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
+              """let oid = initiate entity Order
+                  |            terminate entity Order(oid)""".stripMargin),
+        "terminate-ok"
+      ).justErrors mustBe empty
+    }
+
+    "REJECT arguments that do not match on term" in { (td: TestData) =>
+      val text = diagnostics(
+        model("""on init is { do "start" }
+                |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
+              """terminate entity Order"""),
+        "terminate-arity"
+      ).justErrors.map(_.message).mkString("\n")
+      text must include("1")
+    }
+
+    // Regression guard mirroring `initiate`'s: `checkTerminate` is reached from
+    // `checkStatementScopes`, the single entry point invoked at every container root AND
+    // recursively for a `WhenStatement`'s `thenStatements`/`elseStatements` -- but
+    // `validateStatement`'s generic dispatch does NOT descend into those (they are FIELDS, not
+    // `contents`). Proves the placement is correct today AND stays correct if a future refactor
+    // moves the check.
+    "REJECT arguments that do not match on term when 'terminate' is nested inside a 'when' block" in {
+      (td: TestData) =>
+        val text = diagnostics(
+          model(
+            """on init is { do "start" }
+              |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
+            """when true then { terminate entity Order } end"""
+          ),
+          "terminate-nested-when"
+        ).justErrors.map(_.message).mkString("\n")
+        text must include("1")
+    }
+  }
 }

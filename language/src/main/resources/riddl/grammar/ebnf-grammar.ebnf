@@ -262,8 +262,8 @@ message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 (* Core statements available in all contexts *)
 statement = when_statement | match_statement | foreach_statement | send_statement | tell_statement |
     yield_statement | reply_statement | the_set_statement | let_statement | put_statement |
-    return_statement | prompt_statement | code_statement | error_statement | require_statement |
-    morph_statement | become_statement | comment ;
+    return_statement | terminate_statement | prompt_statement | code_statement | error_statement |
+    require_statement | morph_statement | become_statement | comment ;
 
 (* Control flow *)
 when_statement = "when" when_condition "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
@@ -364,6 +364,12 @@ self_value = "self" ["." identifier] ;
    to a UI output; `return` (function bodies only) returns the function's result value. *)
 put_statement = "put" value "to" output_ref ;
 return_statement = "return" value ;
+
+(* A70/instance-identity: end an instance by invoking its `on term`. Mirrors `initiate` exactly --
+   parens are OPTIONAL and present exactly when there are arguments. A statement, not a value:
+   termination produces nothing. Arity/argument-type checking is done in validation, which is the
+   only place that has resolved the target's `on term` clause; a wrong count still PARSES. *)
+terminate_statement = "terminate" processor_ref ["(" [constructor_arg {"," constructor_arg}] ")"] ;
 
 (* General statements. A54: `do` is canonical; the `prompt` statement is a deprecated synonym. *)
 prompt_statement = ("do" | "prompt") literal_string ;

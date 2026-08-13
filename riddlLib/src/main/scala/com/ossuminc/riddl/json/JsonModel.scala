@@ -869,6 +869,17 @@ object JsonModel:
   /** `{ "kind": "return", "value": <value> }` (A57) */
   case class ReturnStmtDto(value: ValueDto) extends StatementDto
 
+  /** `{ "kind": "terminate", "processor": "<path>", "processorKind": "<kind>", "args":
+    * [<constructorArg>] }` -- A70/instance-identity: end an instance by invoking its `on term`.
+    * Same shape as [[InitiateValueDto]] (mirrors [[AST.Initiate]]/[[AST.TerminateStatement]]),
+    * but a statement rather than a value.
+    */
+  case class TerminateStmtDto(
+    processor: String,
+    processorKind: String,
+    args: Seq[ConstructorArgDto]
+  ) extends StatementDto
+
   // ---------------------------------------------------------------------------
   // Streaming & integration (Phase 4)
   // ---------------------------------------------------------------------------
@@ -1850,7 +1861,19 @@ object JsonModel:
             )
           case "put"    => PutStmtDto(readValue(m("value")), m("output").str)
           case "return" => ReturnStmtDto(readValue(m("value")))
-          case other    => throw new IllegalArgumentException(s"Unknown statement kind: '$other'")
+          case "terminate" =>
+            val args = m
+              .get("args")
+              .map(
+                _.arr
+                  .map(a =>
+                    ConstructorArgDto(a.obj.get("name").map(_.str), readValue(a.obj("value")))
+                  )
+                  .toSeq
+              )
+              .getOrElse(Nil)
+            TerminateStmtDto(m("processor").str, m("processorKind").str, args)
+          case other => throw new IllegalArgumentException(s"Unknown statement kind: '$other'")
     end match
   end readStatement
 
@@ -1974,6 +1997,18 @@ object JsonModel:
         )
       case ReturnStmtDto(value) =>
         ujson.Obj("kind" -> ujson.Str("return"), "value" -> writeValue(value))
+      case TerminateStmtDto(processor, processorKind, args) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("terminate"),
+          "processor" -> ujson.Str(processor),
+          "processorKind" -> ujson.Str(processorKind),
+          "args" -> ujson.Arr.from(args.map { a =>
+            ujson.Obj.from(
+              a.name.map(n => "name" -> (ujson.Str(n): ujson.Value)).toSeq
+                ++ Seq("value" -> (writeValue(a.value): ujson.Value))
+            )
+          })
+        )
   end writeStatement
 
   // Given ReadWriters. These are lazy (Scala 3 parameterless givens), so the

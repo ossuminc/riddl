@@ -369,6 +369,8 @@ object Keywords {
 
   def term[u: P]: P[Unit] = keyword(Keyword.term)
 
+  def terminate[u: P]: P[Unit] = keyword(Keyword.terminate)
+
   def `then`[u: P]: P[Unit] = keyword(Keyword.then_)
 
   def title[u: P]: P[Unit] = keyword(Keyword.title)
@@ -707,6 +709,7 @@ object Keyword {
   final val take = "take"
   final val tell = "tell"
   final val term = "term"
+  final val terminate = "terminate"
   final val then_ = "then"
   final val times = "times"
   final val title = "title"

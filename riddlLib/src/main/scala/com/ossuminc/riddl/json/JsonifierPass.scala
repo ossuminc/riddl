@@ -1449,6 +1449,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       PutStmtDto(serializeValue(value), path(output.pathId))
     case ReturnStatement(_, value) =>
       ReturnStmtDto(serializeValue(value))
+    case TerminateStatement(_, proc, args) => // A70/instance-identity
+      val (pp, pk) = processorRef(proc)
+      TerminateStmtDto(
+        pp,
+        pk,
+        args.map(a => ConstructorArgDto(a.name.map(_.value), serializeValue(a.value)))
+      )
 
   // A54: AST Value -> ValueDto.
   private def serializeValue(v: Value): ValueDto = v match

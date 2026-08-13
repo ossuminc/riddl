@@ -1168,6 +1168,11 @@ class BASTReader(
         val v = readValue()
         ReturnStatement(loc, v)
 
+      case 20 => // Terminate (A70/instance-identity) -- mirrors readValue's Initiate arm (case 8)
+        val processor = readProcessorRef()
+        val args = readSeq(() => readConstructorArg())
+        TerminateStatement(loc, processor, args)
+
       case _ =>
         // THROW, do not fabricate. This arm used to return a PromptStatement carrying
         // "<unknown statement N>", so an unreadable tag decoded into a PLAUSIBLE model that

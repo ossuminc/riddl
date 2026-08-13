@@ -1195,9 +1195,11 @@ case class ValidationPass(
           case ref: MessageRef => checkRef[Type](ref, parents)
           case _: Constructor  => ()
         checkResponsePairing(msg, Keyword.reply, AggregateUseCase.ResultCase)
-      case _: PutStatement | _: ReturnStatement =>
-        // A45/A57: value/type/scope validation runs in checkStatementScopes (which threads in-scope
-        // `let` locals and reaches nested statements). Nothing to check per-statement here.
+      case _: PutStatement | _: ReturnStatement | _: TerminateStatement =>
+        // A45/A57/A70: value/type/scope validation runs in checkStatementScopes (which threads
+        // in-scope `let` locals and reaches nested statements). Nothing to check per-statement
+        // here. `TerminateStatement`'s arity/type check against `on term` is `checkTerminate`,
+        // called from checkStatementScopes -- see its case there.
         ()
       case ForeachStatement(loc, element, _, _, doStatements) =>
         // Collection scoping/collection-type checks run in checkStatementScopes (which threads
@@ -2747,14 +2749,17 @@ case class ValidationPass(
       handler.clauses.foreach { clause =>
         walkStatements(clause.contents) { statement =>
           val effect: Option[String] = statement match
-            case _: TellStatement   => Some("tell")
-            case _: SendStatement   => Some("send")
-            case _: YieldStatement  => Some("yield")
-            case _: ReplyStatement  => Some("reply")
-            case _: PutStatement    => Some("put")
-            case _: MorphStatement  => Some("morph")
-            case _: BecomeStatement => Some("become")
-            case _                  => None
+            case _: TellStatement      => Some("tell")
+            case _: SendStatement      => Some("send")
+            case _: YieldStatement     => Some("yield")
+            case _: ReplyStatement     => Some("reply")
+            case _: PutStatement       => Some("put")
+            case _: MorphStatement     => Some("morph")
+            case _: BecomeStatement    => Some("become")
+            // A70/instance-identity: ending an instance is exactly the kind of effect a re-run of
+            // a fold must not repeat.
+            case _: TerminateStatement => Some("terminate")
+            case _                     => None
           effect.foreach { kw =>
             messages.addError(
               statement.loc,
@@ -3670,7 +3675,15 @@ case class ValidationPass(
       case set: SetStatement    => valueReferencedDefs(set.value)
       case let: LetStatement    => valueReferencedDefs(let.expression)
       case ret: ReturnStatement => valueReferencedDefs(ret.value)
-      case _                    => Seq.empty
+      // A70/instance-identity: the processor a `terminate` ends is exactly the kind of reference
+      // A8 exists to catch -- a saga step ending an instance owned by a DIFFERENT domain crosses
+      // the same boundary a cross-domain `tell` does.
+      case term: TerminateStatement =>
+        resolution.refMap
+          .definitionOf[Processor[?]](term.processor.pathId)
+          .map(term.processor.pathId -> _)
+          .toSeq ++ term.args.flatMap(a => valueReferencedDefs(a.value))
+      case _ => Seq.empty
   end statementReferencedDefs
 
   /** A8: the definitions referenced inside a value expression — each `call function F(…)` (a
@@ -4646,10 +4659,14 @@ case class ValidationPass(
       case yld: YieldStatement   => Seq(yld.msg)
       case rpl: ReplyStatement   => Seq(rpl.msg)
       case mor: MorphStatement   => Seq(mor.value)
-      case req: RequireStatement => Seq(req.condition)
-      case whn: WhenStatement    => Seq(whn.condition)
-      case mat: MatchStatement   => Seq(mat.expression)
-      case _                     => Seq.empty
+      case req: RequireStatement  => Seq(req.condition)
+      case whn: WhenStatement     => Seq(whn.condition)
+      case mat: MatchStatement    => Seq(mat.expression)
+      // A70/instance-identity: `terminate`'s arguments are full Values, exactly like a
+      // constructor's or `initiate`'s, so a `get from state`/`ask`/nested call-fail-point can
+      // hide inside one and must be counted rather than silently skipped.
+      case term: TerminateStatement => term.args.map(_.value)
+      case _                        => Seq.empty
   end statementValues
 
   /** Every [[Ask]] embedded in a value expression, at any depth.
@@ -4760,13 +4777,14 @@ case class ValidationPass(
 
   /** A23: is `s` an EFFECT statement — one that mutates state, changes behavior, or emits a
     * message? This is the shared A23 effect set: A26's pure-function bans
-    * (`set`/`morph`/`become`/`send`/ `tell`/`yield`) plus A45's `put`. It deliberately EXCLUDES the
+    * (`set`/`morph`/`become`/`send`/ `tell`/`yield`) plus A45's `put` and A70/instance-identity's
+    * `terminate` (ends an instance — as much an effect as `tell`). It deliberately EXCLUDES the
     * refusals themselves (`require`/`error`) and the opaque `CodeStatement` (unclassifiable — not
     * treated as an effect).
     */
   private def isEffectStatement(s: Statement): Boolean = s match
     case _: SetStatement | _: MorphStatement | _: BecomeStatement | _: SendStatement |
-        _: TellStatement | _: YieldStatement | _: PutStatement =>
+        _: TellStatement | _: YieldStatement | _: PutStatement | _: TerminateStatement =>
       true
     case _ => false
 
@@ -5183,6 +5201,57 @@ case class ValidationPass(
     }
     init.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
   end checkInitiate
+
+  /** The [[MethodArgument]]s a Processor's `on term` clause declares, or `Seq.empty` when it
+    * declares none (including when it has no `on term` clause at all). Mirrors
+    * [[initClauseParameters]] exactly, including folding in entity state handlers.
+    */
+  private def termClauseParameters(p: Processor[?]): Seq[MethodArgument] =
+    val stateHandlers = p match
+      case e: Entity => e.states.flatMap(_.handlers)
+      case _         => Seq.empty
+    (p.handlers ++ stateHandlers)
+      .flatMap(_.clauses)
+      .collectFirst { case otc: OnTerminationClause => otc.parameters }
+      .getOrElse(Seq.empty)
+  end termClauseParameters
+
+  /** A70/instance-identity: validate `terminate <processor>(args)` against the target's declared
+    * `on term` parameters. Mirror of [[checkInitiate]] -- see its scaladoc for why
+    * [[checkArgumentTypes]] is reused rather than forked.
+    */
+  private def checkTerminate(
+    term: TerminateStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression] = Map.empty
+  ): Unit =
+    checkRef[Processor[?]](term.processor, parents).foreach { p =>
+      val declared = termClauseParameters(p)
+      def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
+      if declared.isEmpty && term.args.nonEmpty then
+        messages.addError(
+          term.loc,
+          s"${p.identify} declares 'on term' with no parameters, but " +
+            s"${count(term.args.size, "argument")} supplied",
+          suggestion = s"Write 'terminate ${term.processor.format}' with no parentheses."
+        )
+      else if declared.size != term.args.size then
+        messages.addError(
+          term.loc,
+          s"${p.identify} declares 'on term' with ${count(declared.size, "parameter")}, but " +
+            s"${count(term.args.size, "argument")} supplied",
+          suggestion =
+            s"Supply ${declared.size}: ${declared.map(a => s"${a.name}: ${a.typeEx.format}").mkString(", ")}."
+        )
+      else
+        val asFields: Seq[Field] = declared.map { a =>
+          Field(a.loc, Identifier(a.loc, a.name), a.typeEx)
+        }
+        checkArgumentTypes(term.args, asFields, "parameter", parents, lets, elements)
+    }
+    term.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
+  end checkTerminate
 
   private def valueType(v: Value, parents: Parents, lets: Seq[LetStatement]): Option[Type] =
     v match
@@ -6192,7 +6261,12 @@ case class ValidationPass(
         )
       case ps: PutStatement    => validatePut(ps, parents, lets)
       case rs: ReturnStatement => validateReturn(rs, parents, lets)
-      case _                   => ()
+      // A70/instance-identity: reached at ANY depth (this function is the single entry point
+      // invoked at every container root AND recursively for when/match/foreach bodies), which is
+      // exactly what the nested-`terminate` regression test requires -- mirrors `checkInitiate`'s
+      // reachability via `validateValue`.
+      case ts: TerminateStatement => checkTerminate(ts, parents, lets, inScopeElements)
+      case _                      => ()
     }
   end checkStatementScopes
 
@@ -6217,9 +6291,10 @@ case class ValidationPass(
           // already names `reply` as a fix, so a user could follow the advice and still be warned.
           case _: TellStatement | _: SendStatement | _: YieldStatement | _: ReplyStatement |
               _: MorphStatement | _: SetStatement | _: BecomeStatement | _: ErrorStatement |
-              _: CodeStatement | _: PutStatement =>
-            // A45: `put` publishes to a UI output — an executable effect. (ReturnStatement is not
-            // added here: it only occurs in function bodies, which are classified by
+              _: CodeStatement | _: PutStatement | _: TerminateStatement =>
+            // A45: `put` publishes to a UI output — an executable effect. A70/instance-identity:
+            // `terminate` ends an instance -- as executable an effect as `tell`. (ReturnStatement
+            // is not added here: it only occurs in function bodies, which are classified by
             // validateFunction's statement-non-empty check, not classifyHandlers.)
             executableCount += 1
           case _: PromptStatement =>

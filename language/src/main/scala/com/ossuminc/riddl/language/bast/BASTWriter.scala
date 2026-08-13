@@ -270,6 +270,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: ForeachStatement => writeForeachStatement(s)
       case s: PutStatement     => writePutStatement(s)
       case s: ReturnStatement  => writeReturnStatement(s)
+      case s: TerminateStatement => writeTerminateStatement(s)
 
       // References
       case r: AuthorRef     => writeAuthorRef(r)
@@ -1321,6 +1322,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(18) // Return statement (A57)
     writeLocation(s.loc)
     writeValue(s.value)
+  }
+
+  /** A70/instance-identity: mirrors [[writeValue]]'s `Initiate` arm exactly (processor ref + a
+    * [[writeSeq]]-framed arg list), except `terminate` is a STATEMENT, so it gets its own
+    * NODE_STATEMENT sub-kind rather than a `Value` discriminator.
+    */
+  def writeTerminateStatement(s: TerminateStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(20) // Terminate statement — next free sub-kind after 19
+    writeLocation(s.loc)
+    writeProcessorRef(s.processor)
+    writeSeq(s.args)(writeConstructorArg)
   }
 
   /** A54/A28: self-contained value codec. A leading discriminator byte selects the arm
