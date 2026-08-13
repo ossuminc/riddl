@@ -287,6 +287,8 @@ class BASTReader(
     case NODE_BAST_IMPORT       => "BASTImport"
     case NODE_TYPE              => "Type"
     case NODE_FIELD             => "Field"
+    case NODE_CONSTANT          => "Constant"
+    case NODE_METHOD            => "Method"
     case NODE_ENUMERATOR        => "Enumerator"
     case NODE_ADAPTOR           => "Adaptor"
     case NODE_FUNCTION          => "Function"
@@ -418,7 +420,9 @@ class BASTReader(
 
         // Types
         case NODE_TYPE       => readTypeNode()
-        case NODE_FIELD      => readFieldOrConstantOrMethod()
+        case NODE_FIELD      => readFieldOrMethodArgument()
+        case NODE_CONSTANT   => readConstantNode()
+        case NODE_METHOD     => readMethodNode()
         case NODE_ENUMERATOR => readEnumeratorNode()
 
         // Processors
@@ -696,18 +700,22 @@ class BASTReader(
     Type(loc, id, typEx, metadata)
   }
 
-  private def readFieldOrConstantOrMethod(): RiddlValue = {
+  /** [[NODE_FIELD]] means a Field or a MethodArgument, and NOTHING else since revision 14.
+    *
+    * It used to also mean Constant and Method, which this method could not tell apart -- it read a
+    * Field and left their extra bytes in the stream. They now carry [[NODE_CONSTANT]] and
+    * [[NODE_METHOD]].
+    *
+    * The remaining two-way split is UNAMBIGUOUS and stays: `writeField` writes a TAGGED identifier
+    * and `writeMethodArgument` writes a bare string, so the next byte decides. That is the standard
+    * a shared tag has to meet.
+    */
+  private def readFieldOrMethodArgument(): RiddlValue = {
     val loc = readLocation()
-    val idOrName = reader.peekU8()
 
-    // Check if next is NODE_IDENTIFIER or a string
-    if idOrName == NODE_IDENTIFIER then
+    if reader.peekU8() == NODE_IDENTIFIER then
       val id = readIdentifier()
       val typEx = readTypeExpression()
-
-      // Check if this is a Constant (has value) or Method (has args) or Field
-      // This is ambiguous - we need to peek ahead
-      // For now, assume Field. Writer should disambiguate better.
       val metadata = readMetadataDeferred()
       Field(loc, id, typEx, metadata)
     else
@@ -716,6 +724,45 @@ class BASTReader(
       val typEx = readTypeExpression()
       MethodArgument(loc, name, typEx)
     end if
+  }
+
+  /** A Constant is a Field PLUS its literal value.
+    *
+    * Until 2026-08-13 it was written with [[NODE_FIELD]] and read as a Field, so the value was
+    * written and never consumed -- misaligning every byte after it. The read ORDER is the contract:
+    * loc, id, type, value, then deferred metadata.
+    */
+  private def readConstantNode(): Constant = {
+    val loc = readLocation()
+    // INLINE, matching `writeIdentifierInline` -- a tagged read here consumes one byte too many.
+    val id = readIdentifierInline()
+    val typEx = readTypeExpression()
+    val value = readLiteralString()
+    val metadata = readMetadataDeferred()
+    Constant(loc, id, typEx, value, metadata)
+  }
+
+  /** Inverse of `BASTWriter.writeMethodArgument`, which writes a RAW `NODE_FIELD` byte (not
+    * `writeNodeTag`, so there is no metadata flag) followed by loc, the name as a STRING, and the
+    * type. The string-vs-identifier difference is what lets a MethodArgument still share
+    * NODE_FIELD with Field without ambiguity.
+    */
+  private def readMethodArgument(): MethodArgument = {
+    reader.readU8() // NODE_FIELD, written raw
+    val loc = readLocation()
+    val name = readString()
+    val typEx = readTypeExpression()
+    MethodArgument(loc, name, typEx)
+  }
+
+  /** A Method is a Field PLUS its argument list; same history as [[readConstantNode]]. */
+  private def readMethodNode(): Method = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // INLINE; see readConstantNode
+    val typEx = readTypeExpression()
+    val args = readSeq(() => readMethodArgument())
+    val metadata = readMetadataDeferred()
+    Method(loc, id, typEx, args, metadata)
   }
 
   private def readEnumeratorNode(): Enumerator = {

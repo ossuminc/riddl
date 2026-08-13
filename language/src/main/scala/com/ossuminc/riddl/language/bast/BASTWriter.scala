@@ -662,7 +662,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeConstant(c: Constant): Unit = {
-    writeNodeTag(NODE_FIELD, c.metadata.nonEmpty) // Constants similar to fields
+    writeNodeTag(NODE_CONSTANT, c.metadata.nonEmpty)
     writeLocation(c.loc)
     writeIdentifierInline(c.id) // Inline - no tag needed
     writeTypeExpression(c.typeEx)
@@ -686,7 +686,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeMethod(m: Method): Unit = {
-    writeNodeTag(NODE_FIELD, m.metadata.nonEmpty) // Methods similar to fields
+    writeNodeTag(NODE_METHOD, m.metadata.nonEmpty)
     writeLocation(m.loc)
     writeIdentifierInline(m.id) // Inline - no tag needed
     writeTypeExpression(m.typeEx)

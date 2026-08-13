@@ -33,6 +33,17 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   before 2.0, so regenerating now buys nothing. riddl-models is the known holder.
   In-repo fixtures are NOT deferred — `language/input/import/NotImplemented.bast`
   must be regenerated at each bump or `IncludeAndImportTest` reddens.
+  **Regenerate it FROM ITS OWN DIRECTORY**, or the `.bast` embeds a different
+  source path than the committed one and the diff stops being a one-field
+  revision bump:
+  ```
+  sbt riddlc/stage
+  cd language/input/import && <repo>/target/out/jvm/scala-<ver>/riddlc/universal/stage/bin/riddlc bastify NotImplemented.riddl
+  ```
+  Done right the file is 93 bytes and `cmp` against the committed one differs
+  at byte 12 (the revision short) and nowhere else — check that, since a
+  larger diff means the path got baked in. (`sbt clean` deletes the stage, so
+  regenerate the fixture BEFORE certifying, not after.)
 - **Update `../RIDDL-Computational-Model.md` with everything `release/2`
   changed.** Reid, 2026-08-06. That document is the authority for any lowering
   decision — what a conforming generator MUST preserve versus may freely choose

@@ -77,7 +77,20 @@ package object bast {
   val FORMAT_REVISION: Short =
     // Connector intentions: `writeConnector` now appends a count plus one byte per intention after
     // the inlet ref, so every byte following a Connector in a revision-12 file would be misread.
-    13 // Connector intentions (persistent / at-least-once / at-most-once)
+    // 13 was connector intentions; 14 adds distinct tags for Constant and Method, which had
+    // been sharing NODE_FIELD and corrupting every byte that followed one.
+    14 // Connector intentions + distinct NODE_CONSTANT / NODE_METHOD tags
+
+  /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.
+    *
+    * Both write MORE than a Field does -- a Constant appends its literal value, a Method appends
+    * its argument list -- and the reader, which could not tell them apart, read a Field and
+    * stopped. Every byte after such a node was then misread, surfacing far away as "Invalid string
+    * table index" or a garbage tag. The reader carried the admission in a comment: "This is
+    * ambiguous ... For now, assume Field. Writer should disambiguate better." It now does.
+    */
+  val NODE_CONSTANT: Byte = 109
+  val NODE_METHOD: Byte = 110
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

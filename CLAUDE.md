@@ -159,6 +159,27 @@ tags; `readTypeExpression()` only handles `TYPE_*` tags. Crossing
 them causes byte misalignment that surfaces as "Invalid string
 table index" errors during deserialization.
 
+**HAZARD — one tag per WIRE SHAPE, not per family.** `Constant` and
+`Method` were both written with `NODE_FIELD` because all three are
+"a name and a type". But a Constant appends its literal value and a
+Method appends its argument list, so the reader — which read a Field
+— left those bytes in the stream and every byte after such a node
+was misread. Fixed 2026-08-13 with `NODE_CONSTANT` (109) /
+`NODE_METHOD` (110) and `FORMAT_REVISION` 14.
+
+The reader had ADMITTED it in a comment (*"This is ambiguous … For
+now, assume Field. Writer should disambiguate better"*), which is
+the part worth learning from: a known-ambiguous decode is a latent
+corruption, not a rough edge. **The rule is that two node kinds may
+share a tag only if they write byte-identical payloads.**
+
+**A BAST error names where the reader DERAILED, never what derailed
+it.** The same single constant surfaced as `Invalid string table
+index` in a 13-node model and as `Invalid invariant condition kind:
+67` in a 9618-node one, sending both riddl-models and this repo to
+bisect an innocent invariant. When diagnosing, bisect toward the
+node BEFORE the reported position, and distrust the construct named.
+
 ## NPM Packaging (JavaScript/TypeScript API)
 
 ### RiddlAPI Facade
