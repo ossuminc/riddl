@@ -128,6 +128,41 @@ delegates to `format`, so there is one source of truth and it cannot drift
 again. The JSON discriminator is still `"Range"` and is deliberately NOT tied to
 either: it is a wire format, hardcoded at both the read and write sites.
 
+## An unexplained round-trip failure, recorded as unexplained (2026-08-13)
+
+One certification run failed `RiddlModelsRoundTripTest` on reactive-bbq with
+`BAST deserialization failed: Invalid invariant condition kind: 67` — the classic
+byte-misalignment signature, and 67 is `NODE_LITERAL_STRING`, so the reader was
+several bytes adrift. It arrived immediately after the connector-intentions work
+bumped `FORMAT_REVISION` 12 → 13, which made it look obviously mine.
+
+**It did not reproduce, and no defect was found.** Connectors round-trip
+correctly in every variant constructed: context-scoped and domain-scoped, bare
+`option persistent` and the parenthesised `option persistent()` the corpus
+actually writes, option-only metadata (where consumption empties the block and
+flips the node's metadata flag), and alongside invariants. rc.13 and HEAD both
+round-trip the model. The test has passed 189/189 on every run since, including
+with the committed `.bast` restored — so it was not `FORMAT_REVISION` staleness
+either, which was the first and most plausible guess.
+
+**Leading hypothesis, stated as a hypothesis:** riddl-models was being edited by
+a concurrent session — its working tree carried `.riddl` modifications nobody
+here made — while two full corpus validations ran against that same tree during
+the certification. A model file changing between the bastify and the unbastify
+would produce exactly this symptom at whatever node followed.
+
+**Why it is written down rather than closed.** A misalignment that appears once
+and vanishes is the kind of thing that returns at a worse moment, and the next
+person to see this message deserves to know it has been seen, chased, and not
+explained — rather than re-deriving the same dead ends. If it recurs, start by
+checking whether anything else is writing to riddl-models, then bisect the
+corpus rather than the codec: the codec was cleared here.
+
+**The durable lesson is about the fixture, not the bug.** CLAUDE.md already warns
+that riddl-models is a moving target for CONTENT. This is the stronger form: it
+can move DURING a run, and a certification that reads it is not hermetic. Do not
+run corpus work concurrently with a certification.
+
 ## A stale capture is not a baseline (2026-08-13)
 
 Connector intentions landed: `persistent` and `at-least-once` | `at-most-once` as
