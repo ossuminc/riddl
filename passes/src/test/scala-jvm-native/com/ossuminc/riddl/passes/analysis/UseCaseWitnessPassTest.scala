@@ -188,6 +188,49 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
       }
     }
 
+    // Regression for a total-dispatch gap found reviewing Task 5 (processor-instance identity):
+    // `collectGetInputRefs` enumerates statement kinds whose VALUES it recurses into looking for
+    // `get from input` refs, and had no `TerminateStatement` arm even though `terminate`'s `args`
+    // is the same `ConstructorArg` shape `Constructor.args` already walks. Without the arm, an
+    // input read only through a `terminate` argument was invisible here and its `TakeInput` step
+    // was reported as an unwitnessed input -- a false positive.
+    "not warn a TakeInput step whose input is read via a 'terminate' argument" in { (td: TestData) =>
+      runWitnessPass(
+        """domain D is {
+          |  user U is "a user"
+          |  application context UI is {
+          |    record Greeting is { text: String }
+          |    command Refresh is { ??? }
+          |    group Main is {
+          |      form Entry acquires type Greeting
+          |    }
+          |  }
+          |  context Ctx is {
+          |    entity Order is {
+          |      handler OH is {
+          |        on term(oid: Id(entity Order)) is { do "end" }
+          |      }
+          |    }
+          |    handler Screen is {
+          |      on command D.UI.Refresh is {
+          |        terminate entity D.Ctx.Order(get from input D.UI.Main.Entry)
+          |      }
+          |    }
+          |  }
+          |  epic E is {
+          |    user U wants to "give" so that "taken"
+          |    case C is {
+          |      user U wants to "give" so that "taken"
+          |      step take input D.UI.Main.Entry from user D.U
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      ) { (uwo, _) =>
+        unwitnessed(uwo) mustBe empty
+      }
+    }
+
     "warn a TakeInput step whose input is neither consumed nor read" in { (td: TestData) =>
       runWitnessPass(
         """domain D is {
