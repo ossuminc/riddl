@@ -65,6 +65,8 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 - **Processor instance identity — DESIGNED 2026-08-13, ready to plan.**
   Spec: `docs/superpowers/specs/
   2026-08-13-processor-instance-identity-design.md`.
+  Plan: `docs/superpowers/plans/2026-08-13-processor-instance-identity.md`
+  (8 tasks, 63 steps, TDD throughout).
   Answers riddl-generator's blocking ask (`task/2026-08-13-tell-to-an-entity-
   cannot-name-which-instance.md`): RIDDL has no way to denote an instance — to
   address one, to read its identity, or to bring one into being. Adds `Id(P)`
