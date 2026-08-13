@@ -869,6 +869,19 @@ to the right group rather than appending to a list.
   keys for State's type ref use State as parent, not Entity.
 - **`do "..."` is an alias for `prompt "..."`** — both produce
   `PromptStatement`.
+- **`not` is RIDDL's only general-purpose negation; `!` is a legacy
+  spelling accepted ONLY as `when !<bare-identifier>`** (ruling
+  2026-08-13, prompted by ossum.tech's crash report). `!` does not
+  precede a path, does not appear in `require`/`let`, and will not be
+  extended to. `not` is prefix, recurses (`not not a`), and works
+  wherever a boolean expression does — including `when not isValid`,
+  which is the recommended spelling of the `!` form.
+  The reasoning is that `!` buys no expressiveness and costs four
+  surfaces (parser, EBNF, GBNF, prettify) plus a second spelling for
+  authors to choose between; RIDDL's operators are words (`and`,
+  `or`, `not`) and `!` is the outlier. It is kept — not deprecated —
+  because it parses today and models use it, and `WhenStatement`
+  carries the negation as a separate `Boolean`, not as an AST node.
 - **walkStatements helper** — private in ValidationPass; walks
   into `WhenStatement` / `MatchStatement` nesting.
 - **Accessors see through the provenance wrappers; `Finder` sees
@@ -961,6 +974,14 @@ model that validates clean and means something else.
   visitor that handles three of forty types. The test is whether the arm means
   *"nothing to do here"* or *"I do not know what this is"*. Only the second is
   the bug.
+- **Enumerate the domain of the FUNCTION, not of the nearest-looking type.**
+  `stateReadsIn`/`asksIn`/`countValueFailPoints` walk what `statementValues`
+  yields, which is WIDER than `Value`: `WhenStatement.condition` alone is
+  `LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue`,
+  and `Identifier` appears in no other member. Auditing `Value` exhaustively
+  therefore still misses it — which is exactly how `when !isValid`, a form
+  that validated on rc.11, threw on rc.13 (fixed 2026-08-13). The throw did
+  its job; the enumeration was against the wrong hierarchy.
 
 Known-total today: `Pass.processValue`, `classifyHandlers` (all 17 `Statement`
 kinds), `countValueFailPoints`, BASTWriter/BASTReader statement dispatch. The

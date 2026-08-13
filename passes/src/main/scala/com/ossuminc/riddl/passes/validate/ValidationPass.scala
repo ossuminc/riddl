@@ -4518,6 +4518,8 @@ case class ValidationPass(
     // `case _ => 0`, because that catch-all is precisely how `ask` went uncounted: a new
     // failure-bearing value read as "contributes nothing" instead of failing the build.
     case _: Reference[?]          => 0
+    // A name cannot fail; see the note in `stateReadsIn`.
+    case _: Identifier            => 0
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => 0
     case other =>
       throw new IllegalStateException(
@@ -4592,6 +4594,17 @@ case class ValidationPass(
     // a state read. (A saga's `ask` is separately banned outright; see `asksIn`.)
     case _: Ask                   => Seq.empty
     case _: Reference[?]          => Seq.empty
+    // An IDENTIFIER is a NAME, not an expression: `when !isValid` binds the legacy negated-
+    // identifier form, whose condition is a bare `Identifier` naming a let-local or a field. A name
+    // has no sub-structure, so it can contain nothing -- decided deliberately, as the throw below
+    // instructs, not defaulted.
+    //
+    // It is here because `statementValues` yields a domain WIDER than `Value`:
+    // `WhenStatement.condition` is `LiteralString | Identifier | ValueRef | BooleanExpression |
+    // PromptValue`, and `Identifier` is in none of the other members. Auditing `Value` alone (as
+    // the InvariantCondition fix did on 2026-08-12) misses exactly this, which is how
+    // `when !isValid` -- documented syntax that validated on rc.11 -- came to throw on rc.13.
+    case _: Identifier            => Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
     case other =>
       throw new IllegalStateException(
@@ -4633,6 +4646,8 @@ case class ValidationPass(
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(asksIn)
     case _: GetValue              => Seq.empty
     case _: Reference[?]          => Seq.empty
+    // A name contains nothing; see the note in `stateReadsIn`.
+    case _: Identifier            => Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
     case other =>
       throw new IllegalStateException(

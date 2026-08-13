@@ -106,6 +106,95 @@ class InvariantConditionValueWalkTest extends AbstractValidatingTest {
     }
   }
 
+  "`when !<identifier>` — the legacy negated-identifier form" should {
+
+    "validate instead of throwing" in { (td: TestData) =>
+      // Reported by ossum.tech 2026-08-13 against rc.13. `stateReadsIn` gained arms for the value
+      // kinds that were NOTICED; `Identifier` was not among them, so a documented form that
+      // validated on rc.11 threw on rc.13.
+      //
+      // The lesson is narrower than "enumerate the sealed hierarchy" -- that was already the rule
+      // and it was followed. `statementValues` yields a domain WIDER than `Value`:
+      // `WhenStatement.condition` is `LiteralString | Identifier | ValueRef | BooleanExpression |
+      // PromptValue`, and `Identifier` appears in no other member. Auditing `Value` alone misses
+      // exactly this. Enumerate the domain of the FUNCTION, not of the nearest-looking type.
+      val src =
+        """domain D is {
+          |  author A is { name is "R" email is "r@o.com" }
+          |  context C is {
+          |    record Acct is { isValid is Boolean } with { briefly "r" }
+          |    command Plain is { amount is Natural } with { briefly "c" }
+          |    entity E is {
+          |      state S of record Acct is {
+          |        handler H is {
+          |          on command Plain {
+          |            when !isValid then { error "no" } end
+          |          }
+          |        } with { briefly "h" }
+          |      } with { briefly "s" }
+          |    } with { briefly "e" }
+          |  } with { briefly "ctx" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val msgs = diagnostics(src, "when-negated-identifier")
+      msgs.filter(_.kind == Messages.SevereError) mustBe empty
+      msgs.justErrors mustBe empty
+    }
+
+    "CONTROL: the un-negated form still validates too" in { (td: TestData) =>
+      // Guards against a fix that made `when` conditions unreachable rather than handled.
+      val src =
+        """domain D is {
+          |  author A is { name is "R" email is "r@o.com" }
+          |  context C is {
+          |    record Acct is { isValid is Boolean } with { briefly "r" }
+          |    command Plain is { amount is Natural } with { briefly "c" }
+          |    entity E is {
+          |      state S of record Acct is {
+          |        handler H is {
+          |          on command Plain {
+          |            when isValid then { error "no" } end
+          |          }
+          |        } with { briefly "h" }
+          |      } with { briefly "s" }
+          |    } with { briefly "e" }
+          |  } with { briefly "ctx" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val msgs = diagnostics(src, "when-plain-identifier")
+      msgs.filter(_.kind == Messages.SevereError) mustBe empty
+      msgs.justErrors mustBe empty
+    }
+
+    "the RECOMMENDED spelling `when not <ref>` works, which is why `!` is not extended" in {
+      (td: TestData) =>
+        // Pins the ruling recorded in CLAUDE.md (2026-08-13): `not` is the only general-purpose
+        // negation and `!` stays `when`-only and identifier-only. That ruling is only defensible
+        // while `not` genuinely covers the same ground, so assert it rather than assume it.
+        val src =
+          """domain D is {
+            |  author A is { name is "R" email is "r@o.com" }
+            |  context C is {
+            |    record Acct is { isValid is Boolean } with { briefly "r" }
+            |    command Plain is { amount is Natural } with { briefly "c" }
+            |    entity E is {
+            |      state S of record Acct is {
+            |        handler H is {
+            |          on command Plain {
+            |            when not isValid then { error "no" } end
+            |          }
+            |        } with { briefly "h" }
+            |      } with { briefly "s" }
+            |    } with { briefly "e" }
+            |  } with { briefly "ctx" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val msgs = diagnostics(src, "when-not-keyword")
+        msgs.filter(_.kind == Messages.SevereError) mustBe empty
+        msgs.justErrors mustBe empty
+    }
+  }
+
   "`when invariant X` in a saga step" should {
 
     "validate instead of throwing" in { (td: TestData) =>
