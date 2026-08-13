@@ -1954,12 +1954,12 @@ object JsonAstBuilder:
       // defaults. root2Json emits these explicitly too, so json1==json2 holds.
       case StringDto(min, max) => String_(curAt, Some(min.getOrElse(0L)), Some(max.getOrElse(255L)))
 
-      case IdDto(entity) =>
+      case IdDto(entity, keyword) =>
         entity match
-          case Some(e) => UniqueId(curAt, pathId(e))
+          case Some(e) => UniqueId(curAt, pathId(e), keyword)
           case None =>
             ctx.err("Id type requires an 'entity' path (it cannot be defaulted)")
-            UniqueId(curAt, PathIdentifier.empty)
+            UniqueId(curAt, PathIdentifier.empty, keyword)
 
       case PredefDto(kind) =>
         kind match

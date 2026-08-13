@@ -123,7 +123,7 @@ is covered in that construct's phase. The builder emits references as
 | UUID | ✅ Phase 1 | |
 | Date | ✅ Phase 1 | |
 | TimeStamp | ✅ Phase 1 | |
-| UniqueId | ✅ Phase 1 | `kind: "Id"`, entity path required |
+| UniqueId | ✅ Phase 1 | `kind: "Id"`, entity path required; `keyword`? carries the as-written processor-kind keyword (2026-08-13, task 1 of processor-instance-identity) |
 | Pattern | ✅ Phase 1 | ≥1 regex required |
 | Enumeration | ✅ Phase 1 | `kind: "Enum"`, ≥1 value required |
 | Alternation | ✅ Phase 1 | `of`: declared type names |

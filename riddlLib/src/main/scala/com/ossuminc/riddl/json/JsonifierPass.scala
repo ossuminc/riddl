@@ -1288,7 +1288,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     // Emit the canonical String(0,255) bounds explicitly (mirroring the defaults
     // parseJson applies) so an unbounded String is a JSON fixed point: json1==json2.
     case String_(_, min, max) => StringDto(Some(min.getOrElse(0L)), Some(max.getOrElse(255L)))
-    case UniqueId(_, p, _)    => IdDto(Some(path(p)))
+    case UniqueId(_, p, kw)   => IdDto(Some(path(p)), kw)
     case Currency(_, c)       => CurrencyDto(Some(c))
     case Pattern(_, ps)       => PatternDto(ps.map(_.s))
     case URI(_, scheme)       => URIDto(scheme.map(_.s))

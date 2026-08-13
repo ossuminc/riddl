@@ -32,8 +32,12 @@ object JsonModel:
   /** `{ "kind": "String", "min"?: Int, "max"?: Int }` */
   case class StringDto(min: Option[Long] = None, max: Option[Long] = None) extends TypeExprDto
 
-  /** `{ "kind": "Id", "entity": "<path>" }` — entity path required by builder. */
-  case class IdDto(entity: Option[String] = None) extends TypeExprDto
+  /** `{ "kind": "Id", "entity": "<path>", "keyword"?: "entity" }` — entity path required by
+    * builder. `keyword` is the AS-WRITTEN processor-kind keyword (`Id(entity Order)` ->
+    * `"entity"`, `Id(Order)` -> absent); added 2026-08-13 alongside `AST.UniqueId.kindKeyword`.
+    */
+  case class IdDto(entity: Option[String] = None, keyword: Option[String] = None)
+      extends TypeExprDto
 
   /** Argument-less predefined kinds: UUID, Boolean, Date, TimeStamp, Integer, Whole, Natural,
     * Number, Real.
@@ -1380,7 +1384,7 @@ object JsonModel:
     else
       m("kind").str match
         case "String" => StringDto(m.get("min").map(_.num.toLong), m.get("max").map(_.num.toLong))
-        case "Id"     => IdDto(m.get("entity").map(_.str))
+        case "Id" => IdDto(m.get("entity").map(_.str), m.get("keyword").map(_.str))
         // Argument-less predefined kinds (Phase 1 + Phase 2)
         case k @ ("UUID" | "Boolean" | "Date" | "TimeStamp" | "Integer" | "Whole" | "Natural" |
             "Number" | "Real" | "UserId" | "Anything" | "Abstract" | "Location" | "Nothing" |
@@ -1463,10 +1467,11 @@ object JsonModel:
             ++ min.map(x => "min" -> (ujson.Num(x.toDouble): ujson.Value))
             ++ max.map(x => "max" -> (ujson.Num(x.toDouble): ujson.Value))
         )
-      case IdDto(entity) =>
+      case IdDto(entity, keyword) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("Id"))
             ++ entity.map(e => "entity" -> (ujson.Str(e): ujson.Value))
+            ++ keyword.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
         )
       case PredefDto(kind) => ujson.Obj("kind" -> ujson.Str(kind))
       case DecimalDto(w, f) =>

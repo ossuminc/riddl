@@ -96,8 +96,15 @@ sbt "passes/testOnly *SuiteName"
 - Modify: `passes/src/main/scala/com/ossuminc/riddl/passes/prettify/RiddlFileEmitter.scala:370`
 - Modify: `language/src/main/scala/com/ossuminc/riddl/language/bast/package.scala` (`FORMAT_REVISION`)
 - Modify: `language/src/main/scala/com/ossuminc/riddl/language/bast/BASTWriter.scala`, `BASTReader.scala`
+- Modify: `passes/.../JsonifierPass.scala` / `JsonAstBuilder.scala` + `JSON_COVERAGE.md`
+  (**corrected 2026-08-13**: the first draft of this list omitted JSON, which the
+  reflectivity mandate and §5.3 both require — a `kindKeyword` the JSON surface drops
+  pushes the coverage ratchet off zero)
+- Modify: `passes/.../resolve/ResolutionPass.scala` (**corrected**: it resolves `UniqueId`
+  as `Entity` and runs BEFORE `TypeValidation`, so widening validation alone leaves the
+  refMap empty and the repository case still fails)
 - Modify: `language/src/main/resources/riddl/grammar/ebnf-grammar.ebnf:141`
-- Regenerate: `language/input/import/NotImplemented.bast`
+- Regenerate: `language/input/import/NotImplemented.bast`, `riddl-grammar.gbnf`
 - Test: `passes/src/test/scala-jvm-native/com/ossuminc/riddl/passes/validate/UniqueIdKindTest.scala`
 
 **Interfaces:**

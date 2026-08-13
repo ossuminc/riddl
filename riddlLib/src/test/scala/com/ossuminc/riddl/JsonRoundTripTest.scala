@@ -1314,5 +1314,44 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           fail(s"parse of the aggregate-flavour model failed: $errors")
       end match
     }
+
+    /** processor-instance-identity task 1 (2026-08-13): `Id(P)` widened from Entity-only to any
+      * Processor, and its optional kind keyword is now CAPTURED (`AST.UniqueId.kindKeyword`)
+      * rather than discarded. The keyword must survive AST -> JSON -> AST, or an AI-authored /
+      * round-tripped model would silently lose `Id(entity Order)` down to the bare `Id(Order)`
+      * form on its next save.
+      */
+    "round-trip the Id(P) kind keyword losslessly" in {
+      val idModel =
+        """domain d is { context c is {
+          |  entity E is { ??? }
+          |  type WithKeyword is Id(entity E)
+          |  type Bare is Id(E)
+          |}}
+          |""".stripMargin
+      RiddlLib.parseString(idModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // JsonifierPass emits the keyword field for the keyword form...
+          json1 must include("\"keyword\": \"entity\"")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) =>
+              // ...and JsonAstBuilder rebuilds it so the JSON is a fixed point.
+              RiddlLib.root2Json(root1) mustBe json1
+              val types = Finder(root1.contents).recursiveFindByType[Type]
+              val withKeyword = types.find(_.id.value == "WithKeyword").get.typEx
+              withKeyword mustBe a[UniqueId]
+              withKeyword.asInstanceOf[UniqueId].kindKeyword mustBe Some("entity")
+              // The bare form must NOT gain a keyword from nowhere.
+              val bare = types.find(_.id.value == "Bare").get.typEx
+              bare mustBe a[UniqueId]
+              bare.asInstanceOf[UniqueId].kindKeyword mustBe None
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the Id-keyword JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the Id-keyword model failed: $errors")
+      end match
+    }
   }
 }

@@ -161,6 +161,7 @@ defaulted by the builder (see the table below).
 ```jsonc
 { "kind": "String", "min": 0, "max": 255 }   // both optional
 { "kind": "Id", "entity": "Order" }          // entity path REQUIRED
+{ "kind": "Id", "entity": "Order", "keyword": "entity" }  // optional processor-kind keyword, as written
 { "kind": "UUID" }
 { "kind": "Boolean" }
 { "kind": "Date" }
@@ -190,6 +191,7 @@ defaulted by the builder (see the table below).
 | `Range` no args | `range(0, 100)` |
 | `Currency` no `country` | `Currency(USD)` |
 | `Id` no `entity` | **error** (a path can't be defaulted) |
+| `Id` no `keyword` | bare `Id(<path>)` (legal; the keyword is optional) |
 | `Enum`/`Pattern` empty | **error** (need ≥ 1) |
 | no `brief` | omitted (legal) |
 
