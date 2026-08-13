@@ -2406,12 +2406,17 @@ object AST:
     val DefaultMax: Long = 255L
   }
 
-  /** A type expression for values that ensure a unique identifier for a specific entity.
+  /** A type expression for values that ensure a unique identifier for a specific Processor
+    * (Adaptor, Context, Entity, Projector, Repository, or Streamlet) -- widened from
+    * Entity-only 2026-08-13.
     *
     * @param loc
     *   The location of the unique identifier type expression
     * @param entityPath
-    *   The path identifier of the entity type
+    *   The path identifier of the referenced Processor
+    * @param kindKeyword
+    *   The optional processor-kind keyword as written (`Id(entity Order)` -> `Some("entity")`,
+    *   `Id(Order)` -> `None`)
     */
   @JSExportTopLevel("UniqueId")
   case class UniqueId(
@@ -6079,7 +6084,9 @@ object AST:
       // it kept saying `Range(2,4)` after `RangeType.kind` was lowered to the spelling that
       // actually parses. One source of truth means it cannot drift again.
       case rt: RangeType           => rt.format
-      case UniqueId(_, entityPath, _) => s"Id(${entityPath.format})"
+      // Same reasoning as RangeType above: delegate to format() so the keyword (added
+      // 2026-08-13) can't drift out of sync with a hand-built second copy of the label.
+      case uid: UniqueId           => uid.format
       case m @ AggregateUseCaseTypeExpression(_, messageKind, _, _) =>
         s"${messageKind.useCase} of ${m.fields.size} fields and ${m.methods.size} methods"
       case pt: PredefinedType => pt.kind

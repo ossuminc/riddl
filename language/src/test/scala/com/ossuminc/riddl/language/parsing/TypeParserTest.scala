@@ -314,6 +314,24 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
       )
       checkDefinition[Type, Type](rpi, expected, identity)
     }
+    "NOT split a keyword-prefixed identifier at Id(...)'s keyword boundary" in { (td: TestData) =>
+      // Id(contextRegistry) must not parse as Id(context Registry) -- Keywords.keywords
+      // enforces the keyword/identifier boundary, the same hazard `event` inside
+      // `event-sourced` is guarded against (Keywords.scala:19-33). Before this fix, a bare
+      // StringIn matched "context" as a PREFIX of the identifier and the remainder "Registry"
+      // silently became the path.
+      val rpi = RiddlParserInput("type ident = Id(contextRegistry)", td)
+      parseDefinition[Type](rpi) match {
+        case Left(errors) => fail(errors.map(_.format).mkString)
+        case Right((typ: Type, _)) =>
+          typ.typEx match {
+            case UniqueId(_, entityPath, kindKeyword) =>
+              entityPath.value mustBe Seq("contextRegistry")
+              kindKeyword mustBe None
+            case other => fail(s"expected UniqueId, got $other")
+          }
+      }
+    }
     "allow renames of 8 literal types" in { (_: TestData) =>
       val mt = RiddlParserInput.empty
       val cases = Map[String, Type](

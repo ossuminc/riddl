@@ -380,7 +380,10 @@ private[parsing] trait TypeParser {
     // The keyword generalizes from `entity` to every processor kind. Longest-first is not
     // needed here (no keyword is a prefix of another) but the alternation order still
     // mirrors ReferenceParser.processorRef for readability.
-    def kindKw[u: P]: P[String] = P(
+    // Keywords.keywords enforces the keyword/identifier boundary (a non-identifier character,
+    // or end of input, must follow) -- without it, `Id(contextRegistry)` would parse as
+    // `Id(context Registry)`, same hazard as `event` inside `event-sourced` (Keywords.scala:19).
+    def kindKw[u: P]: P[String] = Keywords.keywords(
       StringIn(
         Keyword.adaptor, Keyword.context, Keyword.entity,
         Keyword.projector, Keyword.repository, Keyword.streamlet

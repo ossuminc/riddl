@@ -1275,6 +1275,46 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize Id(P)'s kind keyword (processor-instance-identity task 1)" in {
+      // FORMAT_REVISION moved to 15 FOR this feature, but no .riddl in this repo or the
+      // corpus uses the keyword form, so the alignment-critical `true` + interned-string
+      // branch of the Some(keyword) write/read path was proven only by reading the
+      // writer/reader code, not by an actual write -> read cycle. Both the keyword and bare
+      // forms are exercised so a leak in either direction (dropped keyword, or a bare Id
+      // spuriously gaining one) is caught.
+      val riddlSource =
+        """domain d is { context c is {
+          |  entity E is { ??? }
+          |  type WithKeyword is Id(entity E)
+          |  type Bare is Id(E)
+          |}}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-id-keyword")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "Id(P) keyword round trip: ASTs differ")
+              import com.ossuminc.riddl.language.Finder
+              import com.ossuminc.riddl.language.AST.{Type, UniqueId}
+              val types = Finder(module.contents).recursiveFindByType[Type]
+              types.find(_.id.value == "WithKeyword").get.typEx match
+                case uid: UniqueId =>
+                  assert(uid.kindKeyword.contains("entity"), "Id keyword lost in BAST")
+                case other => fail(s"expected UniqueId, got $other")
+              types.find(_.id.value == "Bare").get.typEx match
+                case uid: UniqueId =>
+                  assert(uid.kindKeyword.isEmpty, "bare Id gained a keyword in BAST")
+                case other => fail(s"expected UniqueId, got $other")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize dokn.riddl" in {
       val url = URL.fromCwdPath("language/input/dokn.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "dokn-test")
