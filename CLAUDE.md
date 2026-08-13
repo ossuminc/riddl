@@ -1069,6 +1069,28 @@ validation — resolution and type-checking — in `checkStatementScopes`.
 
 ### Validation Specifics
 
+- **Connector intentions (`persistent`, `at-least-once` | `at-most-once`)** —
+  keywords written BEFORE `connector`, two independent groups, mutually exclusive
+  within a group (an Error, not a parse failure, so both keywords can be named).
+  **Absence of a delivery keyword means `at-least-once`** — Computational Model
+  §25.7 already said so, so nothing was invented and an absent keyword draws NO
+  warning; `at-most-once` exists to make that section's "knowing downgrade, never
+  a silent one" enforceable. `at-least-once` is writable and redundant.
+  **ORDERING is deliberately NOT an intention**: §25.7 makes `unordered`
+  "permission, not mandate" with a best-effort obligation, which is the
+  definition of advisory. The admission test for the enum is whether a generator
+  may decline to honour the keyword.
+  `option persistent` is deprecated and **CONSUMED** into the intention by the
+  parser, which is what makes the round trip converge and migrated 430 corpus
+  uses for free. **Ask `Connector.isPersistent`, never `hasOption("persistent")`**
+  — it accepts both spellings, and three validation gates go through it.
+  Two traps this hit, both documented elsewhere in this file and both worth
+  re-reading before touching AST: inserting the enum between
+  `@JSExportTopLevel("Connector")` and its case class silently reattached the
+  annotation (invisible to `cJVM`), and `StreamingValidation` had an
+  `options.find(…).get` that was safe only while persistence could come from
+  nowhere else.
+
 - **The stream-shape arity table is TOTAL, and `sink`/`source` take ANY port
   count** (Reid, 2026-08-12). `Processor.shapeForArity` maps every non-negative
   `(outlets, inlets)`:

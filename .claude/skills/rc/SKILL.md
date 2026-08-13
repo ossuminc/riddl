@@ -138,9 +138,9 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2245** | 7 |
+| JVM | **2259** | 7 |
 | JS | **712** | 5 |
-| Native | **1535** | 7 |
+| Native | **1549** | 7 |
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks

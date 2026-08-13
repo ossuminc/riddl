@@ -128,6 +128,47 @@ delegates to `format`, so there is one source of truth and it cannot drift
 again. The JSON discriminator is still `"Range"` and is deliberately NOT tied to
 either: it is a wire format, hardcoded at both the read and write sites.
 
+## A stale capture is not a baseline (2026-08-13)
+
+Connector intentions landed: `persistent` and `at-least-once` | `at-most-once` as
+keywords before `connector`, replacing the option. Three things worth keeping.
+
+**The design question answered itself in the authority.** The plan flagged "what
+does a connector with NO delivery intention mean?" as needing a ruling before
+building. Computational Model §25.7 already said it: at-least-once on durable
+realizations, "weaker only as a knowing deployment downgrade, **never a silent
+one**". So no default had to be invented, no completeness warning was warranted,
+and `at-most-once` as a keyword is exactly the mechanism that section demands.
+**Read the authority before asking for a ruling** — half the open question was
+already settled in writing.
+
+It also drew the line for what does NOT belong: §25.7 calls `unordered`
+"permission, not mandate" with a best-effort obligation, which is the definition
+of advisory — so ordering stays an option. The admission test for an intention is
+whether a generator may decline to honour it.
+
+**The corpus A/B nearly produced a phantom regression.** Diffing against
+`corpus-ext2.txt`, captured earlier the same day, showed 18 warnings and 2
+completeness messages "disappearing" — precisely the direction that hides real
+defects, so it stopped the work for a while. They had not disappeared. **riddl-
+models is a moving target** (CLAUDE.md says so, and I had edited it myself hours
+earlier), so a capture from this morning is not a baseline for this afternoon.
+
+Re-running the PREVIOUS binary (`../bin/riddlc` at rc.13) over the corpus at the
+same moment gave the honest answer: warnings 863 → 863, completeness 1 → 1,
+errors 0 → 0, deprecations 2 → 432, every non-deprecation line byte-identical.
+**A baseline is a run, not a file.** If the inputs can move, capture both sides
+back to back or the diff measures the wrong thing.
+
+**Two documented traps bit anyway, which is an argument for re-reading them.**
+Inserting the new enum between `@JSExportTopLevel("Connector")` and its case
+class silently reattached the annotation — `cJVM` cannot see it, `cJS` can. And
+`StreamingValidation` held `options.find(_.name == "persistent").get`, safe only
+while persistence could come from nowhere else; the moment it could come from an
+intention the `.get` threw and killed the entire streaming check with a Severe.
+Widening where a value can come from turns every `.get` on the old source into a
+landmine.
+
 ## Two implementations agreeing is not evidence they are right (2026-08-12)
 
 `repository MachineRegistry as sink` with two inlets and no outlets was rejected:
