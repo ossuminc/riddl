@@ -10,7 +10,6 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass}
 import com.ossuminc.riddl.utils.pc
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
@@ -19,10 +18,14 @@ import org.scalatest.matchers.must.Matchers
   * (BAST tag 8), so it needs its own targeted reflectivity proof rather than relying on the coarse
   * domain/context/entity-level [[DeepASTComparison]] (which does not descend into statement-level
   * Value nodes) or [[com.ossuminc.riddl.language.Finder]] (whose `recursiveFindByType` does not
-  * descend into a `LetStatement`'s `expression` field). Both round trips -- prettify and BAST -- are
-  * walked to the `Initiate` node directly and compared field-by-field.
+  * descend into a `LetStatement`'s `expression` field). Walked to the `Initiate` node directly and
+  * compared field-by-field, mirroring `BASTRoundTripTest`'s style.
+  *
+  * JVM-only, like `BASTRoundTripTest` itself (BAST I/O has no Native-friendly harness in this test
+  * suite). The PRETTIFY round trip is a separate, cross-platform concern -- see
+  * `passes/src/test/scala-jvm-native/.../prettify/InitiateRoundTripTest.scala`.
   */
-class InitiateReflectivityTest extends AnyWordSpec with Matchers {
+class InitiateBASTRoundTripTest extends AnyWordSpec with Matchers {
 
   private val src =
     """domain Dom is {
@@ -76,33 +79,6 @@ class InitiateReflectivityTest extends AnyWordSpec with Matchers {
       case other           => fail(s"expected an Initiate, got $other")
 
   "initiate" should {
-    "round-trip through prettify (parse -> prettify -> re-parse)" in {
-      val original = parse(src, "src")
-      val originalInit = initiateIn(original)
-
-      val pretty = Pass
-        .runThesePasses(
-          PassInput(original),
-          Pass.standardPasses :+ { (in: PassInput, out: PassesOutput) =>
-            PrettifyPass(in, out, PrettifyPass.Options(flatten = true, inputDir = ""))
-          }
-        )
-        .outputs
-        .outputOf[PrettifyOutput](PrettifyPass.name)
-        .getOrElse(fail("PrettifyPass produced no output"))
-        .state
-        .filesAsString
-
-      pretty must include("initiate")
-
-      val regen = parse(pretty, "regen")
-      val regenInit = initiateIn(regen)
-
-      regenInit.processor.pathId.format mustBe originalInit.processor.pathId.format
-      regenInit.args.size mustBe originalInit.args.size
-      regenInit.args.map(_.value.format) mustBe originalInit.args.map(_.value.format)
-    }
-
     "round-trip through BAST (write tag 8, read it back)" in {
       val original = parse(src, "src")
       val originalInit = initiateIn(original)

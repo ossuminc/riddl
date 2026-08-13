@@ -88,6 +88,25 @@ class InitiateTerminateTest extends AbstractValidatingTest {
       ).justErrors.map(_.message).mkString("\n")
       text must include("no parameters")
     }
+
+    // Regression guard for Task 2's Critical finding: `checkInitiate` is reached from the VALUE
+    // path (`validateValue`), which `checkStatementScopes` recurses into for a `WhenStatement`'s
+    // `thenStatements`/`elseStatements` -- but `validateStatement`'s generic dispatch does NOT
+    // descend into those (they are FIELDS, not `contents`). Task 2 shipped exactly this shape of
+    // bug once already (self checks reachable only at the top level of an on-clause); this proves
+    // the placement is correct today AND stays correct if a future refactor moves the check.
+    "REJECT the wrong argument count when 'initiate' is nested inside a 'when' block" in {
+      (td: TestData) =>
+        val text = diagnostics(
+          model(
+            """on init(total: String) is { do "start" }""",
+            """when true then { let oid = initiate entity Order("1", "2") } end"""
+          ),
+          "initiate-nested-when"
+        ).justErrors.map(_.message).mkString("\n")
+        text must include("2")
+        text must include("1")
+    }
   }
 
   // Task 5: `terminate` does not exist yet (TerminateStatement is Task 5's deliverable). Left
