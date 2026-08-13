@@ -377,10 +377,19 @@ private[parsing] trait TypeParser {
   }
 
   private def uniqueIdType[u: P]: P[UniqueId] = {
+    // The keyword generalizes from `entity` to every processor kind. Longest-first is not
+    // needed here (no keyword is a prefix of another) but the alternation order still
+    // mirrors ReferenceParser.processorRef for readability.
+    def kindKw[u: P]: P[String] = P(
+      StringIn(
+        Keyword.adaptor, Keyword.context, Keyword.entity,
+        Keyword.projector, Keyword.repository, Keyword.streamlet
+      ).!
+    )
     (Index ~ PredefType.Id ~ Punctuation.roundOpen ~/
-      maybe(Keyword.entity) ~ pathIdentifier ~ Punctuation.roundClose ~/ Index) map {
-      case (start, pid, end) =>
-        UniqueId(at(start, end), pid)
+      kindKw.? ~ pathIdentifier ~ Punctuation.roundClose ~/ Index) map {
+      case (start, kw, pid, end) =>
+        UniqueId(at(start, end), pid, kw)
     }
   }
 

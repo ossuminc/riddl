@@ -2064,6 +2064,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(0) // UniqueId subtype (0 = UniqueId, 1 = UUID, 2 = UserId)
         writeLocation(u.loc)
         writePathIdentifierInline(u.entityPath)
+        // Revision 15: the kind keyword as written (`Id(entity Order)` -> Some("entity")).
+        writeOption(u.kindKeyword)(writeString)
 
       case c: Currency =>
         writer.writeU8(TYPE_NUMBER)

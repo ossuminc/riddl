@@ -264,9 +264,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     parents: Parents
   ): Resolution[Type] = {
     typ match {
-      case UniqueId(_, entityPath) =>
-        val resolution = resolveAPathId[Entity](entityPath, parents)
-        associateUsage[Entity](user, resolution)
+      case UniqueId(_, entityPath, _) =>
+        // Id(P) now names any Processor, not only an Entity -- widen the resolution to match,
+        // or a Repository/Adaptor/etc. target never even gets a refMap entry and TypeValidation's
+        // checkPathRef[Processor[?]] reports "not resolved" despite being individually correct.
+        val resolution = resolveAPathId[Processor[?]](entityPath, parents)
+        associateUsage[Processor[?]](user, resolution)
         None
       case AliasedTypeExpression(_, _, pathId) =>
         associateUsage[Type](user, resolveAPathId[Type](pathId, parents))

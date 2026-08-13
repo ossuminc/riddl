@@ -367,7 +367,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case EntityReferenceTypeExpression(_, er) =>
         add(s"${Keyword.reference} to ${Keyword.entity} ${er.format}")
       case pattern: Pattern     => emitPattern(pattern)
-      case UniqueId(_, id)      => this.add(s"Id(${id.format}) ")
+      case uid: UniqueId => this.add(s"${uid.format} ")
       case Optional(_, typex)   => emitTypeExpression(typex).add("?")
       case ZeroOrMore(_, typex) => emitTypeExpression(typex).add("*")
       case OneOrMore(_, typex)  => emitTypeExpression(typex).add("+")

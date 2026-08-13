@@ -308,7 +308,8 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         Identifier(At(rpi, 5, 11), "ident"),
         UniqueId(
           At(rpi, 13, 27),
-          entityPath = PathIdentifier(At(rpi, 23, 26), Seq("foo"))
+          entityPath = PathIdentifier(At(rpi, 23, 26), Seq("foo")),
+          kindKeyword = Some("entity")
         )
       )
       checkDefinition[Type, Type](rpi, expected, identity)
@@ -426,7 +427,8 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
               Identifier(At(rpi, 30, 32), "id"),
               UniqueId(
                 At(rpi, 34, 48),
-                PathIdentifier(At(rpi, 44, 47), Seq("foo"))
+                PathIdentifier(At(rpi, 44, 47), Seq("foo")),
+                kindKeyword = Some("entity")
               )
             ),
             Field(
@@ -507,7 +509,8 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
                 Identifier(At(rpi, 31 + l, 33 + l), "id"),
                 UniqueId(
                   At(rpi, 35 + l, 49 + l),
-                  PathIdentifier(At(rpi, 45 + l, 49 + l), Seq("foo"))
+                  PathIdentifier(At(rpi, 45 + l, 49 + l), Seq("foo")),
+                  kindKeyword = Some("entity")
                 )
               ),
               Field(

@@ -261,7 +261,23 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           typ.loc,
           suggestion = "Make the minimum cardinality strictly less than the maximum (e.g. {1..5})."
         )
-      case UniqueId(_, pid) => checkPathRef[Entity](pid, parents)
+      case UniqueId(loc, pid, kindKeyword) =>
+        checkPathRef[Processor[?]](pid, parents)
+        // The keyword must TELL THE TRUTH. Resolution has already run, so the referent's
+        // real kind is available; a keyword that contradicts it is worse than no keyword,
+        // because a reader believes it.
+        kindKeyword.foreach { kw =>
+          resolution.refMap.definitionOf[Processor[?]](pid, parents.head).foreach { referent =>
+            val actual = referent.getClass.getSimpleName
+            check(
+              actual.equalsIgnoreCase(kw),
+              s"Id names ${referent.identify}, which is a $actual, but it is declared as '$kw'",
+              Error,
+              loc,
+              suggestion = s"Write 'Id(${actual.toLowerCase} ${pid.format})' or drop the keyword."
+            )
+          }
+        }
       case Decimal(loc, whole, fractional) =>
         check(
           whole >= 1,

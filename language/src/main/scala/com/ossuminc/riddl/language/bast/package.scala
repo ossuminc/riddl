@@ -79,7 +79,10 @@ package object bast {
     // the inlet ref, so every byte following a Connector in a revision-12 file would be misread.
     // 13 was connector intentions; 14 adds distinct tags for Constant and Method, which had
     // been sharing NODE_FIELD and corrupting every byte that followed one.
-    14 // Connector intentions + distinct NODE_CONSTANT / NODE_METHOD tags
+    // 15 adds the Id kind keyword, `self`, `initiate`, `terminate`, on-clause parameter lists
+    // and the tell `by` clause -- every one of which appends bytes an older reader would leave
+    // in the stream.
+    15 // instance identity: Id keyword, self, initiate/terminate, on-clause params, tell by
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.
     *

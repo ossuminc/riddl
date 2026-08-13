@@ -138,7 +138,8 @@ zone = /[A-Z0-9:.+-]{2,}/ ;
 
 (* Type Expressions *)
 pattern_type = "Pattern" "(" {literal_string} ")" ;
-unique_id_type = "Id" "(" ["entity"] path_identifier ")" ;
+unique_id_type = "Id" "(" [processor_kind] path_identifier ")" ;
+processor_kind = "adaptor" | "context" | "entity" | "projector" | "repository" | "streamlet" ;
 enumeration = "any" ["of"] "{" enumerators "}" ;
 enumerators = undefined | {enumerator [","]} ;
 enumerator = identifier [enum_value] [with_metadata] ;

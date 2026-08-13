@@ -60,7 +60,9 @@ class TypeValidatorTest extends AbstractValidatingTest {
           case (_: Domain, _, msgsAndWarnings: Messages.Messages) =>
             val errors = msgsAndWarnings.justErrors
             errors.size mustBe 1
-            errors.head.message must include("but an Entity was expected")
+            // Id(P) now names any Processor, not only an Entity (2026-08-13); 'Bar' resolves
+            // to a Type, so the widened check is what fires.
+            errors.head.message must include("but a Processor was expected")
         }
       }
     }
@@ -102,7 +104,9 @@ class TypeValidatorTest extends AbstractValidatingTest {
       }
     }
 
-    "identify when unique ID types reference something other than an entity" in { (td: TestData) =>
+    "accept unique ID types that reference a non-Entity Processor" in { (td: TestData) =>
+      // Id(P) now names any Processor, not only an Entity (2026-08-13) -- a Context is one
+      // of the six eligible kinds, so this must validate clean.
       val input = RiddlParserInput(
         """
           |domain foo is {
@@ -115,10 +119,28 @@ class TypeValidatorTest extends AbstractValidatingTest {
       pc.withOptions(CommonOptions.default) { _ =>
         parseAndValidateDomain(input, shouldFailOnErrors = false) {
           case (_: Domain, _, msgs: Messages) =>
+            msgs.justErrors mustBe empty
+        }
+      }
+    }
+
+    "identify when unique ID types reference something other than a Processor" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """
+          |domain foo is {
+          |type NotAProcessor is Integer
+          |type Order is Id(NotAProcessor)
+          |}
+          |""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) {
+          case (_: Domain, _, msgs: Messages) =>
             assertValidationMessage(
               msgs,
               Error,
-              "Path 'TypeTest' resolved to Context 'TypeTest' at empty(3:1->4:1), in Type 'Order', but an Entity"
+              "but a Processor was expected"
             )
         }
       }

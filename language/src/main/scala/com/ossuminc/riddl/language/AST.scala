@@ -2414,10 +2414,19 @@ object AST:
     *   The path identifier of the entity type
     */
   @JSExportTopLevel("UniqueId")
-  case class UniqueId(loc: At, entityPath: PathIdentifier) extends PredefinedType {
+  case class UniqueId(
+    loc: At,
+    entityPath: PathIdentifier,
+    // The kind keyword AS WRITTEN -- `Id(entity Order)` -> Some("entity"), `Id(Order)` -> None.
+    // Kept rather than deprecated (Reid, 2026-08-13): keyword-name disambiguation is a
+    // RIDDL-wide idiom and a bare `Order` could be a context, a message or an entity. Storing
+    // the literal keyword (not an enum) keeps prettify byte-exact without a mapping table.
+    kindKeyword: Option[String] = None
+  ) extends PredefinedType {
     inline override def kind: String = "Id"
 
-    override def format: String = s"$kind(${entityPath.format})"
+    override def format: String =
+      s"$kind(${kindKeyword.map(_ + " ").getOrElse("")}${entityPath.format})"
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[String_] ||
@@ -6070,7 +6079,7 @@ object AST:
       // it kept saying `Range(2,4)` after `RangeType.kind` was lowered to the spelling that
       // actually parses. One source of truth means it cannot drift again.
       case rt: RangeType           => rt.format
-      case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
+      case UniqueId(_, entityPath, _) => s"Id(${entityPath.format})"
       case m @ AggregateUseCaseTypeExpression(_, messageKind, _, _) =>
         s"${messageKind.useCase} of ${m.fields.size} fields and ${m.methods.size} methods"
       case pt: PredefinedType => pt.kind

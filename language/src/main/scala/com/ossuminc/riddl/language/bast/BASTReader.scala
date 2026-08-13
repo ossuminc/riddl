@@ -1898,7 +1898,9 @@ class BASTReader(
         subtype match {
           case 0 => // UniqueId
             val entityPath = readPathIdentifierInline()
-            UniqueId(loc, entityPath)
+            // Revision 15: the kind keyword as written (`Id(entity Order)` -> Some("entity")).
+            val kindKeyword = readOption(readString())
+            UniqueId(loc, entityPath, kindKeyword)
 
           case 1 => // UUID
             UUID(loc)

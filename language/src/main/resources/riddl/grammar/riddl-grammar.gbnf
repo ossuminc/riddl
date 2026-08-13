@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-13 13:55 UTC
+# Generated: 2026-08-13 19:21 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -121,7 +121,8 @@ zone ::= [A-Z0-9:.+-] [A-Z0-9:.+-] [A-Z0-9:.+-]*
 
 # Type Expressions
 pattern-type ::= "Pattern" ws "(" ws (literal-string)* ws ")"
-unique-id-type ::= "Id" ws "(" ws ("entity")? ws path-identifier ws ")"
+unique-id-type ::= "Id" ws "(" ws (processor-kind)? ws path-identifier ws ")"
+processor-kind ::= "adaptor" | "context" | "entity" | "projector" | "repository" | "streamlet"
 enumeration ::= "any" ws ("of")? ws "{" ws enumerators ws "}"
 enumerators ::= undefined | (enumerator (",")?)*
 enumerator ::= identifier ws (enum-value)? ws (with-metadata)?
