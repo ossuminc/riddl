@@ -413,7 +413,13 @@ streamlet_definition = {inlet | outlet | streamlet_include | processor_definitio
 streamlet_include = "include" literal_string ;
 inlet = "inlet" identifier is type_ref [with_metadata] ;
 outlet = "outlet" identifier is type_ref [with_metadata] ;
-connector = "connector" identifier is connector_definitions [with_metadata] ;
+(* Intentions are keywords written BEFORE `connector`, mirroring entity_intention. Two independent
+   groups -- durability (persistent) and delivery (at-least-once | at-most-once) -- mutually
+   exclusive WITHIN a group, which validation reports rather than the grammar forbidding, so a model
+   naming two still parses and both get named. Absent delivery means at-least-once (Computational
+   Model 25.7); `at-most-once` is the knowing downgrade that section requires never be silent. *)
+connector_intention = "at-least-once" | "at-most-once" | "persistent" ;
+connector = {connector_intention} "connector" identifier is connector_definitions [with_metadata] ;
 connector_definitions = ["{" "from" outlet_ref "to" inlet_ref "}" | "from" outlet_ref "to" inlet_ref] ;
 
 (* Group-related *)

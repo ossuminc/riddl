@@ -1712,8 +1712,16 @@ object JsonAstBuilder:
       ident(c.name),
       OutletRef(curAt, pathId(c.from)),
       InletRef(curAt, pathId(c.to)),
+      parseConnectorIntentions(c.intentions),
       meta(c.brief, c.metadata)
     )
+
+  /** Rebuild a Connector's intentions from their keywords, dropping any that are unknown (a
+    * document written against a newer schema stays readable) and canonicalising the order --
+    * same contract as `parseEntityIntentions`.
+    */
+  private def parseConnectorIntentions(keywords: Seq[String]): Seq[ConnectorIntention] =
+    ConnectorIntention.canonical(keywords.flatMap(ConnectorIntention.fromKeyword))
 
   private def buildStreamlet(s: StreamletDto)(using Ctx): Streamlet =
     val inlets = s.inlets.map(buildInlet)

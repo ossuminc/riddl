@@ -1494,12 +1494,30 @@ case class ValidationPass(
     addOutlet(outlet)
   }
 
+  /** Within a group the connector intention keywords are mutually exclusive.
+    *
+    * Reported rather than made a parse error, for the same reason as the entity twin: the model
+    * still builds and the author sees BOTH keywords named.
+    */
+  private def checkConnectorIntentions(connector: Connector): Unit =
+    connector.intentions.groupBy(_.group).foreach { case (group, chosen) =>
+      if chosen.sizeIs > 1 then
+        val names = chosen.map(i => s"'${i.keyword}'").mkString(" and ")
+        messages.addError(
+          connector.errorLoc,
+          s"${connector.identify} declares $names, but $group intentions are mutually exclusive",
+          suggestion = s"Keep exactly one $group keyword before 'connector'."
+        )
+    }
+  end checkConnectorIntentions
+
   private def validateConnector(
     connector: Connector,
     parents: Parents
   ): Unit =
     if connector.nonEmpty then
       addConnector(connector)
+      checkConnectorIntentions(connector)
       val maybeOutlet = checkRef[Outlet](connector.from, parents)
       val maybeInlet = checkRef[Inlet](connector.to, parents)
 

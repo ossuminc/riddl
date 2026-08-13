@@ -4406,6 +4406,8 @@ object AST:
       // `option event-sourced` was consumed into an intention, so it renders as the keyword.
       case e: Entity =>
         EntityIntention.canonical(e.intentions).map(i => s"${i.keyword} ").mkString
+      case c: Connector =>
+        ConnectorIntention.canonical(c.intentions).map(i => s"${i.keyword} ").mkString
       case _ => ""
     end prefix
 
@@ -4820,6 +4822,61 @@ object AST:
     def format: String = s"outlet ${id.format} is ${type_.format}"
   }
 
+  /** A semantic declaration written as a keyword BEFORE `connector`.
+    *
+    * Same reasoning as [[EntityIntention]], and the same category error being fixed: `persistent`
+    * was an option, but the Computational Model calls options advisory ("honored if possible")
+    * and a DELIVERY GUARANTEE is not advisory. §25.7 is explicit -- delivery is at-least-once on
+    * durable realizations, "weaker only as a knowing deployment downgrade, never a silent one" --
+    * and a keyword at the declaration site is exactly what makes the downgrade un-silent.
+    *
+    * Two INDEPENDENT groups; within a group the keywords are mutually exclusive (validated, not
+    * encoded in the type, so a model with two can be REPORTED rather than fail to parse).
+    *
+    * **`at-least-once` is the default and is still writable** (author, 2026-08-13): absence means
+    * at-least-once, and stating it is redundant but legitimate where a reader benefits from seeing
+    * the guarantee affirmatively. It draws no warning.
+    *
+    * ORDERING is deliberately NOT here. §25.7 makes `unordered` "permission, not mandate" with a
+    * best-effort obligation -- which is the definition of advisory, so it stays an option. The test
+    * for admission to this enum is whether a generator may decline to honour it.
+    */
+  enum ConnectorIntention:
+    case Persistent, AtLeastOnce, AtMostOnce
+
+    def keyword: String = this match
+      case Persistent  => "persistent"
+      case AtLeastOnce => "at-least-once"
+      case AtMostOnce  => "at-most-once"
+
+    def group: String = this match
+      case Persistent                => "durability"
+      case AtLeastOnce | AtMostOnce  => "delivery"
+  end ConnectorIntention
+
+  object ConnectorIntention:
+
+    /** The canonical order intentions are emitted in: durability, then delivery. Any order is
+      * accepted on input; PrettifyPass emits this one.
+      */
+    val canonicalOrder: Seq[ConnectorIntention] = Seq(Persistent, AtLeastOnce, AtMostOnce)
+
+    /** All keywords, longest first, so a prefix parser never matches a shorter word that is the
+      * start of a longer one.
+      */
+    val keywords: Seq[String] = canonicalOrder.map(_.keyword).sortBy(-_.length)
+
+    def fromKeyword(kw: String): Option[ConnectorIntention] =
+      canonicalOrder.find(_.keyword == kw)
+
+    /** Sort into [[canonicalOrder]] and drop duplicates. The parser stores intentions this way so
+      * write order can never make two otherwise-identical connectors compare unequal --
+      * `Definition.equals` compares this field.
+      */
+    def canonical(intentions: Seq[ConnectorIntention]): Seq[ConnectorIntention] =
+      canonicalOrder.filter(intentions.contains)
+  end ConnectorIntention
+
   /** A connector between an [[com.ossuminc.riddl.language.AST.Outlet]] and an
     * [[com.ossuminc.riddl.language.AST.Inlet]] that flows a particular
     * [[com.ossuminc.riddl.language.AST.Type]].
@@ -4835,16 +4892,29 @@ object AST:
     *   The meta data for this connector
     */
   @JSExportTopLevel("Connector")
+
+
   case class Connector(
     loc: At,
     id: Identifier,
     from: OutletRef,
     to: InletRef,
+    // DEFAULTED, like Entity.intentions. The compatibility policy requires a new parameter to
+    // have one, and @JSExportTopLevel is satisfied because every param after it is defaulted too --
+    // the rule is that defaulted params be TRAILING, not that there be none.
+    intentions: Seq[ConnectorIntention] = Seq.empty,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf {
     override def format: String = Keyword.connector + " " + id.format
 
     override def isEmpty: Boolean = super.isEmpty && from.isEmpty && to.isEmpty
+
+    /** Durability, from the intention OR the deprecated `option persistent`. Both spellings must be
+      * asked for together during the deprecation -- asking one is the bug that cost 1120 false
+      * warnings on `external` (2026-08-12).
+      */
+    def isPersistent: Boolean =
+      intentions.contains(ConnectorIntention.Persistent) || hasOption("persistent")
   }
 
   sealed trait StreamletShape extends RiddlValue {

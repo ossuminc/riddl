@@ -310,7 +310,12 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   def doConnector(connector: Connector): Unit =
     state.withCurrent { rfe =>
-      rfe.addIndent(s"${keyword(connector)} ${connector.id.format} is ")
+      // Declaration.prefix renders the intentions in CANONICAL order, so a round trip converges
+      // regardless of how they were written -- and a deprecated `option persistent`, consumed into
+      // an intention by the parser, comes back out here as the keyword.
+      rfe.addIndent(
+        s"${Declaration.prefix(connector)}${keyword(connector)} ${connector.id.format} is "
+      )
       rfe
         .add {
           val from =

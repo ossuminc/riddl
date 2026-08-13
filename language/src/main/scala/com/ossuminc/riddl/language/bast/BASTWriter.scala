@@ -465,6 +465,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     case EntityIntention.Transient    => 6
   }
 
+  /** Persist a Connector's intentions, same encoding as the Entity one above. */
+  private def writeConnectorIntentions(intentions: Seq[ConnectorIntention]): Unit = {
+    writer.writeU8(intentions.size)
+    intentions.foreach(i => writer.writeU8(connectorIntentionCode(i)))
+  }
+
+  private def connectorIntentionCode(i: ConnectorIntention): Int = i match {
+    case ConnectorIntention.Persistent  => 1
+    case ConnectorIntention.AtLeastOnce => 2
+    case ConnectorIntention.AtMostOnce  => 3
+  }
+
   def writeContext(c: Context): Unit = {
     writeNodeTag(NODE_CONTEXT, c.metadata.nonEmpty)
     writeLocation(c.loc)
@@ -844,6 +856,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeIdentifierInline(c.id) // Inline - no tag needed
     writeOutletRef(c.from)
     writeInletRef(c.to)
+    writeConnectorIntentions(c.intentions)
   }
 
   // ========== Repository Component Serialization ==========

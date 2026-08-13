@@ -39,11 +39,68 @@ private[parsing] trait StreamingParser {
     )
   }
 
+  /** A70-style intention prefix for connectors: `persistent at-most-once connector X is …`.
+    *
+    * Mirrors `EntityParser.entityIntentionPrefix`, including its trap: the alternatives are STRING
+    * LITERALS, not `ConnectorIntention.keywords`, because `StringIn` is a macro and takes only
+    * constants. `ConnectorIntentionKeywordsTest` pins the two lists together so they cannot drift.
+    *
+    * Longest-first so `at-least-once` can never be matched as a prefix of a shorter word, and the
+    * result is sorted canonically -- write order is a convenience, never a structural difference.
+    */
+  private def connectorIntentionPrefix[u: P]: P[Seq[ConnectorIntention]] =
+    P(
+      StringIn(
+        "at-least-once",
+        "at-most-once",
+        "persistent"
+      ).!.rep(0)
+    ).map(kws => ConnectorIntention.canonical(kws.flatMap(ConnectorIntention.fromKeyword)))
+
+  /** The options these intentions replaced, mapped to their keyword. */
+  private val deprecatedConnectorOptions: Map[String, ConnectorIntention] = Map(
+    "persistent" -> ConnectorIntention.Persistent
+  )
+
+  /** Consume a deprecated `option` into the intention it became, dropping it from the metadata.
+    *
+    * CONSUMING rather than keeping it is what makes a round trip converge and what migrates the
+    * corpus for free: the 426 `option persistent()` uses across riddl-models become the intention
+    * on the next prettify, with no hand edit. Same bargain as the entity intentions.
+    */
+  private def connectorIntentionsFromDeprecatedOptions(
+    meta: Seq[MetaData]
+  ): (Seq[MetaData], Seq[ConnectorIntention]) = {
+    val found = meta.collect {
+      case ov: OptionValue if deprecatedConnectorOptions.contains(ov.name) => ov
+    }
+    found.foreach { ov =>
+      val intention = deprecatedConnectorOptions(ov.name)
+      deprecation(
+        ov.loc,
+        s"'option ${ov.name}' is deprecated; write '${intention.keyword}' before 'connector' instead",
+        code = Option(Messages.DeprecationCode.ConnectorOptionToIntention),
+        autoFixable = false
+      )
+    }
+    val remaining = meta.filterNot(m => found.exists(_ eq m))
+    remaining -> found.map(ov => deprecatedConnectorOptions(ov.name))
+  }
+
   def connector[u: P]: P[Connector] = {
     P(
-      Index ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~ withMetaData ~/ Index
-    ).map { case (start, id, (out, in), descriptives, end) =>
-      Connector(at(start, end), id, out, in, descriptives.toContents)
+      Index ~ connectorIntentionPrefix ~ Keywords.connector ~/ identifier ~/ is ~
+        connectorDefinitions ~ withMetaData ~/ Index
+    ).map { case (start, intentions, id, (out, in), descriptives, end) =>
+      val (remainingMeta, fromOptions) = connectorIntentionsFromDeprecatedOptions(descriptives)
+      Connector(
+        at(start, end),
+        id,
+        out,
+        in,
+        ConnectorIntention.canonical(intentions ++ fromOptions),
+        remainingMeta.toContents
+      )
     }
   }
 

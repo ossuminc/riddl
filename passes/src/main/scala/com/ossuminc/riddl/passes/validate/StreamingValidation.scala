@@ -95,7 +95,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       val externalTouched: Seq[Context] = (fromExt, toExt) match
         case (Some(a), Some(b)) if a eq b => Seq(a)
         case _                            => fromExt.toSeq ++ toExt.toSeq
-      if externalTouched.nonEmpty && !connector.hasOption("persistent") then
+      if externalTouched.nonEmpty && !connector.isPersistent then
         externalTouched.foreach { extCtx =>
           messages.addError(
             connector.errorLoc,
@@ -356,7 +356,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               s"Move ${connector.identify} into ${outletCtx.get.identify}; a connector whose ends " +
                 s"are in the same context belongs in that context, not the domain."
           )
-        else if crossContext && !connector.hasOption("persistent") then
+        else if crossContext && !connector.isPersistent then
           // CompletenessWarning (not a plain Warning) so AI/tooling can adapt: durability across a
           // context boundary can be required for model correctness, not merely a deployment concern.
           messages.addCompleteness(
@@ -379,14 +379,19 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               "Move the connector up to the domain that contains both contexts; a connector that " +
                 "crosses contexts must be defined at domain scope."
           )
-        else if sameContext && connector.hasOption("persistent") then
-          val option = connector.options.find(_.name == "persistent").get
+        else if sameContext && connector.isPersistent then
+          // Point at the OPTION when it is still spelled that way, else at the connector itself.
+          // This used to be `.find(...).get`, which was safe only while persistence could ONLY come
+          // from an option; once it could also come from an intention the `.get` threw
+          // NoSuchElementException and the whole streaming check died with a Severe.
+          val where =
+            connector.options.find(_.name == "persistent").map(_.loc).getOrElse(connector.errorLoc)
           messages.addWarning(
-            option.loc,
-            s"The persistence option on ${connector.identify} is not needed " +
+            where,
+            s"Persistence on ${connector.identify} is not needed " +
               s"since both ends of the connector connect within the same context",
             suggestion =
-              s"Remove the 'persistent' option from ${connector.identify}; both ends are in the same context."
+              s"Remove 'persistent' from ${connector.identify}; both ends are in the same context."
           )
         end if
     }

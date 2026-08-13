@@ -206,7 +206,9 @@ class StreamValidatorTest extends AbstractValidatingTest {
           messages.hasErrors must be(false)
           messages.filter(_.message.contains("is not needed since both end")) match
             case List(message) =>
-              message.message must include("The persistence option on Connector 'c1' is not")
+              // Reworded 2026-08-13: persistence can now come from the `persistent` INTENTION as
+              // well as the deprecated option, so the message no longer says "option".
+              message.message must include("Persistence on Connector 'c1' is not")
               succeed
             case Nil => fail("Missing message")
             case _   => fail("Unexpected message count")

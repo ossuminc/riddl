@@ -1290,13 +1290,39 @@ class BASTReader(
     end if
   }
 
+  /** Inverse of `BASTWriter.writeConnectorIntentions`.
+    *
+    * THROWS on an unknown code rather than dropping it. The revision guard means a file that
+    * reaches here was written by a compatible writer, so an unrecognised byte is corruption or a
+    * writer/reader mismatch -- and silently returning a shorter list would produce a Connector that
+    * differs from the one written while validating perfectly well. (The Entity reader above still
+    * drops unknown codes; that predates the no-silent-fallthrough rule and is filed, not copied.)
+    */
+  private def readConnectorIntentions(): Seq[ConnectorIntention] = {
+    val count = reader.readU8()
+    (0 until count).toSeq.map { _ =>
+      reader.readU8() match {
+        case 1 => ConnectorIntention.Persistent
+        case 2 => ConnectorIntention.AtLeastOnce
+        case 3 => ConnectorIntention.AtMostOnce
+        case other =>
+          throw new IllegalStateException(
+            s"BAST: unknown connector intention code $other; the file is corrupt or was written " +
+              "by an incompatible revision"
+          )
+      }
+    }
+  }
+
   private def readConnectorNode(): Connector = {
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
     val from = readOutletRef()
     val to = readInletRef()
+    // Read ORDER is the contract; intentions were appended after `to` by the writer.
+    val intentions = readConnectorIntentions()
     val metadata = readMetadataDeferred()
-    Connector(loc, id, from, to, metadata)
+    Connector(loc, id, from, to, intentions, metadata)
   }
 
   // ========== Interactions ==========

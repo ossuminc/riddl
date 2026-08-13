@@ -75,10 +75,9 @@ package object bast {
     * that real files carry.
     */
   val FORMAT_REVISION: Short =
-    // A70: a Correlation's `yields` became a CommandRef (was RecordRef). The BYTES are unchanged --
-    // both write loc + inline pathId -- but a revision-11 file's `yields` denoted a record, which
-    // no longer validates, so the old file must not be read as if it were current.
-    12 // A70: correlation.yields is a CommandRef
+    // Connector intentions: `writeConnector` now appends a count plus one byte per intention after
+    // the inlet ref, so every byte following a Connector in a revision-12 file would be misread.
+    13 // Connector intentions (persistent / at-least-once / at-most-once)
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

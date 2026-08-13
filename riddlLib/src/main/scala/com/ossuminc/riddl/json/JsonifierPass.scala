@@ -1101,6 +1101,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           c.id.value,
           path(c.from.pathId),
           path(c.to.pathId),
+          c.intentions.map(_.keyword),
           briefOf(c.metadata),
           metaOf(c.metadata)
         )

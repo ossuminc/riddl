@@ -909,6 +909,10 @@ object JsonModel:
     name: String,
     from: String,
     to: String,
+    /** Keywords written BEFORE `connector`: `persistent`, and one of `at-least-once` /
+      * `at-most-once`. Absent delivery means at-least-once (Computational Model §25.7).
+      */
+    intentions: Seq[String] = Nil,
     brief: Option[String] = None,
     metadata: Option[MetaDto] = None
   )
