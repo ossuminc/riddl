@@ -445,11 +445,30 @@ case class ValidationPass(
     // container (on-clause or function). checkStatementScopes recurses through nested statement
     // bodies threading `let` scope, so invoking it at the container root covers every statement at
     // any depth exactly once.
+    //
+    // A70/self: SagaStep joined this dispatch (was previously the one statement-bearing container
+    // with NO checkStatementScopes call at all -- its do/undoStatements sat completely outside
+    // value validation, including ValueRef resolution and, notably, the `self` legality check this
+    // gap was found auditing). No `ss +: parentsAsSeq`: SagaStep is a `Leaf`, not a `Branch`
+    // (`Parents = Seq[Branch[?]]` cannot hold it), and it is deliberately never pushed onto the
+    // parent stack elsewhere either (see `Pass.traverse`'s SagaStep case) -- `parents.head` stays
+    // the Saga, which is the correct resolution scope for a step's statements.
     value match {
       case oc: OnClause =>
         checkStatementScopes(oc.statements, Seq.empty[LetStatement], oc +: parentsAsSeq)
       case fn: Function =>
         checkStatementScopes(fn.statements, Seq.empty[LetStatement], fn +: parentsAsSeq)
+      case ss: SagaStep =>
+        checkStatementScopes(
+          ss.doStatements.toSeq.collect { case s: Statement => s },
+          Seq.empty[LetStatement],
+          parentsAsSeq
+        )
+        checkStatementScopes(
+          ss.undoStatements.toSeq.collect { case s: Statement => s },
+          Seq.empty[LetStatement],
+          parentsAsSeq
+        )
       case _ => ()
     }
     value match {
@@ -932,23 +951,29 @@ case class ValidationPass(
       }
   end checkStateReadScope
 
-  /** The innermost enclosing [[Processor]], the same "instance" `self` names.
+  /** The innermost enclosing [[Processor]], the same "instance" `self` names -- `None` when no
+    * Processor encloses the reference, OR when the nearest enclosing scope is one of the two kinds
+    * that deliberately do NOT carry the instance identity of whatever Processor happens to
+    * lexically contain them. Both are TERMINATING cases, not merely absent from the match --
+    * mirroring `enclosingWriteScope`'s exact pattern, so `collectFirst` stops at the boundary
+    * instead of walking past it to an outer Processor:
     *
-    * `Function` is a TERMINATING case, not merely absent from the match -- mirroring
-    * `enclosingWriteScope`'s exact pattern. A25's `call function F(...)` carries no processor
-    * operand, so a pure function has no bound instance even when it is lexically nested inside a
-    * Context/Entity (A24 functions commonly are, for organization). Without this, `collectFirst`
-    * would walk PAST the Function to the enclosing Context and let `self` leak in from a scope the
-    * function is not part of. A Saga needs no such case: the CM calls a saga step "a phase of a
-    * saga execution instance" rather than an instance in its own right, and the grammar never
-    * nests a Saga inside a Processor, so `self` inside one already falls through to `None`
-    * naturally.
+    *   - `Function`: A25's `call function F(...)` carries no processor operand, so a pure function
+    *     has no bound instance even when it is lexically nested inside a Context/Entity (A24
+    *     functions commonly are, for organization).
+    *   - `Saga`: a Saga is a `VitalDefinition`, not a `Processor` -- it has no instance identity of
+    *     its own -- and the CM calls a saga step "a phase of a saga execution instance" rather than
+    *     an instance in its own right. This one is NOT merely a formality: the grammar DOES nest a
+    *     Saga inside a Context (`context_definition` includes `saga`, and `Saga` is in
+    *     `OccursInContext`), so without this case a saga step's `self` would silently resolve to
+    *     the enclosing Context's identity instead of being rejected.
     */
   private def enclosingProcessorOf(parents: Parents): Option[Processor[?]] =
     parents
       .collectFirst {
         case p: Processor[?] => Some(p)
         case _: Function      => None
+        case _: Saga          => None
       }
       .flatten
 
@@ -962,68 +987,6 @@ case class ValidationPass(
   private def pathOf(p: Processor[?]): PathIdentifier =
     PathIdentifier(At.empty, symbols.pathOf(p).reverse)
 
-  /** `self` is legal only where a Processor encloses it, and only `id`/`version` exist on it.
-    *
-    * A Saga is NOT a Processor -- the CM calls a saga step "a phase of a saga execution
-    * instance" rather than an instance -- so `self` there is an Error naming that reason
-    * rather than silently resolving to the enclosing context.
-    */
-  private def checkSelfValues(statement: Statement, parents: Parents): Unit =
-    val enclosing: Option[Processor[?]] = enclosingProcessorOf(parents)
-    statementValues(statement).foreach { v =>
-      selfValuesIn(v).foreach { sv =>
-        enclosing match
-          case None =>
-            messages.addError(
-              sv.loc,
-              "'self' names the running processor instance, so it is only meaningful inside a " +
-                "processor (context, entity, projector, repository, streamlet or adaptor)",
-              suggestion = "Remove the 'self' reference, or move this into a processor's handler."
-            )
-          case Some(_) =>
-            sv.field.foreach { f =>
-              if !SelfValue.fieldNames.contains(f.value) then
-                messages.addError(
-                  f.loc,
-                  s"'self' has no field '${f.value}'; it carries " +
-                    SelfValue.fieldNames.map("'" + _ + "'").mkString(" and "),
-                  suggestion = s"Use ${SelfValue.fieldNames.map("self." + _).mkString(" or ")}."
-                )
-            }
-      }
-    }
-  end checkSelfValues
-
-  /** Every `self`/`self.<field>` embedded in a value expression, at any depth.
-    *
-    * Enumerated over the same arms as `stateReadsIn`/`asksIn` and for the same reason: a new value
-    * kind that can CONTAIN a `self` reference must fail the build here rather than quietly hide
-    * one. `statementValues` yields a domain WIDER than `Value` (see `stateReadsIn`'s note on
-    * `Identifier`), which is why that arm is here too even though `self` cannot appear inside one.
-    */
-  private def selfValuesIn(v: RiddlValue): Seq[SelfValue] = v match
-    case sv: SelfValue            => Seq(sv)
-    case call: Call                => call.args.toSeq.flatMap(a => selfValuesIn(a.value))
-    case c: Constructor            => c.args.toSeq.flatMap(a => selfValuesIn(a.value))
-    case le: LogicalExpression     => selfValuesIn(le.left) ++ selfValuesIn(le.right)
-    case ne: NotExpression         => selfValuesIn(ne.expr)
-    case ce: ComparisonExpression  => selfValuesIn(ce.left) ++ selfValuesIn(ce.right)
-    case ic: InvariantCondition    => ic.argument.toSeq.flatMap(selfValuesIn)
-    case _: Ask                    => Seq.empty
-    case _: GetValue               => Seq.empty
-    case _: Reference[?]           => Seq.empty
-    // An IDENTIFIER is a NAME, not an expression; see `stateReadsIn`'s note. It is here because
-    // `statementValues` yields a domain WIDER than `Value` (`WhenStatement.condition` includes a
-    // bare `Identifier` for the legacy `when !isValid` form), and auditing `Value` alone misses it.
-    case _: Identifier              => Seq.empty
-    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
-    case other =>
-      throw new IllegalStateException(
-        s"selfValuesIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
-          "decide whether it can contain a 'self' reference rather than assuming it cannot"
-      )
-  end selfValuesIn
-
   private def validateStatement(
     statement: Statement,
     parents: Parents
@@ -1032,7 +995,6 @@ case class ValidationPass(
     // Scope rules that apply to EVERY statement kind, checked before the per-kind match so a new
     // statement carrying a value cannot skip them.
     checkStateReadScope(statement, parents)
-    checkSelfValues(statement, parents)
     statement match
       case PromptStatement(loc, what) =>
         checkNonEmptyValue(
@@ -5364,11 +5326,38 @@ case class ValidationPass(
         gv.source match
           case ir: InputRef => checkRef[Input](ir, parents)
           case sr: StateRef => checkRef[State](sr, parents)
-      // Legality (must be inside a Processor) and the closed `id`/`version` field set are both
-      // checked by `checkSelfValues`, wired into `validateStatement` beside `checkStateReadScope`
-      // -- nothing further to validate here. `self` names no external definition, so there is no
-      // existence check analogous to `checkRef` above.
-      case _: SelfValue => ()
+      // `self` is legal only where a Processor encloses it, and only `id`/`version` exist on it.
+      // Checked HERE, not from `validateStatement`, so nested occurrences (inside `when`/`match`/
+      // `foreach` bodies) are covered too: `validateValue` is reached at any depth via
+      // `checkStatementScopes`'s recursion, whereas `validateStatement` only sees the statements
+      // the generic Pass dispatcher visits directly -- which does NOT descend into a
+      // WhenStatement's `thenStatements`/`elseStatements`, a MatchCase's `statements`, or a
+      // ForeachStatement's `doStatements`: those are FIELDS, not `contents`, the same hazard
+      // SagaStep/Correlation needed a traversal special-case for (see `Pass.traverse`).
+      //
+      // A Saga is NOT a Processor -- it is a `VitalDefinition`, not a `Processor`, and its
+      // execution identity is deliberately out of scope (see `enclosingProcessorOf`) -- so `self`
+      // in a saga step is an Error naming that reason rather than silently resolving to whatever
+      // Processor happens to enclose the Saga's Context.
+      case sv: SelfValue =>
+        enclosingProcessorOf(parents) match
+          case None =>
+            messages.addError(
+              sv.loc,
+              "'self' names the running processor instance, so it is only meaningful inside a " +
+                "processor (context, entity, projector, repository, streamlet or adaptor)",
+              suggestion = "Remove the 'self' reference, or move this into a processor's handler."
+            )
+          case Some(_) =>
+            sv.field.foreach { f =>
+              if !SelfValue.fieldNames.contains(f.value) then
+                messages.addError(
+                  f.loc,
+                  s"'self' has no field '${f.value}'; it carries " +
+                    SelfValue.fieldNames.map("'" + _ + "'").mkString(" and "),
+                  suggestion = s"Use ${SelfValue.fieldNames.map("self." + _).mkString(" or ")}."
+                )
+            }
       case ic: InvariantCondition =>
         // The invariant must exist; naming an unknown one is an Error rather than becoming a
         // reference to a value that does not exist.
@@ -6012,6 +6001,12 @@ case class ValidationPass(
       case s: TellStatement =>
         s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
       case s: YieldStatement =>
+        s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
+      // Mirrors YieldStatement, immediately above: `validateStatement`'s ReplyStatement case
+      // claims "a Constructor is validated in checkStatementScopes", which was untrue until this
+      // arm existed -- a `reply result Foo(x = self.id)` Constructor argument reached NOTHING,
+      // found auditing `self`'s coverage (a self reference there was silently unchecked).
+      case s: ReplyStatement =>
         s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
       case s: MorphStatement =>
         s.value match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
