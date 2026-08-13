@@ -192,6 +192,8 @@ object Keywords {
 
   def initial[u: P]: P[Unit] = keyword(Keyword.initial)
 
+  def initiate[u: P]: P[Unit] = keyword(Keyword.initiate)
+
   /** Optional `initial` marker returning whether it was present. MUST NOT cut (unlike `keyword`):
     * it precedes alternatives that both allow it (state vs handler), so a mismatch has to backtrack
     * to try the other alternative.
@@ -624,6 +626,7 @@ object Keyword {
   final val index = "index"
   final val init = "init"
   final val initial = "initial"
+  final val initiate = "initiate"
   final val inlet = "inlet"
   final val inlets = "inlets"
   final val input = "input"

@@ -621,6 +621,52 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    "round-trip an `initiate <processor>(args)` value (task 4, processor-instance identity) losslessly" in {
+      val initiateModel =
+        """domain d is {
+          |  context Ctx is {
+          |    command Go is { why: String }
+          |    record R is { total: String }
+          |    entity Order is {
+          |      state S of record R is {
+          |        handler OH is { on init(total: String) is { do "start" } }
+          |      }
+          |    }
+          |    entity Widget is {
+          |      state S of record R is {
+          |        handler OH is { on init is { do "start" } }
+          |      }
+          |    }
+          |    entity Caller is {
+          |      state CS of record R is {
+          |        handler CH is {
+          |          on command Go is {
+          |            let orderId = initiate entity Order("5")
+          |            let widgetId = initiate entity Widget
+          |          }
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(initiateModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          // JsonifierPass emits the initiate discriminator, target processor, and args...
+          json1 must include("\"initiate\"")
+          json1 must include("Order")
+          // ...and JsonAstBuilder rebuilds it so the JSON is a fixed point.
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the initiate JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the initiate model failed: $errors")
+      end match
+    }
+
     "round-trip the 2.0 handler-kind clauses (on event / on activate / on passivate) losslessly" in {
       val hkModel =
         """domain HK is {

@@ -849,6 +849,17 @@ object JsonModel:
     */
   case class SelfValueDto(field: Option[String] = None) extends ValueDto
 
+  /** `{ "value": "initiate", "processor": "<path>", "processorKind": "<kind>", "args":
+    * [<constructorArg>] }` — A70/instance-identity: bring an instance into being and yield its
+    * identity. No answer type is carried: it is always the synthesized `Id(<processor>)`, so
+    * storing it would be a second place for the same fact to go stale (mirrors `AskValueDto`).
+    */
+  case class InitiateValueDto(
+    processor: String,
+    processorKind: String,
+    args: Seq[ConstructorArgDto]
+  ) extends ValueDto
+
   /** `{ "name"?: "<field>", "value": <value> }` — a positional or named constructor argument. */
   case class ConstructorArgDto(name: Option[String], value: ValueDto)
 
@@ -1651,6 +1662,16 @@ object JsonModel:
       case "ask" =>
         AskValueDto(m("query").str, m("processor").str, m("processorKind").str)
       case "self" => SelfValueDto(m.get("field").map(_.str))
+      case "initiate" =>
+        val args = m
+          .get("args")
+          .map(
+            _.arr
+              .map(a => ConstructorArgDto(a.obj.get("name").map(_.str), readValue(a.obj("value"))))
+              .toSeq
+          )
+          .getOrElse(Nil)
+        InitiateValueDto(m("processor").str, m("processorKind").str, args)
       case other => throw new IllegalArgumentException(s"Unknown value kind: '$other'")
   end readValueObj
 
@@ -1732,6 +1753,18 @@ object JsonModel:
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("value" -> ujson.Str("self"))
             ++ field.map(f => "field" -> (ujson.Str(f): ujson.Value))
+        )
+      case InitiateValueDto(processor, processorKind, args) =>
+        ujson.Obj(
+          "value" -> ujson.Str("initiate"),
+          "processor" -> ujson.Str(processor),
+          "processorKind" -> ujson.Str(processorKind),
+          "args" -> ujson.Arr.from(args.map { a =>
+            ujson.Obj.from(
+              a.name.map(n => "name" -> (ujson.Str(n): ujson.Value)).toSeq
+                ++ Seq("value" -> (writeValue(a.value): ujson.Value))
+            )
+          })
         )
   end writeValue
 

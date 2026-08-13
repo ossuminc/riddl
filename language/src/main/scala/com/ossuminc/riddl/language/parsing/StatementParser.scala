@@ -451,6 +451,7 @@ private[parsing] trait StatementParser {
         promptValue.map(pv => pv: Value) |
         callValue.map(c => c: Value) | // A24: `call function F(args)` (keyword-led)
         askValue.map(a => a: Value) | // `ask query Q of <processor>` (keyword-led)
+        initiateValue.map(i => i: Value) | // `initiate <processor>[(args)]` (keyword-led)
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
         booleanExpr
@@ -633,6 +634,23 @@ private[parsing] trait StatementParser {
     P(
       Index ~ Keywords.ask ~/ queryRef ~ of ~/ processorRef ~/ Index
     )./.map { case (start, qRef, pRef, end) => Ask(at(start, end), qRef, pRef) }
+  }
+
+  /** `initiate <processor>[(args)]` -- bring an instance into being and yield its identity.
+    *
+    * Parens are OPTIONAL and present exactly when there are arguments (Reid, 2026-08-13: one
+    * keyword, not two). ARITY IS NOT CHECKED HERE -- a parser error() preempts the whole pass
+    * chain, so the argument diagnostics live in ValidationPass, which is also the only place
+    * that has resolved `on init`.
+    */
+  private def initiateValue[u: P]: P[Initiate] = {
+    P(
+      Index ~ Keywords.initiate ~/ processorRef ~
+        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~/ Index
+    )./.map { case (start, pRef, args, end) =>
+      Initiate(at(start, end), pRef, args.map(_.toSeq).getOrElse(Seq.empty))
+    }
   }
 
   // A45/A45b: `get from (input <ref> | state <ref>)`. The ref parsers already consume their leading

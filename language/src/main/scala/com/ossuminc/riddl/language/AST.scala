@@ -814,8 +814,8 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Requires | Returns |
-    InvariantBlock
+    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Initiate | Requires |
+    Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -2980,7 +2980,7 @@ object AST:
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
-      Ask | SelfValue
+      Ask | SelfValue | Initiate
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -3095,6 +3095,33 @@ object AST:
     override def kind: String = "Ask"
     def format: String = s"ask ${query.format} of ${processor.format}"
   end Ask
+
+  /** `initiate <processor>(args)` -- bring an instance into being and yield its identity.
+    *
+    * Creation still completes only when `on init` finishes, so this does NOT introduce a second
+    * way for an instance to exist (CM line 999): it supplies the invocation that was missing.
+    * The value is the newly minted `Id(P)`, which is system-generated and opaque -- a BUSINESS
+    * key belongs in `on init`'s parameters and lives in state.
+    *
+    * @param loc
+    *   The location of the `initiate` in the source
+    * @param processor
+    *   The processor to bring an instance of into being
+    * @param args
+    *   The arguments supplied to the target's `on init` parameters (empty when `on init` takes
+    *   none, in which case the parentheses are omitted -- see `StatementParser.initiateValue`)
+    */
+  @JSExportTopLevel("Initiate")
+  case class Initiate(
+    loc: At,
+    processor: ProcessorRef[Processor[?]],
+    args: Seq[ConstructorArg]
+  ) extends RiddlValue:
+    override def kind: String = "Initiate"
+    def format: String =
+      val argList = if args.isEmpty then "" else args.map(_.format).mkString("(", ", ", ")")
+      s"initiate ${processor.format}$argList"
+  end Initiate
 
   /** `self` -- the currently executing processor instance, and `self.<field>` on it.
     *

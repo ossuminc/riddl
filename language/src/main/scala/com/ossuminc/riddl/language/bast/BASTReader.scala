@@ -2585,7 +2585,23 @@ class BASTReader(
         val loc = readLocation()
         val field = readOption(readIdentifierInline())
         SelfValue(loc, field)
+      case 8 => // A70/instance-identity: Initiate -- `initiate <processor>[(args)]`
+        val loc = readLocation()
+        val processor = readProcessorRef()
+        val args = readSeq(() => readConstructorArg())
+        Initiate(loc, processor, args)
       case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
+  }
+
+  /** A70/instance-identity: mirror of [[BASTWriter.writeConstructorArg]] -- a single
+    * [[ConstructorArg]], reused by [[readValue]]'s `Initiate` arm (via [[readSeq]]).
+    */
+  private def readConstructorArg(): ConstructorArg = {
+    val argLoc = readLocation()
+    val hasName = reader.readU8() != 0
+    val name = if hasName then Some(readIdentifierInline()) else None
+    val v = readValue()
+    ConstructorArg(argLoc, name, v)
   }
 
   /** A28: mirror of [[BASTWriter.writeComparand]] — a comparison operand (ValueRef | GetValue |

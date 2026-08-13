@@ -4588,6 +4588,10 @@ case class ValidationPass(
     // arrive -- and `Call` was already counted here, so omitting `ask` would have let a saga
     // step hide a second failure point behind a `let`.
     case _: Ask                   => 1
+    // A70/instance-identity: `initiate` invokes `on init` and mints an instance -- it can fail
+    // exactly as `call`/`ask` can, so it counts itself (1) PLUS its argument values, exactly like
+    // `call` immediately above.
+    case init: Initiate           => 1 + init.args.map(a => countValueFailPoints(a.value)).sum
     case _: GetValue              => 1
     case c: Constructor           => c.args.map(a => countValueFailPoints(a.value)).sum
     case le: LogicalExpression    => countValueFailPoints(le.left) + countValueFailPoints(le.right)
@@ -4670,6 +4674,9 @@ case class ValidationPass(
         case _: InputRef  => Seq.empty
     case call: Call               => call.args.toSeq.flatMap(a => stateReadsIn(a.value))
     case c: Constructor           => c.args.toSeq.flatMap(a => stateReadsIn(a.value))
+    // `initiate`'s arguments are full Values, exactly like a constructor's or a call's, so a
+    // `get from state` can hide inside one and this must recurse rather than stop.
+    case init: Initiate           => init.args.toSeq.flatMap(a => stateReadsIn(a.value))
     case le: LogicalExpression    => stateReadsIn(le.left) ++ stateReadsIn(le.right)
     case ne: NotExpression        => stateReadsIn(ne.expr)
     case ce: ComparisonExpression => stateReadsIn(ce.left) ++ stateReadsIn(ce.right)
@@ -4728,6 +4735,9 @@ case class ValidationPass(
     case ask: Ask                 => Seq(ask)
     case call: Call               => call.args.toSeq.flatMap(a => asksIn(a.value))
     case c: Constructor           => c.args.toSeq.flatMap(a => asksIn(a.value))
+    // `initiate`'s arguments are full Values, exactly like a constructor's or a call's, so an
+    // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
+    case init: Initiate           => init.args.toSeq.flatMap(a => asksIn(a.value))
     case le: LogicalExpression    => asksIn(le.left) ++ asksIn(le.right)
     case ne: NotExpression        => asksIn(ne.expr)
     case ce: ComparisonExpression => asksIn(ce.left) ++ asksIn(ce.right)
@@ -5108,6 +5118,72 @@ case class ValidationPass(
     }
   end validateAsk
 
+  /** The [[MethodArgument]]s a Processor's `on init` clause declares, or `Seq.empty` when it
+    * declares none (including when it has no `on init` clause at all -- indistinguishable from
+    * this function's point of view, and `checkInitiate` treats an unresolved target the same way
+    * via `checkRef`'s silence). Entity state handlers are folded in exactly as `validateAsk` does
+    * for `on query`/`on other`: `on init` commonly lives inside a `State` rather than directly on
+    * the entity (state handlers apply to the entity, per `WithHandlers`'s literal `contents`
+    * filter not descending into `State`).
+    */
+  private def initClauseParameters(p: Processor[?]): Seq[MethodArgument] =
+    val stateHandlers = p match
+      case e: Entity => e.states.flatMap(_.handlers)
+      case _         => Seq.empty
+    (p.handlers ++ stateHandlers)
+      .flatMap(_.clauses)
+      .collectFirst { case oic: OnInitializationClause => oic.parameters }
+      .getOrElse(Seq.empty)
+  end initClauseParameters
+
+  /** A70/instance-identity: validate `initiate <processor>(args)` against the target's declared
+    * `on init` parameters -- arity, then best-effort per-argument type compatibility via the SAME
+    * helper a constructor and a call use ([[checkArgumentTypes]]; see its scaladoc for why a
+    * second copy is not written). `on init` declares [[MethodArgument]]s, not [[Field]]s, so they
+    * are adapted rather than the helper forked.
+    *
+    * Silent when the target does not resolve -- `ResolutionPass` already reported that (mirrors
+    * `validateAsk`'s target resolution). Recurses into argument values exactly as
+    * `validateConstructor`/`validateCall` do, so a nested constructor/get/ask inside an argument
+    * is still checked.
+    */
+  private def checkInitiate(
+    init: Initiate,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression] = Map.empty
+  ): Unit =
+    checkRef[Processor[?]](init.processor, parents).foreach { p =>
+      val declared = initClauseParameters(p)
+      def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
+      if declared.isEmpty && init.args.nonEmpty then
+        messages.addError(
+          init.loc,
+          s"${p.identify} declares 'on init' with no parameters, but " +
+            s"${count(init.args.size, "argument")} supplied",
+          suggestion = s"Write 'initiate ${init.processor.format}' with no parentheses."
+        )
+      else if declared.size != init.args.size then
+        messages.addError(
+          init.loc,
+          s"${p.identify} declares 'on init' with ${count(declared.size, "parameter")}, but " +
+            s"${count(init.args.size, "argument")} supplied",
+          suggestion =
+            s"Supply ${declared.size}: ${declared.map(a => s"${a.name}: ${a.typeEx.format}").mkString(", ")}."
+        )
+      else
+        // Reuse the EXISTING per-argument helper (`checkArgumentTypes`) rather than writing a
+        // second one — its scaladoc records that two hand-written copies were free to drift, so a
+        // rule tightened for constructors would silently not apply here. It wants Seq[Field], and
+        // `on init` declares Seq[MethodArgument], so adapt rather than fork:
+        val asFields: Seq[Field] = declared.map { a =>
+          Field(a.loc, Identifier(a.loc, a.name), a.typeEx)
+        }
+        checkArgumentTypes(init.args, asFields, "parameter", parents, lets, elements)
+    }
+    init.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
+  end checkInitiate
+
   private def valueType(v: Value, parents: Parents, lets: Seq[LetStatement]): Option[Type] =
     v match
       case _: LiteralString => None // pseudo-code, untyped
@@ -5143,6 +5219,9 @@ case class ValidationPass(
       // return here. `valueTypeExpr` computes the real TypeExpression (see its `SelfValue` arm);
       // this arm exists only so the match stays exhaustive.
       case _: SelfValue         => None
+      // `initiate`'s type is a SYNTHESIZED UniqueId, not a named Type -- same reasoning as `self`,
+      // immediately above. `valueTypeExpr` computes it (see its `Initiate` arm).
+      case _: Initiate          => None
 
   /** A28: the broad category of a [[Value]] for best-effort boolean/comparison checks: `"boolean"`,
     * `"numeric"`, or `"string"`; `None` when it cannot be determined (skip the check). A
@@ -5273,6 +5352,17 @@ case class ValidationPass(
             case None    => agg
             case Some(f) => agg.fields.find(_.id.value == f.value).map(_.typeEx).getOrElse(agg)
         }
+      // A70/instance-identity: `initiate`'s type is the newly minted `Id(P)` -- a SYNTHESIZED
+      // UniqueId, mirroring `self`'s synthesized Aggregation immediately above. `pathOf(p)` (not
+      // `init.processor.pathId`, which may be an as-written relative/short path) mirrors
+      // `SelfValue.aggregation`'s id field for the same reason: the fully-qualified path is what
+      // identifies the resolved processor. `kindKeyword` is left `None`, exactly as the `self.id`
+      // field's `UniqueId` is: it disambiguates WRITTEN syntax, and this type is synthesized, not
+      // written.
+      case init: Initiate =>
+        resolution.refMap
+          .definitionOf[Processor[?]](init.processor.pathId, parents.head)
+          .map(p => UniqueId(At.empty, pathOf(p)))
       case _            => valueType(v, parents, lets).map(_.typEx)
 
   /** A54/A55: the named [[Type]] a [[ValueRef]] resolves to, if determinable. A bare on-clause
@@ -5341,6 +5431,7 @@ case class ValidationPass(
       case c: Constructor   => validateConstructor(c, parents, lets, elements)
       case call: Call       => validateCall(call, parents, lets)
       case ask: Ask         => validateAsk(ask, parents)
+      case init: Initiate   => checkInitiate(init, parents, lets, elements)
       case vr: ValueRef =>
         if !valueRefResolves(vr, parents, lets, elements) then
           messages.addError(

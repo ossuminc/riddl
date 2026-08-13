@@ -1473,6 +1473,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ic: InvariantCondition =>
       InvariantConditionDto(path(ic.ref.pathId), ic.argument.map(serializeValue))
     case sv: SelfValue => SelfValueDto(sv.field.map(_.value))
+    case init: Initiate => // A70/instance-identity
+      val (pp, pk) = processorRef(init.processor)
+      InitiateValueDto(
+        pp,
+        pk,
+        init.args.map(a => ConstructorArgDto(a.name.map(_.value), serializeValue(a.value)))
+      )
 
   // A29: a match-case pattern -> MatchPatternDto.
   private def serializeMatchPattern(p: MatchPattern): MatchPatternDto = p match

@@ -189,6 +189,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | LogicalExpression | ✅ A28 | `{ "value": "logical", "op": "and"\|"or", "left": <value>, "right": <value> }` |
 | NotExpression | ✅ A28 | `{ "value": "not", "expr": <value> }` |
 | SelfValue | ✅ 2.0 | `{ "value": "self", "field"?: "id"\|"version" }` — the running processor instance. The type is a SYNTHESIZED Aggregation (see `AST.SelfValue`), so nothing here names a path |
+| Initiate | ✅ 2.0 | `{ "value": "initiate", "processor": "<path>", "processorKind": "<kind>", "args": [<arg>] }` — bring an instance into being and yield its identity (task 4 of processor-instance-identity, 2026-08-13). No answer type is carried: it is always the synthesized `Id(<processor>)`, so storing it would be a second place for the same fact to drift |
 
 ## Metadata
 

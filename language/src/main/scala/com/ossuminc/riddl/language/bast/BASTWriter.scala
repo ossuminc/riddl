@@ -1325,9 +1325,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   /** A54/A28: self-contained value codec. A leading discriminator byte selects the arm
     * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue, 5=BooleanExpression,
-    * 6=Call, 7=Ask, 9=SelfValue); the reader mirrors this exactly. Discriminator 5 is followed by a
-    * sub-tag byte selecting the boolean node (0=BooleanLiteral, 1=Comparison, 2=Logical, 3=Not);
-    * operator enums are stored by ordinal.
+    * 6=Call, 7=Ask, 8=Initiate, 9=SelfValue); the reader mirrors this exactly. Discriminator 5 is
+    * followed by a sub-tag byte selecting the boolean node (0=BooleanLiteral, 1=Comparison,
+    * 2=Logical, 3=Not); operator enums are stored by ordinal.
     */
   def writeValue(v: Value): Unit = {
     v match
@@ -1401,6 +1401,27 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(9)
         writeLocation(sv.loc)
         writeOption(sv.field)(writeIdentifierInline)
+      case init: Initiate =>
+        writer.writeU8(8)
+        writeLocation(init.loc)
+        writeProcessorRef(init.processor)
+        writeSeq(init.args)(writeConstructorArg)
+  }
+
+  /** A70/instance-identity: a single [[ConstructorArg]] -- mirror of the inline arg-writing loop
+    * duplicated in [[writeConstructor]] and [[writeCall]]. Not a refactor of those two (out of
+    * scope here; they write byte-identical output already), just a reusable form for [[writeValue]]'s
+    * `Initiate` arm, which frames its args with [[writeSeq]] instead.
+    */
+  private def writeConstructorArg(arg: ConstructorArg): Unit = {
+    writeLocation(arg.loc)
+    arg.name match
+      case Some(id) =>
+        writer.writeU8(1)
+        writeIdentifierInline(id)
+      case None =>
+        writer.writeU8(0)
+    writeValue(arg.value)
   }
 
   /** A28: a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef). A leading

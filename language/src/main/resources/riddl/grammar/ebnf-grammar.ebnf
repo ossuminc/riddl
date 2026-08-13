@@ -314,7 +314,8 @@ let_statement = "let" identifier [":" type_ref] "=" value ;
 (* A54: value expressions. A value is pseudo-code text, an AI-computed `prompt(...)`, a message/record
    constructor, a `get from` read of a UI input or entity state, or (A28) a boolean expression whose
    bare atom is a value reference or literal. *)
-value = literal_string | prompt_value | call | ask | constructor | get_value | boolean_expression ;
+value = literal_string | prompt_value | call | ask | initiate | constructor | get_value
+      | boolean_expression ;
 prompt_value = "prompt" "(" literal_string ")" ;
 (* A24: call a pure function to get a result. "Functions only" — the callee is a function_ref. *)
 call = "call" function_ref "(" [constructor_arg {"," constructor_arg}] ")" ;
@@ -324,6 +325,11 @@ call = "call" function_ref "(" [constructor_arg {"," constructor_arg}] ")" ;
    or record is not answerable, so the restriction is structural rather than a validation rule. The
    answer's type is the query's declared `replies result X`. *)
 ask = "ask" query_ref "of" processor_ref ;
+(* A70/instance-identity: bring an instance into being and yield its identity, the newly minted
+   `Id(<processor>)`. Parens are OPTIONAL and present exactly when there are arguments -- one
+   keyword, not two. Arity/argument-type checking is done in validation, which is the only place
+   that has resolved the target's `on init` clause; a wrong count still PARSES. *)
+initiate = "initiate" processor_ref ["(" [constructor_arg {"," constructor_arg}] ")"] ;
 constructor = (message_ref | record_ref) "(" [constructor_arg {"," constructor_arg}] ")" ;
 constructor_arg = (identifier "=" value) | value ;
 get_value = "get" "from" (input_ref | state_ref) ;

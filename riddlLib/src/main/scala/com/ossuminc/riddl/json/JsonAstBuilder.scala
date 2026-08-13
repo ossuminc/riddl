@@ -1508,6 +1508,12 @@ object JsonAstBuilder:
       case InvariantConditionDto(inv, argument) =>
         InvariantCondition(curAt, InvariantRef(curAt, pathId(inv)), argument.map(buildValue))
       case SelfValueDto(field) => SelfValue(curAt, field.map(f => Identifier(curAt, f)))
+      case i: InitiateValueDto => // A70/instance-identity
+        Initiate(
+          curAt,
+          processorRef(i.processor, i.processorKind),
+          i.args.map(a => ConstructorArg(curAt, a.name.map(ident), buildValue(a.value)))
+        )
 
   // A28: ValueDto -> AST Comparand (ValueRef | GetValue | ConstantRef). Comparison operands are
   // ref-only; any other DTO is a malformed comparand (reported), degraded to a bare ValueRef.
