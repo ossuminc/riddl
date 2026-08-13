@@ -62,6 +62,67 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **Processor instance identity — DESIGNED 2026-08-13, ready to plan.**
+  Spec: `docs/superpowers/specs/
+  2026-08-13-processor-instance-identity-design.md`.
+  Answers riddl-generator's blocking ask (`task/2026-08-13-tell-to-an-entity-
+  cannot-name-which-instance.md`): RIDDL has no way to denote an instance — to
+  address one, to read its identity, or to bring one into being. Adds `Id(P)`
+  widened to any Processor with the keyword form canonical and kind-checked;
+  `self` with `self.id` / `self.version`; `initiate` (value, yields `Id(P)`) and
+  `terminate` (statement) invoking `on init` / `on term`, which gain parameter
+  lists; and instance addressing derived structurally from the message's
+  `Id(target)` field with `by <field>` to disambiguate.
+  **Measured, so the plan does not have to re-derive it:** riddl-models holds
+  7,556 `tell`s (5,155 entity, 2,382 repository) against **7** `Id(...)`-typed
+  fields in the whole corpus — which is why a missing address is a
+  CompletenessWarning and not an Error.
+  Sequencing note: `self` and `self.id` are two jobs, not one — the field access
+  needs a per-processor synthesized type, not just a token.
+
+- **Cross-context `tell` isolation seam — Error, but MEASURE FIRST.**
+  Reid ruled 2026-08-13 that a `tell` into a different context is an Error
+  unless the message type is declared in a domain ancestral to both; across
+  domains an
+  adaptor is always required. Separately and independently, a cross-context tell
+  is **always** a durable channel — the common-domain exemption waives the
+  adaptor, never the durability.
+  This completes **A4 (ACCEPTED)**, which already rejects foreign *message
+  types* outside adaptor scope; this extends the same seam to foreign
+  *processor targets*.
+  **Do not ship the Error before counting.** A heuristic says 5,301
+  cross-context tells (64% of all tells) but the method is unsound, and the
+  exemption's size is UNMEASURABLE by grep: 603 of 996 corpus files are include
+  fragments with no top-level construct, so nothing file-local can tell a
+  domain-level message type from a context-level one. Build the check with a
+  counting mode, run it under riddlc's real resolution, then decide the
+  migration.
+
+- **Clusterability: `clustered`, and `self.isClustered`.** Split out of the
+  identity design 2026-08-13. NOT "multiplicity" — Reid ruled that **entity is
+  the only multiply-instantiated processor**; contexts, projectors, streamlets,
+  repositories and adaptors are singletons that may be clustered for resilience,
+  and clustered instances are interchangeable so clustering does not affect
+  addressability. `self.isClustered` was deliberately kept out of the identity
+  spec because it would have forward-referenced vocabulary this item defines.
+
+- **Survey the CM and every A item for future `self` fields.** Reid, 2026-08-13.
+  `self` currently carries `id` and `version`. Find the other usually-available
+  pieces of processor information that belong there, classifying each by whether
+  it is statically knowable — in which case a generator inlines it and it does
+  NOT belong on `self` — or genuinely runtime-only, which is the admission test
+  the design settled on. `self.isClustered` is already claimed by the
+  clusterability item above.
+
+- **Computational Model amendments owed by the identity design.** Three, all
+  from 2026-08-13: (a) "activate on first message" (§4, line 999) must become
+  rehydrate-an-existing-instance, never create-on-demand, now that `initiate`
+  invokes `on init` explicitly; (b) the memory-space axiom — only processors
+  within one context are guaranteed to share memory, which is what licenses a
+  generator to optimize the same-context `tell`; (c) `Id(P)` (runtime instance
+  identity) must not be conflated with the definition ULIDs of line 2523
+  (model-time identity of a definition).
+
 - **BLOCKED UNTIL 3.0 — drop the deprecated inline aggregation from
   `requires`/`returns`, then narrow the accessors to `Option[TypeRef]`.**
   **Reid, 2026-08-12: wait for 3.0.** Removing a deprecated form is a breaking
