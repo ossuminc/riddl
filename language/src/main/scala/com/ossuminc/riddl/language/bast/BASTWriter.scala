@@ -769,6 +769,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(0) // Init clause type
     writeLocation(oc.loc)
+    // Task 3: parameters live in a FIELD, not `contents`, so they are written directly here
+    // (mirrors writeMethod's `args`), before the contents count -- readOnClauseNode reads them
+    // in the same position.
+    writeSeq(oc.parameters)(writeMethodArgument)
     writeContents(oc.contents)
   }
 
@@ -776,6 +780,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(1) // Term clause type
     writeLocation(oc.loc)
+    writeSeq(oc.parameters)(writeMethodArgument)
     writeContents(oc.contents)
   }
 

@@ -54,11 +54,11 @@ is covered in that construct's phase. The builder emits references as
 | Handler | ✅ Phase 1 | on-clauses |
 | OnMessageClause | ✅ Phase 1 | command/query/result/record refs |
 | OnEventClause | ✅ 2.0 | `kind: "event"`, event ref |
-| OnInitializationClause | ✅ Phase 1 | `kind: "init"` |
+| OnInitializationClause | ✅ Phase 1 / Task 3 | `kind: "init"`; `parameters` (`MethodArgDto[]`, same shape as `MethodDto.args`) |
 | OnActivationClause | ✅ 2.0 | `kind: "activate"` |
 | OnPassivationClause | ✅ 2.0 | `kind: "passivate"` |
 | OnOtherClause | ✅ Phase 1 / A57 | `kind: "other"`; A57 binding + `envelope` (the optional explicit envelope type) |
-| OnTerminationClause | ✅ Phase 1 | `kind: "term"` |
+| OnTerminationClause | ✅ Phase 1 / Task 3 | `kind: "term"`; `parameters` (first must be `Id(...)` of the enclosing processor — validation, not JSON) |
 | Invariant | ✅ Phase 1 / A28 s2 / 2026-08-04 | string `condition`, structured `expression`, or a `block` (statements + predicate) — exactly one. Plus `requires` + `requiresKind` (`state`/`type`), which decide WHERE the invariant applies, so dropping them describes a different model. |
 | Author | ✅ Phase 1 | at domain level |
 | Version | ✅ A53 / A47 | `version` on root/module/domain + all six processors; `name` + `numeric` flag |

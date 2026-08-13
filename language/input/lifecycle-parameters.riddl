@@ -1,0 +1,24 @@
+// Corpus fixture exercising `on init`/`on term` PARAMETER LISTS (Task 3, processor-instance
+// identity): `on init` takes ordinary parameters -- there is no instance yet, and the identity
+// is minted by initiating. `on term`'s FIRST parameter must be Id(<the enclosing processor>)
+// because it is invoked from outside and the caller must say which instance to terminate.
+// `on init` may also be written without any parameter list at all. Exercised by both fastparse
+// (LifecycleParametersFileTest) and the EBNF/TatSu grammar (ebnf_tatsu_validator.py, which
+// scans every input-directory riddl file).
+domain LifecycleParams is {
+  context Orders is {
+    record Fields is { total: Integer } with { briefly "order totals" }
+    entity Order is {
+      state S of record Fields is {
+        handler H is {
+          on init(total: Integer) {
+            do "seed the initial total"
+          }
+          on term(oid: Id(entity Order), reason: String) {
+            do "release resources"
+          }
+        } with { briefly "h" }
+      } with { briefly "s" }
+    } with { briefly "e" }
+  } with { briefly "c" }
+} with { briefly "d" }

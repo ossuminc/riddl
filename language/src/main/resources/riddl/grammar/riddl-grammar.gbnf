@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-13 20:20 UTC
+# Generated: 2026-08-13 21:26 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -201,9 +201,9 @@ handler ::= ("initial")? ws "handler" ws1 identifier ws1 is ws "{" ws handler-bo
 handler-body ::= (undefined | handler-contents)*
 handler-contents ::= (on-clause | comment)*
 on-clause ::= on-init-clause | on-other-clause | on-term-clause | on-activate-clause | on-passivate-clause | on-event-clause | on-message-clause
-on-init-clause ::= "on" ws "init" ws1 is ws1 pseudo-code-block ws (with-metadata)?
+on-init-clause ::= "on" ws "init" ws ("(" (arguments)? ")")? ws is ws1 pseudo-code-block ws (with-metadata)?
 on-other-clause ::= "on" ws "other" ws ("as" identifier (":" path-identifier)?)? ws is ws1 pseudo-code-block ws (with-metadata)?
-on-term-clause ::= "on" ws "term" ws1 is ws1 pseudo-code-block ws (with-metadata)?
+on-term-clause ::= "on" ws "term" ws ("(" (arguments)? ")")? ws is ws1 pseudo-code-block ws (with-metadata)?
 on-activate-clause ::= "on" ws "activate" ws1 is ws1 pseudo-code-block ws (with-metadata)?
 on-passivate-clause ::= "on" ws "passivate" ws1 is ws1 pseudo-code-block ws (with-metadata)?
 on-event-clause ::= "on" ws (identifier ":")? ws event-ref ws ("from" (identifier ":")? message-origins)? ws is ws1 pseudo-code-block ws (with-metadata)?

@@ -14,7 +14,8 @@ import fastparse.MultiLineWhitespace.*
 private[parsing] trait HandlerParser
     extends CommonParser
     with ReferenceParser
-    with StatementParser {
+    with StatementParser
+    with TypeParser {
 
   /** A57: `as <name> [: <envelope-type>]`, the optional envelope binding on `on other`.
     *
@@ -39,19 +40,42 @@ private[parsing] trait HandlerParser
     }
   }
 
+  /** The optional parameter list on `on init`/`on term` (Task 3): `(a: T, b: U)`, or nothing at
+    * all. Reuses [[TypeParser.arguments]] -- the same comma-separated `name: type` parser `method`
+    * uses for its own argument list -- so nothing new is invented. Whether a leading `Id(...)`
+    * parameter is required (as it is for `on term`) is a VALIDATION question, not a grammar one:
+    * the evidence (whether parameters were written at all, and what their types are) survives in
+    * the AST either way, so both clauses share this one parser.
+    */
+  private def lifecycleParameters[u: P]: P[Seq[MethodArgument]] = {
+    P((Punctuation.roundOpen ~/ arguments ~ Punctuation.roundClose).?).map(_.getOrElse(Seq.empty))
+  }
+
   private def onInitClause[u: P](set: StatementsSet): P[OnInitializationClause] = {
     P(
-      Index ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
-    ).map { case (start, statements, descriptives, end) =>
-      OnInitializationClause(at(start, end), statements.toContents, descriptives.toContents)
+      Index ~ Keywords.onInit ~ lifecycleParameters ~ is ~/ pseudoCodeBlock(set) ~
+        withMetaData ~/ Index
+    ).map { case (start, params, statements, descriptives, end) =>
+      OnInitializationClause(
+        at(start, end),
+        params,
+        statements.toContents,
+        descriptives.toContents
+      )
     }
   }
 
   private def onTermClause[u: P](set: StatementsSet): P[OnTerminationClause] = {
     P(
-      Index ~ Keywords.onTerm ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
-    ).map { case (start, statements, descriptives, end) =>
-      OnTerminationClause(at(start, end), statements.toContents, descriptives.toContents)
+      Index ~ Keywords.onTerm ~ lifecycleParameters ~ is ~/ pseudoCodeBlock(set) ~
+        withMetaData ~/ Index
+    ).map { case (start, params, statements, descriptives, end) =>
+      OnTerminationClause(
+        at(start, end),
+        params,
+        statements.toContents,
+        descriptives.toContents
+      )
     }
   }
 

@@ -338,6 +338,22 @@ abstract class Pass(
         correlation.contents.foreach { (value: RiddlValue) => traverse(value, parents) }
         correlation.timeoutStatements.foreach { (value: RiddlValue) => traverse(value, parents) }
         parents.pop()
+      case oic: OnInitializationClause =>
+        // Task 3, same shape as Correlation above and for the same reason: `parameters` lives in
+        // a FIELD, not `contents`, so the generic Branch arm below would walk the clause's body
+        // and silently skip its parameter list -- their types would never be resolved and never
+        // validated, so a parameter naming a type that doesn't exist would validate clean.
+        process(oic, parents)
+        parents.push(oic)
+        oic.parameters.foreach { (value: RiddlValue) => traverse(value, parents) }
+        oic.contents.foreach { (value: RiddlValue) => traverse(value, parents) }
+        parents.pop()
+      case otc: OnTerminationClause =>
+        process(otc, parents)
+        parents.push(otc)
+        otc.parameters.foreach { (value: RiddlValue) => traverse(value, parents) }
+        otc.contents.foreach { (value: RiddlValue) => traverse(value, parents) }
+        parents.pop()
       case branch: Branch[?] =>
         process(branch, parents)
         parents.push(branch)

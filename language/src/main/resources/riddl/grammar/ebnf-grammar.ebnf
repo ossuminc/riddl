@@ -239,13 +239,17 @@ handler = ["initial"] "handler" identifier is "{" handler_body "}" [with_metadat
 handler_body = {undefined | handler_contents} ;
 handler_contents = {on_clause | comment} ;
 on_clause = on_init_clause | on_other_clause | on_term_clause | on_activate_clause | on_passivate_clause | on_event_clause | on_message_clause ;
-on_init_clause = "on" "init" is pseudo_code_block [with_metadata] ;
+(* Task 3: parameters, so `on init`/`on term` become invocable (a later change). The parameter
+   list is OPTIONAL syntax for both clauses -- whether `on term` was given a correctly-typed
+   leading Id(...) parameter is a VALIDATION question, not a grammar one, since the grammar alone
+   cannot know which processor encloses the clause. *)
+on_init_clause = "on" "init" [ "(" [arguments] ")" ] is pseudo_code_block [with_metadata] ;
 (* A57: `as <name>` optionally binds the message's ENVELOPE (not the message -- this clause names
    none). The type is OPTIONAL and is a bare path with no `type` keyword: the colon already says a
    type follows. When omitted the type comes from `option message_envelope` in scope; when written
    it must agree with it. Both rules are enforced in validation, not the grammar. *)
 on_other_clause = "on" "other" [ "as" identifier [ ":" path_identifier ] ] is pseudo_code_block [with_metadata] ;
-on_term_clause = "on" "term" is pseudo_code_block [with_metadata] ;
+on_term_clause = "on" "term" [ "(" [arguments] ")" ] is pseudo_code_block [with_metadata] ;
 on_activate_clause = "on" "activate" is pseudo_code_block [with_metadata] ;
 on_passivate_clause = "on" "passivate" is pseudo_code_block [with_metadata] ;
 (* A55: an optional local name may be bound to the handled message with type ascription:

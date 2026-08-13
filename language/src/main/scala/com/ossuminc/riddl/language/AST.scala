@@ -4149,15 +4149,23 @@ object AST:
   }
 
   /** Defines the actions to be taken when the component this OnClause occurs in is initialized.
+    * `on init` is the CONSTRUCTOR: there is no instance yet, so unlike [[OnTerminationClause]] its
+    * parameters are ordinary -- none of them need be an [[UniqueId]] of the enclosing processor,
+    * because the identity is minted BY initiating, not supplied to it.
     *
     * @param loc
     *   THe location of the "on other" clause
+    * @param parameters
+    *   Declared BEFORE `contents`/`metadata` and WITHOUT a default: `@JSExportTopLevel` requires
+    *   defaulted parameters to be trailing, and those two are defaulted. Same rule as A55's
+    *   `binding` and A57's `envelopeType`.
     * @param contents
     *   A set of statements that define the behavior when a message doesn't match
     */
   @JSExportTopLevel("OnInitializationClause")
   case class OnInitializationClause(
     loc: At,
+    parameters: Seq[MethodArgument],
     contents: Contents[Statements] = Contents.empty[Statements](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {
@@ -4198,16 +4206,25 @@ object AST:
     def format: String = ""
   }
 
-  /** Defines the actions to be taken when the component this OnClause occurs in is initialized.
+  /** Defines the actions to be taken when the component this OnClause occurs in is terminated.
+    * `on term` is the DESTRUCTOR, and is invoked from OUTSIDE the instance, so the caller must say
+    * which one: its first parameter is required (validation-time, not grammar) to be an
+    * [[UniqueId]] of the enclosing processor. Unlike [[OnInitializationClause]] there is no
+    * question of what the identity IS -- it already exists, and termination needs to be told it.
     *
     * @param loc
     *   THe location of the "on other" clause
+    * @param parameters
+    *   Declared BEFORE `contents`/`metadata` and WITHOUT a default: `@JSExportTopLevel` requires
+    *   defaulted parameters to be trailing, and those two are defaulted. Same rule as A55's
+    *   `binding` and A57's `envelopeType`.
     * @param contents
     *   A set of statements that define the behavior when a message doesn't match
     */
   @JSExportTopLevel("OnTerminationClause")
   case class OnTerminationClause(
     loc: At,
+    parameters: Seq[MethodArgument],
     contents: Contents[Statements] = Contents.empty[Statements](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {
@@ -4488,6 +4505,16 @@ object AST:
             s" as ${id.format}" + ooc.envelopeType.map(t => s": ${t.pathId.format}").getOrElse("")
           }
           .getOrElse("")
+      // Task 3: `on init`/`on term` parameter lists. Rendered between the id and `is`, exactly
+      // where the parser reads them (`on init(a: T, b: U) is { … }`), and shared with `openDef`
+      // for the same reason every other ascription case is -- one implementation, so the parser
+      // and the emitter cannot drift.
+      case oic: OnInitializationClause =>
+        if oic.parameters.isEmpty then ""
+        else s"(${oic.parameters.map(_.format).mkString(", ")})"
+      case otc: OnTerminationClause =>
+        if otc.parameters.isEmpty then ""
+        else s"(${otc.parameters.map(_.format).mkString(", ")})"
       case _ => ""
     end ascription
 

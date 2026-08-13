@@ -1248,14 +1248,19 @@ class BASTReader(
 
     clauseType match {
       case 0 => // Init
+        // Task 3: parameters are written BEFORE contents (mirrors readMethodNode's args), and
+        // are read eagerly here -- unlike contents/metadata they are not deferred, since nothing
+        // else in the stream needs to interleave with them.
+        val parameters = readSeq(() => readMethodArgument())
         val contents = readContentsDeferred[Statements]()
         val metadata = readMetadataDeferred()
-        OnInitializationClause(loc, contents, metadata)
+        OnInitializationClause(loc, parameters, contents, metadata)
 
       case 1 => // Term
+        val parameters = readSeq(() => readMethodArgument())
         val contents = readContentsDeferred[Statements]()
         val metadata = readMetadataDeferred()
-        OnTerminationClause(loc, contents, metadata)
+        OnTerminationClause(loc, parameters, contents, metadata)
 
       case 2 => // Message
         val msg = readMessageRef()

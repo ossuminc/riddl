@@ -555,7 +555,10 @@ object JsonModel:
     from: Option[OnFromDto] = None,
     metadata: Option[MetaDto] = None,
     // An on-clause may be documented like any other definition (`on other { … } with { briefly … }`).
-    brief: Option[String] = None
+    brief: Option[String] = None,
+    // Task 3: `on init`/`on term` parameter lists (`kind: "init"|"term"` only). Reuses the same
+    // shape `MethodDto.args` already uses for a record method's arguments.
+    parameters: Seq[MethodArgDto] = Nil
   )
 
   case class MessageRefDto(ref: String, kind: String)
@@ -2339,6 +2342,11 @@ object JsonModel:
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW
   given refDtoRW: ReadWriter[RefDto] = macroRW
   given onFromRW: ReadWriter[OnFromDto] = macroRW
+  // Task 3: `on init`/`on term` `parameters`. `MethodDto.args` (the same DTO) never needed this --
+  // RecordDto/MethodDto are read/written by the hand-rolled readMethod/writeMethod inside
+  // readTypeExpr/writeTypeExpr, not macroRW -- but OnClauseDto IS macroRW-derived, so its
+  // `Seq[MethodArgDto]` field needs a given Reader/Writer for macroRW to find.
+  given methodArgDtoRW: ReadWriter[MethodArgDto] = macroRW
   given onClauseRW: ReadWriter[OnClauseDto] = macroRW
   given handlerRW: ReadWriter[HandlerDto] = macroRW
   // A28: InvariantDto (macroRW) may carry a structured BooleanExpression in `expression: Option[

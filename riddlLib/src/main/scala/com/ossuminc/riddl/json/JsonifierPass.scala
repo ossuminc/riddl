@@ -808,24 +808,26 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 brief = briefOf(oec.metadata)
               )
             )
-          case _: OnInitializationClause =>
+          case oic: OnInitializationClause =>
             Some(
               OnClauseDto(
                 "init",
                 None,
                 statements,
                 metadata = metaOf(oc.metadata),
-                brief = briefOf(oc.metadata)
+                brief = briefOf(oc.metadata),
+                parameters = oic.parameters.map(a => MethodArgDto(a.name, serializeTypeExpr(a.typeEx)))
               )
             )
-          case _: OnTerminationClause =>
+          case otc: OnTerminationClause =>
             Some(
               OnClauseDto(
                 "term",
                 None,
                 statements,
                 metadata = metaOf(oc.metadata),
-                brief = briefOf(oc.metadata)
+                brief = briefOf(oc.metadata),
+                parameters = otc.parameters.map(a => MethodArgDto(a.name, serializeTypeExpr(a.typeEx)))
               )
             )
           case _: OnActivationClause =>

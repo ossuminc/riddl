@@ -229,10 +229,10 @@ class ASTTest extends AbstractTestingBasis {
     )
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
   val onClauses: Contents[OnClause] = Contents(
-    OnInitializationClause(At.empty, statements),
+    OnInitializationClause(At.empty, Seq.empty, statements),
     OnMessageClause(At.empty, messageRef, None, None, statements),
     OnOtherClause(At.empty, None, None, statements),
-    OnTerminationClause(At.empty, statements)
+    OnTerminationClause(At.empty, Seq.empty, statements)
   )
   val handler: Handler =
     Handler(

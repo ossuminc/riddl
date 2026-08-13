@@ -494,6 +494,7 @@ case class ValidationPass(
         checkDefinition(parentsAsSeq, oic)
       case otc: OnTerminationClause =>
         checkDefinition(parentsAsSeq, otc)
+        checkOnTermLeadingParameter(otc, parentsAsSeq)
       case oac: OnActivationClause =>
         checkDefinition(parentsAsSeq, oac)
       case opc: OnPassivationClause =>
@@ -831,6 +832,34 @@ case class ValidationPass(
             s"inferred from the option."
         )
       case _ => () // binding with an envelope in scope, agreeing ascription, or no binding
+
+  /** Task 3: `on term` is the destructor, and unlike `on init` it is invoked from OUTSIDE the
+    * instance — so the caller must say which one. The rule is grammar-shaped (a leading `Id(...)`
+    * parameter) but can only be checked here: the parser sees a bare parameter list and cannot
+    * know which processor encloses it, or whether a resolved `UniqueId` names that processor.
+    *
+    * A missing parameter list and a wrong leading type are reported with the SAME message — both
+    * are "no correctly-typed leading id parameter" — which is what `otc.parameters.headOption`
+    * naturally collapses them into.
+    */
+  private def checkOnTermLeadingParameter(otc: OnTerminationClause, parents: Parents): Unit =
+    val enclosing = parents.collectFirst { case p: Processor[?] => p }
+    enclosing.foreach { p =>
+      val ok = otc.parameters.headOption.exists { a =>
+        a.typeEx match
+          case uid: UniqueId => uid.entityPath.value.lastOption.contains(p.id.value)
+          case _             => false
+      }
+      check(
+        ok,
+        s"'on term' in ${p.identify} must declare its first parameter as Id(${p.id.value}) — " +
+          "the id of the instance to terminate",
+        Error,
+        otc.loc,
+        suggestion = s"Write 'on term(id: Id(${p.id.value}), …) is { … }'."
+      )
+    }
+  end checkOnTermLeadingParameter
 
   /** A56: check a bound `tell`/`send` operand — `tell p to entity F`.
     *

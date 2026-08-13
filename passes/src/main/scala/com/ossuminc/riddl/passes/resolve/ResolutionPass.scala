@@ -110,6 +110,14 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case av: AggregateValue => // Field, Method
         val resolution = resolveTypeExpression(av, av.typeEx, parents)
         associateUsage[Type](av, resolution)
+      // Task 3: an `on init`/`on term` parameter. `MethodArgument` is not a Definition (it can't
+      // own usages of its own), so `parents.head` -- the enclosing on-clause, pushed by Pass.scala's
+      // OnInitializationClause/OnTerminationClause traverse cases -- is the anchor/user instead.
+      // This is what makes `on init(x: Nonexistent)` produce a "not resolved" message rather than
+      // validating clean: `Id(...)` resolves as a Processor via the UniqueId arm below, and every
+      // other type expression resolves the ordinary way.
+      case ma: MethodArgument =>
+        associateUsage[Type](parents.head, resolveTypeExpression(parents.head, ma.typeEx, parents))
       case t: Type =>
         associateUsage[Type](t, resolveType(t, parents))
       case mc: OnMessageLikeClause => // OnMessageClause and OnEventClause both carry a msg ref

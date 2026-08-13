@@ -1016,7 +1016,9 @@ object JsonAstBuilder:
               statements,
               md
             )
-      case "init"      => OnInitializationClause(curAt, statements, md)
+      case "init" =>
+        val parameters = oc.parameters.map(a => MethodArgument(curAt, a.name, buildTypeExpr(a.`type`)))
+        OnInitializationClause(curAt, parameters, statements, md)
       case "other" =>
         // A57: rebuild the optional envelope binding and its optional explicit type.
         OnOtherClause(
@@ -1026,7 +1028,9 @@ object JsonAstBuilder:
           statements,
           md
         )
-      case "term"      => OnTerminationClause(curAt, statements, md)
+      case "term" =>
+        val parameters = oc.parameters.map(a => MethodArgument(curAt, a.name, buildTypeExpr(a.`type`)))
+        OnTerminationClause(curAt, parameters, statements, md)
       case "activate"  => OnActivationClause(curAt, statements, md)
       case "passivate" => OnPassivationClause(curAt, statements, md)
       case other =>
