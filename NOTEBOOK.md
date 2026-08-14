@@ -18,13 +18,13 @@ would get wrong.
   `git log --oneline origin/release/2..HEAD`; do not trust a number written
   here, since the commit that records it moves it.
 - **`publishLocal` AND `~/Code/ossuminc/bin/riddlc` are both at
-  `2.0.0-rc.14-12-54d82288`, and as of 2026-08-14 that is genuinely STALE** —
-  it predates `2ebe24a6c`/`80bb93b40`, so the staged binary still drops
-  `method`/`shown by` on prettify and still rejects a trailing-slash URL. It was
-  merely doc-behind before; it is code-behind now. Restage with
-  `scripts/publish-and-stage.sh` (publishLocal + nativeLink in ONE invocation —
-  never one without the other) when the next RC is cut. Bare `riddlc` on `$PATH`
-  is still the old tap build.
+  `2.0.0-rc.14-20-db2eb423`** — restaged 2026-08-14 via
+  `scripts/publish-and-stage.sh`, which the script itself verified are from one
+  build. This carries the emitter fix AND BAST revision 17. Behaviour-checked,
+  not just version-checked: a model exercising all six emitter defects
+  prettifies, re-parses, and bastifies to **23 nodes on both sides** — the
+  node-count tell riddl-models used to find the defects. Bare `riddlc` on
+  `$PATH` is still the old tap build.
 - **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease, Maven from the tag, npm on
   the **`rc`** dist-tag (`latest` did NOT move), tap commit `489bbb0` touched
   `Formula/riddlc-rc.rb` only.
@@ -37,17 +37,24 @@ would get wrong.
 - **TWO CORPUS TESTS ARE RED ON PURPOSE** and are the one thing a cold session
   is most likely to get wrong — see the trap below.
 
-**NEXT — resume the message-value plan, then cut an RC.** Reid's order
-(2026-08-14): the emitter fix first (DONE, `2ebe24a6c`/`80bb93b40`), then finish
-the 7-task plan, **then cut a new RC** carrying both. That sequencing is what
-lets riddl-models regenerate `.bast` once instead of twice.
+**IN FLIGHT — message-value plan, Tasks 1-3 of 7 DONE, Task 4 NOT started.**
+Plan `docs/superpowers/plans/2026-08-14-message-value-source.md`; design
+`…/specs/2026-08-14-message-value-source-design.md`; running ledger with every
+finding at `.superpowers/sdd/2026-08-14-message-value-source/progress.md` —
+**read the ledger before resuming, it records two traps this work hit.**
 
-**IN FLIGHT — message-value plan, Task 1 of 7 done, Task 2 NOT started.**
-Everything about it is in **`BACKLOG.md` § 1** ("A message ref must be able to
-name its VALUE"), including **T2's completed site audit with line numbers — do
-not redo it.** Plan `docs/superpowers/plans/2026-08-14-message-value-source.md`;
-design `docs/superpowers/specs/2026-08-14-message-value-source-design.md`.
-Reid's order: finish this plan, then the bugs in BACKLOG § 1.
+- **T1** widened `send`/`tell`'s operand source. **T2** (`e87249acc`) extended it
+  to `yield`/`reply`/`morph`. **T3** (`db2eb4235`) carried it across prettify,
+  BAST (**FORMAT_REVISION now 17**) and JSON.
+- **T4 is the next one and is NOT small**: the bare-form CompletenessWarning
+  needs a corpus COUNT of what the field-less exemption removes from the
+  **14,730** figure already quoted to riddlg. That number must be corrected if it
+  moves. **Ship a WARNING, never an Error** — the corpus has 14,730 bare refs and
+  ZERO constructor uses. T5 (unused-`initiate`-id warning) and T6 (pin the
+  saga-step ruling) are small; T7 certifies.
+- **Then cut the RC.** Reid's order (2026-08-14): emitter fix, then this plan,
+  then an RC carrying both — which is what gives riddl-models ONE `.bast`
+  regeneration instead of two.
 
 **Traps — every one of these already bit someone.**
 
