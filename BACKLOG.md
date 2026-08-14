@@ -62,28 +62,18 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **FLAKY CI GATE: `PerformanceBenchmarkTest` asserts a hard 100x cache speedup.**
-  Reid, 2026-08-14 — do before rc.15. Found during the rc.14 certification.
-  `language/src/test/scalajvm/.../PerformanceBenchmarkTest.scala:388-391`:
-  ```scala
-  assert(cachedFindTime < findTime / 100,
-    s"Cache should provide 100x+ speedup (got ${findTime / cachedFindTime}x)")
-  ```
-  **It failed CI run #2278 with 78.4x** on a commit whose code is BYTE-IDENTICAL
-  to the one that passed as #2277 (`git diff cbb7e53b4..9b9ffac36` over
-  `*.scala *.sbt project/ .github/` is empty), and #2279 then passed again on the
-  same code. It also passed in the local rc.14 certification. So the assertion is
-  measuring shared-runner timing noise, not the cache.
-  **Why it matters more than one red X:** this runs in `scala-build (JVM)`, which
-  gates releases. A gate that fails ~1 run in 3 on machine noise trains everyone
-  to disregard a red X — and the next real failure looks identical.
-  **Fix direction, not yet decided:** assert a much weaker bound (the cache is
-  clearly working at 78x, so the property under test is "caching helps", not
-  "helps 100x"), or measure a monotonic property that does not depend on wall
-  clock, or move the whole benchmark out of the release gate and into something
-  advisory. Whichever is chosen, a timing threshold tuned to one machine does not
-  belong in a gate. Note the sibling assertions in the same file
-  (`types1.size == typeCount`) are deterministic and should stay.
+- ~~**FLAKY CI GATE: `PerformanceBenchmarkTest` 100x cache-speedup assertion**~~
+  — **DONE 2026-08-14, `32340312e`.** Replaced with a monotonic check (cached
+  strictly faster) plus a 5x floor; the precise multiplier stays as `info`
+  output. Healthy runs measure 600x–1600x, so the floor has real headroom while
+  a genuine regression collapses toward 1x and still fails hard. **Proven still
+  able to detect one** by removing `Finder.findByType`'s cache-hit branch and
+  watching both assertions go red at 1.17x and 0.9x.
+  **A SECOND identically-shaped 10x assertion existed in the same file** and was
+  fixed with it. The lesson worth keeping: `BASTPerformanceBenchmark.scala`
+  ALREADY carried this exact fix from an earlier round, comment and all — the
+  defect class was diagnosed once and its sibling missed, so when fixing a
+  test-shape defect, grep for the shape rather than fixing the instance.
 
 - **Close the JVM/Native test gap: 729 cases run on JVM that never run on
   Native.** Reid, 2026-08-14, from the rc.14 certification. *"Testing on the JVM
@@ -96,16 +86,28 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
   | module | JVM | Native | gap |
   |---|---|---|---|
-  | language | 668 | 343 | **−325** |
   | commands | 245 | 47 | **−198** |
+  | language | 668 | 512 | **−156** |
   | passes | 1196 | 1040 | **−156** |
   | utils | 146 | 108 | −38 |
   | riddlLib | 122 | 111 | −11 |
   | testkit | 2 | 1 | −1 |
   | riddlc | 21 | 21 | 0 |
-  | **total** | **2400** | **1671** | **−729** |
+  | **total** | **2400** | **1840** | **−560** |
 
-  **Three modules are 679 of the 729.** Start there, in this order:
+  **PROGRESS 2026-08-14 (`546f2f834`): `language` closed from −325 to −156.**
+  The 13 abstract parser suites now run on Native — their concrete runners moved
+  from `src/test/scalajvm` to `src/test/scala-jvm-native` (the root already wired
+  by `jvmNativeSrc("language")`), renamed `JVMNativeTests` since they serve both
+  platforms. Native 343 → 512, exactly the predicted +169, **nothing excluded**:
+  those suites build every input from `RiddlParserInput` and string literals,
+  with no `java.io`/`scala.io.Source`/regex-`.r`, so no Native hazard was present.
+  **The Native floor is therefore expected to be 1840 at the next full
+  certification** — it is NOT raised here, because a floor may only be raised by
+  a certified tri-platform run, and this number is arithmetic plus an isolated
+  `languageNative/testOnly *`.
+
+  **Remaining: 510 of the 560 sit in three modules.** In this order:
 
   1. **`commands` (−198) is the alarming one, and probably the cheapest win.**
      245 JVM against 47 Native, and the module has NO `src/test/scala-jvm-native`
@@ -113,15 +115,18 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
      count matches the riddl-models corpus gate exactly, which means **our single
      largest regression net almost certainly runs JVM-only.** Confirm that first;
      if the corpus round trip can run on Native, that one change is worth ~200.
-  2. **`language` (−325)** — 33 shared test files, 19 `scala-jvm-native`, 22
-     `scalajvm`. **169 of this gap is already filed** as the abstract-suite item
-     below (`TypeParserTest` and 12 siblings are abstract with concrete runners
-     only in `JVMTests`/`JSTests`, so they move JVM and JS but not Native). That
-     part is a pure wiring fix — add Native runners — and needs no rewriting. The
-     remaining ~156 is the 22 `scalajvm` files.
+  2. **`language` (−156, was −325)** — the abstract-suite half is DONE (see
+     PROGRESS above). What remains is its 22 `src/test/scalajvm` files, which
+     need the per-file triage below rather than a wiring fix.
   3. **`passes` (−156)** — 26 shared, 139 `scala-jvm-native`, 29 `scalajvm`. This
      module already does the right thing at scale, so the residue is likely
      genuinely JVM-bound; audit it last.
+
+  **The `language` fix is the template for the other two:** the suites were
+  already compiled for all three platforms and only the CONCRETE RUNNER was
+  JVM-only, so moving it to `src/test/scala-jvm-native` cost nothing and excluded
+  nothing. Check for that shape first in each module before assuming a test is
+  genuinely JVM-bound.
 
   **79 test files sit under `src/test/scalajvm` across the seven modules** (utils
   11, language 22, passes 29, commands 7, riddlLib 7, riddlc 1, testkit 2). Each
@@ -289,34 +294,26 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Needs a corpus A/B — this can only ADD messages, and the models that were
   silently passing may be numerous.
 
-- **GAP: 13 shared `language` parser suites — 169 test cases — have NEVER run
-  on Native.** Found 2026-08-13 by chasing a ONE-test shortfall in the
-  instance-identity certification (predicted Native +68, got +67).
-  They live in `language/src/test/scala/.../parsing/`, which reads like "all
-  three platforms", but each is **abstract** and its concrete runners are
-  declared only in `scalajvm/.../JVMTests.scala` and
-  `scalajs/.../JSTests.scala`. There is no `NativeTests.scala`. Verified by
-  diffing the suite names in the JS and Native `language` rows of the
-  certification log — they overlap almost nowhere.
-  Counts (`in {` per suite): `StatementsTest` 52, `TypeParserTest` 37,
-  `HandlerTest` 19, `ParsingTestTest` 19, `CommonParserTest` 9,
-  `ProjectorTest` 8, `StreamingParserTest` 7, `ApplicationParsingTest` 6,
-  `ModuleTest` 4, `MetaDataTest` 3, `RepositoryTest` 2, `TokenParserTest` 2,
-  `NebulaTest` 1.
-  **Fix is probably one file** — a `scalanative/.../NativeTests.scala` mirroring
-  the other two. Do it as its own change with its own certification, NOT
-  alongside a feature: it will raise the Native floor by ~169 in one step, and
-  if any parser behaves differently on Native (`String` handling and
-  `fastparse` are the plausible risks) the failures must be attributable to
-  this change alone.
-  The trap is already documented in `.claude/skills/rc/SKILL.md` as the
-  "reverse trap"; what was missing was anyone measuring it. A floor is a total,
-  and a total cannot say what is absent from it.
+- ~~**GAP: 13 shared `language` parser suites — 169 cases — never ran on
+  Native**~~ — **DONE 2026-08-14, `546f2f834`.** Concrete runners moved from
+  `src/test/scalajvm` to `src/test/scala-jvm-native` and renamed `JVMNativeTests`.
+  Native `language` 343 → 512, exactly the predicted +169, nothing excluded and
+  nothing weakened — the suites build every input from `RiddlParserInput` and
+  string literals, so no Native hazard was present. Rolled into the JVM/Native
+  gap item above.
 
-- **UNDECIDED: are `initiate`/`terminate` legal inside a SAGA STEP?** Raised
-  three times during the instance-identity plan (2026-08-13) and never ruled,
-  so it is filed rather than lost. **They are legal today by DEFAULT, not by
-  decision:** `checkInstanceEffectScope`
+- **RULED 2026-08-14: `initiate`/`terminate` ARE legal inside a saga step.**
+  Reid: *"a saga may need new entities to be created."* That settles it — but
+  the behaviour is currently correct **by accident, not by decision**, so the
+  remaining work is a TEST that pins it. Without one, the next person to tighten
+  `checkInstanceEffectScope` removes the legality and nothing goes red.
+  Add a case asserting `initiate` and `terminate` both validate clean in a saga
+  step, with a comment citing this ruling. Note the asymmetry the final review
+  flagged is now RESOLVED in the other direction: `self` is banned in a saga
+  step while these are legal, which is coherent — a saga has no instance
+  identity of its own, but it may create and destroy instances.
+  Original context, kept because it explains why nothing enforces it:
+  `checkInstanceEffectScope`
   (`ValidationPass.scala:1029-1054`) bans them in exactly two shapes — a
   parent that is an `OnActivationClause`/`OnPassivationClause`, or any
   `Function` in the parent chain — and for a saga-step statement `parents.head`
@@ -336,8 +333,9 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   instance identity but MAY create and destroy instances. Whichever way it is
   ruled, the two halves should agree; today they disagree by accident.
 
-- **NEW CHECK (Reid ruled it, 2026-08-13; build it as its own task):** a
-  `let x = initiate …` whose id is **never subsequently referenced** draws a
+- **NEW CHECK — Reid, 2026-08-14: "no further task is needed, just build it."**
+  **Folded into the message-value implementation above**, not a separate task.
+  A `let x = initiate …` whose id is **never subsequently referenced** draws a
   plain **Warning** — on by default, NOT gated behind
   `showCompletenessWarnings`, because unlike a missing tell address this is
   locally decidable from the clause body alone.
