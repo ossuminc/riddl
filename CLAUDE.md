@@ -853,6 +853,31 @@ to the right group rather than appending to a list.
     7,556 `tell`s against **7** `Id(...)`-typed fields, so an Error would have
     condemned essentially every model that exists. Ambiguity IS an Error —
     it is a contradiction, not an omission.
+    **The candidate test follows ALIAS CHAINS but never NESTING** (Reid,
+    2026-08-14). A field typed `OrderId`, where `type OrderId is Id(Order)`, IS
+    an address — that alias is riddl-models' documented house style, and until
+    `ccd278c00` `isAddressFieldFor` matched `UniqueId` alone, so it recognised
+    only the rare inline spelling and misfired on the common one (72 of 86
+    distinct findings in reactive-bbq were false; it aborted their `checkAll`).
+    But `result R is { thing: ThingBase }`, where the NESTED record carries the
+    id, stays flagged: descending into an aggregate's fields is an unbounded
+    search — a record holding a record holding a record — with no principled
+    stopping point, so **the id must be a field of the record actually named.**
+    Renaming is followed; containment is not.
+    **Both alias walks carry a visited list, and the reason is a real crash:**
+    `type A is B` / `type B is A` sent `fieldsWithOwner` into infinite recursion
+    in rc.14 (`java.lang.StackOverflowError`, reproduced against the released
+    binary), surfacing as `[severe] Exception Thrown` with no line number.
+    Reference identity (`eq`), NOT a `Set`/`contains` guard — `Definition`
+    overrides `equals` structurally, so a set would fuse two distinct identical
+    alias declarations and truncate a legitimate chain.
+    **Fixing the alias case cost the corpus 49 Errors it had been hiding**, in
+    16 of 189 models — the fourth reminder that a green corpus is evidence about
+    the corpus. All 49 were corpus defects in three classes: genuine two-id
+    ambiguity needing `by`, actor fields legitimately of the same entity
+    (`identityId` + `suspendedBy`) also needing `by`, and **wrong-entity
+    aliases** (`type TaskId is Id(NurseShift)`, `type MemberId is
+    Id(Enrollment)`) that no `tell` had ever exposed.
   - **`initiate`/`terminate` are effects** — banned in a function body (pure,
     A26) and in `on activate`/`on passivate` (must be side-effect-free), and in
     a correlation fold (purity is what makes re-runs safe, A70/§6.5). The fold

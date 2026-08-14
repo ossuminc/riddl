@@ -62,6 +62,30 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **`at-least-once` / `at-most-once` / `exactly-once` are inert as OPTIONS.**
+  Filed by synapify 2026-08-14 alongside the `option persistent` retirement
+  (`e0a424ed0`), and verified here:
+  `StreamingParser.deprecatedConnectorOptions` (`StreamingParser.scala:61`)
+  contains ONLY `"persistent"`, so unlike it the delivery options are NOT
+  consumed into the intention they duplicate. `option at-least-once()` therefore
+  parses as a plain registry option, means nothing, and draws no message at all
+  — two spellings where one is silently inert.
+  **Not a mechanical repeat of the `persistent` fix**, which is why this is
+  filed rather than done: `exactly-once` is a registry option with **no
+  intention at all**, so deprecating the option spellings first needs a ruling
+  on whether it should become one. Deprecating two of three and leaving the
+  third current would be its own inconsistency. Decide `exactly-once`, then do
+  all three together (consume in the parser, mark `deprecatedFor`, extend the
+  Connector drift guard in `RecognizedOptionSetTest`).
+- **`OnInitializationClause.parameters` / `OnTerminationClause.parameters` have
+  no default and are not trailing** (`AST.scala:4236`). Filed by synapify
+  2026-08-14; it is the only thing in rc.14 that broke their build. It departs
+  from the compatibility policy quoted in the adjacent `Connector.intentions`
+  comment in the same release — *"The compatibility policy requires a new
+  parameter to have one"*. Adding `= Seq.empty` is source-compatible and cheap.
+  Note the constraint that produced it: `@JSExportTopLevel` requires defaulted
+  params to be TRAILING, and `contents`/`metadata` are already defaulted — so
+  the fix is to move `parameters` after them, not merely to default it in place.
 - **Two narrow-operand gaps left by the message-value widening (Task 1,
   `9d0e47acd`).** Both are false-POSITIVE-only (an advisory warning that should
   not fire), never a missed Error, and both have zero corpus impact today because

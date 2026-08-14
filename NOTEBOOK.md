@@ -92,6 +92,57 @@ to the task file and note the disposition below.
 ---
 
 
+## A check that was wrong for the common spelling hid 49 real defects (2026-08-14) — DONE
+
+riddl-models filed the rc.14 addressing check as a false positive: *"carries no field typed
+`Id(X)`"* fired on messages that plainly carried the id. Their diagnosis was already correct — it
+compared the field's WRITTEN type rather than its resolved one — and the code confirmed it in one
+line. `isAddressFieldFor` matched `f.typeEx` against `case uid: UniqueId` and fell to `false` for
+everything else, so a field typed by the named alias `type OrderId is Id(entity Order)` was never a
+candidate. The sibling `fieldsWithOwner` two functions above ALREADY followed the alias chain — but
+for the message type, never for the field's type. The fix is the same step in the second place.
+
+**The lesson is about which spelling a check was tested against.** The alias form is riddl-models'
+documented house style (*"Type IDs as `{Name}Id`"*), so the check recognised only the spelling
+almost nobody writes and misfired on the one everybody writes. Every test we had used the inline
+form, so the suite was green and unanimous about a check that was inert in production. Two commands
+differing ONLY in the alias — one flagged, one not — is the whole bug, and is now a test.
+
+**Then the fix turned 16 of 189 corpus models red, and that was the valuable part.** Fixing the
+alias case made previously-invisible fields into candidates, so messages carrying two of them
+started producing the ambiguity Error. A stash-and-rerun A/B established the baseline was
+189/189 green, so all 49 were attributable. Checking the corpus SOURCES rather than reasoning
+from the message text — the step that mattered — showed three classes, all corpus-side:
+genuine two-id ambiguity (`CartsMerged {targetCartId, sourceCartId}`), actor fields legitimately
+of the same entity (`identityId` + `suspendedBy`), and **wrong-entity aliases**:
+`type TaskId is Id(NursingContext.NurseShift)`, `type ReportId is Id(ImagingExam)`,
+`type MemberId is Id(Enrollment)`. A name-heuristic sweep found 17 such candidates corpus-wide,
+several not yet erroring because nothing `tell`s them yet.
+
+Those had been wrong since they were written and nothing could see them. **A broken check does not
+merely fail to report — it certifies.** The fourth sighting of "a green corpus is evidence about
+the corpus", but the first where the corpus going RED was the evidence.
+
+**Reid's ruling on the follow-up question**: alias chains are followed, nesting is NOT. A `result R
+is { thing: ThingBase }` whose nested record carries the id stays flagged, because descending into
+aggregates is an unbounded search with no principled stopping point — turtles all the way down.
+Renaming is transparent; containment is not.
+
+**Found on the way, and worse than the bug being fixed**: a cyclic alias (`type A is B` / `type B
+is A`) crashed rc.14 outright — `StackOverflowError` in `fieldsWithOwner`, reproduced against the
+RELEASED binary, reaching the author as `[severe] Exception Thrown` with no line number. The fix
+would have added a second path into it, so both walks now carry a visited list keyed on reference
+identity (a `Set` would fuse two distinct identical alias declarations, since `Definition.equals`
+is structural). Worth noting how it was found: not by a test, but by asking "my fix adds a
+recursion — is the existing one guarded?" and then spending two minutes proving the answer with
+the staged binary instead of assuming it.
+
+Also shipped: `option persistent` retired for Connector in `RecognizedOptions` (synapify), whose
+own comment had predicted its retirement — the intentions shipped in rc.14 and the entry did not,
+so a tool's picker offered a spelling its Problems pane then flagged. Third drift between those
+two tables; the Connector half of the behavioural drift guard now exists alongside the Entity one.
+
+
 ## A `Container` that isn't a `Branch` is invisible to the writer pass (2026-08-14) — DONE
 
 riddl-models filed `task/2026-08-13-interaction-blocks-break-bast-round-trip.md`: `sequence {
