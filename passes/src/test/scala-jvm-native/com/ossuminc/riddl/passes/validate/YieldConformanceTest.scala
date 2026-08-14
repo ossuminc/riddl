@@ -47,7 +47,7 @@ class YieldConformanceTest extends AbstractValidatingTest {
       |      record F is { x: Integer }
       |      state S of record Ent.F is {
       |        handler EH is {
-      |          on command D.C.Cmd { yield event E }
+      |          on command D.C.Cmd { yield event E(data = "the data") }
       |          on event D.C.E { set field S.x to "1" }
       |        }
       |      }
@@ -76,7 +76,7 @@ class YieldConformanceTest extends AbstractValidatingTest {
 
 
     "accept a yield that matches the declared yields clause" in { (td: TestData) =>
-      val input = RiddlParserInput(model("yield event E"), td)
+      val input = RiddlParserInput(model("""yield event E(data = "the data")"""), td)
       parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
         val conformanceErrors =
           errors(msgs).filter(m => m.message.contains("yield") || m.message.contains("yields"))
@@ -137,7 +137,7 @@ class YieldConformanceTest extends AbstractValidatingTest {
 
     "allow a yield when the command declares no yields clause (yields is optional)" in {
       (td: TestData) =>
-        val input = RiddlParserInput(model("yield event E", yieldsClause = ""), td)
+        val input = RiddlParserInput(model("""yield event E(data = "the data")""", yieldsClause = ""), td)
         parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
           // No yields declared ⇒ conformance is not enforced; the yield must not error.
           errors(msgs).exists(m => m.message.contains("yields")) mustBe false

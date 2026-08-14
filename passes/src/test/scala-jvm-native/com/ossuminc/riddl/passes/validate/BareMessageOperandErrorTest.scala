@@ -14,13 +14,15 @@ import org.scalatest.TestData
 
 /** Message-value-source design, Task 4: a BARE operand — `send command Foo to …`, `morph … with
   * record R` — names a message/record TYPE and says nothing about where the VALUE comes from, so a
-  * generator has nothing to lower. It draws a [[CompletenessWarning]].
+  * generator has nothing to lower. It is an [[Error]].
   *
-  * **It is a Warning now and an Error later, deliberately.** riddl-models holds 14,730 bare refs
-  * and ZERO constructor uses, so shipping the Error first would invalidate every message-sending
-  * statement in all 189 models at once while CI requires them to validate clean. The
-  * `errorsOf(msgs) mustBe empty` assertion `check` runs for EVERY case below is therefore
-  * load-bearing, not decoration: it is what pins the severity at Warning.
+  * **It shipped as a Warning and was FLIPPED to Error on 2026-08-14** (design D3's end state).
+  * riddl-models held 14,730 bare refs and ZERO constructor uses, so the Error had to wait until
+  * that repo could migrate; Reid lifted the block once they began building against this branch.
+  * The severity is still PINNED here and must stay pinned: `bareErrors` selects on `Error`
+  * specifically, and `check` asserts that every OTHER error is absent. Those two together are what
+  * make a silent severity change impossible in either direction — which is the whole reason this
+  * suite exists separately from the ordinary validation tests.
   *
   * **A field-less message is EXEMPT** (design Q1, ruled 2026-08-14). A message with no data leaves
   * the type fully determining the value, so there is nothing to source; warning on it is exactly the
@@ -32,22 +34,31 @@ import org.scalatest.TestData
   * the case below uses, and it lands on the same empty `AggregateTypeExpression` the exemption
   * tests — so the exemption is really "no fields OR an explicit stub", one condition, not two.
   */
-class BareMessageOperandWarningTest extends AbstractValidatingTest {
+class BareMessageOperandErrorTest extends AbstractValidatingTest {
 
-  private def bareWarnings(msgs: Messages): Seq[String] =
-    msgs.filter(_.kind == CompletenessWarning).map(_.message).filter(_.contains("not a value"))
+  /** The bare-operand Errors specifically -- selected by KIND as well as text, so that moving the
+    * severity back to a warning fails this suite instead of silently passing it.
+    */
+  private def bareErrors(msgs: Messages): Seq[String] =
+    msgs.filter(_.kind == Error).map(_.message).filter(_.contains("not a value"))
 
-  private def errorsOf(msgs: Messages): Seq[String] = msgs.filter(_.kind == Error).map(_.message)
+  /** Every error that is NOT a bare-operand one. `check` requires this to be empty, so a fixture
+    * that stops parsing -- or starts tripping some unrelated rule -- cannot masquerade as a case
+    * that legitimately reports nothing. Before the flip this was `errorsOf(msgs) mustBe empty`,
+    * which could say the same thing only while bare operands were not errors themselves.
+    */
+  private def otherErrors(msgs: Messages): Seq[String] =
+    msgs.filter(_.kind == Error).map(_.message).filterNot(_.contains("not a value"))
 
   private def check(src: String, name: String)(f: Messages => org.scalatest.Assertion): Unit =
     parseAndValidate(src, name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-      errorsOf(msgs) mustBe empty
+      otherErrors(msgs) mustBe empty
       f(msgs)
     }
 
   "a bare message-type operand" should {
 
-    "warn on `send`" in { (td: TestData) =>
+    "error on `send`" in { (td: TestData) =>
       val src =
         """domain d is {
           |  context c is {
@@ -62,10 +73,10 @@ class BareMessageOperandWarningTest extends AbstractValidatingTest {
           |  }
           |}
           |""".stripMargin
-      check(src, td.name) { msgs => bareWarnings(msgs).size mustBe 1 }
+      check(src, td.name) { msgs => bareErrors(msgs).size mustBe 1 }
     }
 
-    "warn on `tell`" in { (td: TestData) =>
+    "error on `tell`" in { (td: TestData) =>
       val src =
         """domain d is {
           |  context c is {
@@ -82,10 +93,10 @@ class BareMessageOperandWarningTest extends AbstractValidatingTest {
           |  }
           |}
           |""".stripMargin
-      check(src, td.name) { msgs => bareWarnings(msgs).size mustBe 1 }
+      check(src, td.name) { msgs => bareErrors(msgs).size mustBe 1 }
     }
 
-    "warn on `yield`" in { (td: TestData) =>
+    "error on `yield`" in { (td: TestData) =>
       val src =
         """domain d is {
           |  context c is {
@@ -99,10 +110,10 @@ class BareMessageOperandWarningTest extends AbstractValidatingTest {
           |  }
           |}
           |""".stripMargin
-      check(src, td.name) { msgs => bareWarnings(msgs).size mustBe 1 }
+      check(src, td.name) { msgs => bareErrors(msgs).size mustBe 1 }
     }
 
-    "warn on `reply`" in { (td: TestData) =>
+    "error on `reply`" in { (td: TestData) =>
       val src =
         """domain d is {
           |  context c is {
@@ -116,10 +127,10 @@ class BareMessageOperandWarningTest extends AbstractValidatingTest {
           |  }
           |}
           |""".stripMargin
-      check(src, td.name) { msgs => bareWarnings(msgs).size mustBe 1 }
+      check(src, td.name) { msgs => bareErrors(msgs).size mustBe 1 }
     }
 
-    "warn on `morph … with`" in { (td: TestData) =>
+    "error on `morph … with`" in { (td: TestData) =>
       val src =
         """domain d is {
           |  context c is {
@@ -134,7 +145,7 @@ class BareMessageOperandWarningTest extends AbstractValidatingTest {
           |  }
           |}
           |""".stripMargin
-      check(src, td.name) { msgs => bareWarnings(msgs).size mustBe 1 }
+      check(src, td.name) { msgs => bareErrors(msgs).size mustBe 1 }
     }
   }
 
@@ -159,13 +170,13 @@ class BareMessageOperandWarningTest extends AbstractValidatingTest {
           |  }
           |}
           |""".stripMargin
-      check(src, td.name) { msgs => bareWarnings(msgs) mustBe empty }
+      check(src, td.name) { msgs => bareErrors(msgs) mustBe empty }
     }
 
     /** The alias chain must be FOLLOWED before deciding "no fields", or `command Ship is Shipment`
       * — riddl-models' house style — is exempted by accident even though `Shipment` has data.
       */
-    "still warn when an ALIASED message resolves to a type that has fields" in { (td: TestData) =>
+    "still error when an ALIASED message resolves to a type that has fields" in { (td: TestData) =>
       val src =
         """domain d is {
           |  context c is {
@@ -183,7 +194,7 @@ class BareMessageOperandWarningTest extends AbstractValidatingTest {
           |  }
           |}
           |""".stripMargin
-      check(src, td.name) { msgs => bareWarnings(msgs).size mustBe 1 }
+      check(src, td.name) { msgs => bareErrors(msgs).size mustBe 1 }
     }
   }
 
@@ -204,7 +215,7 @@ class BareMessageOperandWarningTest extends AbstractValidatingTest {
           |  }
           |}
           |""".stripMargin
-      check(src, td.name) { msgs => bareWarnings(msgs) mustBe empty }
+      check(src, td.name) { msgs => bareErrors(msgs) mustBe empty }
     }
 
     "stay silent for a value operand" in { (td: TestData) =>
@@ -223,7 +234,7 @@ class BareMessageOperandWarningTest extends AbstractValidatingTest {
           |  }
           |}
           |""".stripMargin
-      check(src, td.name) { msgs => bareWarnings(msgs) mustBe empty }
+      check(src, td.name) { msgs => bareErrors(msgs) mustBe empty }
     }
   }
 }

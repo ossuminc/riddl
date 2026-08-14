@@ -170,19 +170,19 @@ class TellAddressingTest extends AbstractValidatingTest {
           |    entity Caller is {
           |      state CS of record R is {
           |        handler CH is {
-          |          on command Go { tell command Ship to entity Order }
+          |          on command Go { tell command Ship(orderId = "the order") to entity Order }
           |        } with { briefly "ch" }
           |      } with { briefly "ce" }
           |    } with { briefly "c" }
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
-      // Bare MessageRef form (no constructor args) -- a Constructor's OWN alias-following bug in
-      // `validateConstructor` (a pre-existing, separate gap: `typ.typEx match { case ate:
-      // AggregateTypeExpression => ate.fields; case _ => Seq.empty }` doesn't follow the alias
-      // either, so `Ship(orderId = oid)` misreports "'orderId' is not a field of Type 'Ship'") is
-      // out of this task's scope -- `checkTellAddressing` itself doesn't care about the msg's
-      // syntactic shape, only its resolved [[Type]], so a bare ref isolates the fix under test.
+      // The constructor form works here as of 2026-08-14. It could NOT before: `validateConstructor`
+      // read only the DIRECT fields of `Ship` (`typ.typEx match { case ate: AggregateTypeExpression
+      // => ate.fields; case _ => Seq.empty }`), found none through `command Ship is Shipment`, and
+      // so misreported "'orderId' is not a field of Type 'Ship'". That gap is fixed -- it now goes
+      // through the shared, cycle-guarded `aggregateFieldsOf` -- and this fixture uses the
+      // constructor because the bare form became an Error the same day.
       val msgs = diagnostics(src, "addr-alias-derived")
       msgs.justErrors mustBe empty
       msgs.map(_.message).mkString("\n") must not include "which Order instance"
@@ -353,8 +353,8 @@ class TellAddressingTest extends AbstractValidatingTest {
           |      state CS of record R is {
           |        handler CH is {
           |          on command Go {
-          |            tell command DirectCmd to entity Order
-          |            tell command AliasCmd to entity Order
+          |            tell command DirectCmd(orderId = "the order") to entity Order
+          |            tell command AliasCmd(orderId = "the order") to entity Order
           |          }
           |        } with { briefly "ch" }
           |      } with { briefly "cs" }
@@ -387,7 +387,7 @@ class TellAddressingTest extends AbstractValidatingTest {
           |    entity Caller is {
           |      state CS of record R is {
           |        handler CH is {
-          |          on command Go { tell command Ship to entity Order }
+          |          on command Go { tell command Ship(orderId = "the order") to entity Order }
           |        } with { briefly "ch" }
           |      } with { briefly "cs" }
           |    } with { briefly "ce" }
@@ -469,7 +469,7 @@ class TellAddressingTest extends AbstractValidatingTest {
           |    entity Caller is {
           |      state CS of record R is {
           |        handler CH is {
-          |          on command Go { tell command Ship to entity Order }
+          |          on command Go { tell command Ship(orderId = "the order") to entity Order }
           |        } with { briefly "ch" }
           |      } with { briefly "cs" }
           |    } with { briefly "ce" }
@@ -500,7 +500,7 @@ class TellAddressingTest extends AbstractValidatingTest {
           |    entity Caller is {
           |      state CS of record R is {
           |        handler CH is {
-          |          on command Go { tell command Ship to entity Order }
+          |          on command Go { tell command Ship(orderId = "the order") to entity Order }
           |        } with { briefly "ch" }
           |      } with { briefly "cs" }
           |    } with { briefly "ce" }

@@ -87,7 +87,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
           |    source foo is { outlet forMyEntity is command LetsDoIt }
           |    handler sendAMessage is {
           |      on command ItWillHappen  {
-          |        send command Foo.LetsDoIt to outlet forMyEntity
+          |        send command Foo.LetsDoIt(bcd = "the bcd") to outlet forMyEntity
           |      } with { described as "?" }
           |      on other { error "unexpected message" }
           |    } with { explained as "?" }

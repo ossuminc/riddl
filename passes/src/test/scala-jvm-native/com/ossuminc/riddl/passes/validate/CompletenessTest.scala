@@ -957,7 +957,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |        on init { set field E.Fields.balance to "0" }
           |        on command D.C.Cmd {
           |          require invariant BalanceNonNegative
-          |          send event D.C.Evt to outlet D.C.Events.out
+          |          send event D.C.Evt(amount = "the amount") to outlet D.C.Events.out
           |        }
           |      }
           |    }

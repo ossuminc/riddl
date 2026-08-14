@@ -44,7 +44,7 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
        |      inlet i is command Cmd
        |      outlet o is command Cmd
        |      handler H is {
-       |        on command Cmd { send command Cmd to $target }
+       |        on command Cmd { send command Cmd(x = "the x") to $target }
        |      }
        |    }
        |  }

@@ -31,7 +31,7 @@ class RepositoryTest extends AbstractValidatingTest {
           |          do "add 'what' to the list"
           |        }
           |        on query GetOne {
-          |          send result fubar.Reply to outlet hereyougo
+          |          send result fubar.Reply(that = "the reply") to outlet hereyougo
           |        }
           |      }
           |     }

@@ -56,8 +56,10 @@ class TokenParserFileTest extends AbstractParsingTest {
         case Right(tokens) =>
           // A9b: +2 tokens (record keyword on migrated states). 2026-08-06: -1, because the
           // fixture's one type-first aggregate moved to kind-first -- `type X is command {` is
-          // five tokens, `command X is {` is four.
-          tokens.length must be(408)
+          // five tokens, `command X is {` is four. 2026-08-14: +5, because the fixture's one bare
+          // `send command DoAThing` gained a constructor when a bare message operand became an
+          // Error -- `(thingField = "the thing")` is five tokens.
+          tokens.length must be(413)
           val tasStr = tokens.toString
           tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
           tasStr must include("LiteralCode")

@@ -61,7 +61,7 @@ context full is {
   adaptor fromAPlant to context APlant is {
     handler adaptCommands is {
       on command ACommand {
-        send command DoAThing to outlet APlant.Source.OutCommands
+        send command DoAThing(thingField = "the thing") to outlet APlant.Source.OutCommands
       }
       on other { error "unexpected message" }
     }

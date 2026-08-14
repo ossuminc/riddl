@@ -70,7 +70,7 @@ class ReplyYieldPairingTest extends AbstractValidatingTest {
       case Right((_, msgs)) => msgs.justErrors.map(_.message).mkString("\n")
 
   /** One model, parameterised on the query's declaration keyword and its clause's statement. */
-  private def model(queryDecl: String, queryStmt: String, cmdStmt: String = "yield event D.C.Paid"): String =
+  private def model(queryDecl: String, queryStmt: String, cmdStmt: String = "yield event D.C.Paid(v = \"the amount\")"): String =
     s"""domain D is {
        |  context C is {
        |    result Answer is { v: Integer } with { briefly "r" }
@@ -92,7 +92,7 @@ class ReplyYieldPairingTest extends AbstractValidatingTest {
 
   "the correct pairings" should {
     "validate clean: command yields/yield event, query replies/reply result" in { (td: TestData) =>
-      errorsFor(model("replies", "reply result D.C.Answer"), td.name) mustBe ""
+      errorsFor(model("replies", "reply result D.C.Answer(v = \"the answer\")"), td.name) mustBe ""
     }
   }
 
@@ -105,7 +105,7 @@ class ReplyYieldPairingTest extends AbstractValidatingTest {
     }
 
     "reject `reply event`" in { (td: TestData) =>
-      val errs = errorsFor(model("replies", "reply result D.C.Answer", "reply event D.C.Paid"), td.name)
+      val errs = errorsFor(model("replies", "reply result D.C.Answer(v = \"the answer\")", "reply event D.C.Paid"), td.name)
       errs must include("`reply` takes a Result")
       errs must include("is an Event")
     }
@@ -114,12 +114,12 @@ class ReplyYieldPairingTest extends AbstractValidatingTest {
   "a mismatched DECLARATION" should {
 
     "reject `query X yields`" in { (td: TestData) =>
-      parseErrorsFor(model("yields", "reply result D.C.Answer"), td.name) must
+      parseErrorsFor(model("yields", "reply result D.C.Answer(v = \"the answer\")"), td.name) must
         include("a Query declares its response with `replies`")
     }
 
     "reject `command X replies`" in { (td: TestData) =>
-      val src = model("replies", "reply result D.C.Answer")
+      val src = model("replies", "reply result D.C.Answer(v = \"the answer\")")
         .replace("command Pay yields event", "command Pay replies event")
       parseErrorsFor(src, td.name) must include("a Command declares its response with `yields`")
     }
@@ -129,7 +129,7 @@ class ReplyYieldPairingTest extends AbstractValidatingTest {
       // parse-time error stops the pass chain, so it would PREEMPT this more specific diagnostic
       // and be the only thing the author sees. The parser keeps only the check validation cannot
       // make -- `usecase` is in the AST, the KEYWORD written is not.
-      val src = model("replies", "reply result D.C.Answer")
+      val src = model("replies", "reply result D.C.Answer(v = \"the answer\")")
         .replace("event Paid is {", "event Paid yields event D.C.Paid is {")
       errorsFor(src, td.name) must include("Only command and query types may declare")
     }

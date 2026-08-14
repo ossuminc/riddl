@@ -194,7 +194,7 @@ class CorrelationTest extends AbstractValidatingTest {
       errorsFor(
         model(folds = """on e: event PaymentTaken is {
                         |            set field paidAmount to e.amount
-                        |            tell command ReportStalled to entity Monitor
+                        |            tell command ReportStalled(why = "it stalled") to entity Monitor
                         |          }""".stripMargin),
         "correlation-effect-in-fold"
       ) must include("may not 'tell'")
@@ -206,7 +206,7 @@ class CorrelationTest extends AbstractValidatingTest {
       // previous one is not simply banning `tell` everywhere in a projector.
       val src = model().replace(
         """do "escalate to operations"""",
-        "tell command ReportStalled to entity Monitor"
+        """tell command ReportStalled(why = "it stalled") to entity Monitor"""
       )
       errorsFor(src, "correlation-effect-in-timeout") must be("")
     }
@@ -229,7 +229,7 @@ class CorrelationTest extends AbstractValidatingTest {
           |      updates repository Store
           |      record Mirror is { orderId: String } with { briefly "rec" }
           |      handler T is {
-          |        on event OrderPlaced is { tell command RecordOrder to repository Store }
+          |        on event OrderPlaced is { tell command RecordOrder(orderId = "the order") to repository Store }
           |      } with { briefly "h" }
           |    } with { briefly "p" }
           |  } with { briefly "c" }
@@ -255,7 +255,7 @@ class CorrelationTest extends AbstractValidatingTest {
             |    projector Translate is {
             |      updates repository Store
             |      handler T is {
-            |        on event OrderPlaced is { tell command Store.RecordOrder to repository Store }
+            |        on event OrderPlaced is { tell command Store.RecordOrder(orderId = "the order") to repository Store }
             |      } with { briefly "h" }
             |    } with { briefly "p" }
             |  } with { briefly "c" }
@@ -281,7 +281,7 @@ class CorrelationTest extends AbstractValidatingTest {
           |    projector Translate is {
           |      updates repository Store
           |      handler T is {
-          |        on event OrderPlaced is { tell command RecordOrder to repository Store }
+          |        on event OrderPlaced is { tell command RecordOrder(orderId = "the order") to repository Store }
           |      } with { briefly "h" }
           |    } with { briefly "p" }
           |  } with { briefly "c" }

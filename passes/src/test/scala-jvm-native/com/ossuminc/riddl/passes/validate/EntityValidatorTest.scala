@@ -159,7 +159,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
           |    state field of record Hamburger.fields
           |    handler baz is {
           |      on command DoIt {
-          |        send event Message to outlet ridOfIt
+          |        send event Message(a = "the a") to outlet ridOfIt
           |      }
           |    }
           |  } with {

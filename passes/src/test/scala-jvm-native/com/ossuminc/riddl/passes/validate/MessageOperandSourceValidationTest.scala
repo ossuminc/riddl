@@ -131,7 +131,7 @@ class MessageOperandSourceValidationTest extends AbstractValidatingTest {
             |query Ask replies result d.c.Answer is { q: Integer }
             |entity Ledger is {
             |  handler H is {
-            |    on query d.c.Ask is { reply result d.c.Answer }
+            |    on query d.c.Ask is { reply result d.c.Answer(v = "the answer") }
             |  }
             |}""".stripMargin,
         srcBody =

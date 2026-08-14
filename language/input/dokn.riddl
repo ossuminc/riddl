@@ -52,8 +52,8 @@ domain dokn is {
             state CompanyBase of record Company.fields
             handler CompanyBaseHandler is {
                 on command AddCompany {
-                    yield event CompanyAdded
-                    send event CompanyAdded to outlet CompanyEvents_out
+                    yield event CompanyAdded(when = "now")
+                    send event CompanyAdded(when = "now") to outlet CompanyEvents_out
                 }
                 on event CompanyAdded { ??? }
             }
@@ -94,12 +94,12 @@ domain dokn is {
             state DriverBase of record Driver.fields
             handler DriverBaseHandler is {
                 on command AddDriverToCompany {
-                  yield event DriverAddedToCompany
-                  send event DriverAddedToCompany to outlet Driver_out
+                  yield event DriverAddedToCompany(name = "the driver name", mobile = "the mobile number", companyId = "the company id")
+                  send event DriverAddedToCompany(name = "the driver name", mobile = "the mobile number", companyId = "the company id") to outlet Driver_out
                 }
                 on command RemoveDriverFromCompany {
-                  yield event DriverRemovedFromCompany
-                  send event DriverRemovedFromCompany to outlet Driver_out
+                  yield event DriverRemovedFromCompany(mobile = "the mobile number", companyId = "the company id")
+                  send event DriverRemovedFromCompany(mobile = "the mobile number", companyId = "the company id") to outlet Driver_out
                 }
                 on event DriverAddedToCompany { ??? }
                 on event DriverRemovedFromCompany { ??? }
@@ -182,16 +182,16 @@ domain dokn is {
                 send event Location.DeliveryLocationAdded to outlet CompanyEvents_out
               }
               on command ChangeLocationName {
-                yield event Location.LocationNameChanged
-                send event Location.LocationNameChanged to outlet CompanyEvents_out
+                yield event Location.LocationNameChanged(newName = "the new name")
+                send event Location.LocationNameChanged(newName = "the new name") to outlet CompanyEvents_out
               }
               on command ReportTicketReceived {
                 yield event Location.TicketReportedAtLocation
                 send event Location.TicketReportedAtLocation to outlet CompanyEvents_out
               }
               on command ModifyNotesAtLocation {
-                yield event Location.NotesForLocationModified
-                send event Location.NotesForLocationModified to outlet CompanyEvents_out
+                yield event Location.NotesForLocationModified(note = "the note")
+                send event Location.NotesForLocationModified(note = "the note") to outlet CompanyEvents_out
               }
               on event Location.DeliveryLocationAdded { ??? }
               on event Location.LocationNameChanged { ??? }
@@ -204,7 +204,7 @@ domain dokn is {
                 send result Location.LocationDetails to inlet Driver_in
               }
               on query Location.getLocationNotes {
-                send result Location.LocationNotes to outlet Driver_out
+                send result Location.LocationNotes(notes = "the notes") to outlet Driver_out
               }
             }
         } with {

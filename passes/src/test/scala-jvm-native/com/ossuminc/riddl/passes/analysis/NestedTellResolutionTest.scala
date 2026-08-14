@@ -43,7 +43,7 @@ class NestedTellResolutionTest extends AbstractValidatingTest {
       |      handler AH is {
       |        on event D.FrontOfHouse.OrderSubmitted is {
       |          when "the order has drink items" then
-      |            tell command D.Bar.ReceiveDrinkOrder to entity D.Bar.DrinkOrder
+      |            tell command D.Bar.ReceiveDrinkOrder(id = "the id") to entity D.Bar.DrinkOrder
       |          end
       |        }
       |        on other is { ??? }

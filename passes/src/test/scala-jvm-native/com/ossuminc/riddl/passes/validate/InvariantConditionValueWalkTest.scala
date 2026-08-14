@@ -208,7 +208,7 @@ class InvariantConditionValueWalkTest extends AbstractValidatingTest {
           |    entity Worker is { handler WH is { on command Go is { do "work" } } }
           |    saga Sg is {
           |      step One is {
-          |        when invariant NonNegative then { tell command Go to entity Worker } end
+          |        when invariant NonNegative then { tell command Go(id = "the id") to entity Worker } end
           |      } reverted by { do "undo it" }
           |      step Two is { do "something" } reverted by { do "undo it" }
           |    }
@@ -240,7 +240,7 @@ class InvariantConditionValueWalkTest extends AbstractValidatingTest {
           |    saga Sg is {
           |      step One is {
           |        when invariant NonNegative with ask query Q of entity Worker then {
-          |          tell command Go to entity Worker
+          |          tell command Go(id = "the id") to entity Worker
           |        } end
           |      } reverted by { do "undo it" }
           |      step Two is { do "something" } reverted by { do "undo it" }
