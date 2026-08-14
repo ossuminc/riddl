@@ -1308,6 +1308,80 @@ case class ValidationPass(
   end checkInstanceEffectScope
 
 
+  /** Task 5 of the message-value-source plan (Reid, 2026-08-14: *"no further task is needed, just
+    * build it"*): `let x = initiate entity Order(…)` whose `x` is NEVER referenced afterwards.
+    *
+    * `initiate` is the ONLY way an `Id(P)` value comes into being, so binding one and dropping it
+    * usually means the author meant to address the new instance and forgot. It is a plain
+    * [[Warning]] — on by default, NOT behind `showCompletenessWarnings` — because unlike a missing
+    * address this is decidable from the clause body alone, with nothing elsewhere in the model able
+    * to change the answer.
+    *
+    * **It is a Warning and not an Error because a self-terminating worker legitimately has an
+    * unused id**: nothing ever needs to address a fire-and-forget instance. `initiate` is a VALUE,
+    * not a statement, so there is no argument-less spelling to steer such an author toward — the
+    * `let` IS how you write it, and the warning is simply expected there.
+    *
+    * **Usage is decided from the RENDERED body, deliberately, and it is the conservative choice.**
+    * The obvious alternative — enumerate the escape routes (`set` into state, an operand of
+    * `tell`/`send`/`reply`/`yield`, a `terminate` argument, a constructor or call argument, a
+    * `when` condition, a `foreach` collection …) — is a walk that must stay total over BOTH the
+    * statement kinds and every value-bearing FIELD each one carries, and this file has already been
+    * bitten twice by exactly that (`statementValues` silently dropped `RequireStatement.argument`
+    * and `MatchCase.guard`, hiding an `initiate` from four checks at once). A missed route there is
+    * a FALSE warning on correct code.
+    *
+    * `format` cannot miss one, because RIDDL is fully reflective by mandate: anything that parses
+    * is emitted, a nesting statement's `format` renders its whole body, and a `format` that dropped
+    * an operand would already be failing a prettify round-trip test. The cost is that it
+    * OVER-counts: a name mentioned inside a `do "restart worker"` string reads as a use, so the
+    * warning stays silent. That is the safe direction — "when in doubt, treat it as used".
+    *
+    * `scope` is the statement list the `let` was declared in, which is exactly its lexical extent:
+    * a `let` in a `when` body is invisible outside it, and [[checkStatementScopes]] recurses with
+    * that inner list, so each nesting level asks about its own scope.
+    */
+  private def checkUnusedInitiateId(ls: LetStatement, scope: Seq[Statement]): Unit =
+    ls.expression match
+      case _: Initiate =>
+        val name = ls.identifier.value
+        val used = scope.exists(s => !(s eq ls) && mentionsName(s.format, name))
+        if !used then
+          messages.addWarning(
+            ls.loc,
+            s"'$name' holds the identity of the instance this 'initiate' creates, but nothing " +
+              "else in this clause refers to it",
+            suggestion = s"Refer to '$name' — address the new instance ('tell … to …'), keep it " +
+              s"('set field … to $name'), pass it in a message, or 'terminate' it — or leave it " +
+              "as is if the new instance is self-terminating and never needs addressing."
+          )
+        end if
+      // Every other bound expression: nothing to say. An unused `let` in general is a separate
+      // question from this one and is deliberately NOT raised here.
+      case _ => ()
+  end checkUnusedInitiateId
+
+  /** Whole-word containment: does `text` mention `name` other than as part of a longer identifier?
+    *
+    * Hand-rolled rather than a regex because `.r` is one of the constructs the Native rows avoid,
+    * and this runs on all three platforms. A neighbouring `.` is deliberately NOT an identifier
+    * character, so both `x.field` (a use) and `Foo.x` (a path that merely ends in the same name)
+    * count — the second is an over-count, in the safe direction. See [[checkUnusedInitiateId]].
+    */
+  private def mentionsName(text: String, name: String): Boolean =
+    def isIdentChar(c: Char): Boolean = c.isLetterOrDigit || c == '_'
+    var found = false
+    var i = text.indexOf(name)
+    while i >= 0 && !found do
+      val beforeOk = i == 0 || !isIdentChar(text.charAt(i - 1))
+      val after = i + name.length
+      val afterOk = after >= text.length || !isIdentChar(text.charAt(after))
+      if beforeOk && afterOk then found = true
+      else i = text.indexOf(name, i + 1)
+    end while
+    found
+  end mentionsName
+
   /** The innermost enclosing [[Processor]], the same "instance" `self` names -- `None` when no
     * Processor encloses the reference, OR when the nearest enclosing scope is one of the two kinds
     * that deliberately do NOT carry the instance identity of whatever Processor happens to
@@ -6982,6 +7056,7 @@ case class ValidationPass(
         // then check its type against a declared `let x: T = …`.
         validateValue(ls.expression, parents, lets, elements)
         checkLocalName(ls.identifier, "'let' local", parents) // A55
+        checkUnusedInitiateId(ls, stmts) // Task 5
         ls.typeRef.foreach { tr =>
           val expected = resolution.refMap.definitionOf[Type](tr.pathId)
           checkValueType(
