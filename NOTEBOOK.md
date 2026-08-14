@@ -14,28 +14,28 @@ would get wrong.
 **State — every line produced by a command in the session that wrote it
 (2026-08-14):**
 
-- Branch `release/2`, **tree CLEAN and fully PUSHED** — `origin/release/2` is
-  at `982333cc2`, 0 unpushed. The whole-branch review HAS run (see below).
-- **CERTIFIED.** `clean; cJVM; cJS; cNative; tJVM; tJS; tNative` from clean
-  under a throwaway `--sbt-cache`, one `-batch` argument, exit 0. Final counts
-  after the review fixes: **JVM 2391 / JS 750 / Native 1662**, 19
-  `Suites: completed`, 0 aborted, 0 `No tests to run`, 0 failures. Floors in
-  `.claude/skills/rc/SKILL.md` were raised to the pre-fix certification
-  (2346/715/1619) and are now **69/35/43 BELOW actual** — raise them on the
-  next certification rather than treating the gap as drift. The one canceled
-  test is `ESMSafetyTest`, which needs a `fullLinkJS` bundle the chain does not
-  build — pre-existing.
-- **Corpus green: 189/189 riddl-models `.conf` entry points validate**, exit 0
-  every one. 5088 completeness / 863 warning / 430 deprecated / **0 error** /
-  0 severe. **5087 of the 5088 completeness messages are the new
-  missing-address warning**, so the pre-branch completeness baseline was 1 and
-  the branch's corpus effect is exactly the one designed thing.
-- **The STAGED riddlc is CURRENT**, at
-  `target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc`
-  (`2.0.0-rc.13-25-b2d5a41d`). **`~/Code/ossuminc/bin/riddlc` is still STALE at
-  `2.0.0-rc.13`** and REJECTS every construct this branch added (`self`,
-  `initiate`, `terminate`, `tell … by`, `Id(repository X)`). Use the staged one
-  or re-run `scripts/publish-and-stage.sh`.
+- **`2.0.0-rc.14` IS RELEASED.** Tag `dd42a4903`, GitHub prerelease
+  (`prerelease=true`), branch `release/2` clean and pushed.
+- **CERTIFIED from clean** under a throwaway `--sbt-cache`, sbt 2.0.6 confirmed
+  after a `shutdown`: **JVM 2400 / JS 750 / Native 1671**, 19 suites, 0 aborted,
+  0 `No tests to run`. **All three rows reconciled EXACTLY against a prediction
+  made before the run** (+9/+9/+0 from one 9-case suite in
+  `passes/src/test/scala-jvm-native`). Floors in `.claude/skills/rc/SKILL.md`
+  raised to match. Validators: TatSu 104/127 with no Unexpected failures, GBNF
+  fresh, riddl-models 189/189, riddl-examples 9/9.
+- **All four channels verified, not assumed:** Maven coordinates published from
+  the TAG at exactly `2.0.0-rc.14` (registry queried); `publishLocal` done in the
+  same invocation (20 artifacts in `~/.ivy2/local`); npm logged *"Publishing …
+  with tag rc"* so `latest` did not move; the tap commit `489bbb0` touched
+  `Formula/riddlc-rc.rb` and ONLY that file.
+- **`~/Code/ossuminc/bin/riddlc` IS NOW CURRENT at 2.0.0-rc.14** (commit
+  `dd42a4903`) — staged deliberately for riddl-models' `.bast` regeneration.
+  This REVERSES the long-standing note that it was stale at rc.13. Bare `riddlc`
+  on `$PATH` is still the old tap build.
+- **CI is red on `9b9ffac36` and it is NOT the code.** `PerformanceBenchmarkTest`
+  asserts a hard 100x cache speedup and got 78.4x on a shared runner; that commit
+  is byte-identical to the one that passed before it, and the next commit passed
+  again. Filed in `BACKLOG.md` to fix before rc.15.
 
 **The instance-identity plan is COMPLETE — 8 of 8 tasks.** `Id(P)` widening,
 `self`, lifecycle parameters, `initiate`, `terminate`, `tell` addressing,

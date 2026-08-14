@@ -62,6 +62,29 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **FLAKY CI GATE: `PerformanceBenchmarkTest` asserts a hard 100x cache speedup.**
+  Reid, 2026-08-14 — do before rc.15. Found during the rc.14 certification.
+  `language/src/test/scalajvm/.../PerformanceBenchmarkTest.scala:388-391`:
+  ```scala
+  assert(cachedFindTime < findTime / 100,
+    s"Cache should provide 100x+ speedup (got ${findTime / cachedFindTime}x)")
+  ```
+  **It failed CI run #2278 with 78.4x** on a commit whose code is BYTE-IDENTICAL
+  to the one that passed as #2277 (`git diff cbb7e53b4..9b9ffac36` over
+  `*.scala *.sbt project/ .github/` is empty), and #2279 then passed again on the
+  same code. It also passed in the local rc.14 certification. So the assertion is
+  measuring shared-runner timing noise, not the cache.
+  **Why it matters more than one red X:** this runs in `scala-build (JVM)`, which
+  gates releases. A gate that fails ~1 run in 3 on machine noise trains everyone
+  to disregard a red X — and the next real failure looks identical.
+  **Fix direction, not yet decided:** assert a much weaker bound (the cache is
+  clearly working at 78x, so the property under test is "caching helps", not
+  "helps 100x"), or measure a monotonic property that does not depend on wall
+  clock, or move the whole benchmark out of the release gate and into something
+  advisory. Whichever is chosen, a timing threshold tuned to one machine does not
+  belong in a gate. Note the sibling assertions in the same file
+  (`types1.size == typeCount`) are deterministic and should stay.
+
 - **Close the JVM/Native test gap: 729 cases run on JVM that never run on
   Native.** Reid, 2026-08-14, from the rc.14 certification. *"Testing on the JVM
   does not guarantee correctness on Native, and I can't believe there are ~800
