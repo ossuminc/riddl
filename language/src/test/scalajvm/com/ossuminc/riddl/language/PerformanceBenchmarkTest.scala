@@ -236,12 +236,19 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
           assert(result1.size == result2.size)
           assert(result2.size == result3.size)
 
-          // Cache hits should be much faster
+          // Cache hits should be much faster. Gate on a monotonic property plus a generous,
+          // noise-tolerant floor rather than a multiplier tuned to one machine — see the identical
+          // reasoning (and an observed CI flake) on the "large tree" cache assertion below and in
+          // BASTPerformanceBenchmark.scala. A real cache regression collapses toward ~1x (the
+          // cache not being consulted at all), so a 5x floor still fails hard on that while
+          // tolerating shared-runner timing noise.
+          assert(secondTime < firstTime, s"Cached call should be faster than uncached (${firstTime / secondTime}x)")
           assert(
-            secondTime < firstTime / 10,
-            s"Cache should provide 10x+ speedup (${firstTime / secondTime}x)"
+            secondTime < firstTime / 5,
+            s"Cache should provide meaningful (5x+) speedup, got ${firstTime / secondTime}x — possible cache regression"
           )
-          assert(thirdTime < firstTime / 10, "Cache should remain effective")
+          assert(thirdTime < firstTime, "Cache should remain effective")
+          assert(thirdTime < firstTime / 5, "Cache should remain effective (5x+)")
 
         case Left(errors) =>
           fail(s"Parse failed: ${errors.map(_.format).mkString("\n")}")
@@ -385,10 +392,22 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
             s"Expected $typeCount types in cached call, got ${types2.size}"
           )
 
-          // Verify cache effectiveness
+          // Verify cache effectiveness. This used to assert a hard 100x multiplier, tuned to one
+          // machine's wall-clock timing. It failed CI at 78.4x against that bar on a commit whose
+          // code was byte-identical to a commit that had passed the same assertion at 100x+ —
+          // shared-runner timing noise, not a cache defect. The property actually under test is
+          // that the cache is CONSULTED: a real regression (cache silently bypassed) collapses the
+          // speedup toward ~1x, not down from 100x to 78x. So gate on the monotonic fact plus a
+          // generous, noise-tolerant floor; keep the precise multiplier as informational output
+          // (see `info` above) rather than a strict pass/fail bound. Mirrors the same fix already
+          // applied in BASTPerformanceBenchmark.scala.
           assert(
-            cachedFindTime < findTime / 100,
-            s"Cache should provide 100x+ speedup (got ${findTime / cachedFindTime}x)"
+            cachedFindTime < findTime,
+            s"Cached call should be faster than uncached (got ${findTime / cachedFindTime}x)"
+          )
+          assert(
+            cachedFindTime < findTime / 5,
+            s"Cache should provide meaningful (5x+) speedup, got ${findTime / cachedFindTime}x — possible cache regression"
           )
 
         case Left(errors) =>
