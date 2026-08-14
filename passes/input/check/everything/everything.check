@@ -221,6 +221,9 @@ passes/input/check/everything/everything.riddl(7:5->11):
 passes/input/check/everything/everything.riddl(8:5->9):
  The `sink` keyword is deprecated; use `processor Sink as sink` instead:
      sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
+passes/input/check/everything/everything.riddl(58:16->52):
+ 'event full.SomeOtherThing.ItHappened' in this 'send' names a message type, not a value, so nothing says where its 1 field(s) come from:
+           send event full.SomeOtherThing.ItHappened to
 passes/input/check/everything/everything.riddl(59:13->49):
  send to an inlet is deprecated and will be removed in 3.0; send to your outlet and connect it with a connector, or use `tell` to deliver directly to a processor:
              inlet SomeOtherThing.trashBin.SOT_In

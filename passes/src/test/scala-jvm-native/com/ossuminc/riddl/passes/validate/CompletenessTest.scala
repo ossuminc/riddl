@@ -851,6 +851,13 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    /** Message-value-source Task 4 moved this fixture, deliberately rather than by filtering the
+      * new warning out: a bare `send event D.C.Evt` says nothing about where the event's `data`
+      * comes from, so under the new rule this model is no longer well-formed and the test's own
+      * premise would be false. It now shows BOTH sanctioned spellings — the constructor form for
+      * `send`/`reply`, and A56's value form (`on cmd: command …` then `tell cmd`) for the `tell`,
+      * which is also why `Cmd` carries a `target: Id(C.E)` field for the addressing check to find.
+      */
     "produce no completeness warnings for a well-formed model" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
@@ -869,10 +876,10 @@ class CompletenessTest extends AbstractValidatingTest {
           |          set field E.Fields.data to "default"
           |        }
           |        on command D.C.Cmd {
-          |          send event D.C.Evt to outlet D.C.Events.out
+          |          send event D.C.Evt(data = "changed") to outlet D.C.Events.out
           |        }
           |        on query D.C.GetData {
-          |          reply result D.C.DataResult
+          |          reply result D.C.DataResult(data = "answer")
           |        }
           |      }
           |    }
@@ -882,8 +889,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |    sink Incoming is {
           |      inlet in is type Cmd
           |      handler Dispatch is {
-          |        on command D.C.Cmd {
-          |          tell command D.C.Cmd to entity D.C.E
+          |        on cmd: command D.C.Cmd {
+          |          tell cmd to entity D.C.E
           |        }
           |      }
           |    }

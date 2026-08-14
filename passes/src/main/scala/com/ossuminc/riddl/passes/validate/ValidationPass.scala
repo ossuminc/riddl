@@ -1109,6 +1109,49 @@ case class ValidationPass(
           end if
         }
 
+  /** Task 4 of the message-value-source design: a BARE keyword-led operand — `send event Bar to …`,
+    * `tell command Ship to …`, `yield event Bar`, `reply result Res`, `morph … with record Data` —
+    * names the message or record TYPE and says NOTHING about where the value comes from. riddlg
+    * measured the consequence on reactive-bbq: 659 of 1088 `AI FILL` holes (60.6%) are exactly this
+    * shape, and 98.2% counting the `morph` record analogue. Each becomes a `null` in generated code
+    * — worse than a missing one, because it runs.
+    *
+    * **A [[CompletenessWarning]], and it must stay one for now.** The end state (design D3) is an
+    * Error, but riddl-models holds 14,730 bare refs and ZERO uses of the constructor form, so
+    * shipping the Error first invalidates every message-sending statement in all 189 models at once
+    * while CI requires them to validate clean. The sequence is: warn, drop a migration task on
+    * riddl-models, flip to Error once the corpus is clean. riddlg loses nothing by the delay — a
+    * warning marks all 14,730 sites for their gap audit exactly as an Error would.
+    *
+    * **A FIELD-LESS message is exempt** (design Q1, ruled 2026-08-14). `event Started is { }` has no
+    * data, so the type fully determines the value and there is nothing for the author to source;
+    * warning on it is the noise the standing `???` ruling exists to prevent. The exemption falls out
+    * of the same observation `checkTellAddressing` records: a `???` body parses to the SAME empty
+    * aggregate as an explicit `{ }`, so "zero fields after resolving" covers the stub shape too.
+    *
+    * Resolution goes through [[aggregateFieldsOf]], which FOLLOWS the alias chain, because
+    * `command Ship is Shipment` is riddl-models' house style — reading its (absent) direct fields
+    * would exempt the majority of the corpus by accident. An operand whose type does not resolve at
+    * all is left alone: `validateStatement`'s `checkRef[Type]` already reports that, and piling a
+    * completeness warning on top of an unresolved reference blames the author twice for one defect.
+    */
+  private def checkBareMessageOperand(ref: AggregateRef, statement: String): Unit =
+    resolution.refMap.definitionOf[Type](ref.pathId).foreach { t =>
+      val fields = aggregateFieldsOf(t.typEx)
+      if fields.nonEmpty then
+        val what = if ref.messageKind == AggregateUseCase.RecordCase then "record" else "message"
+        messages.addCompleteness(
+          ref.loc,
+          s"'${ref.format}' in this '$statement' names a $what type, not a value, so nothing says " +
+            s"where its ${fields.size} field(s) come from",
+          suggestion = s"Construct the $what in place, e.g. '$statement ${ref.format}(" +
+            s"${fields.head.id.value} = …)', or name a value of that type — an on-clause " +
+            "binding, a state field, a 'let' local, a function result or an 'ask' result."
+        )
+      end if
+    }
+  end checkBareMessageOperand
+
   /** A54/A56: the NAME of the message an operand denotes. For a ref or constructor that is the last
     * path component; for a binding it is the resolved Type's id, since the binding's own path names
     * the local (`p`), not the message.
@@ -1263,6 +1306,7 @@ case class ValidationPass(
         }
       }
   end checkInstanceEffectScope
+
 
   /** The innermost enclosing [[Processor]], the same "instance" `self` names -- `None` when no
     * Processor encloses the reference, OR when the nearest enclosing scope is one of the two kinds
@@ -6006,12 +6050,28 @@ case class ValidationPass(
   private def valueRefDefinition(vr: ValueRef, parents: Parents): Option[Definition] =
     parents.headOption.flatMap(p => resolution.refMap.anyDefinitionOf(vr.path, p))
 
-  /** A55: the aggregate [[Field]]s of a [[TypeExpression]], following one level of alias. */
-  private def aggregateFieldsOf(te: TypeExpression): Seq[Field] =
+  /** A55: the aggregate [[Field]]s of a [[TypeExpression]], following the alias chain.
+    *
+    * `seen` is the SAME cycle guard [[fieldsWithOwner]] carries and for the same reason: `type A is
+    * B` / `type B is A` otherwise recurses until the stack dies, which surfaces to the author as
+    * `[severe] Exception Thrown` with no line number and takes the whole pass chain down. It was
+    * missing here — the defect was diagnosed once for `fieldsWithOwner` (rc.14) and its sibling
+    * missed, the same "fix the instance, not the shape" miss the flaky-benchmark round recorded.
+    * It was latent only because no caller reached a cyclic alias; Task 4's bare-operand warning
+    * does, and `passes`'s own `CheckMessagesTest` corpus reproduced it on the first full run.
+    *
+    * Reference identity (`eq`), NOT `contains`: [[Definition]] overrides `equals` structurally, so
+    * a `Set` would fuse two distinct but identical alias declarations and truncate a legitimate
+    * chain.
+    */
+  private def aggregateFieldsOf(te: TypeExpression, seen: List[Type] = Nil): Seq[Field] =
     te match
       case ate: AggregateTypeExpression => ate.fields
       case ate: AliasedTypeExpression =>
-        resolveTypeAlias(ate).toSeq.flatMap(t => aggregateFieldsOf(t.typEx))
+        resolveTypeAlias(ate).toSeq.flatMap { t =>
+          if seen.exists(_ eq t) then Seq.empty[Field]
+          else aggregateFieldsOf(t.typEx, t :: seen)
+        }
       case _ => Seq.empty[Field]
 
   /** A55: walk `names` from a starting [[TypeExpression]] through its aggregate fields. Used ONLY
@@ -6965,12 +7025,12 @@ case class ValidationPass(
           // A56/message-value-source: a bare operand needs the threaded `let`/element scope
           // `checkMessageOperandSource` resolves it against — unavailable in `validateStatement`.
           case vr: ValueRef => checkMessageOperandSource(vr, "send", parents, lets, elements)
-          case _: MessageRef => ()
+          case mr: MessageRef => checkBareMessageOperand(mr, "send") // Task 4
       case s: TellStatement =>
         s.msg match
           case c: Constructor => validateValue(c, parents, lets, elements)
           case vr: ValueRef => checkMessageOperandSource(vr, "tell", parents, lets, elements)
-          case _: MessageRef => ()
+          case mr: MessageRef => checkBareMessageOperand(mr, "tell") // Task 4
         // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
         // point invoked at every container root AND recursively for when/match/foreach bodies) --
         // mirrors checkTerminate's reachability, immediately below.
@@ -6982,7 +7042,7 @@ case class ValidationPass(
         s.msg match
           case c: Constructor => validateValue(c, parents, lets, elements)
           case vr: ValueRef   => checkMessageOperandSource(vr, "yield", parents, lets, elements)
-          case _: MessageRef  => ()
+          case mr: MessageRef => checkBareMessageOperand(mr, "yield") // Task 4
       // Mirrors YieldStatement, immediately above: `validateStatement`'s ReplyStatement case
       // claims "a Constructor is validated in checkStatementScopes", which was untrue until this
       // arm existed -- a `reply result Foo(x = self.id)` Constructor argument reached NOTHING,
@@ -6991,14 +7051,15 @@ case class ValidationPass(
         s.msg match
           case c: Constructor => validateValue(c, parents, lets, elements)
           case vr: ValueRef   => checkMessageOperandSource(vr, "reply", parents, lets, elements)
-          case _: MessageRef  => ()
+          case mr: MessageRef => checkBareMessageOperand(mr, "reply") // Task 4
       case s: MorphStatement =>
         s.value match
           case c: Constructor => validateValue(c, parents, lets, elements)
           // NOT checkMessageOperandSource: a morph carries the RECORD that types the target state
           // (A9b), so demanding a command/event/query/result here would reject every correct use.
           case vr: ValueRef  => checkMorphOperandSource(vr, s, parents, lets, elements)
-          case _: RecordRef  => ()
+          // Task 4: the record side of the same warning -- `morph … with record R` names R's TYPE.
+          case rr: RecordRef => checkBareMessageOperand(rr, "morph")
       case fs: ForeachStatement =>
         validateForeachCollection(fs, lets, elements, parents)
         // Bind the loop's name(s) to their TYPES for the body's scope -- not merely the names.
