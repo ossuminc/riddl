@@ -88,7 +88,7 @@ context full is {
       on command ACommand {
         when "Something arrives" then
           // we want to send an event
-          send event Inebriated to outlet APlant.Source.Commands
+          send event Inebriated to outlet APlant.Source.OutCommands
         end
       }
     }

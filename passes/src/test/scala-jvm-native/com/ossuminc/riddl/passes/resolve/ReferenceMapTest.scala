@@ -41,11 +41,18 @@ class ReferenceMapTest extends AbstractValidatingTest {
     }
     "have correct size" in { _ =>
       info("size: " + refMap.size.toString)
-      // 33: a repository schema's `of <name> as type <T>` data clauses are resolved (they used to
+      // 34: a repository schema's `of <name> as type <T>` data clauses are resolved (they used to
       // be skipped, which made stored types look unused), and so are the references in a `send`
       // or `tell` nested inside a conditional (which used to leave MessageFlowPass unable to find
       // them).
-      refMap.size must be(33)
+      //
+      // 2026-08-14, 33 -> 34: `Pass.traverse` now descends into the bodies of `when`/`match`/
+      // `foreach`, so an ORDINARY reference inside one enters the refMap. Before, only names
+      // carried LEXICALLY into a nested body (a `let`, a loop element, a lifecycle parameter)
+      // resolved there; a state field or message type did not, because nothing ever put it in the
+      // map. This number can only GROW from that change -- a shrink means something stopped
+      // resolving and is a regression, not a golden to bump.
+      refMap.size must be(34)
     }
 
     "have definitionOf(pathId:String) work" in { _ =>

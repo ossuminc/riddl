@@ -324,6 +324,30 @@ abstract class Pass(
         process(sagaStep, parents)
         sagaStep.doStatements.foreach { value => traverse(value, parents) }
         sagaStep.undoStatements.foreach { value => traverse(value, parents) }
+      // The three statements that HOLD statements in FIELDS. Each MUST precede `case leaf: Leaf`,
+      // for exactly the reason SagaStep does: a Statement is a Leaf, so without these the nested
+      // body is never traversed and every reference inside it is never resolved and never
+      // validated -- a model naming definitions that do not exist validates clean. Verified with a
+      // repro on 2026-08-14: a bogus `tell` at the top of a clause was reported, the same `tell`
+      // one level inside `when … then { … } end` was silent.
+      //
+      // NO push: a Statement is not a Branch and cannot be pushed, and the enclosing clause is
+      // already the correct resolution scope for a nested statement -- the same reasoning, and the
+      // same consequence for `parents.head`, as SagaStep above.
+      //
+      // `HierarchyPass` deliberately does NOT need this: it overrides `traverse` and its visitors
+      // emit field-held statements themselves, in the position the syntax requires.
+      case whenStmt: WhenStatement =>
+        process(whenStmt, parents)
+        whenStmt.thenStatements.foreach { value => traverse(value, parents) }
+        whenStmt.elseStatements.foreach { value => traverse(value, parents) }
+      case matchStmt: MatchStatement =>
+        process(matchStmt, parents)
+        matchStmt.cases.foreach { mc => mc.statements.foreach { v => traverse(v, parents) } }
+        matchStmt.default.foreach { value => traverse(value, parents) }
+      case foreachStmt: ForeachStatement =>
+        process(foreachStmt, parents)
+        foreachStmt.doStatements.foreach { value => traverse(value, parents) }
       case leaf: Leaf =>
         process(leaf, parents)
       case correlation: Correlation =>
