@@ -14,74 +14,76 @@ would get wrong.
 **State — every line below was run as a command during this handoff
 (2026-08-14), not recalled:**
 
-- Branch `release/2`, **tree CLEAN**, HEAD `19c7869e6`,
-  `git describe` = `2.0.0-rc.14-21-g19c7869e6`, **3 commits UNPUSHED**
-  (`e87249acc` `db2eb4235` `19c7869e6`).
-- **`publishLocal` AND `~/Code/ossuminc/bin/riddlc` are both at
-  `2.0.0-rc.14-20-db2eb423`** — one commit behind HEAD, and that commit
-  (`19c7869e6`) touches NOTEBOOK.md ONLY, so both carry every code change. The
-  script verified they came from one build. Bare `riddlc` on `$PATH` is still
-  the old tap build.
-- **BAST `FORMAT_REVISION` is 17** and the 16 → 17 bump is SPENT. No remaining
-  task may move it.
-- **Green on all three platforms**: JVM utils 148 / language 669 / passes 1245 /
-  riddlLib 121 / riddlc 21 / testkit 2; JS 753; Native utils 110 / language 513 /
-  passes 1088 / testkit 1 / commands 47 / riddlLib 111 / riddlc 21. TatSu
-  104/127 = baseline; GBNF regenerated and verified fresh.
+- Branch `release/2`, HEAD `9e14bcad0`, `git describe` =
+  `2.0.0-rc.14-27-g9e14bcad0`. Ask `git status` for the tree and the unpushed
+  span; do not trust a number written here.
+- **`publishLocal` AND `~/Code/ossuminc/bin/riddlc` are BOTH at
+  `2.0.0-rc.14-27-9e14bcad`**, produced by one `scripts/publish-and-stage.sh`
+  run, which verified it. Bare `riddlc` on `$PATH` is still the old tap build.
+- **BAST `FORMAT_REVISION` is 17.** Tasks 4-7 did not move it and no remaining
+  task may.
+- **Certified tri-platform, from clean, under a throwaway `--sbt-cache`:**
+  JVM utils 148 / language 669 / passes 1262 / testkit 2 / commands 245 /
+  riddlLib 122 / riddlc 21; JS 753; Native utils 110 / language 513 /
+  passes 1105 / testkit 1 / commands 47 / riddlLib 111 / riddlc 21 + nativeLink.
+  Floors raised in `.claude/skills/rc/SKILL.md` to **2469 / 753 / 1908**.
+  All four validators green: TatSu 104/127 (baseline), GBNF fresh + all 320
+  rules covered, external-repo 9/9.
 - **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease, Maven from the tag, npm on
   the **`rc`** dist-tag (`latest` did NOT move).
 
-**IN FLIGHT — message-value plan, Tasks 1-3 of 7 DONE, Task 4 NOT started.**
-Detail is in **`BACKLOG.md` § 1**; the running ledger with every finding is
+**The message-value-source plan is COMPLETE — all 7 tasks.** Detail in
 `.superpowers/sdd/2026-08-14-message-value-source/progress.md` (gitignored, but
-it names every commit). Plan and design live under `docs/superpowers/`.
-**Task 4 is next and is NOT small** — see BACKLOG for its two hard constraints
-(ship a Warning never an Error; the field-less exemption changes the 14,730
-figure already quoted to riddlg, so it must be re-counted).
+it names every commit); plan and design under `docs/superpowers/`. Reid's work
+order was: emitter fix → finish this plan → **cut an RC carrying both**. The
+first two are done, so **the RC is the next action** (`/rc`), which is what gives
+riddl-models the single `.bast` regeneration they asked for.
 
-**Reid's work order (2026-08-14):** emitter fix (DONE) → finish this plan → cut
-an RC carrying both. That sequencing is deliberate: it gives riddl-models ONE
-`.bast` regeneration instead of two, which they asked for.
+**Corpus A/B for the whole plan, measured with the released rc.14 binary as the
+B side (it is exactly this branch's base) and the staged build as A:** errors
+49 → 49, warnings 863 → 863, completeness **288 → 15,585**. The entire delta is
+the new bare-operand warning: 14,652 message + 645 record = 15,297. Nothing else
+moved.
 
 **Traps — every one already bit someone.**
 
-- **TWO CORPUS TESTS ARE RED ON PURPOSE**, and this is the thing a cold session
-  is most likely to get wrong. `RiddlModelsRoundTripTest` (16 of 189) and
-  `Root2JsonCorpusTest` (173/189, needs ≥95%) fail because `ccd278c00` taught
-  the addressing check to resolve `Id` aliases, exposing **49 real defects in
-  riddl-models** the broken check had been certifying. A/B proven. **Do not
-  soften the check and do not chase them here.** BACKLOG § 3.
-- **A no-op that DEFERS is as dangerous as a missing case.** Both silent losses
-  in the emitter fix were explicit, total dispatches whose defect was a CLAIM
-  ABOUT CODE ELSEWHERE that nothing verified: `doMethod` said "handled by their
-  type" (they were not — `emitMethod` had zero callers) and `processValue`
-  skipped `ShownBy` as "read by the definition that holds them" (a survey of the
-  visitors that existed). Check that what an arm defers to actually does it.
-- **`-Werror` catches a missing arm only where the match has NO wildcard.** It
-  did earn its keep in `passes` during Task 2 (three exhaustivity failures). It
-  cannot help where the prescribed terminal `throw` is present, because that
-  wildcard makes the match syntactically exhaustive. `--no-warnings` is on
-  `language` and `commands` besides. Audit dispatch sites, and their INPUTS, by
-  reading.
-- **Resolution keys a `ValueRef` against the ON-CLAUSE, not the Handler.**
-  `checkYieldConformance` passed `parents` (head = Handler); every lookup missed
-  silently until `omc +: parents`. Found by instrumenting, not by reading.
-- Two more from this session, written up in this NOTEBOOK's body rather than
-  here: a constraint you are relaxing is often recorded TWICE (the URL fix
-  needed the parser AND `URL.isValid`), and a test written after the fix proves
-  nothing until revert-proved.
+- **TWO CORPUS TESTS ARE RED ON PURPOSE**, and this is still the thing a cold
+  session is most likely to get wrong. `RiddlModelsRoundTripTest` (16 of 189) and
+  `Root2JsonCorpusTest`'s validation-parity case (173/189, needs ≥95%) fail
+  because `ccd278c00` taught the addressing check to resolve `Id` aliases,
+  exposing **49 real defects in riddl-models**. Tasks 4-7 did not move either
+  figure. **Do not soften the checks and do not chase them here.** BACKLOG § 3.
+- **`tJVM` can no longer be run as one `;` chain**, precisely because of the
+  above: it aborts at `commands` and `riddlLib`/`riddlc` never run, which looks
+  identical to a completed leg. Finish those two separately and count the
+  `Suites: completed` lines.
+- **A dispatch written TWICE hides the incomplete copy.** `WhenStatement.format`
+  carried a `MatchError` on `when prompt("…")` for as long as it has existed,
+  because `RiddlFileEmitter.emitStatement` keeps its own complete copy and
+  prettify routes through THAT — so the round trip, the thing that proves a
+  `format` total, could never reach it. Now in CLAUDE.md; check both when either
+  changes.
+- **A revert-proof under the shared sbt cache can be a lie.** The first attempt
+  to prove that MatchError reported GREEN with the fix removed: sbt 2 served the
+  previously-compiled classes and never compiled the reverted code. Only a
+  throwaway `--sbt-cache` made it fail. **Revert-prove under a fresh cache.**
+- **A test asserting "no X" is also satisfied by a model that never parsed.**
+  The same case could not fail as first written; it needed `justErrors mustBe
+  empty` FIRST. Check that a negative assertion can distinguish its two reasons.
 
-**Certainty.** Everything under State was executed this session. Tasks 4-7 are
-unstarted and unexamined beyond BACKLOG's notes. Three design questions in the
-plan were resolved by a controller rather than by Reid — flagged in BACKLOG so
-he can overrule them.
+**Certainty.** Everything under State was executed this session. The three
+design questions Q1-Q3 were resolved by a controller rather than by Reid and are
+flagged in the plan so he can overrule them; Q1 (the field-less exemption) is now
+also backed by a measurement — it accounts for 62 of 14,714.
 
 **`task/` — ONE file, untriaged, and not actionable as written:**
 `2026-08-04-security.md` (RBAC / `role`, issue #535) is Reid's own draft, marked
 *"Draft (do not act on this)"*, with its acceptance-criteria, semantics and
-why-we-can't-derive-it sections all EMPTY. The prettify-emitter report was
-answered and moved to `task/done/`; the reply to riddl-models about the `Id`
-aliases is filed in their repo and confirmed present.
+why-we-can't-derive-it sections all EMPTY. Two outgoing drops were made this
+session: the landing notice appended to
+`task/done/2026-08-14-where-does-a-message-refs-value-come-from.md` (riddlg), and
+a corpus-wide migration filed at riddl-models
+`task/2026-08-14-bare-message-operands-now-warn-corpus-wide.md`.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
 driver's call, not the handoff's.
