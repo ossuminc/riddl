@@ -91,7 +91,12 @@ package object bast {
     // discriminator byte at all, so the reader silently misread every relationship's location as
     // its own dispatch byte. A revision-15 reader cannot decode files written after this fix, and
     // files this fix produces are unreadable by any older reader -- for all three reasons at once.
-    16 // interaction blocks, invariant block statements, and the relationship/NODE_PIPE discriminator
+    // 17 widens two operand codecs. `morph … with` gains discriminator 2 (a ValueRef) on the
+    // RECORD operand, which a revision-16 reader rejects outright as an invalid discriminator; and
+    // `yield`/`reply` may now legitimately carry the MESSAGE operand's discriminator 2, which a
+    // revision-16 reader THROWS on by design -- its arms said `yield` never accepts a bound name,
+    // true of the parser at the time. So the incompatibility runs both ways and is deliberate.
+    17 // yield/reply/morph accept a bare ValueRef operand (message-value design, Task 2)
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.
     *

@@ -1411,7 +1411,7 @@ object JsonAstBuilder:
           curAt,
           EntityRef(curAt, pathId(entity)),
           StateRef(curAt, pathId(state)),
-          buildRecordOperand(value) // A9b/A54: RecordRef or Constructor
+          buildRecordOperand(value) // A9b/A54 + Task 2: RecordRef, Constructor or ValueRef
         )
       case BecomeStmtDto(entity, handler) =>
         BecomeStatement(curAt, EntityRef(curAt, pathId(entity)), HandlerRef(curAt, pathId(handler)))
@@ -1422,8 +1422,8 @@ object JsonAstBuilder:
           processorRef(to, processor),
           by.map(ident)
         )
-      case YieldStmtDto(message) => YieldStatement(curAt, buildMsgOperand(message))
-      case ReplyStmtDto(message) => ReplyStatement(curAt, buildMsgOperand(message))
+      case YieldStmtDto(message) => YieldStatement(curAt, buildDeliverableOperand(message))
+      case ReplyStmtDto(message) => ReplyStatement(curAt, buildDeliverableOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
         val cond: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue =
           expression match
@@ -1574,10 +1574,10 @@ object JsonAstBuilder:
     case c: ConstructorValueDto => buildConstructor(c)
     case m: MessageRefDto       => messageRef(m)
 
-  /** A56: the widened `tell`/`send` operand. Mirror of
+  /** A56: the widened operand of `tell`/`send` and, as of Task 2, `yield`/`reply`. Mirror of
     * `JsonifierPass.serializeDeliverableOperand` — the reserved kind `"bound"` rebuilds a
-    * [[ValueRef]] naming an on-clause binding. Deliberately separate from [[buildMsgOperand]], so
-    * `yield` (which shares the DTO but not the widened operand) cannot acquire one.
+    * [[ValueRef]]. It stays separate from [[buildMsgOperand]] because that one is still used where
+    * only a keyword-led operand is legal.
     */
   private def buildDeliverableOperand(
     o: MsgOperandDto
@@ -1585,11 +1585,15 @@ object JsonAstBuilder:
     case m: MessageRefDto if m.kind == "bound" => ValueRef(curAt, pathId(m.ref))
     case other                                 => buildMsgOperand(other)
 
-  // A54: a record operand for `morph … with` — a bare record ref or an inline constructor.
-  private def buildRecordOperand(o: MsgOperandDto)(using ctx: Ctx): RecordRef | Constructor =
+  // A54: a record operand for `morph … with` — a bare record ref or an inline constructor, plus
+  // Task 2's bare ValueRef, carried by the same reserved `"bound"` kind used for messages.
+  private def buildRecordOperand(
+    o: MsgOperandDto
+  )(using ctx: Ctx): RecordRef | Constructor | ValueRef =
     o match
-      case c: ConstructorValueDto => buildConstructor(c)
-      case m: MessageRefDto       => RecordRef(curAt, pathId(m.ref))
+      case c: ConstructorValueDto                => buildConstructor(c)
+      case m: MessageRefDto if m.kind == "bound" => ValueRef(curAt, pathId(m.ref))
+      case m: MessageRefDto                      => RecordRef(curAt, pathId(m.ref))
 
   private def buildMatchCase(c: MatchCaseDto)(using ctx: Ctx): MatchCase =
     val guard: Option[BooleanExpression | ValueRef] = c.guard.map(g =>

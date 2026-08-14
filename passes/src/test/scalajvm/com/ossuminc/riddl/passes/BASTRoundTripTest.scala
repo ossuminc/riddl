@@ -245,6 +245,68 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize ValueRef operands on yield/reply/morph (revision 17)" in {
+      // Message-value design Task 2/3: `yield`, `reply` and `morph … with` accept a bare ValueRef.
+      // Two DIFFERENT codecs carry it -- the message operand (already had discriminator 2, but the
+      // reader THREW on it for yield/reply) and the record operand (which gains discriminator 2
+      // here) -- so both are exercised in one model. This is what revision 17 is for.
+      val riddlSource =
+        """domain d is { context c is {
+          |  command Foo yields event Bar is { a: Integer }
+          |  event Bar is { b: Integer }
+          |  query Qry replies result Res is { q: Integer }
+          |  result Res is { r: Integer }
+          |  record Data is { evt: d.c.Bar, answer: d.c.Res }
+          |  record Other is { m: Integer }
+          |  record Holder is { next: d.c.Other }
+          |  entity src is {
+          |    state S of record d.c.Data
+          |    state T of record d.c.Other
+          |    state H of record d.c.Holder
+          |    handler Ops is {
+          |      on command d.c.Foo is {
+          |        morph entity d.c.src to state T with next
+          |        yield evt
+          |      }
+          |      on query d.c.Qry is { reply answer }
+          |    }
+          |  }
+          |}}
+          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-value-operands")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(module) =>
+              assert(compareRoots(originalRoot, module), "value-operand round trip: ASTs differ")
+              // Assert the NODE KIND survived, not merely that something came back: a reader that
+              // rebuilt these as keyword-led refs would still compare equal on the path alone.
+              val ys = Finder(module.contents).recursiveFindByType[AST.YieldStatement]
+              assert(ys.size == 1, s"expected one YieldStatement, found ${ys.size}")
+              assert(ys.head.msg.isInstanceOf[AST.ValueRef], "yield operand is not a ValueRef")
+              assert(ys.head.msg.deliverableOperandPathId.value.last == "evt", "yield operand lost")
+
+              val rs = Finder(module.contents).recursiveFindByType[AST.ReplyStatement]
+              assert(rs.size == 1, s"expected one ReplyStatement, found ${rs.size}")
+              assert(rs.head.msg.isInstanceOf[AST.ValueRef], "reply operand is not a ValueRef")
+              assert(rs.head.msg.deliverableOperandPathId.value.last == "answer", "reply lost")
+
+              val ms = Finder(module.contents).recursiveFindByType[AST.MorphStatement]
+              assert(ms.size == 1, s"expected one MorphStatement, found ${ms.size}")
+              ms.head.value match
+                case vr: AST.ValueRef =>
+                  assert(vr.path.value.last == "next", "morph operand lost in BAST")
+                case other =>
+                  fail(s"morph operand came back as ${other.getClass.getSimpleName}, not ValueRef")
+            case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) => fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize a `foreach` statement (A25)" in {
       // A25 uses new BAST subtag 16 (a wire change carried into version 2). Verify both a field-ref collection and a
       // let-local collection round-trip, and the nested body survives.

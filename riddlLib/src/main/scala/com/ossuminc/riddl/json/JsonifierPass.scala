@@ -1369,8 +1369,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case TellStatement(_, msg, proc, by) =>
       val (pp, pk) = processorRef(proc)
       TellStmtDto(serializeDeliverableOperand(msg), pp, pk, by.map(_.value))
-    case YieldStatement(_, msg) => YieldStmtDto(serializeMsgOperand(msg))
-    case ReplyStatement(_, msg) => ReplyStmtDto(serializeMsgOperand(msg))
+    // Task 2: `yield`/`reply` carry the same widened operand as `send`/`tell`, so they use the
+    // deliverable serializer. Using `serializeMsgOperand` here would not compile once the field
+    // widened -- but had it been reachable, a ValueRef would have been silently unrepresentable.
+    case YieldStatement(_, msg) => YieldStmtDto(serializeDeliverableOperand(msg))
+    case ReplyStatement(_, msg) => ReplyStmtDto(serializeDeliverableOperand(msg))
     case WhenStatement(_, cond, thenS, elseS, negated) =>
       cond match
         case ls: LiteralString =>
@@ -1541,10 +1544,18 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       case vr: ValueRef                      => MessageRefDto(path(vr.path), "bound")
       case other: (MessageRef | Constructor) => serializeMsgOperand(other)
 
-  // A54: a record operand for `morph … with` — a bare record ref or an inline constructor.
-  private def serializeRecordOperand(m: RecordRef | Constructor): MsgOperandDto = m match
-    case rr: RecordRef  => MessageRefDto(path(rr.pathId), "record")
-    case c: Constructor => serializeConstructor(c)
+  /** A54: a record operand for `morph … with` — a bare record ref or an inline constructor, and as
+    * of Task 2 a bare [[ValueRef]].
+    *
+    * The ValueRef reuses the reserved kind `"bound"`, exactly as
+    * [[serializeDeliverableOperand]] does: no record or message kind is spelled that way, so the
+    * reader tells them apart with no new DTO shape and no JSON schema change.
+    */
+  private def serializeRecordOperand(m: RecordRef | Constructor | ValueRef): MsgOperandDto =
+    m match
+      case rr: RecordRef  => MessageRefDto(path(rr.pathId), "record")
+      case vr: ValueRef   => MessageRefDto(path(vr.path), "bound")
+      case c: Constructor => serializeConstructor(c)
 
   private def serializeInteraction(i: Interaction): InteractionDto = i match
     case VagueInteraction(_, from, rel, to, _) => VagueIxnDto(from.s, rel.s, to.s)

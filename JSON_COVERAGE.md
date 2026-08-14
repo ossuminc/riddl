@@ -157,11 +157,11 @@ is covered in that construct's phase. The builder emits references as
 | RequireStatement | ✅ Phase 3 / A28 s2 | condition widened: string, `invariant` name, or structured `expression` (ValueDto) |
 | SetStatement | ✅ Phase 3 / A54 | FieldRef/StateRef; value widened to ValueDto |
 | SendStatement | ✅ Phase 3 / A54 / A56 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); + PortletRef |
-| MorphStatement | ✅ Phase 3 / A54 | value = RecordRef or Constructor |
+| MorphStatement | ✅ Phase 3 / A54 / message-value T2 | value = RecordRef, Constructor, or ValueRef (kind `"bound"`, the same reserved spelling the message operands use) |
 | BecomeStatement | ✅ Phase 3 | |
 | TellStatement | ✅ Phase 3 / A54 / A56 / A70 task 6 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); optional `"by": "<field-name>"` disambiguates which `Id(target)`-typed field is the address (task 6 of processor-instance-identity, 2026-08-13) |
-| YieldStatement | ✅ Phase 3 / A54 | msg = MessageRef or Constructor; `"kind": "yield"` |
-| ReplyStatement | ✅ 2.0 | msg = MessageRef or Constructor; `"kind": "reply"`. Its own node and DTO since `reply` stopped being a deprecated synonym for `yield` — a command yields an event, a query replies a result |
+| YieldStatement | ✅ Phase 3 / A54 / message-value T2 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); `"kind": "yield"` |
+| ReplyStatement | ✅ 2.0 / message-value T2 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); `"kind": "reply"`. Its own node and DTO since `reply` stopped being a deprecated synonym for `yield` — a command yields an event, a query replies a result |
 | WhenStatement | ✅ Phase 3 / A28 s2 | nested statements; condition widened: string, identifier, or structured `expression` (ValueDto) |
 | MatchStatement / MatchCase | ✅ Phase 3 / A29 | subject = ValueDto (valueRef/get/literal); each case: structured `pattern` (type/comparison/literal MatchPatternDto) + optional `guard` (ValueDto) + nested statements |
 | MatchPattern (Type/Comparison/Literal) | ✅ A29 | `{ "kind": "type", "path", "keyword"? }` / `{ "kind": "comparison", "op", "comparand": <value> }` / `{ "kind": "literal", "text" }` |
