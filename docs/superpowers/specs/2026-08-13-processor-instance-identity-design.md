@@ -134,13 +134,27 @@ such parameter — there is no instance yet, and the identity is minted by initi
 
 ```riddl
 let oid = initiate entity Order(custId, total)   // VALUE expression -> Id(entity Order)
-initiate entity Order                            // no parens when on init takes none
+let wid = initiate entity Widget                 // no parens when on init takes none
 terminate entity Order(oid, "cancelled")         // STATEMENT, no value
 ```
 
 **One keyword, `initiate`, with optional parentheses** (Reid, 2026-08-13). Parens are
 present exactly when there are arguments to pass. An earlier message in the session
 wrote `create` for the no-argument case; that was a slip for the same word, confirmed.
+
+**`initiate` has NO standalone-statement form** (Reid's ruling, final review,
+2026-08-13, amending this section — an earlier revision of this document wrote
+`initiate entity Order` on a line by itself). It does not parse, and it must not: the
+returned `Id` would be lost and the created processor could never be referenced again,
+**not even to terminate it — a memory leak by construction**. `let x = initiate …` is
+the only way to write it, including in the no-argument case. The parser was already
+correct; only this document was wrong.
+
+**`terminate`'s parentheses are MANDATORY** (Reid's ruling, final review, 2026-08-13).
+The symmetry with `initiate` was dead syntax: `on term`'s leading `Id(...)` parameter is
+required (§2.1), so a no-argument `terminate` can never satisfy the arity check and is
+unreachable in any valid model. `terminate P()` — an explicitly empty list — still
+parses; "at least one argument" is a validation rule, not a grammar one.
 
 `initiate` **evaluates to `Id(P)`** — system-minted, opaque, globally unique. A
 *business* key (an order number) is therefore an `on init` argument stored in state,
