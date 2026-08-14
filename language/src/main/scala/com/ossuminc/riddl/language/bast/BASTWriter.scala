@@ -653,8 +653,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLiteralString(fr.nodeId)
   }
 
+  /** A `relationship` shares [[NODE_PIPE]] with the 13 [[Interaction]] kinds (discriminators
+    * 0/1/2/10-19, see `writeParallelInteractions` etc. below), which all read through
+    * `BASTReader.readPipeOrRelationshipOrInteraction` -- and that reader unconditionally reads a
+    * discriminator byte BEFORE the location. Until 2026-08-14 this method wrote none: it went
+    * straight from the tag to `writeLocation`, so the reader consumed the location's own first
+    * byte as the discriminator and misread every byte of every `relationship` from there on --
+    * corruption on every occurrence, not merely a risk of one. Discriminator 20 is the next free
+    * value after the interaction kinds' 0-19.
+    */
   def writeRelationship(r: Relationship): Unit = {
     writeNodeTag(NODE_PIPE, r.metadata.nonEmpty) // Reusing PIPE tag for relationship
+    writer.writeU8(20) // Relationship discriminator -- see doc comment above
     writeLocation(r.loc)
     writeIdentifierInline(r.id) // Inline - no tag needed
     writeProcessorRef(r.withProcessor)

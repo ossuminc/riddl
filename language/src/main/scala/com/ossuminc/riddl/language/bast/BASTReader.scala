@@ -1201,6 +1201,13 @@ class BASTReader(
     val loc = readLocation()
     val id = readIdentifierInline() // Inline - no tag
     // A28 + 2026-08-04: a sub-flag byte (0=literal, 1=boolean-expression, 2=block) selects the arm.
+    // 2026-08-14: the block arm's statement COUNT is read here (matching `writeContents`'s
+    // count-only contract), but the ITEMS are NOT -- `BASTWriterPass.traverseInvariant` writes
+    // them immediately after the whole Invariant node (i.e. after `requires`, not right after the
+    // predicate), the same "count now, items once the node that owns them has finished" shape every
+    // multi-content node in this file uses (Correlation, SagaStep, ...). `blockStatementCount`
+    // records how many to read once `requires` has been consumed below; -1 means "no block".
+    var blockStatementCount: Int = -1
     val condition: Option[LiteralString | BooleanExpression | InvariantBlock] = readOption {
       reader.readU8() match
         case 0 => readLiteralString()
@@ -1210,9 +1217,10 @@ class BASTReader(
             case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
         case 2 =>
           val blkLoc = readLocation()
-          val statements = readContentsDeferred[Statements]()
+          blockStatementCount = reader.readVarInt()
           readValue() match
-            case be: BooleanExpression => InvariantBlock(blkLoc, statements, be)
+            case be: BooleanExpression =>
+              InvariantBlock(blkLoc, Contents.empty[Statements](), be) // statements filled in below
             case other =>
               throw new RuntimeException(s"Expected block predicate BooleanExpression, got: $other")
         case k => throw new RuntimeException(s"Invalid invariant condition kind: $k")
@@ -1224,8 +1232,19 @@ class BASTReader(
         case 1 => readTypeRef()
         case k => throw new RuntimeException(s"Invalid invariant requires kind: $k")
     }
+    // The block's statement items, if any, immediately follow `requires` on the wire.
+    val finalCondition = condition match
+      case Some(blk: InvariantBlock) if blockStatementCount >= 0 =>
+        val buffer = ArrayBuffer[Statements]()
+        var i = 0
+        while i < blockStatementCount do
+          buffer += readNode().asInstanceOf[Statements]
+          i += 1
+        end while
+        Some(blk.copy(statements = Contents(buffer.toSeq: _*)))
+      case other => other
     val metadata = readMetadataDeferred()
-    Invariant(loc, id, condition, requires, metadata)
+    Invariant(loc, id, finalCondition, requires, metadata)
   }
 
   /** A53: a Version leaf — mirror of BASTWriter.writeVersion. The numeric flag re-derives the
@@ -1473,13 +1492,16 @@ class BASTReader(
         val metadata = readMetadataDeferred()
         RefusalInteraction(loc, from, to, reason, metadata)
 
-      case _ => // Relationship (default)
+      case 20 => // Relationship -- mirrors BASTWriter.writeRelationship
         val id = readIdentifierInline() // Inline - no tag
         val withProcessor = readProcessorRef()
         val cardinality = RelationshipCardinality.fromOrdinal(reader.readU8())
         val label = readOption(readLiteralString())
         val metadata = readMetadataDeferred()
         Relationship(loc, id, withProcessor, cardinality, label, metadata)
+
+      case k =>
+        throw new RuntimeException(s"Invalid NODE_PIPE discriminator: $k")
     }
   }
 

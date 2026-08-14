@@ -85,6 +85,20 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
       case ws: WhenStatement    => traverseWhenStatement(ws, parents)
       case ms: MatchStatement   => traverseMatchStatement(ms, parents)
       case fs: ForeachStatement => traverseForeachStatement(fs, parents)
+      case inv: Invariant       => traverseInvariant(inv, parents)
+
+      // `sequence`/`parallel`/`optional` interaction blocks (2026-08-14). InteractionContainer
+      // extends Container but NOT Branch (it has no `id`, so it cannot be a Definition), so it
+      // never matched the generic `branch: (Branch[?] & WithMetaData)` case below and fell all
+      // the way to the `wm: WithMetaData` catch-all, which calls process() only -- writing the
+      // block's header and its contents COUNT (via writeContents) but never descending into the
+      // steps themselves. The reader's readContentsDeferred then consumed N nodes that were never
+      // written, desynchronising the stream. Same family as BASTImport's openBASTImport/
+      // closeBASTImport hooks, but scoped locally here since no other pass needs to push an
+      // InteractionContainer onto ParentStack (it isn't a Branch, so it couldn't be) -- every
+      // other consumer (PrettifyVisitor.doInteraction, the VisitingPass processValue arm) already
+      // recurses into an Interaction's contents manually rather than via Pass-level traversal.
+      case ic: InteractionContainer => traverseInteractionContainer(ic, parents)
 
       // OnClauses (grouped for clarity)
       case oc: OnInitializationClause => traverseOnClause(oc, oc.contents, parents)
@@ -169,6 +183,39 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
     process(fs, parents)
     bastWriter.writeContents(fs.doStatements)
     fs.doStatements.toSeq.foreach { value => traverse(value, parents) }
+  }
+
+  /** `sequence { ... }` / `parallel { ... }` / `optional { ... }`. Mirrors [[traverseOnClause]]'s
+    * shape exactly (process, then contents, then metadata) but without the push/pop: an
+    * [[InteractionContainer]] is a [[Container]] but not a [[Branch]] -- it has no `id` -- so
+    * `ParentStack.push`, which requires `Branch[?]`, cannot take it. That omission is harmless
+    * here: BASTWriterPass never resolves anything against `parents`, it only orders bytes.
+    */
+  private def traverseInteractionContainer(ic: InteractionContainer, parents: ParentStack): Unit = {
+    process(ic, parents)
+    ic.contents.foreach { value => traverse(value, parents) }
+    if ic.metadata.nonEmpty then bastWriter.writeMetadataCount(ic.metadata)
+  }
+
+  /** A28 + 2026-08-04: an `invariant ... is { <statements> <predicate> }` block form. `Invariant`
+    * is a `Leaf`, and the block's statements live in a FIELD of its `condition` (an
+    * [[InvariantBlock]], itself not even a `Container`) -- so like [[Correlation]]'s
+    * `timeoutStatements` and [[SagaStep]]'s `doStatements`/`undoStatements`, nothing generic ever
+    * walks them. `writeInvariant` already writes the statements COUNT (via `writeContents`) as
+    * part of the block's encoding, followed -- within that SAME call -- by the predicate and then
+    * `requires`. So the items written here land AFTER `requires` on the wire, not right after the
+    * count: `process(inv, ...)` runs to completion (id, condition incl. predicate, requires)
+    * before this method gets control back, and whatever it appends next is what comes next on the
+    * wire. `BASTReader.readInvariantNode` mirrors this exactly: it reads the count, defers
+    * building the `InvariantBlock`, reads `requires`, and only THEN reads that many items.
+    */
+  private def traverseInvariant(inv: Invariant, parents: ParentStack): Unit = {
+    process(inv, parents)
+    inv.condition match {
+      case Some(blk: InvariantBlock) => blk.statements.foreach { value => traverse(value, parents) }
+      case _                         => ()
+    }
+    if inv.metadata.nonEmpty then bastWriter.writeMetadataCount(inv.metadata)
   }
 
   private def traverseOnClause[T <: RiddlValue](

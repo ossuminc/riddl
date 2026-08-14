@@ -82,7 +82,16 @@ package object bast {
     // 15 adds the Id kind keyword, `self`, `initiate`, `terminate`, on-clause parameter lists
     // and the tell `by` clause -- every one of which appends bytes an older reader would leave
     // in the stream.
-    15 // instance identity: Id keyword, self, initiate/terminate, on-clause params, tell by
+    // 16 fixes three latent corruptions in the SAME family as revision 14's Constant/Method fix,
+    // found together 2026-08-14 while chasing riddl-models' `sequence`/`parallel`/`optional`
+    // report: (1) InteractionContainer (the three block kinds) wrote a contents COUNT that no
+    // pass ever followed with the actual items, understating node counts as content was ADDED;
+    // (2) `invariant ... is { <statements> <predicate> }` had the identical gap for its block
+    // statements; (3) `relationship`, sharing NODE_PIPE with the 13 Interaction kinds, wrote no
+    // discriminator byte at all, so the reader silently misread every relationship's location as
+    // its own dispatch byte. A revision-15 reader cannot decode files written after this fix, and
+    // files this fix produces are unreadable by any older reader -- for all three reasons at once.
+    16 // interaction blocks, invariant block statements, and the relationship/NODE_PIPE discriminator
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.
     *

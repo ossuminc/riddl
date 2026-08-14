@@ -139,6 +139,67 @@ to the task file and note the disposition below.
 ---
 
 
+## A `Container` that isn't a `Branch` is invisible to the writer pass (2026-08-14) — DONE
+
+riddl-models filed `task/2026-08-13-interaction-blocks-break-bast-round-trip.md`: `sequence {
+... }` / `parallel { ... }` / `optional { ... }` interaction blocks bastify without complaint and
+then fail to unbastify, with the reporter's own diagnosis already correct — node count went DOWN
+(9 -> 8) when the block was ADDED, the same tell that caught the `constant`/`Method` defect in
+`4ca2906dc`. This is the third instance of the family CLAUDE.md's BAST section already names:
+`BASTImport` needed dedicated `openBASTImport`/`closeBASTImport` hooks because it "extends
+`Container` but not `Branch`, so without the hooks it falls through and its contents are never
+visited." `InteractionContainer` has exactly that shape and nobody had given it the hooks.
+
+**Root cause, precisely.** `Branch = Definition + Container`, and `InteractionContainer` (the base
+of the three block kinds) has no `id` — it can't be a `Definition`, so it can't be a `Branch`.
+`BASTWriterPass.traverse` (which overrides the base `Pass.traverse` to interleave count-then-items
+for every multi-content node: `Correlation`, `SagaStep`, on-clauses, ...) had no case for it, so it
+fell to the generic `wm: WithMetaData` fallback. That fallback calls `process()` only — which
+writes the header and the contents COUNT (`writeContents`'s whole contract is "write the count,
+trust the caller to write the items") — and never descends. The reader's `readContentsDeferred`
+then consumed N nodes that were never written, desynchronizing the stream. Confirmed independently
+that this ISN'T a validation gap too: `ValidationPass`/`ResolutionPass` don't use the generic
+`Branch` traversal for `Interaction` either — `PrettifyVisitor.doInteraction` already manually
+recurses into a block's contents itself (`emitInteractionContents`), which is the established,
+correct pattern for a node that structurally cannot be pushed onto `ParentStack` (`push` requires
+`Branch[?]`). The fix follows that same shape, added locally to `BASTWriterPass` rather than as a
+new `Pass`-level hook: only the writer needs "children immediately follow the count" ordering: no
+other pass needed to push `InteractionContainer` as a parent.
+
+**The sweep found two more of the identical shape, not literally "Container" this time but the
+same "count now, items later, and later never came" contract failure.** `invariant ... is {
+<statements> <predicate> }` (A28 + 2026-08-04) has its statements in a field of `InvariantBlock`,
+which isn't even a `Container`; `Invariant` is a `Leaf`, so nothing generic ever walked them
+either. That one had a wrinkle the interaction fix didn't: `writeInvariant` writes the block's
+predicate *inline*, before returning control to the pass, so the deferred statement items had to
+land on the wire *after* `requires` (the next field `writeInvariant` writes), not right after their
+own count — `BASTReader.readInvariantNode` needed restructuring to defer building the
+`InvariantBlock` until after `requires` was read, then read the items. And while checking the
+task's explicit ask — "check that Relationship's discriminator cannot collide with the interaction
+kinds' 0/1/2/10-17" — the real answer was worse than a collision risk: `writeRelationship` wrote
+**no discriminator byte at all**, so the shared-tag reader (which unconditionally reads one before
+the location, for every arm including its own `Relationship` default) misread every relationship's
+own location as its own dispatch byte. Corruption on every occurrence, latent since `relationship`
+was first serializable, caught only because this task asked to look at exactly that spot.
+
+**What this teaches, generalized:** `writeContents`'s contract — write a count, trust an unrelated
+caller elsewhere in the codebase to write the items — is a trap that has now fired at least four
+times (`constant`/`Method`'s tag collision was adjacent, not this exact shape, but same family).
+Every fix in this family so far has been "teach the specific missing traversal path," never "make
+the mismatch structurally impossible." That remains true after this round too — not fixed, just
+flagged again, now with three more data points. If a fifth instance turns up, that's the signal to
+stop patching call sites and change the contract itself (e.g., a writer method that returns "how
+many items I still owe" and a chokepoint that refuses to finalize a node until that count is
+satisfied).
+
+FORMAT_REVISION 15 -> 16. `NotImplemented.bast` regenerated from its own directory (per BACKLOG §0
+policy) — 93 bytes, single-byte diff at byte 12 (the revision short), confirmed with `cmp -l`.
+New test: `InteractionBlockBASTRoundTripTest` in `passes/src/test/scala-jvm-native/`, 9 cases
+(three block kinds, nesting, the node-count-delta pin, invariant block statements, relationship
+x2, format revision), verified executing (not just compiling) on both JVM and Native. Full
+`language`/`passes`/`commands` suites green (66+187+17 = 270 suites, 668+1196+245 = 2109 tests, 0
+failures) as one `;`-chained `-batch` invocation so nothing was silently skipped by an early abort.
+
 ## The gap was instantiation, not addressing (2026-08-13)
 
 riddl-generator filed a narrow ask: `tell command Ship to entity Sales.Order`
