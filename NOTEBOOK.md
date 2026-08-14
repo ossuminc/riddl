@@ -12,17 +12,19 @@ this NOTEBOOK's body. This says only where things stand and what a cold session
 would get wrong.
 
 **State — every line produced by a command in the session that wrote it
-(2026-08-13):**
+(2026-08-14):**
 
-- Branch `release/2`, **tree CLEAN, 18 commits UNPUSHED** (`origin/release/2`
-  is at `c90075b1d`). Push is deliberate-pending — the branch is certified but
-  has had no whole-branch review.
-- **CERTIFIED 2026-08-13.** `clean; cJVM; cJS; cNative; tJVM; tJS; tNative`
-  from clean under a throwaway `--sbt-cache`, one `-batch` argument, exit 0:
-  **JVM 2346 / JS 715 / Native 1619**, 19 `Suites: completed`, 0 aborted,
-  0 `No tests to run`, 0 failures. Floors in `.claude/skills/rc/SKILL.md`
-  raised to match. The one canceled test is `ESMSafetyTest`, which needs a
-  `fullLinkJS` bundle the chain does not build — pre-existing.
+- Branch `release/2`, **tree CLEAN and fully PUSHED** — `origin/release/2` is
+  at `982333cc2`, 0 unpushed. The whole-branch review HAS run (see below).
+- **CERTIFIED.** `clean; cJVM; cJS; cNative; tJVM; tJS; tNative` from clean
+  under a throwaway `--sbt-cache`, one `-batch` argument, exit 0. Final counts
+  after the review fixes: **JVM 2391 / JS 750 / Native 1662**, 19
+  `Suites: completed`, 0 aborted, 0 `No tests to run`, 0 failures. Floors in
+  `.claude/skills/rc/SKILL.md` were raised to the pre-fix certification
+  (2346/715/1619) and are now **69/35/43 BELOW actual** — raise them on the
+  next certification rather than treating the gap as drift. The one canceled
+  test is `ESMSafetyTest`, which needs a `fullLinkJS` bundle the chain does not
+  build — pre-existing.
 - **Corpus green: 189/189 riddl-models `.conf` entry points validate**, exit 0
   every one. 5088 completeness / 863 warning / 430 deprecated / **0 error** /
   0 severe. **5087 of the 5088 completeness messages are the new
@@ -40,7 +42,33 @@ would get wrong.
 effect bans, certification. Tasks 1-7 were each reviewed; each needed a fix
 round except Task 3. What it taught is in this NOTEBOOK's body ("The gap was
 instantiation, not addressing"); what is durably true is in `CLAUDE.md`
-(§ AST / Language Internals). **No whole-branch review has run.**
+(§ AST / Language Internals).
+
+**The whole-branch review HAS run** (2026-08-14) and found what eight
+task-scoped reviews structurally could not — read this before assuming the
+per-task gates were sufficient:
+
+- **1 Critical:** `on init`/`on term` parameters could be DECLARED but not
+  READ, so Task 3 was declare-only and `initiate`/`terminate` argument passing
+  was silently gutted. It survived eight reviews because every body in every
+  new test and fixture was `do "start"`, and the one fixture that declared a
+  parameter named it `total` against a state field also named `total` — so it
+  resolved by COINCIDENCE. Fixed; the fixture is de-collided and parameters are
+  now READ in tests.
+- **The `Id(kind Name)` check never fired for a type alias** — 232 of
+  riddl-models' 242 `Id(...)` declarations are aliases against 7 in field
+  position, so Task 1's entire justification was verified working only in the
+  position almost nobody writes. Fixed.
+- **`Definition.kind` cannot be a kind oracle.** `Streamlet` overrides it to
+  its SHAPE (`AST.scala:5163`), so `Id(streamlet Feed)` would be reported as a
+  lie. This retires advice that sat deferred since Task 1.
+- One fix wave plus one approved follow-up (`957f64534`) landed; the corpus A/B
+  stayed byte-identical at 6461 messages throughout. **That zero delta is weak
+  evidence and was treated as such:** riddl-models writes 0 keyword-bearing
+  `Id(...)`, 0 lifecycle parameters, 0 `terminate`/`initiate`/`self`, so the
+  new checks had nothing in the corpus to check. Confidence rests on unit
+  tests, canary reverts, and test-count arithmetic reconciling on three
+  independent axes — not on the corpus.
 
 **Traps — all of these bit someone.**
 
