@@ -62,6 +62,25 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **BUG: `ResolutionPass` does not descend into nested statement bodies, so an
+  ordinary reference inside `foreach`/`when`/`match` never enters the refMap.**
+  Found 2026-08-14 while writing the lexical-scope threading tests (`957f64534`);
+  pre-existing, not introduced there. The `ForeachStatement` arm says so
+  outright. Consequence: only LEXICALLY-carried names (a `let`, a loop element,
+  a lifecycle parameter) resolve inside a nested body — an ordinary reference,
+  such as a state field, does not, because nothing ever put it in the refMap.
+  **This is the resolver-side twin of the validation-side hole already filed
+  below** (`checkStateReadScope` and friends never seeing nested statements):
+  same cause — statements nested in `when`/`match`/`foreach` are FIELD-held and
+  the generic traversal skips them — but this half is in `ResolutionPass`, so
+  fixing the validation half does not fix it.
+  **Verified, and it already shaped a test:** the `foreach` comparison case in
+  `LexicalScopeThreadingTest` compares two ELEMENT fields rather than an element
+  against a state field, because the latter would have passed for the wrong
+  reason. Any future test in this area risks the same trap.
+  Needs a corpus A/B — this can only ADD resolution, so it may surface
+  references that were silently unresolved and are now type-checked.
+
 - **BUG: `validateConstructor` does not follow type aliases.** Found
   2026-08-13 by the Task 6 review of the processor-instance-identity plan;
   pre-existing, not introduced there. `validateConstructor`
