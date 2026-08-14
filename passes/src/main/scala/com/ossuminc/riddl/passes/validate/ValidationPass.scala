@@ -5265,46 +5265,91 @@ case class ValidationPass(
     * every container root AND recursively for when/match/foreach bodies, so a `tell` nested at any
     * depth is still reached -- mirrors [[checkTerminate]]'s reachability.
     *
-    * Guarded on `mt.nonEmpty`: a `command Foo is { ??? }` body says "known to be incomplete" (the
-    * standing `???` ruling), so its absent fields must not be read as "no Id(target) field" --
-    * every check here depends on knowing the message's fields, which a stub does not supply.
+    * Guarded on the RESOLVED field list being non-empty, not on `mt.isEmpty`. `Type.isEmpty` is
+    * `Container.isEmpty` over `Type.contents`, which returns `Seq.empty` for anything that is not
+    * directly an `Aggregation`/`AggregateUseCaseTypeExpression`/`Enumeration` -- in particular for
+    * an ALIAS-declared message (`command Ship is Shipment`), whose `contents` is always empty
+    * regardless of how many fields `Shipment` has. Gating on `mt.isEmpty` therefore treated every
+    * alias-declared message as a `???` stub and silently skipped this whole check for it.
+    * `aggregateFieldsOf` already follows the alias chain (as `checkOnOtherBinding` and friends
+    * rely on elsewhere), so gating on ITS result lets aliases through while still catching the
+    * real stub shape: a `command Foo is { ??? }` body parses to the SAME empty-aggregate AST as an
+    * explicit `{ }` (both hit `TypeParser`'s `undefined(Seq.empty[AggregateContents])`
+    * alternative), so "zero fields after resolving" is exactly the stub condition the standing
+    * `???` ruling asks us to exempt -- its absent fields must not be read as "no Id(target)
+    * field".
     */
+  /** A55-style: the aggregate [[Field]]s of a message [[Type]], each paired with the [[Type]] node
+    * that actually DECLARES it -- itself for a direct aggregate, or (following the alias chain) the
+    * aliased-to `Type` for `command Ship is Shipment`. Needed because [[ResolutionPass]] resolves a
+    * field's `UniqueId` type expression while that OWNING Type is `parents.head` (Pass.scala pushes
+    * a `Branch` -- which `Type` is -- onto the parent stack for its own children's resolution, so a
+    * `Type`'s fields resolve with the Type ITSELF, not its enclosing Context, as the refMap key's
+    * parent). Looking a field's resolution up again later requires the SAME parent it was recorded
+    * under, so the owning Type must travel with the field, not just `mt`.
+    */
+  private def fieldsWithOwner(t: Type): Seq[(Field, Type)] =
+    t.typEx match
+      case ate: AggregateTypeExpression => ate.fields.map(f => f -> t)
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).toSeq.flatMap(fieldsWithOwner)
+      case _ => Seq.empty[(Field, Type)]
+
+  /** Does [[Field]] `f`, declared on message-Type `owner`, name Processor `p` as its
+    * `Id(target)`? Resolved-identity comparison (`eq`), never by name -- looks the field's
+    * `UniqueId.entityPath` up in the refMap using `owner` as the key's parent, which is the SAME
+    * parent [[ResolutionPass]] recorded it under (see [[fieldsWithOwner]]).
+    */
+  private def isAddressFieldFor(f: Field, owner: Type, p: Processor[?]): Boolean =
+    f.typeEx match
+      case uid: UniqueId =>
+        resolution.refMap.definitionOf[Processor[?]](uid.entityPath, owner).exists(_ eq p)
+      case _ => false
+
   private def checkTellAddressing(ts: TellStatement, parents: Parents): Unit =
     checkRef[Processor[?]](ts.processorRef, parents).foreach { p =>
-      operandType(ts.msg).filter(_.nonEmpty).foreach { mt =>
-        val candidates = aggregateFieldsOf(mt.typEx).filter { f =>
-          f.typeEx match
-            case uid: UniqueId => uid.entityPath.value.lastOption.contains(p.id.value)
-            case _             => false
-        }
-        ts.by match
-          case Some(name) =>
-            check(
-              candidates.exists(_.id.value == name.value),
-              s"'by ${name.value}' must name a field of ${mt.identify} typed " +
-                s"'Id(${p.id.value})'; candidates are " +
-                (if candidates.isEmpty then "none" else candidates.map(_.id.value).mkString(", ")),
-              Error,
-              name.loc,
-              suggestion = s"Add a field typed 'Id(${p.id.value})' to ${mt.identify}."
-            )
-          case None =>
-            if candidates.size > 1 then
-              messages.addError(
-                ts.loc,
-                s"${mt.identify} carries ${candidates.size} fields typed 'Id(${p.id.value})' " +
-                  s"(${candidates.map(_.id.value).mkString(", ")}), so which instance this " +
-                  s"addresses is ambiguous",
-                suggestion = s"Add 'by ${candidates.head.id.value}' to choose one."
+      operandType(ts.msg).foreach { mt =>
+        val fieldsAndOwners = fieldsWithOwner(mt)
+        if fieldsAndOwners.nonEmpty then
+          // Match candidates by RESOLVED IDENTITY, not by the last path segment's NAME (Reid,
+          // 2026-08-13, overriding the brief's Step 4 pseudocode). Two entities named `Order` in
+          // different contexts must not collide: a field typed `Id(A.Order)` is not an address
+          // for `entity B.Order`, no matter what its path's last segment reads. Verified: with the
+          // name-match version, adding a second same-named entity in a different context turned a
+          // legal model's tell into a false ambiguity Error (see the "NOT be fooled by a foreign
+          // field..." and "NOT report a false ambiguity..." cases in `TellAddressingTest`).
+          val candidates = fieldsAndOwners.collect {
+            case (f, owner) if isAddressFieldFor(f, owner, p) => f
+          }
+          ts.by match
+            case Some(name) =>
+              check(
+                candidates.exists(_.id.value == name.value),
+                s"'by ${name.value}' must name a field of ${mt.identify} typed " +
+                  s"'Id(${p.id.value})'; candidates are " +
+                  (if candidates.isEmpty then "none"
+                   else candidates.map(_.id.value).mkString(", ")),
+                Error,
+                name.loc,
+                suggestion = s"Add a field typed 'Id(${p.id.value})' to ${mt.identify}."
               )
-            else if candidates.isEmpty && p.isInstanceOf[Entity] then
-              messages.addCompleteness(
-                ts.loc,
-                s"${mt.identify} carries no field typed 'Id(${p.id.value})', so which " +
-                  s"${p.id.value} instance this addresses is unspecified",
-                suggestion =
-                  s"Add a field typed 'Id(${p.id.value})' to ${mt.identify} and populate it."
-              )
+            case None =>
+              if candidates.size > 1 then
+                messages.addError(
+                  ts.loc,
+                  s"${mt.identify} carries ${candidates.size} fields typed 'Id(${p.id.value})' " +
+                    s"(${candidates.map(_.id.value).mkString(", ")}), so which instance this " +
+                    s"addresses is ambiguous",
+                  suggestion = s"Add 'by ${candidates.head.id.value}' to choose one."
+                )
+              else if candidates.isEmpty && p.isInstanceOf[Entity] then
+                messages.addCompleteness(
+                  ts.loc,
+                  s"${mt.identify} carries no field typed 'Id(${p.id.value})', so which " +
+                    s"${p.id.value} instance this addresses is unspecified",
+                  suggestion =
+                    s"Add a field typed 'Id(${p.id.value})' to ${mt.identify} and populate it."
+                )
       }
     }
   end checkTellAddressing

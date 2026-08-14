@@ -149,6 +149,180 @@ class TellAddressingTest extends AbstractValidatingTest {
       text must include("why")
     }
 
+    "derive the address through an ALIAS-declared message type" in { (td: TestData) =>
+      // Regression for a review finding: `Type.isEmpty` (= `Container.isEmpty` over `Type.contents`)
+      // is vacuously TRUE for an `AliasedTypeExpression` -- `Type.contents` returns `Seq.empty` for
+      // anything that isn't directly an Aggregation/AggregateUseCaseTypeExpression/Enumeration --
+      // so gating the whole check on `mt.isEmpty` treated EVERY alias-declared message as a `???`
+      // stub and silently skipped it, no matter how many fields the aliased-to type had.
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    command Shipment is { orderId: Id(entity Order) } with { briefly "sb" }
+          |    command Ship is Shipment with { briefly "s" }
+          |    command Go is { why: String } with { briefly "g" }
+          |    record R is { total: Integer } with { briefly "r" }
+          |    entity Order is {
+          |      state OS of record R is {
+          |        handler OH is { on command Shipment { do "ship" } } with { briefly "oh" }
+          |      } with { briefly "os" }
+          |    } with { briefly "e" }
+          |    entity Caller is {
+          |      state CS of record R is {
+          |        handler CH is {
+          |          on command Go { tell command Ship to entity Order }
+          |        } with { briefly "ch" }
+          |      } with { briefly "ce" }
+          |    } with { briefly "c" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      // Bare MessageRef form (no constructor args) -- a Constructor's OWN alias-following bug in
+      // `validateConstructor` (a pre-existing, separate gap: `typ.typEx match { case ate:
+      // AggregateTypeExpression => ate.fields; case _ => Seq.empty }` doesn't follow the alias
+      // either, so `Ship(orderId = oid)` misreports "'orderId' is not a field of Type 'Ship'") is
+      // out of this task's scope -- `checkTellAddressing` itself doesn't care about the msg's
+      // syntactic shape, only its resolved [[Type]], so a bare ref isolates the fix under test.
+      val msgs = diagnostics(src, "addr-alias-derived")
+      msgs.justErrors mustBe empty
+      msgs.map(_.message).mkString("\n") must not include "which Order instance"
+    }
+
+    "NOT silently accept a garbage 'by' field for an ALIAS-declared message type" in { (td: TestData) =>
+      // Same regression as above, from the OTHER side: before the fix, an alias-declared message
+      // was treated as a stub and this whole check -- including 'by' validation -- never ran, so
+      // 'by nonsense' was accepted with no diagnostic at all. This is the review finding's exact
+      // failure scenario.
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    command Shipment is {
+          |      fromOrder: Id(entity Order), toOrder: Id(entity Order)
+          |    } with { briefly "sb" }
+          |    command Ship is Shipment with { briefly "s" }
+          |    command Go is { why: String } with { briefly "g" }
+          |    record R is { total: Integer } with { briefly "r" }
+          |    entity Order is {
+          |      state OS of record R is {
+          |        handler OH is { on command Shipment { do "ship" } } with { briefly "oh" }
+          |      } with { briefly "os" }
+          |    } with { briefly "e" }
+          |    entity Caller is {
+          |      state CS of record R is {
+          |        handler CH is {
+          |          on command Go { tell command Ship to entity Order by nonsense }
+          |        } with { briefly "ch" }
+          |      } with { briefly "ce" }
+          |    } with { briefly "c" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val text = diagnostics(src, "addr-alias-by-wrong").justErrors.map(_.message).mkString("\n")
+      text must include("nonsense")
+    }
+
+    "NOT be fooled by a foreign field typed 'Id' for a SAME-NAMED entity in another context" in {
+      (td: TestData) =>
+        // Regression for a review finding: the brief's Step 4 pseudocode matched candidates by the
+        // last PATH SEGMENT'S NAME (`uid.entityPath.value.lastOption.contains(p.id.value)`), so two
+        // entities named 'Order' in different contexts collided -- a field typed `Id(CtxA.Order)`
+        // counted as an address for `entity CtxB.Order` merely because both paths end in "Order".
+        // Here `foreignId` genuinely addresses `CtxA.Order`, not the tell's target `CtxB.Order`, so
+        // it must NOT be picked up: the real (and only) candidate is `orderId`, and the tell must
+        // resolve unambiguously without 'by'.
+        val src =
+          """domain Dom is {
+            |  context CtxA is {
+            |    command Noop is { why: String } with { briefly "n" }
+            |    record RA is { total: Integer } with { briefly "ra" }
+            |    entity Order is {
+            |      state OS of record RA is {
+            |        handler OH is { on command Noop { do "noop" } } with { briefly "oh" }
+            |      } with { briefly "os" }
+            |    } with { briefly "ea" }
+            |  } with { briefly "ca" }
+            |  context CtxB is {
+            |    command Ship is {
+            |      foreignId: Id(entity CtxA.Order), orderId: Id(entity CtxB.Order)
+            |    } with { briefly "s" }
+            |    command Go is { why: String } with { briefly "g" }
+            |    record RB is { total: Integer } with { briefly "rb" }
+            |    entity Order is {
+            |      state OS of record RB is {
+            |        handler OH is { on command Ship { do "ship" } } with { briefly "oh" }
+            |      } with { briefly "os" }
+            |    } with { briefly "eb" }
+            |    entity Caller is {
+            |      state CS of record RB is {
+            |        handler CH is {
+            |          on command Go {
+            |            let foreignOid = initiate entity CtxA.Order
+            |            let oid = initiate entity CtxB.Order
+            |            tell command Ship(foreignId = foreignOid, orderId = oid) to entity CtxB.Order
+            |          }
+            |        } with { briefly "ch" }
+            |      } with { briefly "ce" }
+            |    } with { briefly "eb2" }
+            |  } with { briefly "cb" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val msgs = diagnostics(src, "addr-name-collision-genuine")
+        msgs.justErrors mustBe empty
+        msgs.map(_.message).mkString("\n") must not include "which CtxB.Order instance"
+    }
+
+    "NOT report a false ambiguity when both Id-typed fields address a FOREIGN same-named entity" in {
+      (td: TestData) =>
+        // The other half of the same regression: two fields both typed `Id(entity CtxA.Order)`
+        // (neither addressing the tell's actual target, `entity CtxB.Order`) must NOT be reported
+        // as an ambiguous derivation just because their last path segment matches the target's
+        // name. The correct outcome is "no candidates" -- a CompletenessWarning, not an Error --
+        // exactly as if the message carried no Id-typed field for the target at all.
+        val src =
+          """domain Dom is {
+            |  context CtxA is {
+            |    command Noop is { why: String } with { briefly "n" }
+            |    record RA is { total: Integer } with { briefly "ra" }
+            |    entity Order is {
+            |      state OS of record RA is {
+            |        handler OH is { on command Noop { do "noop" } } with { briefly "oh" }
+            |      } with { briefly "os" }
+            |    } with { briefly "ea" }
+            |  } with { briefly "ca" }
+            |  context CtxB is {
+            |    command Ship is {
+            |      fromForeign: Id(entity CtxA.Order), toForeign: Id(entity CtxA.Order)
+            |    } with { briefly "s" }
+            |    command Go is { why: String } with { briefly "g" }
+            |    record RB is { total: Integer } with { briefly "rb" }
+            |    entity Order is {
+            |      state OS of record RB is {
+            |        handler OH is { on command Ship { do "ship" } } with { briefly "oh" }
+            |      } with { briefly "os" }
+            |    } with { briefly "eb" }
+            |    entity Caller is {
+            |      state CS of record RB is {
+            |        handler CH is {
+            |          on command Go {
+            |            let f = initiate entity CtxA.Order
+            |            let t = initiate entity CtxA.Order
+            |            tell command Ship(fromForeign = f, toForeign = t) to entity CtxB.Order
+            |          }
+            |        } with { briefly "ch" }
+            |      } with { briefly "ce" }
+            |    } with { briefly "eb2" }
+            |  } with { briefly "cb" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val msgs = diagnostics(src, "addr-name-collision-foreign")
+        val errText = msgs.justErrors.map(_.message).mkString("\n")
+        errText must not include "ambiguous"
+        val warnText =
+          msgs.filter(_.kind == Messages.CompletenessWarning).map(_.message).mkString("\n")
+        warnText must include("Ship")
+        warnText must include("Order")
+    }
+
     "stay SILENT for a repository target" in { (td: TestData) =>
       // A repository is a singleton, reached by path -- there is nothing to distinguish, so
       // the diagnostic is entity-only even though the MECHANISM is uniform.
