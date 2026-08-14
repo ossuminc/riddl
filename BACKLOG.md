@@ -62,6 +62,23 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **Two narrow-operand gaps left by the message-value widening (Task 1,
+  `9d0e47acd`).** Both are false-POSITIVE-only (an advisory warning that should
+  not fire), never a missed Error, and both have zero corpus impact today because
+  riddl-models uses no widened-source operand yet. Revisit if adoption grows.
+  1. **`elements` is not threaded into `widenedOperandType`** — it is called with
+     `Map.empty`, so a `foreach`-bound loop variable
+     (`foreach msg in cmds do { tell msg to X }`) validates as a legal operand
+     but is invisible to `checkTellAddressing`'s `by`/ambiguity Errors and to the
+     three completeness checks. **Pre-existing in kind** — the old `operandType`
+     never consulted `elements` either — and `foreach` element was not among the
+     five source kinds Task 1 enumerated. Documented in the helper's docstring
+     rather than left silent.
+  2. **`emittedMessageTypes` is still narrow** — a whole-root `Finder` sweep with
+     no per-clause scope, feeding A70's correlation-fold advisory. Fixing it
+     properly needs a restructuring bigger than a fix round.
+
+
 - ~~**FLAKY CI GATE: `PerformanceBenchmarkTest` 100x cache-speedup assertion**~~
   — **DONE 2026-08-14, `32340312e`.** Replaced with a monotonic check (cached
   strictly faster) plus a 5x floor; the precise multiplier stays as `info`
