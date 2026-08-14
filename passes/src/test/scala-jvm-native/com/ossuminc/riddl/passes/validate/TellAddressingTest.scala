@@ -323,6 +323,194 @@ class TellAddressingTest extends AbstractValidatingTest {
         warnText must include("Order")
     }
 
+    "derive the address through an ALIAS-declared Id FIELD type" in { (td: TestData) =>
+      // Filed by riddl-models against rc.14: `isAddressFieldFor` matched `f.typeEx` against
+      // `case uid: UniqueId` and fell to `false` for everything else, so a field typed by the
+      // named alias `type OrderId is Id(entity Order)` was never a candidate. That alias IS the
+      // documented house style (riddl-models CLAUDE.md, "Type IDs as {Name}Id"), so the check
+      // caught only the rare inline spelling and misfired on the common one: reactive-bbq went
+      // from 0 messages at rc.13 to 111 at rc.14, 72 of 86 distinct ones false.
+      //
+      // Note the two commands are otherwise IDENTICAL -- `DirectCmd` was never flagged and
+      // `AliasCmd` always was, and the alias is the whole difference between them.
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    type OrderId is Id(entity Order)
+          |    command DirectCmd is { orderId: Id(entity Order) } with { briefly "d" }
+          |    command AliasCmd is { orderId: OrderId } with { briefly "a" }
+          |    command Go is { why: String } with { briefly "g" }
+          |    record R is { total: Integer } with { briefly "r" }
+          |    entity Order is {
+          |      state OS of record R is {
+          |        handler OH is {
+          |          on command DirectCmd { do "direct" }
+          |          on command AliasCmd { do "alias" }
+          |        } with { briefly "oh" }
+          |      } with { briefly "os" }
+          |    } with { briefly "e" }
+          |    entity Caller is {
+          |      state CS of record R is {
+          |        handler CH is {
+          |          on command Go {
+          |            tell command DirectCmd to entity Order
+          |            tell command AliasCmd to entity Order
+          |          }
+          |        } with { briefly "ch" }
+          |      } with { briefly "cs" }
+          |    } with { briefly "ce" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val msgs = diagnostics(src, "addr-alias-field")
+      msgs.justErrors mustBe empty
+      msgs.map(_.message).mkString("\n") must not include "which Order instance"
+    }
+
+    "REJECT an ambiguous derivation through ALIAS-declared Id field types" in { (td: TestData) =>
+      // The other side of the same fix: once an aliased field COUNTS as a candidate, two of them
+      // must produce the ambiguity Error exactly as two inline ones do. Without this case a fix
+      // that resolved aliases only in the "is there at least one?" direction would still look
+      // green -- the warning would stop firing while `by`/ambiguity stayed blind.
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    type OrderId is Id(entity Order)
+          |    command Ship is { fromOrder: OrderId, toOrder: OrderId } with { briefly "s" }
+          |    command Go is { why: String } with { briefly "g" }
+          |    record R is { total: Integer } with { briefly "r" }
+          |    entity Order is {
+          |      state OS of record R is {
+          |        handler OH is { on command Ship { do "ship" } } with { briefly "oh" }
+          |      } with { briefly "os" }
+          |    } with { briefly "e" }
+          |    entity Caller is {
+          |      state CS of record R is {
+          |        handler CH is {
+          |          on command Go { tell command Ship to entity Order }
+          |        } with { briefly "ch" }
+          |      } with { briefly "cs" }
+          |    } with { briefly "ce" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val text = diagnostics(src, "addr-alias-field-ambiguous").justErrors.map(_.message).mkString("\n")
+      text must include("fromOrder")
+      text must include("toOrder")
+    }
+
+    "NOT treat an alias to a FOREIGN same-named entity as an address" in { (td: TestData) =>
+      // Resolution must survive the indirection: `ForeignId` aliases `Id(entity CtxA.Order)`, so
+      // it is NOT an address for `entity CtxB.Order` even though both paths end in "Order". This
+      // pins that the alias arm compares resolved identity (`eq`) like the direct arm, rather
+      // than degrading to the name matching the direct arm was explicitly fixed to avoid.
+      val src =
+        """domain Dom is {
+          |  context CtxA is {
+          |    command Noop is { why: String } with { briefly "n" }
+          |    record RA is { total: Integer } with { briefly "ra" }
+          |    entity Order is {
+          |      state OS of record RA is {
+          |        handler OH is { on command Noop { do "noop" } } with { briefly "oh" }
+          |      } with { briefly "os" }
+          |    } with { briefly "ea" }
+          |  } with { briefly "ca" }
+          |  context CtxB is {
+          |    type ForeignId is Id(entity CtxA.Order)
+          |    command Ship is { foreignId: ForeignId } with { briefly "s" }
+          |    command Go is { why: String } with { briefly "g" }
+          |    record RB is { total: Integer } with { briefly "rb" }
+          |    entity Order is {
+          |      state OS of record RB is {
+          |        handler OH is { on command Ship { do "ship" } } with { briefly "oh" }
+          |      } with { briefly "os" }
+          |    } with { briefly "eb" }
+          |    entity Caller is {
+          |      state CS of record RB is {
+          |        handler CH is {
+          |          on command Go { tell command Ship to entity CtxB.Order }
+          |        } with { briefly "ch" }
+          |      } with { briefly "cs" }
+          |    } with { briefly "ce" }
+          |  } with { briefly "cb" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val msgs = diagnostics(src, "addr-alias-field-foreign")
+      msgs.justErrors.map(_.message).mkString("\n") must not include "ambiguous"
+      val warnText =
+        msgs.filter(_.kind == Messages.CompletenessWarning).map(_.message).mkString("\n")
+      warnText must include("Ship")
+      warnText must include("Order")
+    }
+
+    "TERMINATE on a cyclic alias used as the MESSAGE type" in { (td: TestData) =>
+      // Pre-existing in rc.14, found while fixing the field-type alias case and verified against
+      // the released binary: `fieldsWithOwner` follows the alias chain with no visited set, so
+      // `type A is B` / `type B is A` recurses forever. Confirmed by running rc.14's riddlc --
+      // `java.lang.StackOverflowError ... at ValidationPass.fieldsWithOwner`. That is a crash of
+      // the validator, not a diagnostic: the author gets "Exception Thrown" and no line number.
+      //
+      // A cycle is a modelling error that some other check may well want to report; what this
+      // test pins is only that resolving one TERMINATES. Asserting on the absence of a crash is
+      // the whole point, so there is deliberately no assertion about the messages.
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    type A is B
+          |    type B is A
+          |    command Ship is A with { briefly "s" }
+          |    command Go is { why: String } with { briefly "g" }
+          |    record R is { total: Integer } with { briefly "r" }
+          |    entity Order is {
+          |      state OS of record R is {
+          |        handler OH is { on command Ship { do "ship" } } with { briefly "oh" }
+          |      } with { briefly "os" }
+          |    } with { briefly "e" }
+          |    entity Caller is {
+          |      state CS of record R is {
+          |        handler CH is {
+          |          on command Go { tell command Ship to entity Order }
+          |        } with { briefly "ch" }
+          |      } with { briefly "cs" }
+          |    } with { briefly "ce" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      diagnostics(src, "addr-alias-cycle-message") // must not StackOverflow
+      succeed
+    }
+
+    "TERMINATE on a cyclic alias used as an Id FIELD type" in { (td: TestData) =>
+      // The same cycle reached through the NEW recursion this fix adds. Without a shared visited
+      // set, resolving a field's type through aliases reintroduces the crash above on a model
+      // that rc.14 merely mis-warned about -- turning a wrong message into a dead validator.
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    type A is B
+          |    type B is A
+          |    command Ship is { thing: A } with { briefly "s" }
+          |    command Go is { why: String } with { briefly "g" }
+          |    record R is { total: Integer } with { briefly "r" }
+          |    entity Order is {
+          |      state OS of record R is {
+          |        handler OH is { on command Ship { do "ship" } } with { briefly "oh" }
+          |      } with { briefly "os" }
+          |    } with { briefly "e" }
+          |    entity Caller is {
+          |      state CS of record R is {
+          |        handler CH is {
+          |          on command Go { tell command Ship to entity Order }
+          |        } with { briefly "ch" }
+          |      } with { briefly "cs" }
+          |    } with { briefly "ce" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      diagnostics(src, "addr-alias-cycle-field") // must not StackOverflow
+      succeed
+    }
+
     "stay SILENT for a repository target" in { (td: TestData) =>
       // A repository is a singleton, reached by path -- there is nothing to distinguish, so
       // the diagnostic is entity-only even though the MECHANISM is uniform.

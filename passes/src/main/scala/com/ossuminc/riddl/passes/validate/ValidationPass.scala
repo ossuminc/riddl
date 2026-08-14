@@ -5660,22 +5660,65 @@ case class ValidationPass(
     * parent). Looking a field's resolution up again later requires the SAME parent it was recorded
     * under, so the owning Type must travel with the field, not just `mt`.
     */
-  private def fieldsWithOwner(t: Type): Seq[(Field, Type)] =
-    t.typEx match
-      case ate: AggregateTypeExpression => ate.fields.map(f => f -> t)
-      case ate: AliasedTypeExpression =>
-        resolveTypeAlias(ate).toSeq.flatMap(fieldsWithOwner)
-      case _ => Seq.empty[(Field, Type)]
+  private def fieldsWithOwner(t: Type, seen: List[Type] = Nil): Seq[(Field, Type)] =
+    if seen.exists(_ eq t) then Seq.empty[(Field, Type)]
+    else
+      t.typEx match
+        case ate: AggregateTypeExpression => ate.fields.map(f => f -> t)
+        case ate: AliasedTypeExpression =>
+          resolveTypeAlias(ate).toSeq.flatMap(fieldsWithOwner(_, t :: seen))
+        case _ => Seq.empty[(Field, Type)]
 
-  /** Does [[Field]] `f`, declared on message-Type `owner`, name Processor `p` as its
-    * `Id(target)`? Resolved-identity comparison (`eq`), never by name -- looks the field's
-    * `UniqueId.entityPath` up in the refMap using `owner` as the key's parent, which is the SAME
-    * parent [[ResolutionPass]] recorded it under (see [[fieldsWithOwner]]).
+  /** The cycle guard shared by [[fieldsWithOwner]] and [[isAddressTypeExpression]], and the reason
+    * both carry a `seen` list: `type A is B` / `type B is A` otherwise recurses forever. This was
+    * a real crash in rc.14 (`java.lang.StackOverflowError ... at
+    * ValidationPass.fieldsWithOwner`, reproduced against the released binary), which surfaces to
+    * the author as `[severe] Exception Thrown` with no line number -- strictly worse than any
+    * wrong message, since it takes the whole pass chain down with it.
+    *
+    * Reference identity (`eq`), NOT `contains`: [[Definition]] overrides `equals` structurally,
+    * so a `Set`/`contains` guard would treat two DISTINCT but identical alias declarations as the
+    * same node and silently truncate a legitimate chain. Alias chains are a handful of links, so
+    * the linear scan is free.
+    *
+    * A cycle is a modelling error in its own right and something may eventually want to REPORT
+    * it; terminating is a separate obligation from diagnosing, and this only does the former.
     */
   private def isAddressFieldFor(f: Field, owner: Type, p: Processor[?]): Boolean =
-    f.typeEx match
+    isAddressTypeExpression(f.typeEx, owner, p, Nil)
+
+  /** Does type expression `te`, declared on `owner`, denote `Id(p)`?
+    *
+    * Resolved-identity comparison (`eq`), never by name -- looks the `UniqueId.entityPath` up in
+    * the refMap using `owner` as the key's parent, which is the SAME parent [[ResolutionPass]]
+    * recorded it under (see [[fieldsWithOwner]]).
+    *
+    * The alias arm is riddl-models' rc.14 report: a field typed by the named alias `type OrderId
+    * is Id(entity Order)` was not recognised, because this matched `UniqueId` alone and fell to
+    * `false` for everything else. That alias is the DOCUMENTED house style, so the check caught
+    * only the rare inline spelling and misfired on the common one -- 72 of 86 distinct findings
+    * in reactive-bbq were false, and it aborted riddl-models' `checkAll`. [[fieldsWithOwner]]
+    * already followed aliases for the MESSAGE type; this is the same step for the FIELD's type,
+    * which is why the two now share a shape and a guard.
+    *
+    * `owner` must become the resolved alias `Type` on the way down: a `Type`'s own type
+    * expression is resolved with that `Type` as `parents.head`, so looking `entityPath` up under
+    * the ORIGINAL owner would miss (see [[fieldsWithOwner]]'s note on the same point).
+    */
+  private def isAddressTypeExpression(
+    te: TypeExpression,
+    owner: Type,
+    p: Processor[?],
+    seen: List[Type]
+  ): Boolean =
+    te match
       case uid: UniqueId =>
         resolution.refMap.definitionOf[Processor[?]](uid.entityPath, owner).exists(_ eq p)
+      case ate: AliasedTypeExpression =>
+        resolveTypeAlias(ate).exists { aliased =>
+          !seen.exists(_ eq aliased) &&
+          isAddressTypeExpression(aliased.typEx, aliased, p, aliased :: seen)
+        }
       case _ => false
 
   /** A70/instance-identity task 6: derive which INSTANCE a `tell` addresses -- the message's field
