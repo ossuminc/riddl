@@ -72,7 +72,78 @@ class RecognizedOptionSetTest extends AbstractValidatingTest {
       // Entity would re-introduce exactly what 2.0 deprecated: an intention spelled as an option.
       val entity = RecognizedOptions.optionSetFor("Entity")
       entity.all must not contain "persistent"
-      RecognizedOptions.optionSetFor("Connector").current must contain("persistent")
+      // Recognized on a Connector -- deliberately `all`, not `current`: this assertion exists to
+      // show the name is SCOPED to Connector, and must not also pin whether it is current there
+      // (it is not; see the Connector split test below).
+      RecognizedOptions.optionSetFor("Connector").all must contain("persistent")
+    }
+
+    "split Connector's options into current and deprecated" in { (td: TestData) =>
+      // synapify 2026-08-14: rc.14 promoted connector durability to an intention and the parser
+      // consumes `option persistent` into it WITH a Deprecation -- but the registry entry never
+      // retired, so `optionSetFor("Connector").current` still advertised it. Synapify's "add
+      // option" picker is driven by `.current`, so the panel offered the spelling and the Problems
+      // pane then flagged the Deprecation the panel had just invited. That is the exact loop the
+      // current/deprecated split was built to close for entity intentions; rc.14 reopened it for
+      // connectors.
+      val set = RecognizedOptions.optionSetFor("Connector")
+      set.deprecated must contain("persistent")
+      set.current must not contain "persistent"
+      set.replacements("persistent") must include("persistent")
+      set.replacements("persistent") must include("connector")
+    }
+
+    "keep a deprecated `persistent` RECOGNIZED on a Connector" in { (td: TestData) =>
+      // Deprecated, not removed: the option must keep parsing (426 uses across riddl-models), so
+      // `optionsFor` -- the "is this name recognized here?" question -- must be unmoved, or a tool
+      // reports "not a recognized RIDDL option" about a name RIDDL still accepts.
+      val set = RecognizedOptions.optionSetFor("Connector")
+      RecognizedOptions.optionsFor("Connector") must contain("persistent")
+      (set.current ++ set.deprecated).toSet mustBe RecognizedOptions.optionsFor("Connector").toSet
+    }
+
+    "leave `persistent` untouched for every OTHER kind" in { (td: TestData) =>
+      // `persistent` is Connector-only, so deprecating it there must shift nothing else. Pins the
+      // reporter's acceptance criterion 4 -- and the per-KIND property generally, since a
+      // name-keyed table would have condemned a Repository's unrelated `transient`/`consistent`.
+      RecognizedOptions.optionSetFor("Repository").all must not contain "persistent"
+      RecognizedOptions.optionSetFor("Entity").all must not contain "persistent"
+      RecognizedOptions.optionSetFor("Context").all must not contain "persistent"
+    }
+
+    // The Connector half of the drift guard below. Same reasoning: the registry claiming a name is
+    // deprecated is worth nothing unless the compiler actually deprecates it, and those live in
+    // two different files (`RecognizedOptions.registry` and `StreamingParser`'s consumed-option
+    // list). rc.14 is precisely the case where they disagreed.
+    "actually deprecate every option it advertises as deprecated for a Connector" in {
+      (td: TestData) =>
+        val deprecated = RecognizedOptions.optionSetFor("Connector").deprecated
+        deprecated must not be empty
+        deprecated.foreach { name =>
+          val src =
+            s"""domain Dom is {
+               |  context Ctx is {
+               |    command Cmd is { why: String }
+               |    source Src is { outlet Out is type Cmd }
+               |    sink Snk is { inlet In is type Cmd }
+               |    connector Conn is {
+               |      from outlet Src.Out to inlet Snk.In
+               |    } with { option $name }
+               |  }
+               |}
+               |""".stripMargin
+          TopLevelParser.parseInputWithMessages(RiddlParserInput(src, s"conn-dep-$name")) match
+            case Left(errs) => fail(s"option '$name' did not parse:\n${errs.format}")
+            case Right((_, msgs)) =>
+              withClue(
+                s"option '$name' is advertised as deprecated but drew no deprecation:\n" +
+                  msgs.format
+              ) {
+                msgs.exists(m =>
+                  m.kind == Messages.Deprecation && m.message.contains(name)
+                ) mustBe true
+              }
+        }
     }
 
     // The drift guard. If the registry and the parser ever disagree, this reddens.

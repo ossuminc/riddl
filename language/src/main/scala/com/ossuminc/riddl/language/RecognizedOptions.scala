@@ -120,11 +120,26 @@ object RecognizedOptions:
     // warning, deliberately a warning because the in-memory downgrade is a legitimate deployment
     // decision -- there is no equivalent reading here.
     //
-    // Filed by riddl-generator for the `gateway` case; the ruling generalised past it. The option
-    // itself is on its way out: BACKLOG § 1 has connector INTENTIONS (`persistent` plus
-    // `at-least-once` | `at-most-once`) replacing it, after which this entry retires. It must keep
-    // working until then -- all 426 uses across riddl-models are on connectors.
-    "persistent" -> OptionSpec(Seq("Connector"), 0, 0, severity = Messages.Error),
+    // Filed by riddl-generator for the `gateway` case; the ruling generalised past it.
+    //
+    // The connector INTENTIONS shipped in 2.0.0-rc.14, so this entry is now DEPRECATED for
+    // Connector rather than removed -- `StreamingParser` consumes `option persistent` into the
+    // intention and reports a Deprecation, and all 426 uses across riddl-models must keep parsing.
+    // Marking it here is what stops an authoring tool inviting the old spelling: synapify's "add
+    // option" picker is driven by `optionSetFor(kind).current`, so while this said "current" the
+    // panel offered a spelling whose own Problems pane then flagged it (filed 2026-08-14, the same
+    // loop the current/deprecated split was built to close for entity intentions).
+    //
+    // `severity` is retained for the parents check: where the option IS still written, naming a
+    // non-Connector parent asserts durability nothing can provide, which stays an Error.
+    "persistent" -> OptionSpec(
+      Seq("Connector"),
+      0,
+      0,
+      Seq("Connector"),
+      Some("write `persistent` before `connector`"),
+      severity = Messages.Error
+    ),
     "technology" -> OptionSpec(Seq.empty, 1, 1),
     // riddl-generator's Quarkus generator lowers an outlet to either an `@Outgoing`
     // method (back-pressured, but a method has ONE return so it fits only a single
