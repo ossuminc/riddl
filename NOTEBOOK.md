@@ -12,25 +12,36 @@ this NOTEBOOK's body. This says only where things stand and what a cold session
 would get wrong.
 
 **State — every line produced by a command in the session that wrote it
-(2026-08-14):**
+(2026-08-14, second session):**
 
-- Branch `release/2`, **tree CLEAN, 0 unpushed**, HEAD `76762de0c`,
-  `git describe` = `2.0.0-rc.14-7-g76762de0c`.
+- Branch `release/2`, **tree CLEAN**, HEAD `54d822883`, `git describe` =
+  `2.0.0-rc.14-12-g54d822883`. **4 commits UNPUSHED** (`ccd278c00`,
+  `e0a424ed0`, `612a5706a`, `54d822883`).
 - **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease (`prerelease=true`), Maven
-  coordinates published from the tag, `publishLocal` done, npm on the **`rc`**
-  dist-tag (`latest` did NOT move), tap commit `489bbb0` touched
-  `Formula/riddlc-rc.rb` and only that file.
-- **`~/Code/ossuminc/bin/riddlc` is CURRENT at `2.0.0-rc.14`**, commit
-  `dd42a4903` — verified by running it. It was staged deliberately for
-  riddl-models' `.bast` regeneration. **This REVERSES the long-standing note
-  that it was stale.** Bare `riddlc` on `$PATH` is still the old tap build.
-- **Certified at rc.14**: JVM 2400 / JS 750 / Native 1671, all three reconciling
-  exactly against a prediction made before the run. Floors in
-  `.claude/skills/rc/SKILL.md` match. **Native is expected to be 1840 next
-  time** — 13 language parser suites were wired onto Native (`546f2f834`, +169)
-  and the floor was deliberately NOT raised on arithmetic alone.
+  coordinates published from the tag, npm on the **`rc`** dist-tag (`latest` did
+  NOT move), tap commit `489bbb0` touched `Formula/riddlc-rc.rb` only.
+- **`publishLocal` done at `2.0.0-rc.14-12-54d82288`** (`[success]`, 54s,
+  including the local npm tgz), and `~/Code/ossuminc/bin/riddlc` restaged from
+  the SAME commit — the two are one operation. Bare `riddlc` on `$PATH` is still
+  the old tap build.
+- **TWO CORPUS TESTS ARE RED ON PURPOSE** — `RiddlModelsRoundTripTest` (16 of
+  189) and `Root2JsonCorpusTest` (173/189). Cause is the alias fix in
+  `ccd278c00` exposing 49 real addressing defects in riddl-models; task filed
+  there (`2026-08-14-alias-fix-exposes-49-addressing-defects.md`). **Do not
+  "fix" these here** — they go green when riddl-models lands its side. Baseline
+  A/B verified 189/189 immediately before the fix, so the delta is exactly those
+  49.
+- **Everything else green, all three platforms**: JVM utils 146 / language 668 /
+  passes 1223 / testkit 2 / riddlc 21; JS **750 exactly** (matches the floor);
+  Native language 512 / passes 1067 (full Native run earlier totalled 1865,
+  above the predicted 1840). TatSu 104/127 = baseline; GBNF regenerated, the
+  validator reports it fresh.
 
-**IN FLIGHT — the message-value plan, Task 1 of 7 done.**
+**IN FLIGHT — the message-value plan, Task 1 of 7 done. Task 2 NOT started.**
+The site audit for Task 2 IS done and is worth not repeating: ~25 dispatch sites
+in `ValidationPass`, both directions of JSON (`JsonifierPass` 1363/1372/1373,
+`JsonAstBuilder` 1410/1425/1426), `StatementParser` (174/186/270), and four EBNF
+rules (`:307` yield, `:308` reply, `:387` morph, `:298` deliverable_message_value).
 
 Plan `docs/superpowers/plans/2026-08-14-message-value-source.md`, design
 `docs/superpowers/specs/2026-08-14-message-value-source-design.md`, ledger
