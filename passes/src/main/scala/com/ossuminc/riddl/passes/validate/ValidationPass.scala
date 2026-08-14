@@ -906,27 +906,76 @@ case class ValidationPass(
     }
   end checkOnTermLeadingParameter
 
-  /** A56: check a bound `tell`/`send` operand — `tell p to entity F`.
+  /** A56 (widened by the message-value-source design, 2026-08-14): check a `tell`/`send` operand
+    * that names a VALUE rather than a keyword-led message ref — `tell p to entity F`, `send
+    * order.lastEvent to outlet Bar`.
     *
-    * `p` must name a binding introduced by an enclosing on-clause, which `ResolutionPass` has keyed
-    * to the handled message's Type. Nothing else can supply a message value, so an unresolved name
-    * here is an Error rather than a warning: the statement names a message that does not exist.
+    * Originally A56 asked only whether `vr` was an on-clause binding, via the same refMap key
+    * `ResolutionPass` uses for one (`refMap.definitionOf[Type](vr.path)`). That missed every other
+    * legal source: a state-record field, a `let`-local, a function result, or an `ask` result. Each
+    * of those resolves through [[valueRefTypeExpr]] — the SAME A55/lifecycle-parameter walk every
+    * other bare `ValueRef` uses (elements, then lets, then the refMap) — not through the on-clause
+    * binding's Type key alone. So the rule is now one probe covering every source: `vr` must resolve
+    * to a [[TypeExpression]] that IS, or ALIASES to (see [[typeExprMessageKind]]), a
+    * command/event/query/result [[AggregateUseCaseTypeExpression]]. Nothing else can supply a
+    * message value, so an unresolved or wrongly-shaped operand is an Error, not a warning.
+    *
+    * `self` is special-cased FIRST. It is a synthesized Aggregation (`id`/`version`, see
+    * [[SelfValue]]), not a message, and would otherwise fall through to the generic "does not name a
+    * message value" Error — true, but not the reason, and not what helps the author fix it. Guarded
+    * on `elements`/`lets` so a local that happens to be named `self` (shadowing) is not misreported.
     *
     * This check is owned by validation, not the resolver, for the reason recorded in
     * `ResolutionPass.quietly` — a ValueRef may legitimately fail to resolve there (a `let`-local is
     * lexical and invisible to the symbol table), so the resolver stays quiet and the diagnostic is
     * issued here where the operand's meaning is known.
+    *
+    * Scope: `send` and `tell` only. `yield`/`reply` compare their operand against the clause's
+    * declared `yields`/`replies` and `morph` against a record, not a message — both are widened
+    * separately.
     */
-  private def checkBoundMessageOperand(vr: ValueRef, statement: String): Unit =
-    if resolution.refMap.definitionOf[Type](vr.path).isEmpty then
+  private def checkMessageOperandSource(
+    vr: ValueRef,
+    statement: String,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    val names = vr.path.value
+    if names.sizeIs == 1 && names.head == "self" &&
+      !elements.contains("self") && letIndexOf("self", lets) < 0
+    then
       messages.addError(
         vr.loc,
-        s"'${vr.path.format}' in this '$statement' does not name a message bound by an enclosing " +
-          s"'on' clause, so there is no message to deliver",
-        suggestion = s"Bind the handled message first, e.g. " +
-          s"'on ${vr.path.format}: command SomeCommand is { $statement ${vr.path.format} to … }', " +
-          s"or name the message explicitly, e.g. '$statement command SomeCommand to …'."
+        s"'self' in this '$statement' is the synthesized instance record (its 'id' and " +
+          "'version'), not a message, so there is no message to deliver",
+        suggestion = s"Send an actual message, e.g. '$statement event SomethingHappened(...) " +
+          s"to …', or send one of its fields, e.g. '$statement self.id to …', if a value (not a " +
+          "message) is what the target expects."
       )
+    else
+      valueRefTypeExpr(vr, parents, lets, elements) match
+        case Some(te) if typeExprMessageKind(te).nonEmpty => () // a legal message value
+        case Some(te) =>
+          messages.addError(
+            vr.loc,
+            s"'${vr.path.format}' in this '$statement' names a value of type '${te.format}', not " +
+              "a command, event, query or result, so there is no message to deliver",
+            suggestion = s"Name a value whose type is a command, event, query or result, or name " +
+              s"the message explicitly, e.g. '$statement command SomeCommand to …'."
+          )
+        case None =>
+          messages.addError(
+            vr.loc,
+            s"'${vr.path.format}' in this '$statement' does not name a message value — legal " +
+              "sources are a state-record field, an on-clause binding, a 'let'-local, a function " +
+              "result, or an 'ask' result",
+            suggestion = s"Bind the handled message first, e.g. " +
+              s"'on ${vr.path.format}: command SomeCommand is { $statement ${vr.path.format} to " +
+              s"… }', declare a 'let ${vr.path.format} = …' local naming a message value, or " +
+              s"name the message explicitly, e.g. '$statement command SomeCommand to …'."
+          )
+  end checkMessageOperandSource
 
   /** A54/A56: the NAME of the message an operand denotes. For a ref or constructor that is the last
     * path component; for a binding it is the resolved Type's id, since the binding's own path names
@@ -1155,12 +1204,12 @@ case class ValidationPass(
             checkNonEmptyValue(ls, "value to set", onClause, loc, MissingWarning, required = true)
           case _ => ()
       case SendStatement(_, msg, portlet) =>
-        // A54: a bare ref is checked here; a Constructor is validated in checkStatementScopes (needs
-        // the threaded `let` scope for its args).
+        // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
+        // checkStatementScopes (both need the threaded `let`/element scope — A56/message-value-source).
         msg match
           case ref: MessageRef => checkRef[Type](ref, parents)
           case _: Constructor  => ()
-          case vr: ValueRef    => checkBoundMessageOperand(vr, "send") // A56
+          case _: ValueRef     => ()
         checkRef[Portlet](portlet, parents)
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
@@ -1181,7 +1230,8 @@ case class ValidationPass(
           checkCrossContextReference(processorRef.pathId, entity, onClause, parents)
           collectedTells.addOne((ts, entity))
         }
-        // A54: a bare ref is checked here; a Constructor is validated in checkStatementScopes.
+        // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
+        // checkStatementScopes (both need the threaded `let`/element scope — A56/message-value-source).
         msg match
           case ref: MessageRef =>
             val maybeType = checkRef[Type](ref, parents)
@@ -1189,7 +1239,7 @@ case class ValidationPass(
               checkCrossContextReference(ref.pathId, typ, onClause, parents)
             }
           case _: Constructor => ()
-          case vr: ValueRef   => checkBoundMessageOperand(vr, "tell") // A56
+          case _: ValueRef     => ()
       case WhenStatement(loc, condition, thenStatements, elseStatements, _) =>
         condition match {
           case ls: LiteralString =>
@@ -5614,6 +5664,33 @@ case class ValidationPass(
         resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => typeExprCategory(t.typEx))
       case _ => None
 
+  /** A9b: the four [[AggregateUseCase]]s that are actual MESSAGES — the same set [[MessageRef]]'s
+    * four subtypes (`CommandRef`/`EventRef`/`QueryRef`/`ResultRef`) restrict a keyword-led operand
+    * to. `RecordCase` is deliberately excluded: a Record is `morph`'s shape, not a message's.
+    */
+  private val messageUseCases: scala.collection.immutable.Set[AggregateUseCase] =
+    scala.collection.immutable.Set(
+      AggregateUseCase.CommandCase,
+      AggregateUseCase.EventCase,
+      AggregateUseCase.QueryCase,
+      AggregateUseCase.ResultCase
+    )
+
+  /** A56 (widened): the [[AggregateUseCase]] a resolved [[TypeExpression]] denotes, following
+    * alias chains exactly as [[typeExprCategory]] does immediately above — answering "which
+    * message kind" instead of "boolean/numeric/string". Used by [[checkMessageOperandSource]] to
+    * decide whether a bare `ValueRef` operand names a legal `send`/`tell` message value: `Some`
+    * only for a command/event/query/result aggregate (see [[messageUseCases]]), `None` for a
+    * Record (a `morph` shape, not a message), a Type/Graph/Table aggregate, or any non-aggregate
+    * type.
+    */
+  private def typeExprMessageKind(te: TypeExpression): Option[AggregateUseCase] =
+    te match
+      case auc: AggregateUseCaseTypeExpression => Some(auc.usecase).filter(messageUseCases.contains)
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => typeExprMessageKind(t.typEx))
+      case _ => None
+
   /** A55: the definition a [[ValueRef]] resolved to, straight out of the refMap. `ResolutionPass`
     * walks a ValueRef's path with the SAME engine as every other reference, so a Field, a Type (the
     * whole message named by an on-clause binding) or a Constant can come back. Before A55 this was
@@ -6581,9 +6658,17 @@ case class ValidationPass(
           s"'set ${ss.field.format}'"
         )
       case s: SendStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
+        s.msg match
+          case c: Constructor => validateValue(c, parents, lets, elements)
+          // A56/message-value-source: a bare operand needs the threaded `let`/element scope
+          // `checkMessageOperandSource` resolves it against — unavailable in `validateStatement`.
+          case vr: ValueRef => checkMessageOperandSource(vr, "send", parents, lets, elements)
+          case _: MessageRef => ()
       case s: TellStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
+        s.msg match
+          case c: Constructor => validateValue(c, parents, lets, elements)
+          case vr: ValueRef => checkMessageOperandSource(vr, "tell", parents, lets, elements)
+          case _: MessageRef => ()
         // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
         // point invoked at every container root AND recursively for when/match/foreach bodies) --
         // mirrors checkTerminate's reachability, immediately below.

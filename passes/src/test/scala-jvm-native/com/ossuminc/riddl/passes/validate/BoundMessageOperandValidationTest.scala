@@ -59,22 +59,20 @@ class BoundMessageOperandValidationTest extends AbstractValidatingTest {
     }
 
     // The canary. If this ever goes green, the check above has stopped running.
-    "reject a name no on-clause bound" in { (td: TestData) =>
+    "reject a name nothing in scope binds" in { (td: TestData) =>
       val src = model("""on p: command d.c.Foo is { tell nosuchname to entity d.c.target }""")
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
         val errs = errorsOf(msgs)
         errs.size mustBe 1
         errs.head must include("'nosuchname'")
-        errs.head must include("does not name a message bound by an enclosing 'on' clause")
+        errs.head must include("does not name a message value")
       }
     }
 
     "reject an unbound name in a clause that binds nothing at all" in { (td: TestData) =>
       val src = model("""on command d.c.Foo is { tell p to entity d.c.target }""")
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-        errorsOf(msgs).exists(
-          _.contains("does not name a message bound by an enclosing 'on' clause")
-        ) mustBe true
+        errorsOf(msgs).exists(_.contains("does not name a message value")) mustBe true
       }
     }
 
