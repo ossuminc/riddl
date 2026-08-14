@@ -98,6 +98,59 @@ to the task file and note the disposition below.
 ---
 
 
+## Three defects that hid behind a SECOND copy of the same dispatch (2026-08-14) — DONE
+
+Tasks 4-6 of the message-value-source plan: warn on a bare message operand, warn on an
+`initiate` id nobody uses, pin that a saga step may create and destroy instances. Commits
+`f40822d3e`, `691f0e28c`, `11bf9c59c`. Two pre-existing defects fell out, and they are the
+part worth keeping.
+
+**A duplicated dispatch means the surface that proves totality is not the surface that runs.**
+`AST.WhenStatement.format` matched four arms over a five-member union — no `PromptValue` — so
+`when prompt("…")` threw a `MatchError`. It had survived because `PrettifyVisitor` does **not**
+route through it: `RiddlFileEmitter.emitStatement` keeps its own copy of that dispatch, and
+that copy has the arm. So the reflectivity round trip, which is the thing that normally proves
+`format` total, could never reach the hole — the two copies were written correct and complete
+INDEPENDENTLY, and only one of them was ever exercised. Prettifying `when prompt("…")` with
+the released rc.14 binary produces correct output, which is exactly why nobody looked.
+**When you find two implementations of one dispatch, the tested one tells you nothing about
+the other.** It became reachable the moment Task 5 started rendering a clause body.
+
+**Fix the SHAPE, not the instance — the second reminder in two days.** `aggregateFieldsOf`
+followed the alias chain with no cycle guard, so `type A is B` / `type B is A` recursed until
+the stack died. That is the identical defect fixed for its sibling `fieldsWithOwner` in rc.14,
+comment and all; the shape was never grepped for. It was latent only because no caller reached
+a cyclic alias, and `CheckMessagesTest` reproduced it as a `StackOverflowError` on the first
+full run after Task 4 added one. The flaky-benchmark round recorded this same lesson a day
+earlier.
+
+**Choosing the conservative mechanism over the precise one, deliberately.** Task 5 has to
+decide whether a `let`-bound id is used. The obvious way — enumerate the escape routes — is a
+walk that must stay total over both the statement kinds AND every value-bearing FIELD each one
+carries, and `statementValues` has already silently dropped two such fields
+(`RequireStatement.argument`, `MatchCase.guard`). A missed route there is a FALSE warning on
+correct code. So usage is decided from the RENDERED body instead: RIDDL is reflective by
+mandate, a nesting statement's `format` renders its whole block, and a `format` that dropped an
+operand would already be failing a round-trip test. It over-counts — a name inside a `do
+"restart worker"` string reads as a use — and that is the safe direction. **Where a walk must
+be total to be CORRECT, prefer a mechanism that cannot be incomplete over one that merely is
+not incomplete today.**
+
+**What the corpus measurement was actually for.** Task 4's field-less exemption had to be
+sized before the number already quoted to riddlg could stand. Measured over all 189 entry
+points: **14,714** bare message refs reached, **62** exempt, **14,652** warned, plus **645**
+bare `morph` record refs; nothing unresolved. So the exemption removes 0.4% and the ~14,700
+figure holds. Two things worth keeping from doing it properly: the design's example of a
+field-less message, `event Started is { }`, **does not parse** (`is { ??? }` is the shape RIDDL
+admits, and it lands on the same empty aggregate), and a source grep and the compiler disagree
+by ~0.2% about how many bare refs exist, because the corpus has 1,001 `.riddl` files and only
+those reached from the 189 `.conf` roots are ever validated.
+
+**`;`-chained certification still stops at the first red module.** `tJVM` aborted at
+`commands`' 16 expected-red corpus cases, so `riddlLib` and `riddlc` never ran — and the run
+LOOKS like a completed leg. Documented in CLAUDE.md, and it still cost a re-run. With two
+tests red on purpose, the JVM leg must be finished module-by-module.
+
 ## A capability nobody called, and a skip arm justified by a survey of its callers (2026-08-14) — DONE
 
 riddl-models reported six constructs the source emitter could not render back. Five were real

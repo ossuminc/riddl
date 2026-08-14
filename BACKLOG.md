@@ -62,6 +62,23 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **Flip the bare-message-operand warning to an Error — BLOCKED on riddl-models.**
+  The message-value-source design's end state (D3): naming a message type with no
+  value is an Error. It shipped 2026-08-14 as a CompletenessWarning because the
+  corpus holds **14,714** bare message refs the check reaches (plus **645** bare
+  `morph` record refs) and **zero** constructor uses, so an Error invalidates every
+  message-sending statement in all 189 models at once while CI requires them clean.
+  Measured, not estimated — full table in
+  `task/done/2026-08-14-where-does-a-message-refs-value-come-from.md`.
+  The migration is filed at riddl-models
+  `task/2026-08-14-bare-message-operands-now-warn-corpus-wide.md`, deliberately with
+  no deadline. **Flip only when that repo reports zero**; the change itself is one
+  `addCompleteness` → `addError` in `checkBareMessageOperand`, plus flipping the
+  `errorsOf(msgs) mustBe empty` assertions in `BareMessageOperandWarningTest` — which
+  are there precisely so the severity cannot move silently.
+  Keep the field-less exemption when flipping: with no data the type fully determines
+  the value, and it accounts for 62 of the 14,714.
+
 - **`at-least-once` / `at-most-once` / `exactly-once` are inert as OPTIONS.**
   Filed by synapify 2026-08-14 alongside the `option persistent` retirement
   (`e0a424ed0`), and verified here:

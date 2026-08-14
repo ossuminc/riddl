@@ -1127,6 +1127,24 @@ a model that validates clean and means something else.
   instance-effect ban that was itself written correctly (found 2026-08-13 by
   task 7's review of the instance-identity plan). Check the arms AND their
   payloads.
+- **A dispatch written TWICE hides the incomplete copy behind the complete one.**
+  `AST.WhenStatement.format` had four arms over a five-member `condition` union
+  (no `PromptValue`), so `when prompt("…")` threw a `MatchError` — and it
+  survived because `PrettifyVisitor` does NOT route through it:
+  `RiddlFileEmitter.emitStatement` keeps its OWN copy of that same dispatch, and
+  that copy has the arm. So the reflectivity round trip, which is what normally
+  proves a `format` total, could never reach the hole; prettifying the construct
+  produced correct output on the released binary. Fixed 2026-08-14 (Task 5 of the
+  message-value plan made it reachable by rendering a clause body).
+  **When you find two implementations of one dispatch, the tested one tells you
+  nothing about the other — read both.** `Statement.format` and
+  `RiddlFileEmitter.emitStatement` are that pair; keep them in step.
+- **Fix the SHAPE of a dispatch/recursion defect, not the instance.** The
+  alias-chain cycle guard was added to `fieldsWithOwner` in rc.14 and its sibling
+  `aggregateFieldsOf` was left unguarded, so `type A is B` / `type B is A` still
+  killed the stack — it was simply latent until a caller reached a cyclic alias
+  (2026-08-14). Same lesson the flaky-benchmark round recorded a day earlier:
+  when fixing a defect of this class, grep for the shape.
 
 Known-total today: `Pass.processValue`, `classifyHandlers` (all 17 `Statement`
 kinds), `countValueFailPoints`, BASTWriter/BASTReader statement dispatch. The

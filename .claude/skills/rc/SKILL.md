@@ -138,16 +138,37 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2400** | 7 |
-| JS | **750** | 5 |
-| Native | **1671** | 7 |
+| JVM | **2469** | 7 |
+| JS | **753** | 5 |
+| Native | **1908** | 7 |
+
+**The JVM row includes 17 cases that FAIL on purpose** as of 2026-08-14 —
+`RiddlModelsRoundTripTest` (16 of 189) and `Root2JsonCorpusTest`'s validation-
+parity case (173/189) — because `ccd278c00` taught the addressing check to
+resolve `Id` aliases and exposed 49 real defects in riddl-models. The minimum
+above is cases RUN, which is what guards against skipping; do not read a green
+JVM leg as achievable until that repo is fixed. See BACKLOG § 3.
+
+**Consequence for the JVM leg: `tJVM` cannot be run as one `;` chain.** The
+chain aborts at `commands`, so `riddlLib` and `riddlc` never run and the leg
+looks complete while having skipped two modules. Finish it with separate
+`riddlLib/testOnly *` and `riddlc/testOnly *` invocations and count the
+`Suites: completed` lines. Observed 2026-08-14.
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks
 reality; never lower them to make a run pass. A number below the floor is a
 skipping bug to find, not a threshold to adjust.
 
-**Raised 2026-08-14** by the 2.0.0-rc.14 certification (2400 / 750 / 1671),
+**Raised 2026-08-14 (second time that day)** by the message-value-source Tasks
+4-7 certification (2469 / 753 / 1908), whose per-row delta again reconciled
+EXACTLY against a prediction made before the run: +16 `passes` on JVM and
+Native (9 bare-operand + 6 unused-initiate-id + 1 saga-step), +0 JS because
+those suites live in `scala-jvm-native`, which the JS rows do not see. A
+seventeenth case (`+1` on JVM and Native `passes`) was added afterwards with the
+`WhenStatement.format` fix and re-verified on all three platforms.
+
+**Earlier that day, raised** by the 2.0.0-rc.14 certification (2400 / 750 / 1671),
 whose per-row delta reconciled EXACTLY against a prediction made before the run:
 +9 JVM, +9 Native, +0 JS, from one 9-case suite in
 `passes/src/test/scala-jvm-native`. Predicting first is what makes a total
