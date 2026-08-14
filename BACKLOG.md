@@ -62,6 +62,63 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **Close the JVM/Native test gap: 729 cases run on JVM that never run on
+  Native.** Reid, 2026-08-14, from the rc.14 certification. *"Testing on the JVM
+  does not guarantee correctness on Native, and I can't believe there are ~800
+  test cases that genuinely cannot run there."*
+
+  **Measured, not estimated** — rc.14 certification from clean under a throwaway
+  `--sbt-cache`, module order taken from the `tJVM`/`tNative` aliases
+  (`build.sbt:538`, `:549`):
+
+  | module | JVM | Native | gap |
+  |---|---|---|---|
+  | language | 668 | 343 | **−325** |
+  | commands | 245 | 47 | **−198** |
+  | passes | 1196 | 1040 | **−156** |
+  | utils | 146 | 108 | −38 |
+  | riddlLib | 122 | 111 | −11 |
+  | testkit | 2 | 1 | −1 |
+  | riddlc | 21 | 21 | 0 |
+  | **total** | **2400** | **1671** | **−729** |
+
+  **Three modules are 679 of the 729.** Start there, in this order:
+
+  1. **`commands` (−198) is the alarming one, and probably the cheapest win.**
+     245 JVM against 47 Native, and the module has NO `src/test/scala-jvm-native`
+     directory at all — 14 shared test files and 7 under `scalajvm`. The JVM
+     count matches the riddl-models corpus gate exactly, which means **our single
+     largest regression net almost certainly runs JVM-only.** Confirm that first;
+     if the corpus round trip can run on Native, that one change is worth ~200.
+  2. **`language` (−325)** — 33 shared test files, 19 `scala-jvm-native`, 22
+     `scalajvm`. **169 of this gap is already filed** as the abstract-suite item
+     below (`TypeParserTest` and 12 siblings are abstract with concrete runners
+     only in `JVMTests`/`JSTests`, so they move JVM and JS but not Native). That
+     part is a pure wiring fix — add Native runners — and needs no rewriting. The
+     remaining ~156 is the 22 `scalajvm` files.
+  3. **`passes` (−156)** — 26 shared, 139 `scala-jvm-native`, 29 `scalajvm`. This
+     module already does the right thing at scale, so the residue is likely
+     genuinely JVM-bound; audit it last.
+
+  **79 test files sit under `src/test/scalajvm` across the seven modules** (utils
+  11, language 22, passes 29, commands 7, riddlLib 7, riddlc 1, testkit 2). Each
+  needs the same triage: does it use a JVM-only facility, or was `scalajvm` just
+  where it got written? Where a real JVM dependency exists (filesystem, reflection,
+  `java.*` APIs without a Native equivalent, `Await` on JVM-only futures), ask
+  whether it can be abstracted behind `PlatformContext` — which exists for exactly
+  this — rather than accepted as unportable.
+
+  **Why this matters beyond coverage arithmetic:** Native fails DIFFERENTLY. It
+  rejects regex lookahead the other platforms accept, and a pattern compiled in a
+  `val` fails at class INITIALISATION, surfacing as a Severe message with EMPTY
+  text that names nothing (`.claude/skills/rc/SKILL.md` § Red flags). A JVM-green
+  suite says nothing about that class of defect.
+
+  **Do not lower the Native floor to accommodate anything found here.** If a
+  count drops, the standard of proof is the one the rc skill records for the
+  2026-08-05 drop: per-row before/after with the unchanged rows shown unchanged.
+
+
 - **A message ref must be able to name its VALUE, not just its type — DESIGNED
   2026-08-14, scheduled for 2026-08-15. NEXT UP.**
   **Design: `docs/superpowers/specs/2026-08-14-message-value-source-design.md`.**
