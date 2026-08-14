@@ -802,14 +802,30 @@ that needs a ruling before either can be fixed.
      *"or remove it if discarding is intentional"*. That second branch is
      exactly this ruling: the fix for a do-nothing clause is deletion, not
      filling. No change needed.
-  3. **OPEN — does this relax the ADAPTOR Error?** `ValidationPass.scala:3489`
-     makes a missing `on other` an **Error** on every non-empty adaptor handler.
-     The ruling's principle ("nothing to do → omit it") reads against that, but
-     an adaptor is a special case with its own argument: it exists to translate
-     at a context seam, so an untranslated foreign message is a translation gap
-     rather than an empty path. Reid did not address adaptors. **Ask before
-     touching it** — leaving a rule that contradicts the general principle is
-     better than silently deleting the one place the check earns its keep.
+  3. **ANSWERED 2026-08-14 — the ADAPTOR Error STANDS, and it is not an
+     exception.** Reid:
+
+     > *"Adaptors are special since they are translators. They must translate
+     > everything, including messages they are not designed to translate! Even
+     > if that translation is 'Sorry, I can't translate that'. Doing nothing on
+     > an unknown message is to silently omit from an inter-context
+     > conversation."*
+
+     This is an **application** of the general ruling, not a carve-out from it.
+     The general rule is "nothing to do → omit the clause"; for an adaptor there
+     is **never nothing to do**, because refusing to translate is itself a
+     translation that the other context is owed. That is exactly why the clause
+     is required here and nowhere else — and it means the rule needs no special
+     pleading if it is ever questioned again.
+     **Corollary worth knowing, not yet acted on:** by the same argument an
+     adaptor's `on other` with an EMPTY body is as wrong as a missing one — it
+     drops the message just as silently. Today that is only the model-wide
+     Completeness warning (`:553-563`), not the adaptor Error. Whether to raise
+     it for adaptors specifically was not asked and is not assumed.
+
+     *Comment at `ValidationPass.scala:3489` corrected 2026-08-14 to record all
+     of this in place, since the stale "generalize later" promise was what put
+     the question on the table.*
 
   **The corpus measurement now reads the other way, and supports the ruling.**
   Brace-matched over riddl-models, 2026-08-14: of **3,606** handler blocks,

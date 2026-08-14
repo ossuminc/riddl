@@ -3488,8 +3488,24 @@ case class ValidationPass(
           )
         // Completeness (adaptors): every non-empty handler must include an 'on other' clause so
         // that messages it does not explicitly translate are handled deliberately rather than
-        // silently dropped. This is an ERROR (a translation gap is a modeling defect). This
-        // presence/completeness check is intended to generalize to other processor kinds later.
+        // silently dropped. This is an ERROR (a translation gap is a modeling defect).
+        //
+        // ADAPTORS ONLY -- do NOT generalize this to other processor kinds. Reid ruled
+        // 2026-08-14 that `on other` is necessary to the LANGUAGE, not required in every
+        // handler: "If there is nothing to do for a message that is not otherwise handled,
+        // then it can be omitted and that is fine. It's better than an `on other { do
+        // "nothing" }` kind of nonsense construct, even if that would be good validation."
+        // (An earlier version of this comment promised to generalize "later"; that is
+        // declined. A5 in ../RIDDL-Tools-To-Do-List.md; see BACKLOG.md for the corpus
+        // measurement -- 1,295 of 3,606 handlers legitimately omit the clause.)
+        //
+        // The adaptor rule is not an exception to that ruling, it is an APPLICATION of it:
+        // an adaptor is a translator, and it "must translate everything, including messages
+        // it is not designed to translate! Even if that translation is 'Sorry, I can't
+        // translate that'. Doing nothing on an unknown message is to silently omit from an
+        // inter-context conversation" (Reid, 2026-08-14). So for an adaptor there is never
+        // "nothing to do" on the fall-through path, which is exactly why the clause is
+        // required here and nowhere else.
         adaptor.handlers.filter(_.clauses.nonEmpty).foreach { handler =>
           if !handler.clauses.exists(_.isInstanceOf[OnOtherClause]) then
             messages.addError(
