@@ -80,7 +80,27 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Needs a corpus A/B — this can only ADD messages, and the models that were
   silently passing may be numerous.
 
-- **Processor instance identity — DESIGNED 2026-08-13, ready to plan.**
+- **Processor instance identity — IN FLIGHT 2026-08-13, 6 of 8 tasks landed.**
+  Execution is subagent-driven; the LEDGER is the resume point, not this entry:
+  `.superpowers/sdd/2026-08-13-processor-instance-identity/progress.md`
+  (gitignored; it names every commit, so `git log` recovers it if lost).
+  Tasks 1-5 complete and review-clean. Task 6 (`tell` addressing) is COMMITTED
+  at `c5672a91f` but **NOT YET REVIEWED** — resume by running `review-package
+  af46e45dee..c5672a91f` and dispatching the task reviewer. Tasks 7-8 and the
+  final whole-branch review remain.
+  **Task 7's scope is REDUCED**: Task 5 already landed the terminate-in-fold
+  ban correctly, so do not redo it — but Task 7 MUST close the asymmetry that
+  exposed, since `let x = initiate ...` inside a fold is still unbanned.
+  **Task 8 must also correct `CLAUDE.md`'s Total Dispatch section**, which
+  claims `-Werror` is the safety net for non-exhaustive matches. It is not:
+  these modules compile with `--no-warnings` AND `-Werror` together, and five
+  separate missed dispatch sites across Tasks 2/4/5 were caught by manual audit
+  or review, never by the compiler.
+  **Open question, unresolved:** do Tasks 4/5's `initiate`/`terminate`
+  diagnostics apply the `???`-stub exemption? Task 6 added one; 4 and 5 were
+  never audited for it.
+
+- ~~**Processor instance identity — DESIGNED 2026-08-13, ready to plan.**~~
   Spec: `docs/superpowers/specs/
   2026-08-13-processor-instance-identity-design.md`.
   Plan: `docs/superpowers/plans/2026-08-13-processor-instance-identity.md`

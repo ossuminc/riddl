@@ -12,73 +12,80 @@ this NOTEBOOK's body. This says only where things stand and what a cold session
 would get wrong.
 
 **State — every line produced by a command in the session that wrote it
-(2026-08-12):**
+(2026-08-13):**
 
-- Branch `release/2`, **clean, 0 unpushed**, HEAD `6ccc0bf64`, tagged
-  **`2.0.0-rc.12`** and published as a GitHub **prerelease**.
-- **CI green on `0f06d85d9`**, all five jobs, checked job-by-job. The one commit
-  above it is `.claude/**` prose, which the `/rc` skill states does not
-  invalidate a green run.
-- **`~/Code/ossuminc/bin/riddlc` is CURRENT at `2.0.0-rc.12`**, and local ivy
-  matches it (one `scripts/publish-and-stage.sh` run — the two must never
-  disagree). Verified by BEHAVIOUR, not by version string: it rejects all four
-  statement-scope probes and validates reactive-bbq with 0 errors.
-- Certified from clean under a **throwaway `--sbt-cache`**, which is the part
-  that matters: `clean` alone leaves sbt 2's shared action cache serving prior
-  results, and that is what had hidden a failing `riddlc` module for most of a
-  session. **JVM 2225, JS 712, Native 1515**, 19/19 module summaries, 0
-  failures, `No tests to run` = 0. Floors in the `/rc` skill raised to match.
-- All 11 Maven coordinates published from the TAG; npm went out `with tag rc`;
-  homebrew-tap touched only `Formula/riddlc-rc.rb`; `notify-blog` **skipped**.
-- Grammar: TatSu zero unexpected failures, GBNF fresh, riddl-examples 9/9,
-  riddl-models 189/189.
+- Branch `release/2`, **tree CLEAN, 13 commits UNPUSHED** (`origin/release/2`
+  is at `5fe611f1b`, HEAD is `c5672a91f`). Push is deliberate-pending: the
+  feature is mid-plan and uncertified.
+- **`~/Code/ossuminc/bin/riddlc` is STALE at `2.0.0-rc.13`** — verified by
+  running `../bin/riddlc version`, not remembered. It predates all 13 commits
+  and REJECTS every construct added this session (`self`, `initiate`,
+  `terminate`, `tell … by`, `Id(repository X)`). Restage before probing
+  language behaviour, via `scripts/publish-and-stage.sh`.
+- **NOT certified.** No tri-platform run from clean has covered these commits.
+  Per-module suites are green (`passes` 1128, `language` 666, `commands` 245
+  incl. the live riddl-models corpus, `riddlLib` 119), and Native execution was
+  verified per task, but that is not the gate.
 
-**What shipped in rc.12 — both are TIGHTENINGS that reject rc.11-valid models.**
+**IN FLIGHT — a subagent-driven plan, 6 of 8 tasks landed.**
 
-- **A70 is complete.** `correlation … yields` now names a **COMMAND**, not a
-  record (a projector's only output is a repository change, and a repository is
-  changed by handling a command). BAST `FORMAT_REVISION` is **12**.
-- **`set` and `get from state` now require a container that owns state.** `set`
-  is legal only in an Entity or a Projector; `get from state` only inside the
-  entity that owns it.
+Plan `docs/superpowers/plans/2026-08-13-processor-instance-identity.md`,
+spec `docs/superpowers/specs/2026-08-13-processor-instance-identity-design.md`.
 
-**The trap most likely to bite: the repository warning and the repository `set`
-ban are ONE change and must stay together.** riddl-models and riddl-examples had
-126 `set` statements in repository handlers that existed *only* to silence
-riddlc's "contains only prompt statements". That warning now exempts
-repositories. Re-admitting `set` there without restoring the warning — or the
-reverse — re-creates exactly the problem. See CLAUDE.md § "Validation Specifics".
+**The resume point is the LEDGER, not this file:**
+`.superpowers/sdd/2026-08-13-processor-instance-identity/progress.md`. It is
+gitignored but names every commit, so `git log` reconstructs it. It carries a
+cold-session orientation block with the per-task loop and the standing facts
+every dispatch needs.
 
-**Sibling repos are migrated and pushed** — riddl-models (97 sites removed) and
-riddl-examples (29 sites; 25 became `do` statements because the `set` was the
-clause's only statement and deleting it is a parse error). Both were fixed HERE
-with Reid's approval rather than via task files, because riddl's own gates
-validate them.
+- Tasks 1-5 complete and review-clean (`Id(P)` widening, `self`, lifecycle
+  parameters, `initiate`, `terminate`).
+- **Task 6 is COMMITTED at `c5672a91f` but NOT REVIEWED.** Resume there:
+  `review-package af46e45dee..c5672a91f`, then dispatch the task reviewer.
+- Tasks 7-8 and the final whole-branch review remain. Task 7's scope is
+  reduced and Task 8 has two extra obligations — both recorded in `BACKLOG.md`.
 
-**Other traps, all of which cost real time; the rest are in CLAUDE.md.**
+**Traps — all of these bit someone this session.**
 
-- **A green suite proves nothing about how much of it ran.** `clean` does not
-  clear the action cache; `test`/`tJVM` resolve to `testQuick`; `sbt -batch`
-  runs only the FIRST command argument. Count `Suites: completed` against 7 JVM
-  / 5 JS / 7 Native, and reconcile the per-row DELTA — a suite in
-  `scala-jvm-native` moves JVM and Native but not JS, and an abstract suite with
-  runners only in `JVMTests`/`JSTests` moves JVM and JS but not Native.
-- **`clean` deletes the staged riddlc.** A probe run afterwards reports "0
-  errors" from a binary that does not exist, because `grep -c` counts zero
-  happily. Re-stage before believing any probe.
-- **A new `Branch` AST node breaks three things with NO compile error** —
-  `Containment.of`, `Pass.traverse`'s generic `Branch` case (walks `contents`
-  only, so FIELD-held statements are never visited), and
-  `VisitingPass.open/closeContainer`.
-- **A warm sbt server IGNORES a changed `sbt.version`.** `shutdown`, then
-  `show sbtVersion`.
+- **`-Werror` is NOT a safety net here.** `language`/`passes`/`riddlLib`
+  compile with `--no-warnings` AND `-Werror`, and non-exhaustive-match warnings
+  do not fail the build. **Five** separate missed `Value`/`Statement` dispatch
+  sites were found by manual audit or review, never by the compiler. CLAUDE.md
+  still claims otherwise; correcting it is queued in BACKLOG.
+- **A check wired into `validateStatement` never sees statements nested inside
+  `when`/`match`/`foreach`** — they are FIELD-held and the generic traversal
+  skips them. Use `validateValue`/`checkStatementScopes`, which recurse. This
+  is also a SHIPPED bug in rc.13's `checkStateReadScope` (filed, `8ddd0137f`).
+- **A subagent that backgrounds a command and arms a Monitor STOPS and is never
+  woken.** Cost three round-trips. Tell implementers to poll their own output
+  file or run in the foreground.
+- **`sbt "cJVM; cJS; cNative"` chained genuinely HUNG once** (0% CPU, 10+ min,
+  no lock contention). Three separate invocations passed. If it stalls, split
+  it rather than assuming a deadlock elsewhere.
+- **`FORMAT_REVISION` is 15** and must not move again for this feature. BAST
+  value tags 8=`Initiate`, 9=`SelfValue`; statement sub-kind 20=`terminate`.
 
-**Certainty.** Everything in State was run this session. Nothing is in flight;
-work stopped at a clean, tagged, published point.
+**Certainty.** Everything in State was run this session. Task 6's
+implementation is committed but its review has NOT run, so treat it as
+unverified. Tasks 1-5 were each reviewed and each needed a fix round except
+Task 3.
 
-**Run `/ossuminc-skills:check-tasks` in the new session.** `task/` holds one
-file, `2026-08-04-security.md`, still marked *"Draft (do not act on this)"* —
-triage is the driver's call, not the handoff's.
+**`task/` — FOUR files, all awaiting triage; two arrived DURING this session
+and have never been read:**
+
+- `2026-08-13-interaction-blocks-break-bast-round-trip.md` (riddl-models) —
+  NEW. Reports `sequence`/`parallel`/`optional` interaction blocks breaking the
+  BAST round trip, *"same shape as the `constant` defect you fixed in
+  `4ca2906dc`"*. Plausibly a third instance of that class.
+- `2026-08-13-riddlg-does-not-use-llama-server.md` (riddl-generator) — NEW. A
+  reply saying our wizard-prefill diagnosis was *right about the effect, wrong
+  about the mechanism*.
+- `2026-08-13-tell-to-an-entity-cannot-name-which-instance.md` — the ask this
+  whole plan answers; close it in Task 8, not before.
+- `2026-08-04-security.md` — still marked *"Draft (do not act on this)"*.
+
+**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
+driver's call, not the handoff's.
 
 ## Incoming Tasks
 
