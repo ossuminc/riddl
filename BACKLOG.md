@@ -565,6 +565,25 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Start with `grep -rn "case _ =>" --include=*.scala passes/ language/ | wc -l`
   to size it before committing to a plan.
 
+  **Widen the sweep to no-op HOOKS, not just catch-all arms** (added 2026-08-14,
+  from the prettify emitter fix `2ebe24a6c`). `PrettifyVisitor.doMethod` was
+  `Unit = ()` with the comment *"Methods are handled by their type"* — they were
+  not, and every `method` was dropped from prettified output. The arm was
+  perfectly explicit and the dispatch perfectly total; the defect was in a
+  CLAIM ABOUT CODE ELSEWHERE that nothing verified. Same shape in
+  `Pass.processValue`, where `ShownBy` was skipped because such values are
+  *"read by the definition that holds them"* — a survey of the visitors that
+  existed, not a property of the node, and false the moment prettify needed it.
+  So the sweep's question is not only *"does this arm mean 'I don't know what
+  this is'?"* but also **"if this arm defers to something else, does that
+  something else actually do it?"** Both were found by reading, never by the
+  compiler: `-Werror` is live in `passes` but a wildcard arm makes a match
+  syntactically exhaustive, so the prescribed terminal `throw` is itself what
+  silences the warning.
+  A cheap first pass: `grep -n "Unit = ()" passes/…/prettify/PrettifyVisitor.scala`
+  and check each justification against the code it names. The five there are all
+  legitimate NOW — `doMethod` only became so with this fix.
+
 - **Finish the `Streamlet` → `Processor` migration in the remaining passes.**
   Filed by Reid 2026-08-10 when the same defect was fixed in
   `StreamingValidation` (`70b0f527a`). These sites narrow to the concrete

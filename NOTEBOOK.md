@@ -13,24 +13,33 @@ would get wrong.
 
 **State — every line verified by a command during the handoff (2026-08-14):**
 
-- Branch `release/2`, **tree CLEAN**, HEAD `7fba1f8f4`, `git describe` =
-  `2.0.0-rc.14-13-g7fba1f8f4`, **5 commits UNPUSHED** (`ccd278c00` `e0a424ed0`
-  `612a5706a` `54d822883` `7fba1f8f4`).
+- Branch `release/2`, HEAD `80bb93b40`, **8 commits UNPUSHED** (`ccd278c00`
+  `e0a424ed0` `612a5706a` `54d822883` `7fba1f8f4` `ea05e144d` `2ebe24a6c`
+  `80bb93b40`).
 - **`publishLocal` AND `~/Code/ossuminc/bin/riddlc` are both at
-  `2.0.0-rc.14-12-54d82288`** — confirmed by running the binary and by
-  `~/.ivy2/local/…/riddl-passes_3/2.0.0-rc.14-12-54d82288`. That is **one commit
-  behind HEAD, and the gap is `7fba1f8f4`, which touches NOTEBOOK.md only** — so
-  both carry every code change. Do not rebuild on account of the version string.
-  Bare `riddlc` on `$PATH` is still the old tap build.
+  `2.0.0-rc.14-12-54d82288`, and as of 2026-08-14 that is genuinely STALE** —
+  it predates `2ebe24a6c`/`80bb93b40`, so the staged binary still drops
+  `method`/`shown by` on prettify and still rejects a trailing-slash URL. It was
+  merely doc-behind before; it is code-behind now. Restage with
+  `scripts/publish-and-stage.sh` (publishLocal + nativeLink in ONE invocation —
+  never one without the other) when the next RC is cut. Bare `riddlc` on `$PATH`
+  is still the old tap build.
 - **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease, Maven from the tag, npm on
   the **`rc`** dist-tag (`latest` did NOT move), tap commit `489bbb0` touched
   `Formula/riddlc-rc.rb` only.
-- **Green, all three platforms**: JVM utils 146 / language 668 / passes 1223 /
-  testkit 2 / riddlc 21; JS **750 exactly** (the floor); Native language 512 /
-  passes 1067 (an earlier full Native run totalled 1865, above the predicted
-  1840). TatSu 104/127 = baseline; GBNF regenerated, validator reports fresh.
+- **Green, all three platforms, re-run 2026-08-14 after the emitter fix**: JVM
+  utils 148 / language 669 / passes 1234 / testkit 2 / riddlc 21; JS **753**
+  (was 750, +3 shared new tests); Native utils 110 / language 513 / passes 1079
+  / testkit 1 / commands 47 / riddlLib 111 / riddlc 21. Every delta is exactly
+  the 15 tests added by `2ebe24a6c`/`80bb93b40`. TatSu 104/127 = baseline.
+  **The corpus test is the one exception — see the trap below.**
 - **TWO CORPUS TESTS ARE RED ON PURPOSE** and are the one thing a cold session
   is most likely to get wrong — see the trap below.
+
+**NEXT — resume the message-value plan, then cut an RC.** Reid's order
+(2026-08-14): the emitter fix first (DONE, `2ebe24a6c`/`80bb93b40`), then finish
+the 7-task plan, **then cut a new RC** carrying both. That sequencing is what
+lets riddl-models regenerate `.bast` once instead of twice.
 
 **IN FLIGHT — message-value plan, Task 1 of 7 done, Task 2 NOT started.**
 Everything about it is in **`BACKLOG.md` § 1** ("A message ref must be able to
@@ -77,18 +86,19 @@ plan were resolved by a controller, not by Reid** — field-less messages exempt
 from the warning, `reply` in scope, `self` rejected with its own message —
 flagged in BACKLOG so he can overrule them.
 
-**`task/` — TWO files awaiting triage, both UNTRIAGED:**
+**`task/` — ONE file left, and it is not actionable:**
 
-- `2026-08-14-prettify-emitter-drops-method-and-shown-by.md` — **arrived DURING
-  this session and has never been read.** Title alone says prettify drops
-  `method` and `shown by`, which would be a reflectivity defect (parse ⇒ emit is
-  the mandate), so it may outrank the message-value plan. Read it first.
-- `2026-08-04-security.md` — still marked *"Draft (do not act on this)"*.
+- `2026-08-04-security.md` (RBAC / `role`, issue #535) — still marked *"Draft
+  (do not act on this)"*, and its acceptance-criteria, semantics, and
+  why-we-can't-derive-it sections are all EMPTY. Reid's own draft. Leave it.
 
-The two that arrived earlier on 2026-08-14 (the `Id`-alias report and the
-connector-`persistent` report) are **done, Results appended, moved to
-`task/done/`**. The reply they generated is filed at
-`../riddl-models/task/2026-08-14-alias-fix-exposes-49-addressing-defects.md`.
+The prettify-emitter report is **done, Results appended, moved to `task/done/`**
+— five of its six confirmed and fixed, `figma` refuted (riddlc does print a
+clear error; exit 7 with no output is correct), and a sixth found by the sweep.
+**riddl-models has been asked for the exact `figma` input**, since their report
+rules out `--quiet` and we could not reproduce it. They were also told NOT to
+regenerate `.bast` against these commits — they wait for the RC, which is what
+gives them the single regeneration they asked for.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
 driver's call, not the handoff's.
@@ -104,6 +114,64 @@ to the task file and note the disposition below.
 
 ---
 
+
+## A capability nobody called, and a skip arm justified by a survey of its callers (2026-08-14) — DONE
+
+riddl-models reported six constructs the source emitter could not render back. Five were real
+(`method`, `shown by`, `table of … of […]`, `attachment`'s mime type, `replica of`); a sixth —
+comments inside a record — was found while fixing them and had not been reported. Commits
+`2ebe24a6c` and `80bb93b40`.
+
+**The two silent ones each had a different flavour of the same mistake: a claim about code
+elsewhere, believed but never checked.**
+
+`doMethod` was a no-op carrying the comment *"Methods are handled by their type."* They were not.
+`emitFields` took a `Seq[Field]` and both callers passed `.fields`, while an aggregate's contents
+are `Field | Method | Comment` — so methods and comments were dropped. Meanwhile `emitMethod` was
+fully written and had **zero callers anywhere in the repo**: the capability existed, was correct,
+and was never invoked. A no-op justified by an assertion about other code is only as good as that
+assertion, and nothing was checking this one.
+
+`ShownBy` was skipped outright by `Pass.processValue`, in an arm whose comment said such values are
+*"read by the definition that holds them."* That was true of every visitor **that existed** — and
+false for the one whose whole job is to write source back out. **"The holder reads it" is a survey
+of today's callers, not a property of the node**, so it is a poor reason to withhold a visitor
+hook. `ShownBy` now has `doShownBy`, alongside the `Enumerator`/`Requires`/`Returns` precedent.
+
+**Emitter defects and writer defects fail in opposite directions, and riddl-models named the tell.**
+A BAST *writer* defect announces itself: the reader derails, loudly, somewhere far from the cause.
+An *emitter* defect is silent — everything exits 0, the output still parses, still validates, and
+simply contains less than the author wrote. Their reliable detector is **node count changing when a
+construct is added or removed**, which is how they caught it: `bastify` reported 11 nodes with the
+method and 9 without, while the round-tripped source came back at 9.
+
+**What made it urgent rather than merely wrong:** `sbt riddlcPrettify` rewrites the whole corpus in
+place. Every `method` in riddl-models was one prettify run from deletion, and the run would have
+exited 0.
+
+**Two lessons about the fix itself.**
+
+*Uniformity is not a virtue when the parser is asymmetric.* The attachment mime type must be BARE
+and the ULID form's argument must stay QUOTED — the same asymmetry `emitDescription` already
+carries for `described at` (bare URL) vs `described in file` (quoted path). A tidy-looking uniform
+fix breaks one of the two. Both are now pinned by tests so the next tidier finds out immediately.
+
+*A test written after the fix proves nothing.* The `shown by` epic case was added after the code
+worked, so it was **revert-proved** — disable the emission, watch it go red, restore it. Everything
+else was watched to fail first.
+
+**The compiler was no help and could not have been.** `-Werror` is live in `passes`, but a wildcard
+arm makes a match syntactically exhaustive, so the terminal `throw` this repo prescribes is exactly
+what silences the exhaustivity warning. The sweep for other instances was done by reading:
+every `Unit = ()` hook in `PrettifyVisitor`, then `processValue`'s remaining skip arm.
+
+**The trailing-slash item that rode along** is a different shape worth its own line: `described at
+https://…/docs/riddl/` did not parse, but **the EBNF had always allowed it** — the fastparse
+`urlPath` was stricter than the grammar it implements. So the fix was to the parser and the EBNF
+went untouched, which is the opposite of the usual parser/EBNF sync obligation. It also took two
+edits, not one: `URL.isValid` independently rejected a path ending in `/`, so fixing only the
+parser converted a clean parse error into a thrown `IllegalArgumentException`. **A constraint you
+are relaxing is often written down twice.**
 
 ## A rule that duplicated the language, and the syntax it had taken with it (2026-08-14) — DONE
 
