@@ -92,6 +92,34 @@ to the task file and note the disposition below.
 ---
 
 
+## A rule that duplicated the language, and the syntax it had taken with it (2026-08-14) — DONE
+
+`on term` required a leading `Id(<enclosing processor>)` parameter. The reasoning was sound as far
+as it went — `on term` is invoked from OUTSIDE the instance, so the caller must say which one — but
+Reid pointed out it does not reach the conclusion: **`self` is in scope for the whole clause body
+and stays live to the very end of it**, so `self.id` already names the instance being terminated.
+The requirement made the author restate what the language supplies, and made the argumentless
+form — the one that will be common — a hard Error.
+
+**The part worth remembering is the knock-on.** The bare `terminate P` form had been removed weeks
+earlier, and the justification recorded in the parser was entirely derivative: *"`on term`'s
+leading `Id(...)` parameter is REQUIRED, so a no-argument `terminate` can never satisfy the arity
+check and is unreachable in any valid model."* That is a true statement about a world with the
+requirement in it. Delete the requirement and the syntax removal it justified has nothing left
+holding it up — but nothing in the code would have said so, because the parser comment reads as an
+independent design decision, not as a consequence. It was found only by reading the comment while
+removing the thing it depended on. **When removing a rule, grep for what was justified BY it**;
+a derived decision outlives its premise silently.
+
+Also a TDD lesson, caught by the revert proof rather than by discipline. Four of the five new tests
+went red with the implementation reverted; one — *"`self.id` readable in the clause body"* — passed
+in BOTH states. It asserted that no error message mentioned `self`, and with the fix absent the
+clause failed for a different reason (the missing parameter), so the assertion never spoke to
+`self` at all. **A test that passes before and after measures nothing**, and writing the test and
+the implementation together is exactly how that goes unnoticed: had it been run red first, the
+vacuity would have been obvious. Strengthened to `justErrors mustBe empty`.
+
+
 ## A check that was wrong for the common spelling hid 49 real defects (2026-08-14) — DONE
 
 riddl-models filed the rc.14 addressing check as a false positive: *"carries no field typed

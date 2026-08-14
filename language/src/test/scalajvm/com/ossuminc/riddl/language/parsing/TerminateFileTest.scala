@@ -58,7 +58,13 @@ class TerminateFileTest extends AnyWordSpec with Matchers {
       Await.result(future, 10.seconds)
     }
 
-    "REJECT the bare `terminate P` form (no parentheses)" in {
+    // Inverted 2026-08-14. The bare form was rejected because `on term`'s leading `Id(...)`
+    // parameter was required, so a no-argument `terminate` could never satisfy the arity check --
+    // it parsed to something that always failed validation. Reid dropped the requirement (`self.id`
+    // already names the instance being terminated), which left nothing justifying the asymmetry
+    // with `initiate P`, so the bare form is legal again and is the canonical spelling for the
+    // argumentless case.
+    "ACCEPT the bare `terminate P` form (no parentheses)" in {
       val src =
         """domain Dom is {
           |  context Ctx is {
@@ -71,8 +77,15 @@ class TerminateFileTest extends AnyWordSpec with Matchers {
           |} with { briefly "d" }
           |""".stripMargin
       TopLevelParser.parseInput(RiddlParserInput(src, "bare-terminate")) match
-        case Left(_)  => succeed
-        case Right(_) => fail("the bare `terminate P` form must no longer parse")
+        case Left(msgs) => fail(s"the bare `terminate P` form must parse:\n${msgs.format}")
+        case Right(root) =>
+          // Not merely "it parses" -- it must produce a TerminateStatement with an EMPTY argument
+          // list, the same AST `terminate Widget()` produces. A bare form that parsed to something
+          // else would be a second shape for validation and every downstream walk to handle.
+          val terminates = Finder(root).recursiveFindByType[TerminateStatement]
+          terminates.size mustBe 1
+          terminates.head.args mustBe empty
+          terminates.head.processor mustBe a[EntityRef]
     }
   }
 }

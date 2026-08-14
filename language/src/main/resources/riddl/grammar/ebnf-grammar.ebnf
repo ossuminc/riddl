@@ -370,7 +370,7 @@ return_statement = "return" value ;
    leading Id(...) parameter is required, so a no-argument `terminate` can never validate and the
    bare spelling was dead syntax. Arity/argument-type checking is done in validation, which is the
    only place that has resolved the target's `on term` clause; a wrong count still PARSES. *)
-terminate_statement = "terminate" processor_ref "(" [constructor_arg {"," constructor_arg}] ")" ;
+terminate_statement = "terminate" processor_ref [ "(" [constructor_arg {"," constructor_arg}] ")" ] ;
 
 (* General statements. A54: `do` is canonical; the `prompt` statement is a deprecated synonym. *)
 prompt_statement = ("do" | "prompt") literal_string ;

@@ -839,6 +839,23 @@ to the right group rather than appending to a list.
     `error()` preempts the whole pass chain. Both fold an Entity's STATE
     handlers in when looking for the clause, exactly as `validateAsk` does —
     `on init` commonly lives inside a `State`.
+    **NEITHER clause requires a parameter, and `terminate`'s parentheses are
+    OPTIONAL** (Reid, 2026-08-14). `on term` briefly required a leading
+    `Id(<enclosing processor>)` on the reasoning that it is invoked from outside
+    so the caller must say which instance — true, but it does not follow that
+    the CLAUSE must declare it: **`self` is in scope for the whole body and
+    stays live to the very end of it**, so `self.id` already names the instance
+    being terminated and the requirement only made the author restate what the
+    language supplies. It made the argumentless form — expected to be the COMMON
+    one — a hard Error. Removed, NOT relaxed to "if present it must be an `Id`":
+    a termination reason is an ordinary thing to pass.
+    That requirement was also the SOLE reason the bare `terminate P` form had
+    been removed (with it, a no-argument `terminate` could never satisfy the
+    arity check, so the spelling always failed validation) — so both came back
+    together, and `TerminateStatement.format` now mirrors `Initiate.format`,
+    emitting no parens for an empty list. `terminate P()` still parses and
+    prettifies to the bare form. The resolved-identity lesson the deleted check
+    carried is NOT lost: it lives on in `isAddressFieldFor`.
   - **Addressing is STRUCTURAL: the address is the message's field typed
     `Id(target)`**, found without annotation; `by <field>` only DISAMBIGUATES
     when more than one field qualifies. Candidates match by **resolved

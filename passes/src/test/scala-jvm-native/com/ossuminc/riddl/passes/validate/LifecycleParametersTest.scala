@@ -11,11 +11,16 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.utils.{CommonOptions, pc}
 import org.scalatest.TestData
 
-/** `on init` and `on term` become invocable, so they need parameters.
+/** `on init` and `on term` become invocable, so they MAY take parameters.
   *
-  * `on term`'s leading parameter is REQUIRED to be Id(this processor): it is invoked from
-  * outside, so the caller must say which instance. `on init` has no such parameter -- there is
-  * no instance yet, and the identity is minted by initiating.
+  * Neither clause requires any. `on term`'s leading parameter was REQUIRED to be Id(this
+  * processor) until 2026-08-14, on the reasoning that the caller must say which instance --
+  * reversed by Reid because `self.id` is already live for the whole clause, so the requirement
+  * only forced the author to restate what the language supplies. `on init` never had one: there
+  * is no instance yet, and the identity is minted by initiating.
+  *
+  * Removing it also restored the bare `terminate P` form, whose absence had been justified
+  * SOLELY by the requirement -- see `TerminateRoundTripTest`.
   */
 class LifecycleParametersTest extends AbstractValidatingTest {
 
@@ -81,41 +86,38 @@ class LifecycleParametersTest extends AbstractValidatingTest {
       ).justErrors mustBe empty
     }
 
-    "REJECT a missing leading id parameter" in { (td: TestData) =>
-      val text = diagnostics(
-        entityWith("""on term(why: String) is { do "end" }"""), "term-no-id"
-      ).justErrors.map(_.message).mkString("\n")
-      text must include("first parameter")
-      text must include("Id(")
+    "ACCEPT a clause with NO parameters at all" in { (td: TestData) =>
+      // Reid, 2026-08-14, reversing the leading-Id requirement: the id of the instance being
+      // terminated is ALREADY available as `self.id`, which stays live to the very end of the
+      // clause, so requiring it as a parameter demands that the author restate what the language
+      // already supplies. Argumentless `on term` is expected to be the COMMON form.
+      diagnostics(
+        entityWith("""on term is { do "end" }"""), "term-no-params"
+      ).justErrors mustBe empty
     }
 
-    "REJECT an Id of a DIFFERENT processor that merely shares the last path segment" in {
-      (td: TestData) =>
-        // The name-matching version accepted this with NO diagnostic. Reid overruled exactly this
-        // pattern for task 6's tell addressing (`isAddressFieldFor` compares by `eq` against a
-        // refMap lookup); one task adopted the ruling and the other did not, in the same feature,
-        // over the same construct. Both paths end in `Order`, so only resolved identity can tell
-        // them apart -- and getting it wrong means `on term` accepts an id that cannot name an
-        // instance of the processor being terminated.
-        val src =
-          """domain Dom is {
-            |  context Other is {
-            |    entity Order is { ??? } with { briefly "foreign" }
-            |  } with { briefly "o" }
-            |  context Ctx is {
-            |    record R is { total: Integer } with { briefly "r" }
-            |    entity Order is {
-            |      state S of record R is {
-            |        handler H is {
-            |          on term(oid: Id(entity Dom.Other.Order), why: String) is { do "end" }
-            |        } with { briefly "h" }
-            |      } with { briefly "s" }
-            |    } with { briefly "e" }
-            |  } with { briefly "c" }
-            |} with { briefly "d" }
-            |""".stripMargin
-        val text = diagnostics(src, "term-foreign-id").justErrors.map(_.message).mkString("\n")
-        text must include("first parameter")
+    "ACCEPT parameters that are NOT a leading id" in { (td: TestData) =>
+      // The requirement is gone, not relaxed to "if present it must be an Id": a termination
+      // reason is a perfectly ordinary thing to pass, and nothing about it needs to be an id.
+      diagnostics(
+        entityWith("""on term(why: String) is { do "end" }"""), "term-non-id-param"
+      ).justErrors mustBe empty
+    }
+
+    "make `self.id` readable in the clause body" in { (td: TestData) =>
+      // This is the PREMISE the removal rests on, so it is pinned rather than assumed. If `self`
+      // did not resolve here there would be no way to obtain the id at all, and dropping the
+      // parameter would have removed the only means of naming the instance being terminated.
+      // `enclosingProcessorOf` terminates at Function/Saga only, so an `on term` inside a State
+      // still finds the Entity.
+      //
+      // Asserts NO errors rather than "no error mentioning self". The weaker form passed even
+      // with the fix reverted -- the clause failed for a DIFFERENT reason (the missing leading
+      // parameter), so the assertion never spoke to `self` at all. A test that passes in both
+      // states measures nothing, which the revert proof is what caught.
+      diagnostics(
+        entityWith("""on term is { let who = self.id }"""), "term-self-id"
+      ).justErrors mustBe empty
     }
   }
 

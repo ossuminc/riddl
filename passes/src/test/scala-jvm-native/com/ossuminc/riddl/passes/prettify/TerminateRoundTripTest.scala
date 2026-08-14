@@ -95,12 +95,15 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
       regenTerm.args.map(_.value.format) mustBe originalTerm.args.map(_.value.format)
     }
 
-    // The bare `terminate P` form was REMOVED in the final review of this branch (it parsed but
-    // could never validate). Its round-trip case is replaced by this one, which pins the
-    // consequence that matters for reflectivity: `TerminateStatement.format` must ALWAYS emit the
-    // parentheses, including for an empty argument list, or prettify would produce source the
-    // parser that made it can no longer read.
-    "emit parentheses even for an empty argument list, so the output re-parses" in {
+    // The bare `terminate P` form RETURNED on 2026-08-14. It had been removed because it could
+    // never validate -- `on term`'s leading `Id(...)` parameter was required, so a no-argument
+    // `terminate` could not satisfy the arity check -- and dropping that requirement (`self.id`
+    // already names the instance) left nothing holding the asymmetry with `initiate` up.
+    //
+    // What this pins is the reflectivity consequence either way: whatever `format` emits for an
+    // empty argument list must be readable by the parser that produced it. It now emits the BARE
+    // form, mirroring `Initiate.format`.
+    "emit the BARE form for an empty argument list, and re-parse it" in {
       (td: TestData) =>
         val emptySrc =
           """domain Dom is {
@@ -108,7 +111,36 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
             |    entity Widget is {
             |      handler H is {
             |        on init { do "start" }
-            |        on term(wid: Id(entity Widget)) { do "end" }
+            |        on term { do "end" }
+            |      } with { briefly "h" }
+            |    } with { briefly "e" }
+            |    entity Caller is {
+            |      handler CH is {
+            |        on init { terminate entity Widget }
+            |      } with { briefly "ch" }
+            |    } with { briefly "ce" }
+            |  } with { briefly "c" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val pretty = prettify(parse(emptySrc, "empty-args"))
+        pretty must include("terminate entity Widget")
+        pretty must not include "terminate entity Widget()"
+        // The proof that matters: the emitted text is readable by the parser that produced it.
+        terminateIn(parse(pretty, "empty-args-regen")).args mustBe empty
+    }
+
+    "still accept the explicit empty parens, normalizing them to the bare form" in {
+      (td: TestData) =>
+        // `terminate P()` keeps parsing -- the grammar is not the place to encode arity, and
+        // models written while the parens were mandatory must not break. Prettify converges on
+        // ONE spelling, which is what makes the round trip idempotent.
+        val emptyParens =
+          """domain Dom is {
+            |  context Ctx is {
+            |    entity Widget is {
+            |      handler H is {
+            |        on init { do "start" }
+            |        on term { do "end" }
             |      } with { briefly "h" }
             |    } with { briefly "e" }
             |    entity Caller is {
@@ -119,10 +151,8 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
             |  } with { briefly "c" }
             |} with { briefly "d" }
             |""".stripMargin
-        val pretty = prettify(parse(emptySrc, "empty-args"))
-        pretty must include("terminate entity Widget()")
-        // The proof that matters: the emitted text is readable by the parser that produced it.
-        terminateIn(parse(pretty, "empty-args-regen")).args mustBe empty
+        terminateIn(parse(emptyParens, "empty-parens")).args mustBe empty
+        prettify(parse(emptyParens, "empty-parens2")) must not include "terminate entity Widget()"
     }
   }
 }

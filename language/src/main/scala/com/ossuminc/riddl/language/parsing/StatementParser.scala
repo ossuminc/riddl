@@ -697,15 +697,18 @@ private[parsing] trait StatementParser {
     )./.map { case (start, v, end) => ReturnStatement(at(start, end), v) }
   }
 
-  /** `terminate <processor>(args)` -- end an instance by invoking its `on term`.
+  /** `terminate <processor>[(args)]` -- end an instance by invoking its `on term`.
     *
-    * Parentheses are MANDATORY, unlike `initiate`'s. The parens-optional symmetry with `initiate`
-    * was dead syntax: `on term`'s leading `Id(...)` parameter is REQUIRED
-    * (`checkOnTermLeadingParameter`), so a no-argument `terminate` can never satisfy the arity
-    * check and is unreachable in any valid model. Reid ruled the bare form out in the final review
-    * of the instance-identity branch rather than leave a spelling that always fails validation.
-    * (`terminate P()` with an empty list still parses -- the grammar is not the place to encode
-    * "at least one", and validation already reports the arity.)
+    * Parentheses are OPTIONAL, exactly as `initiate`'s are. They were mandatory between the
+    * instance-identity branch's final review and 2026-08-14 because `on term`'s leading `Id(...)`
+    * parameter was REQUIRED, which made a no-argument `terminate` unable to satisfy the arity
+    * check and therefore unreachable in any valid model -- a spelling that always failed
+    * validation. Reid dropped that requirement (`self.id` is live for the whole clause, so the
+    * parameter restated what the language already supplies), which removed the sole justification
+    * for the asymmetry, so the bare form came back with it.
+    *
+    * `terminate P()` still parses: the empty list is accepted rather than made an error, since the
+    * grammar is not the place to encode arity.
     *
     * ARITY IS NOT CHECKED HERE -- a parser error() preempts the whole pass chain, so the argument
     * diagnostics live in ValidationPass, which is also the only place that has resolved `on term`.
@@ -713,10 +716,10 @@ private[parsing] trait StatementParser {
   private def terminateStatement[u: P]: P[TerminateStatement] = {
     P(
       Index ~ Keywords.terminate ~/ processorRef ~
-        Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
-        Punctuation.roundClose ~/ Index
+        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~ Index
     )./.map { case (start, pRef, args, end) =>
-      TerminateStatement(at(start, end), pRef, args.toSeq)
+      TerminateStatement(at(start, end), pRef, args.map(_.toSeq).getOrElse(Seq.empty))
     }
   }
 

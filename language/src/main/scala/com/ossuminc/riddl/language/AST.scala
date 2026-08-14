@@ -3918,11 +3918,14 @@ object AST:
   ) extends Statement {
     override def kind: String = "Terminate Statement"
     override def canFail: Boolean = true
-    // The parentheses are ALWAYS emitted, including for an empty list: `terminate P` no longer
-    // parses, so a format that dropped them would make prettify's output unreadable by the parser
-    // that produced it -- the reflectivity mandate's whole point.
+    // Byte-identical in shape to `Initiate.format`, and deliberately so: the bare `terminate P`
+    // form returned on 2026-08-14 when `on term`'s leading-Id requirement was dropped (`self.id`
+    // supplies the instance, so the parameter was redundant). The requirement was the ONLY reason
+    // a no-argument `terminate` was unreachable, and with it gone the parens-optional asymmetry
+    // with `initiate` had nothing left holding it up.
     def format: String =
-      s"terminate ${processor.format}${args.map(_.format).mkString("(", ", ", ")")}"
+      val argList = if args.isEmpty then "" else args.map(_.format).mkString("(", ", ", ")")
+      s"terminate ${processor.format}$argList"
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////// ADAPTOR

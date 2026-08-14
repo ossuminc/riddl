@@ -546,7 +546,6 @@ case class ValidationPass(
         checkDefinition(parentsAsSeq, oic)
       case otc: OnTerminationClause =>
         checkDefinition(parentsAsSeq, otc)
-        checkOnTermLeadingParameter(otc, parentsAsSeq)
       case oac: OnActivationClause =>
         checkDefinition(parentsAsSeq, oac)
       case opc: OnPassivationClause =>
@@ -957,42 +956,29 @@ case class ValidationPass(
         )
       case _ => () // binding with an envelope in scope, agreeing ascription, or no binding
 
-  /** Task 3: `on term` is the destructor, and unlike `on init` it is invoked from OUTSIDE the
-    * instance — so the caller must say which one. The rule is grammar-shaped (a leading `Id(...)`
-    * parameter) but can only be checked here: the parser sees a bare parameter list and cannot
-    * know which processor encloses it, or whether a resolved `UniqueId` names that processor.
-    *
-    * A missing parameter list and a wrong leading type are reported with the SAME message — both
-    * are "no correctly-typed leading id parameter" — which is what `otc.parameters.headOption`
-    * naturally collapses them into.
-    *
-    * The match is by RESOLVED IDENTITY (`eq`), never by the path's last segment. Reid overruled
-    * name matching for task 6's `checkTellAddressing` (see `isAddressFieldFor`) and the same
-    * reasoning applies verbatim here: with the name version, `on term(oid: Id(entity
-    * Dom.Other.Order))` inside `Dom.Ctx.Order` was ACCEPTED with no diagnostic, because both paths
-    * end in `Order`. `otc` is the refMap key's parent -- `Pass.traverse` pushes the on-clause
-    * before walking `parameters`, so that is what `ResolutionPass` recorded the parameter's
-    * `UniqueId` under (see its `MethodArgument` arm) -- and `uniqueIdReferent` probes it first.
-    */
-  private def checkOnTermLeadingParameter(otc: OnTerminationClause, parents: Parents): Unit =
-    val enclosing = parents.collectFirst { case p: Processor[?] => p }
-    enclosing.foreach { p =>
-      val ok = otc.parameters.headOption.exists { a =>
-        a.typeEx match
-          case uid: UniqueId =>
-            uniqueIdReferent(uid.entityPath, otc, otc +: parents).exists(_ eq p)
-          case _ => false
-      }
-      check(
-        ok,
-        s"'on term' in ${p.identify} must declare its first parameter as Id(${p.id.value}) — " +
-          "the id of the instance to terminate",
-        Error,
-        otc.loc,
-        suggestion = s"Write 'on term(id: Id(${p.id.value}), …) is { … }'."
-      )
-    }
-  end checkOnTermLeadingParameter
+  /* REMOVED 2026-08-14 -- `checkOnTermLeadingParameter`, which required `on term`'s first
+   * parameter to be `Id(<enclosing processor>)`.
+   *
+   * The rule reasoned that `on term` is invoked from OUTSIDE the instance, so the caller must say
+   * which one. True, but it does not follow that the CLAUSE must declare it: `self` is in scope
+   * for the whole body and stays live to the very end of it, so `self.id` already names the
+   * instance being terminated. The requirement therefore made the author restate what the
+   * language supplies, and made the argumentless `on term` -- the form Reid expects to be
+   * COMMON -- a hard Error.
+   *
+   * It is removed, not relaxed to "if a parameter is present it must be an Id": a termination
+   * reason is an ordinary thing to pass and has no business being an id. Arity and per-argument
+   * types are still checked, by `checkLifecycleInvocation`, which already handled the
+   * zero-declared/zero-supplied case correctly.
+   *
+   * The knock-on is recorded at `StatementParser.terminateStatement`: this requirement was the
+   * SOLE reason a no-argument `terminate` was unreachable, and it was why the bare `terminate P`
+   * form had been removed. Both came back together.
+   *
+   * The resolved-identity lesson the check carried (`eq` against a refMap lookup, never the
+   * path's last segment) is NOT lost with it -- it lives on in `isAddressFieldFor`, where
+   * `TellAddressingTest` pins it with the same foreign-same-named-entity fixture.
+   */
 
   /** A56 (widened by the message-value-source design, 2026-08-14): check a `tell`/`send` operand
     * that names a VALUE rather than a keyword-led message ref — `tell p to entity F`, `send
@@ -5555,9 +5541,10 @@ case class ValidationPass(
     // "initiate" / "terminate" -- the STATEMENT the author wrote, which is what a suggestion has
     // to be phrased in.
     statementKeyword: String,
-    // `initiate` may drop its parentheses when there are no arguments; `terminate` may not (its
-    // bare form was removed -- see `StatementParser.terminateStatement`). Only the SUGGESTION
-    // differs, so this is a flag rather than a second code path.
+    // Both `initiate` and `terminate` may drop their parentheses when there are no arguments --
+    // `terminate` regained that on 2026-08-14, see `StatementParser.terminateStatement` -- so this
+    // is `true` at both call sites today. Kept as a parameter rather than inlined because it
+    // records a per-statement grammar fact that has already changed once.
     parensOptional: Boolean,
     parents: Parents,
     lets: Seq[LetStatement],
@@ -5633,7 +5620,9 @@ case class ValidationPass(
       term.args,
       s"${Keyword.on} ${Keyword.term}",
       Keyword.terminate,
-      parensOptional = false,
+      // `true` since 2026-08-14, when the bare `terminate P` form returned alongside the removal
+      // of `on term`'s leading-Id requirement. Only the SUGGESTION's wording depends on this.
+      parensOptional = true,
       parents,
       lets,
       elements
