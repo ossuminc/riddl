@@ -197,4 +197,80 @@ class SagaValidatorTest extends AbstractValidatingTest {
       WhenStatement(at, litOne, Contents.empty[Statements]()).canFail mustBe false
     }
   }
+
+  /** Reid ruled 2026-08-14: `initiate` and `terminate` ARE legal inside a saga step -- *"a saga may
+    * need new entities to be created."*
+    *
+    * **This test exists because the behaviour was correct BY ACCIDENT, not by decision.**
+    * `checkInstanceEffectScope` bans the two in exactly two shapes -- a parent that is an
+    * `OnActivationClause`/`OnPassivationClause`, or a `Function` in the parent chain -- and for a
+    * saga-step statement `parents.head` is the **Saga** (a `SagaStep` is a `Leaf` and is never
+    * pushed; see `Pass.traverse`), so both predicates are structurally false. Nothing tested either
+    * way, so the next person to tighten that method would have removed the legality with nothing
+    * going red. That is what this pins.
+    *
+    * Note the asymmetry the ruling settles deliberately: `self` IS banned in a saga step while
+    * these two are legal. That is coherent -- a saga has no instance identity of its own, but it
+    * may create and destroy instances.
+    *
+    * The assertion is `justErrors mustBe empty` over the WHOLE model, not the absence of a
+    * particular message. A test that merely asserted "no ban error" would also pass for a model
+    * that failed to parse -- the trap recorded in CLAUDE.md and hit on this branch before.
+    */
+  "initiate/terminate in a saga step (Reid, 2026-08-14)" should {
+
+    /** Deliberately minimal: `do` for every block that is not under test, and no `send` anywhere.
+      * The first draft reused this file's `stepModel` shape and failed for three reasons that had
+      * nothing to do with instance identity -- an entity with no handler, a saga with one step, and
+      * a BARE `send command UndoGo` which became an Error the same day. Fixture noise that can fail
+      * a "validates clean" assertion is worse here than anywhere, because the assertion is exactly
+      * "nothing is reported".
+      */
+    def instanceSaga(stepOne: String, revertOne: String, td: TestData): Unit =
+      val src =
+        s"""domain d is {
+           |  context c is {
+           |    record OState is { total: Integer }
+           |    command Go is { xfield: Integer }
+           |    entity Order is {
+           |      state OS of record d.c.OState is {
+           |        handler OH is {
+           |          on command d.c.Go is { do "go" }
+           |          on init is { do "start" }
+           |          on term(oid: Id(entity d.c.Order)) is { do "end" }
+           |        }
+           |      }
+           |    }
+           |    saga sag is {
+           |      step StepOne is { $stepOne } reverted by { $revertOne }
+           |      step StepTwo is { do "do it" } reverted by { do "undo it" }
+           |    }
+           |  }
+           |}
+           |""".stripMargin
+      parseAndValidateDomain(RiddlParserInput(src, td), shouldFailOnErrors = false) {
+        case (_, _, messages) => messages.justErrors mustBe empty
+      }
+
+    "accept `initiate` and `terminate` in a do-block" in { (td: TestData) =>
+      instanceSaga(
+        """let oid = initiate entity d.c.Order
+          |        terminate entity d.c.Order(oid)""".stripMargin,
+        """do "undo one"""",
+        td
+      )
+    }
+
+    "accept `initiate` and `terminate` in an UNDO block too" in { (td: TestData) =>
+      // A revert that destroys what the forward action created is the motivating shape, and the
+      // `ask` prohibition showed undo-statements are walked separately from do-blocks -- so a ban
+      // could reach one and not the other. Both halves are pinned.
+      instanceSaga(
+        """do "forward"""",
+        """let oid = initiate entity d.c.Order
+          |        terminate entity d.c.Order(oid)""".stripMargin,
+        td
+      )
+    }
+  }
 }
