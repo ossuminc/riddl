@@ -138,29 +138,64 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   permitted on purpose, and the third banned context (a correlation fold) shows
   the design does discriminate. Reid to rule; then either add a test pinning
   legality or add the predicate.
+  **The sharpest argument that this needs an actual ruling** (final whole-branch
+  review, 2026-08-13): `self` IS banned in a saga step — deliberately, with its
+  own message, per §"What this design does NOT cover" — while `initiate` and
+  `terminate` are not. So the feature as shipped says a saga step has no
+  instance identity but MAY create and destroy instances. Whichever way it is
+  ruled, the two halves should agree; today they disagree by accident.
 
-- **INCONSISTENT: `checkInitiate`/`checkTerminate` do NOT apply the `???`-stub
-  exemption; `checkTellAddressing` does.** Audited 2026-08-13 during Task 8 of
-  the instance-identity plan, deliberately NOT fixed there — a behaviour change
-  would have invalidated the certification run it sat in.
-  `initClauseParameters`/`termClauseParameters`
-  (`ValidationPass.scala:5276`, `:5338`) return `Seq.empty` when the target
-  declares no `on init`/`on term` clause, and `???` parses to empty contents
-  (`CommonParser.undefined`), so a target whose whole body is unwritten is
-  INDISTINGUISHABLE from one that deliberately declares a zero-parameter
-  clause. `entity Order is { ??? }` addressed by `initiate entity Order(x =
-  "1")` therefore draws a hard **Error** — *"Order declares 'on init' with no
-  parameters, but 1 argument supplied"* — which is reasoning from an unwritten
-  body, exactly what the standing `???` ruling (Reid, 2026-08-11) forbids.
-  Task 6's `checkTellAddressing` got this right by gating on the RESOLVED field
-  list being non-empty (`:5442`), and its scaladoc records why.
-  Note the zero-argument case is already silent (`0 != 0` is false), so only
-  `initiate`/`terminate` WITH arguments against a stub misfires.
-  **Fix**: gate both on the target being non-stub, the same way; needs a corpus
-  A/B, though it can only REMOVE messages. Add a test for each — a stub target
-  with arguments must be silent, a real zero-parameter clause with arguments
-  must still Error, or the fix erases a correct diagnostic along with the wrong
-  one.
+- **NEW CHECK (Reid ruled it, 2026-08-13; build it as its own task):** a
+  `let x = initiate …` whose id is **never subsequently referenced** draws a
+  plain **Warning** — on by default, NOT gated behind
+  `showCompletenessWarnings`, because unlike a missing tell address this is
+  locally decidable from the clause body alone.
+  **Why a Warning and not an Error**, recorded so it is not re-litigated: a
+  self-terminating worker legitimately has an unused id, and an Error would
+  make that pattern unwritable; RIDDL specifies MEANING, so an unstated fate is
+  under-specification (which warns) rather than self-contradiction (which
+  errors); and nothing in the corpus uses `initiate` at all, so the repo's
+  standing "do not ship the Error before counting" rule has no data to clear.
+  **The real work is the escape-route analysis, not the message.** An id
+  escapes by being `set` into state, passed as an argument to a `tell`, passed
+  to `terminate`, yielded in an event, or `put` to a repository — and the sweep
+  must be conservative enough that no legal model is rejected. That is what
+  makes it a task rather than a line in this one.
+
+- **NAME-MATCHING SURVIVOR: `isIdForEntity`** (`ValidationPass.scala:2343`,
+  inside `validateEntity`'s "does not define an Id type for its identity"
+  completeness check) decides whether a `Type` is an Id for THIS entity with
+  `uid.entityPath.value.lastOption.contains(entity.id.value)` — the
+  last-segment NAME match Reid overruled for task 6 (`isAddressFieldFor`) and
+  again in the final review (`checkOnTermLeadingParameter`). Found by the sweep
+  those two fixes prompted, 2026-08-13; **NOT fixed there** because it PREDATES
+  the instance-identity branch (`git log -L` gives `99549df47`, the AIHelperPass
+  replacement) and it drives a CompletenessWarning over all 189 corpus models,
+  so it needs its own A/B rather than a ride on someone else's.
+  **Why it matters more now than it did**: `Id(P)` widened from Entity to any
+  Processor this branch, so a `type X is Id(Other.Order)` in a model with two
+  same-named entities can silence the warning for BOTH — and, symmetrically, an
+  `Id(repository Foo)` whose last segment matches an entity name can be counted
+  as that entity's identity type.
+  **Fix**: resolve `uid.entityPath` through the refMap and compare with `eq`,
+  as `isAddressFieldFor` does. Note the lookup's key parent is the OWNING Type,
+  and `TypeValidation.uniqueIdReferent` already encapsulates that — reuse it
+  rather than writing a third variant.
+  (Also noted by the same sweep and deliberately left alone: the projector
+  "declares a repository but never tells it" check at `:3007` matches
+  `repoRef.pathId.value.lastOption` against each tell's target name. Same
+  category, also pre-existing, lower stakes — it is a UsageWarning about a
+  reference the author wrote in the same definition.)
+
+- **`Value` has no NUMERIC LITERAL, so `initiate entity Order(1)` does not
+  parse** against `on init(total: Integer)`. Pre-existing A54 limitation
+  (`count > 5` and `record R(1)` both fail to parse today; see
+  `StatementsTest`'s "reject a bare-number comparison operand"), and the
+  existing tests work around it by declaring `String` parameters and passing
+  `"1"`. It is filed HERE because lifecycle parameters are the first construct
+  designed around passing SCALARS, so this is where it bites hardest: the
+  design spec's own example, `on init(custId: Id(entity Customer), total:
+  Currency)`, cannot be invoked with a literal amount.
 
 - **Cross-context `tell` isolation seam — Error, but MEASURE FIRST.**
   Reid ruled 2026-08-13 that a `tell` into a different context is an Error
