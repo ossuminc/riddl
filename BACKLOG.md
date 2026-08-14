@@ -62,6 +62,45 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **Make `!` a full synonym of `not` (A28) — RULED 2026-08-14, branch does not
+  comply.** Reid, reviewing the `RIDDL-Tools-To-Do-List.md` reconciliation:
+  *"`not` and `!` should be synonymous everywhere as the inverse of a boolean
+  expression."* `!` must be legal in **every position `not` is**.
+  This **OVERRIDES the 2026-08-13 ruling** recorded in `CLAUDE.md` — that `not`
+  was RIDDL's only general-purpose negation, that `!` was a legacy spelling
+  accepted ONLY as `when !<bare-identifier>`, and that it "will not be extended
+  to" anything more. That paragraph has been rewritten; do not restore it.
+
+  **What does not comply, verified 2026-08-14 at `ecfd69d2c`:**
+  - `!` is a special case of `when_condition` alone —
+    `when_condition = … | "!" identifier | …` (`ebnf-grammar.ebnf:275`) — and it
+    takes a **bare identifier, not an expression**. So `!(a and b)`,
+    `require !x` and `let y = !x` are all parse errors today. The fix is an
+    alternative in `not_expression` (`"not" | "!"`), after which the
+    `when_condition` special case should go away rather than sit beside it.
+  - The two spellings build **different ASTs**: `not` a real negation node
+    (`AST.scala:3337`), `!` a `negated: Boolean` flag on `WhenStatement`
+    (`AST.scala:3660`). Synonymy means ONE node for both, which moves prettify,
+    BAST and JSON — so this needs a **`FORMAT_REVISION` bump**.
+
+  **Hazard, and it is a real one:** `!=` is a comparison operator
+  (`ebnf-grammar.ebnf:351`). A `!` prefix rule ahead of `comparison` will swallow
+  the `!` of `a != b` unless guarded by a not-followed-by-`=` test — and
+  **regex lookahead is unavailable**, since Scala Native cannot compile it
+  (`583d47556` removed one for exactly that reason). Use fastparse's `!` negative
+  lookahead combinator on a literal `"="`, not a regex.
+
+  **One design question to answer while building it:** which spelling prettify
+  emits. Emitting `not` for both makes `!` a one-way alias and every round trip
+  rewrites an author's `!` — which the reflectivity mandate arguably forbids;
+  preserving what was written costs a flag on the node. Pick deliberately.
+
+  **Already compliant, do not touch:** parenthesised grouping.
+  `"(" boolean_expression ")"` is a `boolean_atom` in both the grammar
+  (`ebnf-grammar.ebnf:357`) and the parser (`StatementParser.scala:590`), below
+  `comparison`, so it composes with everything above it — `not (a and b)`,
+  `(a or b) and c` and a parenthesised comparison all parse.
+
 - **Flip the bare-message-operand warning to an Error — BLOCKED on riddl-models.**
   The message-value-source design's end state (D3): naming a message type with no
   value is an Error. It shipped 2026-08-14 as a CompletenessWarning because the
@@ -588,6 +627,101 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Sequence: deprecate loudly for a release, then remove.
 
 ### 2. Queued, needs a plan
+
+#### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
+
+Surfaced 2026-08-14 by reconciling that document against this branch. **Six**
+items carry an ACCEPTED ruling and had no backlog entry, so none was tracked.
+Reid, 2026-08-14: *"add the things not built yet to the backlog so they stand a
+chance of being implemented in 2.0.0."* Each was verified unbuilt by the grep
+quoted with it — **re-run the grep rather than re-deriving the finding**, and
+scope it to the whole repo: the first pass of this audit called A42(ii) unbuilt
+on a grammar-only grep and was wrong, because the REST client lives in `utils`.
+A seventh entry closes the section: a contradiction between the two documents
+that needs a ruling before either can be fixed.
+
+- **A20 — typed-hole value expressions, `Value[T]("prose")`.** A vague-but-typed
+  expression: the type is known and checkable, the computation is prose filled in
+  by AI at generation time. Types the seam between the deterministic and AI
+  tiers, which is untyped today.
+  Verified unbuilt: `grep -n "Value\[" language/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
+  returns nothing. The untyped relative DID ship — `prompt_value = "prompt" "("
+  literal_string ")"` — so the seam exists and is exactly as untyped as A20
+  complains of. `let x: T = prompt("…")` is the nearest available approximation
+  and constrains the hole from outside; decide whether that is enough before
+  building the general form.
+
+- **A43 — modality-extended alias vocabulary.** Outputs gain `sound`, `speech`,
+  `haptic`; inputs gain `voice`, `gesture`, `gaze`; groups gain `scene`, `space`,
+  `zone`. Closed lists, **zero structural change** — the input/output/group triad
+  is already the modality-free logical core — so the work is three `StringIn`
+  lists plus their EBNF rules plus a corpus fixture.
+  Verified unbuilt: none of the nine words appears in the alias rules of
+  `ebnf-grammar.ebnf`.
+
+- **A46 — presentation-alias additions and compound consistency.** `plays`
+  (sound/animation); `speaks`, `announces` (speech); `vibrates`, `pulses`,
+  `nudges` (haptics); `diffuses` (scent); `serve`, `offer`, `taste`. Plus a
+  warning for noun/verb inconsistency across a compound output's parts.
+  Verified unbuilt: `presentation_aliases` is still the original five
+  (`ebnf-grammar.ebnf`, and the matching `StringIn` in `GroupParser.scala:45`).
+  **Do this with A43** — they touch the same rules. Note the asymmetry it closes:
+  A44's INPUT verbs grew twice (sixteen now, against the ten A44 listed) while
+  its OUTPUT counterpart never moved, so a deliberately symmetric pair is out of
+  step. Re-marked ACCEPTED from REQUIRED by Reid, 2026-08-14.
+
+- **A42 (iii) — Figma bidirectional scaffolding.** Generate Figma wireframe
+  skeletons mirroring the group tree, and draft RIDDL from Figma.
+  Verified: **parts (i) and (ii) are BOTH shipped** — `figma_ref` in the grammar,
+  `FigmaRef` in `AST.scala:1671` with placement enforced by `mayCarryFigmaRef`,
+  and real drift validation via `FigmaClient` (cross-platform, memoized,
+  four-valued `FigmaLookup`, off by default behind `--check-figma-drift` +
+  `FIGMA_TOKEN`). Only (iii) is missing: `grep -rli "wireframe|scaffold"
+  --include="*.scala" .` returns nothing.
+  This is **generator work, not riddlc's** — it pairs with Part B item 4 and
+  probably belongs in riddl-gen. Filed here so it is tracked somewhere; move it
+  when that repo grows a backlog.
+
+- **A38 — the refusal step's operand should name an invariant, not prose.**
+  The step kind shipped as `any_interaction_ref "refuses" user_ref
+  literal_string`, so the reason is a **prose string**. A38's whole purpose was
+  closing the loop between the requirement's named invariant, the `require` that
+  enforces it, and the InvariantViolated result a generated test asserts — and a
+  string closes none of it. Change the operand to an `invariant_ref`, or admit
+  both and warn on the prose form.
+  Verified: the rule is in `ebnf-grammar.ebnf` under `step_interactions`.
+  Touches parser + EBNF + GBNF + prettify + BAST + JSON, so it needs a
+  `FORMAT_REVISION` bump; the corpus must be surveyed for existing prose
+  refusals before the string form is removed.
+
+- **A5 — generalize the `on other` PRESENCE check beyond adaptors.**
+  Every non-empty **adaptor** handler must have an `on other` clause
+  (`ValidationPass.scala:3489`). A5 asked to "consider generalizing the presence
+  and completeness check across all processor kinds"; the **emptiness** half is
+  already model-wide (`ValidationPass.scala:553-563`), the **presence** half is
+  not. A57 is a fresh reason to want it: `on other` can now bind the message's
+  ENVELOPE, which makes the clause useful outside an adaptor rather than merely
+  dutiful. **Measure first** — this would newly warn on every processor in the
+  corpus that omits the clause, which is most of them, so it may need to be
+  advisory (`provideTips`) rather than always-on.
+
+- **RULING NEEDED — does an EMPTY `on other` mean "deliberately discard", or is
+  it a defect?** The two documents disagree, found 2026-08-14.
+  `ValidationPass.scala:555` warns on every empty `on other`: *"Empty 'on other'
+  clause will silently discard unhandled messages"*, suggesting *"remove it if
+  discarding is intentional"*. But A5 says *"Silence is only a deliberate filter
+  when an explicit 'on other' clause exists and does nothing with the message"* —
+  the empty clause was meant to BE the marker of intent, and the suggestion tells
+  the author to delete the marker.
+  Two coherent answers: **(a)** the empty clause is the idiom, so exempt it and
+  drop the warning; **(b)** the idiom is `do "discard the message"` — which is
+  what the standard module's own `BottomlessPit` writes — so keep the warning and
+  strike that sentence from A5. (b) is the more likely intent, since a `do` is
+  greppable and self-documenting where an empty block is indistinguishable from
+  an unfinished one, and it matches the standing preference for `do "nothing"`
+  over an empty block in A70's timeout clause. **Reid to rule; then fix whichever
+  of the two documents is wrong.**
+
 - **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
   rule.** Reid ruled 2026-08-09: *"There must be no non-sealed matches — it is
   okay to fall through to generate an error or exception but not okay to not

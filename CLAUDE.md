@@ -985,19 +985,25 @@ to the right group rather than appending to a list.
   keys for State's type ref use State as parent, not Entity.
 - **`do "..."` is an alias for `prompt "..."`** — both produce
   `PromptStatement`.
-- **`not` is RIDDL's only general-purpose negation; `!` is a legacy
-  spelling accepted ONLY as `when !<bare-identifier>`** (ruling
-  2026-08-13, prompted by ossum.tech's crash report). `!` does not
-  precede a path, does not appear in `require`/`let`, and will not be
-  extended to. `not` is prefix, recurses (`not not a`), and works
-  wherever a boolean expression does — including `when not isValid`,
-  which is the recommended spelling of the `!` form.
-  The reasoning is that `!` buys no expressiveness and costs four
-  surfaces (parser, EBNF, GBNF, prettify) plus a second spelling for
-  authors to choose between; RIDDL's operators are words (`and`,
-  `or`, `not`) and `!` is the outlier. It is kept — not deprecated —
-  because it parses today and models use it, and `WhenStatement`
-  carries the negation as a separate `Boolean`, not as an AST node.
+- **`not` and `!` are SYNONYMOUS everywhere, as the inverse of a
+  boolean expression** (ruling 2026-08-14). `!` is legal in every
+  position `not` is. `not` is prefix and recurses (`not not a`), and
+  both work wherever a boolean expression does.
+  **This OVERRIDES the 2026-08-13 ruling**, which said `not` was the
+  only general-purpose negation, that `!` was a legacy spelling
+  accepted ONLY as `when !<bare-identifier>`, and that it "will not be
+  extended to" anything more. Do not restore that reasoning — it
+  argued `!` buys no expressiveness and costs four surfaces, and the
+  author has ruled the other way.
+  **The branch does NOT comply yet, and the work is in BACKLOG § 1.**
+  Today `!` is a special case of `when_condition` alone, taking a bare
+  IDENTIFIER rather than an expression, so `!(a and b)`, `require !x`
+  and `let y = !x` are parse errors; and the two spellings build
+  different ASTs — `not` a real negation node, `!` a `negated:
+  Boolean` on `WhenStatement` — so unifying them moves prettify, BAST
+  and JSON and needs a `FORMAT_REVISION` bump. Watch `!=`: a `!`
+  prefix rule ahead of `comparison` swallows its `!` unless guarded,
+  and regex lookahead is unavailable on Scala Native.
 - **walkStatements helper** — private in ValidationPass; walks
   into `WhenStatement` / `MatchStatement` nesting.
 - **Accessors see through the provenance wrappers; `Finder` sees
