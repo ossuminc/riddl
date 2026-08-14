@@ -48,12 +48,20 @@ case class URL(scheme: String = "", authority: String = "", basis: String = "", 
 
   /** Determine if the URL is valid. URLs are valid if they are empty, or they have a valid scheme
     * name and the path is not empty
+    *
+    * A trailing `/` on the [[path]] is accepted for the http(s) schemes and rejected for `file`.
+    * For http(s) it is the ordinary way to write a directory URL -- `described at
+    * https://ossum.tech/docs/riddl/` is the case that exposed this -- and RIDDL must preserve it
+    * rather than normalize it away, since prettify has to emit back what the author wrote. For
+    * `file` a URL names something to be READ, so a trailing slash denotes a directory and stays an
+    * error worth catching.
     */
   @JSExport def isValid: Boolean = {
+    def pathEndValid: Boolean = isHttpScheme || path.last != '/'
     isEmpty | (
       scheme.matches("(file)|(https?)") &&
         (basis.isEmpty | (basis.nonEmpty && basis.head != '/' && basis.last != '/')) &&
-        (path.isEmpty | (path.nonEmpty && path.head != '/' && path.last != '/'))
+        (path.isEmpty | (path.nonEmpty && path.head != '/' && pathEndValid))
     )
   }
 

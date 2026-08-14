@@ -65,6 +65,31 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
       }
     }
 
+    // A trailing slash is the normal way to write a directory URL, and the EBNF has always
+    // allowed one: `url_path` (ebnf-grammar.ebnf:543) is a character-class regex that includes
+    // the slash and is starred, so it admits both an embedded and a trailing one, and the empty
+    // path besides. The fastparse `urlPath` was stricter than the grammar it implements: it read
+    // slash-separated segments each required to be non-empty, so a trailing slash was left
+    // unconsumed and surfaced as a confusing error against the NEXT metadata keyword.
+    //
+    // Reported by riddl-models alongside the prettify emitter defects
+    // (task/2026-08-14-prettify-emitter-drops-method-and-shown-by.md).
+    "allow a URL description to end in a slash" in { (td: TestData) =>
+      import com.ossuminc.riddl.utils.URL
+      val input = RiddlParserInput(
+        """domain foo is { ??? } with { described at https://ossum.tech/docs/riddl/ }""".stripMargin,
+        URL.empty,
+        td.name
+      )
+      parseDomainDefinition(input, identity) match {
+        case Left(errors) => fail(errors.format)
+        case Right((domain, _)) =>
+          domain.metadata.toSeq must contain(
+            URLDescription((1, 30), "https://ossum.tech/docs/riddl/")
+          )
+      }
+    }
+
     "literal strings can handle any chars except \"" in { (td: TestData) =>
       val input: RiddlParserInput = RiddlParserInput(
         """"special chars: !@#$%^&*()_+-={}[];':,.<>/?~`

@@ -132,10 +132,19 @@ private[parsing] trait NoWhiteSpaceParsers {
   }
 
   private final val validURLChars = "-_.~!$&'()*+,;="
+
+  /** The trailing `"/".?` admits the directory form, `https://host/docs/riddl/`.
+    *
+    * Without it every slash-separated segment had to be non-empty, so a trailing slash was left
+    * unconsumed by `httpUrl` and the failure was reported against whatever followed the URL -- for
+    * `described at`, a bewildering "Expected one of (attachment | brief | briefly | ...)" pointing
+    * at the slash. The EBNF's `url_path` (ebnf-grammar.ebnf:543) has always permitted it, so this
+    * brings the parser into line with the grammar rather than extending it; the EBNF is unchanged.
+    */
   private def urlPath[u: P]: P[String] = {
     P(
-      CharsWhile(ch => ch.isLetterOrDigit || validURLChars.contains(ch))
-    ).repX(1, "/").!
+      CharsWhile(ch => ch.isLetterOrDigit || validURLChars.contains(ch)).repX(1, "/") ~~ "/".?
+    ).!
   }
 
   def httpUrl[u: P]: P[URL] = {
