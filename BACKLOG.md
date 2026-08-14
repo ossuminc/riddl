@@ -62,6 +62,58 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **A message ref must be able to name its VALUE, not just its type — DECIDED
+  2026-08-14, needs a plan before implementation.**
+  From riddlg (`task/done/2026-08-14-where-does-a-message-refs-value-come-from.md`).
+  `send event Foo to outlet Bar` names a message TYPE and says nothing about
+  where the value comes from, so a generator has nothing to lower. Measured by
+  riddlg on reactive-bbq: **659 of 1088 `AI FILL` markers (60.6%) are exactly
+  this**, and with the record-ref analogue in `morph` it is **98.2% of every
+  hole** in the generated system. Each becomes a `null` in generated Java.
+
+  **Reid's decisions, all three (2026-08-14):**
+  1. **Shape — a bare `ValueRef` becomes a THIRD arm** of `message_value`,
+     which is `constructor | message_ref` today (A54, `ebnf-grammar.ebnf:292`).
+     No new keyword. It is unambiguous because RIDDL requires the kind keyword
+     on a type, so a bare identifier can only be a value:
+     `on placed: event OrderPlaced is { send placed to outlet Downstream }`.
+     **`from` was REJECTED** for this: it already means the SENDER in epic
+     interactions (`send command Foo from user U to context C`), and one word
+     with two meanings in sibling constructs is a cost authors pay repeatedly.
+  2. **Sources — ANY resolvable `ValueRef`**: state-record field, on-clause
+     binding (A55), `let`-local, function result, `ask` result. One rule rather
+     than an enumeration to keep in sync, reusing machinery A55 already built
+     and tested. The value's type must BE the message type — that check is what
+     makes the feature worth more than a comment.
+  3. **The bare form becomes an ERROR — but NOT in one step.** End state is an
+     Error; the route there is warn-first, per the repo's deprecate-then-remove
+     path (the same one prescribed below for the inline aggregation in
+     `requires`/`returns`).
+
+  **The measurement that forced the sequencing** (counted 2026-08-14, do not
+  re-derive): riddl-models holds **14,730 bare message refs — 7,541 `tell`,
+  6,445 `send`, 406 `reply`, 349 `yield` — and ZERO uses of the constructor
+  form.** So an Error does not migrate the corpus, it invalidates every
+  message-sending statement in all 189 models at once, and the CI gate requires
+  189/189 validating clean. Sequence: ship the ValueRef arm + a
+  CompletenessWarning, drop a migration task on riddl-models, flip to Error when
+  the corpus is clean. riddlg is served either way — a warning marks all 14,730
+  sites for it exactly as an Error would.
+
+  **Needs a plan before implementation** (standing rule: each item gets a plan
+  approved first). The plan must cover: the EBNF/GBNF change and TatSu
+  re-validation; type-checking the ValueRef against the message type; all four
+  statements (`send`/`yield`/`tell`/`reply`) plus the `morph … with` record
+  analogue, since `message_value` is shared; and the four reflectivity surfaces.
+
+  **One observation from riddlg worth keeping, because it is about US:**
+  riddl-models uses the constructor form zero times while riddlg's own fixtures
+  use it 30 times across 6 spec files. Each body of tests was green about a path
+  the other never exercised. That is the same fixture-vs-corpus blindness that
+  hid the instance-identity Critical, and the CI grammar validation against
+  riddl-models proves only that those models parse — never that the corpus
+  reaches the language's expressive range.
+
 - **BUG: `ResolutionPass` does not descend into nested statement bodies, so an
   ordinary reference inside `foreach`/`when`/`match` never enters the refMap.**
   Found 2026-08-14 while writing the lexical-scope threading tests (`957f64534`);
