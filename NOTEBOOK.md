@@ -8,81 +8,69 @@ GitHub release notes — don't reproduce it here.
 
 Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in
-this NOTEBOOK's body. This says only where things stand and what a cold session
-would get wrong.
+this NOTEBOOK's body. This says only what would otherwise have to be
+re-derived. Ask `git` for branch, tree and unpushed span — anything written
+here about those is stale the moment someone commits.
 
-**State — every line below was run as a command during this handoff
+**Build state — every line was run as a command during this handoff
 (2026-08-14), not recalled:**
 
-- Branch `release/2`, HEAD `9e14bcad0`, `git describe` =
-  `2.0.0-rc.14-27-g9e14bcad0`. Ask `git status` for the tree and the unpushed
-  span; do not trust a number written here.
 - **`publishLocal` AND `~/Code/ossuminc/bin/riddlc` are BOTH at
-  `2.0.0-rc.14-27-9e14bcad`**, produced by one `scripts/publish-and-stage.sh`
-  run, which verified it. Bare `riddlc` on `$PATH` is still the old tap build.
-- **BAST `FORMAT_REVISION` is 17.** Tasks 4-7 did not move it and no remaining
-  task may.
-- **Certified tri-platform, from clean, under a throwaway `--sbt-cache`:**
-  JVM utils 148 / language 669 / passes 1262 / testkit 2 / commands 245 /
-  riddlLib 122 / riddlc 21; JS 753; Native utils 110 / language 513 /
-  passes 1105 / testkit 1 / commands 47 / riddlLib 111 / riddlc 21 + nativeLink.
-  Floors raised in `.claude/skills/rc/SKILL.md` to **2469 / 753 / 1908**.
-  All four validators green: TatSu 104/127 (baseline), GBNF fresh + all 320
-  rules covered, external-repo 9/9.
+  `2.0.0-rc.14-28-1f2c496d`**, from one `scripts/publish-and-stage.sh` run;
+  the binary was asked its version and the ivy artifacts confirmed present at
+  that same version. Bare `riddlc` on `$PATH` is still the old tap build.
+- **BAST `FORMAT_REVISION` is 17.** No remaining task may move it.
+- **Certified tri-platform from clean under a throwaway `--sbt-cache`:**
+  floors now **2469 / 753 / 1908** in `.claude/skills/rc/SKILL.md`, which
+  carries the per-module rows. All four validators green (TatSu 104/127 =
+  baseline, GBNF fresh, external-repo 9/9).
 - **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease, Maven from the tag, npm on
   the **`rc`** dist-tag (`latest` did NOT move).
 
-**The message-value-source plan is COMPLETE — all 7 tasks.** Detail in
-`.superpowers/sdd/2026-08-14-message-value-source/progress.md` (gitignored, but
-it names every commit); plan and design under `docs/superpowers/`. Reid's work
-order was: emitter fix → finish this plan → **cut an RC carrying both**. The
-first two are done, so **the RC is the next action** (`/rc`), which is what gives
-riddl-models the single `.bast` regeneration they asked for.
+**In flight: nothing.** The message-value-source plan is COMPLETE, all 7 tasks
+(ledger: `.superpowers/sdd/2026-08-14-message-value-source/progress.md`,
+gitignored but it names every commit; plan and design under
+`docs/superpowers/`). **The next action is Reid's: cut the RC** (`/rc`) — his
+work order was emitter fix → this plan → one RC carrying both, so riddl-models
+gets a single `.bast` regeneration.
 
-**Corpus A/B for the whole plan, measured with the released rc.14 binary as the
-B side (it is exactly this branch's base) and the staged build as A:** errors
-49 → 49, warnings 863 → 863, completeness **288 → 15,585**. The entire delta is
-the new bare-operand warning: 14,652 message + 645 record = 15,297. Nothing else
-moved.
+**Traps — every one already bit someone here.**
 
-**Traps — every one already bit someone.**
-
-- **TWO CORPUS TESTS ARE RED ON PURPOSE**, and this is still the thing a cold
-  session is most likely to get wrong. `RiddlModelsRoundTripTest` (16 of 189) and
+- **TWO CORPUS TESTS ARE RED ON PURPOSE**, and this is what a cold session is
+  most likely to get wrong. `RiddlModelsRoundTripTest` (16 of 189) and
   `Root2JsonCorpusTest`'s validation-parity case (173/189, needs ≥95%) fail
   because `ccd278c00` taught the addressing check to resolve `Id` aliases,
-  exposing **49 real defects in riddl-models**. Tasks 4-7 did not move either
-  figure. **Do not soften the checks and do not chase them here.** BACKLOG § 3.
-- **`tJVM` can no longer be run as one `;` chain**, precisely because of the
-  above: it aborts at `commands` and `riddlLib`/`riddlc` never run, which looks
-  identical to a completed leg. Finish those two separately and count the
-  `Suites: completed` lines.
-- **A dispatch written TWICE hides the incomplete copy.** `WhenStatement.format`
-  carried a `MatchError` on `when prompt("…")` for as long as it has existed,
-  because `RiddlFileEmitter.emitStatement` keeps its own complete copy and
-  prettify routes through THAT — so the round trip, the thing that proves a
-  `format` total, could never reach it. Now in CLAUDE.md; check both when either
-  changes.
-- **A revert-proof under the shared sbt cache can be a lie.** The first attempt
-  to prove that MatchError reported GREEN with the fix removed: sbt 2 served the
-  previously-compiled classes and never compiled the reverted code. Only a
-  throwaway `--sbt-cache` made it fail. **Revert-prove under a fresh cache.**
+  exposing **49 real defects in riddl-models**. **Do not soften the checks and
+  do not chase them here.** BACKLOG § 3.
+- **`tJVM` therefore cannot run as one `;` chain** — it aborts at `commands`,
+  so `riddlLib` and `riddlc` never run and the leg looks complete. Finish those
+  two separately and count the `Suites: completed` lines.
+- **A revert-proof under the shared sbt cache can be a lie.** One this session
+  reported GREEN with the fix removed because sbt 2 served previously-compiled
+  classes and never compiled the reverted code. **Revert-prove under a throwaway
+  `--sbt-cache`**, and check the log for the module actually recompiling.
 - **A test asserting "no X" is also satisfied by a model that never parsed.**
-  The same case could not fail as first written; it needed `justErrors mustBe
-  empty` FIRST. Check that a negative assertion can distinguish its two reasons.
+  Same case, same session: it needed `justErrors mustBe empty` FIRST to become
+  able to fail.
+- **A dispatch written TWICE hides the incomplete copy** — now a rule in
+  CLAUDE.md, with `Statement.format` / `RiddlFileEmitter.emitStatement` named as
+  the pair to keep in step.
 
-**Certainty.** Everything under State was executed this session. The three
-design questions Q1-Q3 were resolved by a controller rather than by Reid and are
-flagged in the plan so he can overrule them; Q1 (the field-less exemption) is now
-also backed by a measurement — it accounts for 62 of 14,714.
+**Certainty.** Everything above was executed this session. The plan's design
+questions Q1-Q3 were resolved by a controller rather than by Reid and are
+flagged in the plan so he can overrule them; Q1 is now also backed by a
+measurement (the field-less exemption accounts for 62 of 14,714 corpus sites).
+One claim I asserted and later DISPROVED: `BASTWriterSpec` does *not* have the
+unawaited-Future defect — CLAUDE.md carried that error and is now corrected
+with the file:line evidence.
 
-**`task/` — ONE file, untriaged, and not actionable as written:**
-`2026-08-04-security.md` (RBAC / `role`, issue #535) is Reid's own draft, marked
-*"Draft (do not act on this)"*, with its acceptance-criteria, semantics and
-why-we-can't-derive-it sections all EMPTY. Two outgoing drops were made this
-session: the landing notice appended to
-`task/done/2026-08-14-where-does-a-message-refs-value-come-from.md` (riddlg), and
-a corpus-wide migration filed at riddl-models
+**`task/` — one file, UNTRIAGED and not actionable as written:**
+`2026-08-04-security.md` (RBAC / `role`, issue #535), Reid's own draft marked
+*"Draft (do not act on this)"*, with acceptance-criteria, semantics and
+why-we-can't-derive-it all EMPTY. Two outgoing replies were dropped this
+session and both are confirmed present: the landing notice appended to
+`task/done/2026-08-14-where-does-a-message-refs-value-come-from.md` (riddlg),
+and riddl-models
 `task/2026-08-14-bare-message-operands-now-warn-corpus-wide.md`.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the

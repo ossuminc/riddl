@@ -1549,7 +1549,12 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   same failure: `inputFuture.map { … assertions … }` followed by
   `Await.result(inputFuture, …)` awaits the WRONG future — the
   assertions run detached and their failures are discarded. Await the
-  MAPPED future. (`BASTWriterSpec` still has this shape.)
+  MAPPED future. (**`BASTWriterSpec` does NOT have this shape** — this note
+  said it did until 2026-08-14, wrongly. All five of its cases bind
+  `assertionFuture = inputFuture.map { … }` and await THAT
+  (`BASTWriterSpec.scala:35`/`70`, `:77`/`123`, `:130`/`170`, `:177`/`225`,
+  `:232`/`254`), which is the correct form. The failure mode is still real
+  and worth watching for; it just has no instance in the repo today.)
 - **`test`/`tJVM` resolve to `testQuick`** — which incrementally
   SKIPS test suites it judges unaffected, even after a source change
   and even with `~/Library/Caches/sbt/v2/ac` cleared (a DIFFERENT cache
