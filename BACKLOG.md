@@ -101,6 +101,22 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   `comparison`, so it composes with everything above it — `not (a and b)`,
   `(a or b) and c` and a parenthesised comparison all parse.
 
+- **APPROVED 2026-08-14 — flip the bare-message-operand warning to an Error.**
+  Reid: *"riddl-models is working on it from the same riddl version we are using;
+  yes, make the flip, riddl-models should be corrected soon."* The block is
+  lifted: they are building against our staged build, so shipping the Error is
+  what gives them the diagnostics to fix against.
+  **Go in with eyes open about CI.** This turns 14,714 warnings into Errors, so
+  the corpus tests stay red until riddl-models lands its migration — on top of
+  the two already red by design (§ 3). **Do not treat a red corpus as a
+  regression while both are outstanding**, and do not "fix" it here.
+  The change itself is one `addCompleteness` → `addError` in
+  `checkBareMessageOperand`, plus flipping the `errorsOf(msgs) mustBe empty`
+  assertions in `BareMessageOperandWarningTest` — which exist precisely so the
+  severity cannot move silently. **Keep the field-less exemption** (62 of the
+  14,714): with no data the type fully determines the value.
+  Detail below, kept because it records the measurement.
+
 - **Flip the bare-message-operand warning to an Error — BLOCKED on riddl-models.**
   The message-value-source design's end state (D3): naming a message type with no
   value is an Error. It shipped 2026-08-14 as a CompletenessWarning because the
@@ -244,8 +260,19 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   2026-08-05 drop: per-row before/after with the unchanged rows shown unchanged.
 
 
-- **A message ref must be able to name its VALUE, not just its type — IN
-  FLIGHT. Tasks 1-3 of 7 DONE; Task 4 IS NEXT and Tasks 4-7 NOT STARTED.**
+- **RETIRED 2026-08-14 — COMPLETE, 7 of 7. This entry is kept for one release as
+  a pointer and should be deleted at 2.0.0.** Tasks 4-7 landed in `f40822d3e`,
+  `691f0e28c`, `11bf9c59c` and `4f26e6462`; the branch was certified
+  tri-platform afterwards. What it taught is in `NOTEBOOK.md`; what is durably
+  true is in `CLAUDE.md`; the language decision is item 72 of
+  `../RIDDL-Tools-To-Do-List.md`. **The only work still outstanding from this
+  design is the bare-operand Error flip, tracked as its own item above** — do not
+  re-read the task detail below expecting open work. The text through Task 7 is
+  left in place this once because it records measurements and reasoning that
+  nothing else captures.
+
+- ~~**A message ref must be able to name its VALUE, not just its type — IN
+  FLIGHT. Tasks 1-3 of 7 DONE; Task 4 IS NEXT and Tasks 4-7 NOT STARTED.**~~
   **Plan: `docs/superpowers/plans/2026-08-14-message-value-source.md`** — it has
   the per-task detail and the Global Constraints; work from it, not from this
   entry.
@@ -410,6 +437,28 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   riddl-models proves only that those models parse — never that the corpus
   reaches the language's expressive range.
 
+- **APPROVED TO FIX 2026-08-14 — all four bugs. Reid: *"Bugs: fix all 4."***
+  The four are: `ResolutionPass` not descending into nested statement bodies
+  (below); `validateConstructor` not following type aliases (below); the
+  statement-scope checks missing nested statements (below); and saga step
+  statements never being validated (§ 2).
+  **Fix them as ONE shape, not four tickets.** Three of the four are the same
+  defect — statements held in a **field** (`when`/`match`/`foreach` bodies,
+  `SagaStep.do/undoStatements`) are skipped by the generic `Branch` traversal,
+  which walks `contents` only. That is already a documented trap in `CLAUDE.md`,
+  and fixing one pass does not fix the other: the resolver half is in
+  `ResolutionPass`, the validation half in `ValidationPass`, and the saga half is
+  a third instance. The standing rule applies — *fix the SHAPE of a
+  dispatch/recursion defect, not the instance* — so the fix should grep for every
+  field-held statement site rather than patching the three that were reported.
+  **Each needs a corpus A/B before it lands.** These can only ADD resolution and
+  validation, so each will surface references that were silently unchecked; that
+  is the point, but it means the corpus delta is the deliverable, not an
+  afterthought. Sequence them AFTER the bare-operand Error flip, or the two
+  deltas become impossible to tell apart.
+  `validateConstructor` is the odd one out — an ordinary missing alias walk, and
+  the cheapest of the four.
+
 - **BUG: `ResolutionPass` does not descend into nested statement bodies, so an
   ordinary reference inside `foreach`/`when`/`match` never enters the refMap.**
   Found 2026-08-14 while writing the lexical-scope threading tests (`957f64534`);
@@ -472,6 +521,13 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   nothing weakened — the suites build every input from `RiddlParserInput` and
   string literals, so no Native hazard was present. Rolled into the JVM/Native
   gap item above.
+
+- **CONFIRMED 2026-08-14 — build the test. Reid: *"yes, add a test case for it
+  to make sure it continues to be supported."*** No design question remains; the
+  deliverable is a `SagaValidatorTest` case asserting `initiate` and `terminate`
+  both validate clean in a saga step, citing the ruling in a comment. Cheap, and
+  it is the only thing standing between the ruling and a future tightening of
+  `checkInstanceEffectScope` silently removing the legality. Context follows.
 
 - **RULED 2026-08-14: `initiate`/`terminate` ARE legal inside a saga step.**
   Reid: *"a saga may need new entities to be created."* That settles it — but
@@ -556,6 +612,25 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   designed around passing SCALARS, so this is where it bites hardest: the
   design spec's own example, `on init(custId: Id(entity Customer), total:
   Currency)`, cannot be invoked with a literal amount.
+
+- **MEASUREMENT ATTEMPTED 2026-08-14 and it FAILED — a grep cannot answer this.**
+  Reid: *"I don't really care, but go ahead and count how many models do this,
+  probably not many."* Recorded so the next person does not repeat the attempt.
+  What is solid: **7,561** lines carry a `tell`; of **8,254** `to <kind> <path>`
+  targets in the corpus, **7,396 are DOTTED (89.6%)** and only **175 are bare**.
+  What is NOT solid: a dotted path means the author QUALIFIED the target, not
+  that it crosses a context boundary — `to entity OrchestrationContext.Marketplace‑
+  Order` may name an entity in the teller's own context. Comparing the path's
+  first segment against the nearest enclosing `context` was tried and is
+  unsound: sagas and adaptors sit at DOMAIN level, outside any context, so the
+  tracked context is stale for exactly the statements most likely to cross a
+  boundary. It reported 7,393 of 7,396 as crossing, which is not credible.
+  **The real count needs RESOLUTION, not text** — compare the telling
+  processor's enclosing Context to the resolved target's, which is a throwaway
+  pass over the corpus (or a `riddlc` run), not a command. Given "I don't really
+  care", the honest read is: **qualified targets are near-universal, so if the
+  seam rule bites it will bite widely** — which is itself the argument for the
+  warn-then-flip sequencing this repo now uses twice.
 
 - **Cross-context `tell` isolation seam — Error, but MEASURE FIRST.**
   Reid ruled 2026-08-13 that a `tell` into a different context is an Error
@@ -694,33 +769,57 @@ that needs a ruling before either can be fixed.
   `FORMAT_REVISION` bump; the corpus must be surveyed for existing prose
   refusals before the string form is removed.
 
-- **A5 — generalize the `on other` PRESENCE check beyond adaptors.**
-  Every non-empty **adaptor** handler must have an `on other` clause
-  (`ValidationPass.scala:3489`). A5 asked to "consider generalizing the presence
-  and completeness check across all processor kinds"; the **emptiness** half is
-  already model-wide (`ValidationPass.scala:553-563`), the **presence** half is
-  not. A57 is a fresh reason to want it: `on other` can now bind the message's
-  ENVELOPE, which makes the clause useful outside an adaptor rather than merely
-  dutiful. **Measure first** — this would newly warn on every processor in the
-  corpus that omits the clause, which is most of them, so it may need to be
-  advisory (`provideTips`) rather than always-on.
+- **RULED 2026-08-14 — `on other` is a NECESSARY construct, not an idiom or a
+  defect. Generalize the presence check to every processor kind (A5).**
+  Reid, asked whether an empty `on other` means "deliberately discard":
 
-- **RULING NEEDED — does an EMPTY `on other` mean "deliberately discard", or is
-  it a defect?** The two documents disagree, found 2026-08-14.
-  `ValidationPass.scala:555` warns on every empty `on other`: *"Empty 'on other'
-  clause will silently discard unhandled messages"*, suggesting *"remove it if
-  discarding is intentional"*. But A5 says *"Silence is only a deliberate filter
-  when an explicit 'on other' clause exists and does nothing with the message"* —
-  the empty clause was meant to BE the marker of intent, and the suggestion tells
-  the author to delete the marker.
-  Two coherent answers: **(a)** the empty clause is the idiom, so exempt it and
-  drop the warning; **(b)** the idiom is `do "discard the message"` — which is
-  what the standard module's own `BottomlessPit` writes — so keep the warning and
-  strike that sentence from A5. (b) is the more likely intent, since a `do` is
-  greppable and self-documenting where an empty block is indistinguishable from
-  an unfinished one, and it matches the standing preference for `do "nothing"`
-  over an empty block in A70's timeout clause. **Reid to rule; then fix whichever
-  of the two documents is wrong.**
+  > *"It's neither an idiom nor a defect, it is a necessary model construct and
+  > it triggers when the processor receives a message OTHER than ones handled by
+  > OMCs in the handler(s). In other words, `on other` is like the fall-through
+  > on a switch statement and it MUST be there and every well constructed
+  > processor should have one, perhaps one for each state for a multi-state
+  > entity."*
+
+  So the question was mis-framed: **presence is the rule**, and the empty-body
+  question is secondary. The scope is **per handler**, which is what gives a
+  multi-state entity one per state — each state carries its own handler.
+
+  **What exists today:** the presence check is **adaptor-only** and is an
+  **Error** (`ValidationPass.scala:3489`), guarded on `clauses.nonEmpty` so a
+  `???` handler is exempt (A76). Its own comment already says *"This
+  presence/completeness check is intended to generalize to other processor kinds
+  later"* — this ruling is that "later". The **emptiness** warning is already
+  model-wide (`:553-563`).
+
+  **MEASURED 2026-08-14 before implementing, brace-matched over the corpus —
+  do not re-derive:**
+
+  | | handlers |
+  |---|---|
+  | total handler blocks in riddl-models | **3,606** |
+  | already have `on other` | **2,311 (64.1%)** |
+  | would be newly flagged | **1,295 (35.9%)**, across **22** of 29 model dirs |
+
+  The 64% is the useful number: the construct is **already the corpus's house
+  style**, which is strong evidence for the ruling and means this is a migration,
+  not a redefinition. Worst-affected are `hospitality` (192), `healthcare` (132)
+  and `manufacturing` (93).
+
+  **Severity is the open sub-question.** The adaptor precedent is an Error, and
+  Reid's "MUST be there" reads that way — but shipping it as an Error reds 22 of
+  29 models at once, and the CI gate requires 189/189 clean. **Follow the
+  A72/bare-operand precedent**: ship as a CompletenessWarning, drop a migration
+  task on riddl-models, flip to Error when the corpus reports zero. That path is
+  already proven on this branch and needs no new argument.
+
+  **The empty-body warning stays** — it is about the BODY, not the presence, and
+  the two rules now compose cleanly: the clause must exist, and it must do
+  something. The discard idiom is `do "discard the message"`, which is what the
+  standard module's own `BottomlessPit` writes. A5's sentence *"Silence is only a
+  deliberate filter when an explicit 'on other' clause exists and does nothing
+  with the message"* is now **wrong on both halves** and must be struck from
+  `../RIDDL-Tools-To-Do-List.md`: presence is mandatory so it signals nothing,
+  and an empty body is the warned shape rather than the sanctioned one.
 
 - **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
   rule.** Reid ruled 2026-08-09: *"There must be no non-sealed matches — it is
@@ -805,6 +904,14 @@ that needs a ruling before either can be fixed.
   have MORE outlets besides — which is exactly what `Source`-shaped rules out
   and why reactive-bbq trips today. So `originates` becomes "has an outlet of
   the connector's type", not "is a Source".
+
+  **CONFIRMED AND MADE EXPLICIT 2026-08-14:** *"a chain of outlet-connector-inlet
+  MUST start with an outlet (Source, Merge, Flow, Split, Router), never a Sink
+  (only has inlet(s))."* So the admissible head shapes are exactly the five that
+  the arity table gives ≥1 outlet — and **`Void` is excluded too**, having
+  neither port, which the enumeration does not say but the rule requires. The
+  test is therefore "has an outlet of the connector's type", asked of the
+  processor, not "is shaped `Source`".
 
   He also asked a question this item must answer before the change lands:
   *"sink with no upstream source probably means no connector connected?"* —
