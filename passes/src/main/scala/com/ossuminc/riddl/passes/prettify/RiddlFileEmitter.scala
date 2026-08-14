@@ -192,20 +192,41 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     addIndent("by ").add(authorRef.format).nl
   end emitAuthorRef
 
+  /** `shown by { <url>… }` -- `ShownBy.format` yields only the keywords, so it is not usable here.
+    * The URLs are emitted BARE: `shownBy` reads them with `httpUrl`, which does not accept quotes.
+    */
+  def emitShownBy(shownBy: ShownBy): this.type =
+    addIndent("shown by { ")
+      .add(shownBy.urls.map(_.toExternalForm).mkString(" "))
+      .add(" }")
+      .nl
+  end emitShownBy
+
   /** A42: `figma "<fileKey>" node "<nodeId>"` */
   def emitFigmaRef(figmaRef: FigmaRef): this.type =
     addIndent(figmaRef.format).nl
   end emitFigmaRef
 
+  // QUOTING DIFFERS BY FORM, and making it uniform either way emits source that will not parse.
+  // `namedAttachmentBody` (CommonParser:372) reads the mime type with `mimeType`, a BARE token, so
+  // quoting it is a hard parse error -- and because the ULID branch is tried first, the reported
+  // failure is the misleading `Expected ("ULID")`. `ulidAttachmentBody` reads a `literalString`,
+  // so that one form does need its quotes. Same trap as `described at` vs `described in file` in
+  // `emitDescription` above.
+  //
+  // All three also lacked a trailing newline, which ran the last attachment onto the closing `}`
+  // of the metadata block.
   private def emitStringAttachment(a: StringAttachment): this.type =
-    addIndent("attachment " + a.id.format).add(s" is \"${a.mimeType}\" as ${a.value.format}")
+    addIndent("attachment " + a.id.format).add(s" is ${a.mimeType} as ${a.value.format}").nl
   end emitStringAttachment
 
   private def emitFileAttachment(a: FileAttachment): this.type =
-    addIndent("attachment " + a.id.format).add(s" is \"${a.mimeType}\" in file ${a.inFile.format}")
+    addIndent("attachment " + a.id.format).add(s" is ${a.mimeType} in file ${a.inFile.format}").nl
+  end emitFileAttachment
 
   private def emitULIDAttachment(a: ULIDAttachment): this.type =
-    addIndent("attachment " + a.id.format).add(s" is \"${a.ulid.toString}\"")
+    addIndent("attachment " + a.id.format).add(s" is \"${a.ulid.toString}\"").nl
+  end emitULIDAttachment
 
   def trimTrailingNewline(): this.type =
     if sb.length >= new_line.length &&
@@ -270,24 +291,38 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     this
   end emitMethod
 
-  private def emitFields(of: Seq[Field]): this.type = {
+  /** Emit an aggregate's contents in the order they were authored.
+    *
+    * This took a `Seq[Field]` until 2026-08-14, and the two callers passed `.fields`. An
+    * aggregate's contents are `Field | Method | Comment`, so every `method` and every comment in a
+    * record body was dropped -- silently, since the shortened output still parsed and still
+    * validated. `emitMethod` had been written for the purpose and had no callers at all.
+    *
+    * It walks `contents` rather than emitting `fields` and then `methods` because reflectivity
+    * means exact AST recovery, sibling order included.
+    */
+  private def emitAggregateContents(of: Seq[AggregateContents]): this.type = {
     of.headOption match {
       case None => this.add("{ ??? }")
-      case Some(field) if of.size == 1 =>
-        if field.metadata.nonEmpty then
-          add("{").nl.incr
-          add(spc).emitField(field)
-          decr.addIndent("}").nl
-        else
-          add(s"{ ")
-            .emitField(field)
-            .add(" }")
-            .nl
+      // The one-line form is deliberately restricted to a lone metadata-free FIELD, which is what
+      // it has always rendered. Widening it to any lone member would reformat the corpus for no
+      // gain.
+      case Some(field: Field) if of.sizeIs == 1 && field.metadata.isEmpty =>
+        add(s"{ ")
+          .emitField(field)
+          .add(" }")
+          .nl
       case Some(_) =>
         this.add("{").nl.incr
-        of.foreach { f =>
-          add(spc).emitField(f)
-          if f.metadata.isEmpty then nl
+        of.foreach {
+          case f: Field =>
+            add(spc).emitField(f)
+            if f.metadata.isEmpty then nl
+          case m: Method =>
+            add(spc).emitMethod(m)
+            if m.metadata.isEmpty then nl
+          // `emitComment` supplies its own indent and newline.
+          case c: Comment => emitComment(c)
         }
         decr.addIndent("}").nl
     }
@@ -295,7 +330,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   }
 
   def emitAggregation(aggregation: Aggregation): this.type = {
-    emitFields(aggregation.fields)
+    emitAggregateContents(aggregation.contents.toSeq)
   }
 
   private def emitSequence(sequence: Sequence): this.type = {
@@ -319,14 +354,17 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   }
 
   private def emitTable(table: Table): this.type = {
+    // `table of T of [ d… ]` -- BOTH `of`s are required by `tableType`. Emitting the dimensions
+    // straight onto the element type produced `table of T[ d… ]`, which is not merely ugly: it is
+    // a hard parse error, so prettify was writing source riddlc rejects.
     this
       .add("table of ")
       .emitTypeExpression(table.of)
-      .add(table.dimensions.mkString("[ ", ", ", " ]"))
+      .add(table.dimensions.mkString(" of [ ", ", ", " ]"))
   }
 
   private def emitReplica(replica: Replica): this.type = {
-    this.add("replica of").emitTypeExpression(replica.of)
+    this.add("replica of ").emitTypeExpression(replica.of)
   }
 
   def emitPattern(pattern: Pattern): this.type = {
@@ -342,7 +380,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   }
 
   private def emitMessageType(mt: AggregateUseCaseTypeExpression): this.type = {
-    this.add(" ").emitFields(mt.fields)
+    this.add(" ").emitAggregateContents(mt.contents.toSeq)
   }
 
   private def emitMessageRef(mr: MessageRef): this.type = {

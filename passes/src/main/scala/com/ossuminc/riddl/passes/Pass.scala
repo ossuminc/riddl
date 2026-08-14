@@ -619,6 +619,15 @@ trait PassVisitor:
   def doRequires(requires: Requires): Unit
   def doReturns(returns: Returns): Unit
 
+  /** A [[Group]]'s or [[Epic]]'s `shown by { <url>… }` clause.
+    *
+    * Same shape as `requires`/`returns` above: it is CONTENT, so a visitor must see it in the
+    * position the author wrote it. It had no hook until 2026-08-14 and was skipped outright by
+    * `processValue`, on the reasoning that its holder reads it -- true of every visitor except the
+    * one that has to write source back out, so prettify deleted every `shown by` it was given.
+    */
+  def doShownBy(shownBy: ShownBy): Unit
+
 /** An abstract Pass that uses the Visitor pattern
   * (https://refactoring.guru/design-patterns/visitor)
   * @param input
@@ -737,16 +746,20 @@ abstract class VisitingPass[VT <: PassVisitor](
         visitor.doRequires(requires)
       case returns: Returns =>
         visitor.doReturns(returns)
+      case shownBy: ShownBy =>
+        visitor.doShownBy(shownBy)
       // A Reference reaches here when it is a container's own field rather than a child of a
       // definition -- a Repository's RepositoryRef is the case that occurs. There is nothing for
       // a visitor to do with it: references are visited as part of the definition that holds
       // them, and resolution reads them from the refMap. Enumerated rather than absorbed by a
       // catch-all, so a value kind nobody anticipated fails loudly instead of being skipped.
-      // Values a visitor has nothing to do with, enumerated rather than absorbed. A Reference
-      // reaches here when it is a container's own field (a Repository's RepositoryRef); a ShownBy
-      // when an Epic carries one. Both are read by the definition that holds them, so there is no
-      // visit to make -- but they are LISTED, so a kind nobody anticipated still fails loudly.
-      case _: Reference[?] | _: ShownBy => ()
+      //
+      // ShownBy sat in this arm until 2026-08-14, on the claim that its holder reads it. Every
+      // visitor but one did; prettify has to WRITE it, and so dropped it from its output on every
+      // group and epic that had one. The lesson is that "the holder reads it" is a statement about
+      // the visitors that exist today, not a property of the node -- so it is a poor reason to
+      // withhold a hook.
+      case _: Reference[?] => ()
       case _ =>
         throw new IllegalStateException(
           s"processValue has no arm for ${value.getClass.getSimpleName} at ${value.loc}; add one " +

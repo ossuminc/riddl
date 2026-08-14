@@ -153,4 +153,5 @@ class TestVisitor extends PassVisitor:
   def doRequires(requires: Requires): Unit = value(requires)
   def doReturns(returns: Returns): Unit = value(returns)
   def doUserStory(userStory: UserStory): Unit = value(userStory)
+  def doShownBy(shownBy: ShownBy): Unit = value(shownBy)
 end TestVisitor

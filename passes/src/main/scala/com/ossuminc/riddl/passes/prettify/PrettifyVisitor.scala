@@ -215,7 +215,14 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   end doField
 
   def doMethod(method: Method): Unit = ()
-  // NOTE: Methods are handled by their type
+  // NOTE: Methods are handled by their type -- `RiddlFileEmitter.emitAggregateContents` walks the
+  // aggregate and calls `emitMethod`, which is what keeps a method in the right position among its
+  // siblings.
+  //
+  // This comment asserted the same thing before 2026-08-14, when it was simply UNTRUE: the emitter
+  // walked `.fields` only, `emitMethod` had zero callers anywhere in the repo, and every `method`
+  // was dropped from prettified output. A no-op hook justified by a claim about code elsewhere is
+  // only as good as that claim, and nothing was checking this one.
   end doMethod
 
   def doAuthor(author: Author): Unit =
@@ -498,6 +505,12 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   def doRequires(requires: Requires): Unit = emitRequiresReturns("requires ", requires.what)
   def doReturns(returns: Returns): Unit = emitRequiresReturns("returns  ", returns.what)
+
+  def doShownBy(shownBy: ShownBy): Unit =
+    state.withCurrent { rfe =>
+      rfe.emitShownBy(shownBy)
+    }
+  end doShownBy
 
   def doAuthorRef(authorRef: AuthorRef): Unit =
     state.withCurrent { rfe =>
