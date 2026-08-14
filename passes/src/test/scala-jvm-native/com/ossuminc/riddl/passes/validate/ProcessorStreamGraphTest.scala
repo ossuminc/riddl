@@ -208,15 +208,25 @@ class ProcessorStreamGraphTest extends AbstractValidatingTest {
       }
     }
 
-    "still report a sink that genuinely has no upstream source" in { (td: TestData) =>
-      parseAndValidate(sinkWithNoSource, td.name, shouldFailOnErrors = false) {
-        case (_, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            CompletenessWarning,
-            "is a sink but has no upstream path from any source"
-          )
-      }
+    /** Reid ruled 2026-08-14 that a chain head need only bear an OUTLET -- "a chain of
+      * outlet-connector-inlet MUST start with an outlet (Source, Merge, Flow, Split, Router), never
+      * a Sink". `Relay` is a flow, so it is a legitimate head, and this fixture no longer draws the
+      * sink-reachability warning.
+      *
+      * **Nothing is lost, which is the point of asserting it here.** The fixture's actual defect is
+      * that `Relay`'s inlet is fed by nothing, and that is reported PRECISELY -- "Inlet 'Unfed' is
+      * not connected" -- naming the port at fault. The old warning said the SINK had no upstream
+      * source, which pointed at the wrong definition and, on reactive-bbq, was simply false: data
+      * enters that pipeline through an application context fed by users, so a correctly wired model
+      * was reported. A duplicate, less accurate diagnostic was removed; the accurate one remains.
+      */
+    "report the UNFED INLET, not the sink, when a chain head has nothing feeding it" in {
+      (td: TestData) =>
+        parseAndValidate(sinkWithNoSource, td.name, shouldFailOnErrors = false) {
+          case (_, _, msgs: Messages) =>
+            noMessageContaining(msgs, "is a sink but has no upstream path from any source")
+            assertValidationMessage(msgs, CompletenessWarning, "Inlet 'Unfed' is not connected")
+        }
     }
 
     "still advise an adaptor for a direct external-to-sink connector" in { (td: TestData) =>

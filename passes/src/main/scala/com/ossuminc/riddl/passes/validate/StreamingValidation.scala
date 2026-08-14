@@ -222,9 +222,38 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       def terminates(n: Node): Boolean =
         sinkNodes.contains(n) ||
           (isPredefined(n.value) && n.value.effectiveShape.isInstanceOf[Sink])
+      // Built here rather than at Check 3 because `originates` below needs it: a chain head is
+      // defined by having no inbound edge.
+      val reverseAdjacency = mutable.Map.empty[Node, mutable.Set[Node]]
+      adjacency.foreach { case (from, toSet) =>
+        toSet.foreach { to =>
+          reverseAdjacency.getOrElseUpdate(to, mutable.Set.empty) += from
+        }
+      }
+
+      // A chain HEAD is where data enters the graph, and Reid ruled 2026-08-14 that it need only
+      // bear an OUTLET -- "a chain of outlet-connector-inlet MUST start with an outlet (Source,
+      // Merge, Flow, Split, Router), never a Sink (only has inlet(s))". `Void` is excluded too,
+      // having neither port, which the enumeration does not say but the rule requires.
+      //
+      // Asking "is it shaped `Source`?" was too narrow and reported models that are correctly
+      // wired. reactive-bbq is the case that showed it: `TableOrderRepository` (sink) <-
+      // `TableOrderEventSplit` (split) <- `TableOrder` (entity as flow) <- `RestaurantApp`
+      // (application context as router). There is no `Source`-shaped processor anywhere in that
+      // chain and there does not need to be -- data enters through an application context fed by
+      // USERS, from outside the streaming graph entirely. The repositories were wired, not
+      // unwired, so the RULE was wrong rather than merely its wording.
+      //
+      // A head is therefore any node with an outlet and no inbound edge. A `Source` always
+      // qualifies (no inlets, so never an edge target) and is kept explicitly for the predefined
+      // `ForeverEmpty`, which satisfies reachability for what it feeds without being reported on.
+      def hasOutlet(p: Processor[?]): Boolean = p.outlets.nonEmpty
+      def isGraphHead(n: Node): Boolean =
+        hasOutlet(n.value) && !reverseAdjacency.contains(n)
       def originates(n: Node): Boolean =
         sourceNodes.contains(n) ||
-          (isPredefined(n.value) && n.value.effectiveShape.isInstanceOf[Source])
+          (isPredefined(n.value) && n.value.effectiveShape.isInstanceOf[Source]) ||
+          isGraphHead(n)
 
       sources.foreach { source =>
         val start = node(source)
@@ -260,13 +289,6 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       }
 
       // Check 3: Sink←Source reverse reachability via BFS
-      val reverseAdjacency = mutable.Map.empty[Node, mutable.Set[Node]]
-      adjacency.foreach { case (from, toSet) =>
-        toSet.foreach { to =>
-          reverseAdjacency.getOrElseUpdate(to, mutable.Set.empty) += from
-        }
-      }
-
       sinks.foreach { sink =>
         val start = node(sink)
         if connectedProcessors.contains(start) then {

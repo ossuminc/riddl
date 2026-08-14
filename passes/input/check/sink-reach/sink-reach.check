@@ -1,7 +1,4 @@
 passes/input/check/sink-reach/sink-reach.riddl(12:5->18):
- Sink 'Consumer' is a sink but has no upstream path from any source:
-     sink Consumer is {
-passes/input/check/sink-reach/sink-reach.riddl(12:5->18):
  Sink 'Consumer' should have a handler:
      sink Consumer is {
 passes/input/check/sink-reach/sink-reach.riddl(5:5->19):
