@@ -62,9 +62,49 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **A message ref must be able to name its VALUE, not just its type — DECIDED
-  2026-08-14, needs a plan before implementation.**
-  From riddlg (`task/done/2026-08-14-where-does-a-message-refs-value-come-from.md`).
+- **A message ref must be able to name its VALUE, not just its type — DESIGNED
+  2026-08-14, scheduled for 2026-08-15. NEXT UP.**
+  **Design: `docs/superpowers/specs/2026-08-14-message-value-source-design.md`.**
+  Read it before planning — it supersedes the summary below, which is kept only
+  so this entry stands alone.
+
+  **READ THIS FIRST, or you will design a feature that partly exists: A56
+  ALREADY BUILT HALF OF IT.** `SendStatement.msg` (`AST:3496`) and
+  `TellStatement.msg` (`:3570`) are ALREADY `MessageRef | Constructor | ValueRef`;
+  the EBNF already has `deliverable_message_value = message_value |
+  path_identifier` (`:298`) wired into `send`/`tell`; `ValidationPass` already
+  dispatches the `ValueRef` arm (`:1163`, `:1192`); and `operandType` (`:752`),
+  `operandMessageKind` (`:763`) and `operandMessageName` (`:931`) already handle
+  it. **`on p: command Ping is { tell p to entity F }` works TODAY.** The task
+  file that requested this does not mention any of that. This is a WIDENING of
+  A56, and far cheaper than "98.2% of generated holes" suggests.
+
+  Four things are genuinely missing: the source is restricted to on-clause
+  bindings and is a hard **Error** otherwise (`checkBoundMessageOperand`, `:920`
+  — whose message names binding as the only legal source and becomes a lie once
+  widened); `yield`/`reply` are excluded; `morph … with` is excluded
+  (`MorphStatement.value: RecordRef | Constructor`, `AST:3520`) which is riddlg's
+  other 37.6%; and nothing warns on the bare form.
+  **The stated reason `yield`/`reply` were excluded does not survive the
+  widening** — their operand is compared against the declared `yields`/`replies`,
+  and that comparison is by resolved TYPE, which a `ValueRef` supplies exactly as
+  a `MessageRef` does.
+
+  **Three open questions need a ruling BEFORE implementation** (design § 6):
+  Q1 does a field-less message (`event Started is { }`) need a value at all —
+  the type fully determines it, so warning is `???`-style noise, and exempting
+  them may take a real bite out of the 14,730 below, so COUNT before quoting
+  that number publicly; Q2 is `reply` in scope for the warning, given its type is
+  already pinned by the clause; Q3 does the widened source admit `self` — it must
+  fail, but with a good message rather than "does not name a message".
+
+  **Wire format:** C2/C3 change what three statements can hold, so BAST needs
+  `FORMAT_REVISION` **16 → 17** — note 16 was just consumed by the
+  interaction-block fix (`78a025362`), so this is a SECOND bump and
+  `language/input/import/NotImplemented.bast` must be regenerated again, from its
+  own directory.
+
+  Origin: `task/done/2026-08-14-where-does-a-message-refs-value-come-from.md`.
   `send event Foo to outlet Bar` names a message TYPE and says nothing about
   where the value comes from, so a generator has nothing to lower. Measured by
   riddlg on reactive-bbq: **659 of 1088 `AI FILL` markers (60.6%) are exactly
