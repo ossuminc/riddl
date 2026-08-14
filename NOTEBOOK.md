@@ -14,74 +14,86 @@ would get wrong.
 **State — every line produced by a command in the session that wrote it
 (2026-08-13):**
 
-- Branch `release/2`, **tree CLEAN, 13 commits UNPUSHED** (`origin/release/2`
-  is at `5fe611f1b`, HEAD is `c5672a91f`). Push is deliberate-pending: the
-  feature is mid-plan and uncertified.
-- **`~/Code/ossuminc/bin/riddlc` is STALE at `2.0.0-rc.13`** — verified by
-  running `../bin/riddlc version`, not remembered. It predates all 13 commits
-  and REJECTS every construct added this session (`self`, `initiate`,
-  `terminate`, `tell … by`, `Id(repository X)`). Restage before probing
-  language behaviour, via `scripts/publish-and-stage.sh`.
-- **NOT certified.** No tri-platform run from clean has covered these commits.
-  Per-module suites are green (`passes` 1128, `language` 666, `commands` 245
-  incl. the live riddl-models corpus, `riddlLib` 119), and Native execution was
-  verified per task, but that is not the gate.
+- Branch `release/2`, **tree CLEAN, 18 commits UNPUSHED** (`origin/release/2`
+  is at `c90075b1d`). Push is deliberate-pending — the branch is certified but
+  has had no whole-branch review.
+- **CERTIFIED 2026-08-13.** `clean; cJVM; cJS; cNative; tJVM; tJS; tNative`
+  from clean under a throwaway `--sbt-cache`, one `-batch` argument, exit 0:
+  **JVM 2346 / JS 715 / Native 1619**, 19 `Suites: completed`, 0 aborted,
+  0 `No tests to run`, 0 failures. Floors in `.claude/skills/rc/SKILL.md`
+  raised to match. The one canceled test is `ESMSafetyTest`, which needs a
+  `fullLinkJS` bundle the chain does not build — pre-existing.
+- **Corpus green: 189/189 riddl-models `.conf` entry points validate**, exit 0
+  every one. 5088 completeness / 863 warning / 430 deprecated / **0 error** /
+  0 severe. **5087 of the 5088 completeness messages are the new
+  missing-address warning**, so the pre-branch completeness baseline was 1 and
+  the branch's corpus effect is exactly the one designed thing.
+- **The STAGED riddlc is CURRENT**, at
+  `target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc`
+  (`2.0.0-rc.13-25-b2d5a41d`). **`~/Code/ossuminc/bin/riddlc` is still STALE at
+  `2.0.0-rc.13`** and REJECTS every construct this branch added (`self`,
+  `initiate`, `terminate`, `tell … by`, `Id(repository X)`). Use the staged one
+  or re-run `scripts/publish-and-stage.sh`.
 
-**IN FLIGHT — a subagent-driven plan, 6 of 8 tasks landed.**
+**The instance-identity plan is COMPLETE — 8 of 8 tasks.** `Id(P)` widening,
+`self`, lifecycle parameters, `initiate`, `terminate`, `tell` addressing,
+effect bans, certification. Tasks 1-7 were each reviewed; each needed a fix
+round except Task 3. What it taught is in this NOTEBOOK's body ("The gap was
+instantiation, not addressing"); what is durably true is in `CLAUDE.md`
+(§ AST / Language Internals). **No whole-branch review has run.**
 
-Plan `docs/superpowers/plans/2026-08-13-processor-instance-identity.md`,
-spec `docs/superpowers/specs/2026-08-13-processor-instance-identity-design.md`.
+**Traps — all of these bit someone.**
 
-**The resume point is the LEDGER, not this file:**
-`.superpowers/sdd/2026-08-13-processor-instance-identity/progress.md`. It is
-gitignored but names every commit, so `git log` reconstructs it. It carries a
-cold-session orientation block with the per-task loop and the standing facts
-every dispatch needs.
-
-- Tasks 1-5 complete and review-clean (`Id(P)` widening, `self`, lifecycle
-  parameters, `initiate`, `terminate`).
-- **Task 6 is COMMITTED at `c5672a91f` but NOT REVIEWED.** Resume there:
-  `review-package af46e45dee..c5672a91f`, then dispatch the task reviewer.
-- Tasks 7-8 and the final whole-branch review remain. Task 7's scope is
-  reduced and Task 8 has two extra obligations — both recorded in `BACKLOG.md`.
-
-**Traps — all of these bit someone this session.**
-
-- **`-Werror` is NOT a safety net here.** `language`/`passes`/`riddlLib`
-  compile with `--no-warnings` AND `-Werror`, and non-exhaustive-match warnings
-  do not fail the build. **Five** separate missed `Value`/`Statement` dispatch
-  sites were found by manual audit or review, never by the compiler. CLAUDE.md
-  still claims otherwise; correcting it is queued in BACKLOG.
+- **`-Werror` is NOT a safety net here, and the reason is subtler than the
+  build flags.** `language` and `commands` carry `--no-warnings` beside
+  `-Werror` (`build.sbt:229`, `:417`) — but `passes` and `riddlLib` do NOT, and
+  it still never fired, because **a wildcard arm makes a match exhaustive**, so
+  the terminal `throw` this repo prescribes is itself what silences the
+  compiler. **Seven** missed dispatch or dispatch-INPUT sites on this branch,
+  every one found by a person. `CLAUDE.md` § Total Dispatch now says so; an
+  earlier note here naming `passes`/`riddlLib` as `--no-warnings` was wrong.
 - **A check wired into `validateStatement` never sees statements nested inside
   `when`/`match`/`foreach`** — they are FIELD-held and the generic traversal
   skips them. Use `validateValue`/`checkStatementScopes`, which recurse. This
   is also a SHIPPED bug in rc.13's `checkStateReadScope` (filed, `8ddd0137f`).
+- **13 shared `language` parser suites (169 cases) have NEVER run on Native** —
+  abstract, with concrete runners only in `JVMTests`/`JSTests`. Found by
+  chasing a ONE-test floor shortfall. Filed in `BACKLOG.md`. Do not assume
+  `src/test/scala` means all three platforms; check for a runner.
 - **A subagent that backgrounds a command and arms a Monitor STOPS and is never
   woken.** Cost three round-trips. Tell implementers to poll their own output
   file or run in the foreground.
 - **`sbt "cJVM; cJS; cNative"` chained genuinely HUNG once** (0% CPU, 10+ min,
-  no lock contention). Three separate invocations passed. If it stalls, split
-  it rather than assuming a deadlock elsewhere.
+  no lock contention). The full certification chain as one `-batch` argument
+  ran clean end to end, so prefer that form; if it stalls, split it rather than
+  assuming a deadlock elsewhere.
 - **`FORMAT_REVISION` is 15** and must not move again for this feature. BAST
   value tags 8=`Initiate`, 9=`SelfValue`; statement sub-kind 20=`terminate`.
 
-**Certainty.** Everything in State was run this session. Task 6's
-implementation is committed but its review has NOT run, so treat it as
-unverified. Tasks 1-5 were each reviewed and each needed a fix round except
-Task 3.
+**Certainty.** Every number in State was produced by a command in the session
+that wrote it. The certification and corpus runs cover HEAD. What has NOT
+happened: a whole-branch review, a push, and any fix for the two defects filed
+during certification (the `???`-stub inconsistency in
+`checkInitiate`/`checkTerminate`, and the Native parser-suite gap).
 
-**`task/` — FOUR files, all awaiting triage; two arrived DURING this session
-and have never been read:**
+**`task/` — FOUR files awaiting triage.**
+`2026-08-13-tell-to-an-entity-cannot-name-which-instance.md` was answered and
+moved to `task/done/`; a new one ARRIVED during the certification run:
 
+- `2026-08-14-where-does-a-message-refs-value-come-from.md` (riddl-generator) —
+  NEWEST, never read, arrived 2026-08-14 mid-certification. *"`send event Foo
+  to outlet Bar` names a message TYPE, not where the VALUE comes from"*, with a
+  proposed `send command Foo from field StateRecord.fieldName to outlet Bar`.
+  **This is the same SHAPE as the ask the instance-identity plan just answered**
+  — a construct that names a type where a value is needed — so read it against
+  that design before treating it as new ground.
 - `2026-08-13-interaction-blocks-break-bast-round-trip.md` (riddl-models) —
-  NEW. Reports `sequence`/`parallel`/`optional` interaction blocks breaking the
-  BAST round trip, *"same shape as the `constant` defect you fixed in
-  `4ca2906dc`"*. Plausibly a third instance of that class.
-- `2026-08-13-riddlg-does-not-use-llama-server.md` (riddl-generator) — NEW. A
-  reply saying our wizard-prefill diagnosis was *right about the effect, wrong
-  about the mechanism*.
-- `2026-08-13-tell-to-an-entity-cannot-name-which-instance.md` — the ask this
-  whole plan answers; close it in Task 8, not before.
+  NEW, never read. Reports `sequence`/`parallel`/`optional` interaction blocks
+  breaking the BAST round trip, *"same shape as the `constant` defect you fixed
+  in `4ca2906dc`"*. Plausibly a third instance of that class.
+- `2026-08-13-riddlg-does-not-use-llama-server.md` (riddl-generator) — NEW,
+  never read. A reply saying our wizard-prefill diagnosis was *right about the
+  effect, wrong about the mechanism*.
 - `2026-08-04-security.md` — still marked *"Draft (do not act on this)"*.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
@@ -97,6 +109,134 @@ CLAUDE.md, or git log). After completing a task, append results
 to the task file and note the disposition below.
 
 ---
+
+
+## The gap was instantiation, not addressing (2026-08-13)
+
+riddl-generator filed a narrow ask: `tell command Ship to entity Sales.Order`
+names a TYPE, and an entity is not a singleton, so a generator cannot know
+which aggregate to load. They offered three candidate answers and said they had
+no stake in which we picked.
+
+We picked their option 3 — a first-class way to denote an instance — and it is
+worth recording that we did **not** pick it because it was the most expressive.
+We picked it because options 1 and 2 are both unimplementable. Each presupposes
+that an instance can already EXIST and be referred to, and RIDDL had no way to
+bring one into being. `Id(P)` was a type with no producer anywhere in the
+language: every value of it would have had to arrive from outside the model.
+Ship only the addressing half and you ship a vocabulary that can never be used.
+
+So the plan's centre of gravity moved off the construct that was reported.
+Eight tasks: one is `tell` addressing. The rest are `Id(P)` widening, `self`,
+parameterised `on init`/`on term`, `initiate`, `terminate`, and the effect bans
+that follow from calling those two effects.
+
+**The generalisation: when a consumer reports that they cannot NAME something,
+check whether anything in the language PRODUCES it.** riddlg's framing — "the
+send site cannot name the target" — was accurate and pointed at the wrong file.
+The real shape was "nothing mints the thing the send site would name". A gap
+report describes a symptom from where the consumer stands; it is not a
+localisation.
+
+### The corpus set the severity, and it was not close
+
+Before writing the diagnostic we counted: riddl-models holds **7,556 `tell`s**
+(5,155 entity-targeted) against **7** `Id(...)`-typed fields in the entire
+996-file corpus. The certified measurement is 5,087 missing-address
+CompletenessWarnings over 189 models — 98.7% of every entity-targeted tell —
+with **zero** new errors.
+
+That ratio decided the severity in one step. As an Error it would have
+condemned essentially every model in existence, including ours, and the feature
+would have shipped with a migration attached. As a CompletenessWarning it says
+something precisely true: the model is under-specified, because the modeller has
+not yet said which instance. That is not noise to suppress — it is a
+measurement of how much of the corpus predates the ability to express the
+thing at all.
+
+Ambiguity, by contrast, IS an Error. Two fields typed `Id(Order)` and no `by`
+is a contradiction, not an omission, and there is nothing for a later pass to
+fill in. Omissions warn; contradictions fail.
+
+### The cheapest design won on resolution cost, not on power
+
+`self`'s type is a synthesized `Aggregation` rather than a bespoke AST node.
+The payoff is that `let me = self` followed by `me.id` runs through the SAME
+`ValueRef` path walk as every other value, so **no resolution rule anywhere had
+to learn that `self` exists**. The bespoke node would have needed a special
+case at each of those sites, and each would have been a place to forget.
+
+The price is that the type is not user-nameable — `self.id` is `Id(Order)` here
+and `Id(Shipping)` there — so `let me: T = self` has no `T` to write. That is a
+real restriction and it was accepted knowingly: passing `self.id` is what a
+modeller wants in every case we could construct.
+
+### `-Werror` never told us anything, and we had written down that it would
+
+Seven missed dispatch (or dispatch-INPUT) sites across this branch. Every one
+was found by a person reading code or by a code review. **Zero** by the
+compiler — while `CLAUDE.md` told each session that the compiler warning "is
+the whole safety net".
+
+Two reasons, and the second is the one that matters. `language` and `commands`
+carry `--no-warnings` next to `-Werror`, so there is nothing to escalate there.
+But in `passes`, where most of the seven lived, warnings are on and it still
+never fired — because **a wildcard arm makes a match exhaustive, so the
+terminal `throw` this repo prescribes is itself what silences the compiler.**
+Follow our own rule and you are guaranteed never to be told the hierarchy grew.
+The `throw` is a real net, but it fires at run time on the first test that
+reaches the arm, which means it protects you exactly as far as your tests
+reach.
+
+Corrected in `CLAUDE.md` § Total Dispatch. The wider lesson is about the file
+itself: a confident, wrong sentence in project memory is worse than silence,
+because every session inherits it and stops looking.
+
+Task 7's review added the other half. `statementValues` was genuinely total
+over the statement kinds and *still* never yielded `RequireStatement.argument`
+or `MatchCase.guard`, so `require X with initiate entity Order` slipped past
+four separate walks built on it — each individually correct. **Auditing the
+match arms proves nothing about the fields each arm forgot to return.**
+
+### Predicting the floor delta by ONE found a hole nobody was looking for
+
+Certification predicted +79 JVM / +3 JS / +68 Native from the source root of
+every suite the branch added, before reading the log. Actual: 2346 / 715 /
+**1619** — JVM and JS exact, Native **one short**.
+
+One test. The rule says a delta that does not reconcile is a skipping bug, not
+a total to accept, so it got chased, and it was not a skipping bug — it was the
+prediction being wrong for an interesting reason. `TypeParserTest` lives in
+`language/src/test/scala`, which I read as "runs on all three platforms". It is
+**abstract**, and its concrete runners are declared only in
+`scalajvm/…/JVMTests.scala` and `scalajs/…/JSTests.scala`. There has never been
+a Native one.
+
+Pulling that thread: **13 shared parser suites, 169 test cases, have never
+executed on Native at all** — `TypeParserTest`, `StatementsTest` (52 cases),
+`HandlerTest`, `ParsingTestTest`, `StreamingParserTest`, `TokenParserTest` and
+the rest. Confirmed by diffing the suite names in the JS and Native `language`
+rows of the certification log: they overlap almost nowhere. Filed in
+`BACKLOG.md`.
+
+The trap itself was already written down — `.claude/skills/rc/SKILL.md` names
+"abstract with concrete runners only in `JVMTests`/`JSTests`" as the reverse
+trap — which is the uncomfortable part: **the gate that catches a thing and the
+knowledge of the thing are not the same asset.** A documented hazard sat next
+to a floor that had absorbed it silently for months, because the floor is a
+total and a total cannot say what is missing from it.
+
+The value of predicting before reading is not the agreement when it holds. A
+number computed afterwards can always be rationalised — 1619 would have been
+written down as "+67, close enough" without a second glance. One computed
+beforehand turns a one-test gap into a question you are obliged to answer.
+
+One inconsistency was found and deliberately NOT fixed: `checkInitiate` and
+`checkTerminate` do not honour the `???`-stub exemption that
+`checkTellAddressing` does, so `initiate entity Order(x = "1")` against
+`entity Order is { ??? }` errors by reasoning from an unwritten body. Filed in
+`BACKLOG.md`. A behaviour change inside the run that certifies it would have
+invalidated the run.
 
 
 ## Two consumer-found defects the corpus could not have found (2026-08-13)

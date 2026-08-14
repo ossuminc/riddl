@@ -790,6 +790,80 @@ to the right group rather than appending to a list.
   typed with the event counts as emitting it, so a `???` source that declares
   the port is not reported; adaptor translations deliberately do not count.
 
+- **Processor instance identity (2.0, release/2)** — `Id(P)`, `self`,
+  `initiate`, `terminate`, and structural `tell` addressing. Five constructs,
+  one gap: **RIDDL could describe processors but not INSTANCES of them.**
+  - **`Id(P)` names any Processor**, not just an Entity (Adaptor, Context,
+    Entity, Projector, Repository, Streamlet). The keyword form
+    `Id(entity Order)` is CANONICAL and the bare `Id(Order)` is the shorthand —
+    `UniqueId.kindKeyword` stores the keyword *as written* (a `String`, not an
+    enum, so prettify is byte-exact without a mapping table), and
+    `TypeValidation` makes it **tell the truth**: a keyword contradicting the
+    resolved referent's kind is an Error, because a wrong keyword is worse than
+    no keyword — a reader believes it. Keyword-name disambiguation is a
+    RIDDL-wide idiom and a bare `Order` could be a context, a message or an
+    entity, which is why the keyword was kept rather than deprecated.
+  - **`Id(P)` is RUNTIME instance identity and is NOT the definition ULID** of
+    CM line 2523, which is model-time identity of a *definition*. Two instances
+    of `Order` share one definition ULID and never share an `Id(Order)`.
+    `isAssignmentCompatible` is deliberately UNCHANGED (still compatible with
+    `String_`/`Pattern`): the value is opaque and system-generated, so a
+    BUSINESS key belongs in `on init`'s parameters and lives in state.
+  - **`self`'s type is a synthesized `Aggregation`, and that is load-bearing.**
+    Because the type is an ordinary record, `let me = self` followed by `me.id`
+    resolves through the SAME `ValueRef` path walk every other value uses — so
+    no resolution rule anywhere has to know `self` exists. A bespoke node would
+    have needed special-casing at each of those sites. The consequence is that
+    the type is not user-nameable (`self.id` is `Id(Order)` in an Order handler
+    and `Id(Shipping)` in a Shipping one), so `let me: T = self` has no `T` to
+    write and `self` is not assignable into a message field — pass `self.id`.
+    `SelfValue.fieldNames` is a CLOSED set (`id`, `version`); adding one is a
+    language change. The admission test is **runtime-only**: anything a
+    generator can know statically it should inline, which is why `version` is
+    in and `isClustered` is not (filed separately).
+    `enclosingProcessorOf` terminates at `Function` AND `Saga` — a Saga sits
+    inside a Context routinely, so without the second terminator `self` in a
+    saga step silently typed as the enclosing Context's identity.
+  - **`initiate` supplies the invocation `on init` always lacked** — it does
+    NOT add a second way for an instance to exist. Construction still completes
+    only when `on init` finishes; CM line 999's "activate on first message" is
+    rehydration, not creation. Without it no `Id(P)` value could ever come into
+    being and the whole addressing story would have been inert.
+    **`initiate` is a VALUE (it yields the new `Id(P)`) and `terminate` is a
+    STATEMENT (termination produces nothing).** That asymmetry is why their
+    bans live in validation and not the parser: `value` carries no
+    `StatementsSet` to gate on, so parser-gating one and validating the other
+    would split one rule across two layers. `on init`/`on term` gained
+    parameter lists; arity and argument types are checked in `ValidationPass`
+    (`checkInitiate`/`checkTerminate`), never the parser, because a parse-time
+    `error()` preempts the whole pass chain. Both fold an Entity's STATE
+    handlers in when looking for the clause, exactly as `validateAsk` does —
+    `on init` commonly lives inside a `State`.
+  - **Addressing is STRUCTURAL: the address is the message's field typed
+    `Id(target)`**, found without annotation; `by <field>` only DISAMBIGUATES
+    when more than one field qualifies. Candidates match by **resolved
+    identity** (`eq` through the refMap), never by the path's last segment —
+    two entities named `Order` in different contexts must not collide, and the
+    name-matching version turned a legal model into a false ambiguity Error.
+    The field's `UniqueId` must be looked up with its OWNING `Type` as the
+    refMap key's parent (`Pass` pushes a `Type` — a `Branch` — for its own
+    children), which is why `fieldsWithOwner` carries the owner along.
+    Zero candidates is a **CompletenessWarning and only for an Entity target**:
+    an entity is the only multiply-instantiated processor, and the corpus holds
+    7,556 `tell`s against **7** `Id(...)`-typed fields, so an Error would have
+    condemned essentially every model that exists. Ambiguity IS an Error —
+    it is a contradiction, not an omission.
+  - **`initiate`/`terminate` are effects** — banned in a function body (pure,
+    A26) and in `on activate`/`on passivate` (must be side-effect-free), and in
+    a correlation fold (purity is what makes re-runs safe, A70/§6.5). The fold
+    ban lives in exactly ONE place (`validateCorrelation`), not duplicated into
+    `checkInstanceEffectScope`, so a fold offender is never double-reported.
+    Every ban is wired into `checkStatementScopes`, **not** `validateStatement`
+    — the latter never sees statements held in a FIELD
+    (`when`/`match`/`foreach`), the trap two tasks of this plan fell into.
+  - **BAST**: `FORMAT_REVISION` **15**; value tags 8 = `Initiate`,
+    9 = `SelfValue`; statement sub-kind 20 = `terminate`.
+
 - **A new `Branch` node breaks three things silently** — all found building A70,
   none caught by the compiler:
   1. **`Containment.of`** (`AST.scala`) is an exhaustive match over `Branch`
@@ -958,14 +1032,33 @@ to the right group rather than appending to a list.
 is okay to fall through to generate an error or exception but not okay to not
 select anything and then carry on as if nothing happened."**
 
-A `case _ => ()` on a SEALED hierarchy is the failure mode: it compiles, it
-silences the exhaustivity warning that `-Werror` would otherwise raise, and when
-a new node type is added the code quietly does nothing for it. Every symptom
-then appears far from the cause — an empty output, a dropped statement, a
-model that validates clean and means something else.
+A `case _ => ()` on a SEALED hierarchy is the failure mode: it compiles, and
+when a new node type is added the code quietly does nothing for it. Every
+symptom then appears far from the cause — an empty output, a dropped statement,
+a model that validates clean and means something else.
 
-- **Enumerate the cases.** Let `-Werror` tell you when the hierarchy grows; that
-  warning is the whole safety net and a catch-all disables it.
+- **Enumerate the cases — and do it by READING, because nothing checks it for
+  you. `-Werror` is NOT a safety net here.** This file said it was until
+  2026-08-13; the claim is false as this repo is configured, and believing it
+  is how the processor-instance-identity branch shipped seven missed dispatch
+  or dispatch-input sites (five across its tasks 2/4/5, two more found by task
+  7's review) — every one caught by a human reading code or a code review,
+  **none** by the compiler. Two independent reasons, and the second is the
+  important one:
+  1. `language` and `commands` compile with `--no-warnings` alongside
+     `-Werror` (`build.sbt:229`, `:417`), so in those two modules there is no
+     warning left for `-Werror` to escalate. (An earlier note here named
+     `passes` and `riddlLib` as well — wrong; check `build.sbt` before
+     repeating it. `-Werror` really is live in those two.)
+  2. Where `-Werror` IS live it still cannot help, because **a wildcard arm
+     makes a match exhaustive** — so the terminal `throw` this section
+     prescribes is itself what silences the compiler. Follow the rule and you
+     are guaranteed never to be told the hierarchy grew. Most of the seven
+     were in `passes`, where warnings are on.
+  The real net is that `throw`, and it fires at RUN time on the first test that
+  exercises the missing arm — so it protects you exactly as far as your tests
+  reach, and not one node further. When you add a node type, grep the
+  dispatches and read them; do not wait to be told.
 - **When a branch genuinely cannot be reached, `throw`** rather than return
   unit. `Pass.processValue` does this; so do `BASTWriter`/`BASTReader`, which
   previously used a `println`-and-drop and a placeholder `PromptStatement`
@@ -982,6 +1075,16 @@ model that validates clean and means something else.
   therefore still misses it — which is exactly how `when !isValid`, a form
   that validated on rc.11, threw on rc.13 (fixed 2026-08-13). The throw did
   its job; the enumeration was against the wrong hierarchy.
+- **A total walk is still defeated if its INPUT drops a field.** Auditing the
+  match arms proves nothing about the fields each arm forgot to RETURN.
+  `statementValues` was total over the statement kinds and nonetheless never
+  yielded `RequireStatement.argument` (the `with <expr>` operand) or
+  `MatchCase.guard` — both full `Value`s — so an `initiate` parked in
+  `require X with initiate entity Order` was invisible to every walk built on
+  it at once: state-reads, asks, the A12 fail-point census, and the
+  instance-effect ban that was itself written correctly (found 2026-08-13 by
+  task 7's review of the instance-identity plan). Check the arms AND their
+  payloads.
 
 Known-total today: `Pass.processValue`, `classifyHandlers` (all 17 `Statement`
 kinds), `countValueFailPoints`, BASTWriter/BASTReader statement dispatch. The

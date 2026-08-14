@@ -62,6 +62,24 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **BUG: `validateConstructor` does not follow type aliases.** Found
+  2026-08-13 by the Task 6 review of the processor-instance-identity plan;
+  pre-existing, not introduced there. `validateConstructor`
+  (`ValidationPass.scala:6058-6060`) computes a constructor's fields with
+  `typ.typEx match { case ate: AggregateTypeExpression => ate.fields; case _ =>
+  Seq.empty }` — no alias-following. So `command Ship is Shipment` followed by
+  `command Ship(orderId = oid)` misreports *"'orderId' is not a field of Type
+  'Ship'"* and gets the arity wrong, on a legal model.
+  **The fix already exists next door:** `checkTellAddressing`'s `fieldsWithOwner`
+  (`ValidationPass.scala:5291-5296`) walks `AliasedTypeExpression` through
+  `resolution.refMap.definitionOf[Type](ate.pathId)` recursively, as does the
+  older `aggregateFieldsOf` (`:5426-5434`). Reuse one of them rather than
+  writing a third.
+  Verified real: Task 6's alias regression tests had to route AROUND this bug
+  (bare `MessageRef` tells, no constructor args) to test what they were actually
+  testing. Needs a corpus A/B — this can only REMOVE false errors, but count
+  them, since a model may have been edited to satisfy the wrong diagnostic.
+
 - **BUG (shipped in rc.13): statement-scope checks miss nested statements.**
   Found 2026-08-13 by a code review of unrelated work. `checkStateReadScope` is
   wired into `validateStatement`, which only sees statements the pass dispatcher
@@ -80,45 +98,69 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Needs a corpus A/B — this can only ADD messages, and the models that were
   silently passing may be numerous.
 
-- **Processor instance identity — IN FLIGHT 2026-08-13, 6 of 8 tasks landed.**
-  Execution is subagent-driven; the LEDGER is the resume point, not this entry:
-  `.superpowers/sdd/2026-08-13-processor-instance-identity/progress.md`
-  (gitignored; it names every commit, so `git log` recovers it if lost).
-  Tasks 1-5 complete and review-clean. Task 6 (`tell` addressing) is COMMITTED
-  at `c5672a91f` but **NOT YET REVIEWED** — resume by running `review-package
-  af46e45dee..c5672a91f` and dispatching the task reviewer. Tasks 7-8 and the
-  final whole-branch review remain.
-  **Task 7's scope is REDUCED**: Task 5 already landed the terminate-in-fold
-  ban correctly, so do not redo it — but Task 7 MUST close the asymmetry that
-  exposed, since `let x = initiate ...` inside a fold is still unbanned.
-  **Task 8 must also correct `CLAUDE.md`'s Total Dispatch section**, which
-  claims `-Werror` is the safety net for non-exhaustive matches. It is not:
-  these modules compile with `--no-warnings` AND `-Werror` together, and five
-  separate missed dispatch sites across Tasks 2/4/5 were caught by manual audit
-  or review, never by the compiler.
-  **Open question, unresolved:** do Tasks 4/5's `initiate`/`terminate`
-  diagnostics apply the `???`-stub exemption? Task 6 added one; 4 and 5 were
-  never audited for it.
+- **GAP: 13 shared `language` parser suites — 169 test cases — have NEVER run
+  on Native.** Found 2026-08-13 by chasing a ONE-test shortfall in the
+  instance-identity certification (predicted Native +68, got +67).
+  They live in `language/src/test/scala/.../parsing/`, which reads like "all
+  three platforms", but each is **abstract** and its concrete runners are
+  declared only in `scalajvm/.../JVMTests.scala` and
+  `scalajs/.../JSTests.scala`. There is no `NativeTests.scala`. Verified by
+  diffing the suite names in the JS and Native `language` rows of the
+  certification log — they overlap almost nowhere.
+  Counts (`in {` per suite): `StatementsTest` 52, `TypeParserTest` 37,
+  `HandlerTest` 19, `ParsingTestTest` 19, `CommonParserTest` 9,
+  `ProjectorTest` 8, `StreamingParserTest` 7, `ApplicationParsingTest` 6,
+  `ModuleTest` 4, `MetaDataTest` 3, `RepositoryTest` 2, `TokenParserTest` 2,
+  `NebulaTest` 1.
+  **Fix is probably one file** — a `scalanative/.../NativeTests.scala` mirroring
+  the other two. Do it as its own change with its own certification, NOT
+  alongside a feature: it will raise the Native floor by ~169 in one step, and
+  if any parser behaves differently on Native (`String` handling and
+  `fastparse` are the plausible risks) the failures must be attributable to
+  this change alone.
+  The trap is already documented in `.claude/skills/rc/SKILL.md` as the
+  "reverse trap"; what was missing was anyone measuring it. A floor is a total,
+  and a total cannot say what is absent from it.
 
-- ~~**Processor instance identity — DESIGNED 2026-08-13, ready to plan.**~~
-  Spec: `docs/superpowers/specs/
-  2026-08-13-processor-instance-identity-design.md`.
-  Plan: `docs/superpowers/plans/2026-08-13-processor-instance-identity.md`
-  (8 tasks, 63 steps, TDD throughout).
-  Answers riddl-generator's blocking ask (`task/2026-08-13-tell-to-an-entity-
-  cannot-name-which-instance.md`): RIDDL has no way to denote an instance — to
-  address one, to read its identity, or to bring one into being. Adds `Id(P)`
-  widened to any Processor with the keyword form canonical and kind-checked;
-  `self` with `self.id` / `self.version`; `initiate` (value, yields `Id(P)`) and
-  `terminate` (statement) invoking `on init` / `on term`, which gain parameter
-  lists; and instance addressing derived structurally from the message's
-  `Id(target)` field with `by <field>` to disambiguate.
-  **Measured, so the plan does not have to re-derive it:** riddl-models holds
-  7,556 `tell`s (5,155 entity, 2,382 repository) against **7** `Id(...)`-typed
-  fields in the whole corpus — which is why a missing address is a
-  CompletenessWarning and not an Error.
-  Sequencing note: `self` and `self.id` are two jobs, not one — the field access
-  needs a per-processor synthesized type, not just a token.
+- **UNDECIDED: are `initiate`/`terminate` legal inside a SAGA STEP?** Raised
+  three times during the instance-identity plan (2026-08-13) and never ruled,
+  so it is filed rather than lost. **They are legal today by DEFAULT, not by
+  decision:** `checkInstanceEffectScope`
+  (`ValidationPass.scala:1029-1054`) bans them in exactly two shapes — a
+  parent that is an `OnActivationClause`/`OnPassivationClause`, or any
+  `Function` in the parent chain — and for a saga-step statement `parents.head`
+  is the **Saga** (a `SagaStep` is a `Leaf` and is never pushed; see
+  `Pass.traverse`), so both predicates are structurally false. Nothing tests
+  either way.
+  **The likely answer is "legal"** — a saga step exists to have effects, which
+  is exactly why the two existing bans do not name it — but a construct that is
+  permitted because nobody wrote the predicate is not the same as one that is
+  permitted on purpose, and the third banned context (a correlation fold) shows
+  the design does discriminate. Reid to rule; then either add a test pinning
+  legality or add the predicate.
+
+- **INCONSISTENT: `checkInitiate`/`checkTerminate` do NOT apply the `???`-stub
+  exemption; `checkTellAddressing` does.** Audited 2026-08-13 during Task 8 of
+  the instance-identity plan, deliberately NOT fixed there — a behaviour change
+  would have invalidated the certification run it sat in.
+  `initClauseParameters`/`termClauseParameters`
+  (`ValidationPass.scala:5276`, `:5338`) return `Seq.empty` when the target
+  declares no `on init`/`on term` clause, and `???` parses to empty contents
+  (`CommonParser.undefined`), so a target whose whole body is unwritten is
+  INDISTINGUISHABLE from one that deliberately declares a zero-parameter
+  clause. `entity Order is { ??? }` addressed by `initiate entity Order(x =
+  "1")` therefore draws a hard **Error** — *"Order declares 'on init' with no
+  parameters, but 1 argument supplied"* — which is reasoning from an unwritten
+  body, exactly what the standing `???` ruling (Reid, 2026-08-11) forbids.
+  Task 6's `checkTellAddressing` got this right by gating on the RESOLVED field
+  list being non-empty (`:5442`), and its scaladoc records why.
+  Note the zero-argument case is already silent (`0 != 0` is false), so only
+  `initiate`/`terminate` WITH arguments against a stub misfires.
+  **Fix**: gate both on the target being non-stub, the same way; needs a corpus
+  A/B, though it can only REMOVE messages. Add a test for each — a stub target
+  with arguments must be silent, a real zero-parameter clause with arguments
+  must still Error, or the fix erases a correct diagnostic along with the wrong
+  one.
 
 - **Cross-context `tell` isolation seam — Error, but MEASURE FIRST.**
   Reid ruled 2026-08-13 that a `tell` into a different context is an Error

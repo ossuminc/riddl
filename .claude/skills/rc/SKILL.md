@@ -138,16 +138,18 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2267** | 7 |
-| JS | **712** | 5 |
-| Native | **1552** | 7 |
+| JVM | **2346** | 7 |
+| JS | **715** | 5 |
+| Native | **1619** | 7 |
 
 These are MINIMUMS, not targets — the count only ever goes up as tests are
 added. RAISE them whenever a release certifies higher, so the floor tracks
 reality; never lower them to make a run pass. A number below the floor is a
 skipping bug to find, not a threshold to adjust.
 
-**Raised 2026-08-13** (2259 / 712 / 1549 earlier the same day; 2230 / 712 / 1520
+**Raised 2026-08-13** by the processor-instance-identity certification
+(2267 / 712 / 1552 earlier the same day; 2259 / 712 / 1549 earlier still;
+2230 / 712 / 1520
 and 2229 / 712 / 1519 on 2026-08-12; 2225 / 712 / 1515 at rc.12; 1846 / 674 /
 1339 at rc.10). These are
 LOCAL `testOnly *` totals, measured under a throwaway `--sbt-cache`. Local
@@ -160,6 +162,16 @@ because the suite lives in `src/test/scala-jvm-native`. Work out what each row
 SHOULD move by before running, and treat a mismatch as a skipping bug. The
 reverse trap is just as real: a suite in `src/test/scala` that is abstract with
 concrete runners only in `JVMTests`/`JSTests` moves JVM and JS but not Native.
+
+**That reverse trap is not hypothetical, and one test is enough to find it.**
+The 2026-08-13 identity certification predicted +68 Native and got **+67**.
+Chasing the single missing case showed `TypeParserTest` is abstract with
+runners only in `JVMTests`/`JSTests` — and then that **13 shared `language`
+parser suites, 169 cases, have NEVER run on Native** (filed in `BACKLOG.md`).
+The hazard was already documented in the paragraph above while a floor absorbed
+it silently for months, because **a total cannot tell you what is missing from
+it.** Predict first: 1619 read on its own would have been written down as
+"close enough" without a second glance.
 
 **The Native floor went DOWN at rc.10 (1624 → 1339), and that is not a softened
 gate.** It is the one case the "never lower" rule does not cover: the metric
