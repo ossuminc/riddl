@@ -212,6 +212,29 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Warning (Reid: *"just build it"*); T6 a test pinning saga-step legality; T7
   certify.
 
+  **T2's SITE AUDIT IS ALREADY DONE (2026-08-14) — do not redo it.** The three
+  AST nodes are `YieldStatement.msg` (`AST:3591`), `ReplyStatement.msg`
+  (`AST:3627`) — both `MessageRef | Constructor` — and `MorphStatement.value`
+  (`AST:3520`, `RecordRef | Constructor`). Everything that dispatches over them:
+  - **`ValidationPass`** (~25 sites): `:180`/`:179` (`note(operandType(...))`),
+    `:731`/`:730`, `:718`/`:717`, `:688`, `:1427` (ReplyStatement case),
+    `:1511`/`:1512`, `:1544`, `:1567`/`:1568`, `:2695`, `:2993`/`:2994`/`:2996`,
+    `:3896`/`:3897`/`:3898` (`msgRefs`), `:4981`/`:4982`/`:4983`
+    (**`statementValues`** — the INPUT every walk is built on; a field dropped
+    here defeats a total match, which is how `require X with initiate` evaded
+    two bans), `:5155`/`:5156`, `:6899`/`:6905`/`:6907`, `:7001`/`:7002`.
+  - **JSON, BOTH directions**: `JsonifierPass` `:1363` (morph), `:1372` (yield),
+    `:1373` (reply); `JsonAstBuilder` `:1410` (morph), `:1425` (yield), `:1426`
+    (reply). `serializeMsgOperand`/`buildMsgOperand` are the shared helpers.
+  - **Parser**: `StatementParser` `:174` (yield), `:186` (reply), `:270` (morph).
+  - **EBNF**: `:307` `yield_statement`, `:308` `reply_statement`, `:387`
+    `morph_statement`; the target is `:298` `deliverable_message_value`, which
+    `send`/`tell` already use.
+  Prettify goes through `format` on each node. **The compiler will NOT flag a
+  missed arm** — a wildcard makes a match syntactically exhaustive, so the
+  terminal `throw` this repo prescribes is itself what silences it. Audit by
+  reading.
+
   **Three design questions were resolved by the controller, not by Reid** —
   flagged so they can be overruled: field-less messages are EXEMPT from the
   warning; `reply` is IN scope; `self` must fail with its own message.
@@ -826,6 +849,29 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
+
+- **BLOCKED ON riddl-models: two corpus tests are RED here and stay red until
+  it lands its fix.** `RiddlModelsRoundTripTest` (16 of 189 models) and
+  `Root2JsonCorpusTest` (173/189, needs ≥95%). **This is not a defect here and
+  must not be "fixed" here.**
+  Cause: `ccd278c00` taught the tell-addressing check to resolve `Id` aliases,
+  which turned it ON for the spelling riddl-models actually uses, surfacing **49
+  ambiguity Errors it had been hiding**. Verified by A/B — stash the fix and the
+  corpus is 189/189 green — so the delta is exactly those 49.
+  All 49 are corpus-side, in three classes, checked against riddl-models'
+  sources rather than inferred from the messages: genuine two-id ambiguity
+  (`CartsMerged {targetCartId, sourceCartId}`) needing `by`; actor fields
+  legitimately of the same entity (`identityId` + `suspendedBy`) also needing
+  `by`; and **wrong-entity aliases** — `nursing-workflow/types.riddl:18 type
+  TaskId is Id(NursingContext.NurseShift)`, `radiology-workflow/types.riddl:27
+  type ReportId is Id(ImagingExam)`, `member-enrollment/types.riddl:2 type
+  MemberId is Id(Enrollment)`, `policy-lifecycle/types.riddl:8,14
+  BeneficiaryId`/`RiderId is Id(LifePolicy)`.
+  Task filed at `../riddl-models/task/2026-08-14-alias-fix-exposes-49-addressing-defects.md`
+  with the full list and a corpus-wide sweep of 17 wrong-alias candidates.
+  **Consequence for the next RC:** certification cannot be clean until this
+  lands. `~/Code/ossuminc/bin/riddlc` is already staged at
+  `2.0.0-rc.14-12-54d82288` so riddl-models can start.
 - ~~**Tell consumers about two BREAKING changes landed 2026-08-10.**~~
   **CLOSED 2026-08-11 by Reid: no announcement needed**, for either half.
   Recorded so it is not re-raised: (1) BAST `FORMAT_REVISION`, now **11**, so
