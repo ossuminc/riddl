@@ -3549,6 +3549,10 @@ object AST:
     *   A constructed message value to send to the entity, probably a command
     * @param processorRef
     *   The processor to which the message is directed
+    * @param by
+    *   The disambiguator, needed only when the message carries more than one field typed
+    *   `Id(target)`. Trailing and defaulted, which is safe here because `TellStatement` has no
+    *   other defaulted parameters.
     */
   @JSExportTopLevel("TellStatement")
   case class TellStatement(
@@ -3558,11 +3562,12 @@ object AST:
     // tell p to entity F }`. The binding is DECLARED by the enclosing clause, so both the Type and
     // the message kind are recovered from `omc.msg`; see `operandMessageKind`.
     msg: MessageRef | Constructor | ValueRef,
-    processorRef: ProcessorRef[Processor[?]]
+    processorRef: ProcessorRef[Processor[?]],
+    by: Option[Identifier] = None
   ) extends Statement {
     override def kind: String = "Tell Statement"
     override def canFail: Boolean = true // A12: telling a processor may fail
-    def format: String = s"tell ${msg.format} to ${processorRef.format}"
+    def format: String = s"tell ${msg.format} to ${processorRef.format}${by.map(b => s" by ${b.format}").getOrElse("")}"
   }
 
   /** A statement that sends a result message back to the sender of the current message. Used in

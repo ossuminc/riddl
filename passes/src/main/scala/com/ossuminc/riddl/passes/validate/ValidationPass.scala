@@ -1077,7 +1077,7 @@ case class ValidationPass(
         checkRef[Handler](handlerRef, parents).foreach { handler =>
           checkCrossContextReference(handlerRef.pathId, handler, onClause, parents)
         }
-      case ts @ TellStatement(_, msg, processorRef) =>
+      case ts @ TellStatement(_, msg, processorRef, _) =>
         val maybeProc = checkRef[Processor[?]](processorRef, parents)
         maybeProc.foreach { entity =>
           checkCrossContextReference(processorRef.pathId, entity, onClause, parents)
@@ -3151,8 +3151,8 @@ case class ValidationPass(
                   ctor.ref match
                     case mr: MessageRef => sendTellRefs.append(mr)
                     case _              => ()
-                case TellStatement(_, mr: MessageRef, _) => sendTellRefs.append(mr)
-                case TellStatement(_, ctor: Constructor, _) =>
+                case TellStatement(_, mr: MessageRef, _, _) => sendTellRefs.append(mr)
+                case TellStatement(_, ctor: Constructor, _, _) =>
                   ctor.ref match
                     case mr: MessageRef => sendTellRefs.append(mr)
                     case _              => ()
@@ -5253,6 +5253,62 @@ case class ValidationPass(
     term.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
   end checkTerminate
 
+  /** A70/instance-identity task 6: derive which INSTANCE a `tell` addresses -- the message's field
+    * typed `Id(target)`, found without annotation. `by <field>` disambiguates when more than one
+    * field qualifies.
+    *
+    * Uniform across processor kinds -- an `Id(projector Foo)` field is used if present -- but the
+    * "no address" DIAGNOSTIC is entity-only, because an entity is the only multiply-instantiated
+    * processor (Reid, 2026-08-13). A repository is reached by path and has nothing to distinguish.
+    *
+    * Called from [[checkStatementScopes]]'s `TellStatement` case, the single entry point invoked at
+    * every container root AND recursively for when/match/foreach bodies, so a `tell` nested at any
+    * depth is still reached -- mirrors [[checkTerminate]]'s reachability.
+    *
+    * Guarded on `mt.nonEmpty`: a `command Foo is { ??? }` body says "known to be incomplete" (the
+    * standing `???` ruling), so its absent fields must not be read as "no Id(target) field" --
+    * every check here depends on knowing the message's fields, which a stub does not supply.
+    */
+  private def checkTellAddressing(ts: TellStatement, parents: Parents): Unit =
+    checkRef[Processor[?]](ts.processorRef, parents).foreach { p =>
+      operandType(ts.msg).filter(_.nonEmpty).foreach { mt =>
+        val candidates = aggregateFieldsOf(mt.typEx).filter { f =>
+          f.typeEx match
+            case uid: UniqueId => uid.entityPath.value.lastOption.contains(p.id.value)
+            case _             => false
+        }
+        ts.by match
+          case Some(name) =>
+            check(
+              candidates.exists(_.id.value == name.value),
+              s"'by ${name.value}' must name a field of ${mt.identify} typed " +
+                s"'Id(${p.id.value})'; candidates are " +
+                (if candidates.isEmpty then "none" else candidates.map(_.id.value).mkString(", ")),
+              Error,
+              name.loc,
+              suggestion = s"Add a field typed 'Id(${p.id.value})' to ${mt.identify}."
+            )
+          case None =>
+            if candidates.size > 1 then
+              messages.addError(
+                ts.loc,
+                s"${mt.identify} carries ${candidates.size} fields typed 'Id(${p.id.value})' " +
+                  s"(${candidates.map(_.id.value).mkString(", ")}), so which instance this " +
+                  s"addresses is ambiguous",
+                suggestion = s"Add 'by ${candidates.head.id.value}' to choose one."
+              )
+            else if candidates.isEmpty && p.isInstanceOf[Entity] then
+              messages.addCompleteness(
+                ts.loc,
+                s"${mt.identify} carries no field typed 'Id(${p.id.value})', so which " +
+                  s"${p.id.value} instance this addresses is unspecified",
+                suggestion =
+                  s"Add a field typed 'Id(${p.id.value})' to ${mt.identify} and populate it."
+              )
+      }
+    }
+  end checkTellAddressing
+
   private def valueType(v: Value, parents: Parents, lets: Seq[LetStatement]): Option[Type] =
     v match
       case _: LiteralString => None // pseudo-code, untyped
@@ -6189,6 +6245,10 @@ case class ValidationPass(
         s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
       case s: TellStatement =>
         s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
+        // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
+        // point invoked at every container root AND recursively for when/match/foreach bodies) --
+        // mirrors checkTerminate's reachability, immediately below.
+        checkTellAddressing(s, parents)
       case s: YieldStatement =>
         s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
       // Mirrors YieldStatement, immediately above: `validateStatement`'s ReplyStatement case

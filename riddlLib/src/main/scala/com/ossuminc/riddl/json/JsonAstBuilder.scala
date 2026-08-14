@@ -1415,8 +1415,13 @@ object JsonAstBuilder:
         )
       case BecomeStmtDto(entity, handler) =>
         BecomeStatement(curAt, EntityRef(curAt, pathId(entity)), HandlerRef(curAt, pathId(handler)))
-      case TellStmtDto(message, to, processor) =>
-        TellStatement(curAt, buildDeliverableOperand(message), processorRef(to, processor))
+      case TellStmtDto(message, to, processor, by) =>
+        TellStatement(
+          curAt,
+          buildDeliverableOperand(message),
+          processorRef(to, processor),
+          by.map(ident)
+        )
       case YieldStmtDto(message) => YieldStatement(curAt, buildMsgOperand(message))
       case ReplyStmtDto(message) => ReplyStatement(curAt, buildMsgOperand(message))
       case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>

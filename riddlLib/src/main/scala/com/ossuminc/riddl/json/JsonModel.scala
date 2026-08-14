@@ -718,9 +718,17 @@ object JsonModel:
   case class BecomeStmtDto(entity: String, handler: String) extends StatementDto
 
   /** `{ "kind": "tell", "message": <msgRef|constructor>, "to": "<path>", "processor":
-    * "entity"|"context"|"projector"|"repository"|"adaptor" }`
+    * "entity"|"context"|"projector"|"repository"|"adaptor", "by"?: "<field-name>" }`
+    *
+    * `by` is the optional disambiguator, needed only when the message carries more than one field
+    * typed `Id(target)`. Absent everywhere before this, so older JSON still reads.
     */
-  case class TellStmtDto(message: MsgOperandDto, to: String, processor: String) extends StatementDto
+  case class TellStmtDto(
+    message: MsgOperandDto,
+    to: String,
+    processor: String,
+    by: Option[String] = None
+  ) extends StatementDto
 
   /** `{ "kind": "yield", "message": <msgRef|constructor> }` -- a command emitting its event. */
   case class YieldStmtDto(message: MsgOperandDto) extends StatementDto
@@ -1823,7 +1831,12 @@ object JsonModel:
             MorphStmtDto(m("entity").str, m("state").str, readMsgOperand(m("value")))
           case "become" => BecomeStmtDto(m("entity").str, m("handler").str)
           case "tell" =>
-            TellStmtDto(readMsgOperand(m("message")), m("to").str, m("processor").str)
+            TellStmtDto(
+              readMsgOperand(m("message")),
+              m("to").str,
+              m("processor").str,
+              m.get("by").map(_.str)
+            )
           case "yield" => YieldStmtDto(readMsgOperand(m("message")))
           case "reply" => ReplyStmtDto(readMsgOperand(m("message")))
           case "when" =>
@@ -1938,12 +1951,14 @@ object JsonModel:
           "entity" -> ujson.Str(entity),
           "handler" -> ujson.Str(handler)
         )
-      case TellStmtDto(message, to, processor) =>
-        ujson.Obj(
-          "kind" -> ujson.Str("tell"),
-          "message" -> writeMsgOperand(message),
-          "to" -> ujson.Str(to),
-          "processor" -> ujson.Str(processor)
+      case TellStmtDto(message, to, processor, by) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("tell"),
+            "message" -> writeMsgOperand(message),
+            "to" -> ujson.Str(to),
+            "processor" -> ujson.Str(processor)
+          ) ++ by.map(x => "by" -> (ujson.Str(x): ujson.Value))
         )
       case YieldStmtDto(message) =>
         ujson.Obj("kind" -> ujson.Str("yield"), "message" -> writeMsgOperand(message))

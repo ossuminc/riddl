@@ -1215,6 +1215,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeMessageOperand(s.msg) // A54: bare ref or constructor
     writeProcessorRef(s.processorRef)
+    writeOption(s.by)(writeIdentifierInline) // the optional 'by' disambiguator
   }
 
   def writeWhenStatement(s: WhenStatement): Unit = {

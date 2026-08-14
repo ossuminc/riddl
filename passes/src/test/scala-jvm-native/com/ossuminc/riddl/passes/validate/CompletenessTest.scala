@@ -856,7 +856,7 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context C is {
           |    type EId is Id(C.E)
-          |    command Cmd is { data: String }
+          |    command Cmd is { target: Id(C.E), data: String }
           |    event Evt is { data: String }
           |    result DataResult is { data: String }
           |    query GetData replies result D.C.DataResult is { id: String }

@@ -319,7 +319,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
       // name, not a reference to a definition. The message it denotes is already reachable through
       // the on-clause that declared it, so the diagram loses nothing by taking only the target.
       case SendStatement(_, msg, portlet)   => operandRefOpt(msg).toSeq :+ portlet
-      case TellStatement(_, msg, processor) => operandRefOpt(msg).toSeq :+ processor
+      case TellStatement(_, msg, processor, _) => operandRefOpt(msg).toSeq :+ processor
       case YieldStatement(_, msg)                  => Seq(operandRef(msg))
       case SetStatement(_, field, _)               => Seq(field)
       case MorphStatement(_, entity, state, value) => Seq(entity, state, operandRef(value))

@@ -1366,8 +1366,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       MorphStmtDto(path(entity.pathId), path(state.pathId), serializeRecordOperand(value))
     case BecomeStatement(_, entity, handler) =>
       BecomeStmtDto(path(entity.pathId), path(handler.pathId))
-    case TellStatement(_, msg, proc) =>
-      val (pp, pk) = processorRef(proc); TellStmtDto(serializeDeliverableOperand(msg), pp, pk)
+    case TellStatement(_, msg, proc, by) =>
+      val (pp, pk) = processorRef(proc)
+      TellStmtDto(serializeDeliverableOperand(msg), pp, pk, by.map(_.value))
     case YieldStatement(_, msg) => YieldStmtDto(serializeMsgOperand(msg))
     case ReplyStatement(_, msg) => ReplyStmtDto(serializeMsgOperand(msg))
     case WhenStatement(_, cond, thenS, elseS, negated) =>

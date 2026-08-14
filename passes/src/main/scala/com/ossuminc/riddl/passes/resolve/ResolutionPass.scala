@@ -385,7 +385,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[State](parents.head, resolveARef[State](state, parents))
         resolveMessageOperand(message, parents)
-      case TellStatement(_, msg, processorRef) =>
+      case TellStatement(_, msg, processorRef, _) =>
         resolveMessageOperand(msg, parents)
         associateUsage(parents.head, resolveARef[Processor[?]](processorRef, parents))
       case _: PromptStatement => () // no references

@@ -1,0 +1,33 @@
+// Corpus fixture exercising `tell ... by <field>` (Task 6, processor-instance identity): `by`
+// disambiguates which Id(target)-typed field of the told message addresses the instance, needed
+// only when more than one qualifies. The bare (no-'by') form is exercised elsewhere in the corpus
+// by every ordinary `tell`; this file exercises the disambiguated form specifically. Exercised by
+// both fastparse (TellByFileTest) and the EBNF/TatSu grammar (ebnf_tatsu_validator.py, which scans
+// every input-directory riddl file).
+domain TellByClause is {
+  context Orders is {
+    command Ship is {
+      fromOrder: Id(entity Order),
+      toOrder: Id(entity Order)
+    } with { briefly "ship between two orders" }
+    record Fields is { total: String } with { briefly "order totals" }
+    entity Order is {
+      state S of record Fields is {
+        handler H is {
+          on command Ship { do "ship" }
+        } with { briefly "h" }
+      } with { briefly "s" }
+    } with { briefly "e" }
+    entity Caller is {
+      state CS of record Fields is {
+        handler CH is {
+          on init {
+            let f = initiate entity Order
+            let t = initiate entity Order
+            tell command Ship(fromOrder = f, toOrder = t) to entity Order by toOrder
+          }
+        } with { briefly "ch" }
+      } with { briefly "cs" }
+    } with { briefly "ce" }
+  } with { briefly "c" }
+} with { briefly "d" }

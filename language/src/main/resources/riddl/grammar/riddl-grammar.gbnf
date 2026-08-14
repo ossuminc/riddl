@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-13 22:42 UTC
+# Generated: 2026-08-13 23:41 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -226,7 +226,7 @@ foreach-statement ::= "foreach" ws1 identifier ws ("," identifier)? ws "in" ws (
 message-value ::= constructor | message-ref
 deliverable-message-value ::= message-value | path-identifier
 send-statement ::= "send" ws1 deliverable-message-value ws "to" ws (outlet-ref | inlet-ref)
-tell-statement ::= "tell" ws1 deliverable-message-value ws "to" ws1 processor-ref
+tell-statement ::= "tell" ws1 deliverable-message-value ws "to" ws1 processor-ref ws ("by" identifier)?
 yield-statement ::= "yield" ws1 message-value
 reply-statement ::= "reply" ws1 message-value
 

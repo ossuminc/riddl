@@ -1010,7 +1010,8 @@ class BASTReader(
       case 9 => // Tell
         val msg = readMessageOperand() // A54: bare ref or constructor
         val processorRef = readProcessorRef()
-        TellStatement(loc, msg, processorRef)
+        val by = readOption(readIdentifierInline()) // the optional 'by' disambiguator
+        TellStatement(loc, msg, processorRef, by)
 
       case 10 => // When
         val conditionType = reader.readU8()

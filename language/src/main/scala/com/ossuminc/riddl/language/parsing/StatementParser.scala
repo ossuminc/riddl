@@ -222,8 +222,9 @@ private[parsing] trait StatementParser {
 
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
-      Index ~ Keywords.tell ~/ deliverableMessageValue ~/ to ~ processorRef ~/ Index
-    )./.map { (start, msg, proc, end) => TellStatement(at(start, end), msg, proc) }
+      Index ~ Keywords.tell ~/ deliverableMessageValue ~/ to ~ processorRef ~
+        (by ~/ identifier).? ~/ Index
+    )./.map { (start, msg, proc, byId, end) => TellStatement(at(start, end), msg, proc, byId) }
   }
 
   /** The processor context a statement occurs in — drives which extra statements are added (Entity

@@ -300,7 +300,7 @@ deliverable_message_value = message_value | path_identifier ;
    to a downstream inlet). The `inlet_ref` form is DEPRECATED (soft, removed in 3.0) but still
    parses; use `tell` for direct delivery to a processor. *)
 send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref) ;
-tell_statement = "tell" deliverable_message_value "to" processor_ref ;
+tell_statement = "tell" deliverable_message_value "to" processor_ref [ "by" identifier ] ;
 (* `yield` emits a command's declared EVENT; `reply` answers a query with its declared RESULT.
    Until 2.0 `reply` was a deprecated synonym for `yield` and both parsed to one node. They are
    now distinct statements, and the wrong pairing (`yield result` / `reply event`) is an Error. *)
