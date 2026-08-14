@@ -1580,11 +1580,12 @@ case class ValidationPass(
     // scope -- that is most of why it exists -- so its statements are threaded, unlike the bare
     // expression form which has none.
     i.condition.foreach {
-      case be: BooleanExpression => validateValue(be, parents, Seq.empty[LetStatement])
+      case be: BooleanExpression =>
+        validateValue(be, parents, Seq.empty[LetStatement], Map.empty)
       case _: LiteralString      => ()
       case blk: InvariantBlock =>
         val lets = blk.statements.toSeq.collect { case l: LetStatement => l }
-        validateValue(blk.predicate, parents, lets)
+        validateValue(blk.predicate, parents, lets, Map.empty)
     }
     i.requires.foreach {
       case sr: StateRef => checkRef[State](sr, parents)
@@ -5043,7 +5044,7 @@ case class ValidationPass(
       case fr: FieldRef  => resolution.refMap.definitionOf[Field](fr.pathId).map(_.typeEx)
       case id: Identifier =>
         val idx = letIndexOf(id.value, lets)
-        if idx >= 0 then letType(lets(idx), lets.take(idx), parents).map(_.typEx)
+        if idx >= 0 then letType(lets(idx), lets.take(idx), parents, elements).map(_.typEx)
         else elements.get(id.value)
     raw.map(dealias)
   end foreachCollectionType
@@ -5153,7 +5154,7 @@ case class ValidationPass(
             // A55: the type may be DECLARED (`let x: T = …`) or INFERRED from the bound
             // expression, so the "no declared type" complaint below is now reached only when
             // neither is available.
-            letType(ls, inScopeLets.take(idx), parents) match
+            letType(ls, inScopeLets.take(idx), parents, inScopeElements) match
               case Some(typ) if !isCollectionType(typ.typEx) =>
                 messages.addError(
                   fs.loc,
@@ -5390,7 +5391,7 @@ case class ValidationPass(
     init: Initiate,
     parents: Parents,
     lets: Seq[LetStatement],
-    elements: Map[String, TypeExpression] = Map.empty
+    elements: Map[String, TypeExpression]
   ): Unit =
     checkLifecycleInvocation(
       init.loc,
@@ -5410,7 +5411,7 @@ case class ValidationPass(
     term: TerminateStatement,
     parents: Parents,
     lets: Seq[LetStatement],
-    elements: Map[String, TypeExpression] = Map.empty
+    elements: Map[String, TypeExpression]
   ): Unit =
     checkLifecycleInvocation(
       term.loc,
@@ -5526,7 +5527,31 @@ case class ValidationPass(
     }
   end checkTellAddressing
 
-  private def valueType(v: Value, parents: Parents, lets: Seq[LetStatement]): Option[Type] =
+  /** The LEXICAL-SCOPE THREADING INVARIANT, which this function and its ~20 relatives share:
+    * **wherever `lets` goes, `elements` goes with it.** The two are one scope written as two
+    * parameters — `lets` holds the statement-ordered `let` locals, `elements` holds the
+    * name-to-type bindings that are NOT statements (`foreach` elements, and since the final review
+    * of the instance-identity branch, `on init`/`on term` parameters).
+    *
+    * Six validators took `lets` alone and defaulted `elements` to empty:
+    * `validateComparand`, `checkWhenValueRef`, `validateMatch`, `validatePut`, `validateReturn`
+    * and `validateCall`. So `when seed > 5` inside `on init(seed: Integer)` was a false Error, and
+    * so — since A25 shipped — was `line.qty > 5` inside a `foreach`: the loop element resolved in
+    * the body's statements but not in any comparison, `when`, `match`, `put`, `return` or call
+    * argument within it.
+    *
+    * **The `= Map.empty` defaults were deleted from every one of these signatures**, which is what
+    * makes the invariant hold: a caller that forgets the scope is now a compile error rather than
+    * a silent narrowing. The genuinely scope-less callers (an `invariant` condition, which has no
+    * enclosing statement list) pass `Map.empty` EXPLICITLY, so the absence is a written decision.
+    * Do not reintroduce a default here.
+    */
+  private def valueType(
+    v: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[Type] =
     v match
       case _: LiteralString => None // pseudo-code, untyped
       case _: PromptValue   => None // AI-computed, untyped
@@ -5545,7 +5570,7 @@ case class ValidationPass(
         // `validateValue` reports it as an Error at the ask site rather than leaving a `let`
         // untyped. Mirrors the Call arm, which reads a function's declared `output`.
         askResultType(ask)
-      case vr: ValueRef => valueRefType(vr, parents, lets)
+      case vr: ValueRef => valueRefType(vr, parents, lets, elements)
       case gv: GetValue =>
         gv.source match
           case ir: InputRef =>
@@ -5570,10 +5595,15 @@ case class ValidationPass(
     * [[BooleanExpression]] is always boolean; otherwise the value's named [[Type]] is classified by
     * its underlying [[TypeExpression]], following one level of type alias.
     */
-  private def valueCategory(v: Value, parents: Parents, lets: Seq[LetStatement]): Option[String] =
+  private def valueCategory(
+    v: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[String] =
     v match
       case _: BooleanExpression => Some("boolean")
-      case _ => valueType(v, parents, lets).flatMap(t => typeExprCategory(t.typEx))
+      case _ => valueType(v, parents, lets, elements).flatMap(t => typeExprCategory(t.typEx))
 
   private def typeExprCategory(te: TypeExpression): Option[String] =
     te match
@@ -5623,11 +5653,12 @@ case class ValidationPass(
   private def letType(
     ls: LetStatement,
     priorLets: Seq[LetStatement],
-    parents: Parents
+    parents: Parents,
+    elements: Map[String, TypeExpression]
   ): Option[Type] =
     ls.typeRef
       .flatMap(tr => resolution.refMap.definitionOf[Type](tr.pathId))
-      .orElse(valueType(ls.expression, parents, priorLets))
+      .orElse(valueType(ls.expression, parents, priorLets, elements))
 
   /** A55: the index in `lets` of the innermost `let` binding `name`, or -1. `let`-locals are the
     * one thing NOT resolved by ResolutionPass: a `let` is not a Definition and is statement-ORDERED
@@ -5645,7 +5676,7 @@ case class ValidationPass(
     vr: ValueRef,
     parents: Parents,
     lets: Seq[LetStatement],
-    elements: Map[String, TypeExpression] = Map.empty
+    elements: Map[String, TypeExpression]
   ): Option[TypeExpression] =
     val names = vr.path.value
     if names.isEmpty then None
@@ -5659,9 +5690,9 @@ case class ValidationPass(
       if idx >= 0 then
         val ls = lets(idx)
         val priorLets = lets.take(idx)
-        letType(ls, priorLets, parents)
+        letType(ls, priorLets, parents, elements)
           .map(_.typEx)
-          .orElse(valueTypeExpr(ls.expression, parents, priorLets))
+          .orElse(valueTypeExpr(ls.expression, parents, priorLets, elements))
           .flatMap(te => typeExprOfPath(te, names.tail))
       else
         valueRefDefinition(vr, parents).flatMap {
@@ -5679,10 +5710,11 @@ case class ValidationPass(
   private def valueTypeExpr(
     v: Value,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Option[TypeExpression] =
     v match
-      case vr: ValueRef => valueRefTypeExpr(vr, parents, lets)
+      case vr: ValueRef => valueRefTypeExpr(vr, parents, lets, elements)
       // A55/`self`: the SYNTHESIZED Aggregation is the only place `self`'s type is materialized.
       // `let me = self` then `me.id` reaches this ARM through `valueRefTypeExpr`'s
       // `valueTypeExpr(ls.expression, …)` fallback, walked by `typeExprOfPath` exactly like any
@@ -5705,7 +5737,7 @@ case class ValidationPass(
         resolution.refMap
           .definitionOf[Processor[?]](init.processor.pathId, parents.head)
           .map(p => UniqueId(At.empty, pathOf(p)))
-      case _            => valueType(v, parents, lets).map(_.typEx)
+      case _            => valueType(v, parents, lets, elements).map(_.typEx)
 
   /** A54/A55: the named [[Type]] a [[ValueRef]] resolves to, if determinable. A bare on-clause
     * binding denotes the whole message, so it yields the message's Type directly; a field yields
@@ -5714,18 +5746,19 @@ case class ValidationPass(
   private def valueRefType(
     vr: ValueRef,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Option[Type] =
     val names = vr.path.value
     if names.isEmpty then None
     else
       val idx = letIndexOf(names.head, lets)
-      if idx >= 0 && names.sizeIs == 1 then letType(lets(idx), lets.take(idx), parents)
+      if idx >= 0 && names.sizeIs == 1 then letType(lets(idx), lets.take(idx), parents, elements)
       else
         valueRefDefinition(vr, parents) match
           case Some(t: Type) if idx < 0 => Some(t) // the whole message named by a binding
           case _ =>
-            valueRefTypeExpr(vr, parents, lets).flatMap {
+            valueRefTypeExpr(vr, parents, lets, elements).flatMap {
               case ate: AliasedTypeExpression => resolution.refMap.definitionOf[Type](ate.pathId)
               case _                          => None
             }
@@ -5740,7 +5773,7 @@ case class ValidationPass(
     vr: ValueRef,
     parents: Parents,
     lets: Seq[LetStatement],
-    elements: Map[String, TypeExpression] = Map.empty
+    elements: Map[String, TypeExpression]
   ): Boolean =
     val names = vr.path.value
     names.nonEmpty && {
@@ -5765,13 +5798,13 @@ case class ValidationPass(
     v: Value,
     parents: Parents,
     lets: Seq[LetStatement],
-    elements: Map[String, TypeExpression] = Map.empty
+    elements: Map[String, TypeExpression]
   ): Unit =
     v match
       case _: LiteralString => ()
       case _: PromptValue   => () // literal AI prompt, nothing to resolve
       case c: Constructor   => validateConstructor(c, parents, lets, elements)
-      case call: Call       => validateCall(call, parents, lets)
+      case call: Call       => validateCall(call, parents, lets, elements)
       case ask: Ask         => validateAsk(ask, parents)
       case init: Initiate   => checkInitiate(init, parents, lets, elements)
       case vr: ValueRef =>
@@ -5779,11 +5812,12 @@ case class ValidationPass(
           messages.addError(
             vr.loc,
             s"Value reference '${vr.path.format}' is not a 'let'-local, an 'on init'/'on term' " +
-              "parameter, a field of the handled message or entity state, or a function input in " +
-              "scope",
+              "parameter, a 'foreach' element, a field of the handled message or entity state, " +
+              "or a function input in scope",
             suggestion =
-              "Bind it with a 'let', or reference an 'on init'/'on term' parameter or a field of " +
-                "the on-clause message, entity state, or the function's 'requires' input."
+              "Bind it with a 'let', or reference an 'on init'/'on term' parameter, a 'foreach' " +
+                "element, or a field of the on-clause message, entity state, or the function's " +
+                "'requires' input."
           )
       case gv: GetValue =>
         gv.source match
@@ -5825,7 +5859,7 @@ case class ValidationPass(
         // The invariant must exist; naming an unknown one is an Error rather than becoming a
         // reference to a value that does not exist.
         checkRef[Invariant](ic.ref, parents)
-        ic.argument.foreach(a => validateValue(a, parents, lets))
+        ic.argument.foreach(a => validateValue(a, parents, lets, elements))
       // NOT checked: whether the invariant declares `requires <type>` and whether a `with` was
       // supplied. Author's ruling 2026-08-04 — a CONDITION asks whether the rule holds and is
       // never rejected either way, unlike `require invariant X`, which APPLIES the rule and so
@@ -5833,17 +5867,17 @@ case class ValidationPass(
       case _: BooleanLiteral        => ()
       case ce: ComparisonExpression =>
         // A28: operands are ref-only Comparands; validate each resolves, then enforce type-safety.
-        validateComparand(ce.left, parents, lets)
-        validateComparand(ce.right, parents, lets)
-        checkComparison(ce, parents, lets)
+        validateComparand(ce.left, parents, lets, elements)
+        validateComparand(ce.right, parents, lets, elements)
+        checkComparison(ce, parents, lets, elements)
       case le: LogicalExpression =>
-        validateValue(le.left, parents, lets)
-        validateValue(le.right, parents, lets)
-        checkBooleanOperand(le.left, s"'${le.op.symbol}'", parents, lets)
-        checkBooleanOperand(le.right, s"'${le.op.symbol}'", parents, lets)
+        validateValue(le.left, parents, lets, elements)
+        validateValue(le.right, parents, lets, elements)
+        checkBooleanOperand(le.left, s"'${le.op.symbol}'", parents, lets, elements)
+        checkBooleanOperand(le.right, s"'${le.op.symbol}'", parents, lets, elements)
       case ne: NotExpression =>
-        validateValue(ne.expr, parents, lets)
-        checkBooleanOperand(ne.expr, "'not'", parents, lets)
+        validateValue(ne.expr, parents, lets, elements)
+        checkBooleanOperand(ne.expr, "'not'", parents, lets, elements)
 
   /** A28: require a logical/`not` operand to be boolean. Emits an Error only when the operand's
     * category is clearly non-boolean; an undetermined category is skipped (best-effort).
@@ -5852,9 +5886,10 @@ case class ValidationPass(
     v: Value,
     what: String,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Unit =
-    valueCategory(v, parents, lets) match
+    valueCategory(v, parents, lets, elements) match
       case Some("boolean") => ()
       case Some(other) =>
         messages.addError(
@@ -5875,9 +5910,10 @@ case class ValidationPass(
   private def whenValueRefCategory(
     vr: ValueRef,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Option[String] =
-    valueRefTypeExpr(vr, parents, lets).flatMap(typeExprCategory)
+    valueRefTypeExpr(vr, parents, lets, elements).flatMap(typeExprCategory)
 
   /** A17: a bare boolean value reference used as a `when` condition must resolve to a Boolean-typed
     * value — a boolean field of the handled message/entity-state/function-input, a boolean
@@ -5888,9 +5924,10 @@ case class ValidationPass(
   private def checkWhenValueRef(
     vr: ValueRef,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Unit =
-    whenValueRefCategory(vr, parents, lets) match
+    whenValueRefCategory(vr, parents, lets, elements) match
       case Some("boolean") => ()
       case Some(other) =>
         messages.addError(
@@ -5915,32 +5952,41 @@ case class ValidationPass(
   private def comparandCategory(
     c: Comparand,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Option[String] =
     c match
       case cr: ConstantRef =>
         resolution.refMap.definitionOf[Constant](cr.pathId).flatMap(k => typeExprCategory(k.typeEx))
-      case gv: GetValue => valueCategory(gv, parents, lets)
+      case gv: GetValue => valueCategory(gv, parents, lets, elements)
       case vr: ValueRef =>
-        valueCategory(vr, parents, lets).orElse(whenValueRefCategory(vr, parents, lets))
+        valueCategory(vr, parents, lets, elements)
+          .orElse(whenValueRefCategory(vr, parents, lets, elements))
 
   /** A28: validate a comparison operand ([[Comparand]]) resolves. A [[ConstantRef]]/[[GetValue]] is
     * checked via [[checkRef]]; a bare [[ValueRef]] must be a `let`-local, an in-scope field, or a
     * named [[Constant]].
     */
-  private def validateComparand(c: Comparand, parents: Parents, lets: Seq[LetStatement]): Unit =
+  private def validateComparand(
+    c: Comparand,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
     c match
       case cr: ConstantRef => checkRef[Constant](cr, parents)
-      case gv: GetValue    => validateValue(gv, parents, lets)
+      case gv: GetValue    => validateValue(gv, parents, lets, elements)
       case vr: ValueRef =>
-        if !valueRefResolves(vr, parents, lets) then
+        if !valueRefResolves(vr, parents, lets, elements) then
           messages.addError(
             vr.loc,
-            s"Value reference '${vr.path.format}' is not a 'let'-local, a field of the handled " +
-              "message or entity state, a function input, or a constant in scope",
+            s"Value reference '${vr.path.format}' is not a 'let'-local, an 'on init'/'on term' " +
+              "parameter, a 'foreach' element, a field of the handled message or entity state, " +
+              "a function input, or a constant in scope",
             suggestion =
-              "Bind it with a 'let'; reference a field of the on-clause message, entity state, or " +
-                "the function's 'requires' input; or declare and reference a 'constant'."
+              "Bind it with a 'let'; reference an 'on init'/'on term' parameter, a 'foreach' " +
+                "element, or a field of the on-clause message, entity state, or the function's " +
+                "'requires' input; or declare and reference a 'constant'."
           )
 
   /** A28: enforce type-safe comparisons. Equality (`==`/`!=`) requires both operands to share a
@@ -5951,10 +5997,11 @@ case class ValidationPass(
   private def checkComparison(
     ce: ComparisonExpression,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Unit =
-    val lc = comparandCategory(ce.left, parents, lets)
-    val rc = comparandCategory(ce.right, parents, lets)
+    val lc = comparandCategory(ce.left, parents, lets, elements)
+    val rc = comparandCategory(ce.right, parents, lets, elements)
     ce.op match
       case ComparisonOperator.EQ | ComparisonOperator.NE =>
         (lc, rc) match
@@ -5987,11 +6034,12 @@ case class ValidationPass(
   private def matchSubjectType(
     subject: MatchSubject,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Option[Type] =
     subject match
-      case vr: ValueRef     => valueRefType(vr, parents, lets)
-      case gv: GetValue     => valueType(gv, parents, lets)
+      case vr: ValueRef     => valueRefType(vr, parents, lets, elements)
+      case gv: GetValue     => valueType(gv, parents, lets, elements)
       case _: LiteralString => None
 
   /** A29: the broad category (`"boolean"`/`"numeric"`/`"string"`) of a [[MatchSubject]] used as the
@@ -6001,11 +6049,12 @@ case class ValidationPass(
   private def matchSubjectCategory(
     subject: MatchSubject,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Option[String] =
     subject match
-      case vr: ValueRef     => whenValueRefCategory(vr, parents, lets)
-      case gv: GetValue     => valueCategory(gv, parents, lets)
+      case vr: ValueRef     => whenValueRefCategory(vr, parents, lets, elements)
+      case gv: GetValue     => valueCategory(gv, parents, lets, elements)
       case _: LiteralString => None
 
   /** A29: the member [[Definition]]s of a CLOSED subject type — the enumerators of an `any of {…}`
@@ -6029,24 +6078,29 @@ case class ValidationPass(
     * `default`, warn (StyleWarning) about uncovered members. All checks are best-effort: an
     * undeterminable subject type skips type-compat and exhaustiveness entirely.
     */
-  private def validateMatch(ms: MatchStatement, parents: Parents, lets: Seq[LetStatement]): Unit =
+  private def validateMatch(
+    ms: MatchStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
     // Subject must resolve (a ValueRef reports out-of-scope; a GetValue source is checked).
-    validateValue(ms.expression, parents, lets)
-    val subjType = matchSubjectType(ms.expression, parents, lets)
-    val subjCat = matchSubjectCategory(ms.expression, parents, lets)
+    validateValue(ms.expression, parents, lets, elements)
+    val subjType = matchSubjectType(ms.expression, parents, lets, elements)
+    val subjCat = matchSubjectCategory(ms.expression, parents, lets, elements)
     val memberDefs: Option[Seq[Definition]] = subjType.flatMap(closedMemberDefs)
     ms.cases.foreach { mc =>
       mc.pattern match
         case tp: TypePattern => validateTypePattern(tp, subjType, memberDefs)
         case cp: ComparisonPattern =>
-          validateComparand(cp.comparand, parents, lets)
-          checkPatternComparison(cp, subjCat, parents, lets)
+          validateComparand(cp.comparand, parents, lets, elements)
+          checkPatternComparison(cp, subjCat, parents, lets, elements)
         case _: LiteralPattern => () // legacy pseudo-code, untyped
       // A29: a guard is a structured BooleanExpression (validated as a value) or a bare
       // boolean-typed ValueRef (checked Boolean-typed, mirroring A17's `when`).
       mc.guard.foreach {
-        case be: BooleanExpression => validateValue(be, parents, lets)
-        case vr: ValueRef          => checkWhenValueRef(vr, parents, lets)
+        case be: BooleanExpression => validateValue(be, parents, lets, elements)
+        case vr: ValueRef          => checkWhenValueRef(vr, parents, lets, elements)
       }
     }
     // Exhaustiveness — StyleWarning, CLOSED subjects only, and only when there is no `default`. Only
@@ -6123,9 +6177,10 @@ case class ValidationPass(
     cp: ComparisonPattern,
     subjCat: Option[String],
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Unit =
-    val rc = comparandCategory(cp.comparand, parents, lets)
+    val rc = comparandCategory(cp.comparand, parents, lets, elements)
     cp.op match
       case ComparisonOperator.EQ | ComparisonOperator.NE =>
         (subjCat, rc) match
@@ -6162,10 +6217,11 @@ case class ValidationPass(
     v: Value,
     parents: Parents,
     lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression],
     loc: At,
     what: String
   ): Unit =
-    (expected, valueType(v, parents, lets)) match
+    (expected, valueType(v, parents, lets, elements)) match
       case (Some(e), Some(a)) if !(e eq a) =>
         messages.addError(
           loc,
@@ -6192,7 +6248,7 @@ case class ValidationPass(
     fieldNoun: String,
     parents: Parents,
     lets: Seq[LetStatement],
-    elements: Map[String, TypeExpression] = Map.empty
+    elements: Map[String, TypeExpression]
   ): Unit =
     args.zipWithIndex.foreach { case (arg, idx) =>
       val fieldOpt: Option[Field] = arg.name match
@@ -6202,7 +6258,7 @@ case class ValidationPass(
         field.typeEx match
           case ate: AliasedTypeExpression =>
             val expected = resolution.refMap.definitionOf[Type](ate.pathId)
-            val actual = valueType(arg.value, parents, lets)
+            val actual = valueType(arg.value, parents, lets, elements)
             (expected, actual) match
               case (Some(e), Some(a)) if !(e eq a) =>
                 messages.addError(
@@ -6225,7 +6281,7 @@ case class ValidationPass(
     c: Constructor,
     parents: Parents,
     lets: Seq[LetStatement],
-    elements: Map[String, TypeExpression] = Map.empty
+    elements: Map[String, TypeExpression]
   ): Unit =
     resolution.refMap.definitionOf[Type](c.ref.pathId) match
       case Some(typ) =>
@@ -6293,7 +6349,8 @@ case class ValidationPass(
   private def validateCall(
     call: Call,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
   ): Unit =
     resolution.refMap.definitionOf[Function](call.function.pathId) match
       case Some(fn) =>
@@ -6357,23 +6414,28 @@ case class ValidationPass(
             suggestion =
               s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset."
           )
-        checkArgumentTypes(call.args, fields, "input", parents, lets)
+        checkArgumentTypes(call.args, fields, "input", parents, lets, elements)
         // Recurse into argument values (nested constructors, calls, value refs).
-        call.args.foreach(arg => validateValue(arg.value, parents, lets))
+        call.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
       case None => () // unresolved function ref reported by ResolutionPass
   end validateCall
 
   /** A45: validate a `put` — the value, the output target's existence, and best-effort type
     * compatibility of the value against the resolved [[Output.putOut]].
     */
-  private def validatePut(ps: PutStatement, parents: Parents, lets: Seq[LetStatement]): Unit =
-    validateValue(ps.value, parents, lets)
+  private def validatePut(
+    ps: PutStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    validateValue(ps.value, parents, lets, elements)
     checkRef[Output](ps.output, parents).foreach { output =>
       val expected: Option[Type] = output.putOut match
         case tr: TypeRef      => resolution.refMap.definitionOf[Type](tr.pathId)
         case _: ConstantRef   => None
         case _: LiteralString => None
-      val actual = valueType(ps.value, parents, lets)
+      val actual = valueType(ps.value, parents, lets, elements)
       (expected, actual) match
         case (Some(e), Some(a)) if !(e eq a) =>
           messages.addError(
@@ -6388,13 +6450,18 @@ case class ValidationPass(
   /** A57: validate a `return` — the value and best-effort type compatibility against the enclosing
     * [[Function.output]].
     */
-  private def validateReturn(rs: ReturnStatement, parents: Parents, lets: Seq[LetStatement]): Unit =
-    validateValue(rs.value, parents, lets)
+  private def validateReturn(
+    rs: ReturnStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    validateValue(rs.value, parents, lets, elements)
     parents.collectFirst { case f: Function => f }.foreach { fn =>
       val expected: Option[Type] = fn.output match
         case Some(tr: TypeRef) => resolution.refMap.definitionOf[Type](tr.pathId)
         case _                 => None
-      val actual = valueType(rs.value, parents, lets)
+      val actual = valueType(rs.value, parents, lets, elements)
       (expected, actual) match
         case (Some(e), Some(a)) if !(e eq a) =>
           messages.addError(
@@ -6483,6 +6550,7 @@ case class ValidationPass(
             ls.expression,
             parents,
             lets,
+            elements,
             ls.loc,
             s"'let ${ls.identifier.value}'"
           )
@@ -6503,7 +6571,15 @@ case class ValidationPass(
             resolution.refMap
               .definitionOf[State](sr.pathId)
               .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
-        checkValueType(expected, ss.value, parents, lets, ss.loc, s"'set ${ss.field.format}'")
+        checkValueType(
+          expected,
+          ss.value,
+          parents,
+          lets,
+          elements,
+          ss.loc,
+          s"'set ${ss.field.format}'"
+        )
       case s: SendStatement =>
         s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
       case s: TellStatement =>
@@ -6542,7 +6618,7 @@ case class ValidationPass(
         // ValueRef condition must resolve to a Boolean-typed value.
         ws.condition match
           case be: BooleanExpression => validateValue(be, parents, lets, elements)
-          case vr: ValueRef          => checkWhenValueRef(vr, parents, lets) // A17
+          case vr: ValueRef          => checkWhenValueRef(vr, parents, lets, elements) // A17
           case _                     => ()
         checkStatementScopes(
           ws.thenStatements.toSeq.collect { case s: Statement => s },
@@ -6566,7 +6642,8 @@ case class ValidationPass(
         validateMatch(
           ms,
           parents,
-          lets
+          lets,
+          elements
         ) // A29: subject/pattern/guard resolution + type-compat + exhaustiveness
         ms.cases.foreach { mc =>
           checkStatementScopes(
@@ -6582,8 +6659,8 @@ case class ValidationPass(
           parents,
           elements
         )
-      case ps: PutStatement    => validatePut(ps, parents, lets)
-      case rs: ReturnStatement => validateReturn(rs, parents, lets)
+      case ps: PutStatement    => validatePut(ps, parents, lets, elements)
+      case rs: ReturnStatement => validateReturn(rs, parents, lets, elements)
       // A70/instance-identity: reached at ANY depth (this function is the single entry point
       // invoked at every container root AND recursively for when/match/foreach bodies), which is
       // exactly what the nested-`terminate` regression test requires -- mirrors `checkInitiate`'s

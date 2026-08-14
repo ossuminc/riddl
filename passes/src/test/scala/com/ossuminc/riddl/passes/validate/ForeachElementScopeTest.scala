@@ -32,7 +32,7 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
     s"""domain D is {
        |  author A is { name is "A" email is "a@b.c" }
        |  context C is {
-       |    record Line is { sku is String }
+       |    record Line is { sku is String, ok is Boolean }
        |    record Entry is { code is String }
        |    record Order is { entries is many Line, ref is String }
        |    record St is { lines is many Line, byId is mapping from Integer to Entry, note is String }
@@ -85,11 +85,28 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
     }
 
     "resolve the element inside a nested when" in { (td: TestData) =>
+      // The condition is the element's BOOLEAN field. It was `line.sku` (a String) until the
+      // lexical-scope threading fix, which is when A17's "a 'when' condition must be a Boolean"
+      // check first started seeing element types at all -- see the case below. The point of THIS
+      // case is that the element resolves inside a nested statement, not that any type goes.
+      val errors = errorsFor(
+        "foreach line in field lines { when line.ok then set field St.note to line.sku end }",
+        td
+      )
+      errors mustBe empty
+    }
+
+    "type-check the element used as a bare `when` condition" in { (td: TestData) =>
+      // A17 applies to an element exactly as it does to a state field. It could not, before the
+      // element scope was threaded into `checkWhenValueRef`: the category came back undetermined
+      // and the check silently skipped, so a String was as acceptable a condition as a Boolean.
       val errors = errorsFor(
         "foreach line in field lines { when line.sku then set field St.note to line.sku end }",
         td
       )
-      errors mustBe empty
+      withClue(clue(errors)) {
+        errors.exists(_.message.contains("must be a Boolean value")) mustBe true
+      }
     }
 
     "resolve the element referenced bare" in { (td: TestData) =>
