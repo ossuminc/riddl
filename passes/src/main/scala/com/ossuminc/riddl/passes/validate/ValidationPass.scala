@@ -455,7 +455,12 @@ case class ValidationPass(
     // the Saga, which is the correct resolution scope for a step's statements.
     value match {
       case oc: OnClause =>
-        checkStatementScopes(oc.statements, Seq.empty[LetStatement], oc +: parentsAsSeq)
+        checkStatementScopes(
+          oc.statements,
+          Seq.empty[LetStatement],
+          oc +: parentsAsSeq,
+          clauseParameterScope(oc)
+        )
       case fn: Function =>
         checkStatementScopes(fn.statements, Seq.empty[LetStatement], fn +: parentsAsSeq)
       case ss: SagaStep =>
@@ -496,6 +501,17 @@ case class ValidationPass(
         f match {
           case f: Field  => validateField(f, parentsAsSeq)
           case m: Method => validateMethod(m, parentsAsSeq)
+        }
+      // Task 3 / final review: an `on init`/`on term` PARAMETER's type expression reached NO
+      // type checking at all -- it was traversed (Pass.scala walks the `parameters` field) and
+      // RESOLVED (ResolutionPass's MethodArgument arm), but nothing ever called
+      // `checkTypeExpression` on it, so a parameter skipped every cardinality, pattern, range and
+      // `Id(kind …)` keyword check a Field of the same type gets. `parentsAsSeq.head` is the
+      // on-clause, which is the SAME parent ResolutionPass keyed the parameter's references under
+      // (`Pass.traverse` pushes the clause before walking `parameters`).
+      case ma: MethodArgument =>
+        parentsAsSeq.headOption.collect { case d: Definition => d }.foreach { owner =>
+          checkTypeExpression(ma.typeEx, owner, parentsAsSeq)
         }
       case t: Type =>
         validateType(t, parentsAsSeq)
@@ -861,14 +877,23 @@ case class ValidationPass(
     * A missing parameter list and a wrong leading type are reported with the SAME message — both
     * are "no correctly-typed leading id parameter" — which is what `otc.parameters.headOption`
     * naturally collapses them into.
+    *
+    * The match is by RESOLVED IDENTITY (`eq`), never by the path's last segment. Reid overruled
+    * name matching for task 6's `checkTellAddressing` (see `isAddressFieldFor`) and the same
+    * reasoning applies verbatim here: with the name version, `on term(oid: Id(entity
+    * Dom.Other.Order))` inside `Dom.Ctx.Order` was ACCEPTED with no diagnostic, because both paths
+    * end in `Order`. `otc` is the refMap key's parent -- `Pass.traverse` pushes the on-clause
+    * before walking `parameters`, so that is what `ResolutionPass` recorded the parameter's
+    * `UniqueId` under (see its `MethodArgument` arm) -- and `uniqueIdReferent` probes it first.
     */
   private def checkOnTermLeadingParameter(otc: OnTerminationClause, parents: Parents): Unit =
     val enclosing = parents.collectFirst { case p: Processor[?] => p }
     enclosing.foreach { p =>
       val ok = otc.parameters.headOption.exists { a =>
         a.typeEx match
-          case uid: UniqueId => uid.entityPath.value.lastOption.contains(p.id.value)
-          case _             => false
+          case uid: UniqueId =>
+            uniqueIdReferent(uid.entityPath, otc, otc +: parents).exists(_ eq p)
+          case _ => false
       }
       check(
         ok,
@@ -5265,149 +5290,141 @@ case class ValidationPass(
     }
   end validateAsk
 
-  /** The [[MethodArgument]]s a Processor's `on init` clause declares, or `Seq.empty` when it
-    * declares none (including when it has no `on init` clause at all -- indistinguishable from
-    * this function's point of view, and `checkInitiate` treats an unresolved target the same way
-    * via `checkRef`'s silence). Entity state handlers are folded in exactly as `validateAsk` does
-    * for `on query`/`on other`: `on init` commonly lives inside a `State` rather than directly on
-    * the entity (state handlers apply to the entity, per `WithHandlers`'s literal `contents`
-    * filter not descending into `State`).
+  /** The [[MethodArgument]]s a Processor's `on init`/`on term` clause declares, or `Seq.empty` when
+    * it declares none (including when it has no such clause at all -- indistinguishable from this
+    * function's point of view, and [[checkLifecycleInvocation]] treats an unresolved target the
+    * same way via `checkRef`'s silence). Entity state handlers are folded in exactly as
+    * `validateAsk` does for `on query`/`on other`: these clauses commonly live inside a `State`
+    * rather than directly on the entity (state handlers apply to the entity, per `WithHandlers`'s
+    * literal `contents` filter not descending into `State`).
     */
-  private def initClauseParameters(p: Processor[?]): Seq[MethodArgument] =
+  private def lifecycleClauseParameters(
+    p: Processor[?]
+  )(select: PartialFunction[OnClause, Seq[MethodArgument]]): Seq[MethodArgument] =
     val stateHandlers = p match
       case e: Entity => e.states.flatMap(_.handlers)
       case _         => Seq.empty
-    (p.handlers ++ stateHandlers)
-      .flatMap(_.clauses)
-      .collectFirst { case oic: OnInitializationClause => oic.parameters }
-      .getOrElse(Seq.empty)
-  end initClauseParameters
+    (p.handlers ++ stateHandlers).flatMap(_.clauses).collectFirst(select).getOrElse(Seq.empty)
+  end lifecycleClauseParameters
 
-  /** A70/instance-identity: validate `initiate <processor>(args)` against the target's declared
-    * `on init` parameters -- arity, then best-effort per-argument type compatibility via the SAME
-    * helper a constructor and a call use ([[checkArgumentTypes]]; see its scaladoc for why a
-    * second copy is not written). `on init` declares [[MethodArgument]]s, not [[Field]]s, so they
-    * are adapted rather than the helper forked.
+  /** A70/instance-identity: validate `initiate <processor>(args)` / `terminate <processor>(args)`
+    * against the target's declared `on init`/`on term` parameters -- arity, then best-effort
+    * per-argument type compatibility via the SAME helper a constructor and a call use
+    * ([[checkArgumentTypes]]; see its scaladoc for why a second copy is not written). The clauses
+    * declare [[MethodArgument]]s, not [[Field]]s, so they are adapted rather than the helper
+    * forked.
+    *
+    * `initiate` and `terminate` shared this body VERBATIM, down to a duplicated local `count`
+    * helper, until the final review of this branch. They are one function for exactly the reason
+    * [[checkArgumentTypes]] is reused rather than forked one level down: two copies drift, and a
+    * rule tightened for one would silently not apply to the other.
     *
     * Silent when the target does not resolve -- `ResolutionPass` already reported that (mirrors
-    * `validateAsk`'s target resolution). Recurses into argument values exactly as
-    * `validateConstructor`/`validateCall` do, so a nested constructor/get/ask inside an argument
-    * is still checked.
+    * `validateAsk`'s target resolution) -- and silent when the target's body is a `???` STUB, per
+    * the standing ruling: a definition that has said "don't expect much" earns a Missing warning
+    * about its body and nothing else, so reasoning from what an unwritten body does NOT declare is
+    * exactly the inference the ruling forbids. `checkTellAddressing` gates the same way; these two
+    * did not, so `initiate entity Order(x = "1")` against `entity Order is { ??? }` drew a hard
+    * Error. (A `???` body and an explicitly empty one parse to the same empty `contents`, which is
+    * what `p.isEmpty` reads.)
+    *
+    * Argument VALUES are validated either way: they belong to the CALL site, and the callee being
+    * a stub says nothing about whether the names written here exist.
     */
+  private def checkLifecycleInvocation(
+    loc: At,
+    processorRef: ProcessorRef[Processor[?]],
+    args: Seq[ConstructorArg],
+    // "on init" / "on term" -- the CLAUSE being invoked, which is what the diagnostic is about.
+    clauseKeyword: String,
+    // "initiate" / "terminate" -- the STATEMENT the author wrote, which is what a suggestion has
+    // to be phrased in.
+    statementKeyword: String,
+    // `initiate` may drop its parentheses when there are no arguments; `terminate` may not (its
+    // bare form was removed -- see `StatementParser.terminateStatement`). Only the SUGGESTION
+    // differs, so this is a flag rather than a second code path.
+    parensOptional: Boolean,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  )(select: PartialFunction[OnClause, Seq[MethodArgument]]): Unit =
+    checkRef[Processor[?]](processorRef, parents).foreach { p =>
+      if p.nonEmpty then
+        val declared = lifecycleClauseParameters(p)(select)
+        def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
+        if declared.isEmpty && args.nonEmpty then
+          messages.addError(
+            loc,
+            s"${p.identify} declares '$clauseKeyword' with no parameters, but " +
+              s"${count(args.size, "argument")} supplied",
+            suggestion = {
+              val bare = s"$statementKeyword ${processorRef.format}"
+              s"Write '${if parensOptional then bare else bare + "()"}' with no arguments."
+            }
+          )
+        else if declared.size != args.size then
+          messages.addError(
+            loc,
+            s"${p.identify} declares '$clauseKeyword' with ${count(declared.size, "parameter")}, but " +
+              s"${count(args.size, "argument")} supplied",
+            suggestion =
+              s"Supply ${declared.size}: ${declared.map(a => s"${a.name}: ${a.typeEx.format}").mkString(", ")}."
+          )
+        else
+          // Reuse the EXISTING per-argument helper (`checkArgumentTypes`) rather than writing a
+          // second one — its scaladoc records that two hand-written copies were free to drift, so a
+          // rule tightened for constructors would silently not apply here. It wants Seq[Field], and
+          // these clauses declare Seq[MethodArgument], so adapt rather than fork:
+          val asFields: Seq[Field] = declared.map { a =>
+            Field(a.loc, Identifier(a.loc, a.name), a.typeEx)
+          }
+          checkArgumentTypes(args, asFields, "parameter", parents, lets, elements)
+        end if
+      end if
+    }
+    args.foreach(arg => validateValue(arg.value, parents, lets, elements))
+  end checkLifecycleInvocation
+
+  /** A70/instance-identity: `initiate <processor>(args)`. See [[checkLifecycleInvocation]]. */
   private def checkInitiate(
     init: Initiate,
     parents: Parents,
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression] = Map.empty
   ): Unit =
-    checkRef[Processor[?]](init.processor, parents).foreach { p =>
-      val declared = initClauseParameters(p)
-      def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
-      if declared.isEmpty && init.args.nonEmpty then
-        messages.addError(
-          init.loc,
-          s"${p.identify} declares 'on init' with no parameters, but " +
-            s"${count(init.args.size, "argument")} supplied",
-          suggestion = s"Write 'initiate ${init.processor.format}' with no parentheses."
-        )
-      else if declared.size != init.args.size then
-        messages.addError(
-          init.loc,
-          s"${p.identify} declares 'on init' with ${count(declared.size, "parameter")}, but " +
-            s"${count(init.args.size, "argument")} supplied",
-          suggestion =
-            s"Supply ${declared.size}: ${declared.map(a => s"${a.name}: ${a.typeEx.format}").mkString(", ")}."
-        )
-      else
-        // Reuse the EXISTING per-argument helper (`checkArgumentTypes`) rather than writing a
-        // second one — its scaladoc records that two hand-written copies were free to drift, so a
-        // rule tightened for constructors would silently not apply here. It wants Seq[Field], and
-        // `on init` declares Seq[MethodArgument], so adapt rather than fork:
-        val asFields: Seq[Field] = declared.map { a =>
-          Field(a.loc, Identifier(a.loc, a.name), a.typeEx)
-        }
-        checkArgumentTypes(init.args, asFields, "parameter", parents, lets, elements)
-    }
-    init.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
+    checkLifecycleInvocation(
+      init.loc,
+      init.processor,
+      init.args,
+      s"${Keyword.on} ${Keyword.init}",
+      Keyword.initiate,
+      parensOptional = true,
+      parents,
+      lets,
+      elements
+    ) { case oic: OnInitializationClause => oic.parameters }
   end checkInitiate
 
-  /** The [[MethodArgument]]s a Processor's `on term` clause declares, or `Seq.empty` when it
-    * declares none (including when it has no `on term` clause at all). Mirrors
-    * [[initClauseParameters]] exactly, including folding in entity state handlers.
-    */
-  private def termClauseParameters(p: Processor[?]): Seq[MethodArgument] =
-    val stateHandlers = p match
-      case e: Entity => e.states.flatMap(_.handlers)
-      case _         => Seq.empty
-    (p.handlers ++ stateHandlers)
-      .flatMap(_.clauses)
-      .collectFirst { case otc: OnTerminationClause => otc.parameters }
-      .getOrElse(Seq.empty)
-  end termClauseParameters
-
-  /** A70/instance-identity: validate `terminate <processor>(args)` against the target's declared
-    * `on term` parameters. Mirror of [[checkInitiate]] -- see its scaladoc for why
-    * [[checkArgumentTypes]] is reused rather than forked.
-    */
+  /** A70/instance-identity: `terminate <processor>(args)`. See [[checkLifecycleInvocation]]. */
   private def checkTerminate(
     term: TerminateStatement,
     parents: Parents,
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression] = Map.empty
   ): Unit =
-    checkRef[Processor[?]](term.processor, parents).foreach { p =>
-      val declared = termClauseParameters(p)
-      def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
-      if declared.isEmpty && term.args.nonEmpty then
-        messages.addError(
-          term.loc,
-          s"${p.identify} declares 'on term' with no parameters, but " +
-            s"${count(term.args.size, "argument")} supplied",
-          suggestion = s"Write 'terminate ${term.processor.format}' with no parentheses."
-        )
-      else if declared.size != term.args.size then
-        messages.addError(
-          term.loc,
-          s"${p.identify} declares 'on term' with ${count(declared.size, "parameter")}, but " +
-            s"${count(term.args.size, "argument")} supplied",
-          suggestion =
-            s"Supply ${declared.size}: ${declared.map(a => s"${a.name}: ${a.typeEx.format}").mkString(", ")}."
-        )
-      else
-        val asFields: Seq[Field] = declared.map { a =>
-          Field(a.loc, Identifier(a.loc, a.name), a.typeEx)
-        }
-        checkArgumentTypes(term.args, asFields, "parameter", parents, lets, elements)
-    }
-    term.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
+    checkLifecycleInvocation(
+      term.loc,
+      term.processor,
+      term.args,
+      s"${Keyword.on} ${Keyword.term}",
+      Keyword.terminate,
+      parensOptional = false,
+      parents,
+      lets,
+      elements
+    ) { case otc: OnTerminationClause => otc.parameters }
   end checkTerminate
 
-  /** A70/instance-identity task 6: derive which INSTANCE a `tell` addresses -- the message's field
-    * typed `Id(target)`, found without annotation. `by <field>` disambiguates when more than one
-    * field qualifies.
-    *
-    * Uniform across processor kinds -- an `Id(projector Foo)` field is used if present -- but the
-    * "no address" DIAGNOSTIC is entity-only, because an entity is the only multiply-instantiated
-    * processor (Reid, 2026-08-13). A repository is reached by path and has nothing to distinguish.
-    *
-    * Called from [[checkStatementScopes]]'s `TellStatement` case, the single entry point invoked at
-    * every container root AND recursively for when/match/foreach bodies, so a `tell` nested at any
-    * depth is still reached -- mirrors [[checkTerminate]]'s reachability.
-    *
-    * Guarded on the RESOLVED field list being non-empty, not on `mt.isEmpty`. `Type.isEmpty` is
-    * `Container.isEmpty` over `Type.contents`, which returns `Seq.empty` for anything that is not
-    * directly an `Aggregation`/`AggregateUseCaseTypeExpression`/`Enumeration` -- in particular for
-    * an ALIAS-declared message (`command Ship is Shipment`), whose `contents` is always empty
-    * regardless of how many fields `Shipment` has. Gating on `mt.isEmpty` therefore treated every
-    * alias-declared message as a `???` stub and silently skipped this whole check for it.
-    * `aggregateFieldsOf` already follows the alias chain (as `checkOnOtherBinding` and friends
-    * rely on elsewhere), so gating on ITS result lets aliases through while still catching the
-    * real stub shape: a `command Foo is { ??? }` body parses to the SAME empty-aggregate AST as an
-    * explicit `{ }` (both hit `TypeParser`'s `undefined(Seq.empty[AggregateContents])`
-    * alternative), so "zero fields after resolving" is exactly the stub condition the standing
-    * `???` ruling asks us to exempt -- its absent fields must not be read as "no Id(target)
-    * field".
-    */
   /** A55-style: the aggregate [[Field]]s of a message [[Type]], each paired with the [[Type]] node
     * that actually DECLARES it -- itself for a direct aggregate, or (following the alias chain) the
     * aliased-to `Type` for `command Ship is Shipment`. Needed because [[ResolutionPass]] resolves a
@@ -5435,6 +5452,32 @@ case class ValidationPass(
         resolution.refMap.definitionOf[Processor[?]](uid.entityPath, owner).exists(_ eq p)
       case _ => false
 
+  /** A70/instance-identity task 6: derive which INSTANCE a `tell` addresses -- the message's field
+    * typed `Id(target)`, found without annotation. `by <field>` disambiguates when more than one
+    * field qualifies.
+    *
+    * Uniform across processor kinds -- an `Id(projector Foo)` field is used if present -- but the
+    * "no address" DIAGNOSTIC is entity-only, because an entity is the only multiply-instantiated
+    * processor (Reid, 2026-08-13). A repository is reached by path and has nothing to distinguish.
+    *
+    * Called from [[checkStatementScopes]]'s `TellStatement` case, the single entry point invoked at
+    * every container root AND recursively for when/match/foreach bodies, so a `tell` nested at any
+    * depth is still reached -- mirrors [[checkTerminate]]'s reachability.
+    *
+    * Guarded on the RESOLVED field list being non-empty, not on `mt.isEmpty`. `Type.isEmpty` is
+    * `Container.isEmpty` over `Type.contents`, which returns `Seq.empty` for anything that is not
+    * directly an `Aggregation`/`AggregateUseCaseTypeExpression`/`Enumeration` -- in particular for
+    * an ALIAS-declared message (`command Ship is Shipment`), whose `contents` is always empty
+    * regardless of how many fields `Shipment` has. Gating on `mt.isEmpty` therefore treated every
+    * alias-declared message as a `???` stub and silently skipped this whole check for it.
+    * `aggregateFieldsOf` already follows the alias chain (as `checkOnOtherBinding` and friends
+    * rely on elsewhere), so gating on ITS result lets aliases through while still catching the
+    * real stub shape: a `command Foo is { ??? }` body parses to the SAME empty-aggregate AST as an
+    * explicit `{ }` (both hit `TypeParser`'s `undefined(Seq.empty[AggregateContents])`
+    * alternative), so "zero fields after resolving" is exactly the stub condition the standing
+    * `???` ruling asks us to exempt -- its absent fields must not be read as "no Id(target)
+    * field".
+    */
   private def checkTellAddressing(ts: TellStatement, parents: Parents): Unit =
     checkRef[Processor[?]](ts.processorRef, parents).foreach { p =>
       operandType(ts.msg).foreach { mt =>
@@ -5646,7 +5689,7 @@ case class ValidationPass(
       // other let's inferred type -- no special casing needed there.
       case sv: SelfValue =>
         enclosingProcessorOf(parents).map { p =>
-          val agg = SelfValue.aggregation(p, pathOf(p))
+          val agg = SelfValue.aggregation(pathOf(p))
           sv.field match
             case None    => agg
             case Some(f) => agg.fields.find(_.id.value == f.value).map(_.typeEx).getOrElse(agg)
@@ -5735,11 +5778,12 @@ case class ValidationPass(
         if !valueRefResolves(vr, parents, lets, elements) then
           messages.addError(
             vr.loc,
-            s"Value reference '${vr.path.format}' is not a 'let'-local, a field of the handled " +
-              "message or entity state, or a function input in scope",
+            s"Value reference '${vr.path.format}' is not a 'let'-local, an 'on init'/'on term' " +
+              "parameter, a field of the handled message or entity state, or a function input in " +
+              "scope",
             suggestion =
-              "Bind it with a 'let', or reference a field of the on-clause message, entity state, " +
-                "or the function's 'requires' input."
+              "Bind it with a 'let', or reference an 'on init'/'on term' parameter or a field of " +
+                "the on-clause message, entity state, or the function's 'requires' input."
           )
       case gv: GetValue =>
         gv.source match
@@ -6372,6 +6416,36 @@ case class ValidationPass(
     * needs the threaded `let` scope, and this walk reaches every statement (top-level and nested)
     * exactly once.
     */
+  /** Task 3 / final review: the LEXICAL name scope an `on init(...)`/`on term(...)` parameter list
+    * introduces for the clause's body.
+    *
+    * Without this the feature was declare-only: the parameters parsed, resolved and prettified,
+    * but READING one from the body was an Error ("Value reference 'seed' is not a 'let'-local, a
+    * field of the handled message or entity state, or a function input in scope"). A parameter
+    * resolved only by COINCIDENCE, when its name happened to collide with a state field — which is
+    * exactly what the original `language/input/lifecycle-parameters.riddl` did, and why the gap
+    * survived a task-scoped review.
+    *
+    * Parameters are threaded HERE rather than taught to `ResolutionPass` for the same reason a
+    * `let` is: they are lexical and statement-scoped, and a [[MethodArgument]] is not a
+    * [[Definition]], so the symbol table cannot hold one. They ride the existing
+    * name-to-[[TypeExpression]] scope map (`inScopeElements`), which is precisely the shape
+    * needed — [[typeExprOfPath]] then walks `buyer.tier` through the parameter's type with no new
+    * machinery. See [[checkStatementScopes]] for how an inner `let` shadows a parameter.
+    */
+  private def clauseParameterScope(oc: OnClause): Map[String, TypeExpression] =
+    val parameters = oc match
+      case oic: OnInitializationClause => oic.parameters
+      case otc: OnTerminationClause    => otc.parameters
+      // Enumerated rather than caught by `case _`: the other clause kinds genuinely have no
+      // parameter list (a message clause's local name is A55's `binding`, taken from the handled
+      // message), and enumerating is what makes a seventh clause kind a compile error here.
+      case _: OnMessageLikeClause | _: OnActivationClause | _: OnPassivationClause |
+          _: OnOtherClause =>
+        Seq.empty[MethodArgument]
+    parameters.map(a => a.name -> a.typeEx).toMap
+  end clauseParameterScope
+
   private def checkStatementScopes(
     stmts: Seq[Statement],
     inScopeLets: Seq[LetStatement],
@@ -6382,6 +6456,12 @@ case class ValidationPass(
     inScopeElements: Map[String, TypeExpression] = Map.empty
   ): Unit =
     var lets = inScopeLets
+    // A parameter/element scope is a MAP threaded by value, but a `let` declared partway through
+    // this list shadows a same-named clause parameter or enclosing `foreach` element from that
+    // point on -- the local is the inner binding. `valueRefTypeExpr` consults `elements` BEFORE
+    // `lets`, so the shadowing has to be expressed by DROPPING the name here rather than by
+    // consultation order.
+    var elements = inScopeElements
     stmts.foreach { stmt =>
       // A70/instance-identity Task 7: initiate/terminate are effects banned in a function body and
       // in an on-activate/on-passivate clause. Checked for EVERY statement in this list, ahead of
@@ -6394,7 +6474,7 @@ case class ValidationPass(
       case ls: LetStatement =>
         // A54: validate the bound expression with the scope BEFORE this let (a let can't see itself),
         // then check its type against a declared `let x: T = …`.
-        validateValue(ls.expression, parents, lets, inScopeElements)
+        validateValue(ls.expression, parents, lets, elements)
         checkLocalName(ls.identifier, "'let' local", parents) // A55
         ls.typeRef.foreach { tr =>
           val expected = resolution.refMap.definitionOf[Type](tr.pathId)
@@ -6408,9 +6488,10 @@ case class ValidationPass(
           )
         }
         lets = lets :+ ls
+        elements = elements - ls.identifier.value
       case ss: SetStatement =>
         // A54: validate the value expression, then check it against the target field/state type.
-        validateValue(ss.value, parents, lets, inScopeElements)
+        validateValue(ss.value, parents, lets, elements)
         val expected: Option[Type] = ss.field match
           case fr: FieldRef =>
             resolution.refMap.definitionOf[Field](fr.pathId).flatMap { f =>
@@ -6424,62 +6505,62 @@ case class ValidationPass(
               .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
         checkValueType(expected, ss.value, parents, lets, ss.loc, s"'set ${ss.field.format}'")
       case s: SendStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
+        s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
       case s: TellStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
+        s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
         // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
         // point invoked at every container root AND recursively for when/match/foreach bodies) --
         // mirrors checkTerminate's reachability, immediately below.
         checkTellAddressing(s, parents)
       case s: YieldStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
+        s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
       // Mirrors YieldStatement, immediately above: `validateStatement`'s ReplyStatement case
       // claims "a Constructor is validated in checkStatementScopes", which was untrue until this
       // arm existed -- a `reply result Foo(x = self.id)` Constructor argument reached NOTHING,
       // found auditing `self`'s coverage (a self reference there was silently unchecked).
       case s: ReplyStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
+        s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
       case s: MorphStatement =>
-        s.value match { case c: Constructor => validateValue(c, parents, lets, inScopeElements); case _ => () }
+        s.value match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
       case fs: ForeachStatement =>
-        validateForeachCollection(fs, lets, inScopeElements, parents)
+        validateForeachCollection(fs, lets, elements, parents)
         // Bind the loop's name(s) to their TYPES for the body's scope -- not merely the names.
         // Without the types `line` resolves and `line.sku` does not, which is the whole point of
         // iterating. An unresolvable collection still binds the names (to `Anything`), because the
         // header's error is already reported and piling "unknown value reference" on top of it
         // would blame the body for a defect above it.
-        val collType = foreachCollectionType(fs, lets, inScopeElements, parents)
+        val collType = foreachCollectionType(fs, lets, elements, parents)
         checkStatementScopes(
           fs.doStatements.toSeq.collect { case s: Statement => s },
           lets,
           parents,
-          inScopeElements ++ foreachBindings(fs, collType)
+          elements ++ foreachBindings(fs, collType)
         )
       case ws: WhenStatement =>
         // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
         // the LiteralString/Identifier forms have no expression to check here. A17: a bare boolean
         // ValueRef condition must resolve to a Boolean-typed value.
         ws.condition match
-          case be: BooleanExpression => validateValue(be, parents, lets, inScopeElements)
+          case be: BooleanExpression => validateValue(be, parents, lets, elements)
           case vr: ValueRef          => checkWhenValueRef(vr, parents, lets) // A17
           case _                     => ()
         checkStatementScopes(
           ws.thenStatements.toSeq.collect { case s: Statement => s },
           lets,
           parents,
-          inScopeElements
+          elements
         )
         checkStatementScopes(
           ws.elseStatements.toSeq.collect { case s: Statement => s },
           lets,
           parents,
-          inScopeElements
+          elements
         )
       case rs: RequireStatement =>
         // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
         // the LiteralString/InvariantRef forms are checked in validateStatement.
         rs.condition match
-          case be: BooleanExpression => validateValue(be, parents, lets, inScopeElements)
+          case be: BooleanExpression => validateValue(be, parents, lets, elements)
           case _                     => ()
       case ms: MatchStatement =>
         validateMatch(
@@ -6492,14 +6573,14 @@ case class ValidationPass(
             mc.statements.toSeq.collect { case s: Statement => s },
             lets,
             parents,
-            inScopeElements
+            elements
           )
         }
         checkStatementScopes(
           ms.default.toSeq.collect { case s: Statement => s },
           lets,
           parents,
-          inScopeElements
+          elements
         )
       case ps: PutStatement    => validatePut(ps, parents, lets)
       case rs: ReturnStatement => validateReturn(rs, parents, lets)
@@ -6507,7 +6588,7 @@ case class ValidationPass(
       // invoked at every container root AND recursively for when/match/foreach bodies), which is
       // exactly what the nested-`terminate` regression test requires -- mirrors `checkInitiate`'s
       // reachability via `validateValue`.
-      case ts: TerminateStatement => checkTerminate(ts, parents, lets, inScopeElements)
+      case ts: TerminateStatement => checkTerminate(ts, parents, lets, elements)
       case _                      => ()
       }
     }

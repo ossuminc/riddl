@@ -18,9 +18,12 @@ import scala.concurrent.duration.DurationInt
 /** Parity guard for Task 5's `terminate` statement: the corpus fixture
   * `language/input/terminate-statement.riddl` is validated against the EBNF grammar by the TatSu
   * validator (which scans every input-directory riddl file). This test proves fastparse accepts
-  * the SAME file -- both the parenthesized (with arguments) and bare (no parameters) forms -- so
-  * the documented grammar and the implementation stay in sync (see CLAUDE.md "Parser/EBNF
-  * Synchronization Requirement").
+  * the SAME file, so the documented grammar and the implementation stay in sync (see CLAUDE.md
+  * "Parser/EBNF Synchronization Requirement").
+  *
+  * The parentheses are MANDATORY as of the final review of the instance-identity branch: the bare
+  * `terminate P` spelling parsed but could never validate (`on term`'s leading Id(...) parameter is
+  * required), so it was dead syntax. The rejection is pinned below.
   *
   * Unlike `initiate` (a VALUE typically wrapped in a `let`), `terminate` is a bare STATEMENT
   * sitting directly in an on-clause's `contents`, so the two `terminate` occurrences are simply
@@ -50,9 +53,26 @@ class TerminateFileTest extends AnyWordSpec with Matchers {
             terminates.head.args.size mustBe 1
 
             terminates(1).processor mustBe a[EntityRef]
-            terminates(1).args mustBe empty
+            terminates(1).args.size mustBe 2
       }
       Await.result(future, 10.seconds)
+    }
+
+    "REJECT the bare `terminate P` form (no parentheses)" in {
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    entity Widget is {
+          |      handler H is {
+          |        on init { terminate entity Widget }
+          |      } with { briefly "h" }
+          |    } with { briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      TopLevelParser.parseInput(RiddlParserInput(src, "bare-terminate")) match
+        case Left(_)  => succeed
+        case Right(_) => fail("the bare `terminate P` form must no longer parse")
     }
   }
 }

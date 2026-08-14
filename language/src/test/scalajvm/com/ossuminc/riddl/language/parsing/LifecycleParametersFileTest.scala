@@ -33,7 +33,9 @@ class LifecycleParametersFileTest extends AnyWordSpec with Matchers {
             val finder = Finder(root)
             val inits = finder.recursiveFindByType[OnInitializationClause]
             inits.size mustBe 1
-            inits.head.parameters.map(_.name) mustBe Seq("total")
+            // The names deliberately do NOT collide with the state record's fields -- see the
+            // fixture's own header for why a colliding name hid a shipped defect.
+            inits.head.parameters.map(_.name) mustBe Seq("seed", "buyer")
 
             val terms = finder.recursiveFindByType[OnTerminationClause]
             terms.size mustBe 1

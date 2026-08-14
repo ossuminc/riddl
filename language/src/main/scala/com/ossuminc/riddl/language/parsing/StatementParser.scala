@@ -697,20 +697,26 @@ private[parsing] trait StatementParser {
     )./.map { case (start, v, end) => ReturnStatement(at(start, end), v) }
   }
 
-  /** `terminate <processor>[(args)]` -- end an instance by invoking its `on term`.
+  /** `terminate <processor>(args)` -- end an instance by invoking its `on term`.
     *
-    * Mirrors `initiateValue`'s shape exactly: parens are OPTIONAL and present exactly when there
-    * are arguments. ARITY IS NOT CHECKED HERE -- a parser error() preempts the whole pass chain,
-    * so the argument diagnostics live in ValidationPass, which is also the only place that has
-    * resolved `on term`.
+    * Parentheses are MANDATORY, unlike `initiate`'s. The parens-optional symmetry with `initiate`
+    * was dead syntax: `on term`'s leading `Id(...)` parameter is REQUIRED
+    * (`checkOnTermLeadingParameter`), so a no-argument `terminate` can never satisfy the arity
+    * check and is unreachable in any valid model. Reid ruled the bare form out in the final review
+    * of the instance-identity branch rather than leave a spelling that always fails validation.
+    * (`terminate P()` with an empty list still parses -- the grammar is not the place to encode
+    * "at least one", and validation already reports the arity.)
+    *
+    * ARITY IS NOT CHECKED HERE -- a parser error() preempts the whole pass chain, so the argument
+    * diagnostics live in ValidationPass, which is also the only place that has resolved `on term`.
     */
   private def terminateStatement[u: P]: P[TerminateStatement] = {
     P(
       Index ~ Keywords.terminate ~/ processorRef ~
-        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
-          Punctuation.roundClose).? ~/ Index
+        Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+        Punctuation.roundClose ~/ Index
     )./.map { case (start, pRef, args, end) =>
-      TerminateStatement(at(start, end), pRef, args.map(_.toSeq).getOrElse(Seq.empty))
+      TerminateStatement(at(start, end), pRef, args.toSeq)
     }
   }
 

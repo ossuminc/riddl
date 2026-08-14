@@ -21,6 +21,10 @@ import org.scalatest.TestData
   * disambiguation is a RIDDL-wide idiom, and `Order` alone could name a context, a message
   * or an entity. Keeping it earns the check below — a keyword that contradicts the
   * resolved kind is a lie a reader would believe.
+  *
+  * Lives in the SHARED test source set (it was `scala-jvm-native`, so JS never exercised it) —
+  * this is a pure validation rule with no platform surface, and the check it covers is now the
+  * one that decides a user-facing kind name.
   */
 class UniqueIdKindTest extends AbstractValidatingTest {
 
@@ -44,6 +48,22 @@ class UniqueIdKindTest extends AbstractValidatingTest {
        |      } with { briefly "s" }
        |    } with { briefly "e" }
        |    record R is { key: $idType } with { briefly "rec" }
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  /** The same model with the `Id(...)` in a type-ALIAS position rather than a field position. */
+  private def aliasModel(idType: String): String =
+    s"""domain Dom is {
+       |  context Ctx is {
+       |    repository Inventory is { ??? } with { briefly "r" }
+       |    entity Order is {
+       |      state S of record R is {
+       |        handler H is { on other is { ??? } }
+       |      } with { briefly "s" }
+       |    } with { briefly "e" }
+       |    type Key is $idType with { briefly "alias" }
+       |    record R is { key: Key } with { briefly "rec" }
        |  } with { briefly "c" }
        |} with { briefly "d" }
        |""".stripMargin
@@ -95,7 +115,76 @@ class UniqueIdKindTest extends AbstractValidatingTest {
       val text = diagnostics(model("Id(entity Inventory)"), "id-mismatch")
         .justErrors.map(_.message).mkString("\n")
       text must include("declared as 'entity'")
-      text must include("Repository")
+      // The kind is named with the RIDDL KEYWORD, not a JVM class name: `getClass.getSimpleName`
+      // worked only by the accident that all six Processor class names lowercase to their keyword,
+      // and `Definition.kind` cannot be used either (a Streamlet overrides it to its SHAPE).
+      text must include("repository")
+    }
+  }
+
+  /** The check above was verified in FIELD position only, and passed there for the wrong reason:
+    * the refMap key's parent for a field's `Id(…)` is the owning `Type`, which happens to be
+    * validation's `parents.head` too. Everywhere else the parents differ and the lookup MISSED,
+    * with `.foreach` turning the miss into "skip the check". riddl-models holds 232
+    * `type X is Id(…)` aliases against 7 field-position uses, so the check was silent in ~97% of
+    * real usage — in the position the keyword check was introduced to serve.
+    */
+  "the Id keyword check" should {
+    "fire in a type-ALIAS position" in { (td: TestData) =>
+      val text = diagnostics(aliasModel("Id(entity Inventory)"), "alias-mismatch")
+        .justErrors.map(_.message).mkString("\n")
+      text must include("declared as 'entity'")
+      text must include("repository")
+    }
+
+    "accept a matching keyword in a type-ALIAS position" in { (td: TestData) =>
+      diagnostics(aliasModel("Id(repository Inventory)"), "alias-ok").justErrors mustBe empty
+    }
+
+    "fire on an `on init`/`on term` PARAMETER" in { (td: TestData) =>
+      // A parameter's type expression reached no `checkTypeExpression` call at all, so it skipped
+      // this check AND every cardinality/pattern/range check a field of the same type gets.
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    repository Inventory is { ??? } with { briefly "r" }
+          |    record R is { total: Integer } with { briefly "rec" }
+          |    entity Order is {
+          |      state S of record R is {
+          |        handler H is {
+          |          on init(k: Id(entity Inventory)) is { do "start" }
+          |        } with { briefly "h" }
+          |      } with { briefly "s" }
+          |    } with { briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val text = diagnostics(src, "param-mismatch").justErrors.map(_.message).mkString("\n")
+      text must include("declared as 'entity'")
+      text must include("repository")
+    }
+
+    "reach a parameter's other type checks too" in { (td: TestData) =>
+      // Not about `Id(...)`: proves `checkTypeExpression` runs on a parameter at all. A Decimal
+      // with a zero whole part is an ordinary Error a Field of the same type would draw; a
+      // parameter drew nothing. (Chosen over a malformed regex because it is pure Scala and so
+      // behaves identically on JVM, JS and Native -- this suite is in the shared source set.)
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    record R is { total: Integer } with { briefly "rec" }
+          |    entity Order is {
+          |      state S of record R is {
+          |        handler H is {
+          |          on init(k: Decimal(0,2)) is { do "start" }
+          |        } with { briefly "h" }
+          |      } with { briefly "s" }
+          |    } with { briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val text = diagnostics(src, "param-decimal").justErrors.map(_.message).mkString("\n")
+      text must include("whole number part")
     }
   }
 

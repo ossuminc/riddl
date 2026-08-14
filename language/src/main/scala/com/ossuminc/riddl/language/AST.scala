@@ -3147,8 +3147,14 @@ object AST:
       */
     val fieldNames: Seq[String] = Seq("id", "version")
 
-    /** The synthesized record type of `self` within `p`. */
-    def aggregation(p: Processor[?], path: PathIdentifier): Aggregation =
+    /** The synthesized record type of `self` within the processor `path` names.
+      *
+      * It takes the PATH, not the [[Processor]]: the only thing `self`'s shape depends on is which
+      * processor `self.id` identifies, and that is the fully-qualified path. The Processor itself
+      * was a parameter here until the final review of the instance-identity branch, and was never
+      * read -- a parameter a function ignores is a claim about its inputs that is not true.
+      */
+    def aggregation(path: PathIdentifier): Aggregation =
       Aggregation(
         At.empty,
         Contents(
@@ -3899,8 +3905,10 @@ object AST:
     * @param processor
     *   The processor whose instance is being terminated
     * @param args
-    *   The arguments supplied to the target's `on term` parameters (empty when `on term` takes
-    *   none, in which case the parentheses are omitted -- mirrors [[Initiate]])
+    *   The arguments supplied to the target's `on term` parameters. Unlike [[Initiate]]'s, the
+    *   parentheses are NOT optional: `on term`'s leading `Id(...)` parameter is mandatory, so a
+    *   no-argument `terminate` could never pass validation and the bare spelling was dead syntax
+    *   (removed in the final review of the instance-identity branch).
     */
   @JSExportTopLevel("TerminateStatement")
   case class TerminateStatement(
@@ -3910,9 +3918,11 @@ object AST:
   ) extends Statement {
     override def kind: String = "Terminate Statement"
     override def canFail: Boolean = true
+    // The parentheses are ALWAYS emitted, including for an empty list: `terminate P` no longer
+    // parses, so a format that dropped them would make prettify's output unreadable by the parser
+    // that produced it -- the reflectivity mandate's whole point.
     def format: String =
-      val argList = if args.isEmpty then "" else args.map(_.format).mkString("(", ", ", ")")
-      s"terminate ${processor.format}$argList"
+      s"terminate ${processor.format}${args.map(_.format).mkString("(", ", ", ")")}"
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////// ADAPTOR

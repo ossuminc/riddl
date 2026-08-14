@@ -184,11 +184,8 @@ class SelfValueTest extends AbstractValidatingTest {
     // independent of any validation-pass plumbing -- proves `id` really is `UniqueId` at the given
     // path and `version` really is `String_`, not merely that some type gets attached.
     "synthesize id: Id(<path>) and version: String" in { (td: TestData) =>
-      val root = parse(inEntity("""let mine = self.id"""), "self-aggregation-unit")
-      val entity = Finder(root).recursiveFindByType[Entity].headOption
-        .getOrElse(fail("no Entity found in parsed model"))
       val path = PathIdentifier(At.empty, Seq("Dom", "Ctx", "Order"))
-      val agg = SelfValue.aggregation(entity, path)
+      val agg = SelfValue.aggregation(path)
       agg.fields.map(_.id.value) mustBe Seq("id", "version")
       agg.fields.head.typeEx mustBe UniqueId(At.empty, path)
       agg.fields(1).typeEx mustBe String_(At.empty)

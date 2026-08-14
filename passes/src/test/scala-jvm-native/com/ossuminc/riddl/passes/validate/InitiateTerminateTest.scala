@@ -55,6 +55,22 @@ class InitiateTerminateTest extends AbstractValidatingTest {
        |} with { briefly "d" }
        |""".stripMargin
 
+  /** A `???` target for the stub-exemption cases below. */
+  private def stubModel(callerBody: String): String =
+    s"""domain Dom is {
+       |  context Ctx is {
+       |    command Go is { why: String } with { briefly "c" }
+       |    record R is { total: String } with { briefly "r" }
+       |    entity Order is { ??? } with { briefly "e" }
+       |    entity Caller is {
+       |      state CS of record R is {
+       |        handler CH is { on command Go { $callerBody } } with { briefly "ch" }
+       |      } with { briefly "cs" }
+       |    } with { briefly "ce" }
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
   "initiate" should {
     "accept matching arguments and yield an Id" in { (td: TestData) =>
       diagnostics(
@@ -124,7 +140,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
       val text = diagnostics(
         model("""on init is { do "start" }
                 |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
-              """terminate entity Order"""),
+              """terminate entity Order()"""),
         "terminate-arity"
       ).justErrors.map(_.message).mkString("\n")
       text must include("1")
@@ -142,11 +158,43 @@ class InitiateTerminateTest extends AbstractValidatingTest {
           model(
             """on init is { do "start" }
               |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
-            """when true then { terminate entity Order } end"""
+            """when true then { terminate entity Order() } end"""
           ),
           "terminate-nested-when"
         ).justErrors.map(_.message).mkString("\n")
         text must include("1")
+    }
+
+    // Reid's ruling, final review: the bare `terminate P` spelling was REMOVED -- it parsed but
+    // could never validate, because `on term`'s leading Id(...) parameter is mandatory. The parse
+    // rejection is pinned in `TerminateFileTest`; `terminate P()` (an explicitly empty list)
+    // remains writable and is what the arity cases above report on.
+  }
+
+  /** The standing `???` ruling: a definition whose body is `???` has said "don't expect much", so
+    * every check other than "provide a body" is skipped for it. `checkTellAddressing` already
+    * gated this way; `checkInitiate`/`checkTerminate` did not, so invoking a stub with arguments
+    * drew a hard Error reasoning from an unwritten body -- exactly the inference the ruling
+    * forbids. Both directions are pinned: the stub is exempt, and a REAL body is still checked
+    * (an exemption with no counter-example is indistinguishable from one applied too widely).
+    */
+  "a `???` target" should {
+    "exempt `initiate` from the arity check" in { (td: TestData) =>
+      diagnostics(stubModel("""let oid = initiate entity Order("1")"""), "initiate-stub")
+        .justErrors mustBe empty
+    }
+
+    "exempt `terminate` from the arity check" in { (td: TestData) =>
+      diagnostics(stubModel("""terminate entity Order("1")"""), "terminate-stub")
+        .justErrors mustBe empty
+    }
+
+    "still validate the ARGUMENT VALUES at the call site" in { (td: TestData) =>
+      // The exemption is about the CALLEE. A name written at the call site either exists or it
+      // does not, and the callee being a stub says nothing about that.
+      val text = diagnostics(stubModel("""terminate entity Order(nosuchlocal)"""), "stub-args")
+        .justErrors.map(_.message).mkString("\n")
+      text must include("nosuchlocal")
     }
   }
 }

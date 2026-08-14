@@ -1,14 +1,19 @@
 // Corpus fixture exercising `terminate` (Task 5, processor-instance identity): `terminate` ends
-// an instance by invoking its `on term`. Parens are OPTIONAL and present exactly when there are
-// arguments -- both forms are exercised here. Exercised by both fastparse (TerminateFileTest) and
-// the EBNF/TatSu grammar (ebnf_tatsu_validator.py, which scans every input-directory riddl file).
+// an instance by invoking its `on term`. Parentheses are MANDATORY -- `on term`'s leading Id(...)
+// parameter is required, so the bare `terminate P` spelling could never validate and was removed
+// in the final review of this branch. Exercised by both fastparse (TerminateFileTest) and the
+// EBNF/TatSu grammar (ebnf_tatsu_validator.py, which scans every input-directory riddl file).
+//
+// This file must VALIDATE, not merely parse: a corpus fixture that fails `riddlc validate` is a
+// trap for whoever runs it next. Its earlier revision paired `on term { ... }` (no parameters)
+// with `terminate entity Widget`, which cannot validate under `checkOnTermLeadingParameter`.
 domain TerminateValue is {
   context Orders is {
     record Fields is { total: String } with { briefly "order totals" }
     entity Order is {
       state S of record Fields is {
         handler H is {
-          on init(total: String) {
+          on init(seed: String) {
             do "seed the initial total"
           }
           on term(oid: Id(entity Order)) {
@@ -23,8 +28,8 @@ domain TerminateValue is {
           on init {
             do "no parameters"
           }
-          on term {
-            do "no parameters"
+          on term(wid: Id(entity Widget), why: String) {
+            do "release resources"
           }
         } with { briefly "h" }
       } with { briefly "s" }
@@ -35,7 +40,8 @@ domain TerminateValue is {
           on init {
             let orderId = initiate entity Order("5")
             terminate entity Order(orderId)
-            terminate entity Widget
+            let widgetId = initiate entity Widget
+            terminate entity Widget(widgetId, "done")
           }
         } with { briefly "ch" }
       } with { briefly "cs" }

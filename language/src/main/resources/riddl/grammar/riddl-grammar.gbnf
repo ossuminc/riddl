@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-13 23:41 UTC
+# Generated: 2026-08-14 03:19 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -256,7 +256,7 @@ boolean-literal ::= "true" | "false"
 self-value ::= "self" ws ("." identifier)?
 put-statement ::= "put" ws1 value ws "to" ws1 output-ref
 return-statement ::= "return" ws1 value
-terminate-statement ::= "terminate" ws1 processor-ref ws ("(" (constructor-arg ("," constructor-arg)*)? ")")?
+terminate-statement ::= "terminate" ws1 processor-ref ws "(" ws (constructor-arg ("," constructor-arg)*)? ws ")"
 
 # General statements. A54: `do` is canonical; the `prompt` statement is a deprecated synonym.
 prompt-statement ::= ("do" | "prompt") ws literal-string

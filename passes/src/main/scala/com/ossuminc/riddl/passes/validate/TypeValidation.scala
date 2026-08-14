@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{Contents, *}
+import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.utils.PlatformContext
 
 import java.util.regex.PatternSyntaxException
@@ -214,6 +215,65 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
     }
   }
 
+  /** The `Id(<keyword> …)` spelling that names Processor `p`'s kind.
+    *
+    * Written out rather than derived, because both derivations are wrong. `getClass.getSimpleName`
+    * (which this used until the final review of the instance-identity branch) couples a
+    * user-facing diagnostic to a JVM class name and works only by the accident that all six
+    * Processor class names lowercase to their keyword. `Definition.kind` is riddl's own answer
+    * everywhere else, but a [[Streamlet]] OVERRIDES it to its SHAPE (`"Sink"`, `"Flow"`, …), so
+    * `Id(streamlet Feed)` would be reported as a lie.
+    *
+    * Total over `Processor`'s six concrete kinds — matching the six keywords `TypeParser`'s
+    * `uniqueIdType` accepts — so a seventh kind is a compile error here rather than a silent
+    * fall-through that reports a legal keyword as wrong.
+    */
+  protected def processorKeywordOf(p: Processor[?]): String = p match
+    case _: Adaptor    => Keyword.adaptor
+    case _: Context    => Keyword.context
+    case _: Entity     => Keyword.entity
+    case _: Projector  => Keyword.projector
+    case _: Repository => Keyword.repository
+    case _: Streamlet  => Keyword.streamlet
+  end processorKeywordOf
+
+  /** The [[Processor]] an `Id(…)` names, found INDEPENDENTLY of which parent [[ResolutionPass]]
+    * happened to key it under.
+    *
+    * This exists because the obvious `refMap.definitionOf[Processor[?]](pid, parents.head)` is
+    * right in exactly one position and silently wrong in the others, and `.foreach` turned the
+    * miss into "skip the check". The keys differ because `ResolutionPass.process` PREPENDS a
+    * `Branch` to its own parents before resolving it:
+    *   - a Field's `Id(…)` is keyed under the owning `Type` (validation's `parents.head` there is
+    *     also the Type — the one position that matched, which is why the check appeared to work);
+    *   - a type ALIAS's `Id(…)` is keyed under the `Type` ITSELF, while validation's `parents.head`
+    *     is the enclosing Context — so the lookup missed and the check never fired. riddl-models
+    *     holds 232 `type X is Id(…)` aliases against 7 field-position uses, so the check was
+    *     silent in 97% of real usage;
+    *   - an `on init`/`on term` PARAMETER's `Id(…)` is keyed under the on-clause.
+    *
+    * `anyDefinitionOf` is used rather than the typed `definitionOf`, because the typed overload
+    * REPORTS an Error when a key exists holding some other kind — which, probing several parents,
+    * would turn a near-miss into a spurious diagnostic.
+    *
+    * There is deliberately NO symbol-table fallback for a single-name path. `resolveAPathId` sends
+    * one through `searchSymbolTable`, which calls `resolved(pathId, parent, d)` — so a single name
+    * IS in the refMap, under the same parent as everything else. A symbol-table probe would only
+    * add a way to pick an ARBITRARY same-named definition where the resolver correctly reported an
+    * ambiguity. So a miss here means the path did not resolve AT ALL, which [[ResolutionPass]] has
+    * already reported: silent is the right behaviour for the miss, and the defect was that the
+    * lookup could miss for a path that HAD resolved.
+    */
+  protected def uniqueIdReferent(
+    pid: PathIdentifier,
+    defn: Definition,
+    parents: Parents
+  ): Option[Processor[?]] =
+    (defn +: parents.headOption.toSeq)
+      .flatMap(parent => resolution.refMap.anyDefinitionOf(pid, parent))
+      .collectFirst { case p: Processor[?] => p }
+  end uniqueIdReferent
+
   def checkTypeExpression(
     typ: TypeExpression,
     defn: Definition,
@@ -267,14 +327,14 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
         // real kind is available; a keyword that contradicts it is worse than no keyword,
         // because a reader believes it.
         kindKeyword.foreach { kw =>
-          resolution.refMap.definitionOf[Processor[?]](pid, parents.head).foreach { referent =>
-            val actual = referent.getClass.getSimpleName
+          uniqueIdReferent(pid, defn, parents).foreach { referent =>
+            val actual = processorKeywordOf(referent)
             check(
-              actual.equalsIgnoreCase(kw),
+              actual == kw,
               s"Id names ${referent.identify}, which is a $actual, but it is declared as '$kw'",
               Error,
               loc,
-              suggestion = s"Write 'Id(${actual.toLowerCase} ${pid.format})' or drop the keyword."
+              suggestion = s"Write 'Id($actual ${pid.format})' or drop the keyword."
             )
           }
         }

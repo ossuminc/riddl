@@ -640,6 +640,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                       resolvePathFromAnchor[Definition](vr.path, parents, t, symbols.parentsOf(t))
                     end if
                 }
+              // Task 3 / final review: an `on init(...)`/`on term(...)` PARAMETER. Like a `let`,
+              // and unlike every other source here, it is LEXICAL: a `MethodArgument` is not a
+              // `Definition`, so there is nothing for the symbol table or the refMap to hold, and
+              // `ValidationPass.clauseParameterScope` owns both its scope and its diagnostic.
+              //
+              // The arm is not empty, though — falling through to `resolveAPathId` would let a
+              // parameter name that HAPPENS to match some unrelated definition bind to it and
+              // record a false usage edge. Claiming the name here is what makes the parameter
+              // shadow, which is the whole point of a lexical scope.
+              case None if enclosingClauseParameter(head, parents) => ()
               case None =>
                 valueScopeField(head, parents) match
                   case Some(field) if names.sizeIs == 1 =>
@@ -663,6 +673,17 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     * function's `requires` input, in that order. Mirrors ValidationPass's `foreachAllowedFields` so
     * both passes see the same fields (membership there is tested by identity).
     */
+  /** Task 3: does an enclosing `on init(...)`/`on term(...)` clause declare a parameter named
+    * `name`? See the call site in [[resolveValueRef]] for why the answer is used to STOP resolving
+    * rather than to resolve.
+    */
+  private def enclosingClauseParameter(name: String, parents: Parents): Boolean =
+    parents.exists {
+      case oic: OnInitializationClause => oic.parameters.exists(_.name == name)
+      case otc: OnTerminationClause    => otc.parameters.exists(_.name == name)
+      case _                           => false
+    }
+
   private def valueScopeField(name: String, parents: Parents): Option[Field] =
     def aggFields(t: Type): Seq[Field] =
       t.typEx match

@@ -667,6 +667,124 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
+    // The final whole-branch review of processor-instance identity found `terminate`, `self` and
+    // `by` had NO JSON round-trip test at all -- only `initiate` and the `Id` keyword did. The
+    // reviewer verified all three by hand; these three cases are what PINS them, since an unpinned
+    // serialization surface is exactly what regresses in this repo.
+    "round-trip a `terminate <processor>(args)` statement (task 5) losslessly" in {
+      val terminateModel =
+        """domain d is {
+          |  context Ctx is {
+          |    command Go is { why: String }
+          |    record R is { total: String }
+          |    entity Order is {
+          |      state S of record R is {
+          |        handler OH is {
+          |          on init is { do "start" }
+          |          on term(oid: Id(entity Order), why: String) is { do "end" }
+          |        }
+          |      }
+          |    }
+          |    entity Caller is {
+          |      state CS of record R is {
+          |        handler CH is {
+          |          on command Go is {
+          |            let orderId = initiate entity Order
+          |            terminate entity Order(orderId, "cancelled")
+          |          }
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(terminateModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"terminate\"")
+          json1 must include("cancelled")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the terminate JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the terminate model failed: $errors")
+      end match
+    }
+
+    "round-trip `self` and `self.<field>` (task 2) losslessly" in {
+      // The bare `self` and the field form differ only in an Option[Identifier] -- precisely the
+      // shape a serializer can drop with nothing else noticing -- so both are in the model.
+      val selfModel =
+        """domain d is {
+          |  context Ctx is {
+          |    command Go is { why: String }
+          |    record R is { total: Integer }
+          |    entity Order is {
+          |      state S of record R is {
+          |        handler H is {
+          |          on command Go is {
+          |            let me = self
+          |            let mine = self.id
+          |            let v = self.version
+          |          }
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(selfModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("\"self\"")
+          json1 must include("version")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the self JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the self model failed: $errors")
+      end match
+    }
+
+    "round-trip a `tell ... by <field>` disambiguator (task 6) losslessly" in {
+      val byModel =
+        """domain d is {
+          |  context Ctx is {
+          |    record R is { total: Integer }
+          |    command Transfer is { fromAcct: Id(entity Account), toAcct: Id(entity Account) }
+          |    entity Account is {
+          |      state S of record R is {
+          |        handler AH is { on command Transfer is { do "move" } }
+          |      }
+          |    }
+          |    entity Teller is {
+          |      state TS of record R is {
+          |        handler TH is {
+          |          on command Transfer is { tell Transfer to entity Account by toAcct }
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      RiddlLib.parseString(byModel) match
+        case RiddlResult.Success(root0) =>
+          val json1 = RiddlLib.root2Json(root0)
+          json1 must include("toAcct")
+          RiddlLib.parseJson(json1) match
+            case RiddlResult.Success(root1) => RiddlLib.root2Json(root1) mustBe json1
+            case RiddlResult.Failure(errors) =>
+              fail(s"parseJson of the tell-by JSON failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"parse of the tell-by model failed: $errors")
+      end match
+    }
+
     "round-trip the 2.0 handler-kind clauses (on event / on activate / on passivate) losslessly" in {
       val hkModel =
         """domain HK is {

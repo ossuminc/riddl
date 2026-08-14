@@ -95,27 +95,34 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
       regenTerm.args.map(_.value.format) mustBe originalTerm.args.map(_.value.format)
     }
 
-    "keep the bare (no-parens) form parenthesis-free after a round trip" in { (td: TestData) =>
-      val bareSrc =
-        """domain Dom is {
-          |  context Ctx is {
-          |    entity Widget is {
-          |      handler H is {
-          |        on init { do "start" }
-          |        on term { do "end" }
-          |      } with { briefly "h" }
-          |    } with { briefly "e" }
-          |    entity Caller is {
-          |      handler CH is {
-          |        on init { terminate entity Widget }
-          |      } with { briefly "ch" }
-          |    } with { briefly "ce" }
-          |  } with { briefly "c" }
-          |} with { briefly "d" }
-          |""".stripMargin
-      val pretty = prettify(parse(bareSrc, "bare"))
-      pretty must include("terminate entity Widget")
-      pretty must not include "terminate entity Widget("
+    // The bare `terminate P` form was REMOVED in the final review of this branch (it parsed but
+    // could never validate). Its round-trip case is replaced by this one, which pins the
+    // consequence that matters for reflectivity: `TerminateStatement.format` must ALWAYS emit the
+    // parentheses, including for an empty argument list, or prettify would produce source the
+    // parser that made it can no longer read.
+    "emit parentheses even for an empty argument list, so the output re-parses" in {
+      (td: TestData) =>
+        val emptySrc =
+          """domain Dom is {
+            |  context Ctx is {
+            |    entity Widget is {
+            |      handler H is {
+            |        on init { do "start" }
+            |        on term(wid: Id(entity Widget)) { do "end" }
+            |      } with { briefly "h" }
+            |    } with { briefly "e" }
+            |    entity Caller is {
+            |      handler CH is {
+            |        on init { terminate entity Widget() }
+            |      } with { briefly "ch" }
+            |    } with { briefly "ce" }
+            |  } with { briefly "c" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val pretty = prettify(parse(emptySrc, "empty-args"))
+        pretty must include("terminate entity Widget()")
+        // The proof that matters: the emitted text is readable by the parser that produced it.
+        terminateIn(parse(pretty, "empty-args-regen")).args mustBe empty
     }
   }
 }
