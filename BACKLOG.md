@@ -164,11 +164,33 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   2026-08-05 drop: per-row before/after with the unchanged rows shown unchanged.
 
 
-- **A message ref must be able to name its VALUE, not just its type — DESIGNED
-  2026-08-14, scheduled for 2026-08-15. NEXT UP.**
+- **A message ref must be able to name its VALUE, not just its type — IN
+  FLIGHT. Task 1 of 7 DONE (`76762de0c`); Tasks 2-7 NOT STARTED.**
+  **Plan: `docs/superpowers/plans/2026-08-14-message-value-source.md`** — it has
+  the per-task detail and the Global Constraints; work from it, not from this
+  entry.
   **Design: `docs/superpowers/specs/2026-08-14-message-value-source-design.md`.**
-  Read it before planning — it supersedes the summary below, which is kept only
-  so this entry stands alone.
+  **Ledger: `.superpowers/sdd/2026-08-14-message-value-source/progress.md`** —
+  gitignored, but it names every commit so `git log` reconstructs it.
+
+  **Task 1 (DONE): the SOURCE is widened on `send`/`tell` only.** An operand may
+  now name a state field, `let`-local, function result or `ask` result, not just
+  an on-clause binding; `self` is rejected with its own message. Review found and
+  fixed a regression Task 1 CREATED — `checkTellAddressing`'s `by`/ambiguity
+  Errors and three completeness checks read a narrow probe that returned `None`
+  for the newly-legal operands. Both fixed; the four-copy alias-following
+  one-liner is now one extracted `resolveTypeAlias`.
+
+  **Remaining, in plan order:** T2 extend the arm to `yield`/`reply`/`morph`
+  (`morph` is riddlg's other 37.6%); T3 reflectivity incl. **`FORMAT_REVISION`
+  16 → 17**; T4 the bare-form CompletenessWarning **with the field-less
+  exemption, and COUNT what that removes from 14,730**; T5 the unused-`initiate`-id
+  Warning (Reid: *"just build it"*); T6 a test pinning saga-step legality; T7
+  certify.
+
+  **Three design questions were resolved by the controller, not by Reid** —
+  flagged so they can be overruled: field-less messages are EXEMPT from the
+  warning; `reply` is IN scope; `self` must fail with its own message.
 
   **READ THIS FIRST, or you will design a feature that partly exists: A56
   ALREADY BUILT HALF OF IT.** `SendStatement.msg` (`AST:3496`) and

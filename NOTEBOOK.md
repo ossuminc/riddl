@@ -14,114 +14,67 @@ would get wrong.
 **State — every line produced by a command in the session that wrote it
 (2026-08-14):**
 
-- **`2.0.0-rc.14` IS RELEASED.** Tag `dd42a4903`, GitHub prerelease
-  (`prerelease=true`), branch `release/2` clean and pushed.
-- **CERTIFIED from clean** under a throwaway `--sbt-cache`, sbt 2.0.6 confirmed
-  after a `shutdown`: **JVM 2400 / JS 750 / Native 1671**, 19 suites, 0 aborted,
-  0 `No tests to run`. **All three rows reconciled EXACTLY against a prediction
-  made before the run** (+9/+9/+0 from one 9-case suite in
-  `passes/src/test/scala-jvm-native`). Floors in `.claude/skills/rc/SKILL.md`
-  raised to match. Validators: TatSu 104/127 with no Unexpected failures, GBNF
-  fresh, riddl-models 189/189, riddl-examples 9/9.
-- **All four channels verified, not assumed:** Maven coordinates published from
-  the TAG at exactly `2.0.0-rc.14` (registry queried); `publishLocal` done in the
-  same invocation (20 artifacts in `~/.ivy2/local`); npm logged *"Publishing …
-  with tag rc"* so `latest` did not move; the tap commit `489bbb0` touched
-  `Formula/riddlc-rc.rb` and ONLY that file.
-- **`~/Code/ossuminc/bin/riddlc` IS NOW CURRENT at 2.0.0-rc.14** (commit
-  `dd42a4903`) — staged deliberately for riddl-models' `.bast` regeneration.
-  This REVERSES the long-standing note that it was stale at rc.13. Bare `riddlc`
-  on `$PATH` is still the old tap build.
-- **CI is red on `9b9ffac36` and it is NOT the code.** `PerformanceBenchmarkTest`
-  asserts a hard 100x cache speedup and got 78.4x on a shared runner; that commit
-  is byte-identical to the one that passed before it, and the next commit passed
-  again. Filed in `BACKLOG.md` to fix before rc.15.
+- Branch `release/2`, **tree CLEAN, 0 unpushed**, HEAD `76762de0c`,
+  `git describe` = `2.0.0-rc.14-7-g76762de0c`.
+- **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease (`prerelease=true`), Maven
+  coordinates published from the tag, `publishLocal` done, npm on the **`rc`**
+  dist-tag (`latest` did NOT move), tap commit `489bbb0` touched
+  `Formula/riddlc-rc.rb` and only that file.
+- **`~/Code/ossuminc/bin/riddlc` is CURRENT at `2.0.0-rc.14`**, commit
+  `dd42a4903` — verified by running it. It was staged deliberately for
+  riddl-models' `.bast` regeneration. **This REVERSES the long-standing note
+  that it was stale.** Bare `riddlc` on `$PATH` is still the old tap build.
+- **Certified at rc.14**: JVM 2400 / JS 750 / Native 1671, all three reconciling
+  exactly against a prediction made before the run. Floors in
+  `.claude/skills/rc/SKILL.md` match. **Native is expected to be 1840 next
+  time** — 13 language parser suites were wired onto Native (`546f2f834`, +169)
+  and the floor was deliberately NOT raised on arithmetic alone.
 
-**The instance-identity plan is COMPLETE — 8 of 8 tasks.** `Id(P)` widening,
-`self`, lifecycle parameters, `initiate`, `terminate`, `tell` addressing,
-effect bans, certification. Tasks 1-7 were each reviewed; each needed a fix
-round except Task 3. What it taught is in this NOTEBOOK's body ("The gap was
-instantiation, not addressing"); what is durably true is in `CLAUDE.md`
-(§ AST / Language Internals).
+**IN FLIGHT — the message-value plan, Task 1 of 7 done.**
 
-**The whole-branch review HAS run** (2026-08-14) and found what eight
-task-scoped reviews structurally could not — read this before assuming the
-per-task gates were sufficient:
+Plan `docs/superpowers/plans/2026-08-14-message-value-source.md`, design
+`docs/superpowers/specs/2026-08-14-message-value-source-design.md`, ledger
+`.superpowers/sdd/2026-08-14-message-value-source/progress.md` (gitignored;
+names every commit, so `git log` reconstructs it).
 
-- **1 Critical:** `on init`/`on term` parameters could be DECLARED but not
-  READ, so Task 3 was declare-only and `initiate`/`terminate` argument passing
-  was silently gutted. It survived eight reviews because every body in every
-  new test and fixture was `do "start"`, and the one fixture that declared a
-  parameter named it `total` against a state field also named `total` — so it
-  resolved by COINCIDENCE. Fixed; the fixture is de-collided and parameters are
-  now READ in tests.
-- **The `Id(kind Name)` check never fired for a type alias** — 232 of
-  riddl-models' 242 `Id(...)` declarations are aliases against 7 in field
-  position, so Task 1's entire justification was verified working only in the
-  position almost nobody writes. Fixed.
-- **`Definition.kind` cannot be a kind oracle.** `Streamlet` overrides it to
-  its SHAPE (`AST.scala:5163`), so `Id(streamlet Feed)` would be reported as a
-  lie. This retires advice that sat deferred since Task 1.
-- One fix wave plus one approved follow-up (`957f64534`) landed; the corpus A/B
-  stayed byte-identical at 6461 messages throughout. **That zero delta is weak
-  evidence and was treated as such:** riddl-models writes 0 keyword-bearing
-  `Id(...)`, 0 lifecycle parameters, 0 `terminate`/`initiate`/`self`, so the
-  new checks had nothing in the corpus to check. Confidence rests on unit
-  tests, canary reverts, and test-count arithmetic reconciling on three
-  independent axes — not on the corpus.
+**Task 1 is complete and review-clean at `76762de0c`. Resume at Task 2.**
+Reid's work order, in this order: finish this plan, then fix the five bugs in
+`BACKLOG.md` § 1. The flaky CI gate and the Native suite wiring — items 2 and 3
+of that order — are already DONE.
 
 **Traps — all of these bit someone.**
 
-- **`-Werror` is NOT a safety net here, and the reason is subtler than the
-  build flags.** `language` and `commands` carry `--no-warnings` beside
-  `-Werror` (`build.sbt:229`, `:417`) — but `passes` and `riddlLib` do NOT, and
-  it still never fired, because **a wildcard arm makes a match exhaustive**, so
-  the terminal `throw` this repo prescribes is itself what silences the
-  compiler. **Seven** missed dispatch or dispatch-INPUT sites on this branch,
-  every one found by a person. `CLAUDE.md` § Total Dispatch now says so; an
-  earlier note here naming `passes`/`riddlLib` as `--no-warnings` was wrong.
-- **A check wired into `validateStatement` never sees statements nested inside
-  `when`/`match`/`foreach`** — they are FIELD-held and the generic traversal
-  skips them. Use `validateValue`/`checkStatementScopes`, which recurse. This
-  is also a SHIPPED bug in rc.13's `checkStateReadScope` (filed, `8ddd0137f`).
-- **13 shared `language` parser suites (169 cases) have NEVER run on Native** —
-  abstract, with concrete runners only in `JVMTests`/`JSTests`. Found by
-  chasing a ONE-test floor shortfall. Filed in `BACKLOG.md`. Do not assume
-  `src/test/scala` means all three platforms; check for a runner.
-- **A subagent that backgrounds a command and arms a Monitor STOPS and is never
-  woken.** Cost three round-trips. Tell implementers to poll their own output
-  file or run in the foreground.
-- **`sbt "cJVM; cJS; cNative"` chained genuinely HUNG once** (0% CPU, 10+ min,
-  no lock contention). The full certification chain as one `-batch` argument
-  ran clean end to end, so prefer that form; if it stalls, split it rather than
-  assuming a deadlock elsewhere.
-- **`FORMAT_REVISION` is 15** and must not move again for this feature. BAST
-  value tags 8=`Initiate`, 9=`SelfValue`; statement sub-kind 20=`terminate`.
+- **A56 already built half the message-value feature.** `SendStatement.msg` and
+  `TellStatement.msg` have accepted a `ValueRef` since before this plan. Read
+  the design's §2 before touching it or you will rebuild what exists.
+- **Widening what validation ACCEPTS silently disarms the checks that CONSUME
+  it.** Task 1 legalized new operands and `checkTellAddressing`'s `by`/ambiguity
+  Errors stopped firing on them, because the consumer read a narrower probe.
+  When you widen an accepted shape, enumerate its consumers.
+- **A green corpus is evidence about the CORPUS, not the language** — fourth
+  sighting. riddl-models has zero widened-source operands, zero constructor-form
+  message values, and one correlation, so a zero A/B there proves safety, never
+  correctness. Affirmative evidence must come from a revert proof.
+- **`-Werror` is NOT a safety net, and the usual explanation is wrong.**
+  `--no-warnings` is on `language` and `commands` only (`build.sbt:229`, `:417`);
+  `-Werror` IS live in `passes`. It never fires because **a wildcard arm makes a
+  match syntactically exhaustive** — the terminal `throw` this repo prescribes is
+  itself what silences the compiler.
+- **`FORMAT_REVISION` is 16.** Task 3 takes it to 17; no earlier task may move it.
 
-**Certainty.** Every number in State was produced by a command in the session
-that wrote it. The certification and corpus runs cover HEAD. What has NOT
-happened: a whole-branch review, a push, and any fix for the two defects filed
-during certification (the `???`-stub inconsistency in
-`checkInitiate`/`checkTerminate`, and the Native parser-suite gap).
+**Certainty.** Everything under State was run this session. Tasks 2-7 are
+unstarted. **Three design questions in the plan were resolved by me, not by
+Reid** — field-less messages exempt from the warning, `reply` in scope, `self`
+rejected with its own message — and are marked in `BACKLOG.md` so he can
+overrule them.
 
-**`task/` — FOUR files awaiting triage.**
-`2026-08-13-tell-to-an-entity-cannot-name-which-instance.md` was answered and
-moved to `task/done/`; a new one ARRIVED during the certification run:
+**`task/` — THREE files, all awaiting triage; two arrived during this session
+and have NEVER been read:**
 
-- `2026-08-14-where-does-a-message-refs-value-come-from.md` (riddl-generator) —
-  NEWEST, never read, arrived 2026-08-14 mid-certification. *"`send event Foo
-  to outlet Bar` names a message TYPE, not where the VALUE comes from"*, with a
-  proposed `send command Foo from field StateRecord.fieldName to outlet Bar`.
-  **This is the same SHAPE as the ask the instance-identity plan just answered**
-  — a construct that names a type where a value is needed — so read it against
-  that design before treating it as new ground.
-- `2026-08-13-interaction-blocks-break-bast-round-trip.md` (riddl-models) —
-  NEW, never read. Reports `sequence`/`parallel`/`optional` interaction blocks
-  breaking the BAST round trip, *"same shape as the `constant` defect you fixed
-  in `4ca2906dc`"*. Plausibly a third instance of that class.
-- `2026-08-13-riddlg-does-not-use-llama-server.md` (riddl-generator) — NEW,
-  never read. A reply saying our wizard-prefill diagnosis was *right about the
-  effect, wrong about the mechanism*.
+- `2026-08-14-instance-addressing-check-does-not-resolve-id-aliases.md` — NEW.
+  Title alone suggests it overlaps Task 1's area (`checkTellAddressing` and
+  alias resolution). Read it before starting Task 2.
+- `2026-08-14-connector-persistent-not-marked-deprecated.md` — NEW, unread.
 - `2026-08-04-security.md` — still marked *"Draft (do not act on this)"*.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
