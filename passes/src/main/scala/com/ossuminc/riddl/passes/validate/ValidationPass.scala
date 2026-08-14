@@ -153,6 +153,22 @@ case class ValidationPass(
     *
     * Computed ONCE over the whole root, and compared by resolved-definition identity rather than by
     * name: two contexts may each declare a `Paid`, and emitting one says nothing about the other.
+    *
+    * **Named limitation (task-1 review, round 1): stays on the NARROW `operandType`, not
+    * `widenedOperandType`.** This is a single flat `Finder` sweep across the ENTIRE root, so a
+    * `send`/`tell` found here carries no notion of which on-clause/function/saga-step it came
+    * from, let alone that container's `let` scope -- unlike the three sites this review fixed
+    * (`checkTellAddressing`, and `validateOnMessageClause`'s two completeness checks), which each
+    * inspect ONE clause at a time and can compute that clause's scope. Widening this one would mean
+    * walking the root container-by-container the way `checkStatementScopes` already does, not
+    * merely passing an extra parameter -- a materially bigger change than this review's scope.
+    * Consequence: a correlation folding an event ONLY emitted via a widened-source `send`/`tell`
+    * (a state field/`let`-local/function-result/`ask`-result) can still draw
+    * `checkCorrelationEventSources`'s "nothing emits this event" warning even though something
+    * does. That warning is advisory (gated on a correlation existing) and reads as a false
+    * positive, not a false negative -- the same direction of error as every other narrowing this
+    * function's siblings had before this fix, so it is a known gap, not a new regression from this
+    * function itself.
     */
   private def emittedMessageTypes(root: PassRoot): mutable.Set[Type] = {
     val finder = Finder(root.contents)
@@ -658,12 +674,20 @@ case class ValidationPass(
             // Checked on EVERY path, for the same reason as `checkYieldConformance` — this check
             // shared the identical "anywhere in the clause" weakness, so a conditional refusal
             // silenced it too. See `dischargesOnEveryPath`.
-            val emitted = dischargesOnEveryPath(omc.contents) {
-              case _: ErrorStatement | _: RequireStatement => true
-              case s: SendStatement  => operandMessageKind(s.msg).contains(AggregateUseCase.EventCase)
-              case t: TellStatement  => operandMessageKind(t.msg).contains(AggregateUseCase.EventCase)
-              case y: YieldStatement => operandMessageKind(y.msg).contains(AggregateUseCase.EventCase)
-              case _                 => false
+            val emitted = dischargesOnEveryPath(omc.contents) { (stmt, curLets) =>
+              stmt match
+                case _: ErrorStatement | _: RequireStatement => true
+                // send/tell resolve their operand WIDENED (a state field/let-local/function
+                // result/ask result counts as emitting the event, not only a keyword-led ref) --
+                // yield's operand is still MessageRef | Constructor only until Task 2, so it stays
+                // on the narrow (but here structurally sufficient) operandMessageKind.
+                case s: SendStatement =>
+                  widenedOperandMessageKind(s.msg, parents, curLets).contains(AggregateUseCase.EventCase)
+                case t: TellStatement =>
+                  widenedOperandMessageKind(t.msg, parents, curLets).contains(AggregateUseCase.EventCase)
+                case y: YieldStatement =>
+                  operandMessageKind(y.msg).contains(AggregateUseCase.EventCase)
+                case _ => false
             }
             if !emitted then
               messages.addCompleteness(
@@ -673,20 +697,34 @@ case class ValidationPass(
                   "Send, tell, or yield an event from this command handler, e.g. 'send event SomethingHappened to outlet ...' or 'yield event SomethingHappened'."
               )
           case AggregateUseCase.QueryCase =>
-            val finder = Finder(omc.contents)
-            val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
-            val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
+            // scopedStatements (not Finder) so a send/tell's ValueRef operand resolves with its
+            // OWN lexical `let` scope, not the clause's outermost one -- the same widening
+            // checkMessageOperandSource applies. `reply`/`yield` operands stay MessageRef |
+            // Constructor only until Task 2, so operandMessageKind (unwidened) is still correct
+            // for them.
+            val scoped = scopedStatements(omc.contents, Seq.empty[LetStatement])
+            val sends: Seq[(SendStatement, Seq[LetStatement])] = scoped.collect {
+              case (s: SendStatement, curLets) => s -> curLets
+            }
+            val tells: Seq[(TellStatement, Seq[LetStatement])] = scoped.collect {
+              case (t: TellStatement, curLets) => t -> curLets
+            }
             // REPLIES, not yields. A query answers with `reply` as of 2.0, so looking only for
             // YieldStatement here made the canonical spelling invisible and reported a
             // well-formed handler as incomplete. Both are accepted: a `yield result` is already
             // an Error from `checkResponsePairing`, and reporting it twice helps nobody.
-            val replies: Seq[Statement] =
-              finder.recursiveFindByType[ReplyStatement] ++
-                finder.recursiveFindByType[YieldStatement]
+            val replies: Seq[Statement] = scoped.collect {
+              case (r: ReplyStatement, _) => r
+              case (y: YieldStatement, _) => y
+            }
             val foundSend = sends.nonEmpty &&
-              sends.exists(s => operandMessageKind(s.msg).contains(AggregateUseCase.ResultCase))
+              sends.exists { (s, curLets) =>
+                widenedOperandMessageKind(s.msg, parents, curLets).contains(AggregateUseCase.ResultCase)
+              }
             val foundTell = tells.nonEmpty &&
-              tells.exists(t => operandMessageKind(t.msg).contains(AggregateUseCase.ResultCase))
+              tells.exists { (t, curLets) =>
+                widenedOperandMessageKind(t.msg, parents, curLets).contains(AggregateUseCase.ResultCase)
+              }
             val foundReply = replies.exists { st =>
               val operand = st match
                 case r: ReplyStatement => r.msg
@@ -751,9 +789,17 @@ case class ValidationPass(
 
   /** A56: the message [[Type]] behind any operand shape, when it can be resolved.
     *
-    * For a [[ValueRef]] this is the on-clause binding's type: `ResolutionPass.resolveValueRef` has
-    * already keyed the binding's path to the handled message's Type, so no new lookup rule is
-    * needed here — only the extra case.
+    * For a [[ValueRef]] this ONLY resolves an on-clause binding — the refMap key
+    * `ResolutionPass.resolveValueRef` records for one. It deliberately does NOT resolve a
+    * state-record field, `let`-local, function result or `ask` result, even though
+    * `checkMessageOperandSource` accepts those as legal `send`/`tell` operands (the
+    * message-value-source widening, 2026-08-14): most of this function's callers (`checkResponsePairing`
+    * via `operandMessageKind`, the `yields`/`replies` conformance loop) take a `yield`/`reply`
+    * operand, whose AST type is still `MessageRef | Constructor` — a `ValueRef` is structurally
+    * impossible there until Task 2 — so widening THIS function would thread `parents`/`lets`
+    * through call sites that can never exercise the new arm. Callers that DO need the widened
+    * resolution for a `send`/`tell` operand use [[widenedOperandType]] /
+    * [[widenedOperandMessageKind]] instead, which take the scope explicitly.
     */
   private def operandType(m: MessageRef | Constructor | ValueRef): Option[Type] = m match
     case mr: MessageRef => resolution.refMap.definitionOf[Type](mr.pathId)
@@ -767,6 +813,9 @@ case class ValidationPass(
     * is only known once resolved, and [[AggregateUseCase]] has no "unknown" member to fall back to.
     * Returning a wrong kind here would silently mis-answer the event-sourcing rules, so an
     * unresolved binding answers `None` and every caller's `contains` reads it as "not that kind".
+    *
+    * Same narrow-on-purpose note as [[operandType]] applies to its `ValueRef` arm — see
+    * [[widenedOperandMessageKind]] for the `send`/`tell`-specific widened version.
     */
   private def operandMessageKind(m: MessageRef | Constructor | ValueRef): Option[AggregateUseCase] =
     m match
@@ -777,6 +826,45 @@ case class ValidationPass(
           case auc: AggregateUseCaseTypeExpression => Some(auc.usecase)
           case _                                   => None
         )
+
+  /** Task-1-review-round-1: the `send`/`tell`-aware counterpart to [[operandType]] — resolves a
+    * `ValueRef` operand through [[valueRefType]], the SAME A55/lifecycle-parameter walk
+    * `checkMessageOperandSource` uses, so a state-record field, `let`-local, function result or
+    * `ask` result resolves here exactly as it resolves there. A `MessageRef`/`Constructor` operand
+    * is unaffected — delegated straight to `operandType`, preserving its syntactic-keyword
+    * semantics unchanged.
+    *
+    * Exists because [[operandType]] itself stays narrow for callers that structurally cannot
+    * receive a widened `ValueRef` (see its doc); this is for the ones that CAN: `send`/`tell`
+    * completeness checks and `checkTellAddressing`.
+    *
+    * `elements` (`foreach` bindings) is NOT threaded — none of this function's three call sites
+    * (`validateOnMessageClause`'s two completeness checks, `checkTellAddressing`) resolve an
+    * operand from inside a `foreach` body, so there is no position at which an element binding
+    * could be in scope for the `ValueRef` being resolved. Named explicitly rather than left
+    * silently narrow, per the task-1 review.
+    */
+  private def widenedOperandType(
+    m: MessageRef | Constructor | ValueRef,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Option[Type] = m match
+    case vr: ValueRef => valueRefType(vr, parents, lets, Map.empty[String, TypeExpression])
+    case other        => operandType(other)
+
+  /** The `widenedOperandType`-based counterpart to [[operandMessageKind]] — see its doc for why the
+    * split exists. Filters through [[typeExprMessageKind]] so a widened resolution that lands on a
+    * Record/Type/Graph/Table (not one of the four real messages) reads as `None`, matching
+    * `checkMessageOperandSource`'s own admission rule.
+    */
+  private def widenedOperandMessageKind(
+    m: MessageRef | Constructor | ValueRef,
+    parents: Parents,
+    lets: Seq[LetStatement]
+  ): Option[AggregateUseCase] = m match
+    case vr: ValueRef => valueRefType(vr, parents, lets, Map.empty[String, TypeExpression])
+        .flatMap(t => typeExprMessageKind(t.typEx))
+    case other => operandMessageKind(other)
 
   /** `yield` emits an EVENT; `reply` answers with a RESULT. Enforce the pairing.
     *
@@ -1447,14 +1535,15 @@ case class ValidationPass(
           // modelling judgment validation cannot make -- the `yields` type conformance loop below
           // still checks every `yield`. What this predicate exists to catch is a path that does
           // nothing at all, and `set`/`do`/an empty branch still fail it.
-          val settled = dischargesOnEveryPath(omc.contents) {
-            case _: ErrorStatement | _: RequireStatement => true
-            // BOTH response statements settle a path. Counting only the pairing-correct one would
-            // report the same mistake twice -- `checkResponsePairing` already names a `yield` in a
-            // query clause, and a second "does not reply on every path" adds nothing.
-            case _: YieldStatement | _: ReplyStatement                   => true
-            case _: SendStatement | _: TellStatement                     => true
-            case _                                       => false
+          val settled = dischargesOnEveryPath(omc.contents) { (stmt, _) =>
+            stmt match
+              case _: ErrorStatement | _: RequireStatement => true
+              // BOTH response statements settle a path. Counting only the pairing-correct one would
+              // report the same mistake twice -- `checkResponsePairing` already names a `yield` in a
+              // query clause, and a second "does not reply on every path" adds nothing.
+              case _: YieldStatement | _: ReplyStatement => true
+              case _: SendStatement | _: TellStatement   => true
+              case _                                     => false
           }
           auc.yields match {
             case Some(declaredYield) =>
@@ -2659,9 +2748,10 @@ case class ValidationPass(
       value match
         case ss @ SetStatement(_, fr: FieldRef, _) =>
           val name = fr.pathId.value.last
-          val overridden = dischargesOnEveryPathSeq(rest) {
-            case SetStatement(_, other: FieldRef, _) => other.pathId.value.last == name
-            case _                                   => false
+          val overridden = dischargesOnEveryPathSeq(rest) { (stmt, _) =>
+            stmt match
+              case SetStatement(_, other: FieldRef, _) => other.pathId.value.last == name
+              case _                                   => false
           }
           if overridden then
             messages.addWarning(
@@ -3915,11 +4005,15 @@ case class ValidationPass(
     }
     // Completeness: saga steps should have tell command statements
     if s.doStatements.nonEmpty then {
-      var hasTellCommand = false
-      walkStatements(s.doStatements) {
-        case t: TellStatement if operandMessageKind(t.msg).contains(AggregateUseCase.CommandCase) =>
-          hasTellCommand = true
-        case _ => ()
+      // scopedStatements (not walkStatements), so a widened ValueRef operand -- a state
+      // field/let-local/function-result/ask-result-sourced command, not only a keyword-led one --
+      // resolves with its own lexical `let` scope (task-1 review, round 1). Before this fix, such
+      // a `tell` was invisible to this check, so a saga step whose only effect was a widened-source
+      // command tell was wrongly reported as having none.
+      val hasTellCommand = scopedStatements(s.doStatements, Seq.empty[LetStatement]).exists {
+        case (t: TellStatement, curLets) =>
+          widenedOperandMessageKind(t.msg, parents, curLets).contains(AggregateUseCase.CommandCase)
+        case _ => false
       }
       if !hasTellCommand then {
         messages.addCompleteness(
@@ -4684,6 +4778,53 @@ case class ValidationPass(
     }
   end walkStatements
 
+  /** [[walkStatements]], but pairing each [[Statement]] with the LEXICAL `let` scope in force AT
+    * its position — the same accumulation [[checkStatementScopes]] performs while it validates,
+    * exposed here as data for a caller that (unlike `checkStatementScopes`) is not itself doing the
+    * walking and needs the scope AFTER the fact, to resolve a widened `ValueRef` message operand
+    * ([[widenedOperandType]] / [[widenedOperandMessageKind]]). Added for the message-value-source
+    * widening (task-1 review, round 1): `validateOnMessageClause`'s query→result completeness check
+    * and `checkTellAddressing`'s addressing checks both inspect statements found by a flat sweep,
+    * where the sweep itself has no notion of "what `let`s are visible here".
+    *
+    * Descends into a `foreach` body (unlike [[dischargesOnEveryPathSeq]], which deliberately does
+    * not, since a foreach body may never execute and this function is answering "does this appear
+    * ANYWHERE", not "on every path") — matching what `Finder.recursiveFindByType` already reaches,
+    * so replacing a Finder-based sweep with this one changes resolution, not which statements are
+    * found.
+    *
+    * `elements` (`foreach` bindings) is NOT threaded into that descent, for the same reason
+    * `dischargesOnEveryPathSeq` does not thread them: no current caller resolves an operand sourced
+    * from a loop variable, so a statement inside a `foreach` body sees its ENCLOSING elements only.
+    * Named explicitly rather than left silently narrow.
+    */
+  private def scopedStatements[CV <: RiddlValue](
+    contents: Contents[CV],
+    lets: Seq[LetStatement]
+  ): Seq[(Statement, Seq[LetStatement])] =
+    var curLets = lets
+    val out = mutable.ListBuffer.empty[(Statement, Seq[LetStatement])]
+    contents.toSeq.foreach {
+      case ls: LetStatement =>
+        out += ((ls, curLets))
+        curLets = curLets :+ ls
+      case ws: WhenStatement =>
+        out += ((ws, curLets))
+        out ++= scopedStatements(ws.thenStatements, curLets)
+        out ++= scopedStatements(ws.elseStatements, curLets)
+      case ms: MatchStatement =>
+        out += ((ms, curLets))
+        ms.cases.foreach(mc => out ++= scopedStatements(mc.statements, curLets))
+        out ++= scopedStatements(ms.default, curLets)
+      case fs: ForeachStatement =>
+        out += ((fs, curLets))
+        out ++= scopedStatements(fs.doStatements, curLets)
+      case s: Statement => out += ((s, curLets))
+      case _            => () // skip Comments
+    }
+    out.toSeq
+  end scopedStatements
+
   /** Does EVERY execution path through `contents` settle the clause's obligation?
     *
     * The obligation differs per caller (`settles` says what discharges it), but the shape of the
@@ -4716,8 +4857,8 @@ case class ValidationPass(
     */
   private def dischargesOnEveryPath[CV <: RiddlValue](
     contents: Contents[CV]
-  )(settles: Statement => Boolean): Boolean =
-    dischargesOnEveryPathSeq(contents.toSeq)(settles)
+  )(settles: (Statement, Seq[LetStatement]) => Boolean): Boolean =
+    dischargesOnEveryPathSeq(contents.toSeq, Seq.empty[LetStatement])(settles)
 
   /** The [[dischargesOnEveryPath]] analysis over a plain `Seq`, so a caller can ask the question of
     * a statement list it BUILT rather than one that exists in the AST.
@@ -4728,18 +4869,41 @@ case class ValidationPass(
     */
   private def dischargesOnEveryPathSeq(
     statements: Seq[RiddlValue]
-  )(settles: Statement => Boolean): Boolean =
+  )(settles: (Statement, Seq[LetStatement]) => Boolean): Boolean =
+    dischargesOnEveryPathSeq(statements, Seq.empty[LetStatement])(settles)
+
+  /** `lets`-threading variant, added for the message-value-source widening (Task 1 review round 1):
+    * `settles` may need to resolve a widened `ValueRef` message operand (the same
+    * `checkMessageOperandSource`/`valueRefType` resolution), which needs the LEXICAL `let` scope in
+    * force at each statement's position, not merely the statement itself. Mirrors
+    * [[checkStatementScopes]]'s accumulation (`var lets`, appended on every [[LetStatement]]
+    * encountered, threaded into `when`/`match` recursion) rather than duplicating it via a shared
+    * cache, since the two callers that don't need `lets` (the yield/reply-settled check and the A70
+    * overridden-`set` check) are unaffected by simply ignoring the second `settles` parameter.
+    *
+    * `elements` (`foreach` loop bindings) is deliberately NOT threaded — `_: ForeachStatement =>
+    * false` immediately below never calls `settles` from inside a foreach body, so there is no
+    * position at which an element binding could matter to this analysis.
+    */
+  private def dischargesOnEveryPathSeq(
+    statements: Seq[RiddlValue],
+    lets: Seq[LetStatement]
+  )(settles: (Statement, Seq[LetStatement]) => Boolean): Boolean =
+    var curLets = lets
     statements.exists {
+      case ls: LetStatement =>
+        curLets = curLets :+ ls
+        false // a `let` itself never settles the obligation
       case WhenStatement(_, _, thenStatements, elseStatements, _) =>
-        dischargesOnEveryPath(thenStatements)(settles) &&
+        dischargesOnEveryPathSeq(thenStatements.toSeq, curLets)(settles) &&
         elseStatements.nonEmpty &&
-        dischargesOnEveryPath(elseStatements)(settles)
+        dischargesOnEveryPathSeq(elseStatements.toSeq, curLets)(settles)
       case MatchStatement(_, _, cases, default) =>
-        cases.forall(mc => dischargesOnEveryPath(mc.statements)(settles)) &&
+        cases.forall(mc => dischargesOnEveryPathSeq(mc.statements.toSeq, curLets)(settles)) &&
         default.nonEmpty &&
-        dischargesOnEveryPath(default)(settles)
+        dischargesOnEveryPathSeq(default.toSeq, curLets)(settles)
       case _: ForeachStatement => false // the body may iterate ZERO times
-      case s: Statement        => settles(s)
+      case s: Statement        => settles(s, curLets)
       case _                   => false // Comments and the like settle nothing
     }
   end dischargesOnEveryPathSeq
@@ -5476,6 +5640,17 @@ case class ValidationPass(
     ) { case otc: OnTerminationClause => otc.parameters }
   end checkTerminate
 
+  /** The one-line alias resolution step shared by `fieldsWithOwner`, `aggregateFieldsOf`,
+    * `typeExprCategory` and `typeExprMessageKind`: given an [[AliasedTypeExpression]] (`command Ship
+    * is Shipment`'s `Shipment` reference), the [[Type]] it names. Extracted per the task-1 review
+    * (round 1), which flagged `typeExprMessageKind` as a FOURTH near-identical copy of this exact
+    * expression — each of the four otherwise differs (return shape, terminal case), so this is the
+    * one line actually worth sharing rather than the whole alias-following recursion, which each
+    * function still writes for itself around its own terminal cases.
+    */
+  private def resolveTypeAlias(ate: AliasedTypeExpression): Option[Type] =
+    resolution.refMap.definitionOf[Type](ate.pathId)
+
   /** A55-style: the aggregate [[Field]]s of a message [[Type]], each paired with the [[Type]] node
     * that actually DECLARES it -- itself for a direct aggregate, or (following the alias chain) the
     * aliased-to `Type` for `command Ship is Shipment`. Needed because [[ResolutionPass]] resolves a
@@ -5489,7 +5664,7 @@ case class ValidationPass(
     t.typEx match
       case ate: AggregateTypeExpression => ate.fields.map(f => f -> t)
       case ate: AliasedTypeExpression =>
-        resolution.refMap.definitionOf[Type](ate.pathId).toSeq.flatMap(fieldsWithOwner)
+        resolveTypeAlias(ate).toSeq.flatMap(fieldsWithOwner)
       case _ => Seq.empty[(Field, Type)]
 
   /** Does [[Field]] `f`, declared on message-Type `owner`, name Processor `p` as its
@@ -5528,10 +5703,18 @@ case class ValidationPass(
     * alternative), so "zero fields after resolving" is exactly the stub condition the standing
     * `???` ruling asks us to exempt -- its absent fields must not be read as "no Id(target)
     * field".
+    *
+    * `lets` added for the message-value-source widening (task-1 review, round 1): the operand's
+    * TYPE now comes from [[widenedOperandType]], not the narrow [[operandType]], so a `tell`
+    * addressing a state field/`let`-local/function-result/`ask`-result-sourced message is checked
+    * for its `by`/ambiguity/missing-address obligations exactly as a keyword-led or bound one is --
+    * before this fix, a widened operand made this whole function silently see no message at all,
+    * so its Errors never fired. Threading `lets` costs nothing new here: `checkStatementScopes`'s
+    * `TellStatement` case already has it, at the one call site below.
     */
-  private def checkTellAddressing(ts: TellStatement, parents: Parents): Unit =
+  private def checkTellAddressing(ts: TellStatement, parents: Parents, lets: Seq[LetStatement]): Unit =
     checkRef[Processor[?]](ts.processorRef, parents).foreach { p =>
-      operandType(ts.msg).foreach { mt =>
+      widenedOperandType(ts.msg, parents, lets).foreach { mt =>
         val fieldsAndOwners = fieldsWithOwner(mt)
         if fieldsAndOwners.nonEmpty then
           // Match candidates by RESOLVED IDENTITY, not by the last path segment's NAME (Reid,
@@ -5661,7 +5844,7 @@ case class ValidationPass(
       case _: NumericType => Some("numeric")
       case _: String_     => Some("string")
       case ate: AliasedTypeExpression =>
-        resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => typeExprCategory(t.typEx))
+        resolveTypeAlias(ate).flatMap(t => typeExprCategory(t.typEx))
       case _ => None
 
   /** A9b: the four [[AggregateUseCase]]s that are actual MESSAGES — the same set [[MessageRef]]'s
@@ -5688,7 +5871,7 @@ case class ValidationPass(
     te match
       case auc: AggregateUseCaseTypeExpression => Some(auc.usecase).filter(messageUseCases.contains)
       case ate: AliasedTypeExpression =>
-        resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => typeExprMessageKind(t.typEx))
+        resolveTypeAlias(ate).flatMap(t => typeExprMessageKind(t.typEx))
       case _ => None
 
   /** A55: the definition a [[ValueRef]] resolved to, straight out of the refMap. `ResolutionPass`
@@ -5706,10 +5889,7 @@ case class ValidationPass(
     te match
       case ate: AggregateTypeExpression => ate.fields
       case ate: AliasedTypeExpression =>
-        resolution.refMap
-          .definitionOf[Type](ate.pathId)
-          .toSeq
-          .flatMap(t => aggregateFieldsOf(t.typEx))
+        resolveTypeAlias(ate).toSeq.flatMap(t => aggregateFieldsOf(t.typEx))
       case _ => Seq.empty[Field]
 
   /** A55: walk `names` from a starting [[TypeExpression]] through its aggregate fields. Used ONLY
@@ -6672,7 +6852,7 @@ case class ValidationPass(
         // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
         // point invoked at every container root AND recursively for when/match/foreach bodies) --
         // mirrors checkTerminate's reachability, immediately below.
-        checkTellAddressing(s, parents)
+        checkTellAddressing(s, parents, lets)
       case s: YieldStatement =>
         s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
       // Mirrors YieldStatement, immediately above: `validateStatement`'s ReplyStatement case
