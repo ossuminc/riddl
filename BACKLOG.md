@@ -769,57 +769,64 @@ that needs a ruling before either can be fixed.
   `FORMAT_REVISION` bump; the corpus must be surveyed for existing prose
   refusals before the string form is removed.
 
-- **RULED 2026-08-14 — `on other` is a NECESSARY construct, not an idiom or a
-  defect. Generalize the presence check to every processor kind (A5).**
-  Reid, asked whether an empty `on other` means "deliberately discard":
+- **RULED 2026-08-14 — `on other` is necessary to the LANGUAGE, not required in
+  every handler. A5's generalization is DECLINED; omission is correct.**
+  Reid, correcting a first reading of this ruling that took "it MUST be there"
+  to mean per-handler:
 
-  > *"It's neither an idiom nor a defect, it is a necessary model construct and
-  > it triggers when the processor receives a message OTHER than ones handled by
-  > OMCs in the handler(s). In other words, `on other` is like the fall-through
-  > on a switch statement and it MUST be there and every well constructed
-  > processor should have one, perhaps one for each state for a multi-state
-  > entity."*
+  > *"`on other` is necessary to the language, not necessary in every handler.
+  > If there is nothing to do for a message that is not otherwise handled, then
+  > it can be omitted and that is fine. It's better than an `on other { do
+  > "nothing" }` kind of nonsense construct, even if that would be good
+  > validation."*
 
-  So the question was mis-framed: **presence is the rule**, and the empty-body
-  question is secondary. The scope is **per handler**, which is what gives a
-  multi-state entity one per state — each state carries its own handler.
+  So the construct's job is real — it is the fall-through of a switch, firing
+  when a processor receives a message no on-message clause in the handler
+  matches — but **an author who has nothing to do on that path writes nothing.**
+  Note what the last clause concedes and then overrules: requiring the clause
+  WOULD make validation better, and is rejected anyway, because a language that
+  forces a do-nothing construct buys its diagnostics by making models lie about
+  intent. **Do not re-open this by arguing the validation benefit; it was already
+  weighed.**
 
-  **What exists today:** the presence check is **adaptor-only** and is an
-  **Error** (`ValidationPass.scala:3489`), guarded on `clauses.nonEmpty` so a
-  `???` handler is exempt (A76). Its own comment already says *"This
-  presence/completeness check is intended to generalize to other processor kinds
-  later"* — this ruling is that "later". The **emptiness** warning is already
-  model-wide (`:553-563`).
+  **Consequences — three, and the third is an open question:**
 
-  **MEASURED 2026-08-14 before implementing, brace-matched over the corpus —
-  do not re-derive:**
+  1. **No new presence check.** A5's *"consider generalizing the presence and
+     completeness check across all processor kinds"* is considered and DECLINED.
+     The comment at `ValidationPass.scala:3492` promising to generalize "later"
+     is now stale and should be corrected in place, or the next reader will
+     build it.
+  2. **The empty-`on other` warning STAYS, and its advice is now clearly the
+     right one.** `ValidationPass.scala:553-563` warns that an empty clause
+     "will silently discard unhandled messages" and suggests adding statements
+     *"or remove it if discarding is intentional"*. That second branch is
+     exactly this ruling: the fix for a do-nothing clause is deletion, not
+     filling. No change needed.
+  3. **OPEN — does this relax the ADAPTOR Error?** `ValidationPass.scala:3489`
+     makes a missing `on other` an **Error** on every non-empty adaptor handler.
+     The ruling's principle ("nothing to do → omit it") reads against that, but
+     an adaptor is a special case with its own argument: it exists to translate
+     at a context seam, so an untranslated foreign message is a translation gap
+     rather than an empty path. Reid did not address adaptors. **Ask before
+     touching it** — leaving a rule that contradicts the general principle is
+     better than silently deleting the one place the check earns its keep.
 
-  | | handlers |
-  |---|---|
-  | total handler blocks in riddl-models | **3,606** |
-  | already have `on other` | **2,311 (64.1%)** |
-  | would be newly flagged | **1,295 (35.9%)**, across **22** of 29 model dirs |
+  **The corpus measurement now reads the other way, and supports the ruling.**
+  Brace-matched over riddl-models, 2026-08-14: of **3,606** handler blocks,
+  **2,311 (64.1%)** carry an `on other` and **1,295 (35.9%)** do not, across 22
+  of 29 model dirs. Under the first (wrong) reading that was migration scope.
+  Under the ruling it is evidence: **roughly a third of handlers legitimately
+  have nothing to do on the fall-through path**, and a presence check would have
+  told all 1,295 of them to write nonsense. Kept because it is the number that
+  would have been re-derived to justify the check.
 
-  The 64% is the useful number: the construct is **already the corpus's house
-  style**, which is strong evidence for the ruling and means this is a migration,
-  not a redefinition. Worst-affected are `hospitality` (192), `healthcare` (132)
-  and `manufacturing` (93).
-
-  **Severity is the open sub-question.** The adaptor precedent is an Error, and
-  Reid's "MUST be there" reads that way — but shipping it as an Error reds 22 of
-  29 models at once, and the CI gate requires 189/189 clean. **Follow the
-  A72/bare-operand precedent**: ship as a CompletenessWarning, drop a migration
-  task on riddl-models, flip to Error when the corpus reports zero. That path is
-  already proven on this branch and needs no new argument.
-
-  **The empty-body warning stays** — it is about the BODY, not the presence, and
-  the two rules now compose cleanly: the clause must exist, and it must do
-  something. The discard idiom is `do "discard the message"`, which is what the
-  standard module's own `BottomlessPit` writes. A5's sentence *"Silence is only a
+  **A5's sentence is still struck from `../RIDDL-Tools-To-Do-List.md`, but for a
+  different reason than first recorded.** The sentence — *"Silence is only a
   deliberate filter when an explicit 'on other' clause exists and does nothing
-  with the message"* is now **wrong on both halves** and must be struck from
-  `../RIDDL-Tools-To-Do-List.md`: presence is mandatory so it signals nothing,
-  and an empty body is the warned shape rather than the sanctioned one.
+  with the message"* — is wrong because **omission IS the deliberate filter**.
+  It required an explicit do-nothing clause as the marker of intent, which is
+  precisely the construct this ruling calls nonsense. (The first correction said
+  it was wrong because presence is mandatory. That was the misreading.)
 
 - **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
   rule.** Reid ruled 2026-08-09: *"There must be no non-sealed matches — it is
