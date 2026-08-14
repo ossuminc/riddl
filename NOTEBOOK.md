@@ -13,9 +13,10 @@ would get wrong.
 
 **State — every line verified by a command during the handoff (2026-08-14):**
 
-- Branch `release/2`, HEAD `80bb93b40`, **8 commits UNPUSHED** (`ccd278c00`
-  `e0a424ed0` `612a5706a` `54d822883` `7fba1f8f4` `ea05e144d` `2ebe24a6c`
-  `80bb93b40`).
+- Branch `release/2`, tree CLEAN, **NOTHING PUSHED since `rc.14`** — the whole
+  span `ccd278c00..HEAD` is local. Count it with
+  `git log --oneline origin/release/2..HEAD`; do not trust a number written
+  here, since the commit that records it moves it.
 - **`publishLocal` AND `~/Code/ossuminc/bin/riddlc` are both at
   `2.0.0-rc.14-12-54d82288`, and as of 2026-08-14 that is genuinely STALE** —
   it predates `2ebe24a6c`/`80bb93b40`, so the staged binary still drops
