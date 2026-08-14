@@ -27,15 +27,38 @@ here about those is stale the moment someone commits.
 - **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease, Maven from the tag, npm on
   the **`rc`** dist-tag (`latest` did NOT move).
 
-**In flight: nothing.** The message-value-source plan is COMPLETE, all 7 tasks
-(ledger: `.superpowers/sdd/2026-08-14-message-value-source/progress.md`,
-gitignored but it names every commit; plan and design under
-`docs/superpowers/`). **The next action is Reid's: cut the RC** (`/rc`) — his
-work order was emitter fix → this plan → one RC carrying both, so riddl-models
-gets a single `.bast` regeneration.
+**In flight: nothing.** Four approved backlog items were completed 2026-08-14
+(`8177418d1`, `7ed365e60`, `4feb5a370`, `fdf29927f`, `75a791682`): the
+bare-message-operand Error, the saga `initiate`/`terminate` test, all four
+approved bugs, and the stream-reachability rule. `language` 669 and `passes`
+1267 are green; **the other modules have NOT been re-run since** — `riddlLib`,
+`riddlc`, `commands`, JS and Native legs are owed before an RC.
+
+**The next action is still Reid's: cut the RC** (`/rc`).
 
 **Traps — every one already bit someone here.**
 
+- **THE CORPUS IS RED BY DESIGN, now for a THIRD reason.** On top of the two
+  already-red tests, the bare-operand Error (`4feb5a370`) makes every unmigrated
+  `send`/`tell`/`yield`/`reply`/`morph` in riddl-models an Error. Reid approved it
+  knowing this: riddl-models has converted against a staged build, but that
+  conversion is NOT in the local checkout. **Do not soften the check to green the
+  corpus.** His reasoning is worth keeping: riddl-models drives all errors AND
+  warnings to zero, so a severity change never alters their workload — which is
+  why the warn-first argument was weaker than recorded.
+- **A backlog cost estimate is a guess, not a measurement.** The flip was filed as
+  "one line plus one test's assertions"; it broke 30 tests across 20 suites,
+  because our own fixtures are written in exactly the style we asked the corpus to
+  migrate away from. Measure before promising a small change.
+- **Run a BASELINE before attributing failures to your change.** Six suites stayed
+  red after the first migration pass and two of them reported messages with nothing
+  to do with it ("no error-sink inlet", "no Sink streamlet") — those are warnings
+  the harness prints ahead of the real trigger. Stashing and re-running proved all
+  six were mine and none pre-existing.
+- **Take a field name from the fixture under the cursor, never a sibling.**
+  `CompletenessTest`'s `Evt` has `amount`; three other fixtures in the same file
+  declare an `Evt` with `data`. The wrong one produced a green-looking edit that
+  failed for a brand-new reason.
 - **TWO CORPUS TESTS ARE RED ON PURPOSE**, and this is what a cold session is
   most likely to get wrong. `RiddlModelsRoundTripTest` (16 of 189) and
   `Root2JsonCorpusTest`'s validation-parity case (173/189, needs ≥95%) fail

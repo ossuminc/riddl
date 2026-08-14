@@ -101,7 +101,15 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   `comparison`, so it composes with everything above it — `not (a and b)`,
   `(a or b) and c` and a parenthesised comparison all parse.
 
-- **APPROVED 2026-08-14 — flip the bare-message-operand warning to an Error.**
+- **DONE 2026-08-14 (`4feb5a370`) — the bare-message-operand Error shipped.**
+  Cost 30 tests across 20 suites, not the "one line" this entry estimated: our own
+  fixtures were written in the same bare style as the corpus. 12 sites in two
+  shared inputs (`everything_full.riddl`, `dokn.riddl`), 16 inline fixtures, and
+  `TokenParserFileTest`'s token golden 408 -> 413. **The corpus stays red until
+  riddl-models' migration lands here** — do not read that as a regression.
+  Original entry follows.
+
+- ~~**APPROVED 2026-08-14 — flip the bare-message-operand warning to an Error.**~~
   Reid: *"riddl-models is working on it from the same riddl version we are using;
   yes, make the flip, riddl-models should be corrected soon."* The block is
   lifted: they are building against our staged build, so shipping the Error is
@@ -437,7 +445,18 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   riddl-models proves only that those models parse — never that the corpus
   reaches the language's expressive range.
 
-- **APPROVED TO FIX 2026-08-14 — all four bugs. Reid: *"Bugs: fix all 4."***
+- **DONE 2026-08-14 — all four resolved, and one was already fixed.**
+  `7ed365e60` `validateConstructor` now follows alias chains (3 tests, revert-proved
+  under a throwaway cache). `fdf29927f` `Pass.traverse` descends into `when`/`match`/
+  `foreach` bodies, closing BOTH the resolver-side and validation-side halves — they
+  were one defect seen from two passes. **The saga-statements bug is CLOSED as
+  already fixed** by `a1bce0d50`, verified with this entry's own repro rather than by
+  reading: all four bogus paths are reported. Corpus A/B for the traversal change:
+  **21 non-bare-operand errors before, 21 after** — it surfaced nothing in the corpus
+  and exactly one real defect in our own fixture (`everything_full.riddl` sent to
+  `APlant.Source.Commands`; the outlet is `OutCommands`). Original entry follows.
+
+- ~~**APPROVED TO FIX 2026-08-14 — all four bugs. Reid: *"Bugs: fix all 4."***~~
   The four are: `ResolutionPass` not descending into nested statement bodies
   (below); `validateConstructor` not following type aliases (below); the
   statement-scope checks missing nested statements (below); and saga step
@@ -522,8 +541,13 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   string literals, so no Native hazard was present. Rolled into the JVM/Native
   gap item above.
 
-- **CONFIRMED 2026-08-14 — build the test. Reid: *"yes, add a test case for it
-  to make sure it continues to be supported."*** No design question remains; the
+- **DONE 2026-08-14 (`8177418d1`) — the test exists, covering do- AND undo-blocks.**
+  It was correct by accident: both ban predicates in `checkInstanceEffectScope`
+  are structurally false for a saga-step statement, so nothing would have gone
+  red. Original entry follows.
+
+- ~~**CONFIRMED 2026-08-14 — build the test. Reid: *"yes, add a test case for it
+  to make sure it continues to be supported."***~~ No design question remains; the
   deliverable is a `SagaValidatorTest` case asserting `initiate` and `terminate`
   both validate clean in a saga step, citing the ruling in a comment. Cheap, and
   it is the only thing standing between the ruling and a future tightening of
@@ -906,7 +930,14 @@ that needs a ruling before either can be fixed.
   and `RiddlFileEmitter`/`PrettifyVisitor`'s uses are NOT in this list: those
   are legitimately about the case class (visitor hooks, keyword emission).
 
-- **Decide whether stream reachability should require a `Source`-SHAPED head.**
+- **DONE 2026-08-14 (`75a791682`) — it should not; a head need only bear an OUTLET.**
+  The preliminary question this entry demanded is answered: the two reactive-bbq
+  repositories are **WIRED**, not unwired, so the rule was wrong rather than its
+  wording. Nothing is lost — the fixture's real defect is still reported, and better,
+  as "Inlet 'Unfed' is not connected" instead of blaming the sink. Original entry
+  follows.
+
+- ~~**Decide whether stream reachability should require a `Source`-SHAPED head.**~~
   Surfaced by the corpus A/B for `70b0f527a`, not theorised. With the graph
   widened, two reactive-bbq repositories now report `is a sink but has no
   upstream path from any source`. The message is LITERALLY true — tracing
