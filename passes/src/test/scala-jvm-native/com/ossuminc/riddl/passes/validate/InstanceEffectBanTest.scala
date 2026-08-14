@@ -134,6 +134,44 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
        |                                   $stmt }
        |    } with { briefly "proj" }""".stripMargin)
 
+  /** Task 6's fixture is standalone rather than built on [[wrap]]: `wrap`'s `entity Order`
+    * deliberately declares NO `on init`, which the ban cases rely on (they only ever assert that a
+    * ban fired), while a case asserting ZERO errors needs a target that can actually be initiated.
+    * Adding `on init` to `wrap` would have changed the arity every other case sends through it.
+    *
+    * The second, inert step is not padding: a Saga must declare at least two (`Sagas must define at
+    * least 2 steps`), so a one-step model would fail this case for a reason unrelated to the ruling.
+    */
+  private def sagaModel(stmt: String): String =
+    s"""domain SDom is {
+       |  context SCtx is {
+       |    record SR is { total: String } with { briefly "r" }
+       |    entity Worker is {
+       |      state WS of record SR is {
+       |        handler WH is {
+       |          on init(total: String) is { do "start" }
+       |          on term(wid: Id(entity Worker)) is { do "end" }
+       |        } with { briefly "wh" }
+       |      } with { briefly "ws" }
+       |    } with { briefly "we" }
+       |    saga Flow is {
+       |      requires { why: String }
+       |      returns { out: String }
+       |      step One is {
+       |        $stmt
+       |      } reverted by {
+       |        do "undo"
+       |      } with { briefly "step" }
+       |      step Two is {
+       |        do "carry on"
+       |      } reverted by {
+       |        do "undo"
+       |      } with { briefly "step" }
+       |    } with { briefly "saga" }
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
   "initiate/terminate" should {
     "be BANNED in a function body" in { (td: TestData) =>
       errorsIn(functionModel("""let x = initiate entity Order"""), "ban-fn") must
@@ -279,6 +317,27 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
       )
       errors must include("on term")
       errors must include("2")
+    }
+
+    /** Message-value-source plan, Task 6. Reid, 2026-08-14: `initiate`/`terminate` ARE legal in a
+      * saga step, because a saga may need to create the entities it coordinates.
+      *
+      * That is already the behaviour, but only **by accident**: `checkInstanceEffectScope`'s two
+      * predicates are structurally false for a saga step — a `SagaStep` is a `Leaf`, never pushed
+      * onto the parent stack (see `Pass.traverse`), so `parents.head` is the Saga, which is neither
+      * an activation clause nor a `Function`. Nothing states the ruling, so a future tightening
+      * that added a Saga arm "for symmetry" would silently remove it and no test would notice.
+      *
+      * The two are exercised TOGETHER in one step on purpose: the pair is what a saga actually
+      * needs (create, then unwind), and using `wid` also keeps Task 5's unused-id warning out of
+      * the picture so a failure here can only mean the ban misfired.
+      */
+    "be LEGAL in a saga step (Reid's ruling, 2026-08-14)" in { (td: TestData) =>
+      errorsIn(
+        sagaModel("""let wid = initiate entity Worker("1")
+                    |        terminate entity Worker(wid)""".stripMargin),
+        "ok-saga-step"
+      ) mustBe ""
     }
   }
 }
