@@ -980,6 +980,59 @@ case class ValidationPass(
       }
   end checkStateReadScope
 
+  /** A70/instance-identity Task 7: `initiate` and `terminate` are EFFECTS -- one mints a processor
+    * instance, the other destroys one -- so they are subject to the same effect bans as
+    * `tell`/`send`/`set`/etc. Two of the three banned contexts are enforced here:
+    *
+    *   - a FUNCTION body, which is pure (A26) and may not create or destroy instances any more than
+    *     it may mutate state or send a message;
+    *   - an `on activate`/`on passivate` clause, which must be side-effect-free for the same reason
+    *     outbound messaging is already banned there (`messagingStatements` in `StatementParser`).
+    *
+    * The THIRD banned context -- a correlation fold -- is deliberately NOT checked here. Task 5
+    * already banned `terminate` there (`validateCorrelation`'s `walkStatements` over
+    * `correlation.handlers`), and that check has been extended to catch `initiate` too rather than
+    * duplicated as a second predicate in this function. Two sites reporting the SAME defect would
+    * double-report a `terminate` (or `initiate`) written inside a fold; keeping the fold rule in
+    * exactly one place is what keeps that from happening. A fold's `parents.head` here is the
+    * `OnEventClause`/`OnMessageClause` inside the correlation's handler -- neither an
+    * `OnActivationClause`/`OnPassivationClause` nor (absent an enclosing Function) a `Function` --
+    * so the two predicates below never fire for it regardless.
+    *
+    * Called from [[checkStatementScopes]], the single entry point invoked at every container root
+    * AND recursively for when/match/foreach bodies -- so a banned statement nested at any depth is
+    * still reached, mirroring [[checkTerminate]]'s and `checkTellAddressing`'s reachability. It is
+    * NOT called from `validateStatement`: that dispatch never sees statements held in a FIELD
+    * (`WhenStatement.thenStatements`, `MatchCase.statements`, `ForeachStatement.doStatements`), the
+    * same gap `checkStateReadScope`'s placement there is a known, filed defect for (see BACKLOG.md).
+    */
+  private def checkInstanceEffectScope(statement: Statement, parents: Parents): Unit =
+    val offenders: Seq[(At, String)] =
+      (statement match
+        case ts: TerminateStatement => Seq(ts.loc -> "terminate")
+        case _                      => Seq.empty
+      ) ++ statementValues(statement).flatMap(initiatesIn).map(init => init.loc -> "initiate")
+
+    if offenders.nonEmpty then
+      val banned: Option[String] = parents.head match
+        case _: OnActivationClause | _: OnPassivationClause =>
+          Some("an activation or passivation clause, which must be side-effect-free")
+        case _ =>
+          if parents.exists(_.isInstanceOf[Function]) then
+            Some("a function body, which is pure and may not create or destroy instances")
+          else None
+
+      banned.foreach { where =>
+        offenders.foreach { case (loc, kw) =>
+          messages.addError(
+            loc,
+            s"'$kw' is not allowed in $where",
+            suggestion = s"Move the '$kw' into an ordinary handler clause."
+          )
+        }
+      }
+  end checkInstanceEffectScope
+
   /** The innermost enclosing [[Processor]], the same "instance" `self` names -- `None` when no
     * Processor encloses the reference, OR when the nearest enclosing scope is one of the two kinds
     * that deliberately do NOT carry the instance identity of whatever Processor happens to
@@ -2760,9 +2813,18 @@ case class ValidationPass(
             // a fold must not repeat.
             case _: TerminateStatement => Some("terminate")
             case _                     => None
-          effect.foreach { kw =>
+          // Task 7: `initiate` is the OTHER instance-identity effect, and unlike `terminate` it is
+          // never a Statement of its own -- it is a VALUE, most commonly hiding inside a
+          // `let x = initiate ...` (a LetStatement, matched by NONE of the arms above). Detecting it
+          // needs a value walk (`initiatesIn`, over `statementValues(statement)`), not a statement
+          // match, which is exactly the asymmetry Task 5 left: `terminate` was banned here, and
+          // `initiate` was not.
+          val offenders: Seq[(At, String)] =
+            effect.map(kw => statement.loc -> kw).toSeq ++
+              statementValues(statement).flatMap(initiatesIn).map(init => init.loc -> "initiate")
+          offenders.foreach { case (loc, kw) =>
             messages.addError(
-              statement.loc,
+              loc,
               s"A fold of ${correlation.identify} may not '$kw': folds must be free of effects so " +
                 s"re-running them over the same events is safe",
               suggestion = s"Move the '$kw' into the correlation's 'times out after' block, or " +
@@ -4727,6 +4789,42 @@ case class ValidationPass(
       )
   end stateReadsIn
 
+  /** Every [[Initiate]] embedded in a value expression, at any depth -- the top-level `Initiate`
+    * itself PLUS any nested inside its own arguments (`initiate entity Order(x = initiate entity
+    * Foo)`), exactly as `stateReadsIn` recurses into `Initiate.args` looking for a `get from state`.
+    *
+    * Enumerated over the same arms as `stateReadsIn`/`asksIn` and for the same reason: a new value
+    * kind that can CONTAIN an `initiate` must fail the build here rather than quietly hide one. This
+    * is what lets `checkInstanceEffectScope` and `validateCorrelation`'s fold-purity check see
+    * `initiate` wherever it hides -- most importantly inside a `let x = initiate ...`, which is a
+    * [[LetStatement]], not a `TerminateStatement`-shaped statement a simple `case` match would catch.
+    */
+  private def initiatesIn(v: RiddlValue): Seq[Initiate] = v match
+    case init: Initiate           => Seq(init) ++ init.args.toSeq.flatMap(a => initiatesIn(a.value))
+    case call: Call               => call.args.toSeq.flatMap(a => initiatesIn(a.value))
+    case c: Constructor           => c.args.toSeq.flatMap(a => initiatesIn(a.value))
+    case le: LogicalExpression    => initiatesIn(le.left) ++ initiatesIn(le.right)
+    case ne: NotExpression        => initiatesIn(ne.expr)
+    case ce: ComparisonExpression => initiatesIn(ce.left) ++ initiatesIn(ce.right)
+    case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
+    // A `get from state`/`get from input` holds only a StateRef/InputRef -- no nested value -- so
+    // it cannot contain an `initiate`.
+    case _: GetValue              => Seq.empty
+    // An `ask` holds only a QueryRef and a ProcessorRef -- no nested value.
+    case _: Ask                   => Seq.empty
+    case _: Reference[?]          => Seq.empty
+    // A name contains nothing; see the note in `stateReadsIn`.
+    case _: Identifier            => Seq.empty
+    // `self`/`self.<field>` holds no nested value; see the same note in `stateReadsIn`.
+    case _: SelfValue             => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
+    case other =>
+      throw new IllegalStateException(
+        s"initiatesIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
+          "decide whether it can contain an 'initiate' rather than assuming it cannot"
+      )
+  end initiatesIn
+
   /** The definition whose data a `set` in this statement position would write — the INNERMOST
     * enclosing processor, since `parents` runs innermost-first.
     *
@@ -6253,7 +6351,15 @@ case class ValidationPass(
     inScopeElements: Map[String, TypeExpression] = Map.empty
   ): Unit =
     var lets = inScopeLets
-    stmts.foreach {
+    stmts.foreach { stmt =>
+      // A70/instance-identity Task 7: initiate/terminate are effects banned in a function body and
+      // in an on-activate/on-passivate clause. Checked for EVERY statement in this list, ahead of
+      // the per-kind match below -- mirrors `checkStateReadScope`'s placement ahead of
+      // `validateStatement`'s per-kind match, but here rather than there, because THIS function
+      // (not `validateStatement`) is what recurses into nested when/match/foreach bodies, so this
+      // is the placement that reaches a banned statement at any nesting depth.
+      checkInstanceEffectScope(stmt, parents)
+      stmt match {
       case ls: LetStatement =>
         // A54: validate the bound expression with the scope BEFORE this let (a let can't see itself),
         // then check its type against a declared `let x: T = …`.
@@ -6372,6 +6478,7 @@ case class ValidationPass(
       // reachability via `validateValue`.
       case ts: TerminateStatement => checkTerminate(ts, parents, lets, inScopeElements)
       case _                      => ()
+      }
     }
   end checkStatementScopes
 
