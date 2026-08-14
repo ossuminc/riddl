@@ -54,6 +54,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
        |    event Started is { oid: Id(entity Order) } with { briefly "ev" }
        |    command Record is { oid: Id(entity Order) } with { briefly "cmd" }
        |    record R is { total: Integer } with { briefly "r" }
+       |    invariant Inv is "always" with { briefly "inv" }
        |    entity Order is {
        |      state OS of record R is {
        |        handler OH is {
@@ -86,6 +87,16 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     s"""    entity Caller is {
        |      state CS of record R is {
        |        handler CH is { on activate is { $stmt } } with { briefly "ch" }
+       |      } with { briefly "cs" }
+       |    } with { briefly "ce" }""".stripMargin)
+
+  // Review round 1 addendum: `on passivate` shares `checkInstanceEffectScope`'s match arm (and
+  // its message) with `on activate` -- one case pins that the claim is actually true for both,
+  // not merely for the one the original brief happened to test.
+  private def passivateModel(stmt: String): String = wrap(
+    s"""    entity Caller is {
+       |      state CS of record R is {
+       |        handler CH is { on passivate is { $stmt } } with { briefly "ch" }
        |      } with { briefly "cs" }
        |    } with { briefly "ce" }""".stripMargin)
 
@@ -138,6 +149,25 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
       ) must include("function")
     }
 
+    // Review round 1 addendum: the original four cases exercised `initiate` only in both NEW
+    // contexts. `terminateStatement` is parsed unconditionally by `anyDefStatements`, and neither
+    // `ProcessorKind.Function` nor `ClauseRestriction.ActivationClause` suppresses it in
+    // `StatementParser.statement` -- so `terminate` in a function body / activation clause is a
+    // live, parseable path whose ban rested entirely on the `TerminateStatement` match arm no test
+    // reached. `terminate` needs a bound instance to name, so bind one with `let`/`initiate` first,
+    // the same shape `timeoutModel` already uses.
+    "be BANNED (terminate) in a function body" in { (td: TestData) =>
+      val errors = errorsIn(
+        functionModel(
+          """let x = initiate entity Order
+            |      terminate entity Order(x)""".stripMargin
+        ),
+        "ban-fn-terminate"
+      )
+      errors must include("function")
+      errors must include("terminate")
+    }
+
     "be LEGAL in an ordinary entity handler" in { (td: TestData) =>
       errorsIn(entityModel("""let x = initiate entity Order"""), "ok-entity") mustBe ""
     }
@@ -152,6 +182,57 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
         activateModel("""when true then { let x = initiate entity Order } end"""),
         "ban-activate-nested"
       ) must include("activat")
+    }
+
+    "be BANNED (terminate) in an on activate clause" in { (td: TestData) =>
+      val errors = errorsIn(
+        activateModel(
+          """let x = initiate entity Order
+            |      terminate entity Order(x)""".stripMargin
+        ),
+        "ban-activate-terminate"
+      )
+      errors must include("activat")
+      errors must include("terminate")
+    }
+
+    "be BANNED in an on passivate clause" in { (td: TestData) =>
+      // Pins the claim that the ban applies to BOTH clauses the message names, not just the one
+      // ("on activate") every other case here happens to use.
+      errorsIn(passivateModel("""let x = initiate entity Order"""), "ban-passivate") must
+        include("activat")
+    }
+
+    // Important #1 (review round 1): `statementValues` used to DROP `RequireStatement.argument`
+    // (the `with <expr>` operand) -- a full Value, parsed by the same `value` rule that admits
+    // `initiate`, and `require` is legal in both a function body and an activation clause
+    // (`guardStatements` suppresses it only under `EventClause`). So `require true with initiate
+    // entity Order` evaded `checkInstanceEffectScope` (and the fold-purity walk) entirely before
+    // the fix. Exercised here in a function body, where the ban applies.
+    "be BANNED when 'initiate' hides inside a 'require ... with' operand" in { (td: TestData) =>
+      errorsIn(
+        functionModel("""require true with initiate entity Order"""),
+        "ban-fn-require-with"
+      ) must include("function")
+    }
+
+    // Important #1, second half: `MatchCase.guard` is the same shape and was equally unfed. The
+    // ONLY way `initiate` can reach a guard at all is through `invariant X with initiate ...` --
+    // `matchGuard`'s grammar bottoms out at `booleanAtom`, whose sole value-carrying member is
+    // `invariantCondition` (`StatementParser.booleanAtom`); the parser's `andExpr`/`comparison`
+    // operands are typed refs (`Comparand`), never `initiate`. So this is not an arbitrary
+    // fixture -- it is the one shape that actually parses.
+    "be BANNED when 'initiate' hides inside a MatchCase guard" in { (td: TestData) =>
+      errorsIn(
+        functionModel(
+          """match a {
+            |        case "x" when invariant Inv with initiate entity Order {
+            |          do "case"
+            |        }
+            |      }""".stripMargin
+        ),
+        "ban-fn-match-guard"
+      ) must include("function")
     }
 
     "be BANNED in a projector correlation fold" in { (td: TestData) =>
@@ -181,6 +262,23 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
       // The timeout block EXISTS to have an effect (design spec §6.7), so banning it there
       // would leave it useless. This is the case that distinguishes a correct ban.
       errorsIn(timeoutModel("""terminate entity Order(oid)"""), "ok-timeout") mustBe ""
+    }
+
+    // Important #2 (review round 1): before `Correlation.timeoutStatements` was wired into
+    // `checkStatementScopes`, the case immediately above could not fail -- a timeout block never
+    // reached ANY check that lives only in `checkStatementScopes` (checkInitiate/checkTerminate
+    // arity+type, let-scope threading, tell addressing), so "legal" and "unchecked" were
+    // indistinguishable. This proves the wiring is real: an arity mismatch against `on term`'s
+    // ONE declared parameter, supplied with two arguments, is now reported -- something that
+    // would have gone completely unreported before this fix, since `checkTerminate` never ran
+    // for a timeout block at all.
+    "now runs full statement validation inside a correlation timeout block" in { (td: TestData) =>
+      val errors = errorsIn(
+        timeoutModel("""terminate entity Order(oid, oid)"""),
+        "timeout-arity-now-checked"
+      )
+      errors must include("on term")
+      errors must include("2")
     }
   }
 }

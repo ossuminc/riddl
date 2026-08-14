@@ -469,6 +469,26 @@ case class ValidationPass(
           Seq.empty[LetStatement],
           parentsAsSeq
         )
+      // Review round 1 (Task 7), Important #2: `Correlation.timeoutStatements` is a FIELD, exactly
+      // like `SagaStep`'s `do`/`undoStatements` above -- it was reached by generic traversal (see
+      // `Pass.traverse`'s `Correlation` case, which pushes the correlation and walks
+      // `timeoutStatements` right alongside `contents`, so each statement DOES reach
+      // `validateStatement`) but was never handed to `checkStatementScopes`, so every check that
+      // lives ONLY there (checkInitiate/checkTerminate arity+type, let-scope threading, ValueRef
+      // resolution, tell addressing) silently never ran for a timeout block. `c +: parentsAsSeq`
+      // mirrors `oc +: parentsAsSeq` above: `traverse` calls `process` (which is where this dispatch
+      // runs) BEFORE `parents.push(correlation)`, so prepending `c` here reproduces the SAME
+      // `parents.head` traversal would install a moment later -- verified empirically (see
+      // task-7-report.md) rather than assumed: `parents.head` is the `Correlation`, and no
+      // `Function` sits in its ancestor chain, so `checkInstanceEffectScope`'s two bans stay
+      // correctly false for a timeout block, which is REQUIRED (§6.7 -- the block exists to have an
+      // effect).
+      case c: Correlation =>
+        checkStatementScopes(
+          c.timeoutStatements.toSeq.collect { case s: Statement => s },
+          Seq.empty[LetStatement],
+          c +: parentsAsSeq
+        )
       case _ => ()
     }
     value match {
@@ -4721,9 +4741,20 @@ case class ValidationPass(
       case yld: YieldStatement   => Seq(yld.msg)
       case rpl: ReplyStatement   => Seq(rpl.msg)
       case mor: MorphStatement   => Seq(mor.value)
-      case req: RequireStatement  => Seq(req.condition)
+      // Review round 1: `req.argument` (the `with <expr>` operand) is a full Value -- `require`
+      // is legal in both a function body and an activation clause (`guardStatements` in
+      // `StatementParser` suppresses it only under `EventClause`), and `initiateValue` is a
+      // production of the same `value` rule the operand is parsed with -- so `require X with
+      // initiate entity Order` could hide an `initiate` from every walk that consumes
+      // `statementValues` (state-reads, asks, this task's instance-effect ban, the A12
+      // fail-point census) unless the operand is included here too.
+      case req: RequireStatement  => Seq(req.condition) ++ req.argument.toSeq
       case whn: WhenStatement     => Seq(whn.condition)
-      case mat: MatchStatement    => Seq(mat.expression)
+      // Review round 1: a `MatchCase.guard` is the SAME shape as `req.argument` -- a full
+      // `BooleanExpression | ValueRef` value that was never fed to any of these walks, even
+      // though `validateMatch` already resolves/type-checks it independently via `validateValue`.
+      // `mat.expression` (the subject) is unaffected; this only adds each case's guard.
+      case mat: MatchStatement    => Seq(mat.expression) ++ mat.cases.flatMap(_.guard.toSeq)
       // A70/instance-identity: `terminate`'s arguments are full Values, exactly like a
       // constructor's or `initiate`'s, so a `get from state`/`ask`/nested call-fail-point can
       // hide inside one and must be counted rather than silently skipped.
