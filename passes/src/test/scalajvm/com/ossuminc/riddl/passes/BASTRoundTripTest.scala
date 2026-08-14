@@ -238,7 +238,7 @@ class BASTRoundTripTest extends AnyWordSpec {
               // `reply`. This also exercises BAST statement tag 19, added with the node.
               val ys = Finder(module.contents).recursiveFindByType[AST.ReplyStatement]
               assert(ys.size == 1, s"expected one ReplyStatement, found ${ys.size}")
-              assert(ys.head.msg.operandPathId.value.last == "Res", "reply target lost in BAST")
+              assert(ys.head.msg.deliverableOperandPathId.value.last == "Res", "reply target lost in BAST")
             case Left(errors) => fail(s"Deserialization failed: ${errors.format}")
           }
         case Left(messages) => fail(s"Parse failed: ${messages.format}")

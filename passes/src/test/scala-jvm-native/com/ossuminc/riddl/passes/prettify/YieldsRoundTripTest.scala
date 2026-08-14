@@ -102,10 +102,10 @@ class YieldsRoundTripTest extends AbstractValidatingTest {
 
         val regen = parse(pretty, "regen2")
         Finder(regen).recursiveFindByType[YieldStatement]
-          .map(_.msg.operandPathId.value.last).toSet mustBe
+          .map(_.msg.deliverableOperandPathId.value.last).toSet mustBe
           scala.collection.immutable.Set("OrderPlaced")
         Finder(regen).recursiveFindByType[ReplyStatement]
-          .map(_.msg.operandPathId.value.last).toSet mustBe
+          .map(_.msg.deliverableOperandPathId.value.last).toSet mustBe
           scala.collection.immutable.Set("OrderFound")
     }
   }

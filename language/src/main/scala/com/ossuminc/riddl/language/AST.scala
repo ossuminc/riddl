@@ -3517,7 +3517,11 @@ object AST:
     state: StateRef,
     // A9b: the morph carries the RECORD that types the target state (its data), not a message.
     // A54: a bare RecordRef names existing data; a Constructor R("v1",…) builds it inline.
-    value: RecordRef | Constructor
+    // Task 2 of the message-value design: it may also be a [[ValueRef]] naming a value already in
+    // hand -- a state-record field, `let`-local, function result or `ask` result. Without it a
+    // generator has nothing to lower and emits a hole; this and `send`/`tell` together were 98.2%
+    // of riddlg's `AI FILL` markers on reactive-bbq.
+    value: RecordRef | Constructor | ValueRef
   ) extends Statement {
     override def kind: String = "Morph Statement"
     def format: String = s"morph ${entity.format} to ${state.format} with ${value.format}"
@@ -3588,7 +3592,11 @@ object AST:
   case class YieldStatement(
     loc: At,
     // A54: the message operand is a bare ref or a constructor that builds the message value.
-    msg: MessageRef | Constructor
+    // Task 2 of the message-value design: also a [[ValueRef]]. `yield` was excluded from A56 on the
+    // grounds that widening it "would interact with yield conformance (A19)" -- but that comparison
+    // is by RESOLVED TYPE, which a ValueRef supplies exactly as a MessageRef does, so conformance
+    // is a check to keep working, not a reason to stay narrow.
+    msg: MessageRef | Constructor | ValueRef
   ) extends Statement {
     override def kind: String = "Yield Statement"
     override def canFail: Boolean = true // A12: yielding a result to the sender may fail
@@ -3623,8 +3631,8 @@ object AST:
   @JSExportTopLevel("ReplyStatement")
   case class ReplyStatement(
     loc: At,
-    // Same operand shape as YieldStatement: a bare ref or a constructor building the message.
-    msg: MessageRef | Constructor
+    // Same operand shape as YieldStatement, Task 2 widening included.
+    msg: MessageRef | Constructor | ValueRef
   ) extends Statement {
     override def kind: String = "Reply Statement"
     override def canFail: Boolean = true // answering the asker may fail, as yielding may

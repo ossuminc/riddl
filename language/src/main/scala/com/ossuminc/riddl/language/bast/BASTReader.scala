@@ -1118,32 +1118,16 @@ class BASTReader(
         RequireStatement(loc, condition, argument)
 
       case 15 => // Yield (formerly Reply — wire format unchanged)
-        // A56: `yield` shares the operand codec but NOT the widened operand — only `tell`/`send`
-        // accept a bound name. A ValueRef here means the stream is malformed (or was written by a
-        // build whose `yield` accepted one), so say that plainly rather than widening
-        // YieldStatement to a shape its parser never produces.
-        val msg: MessageRef | Constructor = readMessageOperand() match
-          case mr: MessageRef => mr
-          case c: Constructor => c
-          case vr: ValueRef =>
-            throw new RuntimeException(
-              s"Yield statement has a bound-name operand '${vr.path.format}', which `yield` does " +
-                s"not accept; only `tell` and `send` do"
-            )
-        YieldStatement(loc, msg)
+        // Task 2 of the message-value design: `yield` now accepts the SAME widened operand as
+        // `tell`/`send`, so the codec's three arms are all legal here and the operand passes
+        // straight through. This arm used to THROW on a ValueRef, on the reasoning that `yield`'s
+        // parser could never produce one -- true then, false now, and revision 17 is what
+        // distinguishes a stream written by each.
+        YieldStatement(loc, readMessageOperand())
 
       case 19 => // Reply -- answers a query with its declared result (2.0)
-        // Same operand restriction as `yield`: `reply` never accepts a bound name, so a ValueRef
-        // here means a malformed stream rather than a shape to widen ReplyStatement for.
-        val replyMsg: MessageRef | Constructor = readMessageOperand() match
-          case mr: MessageRef => mr
-          case c: Constructor => c
-          case vr: ValueRef =>
-            throw new RuntimeException(
-              s"Reply statement has a bound-name operand '${vr.path.format}', which `reply` does " +
-                s"not accept; only `tell` and `send` do"
-            )
-        ReplyStatement(loc, replyMsg)
+        // Same widening as `yield` above.
+        ReplyStatement(loc, readMessageOperand())
 
       case 16 => // Foreach
         val element = readIdentifierInline()
@@ -2692,10 +2676,14 @@ class BASTReader(
       case other => throw new RuntimeException(s"Invalid message operand discriminator: $other")
 
   /** A54: mirror of [[BASTWriter.writeRecordOperand]]. */
-  private def readRecordOperand(): RecordRef | Constructor =
+  private def readRecordOperand(): RecordRef | Constructor | ValueRef =
     reader.readU8() match
-      case 0     => readRecordRefInline()
-      case 1     => readConstructor()
+      case 0 => readRecordRefInline()
+      case 1 => readConstructor()
+      case 2 => // Task 2: `morph … with <value>` names a value already in hand
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ValueRef(loc, pid)
       case other => throw new RuntimeException(s"Invalid record operand discriminator: $other")
 
   /** A54: mirror of [[BASTWriter.writeConstructor]]. */

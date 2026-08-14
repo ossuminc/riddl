@@ -148,32 +148,40 @@ private[parsing] trait StatementParser {
     }
   }
 
-  /** A56: the operand accepted by `tell` and `send` — [[messageValue]] widened with a bound name.
+  /** A56: the operand accepted by `tell`, `send`, `yield` and `reply` — [[messageValue]] widened
+    * with a bound name.
     *
-    * Deliberately NOT used by `yield`. A56 was scoped to delivery: `yield p` would interact with
+    * `yield`/`reply` were held back from A56 on the reasoning that `yield p` "would interact with
     * yield conformance (A19), which compares the yielded operand against the clause's DECLARED
-    * `yields`, and that is a separate decision from being able to forward a message you were handed.
-    * Keeping `messageValue` narrow leaves `yield` exactly as it was.
+    * `yields`". **Task 2 of the message-value design overturns that.** The comparison is by
+    * RESOLVED TYPE, and a `ValueRef` supplies one exactly as a `MessageRef` does — so conformance
+    * is not an obstacle to widening, it is a check that has to keep working across it, which
+    * `YieldReplyMorphValueOperandTest` pins from both directions.
+    *
+    * The ordering matters: `messageValue` is keyword-led, so it must be tried FIRST; a bare path is
+    * only reached when no message kind keyword is present.
     */
   private def deliverableMessageValue[u: P]: P[MessageRef | Constructor | ValueRef] = {
     P(messageValue | boundMessageValue)
   }
 
   // A54: a record operand for `morph … with` — a bare record ref `R` or a constructor `R(args)`.
-  private def recordValue[u: P]: P[RecordRef | Constructor] = {
+  // Task 2 widens it with a bare path naming a value already in hand, the record-side counterpart
+  // of `deliverableMessageValue`. Same ordering rule: `recordRef` is keyword-led and goes first.
+  private def recordValue[u: P]: P[RecordRef | Constructor | ValueRef] = {
     P(
       Index ~ recordRef ~
         (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
           Punctuation.roundClose).? ~ Index
     ).map {
-      case (_, ref, None, _)             => ref: RecordRef | Constructor
+      case (_, ref, None, _)             => ref: RecordRef | Constructor | ValueRef
       case (start, ref, Some(args), end) => Constructor(at(start, end), ref, args.toSeq)
-    }
+    } | boundMessageValue
   }
 
   private def yieldStatement[u: P]: P[YieldStatement] = {
     P(
-      Index ~ Keywords.`yield` ~/ messageValue ~/ Index
+      Index ~ Keywords.`yield` ~/ deliverableMessageValue ~/ Index
     )./.map { case (start, msg, end) => YieldStatement(at(start, end), msg) }
   }
 
@@ -185,7 +193,7 @@ private[parsing] trait StatementParser {
   // could only point at the keyword.
   private def replyStatement[u: P]: P[ReplyStatement] = {
     P(
-      Index ~ Keywords.reply ~/ messageValue ~/ Index
+      Index ~ Keywords.reply ~/ deliverableMessageValue ~/ Index
     )./.map { case (start, msg, end) => ReplyStatement(at(start, end), msg) }
   }
 

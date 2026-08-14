@@ -881,8 +881,14 @@ case class ValidationPass(
     * `None` means the kind is not recoverable (a ValueRef whose type has not resolved); stay
     * silent there rather than guess -- other checks report the unresolved reference.
     */
+  /** Task 2: the operand may now be a `ValueRef`. `operandMessageKind` answers `None` for one it
+    * cannot resolve narrowly, and `foreach` then skips -- so a `let`-bound or state-field operand
+    * is simply not PAIRING-checked here rather than being wrongly reported. Its type is still
+    * checked, by `checkYieldConformance`, which has the parents needed to resolve it widely, and
+    * "is it a message at all" is `checkMessageOperandSource`'s job.
+    */
   private def checkResponsePairing(
-    msg: MessageRef | Constructor,
+    msg: MessageRef | Constructor | ValueRef,
     keyword: String,
     wanted: AggregateUseCase
   ): Unit =
@@ -893,7 +899,11 @@ case class ValidationPass(
           if wanted == AggregateUseCase.EventCase then AggregateUseCase.ResultCase
           else AggregateUseCase.EventCase
         messages.addError(
-          msg match { case mr: MessageRef => mr.loc; case c: Constructor => c.loc },
+          msg match
+            case mr: MessageRef => mr.loc
+            case c: Constructor => c.loc
+            case vr: ValueRef   => vr.loc
+          ,
           s"`$keyword` takes ${article(wanted.useCase)}, but ${msg.format} is " +
             s"${article(actual.useCase)}",
           suggestion =
@@ -1051,6 +1061,54 @@ case class ValidationPass(
           )
   end checkMessageOperandSource
 
+  /** Task 2: the record-side counterpart of [[checkMessageOperandSource]], for `morph … with <v>`.
+    *
+    * The admission rule is DIFFERENT and deliberately so: a morph carries the record that types the
+    * target state (A9b), not a message, so the message-kind test would reject every correct use.
+    * What is checked instead is that the name resolves at all, and -- when the target state's
+    * record type is known -- that the value has THAT type. The second half is the morph analogue of
+    * `checkYieldConformance`: without it `morph … to state S with <any resolvable value>` would
+    * validate, which is how a generator ends up writing the wrong record into a state.
+    */
+  private def checkMorphOperandSource(
+    vr: ValueRef,
+    ms: MorphStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    valueRefTypeExpr(vr, parents, lets, elements) match
+      case None =>
+        messages.addError(
+          vr.loc,
+          s"'${vr.path.format}' in this 'morph' does not name a value in scope",
+          suggestion = "Name a value whose type is the target state's record — a state field, a " +
+            "'let' local, a function result — or name the record explicitly, e.g. " +
+            "'morph … with record SomeRecord'."
+        )
+      case Some(te) =>
+        val wanted: Option[Type] = resolution.refMap
+          .definitionOf[State](ms.state.pathId)
+          .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
+        wanted.foreach { want =>
+          // Compared by resolved type expression, not by name: two contexts may each declare a
+          // record called `Data`. An unresolved `te` is left to the branch above.
+          val ok = te match
+            case ate: AggregateTypeExpression => ate == want.typEx
+            case ate: AliasedTypeExpression =>
+              resolution.refMap.definitionOf[Type](ate.pathId).exists(_ eq want)
+            case other => other == want.typEx
+          if !ok then
+            messages.addError(
+              vr.loc,
+              s"'${vr.path.format}' has type '${te.format}', but state '${ms.state.format}' is " +
+                s"typed by ${want.identify}",
+              suggestion = s"Morph with a value of ${want.identify}, or morph to a state typed by " +
+                s"'${te.format}'."
+            )
+          end if
+        }
+
   /** A54/A56: the NAME of the message an operand denotes. For a ref or constructor that is the last
     * path component; for a binding it is the resolved Type's id, since the binding's own path names
     * the local (`p`), not the message.
@@ -1060,8 +1118,13 @@ case class ValidationPass(
     case other: (MessageRef | Constructor) =>
       operandPathId(other).value.lastOption.getOrElse("")
 
-  /** A54: the [[PathIdentifier]] of a widened message operand (the bare ref's, or the constructor
-    * ref's).
+  /** A54: the [[PathIdentifier]] of a KEYWORD-LED message operand (the bare ref's, or the
+    * constructor ref's).
+    *
+    * Stays narrow on purpose. A `ValueRef` operand has a path too, but it names a VALUE rather than
+    * the message type, so feeding it to the same `refMap.definitionOf[Type]` lookup would answer
+    * with the wrong definition or with nothing. Callers that must handle a widened operand resolve
+    * it with `widenedOperandType` instead — see `checkYieldConformance`.
     */
   private def operandPathId(m: MessageRef | Constructor): PathIdentifier = m match
     case mr: MessageRef => mr.pathId
@@ -1288,9 +1351,13 @@ case class ValidationPass(
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
         checkRef[State](state, parents)
+        // Same split as send/tell/yield/reply: a bare RecordRef is checked here; a Constructor and
+        // a bare ValueRef are validated in checkStatementScopes, which threads the `let`/element
+        // scope they need.
         value match
           case ref: RecordRef => checkRef[Type](ref, parents)
           case _: Constructor => ()
+          case _: ValueRef    => ()
       case BecomeStatement(_, entityRef, handlerRef) =>
         checkRef[Entity](entityRef, parents).foreach { entity =>
           checkCrossContextReference(entityRef.pathId, entity, onClause, parents)
@@ -1405,17 +1472,20 @@ case class ValidationPass(
           case _: BooleanExpression => () // A28: type-checked in checkStatementScopes
         }
       case YieldStatement(_, msg) =>
-        // A54: a bare ref is checked here; a Constructor is validated in checkStatementScopes.
+        // A54: a bare ref is checked here; a Constructor AND a bare ValueRef are validated in
+        // checkStatementScopes (both need the threaded `let`/element scope).
         msg match
           case ref: MessageRef => checkRef[Type](ref, parents)
           case _: Constructor  => ()
+          case _: ValueRef     => ()
         checkResponsePairing(msg, Keyword.yield_, AggregateUseCase.EventCase)
       case ReplyStatement(_, msg) =>
-        // Mirrors YieldStatement: a bare ref is checked here, a Constructor in
+        // Mirrors YieldStatement: a bare ref is checked here, a Constructor and a ValueRef in
         // checkStatementScopes. The pairing check is what keeps the two spellings honest.
         msg match
           case ref: MessageRef => checkRef[Type](ref, parents)
           case _: Constructor  => ()
+          case _: ValueRef     => ()
         checkResponsePairing(msg, Keyword.reply, AggregateUseCase.ResultCase)
       case _: PutStatement | _: ReturnStatement | _: TerminateStatement =>
         // A45/A57/A70: value/type/scope validation runs in checkStatementScopes (which threads
@@ -1548,13 +1618,33 @@ case class ValidationPass(
               end if
               // Independent of `settled`: a clause may discharge by refusing on every path and
               // STILL yield the wrong thing somewhere, which is its own error.
-              responseStmts.foreach { ys =>
-                  val operand = ys match
-                    case y: YieldStatement => y.msg
-                    case r: ReplyStatement => r.msg
-                    case _                 => MessageRef.empty
-                  val kindOk = operandMessageKind(operand).contains(declaredYield.messageKind)
-                  val yieldedType = resolution.refMap.definitionOf[Type](operandPathId(operand))
+              // Task 2: the operand may be a bare `ValueRef`, so it is resolved through
+              // `widenedOperandType`/`widenedOperandMessageKind` -- the same A55 walk
+              // `checkMessageOperandSource` uses -- and `scopedStatements` supplies each
+              // statement's OWN lexical `let` scope rather than the clause's outermost one.
+              //
+              // This comparison is exactly what `yield`/`reply` were held back from A56 to
+              // protect. It did not need protecting: it compares RESOLVED TYPES, and a ValueRef
+              // supplies one just as a MessageRef does. Keeping it working across the widening is
+              // the whole point, so both directions are pinned by
+              // `YieldReplyMorphValueOperandTest`.
+              val scopedResponses = scopedStatements(omc.contents, Seq.empty[LetStatement])
+                .collect {
+                  case (y: YieldStatement, curLets) if !isQuery => (y: Statement, y.msg, curLets)
+                  case (r: ReplyStatement, curLets) if isQuery  => (r: Statement, r.msg, curLets)
+                }
+              scopedResponses.foreach { (ys, operand, curLets) =>
+                  // `omc +: parents`, NOT `parents`. A ValueRef resolves through
+                  // `refMap.anyDefinitionOf(path, parents.head)`, and ResolutionPass keyed these
+                  // against the ON-CLAUSE -- which `validateOnMessageClause` does not include in
+                  // the `parents` it passes here, so `parents.head` is the Handler and every
+                  // lookup missed. Verified by instrumenting both spellings: Handler gave None,
+                  // the on-clause gave Some(Event). `checkStatementScopes` never hit this because
+                  // it is invoked with the clause already on the stack.
+                  val operandParents = omc +: parents
+                  val kindOk = widenedOperandMessageKind(operand, operandParents, curLets)
+                    .contains(declaredYield.messageKind)
+                  val yieldedType = widenedOperandType(operand, operandParents, curLets)
                   val typeOk = (declaredType, yieldedType) match {
                     case (Some(dt), Some(yt)) => dt eq yt
                     case _                    => true // unresolved — reported by other checks
@@ -6885,16 +6975,30 @@ case class ValidationPass(
         // point invoked at every container root AND recursively for when/match/foreach bodies) --
         // mirrors checkTerminate's reachability, immediately below.
         checkTellAddressing(s, parents, lets)
+      // Task 2: the `case _ => ()` these three carried is now ENUMERATED. It was correct while the
+      // operand could only be a MessageRef; the moment a ValueRef became legal it would have
+      // silently accepted `yield garbage` -- the exact shape of fall-through this repo forbids.
       case s: YieldStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
+        s.msg match
+          case c: Constructor => validateValue(c, parents, lets, elements)
+          case vr: ValueRef   => checkMessageOperandSource(vr, "yield", parents, lets, elements)
+          case _: MessageRef  => ()
       // Mirrors YieldStatement, immediately above: `validateStatement`'s ReplyStatement case
       // claims "a Constructor is validated in checkStatementScopes", which was untrue until this
       // arm existed -- a `reply result Foo(x = self.id)` Constructor argument reached NOTHING,
       // found auditing `self`'s coverage (a self reference there was silently unchecked).
       case s: ReplyStatement =>
-        s.msg match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
+        s.msg match
+          case c: Constructor => validateValue(c, parents, lets, elements)
+          case vr: ValueRef   => checkMessageOperandSource(vr, "reply", parents, lets, elements)
+          case _: MessageRef  => ()
       case s: MorphStatement =>
-        s.value match { case c: Constructor => validateValue(c, parents, lets, elements); case _ => () }
+        s.value match
+          case c: Constructor => validateValue(c, parents, lets, elements)
+          // NOT checkMessageOperandSource: a morph carries the RECORD that types the target state
+          // (A9b), so demanding a command/event/query/result here would reject every correct use.
+          case vr: ValueRef  => checkMorphOperandSource(vr, s, parents, lets, elements)
+          case _: RecordRef  => ()
       case fs: ForeachStatement =>
         validateForeachCollection(fs, lets, elements, parents)
         // Bind the loop's name(s) to their TYPES for the body's scope -- not merely the names.

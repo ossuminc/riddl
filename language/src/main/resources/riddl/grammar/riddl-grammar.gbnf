@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-14 13:29 UTC
+# Generated: 2026-08-14 15:06 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -227,8 +227,8 @@ message-value ::= constructor | message-ref
 deliverable-message-value ::= message-value | path-identifier
 send-statement ::= "send" ws1 deliverable-message-value ws "to" ws (outlet-ref | inlet-ref)
 tell-statement ::= "tell" ws1 deliverable-message-value ws "to" ws1 processor-ref ws ("by" identifier)?
-yield-statement ::= "yield" ws1 message-value
-reply-statement ::= "reply" ws1 message-value
+yield-statement ::= "yield" ws1 deliverable-message-value
+reply-statement ::= "reply" ws1 deliverable-message-value
 
 # Variable operations. A54: `set`/`let` operands are now full value expressions.
 the-set-statement ::= "set" ws (field-ref | state-ref) ws "to" ws1 value
@@ -265,9 +265,7 @@ code-contents ::= (any-char-except-triple-backtick)*
 error-statement ::= "error" ws1 literal-string
 require-statement ::= "require" ws (literal-string | invariant-ref | boolean-expression) ws ("with" value)?
 invariant-ref ::= "invariant" ws1 path-identifier
-
-# Entity state transitions. A54: the morph value is a bare record ref or an inline constructor.
-record-value ::= constructor | record-ref
+record-value ::= constructor | record-ref | path-identifier
 morph-statement ::= "morph" ws1 entity-ref ws "to" ws1 state-ref ws "with" ws1 record-value
 become-statement ::= "become" ws1 entity-ref ws "to" ws1 handler-ref
 

@@ -293,8 +293,10 @@ message_value = constructor | message_ref ;
 (* A56: `tell` and `send` additionally accept a bare name bound by the enclosing on-clause --
    `on p: command Ping is { tell p to entity F }` -- so a handler can forward the message it was
    given. Ordered AFTER message_value because message_ref is keyword-led; a bare path is only
-   tried once `command`/`event`/`query`/`result` has failed. NOT accepted by yield_statement,
-   whose operand is compared against the clause's declared `yields`. *)
+   tried once `command`/`event`/`query`/`result` has failed. Also accepted by yield_statement and
+   reply_statement: their operand IS compared against the clause's declared `yields`/`replies`,
+   but that comparison is by resolved TYPE, which a bare path supplies just as a message_ref
+   does, so it is a check that survives the widening rather than a reason against it. *)
 deliverable_message_value = message_value | path_identifier ;
 (* A30: `outlet` is the canonical `send` target (emit on your own outlet; a connector routes it
    to a downstream inlet). The `inlet_ref` form is DEPRECATED (soft, removed in 3.0) but still
@@ -304,8 +306,8 @@ tell_statement = "tell" deliverable_message_value "to" processor_ref [ "by" iden
 (* `yield` emits a command's declared EVENT; `reply` answers a query with its declared RESULT.
    Until 2.0 `reply` was a deprecated synonym for `yield` and both parsed to one node. They are
    now distinct statements, and the wrong pairing (`yield result` / `reply event`) is an Error. *)
-yield_statement = "yield" message_value ;
-reply_statement = "reply" message_value ;
+yield_statement = "yield" deliverable_message_value ;
+reply_statement = "reply" deliverable_message_value ;
 
 (* Variable operations. A54: `set`/`let` operands are now full value expressions. *)
 the_set_statement = "set" (field_ref | state_ref) "to" value ;
@@ -382,8 +384,10 @@ error_statement = "error" literal_string ;
 require_statement = "require" (literal_string | invariant_ref | boolean_expression) ["with" value] ;
 invariant_ref = "invariant" path_identifier ;
 
-(* Entity state transitions. A54: the morph value is a bare record ref or an inline constructor. *)
-record_value = constructor | record_ref ;
+(* Entity state transitions. A54: the morph value is a bare record ref or an inline constructor.
+   It also accepts a bare path naming a value already in hand -- the record-side counterpart of
+   deliverable_message_value, and ordered last for the same keyword-led reason. *)
+record_value = constructor | record_ref | path_identifier ;
 morph_statement = "morph" entity_ref "to" state_ref "with" record_value ;
 become_statement = "become" entity_ref "to" handler_ref ;
 
