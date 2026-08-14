@@ -11,102 +11,77 @@ Orientation for a session with no memory of this work. **Open work is in
 this NOTEBOOK's body. This says only where things stand and what a cold session
 would get wrong.
 
-**State — every line verified by a command during the handoff (2026-08-14):**
+**State — every line below was run as a command during this handoff
+(2026-08-14), not recalled:**
 
-- Branch `release/2`, tree CLEAN, **NOTHING PUSHED since `rc.14`** — the whole
-  span `ccd278c00..HEAD` is local. Count it with
-  `git log --oneline origin/release/2..HEAD`; do not trust a number written
-  here, since the commit that records it moves it.
+- Branch `release/2`, **tree CLEAN**, HEAD `19c7869e6`,
+  `git describe` = `2.0.0-rc.14-21-g19c7869e6`, **3 commits UNPUSHED**
+  (`e87249acc` `db2eb4235` `19c7869e6`).
 - **`publishLocal` AND `~/Code/ossuminc/bin/riddlc` are both at
-  `2.0.0-rc.14-20-db2eb423`** — restaged 2026-08-14 via
-  `scripts/publish-and-stage.sh`, which the script itself verified are from one
-  build. This carries the emitter fix AND BAST revision 17. Behaviour-checked,
-  not just version-checked: a model exercising all six emitter defects
-  prettifies, re-parses, and bastifies to **23 nodes on both sides** — the
-  node-count tell riddl-models used to find the defects. Bare `riddlc` on
-  `$PATH` is still the old tap build.
+  `2.0.0-rc.14-20-db2eb423`** — one commit behind HEAD, and that commit
+  (`19c7869e6`) touches NOTEBOOK.md ONLY, so both carry every code change. The
+  script verified they came from one build. Bare `riddlc` on `$PATH` is still
+  the old tap build.
+- **BAST `FORMAT_REVISION` is 17** and the 16 → 17 bump is SPENT. No remaining
+  task may move it.
+- **Green on all three platforms**: JVM utils 148 / language 669 / passes 1245 /
+  riddlLib 121 / riddlc 21 / testkit 2; JS 753; Native utils 110 / language 513 /
+  passes 1088 / testkit 1 / commands 47 / riddlLib 111 / riddlc 21. TatSu
+  104/127 = baseline; GBNF regenerated and verified fresh.
 - **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease, Maven from the tag, npm on
-  the **`rc`** dist-tag (`latest` did NOT move), tap commit `489bbb0` touched
-  `Formula/riddlc-rc.rb` only.
-- **Green, all three platforms, re-run 2026-08-14 after the emitter fix**: JVM
-  utils 148 / language 669 / passes 1234 / testkit 2 / riddlc 21; JS **753**
-  (was 750, +3 shared new tests); Native utils 110 / language 513 / passes 1079
-  / testkit 1 / commands 47 / riddlLib 111 / riddlc 21. Every delta is exactly
-  the 15 tests added by `2ebe24a6c`/`80bb93b40`. TatSu 104/127 = baseline.
-  **The corpus test is the one exception — see the trap below.**
-- **TWO CORPUS TESTS ARE RED ON PURPOSE** and are the one thing a cold session
-  is most likely to get wrong — see the trap below.
+  the **`rc`** dist-tag (`latest` did NOT move).
 
 **IN FLIGHT — message-value plan, Tasks 1-3 of 7 DONE, Task 4 NOT started.**
-Plan `docs/superpowers/plans/2026-08-14-message-value-source.md`; design
-`…/specs/2026-08-14-message-value-source-design.md`; running ledger with every
-finding at `.superpowers/sdd/2026-08-14-message-value-source/progress.md` —
-**read the ledger before resuming, it records two traps this work hit.**
+Detail is in **`BACKLOG.md` § 1**; the running ledger with every finding is
+`.superpowers/sdd/2026-08-14-message-value-source/progress.md` (gitignored, but
+it names every commit). Plan and design live under `docs/superpowers/`.
+**Task 4 is next and is NOT small** — see BACKLOG for its two hard constraints
+(ship a Warning never an Error; the field-less exemption changes the 14,730
+figure already quoted to riddlg, so it must be re-counted).
 
-- **T1** widened `send`/`tell`'s operand source. **T2** (`e87249acc`) extended it
-  to `yield`/`reply`/`morph`. **T3** (`db2eb4235`) carried it across prettify,
-  BAST (**FORMAT_REVISION now 17**) and JSON.
-- **T4 is the next one and is NOT small**: the bare-form CompletenessWarning
-  needs a corpus COUNT of what the field-less exemption removes from the
-  **14,730** figure already quoted to riddlg. That number must be corrected if it
-  moves. **Ship a WARNING, never an Error** — the corpus has 14,730 bare refs and
-  ZERO constructor uses. T5 (unused-`initiate`-id warning) and T6 (pin the
-  saga-step ruling) are small; T7 certifies.
-- **Then cut the RC.** Reid's order (2026-08-14): emitter fix, then this plan,
-  then an RC carrying both — which is what gives riddl-models ONE `.bast`
-  regeneration instead of two.
+**Reid's work order (2026-08-14):** emitter fix (DONE) → finish this plan → cut
+an RC carrying both. That sequencing is deliberate: it gives riddl-models ONE
+`.bast` regeneration instead of two, which they asked for.
 
-**Traps — every one of these already bit someone.**
+**Traps — every one already bit someone.**
 
-- **The two red corpus tests are NOT a defect here.**
-  `RiddlModelsRoundTripTest` (16/189) and `Root2JsonCorpusTest` (173/189) went
-  red because `ccd278c00` taught the addressing check to resolve `Id` aliases,
-  exposing **49 real defects in riddl-models** that the broken check had been
-  certifying. A/B proven: stash the fix, corpus is 189/189. **Do not soften the
-  check, and do not chase these here** — they clear when riddl-models lands its
-  task. Details + the wrong-alias list: BACKLOG § 3.
-- **A56 already built half the message-value feature.** `SendStatement.msg` and
-  `TellStatement.msg` have accepted a `ValueRef` since before the plan. Read the
-  design's §2 or you will rebuild what exists.
-- **Widening what validation ACCEPTS silently disarms the checks that CONSUME
-  it.** Task 1 legalized new operands and `checkTellAddressing`'s `by`/ambiguity
-  Errors stopped firing, because the consumer read a narrower probe. Enumerate
-  consumers whenever you widen a shape.
-- **A green corpus is evidence about the CORPUS, not the language.** Affirmative
-  evidence comes from a REVERT PROOF — stash the implementation, keep the tests,
-  confirm they go red. This session found a test that passed in BOTH states
-  (`on term`'s `self.id` case) exactly that way; a test that passes before and
-  after measures nothing.
-- **When removing a rule, grep for what was justified BY it.** Dropping `on
-  term`'s required parameter also revived the bare `terminate P` form, whose
-  removal had been justified *solely* by that requirement — and the parser
-  comment read as an independent decision, so nothing would have flagged it.
-- **`-Werror` is NOT a safety net.** `--no-warnings` is on `language` and
-  `commands` (`build.sbt:229`, `:417`); `-Werror` IS live in `passes` but never
-  fires, because **a wildcard arm makes a match syntactically exhaustive** — the
-  terminal `throw` this repo prescribes is itself what silences it. Audit
-  dispatch by reading.
-- **`FORMAT_REVISION` is 16.** Task 3 takes it to 17; no earlier task may move it.
+- **TWO CORPUS TESTS ARE RED ON PURPOSE**, and this is the thing a cold session
+  is most likely to get wrong. `RiddlModelsRoundTripTest` (16 of 189) and
+  `Root2JsonCorpusTest` (173/189, needs ≥95%) fail because `ccd278c00` taught
+  the addressing check to resolve `Id` aliases, exposing **49 real defects in
+  riddl-models** the broken check had been certifying. A/B proven. **Do not
+  soften the check and do not chase them here.** BACKLOG § 3.
+- **A no-op that DEFERS is as dangerous as a missing case.** Both silent losses
+  in the emitter fix were explicit, total dispatches whose defect was a CLAIM
+  ABOUT CODE ELSEWHERE that nothing verified: `doMethod` said "handled by their
+  type" (they were not — `emitMethod` had zero callers) and `processValue`
+  skipped `ShownBy` as "read by the definition that holds them" (a survey of the
+  visitors that existed). Check that what an arm defers to actually does it.
+- **`-Werror` catches a missing arm only where the match has NO wildcard.** It
+  did earn its keep in `passes` during Task 2 (three exhaustivity failures). It
+  cannot help where the prescribed terminal `throw` is present, because that
+  wildcard makes the match syntactically exhaustive. `--no-warnings` is on
+  `language` and `commands` besides. Audit dispatch sites, and their INPUTS, by
+  reading.
+- **Resolution keys a `ValueRef` against the ON-CLAUSE, not the Handler.**
+  `checkYieldConformance` passed `parents` (head = Handler); every lookup missed
+  silently until `omc +: parents`. Found by instrumenting, not by reading.
+- Two more from this session, written up in this NOTEBOOK's body rather than
+  here: a constraint you are relaxing is often recorded TWICE (the URL fix
+  needed the parser AND `URL.isValid`), and a test written after the fix proves
+  nothing until revert-proved.
 
-**Certainty.** Everything under State was run during this handoff. Tasks 2-7 are
-unstarted and unexamined beyond the site audit. **Three design questions in the
-plan were resolved by a controller, not by Reid** — field-less messages exempt
-from the warning, `reply` in scope, `self` rejected with its own message —
-flagged in BACKLOG so he can overrule them.
+**Certainty.** Everything under State was executed this session. Tasks 4-7 are
+unstarted and unexamined beyond BACKLOG's notes. Three design questions in the
+plan were resolved by a controller rather than by Reid — flagged in BACKLOG so
+he can overrule them.
 
-**`task/` — ONE file left, and it is not actionable:**
-
-- `2026-08-04-security.md` (RBAC / `role`, issue #535) — still marked *"Draft
-  (do not act on this)"*, and its acceptance-criteria, semantics, and
-  why-we-can't-derive-it sections are all EMPTY. Reid's own draft. Leave it.
-
-The prettify-emitter report is **done, Results appended, moved to `task/done/`**
-— five of its six confirmed and fixed, `figma` refuted (riddlc does print a
-clear error; exit 7 with no output is correct), and a sixth found by the sweep.
-**riddl-models has been asked for the exact `figma` input**, since their report
-rules out `--quiet` and we could not reproduce it. They were also told NOT to
-regenerate `.bast` against these commits — they wait for the RC, which is what
-gives them the single regeneration they asked for.
+**`task/` — ONE file, untriaged, and not actionable as written:**
+`2026-08-04-security.md` (RBAC / `role`, issue #535) is Reid's own draft, marked
+*"Draft (do not act on this)"*, with its acceptance-criteria, semantics and
+why-we-can't-derive-it sections all EMPTY. The prettify-emitter report was
+answered and moved to `task/done/`; the reply to riddl-models about the `Id`
+aliases is filed in their repo and confirmed present.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
 driver's call, not the handoff's.

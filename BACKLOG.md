@@ -189,7 +189,7 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 
 - **A message ref must be able to name its VALUE, not just its type — IN
-  FLIGHT. Task 1 of 7 DONE (`76762de0c`); Tasks 2-7 NOT STARTED.**
+  FLIGHT. Tasks 1-3 of 7 DONE; Task 4 IS NEXT and Tasks 4-7 NOT STARTED.**
   **Plan: `docs/superpowers/plans/2026-08-14-message-value-source.md`** — it has
   the per-task detail and the Global Constraints; work from it, not from this
   entry.
@@ -205,14 +205,43 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   for the newly-legal operands. Both fixed; the four-copy alias-following
   one-liner is now one extracted `resolveTypeAlias`.
 
-  **Remaining, in plan order:** T2 extend the arm to `yield`/`reply`/`morph`
-  (`morph` is riddlg's other 37.6%); T3 reflectivity incl. **`FORMAT_REVISION`
-  16 → 17**; T4 the bare-form CompletenessWarning **with the field-less
-  exemption, and COUNT what that removes from 14,730**; T5 the unused-`initiate`-id
+  **Task 2 (DONE, `e87249acc`): `yield`/`reply`/`morph … with` take the widened
+  operand.** `yield`/`reply` reuse `deliverableMessageValue`; `morph` gets the
+  record-side counterpart. The recorded reason they had been excluded from A56 —
+  *"it would interact with yield conformance"* — did NOT survive inspection: that
+  comparison is by RESOLVED TYPE, which a `ValueRef` supplies exactly as a
+  `MessageRef` does, so it is a check to keep working, not a reason to stay
+  narrow. `morph` deliberately does NOT reuse `checkMessageOperandSource` (a
+  morph carries the RECORD typing the target state, A9b, so the message-kind test
+  would reject every correct use); `checkMorphOperandSource` requires the name to
+  resolve AND to match the state's record type when that is known.
+
+  **Task 3 (DONE, `db2eb4235`): all four reflection surfaces, at
+  `FORMAT_REVISION` 17.** The 16 → 17 bump is SPENT — no later task may move it.
+  `language/input/import/NotImplemented.bast` regenerated: 93 bytes, byte 12 only
+  (octal 20 → 21). JSON carries the `ValueRef` with the reserved kind `"bound"`
+  on all three statements, so no new DTO and no schema change; `JSON_COVERAGE.md`
+  rows updated. Prettify needed NO change (statements emit via `Statement.format`,
+  which already handled `ValueRef`) — its round-trip tests are regression guards,
+  not TDD, and they assert the NODE KIND because `yield evt` re-emitted as `yield
+  event evt` would satisfy a string assertion while naming a type that does not
+  exist.
+
+  **Remaining, in plan order:** **T4 the bare-form CompletenessWarning — the next
+  one, and NOT small** (see its own note below); T5 the unused-`initiate`-id
   Warning (Reid: *"just build it"*); T6 a test pinning saga-step legality; T7
   certify.
 
-  **T2's SITE AUDIT IS ALREADY DONE (2026-08-14) — do not redo it.** The three
+  **T4's two hard constraints, both easy to get wrong:** (a) it must ship as a
+  **WARNING, never an Error** — the corpus holds **14,730** bare refs and ZERO
+  constructor uses, so an Error invalidates every message-sending statement in all
+  189 models while CI wants 189/189 clean; (b) the field-less exemption changes
+  that 14,730, which has **already been quoted to riddlg**, so the reduced number
+  must be COUNTED and the figure corrected wherever it was cited.
+
+  **T2's site audit is SPENT — Task 2 consumed it and the line numbers below are
+  now stale.** Kept only because it records WHICH KINDS of site exist for a
+  widening of this shape, which T4 will need again. The three
   AST nodes are `YieldStatement.msg` (`AST:3591`), `ReplyStatement.msg`
   (`AST:3627`) — both `MessageRef | Constructor` — and `MorphStatement.value`
   (`AST:3520`, `RecordRef | Constructor`). Everything that dispatches over them:
@@ -868,6 +897,27 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
+
+- **AWAITING riddl-models: the exact `figma` input from their emitter report.**
+  Their `2026-08-14-prettify-emitter-drops-method-and-shown-by.md` claimed
+  `figma` on a domain or context "writes no file, exits 7, prints no error".
+  **Not reproduced** — riddlc prints a specific Error (*"A 'figma' reference is
+  not allowed on Domain 'Dom'; it may only appear on an input, an output, a
+  group, or an application-intended context"*) and exit 7 with no output is
+  CORRECT for a validation Error. Their report says they saw `[style]` and
+  `[missing]` messages, which rules out `--quiet`, so something differs between
+  the two inputs and guessing would be worse than asking. Asked in the Results
+  section of that file (now in `task/done/`). **Nothing here is blocked on it**;
+  if the real complaint is that A42 forbids `figma` on a domain at all, that is a
+  language question and belongs in § 2, not a defect.
+- **riddl-models' coverage model is being held out of their repo** until this
+  lands, so **CI grammar validation is NOT currently exercising `method`,
+  `shown by`, `table of … of […]`, `attachment`, `replica of` or `figma` against
+  the corpus** — precisely the gate that would have caught all six emitter
+  defects. Expect it to land after the next RC. Until then, the only coverage for
+  those constructs is this repo's own round-trip tests
+  (`AggregateContentsRoundTripTest`, `ShownByRoundTripTest`,
+  `TypeExpressionSpacingRoundTripTest`, `AttachmentRoundTripTest`).
 
 - **BLOCKED ON riddl-models: two corpus tests are RED here and stay red until
   it lands its fix.** `RiddlModelsRoundTripTest` (16 of 189 models) and
