@@ -3666,6 +3666,14 @@ object AST:
         case id: Identifier        => if negated then s"!${id.format}" else id.format
         case vr: ValueRef          => if negated then s"!${vr.format}" else vr.format // A17
         case be: BooleanExpression => be.format // A28: negation is expressed via `not` in the expr
+        // A54: an AI-evaluated condition. This arm was MISSING, and the match therefore threw a
+        // MatchError on `when prompt("…")` -- the `condition` union has five members and this had
+        // four. It went unseen because `PrettifyVisitor` does NOT route through here: it has its
+        // own copy of this dispatch in `RiddlFileEmitter.emitStatement`, and THAT copy has the arm.
+        // So the reflectivity round trip, which is what normally proves `format` total, could
+        // never reach the hole. It became reachable when `checkUnusedInitiateId` started rendering
+        // a clause body to decide whether an `initiate` id is used.
+        case pv: PromptValue => pv.format
       }
       val thenStr =
         if thenStatements.isEmpty then "" else thenStatements.toSeq.map(_.format).mkString("\n  ")

@@ -119,6 +119,26 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
       * implementation would most plausibly have missed, and the reason the check reads the rendered
       * body — a nesting statement's `format` renders its whole block.
       */
+    /** Rendering the body is what made a four-armed match over a five-member union reachable:
+      * `WhenStatement.format` had no `PromptValue` arm and threw a `MatchError` on `when
+      * prompt("…")`. Nothing had noticed because `PrettifyVisitor` keeps its OWN copy of that
+      * dispatch, and that copy is complete — so the reflectivity round trip, the thing that
+      * normally proves `format` total, could not reach the hole. This case is the gate.
+      */
+    "survive a clause that also holds a `when prompt(…)` condition" in { (td: TestData) =>
+      val msgs = diagnostics(
+        model("""let wid = initiate entity Worker("1")
+                |            when prompt("the worker is stuck") then
+                |              terminate entity Worker(wid)
+                |            end""".stripMargin),
+        "when-prompt"
+      )
+      // Asserted FIRST and deliberately: `unusedWarnings mustBe empty` is also satisfied by a
+      // model that never parsed, so without this the case could not fail for the reason it exists.
+      msgs.justErrors mustBe empty
+      unusedWarnings(msgs) mustBe empty
+    }
+
     "stay silent when the only use is nested inside a `when` body" in { (td: TestData) =>
       val msgs = diagnostics(
         model("""let wid = initiate entity Worker("1")
