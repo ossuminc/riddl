@@ -1116,12 +1116,17 @@ case class ValidationPass(
     * shape, and 98.2% counting the `morph` record analogue. Each becomes a `null` in generated code
     * — worse than a missing one, because it runs.
     *
-    * **A [[CompletenessWarning]], and it must stay one for now.** The end state (design D3) is an
-    * Error, but riddl-models holds 14,730 bare refs and ZERO uses of the constructor form, so
-    * shipping the Error first invalidates every message-sending statement in all 189 models at once
-    * while CI requires them to validate clean. The sequence is: warn, drop a migration task on
-    * riddl-models, flip to Error once the corpus is clean. riddlg loses nothing by the delay — a
-    * warning marks all 14,730 sites for their gap audit exactly as an Error would.
+    * **An ERROR as of 2026-08-14 — this is design D3's end state, reached.** It shipped as a
+    * [[CompletenessWarning]] because riddl-models held 14,730 bare refs and ZERO uses of the
+    * constructor form, so an Error would have invalidated every message-sending statement in all
+    * 189 models at once. Reid lifted the block once riddl-models began building against this
+    * branch's staged build: *"riddl-models is working on it from the same riddl version we are
+    * using; yes, make the flip, riddl-models should be corrected soon."* Shipping the Error is what
+    * gives them the diagnostics to migrate against.
+    *
+    * **So the corpus tests are RED until riddl-models lands its migration, deliberately** — on top
+    * of the two already red by design. Do not read a red corpus as a regression while both are
+    * outstanding, and do not soften this check to green them.
     *
     * **A FIELD-LESS message is exempt** (design Q1, ruled 2026-08-14). `event Started is { }` has no
     * data, so the type fully determines the value and there is nothing for the author to source;
@@ -1140,7 +1145,7 @@ case class ValidationPass(
       val fields = aggregateFieldsOf(t.typEx)
       if fields.nonEmpty then
         val what = if ref.messageKind == AggregateUseCase.RecordCase then "record" else "message"
-        messages.addCompleteness(
+        messages.addError(
           ref.loc,
           s"'${ref.format}' in this '$statement' names a $what type, not a value, so nothing says " +
             s"where its ${fields.size} field(s) come from",
@@ -6814,9 +6819,15 @@ case class ValidationPass(
   ): Unit =
     resolution.refMap.definitionOf[Type](c.ref.pathId) match
       case Some(typ) =>
-        val fields: Seq[Field] = typ.typEx match
-          case ate: AggregateTypeExpression => ate.fields
-          case _                            => Seq.empty[Field]
+        // FOLLOW THE ALIAS CHAIN. `command Ship is Shipment` is riddl-models' house style, and
+        // reading only the DIRECT fields of `Ship` finds none -- so every named argument was
+        // rejected as "not a field", and the arity check compared against zero. It made the
+        // constructor form unusable for exactly the declaration shape the corpus uses most, which
+        // is why `TellAddressingTest` had to write a bare `tell command Ship` and say so in a
+        // comment. `aggregateFieldsOf` is the shared walk (cycle-guarded by reference identity,
+        // because `Definition.equals` is structural and a `Set` would fuse two distinct identical
+        // alias declarations and truncate a legitimate chain).
+        val fields: Seq[Field] = aggregateFieldsOf(typ.typEx)
         // Ordering: positional args must precede named args.
         val firstNamed = c.args.indexWhere(_.name.isDefined)
         if firstNamed >= 0 && c.args.drop(firstNamed).exists(_.name.isEmpty) then
