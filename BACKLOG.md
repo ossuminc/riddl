@@ -96,6 +96,105 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **`terminate` must name an INSTANCE, not a processor type — DESIGN RULED
+  2026-08-15 by Reid, not yet implemented.** Blocks riddl-generator, for which
+  this is the ONLY rc.14 construct still unlowered (their
+  `task/2026-08-15-terminate-names-no-instance.md`, still open). Their
+  behaviour today is an honest `AI FILL` marker, not a wrong lowering, so this
+  is not urgent — but `terminate` DESTROYS, and a generator guessing the
+  instance deletes the wrong row.
+
+  **Two defects, not one.** (1) `ProcessorRef[Processor[?]]` admits Context,
+  Adaptor, Projector, Repository and Streamlet, all of which are singletons
+  that cannot be created or destroyed. (2) Even narrowed to Entity, `terminate
+  Order` names a KIND, not one of its instances.
+
+  **The ruling: the target becomes a VALUE whose type is `Id(entity E)`.**
+
+  ```
+  terminate order.id
+  terminate self.id
+  terminate customerId with ("account closed")
+  ```
+
+  `TerminateStatement(loc, target: Value, args: Seq[ConstructorArg])` —
+  `processor: ProcessorRef` is REPLACED, not supplemented. The entity is
+  DERIVED from the target's static type, so ref and id can never contradict
+  and no truth-check is needed (contrast `Id(entity Order)`'s keyword, which
+  needs one). Arguments are separated by **`with (…)`**, not bare parens:
+  `terminate order.id("x")` reads as a call on `id`, and `with` is the
+  established RIDDL idiom (`morph … with`, `require … with`).
+
+  This also answers riddlg's third question — **address and payload become
+  structurally distinct**, where today they are told apart only by positional
+  convention (see the fixture note below).
+
+  **`initiate` is UNCHANGED in shape and correct as-is**: it names a type
+  because the instance does not exist yet, and yields the new `Id(P)`. The
+  asymmetry is the point — `initiate` consumes a type and produces an id;
+  `terminate` consumes an id and produces nothing.
+
+  **Both statements narrow to Entity, and this is an EXPLICIT check, not a
+  free consequence.** Reid ruled separately (2026-08-15) that `Id(P)` KEEPS
+  its 2026-08-13 widening to all six processor kinds, and gave the singleton
+  case the meaning it previously lacked: *an `Id` of a singleton denotes the
+  singular DEPLOYMENT of that thing, not a shard or partition. Partitioning is
+  load management; sending to the singular id means "select the right
+  shard/partition and forward", because the singleton is treated as a whole
+  despite a clustered deployment arrangement.* So `Id(context Ordering)` is
+  legal and meaningful, and "no Id ⇒ no terminate" does NOT hold. Two Errors
+  must be written by hand:
+  - target's type is not a `UniqueId` at all;
+  - target is `Id(P)` where `P` is not an Entity — *a singleton is not created
+    or destroyed; its deployment is managed outside the model*. Same rule for
+    `initiate context C`.
+
+  **Evidence this was decided from, so it is not re-derived:**
+  - riddl-models contains exactly **2** real `terminate` statements and both
+    are SELF-termination: `reactive-bbq/restaurant/TableOrder.riddl:1120`
+    (inside `TableOrder`'s own `on orderClosed`, right after morphing itself
+    to `Closed`) and `.../Delivery.riddl:1011`. The other 16 grep hits are
+    prose. Both migrate to `terminate self.id`.
+  - All **227** `Id(…)` uses in riddl-models are BARE names; the kind keyword
+    has zero corpus uptake.
+  - The counter-argument was weighed and rejected: CM:1668 makes an entity the
+    single writer of its state with no two clauses running concurrently, so
+    destroying another instance from outside races its in-flight messages, and
+    a self-only `terminate` would match both corpus uses exactly. Reid chose
+    expressiveness — a supervisor must be able to end a specific instance
+    without a command round-trip.
+
+  **`language/input/terminate-statement.riddl` is the migration's own
+  evidence AND is stale.** Its `terminate entity Order(orderId)` against `on
+  term(oid: Id(entity Order))` passes the address as parameter #1 by
+  positional convention — a vestige of the leading-Id requirement dropped
+  2026-08-14. Its header comment still claims parentheses are mandatory and
+  that the bare `terminate P` form "was removed"; both are false since that
+  date. Rewrite the fixture, do not just re-point it.
+
+  **Surfaces to move together** (this is an AST field REPLACEMENT, so grep by
+  NODE NAME — `TerminateStatement(` — not by field name; positional patterns
+  never mention what they destructure and `language` compiles `--no-warnings`):
+  `AST.TerminateStatement` + its `format`; `StatementParser.terminateStatement`
+  (`:810`); `ebnf-grammar.ebnf`; `ValidationPass.checkTerminate` /
+  `checkLifecycleInvocation` (which currently takes a `ProcessorRef` and is
+  SHARED with `checkInitiate` — it will need to key off a derived entity for
+  one caller and a ref for the other); `ValidationPass.statementValues` (must
+  yield the new `target`, or every walk built on it goes blind — the exact
+  defect shape recorded under Total Dispatch); **`Finder.fieldChildren`**
+  (`:118` currently `case tm: TerminateStatement => tm.args` — must add
+  `target`); `RiddlFileEmitter.emitStatement`; BAST writer/reader statement
+  sub-kind **20** (payload changes → rides `FORMAT_REVISION` 18, still
+  unshipped — re-check `git tag` first); `JsonifierPass`/`JsonAstBuilder`;
+  `JSON_INPUT.md`.
+
+  **Not done until `../RIDDL-Computational-Model.md` records it.** The CM has
+  NO section on `initiate`/`terminate` at all today (verified 2026-08-15 —
+  greps find only incidental prose; §4.5 covers lifecycle as
+  activate/passivate and says nothing about explicit destruction). That gap is
+  what riddlg is actually blocked on, and per CLAUDE.md the CM reconciles with
+  the BRANCH, so the section is written when the code lands, not before.
+
 - **`JsonModel`'s reader never rejects unknown/misspelled keys — a whole
   defect class, not one stale doc line.** Found while fixing
   `JSON_INPUT.md:255`'s stale `"negated"` field (final `!`/`not` synonymy
@@ -807,6 +906,22 @@ that needs a ruling before either can be fixed.
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
+
+- **DELIVERED 2026-08-15 to riddl-generator: `Finder` was returning incomplete
+  results across 27 node fields.** Task dropped at
+  `../riddl-generator/task/2026-08-15-finder-was-missing-content-across-27-fields.md`
+  — **verified written, not merely claimed** (the 49-alias entry below is what
+  that qualifier exists for). Fixed here at `b55d1d5cc` + `a3c0aa345`, both
+  AFTER riddlg's pin and in **no tag yet** (latest is `2.0.0-rc.14`), so they
+  cannot act until the next RC or a local `publishLocal`. Awaiting their reply
+  on whether any of the 27 fields still comes back empty, and on whether any
+  generated output got SHORTER (the unexpected direction).
+
+- **AWAITING riddl-generator: `terminate` design is ruled but unimplemented.**
+  Their `task/2026-08-15-terminate-names-no-instance.md` has a Results section
+  with the full ruling; the file stays OPEN because the acceptance criteria
+  need code and a CM section. They have been told to keep emitting their `AI
+  FILL` marker rather than lower either shape. See § 1 for the design.
 
 - **AWAITING riddl-models: the exact `figma` input from their emitter report.**
   Their `2026-08-14-prettify-emitter-drops-method-and-shown-by.md` claimed
