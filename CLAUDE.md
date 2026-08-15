@@ -44,6 +44,51 @@ following this process:
 
 When in doubt, **add, don't change**.
 
+## Definition of Done, and what bounds 2.0
+
+**2.0 ships when the Computational Model is met** — not when the backlog hits
+zero by attrition. That is the completion criterion, and it is what keeps the
+process bounded (Reid, 2026-08-15). Practically it means: no over-engineering,
+no rampant featurism, and "does the CM require this?" as the test for whether
+something belongs in 2.0 at all.
+
+Distinguish two kinds of completeness, because only one of them is featurism:
+
+- **Correctness completeness** — making a dispatch total so a construct the
+  language ALREADY admits stops emitting broken output. Not a feature. Leaving
+  it half-done is a defect that every generator inherits.
+- **Feature completeness** — adding constructs or diagnostics because they would
+  be nice. This is the thing to resist.
+
+### A backlog item is not done until the CM records its effect
+
+Code landing, tests green and the entry deleted is **not** completion. If the
+change alters what a conforming generator must preserve, the item is done only
+once `../RIDDL-Computational-Model.md` says so. "Tests pass, committed" is an
+incomplete report for any language change.
+
+### The CM reconciles with the BRANCH, never with the backlog
+
+The Computational Model records **events** — what has actually landed. Backlog
+items are **commands and aspirations**; they have not happened, so they have
+nothing to say to the CM until they do. Reconciliation therefore runs CM against
+the branch (`git log`), and may *produce* new backlog entries as output. A
+backlog aspiration may well change the CM one day, but **not yet**, and writing
+it in early makes the document describe a language that does not exist.
+
+### There is no "defer to 2.1" pile
+
+Everything on BACKLOG.md is 2.0 work. Post-2.0 items get filed **after 2.0
+ships**. Do not create a 2.1 bucket to shorten the current list — that is the
+same dishonest zero as deleting an entry that was carrying real work.
+
+### Where backlog items come from
+
+Many originate in **riddlg** (`../riddl-generator`), which keeps discovering
+things RIDDL must disambiguate before code generation is well-defined. Those are
+CM-relevant almost by construction — that is the CM's whole purpose — so treat a
+riddlg-sourced item as in-scope for 2.0 unless there is a specific reason not to.
+
 ## Critical Build Information
 
 ### Scala Version & Syntax
