@@ -47,7 +47,7 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
       |        handler CH is {
       |          on init {
       |            let oid = initiate entity Order
-      |            terminate entity Order(oid)
+      |            terminate oid
       |          }
       |        } with { briefly "ch" }
       |      } with { briefly "cs" }
@@ -90,69 +90,92 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
       val regen = parse(pretty, "regen")
       val regenTerm = terminateIn(regen)
 
-      regenTerm.processor.pathId.format mustBe originalTerm.processor.pathId.format
+      regenTerm.target.format mustBe originalTerm.target.format
       regenTerm.args.size mustBe originalTerm.args.size
       regenTerm.args.map(_.value.format) mustBe originalTerm.args.map(_.value.format)
     }
 
-    // The bare `terminate P` form RETURNED on 2026-08-14. It had been removed because it could
-    // never validate -- `on term`'s leading `Id(...)` parameter was required, so a no-argument
-    // `terminate` could not satisfy the arity check -- and dropping that requirement (`self.id`
-    // already names the instance) left nothing holding the asymmetry with `initiate` up.
-    //
-    // What this pins is the reflectivity consequence either way: whatever `format` emits for an
-    // empty argument list must be readable by the parser that produced it. It now emits the BARE
-    // form, mirroring `Initiate.format`.
-    "emit the BARE form for an empty argument list, and re-parse it" in {
-      (td: TestData) =>
-        val emptySrc =
-          """domain Dom is {
-            |  context Ctx is {
-            |    entity Widget is {
-            |      handler H is {
-            |        on init { do "start" }
-            |        on term { do "end" }
-            |      } with { briefly "h" }
-            |    } with { briefly "e" }
-            |    entity Caller is {
-            |      handler CH is {
-            |        on init { terminate entity Widget }
-            |      } with { briefly "ch" }
-            |    } with { briefly "ce" }
-            |  } with { briefly "c" }
-            |} with { briefly "d" }
-            |""".stripMargin
-        val pretty = prettify(parse(emptySrc, "empty-args"))
-        pretty must include("terminate entity Widget")
-        pretty must not include "terminate entity Widget()"
-        // The proof that matters: the emitted text is readable by the parser that produced it.
-        terminateIn(parse(pretty, "empty-args-regen")).args mustBe empty
+    // What this pins is the reflectivity consequence of the empty-argument case: whatever `format`
+    // emits for an empty argument list must be readable by the parser that produced it. It emits
+    // the target alone, with no `with (...)` clause at all.
+    "emit no `with` clause for an empty argument list, and re-parse it" in { (td: TestData) =>
+      val emptySrc =
+        """domain Dom is {
+          |  context Ctx is {
+          |    entity Widget is {
+          |      handler H is {
+          |        on init { do "start" }
+          |        on term { do "end" }
+          |      } with { briefly "h" }
+          |    } with { briefly "e" }
+          |    entity Caller is {
+          |      handler CH is {
+          |        on init {
+          |          let w = initiate entity Widget
+          |          terminate w
+          |        }
+          |      } with { briefly "ch" }
+          |    } with { briefly "ce" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val pretty = prettify(parse(emptySrc, "empty-args"))
+      pretty must include("terminate w")
+      pretty must not include "terminate w with"
+      // The proof that matters: the emitted text is readable by the parser that produced it.
+      terminateIn(parse(pretty, "empty-args-regen")).args mustBe empty
     }
 
-    "still accept the explicit empty parens, normalizing them to the bare form" in {
-      (td: TestData) =>
-        // `terminate P()` keeps parsing -- the grammar is not the place to encode arity, and
-        // models written while the parens were mandatory must not break. Prettify converges on
-        // ONE spelling, which is what makes the round trip idempotent.
-        val emptyParens =
-          """domain Dom is {
-            |  context Ctx is {
-            |    entity Widget is {
-            |      handler H is {
-            |        on init { do "start" }
-            |        on term { do "end" }
-            |      } with { briefly "h" }
-            |    } with { briefly "e" }
-            |    entity Caller is {
-            |      handler CH is {
-            |        on init { terminate entity Widget() }
-            |      } with { briefly "ch" }
-            |    } with { briefly "ce" }
-            |  } with { briefly "c" }
-            |} with { briefly "d" }
-            |""".stripMargin
-        terminateIn(parse(emptyParens, "empty-parens")).args mustBe empty
-        prettify(parse(emptyParens, "empty-parens2")) must not include "terminate entity Widget()"
+    "still accept an explicit empty `with ()`, normalizing it away" in { (td: TestData) =>
+      // `terminate t with ()` keeps parsing -- the grammar is not the place to encode arity.
+      // Prettify converges on ONE spelling, which is what makes the round trip idempotent.
+      val emptyParens =
+        """domain Dom is {
+          |  context Ctx is {
+          |    entity Widget is {
+          |      handler H is {
+          |        on init { do "start" }
+          |        on term { do "end" }
+          |      } with { briefly "h" }
+          |    } with { briefly "e" }
+          |    entity Caller is {
+          |      handler CH is {
+          |        on init {
+          |          let w = initiate entity Widget
+          |          terminate w with ()
+          |        }
+          |      } with { briefly "ch" }
+          |    } with { briefly "ce" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      terminateIn(parse(emptyParens, "empty-parens")).args mustBe empty
+      prettify(parse(emptyParens, "empty-parens2")) must not include "terminate w with"
+    }
+
+    // The target is a VALUE, so `self.id` must survive the round trip as a `SelfValue` and not
+    // decay into a path-shaped `ValueRef` -- that would silently retarget the statement.
+    "round-trip `terminate self.id`" in { (td: TestData) =>
+      val selfSrc =
+        """domain Dom is {
+          |  context Ctx is {
+          |    record R is { total: String } with { briefly "r" }
+          |    entity Widget is {
+          |      state S of record R is {
+          |        handler H is {
+          |          on init { do "start" }
+          |          on term { terminate self.id }
+          |        } with { briefly "h" }
+          |      } with { briefly "s" }
+          |    } with { briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val pretty = prettify(parse(selfSrc, "self-src"))
+      pretty must include("terminate self.id")
+      val regenTarget = terminateIn(parse(pretty, "self-regen")).target
+      regenTarget mustBe a[SelfValue]
+      regenTarget.asInstanceOf[SelfValue].field.map(_.value) mustBe Some("id")
     }
   }
 }

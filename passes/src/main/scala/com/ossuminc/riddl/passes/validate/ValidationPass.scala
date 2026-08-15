@@ -4218,14 +4218,14 @@ case class ValidationPass(
       case set: SetStatement    => valueReferencedDefs(set.value)
       case let: LetStatement    => valueReferencedDefs(let.expression)
       case ret: ReturnStatement => valueReferencedDefs(ret.value)
-      // A70/instance-identity: the processor a `terminate` ends is exactly the kind of reference
-      // A8 exists to catch -- a saga step ending an instance owned by a DIFFERENT domain crosses
-      // the same boundary a cross-domain `tell` does.
+      // A70/instance-identity: the entity a `terminate` ends is exactly the kind of reference A8
+      // exists to catch -- a saga step ending an instance owned by a DIFFERENT domain crosses the
+      // same boundary a cross-domain `tell` does. Since 2026-08-15 the entity is named by the
+      // `Id(entity E)` TYPE of the target value rather than by a ref, so the crossing is found
+      // through the target's references (`valueReferencedDefs`) plus the entity the `Id` names.
       case term: TerminateStatement =>
-        resolution.refMap
-          .definitionOf[Processor[?]](term.processor.pathId)
-          .map(term.processor.pathId -> _)
-          .toSeq ++ term.args.flatMap(a => valueReferencedDefs(a.value))
+        valueReferencedDefs(term.target) ++
+          term.args.flatMap(a => valueReferencedDefs(a.value))
       case _ => Seq.empty
   end statementReferencedDefs
 
@@ -5290,10 +5290,12 @@ case class ValidationPass(
       // though `validateMatch` already resolves/type-checks it independently via `validateValue`.
       // `mat.expression` (the subject) is unaffected; this only adds each case's guard.
       case mat: MatchStatement    => Seq(mat.expression) ++ mat.cases.flatMap(_.guard.toSeq)
-      // A70/instance-identity: `terminate`'s arguments are full Values, exactly like a
+      // A70/instance-identity: `terminate`'s TARGET and arguments are full Values, exactly like a
       // constructor's or `initiate`'s, so a `get from state`/`ask`/nested call-fail-point can
-      // hide inside one and must be counted rather than silently skipped.
-      case term: TerminateStatement => term.args.map(_.value)
+      // hide inside one and must be counted rather than silently skipped. The target joined this
+      // list on 2026-08-15 when it replaced the old `ProcessorRef`; omitting it would blind every
+      // walk built on `statementValues` at once, which is the documented shape of this defect.
+      case term: TerminateStatement => term.target +: term.args.map(_.value)
       case _                        => Seq.empty
   end statementValues
 
@@ -5846,23 +5848,24 @@ case class ValidationPass(
     */
   private def checkLifecycleInvocation(
     loc: At,
-    processorRef: ProcessorRef[Processor[?]],
+    // The RESOLVED target processor. Since 2026-08-15 the two callers reach it differently --
+    // `initiate` still resolves a written `ProcessorRef`, while `terminate` DERIVES it from the
+    // `Id(entity E)` type of its target value -- so this takes the processor itself rather than a
+    // ref, and each caller owns its own "does the target exist" reporting.
+    p: Processor[?],
     args: Seq[ConstructorArg],
     // "on init" / "on term" -- the CLAUSE being invoked, which is what the diagnostic is about.
     clauseKeyword: String,
-    // "initiate" / "terminate" -- the STATEMENT the author wrote, which is what a suggestion has
-    // to be phrased in.
-    statementKeyword: String,
-    // Both `initiate` and `terminate` may drop their parentheses when there are no arguments --
-    // `terminate` regained that on 2026-08-14, see `StatementParser.terminateStatement` -- so this
-    // is `true` at both call sites today. Kept as a parameter rather than inlined because it
-    // records a per-statement grammar fact that has already changed once.
-    parensOptional: Boolean,
+    // The no-argument spelling of the statement AS THE AUTHOR WOULD WRITE IT, e.g.
+    // `initiate Order` or `terminate order.id`. Passed ready-made because the two statements no
+    // longer have the same shape: `initiate` drops its parentheses, `terminate` drops a whole
+    // `with (...)` clause.
+    noArgSpelling: String,
     parents: Parents,
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
   )(select: PartialFunction[OnClause, Seq[MethodArgument]]): Unit =
-    checkRef[Processor[?]](processorRef, parents).foreach { p =>
+    locally {
       if p.nonEmpty then
         val declared = lifecycleClauseParameters(p)(select)
         def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
@@ -5871,10 +5874,7 @@ case class ValidationPass(
             loc,
             s"${p.identify} declares '$clauseKeyword' with no parameters, but " +
               s"${count(args.size, "argument")} supplied",
-            suggestion = {
-              val bare = s"$statementKeyword ${processorRef.format}"
-              s"Write '${if parensOptional then bare else bare + "()"}' with no arguments."
-            }
+            suggestion = s"Write '$noArgSpelling' with no arguments."
           )
         else if declared.size != args.size then
           messages.addError(
@@ -5899,47 +5899,150 @@ case class ValidationPass(
     args.foreach(arg => validateValue(arg.value, parents, lets, elements))
   end checkLifecycleInvocation
 
-  /** A70/instance-identity: `initiate <processor>(args)`. See [[checkLifecycleInvocation]]. */
+  /** The message both lifecycle statements use when their target is a processor that has no
+    * instances to create or destroy.
+    *
+    * **A singleton's `Id` is legal and useful** (Reid, 2026-08-15): it exists so messages can be
+    * SENT to the singleton, denoting its singular DEPLOYMENT rather than a shard or partition --
+    * addressing it means "select the right shard/partition and forward", the singleton being
+    * treated as a whole despite a clustered arrangement. What is not permitted is a LIFECYCLE
+    * operation on one. So this restriction is checked here by hand and is deliberately NOT
+    * expressed by narrowing which processors may appear in an `Id(...)`.
+    */
+  private def reportNotInstantiable(loc: At, p: Processor[?], statementKeyword: String): Unit =
+    messages.addError(
+      loc,
+      s"'$statementKeyword' is not allowed on ${p.identify}: only an entity has instances to " +
+        s"create or destroy",
+      suggestion = "A singleton's lifecycle is a deployment concern, outside the model. Its " +
+        "Id(...) may still be used to send it messages."
+    )
+
+  /** A70/instance-identity: `initiate <processor>[(args)]`. See [[checkLifecycleInvocation]]. */
   private def checkInitiate(
     init: Initiate,
     parents: Parents,
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
   ): Unit =
-    checkLifecycleInvocation(
-      init.loc,
-      init.processor,
-      init.args,
-      s"${Keyword.on} ${Keyword.init}",
-      Keyword.initiate,
-      parensOptional = true,
-      parents,
-      lets,
-      elements
-    ) { case oic: OnInitializationClause => oic.parameters }
+    checkRef[Processor[?]](init.processor, parents).foreach {
+      case e: Entity =>
+        checkLifecycleInvocation(
+          init.loc,
+          e,
+          init.args,
+          s"${Keyword.on} ${Keyword.init}",
+          s"${Keyword.initiate} ${init.processor.format}",
+          parents,
+          lets,
+          elements
+        ) { case oic: OnInitializationClause => oic.parameters }
+      case p =>
+        reportNotInstantiable(init.loc, p, Keyword.initiate)
+        init.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
+    }
   end checkInitiate
 
-  /** A70/instance-identity: `terminate <processor>(args)`. See [[checkLifecycleInvocation]]. */
+  /** A70/instance-identity: `terminate <target> [with (args)]`, where `target` is a VALUE typed
+    * `Id(entity E)` (Reid, 2026-08-15). See [[AST.TerminateStatement]] for the design.
+    *
+    * The entity is DERIVED from the target's type rather than named by a second reference, so
+    * there is no ref/id pair that could contradict and nothing here checks for one.
+    *
+    * **Silent when the target's type cannot be determined.** `valueTypeExpr` yields `None` for a
+    * literal and for an unascribed `prompt(...)` typed hole; reporting those would be reasoning
+    * from absence, and the A20 ruling is that an unwired position stays quiet rather than
+    * guessing. A target that resolves to a type which is simply NOT an `Id` is a different
+    * matter -- that is determinable, and it is an Error.
+    */
   private def checkTerminate(
     term: TerminateStatement,
     parents: Parents,
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
   ): Unit =
-    checkLifecycleInvocation(
-      term.loc,
-      term.processor,
-      term.args,
-      s"${Keyword.on} ${Keyword.term}",
-      Keyword.terminate,
-      // `true` since 2026-08-14, when the bare `terminate P` form returned alongside the removal
-      // of `on term`'s leading-Id requirement. Only the SUGGESTION's wording depends on this.
-      parensOptional = true,
-      parents,
-      lets,
-      elements
-    ) { case otc: OnTerminationClause => otc.parameters }
+    validateValue(term.target, parents, lets, elements)
+    valueTypeExpr(term.target, parents, lets, elements) match
+      case None => // undeterminable -- see scaladoc
+        term.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
+      case Some(te) =>
+        uniqueIdOf(te, Nil) match
+          case None =>
+            messages.addError(
+              term.loc,
+              s"'${Keyword.terminate}' requires a value of type 'Id(entity ...)', but " +
+                s"${term.target.format} is '${te.format}'",
+              suggestion = "Terminate names the INSTANCE to end, e.g. 'terminate self.id' or " +
+                "'terminate <field typed Id(entity ...)>'."
+            )
+            term.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
+          case Some((uid, owner)) =>
+            resolveIdTarget(uid, owner, parents) match
+              case Some(e: Entity) =>
+                checkLifecycleInvocation(
+                  term.loc,
+                  e,
+                  term.args,
+                  s"${Keyword.on} ${Keyword.term}",
+                  s"${Keyword.terminate} ${term.target.format}",
+                  parents,
+                  lets,
+                  elements
+                ) { case otc: OnTerminationClause => otc.parameters }
+              case Some(p) =>
+                reportNotInstantiable(term.loc, p, Keyword.terminate)
+                term.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
+              case None => // unresolved Id target -- ResolutionPass already reported it
+                term.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
   end checkTerminate
+
+  /** The [[UniqueId]] a type expression denotes, paired with the [[Type]] that DECLARED it when it
+    * arrived through an alias chain (`type OrderId is Id(Order)`) -- riddl-models' documented house
+    * style names an `Id` that way, and all 227 of its `Id(...)` uses do, so a check matching a bare
+    * `UniqueId` alone would miss essentially every real model.
+    *
+    * The owner travels with the id for the same reason `fieldsWithOwner` carries one: the path
+    * inside the `Id(...)` was written in the ALIAS's scope, so resolving it needs that scope as the
+    * refMap parent, not the scope of whatever statement is asking. See [[resolveIdTarget]].
+    *
+    * Carries a `seen` list guarded by reference identity (`eq`, never `contains`): `type A is B` /
+    * `type B is A` otherwise recurses until the stack dies, and [[Definition]] compares
+    * structurally, so a `Set` would fuse two distinct identical alias declarations and truncate a
+    * legitimate chain. Same guard, same reason, as `fieldsWithOwner`.
+    */
+  private def uniqueIdOf(te: TypeExpression, seen: List[Type]): Option[(UniqueId, Option[Type])] =
+    te match
+      case uid: UniqueId => Some(uid -> seen.headOption)
+      case ate: AliasedTypeExpression =>
+        resolveTypeAlias(ate).flatMap { aliased =>
+          if seen.exists(_ eq aliased) then None
+          else uniqueIdOf(aliased.typEx, aliased :: seen)
+        }
+      case _ => None
+
+  /** The [[Processor]] an `Id(...)` names.
+    *
+    * **Two lookups, because two kinds of path reach here and only one is in the refMap.** The
+    * refMap records what [[ResolutionPass]] actually resolved, so it holds paths that were
+    * WRITTEN. But `valueTypeExpr` also SYNTHESIZES `UniqueId`s -- for `initiate` (the new
+    * instance's id) and for `self.id` -- and those carry a fully-qualified `pathOf(p)` that was
+    * never a written reference and therefore has no refMap entry at all. Looking only in the
+    * refMap made every `terminate` whose target came from `initiate` or `self` resolve to `None`
+    * and skip its checks in silence, which is exactly the "no diagnostic at all" outcome this
+    * whole feature exists to remove.
+    *
+    * So: refMap under the alias's owner (most precise -- disambiguates two same-named entities),
+    * then refMap under the asking scope, then the symbol table by fully-qualified name.
+    */
+  private def resolveIdTarget(
+    uid: UniqueId,
+    owner: Option[Type],
+    parents: Parents
+  ): Option[Processor[?]] =
+    owner
+      .flatMap(o => resolution.refMap.definitionOf[Processor[?]](uid.entityPath, o))
+      .orElse(resolution.refMap.definitionOf[Processor[?]](uid.entityPath, parents.head))
+      .orElse(symbols.lookup[Processor[?]](uid.entityPath.value.reverse).headOption)
 
   /** The one-line alias resolution step shared by `fieldsWithOwner`, `aggregateFieldsOf`,
     * `typeExprCategory` and `typeExprMessageKind`: given an [[AliasedTypeExpression]] (`command Ship

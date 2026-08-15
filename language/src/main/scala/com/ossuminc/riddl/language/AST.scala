@@ -4022,37 +4022,57 @@ object AST:
     def format: String = s"return ${value.format}"
   }
 
-  /** `terminate <processor>(id, args)` -- end an instance by invoking its `on term`.
+  /** `terminate <target> [with (<args>)]` -- end the instance denoted by `target`, invoking its
+    * `on term`.
     *
     * A STATEMENT, not a value: termination produces nothing. It can fail (it may race a
     * passivation), so it joins the can-fail census alongside send/tell/call/yield/put/get.
     *
+    * **`target` is a VALUE, not a [[ProcessorRef]]** (Reid, 2026-08-15). It must be typed
+    * `Id(entity E)`, and the entity being terminated is DERIVED from that type. This is the whole
+    * design, and it fixes two defects the `ProcessorRef` form had at once:
+    *
+    *   1. a `ProcessorRef` admitted Context, Adaptor, Projector, Repository and Streamlet -- all
+    *      SINGLETONS, which have no instances to destroy; and
+    *   2. even narrowed to Entity, `terminate Order` named a KIND, not which instance ends.
+    *
+    * Because the entity comes from the target's type rather than from a second reference, the two
+    * can never contradict and no "the keyword must tell the truth" check is needed here (contrast
+    * [[UniqueId.kindKeyword]], which needs exactly that).
+    *
+    * **A singleton's `Id` exists to SEND MESSAGES to it, and lifecycle operations are not
+    * permitted on one** (Reid, 2026-08-15). So `Id(P)` remains valid for all six processor kinds
+    * -- an `Id` of a singleton denotes its singular deployment, and addressing it means "select
+    * the right shard/partition and forward", the singleton being treated as a whole despite a
+    * clustered arrangement -- and the Entity restriction is an EXPLICIT validation check
+    * (`checkTerminate`), never a consequence of which types can hold an `Id`.
+    *
+    * **`args` are pure PAYLOAD.** They carry no addressing: `on term`'s leading `Id(...)`
+    * parameter used to be an addressing convention detectable only by position, and that
+    * convention is gone. A clause that wants the instance it is ending reads `self.id`, which is
+    * in scope for the whole `on term` body, so nothing was lost.
+    *
     * @param loc
     *   The location of the `terminate` statement in the source
-    * @param processor
-    *   The processor whose instance is being terminated
+    * @param target
+    *   A value of type `Id(entity E)` denoting the instance to end
     * @param args
-    *   The arguments supplied to the target's `on term` parameters. Unlike [[Initiate]]'s, the
-    *   parentheses are NOT optional: `on term`'s leading `Id(...)` parameter is mandatory, so a
-    *   no-argument `terminate` could never pass validation and the bare spelling was dead syntax
-    *   (removed in the final review of the instance-identity branch).
+    *   The arguments supplied to the target entity's `on term` parameters, behind a `with`
+    *   separator. `with` rather than bare parentheses because `terminate order.id("x")` reads as
+    *   a call on `id`, and `with` is the established RIDDL idiom (`morph ... with`,
+    *   `require ... with`).
     */
   @JSExportTopLevel("TerminateStatement")
   case class TerminateStatement(
     loc: At,
-    processor: ProcessorRef[Processor[?]],
+    target: Value,
     args: Seq[ConstructorArg]
   ) extends Statement {
     override def kind: String = "Terminate Statement"
     override def canFail: Boolean = true
-    // Byte-identical in shape to `Initiate.format`, and deliberately so: the bare `terminate P`
-    // form returned on 2026-08-14 when `on term`'s leading-Id requirement was dropped (`self.id`
-    // supplies the instance, so the parameter was redundant). The requirement was the ONLY reason
-    // a no-argument `terminate` was unreachable, and with it gone the parens-optional asymmetry
-    // with `initiate` had nothing left holding it up.
     def format: String =
-      val argList = if args.isEmpty then "" else args.map(_.format).mkString("(", ", ", ")")
-      s"terminate ${processor.format}$argList"
+      val argList = if args.isEmpty then "" else args.map(_.format).mkString(" with (", ", ", ")")
+      s"terminate ${target.format}$argList"
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////// ADAPTOR

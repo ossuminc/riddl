@@ -1165,10 +1165,13 @@ class BASTReader(
         val v = readValue()
         ReturnStatement(loc, v)
 
-      case 20 => // Terminate (A70/instance-identity) -- mirrors readValue's Initiate arm (case 8)
-        val processor = readProcessorRef()
+      case 20 => // Terminate (A70/instance-identity)
+        // Target is a VALUE since 2026-08-15 (was a ProcessorRef). Mirrors the writer exactly;
+        // reading the old shape here would misalign every byte after it, which is the failure
+        // mode the BAST section of CLAUDE.md warns names the DERAIL point, never the cause.
+        val target = readValue()
         val args = readSeq(() => readConstructorArg())
-        TerminateStatement(loc, processor, args)
+        TerminateStatement(loc, target, args)
 
       case _ =>
         // THROW, do not fabricate. This arm used to return a PromptStatement carrying

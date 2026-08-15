@@ -44,7 +44,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     diagnostics(src, origin).justErrors.map(_.message).mkString("\n")
 
   /** Every model below declares the same `entity Order` so `initiate entity Order` resolves, and
-    * declares `on term` so `terminate entity Order(oid)` resolves too; only the CONTEXT the
+    * declares `on term` so `terminate oid` resolves too; only the CONTEXT the
     * offending statement sits in differs, which is the variable under test.
     */
   private def wrap(inner: String): String =
@@ -59,7 +59,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
        |      state OS of record R is {
        |        handler OH is {
        |          on command Go { do "go" }
-       |          on term(oid: Id(entity Order)) is { do "end" }
+       |          on term is { do "end" }
        |        } with { briefly "oh" }
        |      } with { briefly "os" }
        |    } with { briefly "e" }
@@ -150,7 +150,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
        |      state WS of record SR is {
        |        handler WH is {
        |          on init(total: String) is { do "start" }
-       |          on term(wid: Id(entity Worker)) is { do "end" }
+       |          on term is { do "end" }
        |        } with { briefly "wh" }
        |      } with { briefly "ws" }
        |    } with { briefly "we" }
@@ -198,7 +198,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
       val errors = errorsIn(
         functionModel(
           """let x = initiate entity Order
-            |      terminate entity Order(x)""".stripMargin
+            |      terminate x""".stripMargin
         ),
         "ban-fn-terminate"
       )
@@ -226,7 +226,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
       val errors = errorsIn(
         activateModel(
           """let x = initiate entity Order
-            |      terminate entity Order(x)""".stripMargin
+            |      terminate x""".stripMargin
         ),
         "ban-activate-terminate"
       )
@@ -288,7 +288,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
       // This case is the regression proof that extending the same check site for `initiate` did not
       // turn `terminate`'s existing single error into two.
       val errors = errorsIn(
-        foldModel("""terminate entity Order(e.oid)"""),
+        foldModel("""terminate e.oid"""),
         "ban-fold-terminate"
       )
       errors must include("fold")
@@ -299,24 +299,24 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     "be LEGAL in a correlation timeout block" in { (td: TestData) =>
       // The timeout block EXISTS to have an effect (design spec §6.7), so banning it there
       // would leave it useless. This is the case that distinguishes a correct ban.
-      errorsIn(timeoutModel("""terminate entity Order(oid)"""), "ok-timeout") mustBe ""
+      errorsIn(timeoutModel("""terminate oid"""), "ok-timeout") mustBe ""
     }
 
     // Important #2 (review round 1): before `Correlation.timeoutStatements` was wired into
     // `checkStatementScopes`, the case immediately above could not fail -- a timeout block never
     // reached ANY check that lives only in `checkStatementScopes` (checkInitiate/checkTerminate
     // arity+type, let-scope threading, tell addressing), so "legal" and "unchecked" were
-    // indistinguishable. This proves the wiring is real: an arity mismatch against `on term`'s
-    // ONE declared parameter, supplied with two arguments, is now reported -- something that
-    // would have gone completely unreported before this fix, since `checkTerminate` never ran
-    // for a timeout block at all.
+    // indistinguishable. This proves the wiring is real: an arity mismatch against `on term`,
+    // which declares NO payload parameters, supplied with one argument, is now reported --
+    // something that would have gone completely unreported before this fix, since
+    // `checkTerminate` never ran for a timeout block at all.
     "now runs full statement validation inside a correlation timeout block" in { (td: TestData) =>
       val errors = errorsIn(
-        timeoutModel("""terminate entity Order(oid, oid)"""),
+        timeoutModel("""terminate oid with (oid)"""),
         "timeout-arity-now-checked"
       )
       errors must include("on term")
-      errors must include("2")
+      errors must include("no parameters")
     }
 
     /** Message-value-source plan, Task 6. Reid, 2026-08-14: `initiate`/`terminate` ARE legal in a
@@ -335,7 +335,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     "be LEGAL in a saga step (Reid's ruling, 2026-08-14)" in { (td: TestData) =>
       errorsIn(
         sagaModel("""let wid = initiate entity Worker("1")
-                    |        terminate entity Worker(wid)""".stripMargin),
+                    |        terminate wid""".stripMargin),
         "ok-saga-step"
       ) mustBe ""
     }

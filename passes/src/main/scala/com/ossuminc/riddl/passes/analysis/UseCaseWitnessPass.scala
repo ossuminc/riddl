@@ -194,13 +194,13 @@ case class UseCaseWitnessPass(
         s.msg match { case c: Constructor => getInputRefsIn(c); case _ => Seq.empty }
       case s: MorphStatement =>
         s.value match { case c: Constructor => getInputRefsIn(c); case _ => Seq.empty }
-      // A70/instance-identity: `terminate <processor>(args)` carries `ConstructorArg`s, the same
-      // shape `Constructor.args` does (already walked by `getInputRefsIn`'s own `Constructor`
-      // arm) -- a `get from input` can hide inside an argument exactly as it can inside a
-      // constructor's, and must be counted or a use case reading an input only through a
-      // `terminate` argument is reported as an unwitnessed input.
+      // A70/instance-identity: `terminate <target> with (args)` carries a target Value plus
+      // `ConstructorArg`s, the same shape `Constructor.args` does (already walked by
+      // `getInputRefsIn`'s own `Constructor` arm) -- a `get from input` can hide inside the
+      // target or an argument exactly as it can inside a constructor's, and must be counted or a
+      // use case reading an input only through a `terminate` is reported as an unwitnessed input.
       case s: TerminateStatement =>
-        s.args.flatMap(a => getInputRefsIn(a.value))
+        getInputRefsIn(s.target) ++ s.args.flatMap(a => getInputRefsIn(a.value))
       case ws: WhenStatement =>
         getInputRefsIn(ws.condition) ++
           collectGetInputRefs(ws.thenStatements.toSeq) ++

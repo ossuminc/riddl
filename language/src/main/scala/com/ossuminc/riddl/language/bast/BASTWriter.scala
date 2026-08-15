@@ -1350,15 +1350,20 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeValue(s.value)
   }
 
-  /** A70/instance-identity: mirrors [[writeValue]]'s `Initiate` arm exactly (processor ref + a
-    * [[writeSeq]]-framed arg list), except `terminate` is a STATEMENT, so it gets its own
-    * NODE_STATEMENT sub-kind rather than a `Value` discriminator.
+  /** A70/instance-identity: a target VALUE plus a [[writeSeq]]-framed arg list.
+    *
+    * **The wire shape CHANGED on 2026-08-15** when `terminate`'s `ProcessorRef` became a `Value`
+    * typed `Id(entity E)`: sub-kind 20 now begins with a `writeValue` where it used to begin with
+    * a `writeProcessorRef`. The two are not interchangeable, so an older reader handed these
+    * bytes misaligns rather than failing cleanly -- which is exactly what `FORMAT_REVISION`
+    * exists to prevent. It rides revision 18 (already spent by numeric literals and unshipped);
+    * re-check `git tag` before assuming a new bump is unnecessary.
     */
   def writeTerminateStatement(s: TerminateStatement): Unit = {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(20) // Terminate statement — next free sub-kind after 19
     writeLocation(s.loc)
-    writeProcessorRef(s.processor)
+    writeValue(s.target)
     writeSeq(s.args)(writeConstructorArg)
   }
 

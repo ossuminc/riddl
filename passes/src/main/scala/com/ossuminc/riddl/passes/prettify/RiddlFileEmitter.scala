@@ -694,13 +694,16 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         }
         argument.foreach { a => add(" with "); emitValue(a) }
         nl
-      case TerminateStatement(_, processor, args) =>
-        // Byte-identical shape to `Initiate` (see `emitValue`): parens are omitted when `args` is
-        // empty. Routes through `emitConstructorArgs` so a `PromptValue` argument ascribes
-        // correctly rather than falling to `.format`.
-        addIndent(s"terminate ${processor.format}")
+      case TerminateStatement(_, target, args) =>
+        // `target` is a VALUE since 2026-08-15, so it routes through `emitValue` rather than
+        // `.format` -- it can be a `PromptValue`, and the whole point of `emitValue` being total
+        // is that a nested typed hole ascribes through `emitTypeExpression` instead of falling
+        // back to the narrower `ascriptionFormat`. Arguments sit behind `with (...)`, not bare
+        // parens, and are omitted entirely when empty.
+        addIndent("terminate ")
+        emitValue(target)
         if args.nonEmpty then
-          add("(")
+          add(" with (")
           emitConstructorArgs(args)
           add(")")
         end if

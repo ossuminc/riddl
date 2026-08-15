@@ -53,7 +53,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
        |      state WS of record R is {
        |        handler WH is {
        |          on init(total: String) is { do "start" }
-       |          on term(wid: Id(entity Worker)) is { do "end" }
+       |          on term is { do "end" }
        |          on command Note is { do "note" }
        |        } with { briefly "wh" }
        |      } with { briefly "ws" }
@@ -91,7 +91,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
     "stay silent when it is terminated" in { (td: TestData) =>
       val msgs = diagnostics(
         model("""let wid = initiate entity Worker("1")
-                |            terminate entity Worker(wid)""".stripMargin),
+                |            terminate wid""".stripMargin),
         "used-terminate"
       )
       unusedWarnings(msgs) mustBe empty
@@ -129,7 +129,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
       val msgs = diagnostics(
         model("""let wid = initiate entity Worker("1")
                 |            when prompt("the worker is stuck") then
-                |              terminate entity Worker(wid)
+                |              terminate wid
                 |            end""".stripMargin),
         "when-prompt"
       )
@@ -143,7 +143,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
       val msgs = diagnostics(
         model("""let wid = initiate entity Worker("1")
                 |            when "the worker is stuck" then
-                |              terminate entity Worker(wid)
+                |              terminate wid
                 |            end""".stripMargin),
         "used-nested"
       )

@@ -36,7 +36,7 @@ class TerminateBASTRoundTripTest extends AnyWordSpec with Matchers {
       |      state S of record R is {
       |        handler H is {
       |          on init { do "start" }
-      |          on term(oid: Id(entity Order)) { do "end" }
+      |          on term { do "end" }
       |        } with { briefly "h" }
       |      } with { briefly "s" }
       |    } with { briefly "e" }
@@ -45,7 +45,7 @@ class TerminateBASTRoundTripTest extends AnyWordSpec with Matchers {
       |        handler CH is {
       |          on init {
       |            let oid = initiate entity Order
-      |            terminate entity Order(oid)
+      |            terminate oid
       |          }
       |        } with { briefly "ch" }
       |      } with { briefly "cs" }
@@ -79,7 +79,10 @@ class TerminateBASTRoundTripTest extends AnyWordSpec with Matchers {
           val reconstructedTerm = Finder(module).recursiveFindByType[TerminateStatement].headOption
             .getOrElse(fail("no TerminateStatement found in reconstructed module"))
 
-          reconstructedTerm.processor.pathId.format mustBe originalTerm.processor.pathId.format
+          // The target is a VALUE on the wire since 2026-08-15 (sub-kind 20 now begins with a
+          // writeValue where it began with a writeProcessorRef). Comparing the rendered target
+          // is what proves the reader stayed aligned with the writer.
+          reconstructedTerm.target.format mustBe originalTerm.target.format
           reconstructedTerm.args.size mustBe originalTerm.args.size
           reconstructedTerm.args.map(_.value.format) mustBe originalTerm.args.map(_.value.format)
         case Left(errors) =>

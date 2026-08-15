@@ -190,11 +190,12 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
 
     // Regression for a total-dispatch gap found reviewing Task 5 (processor-instance identity):
     // `collectGetInputRefs` enumerates statement kinds whose VALUES it recurses into looking for
-    // `get from input` refs, and had no `TerminateStatement` arm even though `terminate`'s `args`
-    // is the same `ConstructorArg` shape `Constructor.args` already walks. Without the arm, an
-    // input read only through a `terminate` argument was invisible here and its `TakeInput` step
-    // was reported as an unwitnessed input -- a false positive.
-    "not warn a TakeInput step whose input is read via a 'terminate' argument" in { (td: TestData) =>
+    // `get from input` refs, and had no `TerminateStatement` arm at all. Without one, an input
+    // read only through a `terminate` was invisible here and its `TakeInput` step was reported as
+    // an unwitnessed input -- a false positive. Since 2026-08-15 `terminate`'s TARGET is a Value
+    // too, so this reads the input through the target: the strongest version of the same case,
+    // since the target is the field that did not exist when the gap was found.
+    "not warn a TakeInput step whose input is read via a 'terminate' target" in { (td: TestData) =>
       runWitnessPass(
         """domain D is {
           |  user U is "a user"
@@ -208,12 +209,12 @@ class UseCaseWitnessPassTest extends AbstractValidatingTest {
           |  context Ctx is {
           |    entity Order is {
           |      handler OH is {
-          |        on term(oid: Id(entity Order)) is { do "end" }
+          |        on term is { do "end" }
           |      }
           |    }
           |    handler Screen is {
           |      on command D.UI.Refresh is {
-          |        terminate entity D.Ctx.Order(get from input D.UI.Main.Entry)
+          |        terminate get from input D.UI.Main.Entry
           |      }
           |    }
           |  }

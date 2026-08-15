@@ -1492,10 +1492,11 @@ object JsonAstBuilder:
         PutStatement(curAt, buildValue(value), OutputRef(curAt, "output", pathId(output)))
       case ReturnStmtDto(value) =>
         ReturnStatement(curAt, buildValue(value))
-      case TerminateStmtDto(processor, processorKind, args) => // A70/instance-identity
+      case TerminateStmtDto(target, args) => // A70/instance-identity
+        // `target` is a VALUE since 2026-08-15, not a processor ref -- see TerminateStmtDto.
         TerminateStatement(
           curAt,
-          processorRef(processor, processorKind),
+          buildValue(target),
           args.map(a => ConstructorArg(curAt, a.name.map(ident), buildValue(a.value)))
         )
   end buildStatement

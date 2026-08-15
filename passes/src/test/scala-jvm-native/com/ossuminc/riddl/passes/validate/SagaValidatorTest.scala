@@ -237,7 +237,7 @@ class SagaValidatorTest extends AbstractValidatingTest {
            |        handler OH is {
            |          on command d.c.Go is { do "go" }
            |          on init is { do "start" }
-           |          on term(oid: Id(entity d.c.Order)) is { do "end" }
+           |          on term is { do "end" }
            |        }
            |      }
            |    }
@@ -255,7 +255,7 @@ class SagaValidatorTest extends AbstractValidatingTest {
     "accept `initiate` and `terminate` in a do-block" in { (td: TestData) =>
       instanceSaga(
         """let oid = initiate entity d.c.Order
-          |        terminate entity d.c.Order(oid)""".stripMargin,
+          |        terminate oid""".stripMargin,
         """do "undo one"""",
         td
       )
@@ -268,7 +268,7 @@ class SagaValidatorTest extends AbstractValidatingTest {
       instanceSaga(
         """do "forward"""",
         """let oid = initiate entity d.c.Order
-          |        terminate entity d.c.Order(oid)""".stripMargin,
+          |        terminate oid""".stripMargin,
         td
       )
     }

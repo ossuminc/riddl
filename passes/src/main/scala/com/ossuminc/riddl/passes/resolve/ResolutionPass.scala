@@ -450,11 +450,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case ReturnStatement(_, v) =>
         // A57: resolve the value expression (typed against Function.output at validation time).
         resolveValue(v, parents)
-      case TerminateStatement(_, processor, args) =>
-        // A70/instance-identity: resolve the target processor and recurse into argument values,
-        // mirroring `TellStatement`/`Initiate`. Arity/type checking happens in ValidationPass,
-        // which is the only place that has resolved `on term`.
-        associateUsage(parents.head, resolveARef[Processor[?]](processor, parents))
+      case TerminateStatement(_, target, args) =>
+        // A70/instance-identity: `target` is a VALUE typed `Id(entity E)` since 2026-08-15, not a
+        // processor ref, so it resolves through `resolveValue` like any other value expression.
+        // The Entity being terminated is DERIVED from the target's type in ValidationPass, which
+        // is the only place that has both that type and the resolved `on term`.
+        resolveValue(target, parents)
         args.foreach(arg => resolveValue(arg.value, parents))
       case _: CodeStatement => () // no references (code body is a string)
     }
@@ -813,13 +814,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         s.value match { case c: Constructor => resolveValue(c, parents); case _ => () }
       // A70/instance-identity: a nested `terminate` gets the SAME treatment as a top-level one --
       // the generic traversal does not descend into a when/match/foreach body (those are FIELDS,
-      // not `contents`), so without this case the processor ref and args would never be entered
-      // in the refMap for a nested occurrence, and `checkRef` in `checkTerminate` would report
-      // "not resolved" instead of (or on top of) the intended arity/type diagnostic. Mirrors the
-      // regression this exact gap produced for `initiate` (see `LetStatement`'s case above, which
-      // already covered `initiate` because it is a VALUE wrapped in a `let`).
+      // not `contents`), so without this case the target and args would never be entered in the
+      // refMap for a nested occurrence, and validation would report "not resolved" instead of (or
+      // on top of) the intended type/arity diagnostic. Mirrors the regression this exact gap
+      // produced for `initiate` (see `LetStatement`'s case above, which already covered
+      // `initiate` because it is a VALUE wrapped in a `let`).
       case s: TerminateStatement =>
-        associateUsage(parents.head, resolveARef[Processor[?]](s.processor, parents))
+        resolveValue(s.target, parents)
         s.args.foreach(arg => resolveValue(arg.value, parents))
       case _ => ()
     }

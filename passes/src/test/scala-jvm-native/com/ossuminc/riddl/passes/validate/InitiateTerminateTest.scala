@@ -128,12 +128,14 @@ class InitiateTerminateTest extends AbstractValidatingTest {
   }
 
   "terminate" should {
-    "accept a leading id argument" in { (td: TestData) =>
+    // The target is a VALUE typed Id(entity E) since 2026-08-15; `on term`'s parameters are pure
+    // PAYLOAD, so this clause declares none and the statement supplies none.
+    "accept an Id-typed target" in { (td: TestData) =>
       diagnostics(
         model("""on init is { do "start" }
-                |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
+                |          on term is { do "end" }""".stripMargin,
               """let oid = initiate entity Order
-                  |            terminate entity Order(oid)""".stripMargin),
+                  |            terminate oid""".stripMargin),
         "terminate-ok"
       ).justErrors mustBe empty
     }
@@ -141,8 +143,9 @@ class InitiateTerminateTest extends AbstractValidatingTest {
     "REJECT arguments that do not match on term" in { (td: TestData) =>
       val text = diagnostics(
         model("""on init is { do "start" }
-                |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
-              """terminate entity Order()"""),
+                |          on term(why: String) is { do "end" }""".stripMargin,
+              """let oid = initiate entity Order
+                  |            terminate oid""".stripMargin),
         "terminate-arity"
       ).justErrors.map(_.message).mkString("\n")
       text must include("1")
@@ -159,18 +162,18 @@ class InitiateTerminateTest extends AbstractValidatingTest {
         val text = diagnostics(
           model(
             """on init is { do "start" }
-              |          on term(oid: Id(entity Order)) is { do "end" }""".stripMargin,
-            """when true then { terminate entity Order() } end"""
+              |          on term(why: String) is { do "end" }""".stripMargin,
+            """let oid = initiate entity Order
+              |            when true then { terminate oid } end""".stripMargin
           ),
           "terminate-nested-when"
         ).justErrors.map(_.message).mkString("\n")
         text must include("1")
     }
 
-    // Reid's ruling, final review: the bare `terminate P` spelling was REMOVED -- it parsed but
-    // could never validate, because `on term`'s leading Id(...) parameter is mandatory. The parse
-    // rejection is pinned in `TerminateFileTest`; `terminate P()` (an explicitly empty list)
-    // remains writable and is what the arity cases above report on.
+    // The old `terminate <processorRef>` spelling no longer parses at all -- it named a KIND, not
+    // an instance. That parse rejection is pinned in `TerminateFileTest`; the target-TYPE checks
+    // (not an Id / an Id of a singleton) are pinned in `TerminateTargetTest`.
   }
 
   /** The standing `???` ruling: a definition whose body is `???` has said "don't expect much", so
@@ -187,15 +190,23 @@ class InitiateTerminateTest extends AbstractValidatingTest {
     }
 
     "exempt `terminate` from the arity check" in { (td: TestData) =>
-      diagnostics(stubModel("""terminate entity Order("1")"""), "terminate-stub")
-        .justErrors mustBe empty
+      // The stub exemption is about the CALLEE's `on term`, so the target must still be a real
+      // Id -- here the one `initiate` mints for the stub entity.
+      diagnostics(
+        stubModel("""let oid = initiate entity Order("1")
+                    |            terminate oid with ("1")""".stripMargin),
+        "terminate-stub"
+      ).justErrors mustBe empty
     }
 
     "still validate the ARGUMENT VALUES at the call site" in { (td: TestData) =>
       // The exemption is about the CALLEE. A name written at the call site either exists or it
       // does not, and the callee being a stub says nothing about that.
-      val text = diagnostics(stubModel("""terminate entity Order(nosuchlocal)"""), "stub-args")
-        .justErrors.map(_.message).mkString("\n")
+      val text = diagnostics(
+        stubModel("""let oid = initiate entity Order("1")
+                    |            terminate oid with (nosuchlocal)""".stripMargin),
+        "stub-args"
+      ).justErrors.map(_.message).mkString("\n")
       text must include("nosuchlocal")
     }
   }

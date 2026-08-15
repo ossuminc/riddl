@@ -115,7 +115,9 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case yl: YieldStatement   => Seq(yl.msg)
     case rp: ReplyStatement   => Seq(rp.msg)
     case mo: MorphStatement   => Seq(mo.value)
-    case tm: TerminateStatement => tm.args
+    // `target` is the instance address (a `Value`, since 2026-08-15) and must be walked with the
+    // args, or every `Finder` consumer goes blind to whatever the address is built from.
+    case tm: TerminateStatement => tm.target +: tm.args
 
     // Value/BooleanExpression composition — needed so a condition tree's leaves (a NumericLiteral,
     // a ValueRef, …) are reachable, not just the top-level condition node itself.

@@ -671,7 +671,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
     // `by` had NO JSON round-trip test at all -- only `initiate` and the `Id` keyword did. The
     // reviewer verified all three by hand; these three cases are what PINS them, since an unpinned
     // serialization surface is exactly what regresses in this repo.
-    "round-trip a `terminate <processor>(args)` statement (task 5) losslessly" in {
+    "round-trip a `terminate <target> with (args)` statement losslessly" in {
       val terminateModel =
         """domain d is {
           |  context Ctx is {
@@ -681,7 +681,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |      state S of record R is {
           |        handler OH is {
           |          on init is { do "start" }
-          |          on term(oid: Id(entity Order), why: String) is { do "end" }
+          |          on term(why: String) is { do "end" }
           |        }
           |      }
           |    }
@@ -690,7 +690,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |        handler CH is {
           |          on command Go is {
           |            let orderId = initiate entity Order
-          |            terminate entity Order(orderId, "cancelled")
+          |            terminate orderId with ("cancelled")
           |          }
           |        }
           |      }

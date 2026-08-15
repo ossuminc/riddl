@@ -1,47 +1,69 @@
-// Corpus fixture exercising `terminate` (Task 5, processor-instance identity): `terminate` ends
-// an instance by invoking its `on term`. Parentheses are MANDATORY -- `on term`'s leading Id(...)
-// parameter is required, so the bare `terminate P` spelling could never validate and was removed
-// in the final review of this branch. Exercised by both fastparse (TerminateFileTest) and the
-// EBNF/TatSu grammar (ebnf_tatsu_validator.py, which scans every input-directory riddl file).
+// Corpus fixture exercising `terminate` (A70, processor-instance identity): `terminate` ends the
+// instance denoted by its TARGET, invoking that entity's `on term`.
+//
+// The target is a VALUE typed `Id(entity E)` (Reid, 2026-08-15), not a processor reference. The
+// entity being terminated is DERIVED from the target's type, so a `terminate` names WHICH INSTANCE
+// ends rather than merely which kind. Arguments are pure payload for `on term`'s parameters and sit
+// behind a `with` separator; a clause that needs the instance it is ending reads `self.id`, which is
+// live for the whole `on term` body.
+//
+// Exercised by both fastparse (TerminateFileTest) and the EBNF/TatSu grammar
+// (ebnf_tatsu_validator.py, which scans every input-directory riddl file).
 //
 // This file must VALIDATE, not merely parse: a corpus fixture that fails `riddlc validate` is a
-// trap for whoever runs it next. Its earlier revision paired `on term { ... }` (no parameters)
-// with `terminate entity Widget`, which cannot validate under `checkOnTermLeadingParameter`.
+// trap for whoever runs it next.
 domain TerminateValue is {
   context Orders is {
     record Fields is { total: String } with { briefly "order totals" }
+
+    // The riddl-models house style: an Id named through an alias. `terminate` follows the alias
+    // chain to find the `Id`, so this spelling must work as directly as the inline one.
+    type OrderId is Id(entity Order) with { briefly "an order's instance identity" }
+
     entity Order is {
       state S of record Fields is {
         handler H is {
           on init(seed: String) {
             do "seed the initial total"
           }
-          on term(oid: Id(entity Order)) {
-            do "release resources"
+          // No leading Id parameter. `on term`'s parameters are PAYLOAD only -- the addressing
+          // convention that used to occupy position 1 is gone, and `self.id` supplies the
+          // instance instead.
+          on term {
+            do "release resources for the instance named by self.id"
           }
         } with { briefly "h" }
       } with { briefly "s" }
     } with { briefly "e" }
+
     entity Widget is {
       state S of record Fields is {
         handler H is {
           on init {
             do "no parameters"
           }
-          on term(wid: Id(entity Widget), why: String) {
+          on term(why: String) {
             do "release resources"
           }
         } with { briefly "h" }
       } with { briefly "s" }
     } with { briefly "e" }
+
     entity Caller is {
       state CS of record Fields is {
         handler CH is {
           on init {
+            // `initiate` still names a TYPE -- the instance does not exist yet -- and yields the
+            // new instance's Id. `terminate` consumes that Id. The asymmetry is the design.
             let orderId = initiate entity Order("5")
-            terminate entity Order(orderId)
+            terminate orderId
+
             let widgetId = initiate entity Widget
-            terminate entity Widget(widgetId, "done")
+            terminate widgetId with ("done")
+          }
+          // An instance ending itself: `self.id` is an ordinary value of type Id(entity Caller).
+          on term {
+            do "the caller's own teardown"
           }
         } with { briefly "ch" }
       } with { briefly "cs" }

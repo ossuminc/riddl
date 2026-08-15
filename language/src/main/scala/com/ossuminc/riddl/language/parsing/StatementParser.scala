@@ -791,29 +791,28 @@ private[parsing] trait StatementParser {
     )./.map { case (start, v, end) => ReturnStatement(at(start, end), v) }
   }
 
-  /** `terminate <processor>[(args)]` -- end an instance by invoking its `on term`.
+  /** `terminate <target> [with (args)]` -- end the instance denoted by `target`.
     *
-    * Parentheses are OPTIONAL, exactly as `initiate`'s are. They were mandatory between the
-    * instance-identity branch's final review and 2026-08-14 because `on term`'s leading `Id(...)`
-    * parameter was REQUIRED, which made a no-argument `terminate` unable to satisfy the arity
-    * check and therefore unreachable in any valid model -- a spelling that always failed
-    * validation. Reid dropped that requirement (`self.id` is live for the whole clause, so the
-    * parameter restated what the language already supplies), which removed the sole justification
-    * for the asymmetry, so the bare form came back with it.
+    * `target` is a VALUE (Reid, 2026-08-15), not a `processorRef`: it must be typed
+    * `Id(entity E)` and the entity terminated is derived from that type. See
+    * [[AST.TerminateStatement]] for why, and for why a singleton's `Id` -- which is legal, and
+    * exists so messages can be SENT to it -- is nonetheless not a legal `terminate` target.
     *
-    * `terminate P()` still parses: the empty list is accepted rather than made an error, since the
-    * grammar is not the place to encode arity.
+    * Arguments sit behind a `with` separator rather than bare parentheses, because
+    * `terminate order.id("x")` reads as a call on `id`. `with ()` parses: an empty list is
+    * accepted rather than made an error, since the grammar is not the place to encode arity.
     *
-    * ARITY IS NOT CHECKED HERE -- a parser error() preempts the whole pass chain, so the argument
-    * diagnostics live in ValidationPass, which is also the only place that has resolved `on term`.
+    * NEITHER the target's TYPE nor the argument ARITY is checked here -- a parser error()
+    * preempts the whole pass chain, so both diagnostics live in ValidationPass, which is also the
+    * only place that has the target's resolved type and the target entity's `on term`.
     */
   private def terminateStatement[u: P]: P[TerminateStatement] = {
     P(
-      Index ~ Keywords.terminate ~/ processorRef ~
-        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+      Index ~ Keywords.terminate ~/ value ~
+        (Keywords.`with` ~/ Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
           Punctuation.roundClose).? ~ Index
-    )./.map { case (start, pRef, args, end) =>
-      TerminateStatement(at(start, end), pRef, args.map(_.toSeq).getOrElse(Seq.empty))
+    )./.map { case (start, target, args, end) =>
+      TerminateStatement(at(start, end), target, args.map(_.toSeq).getOrElse(Seq.empty))
     }
   }
 

@@ -1446,11 +1446,10 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       PutStmtDto(serializeValue(value), path(output.pathId))
     case ReturnStatement(_, value) =>
       ReturnStmtDto(serializeValue(value))
-    case TerminateStatement(_, proc, args) => // A70/instance-identity
-      val (pp, pk) = processorRef(proc)
+    case TerminateStatement(_, target, args) => // A70/instance-identity
+      // `target` is a VALUE since 2026-08-15, not a processor ref -- see TerminateStmtDto.
       TerminateStmtDto(
-        pp,
-        pk,
+        serializeValue(target),
         args.map(a => ConstructorArgDto(a.name.map(_.value), serializeValue(a.value)))
       )
 

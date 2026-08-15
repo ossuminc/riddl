@@ -401,12 +401,18 @@ self_value = "self" ["." identifier] ;
 put_statement = "put" value "to" output_ref ;
 return_statement = "return" value ;
 
-(* A70/instance-identity: end an instance by invoking its `on term`. A statement, not a value:
-   termination produces nothing. Unlike `initiate`, the parentheses are MANDATORY -- `on term`'s
-   leading Id(...) parameter is required, so a no-argument `terminate` can never validate and the
-   bare spelling was dead syntax. Arity/argument-type checking is done in validation, which is the
-   only place that has resolved the target's `on term` clause; a wrong count still PARSES. *)
-terminate_statement = "terminate" processor_ref [ "(" [constructor_arg {"," constructor_arg}] ")" ] ;
+(* A70/instance-identity: end the instance denoted by `value`, invoking its `on term`. A statement,
+   not a value: termination produces nothing.
+
+   The target is a VALUE, not a processor_ref (Reid, 2026-08-15): it must be typed `Id(entity E)`,
+   and the entity terminated is DERIVED from that type. `initiate` still names a type, because the
+   instance does not exist yet -- the asymmetry is the design, not an inconsistency.
+
+   Arguments sit behind `with`, not bare parentheses, because `terminate order.id("x")` reads as a
+   call on `id`. Neither the target's TYPE nor the argument arity is checked here: both live in
+   validation, the only place with the target's resolved type and the entity's `on term` clause,
+   so `terminate someString` and a wrong argument count both still PARSE. *)
+terminate_statement = "terminate" value [ "with" "(" [constructor_arg {"," constructor_arg}] ")" ] ;
 
 (* General statements. A54: `do` is canonical; the `prompt` statement is a deprecated synonym. *)
 prompt_statement = ("do" | "prompt") literal_string ;

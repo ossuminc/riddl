@@ -15,15 +15,16 @@ import org.scalatest.matchers.must.Matchers
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
-/** Parity guard for Task 5's `terminate` statement: the corpus fixture
+/** Parity guard for A70's `terminate` statement: the corpus fixture
   * `language/input/terminate-statement.riddl` is validated against the EBNF grammar by the TatSu
   * validator (which scans every input-directory riddl file). This test proves fastparse accepts
   * the SAME file, so the documented grammar and the implementation stay in sync (see CLAUDE.md
   * "Parser/EBNF Synchronization Requirement").
   *
-  * The parentheses are MANDATORY as of the final review of the instance-identity branch: the bare
-  * `terminate P` spelling parsed but could never validate (`on term`'s leading Id(...) parameter is
-  * required), so it was dead syntax. The rejection is pinned below.
+  * The target is a VALUE typed `Id(entity E)` since 2026-08-15, not a `processorRef`, and
+  * arguments sit behind `with (...)` rather than bare parentheses. Both are pinned below --
+  * `terminate` must NOT accept a processor name, or the old spelling would keep parsing into an
+  * AST whose target names a kind rather than an instance.
   *
   * Unlike `initiate` (a VALUE typically wrapped in a `let`), `terminate` is a bare STATEMENT
   * sitting directly in an on-clause's `contents`, so the two `terminate` occurrences are simply
@@ -49,22 +50,46 @@ class TerminateFileTest extends AnyWordSpec with Matchers {
             val terminates = onClause.contents.toSeq.collect { case ts: TerminateStatement => ts }
             terminates.size mustBe 2
 
-            terminates.head.processor mustBe a[EntityRef]
-            terminates.head.args.size mustBe 1
+            // The target is a VALUE naming the instance -- here a `let`-bound id -- NOT a
+            // processor reference. Asserting the ValueRef is the point: an `EntityRef` here
+            // would mean the statement had gone back to naming a kind.
+            terminates.head.target mustBe a[ValueRef]
+            terminates.head.target.asInstanceOf[ValueRef].path.value mustBe Seq("orderId")
+            terminates.head.args mustBe empty
 
-            terminates(1).processor mustBe a[EntityRef]
-            terminates(1).args.size mustBe 2
+            terminates(1).target mustBe a[ValueRef]
+            terminates(1).target.asInstanceOf[ValueRef].path.value mustBe Seq("widgetId")
+            terminates(1).args.size mustBe 1
       }
       Await.result(future, 10.seconds)
     }
 
-    // Inverted 2026-08-14. The bare form was rejected because `on term`'s leading `Id(...)`
-    // parameter was required, so a no-argument `terminate` could never satisfy the arity check --
-    // it parsed to something that always failed validation. Reid dropped the requirement (`self.id`
-    // already names the instance being terminated), which left nothing justifying the asymmetry
-    // with `initiate P`, so the bare form is legal again and is the canonical spelling for the
-    // argumentless case.
-    "ACCEPT the bare `terminate P` form (no parentheses)" in {
+    "accept `self.id` as the target" in {
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    entity Widget is {
+          |      handler H is {
+          |        on init { terminate self.id }
+          |      } with { briefly "h" }
+          |    } with { briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      TopLevelParser.parseInput(RiddlParserInput(src, "self-terminate")) match
+        case Left(msgs) => fail(s"`terminate self.id` must parse:\n${msgs.format}")
+        case Right(root) =>
+          val terminates = Finder(root).recursiveFindByType[TerminateStatement]
+          terminates.size mustBe 1
+          terminates.head.args mustBe empty
+          terminates.head.target mustBe a[SelfValue]
+          terminates.head.target.asInstanceOf[SelfValue].field.map(_.value) mustBe Some("id")
+    }
+
+    // The grammar's half of the 2026-08-15 change. Validation reports a non-`Id` target, but only
+    // for targets that PARSE as values -- a bare entity NAME parses as a ValueRef and would reach
+    // validation, whereas the keyword-qualified `entity Widget` spelling must not parse at all.
+    "REJECT the old `terminate entity Widget` spelling" in {
       val src =
         """domain Dom is {
           |  context Ctx is {
@@ -76,16 +101,13 @@ class TerminateFileTest extends AnyWordSpec with Matchers {
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
-      TopLevelParser.parseInput(RiddlParserInput(src, "bare-terminate")) match
-        case Left(msgs) => fail(s"the bare `terminate P` form must parse:\n${msgs.format}")
+      TopLevelParser.parseInput(RiddlParserInput(src, "old-terminate")) match
+        case Left(_) => succeed
         case Right(root) =>
-          // Not merely "it parses" -- it must produce a TerminateStatement with an EMPTY argument
-          // list, the same AST `terminate Widget()` produces. A bare form that parsed to something
-          // else would be a second shape for validation and every downstream walk to handle.
-          val terminates = Finder(root).recursiveFindByType[TerminateStatement]
-          terminates.size mustBe 1
-          terminates.head.args mustBe empty
-          terminates.head.processor mustBe a[EntityRef]
+          fail(
+            "`terminate entity Widget` must no longer parse -- it names a KIND, not an " +
+              s"instance, and silently accepting it would keep the old meaning alive:\n$root"
+          )
     }
   }
 }

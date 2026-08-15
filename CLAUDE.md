@@ -884,23 +884,52 @@ to the right group rather than appending to a list.
     `error()` preempts the whole pass chain. Both fold an Entity's STATE
     handlers in when looking for the clause, exactly as `validateAsk` does —
     `on init` commonly lives inside a `State`.
-    **NEITHER clause requires a parameter, and `terminate`'s parentheses are
-    OPTIONAL** (Reid, 2026-08-14). `on term` briefly required a leading
-    `Id(<enclosing processor>)` on the reasoning that it is invoked from outside
-    so the caller must say which instance — true, but it does not follow that
-    the CLAUSE must declare it: **`self` is in scope for the whole body and
-    stays live to the very end of it**, so `self.id` already names the instance
-    being terminated and the requirement only made the author restate what the
-    language supplies. It made the argumentless form — expected to be the COMMON
-    one — a hard Error. Removed, NOT relaxed to "if present it must be an `Id`":
-    a termination reason is an ordinary thing to pass.
-    That requirement was also the SOLE reason the bare `terminate P` form had
-    been removed (with it, a no-argument `terminate` could never satisfy the
-    arity check, so the spelling always failed validation) — so both came back
-    together, and `TerminateStatement.format` now mirrors `Initiate.format`,
-    emitting no parens for an empty list. `terminate P()` still parses and
-    prettifies to the bare form. The resolved-identity lesson the deleted check
-    carried is NOT lost: it lives on in `isAddressFieldFor`.
+    **`terminate <target> [with (args)]` names an INSTANCE, and `target` is a
+    VALUE typed `Id(entity E)`** (Reid, 2026-08-15). `TerminateStatement.target:
+    Value` REPLACED `processor: ProcessorRef` — the old form said which KIND of
+    thing ended, never which one, so `terminate` was the one rc.14 construct
+    riddlg could not lower at all (it emitted an `AI FILL` marker rather than
+    guess, correctly: `terminate` DESTROYS). The entity is DERIVED from the
+    target's type, so ref and id can never contradict and no truth-check is
+    needed — contrast `UniqueId.kindKeyword`, which needs exactly one.
+    Arguments sit behind **`with (…)`**, not bare parens: `terminate
+    order.id("x")` reads as a call on `id`, and `with` is the established idiom
+    (`morph … with`, `require … with`). Empty list ⇒ no `with` clause at all;
+    `terminate t with ()` parses and prettifies away.
+    **`on term`'s parameters are pure PAYLOAD.** A leading `Id(...)` parameter
+    was an addressing convention detectable only BY POSITION — riddlg asked
+    whether address and payload were distinguishable in the AST and the honest
+    answer was no. They are now separate fields. `self` is live for the whole
+    clause body, so a clause that needs the instance it is ending reads
+    `self.id`; nothing was lost.
+    **The asymmetry with `initiate` is the design, not an inconsistency**:
+    `initiate` names a TYPE (the instance does not exist yet) and yields an id;
+    `terminate` consumes an id and yields nothing.
+    **Both are ENTITY-ONLY, and that is an EXPLICIT check, never a consequence
+    of the type system.** `Id(P)` KEEPS its 2026-08-13 widening to all six
+    processor kinds, because **a singleton's `Id` is how you SEND IT MESSAGES**
+    (Reid, 2026-08-15) — it denotes the singular DEPLOYMENT, and addressing it
+    means "select the right shard/partition and forward", the singleton being
+    treated as a whole despite a clustered arrangement. So `Id(context C)` is a
+    perfectly good value that is simply not a legal thing to end, and only
+    `reportNotInstantiable` says so. **Do not "simplify" this by narrowing
+    `Id`.**
+    Two Errors in `checkTerminate`: the target's type is not a `UniqueId`, and
+    the target is an `Id` of a non-Entity. It stays SILENT when the type is
+    undeterminable (a bare `let n = 5`, an unascribed `prompt(…)`) — reporting
+    there would be reasoning from absence, the same conservative rule A20's
+    unascribed-hole warning follows. Note `valueTypeExpr` does NOT surface a
+    `let`'s declared PREDEFINED type (`let n: Integer = 5` yields `None`), which
+    is pre-existing and why the "not an Id" test uses bare `self`.
+    **`resolveIdTarget` needs TWO lookups and the second is not optional.** The
+    refMap holds only paths that were WRITTEN, but `valueTypeExpr` SYNTHESIZES a
+    `UniqueId` for `initiate` and for `self.id` carrying a fully-qualified
+    `pathOf(p)` that has no refMap entry — so a refMap-only lookup made every
+    `terminate` whose target came from `initiate` or `self` resolve to `None`
+    and skip its checks in silence. Falls back to `symbols.lookup`. Found by
+    instrumenting, not by reading.
+    The resolved-identity lesson the deleted `on term` check carried is NOT
+    lost: it lives on in `isAddressFieldFor`.
   - **Addressing is STRUCTURAL: the address is the message's field typed
     `Id(target)`**, found without annotation; `by <field>` only DISAMBIGUATES
     when more than one field qualifies. Candidates match by **resolved
@@ -948,8 +977,17 @@ to the right group rather than appending to a list.
     Every ban is wired into `checkStatementScopes`, **not** `validateStatement`
     — the latter never sees statements held in a FIELD
     (`when`/`match`/`foreach`), the trap two tasks of this plan fell into.
-  - **BAST**: `FORMAT_REVISION` **15**; value tags 8 = `Initiate`,
-    9 = `SelfValue`; statement sub-kind 20 = `terminate`.
+  - **BAST**: value tags 8 = `Initiate`, 9 = `SelfValue`; statement sub-kind
+    20 = `terminate`. Landed at `FORMAT_REVISION` **15**; sub-kind 20's PAYLOAD
+    then changed at revision **18** (2026-08-15) — it now begins with a
+    `writeValue` where it began with a `writeProcessorRef`. The two are not
+    interchangeable, so an older reader handed these bytes MISALIGNS rather than
+    failing cleanly, which is the whole reason the revision gate exists.
+  - **JSON**: `TerminateStmtDto`'s `processor`/`processorKind` pair became a
+    single `target` value at the same time. `JsonModel`'s readers reject no
+    unknown keys (BACKLOG § 1), so a producer still emitting the old pair has
+    them SILENTLY DROPPED and gets a null `target` — recorded on the DTO,
+    because a stale example in a machine-facing document is a data-loss bug.
 
 - **A new `Branch` node breaks three things silently** — all found building A70,
   none caught by the compiler:

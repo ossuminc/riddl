@@ -899,14 +899,22 @@ object JsonModel:
   /** `{ "kind": "return", "value": <value> }` (A57) */
   case class ReturnStmtDto(value: ValueDto) extends StatementDto
 
-  /** `{ "kind": "terminate", "processor": "<path>", "processorKind": "<kind>", "args":
-    * [<constructorArg>] }` -- A70/instance-identity: end an instance by invoking its `on term`.
-    * Same shape as [[InitiateValueDto]] (mirrors [[AST.Initiate]]/[[AST.TerminateStatement]]),
-    * but a statement rather than a value.
+  /** `{ "kind": "terminate", "target": <value>, "args": [<constructorArg>] }` --
+    * A70/instance-identity: end the instance denoted by `target`, invoking its `on term`.
+    *
+    * **The `processor`/`processorKind` pair was REPLACED by `target` on 2026-08-15**, when
+    * `terminate` stopped naming a processor type and started naming an instance: `target` is a
+    * value whose type must be `Id(entity E)`. This is NOT the same shape as [[InitiateValueDto]]
+    * any more -- `initiate` still names a type, because the instance does not exist yet.
+    *
+    * A producer still emitting `processor`/`processorKind` gets them SILENTLY DROPPED and a
+    * `target` of `null`: [[JsonModel]]'s readers never diff present keys against consumed keys
+    * (filed in BACKLOG § 1 as a defect class in its own right), so there is no diagnostic. That
+    * is precisely why this doc comment records the change rather than merely describing the
+    * current shape.
     */
   case class TerminateStmtDto(
-    processor: String,
-    processorKind: String,
+    target: ValueDto,
     args: Seq[ConstructorArgDto]
   ) extends StatementDto
 
@@ -1914,7 +1922,7 @@ object JsonModel:
                   .toSeq
               )
               .getOrElse(Nil)
-            TerminateStmtDto(m("processor").str, m("processorKind").str, args)
+            TerminateStmtDto(readValue(m("target")), args)
           case other => throw new IllegalArgumentException(s"Unknown statement kind: '$other'")
     end match
   end readStatement
@@ -2040,11 +2048,10 @@ object JsonModel:
         )
       case ReturnStmtDto(value) =>
         ujson.Obj("kind" -> ujson.Str("return"), "value" -> writeValue(value))
-      case TerminateStmtDto(processor, processorKind, args) =>
+      case TerminateStmtDto(target, args) =>
         ujson.Obj(
           "kind" -> ujson.Str("terminate"),
-          "processor" -> ujson.Str(processor),
-          "processorKind" -> ujson.Str(processorKind),
+          "target" -> writeValue(target),
           "args" -> ujson.Arr.from(args.map { a =>
             ujson.Obj.from(
               a.name.map(n => "name" -> (ujson.Str(n): ujson.Value)).toSeq
