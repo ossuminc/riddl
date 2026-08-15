@@ -53,13 +53,25 @@ private[parsing] trait StreamingParser {
       StringIn(
         "at-least-once",
         "at-most-once",
+        "exactly-once",
         "persistent"
       ).!.rep(0)
     ).map(kws => ConnectorIntention.canonical(kws.flatMap(ConnectorIntention.fromKeyword)))
 
-  /** The options these intentions replaced, mapped to their keyword. */
+  /** The options these intentions replaced, mapped to their keyword.
+    *
+    * The three DELIVERY options joined `persistent` here on 2026-08-14. Until then they parsed as
+    * plain registry options, meant nothing and drew no message at all -- two spellings where one
+    * was silently inert, which synapify reported. They could not be deprecated earlier because
+    * `exactly-once` had no intention to be consumed INTO; deprecating two of three and leaving the
+    * third current would have been its own inconsistency. Reid made it a third delivery intention,
+    * which unblocked all three.
+    */
   private val deprecatedConnectorOptions: Map[String, ConnectorIntention] = Map(
-    "persistent" -> ConnectorIntention.Persistent
+    "persistent" -> ConnectorIntention.Persistent,
+    "at-least-once" -> ConnectorIntention.AtLeastOnce,
+    "at-most-once" -> ConnectorIntention.AtMostOnce,
+    "exactly-once" -> ConnectorIntention.ExactlyOnce
   )
 
   /** Consume a deprecated `option` into the intention it became, dropping it from the metadata.

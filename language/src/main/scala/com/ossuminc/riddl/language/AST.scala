@@ -5001,21 +5001,30 @@ object AST:
     * at-least-once, and stating it is redundant but legitimate where a reader benefits from seeing
     * the guarantee affirmatively. It draws no warning.
     *
+    * **`exactly-once` joined the delivery group on 2026-08-14** (Reid, asked directly). It failed
+    * no admission test -- a generator may not quietly decline to provide it any more than it may
+    * decline at-most-once -- and leaving it as the one delivery OPTION while its two siblings
+    * became intentions was its own inconsistency, which is what blocked deprecating the option
+    * spellings at all. Whether a given transport can honour it is a lowering concern, exactly as
+    * durability is; the model states the requirement and a generator that cannot meet it must say
+    * so rather than silently weaken it.
+    *
     * ORDERING is deliberately NOT here. §25.7 makes `unordered` "permission, not mandate" with a
     * best-effort obligation -- which is the definition of advisory, so it stays an option. The test
     * for admission to this enum is whether a generator may decline to honour it.
     */
   enum ConnectorIntention:
-    case Persistent, AtLeastOnce, AtMostOnce
+    case Persistent, AtLeastOnce, AtMostOnce, ExactlyOnce
 
     def keyword: String = this match
       case Persistent  => "persistent"
       case AtLeastOnce => "at-least-once"
       case AtMostOnce  => "at-most-once"
+      case ExactlyOnce => "exactly-once"
 
     def group: String = this match
-      case Persistent                => "durability"
-      case AtLeastOnce | AtMostOnce  => "delivery"
+      case Persistent                              => "durability"
+      case AtLeastOnce | AtMostOnce | ExactlyOnce  => "delivery"
   end ConnectorIntention
 
   object ConnectorIntention:
@@ -5023,7 +5032,8 @@ object AST:
     /** The canonical order intentions are emitted in: durability, then delivery. Any order is
       * accepted on input; PrettifyPass emits this one.
       */
-    val canonicalOrder: Seq[ConnectorIntention] = Seq(Persistent, AtLeastOnce, AtMostOnce)
+    val canonicalOrder: Seq[ConnectorIntention] =
+      Seq(Persistent, AtLeastOnce, AtMostOnce, ExactlyOnce)
 
     /** All keywords, longest first, so a prefix parser never matches a shorter word that is the
       * start of a longer one.

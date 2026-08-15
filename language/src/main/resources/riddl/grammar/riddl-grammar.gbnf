@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-15 01:27 UTC
+# Generated: 2026-08-15 01:31 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -307,7 +307,7 @@ streamlet-definition ::= (inlet | outlet | streamlet-include | processor-definit
 streamlet-include ::= "include" ws1 literal-string
 inlet ::= "inlet" ws1 identifier ws1 is ws1 type-ref ws (with-metadata)?
 outlet ::= "outlet" ws1 identifier ws1 is ws1 type-ref ws (with-metadata)?
-connector-intention ::= "at-least-once" | "at-most-once" | "persistent"
+connector-intention ::= "at-least-once" | "at-most-once" | "exactly-once" | "persistent"
 connector ::= (connector-intention)* ws "connector" ws1 identifier ws1 is ws1 connector-definitions ws (with-metadata)?
 connector-definitions ::= ("{" "from" outlet-ref "to" inlet-ref "}" | "from" outlet-ref "to" inlet-ref)?
 

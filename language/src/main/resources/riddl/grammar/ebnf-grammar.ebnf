@@ -445,7 +445,7 @@ outlet = "outlet" identifier is type_ref [with_metadata] ;
    exclusive WITHIN a group, which validation reports rather than the grammar forbidding, so a model
    naming two still parses and both get named. Absent delivery means at-least-once (Computational
    Model 25.7); `at-most-once` is the knowing downgrade that section requires never be silent. *)
-connector_intention = "at-least-once" | "at-most-once" | "persistent" ;
+connector_intention = "at-least-once" | "at-most-once" | "exactly-once" | "persistent" ;
 connector = {connector_intention} "connector" identifier is connector_definitions [with_metadata] ;
 connector_definitions = ["{" "from" outlet_ref "to" inlet_ref "}" | "from" outlet_ref "to" inlet_ref] ;
 

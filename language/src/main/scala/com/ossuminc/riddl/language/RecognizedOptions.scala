@@ -283,9 +283,33 @@ object RecognizedOptions:
       1
     ),
     // Delivery semantics options (C3)
-    "at-least-once" -> OptionSpec(Seq("Connector"), 0, 0),
-    "at-most-once" -> OptionSpec(Seq("Connector"), 0, 0),
-    "exactly-once" -> OptionSpec(Seq("Connector"), 0, 0),
+    // Deprecated 2026-08-14 alongside `persistent`, and for the same reason: each is now a
+    // connector INTENTION written before the keyword, and the parser CONSUMES the option spelling
+    // into it. Until this they parsed as plain registry options, meant nothing and drew no message
+    // at all -- two spellings where one was silently inert (reported by synapify). `exactly-once`
+    // became a third delivery intention on the same day, which is what unblocked deprecating all
+    // three together instead of two of three.
+    "at-least-once" -> OptionSpec(
+      Seq("Connector"),
+      0,
+      0,
+      Seq("Connector"),
+      Some("write `at-least-once` before `connector`")
+    ),
+    "at-most-once" -> OptionSpec(
+      Seq("Connector"),
+      0,
+      0,
+      Seq("Connector"),
+      Some("write `at-most-once` before `connector`")
+    ),
+    "exactly-once" -> OptionSpec(
+      Seq("Connector"),
+      0,
+      0,
+      Seq("Connector"),
+      Some("write `exactly-once` before `connector`")
+    ),
     "ordered" -> OptionSpec(Seq("Connector", "Inlet"), 0, 0),
     // Complement of `ordered` (A33): messages MAY be delivered out of order,
     // enabling partitioning/parallelism. Same stream-property parents as

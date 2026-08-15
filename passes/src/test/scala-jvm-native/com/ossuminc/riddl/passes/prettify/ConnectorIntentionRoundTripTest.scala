@@ -88,6 +88,48 @@ class ConnectorIntentionRoundTripTest extends AbstractValidatingTest {
       c.intentions must contain(ConnectorIntention.AtMostOnce)
     }
 
+    /** `exactly-once` became a third delivery intention on 2026-08-14 (Reid, asked directly). It
+      * had been the ONE delivery spelling with no intention behind it, which is precisely what
+      * blocked deprecating the option forms: deprecating two of three and leaving the third
+      * current would have been its own inconsistency.
+      */
+    "parse `exactly-once` as a delivery intention" in { (td: TestData) =>
+      val c = connectorOf(parse(model("exactly-once"), "exactly-once-kw"))
+      c.intentions must contain(ConnectorIntention.ExactlyOnce)
+    }
+
+    "reject two delivery keywords, naming both" in { (td: TestData) =>
+      // Mutual exclusion WITHIN a group is validated rather than encoded in the grammar, so the
+      // message can name both offenders instead of the model failing to parse.
+      val msgs = messagesFor(model("at-most-once exactly-once"), "two-delivery")
+      val text = msgs.map(_.message).mkString("\n")
+      msgs.justErrors mustNot be(empty)
+      text must include("at-most-once")
+      text must include("exactly-once")
+    }
+
+    /** All three delivery OPTIONS are consumed into the intention they duplicate, exactly as
+      * `option persistent` already was. Until 2026-08-14 they parsed as plain registry options and
+      * meant nothing -- two spellings where one was silently inert (reported by synapify).
+      * Consuming rather than merely deprecating is what makes the round trip converge and migrates
+      * a corpus for free.
+      */
+    "consume a deprecated delivery option into its intention" in { (td: TestData) =>
+      Seq(
+        "at-least-once" -> ConnectorIntention.AtLeastOnce,
+        "at-most-once" -> ConnectorIntention.AtMostOnce,
+        "exactly-once" -> ConnectorIntention.ExactlyOnce
+      ).foreach { case (kw, intention) =>
+        val c = connectorOf(parse(model("", options = s" option $kw"), s"opt-$kw"))
+        withClue(s"option $kw should become $intention: ") {
+          c.intentions must contain(intention)
+          // CONSUMED, not merely recognised: the option must be gone from the metadata, or a round
+          // trip would emit both spellings and never converge.
+          c.hasOption(kw) mustBe false
+        }
+      }
+    }
+
     "accept `at-least-once` even though it is the default" in { (td: TestData) =>
       // Redundant but legal, and it must draw no warning -- Reid's ruling.
       val msgs = messagesFor(model("at-least-once"), "explicit-default")
@@ -171,7 +213,7 @@ class ConnectorIntentionRoundTripTest extends AbstractValidatingTest {
       // `ConnectorIntention.keywords` directly and the two lists can drift. This pins them, exactly
       // as EntityIntentionKeywordsTest does for entities.
       ConnectorIntention.keywords must contain theSameElementsAs
-        Seq("at-least-once", "at-most-once", "persistent")
+        Seq("at-least-once", "at-most-once", "exactly-once", "persistent")
     }
 
     "be ordered longest-first so no keyword is matched as a prefix of another" in { (td: TestData) =>
