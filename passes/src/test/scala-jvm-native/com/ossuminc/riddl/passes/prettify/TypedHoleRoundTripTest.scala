@@ -28,6 +28,14 @@ import org.scalatest.*
   * unascribed (`typeEx` must stay `None`) and ascribed (`typeEx` must survive as the SAME type
   * expression, not merely "some type"), in each of the four positions an ascription can occupy: a
   * `let`, a `constant`, a `when` condition, and a constructor argument.
+  *
+  * A separate case below (`optional`/`repeated`) covers a `Cardinality`-wrapped aliased ascription
+  * (`as OrderId?`, `as OrderId*`). `TypeParser.cardinality` wraps ANY type alternative in
+  * `Optional`/`ZeroOrMore`/`OneOrMore`/`SpecificRange`, including an aliased one, so this parses
+  * today; `PromptValue.ascriptionFormat` must recurse through those wrappers the same way
+  * `RiddlFileEmitter.emitTypeExpression` does, or the keyword bug this file exists to prevent
+  * resurfaces one level down (`as type OrderId?` instead of `as OrderId?`). Found by code review
+  * 2026-08-15.
   */
 class TypedHoleRoundTripTest extends AbstractValidatingTest {
 
@@ -50,13 +58,14 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
 
   // One model exercising an ascribed AND an unascribed `prompt(...)` in each of the four
   // positions: a `let`, a `constant`, a constructor argument (via `set field ... to record ...`),
-  // and a `when` condition. Modeled on `TypedHoleTest` (language/.../parsing), the parser-level
-  // suite Task 1 added for this same fixture shape.
+  // and a `when` condition -- plus two cardinality-wrapped `let`s (`OrderId?`, `OrderId*`).
+  // Modeled on `TypedHoleTest` (language/.../parsing), the parser-level suite Task 1 added for
+  // this same fixture shape.
   private def model: String =
     """domain D is {
       |  context C is {
       |    type OrderId is String
-      |    record Line is { sku: String }
+      |    record Line is { sku: String, note: String }
       |    command Add is { sku: String }
       |    constant Plain: Real = prompt("x")
       |    constant Typed: Real = prompt("x") as Real
@@ -68,9 +77,14 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
       |          let plain = prompt("x")
       |          let typed = prompt("x") as Real
       |          let aliased = prompt("x") as OrderId
-      |          set field E.S.line to record Line(sku = prompt("x") as String)
+      |          let optional = prompt("x") as OrderId?
+      |          let repeated = prompt("x") as OrderId*
+      |          set field E.S.line to record Line(sku = prompt("x") as String, note = prompt("x"))
       |          when prompt("x") as Boolean then
       |            do "something"
+      |          end
+      |          when prompt("x") then
+      |            do "something else"
       |          end
       |        }
       |      }
@@ -92,7 +106,7 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
       .find(_.id.value == name)
       .getOrElse(fail(s"no constant named '$name' found"))
 
-  private def constructorArgPromptValue(root: Root): PromptValue =
+  private def constructorArgPromptValue(root: Root, argName: String): PromptValue =
     Finder(root)
       .recursiveFindByType[SetStatement]
       .find(_.field match {
@@ -102,19 +116,27 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
       .getOrElse(fail("no `set ... line` statement found"))
       .value match
       case c: Constructor =>
-        c.args.headOption.map(_.value) match
+        c.args.find(_.name.exists(_.value == argName)).map(_.value) match
           case Some(pv: PromptValue) => pv
-          case other                 => fail(s"expected a PromptValue constructor arg, got $other")
+          case other => fail(s"expected a PromptValue arg named '$argName', got $other")
       case other => fail(s"expected a Constructor set value, got $other")
 
-  private def whenConditionPromptValue(root: Root): PromptValue =
+  // Two `when` statements share this model; disambiguate by whether the condition is ascribed.
+  private def whenConditionPromptValues(root: Root): Seq[PromptValue] =
     Finder(root)
       .recursiveFindByType[WhenStatement]
-      .headOption
-      .getOrElse(fail("no when statement found"))
-      .condition match
-      case pv: PromptValue => pv
-      case other           => fail(s"expected a PromptValue condition, got $other")
+      .map(_.condition)
+      .collect { case pv: PromptValue => pv }
+
+  private def ascribedWhenCondition(root: Root): PromptValue =
+    whenConditionPromptValues(root)
+      .find(_.typeEx.isDefined)
+      .getOrElse(fail("no ascribed when condition found"))
+
+  private def unascribedWhenCondition(root: Root): PromptValue =
+    whenConditionPromptValues(root)
+      .find(_.typeEx.isEmpty)
+      .getOrElse(fail("no unascribed when condition found"))
 
   "a typed hole (prompt(...) as <type>)" should {
 
@@ -184,30 +206,82 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
         case other           => fail(s"expected a PromptValue, got $other")
     }
 
-    "survive a prettify round trip as a constructor argument" in { (_: TestData) =>
-      val original = parse(model, "orig")
-      constructorArgPromptValue(original).typeEx.get mustBe a[String_]
+    "survive a prettify round trip as a constructor argument, ascribed and unascribed" in {
+      (_: TestData) =>
+        val original = parse(model, "orig")
+        constructorArgPromptValue(original, "sku").typeEx.get mustBe a[String_]
+        constructorArgPromptValue(original, "note").typeEx mustBe None
 
-      val emitted = prettify(original)
-      withClue(s"emitted source was:\n$emitted\n") {
-        emitted must include("""sku = prompt("x") as String""")
-      }
+        val emitted = prettify(original)
+        withClue(s"emitted source was:\n$emitted\n") {
+          emitted must include("""sku = prompt("x") as String""")
+          // The absence check: the unascribed arg must not pick up a trailing ` as ...`.
+          emitted must include("""note = prompt("x"))""")
+        }
 
-      val regen = parse(emitted, "regen")
-      constructorArgPromptValue(regen).typeEx.get mustBe a[String_]
+        val regen = parse(emitted, "regen")
+        constructorArgPromptValue(regen, "sku").typeEx.get mustBe a[String_]
+        constructorArgPromptValue(regen, "note").typeEx mustBe None
     }
 
-    "survive a prettify round trip as a `when` condition" in { (_: TestData) =>
-      val original = parse(model, "orig")
-      whenConditionPromptValue(original).typeEx.get mustBe a[Bool]
+    "survive a prettify round trip as a `when` condition, ascribed and unascribed" in {
+      (_: TestData) =>
+        val original = parse(model, "orig")
+        ascribedWhenCondition(original).typeEx.get mustBe a[Bool]
+        unascribedWhenCondition(original).typeEx mustBe None
 
-      val emitted = prettify(original)
-      withClue(s"emitted source was:\n$emitted\n") {
-        emitted must include("""when prompt("x") as Boolean then""")
-      }
+        val emitted = prettify(original)
+        withClue(s"emitted source was:\n$emitted\n") {
+          emitted must include("""when prompt("x") as Boolean then""")
+          // The absence check: this exact line has no ` as ...` before `then`, so a format bug
+          // that always appends the ascription would make this substring disappear.
+          emitted must include("""when prompt("x") then""")
+        }
 
-      val regen = parse(emitted, "regen")
-      whenConditionPromptValue(regen).typeEx.get mustBe a[Bool]
+        val regen = parse(emitted, "regen")
+        ascribedWhenCondition(regen).typeEx.get mustBe a[Bool]
+        unascribedWhenCondition(regen).typeEx mustBe None
+    }
+
+    "survive a prettify round trip through a Cardinality wrapper on an aliased ascription" in {
+      (_: TestData) =>
+        val original = parse(model, "orig")
+        letExpression(original, "optional") match
+          case pv: PromptValue =>
+            pv.typeEx.get match
+              case Optional(_, ate: AliasedTypeExpression) => ate.pathId.value.last mustBe "OrderId"
+              case other => fail(s"expected Optional(AliasedTypeExpression), got $other")
+          case other => fail(s"expected a PromptValue, got $other")
+        letExpression(original, "repeated") match
+          case pv: PromptValue =>
+            pv.typeEx.get match
+              case ZeroOrMore(_, ate: AliasedTypeExpression) => ate.pathId.value.last mustBe "OrderId"
+              case other => fail(s"expected ZeroOrMore(AliasedTypeExpression), got $other")
+          case other => fail(s"expected a PromptValue, got $other")
+
+        val emitted = prettify(original)
+        withClue(s"emitted source was:\n$emitted\n") {
+          emitted must include("""let optional = prompt("x") as OrderId?""")
+          emitted must include("""let repeated = prompt("x") as OrderId*""")
+          // The specific regression this case guards: the wrapper's own recursion must reach the
+          // SAME stripped rendering as the unwrapped case above, not fall back to the keyword-
+          // including `AliasedTypeExpression.format`.
+          emitted must not include "as type OrderId"
+        }
+
+        val regen = parse(emitted, "regen")
+        letExpression(regen, "optional") match
+          case pv: PromptValue =>
+            pv.typeEx.get match
+              case Optional(_, ate: AliasedTypeExpression) => ate.pathId.value.last mustBe "OrderId"
+              case other => fail(s"expected Optional(AliasedTypeExpression), got $other")
+          case other => fail(s"expected a PromptValue, got $other")
+        letExpression(regen, "repeated") match
+          case pv: PromptValue =>
+            pv.typeEx.get match
+              case ZeroOrMore(_, ate: AliasedTypeExpression) => ate.pathId.value.last mustBe "OrderId"
+              case other => fail(s"expected ZeroOrMore(AliasedTypeExpression), got $other")
+          case other => fail(s"expected a PromptValue, got $other")
     }
   }
 }

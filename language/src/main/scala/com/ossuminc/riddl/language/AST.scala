@@ -3267,8 +3267,21 @@ object AST:
     // a second time, because a `Value` (unlike `TypeExpression`) has no separate emitter-level
     // dispatch to route through -- `RiddlFileEmitter.emitStatement`'s `LetStatement` arm and
     // `emitConstant` both call `.format` on the value directly.
+    //
+    // MUST recurse through the four `Cardinality` wrappers, exactly as
+    // `RiddlFileEmitter.emitTypeExpression` does (`case Optional(_, typex) =>
+    // emitTypeExpression(typex).add("?")`, etc.) -- `TypeParser.cardinality` wraps ANY type
+    // alternative, including an aliased one, so `prompt("x") as OrderId?` parses today via
+    // `typeExpression` and a non-recursive fallback (`case other => other.format`) reaches
+    // `Optional(AliasedTypeExpression).format`, which calls the unwrapped node's OWN `.format` and
+    // reproduces the exact bug this function exists to avoid, one level down. Found by code review
+    // 2026-08-15: two implementations of one dispatch where only one (the emitter's) was total.
     private[AST] def ascriptionFormat(typeEx: TypeExpression): String = typeEx match
       case AliasedTypeExpression(_, _, pathId) => pathId.format
+      case Optional(_, typex)                  => s"${ascriptionFormat(typex)}?"
+      case ZeroOrMore(_, typex)                => s"${ascriptionFormat(typex)}*"
+      case OneOrMore(_, typex)                 => s"${ascriptionFormat(typex)}+"
+      case SpecificRange(_, typex, min, max)   => s"${ascriptionFormat(typex)}{$min,$max}"
       case other                               => other.format
   end PromptValue
 
