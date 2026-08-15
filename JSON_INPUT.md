@@ -252,7 +252,11 @@ Statements appear in handler on-clauses and function bodies.
 { "kind": "morph", "entity": "<path>", "state": "<path>", "value": {"ref":"E","kind":"event"} }
 { "kind": "become", "entity": "<path>", "handler": "<path>" }
 { "kind": "yield", "message": {"ref":"R","kind":"result"} }              // also reads legacy "kind":"reply"
-{ "kind": "when", "condition": "...", "negated": false, "then": [<stmt>], "else": [<stmt>] }   // or "conditionIdentifier"
+{ "kind": "when", "condition": "...", "then": [<stmt>], "else": [<stmt>] }   // opaque pseudo-code string
+{ "kind": "when", "conditionIdentifier": "flag", "then": [<stmt>], "else": [<stmt>] }   // bare identifier
+{ "kind": "when", "expression": <value>, "then": [<stmt>], "else": [<stmt>] }   // structured BooleanExpression (A28)
+// negation is NOT a separate flag -- it's a `not`-wrapped value, same as everywhere else a value can be negated:
+{ "kind": "when", "expression": { "value": "not", "expr": { "value": "valueRef", "path": "isValid" } }, "then": [<stmt>], "else": [<stmt>] }
 { "kind": "match", "expression": "...", "cases": [ { "pattern": "...", "statements": [<stmt>] } ], "default": [<stmt>] }
 ```
 
