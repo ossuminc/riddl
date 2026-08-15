@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-trait VitalDefinitionParser extends TypeParser with CommonParser {
+trait VitalDefinitionParser extends TypeParser with StatementParser with CommonParser {
 
   def vitalDefinitionContents[u: P]: P[OccursInVitalDefinition] =
     P(typeDef | comment).asInstanceOf[P[OccursInVitalDefinition]]

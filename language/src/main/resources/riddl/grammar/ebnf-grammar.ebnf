@@ -405,7 +405,8 @@ pseudo_code_block = undefined | "{" pseudo_code_contents "}" | {statement} ;
 pseudo_code_contents = [undefined] {statement} ;
 
 (* Constants and Invariants *)
-constant = "constant" identifier is type_expression "=" literal_string [with_metadata] ;
+constant = "constant" identifier is type_expression "=" constant_value [with_metadata] ;
+constant_value = literal_string | numeric_literal | boolean_literal | prompt_value ;
 (* An invariant applies IMPLICITLY across every clause of its declaring scope, as a precondition.
    `requires state S` narrows an entity-level invariant to one state and stays implicit;
    `requires <type_ref>` makes it explicit-only (see require_statement). No `returns`: the

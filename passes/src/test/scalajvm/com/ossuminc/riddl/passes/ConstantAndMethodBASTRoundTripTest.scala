@@ -79,7 +79,11 @@ class ConstantAndMethodBASTRoundTripTest extends AbstractValidatingTest {
         .headOption
         .getOrElse(fail("the Constant did not survive as a Constant"))
       c.id.value mustBe "Rate"
-      c.value.s mustBe "10"
+      // `Constant.value` widened to `ConstantValue` in the numeric-literals plan (Task 4); this
+      // fixture's quoted `"10"` still parses as a LiteralString (Task 6 moves the wire format).
+      c.value match
+        case ls: LiteralString => ls.s mustBe "10"
+        case other             => fail(s"expected a LiteralString value, got $other")
     }
 
     "not corrupt the nodes that FOLLOW it" in { (td: TestData) =>

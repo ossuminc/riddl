@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-15 05:10 UTC
+# Generated: 2026-08-15 05:29 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -277,7 +277,8 @@ pseudo-code-block ::= undefined | "{" ws pseudo-code-contents ws "}" | (statemen
 pseudo-code-contents ::= (undefined)? ws (statement)*
 
 # Constants and Invariants
-constant ::= "constant" ws1 identifier ws1 is ws1 type-expression ws "=" ws literal-string ws (with-metadata)?
+constant ::= "constant" ws1 identifier ws1 is ws1 type-expression ws "=" ws constant-value ws (with-metadata)?
+constant-value ::= literal-string | numeric-literal | boolean-literal | prompt-value
 invariant ::= "invariant" ws1 identifier ws ("requires" (state-ref | type-ref))? ws is ws (invariant-condition)? ws (with-metadata)?
 invariant-condition ::= literal-string | boolean-expression | invariant-block
 invariant-block ::= "{" ws (statement)* ws boolean-expression ws "}"

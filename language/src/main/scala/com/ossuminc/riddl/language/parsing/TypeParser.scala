@@ -17,7 +17,9 @@ import scala.collection
 
 /** Parsing rules for Type definitions */
 private[parsing] trait TypeParser {
-  this: CommonParser =>
+  // `& StatementParser`: `constant` reuses `numericLiteral`/`booleanLiteral`/`promptValue` from
+  // StatementParser rather than duplicating them (see the `private[parsing]` notes on those rules).
+  this: CommonParser & StatementParser =>
 
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
@@ -822,12 +824,48 @@ private[parsing] trait TypeParser {
 
   def typeDef[u: P]: P[Type] = { defOfType | defOfTypeKindType }
 
+  // The four arms `Constant` may hold. Keyword-led (`promptValue`, `booleanLiteral`) and
+  // punctuation-led (`numericLiteral`) forms are tried before `literalString`, which is the
+  // permissive bare-quote fallback and must go last.
+  private def constantValue[u: P]: P[ConstantValue] = {
+    P(
+      promptValue.map(pv => pv: ConstantValue) |
+        booleanLiteral.map(bl => bl: ConstantValue) |
+        numericLiteral.map(nl => nl: ConstantValue) |
+        literalString.map(ls => ls: ConstantValue)
+    )
+  }
+
+  // True when `text` is what a NON-string arm of `constantValue` would have matched for `typeEx` --
+  // i.e. the author quoted a value that need not have been quoted. `Bool` is itself a NumericType
+  // (`AST.scala:2497`), so it is handled as its own case rather than falling into the digit-pattern
+  // check below. Scoped precisely: a String-typed constant is never reported, and an alias/named
+  // type (a TypeRef, not a literal predefined type) is left alone -- resolving it needs the symbol
+  // table, which does not exist at parse time.
+  private def isNumericLike(typeEx: TypeExpression, text: String): Boolean = {
+    typeEx match
+      case _: Bool         => text == "true" || text == "false"
+      case _: NumericType  => text.matches("""[+-]?\d+(\.\d+)?([eE][+-]?\d+)?""")
+      case _               => false
+    end match
+  }
+
   def constant[u: P]: P[Constant] = {
     P(
       Index ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
-        Punctuation.equalsSign ~ literalString ~ withMetaData ~/ Index
-    ).map { case (start, id, typeEx, litStr, descriptives, end) =>
-      Constant(at(start, end), id, typeEx, litStr, descriptives.toContents)
+        Punctuation.equalsSign ~ constantValue ~ withMetaData ~/ Index
+    ).map { case (start, id, typeEx, value, descriptives, end) =>
+      value match
+        case ls: LiteralString if isNumericLike(typeEx, ls.s) =>
+          deprecation(
+            ls.loc,
+            s"A ${typeEx.format} constant should hold a numeric literal, not a string",
+            code = Option(Messages.DeprecationCode.QuotedConstantLiteral),
+            autoFixable = true
+          )
+        case _ => ()
+      end match
+      Constant(at(start, end), id, typeEx, value, descriptives.toContents)
     }
   }
 }

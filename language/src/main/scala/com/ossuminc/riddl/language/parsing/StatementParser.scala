@@ -443,7 +443,9 @@ private[parsing] trait StatementParser {
 
   // A54: `prompt("…")` — an AI-computed value. The parens distinguish it from the deprecated `prompt`
   // STATEMENT (`prompt "…"`, no parens). Tried before the bare-path `valueRef` in `value`.
-  private def promptValue[u: P]: P[PromptValue] = {
+  // `private[parsing]`, not `private`: TypeParser's `constant` rule reuses this directly rather than
+  // duplicating it, so a `constant` value can be a prompt hole too.
+  private[parsing] def promptValue[u: P]: P[PromptValue] = {
     P(
       Index ~ Keywords.prompt ~ Punctuation.roundOpen ~/ literalString ~ Punctuation.roundClose ~/ Index
     )./.map { case (start, str, end) => PromptValue(at(start, end), str) }
@@ -465,7 +467,9 @@ private[parsing] trait StatementParser {
     * reporting `true`, and `asLong` throwing `NumberFormatException` instead of the author getting
     * an "expected `,` or `)`" parse error). `CharsWhileIn` is a run primitive with no such gap.
     */
-  private def numericLiteral[u: P]: P[NumericLiteral] = {
+  // `private[parsing]`, not `private`: TypeParser's `constant` rule reuses this directly rather than
+  // duplicating it, so a `constant` value can be a bare numeric literal too.
+  private[parsing] def numericLiteral[u: P]: P[NumericLiteral] = {
     P(
       Index ~~ (CharIn("+\\-").? ~~ CharsWhileIn("0-9") ~~
         ("." ~~ CharsWhileIn("0-9")).? ~~
@@ -596,7 +600,9 @@ private[parsing] trait StatementParser {
 
   // A28: a boolean literal (`true`/`false`), matched with a keyword word-boundary so `truthy` is not
   // read as `true` + `thy`.
-  private def booleanLiteral[u: P]: P[BooleanLiteral] = {
+  // `private[parsing]`, not `private`: TypeParser's `constant` rule reuses this directly rather than
+  // duplicating it, so a `constant` value can be a bare boolean literal too.
+  private[parsing] def booleanLiteral[u: P]: P[BooleanLiteral] = {
     P(
       Index ~ (Keywords.keyword("true").map(_ => true) | Keywords
         .keyword("false")

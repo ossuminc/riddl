@@ -246,11 +246,13 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   def emitString(s: String_): this.type = this.add(s.format)
 
   def emitConstant(constant: Constant): this.type =
-    // `constant <id> is <type> = <value>` — the type expression is part of the surface syntax, so
-    // it must be emitted for the round trip to re-parse.
+    // `constant <id>: <type> = <value>` — the type expression is part of the surface syntax, so
+    // it must be emitted for the round trip to re-parse. `is`/`are`/`=`/omission all still parse
+    // (`CommonParser.is`) and none warns; prettify picks the colon so a constant reads like a
+    // solo field.
     addIndent("constant ")
     add(constant.id.format)
-    add(" is ")
+    add(": ")
     emitTypeExpression(constant.typeEx)
     add(" = ")
     add(constant.value.format)

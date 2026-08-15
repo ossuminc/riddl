@@ -199,6 +199,7 @@ object Messages {
     val EntityOptionToIntention: String = "entity-option-to-intention"
     val TypeFirstAggregate: String = "type-first-aggregate"
     val ConnectorOptionToIntention: String = "connector-option-to-intention"
+    val QuotedConstantLiteral: String = "quoted-constant-literal"
 
     /** Codes whose fix is a pure SPAN REPLACEMENT: the deprecation's `loc` covers exactly the
       * offending keyword, so replacing that range with this text resolves it and touches nothing
@@ -231,7 +232,8 @@ object Messages {
       // Added 2026-08-13 WITH its definition, deliberately: the entry above records that
       // EntityOptionToIntention was defined but not listed for months, so every entity
       // option-to-intention deprecation was missing from "exhaustive" migration reports.
-      ConnectorOptionToIntention
+      ConnectorOptionToIntention,
+      QuotedConstantLiteral
     )
   }
 

@@ -2935,6 +2935,15 @@ object AST:
 
   //////////////////////////////////////////////////////////////////////////////////////// CONSTANT
 
+  /** What a `constant` may hold. A narrowing of [[Value]], defined the same way [[Comparand]] is.
+    *
+    * Deliberately NOT the full [[Value]] union, which would admit `Call`, `Ask` and `Initiate` in
+    * a constant. A [[PromptValue]] IS admitted and is a typed hole: the type is declared by the
+    * constant and the computation is prose an AI fills in at generation time, so it needs no
+    * `as T` ascription and is exempt from the conformance checks.
+    */
+  type ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue
+
   /** A definition that represents a constant value for reference in behaviors
     *
     * @param loc
@@ -2953,13 +2962,20 @@ object AST:
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    value: LiteralString,
+    value: ConstantValue,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf {
 
-    /** Format the node to a string */
+    /** Format the node to a string.
+      *
+      * This emitted `const` — not a keyword; `constant` is (`Keywords.scala:584`) — so the text
+      * did not re-parse. It survived because `PrettifyVisitor` routes through
+      * `RiddlFileEmitter.emitConstant`, which was correct: the same two-copies-of-one-dispatch
+      * trap as `WhenStatement.format` vs `emitStatement`, where the exercised copy concealed the
+      * broken one. Keep the two in step.
+      */
     override def format: String =
-      s"const ${id.format} is ${typeEx.format} = ${value.format}"
+      s"constant ${id.format}: ${typeEx.format} = ${value.format}"
   }
 
   @JSExportTopLevel("ConstantRef")

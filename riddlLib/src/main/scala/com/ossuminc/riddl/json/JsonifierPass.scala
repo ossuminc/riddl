@@ -1021,7 +1021,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         ConstantDto(
           c.id.value,
           serializeTypeExpr(c.typeEx),
-          c.value.s,
+          // SCOPE: `Constant.value` widened to `ConstantValue` (numeric-literals plan Task 4), but
+          // `ConstantDto.value` is still a bare String with no kind discriminator. The LiteralString
+          // arm keeps its exact pre-existing behavior (unquoted content) so the JSON fidelity ratchet
+          // is untouched; the other three arms are rendered via `.format` as a minimal stand-in until
+          // Task 6 widens the DTO.
+          c.value match
+            case ls: LiteralString => ls.s
+            case other             => other.format,
           briefOf(c.metadata),
           metaOf(c.metadata)
         )
