@@ -102,6 +102,21 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   `(a or b) and c` and a parenthesised comparison all parse.
 
 - **DONE 2026-08-14 (`4feb5a370`) — the bare-message-operand Error shipped.**
+  **⚠ AN UNTRIAGED riddl-models REPORT SAYS "read this before flipping", AND IT
+  ARRIVED AFTER THE FLIP.**
+  `task/2026-08-14-valueref-migration-blinds-the-populates-repository-check.md`:
+  the `Event 'X' populates Repository 'R' but is not defined in it` check fires only
+  when the operand is a **`MessageRef`**. Rewrite the same statement to the `ValueRef`
+  arm — which is exactly what this Error now compels — and the check stops firing with
+  nothing about the model changed. Corpus-wide that took it from **863 warnings to 9**;
+  the 854 are hidden, not fixed. Verified there with a negative control (reverting ONE
+  site to the bare form brings its warning back).
+  **This is not an argument to unflip** — it is a check that must learn the widened
+  operand, the same lesson as `9d0e47acd` ("Fix consumers left blind by the send/tell
+  operand widening"), which fixed the same class of blindness for the addressing and
+  completeness checks and evidently missed this one. Triage the task file first; the
+  fix belongs beside `checkBareMessageOperand`.
+
   Cost 30 tests across 20 suites, not the "one line" this entry estimated: our own
   fixtures were written in the same bare style as the corpus. 12 sites in two
   shared inputs (`everything_full.riddl`, `dokn.riddl`), 16 inline fixtures, and

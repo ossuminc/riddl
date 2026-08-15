@@ -7,112 +7,84 @@ GitHub release notes — don't reproduce it here.
 ## HANDOFF
 
 Orientation for a session with no memory of this work. **Open work is in
-`BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in
-this NOTEBOOK's body. This says only what would otherwise have to be
-re-derived. Ask `git` for branch, tree and unpushed span — anything written
-here about those is stale the moment someone commits.
+`BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
+NOTEBOOK's body. Ask `git` for branch, tree and unpushed span — anything written here
+about those is stale the moment someone commits.
 
-**Build state — every line was run as a command during this handoff
-(2026-08-14), not recalled:**
+**Build state — every line below was run as a command during this handoff
+(2026-08-14):**
 
-- **`publishLocal` AND `~/Code/ossuminc/bin/riddlc` are BOTH at
-  `2.0.0-rc.14-28-1f2c496d`**, from one `scripts/publish-and-stage.sh` run;
-  the binary was asked its version and the ivy artifacts confirmed present at
-  that same version. Bare `riddlc` on `$PATH` is still the old tap build.
-- **BAST `FORMAT_REVISION` is 17.** No remaining task may move it.
-- **Certified tri-platform from clean under a throwaway `--sbt-cache`:**
-  floors now **2469 / 753 / 1908** in `.claude/skills/rc/SKILL.md`, which
-  carries the per-module rows. All four validators green (TatSu 104/127 =
-  baseline, GBNF fresh, external-repo 9/9).
-- **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease, Maven from the tag, npm on
-  the **`rc`** dist-tag (`latest` did NOT move).
+- **The staged binary reports `2.0.0-rc.14-39-f8f93893` while `git describe` says
+  `2.0.0-rc.14-43-g112b31fec`.** It was rebuilt several times AFTER that commit, so its
+  content is newer than its version string — sbt's dynver freezes inside a server
+  session (see MEMORY). **Do not trust that version; `reload` and restage before
+  anything that depends on knowing what is in the binary.**
+- `~/Code/ossuminc/bin/riddlc` is still `2.0.0-rc.14-28-1f2c496d` and was NOT updated
+  this session. Bare `riddlc` on `$PATH` remains the old tap build.
+- **BAST `FORMAT_REVISION` is 17 and has NOT moved.**
+- Verified green this session: `language` **669**, `passes` **1271**, and all four
+  grammar validators (TatSu **105/128** — the baseline moved from 104/127 because a
+  fixture was added and passes; GBNF regenerated, 320 rules, verified fresh).
+- **NOT run since the work landed: `riddlLib`, `riddlc`, `commands`, and the JS and
+  Native legs.** This is the biggest gap before an RC, and it is not a formality —
+  the changes touched shared fixtures and `Pass.traverse`.
 
-**In flight: nothing.** An unattended run on 2026-08-14 completed, in order:
-`5072bad5b` A43 modality aliases + A46 presentation verbs, `a68e4a037`
-`exactly-once` as a delivery intention with all three option spellings retired,
-`cb2ea1dd7` `isIdForEntity` by resolved identity. Before that, the four approved
-items (`8177418d1`, `7ed365e60`, `4feb5a370`, `fdf29927f`, `75a791682`).
+**In flight: nothing.** Seven items completed 2026-08-14, all committed and green.
 
-`language` 669 and `passes` 1271 green; all four grammar validators green (TatSu
-**105/128** — the baseline moved from 104/127 because a new fixture was added and
-it passes). **The other modules have NOT been run since** — `riddlLib`, `riddlc`,
-`commands`, JS and Native are owed before an RC.
-
-**Next, and both are APPROVED but want a plan first:** numeric literals in
-`Value` (integers and decimals) and A20 typed holes spelled `prompt("…") as T`.
-**They share ONE `FORMAT_REVISION` bump with A38 — 17 -> 18.** See BACKLOG § 2;
-deciding the bump once, in whichever lands first, is the whole point of the note.
+**Next, and both are APPROVED with the design settled:** numeric literals in `Value`
+(integers and decimals) and A20 typed holes spelled `prompt("…") as T`. Each wants a
+plan first. **They share ONE `FORMAT_REVISION` bump with A38 — 17 → 18** — decide it
+once, in whichever lands first; BACKLOG § 2 says why.
 
 **Traps — every one already bit someone here.**
 
-- **A `.conf` overrides CLI options, so a corpus A/B on a completeness check can be
-  meaningless.** `--show-completeness-warnings=true` was ignored for every
-  riddl-models model, leaving the count at zero both with and without the fix under
-  test. A unit test isolated what the corpus could not. Check that your instrument
-  can move before trusting a number it reports.
-- **Assert a COUNT, not `nonEmpty`, when a bug's symptom is over-silencing.** The
-  name-matching Id check silenced the warning for BOTH same-named entities, so a
-  `nonEmpty` assertion passes under the bug and only a count of exactly 1 fails.
-- **THE CORPUS IS RED BY DESIGN, now for a THIRD reason.** On top of the two
-  already-red tests, the bare-operand Error (`4feb5a370`) makes every unmigrated
-  `send`/`tell`/`yield`/`reply`/`morph` in riddl-models an Error. Reid approved it
-  knowing this: riddl-models has converted against a staged build, but that
-  conversion is NOT in the local checkout. **Do not soften the check to green the
-  corpus.** His reasoning is worth keeping: riddl-models drives all errors AND
-  warnings to zero, so a severity change never alters their workload — which is
-  why the warn-first argument was weaker than recorded.
-- **A backlog cost estimate is a guess, not a measurement.** The flip was filed as
-  "one line plus one test's assertions"; it broke 30 tests across 20 suites,
-  because our own fixtures are written in exactly the style we asked the corpus to
-  migrate away from. Measure before promising a small change.
-- **Run a BASELINE before attributing failures to your change.** Six suites stayed
-  red after the first migration pass and two of them reported messages with nothing
-  to do with it ("no error-sink inlet", "no Sink streamlet") — those are warnings
-  the harness prints ahead of the real trigger. Stashing and re-running proved all
-  six were mine and none pre-existing.
-- **Take a field name from the fixture under the cursor, never a sibling.**
-  `CompletenessTest`'s `Evt` has `amount`; three other fixtures in the same file
-  declare an `Evt` with `data`. The wrong one produced a green-looking edit that
-  failed for a brand-new reason.
-- **TWO CORPUS TESTS ARE RED ON PURPOSE**, and this is what a cold session is
-  most likely to get wrong. `RiddlModelsRoundTripTest` (16 of 189) and
-  `Root2JsonCorpusTest`'s validation-parity case (173/189, needs ≥95%) fail
-  because `ccd278c00` taught the addressing check to resolve `Id` aliases,
-  exposing **49 real defects in riddl-models**. **Do not soften the checks and
-  do not chase them here.** BACKLOG § 3.
-- **`tJVM` therefore cannot run as one `;` chain** — it aborts at `commands`,
-  so `riddlLib` and `riddlc` never run and the leg looks complete. Finish those
-  two separately and count the `Suites: completed` lines.
-- **A revert-proof under the shared sbt cache can be a lie.** One this session
-  reported GREEN with the fix removed because sbt 2 served previously-compiled
-  classes and never compiled the reverted code. **Revert-prove under a throwaway
-  `--sbt-cache`**, and check the log for the module actually recompiling.
-- **A test asserting "no X" is also satisfied by a model that never parsed.**
-  Same case, same session: it needed `justErrors mustBe empty` FIRST to become
-  able to fail.
-- **A dispatch written TWICE hides the incomplete copy** — now a rule in
-  CLAUDE.md, with `Statement.format` / `RiddlFileEmitter.emitStatement` named as
-  the pair to keep in step.
+- **THE CORPUS IS RED BY DESIGN, for THREE reasons**, and this is what a cold session
+  is most likely to get wrong. Two tests were already red awaiting riddl-models' 49
+  addressing fixes; the bare-operand **Error** (`4feb5a370`) adds a third. Reid
+  approved it knowing this. **Do not soften a check to green the corpus.**
+- **`tJVM` cannot run as one `;` chain** — it aborts at `commands`, so `riddlLib` and
+  `riddlc` never run and the leg looks complete. Count the `Suites: completed` lines.
+- **A `.conf` overrides CLI options.** A corpus A/B on a completeness check reported
+  zero both with and without the fix under test, because
+  `--show-completeness-warnings` was ignored. Verify your instrument can move before
+  trusting a number it gives you.
+- **Assert a COUNT, not `nonEmpty`, when the bug's symptom is over-silencing.** The
+  name-matching Id check silenced BOTH same-named entities, so `nonEmpty` passes under
+  the bug and only "exactly 1" fails.
+- **Run a BASELINE before blaming your change.** Six suites stayed red after a
+  migration pass and two reported messages with nothing to do with it — the harness
+  prints warnings ahead of the real trigger. Stashing proved all six were mine.
+- **A backlog cost estimate is a guess.** The flip was filed as "one line plus one
+  test's assertions"; it was 30 tests across 20 suites.
+- **Revert-prove under a throwaway `--sbt-cache`** and confirm the module recompiles,
+  or sbt serves previously-compiled classes and the proof is a lie.
 
-**Certainty.** Everything above was executed this session. The plan's design
-questions Q1-Q3 were resolved by a controller rather than by Reid and are
-flagged in the plan so he can overrule them; Q1 is now also backed by a
-measurement (the field-less exemption accounts for 62 of 14,714 corpus sites).
-One claim I asserted and later DISPROVED: `BASTWriterSpec` does *not* have the
-unawaited-Future defect — CLAUDE.md carried that error and is now corrected
-with the file:line evidence.
+**Certainty.** Everything above was executed this session. Two claims are explicitly
+NOT verified: the staged binary's contents (version string unreliable, see above), and
+the state of any module outside `language`/`passes`.
 
-**`task/` — one file, UNTRIAGED and not actionable as written:**
-`2026-08-04-security.md` (RBAC / `role`, issue #535), Reid's own draft marked
-*"Draft (do not act on this)"*, with acceptance-criteria, semantics and
-why-we-can't-derive-it all EMPTY. Two outgoing replies were dropped this
-session and both are confirmed present: the landing notice appended to
-`task/done/2026-08-14-where-does-a-message-refs-value-come-from.md` (riddlg),
-and riddl-models
-`task/2026-08-14-bare-message-operands-now-warn-corpus-wide.md`.
+**`task/` — FOUR files, ALL UNTRIAGED, and one of them is urgent:**
 
-**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
-driver's call, not the handoff's.
+- **`2026-08-14-valueref-migration-blinds-the-populates-repository-check.md` — READ
+  FIRST.** It is titled *"read this before flipping the bare form to an Error"* and it
+  arrived AFTER the flip shipped. Verified there with a negative control: migrating to
+  the `ValueRef` arm takes the populates-repository check from **863 warnings to 9**
+  corpus-wide with nothing about the models changed. It is a check that must learn the
+  widened operand — the same class `9d0e47acd` fixed for the addressing checks and
+  evidently missed here — **not** a reason to unflip. Pointer kept in BACKLOG beside
+  the flip so it survives triage.
+- `2026-08-14-value-ref-starting-with-to-fails-to-parse.md` — parser defect from the
+  same migration.
+- `2026-08-14-shown-by-loses-its-url-scheme-and-host-through-bast.md` — BAST fidelity
+  defect at revision 17.
+- `2026-08-04-security.md` — Reid's own draft, marked *"do not act on this"*, with
+  acceptance criteria empty.
+
+Outgoing replies are dropped and confirmed present: riddl-models
+`task/2026-08-14-bare-message-operand-is-now-an-error.md`.
+
+**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
+call, not the handoff's.
 
 ## Incoming Tasks
 
