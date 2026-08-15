@@ -106,7 +106,7 @@ task files, so they were NOT physically reshuffled; this index carries the order
 | ~~1~~ | ~~`OnInit`/`OnTerm` params~~ | — | **DONE `c530337d9`** — defaulted IN PLACE; the prescribed "move it trailing" was unnecessary and would itself have broken all five positional call sites. |
 | ~~2~~ | ~~Close the two stale entries~~ | — | **DONE `d46646e10`** — one of them was the sole holder of a live design rationale, graduated to CLAUDE.md before deletion. |
 | ~~3~~ | ~~`valueTypeExpr` predefined types **and** `PromptValue.typeEx`~~ | — | **DONE `141486ed4`** — merged as planned; one function, one corpus A/B. |
-| 4 | Wire `checkPromptAscription` at the remaining A20 positions | ~~3~~ done | Needs the expected-type machinery from 3, which has landed — **unblocked, next up**. |
+| ~~4~~ | ~~Wire `checkPromptAscription` at the remaining A20 positions~~ | — | **DONE `0fd7bb54e`** — all seven wired; the "decide per position" premise dissolved once every position turned out to already hold its expected type. |
 | 5 | Close the JVM/Native test gap (560 cases) | — | **Confidence infrastructure — do it before more language change.** Every later item lands on a base whose Native behaviour is unverified. Its `commands` sub-item also settles whether the corpus gate runs JVM-only, which decides how much the A/Bs in 3 and 11 are worth. |
 | 6 | `!` into `Punctuation.tokenPunctuation` | — | Isolated, tooling-facing (idea-plugin, synapify). Fits any gap. |
 | 7 | JSON strict-key rejection | — | Needs a design decision before code. Independent. |
@@ -367,42 +367,27 @@ each want an approved plan before implementation, per the standing rule.
   identity) must not be conflated with the definition ULIDs of line 2523
   (model-time identity of a definition).
 
-- **A20 typed holes: `checkPromptAscription` (VALIDATION) is not wired at
-  every position a `prompt(...) as T` ascription can legally appear.** Found
-  by the 2026-08-15 whole-branch review; filed rather than fixed, per Reid's
-  "file, do not fix" call on this specific item.
-
-  **Scope correction (2026-08-15, same-day review):** this item is about
-  VALIDATION only — whether an ascription is checked for a restate/contradict
-  violation. It is NOT about rendering: the sibling RENDERING defect at the
-  same set of positions (a `PromptValue` nested in a `Constructor`/`Call`/
-  `Initiate` argument, an `InvariantCondition` argument, or a
-  `LogicalExpression`/`NotExpression` operand emitting non-parsing source via
-  `ascriptionFormat`) is now CLOSED — `RiddlFileEmitter.emitValue` is total
-  over those shapes; see CLAUDE.md's `PromptValue.ascriptionFormat` entry and
-  `TypedHoleContainerAscriptionRoundTripTest`. Both defects were loosely
-  cross-referenced to this one BACKLOG entry from code comments, which
-  conflated them; only the validation half below remains open.
-
-  `checkPromptAscription` runs at exactly four positions today: `constant`
-  (`validateConstant`), `let`/`set` (`checkValueType`, which both share),
-  and a `when` condition (`checkStatementScopes`'s `WhenStatement` arm). A
-  `PromptValue` with an ascription can also appear — the parser does not
-  forbid it — as a `put` statement's value, a `return` statement's value, a
-  `require … with` argument, and a `Call`/`Constructor`/`Initiate`/
-  `TerminateStatement` argument. None of these are checked for a
-  restate/contradict violation, so an ascription that contradicts its
-  position's actual expected type is silently accepted at all of them.
-
-  This is a narrower, sibling gap to the omission already covered by the
-  seam-CompletenessWarning's conservative wiring (only an unascribed `let`
-  warns) — that one is about the ABSENCE of an ascription; this one is
-  about the four-plus positions where a PRESENT ascription is never
-  checked against the position's actual expected type at all. Decide
-  deliberately whether to wire each position (most need the same expected-
-  type lookup `checkValueType`/`validateCall`/`validateConstructor` already
-  do elsewhere) or leave them, before touching `checkPromptAscription`
-  again.
+- ~~**A20 typed holes: `checkPromptAscription` is not wired at every position**~~ —
+  **DONE 2026-08-15, `0fd7bb54e`.** All seven positions are wired: `put`,
+  `return`, `require … with`, and the four argument positions
+  (`Constructor`/`Call`/`Initiate`/`TerminateStatement`).
+  **The decision this entry asked for dissolved on contact.** It said "most need
+  the same expected-type lookup ... already do elsewhere", implying some would
+  need new machinery and might not be worth it. In fact ALL seven already had
+  the expected type in hand where the ascription is visible — there was nothing
+  to build, only somewhere to call — so there was no position for which leaving
+  it was the better trade.
+  **Four of the seven cost ONE call site.** `checkArgumentTypes` already binds
+  each argument to its field, and `checkLifecycleInvocation` adapts
+  `MethodArgument`s into `Field`s precisely so it can reuse that helper.
+  **Which side of the comparison to pass is the part worth remembering.**
+  `field.typeEx` goes in directly because it is the type as WRITTEN, which is
+  what a syntactic comparison needs; a RESOLVED `Type` must be re-wrapped by
+  `selfNamedTypeExpression`, because passing its `typEx` would compare
+  `as OrderId` against the underlying `Id(entity Order)` and report a false
+  contradiction on correct code.
+  The sibling RENDERING defect at the same positions was already closed
+  separately (`RiddlFileEmitter.emitValue` is total over them).
 
 ### 2. Queued, needs a plan
 
