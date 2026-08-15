@@ -4374,16 +4374,22 @@ object AST:
     * @param loc
     *   THe location of the "on other" clause
     * @param parameters
-    *   Declared BEFORE `contents`/`metadata` and WITHOUT a default: `@JSExportTopLevel` requires
-    *   defaulted parameters to be trailing, and those two are defaulted. Same rule as A55's
-    *   `binding` and A57's `envelopeType`.
+    *   Kept in SECOND position, and defaulted in place. It shipped in rc.14 without a default,
+    *   which broke synapify's build and departed from the compatibility policy. The obvious repair
+    *   -- move it after `contents`/`metadata`, since `@JSExportTopLevel` wants defaulted parameters
+    *   trailing -- is NOT needed and would itself be source-breaking: that rule bites only while
+    *   `parameters` has NO default, and once it has one, `loc` is the sole undefaulted parameter
+    *   and everything after it is defaulted, so the constraint is satisfied where it stands.
+    *   Moving it would have broken all five positional constructions in production code
+    *   (`HandlerParser` x2, `BASTReader`, `JsonAstBuilder` x2). Contrast A55's `binding` and A57's
+    *   `envelopeType`, which genuinely cannot be defaulted and so must precede the defaults.
     * @param contents
     *   A set of statements that define the behavior when a message doesn't match
     */
   @JSExportTopLevel("OnInitializationClause")
   case class OnInitializationClause(
     loc: At,
-    parameters: Seq[MethodArgument],
+    parameters: Seq[MethodArgument] = Seq.empty[MethodArgument],
     contents: Contents[Statements] = Contents.empty[Statements](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {
@@ -4433,16 +4439,15 @@ object AST:
     * @param loc
     *   THe location of the "on other" clause
     * @param parameters
-    *   Declared BEFORE `contents`/`metadata` and WITHOUT a default: `@JSExportTopLevel` requires
-    *   defaulted parameters to be trailing, and those two are defaulted. Same rule as A55's
-    *   `binding` and A57's `envelopeType`.
+    *   Kept in SECOND position and defaulted in place -- see [[OnInitializationClause.parameters]]
+    *   for why moving it after `contents`/`metadata` is neither necessary nor safe.
     * @param contents
     *   A set of statements that define the behavior when a message doesn't match
     */
   @JSExportTopLevel("OnTerminationClause")
   case class OnTerminationClause(
     loc: At,
-    parameters: Seq[MethodArgument],
+    parameters: Seq[MethodArgument] = Seq.empty[MethodArgument],
     contents: Contents[Statements] = Contents.empty[Statements](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {

@@ -17,6 +17,27 @@ import wvlet.airframe.ulid.ULID
 /** Unit Tests For Abstract Syntax Tree */
 class ASTTest extends AbstractTestingBasis {
 
+  "Lifecycle clauses" should {
+    // The compatibility policy requires a new parameter to have a default. `parameters` was added
+    // in rc.14 without one, which is the only rc.14 change that broke synapify's build.
+    "construct OnInitializationClause without naming `parameters`" in {
+      val clause = OnInitializationClause(At.empty)
+      clause.parameters mustBe empty
+    }
+    "construct OnTerminationClause without naming `parameters`" in {
+      val clause = OnTerminationClause(At.empty)
+      clause.parameters mustBe empty
+    }
+    // Defaulting in PLACE rather than moving the field keeps every existing positional
+    // construction working — there are five in production code (HandlerParser x2, BASTReader,
+    // JsonAstBuilder x2) that pass `parameters` second.
+    "still accept `parameters` positionally in its original second position" in {
+      val args = Seq(MethodArgument(At.empty, "total", Integer(At.empty)))
+      OnInitializationClause(At.empty, args).parameters mustBe args
+      OnTerminationClause(At.empty, args).parameters mustBe args
+    }
+  }
+
   "Descriptions" should {
     "have empty Description.empty" in {
       Description.empty.format mustBe ""
