@@ -96,6 +96,32 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **`JsonModel`'s reader never rejects unknown/misspelled keys — a whole
+  defect class, not one stale doc line.** Found while fixing
+  `JSON_INPUT.md:255`'s stale `"negated"` field (final `!`/`not` synonymy
+  review, 2026-08-15): `JsonModel.readStatement` and every DTO reader build
+  their result by selective `m("key")`/`m.get("key")` lookups against a
+  `ujson.Obj` map, with no step anywhere that diffs the keys PRESENT against
+  the keys CONSUMED. So a producer emitting a misspelled or obsolete key —
+  `"negated"` was one instance, following what was at the time a correct
+  doc example — gets it silently dropped, no diagnostic, no error. This
+  matters specifically for `JSON_INPUT.md`, which exists so AI producers can
+  emit schema-constrained JSON without reading the Scala: a stale example or
+  a producer typo both fail the same silent way, producing a model that
+  quietly means something other than what was written. Not fixed here per
+  instruction (no strict-key validation built in this pass) — needs a design
+  decision on where to add rejection (a shared "consumed keys" tracker
+  wrapping `ujson.Obj`, most likely) and how strict to be about schema
+  evolution (old documents from before a field existed must still read).
+- **`Punctuation.tokenPunctuation` does not include `!`, so `TokenParser`
+  swallows `!isValid` / `!(a` as a single `Token.Other` blob** (found in the
+  final `!`/`not` synonymy review, 2026-08-15). This is pre-existing — it was
+  never fixed when `Punctuation.exclamation` was removed, because that removal
+  was inert — but the not-bang-synonymy work multiplies the positions where
+  editor tooling (riddl-idea-plugin, synapify) will encounter it, since `!` is
+  now a first-class negation spelling rather than a narrow special case. File,
+  do not fix opportunistically: `Punctuation.scala:76` (`tokenPunctuation`),
+  consumed by `TokenParser.otherToken` (`TokenParser.scala:31`).
 - **`OnInitializationClause.parameters` / `OnTerminationClause.parameters` have
   no default and are not trailing** (`AST.scala:4236`). Filed by synapify
   2026-08-14; it is the only thing in rc.14 that broke their build. It departs
