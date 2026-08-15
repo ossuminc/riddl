@@ -923,10 +923,15 @@ that needs a ruling before either can be fixed.
   session's `terminate` work stashed — so 130 is the true pre-existing baseline
   and 16 was never right. Anyone re-measuring should expect 130, not 16, and
   should A/B by `git stash push -u` rather than trusting either number.
-  Cause: `ccd278c00` taught the tell-addressing check to resolve `Id` aliases,
-  which turned it ON for the spelling riddl-models actually uses, surfacing **49
-  ambiguity Errors it had been hiding**. Verified by A/B — stash the fix and the
-  corpus is 189/189 green — so the delta is exactly those 49.
+  **Cause, CORRECTED 2026-08-15 — it is no longer the alias fix.** The original
+  cause was `ccd278c00`, which taught the tell-addressing check to resolve `Id`
+  aliases, turning it on for the spelling riddl-models uses and surfacing 49
+  ambiguity Errors it had been hiding. **Those 49 are gone** (see below), and
+  what keeps these suites red now is a DIFFERENT and larger thing: Migration 2,
+  the bare-message-operand tightening, which accounts for 130 of the 131 failing
+  models. The 131st is `reactive-bbq`'s two unmigrated `terminate` lines.
+  Keep the history because the two are easy to confuse — the alias fix is closed,
+  the corpus is still red, and those facts are unrelated.
   All 49 are corpus-side, in three classes, checked against riddl-models'
   sources rather than inferred from the messages: genuine two-id ambiguity
   (`CartsMerged {targetCartId, sourceCartId}`) needing `by`; actor fields
@@ -936,35 +941,44 @@ that needs a ruling before either can be fixed.
   type ReportId is Id(ImagingExam)`, `member-enrollment/types.riddl:2 type
   MemberId is Id(Enrollment)`, `policy-lifecycle/types.riddl:8,14
   BeneficiaryId`/`RiderId is Id(LifePolicy)`.
-  **⚠ THE FULL LIST WAS NEVER DELIVERED, AND THIS ENTRY USED TO CLAIM IT WAS.**
-  This line previously read "Task filed at
-  `../riddl-models/task/2026-08-14-alias-fix-exposes-49-addressing-defects.md`
-  with the full list and a corpus-wide sweep of 17 wrong-alias candidates."
-  **That file has never existed** — verified 2026-08-15 by listing both
-  `../riddl-models/task/` and `../riddl-models/task/done/`. A regeneration was
-  attempted 2026-08-15 and did not finish (it stalled waiting on a corpus
-  validation sweep), so the list is still owed.
-  **So riddl-models has the CAUSE but not the WHICH.** The five wrong-entity
-  aliases named above are all they have; the other ~44 sites are not written
-  down anywhere. **Regenerate before expecting them to act**: stage `riddlc`,
-  run `validate` over the corpus entry points (the `<model-name>.conf` files,
-  NOT `model.conf`), and collect the ambiguity Errors — that is how the 49 was
-  derived. Watch that a `.conf` can override CLI options, so confirm the
-  instrument reports these errors before trusting any zero.
-  `../riddl-models/task/2026-08-15-two-corpus-migrations-in-one-pass.md` also
-  points at the missing filename and needs the same correction.
-  **Consequence for the next RC:** certification cannot be clean until this
-  lands. `~/Code/ossuminc/bin/riddlc` is at `2.0.0-rc.14-28-1f2c496d` (verified
-  2026-08-15) — **older than this branch's HEAD by ~100 commits**, so restage
-  before handing riddl-models anything to validate against.
-  **A second, UNEXPLAINED regression sits on top of the 49-alias one**: the
-  corrected 59/190 above is roughly 114 models worse than the 173/189 this
-  entry previously recorded, and that gap is NOT accounted for by the 49
-  aliasing defects. Confirmed by A/B stash testing to PREDATE the
-  numeric-literals work (present with that branch's commits stashed too), so
-  it is not a defect of this branch either — but its cause is not yet known
-  and needs its own investigation. Do not fold it into the alias-fix task
-  above; file and diagnose it separately.
+  **✅ THE 49 ARE CLEARED, AND THE LIST NEVER NEEDED TO BE DELIVERED** (verified
+  2026-08-15). riddl-models fixed all of them ITSELF in `29598ad1`, "Clear all
+  49 addressing errors, and correct 18 Id aliases", dated **2026-08-14** — the
+  day before this entry was written demanding the list. They derived it from
+  their own `riddlc` run and classified all three classes; 16 aliases became
+  plain identifiers (a task is not a shift, a report is not an exam), two models
+  whose only alias was the wrong one were repointed at `MachineId`/`PartId`, and
+  27 genuine two-id sites gained `by <field>`.
+  **Everything this entry previously said was owed is moot**: the phantom
+  filename, the ~44 unwritten sites, the "regenerate before expecting them to
+  act", and the RC-certification blocker. The task file in riddl-models has been
+  corrected in place so it stops asking them to redo finished work.
+  **Verified, not assumed** — a sweep of all 190 corpus entry points at
+  `2.0.0-rc.14-120-7cb40f45` reports **zero** ambiguity Errors, and the
+  instrument was PROVEN able to fire first (a positive-control model, in both
+  the inline `Id(entity X)` and the `type OrderId is Id(entity X)` alias
+  spellings — the alias one being what `ccd278c00` turned on and what this
+  corpus uses). The five wrong-entity aliases named above are now `UUID`s.
+  **The lesson worth keeping: this entry was the stale artifact.** It described
+  work as outstanding for a day after it was finished, in confident detail, and
+  nothing about reading it suggested otherwise — the same failure mode this file
+  documents for test counts. A backlog item asserting another repo owes us
+  something should be re-verified against that repo before being acted on.
+  **~~A second, UNEXPLAINED regression~~ — EXPLAINED 2026-08-15.** The 59/190 is
+  not a mystery and needs no separate investigation. Measured across the same
+  190-entry-point sweep: **131 models carry at least one Error, and 130 of them
+  carry exactly ONE error class** — 343 × *"names a message type, not a value"*
+  plus 19 × the same for a record type, i.e. Migration 2 (the bare-message-
+  operand work), which riddl-models is mid-way through. The 131st is
+  `reactive-bbq`, which does not parse at all because of its two unmigrated
+  `terminate entity X` lines. **Nothing else appears anywhere in the corpus.**
+  So the drop from 173/189 is that one deliberate tightening, and the figure
+  should climb as riddl-models lands the migration.
+  **Method note, because the first attempt got it wrong**: key the sweep's output
+  files on each model's RELATIVE PATH, not its `.conf` basename — ten corpus
+  models share a basename, so a basename-keyed run silently overwrites ten
+  results and reports 180 files as though they were 190. Caught only by
+  reconciling the file count against the exit-code count.
 - ~~**Tell consumers about two BREAKING changes landed 2026-08-10.**~~
   **CLOSED 2026-08-11 by Reid: no announcement needed**, for either half.
   Recorded so it is not re-raised: (1) BAST `FORMAT_REVISION`, now **11**, so

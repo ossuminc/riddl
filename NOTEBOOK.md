@@ -13,13 +13,16 @@ here about those is stale the moment someone commits.
 
 **Build state — verified by running the command, 2026-08-15:**
 
-- **BOTH `riddlc` binaries are STALE. Restage before trusting either.** The staged
-  JVM one (`target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc`) is
-  dated Aug 14 21:26 and reports `2.0.0-rc.14-39-f8f93893`;
-  `~/Code/ossuminc/bin/riddlc` (the NATIVE binary) reports
-  `2.0.0-rc.14-28-1f2c496d`. `git describe` says `2.0.0-rc.14-117-g7b356120a`. Both
-  predate the `terminate` change, so **both still accept the OLD `terminate entity
-  X` spelling** — do not use either to check the corpus migration.
+- **`~/Code/ossuminc/bin/riddlc` (NATIVE) is CURRENT as of 2026-08-15**, at
+  `2.0.0-rc.14-120-7cb40f45`, restaged via `scripts/publish-and-stage.sh` so the
+  ivy artifacts match it. It rejects the old `terminate entity X` spelling, which
+  is the behaviour to check it by. Only doc commits have landed since, so it is
+  still good for language questions; restage if you touch code.
+- **The staged JVM one is STILL STALE** —
+  `target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc` is dated
+  Aug 14 21:26 at `2.0.0-rc.14-39-f8f93893-20260814-2124`, and `publish-and-stage.sh`
+  does NOT refresh it (it links the native binary). Run `sbt riddlc/stage` if you
+  need that path specifically; prefer the native one.
 - **BAST `FORMAT_REVISION` is 18**, unshipped (latest tag `2.0.0-rc.14`). Numeric
   literals spent it; A20, `!`/`not` and now `terminate` all RODE it. The next BAST
   change rides 18 too — re-check `git tag` first.
@@ -28,11 +31,17 @@ here about those is stale the moment someone commits.
 section included (`aee6462`, in the `ossuminc` coordination repo, which is its own
 git repo — commit there separately).
 
-**NEXT: the 49-alias list — BACKLOG § 3.** This is the one thing genuinely at risk.
-It was recorded as filed and **never was**; a regeneration attempt on 2026-08-15
-stalled unfinished. riddl-models has the CAUSE and five named wrong-entity aliases;
-the other ~44 sites are written down NOWHERE. The regeneration recipe is in the
-entry. **Certification cannot be clean until this lands.**
+**The 49-alias list is CLOSED and was never owed** — riddl-models cleared all 49
+itself in `29598ad1` (2026-08-14), a day before our backlog demanded the list.
+Verified 2026-08-15 by sweeping all 190 entry points at HEAD: zero ambiguity
+Errors, with a positive control proving the check can fire in both the inline and
+alias spellings. BACKLOG § 3 and the riddl-models task file are corrected.
+
+**NEXT: nothing is blocked on us.** The corpus is red for ONE reason and it is
+riddl-models' to land: 130 of the 131 failing models carry only the bare-message-
+operand error class (343 + 19 sites), and the 131st is `reactive-bbq`'s two
+unmigrated `terminate` lines. The "unexplained 114-model regression" that BACKLOG
+§ 3 wanted investigated is that same class — closed, not open.
 
 **Suites red on purpose — do NOT "fix" any of these here:**
 
@@ -55,6 +64,15 @@ self-termination; both become `terminate self.id`.
   `checkTerminate` resolved nothing for the two idiomatic target spellings and three
   tests passed anyway. A check's ACCEPT cases prove nothing unless something
   independently proves the check can fire on that input shape.
+- **A corpus sweep needs its own canary.** Keying per-model output on the `.conf`
+  BASENAME silently overwrites ten of the 190 models — ten basenames collide
+  (`benefits-administration`, `case-management`, `order-management`, …). Key on the
+  relative path, and reconcile the output-file count against the entry-point count
+  before reading any total. "It ran and produced output" is not evidence of
+  coverage; this is the `Suites: completed` discipline in another costume.
+- **A BACKLOG item can be stale about whether the work still exists.** § 3's
+  49-alias item was written a day after riddl-models had finished the work. Check
+  the other repo's `git log` before acting on anything filed as owed by them.
 - **The refMap holds only WRITTEN paths.** `valueTypeExpr` synthesizes `UniqueId`s
   (for `initiate`, for `self.id`) with fully-qualified paths that have no refMap
   entry, so a refMap-only lookup silently returns `None`. Fall back to
@@ -69,20 +87,68 @@ self-termination; both become `terminate self.id`.
   `language`/`commands` compile `--no-warnings`.
 - **A green corpus on a construct the corpus does not contain is not evidence.**
 
-**Certainty.** Everything above was executed this session. NOT verified: whether
-riddl-models or riddl-generator have acted on anything in their `task/` dirs, and
-the cause of `Root2JsonCorpusTest`'s long-standing 59-vs-173 gap (predates this
-branch; filed separately in § 3).
+**Certainty.** Everything above was executed this session. Both previously-unverified
+items are now settled: riddl-models HAS acted (`29598ad1` cleared the 49), and the
+59-vs-173 gap IS explained (the bare-message-operand class, 130 of 131 models).
+NOT verified: whether riddl-generator has acted on the `Finder` or `terminate`
+drops, or on the use-case-actors reply left for it this session.
 
-**`task/` — TWO files, both UNTRIAGED.** `2026-08-04-security.md` is Reid's own RBAC
-draft marked *"do not act on this"* with empty acceptance criteria.
-`2026-08-15-usecase-actors-empty-when-steps-are-nested.md` arrived mid-session and
-has not been read by anyone. Replies owed to other repos are already dropped:
-riddl-generator got both the `Finder` defect and the closed `terminate` ruling;
-riddl-models got the corpus migration.
+**`task/` — ONE file left, and it is parked.** `2026-08-04-security.md` is Reid's own
+RBAC draft marked *"do not act on this"*, with empty acceptance criteria and issue
+#535 untouched since 2023-12-21. It is a language feature the Computational Model
+does not require, so it is not 2.0 work and is deliberately NOT in BACKLOG.
+The use-case-actors report was triaged, fixed and moved to `task/done/` this
+session. Replies owed to other repos are all dropped: riddl-generator has the
+`Finder` defect, the closed `terminate` ruling, and now the use-case-actors reply
+(`2026-08-15-usecase-actors-fixed-and-reordered.md`); riddl-models has the corpus
+migration, the `terminate` migration, and a corrected Migration-1 block.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
+
+## The 49-alias list was owed to nobody (2026-08-15) — CLOSED
+
+The backlog's most urgent item — *"⚠ THE FULL LIST WAS NEVER DELIVERED"*,
+certification blocked until it lands, ~44 sites written down nowhere — was
+**already finished when it was written.** riddl-models cleared all 49 in
+`29598ad1` on 2026-08-14, deriving the list from its own `riddlc` run and
+classifying all three classes. Our entry demanding it is dated the 15th.
+
+**A backlog item can be stale in the one direction we never check.** This file
+already teaches that a red suite's recorded COUNT rots because nobody
+re-measures it. This is the same rot in an item's *existence*: it asserted that
+another repo owed us something, and there was nothing in the entry — which was
+detailed, specific, and correct about the cause — to suggest the work might be
+done. **Re-verify an item that depends on another repo's state against that
+repo, before acting on it.** Cost here was a full corpus sweep to discover the
+answer was "nothing to do"; cheaper would have been `git log` in riddl-models.
+
+**Prove the instrument can fire before believing a zero.** The sweep reported
+zero ambiguity Errors, which is exactly what a broken sweep reports. So a
+positive control was built first — a model that must produce the error — in
+BOTH spellings: inline `Id(entity Order)` and `type OrderId is Id(entity
+Order)`, the alias form that `ccd278c00` turned on and the only one the corpus
+uses. A control in the inline spelling alone would have proven nothing about
+the case in question. **Match the control to the shape you are asking about,
+not merely to the message you want to see.**
+
+**The sweep's own first version silently lost ten models.** Output files were
+keyed on the `.conf` basename, and ten corpus models share one
+(`benefits-administration`, `case-management`, `order-management`, …), so ten
+results were overwritten: 180 files reported as 190. Caught only by reconciling
+the file count against the exit-code count, which is the same discipline as
+counting `Suites: completed` against modules asked for. **A sweep needs its own
+canary; "it ran and produced output" is not evidence it covered the input.**
+
+**What the sweep did find is worth more than the list.** The backlog carried a
+second item calling the drop from 173/189 to 59/190 an unexplained regression
+needing its own investigation. It is explained, and there is no mystery: 131
+models carry an Error, and **130 of them carry exactly one error class** — 343
+"names a message type, not a value" plus 19 for records, i.e. the bare-message-
+operand migration riddl-models is mid-way through. The 131st is `reactive-bbq`,
+which does not parse at all for its two unmigrated `terminate` lines. Nothing
+else appears in the corpus at all. A question that had been filed as needing
+diagnosis was answered as a by-product of measuring something else.
 
 ## A collector that stopped one level short (2026-08-15) — DONE
 
