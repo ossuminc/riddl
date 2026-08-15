@@ -124,17 +124,50 @@ class NumericLiteralConformanceTest extends AbstractValidatingTest {
     }
   }
 
+  "a `let` ascribed with a predefined type keyword" should {
+    // Defect filed 2026-08-15, fixed 2026-08-15: `let x: Natural = …` used to fail to resolve.
+    // `LetStatement.typeRef` is a `TypeRef` (a path reference, ordinarily resolved through the
+    // symbol table), and predefined type keywords are deliberately never entered there -- so a
+    // bare `Natural` always hit `notResolved` in `ResolutionPass`. Fixed narrowly:
+    // `PredefTypes.typeExpressionFor` recognizes the keyword directly (mirroring
+    // `ValidationPass.typeRefIsChoice`'s existing "predefined name, no refMap lookup needed"
+    // idiom) rather than seeding the symbol table.
+    "resolve and accept a conforming literal (Natural)" in { (td: TestData) =>
+      errorsFor("function F is { let x: Natural = 10 }", "let-nat-direct-ok") mustBe empty
+    }
+
+    "resolve and reject a non-conforming literal (Natural)" in { (td: TestData) =>
+      val errs = errorsFor("function F is { let x: Natural = -1 }", "let-nat-direct-bad")
+      withClue(errs.map(_.message).mkString("\n")) {
+        errs.exists(_.message.contains("Natural")) mustBe true
+      }
+    }
+
+    "resolve Integer, Real, Whole, Boolean and String directly, with no 'not resolved' error" in {
+      (td: TestData) =>
+        val decls = Seq(
+          "function F is { let a: Integer = -3 }",
+          "function F is { let b: Real = 1.5 }",
+          "function F is { let c: Whole = 0 }",
+          "function F is { let d: Boolean = true }",
+          "function F is { let e: String = \"hi\" }"
+        )
+        decls.zipWithIndex.foreach { case (decl, i) =>
+          val errs = errorsFor(decl, s"let-predef-direct-$i")
+          withClue(s"$decl =>\n${errs.map(_.message).mkString("\n")}") {
+            errs.exists(_.message.toLowerCase.contains("not resolved")) mustBe false
+          }
+        }
+    }
+  }
+
   "a reference, unlike a literal" should {
     "stay loosely compatible — a Real-typed field still assigns to a Natural" in {
       (td: TestData) =>
-        // `let x: Natural = …` cannot be written directly: `LetStatement.typeRef` is a `TypeRef`
-        // (a path reference, resolved through the symbol table), and a bare predefined-type
-        // keyword like `Natural` is recognized only where the full TypeExpression grammar applies
-        // (a field type, a `constant`'s declared type, …) — it is never entered into the symbol
-        // table, so a `TypeRef` naming it bare is "not resolved", regardless of this task's check.
-        // A user-declared alias IS a real `Type` definition and resolves normally, which is enough
-        // to exercise what this case is actually pinning: that a Real-typed reference assigns into
-        // a Natural-aliased local without complaint.
+        // Exercises the ALIAS form (`type Nat is Natural`), which resolves through the ordinary
+        // symbol table and is unaffected by the direct-keyword fix above; kept as a second,
+        // independent path to the same conclusion — a Real-typed reference assigns into a
+        // Natural-aliased local without complaint.
         val src =
           """domain D is {
             |  context C is {

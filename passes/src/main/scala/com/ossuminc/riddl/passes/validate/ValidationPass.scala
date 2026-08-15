@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.{Keyword, PredefType}
+import com.ossuminc.riddl.language.parsing.{Keyword, PredefType, PredefTypes}
 import com.ossuminc.riddl.language.{Contents, Finder, Messages, *}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -7281,15 +7281,32 @@ case class ValidationPass(
         checkUnusedInitiateId(ls, stmts) // Task 5
         ls.typeRef.foreach { tr =>
           val expected = resolution.refMap.definitionOf[Type](tr.pathId)
-          checkValueType(
-            expected,
-            ls.expression,
-            parents,
-            lets,
-            elements,
-            ls.loc,
-            s"'let ${ls.identifier.value}'"
-          )
+          expected match
+            case Some(_) =>
+              checkValueType(
+                expected,
+                ls.expression,
+                parents,
+                lets,
+                elements,
+                ls.loc,
+                s"'let ${ls.identifier.value}'"
+              )
+            case None =>
+              // Defect 2 (2026-08-15): a predefined type keyword (`Natural`, `Integer`, …) used as
+              // the ascription resolves to no `Type` Definition -- predefined types are deliberately
+              // never entered into the symbol table (see `PredefTypes.typeExpressionFor`'s doc) --
+              // so `checkValueType`'s Type-identity comparison has nothing to compare against and
+              // would otherwise silently skip the ascription entirely. Run the two checks that
+              // operate on a bare [[TypeExpression]] instead of a resolved [[Type]] -- the same
+              // ones `checkValueType`'s first match arm runs when a Type WAS found.
+              if tr.pathId.value.sizeIs == 1 then
+                PredefTypes.typeExpressionFor(tr.pathId.value.head, tr.loc).foreach { expectedTe =>
+                  ls.expression match
+                    case nl: NumericLiteral => checkNumericLiteralConformance(nl, expectedTe)
+                    case pv: PromptValue    => checkPromptAscription(pv, Some(expectedTe))
+                    case _                  => ()
+                }
         }
         // A20: the ONE seam-CompletenessWarning site, per the ruling's conservative table. An
         // unascribed `let x = prompt(…)` has NOTHING that supplies a type -- not a `let x: T`

@@ -8,6 +8,9 @@ package com.ossuminc.riddl.language.parsing
 
 import fastparse.*
 import MultiLineWhitespace.*
+import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.language.AST.TypeExpression
 import com.ossuminc.riddl.language.parsing.Keywords.{keyword, keywords}
 
 object PredefTypes {
@@ -87,6 +90,53 @@ object PredefTypes {
   def UserId[u: P]: P[Unit] = keyword("UserId")
   def UUID[u: P]: P[Unit] = keyword("UUID")
   def Whole[u: P]: P[Unit] = keyword("Whole")
+
+  /** A predefined type keyword's [[TypeExpression]], for the ONE spelling that is complete without
+    * arguments — `let x: Natural = …` names the keyword through the ordinary `TypeRef` grammar
+    * (the same production a user-declared alias uses), but predefined types are deliberately never
+    * entered into the symbol table (see `PredefinedModule`'s note on why the standard module stays
+    * out of the shared maps), so a `let` ascription naming one directly had nothing to resolve
+    * against and always failed with "not resolved" until this existed.
+    *
+    * Deliberately covers only the keywords a BARE name fully specifies. `Currency`, `Decimal`,
+    * `Blob`, `ZonedDate`, `ZonedDateTime`, `Pattern` and `Id` all require arguments
+    * (`Currency(USD)`, `Decimal(10,2)`, …) that the bare `TypeRef` spelling cannot carry, so a
+    * `let x: Currency = …` ascription is incomplete regardless of this fix and is left exactly as
+    * it behaved before — unresolved.
+    *
+    * Mirrors `ValidationPass.typeRefIsChoice`'s existing idiom of recognizing a predefined-type
+    * `TypeRef` by name rather than going through the refMap.
+    */
+  // Qualified as `AST.X` throughout: this object also declares parser-rule methods named
+  // `Anything`, `Integer`, `Natural`, … (above), which otherwise shadow the identically-named
+  // `AST` case classes within this object's own scope.
+  def typeExpressionFor(name: String, loc: At): Option[TypeExpression] = name match
+    case PredefType.Anything    => Some(AST.Anything(loc))
+    case PredefType.Nothing     => Some(AST.Nothing(loc))
+    case PredefType.Boolean     => Some(AST.Bool(loc))
+    case PredefType.Integer     => Some(AST.Integer(loc))
+    case PredefType.Natural     => Some(AST.Natural(loc))
+    case PredefType.Whole       => Some(AST.Whole(loc))
+    case PredefType.Real        => Some(AST.Real(loc))
+    case PredefType.Number      => Some(AST.Number(loc))
+    case PredefType.Current     => Some(AST.Current(loc))
+    case PredefType.Length      => Some(AST.Length(loc))
+    case PredefType.Luminosity  => Some(AST.Luminosity(loc))
+    case PredefType.Mass        => Some(AST.Mass(loc))
+    case PredefType.Mole        => Some(AST.Mole(loc))
+    case PredefType.Temperature => Some(AST.Temperature(loc))
+    case PredefType.String      => Some(AST.String_(loc))
+    case PredefType.UUID        => Some(AST.UUID(loc))
+    case PredefType.UserId      => Some(AST.UserId(loc))
+    case PredefType.Location    => Some(AST.Location(loc))
+    case PredefType.Duration    => Some(AST.Duration(loc))
+    case PredefType.DateTime    => Some(AST.DateTime(loc))
+    case PredefType.Date        => Some(AST.Date(loc))
+    case PredefType.TimeStamp   => Some(AST.TimeStamp(loc))
+    case PredefType.Time        => Some(AST.Time(loc))
+    case PredefType.URL         => Some(AST.URI(loc))
+    case _                      => None
+  end typeExpressionFor
 
   /** The TOKENIZER's view of "a predefined type name" -- `TokenParser` uses it to classify a word
     * as [[AST.Token.Predefined]] for syntax highlighting. It is NOT the type parser; that is

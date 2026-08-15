@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.{Entity, *}
-import com.ossuminc.riddl.language.parsing.Keyword
+import com.ossuminc.riddl.language.parsing.{Keyword, PredefTypes}
 import com.ossuminc.riddl.language.{At, Contents, Messages, *}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.*
@@ -427,7 +427,20 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           case _: Identifier => ()
         resolveForeachFieldRefs(fs.doStatements, parents)
       case ls: LetStatement =>
-        ls.typeRef.foreach(tr => resolveARef[Type](tr, parents))
+        // Defect 2 (2026-08-15): a predefined type keyword (`let x: Natural = …`) parses into an
+        // ordinary TypeRef via the same grammar a user-declared alias uses, but predefined types
+        // are deliberately never entered into the symbol table (see `PredefinedModule`'s note on
+        // why the standard module stays out of the shared maps) -- so `resolveARef` could never
+        // find one and every such ascription failed with "not resolved". Skip resolution for the
+        // keywords `PredefTypes.typeExpressionFor` can construct without arguments;
+        // `ValidationPass.letType`/`checkStatementScopes` special-case the same set directly. A
+        // keyword that NEEDS arguments (`Currency`, `Decimal`, …) still goes through the ordinary
+        // path and is unaffected -- a bare `let x: Currency = …` is incomplete regardless.
+        ls.typeRef.foreach { tr =>
+          val isBarePredefinedKeyword = tr.pathId.value.sizeIs == 1 &&
+            PredefTypes.typeExpressionFor(tr.pathId.value.head, tr.loc).isDefined
+          if !isBarePredefinedKeyword then resolveARef[Type](tr, parents)
+        }
         // A54: resolve the bound value expression (constructor refs, get sources).
         resolveValue(ls.expression, parents)
       case PutStatement(_, v, output) =>
