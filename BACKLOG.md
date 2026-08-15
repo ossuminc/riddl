@@ -62,6 +62,33 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **`Finder` never descends into a `when` condition.** Found 2026-08-15 by the
+  numeric-literals work, pre-existing and left alone.
+
+  `Finder.recursiveFindByType` walks `WhenStatement`'s then/else statement
+  lists but never its `condition` FIELD. So any Finder-based search silently
+  misses everything inside a `when` condition — a `ComparisonExpression`, a
+  `ValueRef`, a `PromptValue`, a `NumericLiteral`. It does not error; it
+  returns a shorter list.
+
+  **This is the same shape as the `statementValues` defect already recorded in
+  CLAUDE.md** — a walk that is total over the node kinds and is nonetheless
+  defeated because its INPUT drops a field. There, `RequireStatement.argument`
+  and `MatchCase.guard` were never yielded, which hid an `initiate` from four
+  separate checks at once. Auditing the match arms proves nothing about the
+  fields each arm forgot to return.
+
+  Check the other field-held statements and values while fixing it, rather
+  than patching the one instance: `MatchStatement`'s cases and guards,
+  `Correlation.timeoutStatements`, `SagaStep.do/undoStatements`,
+  `RequireStatement.argument`. **Fix the SHAPE, not the instance** — this is
+  now the fourth appearance of that lesson.
+
+  Consumers most likely affected are the ones that ENUMERATE rather than
+  traverse: riddl-gen and anything reading the AST through `Finder` instead of
+  a `Pass`. A green internal suite is not evidence here, for exactly the
+  reason `ConsumerReadsIncludedDefinitionsTest` exists.
+
 - **A predefined type keyword cannot be used as a `let` ascription.** Found
   2026-08-15 by the numeric-literals work, pre-existing and left alone.
 
