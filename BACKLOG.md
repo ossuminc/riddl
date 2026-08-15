@@ -852,6 +852,31 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   regen, the `ArgDto.fields` read path in JSON, and an external-corpus re-run.
   Sequence: deprecate loudly for a release, then remove.
 
+- **A20 typed holes: `checkPromptAscription` is not wired at every position
+  a `prompt(...) as T` ascription can legally appear.** Found by the
+  2026-08-15 whole-branch review; filed rather than fixed, per Reid's
+  "file, do not fix" call on this specific item.
+
+  `checkPromptAscription` runs at exactly four positions today: `constant`
+  (`validateConstant`), `let`/`set` (`checkValueType`, which both share),
+  and a `when` condition (`checkStatementScopes`'s `WhenStatement` arm). A
+  `PromptValue` with an ascription can also appear — the parser does not
+  forbid it — as a `put` statement's value, a `return` statement's value, a
+  `require … with` argument, and a `Call`/`Constructor`/`Initiate`/
+  `TerminateStatement` argument. None of these are checked for a
+  restate/contradict violation, so an ascription that contradicts its
+  position's actual expected type is silently accepted at all of them.
+
+  This is a narrower, sibling gap to the omission already covered by the
+  seam-CompletenessWarning's conservative wiring (only an unascribed `let`
+  warns) — that one is about the ABSENCE of an ascription; this one is
+  about the four-plus positions where a PRESENT ascription is never
+  checked against the position's actual expected type at all. Decide
+  deliberately whether to wire each position (most need the same expected-
+  type lookup `checkValueType`/`validateCall`/`validateConstructor` already
+  do elsewhere) or leave them, before touching `checkPromptAscription`
+  again.
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built

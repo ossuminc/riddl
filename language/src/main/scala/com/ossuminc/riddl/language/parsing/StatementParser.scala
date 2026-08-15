@@ -454,7 +454,8 @@ private[parsing] trait StatementParser {
   // duplicating it, so a `constant` value can be a prompt hole too.
   //
   // A20: the optional `as <type>` ascription declares the type of the AI-computed value, e.g.
-  // `prompt("compute the discount") as Currency`. `Keywords.keyword("as")`, not
+  // `prompt("compute the discount") as Currency(USD)` (`Currency` is a predefined type requiring a
+  // `country` argument -- bare `as Currency` does not parse). `Keywords.keyword("as")`, not
   // `Readability.readable("as")` -- this `as` is a real keyword introducing a type, not an
   // omittable readability word. No parse ambiguity: every `as` elsewhere in the grammar follows an
   // identifier, a keyword, or an import string, never a value expression (surveyed sites:

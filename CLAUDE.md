@@ -932,15 +932,34 @@ to the right group rather than appending to a list.
   `constant`, a constructor argument, `set`, and a `when` condition (which
   must resolve to `Boolean`) — with either a predefined type or a declared
   alias.
+  **The ascription's type reference RESOLVES, like any other TypeExpression**
+  (2026-08-15 whole-branch review) — `ResolutionPass.resolveValue`'s
+  `PromptValue` arm used to say "no references" and do nothing, so `prompt(
+  "x") as Nonexistent` validated clean while naming a type that need not
+  exist. It now calls the same `resolveTypeExpression` every other
+  TypeExpression position uses, which recurses `Cardinality` wrappers for
+  free and records the resolved Type in `usedBy`, so a Type named ONLY by an
+  ascription is not wrongly flagged unused.
   **The ascription RESTATES the position's already-known type; it never
   OVERRIDES it.** `let x: Real = prompt("...") as String` is a validation
   Error (contradiction), not a coercion — checked by the same
   `checkValueType` a `set` already used. **The comparison is deliberately
   SYNTACTIC, not resolved-type**, mirroring A57: `constant G: Real =
-  prompt("...") as SomeAliasOfReal` is still an Error even though the
-  alias's underlying type is `Real`, because RIDDL treats a declared alias
-  as a distinct name, not a transparent synonym — a resolved comparison
-  would swallow exactly the contradiction this rule exists to catch.
+  prompt("...") as Score` (`type Score is Real`) is still an Error even
+  though the alias's underlying type is `Real`, because RIDDL treats a
+  declared alias as a distinct name, not a transparent synonym — a resolved
+  comparison would swallow exactly the contradiction this rule exists to
+  catch. `typeAscriptionName` (`ValidationPass`) does the comparison; it
+  RECURSES through the four `Cardinality` wrappers (discarding them rather
+  than folding them into the name) and compares only the LAST path segment
+  on both sides — both fixed 2026-08-15 after review found false positives
+  on `let x: OrderId = prompt(…) as OrderId?` and on a qualified restatement
+  (`let x: Common.OrderId = prompt(…) as Common.OrderId`), and a false
+  negative where two differently-aliased `Optional`s compared equal by
+  `kind` alone. Comparing only the last segment is a KNOWN, accepted
+  limitation shared with `checkOnOtherBinding`: two differently-scoped types
+  sharing a simple name compare equal here, because the check stays
+  syntactic rather than resolving through the symbol table.
   **A `constant` with a `prompt` value needs no ascription at all, because
   the constant's own type declaration already supplies it** — `constant G:
   Real = prompt("...")` is the complete, idiomatic form; adding `as Real` is
@@ -952,19 +971,39 @@ to the right group rather than appending to a list.
   UNASCRIBED hole is deliberately CONSERVATIVE: it fires only at call sites
   that already carry an expected type to compare against (`let`, `constant`
   via `checkValueType`), not at constructor arguments, since nothing wires
-  an expected type there today.
-  **`PromptValue.format` and `RiddlFileEmitter`'s statement/constant
-  emitters are the SAME "dispatch written twice" risk documented under
-  Total Dispatch below** — `AliasedTypeExpression.format` always includes
-  its `type` keyword, so a naive `as <type>` render produced `as type
-  OrderId`, a string that does not mean the same thing on re-parse.
-  `PromptValue.ascriptionFormat` strips it and RECURSES through
+  an expected type there today. **Nor at `put`, `return`, `require … with`,
+  or a call/constructor argument** — filed to BACKLOG § 1 as a decision to
+  revisit, not a ruling; those positions can legally carry an ascribed
+  `prompt(...)` and nothing checks it today.
+  **`PromptValue.format`'s `ascriptionFormat` and `RiddlFileEmitter` were
+  the SAME "dispatch written twice" risk documented under Total Dispatch
+  below, and 2026-08-15's review fix makes `RiddlFileEmitter.emitValue` the
+  ONE emitter-level dispatch** — it routes a `PromptValue` ascription
+  through `emitTypeExpression`, the total dispatch every other
+  TypeExpression position already uses, for the four positions
+  `checkPromptAscription` validates (`constant`/`let`/`set`/`when`).
+  `ascriptionFormat` remains, narrower, for contexts the emitter cannot
+  reach — `.format`-based error messages, and a `PromptValue` nested inside
+  a `Constructor`/`Call`/`Initiate`/`TerminateStatement` argument (also
+  filed to BACKLOG § 1). Before the fix, `ascriptionFormat`'s `case other
+  => other.format` fallback mis-rendered several TypeExpression shapes as
+  unparseable source: an enumeration, a table, an entity reference, and a
+  parameterized predefined type all round-tripped to text riddlc rejects.
+  **Historical correction (2026-08-15)**: an earlier version of this entry
+  claimed the spurious `type` keyword bug (`as OrderId` rendering as `as
+  type OrderId`) meant the string "does not mean the same thing on
+  re-parse" — false. `aliasedTypeExpression` defaults an omitted keyword to
+  `"type"` too, so both spellings parse to an AST-IDENTICAL node; the
+  defect was cosmetic (an un-authored keyword in emitted source), never
+  semantic. `ascriptionFormat` still strips it and RECURSES through
   `Optional`/`ZeroOrMore`/`OneOrMore`/`SpecificRange` wrappers rather than
-  falling back to `.format`, or the same bug resurfaces one level down
-  (`as OrderId?` → `as type OrderId?`). **`Currency` cannot appear bare in
-  an example** — it is a predefined type requiring a `country` argument
-  (`Currency(USD)`), so `prompt("...") as Currency` does not compile; use
-  `Real`, `String`, `Boolean`, `Score`, or a declared alias instead.
+  falling back to `.format`, or the same cosmetic bug resurfaces one level
+  down (`as OrderId?` → `as type OrderId?`). **`Currency` cannot appear bare
+  in an example** — it is a predefined type requiring a `country` argument
+  (`Currency(USD)`), so `prompt("...") as Currency` does not compile, and it
+  does NOT resolve to `Real` or anything else underneath — it is its own
+  distinct `PredefinedType`. Use `Real`, `String`, `Boolean`, `Score`, or a
+  declared alias in examples instead.
   **BAST/JSON**: rides `FORMAT_REVISION` 18 (the bump numeric literals
   already spent), not a new bump — see the FORMAT_REVISION note in
   BACKLOG § 2 for who claims 18 next.
