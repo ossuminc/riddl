@@ -275,6 +275,39 @@ to the task file and note the disposition below.
 ---
 
 
+## `!` and `not` become one node (2026-08-15) — DONE
+
+`9c8b0cfb6..631f64bcc`, five tasks plus a whole-branch review and its fix wave. `!` is now legal
+everywhere `not` is, both spellings build the identical `NotExpression`, and `WhenStatement.negated`
+is gone.
+
+**A measurement made the decision, and then made the job smaller.** The ruling left one question
+open — which spelling prettify emits. The corpus answered it: **597 `not` against zero `!`**.
+Authors already write the word form, so `!` converges to `not`, matching the precedent where
+`A | B` prettifies to `one of { A or B }`. The same zero then made the expensive-looking part
+cheap: deleting a public field from `WhenStatement` broke no model, because nothing used the
+spelling that produced it.
+
+**The corpus can only ever confirm what the corpus contains.** It has zero `!=` uses, so no corpus
+run could catch the one real hazard here — a `!` prefix above `comparison` swallowing the `!` of
+`!=`. Tests are the only net, and three were built. It later turned out `!=` is safe by STRUCTURE
+anyway (`notExpr` is only entered where an operand begins, so it never sees a leading `!=`) and the
+guard is inert defence-in-depth — but that was established by reading the composition, not by any
+test passing. **A green corpus on a construct the corpus does not contain is not evidence.**
+
+**Grep by NODE NAME, not field name.** Deleting `negated` looked like a `grep negated` job. Three
+sites had positional `WhenStatement(…, _)` patterns that never mention the field they destructure,
+found only by grepping `WhenStatement(`. Positional patterns are invisible to a field-name search,
+and `language`/`commands` compile `--no-warnings`, so the compiler does not cover for you either.
+
+**The most dangerous stale line was in a document, not the code.** `JSON_INPUT.md` still showed
+`"negated": false` in its `when` example. That file exists so AI producers can emit
+schema-constrained JSON — and `JsonModel`'s reader has **no unknown-key rejection**, so a producer
+following the document would have had its negation silently dropped with no diagnostic. Chasing
+that down established the general defect: the reader never diffs present-against-consumed keys for
+*any* DTO, so every obsolete or misspelled key across the whole JSON input path is silently
+ignored. Filed. **A stale example in a machine-facing document is a data-loss bug, not a typo.**
+
 ## A filed defect that was 22 times bigger than filed (2026-08-15) — DONE
 
 `b55d1d5cc`, `bb46de1db`, `9dcfc646e`, `a3c0aa345`. Three filed defects fixed. Two were exactly
