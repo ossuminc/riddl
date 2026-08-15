@@ -567,6 +567,11 @@ private[parsing] trait StatementParser {
   // negative lookahead, so `~~ !"="` (no-whitespace sequencing, then "not followed by =") is the
   // guard. Regex lookahead is unavailable on Scala Native, so that route is not an option here.
   // `not` keeps its `Keywords.keyword` word boundary so `notify` stays an ordinary identifier.
+  // This guard is defence-in-depth, not the reason `a != b` parses correctly: `notExpr` is only
+  // ever ENTERED where an operand begins (e.g. at `a` in `a != b`), never at the `!` inside `!=`,
+  // so `notOperator` is never even attempted against it -- `comparison` consumes the whole
+  // expression regardless of this lookahead. The guard's only reach is malformed input that puts
+  // `!` where an operand is expected (`when != b`), which is a parse error either way.
   private def notOperator[u: P]: P[Unit] = P(Keywords.keyword("not") | ("!" ~~ !"="))
 
   // `not` level (prefix). Recurses so `not not a` / `!!a` work; falls through to `comparison`.

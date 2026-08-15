@@ -43,24 +43,6 @@ abstract class BangNotSynonymyTest(using PlatformContext) extends AbstractParsin
         clause.contents.filter[Statement].head
   }
 
-  private def parseStmtFails(body: String, td: TestData): Unit = {
-    val input = RiddlParserInput(
-      s"""domain d is {
-         |  context c is {
-         |    handler h is {
-         |      on init {
-         |        $body
-         |      }
-         |    }
-         |  }
-         |}""".stripMargin,
-      td
-    )
-    TopLevelParser.parseInput(input) match
-      case Left(messages) => messages.hasErrors must be(true)
-      case Right(_)       => fail(s"expected a PARSE error for '$body'")
-  }
-
   /** Strip `At` locations from the small set of node kinds these tests build, so two spellings
     * parsed from source strings of different lengths compare equal on SHAPE rather than on offsets.
     * `RiddlValue` case classes do not override `equals` (unlike `Definition`), so plain `==`
