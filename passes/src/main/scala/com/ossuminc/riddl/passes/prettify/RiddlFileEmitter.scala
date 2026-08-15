@@ -288,6 +288,13 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     * `NumericLiteral`, `ComparisonExpression`, `BooleanLiteral`) still renders via `.format`: none
     * of them carries a nested `Value`/`TypeExpression` that needs emitter-level rendering, so the
     * fallback arm is byte-identical to the pre-fix behaviour for all of them.
+    *
+    * `InvariantBlock` (`invariant X is { <stmts> <predicate> }`) is not a `Value` itself, so it is
+    * not dispatched here — see [[emitInvariantBlock]] — but closes the same gap: as of Reid's
+    * 2026-08-15 ruling, its `statements` route through `emitStatement` and its `predicate` through
+    * `emitValue`, so `ascriptionFormat` is unreachable from THAT construct too. With this, prettify
+    * never reaches `PromptValue.ascriptionFormat` anywhere — it serves `.format`-based
+    * error-message rendering only.
     */
   def emitValue(v: Value): this.type =
     v match
@@ -358,34 +365,35 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case c: Constructor => emitValue(c)
       case other          => add(other.format)
 
-  /** `InvariantBlock`'s `{ <stmts> <predicate> }` (`invariant X is { … }` block form). Mirrors
-    * `AST.InvariantBlock.format` (`"{ " + (statements.map(_.format) :+ predicate.format)
-    * .mkString(" ") + " }"`) EXACTLY, with ONE deliberate change: `predicate` -- always a
-    * `BooleanExpression`, and the block's own final expression -- routes through `emitValue`
-    * rather than `.format`, since `LogicalExpression`/`NotExpression`/`InvariantCondition` can
-    * nest a `PromptValue` whose ascription needs `emitValue`'s total dispatch. `predicate` never
-    * calls `nl`/`addIndent` (see `emitValue`'s doc: it is purely inline), so this needs no capture/
-    * squash machinery -- unlike `statements` below.
+  /** `InvariantBlock`'s `{ <stmts> <predicate> }` (`invariant X is { … }` block form) — now
+    * rendered the same way as every OTHER statement block in this emitter (`emitCodeBlock`, an
+    * on-clause body, a `when`/`match` arm): one statement per line, indented, closing brace back at
+    * the block's own indent level. `AST.InvariantBlock.format`'s single-line `"{ " + (statements
+    * .map(_.format) :+ predicate.format).mkString(" ") + " }"` was never a deliberate layout choice
+    * for this construct — RIDDL statements are whitespace-separated everywhere (`pseudo_code_block`
+    * has no `;`/`,` separator; disambiguation is the formatter's job, not the grammar's), and every
+    * other statement-bearing block already puts one per line. The single-line rendering was the
+    * narrow, un-synced SECOND copy of the block dispatch (`InvariantBlock.format` vs.
+    * `RiddlFileEmitter`) behaving differently from the other five, not a design decision — Reid,
+    * 2026-08-15, ruling on the review that found it. `riddlc` accepts `invariant Inv is { let a = 1
+    * a > 0 }` today (verified against the staged binary, with a deliberately-broken negative control
+    * so the check is known to report errors), so this is a legibility/consistency fix plus closing
+    * the ascription gap below, NOT a grammar fix — the parser is untouched.
     *
-    * `statements` deliberately STAYS on `.format`, unfixed. Two independent reasons found
-    * 2026-08-15, NOT a "didn't get to it": (1) `invariantBlock`'s grammar allows
-    * `when`/`match`/`foreach` (`StatementParser.anyDefStatements` GROUP 1, included in
-    * `StatementsSet.FunctionStatements`), and `WhenStatement.format`/`MatchStatement.format` are
-    * ALREADY multi-line (embed literal `\n`) -- so "the block is single-line" is already false for
-    * those, and routing them through the total `emitStatement` dispatch instead would be a genuine,
-    * visible LAYOUT change to every invariant block containing one, not a bug fix. (2) A capture-
-    * and-squash approach (render via a scratch `emitStatement` call, then collapse whitespace back
-    * to one line) risks CORRUPTING content: `NoWhiteSpaceParsers.literalString`'s `stringChars`
-    * permits a raw, author-written newline inside a quoted string (nothing bans it), so blindly
-    * replacing `\s+`/`\n` with a space would silently change what a `do "…"`/`error "…"` literal
-    * MEANS, not merely how it is laid out. Both are why this is a decision for the owner (see
-    * BACKLOG § 1 / CLAUDE.md), not something to fix silently here.
+    * `statements` route through `emitStatement`, the SAME total dispatch every other statement
+    * position uses — so a `let`/`require` here gets the SAME `PromptValue`-ascription fix as
+    * everywhere else, for free, with no capture-and-squash machinery needed (that concern only
+    * existed to preserve a single-line layout this method no longer attempts).
+    * `predicate` — always a `BooleanExpression`, the block's own final expression — routes through
+    * `emitValue` on its own indented line, for the same reason.
     */
   def emitInvariantBlock(block: InvariantBlock): this.type =
-    add("{ ")
-    block.statements.toSeq.foreach(s => add(s.format).add(" "))
+    add("{").nl.incr
+    block.statements.toSeq.foreach(emitStatement)
+    addIndent("")
     emitValue(block.predicate)
-    add(" }")
+    nl
+    decr.addIndent("}")
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
     add(s"any of {").nl.incr

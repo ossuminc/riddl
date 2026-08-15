@@ -1169,40 +1169,52 @@ to the right group rather than appending to a list.
   arm, and a `match`/`case` guard — now routes through `emitValue` too.
   `PrettifyVisitor.doInvariant`'s condition rendering (`invariant X is <condition>`)
   had the same defect and is fixed the same way, INCLUDING the `InvariantBlock`
-  form's own `predicate: BooleanExpression` (`invariant X is { <stmts>
-  <predicate> }` — new `RiddlFileEmitter.emitInvariantBlock` routes `predicate`
-  through `emitValue`; `predicate` never calls `nl`/`addIndent`, so this needed
-  no capture/squash machinery, unlike the residual below).
-  **Correction (2026-08-15, same-day review): an earlier version of this entry
-  claimed the `InvariantBlock` form was untouched and pointed at it as "the
-  same, pre-existing two-dispatches gap" — wrong. Its `predicate` is exactly
-  the `BooleanExpression` shape fixed everywhere else and is now fixed here
-  too.** What remains open in `InvariantBlock` is narrower than that: its
-  LEADING `statements: Contents[Statements]` still render via `.format`,
-  deliberately, because fixing them is genuinely layout-entangled, not a quick
-  follow-up — see `emitInvariantBlock`'s doc and BACKLOG § 1. Two independent,
-  VERIFIED reasons: (1) `invariantBlock`'s grammar (`StatementParser.scala`)
-  allows `when`/`match`/`foreach` inside the block (`StatementsSet
-  .FunctionStatements` includes `anyDefStatements`'s control-flow group), and
-  `WhenStatement.format`/`MatchStatement.format` are ALREADY multi-line (embed
-  literal `\n`) — so routing them through the line-oriented `emitStatement`
-  instead would be a genuine, visible LAYOUT change to every invariant block
-  containing one, not a bug fix. (2) A capture-into-a-scratch-emitter-then-
-  squash-to-one-line approach is unsafe in general: `NoWhiteSpaceParsers
-  .literalString`'s `stringChars` permits a raw, author-written newline
-  inside a quoted string (nothing bans it), so blindly collapsing whitespace
-  risks corrupting what a `do "…"`/`error "…"` literal MEANS, not merely how
-  it is laid out.
-  `ascriptionFormat` remains in `AST.scala`, unchanged, for the two places this
-  emitter genuinely cannot (yet) reach: `.format`-based error-message
-  rendering, and a `PromptValue` nested inside an `InvariantBlock`'s leading
-  statements (the residual above).
+  form (`invariant X is { <stmts> <predicate> }`) — **fully closed as of
+  Reid's 2026-08-15 ruling**, both halves:
+  - `predicate: BooleanExpression` routes through `emitValue` (never calls
+    `nl`/`addIndent`, so no capture/squash machinery needed for it).
+  - `statements: Contents[Statements]` route through `emitStatement` — the
+    SAME total dispatch every other statement position uses. This was found
+    to need a genuine LAYOUT change (single-line -> multi-line, one statement
+    per line, matching `emitCodeBlock`/on-clause bodies/`when`/`match` arms)
+    and was correctly escalated rather than silently squashed; Reid ruled
+    it in, on the grounds that RIDDL statements are whitespace-separated
+    EVERYWHERE (`pseudo_code_block` has no `;`/`,` separator — disambiguation
+    is the formatter's job, not the grammar's) and every other statement
+    block already puts one per line, so the single-line `InvariantBlock`
+    rendering was never a deliberate choice — it was the narrow, un-synced
+    SECOND copy of the block dispatch (`AST.InvariantBlock.format` vs. the
+    emitter) behaving differently from the other five. Verified against the
+    staged `riddlc` (plus a negative control) that the grammar was untouched:
+    `invariant Inv is { let a = 1 a > 0 }` parses clean before and after.
+  **Correction (2026-08-15, earlier same-day review): an intermediate version
+  of this entry first claimed `InvariantBlock` was untouched (wrong — its
+  predicate was fixed immediately), then that its `statements` were a
+  genuinely open, layout-entangled residual needing an owner ruling (correct
+  AS FAR AS IT WENT — that analysis is what got the question to Reid, and is
+  why the ruling above exists). Both intermediate states are superseded: the
+  whole construct is closed now.**
+  `ascriptionFormat` remains in `AST.scala`, unchanged, for the one place this
+  emitter genuinely cannot reach: `.format`-based error-message rendering. It
+  is no longer reachable from prettify output, anywhere, full stop.
   Proven by `TypedHoleContainerAscriptionRoundTripTest` (`passes/.../prettify/`):
   a named `Constructor` argument (`any of {…}`), a named `Call` argument
   (`Currency(USD)`), a nested `LogicalExpression` with the parenthesizing
-  intact (`reference to entity E`), a `not` (`table of T of […]`), and an
-  `InvariantBlock`'s own predicate (`Currency(USD)`) — all five previously
-  mis-emitted, all five verified to fail before the fix via `git stash`.
+  intact (`reference to entity E`), a `not` (`table of T of […]`), an
+  `InvariantBlock`'s own predicate (`Currency(USD)`), and an `InvariantBlock`
+  leading `statement` (`any of {…}`) — all six previously mis-emitted, all six
+  verified to fail before their respective fix via `git stash`.
+  **In-repo fixtures checked for drift, none needed edits**: the ONLY `.riddl`
+  fixture anywhere in the repo containing an `invariant … is { … }` block is
+  `language/input/invariant-scope.riddl` (repo-wide grep), and its block was
+  ALREADY hand-formatted in exactly the multi-line style `emitInvariantBlock`
+  now produces — byte-identical, verified by prettifying it and diffing. A
+  repo-wide grep for a hardcoded single-line `invariant … is { … }` golden
+  string in any Scala test source found none outside this session's own test
+  file (already updated). Full `language`+`passes` suites stay green (70+208
+  suites, 707+1357 tests) and the `RiddlModelsRoundTripTest` corpus baseline
+  is unchanged (59/189, same pre-existing failures) — evidence nothing outside
+  invariant blocks moved.
   `AST.scala` is in `language` and `RiddlFileEmitter` in `passes`, so the copy
   still cannot call the original — the two must be kept in step by hand,
   which is precisely why this pattern keeps recurring here.

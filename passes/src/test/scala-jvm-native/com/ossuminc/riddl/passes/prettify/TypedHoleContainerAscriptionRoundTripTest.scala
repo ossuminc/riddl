@@ -32,6 +32,13 @@ import org.scalatest.*
   * `<name> = ` prefix is proven to survive alongside the routed value), and a nested
   * `LogicalExpression` operand (so the parenthesizing `LogicalExpression.format`'s `paren` helper
   * applies is proven to survive through `emitLogicalOperand`, not merely the ascription inside it).
+  *
+  * `InvariantBlock` cases (added 2026-08-15, same-day follow-up): the `predicate` case closed
+  * first, in isolation (zero leading statements); then Reid ruled that the block's `statements`
+  * should route through `emitStatement` too — the same multi-line, one-statement-per-line
+  * convention every other statement block in this emitter uses, not the single-line form
+  * `AST.InvariantBlock.format` had. The final case below is the one this whole review thread was
+  * about: a previously-broken ascription shape on a `let` inside the block's leading statements.
   */
 class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
 
@@ -253,9 +260,15 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
     // 2026-08-15 review follow-up: `InvariantBlock`'s `predicate` (its OWN final boolean, not one
     // of its leading `statements`) is `BooleanExpression`, exactly the shape `emitValue` is total
     // over elsewhere, and it was still rendered via `AST.InvariantBlock.format` (-> `.format` on
-    // the predicate) in `PrettifyVisitor.doInvariant`. `statements` are a separate, still-open
-    // residual (layout-entangled, not fixed here -- see `RiddlFileEmitter.emitInvariantBlock`'s
-    // doc): this case has ZERO leading statements, so it isolates the predicate fix specifically.
+    // the predicate) in `PrettifyVisitor.doInvariant`. This case has ZERO leading statements, so it
+    // isolates the predicate fix specifically -- the sibling case below covers a `PromptValue`
+    // ascription in a leading STATEMENT, now that Reid's 2026-08-15 ruling closed that gap too by
+    // routing `InvariantBlock.statements` through `emitStatement` (see `emitInvariantBlock`'s doc).
+    // The block is now rendered multi-line -- one statement per line, indented, closing brace back
+    // at the `invariant` keyword's own indent -- matching every other statement block this emitter
+    // renders (`emitCodeBlock`, an on-clause body, `when`/`match` arms). That was never a layout
+    // choice for THIS construct: it was the narrow, un-synced second copy of the dispatch
+    // (`InvariantBlock.format`) behaving differently from the other five.
     "survive a prettify round trip as an InvariantBlock's own predicate, ascribed to a Currency" in {
       (_: TestData) =>
         val src =
@@ -287,11 +300,15 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
 
         val emitted = prettify(original)
         withClue(s"emitted source was:\n$emitted\n") {
+          // Multi-line block form (2026-08-15 ruling): `{`, the predicate on its own indented line,
+          // then `}` on its own line back at the `invariant` keyword's indent.
           emitted must include(
-            """invariant HasFunds is { invariant OtherRule with prompt("w") as Currency(USD) }"""
+            "invariant HasFunds is {\n" +
+              "        invariant OtherRule with prompt(\"w\") as Currency(USD)\n" +
+              "      }"
           )
           // Before the fix this rendered `as Currency` -- a parse error (mandatory `country` arg).
-          emitted must not include """as Currency }"""
+          emitted must not include "as Currency\n"
         }
 
         val regen = parse(emitted, "regen")
@@ -301,6 +318,58 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
               case c: Currency => c.country mustBe "USD"
               case other       => fail(s"expected a Currency, got $other")
           case other => fail(s"expected a PromptValue argument, got $other")
+    }
+
+    // Reid's 2026-08-15 ruling: `InvariantBlock.statements` route through `emitStatement`, closing
+    // the last position `emitValue`'s totality fix had not reached. This is the case the whole
+    // review thread was about: a previously-broken ascription shape on a `let` INSIDE the block's
+    // leading statements (not its predicate, covered above).
+    "survive a prettify round trip as a leading statement inside an InvariantBlock, ascribed " +
+      "to an Enumeration" in { (_: TestData) =>
+        val src =
+          """domain D is {
+            |  context C is {
+            |    entity E is {
+            |      invariant HasFunds is {
+            |        let y = prompt("z") as any of { Red, Green }
+            |        true
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+
+        def invariantBlockOf(root: Root): InvariantBlock =
+          Finder(root)
+            .recursiveFindByType[Invariant]
+            .find(_.id.value == "HasFunds")
+            .getOrElse(fail("no invariant named 'HasFunds' found"))
+            .condition match
+              case Some(ib: InvariantBlock) => ib
+              case other                    => fail(s"expected an InvariantBlock, got $other")
+
+        def letAscriptionOf(root: Root): PromptValue =
+          invariantBlockOf(root).statements.toSeq.headOption match
+            case Some(LetStatement(_, _, _, pv: PromptValue)) => pv
+            case other => fail(s"expected a LetStatement with a PromptValue expression, got $other")
+
+        val original = parse(src, "orig")
+        letAscriptionOf(original).typeEx.get mustBe an[Enumeration]
+
+        val emitted = prettify(original)
+        withClue(s"emitted source was:\n$emitted\n") {
+          // The block is now multi-line, one statement per line, indented -- matching every other
+          // statement block this emitter renders.
+          emitted must include("invariant HasFunds is {")
+          emitted must include("""let y = prompt("z") as any of {""")
+          // Before the fix this rendered `as { Red,Green }` -- a parse error (missing `any of`).
+          emitted must not include "as { Red,Green }"
+        }
+
+        val regen = parse(emitted, "regen")
+        letAscriptionOf(regen).typeEx.get match
+          case e: Enumeration => e.enumerators.toSeq.map(_.id.value) mustBe Seq("Red", "Green")
+          case other          => fail(s"expected an Enumeration, got $other")
     }
   }
 }
