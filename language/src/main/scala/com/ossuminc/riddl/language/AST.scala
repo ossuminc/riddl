@@ -3228,7 +3228,7 @@ object AST:
     * bare [[LiteralString]] in a value position is a literal constant; a `PromptValue` asks the
     * backend to invoke AI codegen. No resolution needed — the prompt is literal text.
     *
-    * A20: `typeEx` is an optional ascription (`prompt("…") as Currency`) declaring the type of the
+    * A20: `typeEx` is an optional ascription (`prompt("…") as Score`) declaring the type of the
     * value the AI must produce, so the seam between RIDDL's deterministic tier and its AI tier is
     * checkable. `None` means unascribed (unchanged pre-A20 behavior).
     *
@@ -3262,11 +3262,26 @@ object AST:
     // (used elsewhere, e.g. as an Alternation member's own surface form), so calling it directly
     // here appended a spurious `type ` the parser never required and no author ever wrote --
     // found by TypedHoleRoundTripTest, whose re-parse of `prompt("x") as OrderId` came back
-    // holding `type OrderId` instead. `RiddlFileEmitter.emitTypeExpression` already strips the
-    // same keyword when rendering a field/constant's type; this is that same rendering choice made
-    // a second time, because a `Value` (unlike `TypeExpression`) has no separate emitter-level
-    // dispatch to route through -- `RiddlFileEmitter.emitStatement`'s `LetStatement` arm and
-    // `emitConstant` both call `.format` on the value directly.
+    // holding an `AliasedTypeExpression` whose `keyword` field read `"type"` explicitly rather than
+    // via the parser's own default (`aliasedTypeExpression` defaults an omitted keyword to `"type"`
+    // too -- see `TypeParser.scala`'s `case (start, None, pid, end) => AliasedTypeExpression(...,
+    // "type", pid)` -- so the two spellings are AST-IDENTICAL nodes either way; re-parsing `as type
+    // OrderId` does NOT change what the ascription means). The defect this function fixes was
+    // therefore COSMETIC, not semantic: an ugly, un-authored keyword in the emitted SOURCE, not a
+    // round-trip that recovered a different AST. (This corrects an earlier version of this comment,
+    // and of CLAUDE.md, that overclaimed the keyword's presence was meaning-changing.)
+    //
+    // As of the 2026-08-15 whole-branch review, this function is no longer the primary rendering
+    // path for the four positions `ValidationPass.checkPromptAscription` actually validates
+    // (`constant`, `let`, `set`, `when`) -- `RiddlFileEmitter.emitValue` routes those through
+    // `emitTypeExpression`, the TOTAL dispatch every other TypeExpression position already uses,
+    // because this function's `case other => other.format` fallback does not reproduce parseable
+    // source for several TypeExpression shapes (an enumeration, a table, an entity reference, a
+    // parameterized predefined type -- see `RiddlFileEmitter.emitValue`'s doc). It remains here for
+    // contexts `RiddlFileEmitter` cannot reach: `.format`-based error-message rendering, and a
+    // `PromptValue` nested inside a `Constructor`/`Call`/`Initiate`/`TerminateStatement` argument,
+    // which still render via this narrower dispatch (tracked in BACKLOG § 1 alongside the other
+    // positions `checkPromptAscription` does not validate).
     //
     // MUST recurse through the four `Cardinality` wrappers, exactly as
     // `RiddlFileEmitter.emitTypeExpression` does (`case Optional(_, typex) =>

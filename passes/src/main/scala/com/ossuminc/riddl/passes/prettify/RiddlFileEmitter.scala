@@ -255,9 +255,39 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     add(": ")
     emitTypeExpression(constant.typeEx)
     add(" = ")
-    add(constant.value.format)
+    emitValue(constant.value)
     emitMetaData(constant.metadata)
   end emitConstant
+
+  /** A20: render a [[Value]] for actual round-trip SOURCE, as opposed to `.format`'s error-message
+    * rendering. The one place the two must differ is [[PromptValue]]'s optional `as <type>`
+    * ascription: `Value.format` renders it via `PromptValue.ascriptionFormat`, a second, narrower
+    * dispatch over [[TypeExpression]] that only reliably covers the handful of shapes it was
+    * written against (an aliased type and the four `Cardinality` wrappers) — an enumeration, a
+    * table, an entity reference, a parameterized predefined type, and others all fall to its
+    * `other => other.format` catch-all, which for several of those does not reproduce parseable
+    * source (found by code review 2026-08-15: `as any of {…}`, `as table of T of […]`, `as
+    * reference to entity E`, and `as Currency(USD)` all mis-emitted). `emitTypeExpression` is
+    * already the TOTAL, correct dispatch for a `TypeExpression` — every OTHER type-expression
+    * position in this emitter routes through it — so a `PromptValue` ascription routes through it
+    * too here, rather than patching `ascriptionFormat` a third time. This makes the four positions
+    * `checkPromptAscription` actually validates (`constant`, `let`, `set`, `when` — see
+    * `emitConstant`/`emitStatement`) the ones this emitter renders correctly; `ascriptionFormat`
+    * remains in `AST.scala` only for contexts this emitter cannot reach (error messages, and a
+    * `PromptValue` nested inside a `Constructor`/`Call`/`Initiate`/`TerminateStatement` argument,
+    * which stay on `.format` — see `RIDDL-Computational-Model.md` handoff notes / BACKLOG § 1).
+    *
+    * Every other [[Value]] still renders via `.format`: none of the rest carries a nested
+    * `TypeExpression` that needs emitter-level rendering.
+    */
+  def emitValue(v: Value): this.type =
+    v match
+      case pv: PromptValue =>
+        add(s"prompt(${pv.prompt.format})")
+        pv.typeEx.foreach { te => add(" as "); emitTypeExpression(te) }
+        this
+      case other => add(other.format)
+  end emitValue
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
     add(s"any of {").nl.incr
@@ -435,14 +465,20 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   def emitStatement(statement: Statements): Unit =
     statement match
       case WhenStatement(_, cond, thenStatements, elseStatements, negated) =>
-        val condStr = cond match {
-          case ls: LiteralString     => ls.format
-          case id: Identifier        => if negated then s"!${id.format}" else id.format
-          case vr: ValueRef          => if negated then s"!${vr.format}" else vr.format // A17
-          case be: BooleanExpression => be.format // A28: structured boolean expression
-          case pv: PromptValue       => pv.format // an AI-evaluated condition
+        // A20: a `PromptValue` condition routes through `emitValue` (not `.format`) so its
+        // ascription — one of the four positions `checkPromptAscription` validates — renders
+        // via `emitTypeExpression`'s total dispatch rather than `PromptValue.ascriptionFormat`'s
+        // narrower one. Built by chaining rather than a single interpolated string, since
+        // `emitValue` appends to the builder rather than returning a `String`.
+        addIndent("when ")
+        cond match {
+          case ls: LiteralString     => add(ls.format)
+          case id: Identifier        => add(if negated then s"!${id.format}" else id.format)
+          case vr: ValueRef          => add(if negated then s"!${vr.format}" else vr.format) // A17
+          case be: BooleanExpression => add(be.format) // A28: structured boolean expression
+          case pv: PromptValue       => emitValue(pv) // an AI-evaluated condition
         }
-        addIndent(s"when $condStr then").nl.incr
+        add(" then").nl.incr
         if thenStatements.isEmpty then addLine("???")
         else thenStatements.toSeq.foreach(emitStatement)
         if elseStatements.nonEmpty then
@@ -475,8 +511,19 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         else doStatements.toSeq.foreach(emitStatement)
         decr.addLine("}")
       case LetStatement(_, id, optTypeRef, expr) =>
+        // A20: route through `emitValue`, not `.format` — see the `WhenStatement` case above.
         val typeClause = optTypeRef.map(t => s": ${t.format}").getOrElse("")
-        addLine(s"let ${id.format}$typeClause = ${expr.format}")
+        addIndent(s"let ${id.format}$typeClause = ")
+        emitValue(expr)
+        nl
+      case SetStatement(_, field, value) =>
+        // A20: `set` is the other carrier `checkValueType` validates ascriptions for (alongside
+        // `let`), so it needs the same `emitValue` routing. Previously fell to the generic
+        // `case statement: Statement => addLine(statement.format)` arm below, which used
+        // `SetStatement.format` and therefore `PromptValue.ascriptionFormat` directly.
+        addIndent(s"set ${field.format} to ")
+        emitValue(value)
+        nl
       case PromptStatement(_, what) =>
         // A54: `do` is canonical; the deprecated `prompt` statement normalizes to `do` on emit.
         addLine(s"do ${what.format}")
