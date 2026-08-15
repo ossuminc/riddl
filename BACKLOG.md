@@ -96,6 +96,33 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **`valueTypeExpr` does not surface a `let`'s declared PREDEFINED type.**
+  Found 2026-08-15 building `terminate`'s target-type check, by instrumenting
+  rather than reading. `let n: Integer = 5` yields `None` from
+  `ValidationPass.valueTypeExpr`, so any check asking "what type is this value"
+  is silently blind to a let whose type the author WROTE OUT, whenever that type
+  is a predefined keyword rather than a named alias. An aliased declaration
+  (`let x: OrderId = …`) works; `let x: Integer = …` does not.
+  **Pre-existing, not caused by the terminate work**, and left alone
+  deliberately — it is a `valueRefTypeExpr`/`letType` gap with a blast radius
+  well beyond one statement, and widening it needs its own A/B against the
+  corpus since it would turn on type checks that currently stay silent.
+  Consequence today: `checkTerminate` stays quiet on `let n: Integer = 5 /
+  terminate n`, which is why `TerminateTargetTest`'s "not an Id" case has to use
+  a bare `self` (whose synthesized Aggregation type IS determinable) instead of
+  the more obvious integer case. That test also pins the silent case, so the
+  boundary is explicit rather than accidental.
+
+- **`checkTerminate`'s target-type check is SILENT for an unascribed
+  `prompt(…)` target.** Same 2026-08-15 work. `terminate prompt("the order to
+  end")` is accepted with no diagnostic, because `valueTypeExpr` yields `None`
+  for an untyped hole. This is deliberate today (A20's conservative rule: an
+  unwired position stays quiet rather than guessing), but note that A20 DOES
+  give holes an ascription — `prompt("…") as OrderId` — and `valueTypeExpr` does
+  not consult `PromptValue.typeEx` either, so even the ASCRIBED form goes
+  unchecked here. Wiring `typeEx` into `valueTypeExpr` is the narrower, more
+  clearly-correct half of the item above and could be done independently.
+
 - **`JsonModel`'s reader never rejects unknown/misspelled keys — a whole
   defect class, not one stale doc line.** Found while fixing
   `JSON_INPUT.md:255`'s stale `"negated"` field (final `!`/`not` synonymy
@@ -856,10 +883,16 @@ that needs a ruling before either can be fixed.
   `TypeExpressionSpacingRoundTripTest`, `AttachmentRoundTripTest`).
 
 - **BLOCKED ON riddl-models: two corpus tests are RED here and stay red until
-  it lands its fix.** `RiddlModelsRoundTripTest` (16 of 189 models) and
-  `Root2JsonCorpusTest` (**59/190**, needs ≥95% — corrected 2026-08-15; this
-  entry previously said 173/189, which was stale). **This is not a defect here
-  and must not be "fixed" here.**
+  it lands its fix.** `RiddlModelsRoundTripTest` and `Root2JsonCorpusTest`
+  (**59/190** validation-parity, needs ≥95% — corrected 2026-08-15; this entry
+  previously said 173/189, which was stale). **This is not a defect here and
+  must not be "fixed" here.**
+  **The "16 of 189" figure this line used to carry for `RiddlModelsRoundTripTest`
+  was WRONG and is removed** (2026-08-15). Measured: the whole `commands` module
+  is **115 succeeded / 130 failed**, and that count is IDENTICAL with this
+  session's `terminate` work stashed — so 130 is the true pre-existing baseline
+  and 16 was never right. Anyone re-measuring should expect 130, not 16, and
+  should A/B by `git stash push -u` rather than trusting either number.
   Cause: `ccd278c00` taught the tell-addressing check to resolve `Id` aliases,
   which turned it ON for the spelling riddl-models actually uses, surfacing **49
   ambiguity Errors it had been hiding**. Verified by A/B — stash the fix and the

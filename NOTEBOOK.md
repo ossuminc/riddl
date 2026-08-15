@@ -11,82 +11,124 @@ Orientation for a session with no memory of this work. **Open work is in
 NOTEBOOK's body. Ask `git` for branch, tree and unpushed span — anything written
 here about those is stale the moment someone commits.
 
-**Build state — every line verified by running the command, 2026-08-15:**
+**Build state — verified by running the command, 2026-08-15:**
 
-- **The staged `riddlc` is STALE. Restage before trusting it.**
-  `target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc` is dated
-  **Aug 14 21:26** and reports `2.0.0-rc.14-39-f8f93893`, while `git describe`
-  says `2.0.0-rc.14-114-g0ef9c7218`. It predates four landed plans.
-- **`~/Code/ossuminc/bin/riddlc` is older still** — `2.0.0-rc.14-28-1f2c496d`.
-  Bare `riddlc` on `$PATH` is the old tap build. The build under test is neither.
-- **BAST `FORMAT_REVISION` is 18**, read from source. Spent by numeric literals;
-  A20 and `!`/`not` RODE it; **A38 is the sole remaining claimant**. It has NOT
-  shipped (latest tag `2.0.0-rc.14`), so the next BAST change rides 18 too —
-  re-check `git tag` before assuming.
-- **FOUR suites are RED for pre-existing reasons**, all A/B-confirmed unchanged:
-  `RiddlModelsRoundTripTest`, `Root2JsonCorpusTest` (59/190), riddlc
-  local-corpus, and `ReportedIssuesTest` "should 406". **Do not soften a check
-  to green them.**
+- **BOTH `riddlc` binaries are STALE. Restage before trusting either.** The staged
+  JVM one (`target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc`) is
+  dated Aug 14 21:26 and reports `2.0.0-rc.14-39-f8f93893`;
+  `~/Code/ossuminc/bin/riddlc` (the NATIVE binary) reports
+  `2.0.0-rc.14-28-1f2c496d`. `git describe` says `2.0.0-rc.14-117-g7b356120a`. Both
+  predate the `terminate` change, so **both still accept the OLD `terminate entity
+  X` spelling** — do not use either to check the corpus migration.
+- **BAST `FORMAT_REVISION` is 18**, unshipped (latest tag `2.0.0-rc.14`). Numeric
+  literals spent it; A20, `!`/`not` and now `terminate` all RODE it. The next BAST
+  change rides 18 too — re-check `git tag` first.
 
-**In flight: nothing.** Four plans landed 2026-08-15 — numeric literals, A20
-typed holes, the three triaged riddl-models defects, and `!`/`not` synonymy —
-each with per-task reviews, a whole-branch review and a fix wave.
+**In flight: nothing.** `terminate` landed complete this session (`7b356120a`), CM
+section included (`aee6462`, in the `ossuminc` coordination repo, which is its own
+git repo — commit there separately).
 
-**NEXT SESSION IS DESIGN WORK, by Reid's decision.** He is bounding the backlog
-so 2.0 can ship. The operating rule is now **CLAUDE.md § "Definition of Done, and
-what bounds 2.0"** — read it first. In short: 2.0 ships when the Computational
-Model is met, not when the backlog empties; an item is not done until the CM
-records its effect; the CM reconciles with the BRANCH (events), never with the
-backlog (aspirations); and there is no "defer to 2.1" pile.
+**NEXT: the 49-alias list — BACKLOG § 3.** This is the one thing genuinely at risk.
+It was recorded as filed and **never was**; a regeneration attempt on 2026-08-15
+stalled unfinished. riddl-models has the CAUSE and five named wrong-entity aliases;
+the other ~44 sites are written down NOWHERE. The regeneration recipe is in the
+entry. **Certification cannot be clean until this lands.**
 
-**Three things owed, and the first is the one at risk:**
+**Suites red on purpose — do NOT "fix" any of these here:**
 
-1. **The 49-alias list was recorded as filed and NEVER WAS.** Verified by listing
-   `../riddl-models/task/` and `task/done/` — no such file, and a regeneration
-   attempt on 2026-08-15 stalled without finishing. riddl-models has the CAUSE
-   and five named wrong-entity aliases; **the other ~44 sites are written down
-   nowhere.** BACKLOG § 3 now says so and gives the regeneration recipe.
-   Certification cannot be clean until this lands.
-2. **riddl-generator has been reading incomplete ASTs and has not been told.**
-   `Finder` was missing content across 27 node fields — shorter lists, never an
-   error, and the consumers most exposed are those that ENUMERATE rather than
-   traverse. No task dropped yet; send it with the 49-alias material.
-3. **`Root2JsonCorpusTest` is 59/190 against a recorded 173/189.** Reid's call:
-   wait for riddl-models' fix, then re-measure. Do not investigate through the
-   noise.
+| Suite | State |
+|---|---|
+| `RiddlModelsRoundTripTest` / whole `commands` module | 115 ok / **130 failed** — A/B-confirmed pre-existing. BACKLOG's old "16 of 189" was simply WRONG; corrected. |
+| `Root2JsonCorpusTest` | validation-parity `cleanRoundTrip=59`, A/B-identical with this session's work stashed. Its json-identity case is NEWLY red (189/190 parse) — see below. |
+| `PassCostBenchmark` | NEWLY red — same cause. |
+| `RunRiddlcOnLocalTest` ("should 406", riddl-examples dokn, shopify-cart) | pre-existing. |
+
+**The two NEWLY red cases are expected corpus fallout, not defects.** reactive-bbq's
+two `terminate` lines use the old spelling and no longer parse. Migration task with
+exact file:line pairs is dropped at
+`../riddl-models/task/2026-08-15-terminate-now-names-an-instance.md`. Both are
+self-termination; both become `terminate self.id`.
 
 **Traps — every one already bit someone here.**
 
-- **Grep by NODE NAME, not field name**, when removing or renaming a field.
-  Positional patterns (`WhenStatement(…, _)`) never mention what they
-  destructure, and `language`/`commands` compile `--no-warnings`, so the
-  compiler will not cover for you. Three sites were found only this way.
+- **"Accepted" and "never examined" look identical from outside a validation check.**
+  `checkTerminate` resolved nothing for the two idiomatic target spellings and three
+  tests passed anyway. A check's ACCEPT cases prove nothing unless something
+  independently proves the check can fire on that input shape.
+- **The refMap holds only WRITTEN paths.** `valueTypeExpr` synthesizes `UniqueId`s
+  (for `initiate`, for `self.id`) with fully-qualified paths that have no refMap
+  entry, so a refMap-only lookup silently returns `None`. Fall back to
+  `symbols.lookup`.
+- **A known-red suite stops being measured, so its recorded count rots.** Re-measure
+  with `git stash push -u` A/B before believing any number in BACKLOG.
+- **`sbt -batch "; a ; b ; c"` aborts the whole chain at the first red module**, so
+  later modules never run. Count `Suites: completed` against the modules you asked
+  for, every time.
+- **Grep by NODE NAME, not field name** when changing a field. Positional patterns
+  (`TerminateStatement(_, x, _)`) never mention what they destructure, and
+  `language`/`commands` compile `--no-warnings`.
 - **A green corpus on a construct the corpus does not contain is not evidence.**
-  Zero `!=` uses meant no corpus run could ever catch the `!=` hazard; tests were
-  the only possible net.
-- **A stale example in a machine-facing document is a data-loss bug.**
-  `JSON_INPUT.md` showed a removed key, and `JsonModel`'s reader has **no
-  unknown-key rejection for any DTO**, so a producer following it lost data
-  silently. Filed.
-- **`sbt -batch "; a ; b ; c"` aborts the whole chain at the first red module.**
-  Count `Suites: completed` against the modules you asked for, every time.
-- **Do not edit a tracked file while an implementer subagent is live** — its
-  `git add` will sweep your change into its commit. That happened this session.
-- **Verify your instrument can move before trusting a zero from it.** A `.conf`
-  overrides CLI options; an sbt 2 `Test/baseDirectory` quirk silently resolves
-  the wrong corpus directory and yields a cancelled, green-looking suite.
 
-**Certainty.** Everything above was executed this session. Two things are
-explicitly NOT verified: whether riddl-models has acted on anything dropped in
-their `task/`, and the cause of the `Root2JsonCorpusTest` 114-model gap.
+**Certainty.** Everything above was executed this session. NOT verified: whether
+riddl-models or riddl-generator have acted on anything in their `task/` dirs, and
+the cause of `Root2JsonCorpusTest`'s long-standing 59-vs-173 gap (predates this
+branch; filed separately in § 3).
 
-**`task/` — ONE file, untriaged, and it is not actionable.**
-`2026-08-04-security.md` is Reid's own RBAC draft, marked *"do not act on this"*
-with empty acceptance criteria. The three defect reports open at the last handoff
-were fixed and moved to `task/done/`.
+**`task/` — TWO files, both UNTRIAGED.** `2026-08-04-security.md` is Reid's own RBAC
+draft marked *"do not act on this"* with empty acceptance criteria.
+`2026-08-15-usecase-actors-empty-when-steps-are-nested.md` arrived mid-session and
+has not been read by anyone. Replies owed to other repos are already dropped:
+riddl-generator got both the `Finder` defect and the closed `terminate` ruling;
+riddl-models got the corpus migration.
 
-**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
-driver's call, not the handoff's.
+**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
+call, not the handoff's.
+
+## `terminate` learns which instance it kills (2026-08-15) — DONE
+
+`7b356120a`. `TerminateStatement.processor: ProcessorRef` became `target: Value` typed
+`Id(entity E)`; args moved behind `with (…)`. CM §4.5 records it (commit `aee6462` in the
+`ossuminc` coordination repo).
+
+**The design came from a consumer refusing to guess, and that is the entry worth keeping.**
+riddl-generator could lower every other rc.14 construct and stopped at this one, emitting an
+`AI FILL` marker instead — because `terminate` DESTROYS, so a wrong instance deletes the wrong
+row, where the same mistake in `tell` merely reads one. It filed the question rather than
+picking the plausible reading (the AST comment implied "always `self`"). **A consumer that
+declines to guess is doing design work for you**; the marker was worth more than a lowering.
+
+**The corpus argued for the option NOT chosen, and that is fine.** Both real `terminate`s in
+riddl-models are self-termination, and CM:1668's single-writer discipline says destroying
+another instance from outside races its in-flight messages — so self-only would have covered
+100% of existing use with a principled story. Reid chose expressiveness: a supervisor must be
+able to end a specific instance without a command round-trip. **Corpus counts measure what has
+been written, never what the language must permit.**
+
+**A "free consequence" that was not free.** The design was picked believing singletons were
+excluded automatically — no instances, so no `Id`, so nothing to terminate. Reid's ruling on
+the same day made that false: **a singleton's `Id` is how you SEND IT MESSAGES**, denoting its
+singular deployment, with shard selection being load management rather than identity. So
+`Id(context C)` is a good value that is simply not a legal thing to end, and the restriction
+had to be written by hand in two places. The lesson is narrow and repeatable: **when a design
+justifies itself by "the type system already prevents this", check that it does.** Here the
+type system was deliberately kept wide for an unrelated and better reason.
+
+**The check that ran and found nothing, silently.** `checkTerminate` resolved its target's
+entity through the refMap alone. The refMap holds only paths that were WRITTEN — but
+`valueTypeExpr` SYNTHESIZES a `UniqueId` for `initiate` and for `self.id`, carrying a
+fully-qualified `pathOf(p)` that was never a written reference. So every `terminate` whose
+target came from either — which is to say the two idiomatic spellings — resolved to `None` and
+skipped all its checks. **Three tests passed while proving nothing**, because "accepted" and
+"never examined" are the same observation from outside. Found only by instrumenting per
+CLAUDE.md's debugging rule; reading the code did not reveal it, and the ACCEPT tests could not.
+Fixed with a `symbols.lookup` fallback. Same family as every other false green recorded here:
+the signal that something was skipped is absent, not wrong.
+
+**A stale number defended itself for weeks.** BACKLOG claimed `RiddlModelsRoundTripTest` was
+red for "16 of 189 models". Measured this session: `commands` is 115/130, and A/B with the work
+stashed gives *the same 130*. The figure was never right, and nothing had re-measured it because
+the suite was already known-red — **a known-red suite stops being measured, so its recorded count
+rots unchallenged.** Corrected in BACKLOG with the A/B method attached.
 
 ## A20 typed holes land (2026-08-15) — DONE
 
