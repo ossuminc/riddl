@@ -3252,7 +3252,24 @@ object AST:
   ) extends RiddlValue:
     override def kind: String = "Prompt Value"
     def format: String =
-      s"prompt(${prompt.format})" + typeEx.map(t => s" as ${t.format}").getOrElse("")
+      val ascription = typeEx.map(t => s" as ${PromptValue.ascriptionFormat(t)}").getOrElse("")
+      s"prompt(${prompt.format})$ascription"
+  end PromptValue
+
+  object PromptValue:
+    // The `as <type>` ascription is a bare type NAME, as the author writes it -- `as OrderId`,
+    // never `as type OrderId`. `AliasedTypeExpression.format` always includes its `keyword` field
+    // (used elsewhere, e.g. as an Alternation member's own surface form), so calling it directly
+    // here appended a spurious `type ` the parser never required and no author ever wrote --
+    // found by TypedHoleRoundTripTest, whose re-parse of `prompt("x") as OrderId` came back
+    // holding `type OrderId` instead. `RiddlFileEmitter.emitTypeExpression` already strips the
+    // same keyword when rendering a field/constant's type; this is that same rendering choice made
+    // a second time, because a `Value` (unlike `TypeExpression`) has no separate emitter-level
+    // dispatch to route through -- `RiddlFileEmitter.emitStatement`'s `LetStatement` arm and
+    // `emitConstant` both call `.format` on the value directly.
+    private[AST] def ascriptionFormat(typeEx: TypeExpression): String = typeEx match
+      case AliasedTypeExpression(_, _, pathId) => pathId.format
+      case other                               => other.format
   end PromptValue
 
   /** A numeric literal — an integer or a real number, written directly rather than quoted or
