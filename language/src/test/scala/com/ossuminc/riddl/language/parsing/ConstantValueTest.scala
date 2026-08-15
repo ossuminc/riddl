@@ -84,7 +84,12 @@ class ConstantValueTest extends AnyWordSpec with Matchers {
     // Scoped narrowly: the deprecation fires only because Natural is a NumericType AND "10"
     // parses as a numeric literal's text. `parseInputWithMessages` is required here -- parse-time
     // messages (deprecations included) are discarded by a plain `parseInput`/`parseAndValidate`.
-    "parse a quoted numeric literal for a numeric type, and draw a deprecation" in {
+    //
+    // The parser CONSUMES the quoted spelling into a `NumericLiteral` -- the value is no longer a
+    // `LiteralString` after this. That is what makes `autoFixable = true` honest: there is no
+    // old-shaped node left for prettify to decide about, so re-emitting the AST always produces the
+    // bare literal and the round trip converges.
+    "parse a quoted numeric literal for a numeric type as a NumericLiteral, and draw a deprecation" in {
       val model =
         """domain D is {
           |  context C is {
@@ -100,8 +105,8 @@ class ConstantValueTest extends AnyWordSpec with Matchers {
           val ctx = AST.getContexts(AST.getTopLevelDomains(root).head).head
           val c = ctx.constants.headOption.getOrElse(fail("no constant parsed"))
           c.value match
-            case ls: LiteralString => ls.s mustBe "10"
-            case other             => fail(s"expected a LiteralString, got $other")
+            case nl: NumericLiteral => nl.text mustBe "10"
+            case other              => fail(s"expected a NumericLiteral, got $other")
           withClue(msgs.format) {
             msgs.exists(m =>
               m.kind == Messages.Deprecation && m.message.contains("numeric literal")

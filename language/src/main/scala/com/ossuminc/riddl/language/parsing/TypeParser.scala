@@ -864,7 +864,13 @@ private[parsing] trait TypeParser {
       Index ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
         Punctuation.equalsSign ~ constantValue ~ withMetaData ~/ Index
     ).map { case (start, id, typeEx, value, descriptives, end) =>
-      value match
+      // CONSUME the deprecated quoted spelling into the node the value actually denotes, the same
+      // bargain as `ConnectorOptionToIntention`/`EntityOptionToIntention`: the fix happens here, at
+      // parse time, so there is no old-shaped node left for prettify to decide about -- it just
+      // emits the bare literal, and the round trip converges. Without this, `autoFixable = true`
+      // was a lie: the AST kept holding a `LiteralString`, so `emitConstant` re-emitted the quotes
+      // unchanged on every prettify.
+      val fixedValue: ConstantValue = value match
         case ls: LiteralString if isNumericLike(typeEx, ls.s) =>
           deprecation(
             ls.loc,
@@ -872,9 +878,11 @@ private[parsing] trait TypeParser {
             code = Option(Messages.DeprecationCode.QuotedConstantLiteral),
             autoFixable = true
           )
-        case _ => ()
-      end match
-      Constant(at(start, end), id, typeEx, value, descriptives.toContents)
+          typeEx match
+            case _: Bool => BooleanLiteral(ls.loc, ls.s == "true")
+            case _       => NumericLiteral(ls.loc, ls.s)
+        case _ => value
+      Constant(at(start, end), id, typeEx, fixedValue, descriptives.toContents)
     }
   }
 }

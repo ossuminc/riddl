@@ -79,11 +79,13 @@ class ConstantAndMethodBASTRoundTripTest extends AbstractValidatingTest {
         .headOption
         .getOrElse(fail("the Constant did not survive as a Constant"))
       c.id.value mustBe "Rate"
-      // `Constant.value` widened to `ConstantValue` in the numeric-literals plan (Task 4); this
-      // fixture's quoted `"10"` still parses as a LiteralString (Task 6 moves the wire format).
+      // `Constant.value` widened to `ConstantValue` in the numeric-literals plan (Task 4). The
+      // parser now CONSUMES a quoted numeric spelling into a `NumericLiteral` at parse time (the
+      // final-review fix for `autoFixable` on `QuotedConstantLiteral`), so this fixture's quoted
+      // `"10"` decodes as a NumericLiteral, not a LiteralString.
       c.value match
-        case ls: LiteralString => ls.s mustBe "10"
-        case other             => fail(s"expected a LiteralString value, got $other")
+        case nl: NumericLiteral => nl.text mustBe "10"
+        case other              => fail(s"expected a NumericLiteral value, got $other")
     }
 
     "not corrupt the nodes that FOLLOW it" in { (td: TestData) =>
