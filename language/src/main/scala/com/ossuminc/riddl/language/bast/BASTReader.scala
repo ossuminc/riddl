@@ -2629,7 +2629,8 @@ class BASTReader(
   }
 
   /** A28: mirror of [[BASTWriter.writeComparand]] — a comparison operand (ValueRef | GetValue |
-    * ConstantRef).
+    * ConstantRef | NumericLiteral). Comparison operands were ref-only until Reid reversed A28's
+    * rule 2026-08-14 to also admit a bare numeric literal.
     */
   private def readComparand(): Comparand = {
     reader.readU8() match

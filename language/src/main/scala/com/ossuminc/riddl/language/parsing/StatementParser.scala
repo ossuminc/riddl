@@ -612,8 +612,9 @@ private[parsing] trait StatementParser {
 
   // A28: an atom of the boolean-expression sub-language: a boolean literal (`true`/`false`), a
   // parenthesized boolean expression (for grouping / precedence override), or a bare boolean-typed
-  // reference (`get from …` or a bare path). Comparison operands are NOT parsed here — they are the
-  // ref-only `comparand`; a boolean atom is the operand of `and`/`or`/`not` or a standalone boolean.
+  // reference (`get from …` or a bare path). Comparison operands are NOT parsed here — they are
+  // `comparand` (refs plus a bare `NumericLiteral`, since Reid reversed A28's ref-only rule
+  // 2026-08-14); a boolean atom is the operand of `and`/`or`/`not` or a standalone boolean.
   // `booleanLiteral` precedes `valueRef` so `true`/`false` are literals here; `valueRef` stays last
   // (permissive bare path). Non-boolean value atoms (literal strings, constructors, prompt values)
   // are handled by `value` directly, before the boolean sub-language, so they never reach here.

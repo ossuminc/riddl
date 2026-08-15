@@ -322,16 +322,31 @@ let_statement = "let" identifier [":" type_ref] "=" value ;
 value = literal_string | prompt_value | call | ask | initiate | constructor | get_value
       | boolean_expression | numeric_literal ;
 prompt_value = "prompt" "(" literal_string ")" ;
-(* Numeric literals - integers and reals, written directly. No digit separators and no radix   *)
-(* prefixes: declined deliberately, and pure additions later if wanted. The exponent marker is  *)
-(* an inline regex, not a quoted "e"|"E" alternation: TatSu's default nameguard bounds a         *)
-(* word-like quoted literal to a word boundary, so "e" immediately followed by a digit (`1e3`,   *)
-(* no sign) fails to match under the generated TatSu parser even though fastparse accepts it --  *)
-(* found 2026-08-15 adding the numeric-literals corpus fixture. A regex match is exact and       *)
-(* bypasses nameguard entirely (see `letter`/`digit` above and `mime_type` below for the same    *)
-(* inline-regex-in-a-composite-rule idiom).                                                      *)
-numeric_literal = [ "+" | "-" ] {digit}+ [ "." {digit}+ ]
-                  [ /[eE]/ [ "+" | "-" ] {digit}+ ] ;
+(* Numeric literals - integers and reals, written directly. No digit separators and no radix     *)
+(* prefixes: declined deliberately, and pure additions later if wanted.                           *)
+(*                                                                                                 *)
+(* ONE single regex, like `integer`/`natural` above -- not a sequence of sub-parts joined by       *)
+(* `{digit}+` or by rule references, and not a quoted "e"|"E" alternation for the exponent marker. *)
+(* Three independent reasons converge on this shape:                                               *)
+(*  1. TatSu's generated parser skips whitespace BETWEEN repeated elements of a `{rule}+` closure   *)
+(*     regardless of any surrounding token boundary, so `{digit}+` let `1 2` parse as a SINGLE      *)
+(*     numeric_literal (verified by running the TatSu parser directly, 2026-08-15).                 *)
+(*  2. TatSu also inserts optional whitespace BETWEEN the elements of a composite (structural)       *)
+(*     rule, so even a version composed from sub-rule references (e.g. `natural "." natural`)        *)
+(*     let `1 . 5` parse as a SINGLE numeric_literal too (verified the same way).                    *)
+(*     fastparse's `numericLiteral` (`StatementParser.scala`) is whitespace-tight END TO END via     *)
+(*     `~~` for exactly this reason (fixed in `2d41c4e39`, `CharIn(...).rep(1)` -> `CharsWhileIn`)   *)
+(*     -- a single regex is the only EBNF shape with the same property.                              *)
+(*  3. A quoted "e"|"E" alternation for the exponent marker fails on its own: TatSu's default        *)
+(*     nameguard bounds a word-like quoted literal to a word boundary, so "e" immediately followed   *)
+(*     by a digit (`1e3`, no sign) fails to match even though fastparse accepts it (found            *)
+(*     2026-08-15 adding the numeric-literals corpus fixture). A regex bypasses nameguard entirely   *)
+(*     (see `letter`/`digit` above and `mime_type` below for the same inline-regex idiom).           *)
+(* A single whole-body regex also keeps the rule classified TERMINAL by `ebnf_to_gbnf.py` (a         *)
+(* whole-body regex qualifies directly, Phase 1), so no spurious `ws` tokens appear between its      *)
+(* parts in the generated GBNF -- a structural classification would reopen reason 2 above in the     *)
+(* LLM-constrained-generation grammar even though the TatSu/fastparse validators stay correct.       *)
+numeric_literal = /[+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?/ ;
 (* A24: call a pure function to get a result. "Functions only" — the callee is a function_ref. *)
 call = "call" function_ref "(" [constructor_arg {"," constructor_arg}] ")" ;
 (* `ask` declares a CORRELATION -- that a reply is expected and which query it answers -- and

@@ -330,7 +330,8 @@ class ValueValidationTest extends AbstractValidatingTest {
       }
     }
 
-    // ---- A28 slice 3: type-safe, ref-only comparison operands ----
+    // ---- A28 slice 3: type-safe comparison operands (refs, or a bare NumericLiteral — A28's
+    // ref-only rule was reversed 2026-08-14) ----
 
     "accept `count > MaxCount` comparing a numeric local to a numeric constant (A28 s3)" in {
       (td: TestData) =>

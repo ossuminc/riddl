@@ -51,8 +51,10 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
   private def parseLetExpr(expr: String, td: TestData): Value =
     parseStmt(s"let x = $expr", td).asInstanceOf[LetStatement].expression
 
-  // A28 s3: assert that `let x = <expr>` fails to PARSE (not merely validate). Used to prove
-  // magic-constant comparison operands are rejected by the parser itself.
+  // A28 s3: assert that `let x = <expr>` fails to PARSE (not merely validate). Comparison operands
+  // are refs or a bare `NumericLiteral` (A28 was reversed 2026-08-14 to admit the latter); this
+  // helper is used to prove the OTHER value kinds — a quoted string, a boolean literal, a
+  // constructor — are still rejected as comparands by the parser itself.
   private def parseLetExprFails(expr: String, td: TestData): Assertion = {
     val input = RiddlParserInput(
       s"""domain d is {

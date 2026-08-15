@@ -1465,10 +1465,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeValue(arg.value)
   }
 
-  /** A28: a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef). A leading
-    * discriminator byte selects the arm (0=ValueRef, 1=GetValue, 2=ConstantRef); the reader mirrors
-    * this exactly. Comparison operands are ref-only, so this is a compact codec separate from
-    * [[writeValue]].
+  /** A28: a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef |
+    * NumericLiteral). A leading discriminator byte selects the arm (0=ValueRef, 1=GetValue,
+    * 2=ConstantRef, 3=NumericLiteral); the reader mirrors this exactly. Comparison operands were
+    * ref-only until Reid reversed A28's rule 2026-08-14 to also admit a bare numeric literal (a
+    * StyleWarning nudges toward a named constant instead, but no longer forbids the literal), which
+    * is why this codec is separate from [[writeValue]] rather than delegating to it.
     */
   def writeComparand(c: Comparand): Unit = {
     c match
