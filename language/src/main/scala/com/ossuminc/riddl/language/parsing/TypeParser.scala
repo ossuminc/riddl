@@ -850,6 +850,15 @@ private[parsing] trait TypeParser {
     end match
   }
 
+  // Names the literal kind `typeEx` actually calls for, so the deprecation's advice matches the
+  // type. `Bool` is itself a NumericType (see `isNumericLike` above), so without this a Boolean
+  // constant would be told to hold "a numeric literal" -- true of every OTHER arm of the match,
+  // but not the fix for a Boolean one, which needs `true`/`false`.
+  private def literalKindFor(typeEx: TypeExpression): String =
+    typeEx match
+      case _: Bool => "a boolean literal (true or false)"
+      case _       => "a numeric literal"
+
   def constant[u: P]: P[Constant] = {
     P(
       Index ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
@@ -859,7 +868,7 @@ private[parsing] trait TypeParser {
         case ls: LiteralString if isNumericLike(typeEx, ls.s) =>
           deprecation(
             ls.loc,
-            s"A ${typeEx.format} constant should hold a numeric literal, not a string",
+            s"A ${typeEx.format} constant should hold ${literalKindFor(typeEx)}, not a string",
             code = Option(Messages.DeprecationCode.QuotedConstantLiteral),
             autoFixable = true
           )
