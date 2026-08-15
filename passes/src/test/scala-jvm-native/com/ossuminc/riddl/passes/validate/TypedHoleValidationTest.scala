@@ -117,16 +117,33 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
     }
 
     "be silent on a 'let' with no declared type but an ascribed hole" in { (td: TestData) =>
-      errorsFor(
+      // The claim under test is specifically that the SEAM WARNING did not fire -- the
+      // `pv.typeEx.isEmpty` guard on `checkStatementScopes`'s `LetStatement` case makes it
+      // provably so, but `completenessFor` pins that claim directly rather than the weaker
+      // (already-covered-elsewhere) absence of Errors.
+      completenessFor(
         entityModel("""let x = prompt("d") as Score"""),
         "let-ascribed-only"
-      ) mustBe empty
+      ).exists(_.message.contains("untyped")) mustBe false
     }
 
     "be silent on a 'set' whose ascription matches the field's type" in { (td: TestData) =>
       errorsFor(
         setModel("""set field Acct.balance to prompt("balance") as Score"""),
         "set-restate"
+      ) mustBe empty
+    }
+
+    "be silent on a 'when' condition ascribed to Boolean" in { (td: TestData) =>
+      // The design doc (2026-08-14-a20-typed-holes-design.md:94) lists this explicitly: `when
+      // prompt(...) as Boolean` restates the position's implied type and must be silent. This is
+      // the one place a wrong `Bool` spelling in `checkPromptAscription`'s `when` wiring would
+      // turn every correctly-ascribed condition into an Error -- `Bool.kind` and the parser's
+      // `Boolean` keyword both happening to read "Boolean" is an assumption worth a real test, not
+      // just inspection.
+      errorsFor(
+        entityModel("""when prompt("is it valid") as Boolean then { do "yes" } end"""),
+        "when-restate"
       ) mustBe empty
     }
   }
