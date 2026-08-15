@@ -1503,10 +1503,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       ComparisonPatternDto(cp.op.symbol, serializeComparand(cp.comparand))
     case lp: LiteralPattern => LiteralPatternDto(lp.literal.s)
 
-  // A28: a comparison operand (Comparand = ValueRef | GetValue | ConstantRef) -> ValueDto.
+  // A28, widened 2026-08-14: a comparison operand (Comparand = ValueRef | GetValue | ConstantRef |
+  // NumericLiteral) -> ValueDto. The NumericLiteral arm reuses NumericLiteralDto -- the same DTO
+  // serializeValue uses for a bare numeric literal -- so the comparand and general-value surfaces
+  // agree on the wire shape.
   private def serializeComparand(c: Comparand): ValueDto = c match
-    case vr: ValueRef    => ValueRefDto(path(vr.path))
-    case cr: ConstantRef => ConstantRefDto(path(cr.pathId))
+    case vr: ValueRef       => ValueRefDto(path(vr.path))
+    case cr: ConstantRef    => ConstantRefDto(path(cr.pathId))
+    case nl: NumericLiteral => NumericLiteralDto(nl.text)
     case gv: GetValue =>
       gv.source match
         case ir: InputRef => GetValueDto("input", Some(ir.keyword), path(ir.pathId))

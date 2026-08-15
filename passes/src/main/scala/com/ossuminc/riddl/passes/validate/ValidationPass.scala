@@ -6417,7 +6417,8 @@ case class ValidationPass(
       case _: BooleanLiteral        => ()
       case _: NumericLiteral        => ()
       case ce: ComparisonExpression =>
-        // A28: operands are ref-only Comparands; validate each resolves, then enforce type-safety.
+        // A28, widened 2026-08-14: operands are Comparands (refs or a bare NumericLiteral);
+        // validate each resolves, then enforce type-safety.
         validateComparand(ce.left, parents, lets, elements)
         validateComparand(ce.right, parents, lets, elements)
         checkComparison(ce, parents, lets, elements)
@@ -6498,7 +6499,8 @@ case class ValidationPass(
   /** A28: the broad category of a comparison operand ([[Comparand]]). A [[ConstantRef]] resolves
     * via the refMap to a [[Constant]] whose declared `typeEx` is classified; a bare [[ValueRef]]
     * (including one naming a constant) is classified by [[valueRefTypeExpr]], which sees a
-    * directly-typed field as well as an aliased one.
+    * directly-typed field as well as an aliased one. A [[NumericLiteral]] is always `"numeric"` —
+    * it needs no resolution, unlike the three ref cases.
     */
   private def comparandCategory(
     c: Comparand,
@@ -6513,10 +6515,12 @@ case class ValidationPass(
       case vr: ValueRef =>
         valueCategory(vr, parents, lets, elements)
           .orElse(whenValueRefCategory(vr, parents, lets, elements))
+      case _: NumericLiteral => Some("numeric")
 
   /** A28: validate a comparison operand ([[Comparand]]) resolves. A [[ConstantRef]]/[[GetValue]] is
     * checked via [[checkRef]]; a bare [[ValueRef]] must be a `let`-local, an in-scope field, or a
-    * named [[Constant]].
+    * named [[Constant]]. A [[NumericLiteral]] always resolves (it names nothing), but draws a
+    * StyleWarning — see the doc on [[Comparand]].
     */
   private def validateComparand(
     c: Comparand,
@@ -6539,6 +6543,15 @@ case class ValidationPass(
                 "element, or a field of the on-clause message, entity state, or the function's " +
                 "'requires' input; or declare and reference a 'constant'."
           )
+      case nl: NumericLiteral =>
+        // A28's original rule made this unconstructible; Reid reversed that 2026-08-14 and the
+        // intent survives as advice. The population starts at ZERO -- `count > 5` is a parse
+        // error before this change, so no existing model can contain one.
+        messages.addStyle(
+          nl.loc,
+          s"Comparison against the literal ${nl.text} would read better as a named constant",
+          suggestion = s"Declare `constant SomeName is <type> = ${nl.text}` and compare against it."
+        )
 
   /** A28: enforce type-safe comparisons. Equality (`==`/`!=`) requires both operands to share a
     * category (identity comparison); ordering (`<`/`>`/`<=`/`>=`) requires an ORDERED type —

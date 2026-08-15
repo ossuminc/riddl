@@ -503,20 +503,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: BooleanLiteral        => ()
       case _: NumericLiteral        => ()
       case ce: ComparisonExpression =>
-        // A28: operands are ref-only Comparands (not general Values); resolve each ref.
+        // A28, widened 2026-08-14: operands are Comparands (refs, or a bare NumericLiteral);
+        // resolve each.
         resolveComparand(ce.left, parents); resolveComparand(ce.right, parents)
       case le: LogicalExpression => resolveValue(le.left, parents); resolveValue(le.right, parents)
       case ne: NotExpression     => resolveValue(ne.expr, parents)
 
-  /** A28: resolve a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef). A
-    * `ConstantRef` and a `GetValue` source resolve here (into the refMap); a bare [[ValueRef]] is
-    * queued for [[resolveValueRef]], like `resolveValue`.
+  /** A28: resolve a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef |
+    * NumericLiteral). A `ConstantRef` and a `GetValue` source resolve here (into the refMap); a
+    * bare [[ValueRef]] is queued for [[resolveValueRef]], like `resolveValue`. A [[NumericLiteral]]
+    * holds no references -- it is raw text, not resolvable -- mirroring the `ComparisonExpression`
+    * case above.
     */
   private def resolveComparand(c: Comparand, parents: Parents): Unit =
     c match
-      case cr: ConstantRef => associateUsage(parents.head, resolveARef[Constant](cr, parents))
-      case gv: GetValue    => resolveValue(gv, parents)
-      case vr: ValueRef    => deferValueRef(vr, parents)
+      case cr: ConstantRef   => associateUsage(parents.head, resolveARef[Constant](cr, parents))
+      case gv: GetValue      => resolveValue(gv, parents)
+      case vr: ValueRef      => deferValueRef(vr, parents)
+      case _: NumericLiteral => ()
 
   /** A29: resolve the reference-bearing parts of a [[MatchStatement]] — the subject (a GetValue
     * source; a bare ValueRef is queued for [[resolveValueRef]]), each pattern (a [[TypePattern]]'s

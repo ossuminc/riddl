@@ -3277,24 +3277,25 @@ object AST:
     case Or extends LogicalOperator("or")
   end LogicalOperator
 
-  /** A28: the operand of a [[ComparisonExpression]]. Comparisons are TYPE-SAFE and therefore
-    * compare two TYPED references only — a [[ValueRef]] (a `let`-local, a field of the handled
-    * message / entity state / function input, or a bare path naming a [[Constant]]), a [[GetValue]]
-    * (a UI input or entity-state read), or a [[ConstantRef]] (`constant <path>`). RIDDL
-    * deliberately has NO magic-constant comparison operands: literals, constructors and prompt
-    * values are not comparands — to compare against a constant, declare a `constant` and reference
-    * it. The parser enforces this (a non-ref comparison operand is a PARSE error); validation
-    * enforces type compatibility.
+  /** Comparison operands are [[Comparand]] — the refs plus a [[NumericLiteral]]. A28 originally
+    * narrowed this to refs ALONE so that "magic-constant comparisons cannot be constructed at
+    * all", forcing `count > MaxCount`. Reid reversed that 2026-08-14: in the whole riddl-models
+    * corpus there was exactly ONE constant, so the rule had no uptake to protect — plausibly
+    * because the only way to name a number was to put it in a string. The intent survives as
+    * advice, not structure: a literal comparand draws a StyleWarning suggesting a named constant.
+    * Booleans remain excluded — `true`/`false` are boolean ATOMS, so `count > true` is still a
+    * parse error.
     */
-  type Comparand = ValueRef | GetValue | ConstantRef
+  type Comparand = ValueRef | GetValue | ConstantRef | NumericLiteral
 
   /** A28: the boolean-expression sub-language. An arm of the [[Value]] union so `let`/`set`/`put`/
     * `return` accept booleans for free. All cases are [[RiddlValue]]s so `.format`/`.loc` work on
     * the union directly. Logical/`not` operands are typed as [[Value]] (not `BooleanExpression`)
     * because the layered precedence parser returns a bare `Value` atom — e.g. a [[ValueRef]] to a
     * boolean field — at any operand position; validation (not the type system) enforces that
-    * logical/`not` operands are boolean. Comparison operands, by contrast, are narrowed to
-    * [[Comparand]] (ref-only) so magic-constant comparisons cannot be constructed at all.
+    * logical/`not` operands are boolean. Comparison operands, by contrast, are typed as
+    * [[Comparand]] — the refs plus a bare [[NumericLiteral]] (A28, widened 2026-08-14; see the
+    * doc on [[Comparand]] for why the original ref-only ban was reversed).
     */
   sealed trait BooleanExpression extends RiddlValue
 

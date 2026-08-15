@@ -1527,12 +1527,14 @@ object JsonAstBuilder:
           i.args.map(a => ConstructorArg(curAt, a.name.map(ident), buildValue(a.value)))
         )
 
-  // A28: ValueDto -> AST Comparand (ValueRef | GetValue | ConstantRef). Comparison operands are
-  // ref-only; any other DTO is a malformed comparand (reported), degraded to a bare ValueRef.
+  // A28, widened 2026-08-14: ValueDto -> AST Comparand (ValueRef | GetValue | ConstantRef |
+  // NumericLiteral). Any other DTO is a malformed comparand (reported), degraded to a bare
+  // ValueRef.
   private def buildComparand(v: ValueDto)(using ctx: Ctx): Comparand =
     v match
-      case ValueRefDto(p)    => ValueRef(curAt, pathId(p))
-      case ConstantRefDto(p) => ConstantRef(curAt, pathId(p))
+      case ValueRefDto(p)          => ValueRef(curAt, pathId(p))
+      case ConstantRefDto(p)       => ConstantRef(curAt, pathId(p))
+      case NumericLiteralDto(text) => NumericLiteral(curAt, text)
       case GetValueDto(source, keyword, ref) =>
         val src: InputRef | StateRef = source match
           case "input" => InputRef(curAt, keyword.getOrElse("input"), pathId(ref))

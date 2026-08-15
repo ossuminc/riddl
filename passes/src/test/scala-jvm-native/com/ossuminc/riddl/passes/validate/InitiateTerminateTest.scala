@@ -18,11 +18,13 @@ import org.scalatest.TestData
   * partitions the two -- `on init` is once-ever, `on activate` is per-rehydration.
   *
   * The model's argument uses a `String` field with quoted literals ("1"/"2"), NOT `Integer` with
-  * bare `1`/`2` as task-4-brief.md originally sketched: RIDDL has no bare-number Value production
-  * today (confirmed empirically -- `count > 5` and `record R(1)` both fail to PARSE; see
-  * `StatementsTest`'s "reject a bare-number comparison operand" case). `checkArgumentTypes` skips
-  * deep type-checking for a primitive (non-aliased) field type either way, so the switch to
-  * `String` changes nothing about what these tests actually exercise (arity, not type-checking).
+  * bare `1`/`2` as task-4-brief.md originally sketched: at the time this was written RIDDL had no
+  * bare-number Value production (confirmed empirically -- `count > 5` and `record R(1)` both failed
+  * to PARSE; see `StatementsTest`'s "reject a bare-number comparison operand" case, since renamed
+  * now that the numeric-literals branch has widened both `Value` and `Comparand`). The `String`
+  * choice is left as-is here regardless: `checkArgumentTypes` skips deep type-checking for a
+  * primitive (non-aliased) field type either way, so the switch changes nothing about what these
+  * tests actually exercise (arity, not type-checking).
   */
 class InitiateTerminateTest extends AbstractValidatingTest {
 

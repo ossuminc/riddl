@@ -488,13 +488,13 @@ private[parsing] trait StatementParser {
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
         booleanExpr |
-        // LAST, and deliberately: `booleanExpr` must get first refusal. Today `comparand` accepts
-        // only `GetValue | ConstantRef | ValueRef`, so `5 > 3` does not yet parse as a comparison
-        // under EITHER ordering -- this ordering has no observable effect until a later task
-        // widens `Comparand` to accept numeric literals. Once it does, this ordering is what keeps
-        // `5 > 3` parsing as a comparison rather than `numericLiteral` matching the bare `5`,
-        // returning it as the whole value, and leaving `> 3` dangling: `comparison` cuts only
-        // AFTER its operator, so a bare `5` backtracks cleanly out of `booleanExpr` and lands here.
+        // LAST, and deliberately: `booleanExpr` must get first refusal. This ordering is now
+        // LOAD-BEARING (it was inert when written -- `comparand` accepted only
+        // `GetValue | ConstantRef | ValueRef` -- until `comparand` was widened to accept
+        // `NumericLiteral`). Trying `booleanExpr` first is what keeps `5 > 3` parsing as a
+        // comparison rather than `numericLiteral` matching the bare `5`, returning it as the whole
+        // value, and leaving `> 3` dangling: `comparison` cuts only AFTER its operator, so a bare
+        // `5` backtracks cleanly out of `booleanExpr` and lands here.
         numericLiteral.map(nl => nl: Value)
     )
   }
@@ -542,13 +542,15 @@ private[parsing] trait StatementParser {
     )
   }
 
-  // comparison level (non-associative). A comparison is TYPE-SAFE: its two operands are TYPED refs
-  // only (`comparand`) — never a literal, a constructor, a boolean literal, or a bare number. So
-  // `count > "5"` / `count > true` / `count > 5` / `count > R(1)` FAIL to parse: the `~/` cut after
-  // the operator commits, and the right operand must be a ref. When there is NO operator the bare
-  // boolean ATOM is returned unchanged (NOT wrapped) — a comparand parsed as the left operand with no
-  // operator following backtracks (no cut before the operator) and re-parses via `booleanAtom`, so
-  // `true`, `(a and b)`, and a bare boolean-typed ref remain valid standalone atoms.
+  // comparison level (non-associative). A comparison's two operands are `comparand` — a TYPED ref
+  // OR a bare numeric literal (A28, widened 2026-08-14); a quoted string, a constructor and a
+  // boolean literal are still not comparands. So `count > "5"` / `count > true` / `count > R(1)`
+  // FAIL to parse (the `~/` cut after the operator commits, and the right operand must match
+  // `comparand`), while `count > 5` now parses -- and draws a StyleWarning in validation rather
+  // than a parse error. When there is NO operator the bare boolean ATOM is returned unchanged (NOT
+  // wrapped) — a comparand parsed as the left operand with no operator following backtracks (no cut
+  // before the operator) and re-parses via `booleanAtom`, so `true`, `(a and b)`, and a bare
+  // boolean-typed ref remain valid standalone atoms.
   private def comparison[u: P]: P[Value] = {
     P(
       (Index ~ comparand ~ comparisonOperator ~/ comparand ~ Index).map {
@@ -558,15 +560,23 @@ private[parsing] trait StatementParser {
     )
   }
 
-  // A28: a comparison operand — a TYPED reference and nothing else. `get from …` and `constant
-  // <path>` are keyword-led (tried first); a bare path is a `ValueRef` (which may itself resolve to a
-  // `Constant` at validation, so `count > MaxCount` works). `!booleanLiteral` rejects `true`/`false`
-  // as operands (they are boolean ATOMS, not comparands) so `count > true` is a parse error while a
-  // field named `trueValue` (word-boundary) is still a legal ref.
+  // A28, widened 2026-08-14: a comparison operand — a TYPED reference, OR a bare numeric literal.
+  // `get from …` and `constant <path>` are keyword-led (tried first); `numericLiteral` goes next so
+  // `count > 5` parses the digits as a literal rather than falling through to `valueRef`, which
+  // would try (and fail) to resolve "5" as a path; a bare path is a `ValueRef` (which may itself
+  // resolve to a `Constant` at validation, so `count > MaxCount` still works) and stays LAST — it is
+  // the permissive fallback. Originally this rule banned literals outright ("magic-constant
+  // comparisons cannot be constructed at all"); Reid reversed that 2026-08-14 (see the doc on
+  // `AST.Comparand`) because the corpus held exactly ONE named constant across 189 models, so the
+  // ban had no uptake to protect. The intent survives as a StyleWarning in validation, not a parse
+  // error. `!booleanLiteral` still rejects `true`/`false` as operands (they are boolean ATOMS, not
+  // comparands) so `count > true` remains a parse error, while a field named `trueValue`
+  // (word-boundary) is still a legal ref.
   private def comparand[u: P]: P[Comparand] = {
     P(
       getValue.map(gv => gv: Comparand) |
         constantRef.map(cr => cr: Comparand) |
+        numericLiteral.map(nl => nl: Comparand) |
         (!booleanLiteral ~ valueRef).map(vr => vr: Comparand)
     )
   }

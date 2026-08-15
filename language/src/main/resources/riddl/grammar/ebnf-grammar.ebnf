@@ -315,11 +315,10 @@ let_statement = "let" identifier [":" type_ref] "=" value ;
 
 (* A54: value expressions. A value is pseudo-code text, an AI-computed `prompt(...)`, a message/record
    constructor, a `get from` read of a UI input or entity state, (A28) a boolean expression whose
-   bare atom is a value reference or literal, or a numeric literal (tried last, deliberately:
-   `comparand` accepts only get_value/constant_ref/value_ref today, so this ordering has no
-   observable effect yet -- but once a later task widens comparand to accept numeric literals,
+   bare atom is a value reference or literal, or a numeric literal (tried last, deliberately). This
+   ordering is LOAD-BEARING now that `comparand` (widened 2026-08-14) accepts numeric_literal:
    trying boolean_expression first is what keeps `5 > 3` parsing as a comparison rather than
-   numeric_literal matching the bare `5` and leaving `> 3` dangling). *)
+   numeric_literal matching the bare `5` and leaving `> 3` dangling. *)
 value = literal_string | prompt_value | call | ask | initiate | constructor | get_value
       | boolean_expression | numeric_literal ;
 prompt_value = "prompt" "(" literal_string ")" ;
@@ -348,14 +347,16 @@ value_ref = path_identifier ;
 (* A28: the boolean-expression sub-language, lowest to highest precedence: or < and < not <
    comparison < atom. `and`/`or`/`not`/`true`/`false` are context-sensitive operators — legal
    identifiers everywhere except these rules. A boolean_atom with no comparison operator is a plain
-   value. A28 s3: comparisons are TYPE-SAFE — their operands are ref-only `comparand`s (a value_ref,
-   a get_value, or a constant_ref), never a literal/constructor/boolean_literal — so a comparison is
-   always between two typed references. *)
+   value. A28 s3: comparisons are `comparand`s (a value_ref, a get_value, a constant_ref, or a bare
+   numeric_literal) — never a quoted string, a constructor, or a boolean_literal. `comparand`
+   originally admitted refs ONLY, banning a literal comparison outright; Reid reversed that
+   2026-08-14, since the whole riddl-models corpus held exactly ONE named constant and the ban had
+   no uptake to protect. The intent survives as a StyleWarning in validation, not a parse error. *)
 boolean_expression = and_expression {"or" and_expression} ;
 and_expression = not_expression {"and" not_expression} ;
 not_expression = "not" not_expression | comparison ;
 comparison = comparand comparison_operator comparand | boolean_atom ;
-comparand = get_value | constant_ref | value_ref ;
+comparand = get_value | constant_ref | numeric_literal | value_ref ;
 comparison_operator = "==" | "!=" | "<=" | ">=" | "<" | ">" ;
 (* `invariant X [with <value>]` names an invariant in a condition. It MUST precede value_ref:
    without it, `invariant` is taken as an ordinary identifier and the parser then demands a

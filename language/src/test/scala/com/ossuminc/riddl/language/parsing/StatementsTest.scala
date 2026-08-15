@@ -620,7 +620,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
         case other => fail(s"expected a SetStatement with a comparison, got $other")
     }
 
-    // ---- A28 slice 3: comparison operands are type-safe, ref-only ----
+    // ---- A28 slice 3: comparison operands are type-safe (refs, or a bare numeric literal) ----
 
     "reject a string-literal comparison operand at PARSE: count > \"5\" (A28 s3)" in {
       (td: TestData) => parseLetExprFails("count > \"5\"", td)
@@ -630,8 +630,32 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       (td: TestData) => parseLetExprFails("count > true", td)
     }
 
-    "reject a bare-number comparison operand at PARSE: count > 5 (A28 s3)" in { (td: TestData) =>
-      parseLetExprFails("count > 5", td)
+    // A28 was reversed 2026-08-14: a bare number is now a legal comparand (draws a StyleWarning in
+    // validation, not a parse error). See the doc on AST.Comparand for why.
+    "parse a bare-number comparison operand: count > 5 (A28, widened 2026-08-14)" in {
+      (td: TestData) =>
+        parseLetExpr("count > 5", td) match
+          case ComparisonExpression(_, ComparisonOperator.GT, left, right) =>
+            vref(left) must be("count")
+            right match
+              case nl: NumericLiteral => nl.text must be("5")
+              case other              => fail(s"expected a NumericLiteral right operand, got $other")
+          case other => fail(s"expected a ComparisonExpression, got $other")
+    }
+
+    // The ordering that was inert until this task: `value` tries `booleanExpr` (hence `comparison`,
+    // hence `comparand`) BEFORE `numericLiteral`. Without it, `5` would be consumed whole by
+    // `numericLiteral` and `> 3` would be left dangling instead of completing a comparison.
+    "parse `5 > 3` as a comparison, not a bare NumericLiteral (ordering, A28)" in { (td: TestData) =>
+      parseLetExpr("5 > 3", td) match
+        case ComparisonExpression(_, ComparisonOperator.GT, left, right) =>
+          left match
+            case nl: NumericLiteral => nl.text must be("5")
+            case other              => fail(s"expected a NumericLiteral left operand, got $other")
+          right match
+            case nl: NumericLiteral => nl.text must be("3")
+            case other              => fail(s"expected a NumericLiteral right operand, got $other")
+        case other => fail(s"expected a ComparisonExpression, got $other")
     }
 
     "reject a constructor comparison operand at PARSE: count > R(1) (A28 s3)" in { (td: TestData) =>
