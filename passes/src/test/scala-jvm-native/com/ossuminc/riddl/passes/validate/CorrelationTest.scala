@@ -293,6 +293,108 @@ class CorrelationTest extends AbstractValidatingTest {
       msgs.map(_.message).mkString("\n") must include("is not defined in it")
     }
 
+    /** Fix A (2026-08-15): `ValidationPass.validateProjector`'s `sentToRepository` walk used to
+      * pattern-match the `tell` operand's syntactic shape and give up on a `ValueRef` — an
+      * on-clause binding — with `case _: ValueRef => None // type comes from the clause; not a
+      * declaration here`. riddl-models measured the fallout corpus-wide: migrating 10,298
+      * forwarding sites from the bare form to the bound form took this check from 863 warnings to
+      * 9, with nothing about the models changed (see
+      * `task/2026-08-14-valueref-migration-blinds-the-populates-repository-check.md`, now in
+      * `task/done/`). The three cases below assert an EXACT count on both spellings of the SAME
+      * defect, plus a negative control, because `nonEmpty` cannot see a drop from 2 to 1 -- only a
+      * count can.
+      */
+    def populatesWarnings(msgs: Messages): Seq[String] =
+      msgs
+        .filter(m =>
+          m.kind == Messages.Warning &&
+            m.message.contains("populates") &&
+            m.message.contains("is not defined in it")
+        )
+        .map(_.message)
+
+    "warn once when an un-owned event populates a repository via the bare form" in {
+      (td: TestData) =>
+        // The message is FIELD-LESS on purpose: as of 2026-08-14 a bare (uncnstructed) operand
+        // naming a message with fields is itself an Error (Task 4, "message-value-source"), so a
+        // genuinely bare `tell event OrderPlaced to ...` is only legal for a type with no fields to
+        // source. That is orthogonal to what THIS test pins (the pre-existing, never-blind
+        // `MessageRef` arm of the populates-repository check).
+        val src =
+          """domain D is {
+            |  context C is {
+            |    event OrderPlaced is { ??? } with { briefly "e" }
+            |    repository Store is {
+            |      command Noop is { z: String } with { briefly "n" }
+            |      handler S is { on command Noop is { do "ignore" } }
+            |    } with { briefly "store" }
+            |    projector Translate is {
+            |      updates repository Store
+            |      handler T is {
+            |        on event OrderPlaced is { tell event OrderPlaced to repository Store }
+            |      } with { briefly "h" }
+            |    } with { briefly "p" }
+            |  } with { briefly "c" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val msgs = diagnostics(src, "populates-bare-form")
+        msgs.justErrors.map(_.message).mkString("\n") must be("")
+        populatesWarnings(msgs).size mustBe 1
+    }
+
+    "warn once when an un-owned event populates a repository via an on-clause binding" in {
+      (td: TestData) =>
+        // Identical to the bare-form case immediately above except for HOW the operand is
+        // written: `placed` is the binding the on-clause declares, resolved through the same
+        // `ValueRef` arm the bug silenced. Before the fix this produced ZERO warnings.
+        val src =
+          """domain D is {
+            |  context C is {
+            |    event OrderPlaced is { orderId: String } with { briefly "e" }
+            |    repository Store is {
+            |      command Noop is { z: String } with { briefly "n" }
+            |      handler S is { on command Noop is { do "ignore" } }
+            |    } with { briefly "store" }
+            |    projector Translate is {
+            |      updates repository Store
+            |      handler T is {
+            |        on placed: event OrderPlaced is { tell placed to repository Store }
+            |      } with { briefly "h" }
+            |    } with { briefly "p" }
+            |  } with { briefly "c" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val msgs = diagnostics(src, "populates-bound-form")
+        msgs.justErrors.map(_.message).mkString("\n") must be("")
+        populatesWarnings(msgs).size mustBe 1
+    }
+
+    "stay silent (negative control) when the bound operand's type IS defined in the repository" in {
+      (td: TestData) =>
+        // Same bound-operand shape as the case above, but `OrderPlaced` is declared INSIDE
+        // `Store` this time, so the check must NOT fire -- proving the fix resolves the operand's
+        // real type rather than warning unconditionally whenever it sees a `ValueRef`.
+        val src =
+          """domain D is {
+            |  context C is {
+            |    repository Store is {
+            |      event OrderPlaced is { orderId: String } with { briefly "e" }
+            |      handler S is { on event OrderPlaced is { do "store it" } }
+            |    } with { briefly "store" }
+            |    projector Translate is {
+            |      updates repository Store
+            |      handler T is {
+            |        on placed: event Store.OrderPlaced is { tell placed to repository Store }
+            |      } with { briefly "h" }
+            |    } with { briefly "p" }
+            |  } with { briefly "c" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val msgs = diagnostics(src, "populates-negative-control")
+        msgs.justErrors.map(_.message).mkString("\n") must be("")
+        populatesWarnings(msgs).size mustBe 0
+    }
+
     "reject a key component missing from a handled event" in { (td: TestData) =>
       // §6.6 makes the key the distribution key, so an event without it could not be routed to the
       // instance holding that tuple's partial in the first place.

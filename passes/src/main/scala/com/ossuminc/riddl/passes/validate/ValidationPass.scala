@@ -3313,10 +3313,10 @@ case class ValidationPass(
                 .definitionOf[Repository](ts.processorRef.pathId)
                 .filter(repo => repositoriesOf.exists(_ eq repo))
                 .foreach { repo =>
-                  val sentType = ts.msg match
-                    case mr: MessageRef => resolution.refMap.definitionOf[Type](mr.pathId)
-                    case c: Constructor => resolution.refMap.definitionOf[Type](c.ref.pathId)
-                    case _: ValueRef    => None // type comes from the clause; not a declaration here
+                  // Resolve the operand's TYPE rather than matching on how it was written -- a
+                  // `ValueRef` (e.g. an on-clause binding) carries the same statically-known type
+                  // as a bare `MessageRef`; only the spelling differs. See `operandType`'s doc.
+                  val sentType = operandType(ts.msg)
                   sentType.foreach(t => found += ((t, repo, ts)))
                 }
             case _ => ()
@@ -3663,6 +3663,21 @@ case class ValidationPass(
         resolvePath[Context](adaptor.referent.pathId, parents).foreach { referentContext =>
           // Gather every message reference the adaptor traffics in: on-clause messages plus the
           // message targets of send/tell statements (walking nested when/match/foreach bodies).
+          //
+          // A56/Fix-A sweep (2026-08-15): audited whether a send/tell `ValueRef` operand (an
+          // on-clause binding) needs the same widening the populates-repository check received.
+          // It does NOT, and this is verified rather than assumed: `operandType`'s ValueRef arm
+          // only ever resolves the BARE on-clause binding name (`ResolutionPass.resolveValueRef`
+          // registers a Type in the refMap only for `names.sizeIs == 1`), and a bare binding always
+          // types identically to the enclosing on-clause's own `msg` -- which `onClauseRefs` below
+          // already reports. A compound path (`p.field`) resolves to a `Field`, not a `Type`, so
+          // `operandType` answers `None` for it -- confirmed empirically: a fixture with
+          // `PaymentCompleted is { detail: ShippingContext.QueueShipment }` and
+          // `tell p.detail to context ShippingContext` produces ZERO seam errors whether or not this
+          // arm is added. Adding it would therefore only DOUBLE-REPORT the violation `onClauseRefs`
+          // already catches, never catch a new one -- so it is deliberately left as `MessageRef`/
+          // `Constructor` only. Revisit if `valueRefType`/`operandType` ever grow field-path
+          // resolution to a `Type`.
           val onClauseRefs: Seq[MessageRef] =
             adaptor.handlers.flatMap(_.clauses).collect { case omc: OnMessageLikeClause => omc.msg }
           val sendTellRefs = scala.collection.mutable.ArrayBuffer.empty[MessageRef]
