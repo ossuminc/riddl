@@ -358,6 +358,35 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case c: Constructor => emitValue(c)
       case other          => add(other.format)
 
+  /** `InvariantBlock`'s `{ <stmts> <predicate> }` (`invariant X is { … }` block form). Mirrors
+    * `AST.InvariantBlock.format` (`"{ " + (statements.map(_.format) :+ predicate.format)
+    * .mkString(" ") + " }"`) EXACTLY, with ONE deliberate change: `predicate` -- always a
+    * `BooleanExpression`, and the block's own final expression -- routes through `emitValue`
+    * rather than `.format`, since `LogicalExpression`/`NotExpression`/`InvariantCondition` can
+    * nest a `PromptValue` whose ascription needs `emitValue`'s total dispatch. `predicate` never
+    * calls `nl`/`addIndent` (see `emitValue`'s doc: it is purely inline), so this needs no capture/
+    * squash machinery -- unlike `statements` below.
+    *
+    * `statements` deliberately STAYS on `.format`, unfixed. Two independent reasons found
+    * 2026-08-15, NOT a "didn't get to it": (1) `invariantBlock`'s grammar allows
+    * `when`/`match`/`foreach` (`StatementParser.anyDefStatements` GROUP 1, included in
+    * `StatementsSet.FunctionStatements`), and `WhenStatement.format`/`MatchStatement.format` are
+    * ALREADY multi-line (embed literal `\n`) -- so "the block is single-line" is already false for
+    * those, and routing them through the total `emitStatement` dispatch instead would be a genuine,
+    * visible LAYOUT change to every invariant block containing one, not a bug fix. (2) A capture-
+    * and-squash approach (render via a scratch `emitStatement` call, then collapse whitespace back
+    * to one line) risks CORRUPTING content: `NoWhiteSpaceParsers.literalString`'s `stringChars`
+    * permits a raw, author-written newline inside a quoted string (nothing bans it), so blindly
+    * replacing `\s+`/`\n` with a space would silently change what a `do "…"`/`error "…"` literal
+    * MEANS, not merely how it is laid out. Both are why this is a decision for the owner (see
+    * BACKLOG § 1 / CLAUDE.md), not something to fix silently here.
+    */
+  def emitInvariantBlock(block: InvariantBlock): this.type =
+    add("{ ")
+    block.statements.toSeq.foreach(s => add(s.format).add(" "))
+    emitValue(block.predicate)
+    add(" }")
+
   private def emitEnumeration(enumeration: Enumeration): this.type = {
     add(s"any of {").nl.incr
     val enumerators: String = enumeration.enumerators.toSeq

@@ -256,15 +256,15 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
       // A28 + block form: `condition` is `LiteralString | BooleanExpression | InvariantBlock`. A
       // `BooleanExpression` routes through `emitValue` (not `.format`), since its `LogicalExpression`/
       // `NotExpression`/`InvariantCondition` shapes can nest a `PromptValue` whose ascription needs
-      // `emitValue`'s total dispatch — see `RiddlFileEmitter.emitValue`'s doc. `InvariantBlock` stays
-      // on `.format`: its own nested statements are a separate, pre-existing "two dispatches" gap
-      // (`Statement.format` vs. `emitStatement`, documented in CLAUDE.md's Total Dispatch section)
-      // that this fix does not reach.
+      // `emitValue`'s total dispatch — see `RiddlFileEmitter.emitValue`'s doc. `InvariantBlock` routes
+      // through `emitInvariantBlock`, which fixes its `predicate` the same way; its `statements` stay
+      // on `.format`, deliberately — see `emitInvariantBlock`'s doc for why that residual is a real,
+      // layout-entangled decision and not something to fix silently here.
       invariant.condition match
         case None                        => rfe.add("N/A")
         case Some(ls: LiteralString)     => rfe.add(ls.format)
         case Some(be: BooleanExpression) => rfe.emitValue(be)
-        case Some(ib: InvariantBlock)    => rfe.add(ib.format)
+        case Some(ib: InvariantBlock)    => rfe.emitInvariantBlock(ib)
       // An invariant is a one-line leaf with nothing following it on the line, so it must
       // terminate its own line when there is no `with { ... }` block to do it — the same rule
       // `doVersion` and `doCopyright` already carry. Without this a metadata-less invariant ran

@@ -249,5 +249,58 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
           case t: Table => t.dimensions mustBe Seq(3L, 3L)
           case other    => fail(s"expected a Table, got $other")
     }
+
+    // 2026-08-15 review follow-up: `InvariantBlock`'s `predicate` (its OWN final boolean, not one
+    // of its leading `statements`) is `BooleanExpression`, exactly the shape `emitValue` is total
+    // over elsewhere, and it was still rendered via `AST.InvariantBlock.format` (-> `.format` on
+    // the predicate) in `PrettifyVisitor.doInvariant`. `statements` are a separate, still-open
+    // residual (layout-entangled, not fixed here -- see `RiddlFileEmitter.emitInvariantBlock`'s
+    // doc): this case has ZERO leading statements, so it isolates the predicate fix specifically.
+    "survive a prettify round trip as an InvariantBlock's own predicate, ascribed to a Currency" in {
+      (_: TestData) =>
+        val src =
+          """domain D is {
+            |  context C is {
+            |    entity E is {
+            |      invariant OtherRule is "always true"
+            |      invariant HasFunds is {
+            |        invariant OtherRule with prompt("w") as Currency(USD)
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+
+        def predicateOf(root: Root): InvariantCondition =
+          Finder(root)
+            .recursiveFindByType[Invariant]
+            .find(_.id.value == "HasFunds")
+            .getOrElse(fail("no invariant named 'HasFunds' found"))
+            .condition match
+              case Some(InvariantBlock(_, _, ic: InvariantCondition)) => ic
+              case other => fail(s"expected an InvariantBlock with an InvariantCondition predicate, got $other")
+
+        val original = parse(src, "orig")
+        predicateOf(original).argument match
+          case Some(pv: PromptValue) => pv.typeEx.get mustBe a[Currency]
+          case other                 => fail(s"expected a PromptValue argument, got $other")
+
+        val emitted = prettify(original)
+        withClue(s"emitted source was:\n$emitted\n") {
+          emitted must include(
+            """invariant HasFunds is { invariant OtherRule with prompt("w") as Currency(USD) }"""
+          )
+          // Before the fix this rendered `as Currency` -- a parse error (mandatory `country` arg).
+          emitted must not include """as Currency }"""
+        }
+
+        val regen = parse(emitted, "regen")
+        predicateOf(regen).argument match
+          case Some(pv: PromptValue) =>
+            pv.typeEx.get match
+              case c: Currency => c.country mustBe "USD"
+              case other       => fail(s"expected a Currency, got $other")
+          case other => fail(s"expected a PromptValue argument, got $other")
+    }
   }
 }

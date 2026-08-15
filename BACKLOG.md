@@ -889,6 +889,50 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   do elsewhere) or leave them, before touching `checkPromptAscription`
   again.
 
+- **A20 rendering: `InvariantBlock`'s leading `statements` still emit a
+  `PromptValue` ascription via `ascriptionFormat`, not `emitValue` — genuinely
+  open, needs a LAYOUT ruling before it can be fixed.** Found and scoped by
+  the 2026-08-15 same-day re-review of the `emitValue` totality fix (which
+  DID close the sibling gap: `InvariantBlock.predicate` — see CLAUDE.md's
+  `PromptValue.ascriptionFormat` entry). `invariant X is { let y = prompt(...)
+  as any of {...} a > b }` still mis-renders the `let`'s ascription today.
+
+  **Why this one is not "just do it" like the rest of the fix:**
+  1. `invariantBlock`'s grammar (`StatementParser.scala:102`) parses
+     `statement(StatementsSet.FunctionStatements).rep(0)`, and that set
+     includes `when`/`match`/`foreach` (`anyDefStatements`'s control-flow
+     group). `WhenStatement.format`/`MatchStatement.format`
+     (`AST.scala:3775`, `:3884`) are ALREADY multi-line — they embed literal
+     `\n` — so `InvariantBlock`'s "single line" premise (`"{ " +
+     statements.map(_.format).mkString(" ") + " }"`) is already false
+     whenever one of those is nested inside. Routing every statement through
+     `RiddlFileEmitter.emitStatement` (the correct, total dispatch) would fix
+     the ascription bug but ALSO reflow every invariant block containing a
+     `let`/`require`/`when`/`match`/`foreach` from its current mostly-single-
+     line rendering to `emitStatement`'s indented multi-line one — a visible
+     output change across the corpus, not a bug fix.
+  2. The alternative — capture each statement's `emitStatement` output into a
+     scratch builder and squash it back to one line — is unsafe in general.
+     `NoWhiteSpaceParsers.literalString`'s `stringChars` (`:108`) permits a
+     raw, author-written newline inside a quoted string (nothing bans it), so
+     collapsing whitespace indiscriminately risks silently changing what a
+     `do "…"`/`error "…"` literal MEANS, not merely how it looks.
+
+  **Decision needed from the owner**: accept the layout change (route
+  statements through `emitStatement`, single-line-only invariant blocks
+  become a thing of the past), or accept a scoped squash that special-cases
+  only the statement kinds known not to embed raw newlines (`let`/`require`,
+  which are the only two that can even carry a `Value`/`BooleanExpression`
+  with a nested `PromptValue` — `do`/`error`/`terminate` take a bare
+  `LiteralString`, not a `Value`) and leaves `when`/`match`/`foreach` on
+  `.format` as before. The second option is narrower and cheaper but still
+  needs a ruling, since it changes what "the block is single-line" means in
+  a way that is not obvious from reading the diff.
+
+  `RiddlFileEmitter.emitInvariantBlock`'s doc comment carries the same
+  reasoning next to the code, so a future fix starts from the evidence
+  rather than re-deriving it.
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built

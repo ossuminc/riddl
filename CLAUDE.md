@@ -1168,22 +1168,44 @@ to the right group rather than appending to a list.
   now explicit cases), `require … with`, a `when` condition's `BooleanExpression`
   arm, and a `match`/`case` guard — now routes through `emitValue` too.
   `PrettifyVisitor.doInvariant`'s condition rendering (`invariant X is <condition>`)
-  had the same defect and is fixed the same way, EXCEPT for the `InvariantBlock`
-  form (`invariant X is { <stmts> <predicate> }`), which still renders via
-  `.format` — that is the separate, pre-existing "two dispatches"
-  (`Statement.format` vs. `emitStatement`) gap documented under Total Dispatch
-  above, not this one, and this fix does not reach it.
-  `ascriptionFormat` remains in `AST.scala`, unchanged, for the one place this
-  emitter genuinely cannot reach: `.format`-based error-message rendering. It is
-  no longer reachable from prettify output.
+  had the same defect and is fixed the same way, INCLUDING the `InvariantBlock`
+  form's own `predicate: BooleanExpression` (`invariant X is { <stmts>
+  <predicate> }` — new `RiddlFileEmitter.emitInvariantBlock` routes `predicate`
+  through `emitValue`; `predicate` never calls `nl`/`addIndent`, so this needed
+  no capture/squash machinery, unlike the residual below).
+  **Correction (2026-08-15, same-day review): an earlier version of this entry
+  claimed the `InvariantBlock` form was untouched and pointed at it as "the
+  same, pre-existing two-dispatches gap" — wrong. Its `predicate` is exactly
+  the `BooleanExpression` shape fixed everywhere else and is now fixed here
+  too.** What remains open in `InvariantBlock` is narrower than that: its
+  LEADING `statements: Contents[Statements]` still render via `.format`,
+  deliberately, because fixing them is genuinely layout-entangled, not a quick
+  follow-up — see `emitInvariantBlock`'s doc and BACKLOG § 1. Two independent,
+  VERIFIED reasons: (1) `invariantBlock`'s grammar (`StatementParser.scala`)
+  allows `when`/`match`/`foreach` inside the block (`StatementsSet
+  .FunctionStatements` includes `anyDefStatements`'s control-flow group), and
+  `WhenStatement.format`/`MatchStatement.format` are ALREADY multi-line (embed
+  literal `\n`) — so routing them through the line-oriented `emitStatement`
+  instead would be a genuine, visible LAYOUT change to every invariant block
+  containing one, not a bug fix. (2) A capture-into-a-scratch-emitter-then-
+  squash-to-one-line approach is unsafe in general: `NoWhiteSpaceParsers
+  .literalString`'s `stringChars` permits a raw, author-written newline
+  inside a quoted string (nothing bans it), so blindly collapsing whitespace
+  risks corrupting what a `do "…"`/`error "…"` literal MEANS, not merely how
+  it is laid out.
+  `ascriptionFormat` remains in `AST.scala`, unchanged, for the two places this
+  emitter genuinely cannot (yet) reach: `.format`-based error-message
+  rendering, and a `PromptValue` nested inside an `InvariantBlock`'s leading
+  statements (the residual above).
   Proven by `TypedHoleContainerAscriptionRoundTripTest` (`passes/.../prettify/`):
   a named `Constructor` argument (`any of {…}`), a named `Call` argument
   (`Currency(USD)`), a nested `LogicalExpression` with the parenthesizing
-  intact (`reference to entity E`), and a `not` (`table of T of […]`) — all
-  four previously mis-emitted, all four verified to fail before the fix via
-  `git stash`. `AST.scala` is in `language` and `RiddlFileEmitter` in `passes`,
-  so the copy still cannot call the original — the two must be kept in step by
-  hand, which is precisely why this pattern keeps recurring here.
+  intact (`reference to entity E`), a `not` (`table of T of […]`), and an
+  `InvariantBlock`'s own predicate (`Currency(USD)`) — all five previously
+  mis-emitted, all five verified to fail before the fix via `git stash`.
+  `AST.scala` is in `language` and `RiddlFileEmitter` in `passes`, so the copy
+  still cannot call the original — the two must be kept in step by hand,
+  which is precisely why this pattern keeps recurring here.
   **What is NOT fixed by this**: `checkPromptAscription` (validation) is still
   wired at only the same four positions, so an ascription that CONTRADICTS its
   position's actual expected type is silently accepted at `put`, `return`,
