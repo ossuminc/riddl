@@ -7,7 +7,7 @@ module MixedBag is {
 
   type Amount is Number
 
-  constant Limit is Number = "100"
+  constant Limit is Number = 100
 
   user Shopper is "a person who buys things"
 

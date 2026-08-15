@@ -72,7 +72,7 @@ domain Values is {
   context Flags is {
     command Check is { threshold: Integer }
     // A28 s3: a numeric constant used as a type-safe comparison operand (no magic-number literals).
-    constant MaxCount is Integer = "100"
+    constant MaxCount is Integer = 100
     entity Gate is {
       record GateData is { count: Integer, active: Boolean, open: Boolean }
       state Status of record GateData
@@ -128,7 +128,7 @@ domain Values is {
   context Matching is {
     type OrderStatus is any of { Pending, Shipped, Delivered }
     command Track is { status: OrderStatus, count: Integer }
-    constant MaxRetries is Integer = "3"
+    constant MaxRetries is Integer = 3
     entity Tracker is {
       record TrackData is { status: OrderStatus, count: Integer, active: Boolean }
       state TState of record TrackData
