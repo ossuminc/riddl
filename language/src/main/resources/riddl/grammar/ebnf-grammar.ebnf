@@ -267,12 +267,14 @@ statement = when_statement | match_statement | foreach_statement | send_statemen
 
 (* Control flow *)
 when_statement = "when" when_condition "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
-(* A28/A17: a condition is an opaque pseudo-code literal, a negated/bare let-binding identifier, a
-   structured boolean_expression, or (A17) a first-class bare boolean value_ref (a single name or a
-   dotted path, resolved and validated to be Boolean-typed). *)
+(* A28/A17: a condition is an opaque pseudo-code literal, a structured boolean_expression (which
+   covers a negated condition via `not`/`!` -- see not_expression), or (A17) a first-class bare
+   boolean value_ref (a single name or a dotted path, resolved and validated to be Boolean-typed).
+   `not`/`!` are synonymous everywhere (2026-08-14 ruling): there is deliberately no separate
+   `"!" identifier` alternative here -- boolean_expression's not_expression already subsumes it. *)
 (* literal_string is DEPRECATED as a condition: a bare string means a literal everywhere else,
    so a natural-language condition is written prompt("...") and evaluated by an AI. *)
-when_condition = prompt_value | literal_string | "!" identifier | boolean_expression | value_ref ;
+when_condition = prompt_value | literal_string | boolean_expression | value_ref ;
 (* A29: `match <subject> { case <pattern> [when <boolean_expression>] { <statements> } ...
    [default { <statements> }] }`. The subject is a runtime value ref / `get` / legacy literal. A
    pattern is a type-case (a bare type_ref), an explicit value comparison (`<op> <comparand>`, the
@@ -372,10 +374,12 @@ value_ref = path_identifier ;
    numeric_literal) — never a quoted string, a constructor, or a boolean_literal. `comparand`
    originally admitted refs ONLY, banning a literal comparison outright; Reid reversed that
    2026-08-14, since the whole riddl-models corpus held exactly ONE named constant and the ban had
-   no uptake to protect. The intent survives as a StyleWarning in validation, not a parse error. *)
+   no uptake to protect. The intent survives as a StyleWarning in validation, not a parse error.
+   `!` is a synonym for `not` (2026-08-14 ruling), NOT matched when immediately followed by `=`
+   (that is the `!=` comparison_operator, handled below). *)
 boolean_expression = and_expression {"or" and_expression} ;
 and_expression = not_expression {"and" not_expression} ;
-not_expression = "not" not_expression | comparison ;
+not_expression = ("not" | "!") not_expression | comparison ;
 comparison = comparand comparison_operator comparand | boolean_atom ;
 comparand = get_value | constant_ref | numeric_literal | value_ref ;
 comparison_operator = "==" | "!=" | "<=" | ">=" | "<" | ">" ;

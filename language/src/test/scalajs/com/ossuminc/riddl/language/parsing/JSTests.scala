@@ -9,6 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.utils.{pc, ec}
 
 class JSApplicationParsingTest extends ApplicationParsingTest
+class JSBangNotSynonymyTest extends BangNotSynonymyTest
 class JSCommonParserTest extends CommonParserTest
 class JSHandlerTest extends HandlerTest
 class JSMetaDataTest extends MetaDataTest

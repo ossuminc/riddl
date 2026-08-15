@@ -19,6 +19,7 @@ import com.ossuminc.riddl.utils.{ec, pc}
 // and keeping it a distinct file avoids implying JS coverage this file does
 // not provide.
 class JVMNativeApplicationParsingTest extends ApplicationParsingTest
+class JVMNativeBangNotSynonymyTest extends BangNotSynonymyTest
 class JVMNativeCommonParserTest extends CommonParserTest
 class JVMNativeHandlerTest extends HandlerTest
 class JVMNativeMetaDataTest extends MetaDataTest

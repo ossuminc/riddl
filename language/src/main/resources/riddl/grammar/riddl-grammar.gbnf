@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-15 11:30 UTC
+# Generated: 2026-08-15 16:57 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -215,7 +215,7 @@ statement ::= when-statement | match-statement | foreach-statement | send-statem
 
 # Control flow
 when-statement ::= "when" ws1 when-condition ws "then" ws1 pseudo-code-block ws ("else" pseudo-code-block)? ws "end"
-when-condition ::= prompt-value | literal-string | "!" ws identifier | boolean-expression | value-ref
+when-condition ::= prompt-value | literal-string | boolean-expression | value-ref
 match-statement ::= "match" ws1 match-subject ws "{" ws (match-case)+ ws ("default" "{" (statement)* "}")? ws "}"
 match-subject ::= get-value | literal-string | value-ref
 match-case ::= "case" ws1 match-pattern ws ("when" boolean-expression)? ws "{" ws (statement)* ws "}"
@@ -249,7 +249,7 @@ get-value ::= "get" ws "from" ws (input-ref | state-ref)
 value-ref ::= path-identifier
 boolean-expression ::= and-expression ws ("or" and-expression)*
 and-expression ::= not-expression ws ("and" not-expression)*
-not-expression ::= "not" ws1 not-expression | comparison
+not-expression ::= ("not" | "!") ws not-expression | comparison
 comparison ::= comparand ws1 comparison-operator ws1 comparand | boolean-atom
 comparand ::= get-value | constant-ref | numeric-literal | value-ref
 comparison-operator ::= "==" | "!=" | "<=" | ">=" | "<" | ">"

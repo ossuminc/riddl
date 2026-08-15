@@ -297,28 +297,32 @@ private[parsing] trait StatementParser {
   }
 
   // A28/A17: `when` accepts a structured BooleanExpression, a bare boolean value reference (a single
-  // name OR a dotted path -> ValueRef, A17), a pseudo-code LiteralString, or the legacy negated/bare
+  // name OR a dotted path -> ValueRef, A17), a pseudo-code LiteralString, or the legacy bare
   // `let`-binding Identifier. ORDER matters:
-  //   - `! identifier` (negated) is tried first: `!` is not a boolean-atom start, so the boolean
-  //     grammar never consumes it.
-  //   - `booleanExprOnly` is tried before `valueRef`: for `when a > b` / `when x and y` / `when true`
-  //     it yields a real BooleanExpression; for a BARE atom (`when flag`, `when order.isPaid`) the
-  //     filter rejects the bare-atom result and the parse backtracks (no cut before an operator) to
-  //     `valueRef`, which builds a first-class ValueRef (A17) covering both a single name and a
-  //     dotted path.
+  //   - `booleanExprOnly` is tried first: for `when a > b` / `when x and y` / `when true` /
+  //     `when not flag` / `when !flag` it yields a real BooleanExpression; for a BARE atom
+  //     (`when flag`, `when order.isPaid`) the filter rejects the bare-atom result and the parse
+  //     backtracks (no cut before an operator) to `valueRef`, which builds a first-class ValueRef
+  //     (A17) covering both a single name and a dotted path.
+  //   - `not`/`!` are NOT special-cased here (2026-08-14 ruling: the two spellings are synonymous
+  //     everywhere): `booleanExprOnly` routes both through `not_expression`
+  //     (see `notExpr`/`notOperator` below), producing one `NotExpression` node either way. There is
+  //     deliberately no separate `"!" identifier` alternative -- that was the source of the old
+  //     two-AST divergence (a `negated: Boolean` flag vs. a real `NotExpression` node) and leaving it
+  //     beside the general rule would have kept the special case alive instead of retiring it.
   //   - `literalString` then handles the opaque pseudo-code form (`when "user is authenticated"`);
   //     `valueRef` above never consumes a quote, so the order is safe.
   //   - the bare `identifier` arm is the legacy fallback (now effectively unreached, since a bare
   //     name is routed to `valueRef`); kept for AST/API back-compat.
   private def whenCondition[u: P]
-    : P[(LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue, Boolean)] = {
+    : P[LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue] = {
     P(
-      (Punctuation.exclamation ~ identifier).map(id => (id, true)) |
-        booleanExprOnly.map(be => (be, false)) |
-        promptValue.map(pv => (pv, false)) |
-        valueRef.map(vr => (vr, false)) |
-        deprecatedStringCondition.map(ls => (ls, false)) |
-        identifier.map(id => (id, false))
+      booleanExprOnly.map(be => be: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue) |
+        promptValue.map(pv => pv: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue) |
+        valueRef.map(vr => vr: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue) |
+        deprecatedStringCondition
+          .map(ls => ls: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue) |
+        identifier.map(id => id: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue)
     )
   }
 
@@ -348,9 +352,12 @@ private[parsing] trait StatementParser {
         pseudoCodeBlock(set) ~/
         (Keywords.else_ ~/ pseudoCodeBlock(set)).? ~/
         Keywords.end_ ~/ Index
-    )./.map { case (start, (cond, negated), thenStmts, elseStmtsOpt, end) =>
+    )./.map { case (start, cond, thenStmts, elseStmtsOpt, end) =>
       val elseStmts = elseStmtsOpt.getOrElse(Seq.empty[Statements])
-      WhenStatement(at(start, end), cond, thenStmts.toContents, elseStmts.toContents, negated)
+      // `negated` stays false: the `!`-as-flag encoding is retired (2026-08-14 ruling) in favor of
+      // a real `NotExpression` inside `cond` when the author wrote `not`/`!`. The field itself is
+      // NOT deleted here -- that is a separate task -- so it keeps its `false` default.
+      WhenStatement(at(start, end), cond, thenStmts.toContents, elseStmts.toContents)
     }
   }
 
@@ -554,10 +561,18 @@ private[parsing] trait StatementParser {
     }
   }
 
-  // `not` level (prefix). Recurses so `not not a` works; falls through to `comparison`.
+  // `not` and `!` are synonymous everywhere, as the inverse of a boolean expression (Reid,
+  // 2026-08-14; overrides the 2026-08-13 ruling that confined `!` to `when !<bare-identifier>`).
+  // `!` must NOT match the `!` of the `!=` comparison operator: fastparse's `!` prefix combinator is
+  // negative lookahead, so `~~ !"="` (no-whitespace sequencing, then "not followed by =") is the
+  // guard. Regex lookahead is unavailable on Scala Native, so that route is not an option here.
+  // `not` keeps its `Keywords.keyword` word boundary so `notify` stays an ordinary identifier.
+  private def notOperator[u: P]: P[Unit] = P(Keywords.keyword("not") | ("!" ~~ !"="))
+
+  // `not` level (prefix). Recurses so `not not a` / `!!a` work; falls through to `comparison`.
   private def notExpr[u: P]: P[Value] = {
     P(
-      (Index ~ Keywords.keyword("not") ~/ notExpr ~ Index).map { case (start, inner, end) =>
+      (Index ~ notOperator ~/ notExpr ~ Index).map { case (start, inner, end) =>
         NotExpression(at(start, end), inner): Value
       } | comparison
     )

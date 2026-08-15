@@ -717,11 +717,15 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           ws.condition mustBe a[LiteralString]
           ws.negated must be(false)
         case other => fail(s"expected a WhenStatement, got $other")
-      // A negated bare ref stays an Identifier with negated=true (the `! identifier` legacy arm).
+      // A negated bare ref now builds a real NotExpression, not the retired `negated: Boolean` flag
+      // (2026-08-14 ruling: `not`/`!` are synonymous everywhere; see BangNotSynonymyTest).
       parseStmt("when !flag then error \"boom\" end", td) match
         case ws: WhenStatement =>
-          ws.condition mustBe a[Identifier]
-          ws.negated must be(true)
+          ws.condition mustBe a[NotExpression]
+          ws.negated must be(false)
+          ws.condition match
+            case NotExpression(_, inner) => vref(inner) must be("flag")
+            case other                   => fail(s"expected a NotExpression, got $other")
         case other => fail(s"expected a WhenStatement, got $other")
     }
 
