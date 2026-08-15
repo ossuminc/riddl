@@ -174,6 +174,68 @@ to the task file and note the disposition below.
 ---
 
 
+## Numeric literals, and four bugs found by RUNNING rather than reading (2026-08-15) — DONE
+
+21 commits, `7d5ea5b28..2e75ae3e7`. RIDDL can now write a number. The feature itself went
+as designed; what is worth keeping is how the defects were found.
+
+**Every real bug in this work was found by executing something, not by reading it.** The
+plan specified `CharIn("0-9").rep(1)` for the digit runs, and it read correctly to me, to
+the implementer, and to the first reviewer. It is wrong: under `MultiLineWhitespace`,
+fastparse's `.rep` skips whitespace BETWEEN repetitions no matter what the surrounding `~~`
+says, so `record R(1 2)` parsed as ONE literal with the text `"1 2"`. The reviewer caught it
+by running the combinator standalone against fastparse 3.1.1 and getting
+`Parsed.Success("1 2", 5)`. The same reviewer later confirmed the identical bug in the EBNF
+by running TatSu, and a third verified the regenerated BAST fixture by `cmp -l` on the git
+blobs rather than trusting the report. **Reading a parser combinator tells you what you think
+it means; running it tells you what it does.**
+
+**The same defect shape appeared FIVE times in two days, twice re-created after being
+filed.** `CharIn(...).rep(1)` was fixed in the new parser rule, then found pre-existing in
+`CommonParser.naturalNumber` and filed — and then written *again* into the EBNF, after the
+lesson. Separately, `asLong` (`text.toLong`) was placed inside a match guard while the parser
+accepts unbounded digit runs, so `constant N: Natural = <20 digits>` threw
+`NumberFormatException` during validation and surfaced as `[severe] Exception Thrown` with no
+line number — the *same class* of bug the branch had filed to BACKLOG one day earlier.
+**"Fix the SHAPE, not the instance" is not advice about tidiness. Filing an instance does not
+inoculate anyone, including the person who filed it.**
+
+**`autoFixable = true` was a lie, and the lie was structural.** The new quoted-constant
+deprecation claimed prettify would resolve it. Prettify did not: the parser kept the value as
+a `LiteralString` and the emitter re-emitted it, so a migration tool trusting the flag would
+report a fix that never happened. The fix was not to clear the flag but to make it TRUE — the
+parser now CONSUMES the quoted numeric, exactly as `ConnectorOptionToIntention` does. **That
+is what makes `autoFixable` honest anywhere: the old spelling must not survive parsing.**
+
+**Three ways a test could not fail, all caught in review.** A "must be a parse error" case
+routed through `parseAndValidate`, whose `Left` branch calls `fail` directly, so its
+assertion was unreachable and it could only pass. A round-trip case asserting only that the
+output re-parses — which `1.5` does perfectly well after `1.50` has been mangled into it. And
+the standing trap of a `(td: TestData)` lambda on a plain `AnyWordSpec`, which constructs a
+`Function1` and never runs the body. **Assert the exact value, and check the harness can
+express the failure you are claiming to test.**
+
+**A reversal has to move the comments, or the code starts lying.** Widening `Comparand` so
+`count > 5` parses contradicted an explicit A28 comment — *"so magic-constant comparisons
+cannot be constructed at all"* — repeated in the AST, the parser, the BAST codec docs, two
+test files and a corpus fixture. The final review found four still standing after the task
+that changed the behaviour. The BAST one mattered most: it is the wire-format spec for anyone
+writing a reader, and it both omitted the new discriminator and asserted the old rule.
+
+**The evidence for the reversal was a count, not an argument.** A28 required naming your
+constants. The entire 189-model corpus contained **one** constant — and it was
+`constant PointsPerDollar is Natural = "10"`, a number in quotes. The rule had no uptake to
+protect, plausibly because the only way to name a number was to put it in a string.
+
+**A fixture under `input/` is the only thing the CI grammar validators can see.** The
+corpus fixture added in the last task immediately exposed a real parser/EBNF divergence:
+`1e3` failed under TatSu without an explicit exponent sign. No internal test would ever have
+found it, because internal tests exercise fastparse and never the documented grammar.
+
+**Unrelated, and it needs its own look:** `Root2JsonCorpusTest` is at **59/190**, while
+BACKLOG had recorded 173/189. A/B stash testing confirms the ~114-model gap predates this
+work entirely. The stale number is corrected and the regression is filed.
+
 ## Three defects that hid behind a SECOND copy of the same dispatch (2026-08-14) — DONE
 
 Tasks 4-6 of the message-value-source plan: warn on a bare message operand, warn on an

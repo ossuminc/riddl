@@ -972,6 +972,62 @@ to the right group rather than appending to a list.
   has `intention: Option[Intention]` (Application/External/Gateway/
   Service). Shape/intention now participate in `Definition.equals`, so
   keep their `loc` at `At.empty` on every surface (parser/BAST/JSON).
+- **Numeric literals (2026-08-15, `release/2`)** — `NumericLiteral(loc, text)`
+  in the `Value` and `Comparand` unions, accepting
+  `[+-]? digits [. digits] [(e|E) [+-] digits]`. No digit separators, no radix
+  prefixes.
+  **The text is stored AS WRITTEN and that is the whole design.** `1.50`, `007`,
+  `+3` and `2E+8` are not recoverable from a parsed `Long`/`BigDecimal`, so a
+  parsed payload would make prettify diverge from source on first use. Same
+  reasoning as `UniqueId.kindKeyword` and correlation keys. It also keeps
+  `BigDecimal` off the Native and JS paths, and needs one BAST tag (value **10**,
+  comparand **3**) rather than two. **JSON stores it as a `ujson.Str`, never a
+  `ujson.Num`** — `ujson.Num` is a Double and would silently turn `1.50` into
+  `1.5`. A JSON-identity fixed-point test cannot catch that, because a
+  consistently-mangled value is still a perfect fixed point; assert the text.
+  **`count > 5` now parses, REVERSING A28's deliberate narrowing.** `Comparand`
+  was ref-only on purpose, "so magic-constant comparisons cannot be constructed
+  at all" — Reid reversed it 2026-08-14 on the evidence that the whole 189-model
+  corpus contained exactly ONE constant, so the rule had no uptake to protect
+  (plausibly because naming a number meant quoting it). The intent survives as a
+  StyleWarning whose population started at zero. `count > true` is still a parse
+  error: booleans are atoms, not comparands.
+  **`Integer` is signed, `Whole` is `>= 0`, `Natural` is `>= 1`** (Reid,
+  2026-08-14). Until then the three had NO definition anywhere — no scaladoc, no
+  language reference, no Computational Model entry — so the check had nothing to
+  enforce. They are documented at `AST.scala:2518-2530`; a check cannot enforce a
+  rule the language never states.
+  **Literals are held STRICTER than references, deliberately.**
+  `NumericType.isAssignmentCompatible` (`:1912`) lets ANY numeric accept any
+  other and STAYS that way — `let x: Nat = someRealField` is unchanged. Only a
+  literal, whose value the compiler can see, is range-checked
+  (`checkNumericLiteralConformance`). `NumericLiteralConformanceTest` pins the
+  loose side so a later "tidy-up" of `isAssignmentCompatible` reddens instead of
+  silently changing behaviour far beyond literals.
+  **`Bool extends IntegerTypeExpression extends NumericType`**, so any check
+  matching `IntegerTypeExpression` also catches Boolean-typed values — put an
+  explicit `Bool` arm first, or a Boolean constant is told it "requires a whole
+  number".
+  **Never call `asLong` in a match guard.** It is `text.toLong` and the parser
+  accepts unbounded digit runs, so a 20-digit literal throws
+  `NumberFormatException` *inside the guard* and surfaces as `[severe] Exception
+  Thrown` with no line number. Use `asBigDecimal` or test the text.
+
+- **`Constant` holds four kinds, and prettify emits `:`** (2026-08-15).
+  `ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue`
+  — a narrowing of `Value`, defined the way `Comparand` is. Deliberately NOT the
+  full union, which would admit `Call`, `Ask` and `Initiate` in a constant. The
+  `PromptValue` arm is a **typed hole**: the constant declares the type and the
+  computation is prose, so it needs no `as T` — the precedent A20 builds on.
+  **There was never any parser work for the separator.** `CommonParser.is` (`:38`)
+  is `StringIn("is","are",":","=").?` and has always accepted the colon, and
+  omission. All spellings are legal, none warns, and prettify emits `: `.
+  **The quoted numeric/boolean form is CONSUMED by the parser**, not merely
+  deprecated — that is what makes its `autoFixable = true` honest and the round
+  trip converge, exactly as `ConnectorOptionToIntention` does. A deprecation
+  claiming `autoFixable` while prettify re-emits the old spelling is a lie a
+  migration tool will act on.
+
 - **AST.Set shadows scala.Set** — use selective imports or
   qualify as `scala.collection.immutable.Set`.
 - **Schema match ordering** — Schema extends `Leaf` (Definition)
@@ -1155,6 +1211,22 @@ a model that validates clean and means something else.
 Known-total today: `Pass.processValue`, `classifyHandlers` (all 17 `Statement`
 kinds), `countValueFailPoints`, BASTWriter/BASTReader statement dispatch. The
 remaining ~140 catch-alls are unaudited — see BACKLOG § 2.
+
+**A new `Value` arm touches EIGHT sites, not five** (counted 2026-08-15 adding
+`NumericLiteral`; the plan said five and `-Werror` found three more). Beyond
+`ValidationPass`'s four walks (`countValueFailPoints`, `stateReadsIn`,
+`initiatesIn`, `asksIn`) and `validateValue`, there are: **`AST.NonDefinitionValues`**
+— a parallel union to `Value` that is easy to miss entirely — **`ValidationPass.valueType`**,
+and **`JsonifierPass`** in `riddlLib`. Widening **`Comparand`** is a SEPARATE
+family of its own: `resolveComparand`, `serializeComparand`, `buildComparand`,
+plus the BAST writer/reader pair. Grep and read; do not trust a five-item list.
+
+**A catch-all that "just works" is how a literal disappears.** Before Task 3
+added its arm, `JsonAstBuilder.buildComparand`'s pre-existing
+`case other => ValueRef(curAt, PathIdentifier.empty)` silently degraded a numeric
+comparand into an empty reference — no error, no warning, a valid-looking wrong
+answer. That is a live instance of the unaudited catch-alls above, not a
+hypothetical.
 
 ### Emptiness — `isEmpty` means NO CONTENTS, never "absent"
 
