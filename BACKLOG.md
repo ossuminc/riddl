@@ -53,6 +53,17 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   model, implicit invariant scope, `requires`/`returns` in contents,
   `Riddl.Envelope` + `option message_envelope`, A56 (`tell p`) and A57
   (`on other as x`). Work from `git log 2.0.0-rc.1..HEAD` rather than memory.
+  Also add (2026-08-15, numeric-literals plan): the three integer types'
+  ranges — `Integer` signed, `Whole` non-negative, `Natural` positive
+  (Reid, 2026-08-14) — were undefined anywhere until this work, and a
+  `constant` literal outside its declared type's range is now a
+  validation Error (`checkNumericLiteralConformance`,
+  `passes/.../ValidationPass.scala`). The "vocabulary of information
+  shapes" passage that already lists the predefined types is the right
+  place for the range table; see the task dropped in
+  `../ossum.tech/task/2026-08-15-integer-type-ranges.md` for the
+  worked examples and the two related grammar widenings (`Constant`
+  accepting a bare literal, `Comparand` accepting one).
 - **Update the ossum.tech documentation site** with the same syntax changes,
   **plus a LIGHTER treatment of the implied syntax.** Reid, 2026-08-06 — the
   reference currently spells out more of the implicit forms than a reader needs,
@@ -835,22 +846,19 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 up front. Two are built (`exactly-once`, A43+A46 verbatim). The other two are
 APPROVED BUT NOT BUILT and are the largest remaining items:
 
-- **Numeric literals in `Value` — APPROVED, integers AND decimals.** Unblocks
-  `initiate entity Order(1)`, `count > 5`, `record R(1)` and the identity spec's own
-  `on init(total: Currency)` example. Touches parser, EBNF, GBNF, prettify, BAST and
-  JSON. **Wants a plan first** — it widens a closed union that four reflection
-  surfaces switch on.
 - **A20 typed holes — APPROVED, spelled `prompt("…") as T`.** Reid chose this over
   `prompt T ("…")` and over the document's un-RIDDL `Value[T]("prose")`. It reuses the
   shipped `prompt` and ascribes a type after it, matching `on foo: command Foo` and
   `let x: T = …`, so nothing new enters the lexer. Also wants a plan.
 
-**THESE TWO AND A38 SHARE ONE `FORMAT_REVISION` BUMP (17 -> 18).** Each adds or changes
-an AST node that BAST must carry. Doing them in three commits with three bumps would be
-three needless `.bast` regenerations across riddl-models; doing them without a bump at
-all silently corrupts old files. **Decide the bump ONCE, in whichever lands first, and
-say so in its commit** — the message-value plan's "the 16 -> 17 bump is SPENT" note is
-the precedent for how to record it.
+**THE `FORMAT_REVISION` BUMP (17 -> 18) IS SPENT — numeric literals landed and
+consumed it** (`6cfeceb2f`, 2026-08-14/15). A20 and A38 now RIDE revision 18
+rather than bumping again: each still adds/changes an AST node BAST must
+carry, but 18 has not shipped in a release yet, so folding them in avoids a
+needless third `.bast` regeneration across riddl-models. Decide differently
+only if 18 ships before either lands — then the next one bumps to 19 and says
+so in its commit, per the message-value plan's "the 16 -> 17 bump is SPENT"
+precedent.
 
 Still unbuilt from A46: the compound-output noun/verb consistency warning (a sound, a
 window and a haptic inside one output). The VERBS shipped; this diagnostic did not, and
