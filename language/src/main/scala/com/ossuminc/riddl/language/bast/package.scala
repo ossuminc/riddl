@@ -117,7 +117,18 @@ package object bast {
     // `0x00` "none" byte; a revision-17 reader has no idea this byte exists and misreads it as
     // the start of whatever comes next, derailing every byte after the first PromptValue it
     // decodes -- same failure shape as the Constant/Method and numeric-literal changes above.
-    18 // numeric literals + Constant carries a tagged value + URL carries scheme/authority + A20 typed holes
+    // Also riding 18 (2026-08-15, not/! synonymy task 4): `writeWhenStatement` no longer appends
+    // the legacy negated-flag byte after the condition -- negation is fully carried by the
+    // `NotExpression` inside `condition` (discriminator `2`) since task 1, so the byte task 2 had
+    // been writing as a hardcoded `0` placeholder is deleted outright, not merely zeroed. A reader
+    // still expecting it would consume the FIRST byte of whatever follows (the `thenStatements`
+    // contents count, or -- for an empty `condition` payload with no trailing bytes of its own --
+    // the next node's tag) as that flag, then read everything downstream one byte short for the
+    // rest of the WhenStatement's subtree. No shipped `.bast` carries the placeholder byte (it was
+    // only ever written by task 2's still-unreleased code), so this is folded into revision 18
+    // rather than bumping to 19.
+    18 // numeric literals + Constant carries a tagged value + URL carries scheme/authority + A20
+    // typed holes + WhenStatement drops the legacy negated-flag byte
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.
     *

@@ -747,14 +747,18 @@ object JsonModel:
     */
   case class ReplyStmtDto(message: MsgOperandDto) extends StatementDto
 
-  /** `{ "kind": "when", "condition"|"conditionIdentifier"|"expression": ..., "negated"?: bool,
-    * "then": [<stmt>], "else"?: [<stmt>] }`. A28's structured BooleanExpression condition is
-    * carried in `expression`; at most one of the three condition fields is populated.
+  /** `{ "kind": "when", "condition"|"conditionIdentifier"|"expression": ..., "then": [<stmt>],
+    * "else"?: [<stmt>] }`. A28's structured BooleanExpression condition is carried in
+    * `expression`; at most one of the three condition fields is populated. Negation is NOT a
+    * separate field -- it is a `NotDto`-wrapped value inside `expression` (not/! synonymy task 4,
+    * 2026-08-15), the same as everywhere else a `NotExpression` appears. The DTO carried its own
+    * `negated: Boolean` field until this task, mirroring the AST's now-deleted
+    * `WhenStatement.negated`; it was always written/read as a hardcoded `false` (task 2's minimal
+    * accommodation) since the real payload already round-trips through `expression`.
     */
   case class WhenStmtDto(
     condition: Option[String],
     conditionIdentifier: Option[String],
-    negated: Boolean,
     thenStatements: Seq[StatementDto],
     elseStatements: Seq[StatementDto],
     expression: Option[ValueDto] = None
@@ -1869,7 +1873,6 @@ object JsonModel:
             WhenStmtDto(
               m.get("condition").map(_.str),
               m.get("conditionIdentifier").map(_.str),
-              m.get("negated").exists(_.bool),
               readStmts(m.get("then")),
               readStmts(m.get("else")),
               m.get("expression").map(readValue)
@@ -1990,14 +1993,13 @@ object JsonModel:
         ujson.Obj("kind" -> ujson.Str("yield"), "message" -> writeMsgOperand(message))
       case ReplyStmtDto(message) =>
         ujson.Obj("kind" -> ujson.Str("reply"), "message" -> writeMsgOperand(message))
-      case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
+      case WhenStmtDto(condition, conditionId, thenS, elseS, expression) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("when"))
             ++ condition.map(x => "condition" -> (ujson.Str(x): ujson.Value))
             ++ conditionId.map(x => "conditionIdentifier" -> (ujson.Str(x): ujson.Value))
             ++ expression.map(x => "expression" -> (writeValue(x): ujson.Value))
             ++ Seq[(String, ujson.Value)](
-              "negated" -> ujson.Bool(negated),
               "then" -> stmtArr(thenS),
               "else" -> stmtArr(elseS)
             )

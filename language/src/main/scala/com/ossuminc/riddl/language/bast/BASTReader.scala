@@ -1042,11 +1042,10 @@ class BASTReader(
                 case other => throw new RuntimeException(s"Expected PromptValue, got: $other")
             case _ => throw new RuntimeException(s"Invalid when condition type: $conditionType")
           }
-        // The legacy negated-flag byte: consumed for wire-format stability but no longer carried on
-        // the AST (`WhenStatement.negated` deleted 2026-08-15, not/! synonymy task 2). It is always
-        // 0 on the wire now that negation is a `NotExpression` inside `condition`; giving this a
-        // real payload is the next task's scope.
-        reader.readU8()
+        // The legacy negated-flag byte (task 2's placeholder) is GONE, not merely ignored:
+        // negation now always arrives as a real `NotExpression` inside `condition` (discriminator
+        // `2` above), so there is nothing left on the wire to read here. See FORMAT_REVISION 18's
+        // comment for what an 18-reader that still expects this byte would misread.
         val thenStatements = readContentsDeferred[Statements]()
         val elseStatements = readContentsDeferred[Statements]()
         WhenStatement(loc, condition, thenStatements, elseStatements)

@@ -1435,12 +1435,11 @@ object JsonAstBuilder:
         )
       case YieldStmtDto(message) => YieldStatement(curAt, buildDeliverableOperand(message))
       case ReplyStmtDto(message) => ReplyStatement(curAt, buildDeliverableOperand(message))
-      case WhenStmtDto(condition, conditionId, _negated, thenS, elseS, expression) =>
-        // `_negated` (the DTO/wire field) is deliberately unread: `WhenStatement.negated` was
-        // deleted from the AST (2026-08-15, not/! synonymy task 2) -- negation now always arrives
-        // as a real `NotExpression` inside `expression`/`condition`. Reading it back into that
-        // shape is the next task's scope; this is a minimal accommodation to keep the tree
-        // compiling.
+      case WhenStmtDto(condition, conditionId, thenS, elseS, expression) =>
+        // Negation arrives as a real `NotExpression` inside `expression` (via `NotDto`, handled by
+        // `buildValue` below) -- there is no separate negated-flag field to read anymore (not/!
+        // synonymy task 4, 2026-08-15; task 2 had left an unread `_negated` placeholder here for
+        // wire-format stability, now removed along with the DTO field itself).
         val cond: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue =
           expression match
             case Some(exprDto) =>
