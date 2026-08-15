@@ -952,17 +952,40 @@ that needs a ruling before either can be fixed.
   (`AggregateContentsRoundTripTest`, `ShownByRoundTripTest`,
   `TypeExpressionSpacingRoundTripTest`, `AttachmentRoundTripTest`).
 
-- **BLOCKED ON riddl-models: two corpus tests are RED here and stay red until
-  it lands its fix.** `RiddlModelsRoundTripTest` and `Root2JsonCorpusTest`
-  (**59/190** validation-parity, needs ≥95% — corrected 2026-08-15; this entry
-  previously said 173/189, which was stale). **This is not a defect here and
-  must not be "fixed" here.**
-  **The "16 of 189" figure this line used to carry for `RiddlModelsRoundTripTest`
-  was WRONG and is removed** (2026-08-15). Measured: the whole `commands` module
-  is **115 succeeded / 130 failed**, and that count is IDENTICAL with this
-  session's `terminate` work stashed — so 130 is the true pre-existing baseline
-  and 16 was never right. Anyone re-measuring should expect 130, not 16, and
-  should A/B by `git stash push -u` rather than trusting either number.
+- **NEARLY UNBLOCKED — riddl-models landed the migration mid-session
+  (2026-08-15 19:19).** Their `2e619c44`, *"Upgrade to riddl
+  2.0.0-rc.14-121-fe768026 and validate the corpus cleanly"*, took the binary
+  staged an hour earlier and did the `terminate` AND bare-message-operand
+  migrations in one pass. **Re-measured immediately after, at that commit:**
+
+  | measurement | earlier same day | now |
+  |---|---|---|
+  | corpus models validating clean | 59/190 | **188/190** |
+  | `RiddlModelsRoundTripTest` | 115 ok / 130 failed | **187 ok / 2 failed** |
+  | `Root2JsonCorpusTest` json-identity | 189/190 | **190/190 (100%)** |
+  | `Root2JsonCorpusTest` validation-parity | 59 | **188 (98.9%)** |
+
+  **All that remains is TWO models**, and they are the same two by every
+  instrument: `patterns/entity/aggregate-root/example` (6 errors) and
+  `patterns/entity/event-sourced/example` (14 errors), both still carrying
+  bare-message operands (18 message-type + 2 record-type). Note both files are
+  named `example.riddl`, so a failure list shows "example.riddl, example.riddl"
+  — do not read that as one model reported twice.
+
+  **⚠ `Root2JsonCorpusTest`'s NAME AND ASSERTION DISAGREE, and that is a defect
+  here, not in the corpus.** The case is called *"...(>= 95% of models)"* and its
+  own `+ validation-parity` line reports a percentage against that threshold —
+  but `Root2JsonCorpusTest.scala:173` asserts **strict equality**, failing with
+  `188 was not equal to 190`. So 98.9% clears the documented gate and fails the
+  real one. Decide which is intended and make the two agree; this entry and § 0
+  have both been repeating the ≥95% figure that the code does not implement.
+
+  **The stale-number lesson, third instance in one day.** Every figure in the
+  old version of this entry — 173/189, then 59/190, then 115/130 — was accurate
+  when written and wrong within hours, because the corpus is a LIVE checkout
+  that another session edits in parallel. Twice during this session
+  `git status` in `../riddl-models` changed between two consecutive commands.
+  **Re-measure before quoting any corpus number; never carry one forward.**
   **Cause, CORRECTED 2026-08-15 — it is no longer the alias fix.** The original
   cause was `ccd278c00`, which taught the tell-addressing check to resolve `Id`
   aliases, turning it on for the spelling riddl-models uses and surfacing 49
@@ -1004,16 +1027,16 @@ that needs a ruling before either can be fixed.
   nothing about reading it suggested otherwise — the same failure mode this file
   documents for test counts. A backlog item asserting another repo owes us
   something should be re-verified against that repo before being acted on.
-  **~~A second, UNEXPLAINED regression~~ — EXPLAINED 2026-08-15.** The 59/190 is
-  not a mystery and needs no separate investigation. Measured across the same
-  190-entry-point sweep: **131 models carry at least one Error, and 130 of them
-  carry exactly ONE error class** — 343 × *"names a message type, not a value"*
-  plus 19 × the same for a record type, i.e. Migration 2 (the bare-message-
-  operand work), which riddl-models is mid-way through. The 131st is
-  `reactive-bbq`, which does not parse at all because of its two unmigrated
-  `terminate entity X` lines. **Nothing else appears anywhere in the corpus.**
-  So the drop from 173/189 is that one deliberate tightening, and the figure
-  should climb as riddl-models lands the migration.
+  **~~A second, UNEXPLAINED regression~~ — EXPLAINED, then RESOLVED, both
+  2026-08-15.** The 59/190 was never a mystery: a sweep of all 190 entry points
+  found 131 models carrying an Error and **130 of them carrying exactly ONE
+  error class** — 343 × *"names a message type, not a value"* plus 19 for record
+  types, i.e. the bare-message-operand tightening. The 131st was `reactive-bbq`,
+  which did not parse at all for two unmigrated `terminate entity X` lines.
+  Nothing else appeared anywhere in the corpus. **riddl-models then landed the
+  migration the same evening and the figure went to 188/190**, exactly as the
+  diagnosis predicted — which is the corroboration, since the prediction was
+  made before their commit existed.
   **Method note, because the first attempt got it wrong**: key the sweep's output
   files on each model's RELATIVE PATH, not its `.conf` basename — ten corpus
   models share a basename, so a basename-keyed run silently overwrites ten

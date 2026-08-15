@@ -37,26 +37,43 @@ Verified 2026-08-15 by sweeping all 190 entry points at HEAD: zero ambiguity
 Errors, with a positive control proving the check can fire in both the inline and
 alias spellings. BACKLOG § 3 and the riddl-models task file are corrected.
 
-**NEXT: nothing is blocked on us.** The corpus is red for ONE reason and it is
-riddl-models' to land: 130 of the 131 failing models carry only the bare-message-
-operand error class (343 + 19 sites), and the 131st is `reactive-bbq`'s two
-unmigrated `terminate` lines. The "unexplained 114-model regression" that BACKLOG
-§ 3 wanted investigated is that same class — closed, not open.
+**NEXT: § 1 of BACKLOG is the active to-do list**, ordered by dependency with an
+index at its head; the same twelve items are in the session task list. Item 1
+(`OnInit`/`OnTerm` parameter defaults) is DONE, `c530337d9`. Only three real
+dependency edges exist among the twelve, so most of it can be reordered freely.
 
-**Suites red on purpose — do NOT "fix" any of these here:**
+**Two § 1 entries were STALE and are struck** — the numeric-literal limitation
+(closed by `6cfeceb2f`; verified by running the entry's own example) and the
+unused-`initiate`-id check (built; `UnusedInitiateIdTest` green, 7 cases). That
+is the third stale-entry find in a day. **Re-verify an entry before working it.**
+
+**The corpus is a LIVE checkout another session edits in parallel.** Twice this
+session `git status` in `../riddl-models` changed between two consecutive
+commands, and a corpus figure written at 17:40 was wrong by 19:19. Never carry a
+corpus number forward; re-measure.
+
+**Corpus suites — riddl-models landed its migration at 19:19 and almost all of
+this went green. Re-measured AFTER their `2e619c44`:**
 
 | Suite | State |
 |---|---|
-| `RiddlModelsRoundTripTest` / whole `commands` module | 115 ok / **130 failed** — A/B-confirmed pre-existing. BACKLOG's old "16 of 189" was simply WRONG; corrected. |
-| `Root2JsonCorpusTest` | validation-parity `cleanRoundTrip=59`, A/B-identical with this session's work stashed. Its json-identity case is NEWLY red (189/190 parse) — see below. |
-| `PassCostBenchmark` | NEWLY red — same cause. |
-| `RunRiddlcOnLocalTest` ("should 406", riddl-examples dokn, shopify-cart) | pre-existing. |
+| `RiddlModelsRoundTripTest` | **187 ok / 2 failed** (was 115/130) |
+| `Root2JsonCorpusTest` json-identity | **190/190, 100%** (was 189/190) |
+| `Root2JsonCorpusTest` validation-parity | **188 (98.9%)**, still RED — see the assertion note below |
+| `PassCostBenchmark` | **GREEN** (was red on reactive-bbq's `terminate`) |
+| `RunRiddlcOnLocalTest` ("should 406", riddl-examples dokn, shopify-cart) | pre-existing, unchanged |
 
-**The two NEWLY red cases are expected corpus fallout, not defects.** reactive-bbq's
-two `terminate` lines use the old spelling and no longer parse. Migration task with
-exact file:line pairs is dropped at
-`../riddl-models/task/2026-08-15-terminate-now-names-an-instance.md`. Both are
-self-termination; both become `terminate self.id`.
+**Only TWO corpus models are still red**, and they are the same two by every
+instrument: `patterns/entity/aggregate-root/example` and
+`patterns/entity/event-sourced/example`, both still carrying bare-message
+operands. Both files are named `example.riddl`, so a failure list reads
+"example.riddl, example.riddl" — that is two models, not one repeated.
+
+**`Root2JsonCorpusTest`'s remaining red is OURS, not the corpus's.** The case is
+named *"(>= 95% of models)"* and reports a percentage against that gate, but
+`Root2JsonCorpusTest.scala:173` asserts strict EQUALITY — so 98.9% passes the
+documented bar and fails the real one. Filed in BACKLOG § 3; decide which is
+intended rather than "fixing" the corpus to 190.
 
 **Traps — every one already bit someone here.**
 
