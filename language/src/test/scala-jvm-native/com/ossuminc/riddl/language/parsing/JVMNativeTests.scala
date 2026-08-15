@@ -32,3 +32,4 @@ class JVMNativeStatementsTest extends StatementsTest
 class JVMNativeStreamingParserTest extends StreamingParserTest
 class JVMNativeTypeParserTest extends TypeParserTest
 class JVMNativeTokenParserTest extends TokenParserTest
+class JVMNativeTypedHoleTest extends TypedHoleTest

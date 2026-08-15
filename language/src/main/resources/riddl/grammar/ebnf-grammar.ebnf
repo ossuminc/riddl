@@ -321,7 +321,7 @@ let_statement = "let" identifier [":" type_ref] "=" value ;
    numeric_literal matching the bare `5` and leaving `> 3` dangling. *)
 value = literal_string | prompt_value | call | ask | initiate | constructor | get_value
       | boolean_expression | numeric_literal ;
-prompt_value = "prompt" "(" literal_string ")" ;
+prompt_value = "prompt" "(" literal_string ")" [ "as" type_expression ] ;
 (* Numeric literals - integers and reals, written directly. No digit separators and no radix     *)
 (* prefixes: declined deliberately, and pure additions later if wanted.                           *)
 (*                                                                                                 *)

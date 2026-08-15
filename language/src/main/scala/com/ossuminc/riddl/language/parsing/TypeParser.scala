@@ -697,7 +697,9 @@ private[parsing] trait TypeParser {
     }
   }
 
-  private def typeExpression[u: P]: P[TypeExpression] = {
+  // `private[parsing]`, not `private`: A20's `promptValue` (StatementParser) reuses this directly
+  // for the `as <type>` ascription, rather than duplicating the type-expression grammar.
+  private[parsing] def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
         // GROUP 0: `A | B` -- see infixAlternation; tried first, requires a `|`.

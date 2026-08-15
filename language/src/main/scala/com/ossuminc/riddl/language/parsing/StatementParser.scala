@@ -18,7 +18,14 @@ import fastparse.MultiLineWhitespace.*
   * match, error, let, set, prompt, code
   */
 private[parsing] trait StatementParser {
-  this: ReferenceParser & CommonParser =>
+  // `& TypeParser`: A20's `promptValue` reuses `typeExpression` for the `as <type>` ascription
+  // rather than duplicating the type-expression grammar. This mirrors TypeParser's own self-type
+  // (`this: CommonParser & StatementParser`), which already depends back on StatementParser (for
+  // `numericLiteral`/`booleanLiteral`/`promptValue` reuse in `constant`) — mutual self-type
+  // requirements are legal in Scala (unlike inheritance, they carry no linearization order), and
+  // both are always mixed together at the concrete-parser leaves (HandlerParser,
+  // VitalDefinitionParser).
+  this: ReferenceParser & CommonParser & TypeParser =>
 
   // `do "…"` is the canonical AI-action statement (A54). It builds a PromptStatement.
   private def doStatement[u: P]: P[PromptStatement] = {
@@ -445,10 +452,19 @@ private[parsing] trait StatementParser {
   // STATEMENT (`prompt "…"`, no parens). Tried before the bare-path `valueRef` in `value`.
   // `private[parsing]`, not `private`: TypeParser's `constant` rule reuses this directly rather than
   // duplicating it, so a `constant` value can be a prompt hole too.
+  //
+  // A20: the optional `as <type>` ascription declares the type of the AI-computed value, e.g.
+  // `prompt("compute the discount") as Currency`. `Keywords.keyword("as")`, not
+  // `Readability.readable("as")` -- this `as` is a real keyword introducing a type, not an
+  // omittable readability word. No parse ambiguity: every `as` elsewhere in the grammar follows an
+  // identifier, a keyword, or an import string, never a value expression (surveyed sites:
+  // `selective_bast_import`, `on_other_clause`, `as_shape`, `byAs`), and here it follows the
+  // closing `)` of the prompt's parenthesized literal string, which is the same shape.
   private[parsing] def promptValue[u: P]: P[PromptValue] = {
     P(
-      Index ~ Keywords.prompt ~ Punctuation.roundOpen ~/ literalString ~ Punctuation.roundClose ~/ Index
-    )./.map { case (start, str, end) => PromptValue(at(start, end), str) }
+      Index ~ Keywords.prompt ~ Punctuation.roundOpen ~/ literalString ~
+        Punctuation.roundClose ~ (Keywords.keyword("as") ~/ typeExpression).? ~/ Index
+    )./.map { case (start, str, typeEx, end) => PromptValue(at(start, end), str, typeEx) }
   }
 
   /** A numeric literal — `[+-]? digits [ . digits ] [ (e|E) [+-] digits ]`.

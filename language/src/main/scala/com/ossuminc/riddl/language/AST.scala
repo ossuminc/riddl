@@ -3228,20 +3228,31 @@ object AST:
     * bare [[LiteralString]] in a value position is a literal constant; a `PromptValue` asks the
     * backend to invoke AI codegen. No resolution needed — the prompt is literal text.
     *
+    * A20: `typeEx` is an optional ascription (`prompt("…") as Currency`) declaring the type of the
+    * value the AI must produce, so the seam between RIDDL's deterministic tier and its AI tier is
+    * checkable. `None` means unascribed (unchanged pre-A20 behavior).
+    *
     * @param loc
     *   The location of the prompt value in the source
     * @param prompt
     *   The prompt text to provide to an AI code generator
+    * @param typeEx
+    *   The optional ascribed type of the AI-computed value (A20 typed hole)
     */
   // `loc` required (not defaulted): see the ConstructorArg note — @JSExportTopLevel forbids a
-  // non-trailing default and `prompt` has no empty default.
+  // non-trailing default and `prompt` has no empty default. `typeEx` IS defaulted: it is
+  // TRAILING (no `contents`/`metadata` field follows it), so the `@JSExportTopLevel` rule that
+  // bit A55/A57 does not apply here, and the default keeps existing `PromptValue(loc, str)`
+  // call sites source-compatible.
   @JSExportTopLevel("PromptValue")
   case class PromptValue(
     loc: At,
-    prompt: LiteralString
+    prompt: LiteralString,
+    typeEx: Option[TypeExpression] = None
   ) extends RiddlValue:
     override def kind: String = "Prompt Value"
-    def format: String = s"prompt(${prompt.format})"
+    def format: String =
+      s"prompt(${prompt.format})" + typeEx.map(t => s" as ${t.format}").getOrElse("")
   end PromptValue
 
   /** A numeric literal — an integer or a real number, written directly rather than quoted or
