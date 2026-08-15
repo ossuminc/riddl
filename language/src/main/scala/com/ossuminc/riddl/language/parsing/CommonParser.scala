@@ -260,7 +260,13 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     * (which may not carry a sign) can use it directly rather than `integer`.
     */
   def naturalNumber[u: P]: P[Long] = {
-    CharIn("0-9").rep(1).!.map(_.toLong)
+    // MUST be `CharsWhileIn`, not `CharIn(...).rep(1)`. Under `MultiLineWhitespace`, fastparse's
+    // `.rep` skips whitespace BETWEEN repetitions regardless of `~~` at the surrounding call
+    // sites, so `CharIn("0-9").rep(1)` matched "1 2" as a single run of digit-repetitions and
+    // `.!` captured the literal text "1 2" -- which then threw `NumberFormatException` out of
+    // `.toLong` instead of failing to parse. Verified empirically against fastparse 3.1.1.
+    // `CharsWhileIn` is a run primitive with no such gap.
+    CharsWhileIn("0-9").!.map(_.toLong)
   }
 
   /** A signed whole number. The sign used to be matched but DISCARDED, so `-3` silently parsed as
