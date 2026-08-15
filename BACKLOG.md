@@ -96,6 +96,46 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+**EXECUTION ORDER (set 2026-08-15, ordered by dependency, not by severity).** All
+of § 1 is now the active to-do list. The detailed entries stay in their original
+positions below — they are cross-referenced from code comments and other repos'
+task files, so they were NOT physically reshuffled; this index carries the order.
+
+| # | Item | Blocked by | Why here |
+|---|---|---|---|
+| 1 | `OnInit`/`OnTerm` params — default + move trailing | — | The only item with a consumer's build **broken right now** (synapify), and a stated compatibility-policy violation. Cheap. |
+| 2 | Close the two stale entries | — | Bookkeeping; they carry phantom work. Both verified closed — see below. |
+| 3 | `valueTypeExpr` surfaces declared predefined types **and** `PromptValue.typeEx` | — | **MERGE of two entries** — same function, same corpus A/B. Running that A/B twice is the waste to avoid. |
+| 4 | Wire `checkPromptAscription` at the remaining A20 positions | 3 | Needs the expected-type machinery from 3 to be sound first. |
+| 5 | Close the JVM/Native test gap (560 cases) | — | **Confidence infrastructure — do it before more language change.** Every later item lands on a base whose Native behaviour is unverified. Its `commands` sub-item also settles whether the corpus gate runs JVM-only, which decides how much the A/Bs in 3 and 11 are worth. |
+| 6 | `!` into `Punctuation.tokenPunctuation` | — | Isolated, tooling-facing (idea-plugin, synapify). Fits any gap. |
+| 7 | JSON strict-key rejection | — | Needs a design decision before code. Independent. |
+| 8 | Three CM amendments owed by the identity design | — | Documents work already SHIPPED, so it is overdue debt under the definition of done. **Fold into § 0's CM sweep — do that once, not twice.** |
+| 9 | Survey the CM/A items for future `self` fields | — | Cheap, and it BOUNDS 10 by deciding what is in scope. |
+| 10 | Clusterability: `clustered`, `self.isClustered` | 9 | Defines the vocabulary `self.isClustered` was deliberately kept out of the identity spec to avoid forward-referencing. Wants its own plan. |
+| 11 | Cross-context `tell` isolation seam | 5 | Largest item and the biggest corpus-migration risk. Needs a counting mode built and run under real resolution before the Error ships. Wants its own plan. |
+| 12 | Two narrow-operand gaps | — | **Deliberately last.** False-positive-only, zero corpus impact today; the entry itself says revisit if adoption grows. |
+
+Three real dependency edges, not twelve: **4 ← 3**, **10 ← 9**, **11 ← 5**.
+Everything else is independent and may be reordered by appetite. Items 10 and 11
+each want an approved plan before implementation, per the standing rule.
+
+- ~~**`Value` has no NUMERIC LITERAL, so `initiate entity Order(1)` does not
+  parse.**~~ — **STALE, CLOSED 2026-08-15.** Numeric literals shipped
+  (`6cfeceb2f`) and closed it. Verified against the staged riddlc at
+  `2.0.0-rc.14-121-fe768026`: the entry's own example — `initiate entity
+  Order(1)` against `on init(total: Integer)` — validates with **zero errors**.
+  Its two supporting claims are also dead: `count > 5` parses (A28's ban was
+  reversed) and a constant may hold a bare number. **The full entry text is left
+  in place below** only until someone confirms nothing cites it; it describes a
+  limitation that no longer exists and must not be worked on.
+
+- ~~**NEW CHECK — the unused `initiate` id Warning.**~~ — **BUILT, CLOSED
+  2026-08-15.** `UnusedInitiateIdTest` is green with 7 cases, and they cover the
+  escape-route analysis the entry called "the real work": terminated, kept in
+  state, passed in a message, and used only inside a nested `when` body. Verified
+  by running it, not by reading the file name.
+
 - **`valueTypeExpr` does not surface a `let`'s declared PREDEFINED type.**
   Found 2026-08-15 building `terminate`'s target-type check, by instrumenting
   rather than reading. `let n: Integer = 5` yields `None` from
