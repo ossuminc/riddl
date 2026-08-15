@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-15 05:29 UTC
+# Generated: 2026-08-15 06:19 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -236,8 +236,8 @@ let-statement ::= "let" ws1 identifier ws (":" type-ref)? ws "=" ws value
 value ::= literal-string | prompt-value | call | ask | initiate | constructor | get-value | boolean-expression | numeric-literal
 prompt-value ::= "prompt" ws "(" ws literal-string ws ")"
 
-# prefixes: declined deliberately, and pure additions later if wanted.
-numeric-literal ::= ("+" | "-")? (digit)+ ("." (digit)+)? (("e" | "E") ("+" | "-")? (digit)+)?
+# inline-regex-in-a-composite-rule idiom).
+numeric-literal ::= ("+" | "-")? (digit)+ ("." (digit)+)? ([eE] ("+" | "-")? (digit)+)?
 
 # A24: call a pure function to get a result. "Functions only" — the callee is a function_ref.
 call ::= "call" ws1 function-ref ws "(" ws (constructor-arg ("," constructor-arg)*)? ws ")"

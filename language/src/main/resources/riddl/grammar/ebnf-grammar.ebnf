@@ -323,9 +323,15 @@ value = literal_string | prompt_value | call | ask | initiate | constructor | ge
       | boolean_expression | numeric_literal ;
 prompt_value = "prompt" "(" literal_string ")" ;
 (* Numeric literals - integers and reals, written directly. No digit separators and no radix   *)
-(* prefixes: declined deliberately, and pure additions later if wanted.                        *)
+(* prefixes: declined deliberately, and pure additions later if wanted. The exponent marker is  *)
+(* an inline regex, not a quoted "e"|"E" alternation: TatSu's default nameguard bounds a         *)
+(* word-like quoted literal to a word boundary, so "e" immediately followed by a digit (`1e3`,   *)
+(* no sign) fails to match under the generated TatSu parser even though fastparse accepts it --  *)
+(* found 2026-08-15 adding the numeric-literals corpus fixture. A regex match is exact and       *)
+(* bypasses nameguard entirely (see `letter`/`digit` above and `mime_type` below for the same    *)
+(* inline-regex-in-a-composite-rule idiom).                                                      *)
 numeric_literal = [ "+" | "-" ] {digit}+ [ "." {digit}+ ]
-                  [ ( "e" | "E" ) [ "+" | "-" ] {digit}+ ] ;
+                  [ /[eE]/ [ "+" | "-" ] {digit}+ ] ;
 (* A24: call a pure function to get a result. "Functions only" — the callee is a function_ref. *)
 call = "call" function_ref "(" [constructor_arg {"," constructor_arg}] ")" ;
 (* `ask` declares a CORRELATION -- that a reply is expected and which query it answers -- and

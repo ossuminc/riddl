@@ -1,0 +1,45 @@
+// Task 8 (numeric-literals plan): a corpus fixture under `**/input/**/*.riddl` so the CI
+// TatSu/GBNF grammar validators actually see the new syntax added by this plan -- without a
+// fixture here, the parser/EBNF sync is asserted (Tasks 1-7) but never checked in CI.
+//
+// Exercises every literal shape numericLiteral accepts (StatementParser.scala), a bare
+// numeric-literal Comparand (A28, widened 2026-08-14), and all four ConstantValue kinds
+// (LiteralString | NumericLiteral | BooleanLiteral | PromptValue).
+domain NumericLiterals is {
+  context Literals is {
+    // Every literal shape: [+-]? digits [ . digits ] [ (e|E) [+-]? digits ].
+    constant PlainInt is Integer = 5
+    constant NegativeInt is Integer = -1
+    constant ExplicitPlus is Integer = +3
+    constant LeadingZeros is Integer = 007
+    constant TrailingZeros is Real = 1.50
+    constant NegativeDecimal is Real = -0.25
+    constant ScientificWhole is Real = 1e3
+    constant ScientificNegExp is Real = 1.5e-3
+    constant ScientificPlusExp is Real = 2E+8
+
+    // The three integer types (Reid, 2026-08-14): Integer is signed, Whole >= 0, Natural >= 1.
+    constant ZeroBalance is Whole = 0
+    constant FirstPage is Natural = 1
+
+    // Constant.value's four kinds -- numeric is exercised above.
+    constant Name is String = "Fred"
+    constant Enabled is Boolean = true
+    constant Gravity is Real = prompt("the gravitational constant")
+
+    command Check is { count: Integer }
+    entity Gate is {
+      record GateData is { count: Integer }
+      state Status of record GateData
+      handler Ops is {
+        on command Check {
+          // A28: a bare numeric-literal Comparand, no named constant required (widened
+          // 2026-08-14; draws a StyleWarning suggesting a named constant, not a parse error).
+          let overLimit = count > 5
+          // A comparand may still be a resolved constant reference.
+          let underMin = count < NegativeInt
+        }
+      }
+    }
+  }
+}
