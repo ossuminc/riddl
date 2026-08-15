@@ -847,11 +847,27 @@ that needs a ruling before either can be fixed.
   type ReportId is Id(ImagingExam)`, `member-enrollment/types.riddl:2 type
   MemberId is Id(Enrollment)`, `policy-lifecycle/types.riddl:8,14
   BeneficiaryId`/`RiderId is Id(LifePolicy)`.
-  Task filed at `../riddl-models/task/2026-08-14-alias-fix-exposes-49-addressing-defects.md`
-  with the full list and a corpus-wide sweep of 17 wrong-alias candidates.
+  **⚠ THE FULL LIST WAS NEVER DELIVERED, AND THIS ENTRY USED TO CLAIM IT WAS.**
+  This line previously read "Task filed at
+  `../riddl-models/task/2026-08-14-alias-fix-exposes-49-addressing-defects.md`
+  with the full list and a corpus-wide sweep of 17 wrong-alias candidates."
+  **That file has never existed** — verified 2026-08-15 by listing both
+  `../riddl-models/task/` and `../riddl-models/task/done/`. A regeneration was
+  attempted 2026-08-15 and did not finish (it stalled waiting on a corpus
+  validation sweep), so the list is still owed.
+  **So riddl-models has the CAUSE but not the WHICH.** The five wrong-entity
+  aliases named above are all they have; the other ~44 sites are not written
+  down anywhere. **Regenerate before expecting them to act**: stage `riddlc`,
+  run `validate` over the corpus entry points (the `<model-name>.conf` files,
+  NOT `model.conf`), and collect the ambiguity Errors — that is how the 49 was
+  derived. Watch that a `.conf` can override CLI options, so confirm the
+  instrument reports these errors before trusting any zero.
+  `../riddl-models/task/2026-08-15-two-corpus-migrations-in-one-pass.md` also
+  points at the missing filename and needs the same correction.
   **Consequence for the next RC:** certification cannot be clean until this
-  lands. `~/Code/ossuminc/bin/riddlc` is already staged at
-  `2.0.0-rc.14-12-54d82288` so riddl-models can start.
+  lands. `~/Code/ossuminc/bin/riddlc` is at `2.0.0-rc.14-28-1f2c496d` (verified
+  2026-08-15) — **older than this branch's HEAD by ~100 commits**, so restage
+  before handing riddl-models anything to validate against.
   **A second, UNEXPLAINED regression sits on top of the 49-alias one**: the
   corrected 59/190 above is roughly 114 models worse than the 173/189 this
   entry previously recorded, and that gap is NOT accounted for by the 49

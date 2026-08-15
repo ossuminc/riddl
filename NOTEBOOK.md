@@ -8,168 +8,85 @@ GitHub release notes — don't reproduce it here.
 
 Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
-NOTEBOOK's body. Ask `git` for branch, tree and unpushed span — anything written here
-about those is stale the moment someone commits.
+NOTEBOOK's body. Ask `git` for branch, tree and unpushed span — anything written
+here about those is stale the moment someone commits.
 
-**Build state — every line below was run as a command during this handoff
-(2026-08-15, Task 5 of the A20 typed-holes plan — the plan is now DONE, all
-5 tasks committed):**
+**Build state — every line verified by running the command, 2026-08-15:**
 
-- **The staged binary's version was NOT re-checked this session** — no
-  `stage`/`reload` was run. Do not trust its version string; `reload` and
-  restage before anything that depends on knowing what is in the binary
-  (dynver freezes inside a running sbt server — see MEMORY).
-- `~/Code/ossuminc/bin/riddlc` was not touched. Bare `riddlc` on `$PATH`
-  remains the old tap build.
-- **BAST `FORMAT_REVISION` is still 18** — A20 RODE it, did not bump it
-  (`git tag` confirms `2.0.0-rc.14` is still latest, so 18 has not shipped).
-  **A38 is now the LAST claimant of 18**; see BACKLOG § 2.
-- **All five JVM modules run and counted this session, in three
-  invocations (the chain aborted twice on the documented pre-existing
-  reds, per the trap below):** `language` **70 suites / 707 tests**,
-  `passes` **206 suites / 1340 tests**, `riddlLib` **14 suites / 131
-  tests** (1 red — `Root2JsonCorpusTest`, pre-existing), `commands` **17
-  suites / 245 tests** (130 red, all `RiddlModelsRoundTripTest`,
-  pre-existing), `riddlc` **4 suites / 21 tests** (3 red —
-  `RunRiddlcOnLocalTest` + `ReportedIssuesTest`, pre-existing). `cJS` and
-  `cNative` both compiled clean (`[success]`, no `[error]` lines).
-  **TatSu 107/130 → 108/131** (the plan brief's stated baseline of
-  106/129 was stale — measured before other work landed on this branch
-  since; the true immediately-prior baseline, re-measured this session by
-  temporarily removing the new fixture, was 107/130). Both numerator and
-  denominator moved by exactly one, confirming the new fixture
-  (`language/input/typed-holes.riddl`) parses under the EBNF, not just
-  gets counted. `ebnf_to_gbnf.py` + `gbnf_validator.py` both pass; the
-  regenerated `.gbnf` differed only in its generation timestamp (the EBNF
-  itself was untouched this task) so that diff was reverted rather than
-  committed.
-- **Four test failures, ALL confirmed PRE-EXISTING by `git stash -u` A/B**
-  (identical failure sets and counts with the new fixture stashed out):
-  `riddlLib`'s `Root2JsonCorpusTest` (59/190, unchanged), `commands`'
-  `RiddlModelsRoundTripTest` (59 succeeded / 130 failed, unchanged), and
-  `riddlc`'s `RunRiddlcOnLocalTest` (2 of the external riddl-examples
-  corpus fail) + `ReportedIssuesTest` ("should 406" — a `morph ... with
-  record ...` fixture in THIS repo, not the external corpus; also
-  unchanged before/after). The first three are the three reds this
-  branch has been carrying since the numeric-literals handoff;
-  `ReportedIssuesTest`'s "should 406" is a fourth, already implicit in
-  that same handoff's "18 succeeded / 3 failed" `riddlc` count but not
-  separately named until this session bothered to look inside it. None
-  read the fixture this task touched.
+- **The staged `riddlc` is STALE. Restage before trusting it.**
+  `target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc` is dated
+  **Aug 14 21:26** and reports `2.0.0-rc.14-39-f8f93893`, while `git describe`
+  says `2.0.0-rc.14-114-g0ef9c7218`. It predates four landed plans.
+- **`~/Code/ossuminc/bin/riddlc` is older still** — `2.0.0-rc.14-28-1f2c496d`.
+  Bare `riddlc` on `$PATH` is the old tap build. The build under test is neither.
+- **BAST `FORMAT_REVISION` is 18**, read from source. Spent by numeric literals;
+  A20 and `!`/`not` RODE it; **A38 is the sole remaining claimant**. It has NOT
+  shipped (latest tag `2.0.0-rc.14`), so the next BAST change rides 18 too —
+  re-check `git tag` before assuming.
+- **FOUR suites are RED for pre-existing reasons**, all A/B-confirmed unchanged:
+  `RiddlModelsRoundTripTest`, `Root2JsonCorpusTest` (59/190), riddlc
+  local-corpus, and `ReportedIssuesTest` "should 406". **Do not soften a check
+  to green them.**
 
-**In flight: nothing. FOUR plans landed on 2026-08-15**, each with per-task
-reviews, a whole-branch review and a fix wave: numeric literals, A20 typed
-holes, the three triaged riddl-models defects, and `!`/`not` synonymy
-(`9c8b0cfb6..631f64bcc`). Plus the three defects filed the night before —
-`Finder`'s field-held descent, predefined keywords as a `let` ascription, and
-`naturalNumber`'s whitespace swallowing.
+**In flight: nothing.** Four plans landed 2026-08-15 — numeric literals, A20
+typed holes, the three triaged riddl-models defects, and `!`/`not` synonymy —
+each with per-task reviews, a whole-branch review and a fix wave.
 
-**NEXT SESSION IS FOR DESIGN WORK, by Reid's decision.** He is bounding the
-backlog so 2.0 can ship — see CLAUDE.md § "Definition of Done, and what bounds
-2.0", which is the operating rule now: **2.0 ships when the Computational Model
-is met, not when the backlog empties**, an item is not done until the CM records
-its effect, and there is no "defer to 2.1" pile. The remaining §§ 1–2 entries
-want design sessions WITH him, not autonomous building.
+**NEXT SESSION IS DESIGN WORK, by Reid's decision.** He is bounding the backlog
+so 2.0 can ship. The operating rule is now **CLAUDE.md § "Definition of Done, and
+what bounds 2.0"** — read it first. In short: 2.0 ships when the Computational
+Model is met, not when the backlog empties; an item is not done until the CM
+records its effect; the CM reconciles with the BRANCH (events), never with the
+backlog (aspirations); and there is no "defer to 2.1" pile.
 
-**Three things to pick up:**
+**Three things owed, and the first is the one at risk:**
 
-1. **`riddl-generator` has been reading incomplete ASTs and does not know it.**
-   `Finder` was missing content across 27 node fields — it returned shorter
-   lists, never an error, and the consumers most exposed are those that
-   ENUMERATE rather than traverse. **No task has been dropped to them yet.** It
-   may explain generator output already puzzled over.
-2. **The 49-alias list was recorded as filed and never was.** A regeneration
-   agent was mid-run at session end. Verify
-   `../riddl-models/task/2026-08-15-49-addressing-errors-the-full-list.md`
-   exists and that the combined migration task points at it, not at the missing
-   `2026-08-14-alias-fix-exposes-49-addressing-defects.md`.
-3. **`Root2JsonCorpusTest` is at 59/190 against a recorded 173/189.** Reid's
-   call: **wait for riddl-models' 49-alias fix, then re-measure** — that removes
-   the known noise, and re-measuring is cheaper than investigating through it.
-
-**One deviation Reid should confirm:** the `!`/`not` plan's own completion
-clause said the CM update was "part of completing this item, not a follow-up".
-Task 5 folded it into the aggregate BACKLOG § 0 CM item by reference rather than
-editing `../RIDDL-Computational-Model.md` — justified by one-instance-per-project
-(the CM lives above this repo) and it IS tracked in a committed file, but it is a
-deviation from the plan's own text.
-
-**A38 is now the sole remaining claimant on `FORMAT_REVISION` 18.**
-
-**One residual gap is FILED, not hidden** (BACKLOG § 1): a `prompt`
-ascription nested in a `Constructor`/`Call`/`Initiate` argument still
-renders via `PromptValue.ascriptionFormat` rather than the emitter's total
-`emitTypeExpression`, because `RiddlFileEmitter` has no `Constructor`
-dispatch at all. Non-regressive — those paths were equally broken before
-A20 — but it can emit non-parsing output for exotic type expressions.
-
-**There are FOUR pre-existing red suites, not three.** The fourth is
-riddlc's `ReportedIssuesTest` "should 406", previously bundled anonymously
-into an "18/3" count and never named. All four A/B identical under stash. `task/` holds only Reid's own security
-draft (`2026-08-04-security.md`, marked *"do not act on this"*) — the
-three defect reports open at the last handoff
-(valueref-migration/populates-repository, value-ref-starting-with-to,
-shown-by-loses-url-through-bast) were all triaged and moved to
-`task/done/` since.
-
-**Two pre-existing defects found and FILED, not fixed** (BACKLOG § 1): a
-predefined type keyword cannot be a `let` ascription (`let x: Natural = …`
-does not resolve — `ResolutionPass:329`), and `Finder` never descends into a
-`when` CONDITION, so any Finder-based search silently misses everything
-inside one. The second is the `statementValues` shape again and lists its
-siblings to fix alongside it.
-
-**Root2JsonCorpusTest is at 59/190 against a recorded 173/189** — a ~114-model
-regression that A/B stash testing proves predates all of this work. The stale
-number is corrected in BACKLOG and the gap is filed. **Nobody has explained
-it, and it is the largest unexplained thing on this branch.**
+1. **The 49-alias list was recorded as filed and NEVER WAS.** Verified by listing
+   `../riddl-models/task/` and `task/done/` — no such file, and a regeneration
+   attempt on 2026-08-15 stalled without finishing. riddl-models has the CAUSE
+   and five named wrong-entity aliases; **the other ~44 sites are written down
+   nowhere.** BACKLOG § 3 now says so and gives the regeneration recipe.
+   Certification cannot be clean until this lands.
+2. **riddl-generator has been reading incomplete ASTs and has not been told.**
+   `Finder` was missing content across 27 node fields — shorter lists, never an
+   error, and the consumers most exposed are those that ENUMERATE rather than
+   traverse. No task dropped yet; send it with the 49-alias material.
+3. **`Root2JsonCorpusTest` is 59/190 against a recorded 173/189.** Reid's call:
+   wait for riddl-models' fix, then re-measure. Do not investigate through the
+   noise.
 
 **Traps — every one already bit someone here.**
 
-- **THE CORPUS IS RED BY DESIGN, for THREE reasons**, and this is what a cold
-  session is most likely to get wrong. Two tests were already red awaiting
-  riddl-models' 49 addressing fixes; the bare-operand **Error** (`4feb5a370`)
-  adds a third. Reid approved it knowing this. **Do not soften a check to
-  green the corpus.** (Task 8, 2026-08-15, re-confirmed all three still red
-  by the same causes — see the build-state bullets above.)
-- **`sbt -batch "; a ; b ; c"` aborts the WHOLE chain at the first red
-  module**, silently skipping everything after it — not just `tJVM`'s known
-  `commands` abort. Task 8's five-module chain aborted at `riddlLib`
-  (`Root2JsonCorpusTest`), so `commands` and `riddlc` had to be re-invoked
-  separately. Count the `Suites: completed` lines against the modules you
-  asked for, every time, not just for the one specific known case.
-- **A `.conf` overrides CLI options.** A corpus A/B on a completeness check reported
-  zero both with and without the fix under test, because
-  `--show-completeness-warnings` was ignored. Verify your instrument can move before
-  trusting a number it gives you.
-- **Assert a COUNT, not `nonEmpty`, when the bug's symptom is over-silencing.** The
-  name-matching Id check silenced BOTH same-named entities, so `nonEmpty` passes under
-  the bug and only "exactly 1" fails.
-- **Run a BASELINE before blaming your change.** Six suites stayed red after a
-  migration pass and two reported messages with nothing to do with it — the harness
-  prints warnings ahead of the real trigger. Stashing proved all six were mine.
-- **A backlog cost estimate is a guess.** The flip was filed as "one line plus one
-  test's assertions"; it was 30 tests across 20 suites.
-- **Revert-prove under a throwaway `--sbt-cache`** and confirm the module recompiles,
-  or sbt serves previously-compiled classes and the proof is a lie.
+- **Grep by NODE NAME, not field name**, when removing or renaming a field.
+  Positional patterns (`WhenStatement(…, _)`) never mention what they
+  destructure, and `language`/`commands` compile `--no-warnings`, so the
+  compiler will not cover for you. Three sites were found only this way.
+- **A green corpus on a construct the corpus does not contain is not evidence.**
+  Zero `!=` uses meant no corpus run could ever catch the `!=` hazard; tests were
+  the only possible net.
+- **A stale example in a machine-facing document is a data-loss bug.**
+  `JSON_INPUT.md` showed a removed key, and `JsonModel`'s reader has **no
+  unknown-key rejection for any DTO**, so a producer following it lost data
+  silently. Filed.
+- **`sbt -batch "; a ; b ; c"` aborts the whole chain at the first red module.**
+  Count `Suites: completed` against the modules you asked for, every time.
+- **Do not edit a tracked file while an implementer subagent is live** — its
+  `git add` will sweep your change into its commit. That happened this session.
+- **Verify your instrument can move before trusting a zero from it.** A `.conf`
+  overrides CLI options; an sbt 2 `Test/baseDirectory` quirk silently resolves
+  the wrong corpus directory and yields a cancelled, green-looking suite.
 
-**Certainty.** Everything in the build-state bullets above was executed this
-session (Task 5 of the A20 plan, 2026-08-15) and every count is from a real
-command's output, not memory. The one thing explicitly NOT re-verified this
-session: the staged binary's contents — see above, restage before trusting
-it.
+**Certainty.** Everything above was executed this session. Two things are
+explicitly NOT verified: whether riddl-models has acted on anything dropped in
+their `task/`, and the cause of the `Root2JsonCorpusTest` 114-model gap.
 
-**`task/` holds one file, and it is not for triage.** `2026-08-04-security.md`
-is Reid's own draft, marked *"do not act on this"*. The three defect reports
-open at the numeric-literals handoff (valueref-migration/populates-repository,
-value-ref-starting-with-to, shown-by-loses-url-through-bast) were all triaged
-and moved to `task/done/` before this session started. This task also dropped
-a NEW outgoing task: `../ossum.tech/task/2026-08-15-a20-typed-holes.md`,
-documenting the A20 syntax for the language reference (one-instance-per-project
-rule — that repo is not edited from here).
+**`task/` — ONE file, untriaged, and it is not actionable.**
+`2026-08-04-security.md` is Reid's own RBAC draft, marked *"do not act on this"*
+with empty acceptance criteria. The three defect reports open at the last handoff
+were fixed and moved to `task/done/`.
 
-**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
-call, not the handoff's.
+**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
+driver's call, not the handoff's.
 
 ## A20 typed holes land (2026-08-15) — DONE
 
