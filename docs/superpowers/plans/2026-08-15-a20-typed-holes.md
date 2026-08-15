@@ -33,7 +33,40 @@
 
 ---
 
-## A DECISION FOR REID BEFORE TASK 3
+## RULED 2026-08-15 — the seam warning is CONSERVATIVE, and `when` is wired
+
+Reid, given the corpus measurement below: **warn ONLY on an unascribed
+`let x = prompt("…")` with no declared type. Wire `when` → `Boolean` so a
+condition never warns. Leave constructor arguments SILENT and unwired.**
+
+| position | corpus uses | behaviour |
+|---|---:|---|
+| `let X: type T = prompt(…)` | **273** | silent — the `let` supplies the type |
+| `when prompt(…)` | **15** | silent — **must wire** `Boolean`, or these 15 warn falsely |
+| `constant G: T = prompt(…)` | 0 | silent — the constant supplies the type |
+| constructor arg, `set`, everything else | **0** | silent — unwired, deliberately |
+| `let x = prompt(…)` (no ascription) | **0** | **WARN** — the only case |
+
+**Why conservative wins here, on evidence rather than taste.** All 288 corpus
+uses already carry a type: 273 authors wrote the ascription unprompted, and the
+other 15 are conditions where `Boolean` is implied. The habit the warning would
+teach is one authors already have. So the warning's entire value is for code
+written tomorrow, and its entire risk is firing on code that is already correct
+— which is the failure that cost this project 1120 false external-context
+warnings and taught everyone to ignore a check.
+
+**Wiring `when` → `Boolean` is NOT optional.** It is the difference between zero
+false positives and fifteen, and it is trivial: the expected type is a constant,
+not something threaded through call sites.
+
+Constructor arguments stay silent rather than warning, because "we did not wire
+this position" is not the same fact as "the language cannot type this position",
+and only the second deserves a diagnostic. When someone wires them, the check
+follows for free.
+
+Original framing of the decision follows.
+
+## THE DECISION AS PUT TO REID (now answered above)
 
 **The untyped-seam warning's accuracy depends on how many positions we wire, and we do not wire them all.**
 
@@ -165,7 +198,8 @@ Model on `passes/src/test/scala-jvm-native/.../prettify/NumericLiteralRoundTripT
 
 ### Task 3: Validation — restates, contradicts, and the seam warning
 
-**BLOCKED until Reid answers the decision above.**
+**UNBLOCKED — Reid ruled 2026-08-15. See "RULED" above: conservative warning,
+`when` wired to `Boolean`, constructor arguments silent.**
 
 **Files:**
 - Modify: `passes/src/main/scala/com/ossuminc/riddl/passes/validate/ValidationPass.scala`
