@@ -14,10 +14,10 @@ here about those is stale the moment someone commits.
 **Build state — verified by running the command, 2026-08-15:**
 
 - **`~/Code/ossuminc/bin/riddlc` (NATIVE) is CURRENT as of 2026-08-15**, at
-  `2.0.0-rc.14-120-7cb40f45`, restaged via `scripts/publish-and-stage.sh` so the
-  ivy artifacts match it. It rejects the old `terminate entity X` spelling, which
-  is the behaviour to check it by. Only doc commits have landed since, so it is
-  still good for language questions; restage if you touch code.
+  `2.0.0-rc.14-121-fe768026` = HEAD, restaged via `scripts/publish-and-stage.sh`
+  so the ivy artifacts match it exactly. **Verified by BEHAVIOUR, not the version
+  string**: it accepts a numeric literal in `initiate entity Order(1)` and
+  rejects the old `terminate entity X`. Restage if you touch code.
 - **The staged JVM one is STILL STALE** —
   `target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc` is dated
   Aug 14 21:26 at `2.0.0-rc.14-39-f8f93893-20260814-2124`, and `publish-and-stage.sh`
@@ -99,9 +99,16 @@ RBAC draft marked *"do not act on this"*, with empty acceptance criteria and iss
 does not require, so it is not 2.0 work and is deliberately NOT in BACKLOG.
 The use-case-actors report was triaged, fixed and moved to `task/done/` this
 session. Replies owed to other repos are all dropped: riddl-generator has the
-`Finder` defect, the closed `terminate` ruling, and now the use-case-actors reply
-(`2026-08-15-usecase-actors-fixed-and-reordered.md`); riddl-models has the corpus
-migration, the `terminate` migration, and a corrected Migration-1 block.
+`Finder` defect, the closed `terminate` ruling, the use-case-actors reply
+(`2026-08-15-usecase-actors-fixed-and-reordered.md`) and an FYI of everything in
+the 93 commits since its pin (`2026-08-15-FYI-whats-in-rc14-121.md` — explicitly
+informational, riddlg owes nothing); riddl-models has the corpus migration, the
+`terminate` migration, and a corrected Migration-1 block.
+
+**riddl-generator is pinned at `2.0.0-rc.14-28-1f2c496d`**
+(`../riddl-generator/project/Dependencies.scala:265`) — 93 commits behind. The
+bump is theirs to take when they want it; five AST changes in the range are
+source-incompatible and are tabulated in the FYI.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
