@@ -14,7 +14,8 @@ import org.scalatest.TestData
 /** Reid's 2026-08-14 ruling: `not` and `!` are synonymous everywhere, as the inverse of a boolean
   * expression. This suite pins the parser half of that ruling (task 1 of the
   * `2026-08-15-not-bang-synonymy` plan): both spellings must build the IDENTICAL AST node, not
-  * merely both parse. Task 2 removes `WhenStatement.negated`, which this suite does not touch.
+  * merely both parse. Task 2 removed `WhenStatement.negated` entirely; this suite never asserted
+  * on it and needs no change for that.
   */
 abstract class BangNotSynonymyTest(using PlatformContext) extends AbstractParsingTest {
 

@@ -1042,10 +1042,14 @@ class BASTReader(
                 case other => throw new RuntimeException(s"Expected PromptValue, got: $other")
             case _ => throw new RuntimeException(s"Invalid when condition type: $conditionType")
           }
-        val negated = reader.readU8() != 0
+        // The legacy negated-flag byte: consumed for wire-format stability but no longer carried on
+        // the AST (`WhenStatement.negated` deleted 2026-08-15, not/! synonymy task 2). It is always
+        // 0 on the wire now that negation is a `NotExpression` inside `condition`; giving this a
+        // real payload is the next task's scope.
+        reader.readU8()
         val thenStatements = readContentsDeferred[Statements]()
         val elseStatements = readContentsDeferred[Statements]()
-        WhenStatement(loc, condition, thenStatements, elseStatements, negated)
+        WhenStatement(loc, condition, thenStatements, elseStatements)
 
       case 11 => // Match
         // A29: subject is a MatchSubject (ValueRef | GetValue | LiteralString), written via the

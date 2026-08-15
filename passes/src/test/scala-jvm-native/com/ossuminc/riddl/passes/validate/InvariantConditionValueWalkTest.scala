@@ -106,7 +106,7 @@ class InvariantConditionValueWalkTest extends AbstractValidatingTest {
     }
   }
 
-  "`when !<identifier>` — the legacy negated-identifier form" should {
+  "`when !<identifier>`" should {
 
     "validate instead of throwing" in { (td: TestData) =>
       // Reported by ossum.tech 2026-08-13 against rc.13. `stateReadsIn` gained arms for the value
@@ -118,6 +118,13 @@ class InvariantConditionValueWalkTest extends AbstractValidatingTest {
       // `WhenStatement.condition` is `LiteralString | Identifier | ValueRef | BooleanExpression |
       // PromptValue`, and `Identifier` appears in no other member. Auditing `Value` alone misses
       // exactly this. Enumerate the domain of the FUNCTION, not of the nearest-looking type.
+      //
+      // UPDATE (2026-08-15, not/! synonymy task 2): `when !isValid` no longer builds a bare
+      // Identifier condition at all -- since task 1 it parses to `NotExpression(ValueRef)`, and
+      // `WhenStatement.negated` (the flag this test's name used to describe) is deleted. This case
+      // now exercises the `NotExpression`/`ValueRef` arms of `stateReadsIn`, not the `Identifier`
+      // arm; the `Identifier` arm remains reachable only via directly-constructed ASTs (e.g. an
+      // older BAST/JSON payload), kept for back-compat per `StatementParser.whenCondition`.
       val src =
         """domain D is {
           |  author A is { name is "R" email is "r@o.com" }

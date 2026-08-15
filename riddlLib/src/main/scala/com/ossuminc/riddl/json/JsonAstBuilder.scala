@@ -1435,7 +1435,12 @@ object JsonAstBuilder:
         )
       case YieldStmtDto(message) => YieldStatement(curAt, buildDeliverableOperand(message))
       case ReplyStmtDto(message) => ReplyStatement(curAt, buildDeliverableOperand(message))
-      case WhenStmtDto(condition, conditionId, negated, thenS, elseS, expression) =>
+      case WhenStmtDto(condition, conditionId, _negated, thenS, elseS, expression) =>
+        // `_negated` (the DTO/wire field) is deliberately unread: `WhenStatement.negated` was
+        // deleted from the AST (2026-08-15, not/! synonymy task 2) -- negation now always arrives
+        // as a real `NotExpression` inside `expression`/`condition`. Reading it back into that
+        // shape is the next task's scope; this is a minimal accommodation to keep the tree
+        // compiling.
         val cond: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue =
           expression match
             case Some(exprDto) =>
@@ -1455,7 +1460,7 @@ object JsonAstBuilder:
               conditionId match
                 case Some(id) => ident(id)
                 case None     => LiteralString(curAt, condition.getOrElse(""))
-        WhenStatement(curAt, cond, buildStatements(thenS), buildStatements(elseS), negated)
+        WhenStatement(curAt, cond, buildStatements(thenS), buildStatements(elseS))
       case MatchStmtDto(subject, cases, default) =>
         val subj: MatchSubject = buildValue(subject) match // A29: narrow to MatchSubject
           case vr: ValueRef      => vr

@@ -354,9 +354,9 @@ private[parsing] trait StatementParser {
         Keywords.end_ ~/ Index
     )./.map { case (start, cond, thenStmts, elseStmtsOpt, end) =>
       val elseStmts = elseStmtsOpt.getOrElse(Seq.empty[Statements])
-      // `negated` stays false: the `!`-as-flag encoding is retired (2026-08-14 ruling) in favor of
-      // a real `NotExpression` inside `cond` when the author wrote `not`/`!`. The field itself is
-      // NOT deleted here -- that is a separate task -- so it keeps its `false` default.
+      // The `!`-as-flag encoding is retired (2026-08-14 ruling) in favor of a real `NotExpression`
+      // inside `cond` when the author wrote `not`/`!`. `WhenStatement.negated` itself is deleted
+      // (2026-08-15, not/! synonymy task 2), so there is no flag left to set here.
       WhenStatement(at(start, end), cond, thenStmts.toContents, elseStmts.toContents)
     }
   }

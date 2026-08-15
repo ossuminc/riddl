@@ -3768,15 +3768,14 @@ object AST:
     loc: At,
     condition: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue,
     thenStatements: Contents[Statements],
-    elseStatements: Contents[Statements] = Contents.empty[Statements](0),
-    negated: Boolean = false
+    elseStatements: Contents[Statements] = Contents.empty[Statements](0)
   ) extends Statement {
     override def kind: String = "When Statement"
     def format: String = {
       val condStr = condition match {
         case ls: LiteralString     => ls.format
-        case id: Identifier        => if negated then s"!${id.format}" else id.format
-        case vr: ValueRef          => if negated then s"!${vr.format}" else vr.format // A17
+        case id: Identifier        => id.format
+        case vr: ValueRef          => vr.format // A17
         case be: BooleanExpression => be.format // A28: negation is expressed via `not` in the expr
         // A54: an AI-evaluated condition. This arm was MISSING, and the match therefore threw a
         // MatchError on `when prompt("…")` -- the `condition` union has five members and this had

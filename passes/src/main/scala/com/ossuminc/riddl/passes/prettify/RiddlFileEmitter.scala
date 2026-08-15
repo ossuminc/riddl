@@ -570,7 +570,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
 
   def emitStatement(statement: Statements): Unit =
     statement match
-      case WhenStatement(_, cond, thenStatements, elseStatements, negated) =>
+      case WhenStatement(_, cond, thenStatements, elseStatements) =>
         // A20: a `PromptValue` condition routes through `emitValue` (not `.format`) so its
         // ascription — one of the four positions `checkPromptAscription` validates — renders
         // via `emitTypeExpression`'s total dispatch rather than `PromptValue.ascriptionFormat`'s
@@ -579,8 +579,8 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         addIndent("when ")
         cond match {
           case ls: LiteralString     => add(ls.format)
-          case id: Identifier        => add(if negated then s"!${id.format}" else id.format)
-          case vr: ValueRef          => add(if negated then s"!${vr.format}" else vr.format) // A17
+          case id: Identifier        => add(id.format)
+          case vr: ValueRef          => add(vr.format) // A17
           case be: BooleanExpression => emitValue(be) // A28: structured boolean expression
           case pv: PromptValue       => emitValue(pv) // an AI-evaluated condition
         }

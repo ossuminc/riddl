@@ -1377,13 +1377,18 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     // widened -- but had it been reachable, a ValueRef would have been silently unrepresentable.
     case YieldStatement(_, msg) => YieldStmtDto(serializeDeliverableOperand(msg))
     case ReplyStatement(_, msg) => ReplyStmtDto(serializeDeliverableOperand(msg))
-    case WhenStatement(_, cond, thenS, elseS, negated) =>
+    case WhenStatement(_, cond, thenS, elseS) =>
+      // `WhenStmtDto.negated` is a wire-format field, unlike the deleted `WhenStatement.negated`
+      // AST field (removed 2026-08-15, not/! synonymy task 2): negation is now always a real
+      // `NotExpression` inside `cond`, so this is always `false` on write. Giving the DTO a
+      // payload for that `NotExpression` is the next task's scope (BAST/JSON carrying the changed
+      // WhenStatement payload); this is a minimal accommodation to keep the tree compiling.
       cond match
         case ls: LiteralString =>
           WhenStmtDto(
             Some(ls.s),
             None,
-            negated,
+            false,
             serializeStatements(thenS),
             serializeStatements(elseS)
           )
@@ -1391,7 +1396,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           WhenStmtDto(
             None,
             Some(id.value),
-            negated,
+            false,
             serializeStatements(thenS),
             serializeStatements(elseS)
           )
@@ -1399,7 +1404,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           WhenStmtDto(
             None,
             None,
-            negated,
+            false,
             serializeStatements(thenS),
             serializeStatements(elseS),
             Some(serializeValue(be))
@@ -1408,7 +1413,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           WhenStmtDto(
             None,
             None,
-            negated,
+            false,
             serializeStatements(thenS),
             serializeStatements(elseS),
             Some(serializeValue(vr))
@@ -1417,7 +1422,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           WhenStmtDto(
             None,
             None,
-            negated,
+            false,
             serializeStatements(thenS),
             serializeStatements(elseS),
             Some(serializeValue(pv))

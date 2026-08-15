@@ -1265,8 +1265,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(4)
         writeValue(pv)
     }
-    // Write negated flag (0=not negated, 1=negated)
-    writer.writeU8(if s.negated then 1 else 0)
+    // Write the legacy negated-flag byte for wire-format stability. `WhenStatement.negated` was
+    // deleted from the AST (2026-08-15, not/! synonymy task 2): negation is now always a real
+    // `NotExpression` inside `condition`, so this byte is always 0. The byte itself is kept only
+    // to avoid a FORMAT_REVISION bump here -- retiring it, and giving BASTReader a real payload to
+    // read back a NotExpression condition, is deliberately deferred to the next task (BAST/JSON
+    // carrying the changed WhenStatement payload).
+    writer.writeU8(0)
     // NOTE: thenStatements and elseStatements counts/items are written by the Pass's traverse() override
   }
 

@@ -1504,7 +1504,7 @@ case class ValidationPass(
             }
           case _: Constructor => ()
           case _: ValueRef     => ()
-      case WhenStatement(loc, condition, thenStatements, elseStatements, _) =>
+      case WhenStatement(loc, condition, thenStatements, elseStatements) =>
         condition match {
           case ls: LiteralString =>
             checkNonEmptyValue(ls, "condition", onClause, loc, MissingWarning, required = true)
@@ -5060,7 +5060,7 @@ case class ValidationPass(
       case s: Statement =>
         f(s)
         s match
-          case WhenStatement(_, _, thenStatements, elseStatements, _) =>
+          case WhenStatement(_, _, thenStatements, elseStatements) =>
             walkStatements(thenStatements)(f)
             walkStatements(elseStatements)(f)
           case MatchStatement(_, _, cases, default) =>
@@ -5189,7 +5189,7 @@ case class ValidationPass(
       case ls: LetStatement =>
         curLets = curLets :+ ls
         false // a `let` itself never settles the obligation
-      case WhenStatement(_, _, thenStatements, elseStatements, _) =>
+      case WhenStatement(_, _, thenStatements, elseStatements) =>
         dischargesOnEveryPathSeq(thenStatements.toSeq, curLets)(settles) &&
         elseStatements.nonEmpty &&
         dischargesOnEveryPathSeq(elseStatements.toSeq, curLets)(settles)
@@ -5333,10 +5333,13 @@ case class ValidationPass(
     // a state read. (A saga's `ask` is separately banned outright; see `asksIn`.)
     case _: Ask                   => Seq.empty
     case _: Reference[?]          => Seq.empty
-    // An IDENTIFIER is a NAME, not an expression: `when !isValid` binds the legacy negated-
-    // identifier form, whose condition is a bare `Identifier` naming a let-local or a field. A name
-    // has no sub-structure, so it can contain nothing -- decided deliberately, as the throw below
-    // instructs, not defaulted.
+    // An IDENTIFIER is a NAME, not an expression: `when isValid` can bind a bare `Identifier`
+    // naming a let-local or a field. A name has no sub-structure, so it can contain nothing --
+    // decided deliberately, as the throw below instructs, not defaulted. (This arm predates, and is
+    // unrelated to, the retired `WhenStatement.negated` flag -- `when !isValid` has parsed to a
+    // `NotExpression` since the 2026-08-14 not/! synonymy ruling, not to a bare `Identifier`; the
+    // parser's bare-name path already routes through `ValueRef`, per A17, and this `Identifier` arm
+    // is kept only for AST/API back-compat, e.g. a directly-constructed or older-BAST condition.)
     //
     // It is here because `statementValues` yields a domain WIDER than `Value`:
     // `WhenStatement.condition` is `LiteralString | Identifier | ValueRef | BooleanExpression |
