@@ -69,6 +69,72 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
        |}
        |""".stripMargin
 
+  /** Carries everything the four argument-bearing positions need in one model: a record to
+    * construct, a function to call, an entity with `on init`/`on term` parameters to initiate and
+    * terminate, and an invariant with a `requires` type. `Score` and `Other` are two DECLARED types
+    * with the same underlying `Real`, which is the point -- the comparison is syntactic, so two
+    * names that resolve alike must still contradict.
+    */
+  private def argModel(stmt: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    type Score is Real
+       |    type Other is Real
+       |    record Params is { amount: Score } with { briefly "params" }
+       |    record Sum is { s: Score } with { briefly "sum" }
+       |    record Estimate is { amount: Score } with { briefly "rec" }
+       |    command Go is { why: String } with { briefly "cmd" }
+       |    function Rate is {
+       |      requires record Params
+       |      returns record Sum
+       |      return record Sum(s = prompt("s") as Score)
+       |    } with { briefly "fn" }
+       |    invariant Positive requires record Params is "amount is positive" with {
+       |      briefly "inv"
+       |    }
+       |    entity Target is {
+       |      handler TH is {
+       |        on init(seed: Score) { do "start" }
+       |        on term(why: Score) { do "end" }
+       |      } with { briefly "th" }
+       |    } with { briefly "t" }
+       |    entity E is {
+       |      handler H is { on command Go is { $stmt } }
+       |    } with { briefly "e" }
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  private def functionModel(stmt: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    type Score is Real
+       |    record Sum is { s: Score } with { briefly "sum" }
+       |    record Other is { o: Score } with { briefly "other" }
+       |    function Rate is {
+       |      returns record Sum
+       |      $stmt
+       |    } with { briefly "fn" }
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  private def appModel(stmt: String): String =
+    s"""domain D is {
+       |  application context App is {
+       |    type Greeting is String
+       |    type Other is String
+       |    command Refresh is { why: String } with { briefly "cmd" }
+       |    group Main is {
+       |      output Panel presents type Greeting
+       |    } with { briefly "g" }
+       |    handler Screen is {
+       |      on command Refresh { $stmt }
+       |    } with { briefly "h" }
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
   private def constantModel(decl: String): String =
     s"""domain D is {
        |  context C is {
@@ -290,6 +356,79 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
 
     // NEGATIVE CONTROLS -- these are the false positives the ruling exists to prevent. Without
     // these, a future "fix" that widens the warning to every unwired position has nothing to break.
+
+    // ------------------------------------------------------------------------------------------
+    // The seven positions `checkPromptAscription` reaches. Four of them (constructor, call,
+    // initiate, terminate arguments) share ONE wiring point, `checkArgumentTypes` -- that helper's
+    // own scaladoc records that two hand-written copies were free to drift, and these four would
+    // have been four more copies. Each Error case is paired with an agreement case, because a
+    // check wired to reject everything would satisfy the Error half alone.
+    // ------------------------------------------------------------------------------------------
+
+    "be an Error on a CONSTRUCTOR argument whose ascription contradicts the field" in {
+      (td: TestData) =>
+        val src = argModel("""let r = record Estimate(amount = prompt("e") as Other)""")
+        errorsFor(src, td.name).map(_.message).mkString("\n") must include("contradicts")
+    }
+
+    "be silent on a CONSTRUCTOR argument whose ascription agrees with the field" in {
+      (td: TestData) =>
+        val src = argModel("""let r = record Estimate(amount = prompt("e") as Score)""")
+        errorsFor(src, td.name).map(_.message).mkString("\n") must not include "contradicts"
+    }
+
+    "be an Error on a CALL argument whose ascription contradicts the parameter" in {
+      (td: TestData) =>
+        val src = argModel("""let q = call function Rate(amount = prompt("r") as Other)""")
+        errorsFor(src, td.name).map(_.message).mkString("\n") must include("contradicts")
+    }
+
+    "be an Error on an INITIATE argument whose ascription contradicts the parameter" in {
+      (td: TestData) =>
+        val src = argModel("""let i = initiate entity Target(seed = prompt("s") as Other)""")
+        errorsFor(src, td.name).map(_.message).mkString("\n") must include("contradicts")
+    }
+
+    "be an Error on a TERMINATE argument whose ascription contradicts the parameter" in {
+      (td: TestData) =>
+        val src = argModel(
+          """let i = initiate entity Target(seed = prompt("s") as Score)
+            |            terminate i with (why = prompt("w") as Other)""".stripMargin
+        )
+        errorsFor(src, td.name).map(_.message).mkString("\n") must include("contradicts")
+    }
+
+    "be an Error on a RETURN value whose ascription contradicts the function's returns" in {
+      (td: TestData) =>
+        errorsFor(functionModel("""return prompt("r") as Other"""), td.name)
+          .map(_.message)
+          .mkString("\n") must include("contradicts")
+    }
+
+    "be silent on a RETURN value whose ascription agrees with the function's returns" in {
+      (td: TestData) =>
+        errorsFor(functionModel("""return prompt("r") as Sum"""), td.name)
+          .map(_.message)
+          .mkString("\n") must not include "contradicts"
+    }
+
+    "be an Error on a REQUIRE argument whose ascription contradicts the invariant" in {
+      (td: TestData) =>
+        val src = argModel("""require invariant Positive with prompt("p") as Other""")
+        errorsFor(src, td.name).map(_.message).mkString("\n") must include("contradicts")
+    }
+
+    "be an Error on a PUT value whose ascription contradicts the output" in { (td: TestData) =>
+      errorsFor(appModel("""put prompt("g") as Other to output Panel"""), td.name)
+        .map(_.message)
+        .mkString("\n") must include("contradicts")
+    }
+
+    "be silent on a PUT value whose ascription agrees with the output" in { (td: TestData) =>
+      errorsFor(appModel("""put prompt("g") as Greeting to output Panel"""), td.name)
+        .map(_.message)
+        .mkString("\n") must not include "contradicts"
+    }
 
     "stay silent on a constructor argument -- deliberately unwired" in { (td: TestData) =>
       // `record Estimate(...)` -- the keyword-led Constructor form, matching the working shape in

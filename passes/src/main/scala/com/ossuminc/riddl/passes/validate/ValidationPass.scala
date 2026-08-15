@@ -1897,7 +1897,15 @@ case class ValidationPass(
           s"${inv.identify} declares 'requires ${tr.format}', so it must be given a value here",
           suggestion = s"Write 'require invariant ${inv.id.value} with <expr>'."
         )
-      case Some(_: TypeRef) => () // present, as required
+      case Some(tr: TypeRef) =>
+        // Present, as required. A20: the `with` value may be an ascribed hole, and the type it must
+        // restate is the one `requires` NAMES. The TypeRef is used as written rather than resolved,
+        // which is what the syntactic comparison wants -- no refMap lookup is needed or wanted here.
+        argument.foreach {
+          case pv: PromptValue =>
+            checkPromptAscription(pv, Some(AliasedTypeExpression(At.empty, "type", tr.pathId)))
+          case _ => ()
+        }
       case _ if argument.nonEmpty =>
         messages.addWarning(
           loc,
@@ -7123,6 +7131,16 @@ case class ValidationPass(
         case Some(id) => fields.find(_.id.value == id.value)
         case None     => if idx < fields.size then Some(fields(idx)) else None
       fieldOpt.foreach { field =>
+        // A20: the ONE wiring point for four of the seven ascription positions -- a constructor
+        // argument, a call argument, and (through `checkLifecycleInvocation`, which adapts
+        // `MethodArgument`s to `Field`s precisely so it can reuse this helper) an `initiate` and a
+        // `terminate` argument. Wiring each separately would have been four more copies of the
+        // drift this helper's scaladoc exists to prevent. `field.typeEx` is passed DIRECTLY, not
+        // through `selfNamedTypeExpression`: it is already the type as WRITTEN, which is the side
+        // the syntactic comparison needs -- the same reason `validateConstant` passes `c.typeEx`.
+        arg.value match
+          case pv: PromptValue => checkPromptAscription(pv, Some(field.typeEx))
+          case _               => ()
         field.typeEx match
           case ate: AliasedTypeExpression =>
             val expected = resolution.refMap.definitionOf[Type](ate.pathId)
@@ -7309,6 +7327,11 @@ case class ValidationPass(
         case tr: TypeRef      => resolution.refMap.definitionOf[Type](tr.pathId)
         case _: ConstantRef   => None
         case _: LiteralString => None
+      // A20: `expected` here is a RESOLVED Type, so it is re-wrapped as a self-named alias to give
+      // the syntactic comparison a name on both sides -- the same adaptation `checkValueType` makes.
+      ps.value match
+        case pv: PromptValue => checkPromptAscription(pv, expected.map(selfNamedTypeExpression))
+        case _               => ()
       val actual = valueType(ps.value, parents, lets, elements)
       (expected, actual) match
         case (Some(e), Some(a)) if !(e eq a) =>
@@ -7335,6 +7358,10 @@ case class ValidationPass(
       val expected: Option[Type] = fn.output match
         case Some(tr: TypeRef) => resolution.refMap.definitionOf[Type](tr.pathId)
         case _                 => None
+      // A20: as in `validatePut` -- a resolved Type re-wrapped as a self-named alias.
+      rs.value match
+        case pv: PromptValue => checkPromptAscription(pv, expected.map(selfNamedTypeExpression))
+        case _               => ()
       val actual = valueType(rs.value, parents, lets, elements)
       (expected, actual) match
         case (Some(e), Some(a)) if !(e eq a) =>
