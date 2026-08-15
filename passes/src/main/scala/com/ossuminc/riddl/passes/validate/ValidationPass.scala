@@ -6891,13 +6891,41 @@ case class ValidationPass(
     AliasedTypeExpression(At.empty, "type", PathIdentifier(At.empty, Seq(t.id.value)))
 
   /** A20: the name a [[TypeExpression]] was WRITTEN as, for [[checkPromptAscription]]'s syntactic
-    * comparison. An [[AliasedTypeExpression]] names a declared [[Type]] by its path, so its
-    * written name is the path text; every other [[TypeExpression]] (a [[PredefinedType]] like
-    * `Real`, or a parameterized one like `Decimal(10,2)`) has no path and is named by its `kind`.
+    * comparison. An [[AliasedTypeExpression]] names a declared [[Type]] by its path; every other
+    * [[TypeExpression]] (a [[PredefinedType]] like `Real`, or a parameterized one like
+    * `Decimal(10,2)`) has no path and is named by its `kind`.
+    *
+    * **Recurses through the four `Cardinality` wrappers** (`Optional`/`ZeroOrMore`/`OneOrMore`/
+    * `SpecificRange`), discarding the wrapper rather than folding its symbol into the name —
+    * `TypeParser.cardinality` wraps ANY type alternative, including an aliased one, so `prompt(…)
+    * as OrderId?` parses today. Before this recursion existed, `Optional`/etc. matched the `_`
+    * catch-all and were named by `te.kind` (`"Optional"`), which broke in BOTH directions: `let x:
+    * OrderId = prompt("d") as OrderId?` compared `"Optional"` to `"OrderId"` and reported a false
+    * contradiction on legal code (the position expects `OrderId`; ascribing its `?`-wrapped form
+    * still restates the same named type — cardinality itself is not part of this comparison, same
+    * as `checkOnOtherBinding`'s), while `constant G: OrderId? = prompt("g") as SomethingElse?`
+    * compared `"Optional"` to `"Optional"` on BOTH sides and missed a real contradiction between
+    * two DIFFERENT aliased types sharing the same wrapper. Found by code review 2026-08-15.
+    *
+    * **Only the LAST path segment is used**, not [[PathIdentifier.format]]'s full dotted form.
+    * `selfNamedTypeExpression`'s `expected` side is always a bare, single-segment name (the
+    * resolved Type's own `id.value` — it has no knowledge of how the position's `TypeRef` was
+    * qualified), so comparing it against an ascription's FULL path made every qualified restatement
+    * a false contradiction: `let x: Common.OrderId = prompt("d") as Common.OrderId` compared
+    * `"OrderId"` to `"Common.OrderId"`. Using the last segment on both sides makes the two consistent.
+    * This does trade away one thing: two DIFFERENT types that happen to share a simple name in
+    * different scopes (`Common.OrderId` vs `Other.OrderId`) now compare equal here, exactly as
+    * `checkOnOtherBinding`'s own syntactic, non-resolving comparison already accepts for envelope
+    * names — a known, documented limitation of staying syntactic rather than resolving through the
+    * symbol table, not a new one this fix introduces.
     */
   private def typeAscriptionName(te: TypeExpression): String = te match
-    case ate: AliasedTypeExpression => ate.pathId.format
-    case _                          => te.kind
+    case ate: AliasedTypeExpression    => ate.pathId.value.lastOption.getOrElse("")
+    case Optional(_, typex)            => typeAscriptionName(typex)
+    case ZeroOrMore(_, typex)          => typeAscriptionName(typex)
+    case OneOrMore(_, typex)           => typeAscriptionName(typex)
+    case SpecificRange(_, typex, _, _) => typeAscriptionName(typex)
+    case _                             => te.kind
 
   /** A20: a typed hole's ascription (`prompt("…") as T`) RESTATES the type its position already
     * supplies — it never overrides it, mirroring A57's `on other as x: <envelope>` rule exactly
@@ -6909,10 +6937,13 @@ case class ValidationPass(
     *
     * The comparison is purely SYNTACTIC — by [[typeAscriptionName]], not by resolving through
     * alias chains — exactly as [[checkOnOtherBinding]] compares `t.pathId.format` against the
-    * option's stored name rather than resolving either side. `type Currency is Real` is a
-    * DIFFERENT declared type than bare `Real`, even though one is defined in terms of the other,
-    * so `constant G: Real = prompt(…) as Currency` is a contradiction despite Currency resolving
-    * to Real underneath — the ruling's table pins exactly this case as an Error.
+    * option's stored name rather than resolving either side. `type Score is Real` is a DIFFERENT
+    * declared type than bare `Real`, even though one is defined in terms of the other, so
+    * `constant G: Real = prompt(…) as Score` is a contradiction despite `Score` resolving to
+    * `Real` underneath — the ruling's table pins exactly this case as an Error. (`Currency` is NOT
+    * a usable example here: it is a predefined type requiring a `country` argument — bare `as
+    * Currency` does not parse, only `as Currency(USD)` does — and it does not resolve to `Real` or
+    * to anything else; it is its own distinct [[PredefinedType]].)
     */
   private def checkPromptAscription(pv: PromptValue, expected: Option[TypeExpression]): Unit =
     (pv.typeEx, expected) match
@@ -7370,7 +7401,7 @@ case class ValidationPass(
           // `checkPromptAscription` never WARNS on an absent ascription (only the `let`-no-
           // ascription site does that, above), so an unascribed `when prompt(…)` -- 15 of them in
           // the corpus -- stays silent with or without this arm; what this arm buys is
-          // CONTRADICTION detection: `when prompt(…) as Currency` would otherwise fall to the
+          // CONTRADICTION detection: `when prompt(…) as Score` would otherwise fall to the
           // catch-all below and silently accept an ascription that can never be a legal condition.
           case pv: PromptValue       => checkPromptAscription(pv, Some(Bool(At.empty)))
           case _                     => ()

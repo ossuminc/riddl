@@ -455,7 +455,20 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private def resolveValue(v: Value, parents: Parents): Unit =
     v match
       case _: LiteralString => () // no references
-      case _: PromptValue   => () // AI-computed literal text, no references
+      case pv: PromptValue  =>
+        // A20: the prompt TEXT is literal (nothing to resolve), but an optional `as <type>`
+        // ascription carries a real TypeExpression that may hold a PathIdentifier -- e.g.
+        // `prompt("x") as Nonexistent`. Until this arm, NOTHING resolved it: the comment here used
+        // to say "no references", true before A20 and false since, and the consequence was that an
+        // ascription naming a type that does not exist validated clean instead of reporting an
+        // unresolved path -- the exact "validates clean while naming definitions that need not
+        // exist" class CLAUDE.md's Total Dispatch section warns about. `resolveTypeExpression` is
+        // the SAME total dispatch every other TypeExpression position (a Field's type, a Sequence's
+        // element, …) already routes through, so it recurses through the four Cardinality wrappers
+        // for free (`prompt("x") as OrderId?`) and registers the resolved Type in `usedBy` via its
+        // own `associateUsage` call -- a Type named ONLY by an ascription is therefore NOT
+        // wrongly flagged unused by `UsageResolution.checkUnused`.
+        pv.typeEx.foreach(te => resolveTypeExpression(parents.head, te, parents))
       case c: Constructor =>
         associateUsage[Type](parents.head, resolveARef[Type](c.ref, parents))
         c.args.foreach(arg => resolveValue(arg.value, parents))

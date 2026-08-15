@@ -50,6 +50,9 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
   private def completenessFor(src: String, origin: String): Messages =
     diagnostics(src, origin).filter(_.kind == Messages.CompletenessWarning)
 
+  private def usageWarningsFor(src: String, origin: String): Messages =
+    diagnostics(src, origin).filter(_.kind == Messages.UsageWarning)
+
   // `Score` is a declared Type (not a bare predefined keyword): a `LetStatement.typeRef` /
   // `SetStatement.field`'s type is a `TypeRef`, resolved through the symbol table, and a bare
   // predefined keyword like `Real` is never entered into it (see NumericLiteralConformanceTest's
@@ -93,12 +96,84 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
        |}
        |""".stripMargin
 
+  // Cross-context qualified paths, for the two "qualified restatement" cases below. `D.Common.X`
+  // mirrors the fully-domain-qualified spelling `AskTest`'s cross-context fixtures already use.
+  private def qualifiedModel(stmt: String): String =
+    s"""domain D is {
+       |  context Common is {
+       |    type OrderId is String
+       |    type ShippingId is String
+       |  }
+       |  context C is {
+       |    command Go is { why: String }
+       |    entity E is {
+       |      handler H is { on command Go is { $stmt } }
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+
+  "the ascription's type reference (A20 review finding 3)" should {
+    "be an Error when the ascription names a type that does not exist" in { (td: TestData) =>
+      // Before the 2026-08-15 fix, `ResolutionPass.resolveValue`'s `PromptValue` arm resolved
+      // nothing -- an ascription naming a nonexistent type validated clean.
+      val errs =
+        errorsFor(entityModel("""let x = prompt("d") as Nonexistent"""), "ascription-unresolved")
+      withClue(errs.map(_.message).mkString("\n")) {
+        errs.exists(_.message.contains("was not resolved")) mustBe true
+      }
+    }
+
+    "stay silent (no unresolved-path error) when the ascription names a real type" in {
+      (td: TestData) =>
+        val errs = errorsFor(entityModel("""let x = prompt("d") as Score"""), "ascription-resolved")
+        withClue(errs.map(_.message).mkString("\n")) {
+          errs.exists(_.message.contains("was not resolved")) mustBe false
+        }
+    }
+
+    "NOT flag a type as unused when its only reference is an ascription" in { (td: TestData) =>
+      // `entityModel`'s `type Score is Real` is otherwise unused by this fixture -- no field, no
+      // state, nothing but the ascription below names it. `resolveTypeExpression`'s
+      // AliasedTypeExpression arm calls `associateUsage` internally, so calling it from the new
+      // PromptValue arm is enough to populate `usedBy` -- this pins that it actually does, not
+      // just that resolution itself succeeds (the previous case already covers that).
+      val warns =
+        usageWarningsFor(entityModel("""let x = prompt("d") as Score"""), "ascription-usedby")
+      withClue(warns.map(_.message).mkString("\n")) {
+        warns.exists(w => w.message.contains("Score") && w.message.contains("unused")) mustBe false
+      }
+    }
+  }
+
   "a restated ascription" should {
     "be silent on a 'let' whose ascription matches its declared type" in { (td: TestData) =>
       errorsFor(
         entityModel("""let x: Score = prompt("d") as Score"""),
         "let-restate"
       ) mustBe empty
+    }
+
+    "be silent on a 'let' whose declared type matches a Cardinality-wrapped ascription (review" +
+      " finding 1)" in { (td: TestData) =>
+        // Before the fix, `typeAscriptionName` named `Optional(AliasedTypeExpression(Score))` by
+        // its Scala class ("Optional") rather than recursing to "Score", so this compared
+        // "Optional" against "Score" and reported a false contradiction on legal code.
+        errorsFor(
+          entityModel("""let x: Score = prompt("d") as Score?"""),
+          "let-restate-optional"
+        ) mustBe empty
+    }
+
+    "be silent on a 'let' whose qualified ascription restates its qualified declared type" +
+      " (review finding 4)" in { (td: TestData) =>
+        // Before the fix, the expected side was rebuilt as the bare simple name ("OrderId") while
+        // the ascribed side kept the full written path ("D.Common.OrderId"), so this compared
+        // unequal and reported a false contradiction against itself.
+        errorsFor(
+          qualifiedModel("""let x: D.Common.OrderId = prompt("d") as D.Common.OrderId"""),
+          "let-restate-qualified"
+        ) mustBe empty
     }
 
     "be silent on a 'constant' whose ascription matches its declared type" in { (td: TestData) =>
@@ -175,6 +250,22 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
       withClue(errs.map(_.message).mkString("\n")) {
         errs.exists(_.message.contains("contradicts")) mustBe true
       }
+    }
+
+    "be an Error on a 'let' whose qualified ascription names a genuinely different qualified" +
+      " type (review finding 4, the other direction)" in { (td: TestData) =>
+        // The last-path-segment comparison that fixes the qualified-restatement false positive
+        // above must not become vacuous: two DIFFERENTLY-named qualified types must still
+        // contradict.
+        val errs = errorsFor(
+          qualifiedModel(
+            """let x: D.Common.OrderId = prompt("d") as D.Common.ShippingId"""
+          ),
+          "let-contradict-qualified"
+        )
+        withClue(errs.map(_.message).mkString("\n")) {
+          errs.exists(_.message.contains("contradicts")) mustBe true
+        }
     }
 
     "be an Error on a 'when' condition ascribed to a non-Boolean type" in { (td: TestData) =>
