@@ -62,6 +62,30 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **A predefined type keyword cannot be used as a `let` ascription.** Found
+  2026-08-15 by the numeric-literals work, pre-existing and left alone.
+
+  `let x: Natural = …` does not resolve. `LetStatement.typeRef` is a path
+  reference, and predefined type keywords are never entered into the symbol
+  table — `ResolutionPass.scala:329` reads
+  `case _: Enumeration | _: NumericType | _: PredefinedType => None // no
+  references`. So a bare `TypeRef` naming `Natural`, `Integer`, `Real`,
+  `String`, `Boolean` or any other predefined type has nothing to resolve
+  against.
+
+  The workaround is an alias — `type Nat is Natural` then `let x: Nat = …` —
+  which is what two test fixtures in this branch now do. That is a real
+  papercut: the obvious spelling silently fails while the indirect one works,
+  and A55 documents `let x: T = …` as ordinary type ascription without saying
+  `T` may not be a predefined type.
+
+  Decide deliberately between: seeding the predefined types into the symbol
+  table (watch the `PredefinedModule` precedent — the standard module is kept
+  in SEPARATE maps precisely so it does not leak into "all X in the model"),
+  or special-casing predefined keywords in the `let` ascription path only.
+  The first is more general and more dangerous; the second is narrow and
+  honest.
+
 - **`CommonParser.naturalNumber` swallows whitespace between digits.** Found
   2026-08-15 by the numeric-literals review, in the pre-existing code — NOT
   introduced by that work, which is why it was left alone rather than fixed in
