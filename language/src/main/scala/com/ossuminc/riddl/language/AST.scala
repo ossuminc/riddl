@@ -2509,17 +2509,22 @@ object AST:
       with IntegerTypeExpression
       with RealTypeExpression {}
 
-  /** A predefined type expression for an integer value
+  /** A signed whole number: `… -2, -1, 0, 1, 2 …`.
     *
-    * @param loc
-    *   The location of the integer type expression
+    * The three integer types were undocumented until 2026-08-14 — nothing in the code, the
+    * grammar, the language reference or the Computational Model said what they meant, so a check
+    * could not enforce them. Ruled by Reid: `Integer` signed, [[Whole]] non-negative, [[Natural]]
+    * positive. Note the grammar's lexical `natural = /[0-9]+/` admits `0` and is UNAFFECTED — it
+    * is the rule for version components, not this type.
     */
   @JSExportTopLevel("Integer")
   case class Integer(loc: At) extends PredefinedType with IntegerTypeExpression
 
+  /** A non-negative whole number: `0, 1, 2 …`. The counting type. See [[Integer]]. */
   @JSExportTopLevel("Whole")
   case class Whole(loc: At) extends PredefinedType with IntegerTypeExpression
 
+  /** A positive whole number: `1, 2 …`. The ordinal type; excludes zero. See [[Integer]]. */
   @JSExportTopLevel("Natural")
   case class Natural(loc: At) extends PredefinedType with IntegerTypeExpression
 

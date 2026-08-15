@@ -2155,7 +2155,50 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, c)
     checkMetadata(c)
+    c.value match
+      case nl: NumericLiteral => checkNumericLiteralConformance(nl, c.typeEx)
+      case _                  => ()
   }
+
+  /** A literal's value is statically known where a reference's is not, so a literal is held to a
+    * STRICTER standard than the surrounding assignment rules. `NumericType.isAssignmentCompatible`
+    * (`AST.scala:1912`) deliberately lets ANY numeric accept any other, and that stays true for
+    * references — `let x: Natural = someRealField` is unchanged. Only literals are checked here.
+    *
+    * The fractional-value arm must precede the `Natural`/`Whole` range arms: both are
+    * [[IntegerTypeExpression]]s, and reporting a range violation for `1.5` would be true and
+    * useless — the fraction is the more specific defect. Range arms are guarded on `isInteger` so
+    * `asLong` (which throws on a decimal) is never reached for a real-form literal. `Bool` is
+    * excluded explicitly even though it extends [[IntegerTypeExpression]]: a Boolean-typed
+    * constant is not "a whole number with a fractional part", it is a different kind entirely, and
+    * telling it so would be a nonsense message.
+    */
+  private def checkNumericLiteralConformance(
+    nl: NumericLiteral,
+    expected: TypeExpression
+  ): Unit =
+    expected match
+      case _: Bool => () // Boolean, not integer-range — see the doc above.
+      case _: IntegerTypeExpression if !nl.isInteger =>
+        messages.addError(
+          nl.loc,
+          s"${expected.format} requires a whole number, but ${nl.text} has a fractional part",
+          suggestion = s"Remove the fractional part, or declare the type as Real or Decimal."
+        )
+      case _: Natural if nl.isInteger && nl.asLong < 1 =>
+        messages.addError(
+          nl.loc,
+          s"Natural is a positive whole number, but ${nl.text} is not greater than zero",
+          suggestion = "Use Whole to admit zero, or Integer to admit negative values."
+        )
+      case _: Whole if nl.isInteger && nl.asLong < 0 =>
+        messages.addError(
+          nl.loc,
+          s"Whole is a non-negative whole number, but ${nl.text} is negative",
+          suggestion = "Use Integer to admit negative values."
+        )
+      case _ => ()
+  end checkNumericLiteralConformance
 
   private def validateState(
     s: State,
@@ -6785,6 +6828,13 @@ case class ValidationPass(
     loc: At,
     what: String
   ): Unit =
+    // A NumericLiteral never resolves to a named Type (valueType returns None for it — see its
+    // NumericLiteral arm), so the general (Some, Some) identity check below never fires for one.
+    // This is the OTHER site — besides Constant validation — where an expected type is already in
+    // hand for a literal, so it is where the literal-only range/fraction check belongs.
+    (v, expected) match
+      case (nl: NumericLiteral, Some(e)) => checkNumericLiteralConformance(nl, e.typEx)
+      case _                             => ()
     (expected, valueType(v, parents, lets, elements)) match
       case (Some(e), Some(a)) if !(e eq a) =>
         messages.addError(
