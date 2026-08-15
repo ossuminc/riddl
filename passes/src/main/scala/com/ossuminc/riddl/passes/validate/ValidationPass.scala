@@ -2157,7 +2157,12 @@ case class ValidationPass(
     checkMetadata(c)
     c.value match
       case nl: NumericLiteral => checkNumericLiteralConformance(nl, c.typeEx)
-      case _                  => ()
+      // A20: a typed hole's ascription restates the constant's declared type; it never overrides
+      // it. `c.typeEx` is ALWAYS present for a Constant (unlike `let`, which may be unascribed),
+      // so a Constant never draws the seam CompletenessWarning -- the constant itself supplies
+      // the type, per the ruling's table.
+      case pv: PromptValue => checkPromptAscription(pv, Some(c.typeEx))
+      case _               => ()
   }
 
   /** A literal's value is statically known where a reference's is not, so a literal is held to a
@@ -6855,7 +6860,14 @@ case class ValidationPass(
     // hand for a literal, so it is where the literal-only range/fraction check belongs.
     (v, expected) match
       case (nl: NumericLiteral, Some(e)) => checkNumericLiteralConformance(nl, e.typEx)
-      case _                             => ()
+      // A20: `let`/`set` are the two carriers `checkValueType` serves, and both wire the
+      // restate/contradict check for free by living here rather than being duplicated at each
+      // call site. `expected` is already the RESOLVED Type the position declares, so it is
+      // re-wrapped as a self-named [[AliasedTypeExpression]] purely so
+      // [[checkPromptAscription]]'s syntactic name comparison has a [[TypeExpression]] on both
+      // sides -- see that method's doc for why the comparison is syntactic, not identity-based.
+      case (pv: PromptValue, _) => checkPromptAscription(pv, expected.map(selfNamedTypeExpression))
+      case _                    => ()
     (expected, valueType(v, parents, lets, elements)) match
       case (Some(e), Some(a)) if !(e eq a) =>
         messages.addError(
@@ -6865,6 +6877,57 @@ case class ValidationPass(
         )
       case _ => ()
   end checkValueType
+
+  /** A20: the [[TypeExpression]] standing for a resolved [[Type]]'s own identity, for comparing
+    * against a typed hole's ascription. `checkValueType`'s `expected` is already resolved to the
+    * named Type a `let`/`set` position declares (there is exactly one Type in play, found via its
+    * own [[TypeRef]]), so re-wrapping its OWN name as a single-segment path lets
+    * [[checkPromptAscription]] treat "the type this position resolved to" the same way it treats
+    * "the type this position was WRITTEN as". A `constant`'s declared type is NOT run through
+    * this: `c.typeEx` may be an unresolvable [[PredefinedType]] like `Real`, so
+    * `validateConstant` passes it directly.
+    */
+  private def selfNamedTypeExpression(t: Type): TypeExpression =
+    AliasedTypeExpression(At.empty, "type", PathIdentifier(At.empty, Seq(t.id.value)))
+
+  /** A20: the name a [[TypeExpression]] was WRITTEN as, for [[checkPromptAscription]]'s syntactic
+    * comparison. An [[AliasedTypeExpression]] names a declared [[Type]] by its path, so its
+    * written name is the path text; every other [[TypeExpression]] (a [[PredefinedType]] like
+    * `Real`, or a parameterized one like `Decimal(10,2)`) has no path and is named by its `kind`.
+    */
+  private def typeAscriptionName(te: TypeExpression): String = te match
+    case ate: AliasedTypeExpression => ate.pathId.format
+    case _                          => te.kind
+
+  /** A20: a typed hole's ascription (`prompt("…") as T`) RESTATES the type its position already
+    * supplies — it never overrides it, mirroring A57's `on other as x: <envelope>` rule exactly
+    * (see [[checkOnOtherBinding]]). Silent when the position carries no expected type: nothing to
+    * restate against, and nothing to warn about here either — an untyped position that ALSO has
+    * no ascription is the seam-CompletenessWarning's job (wired only at the one conservative site
+    * the ruling names: an unascribed `let`), not this method's. Silent when the ascription
+    * agrees. An Error when it names a DIFFERENT type: a contradiction, not an omission.
+    *
+    * The comparison is purely SYNTACTIC — by [[typeAscriptionName]], not by resolving through
+    * alias chains — exactly as [[checkOnOtherBinding]] compares `t.pathId.format` against the
+    * option's stored name rather than resolving either side. `type Currency is Real` is a
+    * DIFFERENT declared type than bare `Real`, even though one is defined in terms of the other,
+    * so `constant G: Real = prompt(…) as Currency` is a contradiction despite Currency resolving
+    * to Real underneath — the ruling's table pins exactly this case as an Error.
+    */
+  private def checkPromptAscription(pv: PromptValue, expected: Option[TypeExpression]): Unit =
+    (pv.typeEx, expected) match
+      case (Some(ascribed), Some(exp))
+          if typeAscriptionName(ascribed) != typeAscriptionName(exp) =>
+        messages.addError(
+          ascribed.loc,
+          s"'prompt(...) as ${typeAscriptionName(ascribed)}' contradicts the expected type " +
+            s"${typeAscriptionName(exp)}: the ascription restates the position's type, it does " +
+            "not override it",
+          suggestion = s"Change the ascription to 'as ${typeAscriptionName(exp)}', or drop it " +
+            "-- it is optional and inferred from the position."
+        )
+      case _ => () // agreement, no expectation to restate against, or no ascription written
+  end checkPromptAscription
 
   /** Best-effort per-argument type compatibility, shared by a constructor and a call.
     *
@@ -7197,6 +7260,24 @@ case class ValidationPass(
             s"'let ${ls.identifier.value}'"
           )
         }
+        // A20: the ONE seam-CompletenessWarning site, per the ruling's conservative table. An
+        // unascribed `let x = prompt(…)` has NOTHING that supplies a type -- not a `let x: T`
+        // annotation, not a `prompt(…) as T` ascription -- so the hole is genuinely untyped. Every
+        // other position (a `let` WITH either half present, `set`, a constructor argument, `when`,
+        // …) stays silent: "we have not wired this position" is not the same fact as "the
+        // language cannot type it", and this is the single position the corpus measurement (0 of
+        // 288 uses) showed was actually unascribed in the wild.
+        if ls.typeRef.isEmpty then
+          ls.expression match
+            case pv: PromptValue if pv.typeEx.isEmpty =>
+              messages.addCompleteness(
+                pv.loc,
+                s"'let ${ls.identifier.value}' binds an untyped 'prompt(…)' with no type anywhere " +
+                  "to check it against",
+                suggestion = "Add a type: 'let " + ls.identifier.value +
+                  ": T = prompt(…)', or ascribe the hole itself: 'prompt(…) as T'."
+              )
+            case _ => ()
         lets = lets :+ ls
         elements = elements - ls.identifier.value
       case ss: SetStatement =>
@@ -7284,6 +7365,14 @@ case class ValidationPass(
         ws.condition match
           case be: BooleanExpression => validateValue(be, parents, lets, elements)
           case vr: ValueRef          => checkWhenValueRef(vr, parents, lets, elements) // A17
+          // A20: a `when` condition's position IMPLIES Boolean -- a constant expected type, not
+          // something threaded through call sites. This is the ruling's one MANDATORY wire.
+          // `checkPromptAscription` never WARNS on an absent ascription (only the `let`-no-
+          // ascription site does that, above), so an unascribed `when prompt(…)` -- 15 of them in
+          // the corpus -- stays silent with or without this arm; what this arm buys is
+          // CONTRADICTION detection: `when prompt(…) as Currency` would otherwise fall to the
+          // catch-all below and silently accept an ascription that can never be a legal condition.
+          case pv: PromptValue       => checkPromptAscription(pv, Some(Bool(At.empty)))
           case _                     => ()
         checkStatementScopes(
           ws.thenStatements.toSeq.collect { case s: Statement => s },
