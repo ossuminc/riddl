@@ -260,25 +260,34 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   end emitConstant
 
   /** A20: render a [[Value]] for actual round-trip SOURCE, as opposed to `.format`'s error-message
-    * rendering. The one place the two must differ is [[PromptValue]]'s optional `as <type>`
+    * rendering. The reason the two must differ at all is [[PromptValue]]'s optional `as <type>`
     * ascription: `Value.format` renders it via `PromptValue.ascriptionFormat`, a second, narrower
     * dispatch over [[TypeExpression]] that only reliably covers the handful of shapes it was
     * written against (an aliased type and the four `Cardinality` wrappers) — an enumeration, a
-    * table, an entity reference, a parameterized predefined type, and others all fall to its
+    * table, an entity reference, a parameterized predefined type, and others all fell to its
     * `other => other.format` catch-all, which for several of those does not reproduce parseable
     * source (found by code review 2026-08-15: `as any of {…}`, `as table of T of […]`, `as
     * reference to entity E`, and `as Currency(USD)` all mis-emitted). `emitTypeExpression` is
     * already the TOTAL, correct dispatch for a `TypeExpression` — every OTHER type-expression
     * position in this emitter routes through it — so a `PromptValue` ascription routes through it
-    * too here, rather than patching `ascriptionFormat` a third time. This makes the four positions
-    * `checkPromptAscription` actually validates (`constant`, `let`, `set`, `when` — see
-    * `emitConstant`/`emitStatement`) the ones this emitter renders correctly; `ascriptionFormat`
-    * remains in `AST.scala` only for contexts this emitter cannot reach (error messages, and a
-    * `PromptValue` nested inside a `Constructor`/`Call`/`Initiate`/`TerminateStatement` argument,
-    * which stay on `.format` — see `RIDDL-Computational-Model.md` handoff notes / BACKLOG § 1).
+    * too, rather than patching `ascriptionFormat` a third time.
     *
-    * Every other [[Value]] still renders via `.format`: none of the rest carries a nested
-    * `TypeExpression` that needs emitter-level rendering.
+    * As of 2026-08-15's whole-branch review, `emitValue` is TOTAL over every [[Value]] shape that
+    * can CONTAIN a nested `PromptValue`, not merely over `PromptValue` itself — a `Constructor`/
+    * `Call`/`Initiate` argument, an `InvariantCondition`'s `with` argument, and a
+    * `LogicalExpression`/`NotExpression` operand all recurse back through `emitValue` (via
+    * `emitConstructorArg(s)`/`emitLogicalOperand`) rather than falling to `.format`. Every
+    * `emitStatement` site whose operand can reach a `PromptValue` — `send`/`tell`/`yield`/`reply`
+    * (via a `Constructor` operand), `morph … with`, `put`, `return`, `require … with`, a `when`
+    * condition, and a `match`/`case` guard — now routes through `emitValue` too, so prettify never
+    * reaches `.format` for a value that might carry an ascription. `ascriptionFormat` remains in
+    * `AST.scala` ONLY for `.format`-based error-message rendering, which this emitter never uses
+    * for a `Value`.
+    *
+    * Every OTHER [[Value]] shape (`LiteralString`, `ValueRef`, `GetValue`, `Ask`, `SelfValue`,
+    * `NumericLiteral`, `ComparisonExpression`, `BooleanLiteral`) still renders via `.format`: none
+    * of them carries a nested `Value`/`TypeExpression` that needs emitter-level rendering, so the
+    * fallback arm is byte-identical to the pre-fix behaviour for all of them.
     */
   def emitValue(v: Value): this.type =
     v match
@@ -286,8 +295,68 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         add(s"prompt(${pv.prompt.format})")
         pv.typeEx.foreach { te => add(" as "); emitTypeExpression(te) }
         this
+      case Constructor(_, ref, args) =>
+        add(s"${ref.format}(")
+        emitConstructorArgs(args)
+        add(")")
+      case Call(_, function, args) =>
+        add(s"call ${function.format}(")
+        emitConstructorArgs(args)
+        add(")")
+      case Initiate(_, processor, args) =>
+        add(s"initiate ${processor.format}")
+        if args.nonEmpty then add("(").emitConstructorArgs(args).add(")") else this
+      case InvariantCondition(_, ref, argument) =>
+        add(ref.format)
+        argument.foreach { a => add(" with "); emitValue(a) }
+        this
+      case LogicalExpression(_, op, left, right) =>
+        emitLogicalOperand(left)
+        add(s" ${op.symbol} ")
+        emitLogicalOperand(right)
+      case NotExpression(_, expr) =>
+        expr match
+          case _: LogicalExpression => add("not (").emitValue(expr).add(")")
+          case _                    => add("not ").emitValue(expr)
       case other => add(other.format)
   end emitValue
+
+  /** A `LogicalExpression` operand is parenthesized when it is itself a `LogicalExpression` — same
+    * rule as `LogicalExpression.format`'s private `paren` helper, kept in step by hand since this
+    * emitter cannot call that helper (it is private to `AST.scala`).
+    */
+  private def emitLogicalOperand(v: Value): this.type = v match
+    case le: LogicalExpression => add("(").emitValue(le).add(")")
+    case _                     => emitValue(v)
+
+  /** A single [[ConstructorArg]]: `<name> = <value>` when named, bare `<value>` when positional.
+    * The value recurses through `emitValue` so a `PromptValue` argument's ascription renders
+    * correctly no matter how deeply it is nested.
+    */
+  private def emitConstructorArg(arg: ConstructorArg): this.type =
+    arg.name match
+      case Some(id) => add(s"${id.format} = ").emitValue(arg.value)
+      case None     => emitValue(arg.value)
+
+  /** A comma-separated `ConstructorArg` list, shared by `Constructor`/`Call`/`Initiate` and
+    * `TerminateStatement`.
+    */
+  private def emitConstructorArgs(args: Seq[ConstructorArg]): this.type =
+    args.zipWithIndex.foreach { case (arg, idx) =>
+      if idx > 0 then add(", ")
+      emitConstructorArg(arg)
+    }
+    this
+
+  /** The `MessageRef | RecordRef | Constructor | ValueRef` operand shared by
+    * `SendStatement`/`TellStatement`/`YieldStatement`/`ReplyStatement` (message) and
+    * `MorphStatement` (record). Only the `Constructor` arm can carry a nested `PromptValue`; the
+    * refs have no nested `Value` to render, so they stay on `.format`.
+    */
+  private def emitConstructorOperand(v: MessageRef | RecordRef | Constructor | ValueRef): this.type =
+    v match
+      case c: Constructor => emitValue(c)
+      case other          => add(other.format)
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
     add(s"any of {").nl.incr
@@ -475,7 +544,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           case ls: LiteralString     => add(ls.format)
           case id: Identifier        => add(if negated then s"!${id.format}" else id.format)
           case vr: ValueRef          => add(if negated then s"!${vr.format}" else vr.format) // A17
-          case be: BooleanExpression => add(be.format) // A28: structured boolean expression
+          case be: BooleanExpression => emitValue(be) // A28: structured boolean expression
           case pv: PromptValue       => emitValue(pv) // an AI-evaluated condition
         }
         add(" then").nl.incr
@@ -489,9 +558,13 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case MatchStatement(_, expr, cases, default) =>
         addIndent(s"match ${expr.format} {").nl.incr
         cases.foreach { mc =>
-          // A29: `case <pattern> [when <guard>] { … }`
-          val guardStr = mc.guard.map(g => s" when ${g.format}").getOrElse("")
-          addIndent(s"case ${mc.pattern.format}$guardStr {").nl.incr
+          // A29: `case <pattern> [when <guard>] { … }`. The guard is `BooleanExpression | ValueRef`
+          // — both are `Value` members — and routes through `emitValue` (not `.format`) so a
+          // nested `PromptValue` ascription (e.g. `when prompt("x") as Currency(USD)`) renders
+          // correctly rather than falling to `PromptValue.ascriptionFormat`.
+          addIndent(s"case ${mc.pattern.format}")
+          mc.guard.foreach { g => add(" when "); emitValue(g) }
+          add(" {").nl.incr
           mc.statements.toSeq.foreach(emitStatement)
           decr.addLine("}")
         }
@@ -528,13 +601,40 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         // A54: `do` is canonical; the deprecated `prompt` statement normalizes to `do` on emit.
         addLine(s"do ${what.format}")
       case SendStatement(_, msg, portlet) =>
-        addLine(s"send ${msg.format} to ${portlet.format}")
-      case ts: TellStatement =>
-        addLine(ts.format)
+        // A20: `msg` is `MessageRef | Constructor | ValueRef`; a `Constructor` argument can carry a
+        // `PromptValue` ascription, so this routes through `emitConstructorOperand` (-> `emitValue`)
+        // rather than `.format`.
+        addIndent("send ")
+        emitConstructorOperand(msg)
+        add(s" to ${portlet.format}")
+        nl
+      case TellStatement(_, msg, processorRef, by) =>
+        addIndent("tell ")
+        emitConstructorOperand(msg)
+        add(s" to ${processorRef.format}${by.map(b => s" by ${b.format}").getOrElse("")}")
+        nl
       case YieldStatement(_, msg) =>
-        addLine(s"yield ${msg.format}")
+        addIndent("yield ")
+        emitConstructorOperand(msg)
+        nl
       case ReplyStatement(_, msg) =>
-        addLine(s"reply ${msg.format}")
+        addIndent("reply ")
+        emitConstructorOperand(msg)
+        nl
+      case MorphStatement(_, entity, state, value) =>
+        // A54: `value` is `RecordRef | Constructor | ValueRef`; same reasoning as `SendStatement`.
+        addIndent(s"morph ${entity.format} to ${state.format} with ")
+        emitConstructorOperand(value)
+        nl
+      case PutStatement(_, value, output) =>
+        addIndent("put ")
+        emitValue(value)
+        add(s" to ${output.format}")
+        nl
+      case ReturnStatement(_, value) =>
+        addIndent("return ")
+        emitValue(value)
+        nl
       case CodeStatement(_, lang, body) =>
         // The parser captures the body up to (but not including) the closing "```" fence, so it
         // retains the newline and indent that precede that fence. Emitting the body verbatim and
@@ -546,14 +646,28 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case RequireStatement(_, condition, argument) =>
         // The `with <expr>` argument is SEMANTIC — it is the value an invariant declaring
         // `requires <type>` is checked against — so dropping it on a round trip would change the
-        // model, not merely its formatting.
-        val arg = argument.map(a => s" with ${a.format}").getOrElse("")
+        // model, not merely its formatting. Both `condition` (when a `BooleanExpression`) and
+        // `argument` are `Value`-bearing and route through `emitValue`, not `.format`, so a nested
+        // `PromptValue` ascription renders correctly.
+        addIndent("require ")
         condition match {
-          case ls: LiteralString     => addLine(s"require ${ls.format}$arg")
-          case ir: InvariantRef      => addLine(s"require ${ir.format}$arg")
-          case be: BooleanExpression => addLine(s"require ${be.format}$arg") // A28
+          case ls: LiteralString     => add(ls.format)
+          case ir: InvariantRef      => add(ir.format)
+          case be: BooleanExpression => emitValue(be) // A28
         }
-      case ts: TerminateStatement => addLine(ts.format)
+        argument.foreach { a => add(" with "); emitValue(a) }
+        nl
+      case TerminateStatement(_, processor, args) =>
+        // Byte-identical shape to `Initiate` (see `emitValue`): parens are omitted when `args` is
+        // empty. Routes through `emitConstructorArgs` so a `PromptValue` argument ascribes
+        // correctly rather than falling to `.format`.
+        addIndent(s"terminate ${processor.format}")
+        if args.nonEmpty then
+          add("(")
+          emitConstructorArgs(args)
+          add(")")
+        end if
+        nl
       case statement: Statement   => addLine(statement.format)
       case comment: Comment       => emitComment(comment)
     end match

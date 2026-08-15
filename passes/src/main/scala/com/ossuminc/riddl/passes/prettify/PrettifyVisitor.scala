@@ -253,9 +253,18 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         // than its formatting: `requires state Open` would silently widen to the whole entity.
         .add(invariant.requires.map(r => " requires " + r.format).getOrElse(""))
         .add(" is ")
-        // A28 + block form: every arm is a RiddlValue with `.format` (the Option[LiteralString]
-        // `.format` extension no longer applies).
-        .add(invariant.condition.map(_.format).getOrElse("N/A"))
+      // A28 + block form: `condition` is `LiteralString | BooleanExpression | InvariantBlock`. A
+      // `BooleanExpression` routes through `emitValue` (not `.format`), since its `LogicalExpression`/
+      // `NotExpression`/`InvariantCondition` shapes can nest a `PromptValue` whose ascription needs
+      // `emitValue`'s total dispatch — see `RiddlFileEmitter.emitValue`'s doc. `InvariantBlock` stays
+      // on `.format`: its own nested statements are a separate, pre-existing "two dispatches" gap
+      // (`Statement.format` vs. `emitStatement`, documented in CLAUDE.md's Total Dispatch section)
+      // that this fix does not reach.
+      invariant.condition match
+        case None                        => rfe.add("N/A")
+        case Some(ls: LiteralString)     => rfe.add(ls.format)
+        case Some(be: BooleanExpression) => rfe.emitValue(be)
+        case Some(ib: InvariantBlock)    => rfe.add(ib.format)
       // An invariant is a one-line leaf with nothing following it on the line, so it must
       // terminate its own line when there is no `with { ... }` block to do it — the same rule
       // `doVersion` and `doCopyright` already carry. Without this a metadata-less invariant ran

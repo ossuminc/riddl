@@ -852,10 +852,22 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   regen, the `ArgDto.fields` read path in JSON, and an external-corpus re-run.
   Sequence: deprecate loudly for a release, then remove.
 
-- **A20 typed holes: `checkPromptAscription` is not wired at every position
-  a `prompt(...) as T` ascription can legally appear.** Found by the
-  2026-08-15 whole-branch review; filed rather than fixed, per Reid's
+- **A20 typed holes: `checkPromptAscription` (VALIDATION) is not wired at
+  every position a `prompt(...) as T` ascription can legally appear.** Found
+  by the 2026-08-15 whole-branch review; filed rather than fixed, per Reid's
   "file, do not fix" call on this specific item.
+
+  **Scope correction (2026-08-15, same-day review):** this item is about
+  VALIDATION only — whether an ascription is checked for a restate/contradict
+  violation. It is NOT about rendering: the sibling RENDERING defect at the
+  same set of positions (a `PromptValue` nested in a `Constructor`/`Call`/
+  `Initiate` argument, an `InvariantCondition` argument, or a
+  `LogicalExpression`/`NotExpression` operand emitting non-parsing source via
+  `ascriptionFormat`) is now CLOSED — `RiddlFileEmitter.emitValue` is total
+  over those shapes; see CLAUDE.md's `PromptValue.ascriptionFormat` entry and
+  `TypedHoleContainerAscriptionRoundTripTest`. Both defects were loosely
+  cross-referenced to this one BACKLOG entry from code comments, which
+  conflated them; only the validation half below remains open.
 
   `checkPromptAscription` runs at exactly four positions today: `constant`
   (`validateConstant`), `let`/`set` (`checkValueType`, which both share),

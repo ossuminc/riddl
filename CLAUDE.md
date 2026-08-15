@@ -1142,17 +1142,54 @@ to the right group rather than appending to a list.
   cannot be written bare. Several early A20 examples used `as Currency` and do
   not compile.
 
-- **`PromptValue.ascriptionFormat` is a SECOND copy of `emitTypeExpression`, and
-  it is knowingly incomplete.** Prettify's four validated positions (constant,
-  `let`, `set`, `when`) route through `RiddlFileEmitter.emitValue`, which uses
-  the total `emitTypeExpression`. But a `PromptValue` nested in a
-  `Constructor`/`Call`/`Initiate` argument has no emitter-level dispatch — the
-  emitter has no `Constructor` case at all — so it still renders via
-  `ascriptionFormat` and can emit non-parsing output (`as any of {…}`,
-  `as Currency(USD)`, `as table of T of [3,3]`). Filed in BACKLOG § 1. `AST.scala`
-  is in `language` and `RiddlFileEmitter` in `passes`, so the copy cannot simply
-  call the original — the two must be kept in step by hand, which is precisely
-  why this pattern keeps recurring here.
+- **`PromptValue.ascriptionFormat` is a SECOND, narrower copy of `emitTypeExpression`
+  — CLOSED 2026-08-15, prettify never reaches it for a `Value` anymore.** Until this
+  fix, only the four validated positions (`constant`, `let`, `set`, `when`) routed
+  through `RiddlFileEmitter.emitValue`, and `emitValue`'s fallback for every OTHER
+  `Value` shape was `add(other.format)` — so a `PromptValue` nested one level
+  deeper (a `Constructor`/`Call`/`Initiate` argument, an `InvariantCondition`'s
+  `with` argument, a `LogicalExpression`/`NotExpression` operand) fell straight
+  back into `.format` and reached `ascriptionFormat`'s narrower dispatch, which
+  could emit non-parsing output (`as any of {…}`, `as Currency(USD)`,
+  `as table of T of [3,3]`, `as reference to entity E`).
+  **`emitValue` is now TOTAL over every `Value` shape that can contain a nested
+  `PromptValue`**: `Constructor`/`Call`/`Initiate` route their arguments through
+  new `emitConstructorArg(s)` helpers (which recurse through `emitValue`, so a
+  named `id = value` argument's value gets the same treatment); `InvariantCondition`
+  routes its `with` argument; `LogicalExpression`/`NotExpression` route their
+  operands through a new `emitLogicalOperand` helper that preserves the same
+  parenthesizing rule as `LogicalExpression.format`'s private `paren` helper
+  (kept in step by hand, since that helper is private to `AST.scala` and this
+  emitter cannot call it). Every `emitStatement` site whose operand can reach a
+  `PromptValue` — `send`/`tell`/`yield`/`reply`/`morph … with` (via a
+  `Constructor`/`RecordRef` operand, through a new `emitConstructorOperand`
+  helper), `put`, `return` (previously unhandled at all — both fell to the
+  generic `case statement: Statement => addLine(statement.format)` arm and are
+  now explicit cases), `require … with`, a `when` condition's `BooleanExpression`
+  arm, and a `match`/`case` guard — now routes through `emitValue` too.
+  `PrettifyVisitor.doInvariant`'s condition rendering (`invariant X is <condition>`)
+  had the same defect and is fixed the same way, EXCEPT for the `InvariantBlock`
+  form (`invariant X is { <stmts> <predicate> }`), which still renders via
+  `.format` — that is the separate, pre-existing "two dispatches"
+  (`Statement.format` vs. `emitStatement`) gap documented under Total Dispatch
+  above, not this one, and this fix does not reach it.
+  `ascriptionFormat` remains in `AST.scala`, unchanged, for the one place this
+  emitter genuinely cannot reach: `.format`-based error-message rendering. It is
+  no longer reachable from prettify output.
+  Proven by `TypedHoleContainerAscriptionRoundTripTest` (`passes/.../prettify/`):
+  a named `Constructor` argument (`any of {…}`), a named `Call` argument
+  (`Currency(USD)`), a nested `LogicalExpression` with the parenthesizing
+  intact (`reference to entity E`), and a `not` (`table of T of […]`) — all
+  four previously mis-emitted, all four verified to fail before the fix via
+  `git stash`. `AST.scala` is in `language` and `RiddlFileEmitter` in `passes`,
+  so the copy still cannot call the original — the two must be kept in step by
+  hand, which is precisely why this pattern keeps recurring here.
+  **What is NOT fixed by this**: `checkPromptAscription` (validation) is still
+  wired at only the same four positions, so an ascription that CONTRADICTS its
+  position's actual expected type is silently accepted at `put`, `return`,
+  `require … with`, and a `Call`/`Constructor`/`Initiate`/`TerminateStatement`
+  argument. That is a different defect (a missing check, not broken output) at
+  an overlapping set of positions — see BACKLOG § 1.
 
 - **AST.Set shadows scala.Set** — use selective imports or
   qualify as `scala.collection.immutable.Set`.
