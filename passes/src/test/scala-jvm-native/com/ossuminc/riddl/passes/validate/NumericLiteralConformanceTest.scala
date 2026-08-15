@@ -81,6 +81,28 @@ class NumericLiteralConformanceTest extends AbstractValidatingTest {
     "be accepted by Real — an integer is a fine real" in { (td: TestData) =>
       errorsFor("constant R: Real = 5", "real-int") mustBe empty
     }
+
+    // Regression: the parser accepts unbounded digit runs, so a literal wider than a Long is legal
+    // syntax. `asLong` (`text.toLong`) throws `NumberFormatException` on overflow -- inside a match
+    // guard, which surfaces as `[severe] Exception Thrown` with no line number instead of a
+    // diagnostic. The range check must compare via `asBigDecimal`, which has no such bound, so a
+    // 20-digit literal is a clean Error (Whole/Natural both admit it -- it is positive) rather than
+    // a thrown exception aborting validation.
+    "not overflow on a 20-digit literal (Natural)" in { (td: TestData) =>
+      errorsFor("constant N: Natural = 99999999999999999999", "nat-overflow") mustBe empty
+    }
+
+    "not overflow on a 20-digit literal (Whole)" in { (td: TestData) =>
+      errorsFor("constant W: Whole = 99999999999999999999", "whole-overflow") mustBe empty
+    }
+
+    "not overflow on a negative 20-digit literal, and report it cleanly (Whole)" in {
+      (td: TestData) =>
+        val errs = errorsFor("constant W: Whole = -99999999999999999999", "whole-neg-overflow")
+        withClue(errs.map(_.message).mkString("\n")) {
+          errs.exists(_.message.contains("Whole")) mustBe true
+        }
+    }
   }
 
   "a real literal" should {

@@ -2168,10 +2168,16 @@ case class ValidationPass(
     * The fractional-value arm must precede the `Natural`/`Whole` range arms: both are
     * [[IntegerTypeExpression]]s, and reporting a range violation for `1.5` would be true and
     * useless — the fraction is the more specific defect. Range arms are guarded on `isInteger` so
-    * `asLong` (which throws on a decimal) is never reached for a real-form literal. `Bool` is
-    * excluded explicitly even though it extends [[IntegerTypeExpression]]: a Boolean-typed
-    * constant is not "a whole number with a fractional part", it is a different kind entirely, and
-    * telling it so would be a nonsense message.
+    * a real-form literal is never range-checked as an integer. `Bool` is excluded explicitly even
+    * though it extends [[IntegerTypeExpression]]: a Boolean-typed constant is not "a whole number
+    * with a fractional part", it is a different kind entirely, and telling it so would be a
+    * nonsense message.
+    *
+    * The range arms compare via `asBigDecimal`, never `asLong`: the parser accepts unbounded digit
+    * runs (`99999999999999999999` is a legal `Natural` literal syntactically), and `asLong` is
+    * `text.toLong` — it throws `NumberFormatException` on overflow, INSIDE a match guard, which
+    * surfaces as `[severe] Exception Thrown` with no line number instead of a diagnostic.
+    * `BigDecimal` has no such bound.
     */
   private def checkNumericLiteralConformance(
     nl: NumericLiteral,
@@ -2185,13 +2191,13 @@ case class ValidationPass(
           s"${expected.format} requires a whole number, but ${nl.text} has a fractional part",
           suggestion = s"Remove the fractional part, or declare the type as Real or Decimal."
         )
-      case _: Natural if nl.isInteger && nl.asLong < 1 =>
+      case _: Natural if nl.isInteger && nl.asBigDecimal < BigDecimal(1) =>
         messages.addError(
           nl.loc,
           s"Natural is a positive whole number, but ${nl.text} is not greater than zero",
           suggestion = "Use Whole to admit zero, or Integer to admit negative values."
         )
-      case _: Whole if nl.isInteger && nl.asLong < 0 =>
+      case _: Whole if nl.isInteger && nl.asBigDecimal < BigDecimal(0) =>
         messages.addError(
           nl.loc,
           s"Whole is a non-negative whole number, but ${nl.text} is negative",
