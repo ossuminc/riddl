@@ -12,8 +12,8 @@ NOTEBOOK's body. Ask `git` for branch, tree and unpushed span — anything writt
 about those is stale the moment someone commits.
 
 **Build state — every line below was run as a command during this handoff
-(2026-08-15, Task 8 of the numeric-literals plan — the plan is now DONE, all
-8 tasks committed):**
+(2026-08-15, Task 5 of the A20 typed-holes plan — the plan is now DONE, all
+5 tasks committed):**
 
 - **The staged binary's version was NOT re-checked this session** — no
   `stage`/`reload` was run. Do not trust its version string; `reload` and
@@ -21,49 +21,49 @@ about those is stale the moment someone commits.
   (dynver freezes inside a running sbt server — see MEMORY).
 - `~/Code/ossuminc/bin/riddlc` was not touched. Bare `riddlc` on `$PATH`
   remains the old tap build.
-- **BAST `FORMAT_REVISION` is 18** — numeric literals spent the 17 → 18 bump
-  (`6cfeceb2f`). A20 and A38 (still unbuilt) now RIDE 18 rather than bumping
-  again; see BACKLOG § 2.
-- **All five JVM modules run and counted this session, in two invocations
-  (the first `;`-chain aborted at `riddlLib`, per the trap below):**
-  `language` **68 suites**, `passes` **201 suites**, `riddlLib` **13
-  suites** (1 test red — see below), `commands` **17+ suites**, `riddlc`
-  **4 suites**. `cJS` and `cNative` both compiled clean (no `[error]`
-  lines). TatSu **106/129** (moved from the 105/128 baseline — one fixture
-  added and it parses, not just counted); GBNF regenerated and verified
-  fresh via `gbnf_validator.py`.
-- **Three test failures, ALL confirmed PRE-EXISTING by `git stash` A/B**
-  (identical failure sets and counts with Task 8's diff stashed out):
-  `riddlLib`'s `Root2JsonCorpusTest` (59/190 clean, needs ≥95% — a much
-  larger gap than the 173/189 BACKLOG § 0 last recorded; re-measure before
-  trusting that older number), `commands`' `RiddlModelsRoundTripTest`
-  (59 succeeded / 130 failed, both before and after), and `riddlc`'s
-  `RunRiddlcOnLocalTest` + `ReportedIssuesTest` (18 succeeded / 3 failed,
-  both before and after). None of these read the fixture or grammar files
-  Task 8 touched — see `task-8-report.md` in
-  `.superpowers/sdd/2026-08-15-numeric-literals/` for the full transcripts.
+- **BAST `FORMAT_REVISION` is still 18** — A20 RODE it, did not bump it
+  (`git tag` confirms `2.0.0-rc.14` is still latest, so 18 has not shipped).
+  **A38 is now the LAST claimant of 18**; see BACKLOG § 2.
+- **All five JVM modules run and counted this session, in three
+  invocations (the chain aborted twice on the documented pre-existing
+  reds, per the trap below):** `language` **70 suites / 707 tests**,
+  `passes` **206 suites / 1340 tests**, `riddlLib` **14 suites / 131
+  tests** (1 red — `Root2JsonCorpusTest`, pre-existing), `commands` **17
+  suites / 245 tests** (130 red, all `RiddlModelsRoundTripTest`,
+  pre-existing), `riddlc` **4 suites / 21 tests** (3 red —
+  `RunRiddlcOnLocalTest` + `ReportedIssuesTest`, pre-existing). `cJS` and
+  `cNative` both compiled clean (`[success]`, no `[error]` lines).
+  **TatSu 107/130 → 108/131** (the plan brief's stated baseline of
+  106/129 was stale — measured before other work landed on this branch
+  since; the true immediately-prior baseline, re-measured this session by
+  temporarily removing the new fixture, was 107/130). Both numerator and
+  denominator moved by exactly one, confirming the new fixture
+  (`language/input/typed-holes.riddl`) parses under the EBNF, not just
+  gets counted. `ebnf_to_gbnf.py` + `gbnf_validator.py` both pass; the
+  regenerated `.gbnf` differed only in its generation timestamp (the EBNF
+  itself was untouched this task) so that diff was reverted rather than
+  committed.
+- **Four test failures, ALL confirmed PRE-EXISTING by `git stash -u` A/B**
+  (identical failure sets and counts with the new fixture stashed out):
+  `riddlLib`'s `Root2JsonCorpusTest` (59/190, unchanged), `commands`'
+  `RiddlModelsRoundTripTest` (59 succeeded / 130 failed, unchanged), and
+  `riddlc`'s `RunRiddlcOnLocalTest` (2 of the external riddl-examples
+  corpus fail) + `ReportedIssuesTest` ("should 406" — a `morph ... with
+  record ...` fixture in THIS repo, not the external corpus; also
+  unchanged before/after). The first three are the three reds this
+  branch has been carrying since the numeric-literals handoff;
+  `ReportedIssuesTest`'s "should 406" is a fourth, already implicit in
+  that same handoff's "18 succeeded / 3 failed" `riddlc` count but not
+  separately named until this session bothered to look inside it. None
+  read the fixture this task touched.
 
-**In flight: nothing.** The numeric-literals plan (8 tasks) is fully landed,
-verified, and committed, and so are **all three triaged task fixes** that
-followed it (`baab7c50c`, `472d11960`, `c01bd3add`) — `task/` now holds only
-Reid's own security draft, marked *"do not act on this"*.
-
-**A20 typed holes is PLANNED but deliberately NOT started**, and one thing
-must happen before it can be:
-
-> `docs/superpowers/plans/2026-08-15-a20-typed-holes.md` **Task 3 is BLOCKED
-> on a ruling from Reid** and says so in the plan. The design says an
-> unascribed `prompt("…")` warns where nothing supplies a type — but
-> "supplies a type" is a property of *which call sites we wire*, not of the
-> language. Only `validateConstant` and `checkValueType` carry an expected
-> type; constructor arguments do not. So the naive build warns on
-> `record R(prompt("the total"))`, which the design's own table lists as
-> silent. The plan recommends the conservative warning and gives the
-> alternative. **Tasks 1, 2, 4 and 5 are unaffected and can start.**
-
-A38 (refusal step naming an invariant) remains its own queued item. Both ride
-`FORMAT_REVISION` **18**, which is SPENT but has **not shipped** — latest tag
-is `2.0.0-rc.14`, so folding in beats bumping to 19. Re-check `git tag`.
+**In flight: nothing.** The A20 typed-holes plan (5 tasks) is fully
+landed, verified, and committed. `task/` holds only Reid's own security
+draft (`2026-08-04-security.md`, marked *"do not act on this"*) — the
+three defect reports open at the last handoff
+(valueref-migration/populates-repository, value-ref-starting-with-to,
+shown-by-loses-url-through-bast) were all triaged and moved to
+`task/done/` since.
 
 **Two pre-existing defects found and FILED, not fixed** (BACKLOG § 1): a
 predefined type keyword cannot be a `let` ascription (`let x: Natural = …`
@@ -107,36 +107,91 @@ it, and it is the largest unexplained thing on this branch.**
   or sbt serves previously-compiled classes and the proof is a lie.
 
 **Certainty.** Everything in the build-state bullets above was executed this
-session (Task 8, 2026-08-15) and every count is from a real command's
-output, not memory. The one thing explicitly NOT re-verified this session:
-the staged binary's contents — see above, restage before trusting it.
+session (Task 5 of the A20 plan, 2026-08-15) and every count is from a real
+command's output, not memory. The one thing explicitly NOT re-verified this
+session: the staged binary's contents — see above, restage before trusting
+it.
 
-**`task/` — still FOUR files, ALL UNTRIAGED — Task 8 did not touch these,
-they are unrelated to numeric literals** (verified 2026-08-15: same four
-files, same names, as the last handoff):
-
-- **`2026-08-14-valueref-migration-blinds-the-populates-repository-check.md` — READ
-  FIRST.** It is titled *"read this before flipping the bare form to an Error"* and it
-  arrived AFTER the flip shipped. Verified there with a negative control: migrating to
-  the `ValueRef` arm takes the populates-repository check from **863 warnings to 9**
-  corpus-wide with nothing about the models changed. It is a check that must learn the
-  widened operand — the same class `9d0e47acd` fixed for the addressing checks and
-  evidently missed here — **not** a reason to unflip. Pointer kept in BACKLOG beside
-  the flip so it survives triage.
-- `2026-08-14-value-ref-starting-with-to-fails-to-parse.md` — parser defect from the
-  same migration.
-- `2026-08-14-shown-by-loses-its-url-scheme-and-host-through-bast.md` — BAST fidelity
-  defect at revision 17.
-- `2026-08-04-security.md` — Reid's own draft, marked *"do not act on this"*, with
-  acceptance criteria empty.
-
-Outgoing replies are dropped and confirmed present: riddl-models
-`task/2026-08-14-bare-message-operand-is-now-an-error.md`.
+**`task/` holds one file, and it is not for triage.** `2026-08-04-security.md`
+is Reid's own draft, marked *"do not act on this"*. The three defect reports
+open at the numeric-literals handoff (valueref-migration/populates-repository,
+value-ref-starting-with-to, shown-by-loses-url-through-bast) were all triaged
+and moved to `task/done/` before this session started. This task also dropped
+a NEW outgoing task: `../ossum.tech/task/2026-08-15-a20-typed-holes.md`,
+documenting the A20 syntax for the language reference (one-instance-per-project
+rule — that repo is not edited from here).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
 
-## Numeric literals land, and what fell out of them (2026-08-15) — DONE
+## A20 typed holes land (2026-08-15) — DONE
+
+Five tasks: `PromptValue.typeEx: Option[TypeExpression]` + parser (reusing
+`TypeParser.typeExpression`, widened to `private[parsing]`), prettify (a new
+`PromptValue.ascriptionFormat` that strips the aliased-type `type` keyword and
+recurses through `Cardinality` wrappers), validation (restate/contradict plus
+a conservative unascribed-hole warning gated on which call sites actually
+carry an expected type), BAST at `FORMAT_REVISION` 18 (riding the bump
+numeric literals already spent, not a new one), JSON, and this verification
+task. Commits `a1e040e55`..`746557d4c`, plus this task's fixture, BACKLOG
+edits, and the ossum.tech task drop.
+
+**The design's stated goal — "a typed hole is a seam, and the ascription
+must never lie about it" — turned into a concrete rule: RESTATE, never
+OVERRIDE.** `let x: Real = prompt("...") as String` is a validation Error
+(the `let`'s declared type and the ascription disagree), and the comparison
+is deliberately **syntactic, not resolved-type** — `constant G: Real =
+prompt("...") as SomeAliasOfReal` is still an Error even when the alias's
+underlying type is `Real`, mirroring how A57 treats an alias as a distinct
+name rather than a transparent synonym. The corollary: **a `constant` with a
+`prompt` value needs no ascription at all**, because the constant's own type
+declaration already supplies it — `as Real` there is legal but says nothing
+the reader didn't already know.
+
+**A format bug — the sixth instance of "a dispatch written twice hides the
+incomplete copy behind the complete one" in three days (CLAUDE.md, Total
+Dispatch) — was found by Task 2 rather than merely proving Task 1's work.**
+`PromptValue.format` called `TypeExpression.format` directly, and
+`AliasedTypeExpression.format` always includes its `type` keyword, so
+`prompt("x") as OrderId` prettified to `as type OrderId` — a string that does
+not re-parse to the same AST (`type` there means something else). The first
+fix was itself top-level-only — the instance-fix reflex recurring INSIDE the
+fix for an instance-fix defect — and needed a second round to recurse through
+`Optional`/`ZeroOrMore`/`OneOrMore`/`SpecificRange` the same way
+`RiddlFileEmitter.emitTypeExpression` does, or `as OrderId?` regains the same
+bug one level down. `AST.scala` cannot call `RiddlFileEmitter` (language
+before passes, not the reverse), so the two copies cannot be merged and must
+be kept in step by hand — which is exactly why this class of bug keeps
+recurring here.
+
+**`Currency` cannot appear bare in an example, and this project's own design
+doc got it wrong before Task 3 caught it.** `Currency` is a predefined type
+requiring a `country` argument (`Currency(USD)`), so `prompt("...") as
+Currency` does not compile; the design doc's several `as Currency` examples
+are illustrative shorthand only. Every fixture in this plan (test suites AND
+the corpus fixture) uses `Real`, `String`, `Boolean`, or a declared alias
+instead, and the ossum.tech task drop carries the same warning forward so the
+documented examples don't repeat the mistake.
+
+**This task's TatSu baseline (106/129, from the plan's Task 5 brief) was
+already stale by the time verification ran.** Other work landed on
+`release/2` between when that number was recorded and this session (modality
+aliases, presentation verbs), moving the true immediately-prior baseline to
+107/130. Re-measured by temporarily removing the new fixture rather than
+trusting the brief's number — the lesson generalizes: **a baseline written
+into a plan brief is a snapshot, not a constant; re-measure it at execution
+time rather than trusting the number the plan was written against.**
+
+**`ReportedIssuesTest`'s "should 406" failure is a fourth pre-existing red,
+not a new one — but it had never been named on its own before.** The
+numeric-literals handoff recorded `riddlc`'s corpus-suite failures as "18
+succeeded / 3 failed" without separately naming which three; this session's
+`git stash -u` A/B (identical count and identical failing test names, before
+and after the new fixture) confirms it predates this plan too. It concerns
+`morph entity ... to state ... with record ...` (`riddlc/input/issues/406.riddl`,
+an in-repo fixture, not the external riddl-examples corpus) and is unrelated
+to typed holes — filed as a fact for the next session rather than
+investigated, since investigating it was out of this task's scope.
 
 Eight tasks: `NumericLiteral` AST node + parser, prettify, widen `Comparand`
 (A28) and `Constant.value` (four kinds), integer-type conformance, BAST at

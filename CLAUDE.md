@@ -922,6 +922,52 @@ to the right group rather than appending to a list.
   Also remember `PrettifyVisitor.keyword`, whose fallback is the string
   `"unknown"`.
 
+- **Typed holes (A20, release/2)** — `prompt("...") as <type>` ascribes a
+  type to an AI-computed value: the type is known and checkable at compile
+  time, the computation is prose an AI fills in at generation time. It is the
+  seam between RIDDL's deterministic tier and its AI tier. `PromptValue`
+  (already the node `prompt("...")` produced) gains `typeEx:
+  Option[TypeExpression]`; unascribed `prompt(...)` is unchanged and still
+  valid. Legal in every position an ordinary `Value` can occupy — `let`,
+  `constant`, a constructor argument, `set`, and a `when` condition (which
+  must resolve to `Boolean`) — with either a predefined type or a declared
+  alias.
+  **The ascription RESTATES the position's already-known type; it never
+  OVERRIDES it.** `let x: Real = prompt("...") as String` is a validation
+  Error (contradiction), not a coercion — checked by the same
+  `checkValueType` a `set` already used. **The comparison is deliberately
+  SYNTACTIC, not resolved-type**, mirroring A57: `constant G: Real =
+  prompt("...") as SomeAliasOfReal` is still an Error even though the
+  alias's underlying type is `Real`, because RIDDL treats a declared alias
+  as a distinct name, not a transparent synonym — a resolved comparison
+  would swallow exactly the contradiction this rule exists to catch.
+  **A `constant` with a `prompt` value needs no ascription at all, because
+  the constant's own type declaration already supplies it** — `constant G:
+  Real = prompt("...")` is the complete, idiomatic form; adding `as Real` is
+  legal but redundant. Where nothing else states a type (a bare `let x =
+  prompt(...)`, a bare constructor argument, a `when` condition with no
+  other source of truth) the ascription is the ONLY source of the type —
+  there it is doing real work, but it is still describing what is already
+  true about the hole, never coercing it. The seam warning for an
+  UNASCRIBED hole is deliberately CONSERVATIVE: it fires only at call sites
+  that already carry an expected type to compare against (`let`, `constant`
+  via `checkValueType`), not at constructor arguments, since nothing wires
+  an expected type there today.
+  **`PromptValue.format` and `RiddlFileEmitter`'s statement/constant
+  emitters are the SAME "dispatch written twice" risk documented under
+  Total Dispatch below** — `AliasedTypeExpression.format` always includes
+  its `type` keyword, so a naive `as <type>` render produced `as type
+  OrderId`, a string that does not mean the same thing on re-parse.
+  `PromptValue.ascriptionFormat` strips it and RECURSES through
+  `Optional`/`ZeroOrMore`/`OneOrMore`/`SpecificRange` wrappers rather than
+  falling back to `.format`, or the same bug resurfaces one level down
+  (`as OrderId?` → `as type OrderId?`). **`Currency` cannot appear bare in
+  an example** — it is a predefined type requiring a `country` argument
+  (`Currency(USD)`), so `prompt("...") as Currency` does not compile; use
+  `Real`, `String`, `Boolean`, `Score`, or a declared alias instead.
+  **BAST/JSON**: rides `FORMAT_REVISION` 18 (the bump numeric literals
+  already spent), not a new bump — see the FORMAT_REVISION note in
+  BACKLOG § 2 for who claims 18 next.
 - **On-clause message binding (A55, release/2)** — `on foo: command
   Foo { … }` optionally binds a local name to the handled message.
   The `:` is ordinary TYPE ASCRIPTION (same rule as `let x: T = …`
@@ -1018,7 +1064,9 @@ to the right group rather than appending to a list.
   — a narrowing of `Value`, defined the way `Comparand` is. Deliberately NOT the
   full union, which would admit `Call`, `Ask` and `Initiate` in a constant. The
   `PromptValue` arm is a **typed hole**: the constant declares the type and the
-  computation is prose, so it needs no `as T` — the precedent A20 builds on.
+  computation is prose, so it needs no `as T` — see the full A20 typed-holes
+  entry above (AST / Language Internals) for the ascribed form and its
+  restate-never-override rule, built on this precedent.
   **There was never any parser work for the separator.** `CommonParser.is` (`:38`)
   is `StringIn("is","are",":","=").?` and has always accepted the colon, and
   omission. All spellings are legal, none warns, and prettify emits `: `.

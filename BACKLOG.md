@@ -64,6 +64,20 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   `../ossum.tech/task/2026-08-15-integer-type-ranges.md` for the
   worked examples and the two related grammar widenings (`Constant`
   accepting a bare literal, `Comparand` accepting one).
+  Also add (2026-08-15, A20 typed-holes plan): `prompt("...") as
+  <type>` ascribes a type to an AI-computed value — the type is known
+  and checkable, the computation is prose an AI fills in at generation
+  time. Legal in every position an ordinary value can occupy (`let`,
+  `constant`, constructor argument, `set`, `when` condition), with
+  either a predefined type or a declared alias. **The ascription
+  RESTATES the position's already-known type, it never OVERRIDES
+  it** — a contradicting ascription is a validation Error, and a
+  `constant` with a `prompt` value needs no ascription at all since
+  the constant already declares the type. See the task dropped in
+  `../ossum.tech/task/2026-08-15-a20-typed-holes.md` for the full
+  writeup and worked examples, and its caution that `Currency`
+  cannot be used bare in an example (it requires a `country`
+  argument).
 - **Update the ossum.tech documentation site** with the same syntax changes,
   **plus a LIGHTER treatment of the implied syntax.** Reid, 2026-08-06 — the
   reference currently spells out more of the implicit forms than a reader needs,
@@ -843,22 +857,20 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
 
 **RULINGS TAKEN 2026-08-14, before an unattended run.** Reid answered four questions
-up front. Two are built (`exactly-once`, A43+A46 verbatim). The other two are
-APPROVED BUT NOT BUILT and are the largest remaining items:
-
-- **A20 typed holes — APPROVED, spelled `prompt("…") as T`.** Reid chose this over
-  `prompt T ("…")` and over the document's un-RIDDL `Value[T]("prose")`. It reuses the
-  shipped `prompt` and ascribes a type after it, matching `on foo: command Foo` and
-  `let x: T = …`, so nothing new enters the lexer. Also wants a plan.
+up front. Three are built (`exactly-once`, A43+A46 verbatim, and — as of
+2026-08-15 — A20). The remaining one (A38, below) is APPROVED BUT NOT BUILT.
 
 **THE `FORMAT_REVISION` BUMP (17 -> 18) IS SPENT — numeric literals landed and
-consumed it** (`6cfeceb2f`, 2026-08-14/15). A20 and A38 now RIDE revision 18
-rather than bumping again: each still adds/changes an AST node BAST must
-carry, but 18 has not shipped in a release yet, so folding them in avoids a
-needless third `.bast` regeneration across riddl-models. Decide differently
-only if 18 ships before either lands — then the next one bumps to 19 and says
-so in its commit, per the message-value plan's "the 16 -> 17 bump is SPENT"
-precedent.
+consumed it** (`6cfeceb2f`, 2026-08-14/15). **DONE 2026-08-15 — A20 typed
+holes shipped riding the same revision 18** (spelled `prompt("…") as T`,
+Reid's choice over `prompt T ("…")` and over the document's un-RIDDL
+`Value[T]("prose")`; reuses the shipped `prompt` and ascribes a type after
+it, matching `on foo: command Foo` and `let x: T = …`, so nothing new
+entered the lexer). **A38 is now the LAST claimant of revision 18** — it
+still adds/changes an AST node BAST must carry, and 18 has not shipped in a
+release yet, so it rides too rather than bumping again. Decide differently
+only if 18 ships before A38 lands — then A38 bumps to 19 and says so in its
+commit, per the message-value plan's "the 16 -> 17 bump is SPENT" precedent.
 
 Still unbuilt from A46: the compound-output noun/verb consistency warning (a sound, a
 window and a haptic inside one output). The VERBS shipped; this diagnostic did not, and
@@ -874,17 +886,6 @@ scope it to the whole repo: the first pass of this audit called A42(ii) unbuilt
 on a grammar-only grep and was wrong, because the REST client lives in `utils`.
 A seventh entry closes the section: a contradiction between the two documents
 that needs a ruling before either can be fixed.
-
-- **A20 — typed-hole value expressions, `Value[T]("prose")`.** A vague-but-typed
-  expression: the type is known and checkable, the computation is prose filled in
-  by AI at generation time. Types the seam between the deterministic and AI
-  tiers, which is untyped today.
-  Verified unbuilt: `grep -n "Value\[" language/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
-  returns nothing. The untyped relative DID ship — `prompt_value = "prompt" "("
-  literal_string ")"` — so the seam exists and is exactly as untyped as A20
-  complains of. `let x: T = prompt("…")` is the nearest available approximation
-  and constrains the hole from outside; decide whether that is enough before
-  building the general form.
 
 - **DONE 2026-08-14 (`5072bad5b`) — A43 and A46 shipped together.** Same four rules,
   and A46's verbs only make sense beside A43's modalities. Fixture at
