@@ -58,7 +58,25 @@ about those is stale the moment someone commits.
   read the fixture this task touched.
 
 **In flight: nothing.** The A20 typed-holes plan (5 tasks) is fully
-landed, verified, and committed. `task/` holds only Reid's own security
+landed, verified, and committed — **plus a whole-branch review and its
+fix wave** (`a59cbba60`, `414b79a5d`, `2e3be3ade`), which found four
+Important defects no per-task review could see. The biggest: nothing
+resolved the ascription's type reference, so `prompt("x") as Nonexistent`
+produced **no message at all**. See the "what only a whole-branch review
+can see" entry below.
+
+**A38 is now the sole remaining claimant on `FORMAT_REVISION` 18.**
+
+**One residual gap is FILED, not hidden** (BACKLOG § 1): a `prompt`
+ascription nested in a `Constructor`/`Call`/`Initiate` argument still
+renders via `PromptValue.ascriptionFormat` rather than the emitter's total
+`emitTypeExpression`, because `RiddlFileEmitter` has no `Constructor`
+dispatch at all. Non-regressive — those paths were equally broken before
+A20 — but it can emit non-parsing output for exotic type expressions.
+
+**There are FOUR pre-existing red suites, not three.** The fourth is
+riddlc's `ReportedIssuesTest` "should 406", previously bundled anonymously
+into an "18/3" count and never named. All four A/B identical under stash. `task/` holds only Reid's own security
 draft (`2026-08-04-security.md`, marked *"do not act on this"*) — the
 three defect reports open at the last handoff
 (valueref-migration/populates-repository, value-ref-starting-with-to,
@@ -256,6 +274,44 @@ to the task file and note the disposition below.
 
 ---
 
+
+## A20: what only a WHOLE-BRANCH review could see (2026-08-15) — DONE
+
+10 commits, `a1e040e55..2e3be3ade`. `prompt("…") as T` types the seam between the
+deterministic tier and the AI tier. Five tasks, each individually reviewed and each passing.
+**Then the whole-branch review found four Important defects, and that gap is the lesson.**
+
+**Per-task review is structurally blind to a missing owner.** Nothing resolved the ascription's
+type reference. `ResolutionPass` had `case _: PromptValue => ()` with the comment *"AI-computed
+literal text, no references"* — true before A20 and false after it, since `typeEx` can hold an
+`AliasedTypeExpression` with a `PathIdentifier`. So `prompt("x") as Nonexistent` produced **no
+message at all**: a model validating clean while naming a type that need not exist, which is the
+one thing that undercuts a feature whose entire purpose is that the seam be checkable. No task
+owned resolution, so no task's review asked about it. **When a feature adds a field, ask which
+pass owns it — the answer "none" is invisible from inside any single task.**
+
+**The shape-vs-instance failure recurred INSIDE the fix for its own previous instance.** Task 2
+found `ascriptionFormat` emitting `as type OrderId` and fixed it — top-level only. Told to fix
+the shape, it recursed through the cardinality wrappers — still only 5 of ~18 type-expression
+shapes. Then Task 3 wrote `typeAscriptionName`, **a third copy of the same dispatch**, comparing
+Scala class names, so `let x: OrderId = prompt("d") as OrderId?` reported a false contradiction
+against itself. Three copies, each incomplete in a different way, all written within hours of
+each other by people who had just been told about the pattern. That is the seventh instance in
+three days. **The durable fix was to delete a copy, not patch it** — prettify's validated
+positions now route through the emitter's total `emitTypeExpression`. One residual remains, in
+constructor arguments, and it is filed rather than hidden.
+
+**The design document's own examples did not compile.** `as Currency` appears throughout it, and
+`Currency` is a predefined type requiring a `country` argument. Four shipped source comments
+carried it too, one also asserting — falsely — that `Currency` resolves to `Real`. A spec that
+has never been run against the parser accumulates this quietly.
+
+**A ruling grounded in a count beat one grounded in judgement.** The open design question was how
+aggressively to warn about an untyped hole. The answer came from measuring: all 288 corpus uses
+already carry a type, 273 of them because the author wrote it unprompted. So the conservative
+warning — one case, everything unwired stays silent — was not caution, it was what the evidence
+supported. The distinction that made it precise: *"we did not wire this position"* is not the
+same fact as *"the language cannot type this position"*.
 
 ## Numeric literals, and four bugs found by RUNNING rather than reading (2026-08-15) — DONE
 

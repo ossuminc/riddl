@@ -1115,6 +1115,45 @@ to the right group rather than appending to a list.
   claiming `autoFixable` while prettify re-emits the old spelling is a lie a
   migration tool will act on.
 
+- **A20 typed holes — `prompt("…") as T`** (2026-08-15). `PromptValue` gains
+  `typeEx: Option[TypeExpression] = None`; one node, not two, because the forms
+  differ by an `Option` and not by wire shape. The default is legal ONLY because
+  it is trailing (`@JSExportTopLevel` forbids a non-trailing default, which is
+  why A55/A57's fields had to go undefaulted — `PromptValue` has no
+  `contents`/`metadata` after it).
+  **The ascription RESTATES the position's type and NEVER overrides it**, per
+  A57. Agreement is silent — writing the type out lets the hole read standalone —
+  and a contradiction is an Error.
+  **The comparison is SYNTACTIC on purpose, not by resolved type.**
+  `constant G: Real = prompt("g") as Currency` must Error even though `type
+  Currency is Real` resolves to the same underlying type; a resolved comparison
+  would swallow exactly the contradiction the rule exists to catch. Mirrors
+  `checkOnOtherBinding`.
+  **The untyped-seam warning is deliberately CONSERVATIVE** (Reid, 2026-08-15):
+  it fires on an unascribed `let x = prompt("…")` with no declared type, and
+  **nowhere else**. `when` is wired to `Boolean`; constructor arguments, `set`
+  and every unwired position stay SILENT. The evidence was a count — all 288
+  `prompt(` uses in riddl-models already carry a type (273 authors wrote the
+  ascription unprompted; the other 15 are `when` conditions) — so the warning's
+  whole value is for future code and its whole risk is firing on correct code.
+  **"We did not wire this position" is not the same fact as "the language cannot
+  type this position", and only the second deserves a diagnostic.**
+  **`Currency` is a predefined type requiring a `country` argument**, so it
+  cannot be written bare. Several early A20 examples used `as Currency` and do
+  not compile.
+
+- **`PromptValue.ascriptionFormat` is a SECOND copy of `emitTypeExpression`, and
+  it is knowingly incomplete.** Prettify's four validated positions (constant,
+  `let`, `set`, `when`) route through `RiddlFileEmitter.emitValue`, which uses
+  the total `emitTypeExpression`. But a `PromptValue` nested in a
+  `Constructor`/`Call`/`Initiate` argument has no emitter-level dispatch — the
+  emitter has no `Constructor` case at all — so it still renders via
+  `ascriptionFormat` and can emit non-parsing output (`as any of {…}`,
+  `as Currency(USD)`, `as table of T of [3,3]`). Filed in BACKLOG § 1. `AST.scala`
+  is in `language` and `RiddlFileEmitter` in `passes`, so the copy cannot simply
+  call the original — the two must be kept in step by hand, which is precisely
+  why this pattern keeps recurring here.
+
 - **AST.Set shadows scala.Set** — use selective imports or
   qualify as `scala.collection.immutable.Set`.
 - **Schema match ordering** — Schema extends `Leaf` (Definition)
