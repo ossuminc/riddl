@@ -62,6 +62,30 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
+- **`CommonParser.naturalNumber` swallows whitespace between digits.** Found
+  2026-08-15 by the numeric-literals review, in the pre-existing code — NOT
+  introduced by that work, which is why it was left alone rather than fixed in
+  scope.
+
+  `naturalNumber` (`CommonParser.scala:263`) is `CharIn("0-9").rep(1).!`. Under
+  `MultiLineWhitespace`, fastparse's `.rep` skips whitespace **between
+  repetitions** regardless of `~~` at the surrounding boundaries, so `1 2`
+  matches as one number and `.!` captures the literal text `"1 2"` — which then
+  goes to `.toLong` and throws `NumberFormatException`. **Verified empirically
+  against fastparse 3.1.1**, not deduced: the reviewer ran the combinator
+  standalone and got `Parsed.Success("1 2", 5)`.
+
+  The fix is mechanical — `CharsWhileIn("0-9")`, a run primitive that does not
+  have this behaviour. `integer` (`:270`) inherits it through `naturalNumber`.
+  Reachable from **A53 version components** (`version 1 2`) and anywhere
+  `integer` is used: `range(-5, 5)`, enumerator values, `String(1,10)`.
+
+  This is the **"fix the SHAPE, not the instance"** lesson for the third time
+  (after the alias-cycle guard and the flaky-benchmark round): the same idiom
+  was copied into new code without re-examining it, and the new copy was caught
+  only because a review ran the parser instead of reading it. Grep for
+  `.rep(1)` on a `CharIn` before assuming this is the last one.
+
 - **Make `!` a full synonym of `not` (A28) — RULED 2026-08-14, branch does not
   comply.** Reid, reviewing the `RIDDL-Tools-To-Do-List.md` reconciliation:
   *"`not` and `!` should be synonymous everywhere as the inverse of a boolean
