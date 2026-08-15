@@ -1364,7 +1364,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue, 5=BooleanExpression,
     * 6=Call, 7=Ask, 8=Initiate, 9=SelfValue); the reader mirrors this exactly. Discriminator 5 is
     * followed by a sub-tag byte selecting the boolean node (0=BooleanLiteral, 1=Comparison,
-    * 2=Logical, 3=Not); operator enums are stored by ordinal.
+    * 2=Logical, 3=Not); operator enums are stored by ordinal. A20 (revision 18): discriminator 4
+    * (PromptValue) APPENDS an optional `as <type>` ascription after the prompt literal, via
+    * `writeOption`/`writeTypeExpression` -- an untyped prompt's bytes are unchanged apart from the
+    * new `0x00` "none" flag.
     */
   def writeValue(v: Value): Unit = {
     v match
@@ -1376,6 +1379,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(4)
         writeLocation(pv.loc)
         writeLiteralString(pv.prompt)
+        writeOption(pv.typeEx)(writeTypeExpression) // A20: optional `as <type>` ascription
       case c: Constructor =>
         writer.writeU8(1)
         writeConstructor(c)

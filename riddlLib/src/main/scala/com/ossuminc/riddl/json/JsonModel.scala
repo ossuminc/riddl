@@ -839,8 +839,11 @@ object JsonModel:
     */
   case class ConstantRefDto(path: String) extends ValueDto
 
-  /** `{ "value": "prompt", "prompt": "..." }` — an AI-computed value (A54). */
-  case class PromptValueDto(prompt: String) extends ValueDto
+  /** `{ "value": "prompt", "prompt": "...", "type"?: <typeExpr> }` — an AI-computed value (A54).
+    * `type` is the optional `as <type>` ascription (A20 typed holes); omitted when unascribed, so an
+    * untyped prompt's JSON is unchanged.
+    */
+  case class PromptValueDto(prompt: String, typeEx: Option[TypeExprDto] = None) extends ValueDto
 
   /** `{ "value": "get", "source": "input"|"state", "keyword": "<kw>", "ref": "<path>" }` — the
     * `keyword` preserves the InputRef alias (input/form/…) for reflection fidelity; a StateRef has
@@ -1664,7 +1667,7 @@ object JsonModel:
     m("value").str match
       case "literal"     => LiteralValueDto(m("text").str)
       case "numeric"     => NumericLiteralDto(m("text").str)
-      case "prompt"      => PromptValueDto(m("prompt").str)
+      case "prompt"      => PromptValueDto(m("prompt").str, m.get("type").map(readTypeExpr))
       case "valueRef"    => ValueRefDto(m("path").str)
       case "constantRef" => ConstantRefDto(m("path").str)
       case "get"         => GetValueDto(m("source").str, m.get("keyword").map(_.str), m("ref").str)
@@ -1718,8 +1721,11 @@ object JsonModel:
         // ALWAYS a JSON string, never ujson.Num -- a Double would turn 1.50 into 1.5. See the
         // DTO's doc comment.
         ujson.Obj("value" -> ujson.Str("numeric"), "text" -> ujson.Str(text))
-      case PromptValueDto(prompt) =>
-        ujson.Obj("value" -> ujson.Str("prompt"), "prompt" -> ujson.Str(prompt))
+      case PromptValueDto(prompt, typeEx) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("value" -> ujson.Str("prompt"), "prompt" -> ujson.Str(prompt))
+            ++ typeEx.map(t => "type" -> writeTypeExpr(t))
+        )
       case ValueRefDto(path) =>
         ujson.Obj("value" -> ujson.Str("valueRef"), "path" -> ujson.Str(path))
       case ConstantRefDto(path) =>

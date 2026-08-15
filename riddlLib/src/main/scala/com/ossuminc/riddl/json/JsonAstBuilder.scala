@@ -1501,7 +1501,8 @@ object JsonAstBuilder:
     v match
       case LiteralValueDto(text)  => LiteralString(curAt, text)
       case NumericLiteralDto(text) => NumericLiteral(curAt, text)
-      case PromptValueDto(prompt) => PromptValue(curAt, LiteralString(curAt, prompt))
+      case PromptValueDto(prompt, typeEx) =>
+        PromptValue(curAt, LiteralString(curAt, prompt), typeEx.map(buildTypeExpr))
       case ValueRefDto(p)         => ValueRef(curAt, pathId(p))
       case GetValueDto(source, keyword, ref) =>
         val src: InputRef | StateRef = source match

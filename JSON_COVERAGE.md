@@ -180,7 +180,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 |---|---|---|
 | LiteralString (value) | ✅ A54 | `{ "value": "literal", "text": ... }` |
 | NumericLiteral | ✅ numeric-literals (2026-08-15) | `{ "value": "numeric", "text": ... }` — `text` is the literal AS WRITTEN (`5`, `007`, `1.50`, `2E+8`), always a JSON string, never `ujson.Num`: a Double would turn `1.50` into `1.5` and drop the precision of a large integer, exactly the loss the AST node stores text to avoid. Also serves as a `Comparand` (A28, widened) |
-| PromptValue | ✅ A54 | `{ "value": "prompt", "prompt": ... }` — AI-computed value |
+| PromptValue | ✅ A54 / A20 typed holes (2026-08-15) | `{ "value": "prompt", "prompt": ..., "type"?: <typeExpr> }` — AI-computed value; optional `type` is the `as <type>` ascription (A20), omitted when unascribed so an untyped prompt's JSON is unchanged |
 | Constructor / ConstructorArg | ✅ A54 | refKind command/event/query/result/record; positional + named args |
 | Call | ✅ A24 | `{ "value": "call", "function": "<path>", "args": [<arg>] }` — call a pure function to get a result |
 | Ask | ✅ 2.0 | `{ "value": "ask", "query": "<path>", "processor": "<path>", "processorKind": "<kind>" }` — a query correlated with the processor asked. No answer type is carried: it is the query's declared `replies result X`, so storing it would be a second place for the same fact to drift |

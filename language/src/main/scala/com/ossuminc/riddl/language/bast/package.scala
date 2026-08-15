@@ -111,7 +111,13 @@ package object bast {
     // because riddl-models' one instance happened to be a file/relative URL already. Folded
     // into 18 rather than bumping to 19 because 18 has not shipped in a release yet, so no
     // `.bast` file in the wild carries the old two-field shape to be misread.
-    18 // numeric literals + Constant carries a tagged value + URL carries scheme/authority
+    // Also riding 18 (2026-08-15): A20 typed holes -- `PromptValue` (writeValue/readValue
+    // discriminator 4) APPENDS an optional `as <type>` ascription (`writeOption` +
+    // `writeTypeExpression`) after the prompt literal. An untyped prompt now carries one extra
+    // `0x00` "none" byte; a revision-17 reader has no idea this byte exists and misreads it as
+    // the start of whatever comes next, derailing every byte after the first PromptValue it
+    // decodes -- same failure shape as the Constant/Method and numeric-literal changes above.
+    18 // numeric literals + Constant carries a tagged value + URL carries scheme/authority + A20 typed holes
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.
     *

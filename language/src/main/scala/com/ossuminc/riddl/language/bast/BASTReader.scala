@@ -2544,7 +2544,8 @@ class BASTReader(
       case 4 => // PromptValue
         val loc = readLocation()
         val what = readLiteralString()
-        PromptValue(loc, what)
+        val typeEx = readOption(readTypeExpression()) // A20: optional `as <type>` ascription
+        PromptValue(loc, what, typeEx)
       case 1 => // Constructor
         readConstructor()
       case 6 => // A24: Call
