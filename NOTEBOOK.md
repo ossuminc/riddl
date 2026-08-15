@@ -275,6 +275,37 @@ to the task file and note the disposition below.
 ---
 
 
+## A filed defect that was 22 times bigger than filed (2026-08-15) — DONE
+
+`b55d1d5cc`, `bb46de1db`, `9dcfc646e`, `a3c0aa345`. Three filed defects fixed. Two were exactly
+what they said. The third was not, and that is the entry worth keeping.
+
+**I filed it as "`Finder` never descends into a `when` condition."** The audit found **29
+field-held sites, 27 of them unreachable** — `MatchStatement`'s cases and guards,
+`Correlation.timeoutStatements`, `SagaStep`'s do/undo blocks, `RequireStatement.argument`,
+`InvariantBlock`, `PromptValue.typeEx`, the `Constructor`/`Call`/`Initiate` argument lists, the
+`LogicalExpression`/`NotExpression` operands, and more. So **anything reading the AST through
+`Finder` rather than a `Pass` has been silently missing content across 27 node fields** — and the
+consumers most exposed are precisely the ones that ENUMERATE rather than traverse, which is
+riddl-generator. Nothing errored. It just returned shorter lists.
+
+**The lesson is about how the defect was found, not what it was.** It surfaced because a BAST test
+tried to find a `ComparisonExpression` inside a `when` condition and got nothing back. One symptom,
+one field — and behind it, twenty-seven. **A field-drop defect has no natural blast radius: the
+instance you notice is the one your test happened to walk, not the extent of the problem.** That is
+the difference between this family and a dispatch defect, where the compiler at least knows the
+arms exist.
+
+**And the first fix still claimed completeness while missing an arm.** The review caught
+`PromptValue` — the only one of `Value`'s eleven arms holding a nested structure — absent from
+`fieldChildren` entirely, despite being named explicitly in the brief. Fixed, and the second pass
+answered the coverage question exhaustively rather than by assertion.
+
+**What it cost to not fix the shape:** the consolidated `fieldChildren` is one extension point
+instead of four scattered special cases, which is a real improvement, and it still ends in
+`case _ => Seq.empty`. Logged with the other unaudited catch-alls rather than held, because the
+consolidation was worth landing — but arm 12 of `Value` will be invisible on the day it is added.
+
 ## A20: what only a WHOLE-BRANCH review could see (2026-08-15) — DONE
 
 10 commits, `a1e040e55..2e3be3ade`. `prompt("…") as T` types the seam between the

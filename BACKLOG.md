@@ -87,81 +87,6 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 ### 1. Queued, designed, not started
 
-- **`Finder` never descends into a `when` condition.** Found 2026-08-15 by the
-  numeric-literals work, pre-existing and left alone.
-
-  `Finder.recursiveFindByType` walks `WhenStatement`'s then/else statement
-  lists but never its `condition` FIELD. So any Finder-based search silently
-  misses everything inside a `when` condition — a `ComparisonExpression`, a
-  `ValueRef`, a `PromptValue`, a `NumericLiteral`. It does not error; it
-  returns a shorter list.
-
-  **This is the same shape as the `statementValues` defect already recorded in
-  CLAUDE.md** — a walk that is total over the node kinds and is nonetheless
-  defeated because its INPUT drops a field. There, `RequireStatement.argument`
-  and `MatchCase.guard` were never yielded, which hid an `initiate` from four
-  separate checks at once. Auditing the match arms proves nothing about the
-  fields each arm forgot to return.
-
-  Check the other field-held statements and values while fixing it, rather
-  than patching the one instance: `MatchStatement`'s cases and guards,
-  `Correlation.timeoutStatements`, `SagaStep.do/undoStatements`,
-  `RequireStatement.argument`. **Fix the SHAPE, not the instance** — this is
-  now the fourth appearance of that lesson.
-
-  Consumers most likely affected are the ones that ENUMERATE rather than
-  traverse: riddl-gen and anything reading the AST through `Finder` instead of
-  a `Pass`. A green internal suite is not evidence here, for exactly the
-  reason `ConsumerReadsIncludedDefinitionsTest` exists.
-
-- **A predefined type keyword cannot be used as a `let` ascription.** Found
-  2026-08-15 by the numeric-literals work, pre-existing and left alone.
-
-  `let x: Natural = …` does not resolve. `LetStatement.typeRef` is a path
-  reference, and predefined type keywords are never entered into the symbol
-  table — `ResolutionPass.scala:329` reads
-  `case _: Enumeration | _: NumericType | _: PredefinedType => None // no
-  references`. So a bare `TypeRef` naming `Natural`, `Integer`, `Real`,
-  `String`, `Boolean` or any other predefined type has nothing to resolve
-  against.
-
-  The workaround is an alias — `type Nat is Natural` then `let x: Nat = …` —
-  which is what two test fixtures in this branch now do. That is a real
-  papercut: the obvious spelling silently fails while the indirect one works,
-  and A55 documents `let x: T = …` as ordinary type ascription without saying
-  `T` may not be a predefined type.
-
-  Decide deliberately between: seeding the predefined types into the symbol
-  table (watch the `PredefinedModule` precedent — the standard module is kept
-  in SEPARATE maps precisely so it does not leak into "all X in the model"),
-  or special-casing predefined keywords in the `let` ascription path only.
-  The first is more general and more dangerous; the second is narrow and
-  honest.
-
-- **`CommonParser.naturalNumber` swallows whitespace between digits.** Found
-  2026-08-15 by the numeric-literals review, in the pre-existing code — NOT
-  introduced by that work, which is why it was left alone rather than fixed in
-  scope.
-
-  `naturalNumber` (`CommonParser.scala:263`) is `CharIn("0-9").rep(1).!`. Under
-  `MultiLineWhitespace`, fastparse's `.rep` skips whitespace **between
-  repetitions** regardless of `~~` at the surrounding boundaries, so `1 2`
-  matches as one number and `.!` captures the literal text `"1 2"` — which then
-  goes to `.toLong` and throws `NumberFormatException`. **Verified empirically
-  against fastparse 3.1.1**, not deduced: the reviewer ran the combinator
-  standalone and got `Parsed.Success("1 2", 5)`.
-
-  The fix is mechanical — `CharsWhileIn("0-9")`, a run primitive that does not
-  have this behaviour. `integer` (`:270`) inherits it through `naturalNumber`.
-  Reachable from **A53 version components** (`version 1 2`) and anywhere
-  `integer` is used: `range(-5, 5)`, enumerator values, `String(1,10)`.
-
-  This is the **"fix the SHAPE, not the instance"** lesson for the third time
-  (after the alias-cycle guard and the flaky-benchmark round): the same idiom
-  was copied into new code without re-examining it, and the new copy was caught
-  only because a review ran the parser instead of reading it. Grep for
-  `.rep(1)` on a `CharIn` before assuming this is the last one.
-
 - **Make `!` a full synonym of `not` (A28) — RULED 2026-08-14, branch does not
   comply.** Reid, reviewing the `RIDDL-Tools-To-Do-List.md` reconciliation:
   *"`not` and `!` should be synonymous everywhere as the inverse of a boolean
@@ -582,7 +507,16 @@ that needs a ruling before either can be fixed.
   it was wrong because presence is mandatory. That was the misreading.)
 
 - **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
-  rule.** Reid ruled 2026-08-09: *"There must be no non-sealed matches — it is
+  rule.** **Add `Finder.fieldChildren` to the list** (2026-08-15): it is 29
+  hand-written cases ending in `case _ => Seq.empty`, so a future node holding
+  statements or values in a FIELD returns nothing rather than failing loudly.
+  Landed deliberately — consolidating four scattered special cases into ONE
+  extension point was a genuine improvement and was not held for this — but it
+  is the same shape as everything else in this item, and the next field-held
+  node will be silently invisible to every `Finder` consumer. All 11 `Value`
+  arms and all 18 `Statement` arms are covered *today*; nothing keeps arm 12 or
+  19 covered tomorrow.
+  Reid ruled 2026-08-09: *"There must be no non-sealed matches — it is
   okay to fall through to generate an error or exception but not okay to not
   select anything and then carry on as if nothing happened."* Offered as a
   follow-up and never answered, so it is filed rather than lost.
