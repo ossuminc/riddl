@@ -447,7 +447,13 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
           "section",
           "tab",
           "flow",
-          "block"
+          "block",
+          // A43: spatial/3D cohesion. Closed list, no structural change -- the input/output/group
+          // triad is already the modality-free logical core, and an alias is a directional
+          // heuristic for generators, never a different kind of definition.
+          "scene",
+          "space",
+          "zone"
         ).!
       )
     )
@@ -463,7 +469,11 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
           "table",
           "graph",
           "animation",
-          "picture"
+          "picture",
+          // A43: non-visual output modalities.
+          "sound",
+          "speech",
+          "haptic"
         ).!
       )
     )
@@ -479,7 +489,11 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
           "button",
           "picklist",
           "selector",
-          "item"
+          "item",
+          // A43: non-keyboard input modalities.
+          "voice",
+          "gesture",
+          "gaze"
         ).!
       )
     )

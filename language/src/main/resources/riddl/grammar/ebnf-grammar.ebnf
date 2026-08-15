@@ -457,10 +457,10 @@ group_output = output_aliases identifier presentation_aliases (literal_string | 
 group_input = input_aliases identifier acquisition_aliases type_ref [input_definitions] [with_metadata] ;
 output_definitions = [is "{" {undefined | (group_output | type_ref)} "}"] ;
 input_definitions = [is "{" {undefined | group_input} "}"] ;
-group_aliases = "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "frame" | "column" | "window" | "section" | "tab" | "flow" | "block" ;
-output_aliases = "output" | "document" | "list" | "table" | "graph" | "animation" | "picture" ;
-input_aliases = "input" | "form" | "text" | "button" | "picklist" | "selector" | "item" ;
-presentation_aliases = "presents" | "shows" | "displays" | "writes" | "emits" ;
+group_aliases = "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "frame" | "column" | "window" | "section" | "tab" | "flow" | "block" | "scene" | "space" | "zone" ;
+output_aliases = "output" | "document" | "list" | "table" | "graph" | "animation" | "picture" | "sound" | "speech" | "haptic" ;
+input_aliases = "input" | "form" | "text" | "button" | "picklist" | "selector" | "item" | "voice" | "gesture" | "gaze" ;
+presentation_aliases = "presents" | "shows" | "displays" | "writes" | "emits" | "plays" | "speaks" | "announces" | "vibrates" | "pulses" | "nudges" | "diffuses" | "serve" | "offer" | "taste" ;
 acquisition_aliases = "acquires" | "reads" | "takes" | "accepts" | "admits" | "enters" | "provides" | "selects" | "chooses" | "picks" | "initiates" | "submits" | "triggers" | "activates" | "activate" | "starts" ;
 
 (* Repository-related *)

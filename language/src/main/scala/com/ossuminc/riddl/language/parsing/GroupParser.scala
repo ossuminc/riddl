@@ -39,10 +39,38 @@ private[parsing] trait GroupParser extends CommonParser:
     }
   }
 
+  /** A46: the presentation verbs. `presents`/`shows`/`displays`/`writes`/`emits` are the original
+    * five; the rest were accepted with A43's modality aliases and pair with them -- `plays` for a
+    * sound or animation, `speaks`/`announces` for speech, `vibrates`/`pulses`/`nudges` for
+    * haptics, `diffuses` for scent, and `serve`/`offer`/`taste` for taste.
+    *
+    * **The mixed grammatical person is deliberate and is the author's list verbatim** (Reid,
+    * 2026-08-14, asked directly). Note this is the OPPOSITE call to the one recorded on
+    * `acquisitionAliases`, which is third-person with `activate` as a single deliberate exception
+    * and argues against pairing a whole vocabulary. Both stand: the verb is the SME's word choice,
+    * and these are the words the author wants available. Do not "regularise" `serve`/`offer`/
+    * `taste` into third person to match their neighbours.
+    */
   private def presentationAliases[u: P]: P[String] = {
     Keywords
       .keywords(
-        StringIn("presents", "shows", "displays", "writes", "emits")
+        StringIn(
+          "presents",
+          "shows",
+          "displays",
+          "writes",
+          "emits",
+          "plays",
+          "speaks",
+          "announces",
+          "vibrates",
+          "pulses",
+          "nudges",
+          "diffuses",
+          "serve",
+          "offer",
+          "taste"
+        )
       )
       .!
   }

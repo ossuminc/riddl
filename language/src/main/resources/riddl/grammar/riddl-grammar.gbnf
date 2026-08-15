@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-14 15:06 UTC
+# Generated: 2026-08-15 01:27 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -319,10 +319,10 @@ group-output ::= output-aliases ws1 identifier ws1 presentation-aliases ws (lite
 group-input ::= input-aliases ws1 identifier ws1 acquisition-aliases ws1 type-ref ws (input-definitions)? ws (with-metadata)?
 output-definitions ::= (is "{" (undefined | (group-output | type-ref))* "}")?
 input-definitions ::= (is "{" (undefined | group-input)* "}")?
-group-aliases ::= "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "frame" | "column" | "window" | "section" | "tab" | "flow" | "block"
-output-aliases ::= "output" | "document" | "list" | "table" | "graph" | "animation" | "picture"
-input-aliases ::= "input" | "form" | "text" | "button" | "picklist" | "selector" | "item"
-presentation-aliases ::= "presents" | "shows" | "displays" | "writes" | "emits"
+group-aliases ::= "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "frame" | "column" | "window" | "section" | "tab" | "flow" | "block" | "scene" | "space" | "zone"
+output-aliases ::= "output" | "document" | "list" | "table" | "graph" | "animation" | "picture" | "sound" | "speech" | "haptic"
+input-aliases ::= "input" | "form" | "text" | "button" | "picklist" | "selector" | "item" | "voice" | "gesture" | "gaze"
+presentation-aliases ::= "presents" | "shows" | "displays" | "writes" | "emits" | "plays" | "speaks" | "announces" | "vibrates" | "pulses" | "nudges" | "diffuses" | "serve" | "offer" | "taste"
 acquisition-aliases ::= "acquires" | "reads" | "takes" | "accepts" | "admits" | "enters" | "provides" | "selects" | "chooses" | "picks" | "initiates" | "submits" | "triggers" | "activates" | "activate" | "starts"
 
 # Repository-related
