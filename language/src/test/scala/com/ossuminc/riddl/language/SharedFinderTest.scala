@@ -8,7 +8,17 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.utils.pc
-import com.ossuminc.riddl.language.AST.{Root, Parents, RootContents, Type, Handler, Entity, Context}
+import com.ossuminc.riddl.language.AST.{
+  Root,
+  Parents,
+  RootContents,
+  Type,
+  Handler,
+  Entity,
+  Context,
+  NumericLiteral,
+  LetStatement
+}
 import com.ossuminc.riddl.language.parsing.{
   AbstractParsingTest,
   RiddlParserInput,
@@ -99,6 +109,132 @@ class SharedFinderTest extends AbstractTestingBasis {
         ._2
       entCmdParents must be(Parents(ctx, dom, root2))
     }
+    // Defect filed 2026-08-15 (BACKLOG § 1), fixed same day: `recursiveFindByType` walked
+    // `WhenStatement`'s then/else statement lists but never its `condition` FIELD, so a
+    // Finder-based search silently missed everything held in a field rather than in `contents` --
+    // a ComparisonExpression, a NumericLiteral, a Correlation's `timeoutStatements`, a
+    // RequireStatement's `with <expr>` argument, a MatchCase guard. This pins the fix's audit:
+    // every field-held site named in the BACKLOG entry, found by a NumericLiteral search at each.
+    // Parsing only (no validation) -- Finder operates on the parsed AST, so an unresolved
+    // reference is irrelevant to what these cases pin.
+    "descend into a WhenStatement's condition" in {
+      val content2 =
+        """domain D is {
+          |  context C is {
+          |    function F is {
+          |      when 5 > 3 then
+          |        let ignored = 1
+          |      end
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "whenCondTest"), true) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(r: Root) => r
+      val literals = Finder(root2).recursiveFindByType[NumericLiteral]
+      // "5" and "3" from the condition, "1" from the let inside `then` -- all three must be found.
+      literals.map(_.text) must contain("5")
+      literals.map(_.text) must contain("3")
+      literals.map(_.text) must contain("1")
+    }
+
+    "descend into a MatchCase guard" in {
+      val content2 =
+        """domain D is {
+          |  context C is {
+          |    command Track is { count: Integer } with { briefly "t" }
+          |    entity E is {
+          |      handler H is {
+          |        on command Track {
+          |          match count {
+          |            case > 3 when count > 7 { error "g" }
+          |            default { error "d" }
+          |          }
+          |        }
+          |      } with { briefly "h" }
+          |    } with { briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "matchGuardTest"), true) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(r: Root) => r
+      val literals = Finder(root2).recursiveFindByType[NumericLiteral]
+      // "3" is the pattern's comparand (`case > 3`) and "7" is the guard's operand (`when count >
+      // 7`) -- neither field was traversed pre-fix; both are new.
+      literals.map(_.text) must contain("3")
+      literals.map(_.text) must contain("7")
+    }
+
+    "descend into a Correlation's timeoutStatements" in {
+      val content2 =
+        """domain D is {
+          |  context C is {
+          |    command Ping is { n: Integer } with { briefly "cmd" }
+          |    event Pinged is { n: Integer } with { briefly "evt" }
+          |    projector P is {
+          |      correlation Corr by n yields command Ping is {
+          |        handler H is {
+          |          on e: event Pinged is { set field n to e.n }
+          |        } with { briefly "h" }
+          |      } times out after "1 day" {
+          |        let ignored = 42
+          |      } with { briefly "corr" }
+          |    } with { briefly "proj" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "corrTimeoutTest"), true) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(r: Root) => r
+      val literals = Finder(root2).recursiveFindByType[NumericLiteral]
+      literals.map(_.text) must contain("42")
+    }
+
+    "descend into a RequireStatement's `with <expr>` argument" in {
+      val content2 =
+        """domain D is {
+          |  context C is {
+          |    function F is {
+          |      require invariant UnderLimit with 42
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "requireArgTest"), true) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(r: Root) => r
+      val literals = Finder(root2).recursiveFindByType[NumericLiteral]
+      literals.map(_.text) must contain("42")
+    }
+
+    "still find the STATEMENTS in a SagaStep's do/undo (already reachable pre-fix)" in {
+      // Unlike the other cases above, `SagaStep(_, _, dos, undos, _)` was ALREADY one of the old
+      // `consider` match's explicit arms, so the two `LetStatement`s themselves were already
+      // found before this fix -- pinned here so a future change to `fieldChildren`'s SagaStep arm
+      // cannot silently narrow what used to work. (The NumericLiteral NESTED inside each
+      // LetStatement's `expression` was NOT reachable pre-fix, but that gap is the same one every
+      // other case above pins -- `LetStatement.expression` was never a traversed field for ANY
+      // LetStatement anywhere, not something specific to sitting inside a SagaStep -- so it is not
+      // re-tested here.)
+      val content2 =
+        """domain D is {
+          |  context C is {
+          |    saga S is {
+          |      step One is { let a = 1 } reverted by { let b = 2 }
+          |    } with { briefly "s" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "sagaStepTest"), true) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(r: Root) => r
+      val lets = Finder(root2).recursiveFindByType[LetStatement]
+      lets.map(_.identifier.value) must contain("a")
+      lets.map(_.identifier.value) must contain("b")
+    }
+
     "build path map correctly" in {
       val a = root.modules.head
       val b = a.domains.head

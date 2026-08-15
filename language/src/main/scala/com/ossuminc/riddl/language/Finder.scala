@@ -67,6 +67,64 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     }
   end findByType
 
+  /** The direct, non-`contents` children of a [[RiddlValue]] that hold nested statements or values
+    * in a FIELD rather than in a `Contents[?]` — e.g. `WhenStatement.condition`,
+    * `Correlation.timeoutStatements`, `RequireStatement.argument`.
+    *
+    * `recursiveFindByType`'s traversal was, until 2026-08-15, total over a handful of container-
+    * shaped statement kinds (When/Match/Foreach/SagaStep) but blind to every FIELD any node holds
+    * a nested value or statement block in — the same shape of defect `statementValues` had in
+    * `ValidationPass` (see CLAUDE.md "Total Dispatch"). This function is the fix, factored out
+    * so a new field-held site is added in ONE place rather than patched into a growing `consider`
+    * match.
+    *
+    * Deliberately excludes plain structural [[Reference]] fields (`processorRef`, `entity`,
+    * `handler`, `output`, `portlet`, `collection`, …) — those are leaf path identifiers already
+    * resolved via `ResolutionPass`'s refMap, not nested statements/values, and including every
+    * reference field on every statement would broaden this well past the defect's shape without a
+    * concrete use found for it.
+    */
+  private def fieldChildren(v: RiddlValue): Seq[RiddlValue] = v match
+    // Statement blocks held in fields, not in `contents`
+    case ws: WhenStatement    => Seq(ws.condition) ++ ws.thenStatements.toSeq ++ ws.elseStatements.toSeq
+    case ms: MatchStatement   => Seq(ms.expression) ++ ms.cases ++ ms.default.toSeq
+    case mc: MatchCase        => Seq(mc.pattern) ++ mc.guard.toSeq ++ mc.statements.toSeq
+    case cp: ComparisonPattern => Seq(cp.comparand)
+    case lp: LiteralPattern    => Seq(lp.literal)
+    case fe: ForeachStatement => fe.doStatements.toSeq
+    case ss: SagaStep         => ss.doStatements.toSeq ++ ss.undoStatements.toSeq
+    case cr: Correlation      => cr.timeoutStatements.toSeq // `.contents` already walked as a Container
+    case iv: Invariant        => iv.condition.toSeq
+    case ib: InvariantBlock   => ib.statements.toSeq :+ ib.predicate
+
+    // Statement leaves holding a single Value/BooleanExpression/message operand in a field
+    case rq: RequireStatement => Seq(rq.condition) ++ rq.argument.toSeq
+    case st: SetStatement     => Seq(st.value)
+    case lt: LetStatement     => Seq(lt.expression)
+    case pt: PutStatement     => Seq(pt.value)
+    case rt: ReturnStatement  => Seq(rt.value)
+    case sn: SendStatement    => Seq(sn.msg)
+    case tl: TellStatement    => Seq(tl.msg)
+    case yl: YieldStatement   => Seq(yl.msg)
+    case rp: ReplyStatement   => Seq(rp.msg)
+    case mo: MorphStatement   => Seq(mo.value)
+    case tm: TerminateStatement => tm.args
+
+    // Value/BooleanExpression composition — needed so a condition tree's leaves (a NumericLiteral,
+    // a ValueRef, …) are reachable, not just the top-level condition node itself.
+    case ic: InvariantCondition   => ic.argument.toSeq
+    case ce: ComparisonExpression => Seq(ce.left, ce.right)
+    case le: LogicalExpression    => Seq(le.left, le.right)
+    case ne: NotExpression        => Seq(ne.expr)
+    case ct: Constructor          => ct.args
+    case cl: Call                 => cl.args
+    case in: Initiate             => in.args
+    case ca: ConstructorArg       => Seq(ca.value)
+    case gv: GetValue             => Seq(gv.source)
+
+    case _ => Seq.empty
+  end fieldChildren
+
   def recursiveFindByType[T <: AST.RiddlValue: ClassTag]: Seq[T] =
     import scala.reflect.classTag
     val lookingFor = classTag[T].runtimeClass
@@ -77,29 +135,15 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
         cached.asInstanceOf[Seq[T]]
       case None =>
         def consider(list: Seq[T], child: RiddlValue): Seq[T] =
-          val nested =
+          val afterContents =
             child match
               case c: Container[?] =>
                 c.contents.foldLeft(list) { case (next, child) => consider(next, child) }
-              case WhenStatement(_, _, thenStatements, elseStatements, _) =>
-                val r1 = thenStatements.foldLeft(list) { case (next, child) =>
-                  consider(next, child)
-                }
-                elseStatements.foldLeft(r1) { case (next, child) => consider(next, child) }
-              case MatchStatement(_, _, cases, default) =>
-                val r1 = cases.foldLeft(list) { case (next, mc) =>
-                  mc.statements.foldLeft(next) { case (next2, child) => consider(next2, child) }
-                }
-                default.foldLeft(r1) { case (next, child) => consider(next, child) }
-              case ForeachStatement(_, _, _, _, doStatements) =>
-                doStatements.foldLeft(list) { case (next, child) => consider(next, child) }
-              case SagaStep(_, _, dos, undos, _) =>
-                val r2 = dos.foldLeft(list) { case (next, child) => consider(next, child) }
-                undos.foldLeft(r2) { case (next, child) => consider(next, child) }
               case _ => list
-            end match
-          if lookingFor.isAssignableFrom(child.getClass) then nested :+ child.asInstanceOf[T]
-          else nested
+          val afterFields =
+            fieldChildren(child).foldLeft(afterContents) { case (next, child) => consider(next, child) }
+          if lookingFor.isAssignableFrom(child.getClass) then afterFields :+ child.asInstanceOf[T]
+          else afterFields
         end consider
         val result = root.contents.foldLeft(Seq.empty[T]) { case (list, child) =>
           consider(list, child)
