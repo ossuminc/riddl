@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-15 04:24 UTC
+# Generated: 2026-08-15 04:47 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*

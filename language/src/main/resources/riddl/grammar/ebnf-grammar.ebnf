@@ -315,8 +315,11 @@ let_statement = "let" identifier [":" type_ref] "=" value ;
 
 (* A54: value expressions. A value is pseudo-code text, an AI-computed `prompt(...)`, a message/record
    constructor, a `get from` read of a UI input or entity state, (A28) a boolean expression whose
-   bare atom is a value reference or literal, or a numeric literal (tried last: boolean_expression
-   gets first refusal so `5 > 3` parses as a comparison, not a numeric literal with a dangling tail). *)
+   bare atom is a value reference or literal, or a numeric literal (tried last, deliberately:
+   `comparand` accepts only get_value/constant_ref/value_ref today, so this ordering has no
+   observable effect yet -- but once a later task widens comparand to accept numeric literals,
+   trying boolean_expression first is what keeps `5 > 3` parsing as a comparison rather than
+   numeric_literal matching the bare `5` and leaving `> 3` dangling). *)
 value = literal_string | prompt_value | call | ask | initiate | constructor | get_value
       | boolean_expression | numeric_literal ;
 prompt_value = "prompt" "(" literal_string ")" ;

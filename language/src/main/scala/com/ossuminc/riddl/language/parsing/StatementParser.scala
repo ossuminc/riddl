@@ -457,12 +457,19 @@ private[parsing] trait StatementParser {
     *
     * There is no lexical ambiguity with identifiers or paths: an identifier must begin with a
     * letter (`simpleIdentifier`), so nothing beginning with a digit or a sign can be one.
+    *
+    * **Every digit run uses `CharsWhileIn`, never `CharIn(...).rep(1)`.** Under
+    * `MultiLineWhitespace`, `.rep` skips whitespace BETWEEN repetitions regardless of `~~` at the
+    * rule's own boundaries — confirmed empirically against fastparse 3.1.1, 2026-08-15. With
+    * `CharIn("0-9").rep(1)` this parsed `1 2` as ONE literal of text `"1 2"` (`isInteger` then
+    * reporting `true`, and `asLong` throwing `NumberFormatException` instead of the author getting
+    * an "expected `,` or `)`" parse error). `CharsWhileIn` is a run primitive with no such gap.
     */
   private def numericLiteral[u: P]: P[NumericLiteral] = {
     P(
-      Index ~~ (CharIn("+\\-").? ~~ CharIn("0-9").rep(1) ~~
-        ("." ~~ CharIn("0-9").rep(1)).? ~~
-        (CharIn("eE") ~~ CharIn("+\\-").? ~~ CharIn("0-9").rep(1)).?).! ~~ Index
+      Index ~~ (CharIn("+\\-").? ~~ CharsWhileIn("0-9") ~~
+        ("." ~~ CharsWhileIn("0-9")).? ~~
+        (CharIn("eE") ~~ CharIn("+\\-").? ~~ CharsWhileIn("0-9")).?).! ~~ Index
     ).map { case (start, text, end) => NumericLiteral(at(start, end), text) }
   }
 
@@ -481,10 +488,13 @@ private[parsing] trait StatementParser {
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
         booleanExpr |
-        // LAST, and deliberately: `booleanExpr` must get first refusal so `5 > 3` parses as a
-        // comparison. Tried earlier, `numericLiteral` would match `5`, return it as the whole
-        // value, and leave `> 3` dangling. `comparison` cuts only AFTER its operator, so a bare
-        // `5` backtracks cleanly out of `booleanExpr` and lands here.
+        // LAST, and deliberately: `booleanExpr` must get first refusal. Today `comparand` accepts
+        // only `GetValue | ConstantRef | ValueRef`, so `5 > 3` does not yet parse as a comparison
+        // under EITHER ordering -- this ordering has no observable effect until a later task
+        // widens `Comparand` to accept numeric literals. Once it does, this ordering is what keeps
+        // `5 > 3` parsing as a comparison rather than `numericLiteral` matching the bare `5`,
+        // returning it as the whole value, and leaving `> 3` dangling: `comparison` cuts only
+        // AFTER its operator, so a bare `5` backtracks cleanly out of `booleanExpr` and lands here.
         numericLiteral.map(nl => nl: Value)
     )
   }

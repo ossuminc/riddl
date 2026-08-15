@@ -48,6 +48,15 @@ abstract class NumericLiteralTest(using PlatformContext) extends AbstractParsing
         case other => fail(s"expected NumericLiteral, got $other")
     }
 
+    "compute asLong on a negative integer" in { (td: TestData) =>
+      firstLetValue(wrap("-1"), td) match
+        case nl: NumericLiteral =>
+          nl.text mustBe "-1"
+          nl.isInteger mustBe true
+          nl.asLong mustBe -1L
+        case other => fail(s"expected NumericLiteral, got $other")
+    }
+
     "preserve trailing zeros in a decimal" in { (td: TestData) =>
       firstLetValue(wrap("1.50"), td) match
         case nl: NumericLiteral =>
@@ -89,6 +98,25 @@ abstract class NumericLiteralTest(using PlatformContext) extends AbstractParsing
       firstLetValue(wrap("1.5e-3"), td) match
         case nl: NumericLiteral => nl.text mustBe "1.5e-3"
         case other              => fail(s"expected NumericLiteral, got $other")
+    }
+
+    // Regression: fastparse's `.rep` skips whitespace BETWEEN repetitions under
+    // MultiLineWhitespace regardless of `~~` at the rule's own boundaries. With
+    // `CharIn("0-9").rep(1)` this made "1 2" parse as ONE literal of text "1 2" -- isInteger then
+    // reported true, and asLong would throw NumberFormatException, instead of the author getting
+    // an "expected ',' or ')'"-style parse error. `numericLiteral` must use `CharsWhileIn`, which
+    // has no such gap: two whitespace-separated numbers are never one literal. Either outcome
+    // below is acceptable -- a parse failure, or a successful parse whose literal's text is just
+    // the first number -- but "1 2" swallowed whole as a single literal is not.
+    "not swallow whitespace-separated digits into a single literal" in { (td: TestData) =>
+      val input = RiddlParserInput(wrap("1 2"), td)
+      TopLevelParser.parseInput(input, true) match
+        case Left(_) => succeed
+        case Right(root) =>
+          val lets = Finder(root).recursiveFindByType[LetStatement]
+          lets.headOption.map(_.expression) match
+            case Some(nl: NumericLiteral) => nl.text must not be "1 2"
+            case other => fail(s"expected a parse failure or a NumericLiteral, got $other")
     }
   }
 }
