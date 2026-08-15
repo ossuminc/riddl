@@ -369,16 +369,92 @@ Prettify emits values through `.format` (`RiddlFileEmitter.scala:256`, `:470`), 
 
 - [ ] **Step 1: Write the failing test**
 
-Model it on `passes/src/test/scala-jvm-native/com/ossuminc/riddl/passes/prettify/InfixAlternationRoundTripTest.scala` — read that file first for the exact prettify invocation and base class in use, and mirror it.
+Create `passes/src/test/scala-jvm-native/com/ossuminc/riddl/passes/prettify/NumericLiteralRoundTripTest.scala`:
 
-The test must, for each of `5`, `-1`, `+3`, `007`, `1.50`, `-0.25`, `1e3`, `1.5e-3`, `2E+8`:
+```scala
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-1. parse a model containing `let x = <literal>`
-2. run `PrettifyPass` with `flatten=true`
-3. assert the emitted text contains the literal **exactly as written**
-4. re-parse the emitted text and assert the `NumericLiteral.text` is unchanged
+package com.ossuminc.riddl.passes.prettify
 
-Assert on the literal's exact text, not merely that re-parsing succeeds — `1.5` re-parses fine after `1.50` is mangled to it, and that is precisely the bug this guards.
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{Finder, toSeq}
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
+import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.pc
+
+import org.scalatest.*
+
+/** A numeric literal stores its text AS WRITTEN, so prettify must reproduce it byte-for-byte.
+  *
+  * These assertions are on the literal's EXACT TEXT, not on whether the output re-parses. `1.5`
+  * re-parses perfectly well after `1.50` has been mangled into it — a test that only re-parsed
+  * would pass while the fidelity claim was false, which is the whole failure this guards.
+  */
+class NumericLiteralRoundTripTest extends AbstractValidatingTest {
+
+  private def parse(src: String, origin: String): Root =
+    TopLevelParser.parseInput(RiddlParserInput(src, origin)) match
+      case Right(root) => root
+      case Left(msgs)  => fail(s"parse of $origin failed:\n${msgs.format}")
+
+  private def prettify(root: Root): String =
+    val creators = Pass.standardPasses :+ { (in: PassInput, out: PassesOutput) =>
+      PrettifyPass(in, out, PrettifyPass.Options(flatten = true, inputDir = ""))
+    }
+    Pass
+      .runThesePasses(PassInput(root), creators)
+      .outputs
+      .outputOf[PrettifyOutput](PrettifyPass.name)
+      .getOrElse(fail("PrettifyPass produced no output"))
+      .state
+      .filesAsString
+
+  private def model(literal: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    function F is {
+       |      body { let x = $literal }
+       |    } with { briefly "f" }
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  private def literalTextIn(root: Root): String =
+    Finder(root)
+      .recursiveFindByType[LetStatement]
+      .headOption
+      .map(_.expression)
+      .collect { case nl: NumericLiteral => nl.text }
+      .getOrElse(fail("no NumericLiteral found in a let statement"))
+
+  private val forms =
+    Seq("5", "-1", "+3", "007", "1.50", "-0.25", "1e3", "1.5e-3", "2E+8")
+
+  "a numeric literal" should {
+    for form <- forms do
+      s"survive a prettify round trip byte-exact: $form" in { (td: TestData) =>
+        val original = parse(model(form), s"orig-$form")
+        literalTextIn(original) mustBe form
+
+        val emitted = prettify(original)
+        withClue(s"emitted source was:\n$emitted\n") {
+          emitted must include(s"let x = $form")
+        }
+
+        val reparsed = parse(emitted, s"reparsed-$form")
+        literalTextIn(reparsed) mustBe form
+      }
+    end for
+  }
+}
+```
+
+The `for … do` loop generates one named case per form, so a failure names the offending literal instead of hiding it inside a passing loop.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -430,14 +506,114 @@ Delivers `count > 5`. **This reverses a deliberate A28 decision** — the AST cu
 
 - [ ] **Step 1: Write the failing test**
 
-Create `NumericComparandTest.scala`. Read an existing suite in that directory first for the base class and the message-assertion helpers, then write cases asserting:
+Create `passes/src/test/scala-jvm-native/com/ossuminc/riddl/passes/validate/NumericComparandTest.scala`:
 
-1. `when count > 5 then …` parses and validates without an Error.
-2. It produces a `StyleWarning` whose message suggests a named constant.
-3. `when count > MaxCount` (a `constant`) produces **no** such warning — the negative control.
-4. `when count > true` is still a parse error (booleans are atoms, not comparands).
+```scala
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-Assert the warning **count is exactly 1** in case 2, not merely `nonEmpty`. Over-firing is the plausible failure here and `nonEmpty` cannot see it.
+package com.ossuminc.riddl.passes.validate
+
+import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.utils.pc
+
+import org.scalatest.TestData
+
+/** A28 narrowed comparands to refs so a literal comparison could not be built at all. Reid
+  * reversed that 2026-08-14: the corpus held ONE constant across 189 models, so the rule had no
+  * uptake to protect. The intent survives as a StyleWarning.
+  *
+  * **`showStyleWarnings` must be ON here.** The default suppresses exactly the message under test,
+  * and a suite that cannot see its own signal reports a confident zero.
+  */
+class NumericComparandTest extends AbstractValidatingTest {
+
+  private def diagnostics(src: String, origin: String): Messages =
+    var captured: Messages = Messages.empty
+    pc.withOptions(CommonOptions(showStyleWarnings = true, showWarnings = true)) { _ =>
+      parseAndValidate(src, origin, shouldFailOnErrors = false) { (_, _, messages) =>
+        captured = messages
+        succeed
+      }
+    }
+    // Cases below assert the ABSENCE of a warning, which a fixture that never parsed satisfies for
+    // free. Refuse to report on one.
+    captured.find(_.message.contains("Expected one of")) match
+      case Some(m) => fail(s"fixture did not parse, so any absence proves nothing:\n${m.format}")
+      case None    => captured
+  end diagnostics
+
+  private def model(condition: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    constant MaxCount: Integer = 5
+       |    record St is { count: Integer, note: String } with { briefly "st" }
+       |    command Cmd is { why: String } with { briefly "cmd" }
+       |    entity E is {
+       |      state S of record St is {
+       |        handler H is {
+       |          on command Cmd { when $condition then do "big" end }
+       |        } with { briefly "h" }
+       |      } with { briefly "s" }
+       |    } with { briefly "e" }
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  private def literalWarnings(msgs: Messages): Messages =
+    msgs.justStyle.filter(_.message.contains("named constant"))
+
+  "a numeric literal comparand" should {
+
+    "parse and validate without an Error" in { (td: TestData) =>
+      val msgs = diagnostics(model("count > 5"), "literal-comparand")
+      withClue(msgs.map(_.message).mkString("\n")) {
+        msgs.justErrors mustBe empty
+      }
+    }
+
+    "draw exactly one StyleWarning suggesting a named constant" in { (td: TestData) =>
+      val msgs = diagnostics(model("count > 5"), "literal-style")
+      // EXACTLY ONE, not `nonEmpty`: over-firing is the plausible failure here, and `nonEmpty`
+      // cannot tell one warning from three.
+      withClue(msgs.map(_.message).mkString("\n")) {
+        literalWarnings(msgs).size mustBe 1
+      }
+    }
+
+    "stay silent when the comparison names a constant" in { (td: TestData) =>
+      val msgs = diagnostics(model("count > constant MaxCount"), "named-constant")
+      withClue(msgs.map(_.message).mkString("\n")) {
+        literalWarnings(msgs) mustBe empty
+      }
+    }
+
+    "accept a decimal and a negative literal" in { (td: TestData) =>
+      literalWarnings(diagnostics(model("count > 1.5"), "decimal")).size mustBe 1
+      literalWarnings(diagnostics(model("count > -1"), "negative")).size mustBe 1
+    }
+  }
+
+  "a boolean comparand" should {
+    "remain a parse error — true/false are atoms, not comparands" in { (td: TestData) =>
+      var captured: Messages = Messages.empty
+      pc.withOptions(CommonOptions(showStyleWarnings = true)) { _ =>
+        parseAndValidate(model("count > true"), "bool-comparand", shouldFailOnErrors = false) {
+          (_, _, messages) => captured = messages; succeed
+        }
+      }
+      captured.justErrors must not be empty
+    }
+  }
+}
+```
+
+If `count > constant MaxCount` is not the spelling `constantRef` accepts, check the `constantRef` rule and use whatever it defines — the point of the case is a named constant as comparand, not the particular spelling.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -703,20 +879,141 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `NumericLiteralConformanceTest.scala` with one case per rule:
+Create `passes/src/test/scala-jvm-native/com/ossuminc/riddl/passes/validate/NumericLiteralConformanceTest.scala`:
 
-1. `constant N is Natural = 10` — no messages.
-2. `constant N is Natural = 0` — **Error**, message mentions that `Natural` is positive.
-3. `constant N is Natural = -1` — **Error**.
-4. `constant W is Whole = 0` — no messages.
-5. `constant W is Whole = -1` — **Error**.
-6. `constant I is Integer = -1` — no messages.
-7. `constant N is Natural = 1.5` — **Error**, message says a whole number is required.
-8. `constant R is Real = 1.5` — no messages.
-9. `constant R is Real = 5` — no messages (an integer literal is a fine real).
-10. **Negative control:** a `let x: Natural = someRealField` reading a `Real`-typed field produces **no** Error — references stay loose; only literals are strict.
+```scala
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-Case 10 is the one that stops an over-eager implementation from tightening `isAssignmentCompatible` itself, which would change behaviour far beyond literals.
+package com.ossuminc.riddl.passes.validate
+
+import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.utils.pc
+
+import org.scalatest.TestData
+
+/** A literal's value is statically known where a reference's is not, so literals are held to a
+  * STRICTER standard than the surrounding assignment rules.
+  *
+  * `NumericType.isAssignmentCompatible` deliberately lets ANY numeric accept any other, and that
+  * stays true for references. The last case pins that from the loose side: if someone "tidies up"
+  * by tightening `isAssignmentCompatible` itself, this suite goes red instead of silently
+  * changing behaviour far beyond literals.
+  */
+class NumericLiteralConformanceTest extends AbstractValidatingTest {
+
+  private def diagnostics(src: String, origin: String): Messages =
+    var captured: Messages = Messages.empty
+    pc.withOptions(CommonOptions(showStyleWarnings = false, showWarnings = false)) { _ =>
+      parseAndValidate(src, origin, shouldFailOnErrors = false) { (_, _, messages) =>
+        captured = messages
+        succeed
+      }
+    }
+    captured.find(_.message.contains("Expected one of")) match
+      case Some(m) => fail(s"fixture did not parse, so any absence proves nothing:\n${m.format}")
+      case None    => captured
+  end diagnostics
+
+  private def constantModel(decl: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    $decl
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  private def errorsFor(decl: String, origin: String): Messages =
+    diagnostics(constantModel(decl), origin).justErrors
+
+  "an integer literal" should {
+    "be accepted by Natural when positive" in { (td: TestData) =>
+      errorsFor("constant N: Natural = 10", "nat-ok") mustBe empty
+    }
+
+    "be rejected by Natural when zero" in { (td: TestData) =>
+      val errs = errorsFor("constant N: Natural = 0", "nat-zero")
+      withClue(errs.map(_.message).mkString("\n")) {
+        errs.exists(_.message.contains("Natural")) mustBe true
+      }
+    }
+
+    "be rejected by Natural when negative" in { (td: TestData) =>
+      errorsFor("constant N: Natural = -1", "nat-neg") must not be empty
+    }
+
+    "be accepted by Whole when zero" in { (td: TestData) =>
+      errorsFor("constant W: Whole = 0", "whole-zero") mustBe empty
+    }
+
+    "be rejected by Whole when negative" in { (td: TestData) =>
+      val errs = errorsFor("constant W: Whole = -1", "whole-neg")
+      withClue(errs.map(_.message).mkString("\n")) {
+        errs.exists(_.message.contains("Whole")) mustBe true
+      }
+    }
+
+    "be accepted by Integer when negative" in { (td: TestData) =>
+      errorsFor("constant I: Integer = -1", "int-neg") mustBe empty
+    }
+
+    "be accepted by Real — an integer is a fine real" in { (td: TestData) =>
+      errorsFor("constant R: Real = 5", "real-int") mustBe empty
+    }
+  }
+
+  "a real literal" should {
+    "be rejected by an integer type" in { (td: TestData) =>
+      val errs = errorsFor("constant N: Natural = 1.5", "nat-frac")
+      withClue(errs.map(_.message).mkString("\n")) {
+        // The fractional arm must win over the range arm: reporting "not greater than zero" for
+        // 1.5 would be true and useless.
+        errs.exists(m => m.message.contains("whole number")) mustBe true
+      }
+    }
+
+    "be accepted by Real" in { (td: TestData) =>
+      errorsFor("constant R: Real = 1.5", "real-frac") mustBe empty
+    }
+
+    "be accepted by Real in scientific notation" in { (td: TestData) =>
+      errorsFor("constant R: Real = 1.5e-3", "real-exp") mustBe empty
+    }
+  }
+
+  "a reference, unlike a literal" should {
+    "stay loosely compatible — a Real-typed field still assigns to a Natural" in {
+      (td: TestData) =>
+        val src =
+          """domain D is {
+            |  context C is {
+            |    record St is { rate: Real, note: String } with { briefly "st" }
+            |    command Cmd is { why: String } with { briefly "cmd" }
+            |    entity E is {
+            |      state S of record St is {
+            |        handler H is {
+            |          on command Cmd { let x: Natural = rate }
+            |        } with { briefly "h" }
+            |      } with { briefly "s" }
+            |    } with { briefly "e" }
+            |  } with { briefly "c" }
+            |} with { briefly "d" }
+            |""".stripMargin
+        val errs = diagnostics(src, "ref-stays-loose").justErrors
+        withClue(errs.map(_.message).mkString("\n")) {
+          errs mustBe empty
+        }
+    }
+  }
+}
+```
+
+The final case is the guard rail. If it fails, the implementation tightened `isAssignmentCompatible` instead of adding a literal-only check — revert that and put the check in `checkNumericLiteralConformance` where it belongs.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -835,17 +1132,157 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Model on `passes/src/test/scalajvm/com/ossuminc/riddl/passes/ConstantAndMethodBASTRoundTripTest.scala` — read it for the `roundTrip` helper shape (parse → `BASTWriterPass` → `BASTReader`). Cases:
+Create `passes/src/test/scalajvm/com/ossuminc/riddl/passes/NumericLiteralBASTRoundTripTest.scala`:
 
-1. Every literal form from Task 1 survives with `text` unchanged.
-2. A `count > 5` comparison survives with its comparand a `NumericLiteral`.
-3. `constant Max is Integer = 5` survives with `value` a `NumericLiteral`.
-4. `constant Enabled is Boolean = true` survives as a `BooleanLiteral`.
-5. `constant Gravity is Real = prompt("…")` survives as a `PromptValue`.
-6. `constant Name is String = "Fred"` survives as a `LiteralString`.
-7. A model with a literal followed by **several more definitions** decodes fully — a misaligned stream shows up as damage AFTER the literal, not at it.
+```scala
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-Case 7 is the one that catches a tag/payload mismatch. A BAST error names where the reader DERAILED, never what derailed it.
+package com.ossuminc.riddl.passes
+
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.Finder
+import com.ossuminc.riddl.language.bast.BASTReader
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
+import com.ossuminc.riddl.utils.pc
+
+import org.scalatest.TestData
+
+/** Numeric literals and the widened `Constant` across the wire format, at revision 18.
+  *
+  * **A BAST error names where the reader DERAILED, never what derailed it.** So the decisive case
+  * is not the literal itself but the one with definitions AFTER it: a tag whose payload the reader
+  * mis-sizes leaves the stream misaligned, and the damage surfaces on some later, innocent node.
+  */
+class NumericLiteralBASTRoundTripTest extends AbstractValidatingTest {
+
+  /** parse -> BAST -> decode. Returns the decoded tree, which is a Module (the nebula the writer
+    * wraps a Root in), not a Root.
+    */
+  private def roundTrip(src: String, origin: String): Module =
+    val root = TopLevelParser.parseInput(RiddlParserInput(src, origin), true) match
+      case Right(r)   => r
+      case Left(msgs) => fail(s"parse failed:\n${msgs.format}")
+    val bytes = Pass
+      .runThesePasses(PassInput(root), Seq(BASTWriterPass.creator()))
+      .outputOf[BASTOutput](BASTWriterPass.name)
+      .getOrElse(fail("BASTWriterPass produced no output"))
+      .bytes
+    BASTReader(bytes).read() match
+      case Right(decoded) => decoded
+      case Left(msgs)     => fail(s"BAST round trip failed:\n${msgs.format}")
+
+  private def constantModel(decl: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    $decl
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  private def constantValueOf(m: Module, name: String): ConstantValue =
+    Finder(m)
+      .recursiveFindByType[Constant]
+      .find(_.id.value == name)
+      .map(_.value)
+      .getOrElse(fail(s"constant '$name' not found in the decoded tree"))
+
+  "a numeric literal" should {
+
+    "survive with its text unchanged, in every form" in { (td: TestData) =>
+      for form <- Seq("5", "-1", "+3", "007", "1.50", "-0.25", "1e3", "1.5e-3", "2E+8") do
+        val decoded = roundTrip(constantModel(s"constant K: Real = $form"), s"bast-$form")
+        constantValueOf(decoded, "K") match
+          case nl: NumericLiteral => withClue(s"form $form: ") { nl.text mustBe form }
+          case other => fail(s"form $form decoded as ${other.getClass.getSimpleName}")
+      end for
+    }
+
+    "survive as a comparison operand" in { (td: TestData) =>
+      val src =
+        """domain D is {
+          |  context C is {
+          |    record St is { count: Integer, note: String } with { briefly "st" }
+          |    command Cmd is { why: String } with { briefly "cmd" }
+          |    entity E is {
+          |      state S of record St is {
+          |        handler H is {
+          |          on command Cmd { when count > 5 then do "big" end }
+          |        } with { briefly "h" }
+          |      } with { briefly "s" }
+          |    } with { briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val decoded = roundTrip(src, "bast-comparand")
+      val comparisons = Finder(decoded).recursiveFindByType[ComparisonExpression]
+      comparisons must not be empty
+      comparisons.head.right match
+        case nl: NumericLiteral => nl.text mustBe "5"
+        case other              => fail(s"comparand decoded as ${other.getClass.getSimpleName}")
+    }
+  }
+
+  "a widened constant" should {
+
+    "keep a numeric value" in { (td: TestData) =>
+      constantValueOf(roundTrip(constantModel("constant K: Integer = 5"), "c-num"), "K") match
+        case nl: NumericLiteral => nl.text mustBe "5"
+        case other              => fail(s"decoded as ${other.getClass.getSimpleName}")
+    }
+
+    "keep a boolean value" in { (td: TestData) =>
+      constantValueOf(roundTrip(constantModel("constant K: Boolean = true"), "c-bool"), "K") match
+        case bl: BooleanLiteral => bl.value mustBe true
+        case other              => fail(s"decoded as ${other.getClass.getSimpleName}")
+    }
+
+    "keep a prompt value" in { (td: TestData) =>
+      val decl = """constant K: Real = prompt("the gravitational constant")"""
+      constantValueOf(roundTrip(constantModel(decl), "c-prompt"), "K") match
+        case pv: PromptValue => pv.prompt.s must include("gravitational")
+        case other           => fail(s"decoded as ${other.getClass.getSimpleName}")
+    }
+
+    "keep a string value" in { (td: TestData) =>
+      val decl = """constant K: String = "Fred""""
+      constantValueOf(roundTrip(constantModel(decl), "c-str"), "K") match
+        case ls: LiteralString => ls.s mustBe "Fred"
+        case other             => fail(s"decoded as ${other.getClass.getSimpleName}")
+    }
+  }
+
+  "the stream after a numeric literal" should {
+
+    "stay aligned — later definitions decode intact" in { (td: TestData) =>
+      // THE case that distinguishes a real fix from a plausible one. A mis-sized payload derails
+      // the reader somewhere AFTER the literal, on a node that is entirely innocent.
+      val src =
+        """domain D is {
+          |  context C is {
+          |    constant K: Integer = 5 with { briefly "k" }
+          |    type T is String with { briefly "t" }
+          |    command Cmd is { why: String } with { briefly "cmd" }
+          |    entity E is {
+          |      handler H is { on command Cmd { do "work" } } with { briefly "h" }
+          |    } with { briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val decoded = roundTrip(src, "bast-alignment")
+      Finder(decoded).recursiveFindByType[Type].map(_.id.value) must contain("T")
+      Finder(decoded).recursiveFindByType[Entity].map(_.id.value) must contain("E")
+      Finder(decoded).recursiveFindByType[Handler].map(_.id.value) must contain("H")
+    }
+  }
+}
+```
+
+`ComparisonExpression.right` is a `Comparand`; if the field is named differently, check `AST.scala:3288`. Prefer `must contain` over `must not be empty` in the alignment case — a truncated decode that returns *some* nodes still fails it.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -977,7 +1414,119 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the failing test**
 
-Assert a JSON round trip preserves `text` exactly for every form from Task 1, plus all four `ConstantValue` arms.
+Create `riddlLib/src/test/scala/com/ossuminc/riddl/NumericLiteralJsonRoundTripTest.scala`:
+
+```scala
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl
+
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{Finder, toSeq}
+import com.ossuminc.riddl.utils.pc
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
+/** Numeric literals and the widened `Constant` across JSON, the fourth serialization surface.
+  *
+  * The JSON-identity fixed point is the strong assertion: any field that serializes but does not
+  * deserialize (or vice versa) makes the second document differ from the first.
+  *
+  * The text assertions matter independently. The DTO stores the literal as a STRING, not a
+  * `ujson.Num` — `ujson.Num` is a Double and would quietly turn `1.50` into `1.5`, `007` into `7`
+  * and drop the precision of any large integer. A fixed-point test alone would not catch that,
+  * because a consistently-mangled value is still a fixed point.
+  */
+// NOTE: a plain AnyWordSpec, so cases take NO `(td: TestData)` parameter. Writing one here would
+// construct a Function1 and never evaluate the body — a silently passing test.
+class NumericLiteralJsonRoundTripTest extends AnyWordSpec with Matchers {
+
+  private def model(decl: String): String =
+    s"""domain D is {
+       |  context C is {
+       |    $decl
+       |  } with { briefly "c" }
+       |} with { briefly "d" }
+       |""".stripMargin
+
+  private def roundTripped(src: String): Root =
+    RiddlLib.parseString(src) match
+      case RiddlResult.Success(root0) =>
+        val json1 = RiddlLib.root2Json(root0)
+        RiddlLib.parseJson(json1) match
+          case RiddlResult.Success(root1) =>
+            withClue("JSON is not an identity fixed point: ") {
+              RiddlLib.root2Json(root1) mustBe json1
+            }
+            root1
+          case RiddlResult.Failure(errors) =>
+            fail(s"parseJson of the generated JSON failed: $errors")
+      case RiddlResult.Failure(errors) => fail(s"parse failed: $errors")
+
+  private def constantValueOf(root: Root, name: String): ConstantValue =
+    Finder(root)
+      .recursiveFindByType[Constant]
+      .find(_.id.value == name)
+      .map(_.value)
+      .getOrElse(fail(s"constant '$name' not found after the round trip"))
+
+  "a numeric literal in JSON" should {
+
+    "preserve its text exactly, in every form" in {
+      for form <- Seq("5", "-1", "+3", "007", "1.50", "-0.25", "1e3", "1.5e-3", "2E+8") do
+        val root = roundTripped(model(s"constant K: Real = $form"))
+        constantValueOf(root, "K") match
+          case nl: NumericLiteral => withClue(s"form $form: ") { nl.text mustBe form }
+          case other => fail(s"form $form decoded as ${other.getClass.getSimpleName}")
+      end for
+    }
+
+    "not be degraded to a JSON number" in {
+      // Explicit guard on the encoding itself: the payload must be a JSON string. If someone
+      // "improves" the DTO to a ujson.Num, 1.50 becomes 1.5 and this is the case that says so.
+      RiddlLib.parseString(model("constant K: Real = 1.50")) match
+        case RiddlResult.Success(root) =>
+          RiddlLib.root2Json(root) must include("\"1.50\"")
+        case RiddlResult.Failure(errors) => fail(s"parse failed: $errors")
+    }
+  }
+
+  "a widened constant in JSON" should {
+
+    "keep a numeric value" in {
+      constantValueOf(roundTripped(model("constant K: Integer = 5")), "K") match
+        case nl: NumericLiteral => nl.text mustBe "5"
+        case other              => fail(s"decoded as ${other.getClass.getSimpleName}")
+    }
+
+    "keep a boolean value" in {
+      constantValueOf(roundTripped(model("constant K: Boolean = true")), "K") match
+        case bl: BooleanLiteral => bl.value mustBe true
+        case other              => fail(s"decoded as ${other.getClass.getSimpleName}")
+    }
+
+    "keep a prompt value" in {
+      val decl = """constant K: Real = prompt("the gravitational constant")"""
+      constantValueOf(roundTripped(model(decl)), "K") match
+        case pv: PromptValue => pv.prompt.s must include("gravitational")
+        case other           => fail(s"decoded as ${other.getClass.getSimpleName}")
+    }
+
+    "keep a string value" in {
+      val decl = """constant K: String = "Fred""""
+      constantValueOf(roundTripped(model(decl)), "K") match
+        case ls: LiteralString => ls.s mustBe "Fred"
+        case other             => fail(s"decoded as ${other.getClass.getSimpleName}")
+    }
+  }
+}
+```
+
+Check `RiddlResult`'s constructor names against `CorrelationJsonRoundTripTest` if they do not compile — that suite is the live reference for this API.
 
 - [ ] **Step 2: Run to verify it fails**
 
