@@ -84,6 +84,58 @@ riddl-models got the corpus migration.
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
 
+## A collector that stopped one level short (2026-08-15) — DONE
+
+`b8a6057fb`. `DiagramsPass.captureUseCase` collected actors from a use case's
+top-level contents only, giving `InteractionContainer` (`sequence`, `parallel`,
+`optional`) an arm that returned `Seq.empty`. Reported by riddl-generator, whose
+docs generator crashed on reactive-bbq. Task file with the full A/B is in
+`task/done/2026-08-15-usecase-actors-empty-when-steps-are-nested.md`.
+
+**The interesting part is not the missing recursion, it is which failures were
+invisible.** One use case (`ReservationFlow`) returned an EMPTY actors map, and
+that is the one that produced a crash and a bug report. Four others returned
+PARTIAL maps — `OrderingFlow` 3 of 6, `PaymentFlow` 4 of 6, `WalkInSeating` 4 of
+5 — because they happened to have some steps at the top level. A partial answer
+raises no exception and does not look wrong: the diagram renders, with some
+participants. **The case that crashed is the case we were lucky about.** When a
+consumer reports an empty result, ask what the same defect does when it is only
+partly wrong, and go looking for those.
+
+**Three failure shapes now, all called "silent fall-through", and this one fits
+none of the existing two.** The dispatch was explicit and total (no catch-all),
+and it deferred to nothing (so no unverified claim about code elsewhere). It was
+simply a *wrong answer written deliberately* — an arm that said "containers
+contribute no actors" when the renderer walks straight into them. The rule this
+adds: **a collector must descend as far as the code consuming its output does.**
+Filed as a third widening of BACKLOG § 2's audit item.
+
+**`.sortWith(…).toMap` throws the sort away, and only above four elements.**
+Fixing the recursion exposed it: `actorsFirst` exists to put users on the left of
+the diagram, and `Map1`..`Map4` preserve insertion order incidentally while the
+fifth entry becomes a hash-ordered `HashMap`. So the ordering was correct for
+small use cases and silently wrong for large ones — and unreachable for nested
+ones, which had no actors at all. `immutable.VectorMap` fixes it while remaining
+a `Map[String, Definition]`, so no exported signature moved. **A sorted
+collection converted to a `Map` is not sorted; the bug hides below five
+elements**, which is exactly the size most tests use.
+
+**There was no use case coverage in the diagrams tests at all** — zero mentions
+of `usecase`, `UseCase` or `actors` across all four suites. The only assertion
+was `useCaseDiagrams must not be (empty)`, which counts diagrams rather than
+their contents, and passes on `everything.riddl`, whose cases are all `???`. The
+task file said the existing coverage "passes today with the bug present"; the
+truth was weaker and worth recording, because *"a suite exists for this file"*
+was doing the reassurance work that *"a test exercises this behaviour"* should.
+
+**Verifying against the corpus needed a scratch copy.** reactive-bbq does not
+parse at HEAD — its two `terminate entity X` lines predate `7b356120a` and the
+riddl-models migration has not landed — so criterion 3 was checked against a
+`cp -R` copy with those two lines migrated to `terminate self.id`. Recorded
+because the number in the A/B table came from that copy, not from the corpus as
+it stands, and because it is a reminder that `PassCostBenchmark` and
+`Root2JsonCorpusTest` stay red until riddl-models moves.
+
 ## `terminate` learns which instance it kills (2026-08-15) — DONE
 
 `7b356120a`. `TerminateStatement.processor: ProcessorRef` became `target: Value` typed

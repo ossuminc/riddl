@@ -580,6 +580,36 @@ that needs a ruling before either can be fixed.
   and check each justification against the code it names. The five there are all
   legitimate NOW — `doMethod` only became so with this fix.
 
+  **Widen the sweep a third time: to ONE-LEVEL COLLECTORS** (added 2026-08-15,
+  from `DiagramsPass.captureUseCase`, `b8a6057fb`, reported by riddl-generator).
+  A third shape that this sweep's two questions both miss. `captureUseCase`
+  enumerated its cases explicitly — no catch-all — and deferred nothing to
+  anywhere, so it passes both tests above and was still wrong: it mapped over
+  `uc.contents.toSeq` and gave `InteractionContainer` an arm returning
+  `Seq.empty`, so nested steps were never collected. **The arm was not a
+  fall-through; it was a wrong answer, written deliberately.** Consumers render
+  from the same data by RECURSING through those containers, so capture and
+  render disagreed about what a use case contains.
+  The symptom is the one this whole item keeps circling: an empty result is
+  indistinguishable from a model that does not use the construct. Note it was
+  only *sometimes* empty — 4 of reactive-bbq's 12 use cases returned partial maps
+  and 1 returned nothing, which is worse, because a partial answer is not even
+  suspicious.
+  So the third question is: **"does this collector descend as far as the code
+  that CONSUMES its output does?"** Sizing grep:
+  `grep -rn "contents.toSeq" --include=*.scala passes/ | grep -v "flatMap\|Finder"`.
+  Same family as `Finder.recursiveFindByType` (`b55d1d5cc`) — riddlg hit both
+  within a day, from different directions, which is the reason to believe there
+  are more.
+  **A fourth defect rode along and is worth its own line, because no sweep of
+  matches or traversals would find it**: `.sortWith(actorsFirst).toMap` silently
+  DISCARDS the sort. Scala's `Map1`..`Map4` keep insertion order incidentally;
+  the fifth entry becomes a hash-ordered `HashMap`. Any `.sorted…toMap` pipeline
+  in this codebase is a latent version of the same bug and is invisible below
+  five elements — `grep -rn "sortWith\|sortBy" --include=*.scala passes/ | grep -i "toMap"`
+  is worth running once. Fixed here with `immutable.VectorMap`, which preserves
+  the declared `Map` type.
+
 - **Finish the `Streamlet` → `Processor` migration in the remaining passes.**
   Filed by Reid 2026-08-10 when the same defect was fixed in
   `StreamingValidation` (`70b0f527a`). These sites narrow to the concrete
