@@ -149,6 +149,43 @@ class TerminateTargetTest extends AbstractValidatingTest {
       errs mustBe ""
     }
 
+    // The two halves of the `valueTypeExpr` widening. Both of these used to fall into the SILENT
+    // case above -- not because the type was genuinely unknown, but because `valueTypeExpr` could
+    // not see a type the author had WRITTEN OUT. "Not determinable" and "we did not look" are
+    // different facts, and only the first deserves silence.
+    "REJECT a let whose DECLARED PREDEFINED type is not an Id" in { (td: TestData) =>
+      // Contrast the SILENT case: there the type is inferred and absent; here `Integer` is
+      // declared. Predefined keywords are deliberately never in the symbol table, so this needs
+      // `PredefTypes.typeExpressionFor` rather than a refMap lookup.
+      val errs = errorsIn(
+        wrap("", """let n: Integer = 5
+                   |            terminate n""".stripMargin),
+        td.name
+      )
+      errs must include("requires a value of type 'Id(entity ...)'")
+    }
+
+    "REJECT an ASCRIBED typed hole whose type is not an Id" in { (td: TestData) =>
+      // A20 gives a hole an ascription, so `prompt(...) as Integer` states its type as plainly as
+      // any literal does. The UNASCRIBED form stays silent -- that is the case below.
+      val errs = errorsIn(
+        wrap("", """terminate prompt("the order to end") as Integer"""),
+        td.name
+      )
+      errs must include("requires a value of type 'Id(entity ...)'")
+    }
+
+    "ACCEPT an ASCRIBED typed hole whose type IS an Id alias" in { (td: TestData) =>
+      // The positive half: reading the ascription must admit the legal spelling, not merely reject
+      // the illegal one. Without this a check wired to reject everything would still look green.
+      errorsIn(wrap("", """terminate prompt("the order to end") as OrderId"""), td.name) mustBe ""
+    }
+
+    "stay SILENT for an UNASCRIBED typed hole" in { (td: TestData) =>
+      // A20's conservative rule is unchanged: an unwired position stays quiet rather than guessing.
+      errorsIn(wrap("", """terminate prompt("the order to end")"""), td.name) mustBe ""
+    }
+
     // The check that is NOT free. `Id(context Ordering)` is a legal, meaningful value -- it names
     // the context's singular deployment so messages can be sent to it -- and nothing about its
     // TYPE says it cannot be terminated. Only this check does.

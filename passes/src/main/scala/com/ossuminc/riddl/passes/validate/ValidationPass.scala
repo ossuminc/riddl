@@ -6385,6 +6385,28 @@ case class ValidationPass(
       .flatMap(tr => resolution.refMap.definitionOf[Type](tr.pathId))
       .orElse(valueType(ls.expression, parents, priorLets, elements))
 
+  /** The [[TypeExpression]] a `let`'s DECLARED ascription names when that ascription is a bare
+    * predefined keyword (`let n: Integer = …`).
+    *
+    * [[letType]] cannot answer this: it returns a named [[Type]] Definition, and predefined types
+    * are deliberately never entered into the symbol table (see `PredefTypes.typeExpressionFor`'s
+    * doc, and `PredefinedModule`'s note on why the standard module stays out of the shared maps).
+    * So a `let` ascribed with a predefined keyword yielded `None` from every "what type is this
+    * value" query, and the type the author had WRITTEN OUT was invisible — while the alias
+    * spelling (`type Nat is Natural`) worked. That is a gap in what we LOOKED AT, not in what is
+    * knowable, which is why it deserves an answer rather than the silence reserved for genuinely
+    * undeterminable types.
+    *
+    * The `sizeIs == 1` guard and the keyword set are shared with `ResolutionPass`, which skips
+    * `resolveARef` for exactly these, and with `checkStatementScopes`. A keyword needing arguments
+    * (`Currency`, `Decimal`, …) is not in the set and is unaffected: a bare `let x: Currency = …`
+    * is incomplete regardless.
+    */
+  private def letDeclaredPredefinedType(ls: LetStatement): Option[TypeExpression] =
+    ls.typeRef
+      .filter(_.pathId.value.sizeIs == 1)
+      .flatMap(tr => PredefTypes.typeExpressionFor(tr.pathId.value.head, tr.loc))
+
   /** A55: the index in `lets` of the innermost `let` binding `name`, or -1. `let`-locals are the
     * one thing NOT resolved by ResolutionPass: a `let` is not a Definition and is statement-ORDERED
     * (visible only after its declaration, shadowed by inner blocks), which the symbol table does
@@ -6417,6 +6439,11 @@ case class ValidationPass(
         val priorLets = lets.take(idx)
         letType(ls, priorLets, parents, elements)
           .map(_.typEx)
+          // A DECLARED predefined ascription outranks inference from the expression, exactly as a
+          // declared named Type does -- it is the same fact, written with a keyword instead of an
+          // alias. Ordered before the inference fallback for that reason, not for precedence
+          // between two guesses.
+          .orElse(letDeclaredPredefinedType(ls))
           .orElse(valueTypeExpr(ls.expression, parents, priorLets, elements))
           .flatMap(te => typeExprOfPath(te, names.tail))
       else
@@ -6462,7 +6489,13 @@ case class ValidationPass(
         resolution.refMap
           .definitionOf[Processor[?]](init.processor.pathId, parents.head)
           .map(p => UniqueId(At.empty, pathOf(p)))
-      case _            => valueType(v, parents, lets, elements).map(_.typEx)
+      // A20: an ASCRIBED typed hole states its type as plainly as a literal does -- that is what
+      // the ascription is FOR. An UNASCRIBED hole still yields None here, so A20's conservative
+      // rule is untouched: the silence belongs to the form that says nothing, not to every
+      // `prompt(...)`. Note this reports the type the author WROTE; whether that ascription agrees
+      // with the position's own expected type is `checkPromptAscription`'s separate question.
+      case pv: PromptValue => pv.typeEx
+      case _               => valueType(v, parents, lets, elements).map(_.typEx)
 
   /** A54/A55: the named [[Type]] a [[ValueRef]] resolves to, if determinable. A bare on-clause
     * binding denotes the whole message, so it yields the message's Type directly; a field yields
