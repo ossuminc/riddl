@@ -1489,6 +1489,7 @@ object JsonAstBuilder:
   private def buildValue(v: ValueDto)(using ctx: Ctx): Value =
     v match
       case LiteralValueDto(text)  => LiteralString(curAt, text)
+      case NumericLiteralDto(text) => NumericLiteral(curAt, text)
       case PromptValueDto(prompt) => PromptValue(curAt, LiteralString(curAt, prompt))
       case ValueRefDto(p)         => ValueRef(curAt, pathId(p))
       case GetValueDto(source, keyword, ref) =>

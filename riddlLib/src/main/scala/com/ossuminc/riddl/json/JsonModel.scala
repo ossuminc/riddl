@@ -800,6 +800,15 @@ object JsonModel:
   /** `{ "value": "literal", "text": "..." }` */
   case class LiteralValueDto(text: String) extends ValueDto
 
+  /** `{ "value": "numeric", "text": "..." }` — a numeric literal (`5`, `1.50`, `2E+8`). `text` is
+    * the literal AS WRITTEN, never a `ujson.Num`: a Double would turn `1.50` into `1.5` and drop
+    * the precision of a large integer, exactly the byte-exactness `AST.NumericLiteral` exists to
+    * avoid (see its doc comment). Deliberately its own DTO/tag rather than reusing
+    * `LiteralValueDto` — that would round-trip the TEXT but silently rebuild a `LiteralString`
+    * instead of a `NumericLiteral`, losing node identity.
+    */
+  case class NumericLiteralDto(text: String) extends ValueDto
+
   /** `{ "value": "constructor", "refKind": "command"|"event"|"query"|"result"|"record", "ref":
     * "<path>", "args": [<constructorArg>] }`
     */
@@ -1648,6 +1657,7 @@ object JsonModel:
     val m = v.obj
     m("value").str match
       case "literal"     => LiteralValueDto(m("text").str)
+      case "numeric"     => NumericLiteralDto(m("text").str)
       case "prompt"      => PromptValueDto(m("prompt").str)
       case "valueRef"    => ValueRefDto(m("path").str)
       case "constantRef" => ConstantRefDto(m("path").str)
@@ -1698,6 +1708,10 @@ object JsonModel:
     dto match
       case LiteralValueDto(text) =>
         ujson.Obj("value" -> ujson.Str("literal"), "text" -> ujson.Str(text))
+      case NumericLiteralDto(text) =>
+        // ALWAYS a JSON string, never ujson.Num -- a Double would turn 1.50 into 1.5. See the
+        // DTO's doc comment.
+        ujson.Obj("value" -> ujson.Str("numeric"), "text" -> ujson.Str(text))
       case PromptValueDto(prompt) =>
         ujson.Obj("value" -> ujson.Str("prompt"), "prompt" -> ujson.Str(prompt))
       case ValueRefDto(path) =>

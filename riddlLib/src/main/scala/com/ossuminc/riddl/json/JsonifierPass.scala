@@ -1476,6 +1476,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       val (pp, pk) = processorRef(ask.processor)
       AskValueDto(path(ask.query.pathId), pp, pk)
     case bl: BooleanLiteral => BooleanLiteralDto(bl.value)
+    // Text, always -- never a ujson.Num (a Double would turn 1.50 into 1.5 and drop the precision
+    // of a large integer). Storing text is the entire reason AST.NumericLiteral holds a String.
+    case nl: NumericLiteral => NumericLiteralDto(nl.text)
     case ce: ComparisonExpression =>
       ComparisonDto(ce.op.symbol, serializeComparand(ce.left), serializeComparand(ce.right))
     case le: LogicalExpression =>
