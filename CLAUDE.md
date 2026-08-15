@@ -884,6 +884,19 @@ to the right group rather than appending to a list.
     `error()` preempts the whole pass chain. Both fold an Entity's STATE
     handlers in when looking for the clause, exactly as `validateAsk` does —
     `on init` commonly lives inside a `State`.
+    **An `initiate` whose id is never subsequently referenced draws a plain
+    Warning — NOT an Error, and NOT gated behind `showCompletenessWarnings`.**
+    Three reasons, recorded so this is not re-litigated: a self-terminating
+    worker legitimately has an unused id and an Error would make that pattern
+    unwritable; RIDDL specifies MEANING, so an unstated fate is
+    under-specification (which warns) rather than self-contradiction (which
+    errors); and it is ungated because, unlike a missing tell address, this is
+    locally decidable from the clause body alone. **The work is the escape-route
+    analysis, not the message**: an id escapes by being `set` into state, passed
+    as a `tell` argument, passed to `terminate`, yielded in an event, or `put` to
+    a repository, and the sweep must be conservative enough that no legal model
+    is rejected. `UnusedInitiateIdTest` pins all five routes plus the
+    nested-`when` case.
     **`terminate <target> [with (args)]` names an INSTANCE, and `target` is a
     VALUE typed `Id(entity E)`** (Reid, 2026-08-15). `TerminateStatement.target:
     Value` REPLACED `processor: ProcessorRef` — the old form said which KIND of

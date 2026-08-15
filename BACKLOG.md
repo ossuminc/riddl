@@ -121,20 +121,24 @@ Everything else is independent and may be reordered by appetite. Items 10 and 11
 each want an approved plan before implementation, per the standing rule.
 
 - ~~**`Value` has no NUMERIC LITERAL, so `initiate entity Order(1)` does not
-  parse.**~~ — **STALE, CLOSED 2026-08-15.** Numeric literals shipped
+  parse.**~~ — **STALE, CLOSED and REMOVED 2026-08-15.** Numeric literals shipped
   (`6cfeceb2f`) and closed it. Verified against the staged riddlc at
   `2.0.0-rc.14-121-fe768026`: the entry's own example — `initiate entity
   Order(1)` against `on init(total: Integer)` — validates with **zero errors**.
-  Its two supporting claims are also dead: `count > 5` parses (A28's ban was
-  reversed) and a constant may hold a bare number. **The full entry text is left
-  in place below** only until someone confirms nothing cites it; it describes a
-  limitation that no longer exists and must not be worked on.
+  Its two supporting claims are dead too: `count > 5` parses (A28's ban was
+  reversed) and a constant may hold a bare number. Body deleted; nothing cited
+  it (the two `BACKLOG`-referencing code comments point at the `Finder` entry and
+  at § 2's `FORMAT_REVISION` reservation, neither of them this).
 
-- ~~**NEW CHECK — the unused `initiate` id Warning.**~~ — **BUILT, CLOSED
-  2026-08-15.** `UnusedInitiateIdTest` is green with 7 cases, and they cover the
-  escape-route analysis the entry called "the real work": terminated, kept in
+- ~~**NEW CHECK — the unused `initiate` id Warning.**~~ — **BUILT, CLOSED and
+  REMOVED 2026-08-15.** `UnusedInitiateIdTest` is green with 7 cases covering the
+  escape-route analysis the entry called "the real work" — terminated, kept in
   state, passed in a message, and used only inside a nested `when` body. Verified
-  by running it, not by reading the file name.
+  by running it, not by reading the file name. **Its durable half was GRADUATED
+  to CLAUDE.md** (the processor-instance-identity section): why this is a Warning
+  and not an Error, and why it is ungated. That reasoning was recorded "so it is
+  not re-litigated", which is exactly the kind of thing that must not die with
+  the backlog entry.
 
 - **`valueTypeExpr` does not surface a `let`'s declared PREDEFINED type.**
   Found 2026-08-15 building `terminate`'s target-type check, by instrumenting
@@ -307,34 +311,6 @@ each want an approved plan before implementation, per the standing rule.
   nothing weakened — the suites build every input from `RiddlParserInput` and
   string literals, so no Native hazard was present. Rolled into the JVM/Native
   gap item above.
-
-- **NEW CHECK — Reid, 2026-08-14: "no further task is needed, just build it."**
-  **Folded into the message-value implementation above**, not a separate task.
-  A `let x = initiate …` whose id is **never subsequently referenced** draws a
-  plain **Warning** — on by default, NOT gated behind
-  `showCompletenessWarnings`, because unlike a missing tell address this is
-  locally decidable from the clause body alone.
-  **Why a Warning and not an Error**, recorded so it is not re-litigated: a
-  self-terminating worker legitimately has an unused id, and an Error would
-  make that pattern unwritable; RIDDL specifies MEANING, so an unstated fate is
-  under-specification (which warns) rather than self-contradiction (which
-  errors); and nothing in the corpus uses `initiate` at all, so the repo's
-  standing "do not ship the Error before counting" rule has no data to clear.
-  **The real work is the escape-route analysis, not the message.** An id
-  escapes by being `set` into state, passed as an argument to a `tell`, passed
-  to `terminate`, yielded in an event, or `put` to a repository — and the sweep
-  must be conservative enough that no legal model is rejected. That is what
-  makes it a task rather than a line in this one.
-
-- **`Value` has no NUMERIC LITERAL, so `initiate entity Order(1)` does not
-  parse** against `on init(total: Integer)`. Pre-existing A54 limitation
-  (`count > 5` and `record R(1)` both fail to parse today; see
-  `StatementsTest`'s "reject a bare-number comparison operand"), and the
-  existing tests work around it by declaring `String` parameters and passing
-  `"1"`. It is filed HERE because lifecycle parameters are the first construct
-  designed around passing SCALARS, so this is where it bites hardest: the
-  design spec's own example, `on init(custId: Id(entity Customer), total:
-  Currency)`, cannot be invoked with a literal amount.
 
 - **MEASUREMENT ATTEMPTED 2026-08-14 and it FAILED — a grep cannot answer this.**
   Reid: *"I don't really care, but go ahead and count how many models do this,
