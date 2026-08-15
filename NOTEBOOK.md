@@ -57,13 +57,42 @@ about those is stale the moment someone commits.
   separately named until this session bothered to look inside it. None
   read the fixture this task touched.
 
-**In flight: nothing.** The A20 typed-holes plan (5 tasks) is fully
-landed, verified, and committed — **plus a whole-branch review and its
-fix wave** (`a59cbba60`, `414b79a5d`, `2e3be3ade`), which found four
-Important defects no per-task review could see. The biggest: nothing
-resolved the ascription's type reference, so `prompt("x") as Nonexistent`
-produced **no message at all**. See the "what only a whole-branch review
-can see" entry below.
+**In flight: nothing. FOUR plans landed on 2026-08-15**, each with per-task
+reviews, a whole-branch review and a fix wave: numeric literals, A20 typed
+holes, the three triaged riddl-models defects, and `!`/`not` synonymy
+(`9c8b0cfb6..631f64bcc`). Plus the three defects filed the night before —
+`Finder`'s field-held descent, predefined keywords as a `let` ascription, and
+`naturalNumber`'s whitespace swallowing.
+
+**NEXT SESSION IS FOR DESIGN WORK, by Reid's decision.** He is bounding the
+backlog so 2.0 can ship — see CLAUDE.md § "Definition of Done, and what bounds
+2.0", which is the operating rule now: **2.0 ships when the Computational Model
+is met, not when the backlog empties**, an item is not done until the CM records
+its effect, and there is no "defer to 2.1" pile. The remaining §§ 1–2 entries
+want design sessions WITH him, not autonomous building.
+
+**Three things to pick up:**
+
+1. **`riddl-generator` has been reading incomplete ASTs and does not know it.**
+   `Finder` was missing content across 27 node fields — it returned shorter
+   lists, never an error, and the consumers most exposed are those that
+   ENUMERATE rather than traverse. **No task has been dropped to them yet.** It
+   may explain generator output already puzzled over.
+2. **The 49-alias list was recorded as filed and never was.** A regeneration
+   agent was mid-run at session end. Verify
+   `../riddl-models/task/2026-08-15-49-addressing-errors-the-full-list.md`
+   exists and that the combined migration task points at it, not at the missing
+   `2026-08-14-alias-fix-exposes-49-addressing-defects.md`.
+3. **`Root2JsonCorpusTest` is at 59/190 against a recorded 173/189.** Reid's
+   call: **wait for riddl-models' 49-alias fix, then re-measure** — that removes
+   the known noise, and re-measuring is cheaper than investigating through it.
+
+**One deviation Reid should confirm:** the `!`/`not` plan's own completion
+clause said the CM update was "part of completing this item, not a follow-up".
+Task 5 folded it into the aggregate BACKLOG § 0 CM item by reference rather than
+editing `../RIDDL-Computational-Model.md` — justified by one-instance-per-project
+(the CM lives above this repo) and it IS tracked in a committed file, but it is a
+deviation from the plan's own text.
 
 **A38 is now the sole remaining claimant on `FORMAT_REVISION` 18.**
 
