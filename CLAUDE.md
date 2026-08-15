@@ -1932,6 +1932,29 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   **count the `Suites: completed` lines against the number of modules
   you asked for.** (The `;` chain still aborts at the first failure,
   so a short count means either a red or a skip; either way, look.)
+- **Corpus tests can resolve the WRONG `../riddl-models` — or none — under
+  sbt 2's `projectMatrix`, and the failure mode is a CANCELLED, green-looking
+  suite.** Found 2026-08-15 doing the corpus A/B for the `!`/`not` synonymy
+  plan (task 5). `RiddlModelsRoundTripTest` and `Root2JsonCorpusTest` locate
+  the corpus via `Path.of("../riddl-models")` resolved against the **process
+  cwd at sbt launch** — NOT `Test/baseDirectory`, which under `projectMatrix`
+  is `<root>/.sbt/matrix/<module>`, several directories deeper than the repo
+  root the relative path was written for. Depending on where sbt was
+  launched from, that relative path can land on a directory that doesn't
+  exist, or a *different* one that happens to exist — either way the test
+  finds nothing to iterate over. **A plain symlink at that path does not
+  fix it and fails the SAME silent way**: BSD `find` and Java's
+  `Files.walk` do not descend into a directory reached via a top-level
+  symlink argument without `-L`/`FOLLOW_LINKS` (confirmed both ways), so a
+  symlinked corpus also reports zero files. The symptom in both cases is
+  "No .conf files found" (or an equivalent zero-models message) followed by
+  the suite reporting as **cancelled, not failed** — which reads as green in
+  a summary scan exactly like the `testQuick`-skip and abstract-spec-with-no-
+  subclass members of this family. **To tell:** don't trust "all tests
+  passed" from a corpus-reading suite — check that it actually reports the
+  expected model COUNT (e.g. "models=190"), not zero, and use a real
+  directory copy (`cp -R`, not a symlink) at the path the test computes when
+  reproducing a corpus run outside CI.
 - **`@JSExport*` annotation placement** — an `@JSExportTopLevel(...)`
   binds to the very next definition. Inserting a new
   `enum`/`object`/class between the annotation and its case class
