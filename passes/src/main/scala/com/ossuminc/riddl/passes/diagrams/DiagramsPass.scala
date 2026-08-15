@@ -411,28 +411,50 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
       case _: Definition                            => a._1 < b._1
   }
 
+  /** Collect every [[TwoReferenceInteraction]] of a use case, descending into the
+    * [[InteractionContainer]]s (`sequence`, `parallel`, `optional`) that may nest them, and which
+    * may nest each other.
+    *
+    * The recursion is the point: consumers render these diagrams by recursing through the same
+    * containers, so a capture that saw only the top level disagreed with the renderer about what a
+    * use case contains. A use case whose steps all live inside a `sequence` — the common shape —
+    * yielded an actors map that was empty rather than merely incomplete, and an empty map renders
+    * as a diagram with no declared participants and no documentation links instead of failing.
+    */
+  private def twoReferenceInteractionsIn(
+    contents: Seq[Interaction | Comment]
+  ): Seq[TwoReferenceInteraction] = {
+    contents.flatMap {
+      case tri: TwoReferenceInteraction => Seq(tri)
+      case ic: InteractionContainer     => twoReferenceInteractionsIn(ic.contents.toSeq)
+      case _: Interaction | _: Comment | _: Term | _: Description | _: BriefDescription |
+          _: AuthorRef =>
+        Seq.empty
+    }
+  }
+
   private def captureUseCase(uc: UseCase): UseCaseDiagramData = {
     val actors: Map[String, Definition] = {
-      uc.contents.toSeq
-        .map {
-          case tri: TwoReferenceInteraction =>
-            val fromDef = refMap.definitionOf[Definition](tri.from.pathId, uc)
-            val toDef = refMap.definitionOf[Definition](tri.to.pathId, uc)
-            Seq(
-              tri.from.pathId.format -> fromDef,
-              tri.to.pathId.format -> toDef
-            )
-          case _: InteractionContainer | _: Interaction | _: Comment | _: Term | _: Description |
-              _: BriefDescription | _: AuthorRef =>
-            Seq.empty
+      twoReferenceInteractionsIn(uc.contents.toSeq)
+        .map { tri =>
+          val fromDef = refMap.definitionOf[Definition](tri.from.pathId, uc)
+          val toDef = refMap.definitionOf[Definition](tri.to.pathId, uc)
+          Seq(
+            tri.from.pathId.format -> fromDef,
+            tri.to.pathId.format -> toDef
+          )
         }
-        .filterNot(_.isEmpty) // ignore None values generated when ref not found
         .flatten // get rid of seq of seq
         .filterNot(_._1.isEmpty) // drop empty things
         .map(x => x._1 -> x._2.getOrElse(Root.empty)) // get rid of no definition case
         .distinctBy(_._1) // eliminate duplicates
         .sortWith(actorsFirst) // always list actors first (left side of diagram)
-        .toMap
+        // An insertion-ordered Map, because a plain `.toMap` DISCARDS the sort above: Scala's
+        // Map1..Map4 preserve insertion order only incidentally, and the fifth entry switches to a
+        // hash-ordered HashMap. Use cases with five or more actors therefore lost the actors-first
+        // ordering silently. `VectorMap` is still a `Map[String, Definition]`, so the type of
+        // `UseCaseDiagramData.actors` and its exported signature are unchanged.
+        .to(immutable.VectorMap)
     }
     val title = uc.identify + " in " + symTab.parentOf(uc).map(_.identify).getOrElse(" an Epic")
     UseCaseDiagramData(title, actors, uc.contents.filter[Interaction])
