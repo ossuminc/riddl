@@ -78,6 +78,15 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   writeup and worked examples, and its caution that `Currency`
   cannot be used bare in an example (it requires a `country`
   argument).
+  Also add (2026-08-15, not-bang-synonymy plan): `not` and `!` are
+  synonymous EVERYWHERE, as the inverse of a boolean expression —
+  both spellings build the identical `NotExpression` AST node, so a
+  generator lowering a boolean expression needs to know there is only
+  ever one node to handle, never a spelling to branch on. `!` is not
+  related to the `!` in `!=` (an ordinary comparison operator). See
+  the task dropped in
+  `../ossum.tech/task/2026-08-15-not-bang-synonymy.md` for the
+  worked examples and the `!=` caution.
 - **Update the ossum.tech documentation site** with the same syntax changes,
   **plus a LIGHTER treatment of the implied syntax.** Reid, 2026-08-06 — the
   reference currently spells out more of the implicit forms than a reader needs,
@@ -86,45 +95,6 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   (ossum.tech is a separate repo; this is a task DROP, not work done here.)
 
 ### 1. Queued, designed, not started
-
-- **Make `!` a full synonym of `not` (A28) — RULED 2026-08-14, branch does not
-  comply.** Reid, reviewing the `RIDDL-Tools-To-Do-List.md` reconciliation:
-  *"`not` and `!` should be synonymous everywhere as the inverse of a boolean
-  expression."* `!` must be legal in **every position `not` is**.
-  This **OVERRIDES the 2026-08-13 ruling** recorded in `CLAUDE.md` — that `not`
-  was RIDDL's only general-purpose negation, that `!` was a legacy spelling
-  accepted ONLY as `when !<bare-identifier>`, and that it "will not be extended
-  to" anything more. That paragraph has been rewritten; do not restore it.
-
-  **What does not comply, verified 2026-08-14 at `ecfd69d2c`:**
-  - `!` is a special case of `when_condition` alone —
-    `when_condition = … | "!" identifier | …` (`ebnf-grammar.ebnf:275`) — and it
-    takes a **bare identifier, not an expression**. So `!(a and b)`,
-    `require !x` and `let y = !x` are all parse errors today. The fix is an
-    alternative in `not_expression` (`"not" | "!"`), after which the
-    `when_condition` special case should go away rather than sit beside it.
-  - The two spellings build **different ASTs**: `not` a real negation node
-    (`AST.scala:3337`), `!` a `negated: Boolean` flag on `WhenStatement`
-    (`AST.scala:3660`). Synonymy means ONE node for both, which moves prettify,
-    BAST and JSON — so this needs a **`FORMAT_REVISION` bump**.
-
-  **Hazard, and it is a real one:** `!=` is a comparison operator
-  (`ebnf-grammar.ebnf:351`). A `!` prefix rule ahead of `comparison` will swallow
-  the `!` of `a != b` unless guarded by a not-followed-by-`=` test — and
-  **regex lookahead is unavailable**, since Scala Native cannot compile it
-  (`583d47556` removed one for exactly that reason). Use fastparse's `!` negative
-  lookahead combinator on a literal `"="`, not a regex.
-
-  **One design question to answer while building it:** which spelling prettify
-  emits. Emitting `not` for both makes `!` a one-way alias and every round trip
-  rewrites an author's `!` — which the reflectivity mandate arguably forbids;
-  preserving what was written costs a flag on the node. Pick deliberately.
-
-  **Already compliant, do not touch:** parenthesised grouping.
-  `"(" boolean_expression ")"` is a `boolean_atom` in both the grammar
-  (`ebnf-grammar.ebnf:357`) and the parser (`StatementParser.scala:590`), below
-  `comparison`, so it composes with everything above it — `not (a and b)`,
-  `(a or b) and c` and a parenthesised comparison all parse.
 
 - **`OnInitializationClause.parameters` / `OnTerminationClause.parameters` have
   no default and are not trailing** (`AST.scala:4236`). Filed by synapify

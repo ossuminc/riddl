@@ -1284,24 +1284,40 @@ to the right group rather than appending to a list.
 - **`do "..."` is an alias for `prompt "..."`** — both produce
   `PromptStatement`.
 - **`not` and `!` are SYNONYMOUS everywhere, as the inverse of a
-  boolean expression** (ruling 2026-08-14). `!` is legal in every
-  position `not` is. `not` is prefix and recurses (`not not a`), and
-  both work wherever a boolean expression does.
+  boolean expression** (ruling 2026-08-14, implemented and shipped
+  2026-08-15 — `2026-08-15-not-bang-synonymy` plan, all 5 tasks
+  complete). `!` is legal in every position `not` is, and both build
+  the IDENTICAL `NotExpression` AST node — there is no spelling flag
+  anywhere, so two ASTs meaning the same thing can never compare
+  unequal. `not` is prefix and recurses (`not not a` / `!!a`), and
+  both work wherever a boolean expression does: `when`, `require`,
+  `let`, parenthesised, and applied before a comparison.
   **This OVERRIDES the 2026-08-13 ruling**, which said `not` was the
   only general-purpose negation, that `!` was a legacy spelling
   accepted ONLY as `when !<bare-identifier>`, and that it "will not be
-  extended to" anything more. Do not restore that reasoning — it
-  argued `!` buys no expressiveness and costs four surfaces, and the
-  author has ruled the other way.
-  **The branch does NOT comply yet, and the work is in BACKLOG § 1.**
-  Today `!` is a special case of `when_condition` alone, taking a bare
-  IDENTIFIER rather than an expression, so `!(a and b)`, `require !x`
-  and `let y = !x` are parse errors; and the two spellings build
-  different ASTs — `not` a real negation node, `!` a `negated:
-  Boolean` on `WhenStatement` — so unifying them moves prettify, BAST
-  and JSON and needs a `FORMAT_REVISION` bump. Watch `!=`: a `!`
-  prefix rule ahead of `comparison` swallows its `!` unless guarded,
-  and regex lookahead is unavailable on Scala Native.
+  extended to" anything more. That reasoning is retired, not merely
+  superseded — do not restore it.
+  **The `!` grammar rule is `("not" | "!") not_expression`**, replacing
+  the old `when_condition`-only special case entirely (EBNF
+  `not_expression` — `language/.../ebnf-grammar.ebnf`); the parser
+  guards the `!=` case with `"!" ~~ !"="` (fastparse negative
+  lookahead, no regex — unavailable on Scala Native).
+  **Prettify converges `!` to `not`** — the same precedent as `A | B`
+  prettifying to `one of { A or B }` — pinned by
+  `BangNotRoundTripTest`; a `!=` comparison is untouched, since it is
+  a comparison operator, not a negation. BAST and JSON both carry the
+  change at `FORMAT_REVISION` 18 (`WhenStatement.negated` deleted
+  entirely — there was never a second node kind to reconcile).
+  Corpus fixture: `language/input/bang-not-synonymy.riddl` exercises
+  every position plus the `!=` guard, and is what moved the TatSu
+  baseline from 108/131 to 109/132. Corpus A/B against the four
+  known-red suites (`RiddlModelsRoundTripTest`, `Root2JsonCorpusTest`
+  59/190, riddlc local-corpus, `ReportedIssuesTest` "should 406")
+  showed **zero movement** — the corpus (riddl-models + riddl-examples)
+  has no `!` uses, 597 `not` uses, and no `!=` uses either.
+  Language-reference documentation is a task drop in
+  `../ossum.tech/task/2026-08-15-not-bang-synonymy.md`, not an edit
+  here (one Claude instance per project).
 - **walkStatements helper** — private in ValidationPass; walks
   into `WhenStatement` / `MatchStatement` nesting.
 - **Accessors see through the provenance wrappers; `Finder` sees
