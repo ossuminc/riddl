@@ -103,10 +103,10 @@ task files, so they were NOT physically reshuffled; this index carries the order
 
 | # | Item | Blocked by | Why here |
 |---|---|---|---|
-| 1 | `OnInit`/`OnTerm` params — default + move trailing | — | The only item with a consumer's build **broken right now** (synapify), and a stated compatibility-policy violation. Cheap. |
-| 2 | Close the two stale entries | — | Bookkeeping; they carry phantom work. Both verified closed — see below. |
-| 3 | `valueTypeExpr` surfaces declared predefined types **and** `PromptValue.typeEx` | — | **MERGE of two entries** — same function, same corpus A/B. Running that A/B twice is the waste to avoid. |
-| 4 | Wire `checkPromptAscription` at the remaining A20 positions | 3 | Needs the expected-type machinery from 3 to be sound first. |
+| ~~1~~ | ~~`OnInit`/`OnTerm` params~~ | — | **DONE `c530337d9`** — defaulted IN PLACE; the prescribed "move it trailing" was unnecessary and would itself have broken all five positional call sites. |
+| ~~2~~ | ~~Close the two stale entries~~ | — | **DONE `d46646e10`** — one of them was the sole holder of a live design rationale, graduated to CLAUDE.md before deletion. |
+| ~~3~~ | ~~`valueTypeExpr` predefined types **and** `PromptValue.typeEx`~~ | — | **DONE `141486ed4`** — merged as planned; one function, one corpus A/B. |
+| 4 | Wire `checkPromptAscription` at the remaining A20 positions | ~~3~~ done | Needs the expected-type machinery from 3, which has landed — **unblocked, next up**. |
 | 5 | Close the JVM/Native test gap (560 cases) | — | **Confidence infrastructure — do it before more language change.** Every later item lands on a base whose Native behaviour is unverified. Its `commands` sub-item also settles whether the corpus gate runs JVM-only, which decides how much the A/Bs in 3 and 11 are worth. |
 | 6 | `!` into `Punctuation.tokenPunctuation` | — | Isolated, tooling-facing (idea-plugin, synapify). Fits any gap. |
 | 7 | JSON strict-key rejection | — | Needs a design decision before code. Independent. |
@@ -140,32 +140,25 @@ each want an approved plan before implementation, per the standing rule.
   not re-litigated", which is exactly the kind of thing that must not die with
   the backlog entry.
 
-- **`valueTypeExpr` does not surface a `let`'s declared PREDEFINED type.**
-  Found 2026-08-15 building `terminate`'s target-type check, by instrumenting
-  rather than reading. `let n: Integer = 5` yields `None` from
-  `ValidationPass.valueTypeExpr`, so any check asking "what type is this value"
-  is silently blind to a let whose type the author WROTE OUT, whenever that type
-  is a predefined keyword rather than a named alias. An aliased declaration
-  (`let x: OrderId = …`) works; `let x: Integer = …` does not.
-  **Pre-existing, not caused by the terminate work**, and left alone
-  deliberately — it is a `valueRefTypeExpr`/`letType` gap with a blast radius
-  well beyond one statement, and widening it needs its own A/B against the
-  corpus since it would turn on type checks that currently stay silent.
-  Consequence today: `checkTerminate` stays quiet on `let n: Integer = 5 /
-  terminate n`, which is why `TerminateTargetTest`'s "not an Id" case has to use
-  a bare `self` (whose synthesized Aggregation type IS determinable) instead of
-  the more obvious integer case. That test also pins the silent case, so the
-  boundary is explicit rather than accidental.
-
-- **`checkTerminate`'s target-type check is SILENT for an unascribed
-  `prompt(…)` target.** Same 2026-08-15 work. `terminate prompt("the order to
-  end")` is accepted with no diagnostic, because `valueTypeExpr` yields `None`
-  for an untyped hole. This is deliberate today (A20's conservative rule: an
-  unwired position stays quiet rather than guessing), but note that A20 DOES
-  give holes an ascription — `prompt("…") as OrderId` — and `valueTypeExpr` does
-  not consult `PromptValue.typeEx` either, so even the ASCRIBED form goes
-  unchecked here. Wiring `typeEx` into `valueTypeExpr` is the narrower, more
-  clearly-correct half of the item above and could be done independently.
+- ~~**`valueTypeExpr` does not surface a `let`'s declared PREDEFINED type**~~ and
+  ~~**`checkTerminate` is SILENT for an ascribed `prompt(…)` target**~~ — **BOTH
+  DONE 2026-08-15, `141486ed4`.** Merged deliberately: one function, one corpus
+  A/B. `letDeclaredPredefinedType` answers the first from the same
+  `PredefTypes.typeExpressionFor` set ResolutionPass and `checkStatementScopes`
+  already share, ordered BEFORE inference because a declared type outranks an
+  inferred one; a `PromptValue` arm answers the second by returning `typeEx`.
+  **The UNASCRIBED hole still yields `None`, by design** — A20's conservative
+  rule is untouched, and the silence belongs to the form that says nothing
+  rather than to every `prompt(...)`. `TerminateTargetTest` now pins all four
+  corners.
+  Two things worth keeping. It made an existing comment honest:
+  `ResolutionPass:435` claimed *"`ValidationPass.letType`/`checkStatementScopes`
+  special-case the same set directly"* — `checkStatementScopes` did, `letType`
+  did not, which is the defer-to-something-that-does-not-do-it shape. And the
+  corpus A/B came back identical (187/2, 188 clean) while containing **zero**
+  `let x: <predefined>` ascriptions and **zero** ascribed prompts — all 834 of
+  its `let x:` use named aliases — so that green is evidence the ALIAS path still
+  works, and no evidence at all about the shapes actually changed.
 
 - **`JsonModel`'s reader never rejects unknown/misspelled keys — a whole
   defect class, not one stale doc line.** Found while fixing
