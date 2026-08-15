@@ -449,6 +449,23 @@ private[parsing] trait StatementParser {
     )./.map { case (start, str, end) => PromptValue(at(start, end), str) }
   }
 
+  /** A numeric literal — `[+-]? digits [ . digits ] [ (e|E) [+-] digits ]`.
+    *
+    * Captured as raw text, not converted: the AST stores what the author wrote. No digit
+    * separators and no radix prefixes — declined deliberately (Reid, 2026-08-14); both are pure
+    * additions later if wanted.
+    *
+    * There is no lexical ambiguity with identifiers or paths: an identifier must begin with a
+    * letter (`simpleIdentifier`), so nothing beginning with a digit or a sign can be one.
+    */
+  private def numericLiteral[u: P]: P[NumericLiteral] = {
+    P(
+      Index ~~ (CharIn("+\\-").? ~~ CharIn("0-9").rep(1) ~~
+        ("." ~~ CharIn("0-9").rep(1)).? ~~
+        (CharIn("eE") ~~ CharIn("+\\-").? ~~ CharIn("0-9").rep(1)).?).! ~~ Index
+    ).map { case (start, text, end) => NumericLiteral(at(start, end), text) }
+  }
+
   // A54/A28: a value expression. Keyword-led forms (`prompt(…)`, constructor, `get from`) are tried
   // first; everything else flows through the boolean-expression sub-language (`booleanExpr`), which
   // returns the bare atom unchanged when no comparison/logical operator is present — so a plain
@@ -463,7 +480,12 @@ private[parsing] trait StatementParser {
         initiateValue.map(i => i: Value) | // `initiate <processor>[(args)]` (keyword-led)
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
-        booleanExpr
+        booleanExpr |
+        // LAST, and deliberately: `booleanExpr` must get first refusal so `5 > 3` parses as a
+        // comparison. Tried earlier, `numericLiteral` would match `5`, return it as the whole
+        // value, and leave `> 3` dangling. `comparison` cuts only AFTER its operator, so a bare
+        // `5` backtracks cleanly out of `booleanExpr` and lands here.
+        numericLiteral.map(nl => nl: Value)
     )
   }
 

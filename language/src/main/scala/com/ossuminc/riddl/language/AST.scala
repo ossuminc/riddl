@@ -814,8 +814,8 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Initiate | Requires |
-    Returns | InvariantBlock
+    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Initiate | NumericLiteral |
+    Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -2980,7 +2980,7 @@ object AST:
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
-      Ask | SelfValue | Initiate
+      Ask | SelfValue | Initiate | NumericLiteral
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -3222,6 +3222,40 @@ object AST:
     override def kind: String = "Prompt Value"
     def format: String = s"prompt(${prompt.format})"
   end PromptValue
+
+  /** A numeric literal — an integer or a real number, written directly rather than quoted or
+    * named.
+    *
+    * **The text is stored AS WRITTEN, and that is the point.** `1.50`, `007` and `+3` are not
+    * recoverable from a parsed `Long`/`BigDecimal`, so a parsed payload would make prettify
+    * diverge from the source on its first use. Storing text makes the round trip byte-exact by
+    * construction, needs one BAST tag rather than two, and keeps `BigDecimal` off the Native and
+    * JS paths entirely. Same reasoning as `UniqueId.kindKeyword` and correlation keys.
+    *
+    * `isEmpty` is deliberately NOT overridden: a literal is a non-container, so the inherited
+    * `true` is correct. Emptiness asks whether a node HAS CONTENTS, never whether the author
+    * supplied it.
+    *
+    * @param loc
+    *   The location of the literal in the source
+    * @param text
+    *   The literal exactly as the author wrote it
+    */
+  // `loc` required (not defaulted): @JSExportTopLevel forbids a non-trailing default and `text`
+  // has no empty default — matching PromptValue and the other sibling value nodes.
+  @JSExportTopLevel("NumericLiteral")
+  case class NumericLiteral(loc: At, text: String) extends RiddlValue:
+    override def kind: String = "Numeric Literal"
+    def format: String = text
+
+    /** True when the literal has neither a fractional part nor an exponent. `1e3` is therefore
+      * NOT an integer literal: it denotes a real, and the type inference in ValidationPass
+      * depends on that reading.
+      */
+    def isInteger: Boolean = !text.exists(c => c == '.' || c == 'e' || c == 'E')
+    def asLong: Long = text.toLong
+    def asBigDecimal: BigDecimal = BigDecimal(text)
+  end NumericLiteral
 
   /** A28: the relational operator of a [[ComparisonExpression]]. `symbol` is the surface syntax
     * (`==`, `!=`, `<`, `>`, `<=`, `>=`) used by both the parser and `format`.

@@ -14,6 +14,7 @@ class JSHandlerTest extends HandlerTest
 class JSMetaDataTest extends MetaDataTest
 class JSModuleTest extends ModuleTest
 class JSNebulaTest extends NebulaTest
+class JSNumericLiteralTest extends NumericLiteralTest
 class JSParsingTestTest extends ParsingTestTest
 class JSProjectorTest extends ProjectorTest
 class JSRepositoryTest extends RepositoryTest

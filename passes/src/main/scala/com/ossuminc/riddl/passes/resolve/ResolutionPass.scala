@@ -498,8 +498,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage[Invariant](parents.head, resolveARef[Invariant](ic.ref, parents))
         ic.argument.foreach(a => resolveValue(a, parents))
       // A28: recurse into boolean-expression operands so any nested ValueRef/GetValue/Constructor
-      // atoms resolve (a BooleanLiteral has no references).
+      // atoms resolve (a BooleanLiteral has no references). A NumericLiteral likewise holds no
+      // references -- it is raw text, not resolvable.
       case _: BooleanLiteral        => ()
+      case _: NumericLiteral        => ()
       case ce: ComparisonExpression =>
         // A28: operands are ref-only Comparands (not general Values); resolve each ref.
         resolveComparand(ce.left, parents); resolveComparand(ce.right, parents)

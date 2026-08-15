@@ -5172,7 +5172,7 @@ case class ValidationPass(
     // `self`/`self.<field>` is a keyword-anchored value, not an effect -- reading the running
     // instance's own identity cannot fail the way a call, ask, or get can.
     case _: SelfValue             => 0
-    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => 0
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral => 0
     case other =>
       throw new IllegalStateException(
         s"countValueFailPoints has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
@@ -5278,7 +5278,7 @@ case class ValidationPass(
     // `self`/`self.<field>` holds no nested value -- an optional bare field Identifier, not a
     // sub-expression -- so it cannot contain a state read.
     case _: SelfValue             => Seq.empty
-    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral => Seq.empty
     case other =>
       throw new IllegalStateException(
         s"stateReadsIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
@@ -5314,7 +5314,7 @@ case class ValidationPass(
     case _: Identifier            => Seq.empty
     // `self`/`self.<field>` holds no nested value; see the same note in `stateReadsIn`.
     case _: SelfValue             => Seq.empty
-    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral => Seq.empty
     case other =>
       throw new IllegalStateException(
         s"initiatesIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
@@ -5362,7 +5362,7 @@ case class ValidationPass(
     case _: Identifier            => Seq.empty
     // `self`/`self.<field>` holds no nested value; see the same note in `stateReadsIn`.
     case _: SelfValue             => Seq.empty
-    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral => Seq.empty
     case other =>
       throw new IllegalStateException(
         s"asksIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
@@ -6094,6 +6094,11 @@ case class ValidationPass(
       // `initiate`'s type is a SYNTHESIZED UniqueId, not a named Type -- same reasoning as `self`,
       // immediately above. `valueTypeExpr` computes it (see its `Initiate` arm).
       case _: Initiate          => None
+      // A numeric literal denotes no NAMED Type -- it is a raw literal, not a reference to a
+      // declaration. Best-effort numeric type-compatibility checking (matching it against a
+      // field's declared numeric type) is Task 5's job and reads `.isInteger`/`.asBigDecimal`
+      // directly rather than through this named-Type lookup.
+      case _: NumericLiteral    => None
 
   /** A28: the broad category of a [[Value]] for best-effort boolean/comparison checks: `"boolean"`,
     * `"numeric"`, or `"string"`; `None` when it cannot be determined (skip the check). A
@@ -6410,6 +6415,7 @@ case class ValidationPass(
       // never rejected either way, unlike `require invariant X`, which APPLIES the rule and so
       // must be handed what the rule reads (`checkRequireArgument`).
       case _: BooleanLiteral        => ()
+      case _: NumericLiteral        => ()
       case ce: ComparisonExpression =>
         // A28: operands are ref-only Comparands; validate each resolves, then enforce type-safety.
         validateComparand(ce.left, parents, lets, elements)

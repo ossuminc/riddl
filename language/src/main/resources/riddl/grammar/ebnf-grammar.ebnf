@@ -314,11 +314,16 @@ the_set_statement = "set" (field_ref | state_ref) "to" value ;
 let_statement = "let" identifier [":" type_ref] "=" value ;
 
 (* A54: value expressions. A value is pseudo-code text, an AI-computed `prompt(...)`, a message/record
-   constructor, a `get from` read of a UI input or entity state, or (A28) a boolean expression whose
-   bare atom is a value reference or literal. *)
+   constructor, a `get from` read of a UI input or entity state, (A28) a boolean expression whose
+   bare atom is a value reference or literal, or a numeric literal (tried last: boolean_expression
+   gets first refusal so `5 > 3` parses as a comparison, not a numeric literal with a dangling tail). *)
 value = literal_string | prompt_value | call | ask | initiate | constructor | get_value
-      | boolean_expression ;
+      | boolean_expression | numeric_literal ;
 prompt_value = "prompt" "(" literal_string ")" ;
+(* Numeric literals - integers and reals, written directly. No digit separators and no radix   *)
+(* prefixes: declined deliberately, and pure additions later if wanted.                        *)
+numeric_literal = [ "+" | "-" ] {digit}+ [ "." {digit}+ ]
+                  [ ( "e" | "E" ) [ "+" | "-" ] {digit}+ ] ;
 (* A24: call a pure function to get a result. "Functions only" — the callee is a function_ref. *)
 call = "call" function_ref "(" [constructor_arg {"," constructor_arg}] ")" ;
 (* `ask` declares a CORRELATION -- that a reply is expected and which query it answers -- and
