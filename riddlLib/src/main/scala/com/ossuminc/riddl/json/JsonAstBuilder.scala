@@ -698,12 +698,23 @@ object JsonAstBuilder:
   private def buildUser(u: UserDto)(using Ctx): User =
     User(curAt, ident(u.name), LiteralString(curAt, u.isA), meta(u.brief, u.metadata))
 
-  private def buildConstant(c: ConstantDto)(using Ctx): Constant =
+  private def buildConstant(c: ConstantDto)(using ctx: Ctx): Constant =
+    // `Constant.value: ConstantValue = LiteralString | NumericLiteral | BooleanLiteral |
+    // PromptValue` -- narrow what buildValue's general Value result actually is, rather than
+    // assuming LiteralString.
+    val value: ConstantValue = buildValue(c.value) match
+      case cv: ConstantValue => cv
+      case other =>
+        ctx.err(
+          s"constant value must be a literal string, numeric literal, boolean literal, or " +
+            s"prompt, got: ${other.getClass.getSimpleName}"
+        )
+        LiteralString(curAt, "")
     Constant(
       curAt,
       ident(c.name),
       buildTypeExpr(c.`type`),
-      LiteralString(curAt, c.value),
+      value,
       meta(c.brief, c.metadata)
     )
 

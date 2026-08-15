@@ -64,7 +64,7 @@ is covered in that construct's phase. The builder emits references as
 | Version | ✅ A53 / A47 | `version` on root/module/domain + all six processors; `name` + `numeric` flag |
 | Copyright | ✅ A47 | `copyright` on root/module/domain + all six processors; `name` + verbatim `text` |
 | Enumerator | ✅ Phase 2 | names + explicit `value` |
-| Constant | ✅ Phase 2 | in context/entity |
+| Constant | ✅ Phase 2 / numeric-literals (2026-08-15) | in context/entity; `value` is a `ValueDto` (`ConstantValue = LiteralString \| NumericLiteral \| BooleanLiteral \| PromptValue`), not a bare string, so a constant can hold any of the four |
 | User | ✅ Phase 2 | at domain level |
 | Term | ✅ Phase 9 | glossary entry (metadata; see Metadata section) |
 | Method | ✅ Phase 3 | aggregate method with args |
@@ -179,6 +179,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | Construct | Status | Notes |
 |---|---|---|
 | LiteralString (value) | ✅ A54 | `{ "value": "literal", "text": ... }` |
+| NumericLiteral | ✅ numeric-literals (2026-08-15) | `{ "value": "numeric", "text": ... }` — `text` is the literal AS WRITTEN (`5`, `007`, `1.50`, `2E+8`), always a JSON string, never `ujson.Num`: a Double would turn `1.50` into `1.5` and drop the precision of a large integer, exactly the loss the AST node stores text to avoid. Also serves as a `Comparand` (A28, widened) |
 | PromptValue | ✅ A54 | `{ "value": "prompt", "prompt": ... }` — AI-computed value |
 | Constructor / ConstructorArg | ✅ A54 | refKind command/event/query/result/record; positional + named args |
 | Call | ✅ A24 | `{ "value": "call", "function": "<path>", "args": [<arg>] }` — call a pure function to get a result |

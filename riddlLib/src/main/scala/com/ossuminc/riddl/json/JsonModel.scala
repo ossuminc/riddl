@@ -463,11 +463,17 @@ object JsonModel:
     contents: Seq[ContentEntry] = Nil
   )
 
-  /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
+  /** `{ "name": "MaxItems", "type": <typeExpr>, "value": <value>, "brief"?: ... }` (Phase 2).
+    *
+    * `value` is a [[ValueDto]], not a bare string, because `AST.Constant.value` is
+    * `ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue` -- a constant
+    * can hold any of the four. `valueDtoRW` (below) already handles the polymorphism, so
+    * `macroRW` picks it up with no further work.
+    */
   case class ConstantDto(
     name: String,
     `type`: TypeExprDto,
-    value: String,
+    value: ValueDto,
     brief: Option[String] = None,
     metadata: Option[MetaDto] = None
   )
