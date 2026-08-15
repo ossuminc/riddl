@@ -2899,13 +2899,15 @@ class BASTReader(
   }
 
   private def readURL(): URL = {
-    // Read basis and path separately (format revision 4+).
-    // The writer stores these as two separate strings to
-    // preserve the relative path structure for includes.
+    // Read all four fields separately (format revision 18+; revisions 4-17 wrote only
+    // basis+path and this reader rebuilt scheme/authority as `file`/empty, silently
+    // discarding `https://ossum.tech` and any other non-file URL).
+    val scheme = readString()
+    val authority = readString()
     val basis = readString()
     val path = readString()
-    if basis.isEmpty && path.isEmpty then URL.empty
-    else URL(URL.fileScheme, "", basis, path)
+    if scheme.isEmpty && authority.isEmpty && basis.isEmpty && path.isEmpty then URL.empty
+    else URL(scheme, authority, basis, path)
   }
 
   private def readOption[T](readValue: => T): Option[T] = {

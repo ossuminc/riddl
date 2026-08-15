@@ -2374,10 +2374,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeURL(url: URL): Unit = {
-    // Store basis and path separately to preserve the relative
-    // path structure through BAST round-trips. Previously we
-    // stored url.toExternalForm which flattened basis+path into
-    // a single path string, losing the split point.
+    // Store all four fields separately to preserve the relative path structure AND the
+    // scheme/authority through BAST round-trips. Previously we stored url.toExternalForm
+    // which flattened basis+path into a single path string, losing the split point; then
+    // (revision 17 and earlier) we stored only basis+path, so the reader had to guess
+    // scheme/authority and always guessed `file`/empty -- losing `https://ossum.tech` etc.
+    // on every URL, not just the one construct that happened to report it.
+    writeString(url.scheme)
+    writeString(url.authority)
     writeString(url.basis)
     writeString(url.path)
   }

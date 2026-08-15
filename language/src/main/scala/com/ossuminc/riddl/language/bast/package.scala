@@ -102,7 +102,16 @@ package object bast {
     // byte as the start of the string and derails on everything after it. Incompatible both ways,
     // deliberately. This bump is SHARED: BACKLOG § 2 reserves ONE bump for numeric literals, A20
     // typed holes and A38. It is now SPENT -- neither of those may move it again.
-    18 // numeric literals + Constant carries a tagged value
+    // Also riding 18 (2026-08-15): `writeURL`/`readURL` now write/read all FOUR `URL` fields
+    // (scheme, authority, basis, path) instead of just basis+path. A revision-17 reader still
+    // decodes the bytes without error -- it just silently drops the leading scheme+authority
+    // strings and rebuilds every URL as `file:///<path>`, which is how `shown by
+    // https://ossum.tech/...` came back as `file:///...` and is not a `ShownBy`-specific
+    // defect: every URL through BAST was affected, `described at <url>` only escaped notice
+    // because riddl-models' one instance happened to be a file/relative URL already. Folded
+    // into 18 rather than bumping to 19 because 18 has not shipped in a release yet, so no
+    // `.bast` file in the wild carries the old two-field shape to be misread.
+    18 // numeric literals + Constant carries a tagged value + URL carries scheme/authority
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.
     *
