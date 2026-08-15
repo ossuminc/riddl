@@ -91,6 +91,13 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case mc: MatchCase        => Seq(mc.pattern) ++ mc.guard.toSeq ++ mc.statements.toSeq
     case cp: ComparisonPattern => Seq(cp.comparand)
     case lp: LiteralPattern    => Seq(lp.literal)
+    // Same-shaped bare-LiteralString fields as `lp.literal` immediately above — added for
+    // audit consistency (review round 1, fix 2). A LiteralString is a leaf so these add no
+    // actual reachability, but a table claiming to be exhaustive should not have unexplained
+    // gaps next to a sibling it does cover.
+    case ps: PromptStatement   => Seq(ps.what)
+    case es: ErrorStatement    => Seq(es.message)
+    case cs: CodeStatement     => Seq(cs.language)
     case fe: ForeachStatement => fe.doStatements.toSeq
     case ss: SagaStep         => ss.doStatements.toSeq ++ ss.undoStatements.toSeq
     case cr: Correlation      => cr.timeoutStatements.toSeq // `.contents` already walked as a Container
@@ -121,6 +128,18 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case in: Initiate             => in.args
     case ca: ConstructorArg       => Seq(ca.value)
     case gv: GetValue             => Seq(gv.source)
+
+    // Review round 1, fix 1: `PromptValue` (A20's `prompt("…") as T` typed hole) was the ONLY
+    // arm of `Value` holding a non-trivial nested structure and had NO case at all — not the
+    // `prompt` text, not the `as T` ascription. `PromptValue` legally sits in
+    // `WhenStatement.condition`, `LetStatement.expression`, `SetStatement.value`,
+    // `PutStatement.value`, `ReturnStatement.value` and `ConstantValue`, so a search for a
+    // `NumericLiteral`/`AliasedTypeExpression`/etc. reached through any of those missed it. The
+    // ascription's `TypeExpression` is surfaced here too (an `AliasedTypeExpression` — a NAMED
+    // type ascription — recurses one further level into its `PathIdentifier`, so `prompt("…") as
+    // SomeType` makes both the ascription node AND the path it names reachable).
+    case pv: PromptValue          => Seq(pv.prompt) ++ pv.typeEx.toSeq
+    case ate: AliasedTypeExpression => Seq(ate.pathId)
 
     case _ => Seq.empty
   end fieldChildren

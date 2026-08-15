@@ -17,7 +17,9 @@ import com.ossuminc.riddl.language.AST.{
   Entity,
   Context,
   NumericLiteral,
-  LetStatement
+  LetStatement,
+  AliasedTypeExpression,
+  PathIdentifier
 }
 import com.ossuminc.riddl.language.parsing.{
   AbstractParsingTest,
@@ -137,6 +139,30 @@ class SharedFinderTest extends AbstractTestingBasis {
       literals.map(_.text) must contain("5")
       literals.map(_.text) must contain("3")
       literals.map(_.text) must contain("1")
+    }
+
+    // Review round 1, fix 1: `PromptValue` (A20's `prompt("…") as T` typed hole) had NO
+    // `fieldChildren` case at all -- not `prompt`, not the `as T` ascription. Reaches a type
+    // expression THROUGH a prompt ascription: both the `AliasedTypeExpression` node the `as
+    // OrderId` ascription builds, and the `PathIdentifier` named inside it, must be found.
+    "descend into a PromptValue's `as <type>` ascription" in {
+      val content2 =
+        """domain D is {
+          |  context C is {
+          |    type OrderId is String
+          |    function F is {
+          |      let x = prompt("describe it") as OrderId
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "promptAscriptionTest"), true) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(r: Root) => r
+      val aliases = Finder(root2).recursiveFindByType[AliasedTypeExpression]
+      aliases.map(_.pathId.format) must contain("OrderId")
+      val paths = Finder(root2).recursiveFindByType[PathIdentifier]
+      paths.map(_.format) must contain("OrderId")
     }
 
     "descend into a MatchCase guard" in {
