@@ -1377,8 +1377,9 @@ that needs a ruling before either can be fixed.
 
 - **BLOCKED ON riddl-models: two corpus tests are RED here and stay red until
   it lands its fix.** `RiddlModelsRoundTripTest` (16 of 189 models) and
-  `Root2JsonCorpusTest` (173/189, needs ≥95%). **This is not a defect here and
-  must not be "fixed" here.**
+  `Root2JsonCorpusTest` (**59/190**, needs ≥95% — corrected 2026-08-15; this
+  entry previously said 173/189, which was stale). **This is not a defect here
+  and must not be "fixed" here.**
   Cause: `ccd278c00` taught the tell-addressing check to resolve `Id` aliases,
   which turned it ON for the spelling riddl-models actually uses, surfacing **49
   ambiguity Errors it had been hiding**. Verified by A/B — stash the fix and the
@@ -1397,6 +1398,14 @@ that needs a ruling before either can be fixed.
   **Consequence for the next RC:** certification cannot be clean until this
   lands. `~/Code/ossuminc/bin/riddlc` is already staged at
   `2.0.0-rc.14-12-54d82288` so riddl-models can start.
+  **A second, UNEXPLAINED regression sits on top of the 49-alias one**: the
+  corrected 59/190 above is roughly 114 models worse than the 173/189 this
+  entry previously recorded, and that gap is NOT accounted for by the 49
+  aliasing defects. Confirmed by A/B stash testing to PREDATE the
+  numeric-literals work (present with that branch's commits stashed too), so
+  it is not a defect of this branch either — but its cause is not yet known
+  and needs its own investigation. Do not fold it into the alias-fix task
+  above; file and diagnose it separately.
 - ~~**Tell consumers about two BREAKING changes landed 2026-08-10.**~~
   **CLOSED 2026-08-11 by Reid: no announcement needed**, for either half.
   Recorded so it is not re-raised: (1) BAST `FORMAT_REVISION`, now **11**, so
