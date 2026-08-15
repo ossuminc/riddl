@@ -27,17 +27,32 @@ here about those is stale the moment someone commits.
 - **`2.0.0-rc.14` IS RELEASED** — GitHub prerelease, Maven from the tag, npm on
   the **`rc`** dist-tag (`latest` did NOT move).
 
-**In flight: nothing.** Four approved backlog items were completed 2026-08-14
-(`8177418d1`, `7ed365e60`, `4feb5a370`, `fdf29927f`, `75a791682`): the
-bare-message-operand Error, the saga `initiate`/`terminate` test, all four
-approved bugs, and the stream-reachability rule. `language` 669 and `passes`
-1267 are green; **the other modules have NOT been re-run since** — `riddlLib`,
-`riddlc`, `commands`, JS and Native legs are owed before an RC.
+**In flight: nothing.** An unattended run on 2026-08-14 completed, in order:
+`5072bad5b` A43 modality aliases + A46 presentation verbs, `a68e4a037`
+`exactly-once` as a delivery intention with all three option spellings retired,
+`cb2ea1dd7` `isIdForEntity` by resolved identity. Before that, the four approved
+items (`8177418d1`, `7ed365e60`, `4feb5a370`, `fdf29927f`, `75a791682`).
 
-**The next action is still Reid's: cut the RC** (`/rc`).
+`language` 669 and `passes` 1271 green; all four grammar validators green (TatSu
+**105/128** — the baseline moved from 104/127 because a new fixture was added and
+it passes). **The other modules have NOT been run since** — `riddlLib`, `riddlc`,
+`commands`, JS and Native are owed before an RC.
+
+**Next, and both are APPROVED but want a plan first:** numeric literals in
+`Value` (integers and decimals) and A20 typed holes spelled `prompt("…") as T`.
+**They share ONE `FORMAT_REVISION` bump with A38 — 17 -> 18.** See BACKLOG § 2;
+deciding the bump once, in whichever lands first, is the whole point of the note.
 
 **Traps — every one already bit someone here.**
 
+- **A `.conf` overrides CLI options, so a corpus A/B on a completeness check can be
+  meaningless.** `--show-completeness-warnings=true` was ignored for every
+  riddl-models model, leaving the count at zero both with and without the fix under
+  test. A unit test isolated what the corpus could not. Check that your instrument
+  can move before trusting a number it reports.
+- **Assert a COUNT, not `nonEmpty`, when a bug's symptom is over-silencing.** The
+  name-matching Id check silenced the warning for BOTH same-named entities, so a
+  `nonEmpty` assertion passes under the bug and only a count of exactly 1 fails.
 - **THE CORPUS IS RED BY DESIGN, now for a THIRD reason.** On top of the two
   already-red tests, the bare-operand Error (`4feb5a370`) makes every unmigrated
   `send`/`tell`/`yield`/`reply`/`morph` in riddl-models an Error. Reid approved it

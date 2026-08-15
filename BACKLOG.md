@@ -142,7 +142,12 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   Keep the field-less exemption when flipping: with no data the type fully determines
   the value, and it accounts for 62 of the 14,714.
 
-- **`at-least-once` / `at-most-once` / `exactly-once` are inert as OPTIONS.**
+- **DONE 2026-08-14 (`a68e4a037`) — `exactly-once` is a delivery INTENTION and all
+  three option spellings are retired.** Reid ruled it into the enum, which is what
+  unblocked deprecating them together; all three now CONSUME into their intention as
+  `persistent` does. Original entry follows.
+
+- ~~**`at-least-once` / `at-most-once` / `exactly-once` are inert as OPTIONS.**~~
   Filed by synapify 2026-08-14 alongside the `option persistent` retirement
   (`e0a424ed0`), and verified here:
   `StreamingParser.deprecatedConnectorOptions` (`StreamingParser.scala:61`)
@@ -602,7 +607,14 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   must be conservative enough that no legal model is rejected. That is what
   makes it a task rather than a line in this one.
 
-- **NAME-MATCHING SURVIVOR: `isIdForEntity`** (`ValidationPass.scala:2343`,
+- **DONE 2026-08-14 (`cb2ea1dd7`) — `isIdForEntity` resolves through `uniqueIdReferent`
+  and compares with `eq`.** Test asserts a COUNT, not nonEmpty, which is what makes it
+  fail under the old name match; revert-proved. Note for anyone attempting a CLI corpus
+  A/B on a completeness check: each model's `.conf` supplies its own options and
+  overrides `--show-completeness-warnings`, so the count stays at zero either way and
+  the comparison says nothing. Original entry follows.
+
+- ~~**NAME-MATCHING SURVIVOR: `isIdForEntity`**~~ (`ValidationPass.scala:2343`,
   inside `validateEntity`'s "does not define an Id type for its identity"
   completeness check) decides whether a `Type` is an Id for THIS entity with
   `uid.entityPath.value.lastOption.contains(entity.id.value)` — the
@@ -729,6 +741,32 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
 
+**RULINGS TAKEN 2026-08-14, before an unattended run.** Reid answered four questions
+up front. Two are built (`exactly-once`, A43+A46 verbatim). The other two are
+APPROVED BUT NOT BUILT and are the largest remaining items:
+
+- **Numeric literals in `Value` — APPROVED, integers AND decimals.** Unblocks
+  `initiate entity Order(1)`, `count > 5`, `record R(1)` and the identity spec's own
+  `on init(total: Currency)` example. Touches parser, EBNF, GBNF, prettify, BAST and
+  JSON. **Wants a plan first** — it widens a closed union that four reflection
+  surfaces switch on.
+- **A20 typed holes — APPROVED, spelled `prompt("…") as T`.** Reid chose this over
+  `prompt T ("…")` and over the document's un-RIDDL `Value[T]("prose")`. It reuses the
+  shipped `prompt` and ascribes a type after it, matching `on foo: command Foo` and
+  `let x: T = …`, so nothing new enters the lexer. Also wants a plan.
+
+**THESE TWO AND A38 SHARE ONE `FORMAT_REVISION` BUMP (17 -> 18).** Each adds or changes
+an AST node that BAST must carry. Doing them in three commits with three bumps would be
+three needless `.bast` regenerations across riddl-models; doing them without a bump at
+all silently corrupts old files. **Decide the bump ONCE, in whichever lands first, and
+say so in its commit** — the message-value plan's "the 16 -> 17 bump is SPENT" note is
+the precedent for how to record it.
+
+Still unbuilt from A46: the compound-output noun/verb consistency warning (a sound, a
+window and a haptic inside one output). The VERBS shipped; this diagnostic did not, and
+it is the design-y half.
+
+
 Surfaced 2026-08-14 by reconciling that document against this branch. **Six**
 items carry an ACCEPTED ruling and had no backlog entry, so none was tracked.
 Reid, 2026-08-14: *"add the things not built yet to the backlog so they stand a
@@ -750,7 +788,15 @@ that needs a ruling before either can be fixed.
   and constrains the hole from outside; decide whether that is enough before
   building the general form.
 
-- **A43 — modality-extended alias vocabulary.** Outputs gain `sound`, `speech`,
+- **DONE 2026-08-14 (`5072bad5b`) — A43 and A46 shipped together.** Same four rules,
+  and A46's verbs only make sense beside A43's modalities. Fixture at
+  `language/input/modality-aliases.riddl`; TatSu 104/127 -> 105/128, the extra pass IS
+  that file. **A46's mixed grammatical person is deliberate** (Reid, verbatim) and is
+  commented at the parser, because it is the OPPOSITE call to the one already recorded
+  on `acquisitionAliases` — the next reader will otherwise "regularise" it.
+  Original entries follow.
+
+- ~~**A43 — modality-extended alias vocabulary.**~~ Outputs gain `sound`, `speech`,
   `haptic`; inputs gain `voice`, `gesture`, `gaze`; groups gain `scene`, `space`,
   `zone`. Closed lists, **zero structural change** — the input/output/group triad
   is already the modality-free logical core — so the work is three `StringIn`
@@ -758,7 +804,7 @@ that needs a ruling before either can be fixed.
   Verified unbuilt: none of the nine words appears in the alias rules of
   `ebnf-grammar.ebnf`.
 
-- **A46 — presentation-alias additions and compound consistency.** `plays`
+- ~~**A46 — presentation-alias additions and compound consistency.**~~ *(shipped with A43; the compound-output noun/verb consistency WARNING is NOT built — see below.)* `plays`
   (sound/animation); `speaks`, `announces` (speech); `vibrates`, `pulses`,
   `nudges` (haptics); `diffuses` (scent); `serve`, `offer`, `taste`. Plus a
   warning for noun/verb inconsistency across a compound output's parts.
