@@ -44,10 +44,38 @@ about those is stale the moment someone commits.
   `.superpowers/sdd/2026-08-15-numeric-literals/` for the full transcripts.
 
 **In flight: nothing.** The numeric-literals plan (8 tasks) is fully landed,
-verified, and committed. A20 typed holes (`prompt("…") as T`) remains
-APPROVED but not started, and A38 (refusal step naming an invariant) remains
-its own queued item — both in BACKLOG § 2, both riding `FORMAT_REVISION` 18
-when they land.
+verified, and committed, and so are **all three triaged task fixes** that
+followed it (`baab7c50c`, `472d11960`, `c01bd3add`) — `task/` now holds only
+Reid's own security draft, marked *"do not act on this"*.
+
+**A20 typed holes is PLANNED but deliberately NOT started**, and one thing
+must happen before it can be:
+
+> `docs/superpowers/plans/2026-08-15-a20-typed-holes.md` **Task 3 is BLOCKED
+> on a ruling from Reid** and says so in the plan. The design says an
+> unascribed `prompt("…")` warns where nothing supplies a type — but
+> "supplies a type" is a property of *which call sites we wire*, not of the
+> language. Only `validateConstant` and `checkValueType` carry an expected
+> type; constructor arguments do not. So the naive build warns on
+> `record R(prompt("the total"))`, which the design's own table lists as
+> silent. The plan recommends the conservative warning and gives the
+> alternative. **Tasks 1, 2, 4 and 5 are unaffected and can start.**
+
+A38 (refusal step naming an invariant) remains its own queued item. Both ride
+`FORMAT_REVISION` **18**, which is SPENT but has **not shipped** — latest tag
+is `2.0.0-rc.14`, so folding in beats bumping to 19. Re-check `git tag`.
+
+**Two pre-existing defects found and FILED, not fixed** (BACKLOG § 1): a
+predefined type keyword cannot be a `let` ascription (`let x: Natural = …`
+does not resolve — `ResolutionPass:329`), and `Finder` never descends into a
+`when` CONDITION, so any Finder-based search silently misses everything
+inside one. The second is the `statementValues` shape again and lists its
+siblings to fix alongside it.
+
+**Root2JsonCorpusTest is at 59/190 against a recorded 173/189** — a ~114-model
+regression that A/B stash testing proves predates all of this work. The stale
+number is corrected in BACKLOG and the gap is filed. **Nobody has explained
+it, and it is the largest unexplained thing on this branch.**
 
 **Traps — every one already bit someone here.**
 
