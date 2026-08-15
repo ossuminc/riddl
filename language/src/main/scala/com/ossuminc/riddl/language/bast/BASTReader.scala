@@ -737,7 +737,16 @@ class BASTReader(
     // INLINE, matching `writeIdentifierInline` -- a tagged read here consumes one byte too many.
     val id = readIdentifierInline()
     val typEx = readTypeExpression()
-    val value = readLiteralString()
+    // `Constant.value: ConstantValue` as of the numeric-literals plan (Task 4); the writer now
+    // emits a full tagged VALUE (FORMAT_REVISION 18), so read one back and narrow it. A wrong arm
+    // here is corruption, not a rough edge -- throw rather than substitute a plausible value, the
+    // same lesson the ShownBy and Constant/Method bugs taught.
+    val value = readValue() match
+      case cv: (LiteralString | NumericLiteral | BooleanLiteral | PromptValue) => cv
+      case other =>
+        throw new RuntimeException(
+          s"Constant value decoded as ${other.getClass.getSimpleName}, which is not a ConstantValue"
+        )
     val metadata = readMetadataDeferred()
     Constant(loc, id, typEx, value, metadata)
   }
@@ -2602,6 +2611,9 @@ class BASTReader(
         val loc = readLocation()
         val field = readOption(readIdentifierInline())
         SelfValue(loc, field)
+      case 10 => // NumericLiteral -- text as written
+        val loc = readLocation()
+        NumericLiteral(loc, readString())
       case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
   }
 
@@ -2644,6 +2656,9 @@ class BASTReader(
         val loc = readLocation()
         val pid = readPathIdentifierInline()
         ConstantRef(loc, pid)
+      case 3 => // NumericLiteral
+        val loc = readLocation()
+        NumericLiteral(loc, readString())
       case other => throw new RuntimeException(s"Invalid comparand discriminator: $other")
   }
 

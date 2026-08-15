@@ -677,19 +677,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(c.loc)
     writeIdentifierInline(c.id) // Inline - no tag needed
     writeTypeExpression(c.typeEx)
-    // SCOPE: `Constant.value` widened to `ConstantValue` (numeric-literals plan Task 4), but the
-    // wire format for the three new arms is Task 6's job, not this one's -- only the pre-existing
-    // LiteralString arm is written here. Throwing (not silently dropping a byte) follows the
-    // "Total Dispatch" rule until Task 6 lands.
-    c.value match
-      case ls: LiteralString => writeLiteralString(ls)
-      case other =>
-        throw new NotImplementedError(
-          s"BAST serialization of a non-string constant value " +
-            s"(${other.getClass.getSimpleName}) is not yet implemented; see numeric-literals " +
-            "plan Task 6."
-        )
-    end match
+    // `Constant.value: ConstantValue` (LiteralString | NumericLiteral | BooleanLiteral |
+    // PromptValue) is a subset of `Value`, so `writeValue` handles all four arms and the reader
+    // gains the discriminator byte it needs to tell them apart -- see FORMAT_REVISION 18.
+    writeValue(c.value)
   }
 
   // ========== Type Component Serialization ==========
@@ -1452,6 +1443,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeLocation(init.loc)
         writeProcessorRef(init.processor)
         writeSeq(init.args)(writeConstructorArg)
+      case nl: NumericLiteral =>
+        writer.writeU8(10)
+        writeLocation(nl.loc)
+        writeString(nl.text)
   }
 
   /** A70/instance-identity: a single [[ConstructorArg]] -- mirror of the inline arg-writing loop
@@ -1498,6 +1493,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(2)
         writeLocation(cr.loc)
         writePathIdentifierInline(cr.pathId)
+      case nl: NumericLiteral =>
+        writer.writeU8(3)
+        writeLocation(nl.loc)
+        writeString(nl.text)
   }
 
   def writeConstructor(c: Constructor): Unit = {

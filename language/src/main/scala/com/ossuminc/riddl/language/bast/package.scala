@@ -96,7 +96,13 @@ package object bast {
     // `yield`/`reply` may now legitimately carry the MESSAGE operand's discriminator 2, which a
     // revision-16 reader THROWS on by design -- its arms said `yield` never accepts a bound name,
     // true of the parser at the time. So the incompatibility runs both ways and is deliberate.
-    17 // yield/reply/morph accept a bare ValueRef operand (message-value design, Task 2)
+    // 18 adds numeric literals -- value tag 10 and comparand discriminator 3, both of which a
+    // revision-17 reader rejects as invalid -- and changes `Constant` to write a full tagged
+    // VALUE rather than a bare literal string, so a revision-17 reader misreads the discriminator
+    // byte as the start of the string and derails on everything after it. Incompatible both ways,
+    // deliberately. This bump is SHARED: BACKLOG § 2 reserves ONE bump for numeric literals, A20
+    // typed holes and A38. It is now SPENT -- neither of those may move it again.
+    18 // numeric literals + Constant carries a tagged value
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.
     *
