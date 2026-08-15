@@ -1280,6 +1280,26 @@ validation — resolution and type-checking — in `checkStatementScopes`.
 
 ### Validation Specifics
 
+- **The three integer types (`Integer`/`Whole`/`Natural`) have defined ranges,
+  and a LITERAL is checked more strictly than a REFERENCE** (numeric-literals
+  plan, 2026-08-14/15). Ruled by Reid: `Integer` is signed (any whole
+  number), `Whole` is non-negative (`>= 0`, the counting type), `Natural` is
+  positive (`>= 1`, the ordinal type, excludes zero). These were undefined
+  everywhere — code, grammar, language reference, Computational Model — until
+  this work, so nothing could enforce a distinction between them.
+  `ValidationPass.checkNumericLiteralConformance` enforces it now, but ONLY
+  against a `NumericLiteral` value on a `Constant` — a `ValueRef` is
+  untouched, and `NumericType.isAssignmentCompatible` deliberately still lets
+  ANY numeric type flow into any other by reference (`let x: Natural =
+  someRealField` stays legal). The asymmetry is intentional: a literal's
+  value is statically known where a reference's is not, so only the literal
+  can be held to the stricter standard. The fractional-value check
+  (`IntegerTypeExpression` rejecting a decimal) is reported BEFORE the
+  `Natural`/`Whole` range checks — both are integer-type violations, and a
+  range message for `1.5` would be true but useless next to "has a
+  fractional part". `Bool` is excluded even though it extends
+  `IntegerTypeExpression`: a Boolean-typed constant is a different kind of
+  thing, not "a whole number with a fractional part."
 - **Connector intentions (`persistent`, `at-least-once` | `at-most-once`)** —
   keywords written BEFORE `connector`, two independent groups, mutually exclusive
   within a group (an Error, not a parse failure, so both keywords can be named).

@@ -12,38 +12,57 @@ NOTEBOOK's body. Ask `git` for branch, tree and unpushed span — anything writt
 about those is stale the moment someone commits.
 
 **Build state — every line below was run as a command during this handoff
-(2026-08-14):**
+(2026-08-15, Task 8 of the numeric-literals plan — the plan is now DONE, all
+8 tasks committed):**
 
-- **The staged binary reports `2.0.0-rc.14-39-f8f93893` while `git describe` says
-  `2.0.0-rc.14-43-g112b31fec`.** It was rebuilt several times AFTER that commit, so its
-  content is newer than its version string — sbt's dynver freezes inside a server
-  session (see MEMORY). **Do not trust that version; `reload` and restage before
-  anything that depends on knowing what is in the binary.**
-- `~/Code/ossuminc/bin/riddlc` is still `2.0.0-rc.14-28-1f2c496d` and was NOT updated
-  this session. Bare `riddlc` on `$PATH` remains the old tap build.
-- **BAST `FORMAT_REVISION` is 17 and has NOT moved.**
-- Verified green this session: `language` **669**, `passes` **1271**, and all four
-  grammar validators (TatSu **105/128** — the baseline moved from 104/127 because a
-  fixture was added and passes; GBNF regenerated, 320 rules, verified fresh).
-- **NOT run since the work landed: `riddlLib`, `riddlc`, `commands`, and the JS and
-  Native legs.** This is the biggest gap before an RC, and it is not a formality —
-  the changes touched shared fixtures and `Pass.traverse`.
+- **The staged binary's version was NOT re-checked this session** — no
+  `stage`/`reload` was run. Do not trust its version string; `reload` and
+  restage before anything that depends on knowing what is in the binary
+  (dynver freezes inside a running sbt server — see MEMORY).
+- `~/Code/ossuminc/bin/riddlc` was not touched. Bare `riddlc` on `$PATH`
+  remains the old tap build.
+- **BAST `FORMAT_REVISION` is 18** — numeric literals spent the 17 → 18 bump
+  (`6cfeceb2f`). A20 and A38 (still unbuilt) now RIDE 18 rather than bumping
+  again; see BACKLOG § 2.
+- **All five JVM modules run and counted this session, in two invocations
+  (the first `;`-chain aborted at `riddlLib`, per the trap below):**
+  `language` **68 suites**, `passes` **201 suites**, `riddlLib` **13
+  suites** (1 test red — see below), `commands` **17+ suites**, `riddlc`
+  **4 suites**. `cJS` and `cNative` both compiled clean (no `[error]`
+  lines). TatSu **106/129** (moved from the 105/128 baseline — one fixture
+  added and it parses, not just counted); GBNF regenerated and verified
+  fresh via `gbnf_validator.py`.
+- **Three test failures, ALL confirmed PRE-EXISTING by `git stash` A/B**
+  (identical failure sets and counts with Task 8's diff stashed out):
+  `riddlLib`'s `Root2JsonCorpusTest` (59/190 clean, needs ≥95% — a much
+  larger gap than the 173/189 BACKLOG § 0 last recorded; re-measure before
+  trusting that older number), `commands`' `RiddlModelsRoundTripTest`
+  (59 succeeded / 130 failed, both before and after), and `riddlc`'s
+  `RunRiddlcOnLocalTest` + `ReportedIssuesTest` (18 succeeded / 3 failed,
+  both before and after). None of these read the fixture or grammar files
+  Task 8 touched — see `task-8-report.md` in
+  `.superpowers/sdd/2026-08-15-numeric-literals/` for the full transcripts.
 
-**In flight: nothing.** Seven items completed 2026-08-14, all committed and green.
-
-**Next, and both are APPROVED with the design settled:** numeric literals in `Value`
-(integers and decimals) and A20 typed holes spelled `prompt("…") as T`. Each wants a
-plan first. **They share ONE `FORMAT_REVISION` bump with A38 — 17 → 18** — decide it
-once, in whichever lands first; BACKLOG § 2 says why.
+**In flight: nothing.** The numeric-literals plan (8 tasks) is fully landed,
+verified, and committed. A20 typed holes (`prompt("…") as T`) remains
+APPROVED but not started, and A38 (refusal step naming an invariant) remains
+its own queued item — both in BACKLOG § 2, both riding `FORMAT_REVISION` 18
+when they land.
 
 **Traps — every one already bit someone here.**
 
-- **THE CORPUS IS RED BY DESIGN, for THREE reasons**, and this is what a cold session
-  is most likely to get wrong. Two tests were already red awaiting riddl-models' 49
-  addressing fixes; the bare-operand **Error** (`4feb5a370`) adds a third. Reid
-  approved it knowing this. **Do not soften a check to green the corpus.**
-- **`tJVM` cannot run as one `;` chain** — it aborts at `commands`, so `riddlLib` and
-  `riddlc` never run and the leg looks complete. Count the `Suites: completed` lines.
+- **THE CORPUS IS RED BY DESIGN, for THREE reasons**, and this is what a cold
+  session is most likely to get wrong. Two tests were already red awaiting
+  riddl-models' 49 addressing fixes; the bare-operand **Error** (`4feb5a370`)
+  adds a third. Reid approved it knowing this. **Do not soften a check to
+  green the corpus.** (Task 8, 2026-08-15, re-confirmed all three still red
+  by the same causes — see the build-state bullets above.)
+- **`sbt -batch "; a ; b ; c"` aborts the WHOLE chain at the first red
+  module**, silently skipping everything after it — not just `tJVM`'s known
+  `commands` abort. Task 8's five-module chain aborted at `riddlLib`
+  (`Root2JsonCorpusTest`), so `commands` and `riddlc` had to be re-invoked
+  separately. Count the `Suites: completed` lines against the modules you
+  asked for, every time, not just for the one specific known case.
 - **A `.conf` overrides CLI options.** A corpus A/B on a completeness check reported
   zero both with and without the fix under test, because
   `--show-completeness-warnings` was ignored. Verify your instrument can move before
@@ -59,11 +78,14 @@ once, in whichever lands first; BACKLOG § 2 says why.
 - **Revert-prove under a throwaway `--sbt-cache`** and confirm the module recompiles,
   or sbt serves previously-compiled classes and the proof is a lie.
 
-**Certainty.** Everything above was executed this session. Two claims are explicitly
-NOT verified: the staged binary's contents (version string unreliable, see above), and
-the state of any module outside `language`/`passes`.
+**Certainty.** Everything in the build-state bullets above was executed this
+session (Task 8, 2026-08-15) and every count is from a real command's
+output, not memory. The one thing explicitly NOT re-verified this session:
+the staged binary's contents — see above, restage before trusting it.
 
-**`task/` — FOUR files, ALL UNTRIAGED, and one of them is urgent:**
+**`task/` — still FOUR files, ALL UNTRIAGED — Task 8 did not touch these,
+they are unrelated to numeric literals** (verified 2026-08-15: same four
+files, same names, as the last handoff):
 
 - **`2026-08-14-valueref-migration-blinds-the-populates-repository-check.md` — READ
   FIRST.** It is titled *"read this before flipping the bare form to an Error"* and it
@@ -85,6 +107,60 @@ Outgoing replies are dropped and confirmed present: riddl-models
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
+
+## Numeric literals land, and what fell out of them (2026-08-15) — DONE
+
+Eight tasks: `NumericLiteral` AST node + parser, prettify, widen `Comparand`
+(A28) and `Constant.value` (four kinds), integer-type conformance, BAST at
+`FORMAT_REVISION` 18, JSON, and this verification task. Commits
+`eeb9e4707`..`a52844a8a`, plus the grammar fix and corpus fixture below.
+
+**A28's literal-comparand ban had no uptake to protect.** `comparand` used to
+admit only refs — `count > 5` was a parse error, forcing `count > MaxCount` —
+on the theory that magic numbers should always be named. Reid reversed it
+2026-08-14 after checking: the entire 189-model riddl-models corpus held
+**exactly one** `constant`. The ban's cost (every literal comparison needs a
+named constant) had nothing to show for it, because almost nobody was naming
+one anyway. `comparand` now accepts a bare `NumericLiteral` and a literal
+comparand draws a StyleWarning suggesting a name, not a parse error — advice
+survives, the hard block does not.
+
+**`Constant.format` emitted `const`, which is not a keyword** (`constant` is)
+— so its output never re-parsed. Invisible for the same reason
+`WhenStatement.format` was: `PrettifyVisitor` does not call `.format` for a
+`Constant`, it routes through `RiddlFileEmitter.emitConstant`, so the
+round-trip tests that would have caught it never touched the broken copy.
+This is the second instance in this repo of "a dispatch written twice hides
+the incomplete copy behind the complete one" (CLAUDE.md, Total Dispatch) —
+worth treating as a standing risk anywhere prettify keeps a `format` method
+AND a separate emitter for the same node.
+
+**The three integer types had no documented range until this work.**
+`Integer`, `Whole` and `Natural` existed in the AST and grammar with no
+stated meaning anywhere — not the code, the grammar, the language reference,
+or the Computational Model — so nothing could enforce a distinction between
+them. Ruled by Reid 2026-08-14: `Integer` signed, `Whole` non-negative
+(`>= 0`), `Natural` positive (`>= 1`). `checkNumericLiteralConformance`
+enforces it now, but **only against literals** — `NumericType.isAssignmentCompatible`
+still lets a reference of any numeric type flow anywhere, deliberately: a
+literal's value is statically known where a reference's is not, so a literal
+is held to the stricter standard. Task dropped in
+`../ossum.tech/task/2026-08-15-integer-type-ranges.md`; Computational Model
+update queued in `BACKLOG.md` § 0.
+
+**The TatSu grammar validator hides a nameguard trap for bare letter tokens
+next to digits.** `numeric_literal`'s exponent marker was written
+`("e" | "E")`, which parses fine as prose but fails under TatSu's generated
+parser specifically for `1e3` (no explicit sign) — TatSu's default
+`nameguard` bounds any word-like quoted literal to a word boundary, so `e`
+immediately followed by a digit reads as "might be the start of a longer
+identifier" and refuses to match, even though `e+3`/`e-3` (non-alnum next
+character) work fine. Fixed by writing the marker as an inline regex,
+`/[eE]/`, which bypasses nameguard entirely — same idiom already used by
+`mime_type`'s `/[a-z.*-]*/` and `markdown_line`'s `/[^\n]*\n?/` elsewhere in
+the same grammar file. Found adding the `numeric-literals.riddl` corpus
+fixture (TatSu baseline moved 105/128 -> 106/129, confirming the fixture is
+actually exercised, not merely present).
 
 ## Incoming Tasks
 
