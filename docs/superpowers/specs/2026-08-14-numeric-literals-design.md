@@ -111,18 +111,36 @@ needs no `as T` ascription because the constant already declares its type — a
 precedent that lands ahead of, and informs, the A20 work. It is **exempt from
 the conformance checks in § 5**: there is no value to check.
 
-**Separator: `:` and `is` both parse; prettify emits `:`.** Reid, 2026-08-14:
-*"we can think of it as a solo field which also uses `:`."* `:` is already
-RIDDL's ascription mark (`let x: T`, `on foo: command Foo`, `p1: String`), so a
-constant reads as a field with a value.
+**Separator: NO parser change — the `is` production already accepts both.**
+Reid, 2026-08-14: *"we can think of it as a solo field which also uses `:`."*
+`:` is already RIDDL's ascription mark (`let x: T`, `on foo: command Foo`,
+`p1: String`), so a constant reads as a field with a value.
 
-No spelling field is stored. `is` is the legacy spelling and prettify
-normalizes it away, the same shape as `option persistent` being consumed into
-the connector intention, "which is what makes the round trip converge".
-**Consequence to test explicitly:** a constant written with `is` round-trips to
-`:`, so its reflectivity test asserts CONVERGENCE — pass two is stable — not
-byte-exactness against the source. This is a documented deviation from the
-exact-recovery mandate with existing precedent, not a new exception.
+```scala
+// CommonParser.scala:38
+def is[u: P]: P[Unit] = Keywords.keywords(StringIn("is", "are", ":", "=")).?
+```
+
+`constant Gravity : Real = 5` therefore parses today, as do `are`, `=`, and
+omitting the separator entirely. **All spellings are legal and none warns.**
+The only change is that prettify emits `: ` instead of `is ` — one line at
+`RiddlFileEmitter.scala:253`.
+
+**No spelling field, and no new reflectivity deviation.** An earlier draft of
+this design treated "written `is`, prettified `:`" as a deviation from
+byte-exact recovery needing precedent. That was wrong: the `is` production has
+always discarded which of five spellings the author wrote, everywhere in the
+language, so a constant is no different from a domain or a type in this respect.
+The round trip converges on pass two, as it already does for every other `is`
+in every model. Nothing special to test beyond the ordinary round trip.
+
+**Latent defect to fix alongside.** `Constant.format` (`AST.scala:2962`) emits
+`const `, but the keyword is `constant` (`Keywords.scala:584`), so that text
+does not re-parse. It is invisible because `PrettifyVisitor` routes through
+`emitConstant`, which is correct — the same two-copies-of-one-dispatch trap as
+`WhenStatement.format` vs `RiddlFileEmitter.emitStatement`, where the exercised
+copy concealed the broken one. Fix both the keyword and the separator in
+`format` so the two copies agree.
 
 **Deprecating the quoted number.** `constant Max is Natural = "10"` continues to
 parse and draws a deprecation warning pointing at the unquoted form. Scoped
@@ -132,11 +150,9 @@ parses as a literal of that type. A `String`-typed constant is never warned, and
 a numeric-typed constant whose string is not a number is left to § 5.2. Corpus
 cost is one line.
 
-**The `is` spelling itself does NOT warn.** It is the incumbent syntax, and
-normalization to `:` is silent. Only the quoted-value form above warns. (Should
-that prove too quiet in practice, adding a deprecation is a one-line follow-up;
-starting quiet avoids a warning on every constant in every existing model for a
-spelling that was correct when written.)
+**The separator never warns, in any of its spellings** (Reid, 2026-08-14: *"Both
+are legal, and should not warn"*). The quoted-value form above is the only new
+warning in this section.
 
 **This is a breaking change to a public field's type.** The backward
 compatibility policy permits that only in a major release; `release/2` is 2.0.0,
