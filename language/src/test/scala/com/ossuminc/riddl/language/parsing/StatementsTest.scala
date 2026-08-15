@@ -827,5 +827,62 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
         case Right(_)       => fail("expected a parse ban for 'put' outside a context handler")
     }
 
+    // Fix B (2026-08-15, docs/superpowers/plans/2026-08-15-three-task-fixes.md; report
+    // task/2026-08-14-value-ref-starting-with-to-fails-to-parse.md). `Readability.readable` had no
+    // word boundary, so `to` matched as a PREFIX of any longer identifier. `boundMessageValue`
+    // guards its bare-path arm with `!to`, meant to read "not the word `to`" but actually reading
+    // "does not start with the two characters `t` `o`" -- so `tell tourCompleted to …` died with
+    // "Expected one of (command | event | query | result)", naming a message kind instead of the
+    // real cause. Table-driven from the report's own repro AND its negative controls: identifiers
+    // starting with OTHER letter pairs were never broken, which is what proves this was `to`-
+    // specific rather than a general keyword-prefix problem -- see `readable`'s doc comment for why
+    // the fix widens to all twelve readability words rather than patching just this one guard.
+    def boundOperandModel(binding: String, stmt: String): String =
+      s"""domain d is {
+         |  context c is {
+         |    command Foo is { a: Integer }
+         |    entity target is {
+         |      handler In is {
+         |        on command d.c.Foo is { do "handle" }
+         |      }
+         |    }
+         |    entity e is {
+         |      outlet emitted is command d.c.Foo
+         |      handler Ops is {
+         |        on $binding: command d.c.Foo is { $stmt }
+         |      }
+         |    }
+         |  }
+         |}
+         |""".stripMargin
+
+    val toPrefixCases = Seq(
+      "tourCompleted",      // reported: message TourCompleted
+      "toleranceEvaluated", // reported: message ToleranceEvaluated
+      "totalX" // shape of the third reported collision (TouchpointRecorded), condensed
+    )
+    val controlCases = Seq(
+      "abcCompleted", // control: does not start with `to`
+      "termX",        // control: starts with `te`, not `to`
+      "typeX"         // control: starts with `ty`, not `to`
+    )
+
+    (toPrefixCases ++ controlCases).foreach { binding =>
+      s"parse a bound operand named '$binding' in `tell` (Fix B)" in { (td: TestData) =>
+        val src = boundOperandModel(binding, s"tell $binding to entity d.c.target")
+        TopLevelParser.parseInput(RiddlParserInput(src, td)) match
+          case Left(messages) =>
+            fail(s"tell with binding '$binding' failed to parse: ${messages.justErrors.format}")
+          case Right(_) => succeed
+      }
+      s"parse a bound operand named '$binding' in `send` (Fix B)" in { (td: TestData) =>
+        val src = boundOperandModel(binding, s"send $binding to outlet d.c.e.emitted")
+        TopLevelParser.parseInput(RiddlParserInput(src, td)) match
+          case Left(messages) =>
+            fail(s"send with binding '$binding' failed to parse: ${messages.justErrors.format}")
+          case Right(_) => succeed
+      }
+    }
+
   }
 }

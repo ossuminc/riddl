@@ -23,7 +23,13 @@ object Keywords {
   // Succeeds if the next character (look ahead without consuming) is not an
   // identifier character. This is used with keywords to make sure the keyword
   // isn't followed by keyword
-  private def isNotKeywordChar[u: P]: P[Unit] = { CharPred(nonKeywordChars) | End }
+  //
+  // `private[parsing]`, not `private`: `Readability.readable` (same package, different file)
+  // reuses this exact boundary test for the twelve readability words (`to`, `as`, `by`, …), which
+  // had no word boundary at all until 2026-08-15 -- `tell tourCompleted to …` silently swallowed
+  // `to` as a prefix of `tourCompleted` and the `!to` guard in `boundMessageValue` misfired. See
+  // `Readability.readable`'s doc comment for the fix's reasoning.
+  private[parsing] def isNotKeywordChar[u: P]: P[Unit] = { CharPred(nonKeywordChars) | End }
 
   def keyword[u: P](key: String): P[Unit] = {
     P(key ~~ &(isNotKeywordChar))./

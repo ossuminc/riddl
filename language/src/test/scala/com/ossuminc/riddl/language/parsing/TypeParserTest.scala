@@ -806,5 +806,27 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
           }
       }
     }
+
+    // Fix B (2026-08-15, docs/superpowers/plans/2026-08-15-three-task-fixes.md). A second, distinct
+    // collision from the same root cause as the `tell`/`send` bug in StatementsTest: `entity
+    // ReferenceType` is `"reference" ["to"] ["entity"] path_identifier`, with BOTH `to` and `entity`
+    // optional. Before the word-boundary fix, `reference totalOrders` (the bare form, `to` omitted)
+    // let the boundary-less `to` match the first two letters of `totalOrders` itself, silently
+    // dropping them: the referenced path came out as `talOrders`, not `totalOrders` -- a corruption,
+    // not a parse failure, so nothing would have flagged it short of comparing the identifier. This
+    // is the evidence the general fix is a shape fix, not a patch to one guard.
+    "parse `reference <id>` (no `to`, no `entity`) without swallowing its first two letters (Fix B)" in {
+      (td: TestData) =>
+        val rpi = RiddlParserInput("type ref is reference totalOrders", td)
+        parseDefinition[Type](rpi) match {
+          case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+          case Right((typ, _)) =>
+            typ.typEx match {
+              case ert: EntityReferenceTypeExpression =>
+                ert.entity.value mustBe Seq("totalOrders")
+              case other => fail(s"Expected EntityReferenceTypeExpression, got $other")
+            }
+        }
+    }
   }
 }

@@ -1,0 +1,35 @@
+// Corpus fixture for Fix B (2026-08-15,
+// docs/superpowers/plans/2026-08-15-three-task-fixes.md; report
+// task/2026-08-14-value-ref-starting-with-to-fails-to-parse.md). Before the fix,
+// `Readability.readable` had no word boundary, so `to` matched as a PREFIX of any
+// longer identifier. `boundMessageValue`'s `!to` guard therefore misfired on any
+// bound-name operand whose identifier starts with `to`, and `tell tourCompleted to
+// …` died with "Expected one of (command | event | query | result)" -- a message
+// naming the wrong problem. Exercised by both fastparse
+// (BoundValueReadabilityPrefixFileTest) and the EBNF/TatSu grammar
+// (ebnf_tatsu_validator.py, which scans every input-directory riddl file) -- the
+// TatSu grammar already nameguards its quoted-literal `"to"` token to a word
+// boundary, so this file proves the two parsers AGREE once fastparse catches up,
+// not that the grammar text needed to change.
+domain BoundValuePrefix is {
+  context c is {
+    command Foo is { a: Integer } with { briefly "the triggering command" }
+    entity target is {
+      handler In is {
+        on command c.Foo is { do "handle" }
+      } with { briefly "h" }
+    } with { briefly "e" }
+    entity e is {
+      outlet emitted is command c.Foo
+      handler Ops is {
+        // `tourCompleted` starts with the readability word `to`; this is the
+        // exact shape of the reported corpus collisions (TourCompleted,
+        // ToleranceEvaluated, TouchpointRecorded).
+        on tourCompleted: command c.Foo is {
+          tell tourCompleted to entity target
+          send tourCompleted to outlet emitted
+        }
+      } with { briefly "h2" }
+    } with { briefly "e2" }
+  } with { briefly "c" }
+} with { briefly "d" }
