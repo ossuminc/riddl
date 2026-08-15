@@ -567,6 +567,50 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    /** The Id-type check matches by RESOLVED IDENTITY, not by the path's last segment.
+      *
+      * Two entities named `Order` in different contexts, and exactly ONE `Id` type, pointing at
+      * `Two.Order`. Under the old last-segment name match both entities were considered to have an
+      * identity type and NEITHER warned; only `Two.Order` actually has one, so `One.Order` must.
+      *
+      * This mattered more once `Id(P)` widened from Entity to any Processor on this branch: an
+      * `Id(repository Foo)` whose last segment happens to match an entity name was being counted
+      * as that entity's identity type. Reid overruled name matching twice for the same class of
+      * bug (`isAddressFieldFor`, and the `on term` leading parameter); this site predated both and
+      * survived the sweep they prompted.
+      */
+    "attribute an Id type by identity, not by its path's last segment" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context One is {
+          |    entity Order is {
+          |      record F is { a: String }
+          |      state S of record Order.F
+          |      handler H is { on other is { do "x" } }
+          |    }
+          |  }
+          |  context Two is {
+          |    type OrderId is Id(entity D.Two.Order)
+          |    entity Order is {
+          |      record F is { a: String }
+          |      state S of record Order.F
+          |      handler H is { on other is { do "x" } }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val noIdWarnings = completenessWarnings(msgs)
+          .map(_.message)
+          .filter(_.contains("does not define an Id type"))
+        // Exactly one -- `One.Order`. Asserting the COUNT rather than "nonEmpty" is what makes the
+        // name-matching behaviour fail here: it silenced both, giving zero.
+        noIdWarnings.size mustBe 1
+      }
+    }
+
     "not warn when entity Id type is defined in containing context" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

@@ -2677,10 +2677,21 @@ case class ValidationPass(
     if entity.nonEmpty then {
       val parentContext = parents.collectFirst { case c: Context => c }
 
-      // Search all known types via symbols table for Id types referencing this entity
+      // Search all known types via symbols table for Id types referencing this entity.
+      //
+      // By RESOLVED IDENTITY, never by the path's last segment. Reid overruled name matching twice
+      // on the instance-identity branch -- for `isAddressFieldFor` and for the `on term` leading
+      // parameter -- and this predated both, so it survived that sweep. It matters more since
+      // `Id(P)` widened from Entity to any Processor: a `type X is Id(Other.Order)` in a model with
+      // two same-named entities silenced this warning for BOTH, and symmetrically an
+      // `Id(repository Foo)` whose last segment happened to match an entity name was counted as
+      // that entity's identity type.
+      //
+      // `uniqueIdReferent` is the existing encapsulation of this lookup, including the detail that
+      // the refMap key's parent is the OWNING Type -- reuse it rather than writing a third variant.
       def isIdForEntity(t: Type): Boolean = t.typEx match {
         case uid: UniqueId =>
-          uid.entityPath.value.lastOption.contains(entity.id.value)
+          uniqueIdReferent(uid.entityPath, t, parents).exists(_ eq entity)
         case _ => false
       }
 
