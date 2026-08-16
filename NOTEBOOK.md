@@ -10,7 +10,13 @@ Four decisions I did not make for you. Everything else on the § 1 list was
 either built or is genuinely blocked on one of these. Each says what I would do
 and why, so a one-word answer is enough.
 
-**Q1 — JSON unknown keys: which layer, and how strict?** (§ 1, `4bb0ba01a`
+**Q1 — ANSWERED and BUILT 2026-08-16 (`927898a97`): validate before upickle,
+emit a Warning.** Zero false positives across 188 corpus models — after two
+near-misses that would each have warned on every correct document (writer sigil
+keys; `Schema.data`/`links` keyed by modeller identifiers). Reid also asked the
+bigger question — why have a JSON surface at all? — now filed in § 1.
+
+**Q1 (original) — which layer, and how strict?** (§ 1, `4bb0ba01a`
 characterizes it.) The entry's proposed mechanism does not work: a consumed-keys
 tracker wrapping `ujson.Obj` fixes the hand-written readers but CANNOT fix the
 macro-derived ones, which are most of them — upickle's `macroRW` ignores unknown

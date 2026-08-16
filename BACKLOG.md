@@ -160,34 +160,49 @@ each want an approved plan before implementation, per the standing rule.
   its `let x:` use named aliases — so that green is evidence the ALIAS path still
   works, and no evidence at all about the shapes actually changed.
 
-- **`JsonModel`'s reader never rejects unknown/misspelled keys — a whole
-  defect class, not one stale doc line.** Found while fixing `JSON_INPUT.md:255`'s
-  stale `"negated"` field. A producer emitting a misspelled or obsolete key gets
-  it silently dropped — no diagnostic, no error, a model that quietly means
-  something other than what was written. This matters specifically because
-  `JSON_INPUT.md` exists so AI producers can emit schema-constrained JSON without
-  reading the Scala: a stale example and a producer typo fail the same silent way.
-  **CHARACTERIZED 2026-08-15, `4bb0ba01a`** — `JsonUnknownKeyTest` pins today's
-  behaviour at BOTH reader layers, with an isolation control (the same document
-  minus the offending key) so a malformed fixture cannot masquerade as a rejected
-  one. It goes red the moment strictness changes.
-  **⚠ THIS ENTRY'S PROPOSED MECHANISM DOES NOT WORK, and that is the finding.**
-  It said "a shared consumed-keys tracker wrapping `ujson.Obj`, most likely".
-  That fixes the hand-written readers (`readStatement`, `readValue`,
-  `readTypeExpr`, … — 6 binding sites, ~120 selective `m("key")` lookups) and
-  **cannot fix the rest**: most DTOs are read by upickle's derived `macroRW`,
-  which ignores unknown keys by construction and is not ours to instrument. A
-  wrapper sees the lookups a hand-written reader makes, never the ones a derived
-  reader makes internally.
-  **Two decisions, queued for Reid (NOTEBOOK § QUESTIONS, Q1):** (a) validate the
-  `ujson` tree against a key inventory BEFORE upickle sees it — covers both
-  layers, one new component, no reader changes — or (b) instrument only the
-  hand-written layer and accept the larger one stays silent; and separately,
-  Error or Warning. Recommendation on file: (a) with a Warning first, per the
-  warn-then-flip sequencing used twice already.
-  **The evolution constraint is about MISSING keys, not unknown ones** and is
-  already satisfied: readers use `m.get`, so a document predating a field reads
-  fine. `JsonUnknownKeyTest` keeps a control case pinning that.
+- ~~**`JsonModel`'s reader never rejects unknown/misspelled keys.**~~ — **DONE
+  2026-08-16, `927898a97`, as a WARNING** per Reid's ruling. Validated on the raw
+  `ujson` tree BEFORE any reader runs, which is the only place both reader layers
+  are visible at once: this entry's proposed consumed-keys tracker would have
+  covered the 6 hand-written readers and never the 59 macro-derived ones, where
+  upickle drops unknown keys internally with no hook of ours.
+  **Two guards, and the second is not redundant.**
+  `JsonUnknownKeyVocabularyTest` re-derives the vocabulary from `JsonModel.scala`'s
+  own source, so the list cannot drift from the readers.
+  `JsonKeyFalsePositiveTest` runs every corpus model through the writer and back.
+  **It caught two defects the source-derived guard could not see, either of which
+  would have fired on EVERY correct document:** the writer emits sigil keys
+  (`$kind`, `$at`) that no DTO field or reader lookup spells (188/188 models
+  warned), and a `Schema`'s `data`/`links` are maps keyed by the MODELLER's
+  identifiers (184/188).
+  **The second is the lesson.** I had asserted in a comment that no object in the
+  schema is keyed by data, having grepped the READERS for key iteration and found
+  none — nothing appears there because upickle's derived `Map[String, _]` reader
+  does the iterating. Only running the writer's output back through the check
+  exposed it. **A diagnostic that fires on correct input is worse than none**, so
+  both checks are permanent tests rather than things verified once.
+  Corpus: 0 unrecognized keys across 188 models.
+
+- **STRATEGIC, raised by Reid 2026-08-16: should the JSON input surface exist at
+  all?** Not urgent — the warning above protects today's users either way — but it
+  outlives that fix and should be decided rather than drift.
+  **The argument for retiring it.** JSON guarantees SHAPE only. Our own path runs
+  the identical validation passes afterwards, so "correct-by-construction" covers
+  structure and never meaning, and an AI must learn RIDDL's semantics regardless.
+  The price is a second serialization surface — **131 DTOs tracking the AST** —
+  which is what produced the unknown-key defect class in the first place.
+  **What the alternatives actually are** (researched 2026-08-16):
+  - **Hosted frontier models (Claude, GPT, Gemini) expose JSON Schema and tool
+    schemas only.** There is no logit-level hook for an arbitrary CFG, so for them
+    JSON is the ONLY constrained channel. This is the fact that decides it.
+  - **Self-hosted:** GBNF already exists here (`riddl-grammar.gbnf`, generated
+    from the EBNF, CI-checked against drift), and **XGrammar** is the modern retry
+    if GBNF's collapse on our 263-rule grammar was a performance problem.
+    Outlines / lm-format-enforcer are equivalents.
+  - **Generate RIDDL then repair**, using riddlc's diagnostics and `provideTips`.
+    No constrained decoding, but far more viable than when JSON was chosen.
+  **Options:** keep JSON; retire it in favour of repair loops; or keep it only for
+  hosted models and point self-hosted users at GBNF/XGrammar.
 
 - **`Punctuation.tokenPunctuation` does not include `!`, so `TokenParser`
   swallows `!isValid` / `!(a` as a single `Token.Other` blob** (found in the
