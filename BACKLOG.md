@@ -161,22 +161,34 @@ each want an approved plan before implementation, per the standing rule.
   works, and no evidence at all about the shapes actually changed.
 
 - **`JsonModel`'s reader never rejects unknown/misspelled keys — a whole
-  defect class, not one stale doc line.** Found while fixing
-  `JSON_INPUT.md:255`'s stale `"negated"` field (final `!`/`not` synonymy
-  review, 2026-08-15): `JsonModel.readStatement` and every DTO reader build
-  their result by selective `m("key")`/`m.get("key")` lookups against a
-  `ujson.Obj` map, with no step anywhere that diffs the keys PRESENT against
-  the keys CONSUMED. So a producer emitting a misspelled or obsolete key —
-  `"negated"` was one instance, following what was at the time a correct
-  doc example — gets it silently dropped, no diagnostic, no error. This
-  matters specifically for `JSON_INPUT.md`, which exists so AI producers can
-  emit schema-constrained JSON without reading the Scala: a stale example or
-  a producer typo both fail the same silent way, producing a model that
-  quietly means something other than what was written. Not fixed here per
-  instruction (no strict-key validation built in this pass) — needs a design
-  decision on where to add rejection (a shared "consumed keys" tracker
-  wrapping `ujson.Obj`, most likely) and how strict to be about schema
-  evolution (old documents from before a field existed must still read).
+  defect class, not one stale doc line.** Found while fixing `JSON_INPUT.md:255`'s
+  stale `"negated"` field. A producer emitting a misspelled or obsolete key gets
+  it silently dropped — no diagnostic, no error, a model that quietly means
+  something other than what was written. This matters specifically because
+  `JSON_INPUT.md` exists so AI producers can emit schema-constrained JSON without
+  reading the Scala: a stale example and a producer typo fail the same silent way.
+  **CHARACTERIZED 2026-08-15, `4bb0ba01a`** — `JsonUnknownKeyTest` pins today's
+  behaviour at BOTH reader layers, with an isolation control (the same document
+  minus the offending key) so a malformed fixture cannot masquerade as a rejected
+  one. It goes red the moment strictness changes.
+  **⚠ THIS ENTRY'S PROPOSED MECHANISM DOES NOT WORK, and that is the finding.**
+  It said "a shared consumed-keys tracker wrapping `ujson.Obj`, most likely".
+  That fixes the hand-written readers (`readStatement`, `readValue`,
+  `readTypeExpr`, … — 6 binding sites, ~120 selective `m("key")` lookups) and
+  **cannot fix the rest**: most DTOs are read by upickle's derived `macroRW`,
+  which ignores unknown keys by construction and is not ours to instrument. A
+  wrapper sees the lookups a hand-written reader makes, never the ones a derived
+  reader makes internally.
+  **Two decisions, queued for Reid (NOTEBOOK § QUESTIONS, Q1):** (a) validate the
+  `ujson` tree against a key inventory BEFORE upickle sees it — covers both
+  layers, one new component, no reader changes — or (b) instrument only the
+  hand-written layer and accept the larger one stays silent; and separately,
+  Error or Warning. Recommendation on file: (a) with a Warning first, per the
+  warn-then-flip sequencing used twice already.
+  **The evolution constraint is about MISSING keys, not unknown ones** and is
+  already satisfied: readers use `m.get`, so a document predating a field reads
+  fine. `JsonUnknownKeyTest` keeps a control case pinning that.
+
 - **`Punctuation.tokenPunctuation` does not include `!`, so `TokenParser`
   swallows `!isValid` / `!(a` as a single `Token.Other` blob** (found in the
   final `!`/`not` synonymy review, 2026-08-15). This is pre-existing — it was

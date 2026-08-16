@@ -4,6 +4,48 @@ Records open work, blockers, and design nuances that future AI
 sessions need to know. Release history lives in git tags and
 GitHub release notes — don't reproduce it here.
 
+## QUESTIONS FOR REID (queued overnight 2026-08-15)
+
+Four decisions I did not make for you. Everything else on the § 1 list was
+either built or is genuinely blocked on one of these. Each says what I would do
+and why, so a one-word answer is enough.
+
+**Q1 — JSON unknown keys: which layer, and how strict?** (§ 1, `4bb0ba01a`
+characterizes it.) The entry's proposed mechanism does not work: a consumed-keys
+tracker wrapping `ujson.Obj` fixes the hand-written readers but CANNOT fix the
+macro-derived ones, which are most of them — upickle's `macroRW` ignores unknown
+keys by construction and is not ours to instrument. So the real choice is:
+  - **(a)** validate the `ujson` tree against a key inventory BEFORE upickle
+    sees it — covers both layers, one new component, no reader changes; or
+  - **(b)** instrument only the hand-written readers and accept that the larger
+    layer stays silent.
+And separately: **Error or Warning?** *My recommendation: (a), emitting a
+Warning first.* A Warning breaks no existing producer, makes typos visible
+immediately, and matches the warn-then-flip sequencing this repo has now used
+twice. The flip to Error is then a separate, informed call.
+
+**Q2 — the corpus gate on Native.** (§ 1 item 1, `682e835bc`.) Nearly the whole
+remaining JVM/Native gap (−191 of −275) is `RiddlModelsRoundTripTest`'s 189
+cases. Its two JVM dependencies are shallow and easily replaced. The real
+blocker is that it **writes a `.bast` beside every model in `../riddl-models`
+and restores them**, so running it on two platforms means two runs mutating one
+shared external checkout, and sbt may run those rows concurrently. Options:
+copy the corpus to a per-platform temp dir (costs I/O per run), run the suite on
+one platform only (status quo, honest), or serialise the two rows. *My
+recommendation: leave it JVM-only and record WHY* — the suite's value is
+corpus coverage, which is platform-independent, and BAST's platform behaviour is
+already covered by the 26 BAST suites that moved to Native in `6cf60baf2`.
+
+**Q3 — clusterability (§ 1 item 10).** Written up as a plan, NOT implemented,
+per the standing rule that design items get approval first. See the entry.
+
+**Q4 — the cross-context `tell` seam (§ 1 item 11).** The mandatory count is
+built and run; the migration decision is yours. See the entry.
+
+**Also worth knowing, needing no decision:** `Root2JsonCorpusTest` asserts strict
+EQUALITY while its name and its own reported metric both advertise a ≥95% gate,
+so 98.9% fails it. That is our defect, not the corpus's — filed in § 3.
+
 ## HANDOFF
 
 Orientation for a session with no memory of this work. **Open work is in
