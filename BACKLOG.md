@@ -459,55 +459,26 @@ each want an approved plan before implementation, per the standing rule.
   scope for the same seam is unstated in the ruling and should be settled before
   building.
 
-- **Clusterability: `clustered`, and `self.isClustered`.** Split out of the
-  identity design 2026-08-13. NOT "multiplicity" — Reid ruled that **entity is
-  the only multiply-instantiated processor**; contexts, projectors, streamlets,
-  repositories and adaptors are singletons that may be clustered for resilience,
-  and clustered instances are interchangeable so clustering does not affect
-  addressability.
-  **PLANNED 2026-08-15, NOT BUILT — needs a ruling first (NOTEBOOK § QUESTIONS,
-  Q3), because the item as filed contains a contradiction.**
-
-  **The contradiction, which is the main finding.** This item promises BOTH a
-  `clustered` keyword AND `self.isClustered`. **You can have either, not both.**
-  Reid's own admission test for `self` is *runtime-only — anything a generator
-  can know statically it should inline*. If `clustered` is written in the model,
-  then whether a processor is clustered becomes STATICALLY KNOWABLE, and
-  `self.isClustered` is exactly what the test excludes. The field is only
-  admissible if clustering is a DEPLOYMENT-time fact absent from the model —
-  in which case there is no keyword to add. The 2026-08-15 `self`-fields survey
-  reached the same conclusion from the other direction and rejected
-  `isClustered` outright.
-
-  **What the CM already settles, so the plan need not re-litigate it:**
-  - A Context is a deployment unit and "a conforming realization may run many
-    incarnations … may form regional, zonal, or geographical clusters. A
-    TypeScript generator must NOT assume singleton processes" (§3.1).
-  - Projectors and Streamlets are each "a unit of deployment, clusterability,
-    and scalability" (§6.1, §11.1) — so clusterability is ALREADY a CM concept
-    for every processor; what is missing is only a way to SAY it in a model.
-  - Addressing a clustered singleton means "select the right shard/partition and
-    forward … partitioning is load management, not identity" (§4.2).
-  - **The one MANDATORY constraint**: a projector with correlations "is no longer
-    stateless, and every event bearing a given key tuple must reach the instance
-    holding that tuple's partial, so distribution must be by key" (§6.1/§6.6).
-    Round-robin is legal ONLY for a correlation-free projector.
-
-  **The design question that follows from that last point.** Everywhere else,
-  clustering is ADVISORY — a generator may honour it or deploy one instance, and
-  §4.2 says options are advisory, so `clustered` would be an `option`. But
-  key-distribution for a correlating projector is a CORRECTNESS requirement, not
-  a preference. That is the same shape as the entity-intentions ruling, where a
-  hard Error keyed off advisory metadata was judged a category error and the
-  keywords became grammar. So: is `clustered` an advisory `option`, or an
-  intention in the grammar like `event-sourced` and `at-least-once`? *My reading:
-  `option`, because a generator may legitimately decline to cluster — and the
-  mandatory half is already implied by declaring correlations, so it needs no
-  keyword at all. But that is a ruling, not a deduction.*
-
-  **Scope note:** applying `clustered` to an Entity is meaningless — an entity is
-  already distributed by identity (§4.1), so it is sharded by construction. The
-  keyword, if admitted, belongs on the five singleton processor kinds only.
+- ~~**Clusterability: `clustered`, and `self.isClustered`.**~~ — **DONE
+  2026-08-16.** Reid chose the keyword and DECLINED the `self` field, resolving
+  the contradiction this item was filed with: writing `clustered` in the model is
+  exactly what makes clustering statically knowable, which is what the `self`
+  admission test excludes. `SelfValue.fieldNames` stays closed at `id`/`version`.
+  Shipped as an advisory **`option clustered`**, not a grammar intention, on the
+  test every intention has been judged by — *may a generator decline to honour
+  it?* Here it may: deploying one instance is a legitimate realization. Contrast
+  `event-sourced`, where declining changes what the model MEANS.
+  Scoped to the SINGLETON processors (Context, Projector, Repository, Adaptor and
+  the seven streamlet shapes, spelled out because a Streamlet's parent kind is
+  its shape's simple name). **Not an Entity** — already distributed by identity,
+  so it would state nothing; the misplacement is a StyleWarning rather than an
+  Error because it asserts nothing false, unlike `persistent` on a stateless
+  definition. Verified end to end against the staged riddlc: silent on a Context
+  and a Projector, and on an Entity it reports *"Option 'clustered' is not
+  typically used on Entity definitions (expected: Context, Projector, …)"*.
+  The one HARD rule nearby deliberately needs no keyword: a correlating projector
+  must distribute by key rather than round-robin, which follows from declaring
+  correlations. Recorded in CM §39.1.
 
 - ~~**Survey the CM and every A item for future `self` fields.**~~ — **DONE
   2026-08-15.** Reid's admission test applied: is it runtime-only? Anything a

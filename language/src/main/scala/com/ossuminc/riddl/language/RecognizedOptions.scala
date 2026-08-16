@@ -140,6 +140,47 @@ object RecognizedOptions:
       Some("write `persistent` before `connector`"),
       severity = Messages.Error
     ),
+    // `clustered` says a SINGLETON processor is deployed as several interchangeable copies behind
+    // one address (Reid, 2026-08-16). The Computational Model already treats clusterability as a
+    // property of every processor -- what was missing was any way to SAY it in a model.
+    //
+    // An OPTION rather than a grammar intention, deliberately, and this is the same test the
+    // entity and connector intentions were judged by: may a generator decline to honour it? Here
+    // it may -- deploying one instance is a legitimate realization of `clustered` -- so it is
+    // advisory, which is what §4.2 says an option is. Contrast `event-sourced`, where declining
+    // changes what the model MEANS, and which therefore had to become grammar.
+    //
+    // The one HARD rule nearby needs no keyword at all: a projector with correlations must
+    // distribute by key rather than round-robin (§6.1/§6.6), or events bearing one key tuple reach
+    // instances that do not hold its partial. That is already implied by declaring correlations.
+    //
+    // NOT valid on an Entity: an entity is already distributed BY IDENTITY (§4.1), one instance
+    // per identity value, so it is sharded by construction and `clustered` would state nothing.
+    // Left at the default StyleWarning rather than Error -- unlike `persistent` on a stateless
+    // definition, `clustered` on an entity asserts nothing false, it is merely redundant.
+    //
+    // `self.isClustered` was declined alongside this: writing the option is precisely what makes
+    // clustering STATICALLY knowable, so a runtime field would ask for what a generator can see.
+    //
+    // A Streamlet's parent kind is its SHAPE's simple name and never "Streamlet" -- see the
+    // parent-kind note at the top of this file -- so the shapes are spelled out.
+    "clustered" -> OptionSpec(
+      Seq(
+        "Context",
+        "Projector",
+        "Repository",
+        "Adaptor",
+        "Source",
+        "Sink",
+        "Flow",
+        "Merge",
+        "Split",
+        "Router",
+        "Void"
+      ),
+      0,
+      0
+    ),
     "technology" -> OptionSpec(Seq.empty, 1, 1),
     // riddl-generator's Quarkus generator lowers an outlet to either an `@Outgoing`
     // method (back-pressured, but a method has ONE return so it fits only a single

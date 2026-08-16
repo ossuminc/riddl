@@ -66,6 +66,37 @@ class RecognizedOptionSetTest extends AbstractValidatingTest {
       repo.deprecated must not contain "consistent"
     }
 
+    /** `clustered` (Reid, 2026-08-16). A singleton processor may be deployed as several
+      * interchangeable copies behind one address. RIDDL had no way to SAY that, though the
+      * Computational Model already treats clusterability as a property of every processor.
+      *
+      * It is an OPTION rather than a grammar intention because it is genuinely ADVISORY -- a
+      * generator may honour it or deploy a single instance, which is what CM 4.2 means by
+      * advisory. The one HARD rule in the area needs no keyword: a correlating projector must
+      * distribute by key rather than round-robin, and that is already implied by declaring
+      * correlations.
+      *
+      * `self.isClustered` was DECLINED with it: writing the option is exactly what makes
+      * clustering statically knowable, so a runtime field would be asking for something the
+      * generator can already see.
+      */
+    "advertise `clustered` on the singleton processors" in { (td: TestData) =>
+      Seq("Context", "Projector", "Repository", "Adaptor").foreach { kind =>
+        withClue(s"$kind: ") { RecognizedOptions.optionSetFor(kind).current must contain("clustered") }
+      }
+      // A Streamlet's kind is its SHAPE's simple name, never "Streamlet".
+      Seq("Source", "Sink", "Flow", "Merge", "Split", "Router", "Void").foreach { shape =>
+        withClue(s"$shape: ") { RecognizedOptions.optionSetFor(shape).current must contain("clustered") }
+      }
+    }
+
+    "NOT advertise `clustered` on an Entity" in { (td: TestData) =>
+      // An entity is already distributed BY IDENTITY (CM 4.1) -- one instance per identity value,
+      // sharded by construction -- so `clustered` on one states nothing. This is the negative half
+      // that stops the option being quietly widened to "every processor".
+      RecognizedOptions.optionSetFor("Entity").all must not contain "clustered"
+    }
+
     "not advertise `persistent` on an Entity" in { (td: TestData) =>
       // `persistent` IS in the registry, but scoped to Connector, where it means connector
       // persistence -- a different thing from the entity persistence intention. Adding it to
