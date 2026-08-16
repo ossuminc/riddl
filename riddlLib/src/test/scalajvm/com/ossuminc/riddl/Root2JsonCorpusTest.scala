@@ -131,7 +131,7 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
       parsed mustBe files.size
     }
 
-    "introduce no new validation errors on the re-parsed AST (>= 95% of models)" in {
+    "introduce no new validation errors on the re-parsed AST (EVERY model)" in {
       val files = modelFiles
       if files.isEmpty then cancel("../riddl-models corpus not found relative to the build root")
 
@@ -157,9 +157,14 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
               case RiddlResult.Failure(_) => failedFiles += (f.getName + " [reparse-fail]")
           case RiddlResult.Failure(_) => failedFiles += (f.getName + " [parse-fail]")
       end for
-      val pct = if files.nonEmpty then 100.0 * clean / files.size else 0.0
+      // Reported as a COUNT, not a percentage. The percentage that used to print here read as a
+      // score against a threshold, and there is no threshold: Reid ruled 2026-08-16 that the
+      // corpus at 100% is the release gate and that ">= 95%" is contrived. A figure of 98.9%
+      // invited exactly the misreading it produced -- it clears a bar that does not exist while
+      // failing the assertion below, and BACKLOG repeated the 95% for weeks as though it were real.
       info(
-        f"validation-parity: models=${files.size} reparsed=$reparsed cleanRoundTrip=$clean ($pct%.1f%%)"
+        s"validation-parity: models=${files.size} reparsed=$reparsed cleanRoundTrip=$clean " +
+          s"(gate: cleanRoundTrip must equal reparsed)"
       )
       info("top new-error categories (count, normalized message):")
       newErrs.toSeq.sortBy(-_._2).take(15).foreach { case (msg, n) => info(f"  $n%4d  $msg") }

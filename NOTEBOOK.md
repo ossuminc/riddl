@@ -62,9 +62,11 @@ is already sharded by identity.
   - **`self.state` is still open** — admit it, admit it only for entity-level
     handlers, or decline. Not urgent; nothing depends on it.
 
-**Also worth knowing, needing no decision:** `Root2JsonCorpusTest` asserts strict
-EQUALITY while its name and its own reported metric both advertise a ≥95% gate,
-so 98.9% fails it. That is our defect, not the corpus's — filed in § 3.
+**ANSWERED 2026-08-16:** `Root2JsonCorpusTest`'s equality assertion was right and
+its NAME was wrong. Reid: the corpus at 100% is the release gate; ">95%" is
+contrived. Renamed, and it now reports a count rather than a percentage. **It
+stays red until riddl-models migrates its last two models — that is the gate
+working.**
 
 ## HANDOFF
 
@@ -120,7 +122,8 @@ is now blocked on effort — only on those four answers.
 
 **Verified at the end of the run, per module (JVM):** utils 148, language 728,
 passes 1398, riddlLib 138, commands 243, riddlc 18. **Every failure is known and
-filed:** riddlLib 1 (our own `Root2JsonCorpusTest` equality-vs-95% defect, § 3),
+filed:** riddlLib 1 (`Root2JsonCorpusTest` — the 100% corpus gate, red until
+riddl-models migrates its last 2 models),
 commands 2 (riddl-models' two `patterns/entity/*` stragglers), riddlc 3
 (pre-existing, all in `riddl-examples`, not riddl-models). `cJS` and `cNative`
 both compile.
@@ -142,11 +145,12 @@ instrument: `patterns/entity/aggregate-root/example` and
 operands. Both files are named `example.riddl`, so a failure list reads
 "example.riddl, example.riddl" — that is two models, not one repeated.
 
-**`Root2JsonCorpusTest`'s remaining red is OURS, not the corpus's.** The case is
-named *"(>= 95% of models)"* and reports a percentage against that gate, but
-`Root2JsonCorpusTest.scala:173` asserts strict EQUALITY — so 98.9% passes the
-documented bar and fails the real one. Filed in BACKLOG § 3; decide which is
-intended rather than "fixing" the corpus to 190.
+**`Root2JsonCorpusTest` is RED ON PURPOSE and must stay that way until the
+corpus is clean.** Reid ruled 2026-08-16 that **the corpus at 100% is the release
+gate** and that a ">95%" bar is contrived. Its equality assertion was always
+right — its own comment says *"NO allowance"* — and only the case NAME and its
+percentage readout were wrong; both are fixed. Do not "fix" this by relaxing the
+assertion. It goes green when riddl-models migrates its last two models.
 
 **Traps — every one already bit someone here.**
 

@@ -325,9 +325,14 @@ each want an approved plan before implementation, per the standing rule.
      **The rewrite is not the blocker.** That suite WRITES a `.bast` beside every
      model in `../riddl-models` and restores each in a `finally`; running it on
      two platforms means two runs mutating one shared external directory, and sbt
-     may run those rows concurrently. **Porting it needs a decision about
-     isolating the corpus per platform, not a dependency swap** — that is the
-     open question, and it is a design call rather than a chore.
+     may run those rows concurrently.
+     **DECIDED 2026-08-16 by Reid: it STAYS JVM-ONLY. This is a decision, not an
+     omission.** The suite's value is CORPUS coverage, which does not vary by
+     platform, and BAST's platform behaviour is separately covered by the 26 BAST
+     suites moved to Native in `6cf60baf2`. Copying the corpus per platform, or
+     serialising the two rows, would buy a number rather than a fact. **Do not
+     "close" this by porting it.** Excluding it, the whole repo sits about 86
+     cases from tri-platform parity, and that residue is the part worth chasing.
      Also still JVM-bound: `RunCommandOnExamplesTest` (commons-io `FileUtils` +
      `filefilter`) and, through it, `RunCommandsOnExamplesTest` and
      `NamespaceTest`.
@@ -1133,13 +1138,17 @@ that needs a ruling before either can be fixed.
   named `example.riddl`, so a failure list shows "example.riddl, example.riddl"
   — do not read that as one model reported twice.
 
-  **⚠ `Root2JsonCorpusTest`'s NAME AND ASSERTION DISAGREE, and that is a defect
-  here, not in the corpus.** The case is called *"...(>= 95% of models)"* and its
-  own `+ validation-parity` line reports a percentage against that threshold —
-  but `Root2JsonCorpusTest.scala:173` asserts **strict equality**, failing with
-  `188 was not equal to 190`. So 98.9% clears the documented gate and fails the
-  real one. Decide which is intended and make the two agree; this entry and § 0
-  have both been repeating the ≥95% figure that the code does not implement.
+  **~~`Root2JsonCorpusTest`'s name and assertion disagree~~ — RESOLVED
+  2026-08-16 by Reid: "Corpus at 100% should be the release gate, > 95% is
+  contrived."** So the EQUALITY assertion was right all along (its own comment
+  said *"NO allowance"*) and the ADVERTISING was wrong. The case is renamed to
+  "(EVERY model)" and now reports a count rather than a percentage — a figure
+  like 98.9% reads as a score against a threshold, and there is no threshold. §0
+  and this entry had both been repeating the ≥95% bar as though the code
+  implemented it.
+  **Consequence, and it is the point of a gate: this suite stays RED until
+  riddl-models migrates its last two models** (`patterns/entity/aggregate-root`,
+  `patterns/entity/event-sourced`). That is not a defect here.
 
   **The stale-number lesson, third instance in one day.** Every figure in the
   old version of this entry — 173/189, then 59/190, then 115/130 — was accurate
