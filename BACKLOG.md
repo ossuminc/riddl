@@ -562,17 +562,48 @@ on a grammar-only grep and was wrong, because the REST client lives in `utils`.
 A seventh entry closes the section: a contradiction between the two documents
 that needs a ruling before either can be fixed.
 
-- **[2.1]** **A42 (iii) — Figma bidirectional scaffolding.** Generate Figma wireframe
-  skeletons mirroring the group tree, and draft RIDDL from Figma.
-  Verified: **parts (i) and (ii) are BOTH shipped** — `figma_ref` in the grammar,
-  `FigmaRef` in `AST.scala:1671` with placement enforced by `mayCarryFigmaRef`,
-  and real drift validation via `FigmaClient` (cross-platform, memoized,
-  four-valued `FigmaLookup`, off by default behind `--check-figma-drift` +
-  `FIGMA_TOKEN`). Only (iii) is missing: `grep -rli "wireframe|scaffold"
-  --include="*.scala" .` returns nothing.
-  This is **generator work, not riddlc's** — it pairs with Part B item 4 and
-  probably belongs in riddl-gen. Filed here so it is tracked somewhere; move it
-  when that repo grows a backlog.
+- **[2.1]** **A42 (iii) — Figma bidirectional scaffolding.** **PLANNED 2026-08-16;
+  needs a scoping ruling before any code.** Parts (i) and (ii) shipped: the
+  `shown by figma "fileKey" node "1:23"` reference form with placement enforced by
+  `mayCarryFigmaRef`, and drift validation through `FigmaClient`, four-valued and
+  off by default behind `--check-figma-drift`.
+
+  **⚠ THE FIRST QUESTION IS WHETHER THIS BELONGS IN THIS REPO.** A42's own text
+  says part (iii) *"is generator work and pairs with Part B item 4"* — and Part B
+  is **riddlg**, whose item 4 is the UI application generator ("structure and
+  wiring come from RIDDL, the visual skin from Figma design tokens, with
+  bidirectional scaffolding between them"). Filing it in riddl's backlog was
+  probably a filing error. **Recommendation: move the bulk to riddlg and keep in
+  riddl only what riddlg cannot do for itself.**
+
+  **The two halves are NOT symmetric in difficulty, and this is the substance.**
+
+  **(a) RIDDL → Figma (generate wireframe skeletons from the group tree).**
+  Blocked on a platform constraint, not on modelling. **Figma's REST API cannot
+  create frames** — node creation lives in the Plugin API, which runs *inside*
+  Figma, so `FigmaClient` (one method, `lookupNode`, read-only) cannot be extended
+  into this. The real options are: ship a small Figma **plugin** that consumes a
+  RIDDL-derived spec; emit a format Figma **imports**; or use whatever write
+  surface REST now exposes. **Confirm against current Figma docs before planning
+  further — this constraint is the whole shape of (a), and their API moves.**
+
+  **(b) Figma → RIDDL (draft RIDDL from a Figma file).** Tractable today with the
+  READ surface that already exists: walk a file's frames and emit `group` /
+  `input` / `output` skeletons, reusing part (ii)'s name-normalisation (bare
+  word-characters, so "Login Screen" ↔ `LoginScreen`). **Do (b) first** — it is
+  useful alone, needs no new platform capability, and exercises the mapping in the
+  direction where a wrong guess costs a draft rather than a design file.
+
+  **What riddl owes either way**, and the only part that is clearly ours: a stable
+  view of the UI structure for a generator to walk (the group/input/output tree is
+  already reachable via the content accessors and `TreePass`), `FigmaRef` in the
+  AST (shipped), and `FigmaClient` if a write surface ever lands here rather than
+  in riddlg.
+
+  **Carry part (ii)'s two rulings into anything built here**, since they were
+  learned the expensive way: a lookup result must distinguish *not found* from
+  *could not ask* (`Unavailable` is not drift), and **a build must never fail
+  because of the network** — off by default, never fatal.
 
 - **[2.2]** **A38 — ADMIT an invariant reference as an ALTERNATIVE refusal operand.**
   **CORRECTED 2026-08-16 by Reid, and the previous framing was wrong.** This
