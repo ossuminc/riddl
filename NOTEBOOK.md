@@ -120,20 +120,31 @@ Verified 2026-08-15 by sweeping all 190 entry points at HEAD: zero ambiguity
 Errors, with a positive control proving the check can fire in both the inline and
 alias spellings. BACKLOG § 3 and the riddl-models task file are corrected.
 
-**NEXT: § 1 of BACKLOG is the active to-do list**, ordered by dependency with an
-index at its head; the same twelve items are in the session task list. Item 1
-(`OnInit`/`OnTerm` parameter defaults) is DONE, `c530337d9`. Only three real
-dependency edges exist among the twelve, so most of it can be reordered freely.
+**§ 1 IS CLEARED.** All twelve items worked through overnight 2026-08-15: nine
+built and committed, three left as rulings in § QUESTIONS above. Nothing in § 1
+is now blocked on effort — only on those four answers.
 
-**Two § 1 entries were STALE and are struck** — the numeric-literal limitation
-(closed by `6cfeceb2f`; verified by running the entry's own example) and the
-unused-`initiate`-id check (built; `UnusedInitiateIdTest` green, 7 cases). That
-is the third stale-entry find in a day. **Re-verify an entry before working it.**
+| # | item | state |
+|---|---|---|
+| 1 | `OnInit`/`OnTerm` param defaults | `c530337d9` |
+| 2 | two stale entries closed | `d46646e10` |
+| 3 | `valueTypeExpr` predefined + `typeEx` | `141486ed4` |
+| 4 | A20 ascription wiring, 7 positions | `0fd7bb54e` |
+| 5 | JVM/Native gap **560 → 275** | `682e835bc` `54ff5fe73` `6cf60baf2` `0919f191e` |
+| 6 | `!` tokenized as punctuation | `66388821c` |
+| 7 | JSON unknown keys — characterized | `4bb0ba01a` → **Q1** |
+| 8 | three CM amendments | `18bdb8f` (ossuminc repo) |
+| 9 | `self`-fields survey | `c478e9d6b` → **Q5** |
+| 10 | clusterability — planned only | `38fa65dd5` → **Q3** |
+| 11 | cross-context tell — **counted: 18, not 5,301** | `69f50bf9a` → **Q4** |
+| 12 | `foreach` element threading | `faf7551c0` (part 2 split out, last) |
 
-**The corpus is a LIVE checkout another session edits in parallel.** Twice this
-session `git status` in `../riddl-models` changed between two consecutive
-commands, and a corpus figure written at 17:40 was wrong by 19:19. Never carry a
-corpus number forward; re-measure.
+**Verified at the end of the run, per module (JVM):** utils 148, language 728,
+passes 1398, riddlLib 138, commands 243, riddlc 18. **Every failure is known and
+filed:** riddlLib 1 (our own `Root2JsonCorpusTest` equality-vs-95% defect, § 3),
+commands 2 (riddl-models' two `patterns/entity/*` stragglers), riddlc 3
+(pre-existing, all in `riddl-examples`, not riddl-models). `cJS` and `cNative`
+both compile.
 
 **Corpus suites — riddl-models landed its migration at 19:19 and almost all of
 this went green. Re-measured AFTER their `2e619c44`:**
@@ -212,6 +223,57 @@ source-incompatible and are tabulated in the FYI.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
+
+## A night spent on BACKLOG § 1 — what the list itself got wrong (2026-08-15)
+
+Twelve items worked end to end. Nine built, three queued for a ruling. The code
+is in the commits; what belongs here is that **the backlog was wrong about its
+own contents in six distinct ways**, and every one was cheap to detect and
+expensive to have believed.
+
+**Two entries described work that was already done.** The numeric-literal
+limitation had been closed by `6cfeceb2f`; the unused-`initiate`-id check was
+built and green with seven cases. Both were found by *running the entry's own
+example* rather than reading the entry. That is now three in one day, counting
+the 49-alias list that riddl-models had already cleared.
+
+**Two entries prescribed a fix that would have caused damage.** The
+`OnInit`/`OnTerm` item said to move `parameters` after `contents`/`metadata`;
+doing so would have broken all five positional construction sites to fix one
+consumer, and the constraint it cited dissolves the moment the field is
+defaulted. The JSON item proposed a consumed-keys tracker wrapping `ujson.Obj`,
+which cannot work: most DTOs are read by upickle's derived `macroRW`, which a
+wrapper cannot instrument.
+
+**One entry's central measurement was wrong by 294x.** The cross-context `tell`
+seam was filed on a heuristic saying 5,301 crossings (64% of all tells). Counted
+by resolution: **18** (0.24%), all in two models. The entry's strategic
+conclusion — that the rule "will bite widely", which was the argument for
+warn-then-flip — was built entirely on that number and does not survive it.
+
+**One entry contradicted itself.** Clusterability asks for both a `clustered`
+keyword and `self.isClustered`, but writing the keyword is exactly what makes
+clustering statically knowable, which is what disqualifies the field under the
+admission test. You can have either, not both.
+
+**One entry's headline described the milder half of a bundle.** The two
+narrow-operand gaps were filed together as "false-positive-only, zero corpus
+impact". True of one; the other was a **missed Error**, and the bundling is
+plausibly why it sat unexamined.
+
+**The one technical pattern worth carrying forward: a comment asserting what
+some OTHER function does is unverified, and three were false today.**
+`ResolutionPass` claimed `letType` special-cased predefined keywords (it did
+not). `widenedOperandType`'s scaladoc claimed no call site could see a `foreach`
+body, while the call site two lines above `checkTellAddressing` said it is
+"reached at ANY depth" — two claims about one path, in one file, disagreeing,
+and the false one was load-bearing. CLAUDE.md already names this shape under
+Total Dispatch; what today adds is that it is not rare.
+
+**Method note that paid for itself repeatedly: move it, compile it, move it
+back.** Four files that no import scan flags as JVM-bound are, because they name
+a JVM-only TYPE or extend a JVM-only base. Guessing cost minutes; the compiler
+answered in seconds.
 
 ## The 49-alias list was owed to nobody (2026-08-15) — CLOSED
 
