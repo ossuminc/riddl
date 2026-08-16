@@ -819,18 +819,18 @@ that needs a ruling before either can be fixed.
   Two probes on purpose: resolution and scope are separate passes over the same
   statements, and one working says nothing about the other.
 
-- **[2.9]** **`TypeParserTest` has never run on Native.** Found 2026-08-07 while checking
-  where new tests executed. It is `abstract class TypeParserTest` with concrete
-  subclasses ONLY in `language/src/test/scalajvm/.../JVMTests.scala:22` and
-  `language/src/test/scalajs/.../JSTests.scala:22` — there is no Native one, so
-  ScalaTest never instantiates it there. This is CLAUDE.md's documented trap #2
-  (abstract spec with no concrete subclass: cases never appear in the log at
-  all, not even as skipped). Pre-existing, NOT introduced by the Blob work.
-  **Do not just add the subclass and assume green** — it would newly execute a
-  large parser suite on a platform that has never run it, and this repo's own
-  history says to expect findings on a first run. Worth checking whether other
-  `language` suites have the same gap; the audit is the task, not the one-liner.
-- **[2.10]** **Audit every other port-COUNTING site for the `error-sink`
+- ~~**`TypeParserTest` has never run on Native.**~~ — **ALREADY FIXED, closed
+  2026-08-16.** Swept up by `54ff5fe73`, the batch that moved 17 language suites'
+  concrete runners from `src/test/scalajvm` to `src/test/scala-jvm-native` and
+  renamed them `JVMNativeTests` — `JVMNativeTypeParserTest` is at
+  `JVMNativeTests.scala:34`. Verified by running it: `languageNative/testOnly
+  *TypeParserTest` reports **38 tests, all passing**.
+  Worth noting HOW it closed: nobody was working on this item. It was fixed as a
+  side effect of a batch move made for a different reason, and stayed on the list
+  for a day afterwards — the seventh stale entry in two days, and the argument for
+  verifying an item before planning it rather than after.
+
+- **[2.9]** **Audit every other port-COUNTING site for the `error-sink`
   exemption.** (Description expanded 2026-08-16 at Reid's request.)
   **Background.** A processor's stream SHAPE is derived from its arity — 1-in/1-out
   is a `flow`, 1-out/2-in a `merge`, and so on. An `option error-sink` inlet is
