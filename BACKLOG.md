@@ -804,101 +804,22 @@ that needs a ruling before either can be fixed.
   (`GroupParser.scala:28`). The "3 pinned occurrences" are gone —
   `Root2JsonFixturesTest` reports `identical=91`, `lossy=0`, `divergent=0`, and
   the test carries no Comment allowance. No decision needed; nothing to do.
-- **[2.9]** **Saga step statements are NEVER VALIDATED — not just reachability.**
-  **⚠ LIKELY ALREADY FIXED — verify and close before doing any work here.**
-  Found 2026-08-11: `git log -S "case sagaStep: SagaStep =>" -- passes/…/Pass.scala`
-  gives **`a1bce0d50` (2026-08-07) "Traverse saga step statements, which were
-  never validated at all"** — one day AFTER this item was filed. `Pass.traverse`
-  now has a `SagaStep` case ahead of `case leaf: Leaf` that traverses
-  `doStatements`/`undoStatements`, which is exactly the root cause described
-  below. Re-run the repro before treating any of the following as true; if it is
-  green, delete this item and keep only the reachability question if that
-  survives. Not deleted outright because the entry has several sub-claims and
-  only the traversal one was checked.
+- ~~**Saga step statements are NEVER VALIDATED — not just reachability.**~~ —
+  **VERIFIED FIXED and CLOSED 2026-08-16.** The entry carried its own suspicion
+  that `a1bce0d50` (2026-08-07, "Traverse saga step statements, which were never
+  traversed") had already fixed it. It had. Confirmed by EXECUTION rather than by
+  reading the log, on both layers and in both statement positions:
+  - **Reference resolution** — a saga whose `step` and whose `reverted by` each
+    name a nonexistent path reports all four: *"Path 'Nonexistent.Bogus' was not
+    resolved, in Saga 'S'"*, the same for the undo statement's `AlsoBogus`, and
+    both targets.
+  - **Statement SCOPE** — `set` inside a saga step reports *"'set' is not allowed
+    in Saga 'S', which owns no state to write"*, which is a different check from
+    resolution and proves the scope machinery reaches these statements too.
+  Two probes on purpose: resolution and scope are separate passes over the same
+  statements, and one working says nothing about the other.
 
-  Filed as "saga reachability", VERIFIED 2026-08-06 and it is materially worse
-  than that.
-  **Promoted: this is a silent correctness hole, not a missing warning.**
-
-  Repro, one file, both statements identical in shape:
-
-      entity Caller is { handler H is {
-        on command Dom.Ours.Doit is {
-          tell command Dom.Ours.NoSuchCommand to entity Dom.Ours.NoSuchEntity } } }
-      saga Flow is {
-        step One is {
-          tell command Dom.Ours.AlsoBogus to entity Dom.Ours.AlsoMissing
-        } reverted by { do "undo" } }
-
-  riddlc reports `NoSuchCommand` and `NoSuchEntity` as unresolved. It reports
-  **nothing at all** about `AlsoBogus` or `AlsoMissing`. A saga step can name
-  definitions that do not exist and validate clean. The reachability warning is
-  just the symptom that happened to get noticed.
-
-  **Root cause, and it is a known shape:** `SagaStep extends Leaf`
-  (`AST.scala:4802-4808`) with `doStatements` / `undoStatements` as FIELDS beside
-  `contents` rather than in it, so the traversal never descends into them.
-
-  **DONE 2026-08-07, `a1bce0d50` — but NOT the way this entry proposed, and the
-  reason is kept so it is not re-proposed.** This entry called for the
-  `3e4af6801` treatment: make `SagaStep` a `Branch`, statements into `contents`.
-  **That precedent does not transfer:** it moved two SINGLETON clauses into one
-  ordered list, whereas a SagaStep has TWO distinct blocks, and
-  `JsonModel.SagaStepDto` exposes them as separate `do` and `undo` arrays.
-  Merging them loses a distinction the JSON wire format — read by synapify and
-  riddl-gen — depends on, and forces a BAST `FORMAT_REVISION` bump.
-
-  What was done instead: one `SagaStep` case in the base `Pass.traverse`,
-  descending into both statement lists WITHOUT pushing (`ParentStack.push` takes
-  a `Branch[?]`; Include and BASTImport already traverse this way, and
-  `parents.head` staying the Saga is the correct resolution scope). No AST, JSON
-  or BAST change. ~12 `Pass`-derived passes now see saga statements;
-  `HierarchyPass` overrides `traverse` entirely, so Prettify, BASTWriter,
-  Outline and Tree were untouched.
-
-  The predicted "wave of findings" did not materialise — 23 saga steps across
-  all three corpora, and the only golden change was the REMOVAL of two FALSE
-  `is unused` warnings (`blah` and `UndoSomething` are named by a step's `send`
-  statements, so they were never unused, only unseen).
-- ~~**`validateArbitraryInteraction`'s refMap path is dead**~~ — **ALREADY FIXED
-  at `55d5dc6d9` (2026-07-27), "Fix arbitrary-interaction ref resolution (was
-  dead — wrong refMap key)".** Discovered 2026-08-07 while planning to implement
-  it: the call site already resolves with `useCase` as the scope and carries a
-  comment saying so. This entry sat open for eleven days after the work shipped.
-- ~~`PlatformContext.withOptions` lacks try/finally~~ — **STALE; `withOptions`
-  was fixed at `2eefeec52` (2026-07-27), eight days before this entry was last
-  read.** The unfixed twin was `withLogger`, directly above it, with the same
-  failure mode: a throwing body leaves the swapped-in logger installed globally,
-  so a later sequential suite writes into a dead test's capture buffer. **DONE
-  2026-08-07, `359949e83`.**
-- ~~**`Blob`, `Unknown`, `Range` are RESERVED BUT UNUSABLE.**~~ — **DONE
-  2026-08-07, `f41cf399f`**, all three parts. Left below because the DIAGNOSIS
-  is the durable part: three tables that look authoritative, two of which are
-  not. Two residues were filed rather than fixed — see the two entries after
-  this one. Original analysis, verified 2026-08-07
-  by three `riddlc` probes, correcting an earlier reading of this entry that
-  treated tokenizing as evidence of parseability — it is not. For all three,
-  `type X is <Name>` fails with "Path '<Name>' was not resolved", AND defining
-  your own type by that name fails with "redefines built-in type" — unusable in
-  both directions. The cause is two tables that drifted apart:
-  `PredefType.allPredefTypes` (reserves names; read by `ValidationPass:1268`)
-  and `PredefTypes.anyPredefType` (tokenizer only; read by `TokenParser:61`).
-  Neither is the REAL type parser, which is `TypeParser.predefinedTypes:327`.
-  **Reid ruled 2026-08-07 — three different jobs, not one cleanup:**
-  1. **Add `Blob` to the parser.** It is a legitimate type missing only its
-     syntax: `AST.Blob(loc, BlobKind)` exists, the `BlobKind` enum exists,
-     BASTWriter/Reader round-trip it and `ASTTest:117-124` tests its `format`.
-     Grammar-surface change — parser rule + EBNF + GBNF regen + prettify +
-     round-trip test + corpus re-run.
-  2. **Drop capitalized `Range`, keep `range(n,m)`.** The working type is the
-     LOWERCASE `range(1,10)` (`TypeParser:617` via `Keywords.range`,
-     `Keyword.range = "range"`, verified validating clean). Capitalized `Range`
-     is a phantom that only reserves the name and mis-highlights it; dropping
-     it frees `Range` for users.
-  3. **Drop `Unknown`.** Nothing behind it — no AST node, no parser rule, just
-     the reservation and a tokenizer entry.
-
-- **[2.10]** **`TypeParserTest` has never run on Native.** Found 2026-08-07 while checking
+- **[2.9]** **`TypeParserTest` has never run on Native.** Found 2026-08-07 while checking
   where new tests executed. It is `abstract class TypeParserTest` with concrete
   subclasses ONLY in `language/src/test/scalajvm/.../JVMTests.scala:22` and
   `language/src/test/scalajs/.../JSTests.scala:22` — there is no Native one, so
@@ -909,7 +830,7 @@ that needs a ruling before either can be fixed.
   large parser suite on a platform that has never run it, and this repo's own
   history says to expect findings on a first run. Worth checking whether other
   `language` suites have the same gap; the audit is the task, not the one-liner.
-- **[2.11]** **Audit every other port-COUNTING site for the `error-sink`
+- **[2.10]** **Audit every other port-COUNTING site for the `error-sink`
   exemption.** (Description expanded 2026-08-16 at Reid's request.)
   **Background.** A processor's stream SHAPE is derived from its arity — 1-in/1-out
   is a `flow`, 1-out/2-in a `merge`, and so on. An `option error-sink` inlet is
