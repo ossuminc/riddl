@@ -80,6 +80,40 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
     }
   }
 
+  /** `!` is a first-class negation spelling since the 2026-08-14 ruling that made it synonymous
+    * with `not` everywhere. The tokenizer never learned that: `Punctuation.tokenPunctuation`
+    * omitted it, so `TokenParser.otherToken` swallowed `!isValid` as ONE `Token.Other` blob and
+    * editor tooling (riddl-idea-plugin, synapify) could not highlight either part.
+    */
+  "tokenize `!` as punctuation, not as part of an Other blob" in { (td: TestData) =>
+    val rpi = RiddlParserInput("""when !isValid then do "no" end""", td)
+    TopLevelParser.mapTextAndToken[String](rpi) { (slice, token) =>
+      token.getClass.getSimpleName.replace("$", "") + "(" + slice.mkString + ")"
+    } match
+      case Left(messages) => fail(messages.format)
+      case Right(list) =>
+        withClue(list.mkString(", ")) {
+          list must contain("Punctuation(!)")
+          list must contain("Identifier(isValid)")
+          list.exists(_.startsWith("Other(")) mustBe false
+        }
+  }
+
+  /** The guard that keeps the fix honest: `!=` is a comparison OPERATOR, not a negation, and
+    * splitting it into two punctuation tokens would misreport it to an editor as `!` followed by
+    * `=`. Pinned separately because the parser's own `"!" ~~ !"="` lookahead has no counterpart in
+    * the tokenizer, so nothing else would notice.
+    */
+  "tokenize `!=` without splitting it into two punctuation tokens" in { (td: TestData) =>
+    val rpi = RiddlParserInput("""when count != total then do "no" end""", td)
+    TopLevelParser.mapTextAndToken[String](rpi) { (slice, token) =>
+      token.getClass.getSimpleName.replace("$", "") + "(" + slice.mkString + ")"
+    } match
+      case Left(messages) => fail(messages.format)
+      case Right(list) =>
+        withClue(list.mkString(", ")) { list must not contain "Punctuation(!)" }
+  }
+
   "handle mapping text with tokens" in { (td: TestData) =>
     val data =
       """

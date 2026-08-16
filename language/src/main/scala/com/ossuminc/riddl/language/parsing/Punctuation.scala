@@ -17,6 +17,7 @@ object Punctuation {
   final val curlyClose = "}"
   final val dot = "."
   final val equalsSign = "="
+  final val exclamation = "!"
   final val plus = "+"
   final val question = "?"
   final val quote = "\""
@@ -37,6 +38,7 @@ object Punctuation {
     curlyClose,
     dot,
     equalsSign,
+    exclamation,
     plus,
     question,
     quote,
@@ -60,6 +62,7 @@ object Punctuation {
         curlyClose,
         dot,
         equalsSign,
+        exclamation,
         plus,
         question,
         quote,
@@ -73,9 +76,21 @@ object Punctuation {
     )
   }
 
+  /** The TOKENIZER's punctuation set. `!` is guarded by a negative lookahead rather than listed
+    * inside the `StringIn`, mirroring the parser's own `"!" ~~ !"="` guard: `!=` is a comparison
+    * OPERATOR, not a negation, and this set deliberately contains no comparison operators at all
+    * (there is no `<` or `>` here either), so tokenizing `!=` as punctuation would be inconsistent
+    * as well as misleading to an editor.
+    *
+    * `!` belongs here at all only because of the 2026-08-14 ruling that made it synonymous with
+    * `not` EVERYWHERE. Before that it was a narrow special case, and its absence cost nothing;
+    * after it, `TokenParser.otherToken` swallowed `!isValid then do "no" end` -- the whole rest of
+    * the input -- into a single `Token.Other`, leaving riddl-idea-plugin and synapify unable to
+    * highlight any of it.
+    */
   def tokenPunctuation[u: P]: P[Unit] = {
     P(
-      StringIn(
+      (exclamation ~~ !"=") | StringIn(
         asterisk,
         atSign,
         comma,
