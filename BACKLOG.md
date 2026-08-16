@@ -15,20 +15,26 @@ them as items are touched rather than in one sweep.
 Large items get their own plan (`~/.claude/plans/`) before implementation; the
 plan is discarded once built.
 
+**ITEM IDs.** Every open item carries a stable `[section.n]` identifier so it can
+be named in conversation without quoting its title. **IDs are positional and are
+reassigned when an item closes** — they are a handle for today, not a permanent
+key. Struck-through entries are kept for the diagnosis they record and are not
+numbered.
+
 ### 0. Just before 2.0.0 is released
 
 Things deliberately deferred to the release itself, not to be done piecemeal.
 
-- **Run one `scalafmt` pass.** Formatting is not a gate before 2.0 (Reid,
+- **[0.1]** **Run one `scalafmt` pass.** Formatting is not a gate before 2.0 (Reid,
   2026-08-04); do not run `scalafmtCheckAll`, report it, or format
   incrementally. `sbt scalafmtCheck` is red on HEAD — 7 committed files
   reformat, 6 in `commands`.
-- **Upgrade riddl-vscode.** Reid, 2026-08-06 — deferred here deliberately, not
+- **[0.2]** **Upgrade riddl-vscode.** Reid, 2026-08-06 — deferred here deliberately, not
   overlooked. It consumes `@ossuminc/riddl-lib` via npm, which carries only
   PUBLISHED releases, so it cannot take a staged build at all and chasing it
   between RCs means cutting an RC for its benefit. It is on `2.0.0-rc.9`
   (`package.json:128`); bring it to 2.0.0 when 2.0.0 exists.
-- **Regenerate every checked-in `.bast`.** Reid, 2026-08-06 — same reasoning:
+- **[0.3]** **Regenerate every checked-in `.bast`.** Reid, 2026-08-06 — same reasoning:
   `FORMAT_REVISION` has moved twice in one day (6 -> 7 -> 8) and may move again
   before 2.0, so regenerating now buys nothing. riddl-models is the known holder.
   In-repo fixtures are NOT deferred — `language/input/import/NotImplemented.bast`
@@ -44,7 +50,7 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   at byte 12 (the revision short) and nowhere else — check that, since a
   larger diff means the path got baked in. (`sbt clean` deletes the stage, so
   regenerate the fixture BEFORE certifying, not after.)
-- **Update `../RIDDL-Computational-Model.md` with everything `release/2`
+- **[0.4]** **Update `../RIDDL-Computational-Model.md` with everything `release/2`
   changed.** Reid, 2026-08-06. That document is the authority for any lowering
   decision — what a conforming generator MUST preserve versus may freely choose
   — so a language change that does not reach it leaves generator authors working
@@ -87,7 +93,7 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   the task dropped in
   `../ossum.tech/task/2026-08-15-not-bang-synonymy.md` for the
   worked examples and the `!=` caution.
-- **Update the ossum.tech documentation site** with the same syntax changes,
+- **[0.5]** **Update the ossum.tech documentation site** with the same syntax changes,
   **plus a LIGHTER treatment of the implied syntax.** Reid, 2026-08-06 — the
   reference currently spells out more of the implicit forms than a reader needs,
   and the balance should shift toward what someone actually writes. Same source
@@ -183,7 +189,7 @@ each want an approved plan before implementation, per the standing rule.
   both checks are permanent tests rather than things verified once.
   Corpus: 0 unrecognized keys across 188 models.
 
-- **STRATEGIC, raised by Reid 2026-08-16: should the JSON input surface exist at
+- **[1.1]** **STRATEGIC, raised by Reid 2026-08-16: should the JSON input surface exist at
   all?** Not urgent — the warning above protects today's users either way — but it
   outlives that fix and should be decided rather than drift.
   **The argument for retiring it.** JSON guarantees SHAPE only. Our own path runs
@@ -204,42 +210,27 @@ each want an approved plan before implementation, per the standing rule.
   **Options:** keep JSON; retire it in favour of repair loops; or keep it only for
   hosted models and point self-hosted users at GBNF/XGrammar.
 
-- **`Punctuation.tokenPunctuation` does not include `!`, so `TokenParser`
-  swallows `!isValid` / `!(a` as a single `Token.Other` blob** (found in the
-  final `!`/`not` synonymy review, 2026-08-15). This is pre-existing — it was
-  never fixed when `Punctuation.exclamation` was removed, because that removal
-  was inert — but the not-bang-synonymy work multiplies the positions where
-  editor tooling (riddl-idea-plugin, synapify) will encounter it, since `!` is
-  now a first-class negation spelling rather than a narrow special case. File,
-  do not fix opportunistically: `Punctuation.scala:76` (`tokenPunctuation`),
-  consumed by `TokenParser.otherToken` (`TokenParser.scala:31`).
-- **`OnInitializationClause.parameters` / `OnTerminationClause.parameters` have
-  no default and are not trailing** (`AST.scala:4236`). Filed by synapify
-  2026-08-14; it is the only thing in rc.14 that broke their build. It departs
-  from the compatibility policy quoted in the adjacent `Connector.intentions`
-  comment in the same release — *"The compatibility policy requires a new
-  parameter to have one"*. Adding `= Seq.empty` is source-compatible and cheap.
-  Note the constraint that produced it: `@JSExportTopLevel` requires defaulted
-  params to be TRAILING, and `contents`/`metadata` are already defaulted — so
-  the fix is to move `parameters` after them, not merely to default it in place.
-- ~~**`elements` is not threaded into `widenedOperandType`**~~ — **DONE
-  2026-08-15, `faf7551c0`.** A `tell` whose operand IS a `foreach` loop variable
-  resolved to nothing, so the `by`/ambiguity Errors and the three completeness
-  checks skipped it silently.
-  **The entry filed this as "pre-existing in kind" and false-positive-only; it
-  was neither.** It was a missed ERROR — an ambiguous derivation that should be
-  rejected was accepted — and the scaladoc actively asserted it could not happen
-  ("none of this function's three call sites resolve an operand from inside a
-  `foreach` body"). `checkTellAddressing` is called from `checkStatementScopes`,
-  which recurses into `foreach` bodies precisely to thread those bindings, and
-  says so in a comment two lines above the call. **Two claims about the same
-  code, in one file, contradicting each other — and the false one was the one
-  being relied on.** Second instance found the same day, after `ResolutionPass`'s
-  claim that `letType` special-cased predefined keywords.
-  Corpus impact nil and honestly so: the whole corpus has **3** `foreach`
-  statements and none tells its element.
+- ~~**`Punctuation.tokenPunctuation` does not include `!`.**~~ — **DONE
+  2026-08-15, `66388821c`.** The damage was worse than filed: not `!isValid` but
+  `!isValid then do "no" end` — the whole remainder of the input — became one
+  `Token.Other`, so an editor lost highlighting for everything after the `!`.
+  `!` is guarded by a negative lookahead rather than listed in the `StringIn`,
+  mirroring the parser's `"!" ~~ !"="`: `!=` is a comparison OPERATOR and this set
+  holds no comparison operators at all. No EBNF change — `not_expression` already
+  described it; the tokenizer is a highlighting surface, which is why the parser
+  accepted `!` all along while the tokenizer did not.
 
-- **`emittedMessageTypes` is still narrow.** The second of the two gaps, and the
+- ~~**`OnInitializationClause.parameters` / `OnTerminationClause.parameters` have
+  no default.**~~ — **DONE 2026-08-15, `c530337d9`.** Defaulted IN PLACE.
+  **This entry's prescribed fix would have caused a second break:** it said to move
+  the field after `contents`/`metadata` because `@JSExportTopLevel` wants defaulted
+  params trailing, but that constraint bites only while the field has NO default —
+  once it has one, `loc` is the sole undefaulted parameter and the rule is already
+  satisfied where it stands. Moving it would have broken all five positional
+  construction sites (`HandlerParser` x2, `BASTReader`, `JsonAstBuilder` x2).
+  Verified on cJS and cNative, which is the only place that hazard is visible.
+
+- **[1.2]** **`emittedMessageTypes` is still narrow.** The second of the two gaps, and the
   one that really is a restructuring rather than a fix round. It is a whole-root
   `Finder` sweep with no per-clause scope, feeding A70's correlation-fold
   advisory (`ValidationPass.scala:158` documents the flatness). Still
@@ -260,7 +251,7 @@ each want an approved plan before implementation, per the standing rule.
   defect class was diagnosed once and its sibling missed, so when fixing a
   test-shape defect, grep for the shape rather than fixing the instance.
 
-- **Close the JVM/Native test gap: 729 cases run on JVM that never run on
+- **[1.3]** **Close the JVM/Native test gap: 729 cases run on JVM that never run on
   Native.** Reid, 2026-08-14, from the rc.14 certification. *"Testing on the JVM
   does not guarantee correctness on Native, and I can't believe there are ~800
   test cases that genuinely cannot run there."*
@@ -403,7 +394,7 @@ each want an approved plan before implementation, per the standing rule.
   string literals, so no Native hazard was present. Rolled into the JVM/Native
   gap item above.
 
-- **MEASUREMENT ATTEMPTED 2026-08-14 and it FAILED — a grep cannot answer this.**
+- **[1.4]** **MEASUREMENT ATTEMPTED 2026-08-14 and it FAILED — a grep cannot answer this.**
   Reid: *"I don't really care, but go ahead and count how many models do this,
   probably not many."* Recorded so the next person does not repeat the attempt.
   What is solid: **7,561** lines carry a `tell`; of **8,254** `to <kind> <path>`
@@ -527,36 +518,14 @@ each want an approved plan before implementation, per the standing rule.
     Exposing them would let a model depend on something the CM explicitly
     reserves to the runtime, which is worse than merely redundant.
 
-- **Computational Model amendments owed by the identity design.** Three, all
-  from 2026-08-13: (a) "activate on first message" (§4, line 999) must become
-  rehydrate-an-existing-instance, never create-on-demand, now that `initiate`
-  invokes `on init` explicitly; (b) the memory-space axiom — only processors
-  within one context are guaranteed to share memory, which is what licenses a
-  generator to optimize the same-context `tell`; (c) `Id(P)` (runtime instance
-  identity) must not be conflated with the definition ULIDs of line 2523
-  (model-time identity of a definition).
-
-- ~~**A20 typed holes: `checkPromptAscription` is not wired at every position**~~ —
-  **DONE 2026-08-15, `0fd7bb54e`.** All seven positions are wired: `put`,
-  `return`, `require … with`, and the four argument positions
-  (`Constructor`/`Call`/`Initiate`/`TerminateStatement`).
-  **The decision this entry asked for dissolved on contact.** It said "most need
-  the same expected-type lookup ... already do elsewhere", implying some would
-  need new machinery and might not be worth it. In fact ALL seven already had
-  the expected type in hand where the ascription is visible — there was nothing
-  to build, only somewhere to call — so there was no position for which leaving
-  it was the better trade.
-  **Four of the seven cost ONE call site.** `checkArgumentTypes` already binds
-  each argument to its field, and `checkLifecycleInvocation` adapts
-  `MethodArgument`s into `Field`s precisely so it can reuse that helper.
-  **Which side of the comparison to pass is the part worth remembering.**
-  `field.typeEx` goes in directly because it is the type as WRITTEN, which is
-  what a syntactic comparison needs; a RESOLVED `Type` must be re-wrapped by
-  `selfNamedTypeExpression`, because passing its `typEx` would compare
-  `as OrderId` against the underlying `Id(entity Order)` and report a false
-  contradiction on correct code.
-  The sibling RENDERING defect at the same positions was already closed
-  separately (`RiddlFileEmitter.emitValue` is total over them).
+- ~~**Computational Model amendments owed by the identity design.**~~ — **DONE
+  2026-08-16, `18bdb8f` in the `ossuminc` repo.** All three: §4.5 now reads
+  "rehydrate an already-existing instance" with a paragraph on why activation is
+  never creation; §3.6 gains the memory-space axiom in its POSITIVE form (only
+  processors within one context are guaranteed to share memory, which is what
+  licenses optimizing a same-context `tell`); and §38.9 states, as a table, that a
+  definition's ULID is not `Id(P)` — the failure modes are symmetric and both
+  silent.
 
 ### 2. Queued, needs a plan
 
@@ -593,7 +562,7 @@ on a grammar-only grep and was wrong, because the REST client lives in `utils`.
 A seventh entry closes the section: a contradiction between the two documents
 that needs a ruling before either can be fixed.
 
-- **A42 (iii) — Figma bidirectional scaffolding.** Generate Figma wireframe
+- **[2.1]** **A42 (iii) — Figma bidirectional scaffolding.** Generate Figma wireframe
   skeletons mirroring the group tree, and draft RIDDL from Figma.
   Verified: **parts (i) and (ii) are BOTH shipped** — `figma_ref` in the grammar,
   `FigmaRef` in `AST.scala:1671` with placement enforced by `mayCarryFigmaRef`,
@@ -605,7 +574,7 @@ that needs a ruling before either can be fixed.
   probably belongs in riddl-gen. Filed here so it is tracked somewhere; move it
   when that repo grows a backlog.
 
-- **A38 — the refusal step's operand should name an invariant, not prose.**
+- **[2.2]** **A38 — the refusal step's operand should name an invariant, not prose.**
   The step kind shipped as `any_interaction_ref "refuses" user_ref
   literal_string`, so the reason is a **prose string**. A38's whole purpose was
   closing the loop between the requirement's named invariant, the `require` that
@@ -617,7 +586,7 @@ that needs a ruling before either can be fixed.
   `FORMAT_REVISION` bump; the corpus must be surveyed for existing prose
   refusals before the string form is removed.
 
-- **RULED 2026-08-14 — `on other` is necessary to the LANGUAGE, not required in
+- **[2.3]** **RULED 2026-08-14 — `on other` is necessary to the LANGUAGE, not required in
   every handler. A5's generalization is DECLINED; omission is correct.**
   Reid, correcting a first reading of this ruling that took "it MUST be there"
   to mean per-handler:
@@ -692,7 +661,7 @@ that needs a ruling before either can be fixed.
   precisely the construct this ruling calls nonsense. (The first correction said
   it was wrong because presence is mandatory. That was the misreading.)
 
-- **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
+- **[2.4]** **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
   rule.** **Add `Finder.fieldChildren` to the list** (2026-08-15): it is 29
   hand-written cases ending in `case _ => Seq.empty`, so a future node holding
   statements or values in a FIELD returns nothing rather than failing loudly.
@@ -773,7 +742,7 @@ that needs a ruling before either can be fixed.
   is worth running once. Fixed here with `immutable.VectorMap`, which preserves
   the declared `Map` type.
 
-- **Finish the `Streamlet` → `Processor` migration in the remaining passes.**
+- **[2.5]** **Finish the `Streamlet` → `Processor` migration in the remaining passes.**
   Filed by Reid 2026-08-10 when the same defect was fixed in
   `StreamingValidation` (`70b0f527a`). These sites narrow to the concrete
   `Streamlet` case class the same way the streaming graph did, so they see one
@@ -793,7 +762,7 @@ that needs a ruling before either can be fixed.
   and `RiddlFileEmitter`/`PrettifyVisitor`'s uses are NOT in this list: those
   are legitimately about the case class (visitor hooks, keyword emission).
 
-- **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10, syntax his
+- **[2.6]** **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10, syntax his
   suggestion. Wants a plan. Filed out of the `foreach`-over-a-mapping question:
   the destructuring form below covers the loop body, but **outside a loop a
   mapping is currently write-only** — there is no way to name the value stored
@@ -821,7 +790,7 @@ that needs a ruling before either can be fixed.
     `collectionElementType` (ValidationPass) already computes the latter.
   - Whether `at` reads well in a `when` guard, its most likely home.
 
-- **A keyword-named field reports the error several tokens upstream.** From
+- **[2.7]** **A keyword-named field reports the error several tokens upstream.** From
   riddl-generator 2026-08-03, filed here because it is a real diagnostic defect
   even though they marked it "no action needed". A field in a message
   aggregation named after a keyword — `command Store is { entity: Order }` —
@@ -833,7 +802,7 @@ that needs a ruling before either can be fixed.
   here likely means a cut/`~/` placement change in the aggregation rule, and
   those interact with `rep` termination (see the statement-restriction pattern
   note in memory). Low priority; a nuisance, not a blocker.
-- **Move ResolutionPass off `ClassTag` for type differentiation.** A measured
+- **[2.8]** **Move ResolutionPass off `ClassTag` for type differentiation.** A measured
   cleanup, NOT a fix for anything currently slow — filed 2026-08-03 after the
   ClassTag hypothesis was tested and refuted as the cause of the Scala.js
   resolution cost (that was the source-file hashing; see NOTEBOOK).
@@ -875,7 +844,7 @@ that needs a ruling before either can be fixed.
   overrides under the stated premise would have moved the fabrication into the
   base class instead of removing it. Guarding `endLine`/`endCol` came first;
   only then was the machinery genuinely dead.
-- **Should an imported definition RESOLVE without an explicit flatten?** The
+- **[2.9]** **Should an imported definition RESOLVE without an explicit flatten?** The
   accessors now report `.bast`-imported definitions (2026-08-03), so
   `domain.types` lists an imported type — but a reference to it still fails to
   resolve until `FlattenPass` runs, because the symbol table is built by
@@ -904,7 +873,7 @@ that needs a ruling before either can be fixed.
      neither yields nor refuses. Making `else`/`default` mandatory in the
      grammar was considered and REJECTED (Reid, 2026-08-07): ~56 sites across
      three repos, and it would not have closed the hole anyway.
-- **The QueryCase completeness check shares the "anywhere in the clause"
+- **[2.10]** **The QueryCase completeness check shares the "anywhere in the clause"
   shape.** Filed 2026-08-07 out of `1d87a109a`, deliberately not changed there —
   it was not the approved hole, and it has no refusal exemption, so the
   conditional-refusal escape does not apply to it in the same way. QueryCase
@@ -918,7 +887,7 @@ that needs a ruling before either can be fixed.
   (`GroupParser.scala:28`). The "3 pinned occurrences" are gone —
   `Root2JsonFixturesTest` reports `identical=91`, `lossy=0`, `divergent=0`, and
   the test carries no Comment allowance. No decision needed; nothing to do.
-- **Saga step statements are NEVER VALIDATED — not just reachability.**
+- **[2.11]** **Saga step statements are NEVER VALIDATED — not just reachability.**
   **⚠ LIKELY ALREADY FIXED — verify and close before doing any work here.**
   Found 2026-08-11: `git log -S "case sagaStep: SagaStep =>" -- passes/…/Pass.scala`
   gives **`a1bce0d50` (2026-08-07) "Traverse saga step statements, which were
@@ -1012,7 +981,7 @@ that needs a ruling before either can be fixed.
   3. **Drop `Unknown`.** Nothing behind it — no AST node, no parser rule, just
      the reservation and a tokenizer entry.
 
-- **`TypeParserTest` has never run on Native.** Found 2026-08-07 while checking
+- **[2.12]** **`TypeParserTest` has never run on Native.** Found 2026-08-07 while checking
   where new tests executed. It is `abstract class TypeParserTest` with concrete
   subclasses ONLY in `language/src/test/scalajvm/.../JVMTests.scala:22` and
   `language/src/test/scalajs/.../JSTests.scala:22` — there is no Native one, so
@@ -1023,12 +992,12 @@ that needs a ruling before either can be fixed.
   large parser suite on a platform that has never run it, and this repo's own
   history says to expect findings on a first run. Worth checking whether other
   `language` suites have the same gap; the audit is the task, not the one-liner.
-- **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
+- **[2.13]** **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
   design decision, then FIXED in rc.9. Verify nothing else wants it.
 
 ### 3. Owed to other repos
 
-- **DELIVERED 2026-08-15 to riddl-generator: `Finder` was returning incomplete
+- **[3.1]** **DELIVERED 2026-08-15 to riddl-generator: `Finder` was returning incomplete
   results across 27 node fields.** Task dropped at
   `../riddl-generator/task/2026-08-15-finder-was-missing-content-across-27-fields.md`
   — **verified written, not merely claimed** (the 49-alias entry below is what
@@ -1038,23 +1007,13 @@ that needs a ruling before either can be fixed.
   on whether any of the 27 fields still comes back empty, and on whether any
   generated output got SHORTER (the unexpected direction).
 
-- **BLOCKED ON riddl-models: reactive-bbq's 2 `terminate` lines.** `terminate`
-  now names an INSTANCE (a value typed `Id(entity E)`), so
-  `terminate entity FrontOfHouse.TableOrder` no longer parses. Both corpus uses
-  are SELF-termination and become `terminate self.id`; task dropped at
-  `../riddl-models/task/2026-08-15-terminate-now-names-an-instance.md` with the
-  exact file:line pairs — **verified written to disk, not merely claimed.**
-  Until it lands, `reactive-bbq` fails to PARSE, which costs
-  `Root2JsonCorpusTest` its json-identity case (parsed 189/190 rather than
-  190/190) and `PassCostBenchmark` its only case. **Neither is a defect here and
-  neither must be "fixed" here.** A/B verified 2026-08-15: validation-parity is
-  `cleanRoundTrip=59` both with and without the change, so the 59/190 baseline
-  is UNMOVED, and `commands` is 115/130 both ways.
-  ~~AWAITING riddl-generator: `terminate` design ruled but unimplemented.~~
-  **CLOSED** — implemented the same day; their task file is in `task/done/`
-  with the AST, the CM reference and the other moved surfaces.
+- ~~**BLOCKED ON riddl-models: reactive-bbq's 2 `terminate` lines.**~~ — **DONE by
+  riddl-models 2026-08-15, `2e619c44`.** Both migrated to `terminate self.id` in
+  the same commit that took `2.0.0-rc.14-121` and cleared the bare-message-operand
+  migration. reactive-bbq parses again; it is red now for a DIFFERENT and newer
+  reason (the cross-context seam, § 3), which is worth not confusing with this.
 
-- **AWAITING riddl-models: the exact `figma` input from their emitter report.**
+- **[3.2]** **AWAITING riddl-models: the exact `figma` input from their emitter report.**
   Their `2026-08-14-prettify-emitter-drops-method-and-shown-by.md` claimed
   `figma` on a domain or context "writes no file, exits 7, prints no error".
   **Not reproduced** — riddlc prints a specific Error (*"A 'figma' reference is
@@ -1066,7 +1025,7 @@ that needs a ruling before either can be fixed.
   section of that file (now in `task/done/`). **Nothing here is blocked on it**;
   if the real complaint is that A42 forbids `figma` on a domain at all, that is a
   language question and belongs in § 2, not a defect.
-- **riddl-models' coverage model is being held out of their repo** until this
+- **[3.3]** **riddl-models' coverage model is being held out of their repo** until this
   lands, so **CI grammar validation is NOT currently exercising `method`,
   `shown by`, `table of … of […]`, `attachment`, `replica of` or `figma` against
   the corpus** — precisely the gate that would have caught all six emitter
@@ -1075,7 +1034,7 @@ that needs a ruling before either can be fixed.
   (`AggregateContentsRoundTripTest`, `ShownByRoundTripTest`,
   `TypeExpressionSpacingRoundTripTest`, `AttachmentRoundTripTest`).
 
-- **NEARLY UNBLOCKED — riddl-models landed the migration mid-session
+- **[3.4]** **NEARLY UNBLOCKED — riddl-models landed the migration mid-session
   (2026-08-15 19:19).** Their `2e619c44`, *"Upgrade to riddl
   2.0.0-rc.14-121-fe768026 and validate the corpus cleanly"*, took the binary
   staged an hour earlier and did the `terminate` AND bare-message-operand
@@ -1195,7 +1154,7 @@ that needs a ruling before either can be fixed.
   `riddlcNative/nativeLink` in ONE sbt invocation, because the ivy artifacts and
   the CLI must never disagree about what the language accepts. Use the script;
   do not stage by hand.
-- **synapify: `flattenAST` workaround can be dropped.** `Contents.definitions`
+- **[3.5]** **synapify: `flattenAST` workaround can be dropped.** `Contents.definitions`
   became include- and import-transparent on 2026-08-06 (their task file, now in
   `task/done/`), so their 33 `.definitions` sites no longer need the tree
   physically flattened first. Nothing owed until they take a build containing
