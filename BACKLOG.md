@@ -524,16 +524,32 @@ each want an approved plan before implementation, per the standing rule.
   decided: the admission test gives two different answers depending on where you
   stand, which is precisely the sort of thing this survey was meant to surface.
 
-  **DEBT: `self.version` is in the CLOSED set and its MEANING is defined
-  NOWHERE** — not in the Computational Model, not in `AST.scala`'s scaladoc, not
-  in the language reference. It is used in one fixture (`language/input/
-  values.riddl:173`) and typed `String`. Is it a state version, an event-sourced
-  sequence number, an optimistic-concurrency token, or an opaque change marker?
-  Each implies different generator behaviour, and a generator today must guess.
-  **This is the same defect class as `Integer`/`Whole`/`Natural` having no
-  defined ranges** — a construct shipped, used, and never specified — which took
-  a ruling to settle. Same fix needed: state what it means, then let checks
-  enforce it. Also queued in Q5.
+  **~~DEBT: `self.version`'s meaning is undefined~~ — WRONG, RETRACTED 2026-08-16.**
+  I filed it as semantically undefined and as the same defect class as
+  `Integer`/`Whole`/`Natural` shipping without ranges. It is neither. Reid: it is
+  the fully-qualified version number from RIDDL's `version` definition — **static
+  but COMPUTED at generation time**, components joined with `.`. That is **A53,
+  already implemented**: `AST.composedVersionString` (`VersionSeparator = "."`)
+  yields e.g. `"Jellyfish.Garibaldi.4.2"` (pinned by `CopyrightTest:234`) and is
+  exposed as `AnalysisResult.composedVersionStringOf`. Its purpose is developer
+  convenience: a component names its own version accurately **even when a PARENT
+  component's version changes**, because the coordinate is composed from
+  versioned ancestors.
+  **What was actually missing was the LINK, and it has been written** (2026-08-16):
+  `SelfValue.fieldNames`' scaladoc now says which field qualifies for which
+  reason, and the CM §4.5 now tells a generator to resolve `self.version` at
+  generation time rather than carry it at run time.
+  **The lesson is mine, not the language's: I searched for a DEFINITION of
+  `self.version` and found none, and concluded there was none — without asking
+  what already-implemented thing it might be naming.** A53 was right there. An
+  absent definition is evidence of an absent definition, not of an absent
+  concept.
+  **It also falsified the admission principle as the code stated it.** The
+  scaladoc said `self` "carries what cannot be known statically, which is why
+  `version` is here" — but `version` is static. The real test, now written down:
+  a field belongs on `self` when the author would otherwise restate something
+  that can DRIFT, either unknowable until run time (`id`) or derived from context
+  that changes without them touching this definition (`version`).
 
   **REJECTED, with the reason, so they are not re-proposed:**
   - `isClustered`, enclosing context/domain names, the processor's own kind,

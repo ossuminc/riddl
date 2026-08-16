@@ -3162,9 +3162,28 @@ object AST:
   end SelfValue
 
   object SelfValue:
-    /** The CLOSED set of fields. Adding one is a language change, not a detail: see the
-      * admission principle in the design spec -- `self` carries what cannot be known
-      * statically, which is why `version` is here and `isClustered` is not.
+    /** The CLOSED set of fields. Adding one is a language change, not a detail.
+      *
+      * **The two members qualify for DIFFERENT reasons, and an earlier version of this comment
+      * got the second one wrong** (it said `self` "carries what cannot be known statically, which
+      * is why `version` is here" -- `version` is not runtime information at all):
+      *
+      *   - **`id`** is genuinely RUNTIME-ONLY. It is minted by `initiate` and no generator can
+      *     know it statically.
+      *   - **`version`** is STATIC but COMPUTED -- it is A53's composed version coordinate for the
+      *     enclosing processor, the one [[composedVersionString]] builds by joining each versioned
+      *     ancestor's component with [[VersionSeparator]] (e.g. `"Jellyfish.Garibaldi.4.2"`). A
+      *     generator resolves it at generation time. It earns its place as a CONVENIENCE: the
+      *     coordinate is composed from ancestors, so a hand-written copy silently goes stale the
+      *     moment a parent's version changes, and this is the one spelling that cannot.
+      *
+      * So the admission test is not "runtime-only" alone. A field belongs here when it describes
+      * the enclosing processor and the author would otherwise have to restate something that can
+      * drift -- either because it is unknowable until run time (`id`) or because it is derived
+      * from context that changes without the author touching this definition (`version`).
+      *
+      * `isClustered` fails that test on both counts: with `option clustered` written on the
+      * processor it is neither unknowable nor derived, just a property the author stated directly.
       */
     val fieldNames: Seq[String] = Seq("id", "version")
 
@@ -3180,6 +3199,9 @@ object AST:
         At.empty,
         Contents(
           Field(At.empty, Identifier(At.empty, "id"), UniqueId(At.empty, path)),
+          // A53's composed version coordinate, e.g. "Jellyfish.Garibaldi.4.2" -- a String because
+          // a scope may NAME its version rather than number it (`version Garibaldi`), so the
+          // components are not numeric. See `fieldNames` for why a static value belongs on `self`.
           Field(At.empty, Identifier(At.empty, "version"), String_(At.empty))
         )
       )
