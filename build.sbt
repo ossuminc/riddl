@@ -419,6 +419,7 @@ lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, N
   )
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.MiMa(V.previous))
+  .jvmConfigure(jvmNativeSrc("commands"))
   .jvmSettings(
     libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig, Dep.scalajs_stubs),
     coverageExcludedFiles := """<empty>;$anon"""
@@ -426,6 +427,7 @@ lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, N
   // NOTE: A JS variant is not supported because executing commands from
   // JavaScript is not easy.
   .nativeConfigure(With.Native(mode = "fast"))
+  .nativeConfigure(jvmNativeSrc("commands"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(Dep.scopt_nojvm.value, Dep.sconfig_nojvm.value)
