@@ -407,57 +407,28 @@ each want an approved plan before implementation, per the standing rule.
   seam rule bites it will bite widely** — which is itself the argument for the
   warn-then-flip sequencing this repo now uses twice.
 
-- **Cross-context `tell` isolation seam — MEASURED 2026-08-15. The heuristic was
-  wrong by 294x, and the migration is 18 sites.**
-  Reid ruled 2026-08-13 that a `tell` into a different context is an Error unless
-  the message type is declared in a domain ancestral to both; across domains an
-  adaptor is always required. Separately, a cross-context tell is **always** a
-  durable channel — the common-domain exemption waives the adaptor, never the
-  durability. This completes **A4 (ACCEPTED)**, extending to foreign processor
-  TARGETS the seam A4 already applies to foreign message TYPES.
-
-  **The count the entry demanded, done by RESOLUTION rather than text** (a
-  throwaway pass over 188 corpus models; each `tell`'s telling Context compared
-  against its RESOLVED target's Context):
-
-  | | count | share |
-  |---|---|---|
-  | `tell` statements | **7,537** | |
-  | target unresolved | 0 | — |
-  | same context | 7,519 | **99.76%** |
-  | **CROSS context** | **18** | **0.24%** |
-  | ...crossing DOMAINS (adaptor always required) | 0 | |
-
-  **The old heuristic said 5,301 (64%). The real figure is 18 (0.24%).** The
-  entry's conclusion drawn from that heuristic — *"qualified targets are
-  near-universal, so if the seam rule bites it will bite widely, which is itself
-  the argument for warn-then-flip"* — **does not survive the measurement.** A
-  dotted path means the author qualified the target, which is a house style, not
-  a boundary crossing; nearly every qualified target names something in the
-  teller's own context.
-
-  **All 18 sit in TWO models**, so the migration is a morning's work, not a
-  campaign: `ticket-sales/TicketContext.riddl` (4, all `TicketContext ->
-  MarketingService`) and `reactive-bbq` (14 — FrontOfHouse -> Kitchen/Bar/Loyalty,
-  OnlineOrdering -> Kitchen/Loyalty/Delivery, Delivery -> NotificationService x5,
-  MenuManagement -> FrontOfHouse). Every one shares a domain, so none needs an
-  adaptor; each needs its message type moved to the common ancestor domain, or an
-  adaptor by choice.
-
-  **CAVEAT, and it is the reason the exemption count is not quoted above.** The
-  probe could not evaluate the exemption for a `tell` whose operand is a
-  `ValueRef` (a `let`-bound constructed message) — there is no `MessageRef` to
-  resolve to a `Type`, so those sites' message-type domain is unknown. At least
-  the four `ticket-sales` sites are of that shape. **The 18 is solid; treat any
-  exemption figure as a lower bound** until the real check, which will have the
-  operand's resolved type in hand, reports it.
-
-  **What this changes about sequencing.** With 18 sites the warn-then-flip
-  ceremony buys little — the Error can ship with the migration filed alongside
-  it. That is a decision, not a deduction, and it is queued (NOTEBOOK §
-  QUESTIONS, Q4). Note also this census counted `tell` ONLY; whether `send` is in
-  scope for the same seam is unstated in the ruling and should be settled before
-  building.
+- ~~**Cross-context `tell` isolation seam.**~~ — **DONE 2026-08-16, `3059a43f8`.**
+  Shipped straight as an **Error**, skipping this repo's warn-then-flip, because
+  the census removed the reason for it: **18 crossings in 7,537 tells (0.24%)**,
+  not the 5,301 (64%) a text heuristic had claimed — a dotted path means the
+  author QUALIFIED the target, not that it crosses anything.
+  **The real migration is smaller still: 8 Errors, in ONE model.** Ten of the 18
+  are already adaptor-mediated — all 4 in `ticket-sales` sit inside `adaptor
+  MarketingAdapter`, several in reactive-bbq inside `adaptor ToLoyalty`/`ToBar` —
+  verified by reading those sources rather than inferred from the drop. Migration
+  task with the 8 file:line pairs and the modelling choice at each is at
+  `../riddl-models/task/2026-08-16-cross-context-tell-is-now-an-error.md`.
+  **Scope, both settled on evidence:** `send` is NOT covered (its target is a
+  `PortletRef`, so it cannot name a foreign processor at all; a message crossing
+  by `send` goes through a CONNECTOR, the streaming counterpart of an adaptor),
+  and an **Adaptor is exempt**, since A4 makes it the sanctioned place to name
+  another context's messages.
+  **The bug worth remembering: the exemption must test the IMMEDIATE parent.**
+  `parentsOf` returns every ancestor, so a type declared inside the target's own
+  context still lists the shared domain among them — as does everything in the
+  tree — and the exemption swallowed the whole rule until it asked `parentOf`.
+  Recorded in CM §3.6. `RiddlModelsRoundTripTest` goes 187/2 → **186/3** until
+  riddl-models migrates; under the 100%-corpus gate that blocks a release.
 
 - ~~**Clusterability: `clustered`, and `self.isClustered`.**~~ — **DONE
   2026-08-16.** Reid chose the keyword and DECLINED the `self` field, resolving
