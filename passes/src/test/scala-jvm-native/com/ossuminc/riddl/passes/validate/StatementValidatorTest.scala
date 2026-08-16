@@ -43,7 +43,15 @@ class StatementValidatorTest extends AbstractValidatingTest {
         (root: Root, _: RiddlParserInput, messages: Messages) =>
           // info(messages.format)
           root.isEmpty mustBe false
-          messages.hasErrors mustBe false
+          // UPDATED 2026-08-16 for the isolation-seam ruling. This case is the in-repo record of
+          // the OLD behaviour: it asserted `hasErrors mustBe false` for two tells that each cross
+          // into the other context naming that context's own message -- which is now exactly the
+          // violation Reid's seam makes an Error. The pre-existing Warning is retained and still
+          // asserted, so this case now pins BOTH diagnostics rather than trading one for the other.
+          messages.hasErrors mustBe true
+          messages.justErrors.map(_.message).mkString("\n") must include(
+            "crosses the context isolation seam"
+          )
           val warnings = messages.justWarnings
           warnings.isEmpty mustBe false
           messages.exists { (msg: Messages.Message) =>

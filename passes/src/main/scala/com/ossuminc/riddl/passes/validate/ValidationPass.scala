@@ -6177,6 +6177,84 @@ case class ValidationPass(
     * so its Errors never fired. Threading `lets` costs nothing new here: `checkStatementScopes`'s
     * `TellStatement` case already has it, at the one call site below.
     */
+  /** A4 completion: the cross-context `tell` isolation seam (Reid, 2026-08-13).
+    *
+    * A `tell` into a DIFFERENT Context is an Error unless the message type is declared in a Domain
+    * ancestral to BOTH. Across domains an adaptor is always required, so the exemption cannot
+    * apply. A4 already rejects naming a foreign context's message TYPES outside adaptor scope;
+    * this extends the same seam to foreign processor TARGETS, which A4 left open.
+    *
+    * **`send` is deliberately not covered.** `SendStatement.portlet` is a `PortletRef`, so `send`
+    * names an Inlet or Outlet and structurally cannot name a foreign processor. A message crossing
+    * a boundary by `send` travels through a CONNECTOR, which is the sanctioned mediator for
+    * streaming exactly as an adaptor is for direct messaging.
+    *
+    * **An Adaptor is exempt**, because A4 makes it the one sanctioned place to name another
+    * context's messages -- an adaptor that could not tell across the boundary could not do its job.
+    *
+    * **Shipped straight as an Error, skipping this repo's usual warn-then-flip**, on evidence: a
+    * resolution-based census of 188 corpus models found 18 crossings in 7,537 tells (0.24%), all in
+    * two models. The text heuristic that argued for a staged rollout claimed 5,301 (64%) and was
+    * wrong by 294x -- a dotted path means the author QUALIFIED the target, not that it crosses
+    * anything.
+    */
+  private def checkTellIsolation(
+    ts: TellStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    val tellingCtx: Option[Context] = parents.collectFirst { case c: Context => c }
+    // The adaptor exemption is checked on the PARENTS rather than the enclosing context, because an
+    // adaptor sits inside a context and would otherwise be judged by it.
+    val insideAdaptor = parents.exists(_.isInstanceOf[Adaptor])
+    if !insideAdaptor then
+      (tellingCtx, resolution.refMap.definitionOf[Processor[?]](ts.processorRef.pathId, parents.head))
+        .match
+          case (Some(fromCtx), Some(target)) =>
+            val toCtx: Option[Context] = target match
+              case c: Context => Some(c)
+              case other      => symbols.parentsOf(other).collectFirst { case c: Context => c }
+            toCtx.foreach { targetCtx =>
+              if !(targetCtx eq fromCtx) then
+                val fromDomains = symbols.parentsOf(fromCtx).collect { case d: Domain => d }
+                val toDomains = symbols.parentsOf(targetCtx).collect { case d: Domain => d }
+                // Reference identity: `Definition.equals` is structural, so two same-named domains
+                // in different trees would otherwise fuse and manufacture a shared ancestor.
+                val shared = fromDomains.filter(fd => toDomains.exists(_ eq fd))
+                val msgType: Option[Type] = ts.msg match
+                  case mr: MessageRef => resolution.refMap.definitionOf[Type](mr.pathId, parents.head)
+                  case c: Constructor => resolution.refMap.definitionOf[Type](c.ref.pathId, parents.head)
+                  case vr: ValueRef   => valueRefType(vr, parents, lets, elements)
+                // The IMMEDIATE parent, not the ancestor chain. `parentsOf` returns every ancestor,
+                // so a type declared inside the TARGET's context still lists the shared domain
+                // among its ancestors -- as does everything else in the tree -- and the exemption
+                // would swallow the whole rule. The ruling says the type must be DECLARED IN a
+                // domain ancestral to both, which is a statement about where it is written.
+                val exempt = msgType.exists { mt =>
+                  symbols.parentOf(mt).exists(p => shared.exists(_ eq p))
+                }
+                if shared.isEmpty then
+                  messages.addError(
+                    ts.loc,
+                    s"'tell' crosses a DOMAIN boundary from ${fromCtx.identify} to " +
+                      s"${targetCtx.identify}, which the context isolation seam forbids: an " +
+                      "adaptor is always required across domains",
+                    suggestion = s"Route this through an adaptor in ${fromCtx.id.value}."
+                  )
+                else if !exempt then
+                  messages.addError(
+                    ts.loc,
+                    s"'tell' crosses the context isolation seam from ${fromCtx.identify} to " +
+                      s"${targetCtx.identify}: ${ts.msg.format} is not declared in a domain " +
+                      "ancestral to both",
+                    suggestion = s"Declare the message type in ${shared.head.identify}, or route " +
+                      "this through an adaptor."
+                  )
+            }
+          case _ => () // unresolved target -- ResolutionPass already reported it
+  end checkTellIsolation
+
   private def checkTellAddressing(
     ts: TellStatement,
     parents: Parents,
@@ -7548,6 +7626,7 @@ case class ValidationPass(
         // point invoked at every container root AND recursively for when/match/foreach bodies) --
         // mirrors checkTerminate's reachability, immediately below.
         checkTellAddressing(s, parents, lets, elements)
+        checkTellIsolation(s, parents, lets, elements)
       // Task 2: the `case _ => ()` these three carried is now ENUMERATED. It was correct while the
       // operand could only be a MessageRef; the moment a ValueRef became legal it would have
       // silently accepted `yield garbage` -- the exact shape of fall-through this repo forbids.
