@@ -805,87 +805,51 @@ that needs a ruling before either can be fixed.
   `IncludeAndImportTest`, both of which assert the CURRENT behaviour and will need
   to move with it.
 
-- **[2.8]** **Decide whether a query must REPLY on every path, as a command must
-  already discharge on every path.** (Description expanded 2026-08-16 at Reid's
-  request.)
-  **What the check does today.** For a query handler, validation asks whether a
-  `reply` appears ANYWHERE in the clause. For a command handler it used to ask the
-  same thing, and `1d87a109a` changed that to `dischargesOnEveryPath` — does every
-  branch either emit or refuse.
-  **The gap that leaves.** A query handler written as
-  `when isReady then reply result R end` — with no `else` — satisfies "anywhere"
-  and is accepted. On the other branch it answers nothing at all, and **a query
-  that does not answer leaves its caller waiting**: `ask` is defined as taking the
-  value a `reply` provides, so an unanswered path is not a style matter, it is a
-  hang.
-  **Why it was not changed with the command case.** It was not the approved hole,
-  and it differs in one respect: the command check has a REFUSAL exemption
-  (`error`/`require` count as discharging), and a query has no equivalent — which
-  is exactly the question. May a query refuse instead of replying? If yes, the
-  same exemption applies and this is a small change; if no, it is stricter than
-  the command rule.
-  **Expect corpus corrections.** The command change needed them, and this check is
-  the same shape over a comparable population; measure before shipping, as with
-  the isolation seam.
+- **[2.8]** **BUILD: a query must REPLY or REFUSE on every path.** **RULED
+  2026-08-16 by Reid — "queries SHOULD be answered, however, it is possible to let
+  them refuse as well."** Was a question; it is now work, and the ruling makes the
+  query rule exactly PARALLEL to the command rule rather than stricter.
+  **The gap.** Today validation asks whether a `reply` appears ANYWHERE in a query
+  handler, so `when isReady then reply result R end` — no `else` — is accepted
+  while answering nothing on the other branch. **A query that does not answer
+  hangs its caller**: `ask` is defined as taking the value a `reply` provides, so
+  this is not a style matter.
+  **The change.** Move the QueryCase arm to `dischargesOnEveryPath`, carrying the
+  refusal exemption the command case already has (`ErrorStatement |
+  RequireStatement` count as discharging) — that is precisely what Reid's "it is
+  possible to let them refuse as well" grants. Mirrors `1d87a109a`.
+  **MEASURE FIRST**, per the standing rule and the isolation-seam precedent: the
+  command change needed corpus corrections and this is the same shape over a
+  comparable population. Sweep and count before shipping the Error.
 
-- ~~`Comment` in a `Group`'s contents cannot be rebuilt~~ — **STALE, resolved
-  somewhere along the way; removed after verifying 2026-08-06.** Both halves of
-  the claim are now false: `OccursInGroup` DOES include `Comment`
-  (`AST.scala:900`) and `GroupParser.groupDefinitions` accepts it
-  (`GroupParser.scala:28`). The "3 pinned occurrences" are gone —
-  `Root2JsonFixturesTest` reports `identical=91`, `lossy=0`, `divergent=0`, and
-  the test carries no Comment allowance. No decision needed; nothing to do.
-- ~~**Saga step statements are NEVER VALIDATED — not just reachability.**~~ —
-  **VERIFIED FIXED and CLOSED 2026-08-16.** The entry carried its own suspicion
-  that `a1bce0d50` (2026-08-07, "Traverse saga step statements, which were never
-  traversed") had already fixed it. It had. Confirmed by EXECUTION rather than by
-  reading the log, on both layers and in both statement positions:
-  - **Reference resolution** — a saga whose `step` and whose `reverted by` each
-    name a nonexistent path reports all four: *"Path 'Nonexistent.Bogus' was not
-    resolved, in Saga 'S'"*, the same for the undo statement's `AlsoBogus`, and
-    both targets.
-  - **Statement SCOPE** — `set` inside a saga step reports *"'set' is not allowed
-    in Saga 'S', which owns no state to write"*, which is a different check from
-    resolution and proves the scope machinery reaches these statements too.
-  Two probes on purpose: resolution and scope are separate passes over the same
-  statements, and one working says nothing about the other.
-
-- ~~**`TypeParserTest` has never run on Native.**~~ — **ALREADY FIXED, closed
-  2026-08-16.** Swept up by `54ff5fe73`, the batch that moved 17 language suites'
-  concrete runners from `src/test/scalajvm` to `src/test/scala-jvm-native` and
-  renamed them `JVMNativeTests` — `JVMNativeTypeParserTest` is at
-  `JVMNativeTests.scala:34`. Verified by running it: `languageNative/testOnly
-  *TypeParserTest` reports **38 tests, all passing**.
-  Worth noting HOW it closed: nobody was working on this item. It was fixed as a
-  side effect of a batch move made for a different reason, and stayed on the list
-  for a day afterwards — the seventh stale entry in two days, and the argument for
-  verifying an item before planning it rather than after.
-
-- **[2.9]** **Audit every other port-COUNTING site for the `error-sink`
-  exemption.** (Description expanded 2026-08-16 at Reid's request.)
-  **Background.** A processor's stream SHAPE is derived from its arity — 1-in/1-out
-  is a `flow`, 1-out/2-in a `merge`, and so on. An `option error-sink` inlet is
-  INFRASTRUCTURE, not dataflow: it is where a domain's hard errors go. But it is
-  still an inlet, so it changes the arity, and a processor that is logically a
-  `flow` while also hosting its domain's error sink derives as a `merge` and
-  contradicts its own `as flow` ascription.
-  **What was fixed in rc.9**, at ONE site: `validateProcessorShape` now accepts
-  EITHER reading — with the error-sink inlet counted, or without it (via
-  `dataflowInlets`) — so `as flow` and `as sink` both validate. riddl-models had
-  previously had to move api-management's sink into a sibling context because only
-  the first reading was allowed.
-  **What "verify nothing else wants it" means concretely.** Every OTHER place that
-  counts ports may have the same blind spot, and each needs checking:
-  - **`StreamingParser`'s per-shape `minInlets`/`maxInlets`/`minOutlets`/
-    `maxOutlets`.** This is the important one: CLAUDE.md records that the arity
-    table is encoded in TWO places that must move together, and only one of them
-    was taught the exemption. `sink R` and `repository R as sink` must agree about
-    what a sink is.
-  - the streaming/connector graph checks, which reason about unconnected inlets;
-  - `DiagramsPass`, which draws from the same counts;
-  - any completeness warning phrased in terms of inlet or outlet counts.
-  Cheap to start: `grep -rn "dataflowInlets\|numInlets\|inlets.size" passes/ language/`
-  and ask of each whether an infrastructure inlet belongs in that number.
+- **[2.9]** **BUILD: exclude `error-sink` inlets from arity EVERYWHERE.** **RULED
+  2026-08-16 by Reid — "I don't think the error-sink should be counted in the
+  shape/arity of the processor; it is merely a way to deliver out-of-band errors
+  through the existing infrastructure."**
+  **This SIMPLIFIES what rc.9 did.** That fix made `validateProcessorShape` accept
+  EITHER reading — arity with the error-sink inlet counted, or without it. The
+  ruling says there is only one correct reading, so the dual acceptance can go and
+  every other port-counting site must exclude it too.
+  **Why an infrastructure inlet distorts the shape.** An `error-sink` is an
+  **Inlet** (`RecognizedOptions`: `OptionSpec(Seq("Inlet"))`), so it raises the
+  inlet count. A 1-in/1-out `flow` that also hosts its domain's error sink has 2
+  inlets and 1 outlet, which is the definition of a **`merge`** — not a `split`,
+  which is ≥2 OUTLETS. (Direction is easy to invert; see CLAUDE.md's inlet/outlet
+  note.)
+  **Evidence the ruling is right, from the corpus:** riddl-models' order-
+  orchestration declares `application context OrderOrchestrationApp as merge`
+  while hosting an `ErrorSink` inlet — an infrastructure port inflating the arity
+  and driving the author's shape ascription. That is the distortion, in the wild.
+  **Sites to fix.** `validateProcessorShape` (drop the dual reading), and above all
+  **`StreamingParser`'s per-shape `minInlets`/`maxInlets`/`minOutlets`/
+  `maxOutlets`** — CLAUDE.md records that the arity table is encoded in TWO places
+  that must move together, and only one was taught the exemption. Then the
+  streaming/connector graph checks, `DiagramsPass`, and any completeness warning
+  phrased in port counts. Start with
+  `grep -rn "dataflowInlets\|numInlets\|inlets.size" passes/ language/`.
+  **Expect corpus fallout in the GOOD direction:** models that ascribed a shape to
+  satisfy an inflated count may be able to drop or correct it. Measure before and
+  after.
 
 ### 3. Owed to other repos
 
