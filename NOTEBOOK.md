@@ -36,8 +36,20 @@ recommendation: leave it JVM-only and record WHY* — the suite's value is
 corpus coverage, which is platform-independent, and BAST's platform behaviour is
 already covered by the 26 BAST suites that moved to Native in `6cf60baf2`.
 
-**Q3 — clusterability (§ 1 item 10).** Written up as a plan, NOT implemented,
-per the standing rule that design items get approval first. See the entry.
+**Q3 — clusterability (§ 1 item 10): the item as filed contains a
+contradiction.** Planned, not built. It promises both a `clustered` keyword and
+`self.isClustered`, and **you can have either but not both**: your own admission
+test for `self` is *runtime-only*, so the moment `clustered` is written in the
+model, "is this clustered" becomes statically knowable and the field is exactly
+what the test excludes. The field is admissible only if clustering stays a
+deployment-time fact ABSENT from the model — in which case there is no keyword.
+The `self`-survey reached the same place independently.
+Given that, the real question is just: **advisory `option`, or grammar
+intention?** *My reading: an `option`* — a generator may legitimately deploy one
+instance, and the one genuinely MANDATORY part (a correlating projector must
+distribute by key, §6.1/§6.6) is already implied by declaring correlations, so it
+needs no keyword. Applying it to an Entity is meaningless either way: an entity
+is already sharded by identity.
 
 **Q5 — two findings from the `self`-fields survey (§ 1 item 9, now done).**
   - **`self.state`?** The admission test gives two answers. Inside a handler
