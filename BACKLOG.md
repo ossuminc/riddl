@@ -114,7 +114,7 @@ task files, so they were NOT physically reshuffled; this index carries the order
 | 9 | Survey the CM/A items for future `self` fields | — | Cheap, and it BOUNDS 10 by deciding what is in scope. |
 | 10 | Clusterability: `clustered`, `self.isClustered` | 9 | Defines the vocabulary `self.isClustered` was deliberately kept out of the identity spec to avoid forward-referencing. Wants its own plan. |
 | 11 | Cross-context `tell` isolation seam | 5 | Largest item and the biggest corpus-migration risk. Needs a counting mode built and run under real resolution before the Error ships. Wants its own plan. |
-| 12 | Two narrow-operand gaps | — | **Deliberately last.** False-positive-only, zero corpus impact today; the entry itself says revisit if adoption grows. |
+| ~~12~~ | ~~Two narrow-operand gaps~~ | — | **Part 1 DONE `faf7551c0`** — and it was NOT false-positive-only as filed, it was a missed Error. Part 2 (`emittedMessageTypes`) split out and left last: genuinely advisory, genuinely a restructuring. |
 
 Three real dependency edges, not twelve: **4 ← 3**, **10 ← 9**, **11 ← 5**.
 Everything else is independent and may be reordered by appetite. Items 10 and 11
@@ -207,22 +207,30 @@ each want an approved plan before implementation, per the standing rule.
   Note the constraint that produced it: `@JSExportTopLevel` requires defaulted
   params to be TRAILING, and `contents`/`metadata` are already defaulted — so
   the fix is to move `parameters` after them, not merely to default it in place.
-- **Two narrow-operand gaps left by the message-value widening (Task 1,
-  `9d0e47acd`).** Both are false-POSITIVE-only (an advisory warning that should
-  not fire), never a missed Error, and both have zero corpus impact today because
-  riddl-models uses no widened-source operand yet. Revisit if adoption grows.
-  1. **`elements` is not threaded into `widenedOperandType`** — it is called with
-     `Map.empty`, so a `foreach`-bound loop variable
-     (`foreach msg in cmds do { tell msg to X }`) validates as a legal operand
-     but is invisible to `checkTellAddressing`'s `by`/ambiguity Errors and to the
-     three completeness checks. **Pre-existing in kind** — the old `operandType`
-     never consulted `elements` either — and `foreach` element was not among the
-     five source kinds Task 1 enumerated. Documented in the helper's docstring
-     rather than left silent.
-  2. **`emittedMessageTypes` is still narrow** — a whole-root `Finder` sweep with
-     no per-clause scope, feeding A70's correlation-fold advisory. Fixing it
-     properly needs a restructuring bigger than a fix round.
+- ~~**`elements` is not threaded into `widenedOperandType`**~~ — **DONE
+  2026-08-15, `faf7551c0`.** A `tell` whose operand IS a `foreach` loop variable
+  resolved to nothing, so the `by`/ambiguity Errors and the three completeness
+  checks skipped it silently.
+  **The entry filed this as "pre-existing in kind" and false-positive-only; it
+  was neither.** It was a missed ERROR — an ambiguous derivation that should be
+  rejected was accepted — and the scaladoc actively asserted it could not happen
+  ("none of this function's three call sites resolve an operand from inside a
+  `foreach` body"). `checkTellAddressing` is called from `checkStatementScopes`,
+  which recurses into `foreach` bodies precisely to thread those bindings, and
+  says so in a comment two lines above the call. **Two claims about the same
+  code, in one file, contradicting each other — and the false one was the one
+  being relied on.** Second instance found the same day, after `ResolutionPass`'s
+  claim that `letType` special-cased predefined keywords.
+  Corpus impact nil and honestly so: the whole corpus has **3** `foreach`
+  statements and none tells its element.
 
+- **`emittedMessageTypes` is still narrow.** The second of the two gaps, and the
+  one that really is a restructuring rather than a fix round. It is a whole-root
+  `Finder` sweep with no per-clause scope, feeding A70's correlation-fold
+  advisory (`ValidationPass.scala:158` documents the flatness). Still
+  false-POSITIVE-only, still zero corpus impact, so it stays deliberately last —
+  but it is now filed on its own rather than bundled, because its sibling turned
+  out to be a missed Error and bundling the two hid that.
 
 - ~~**FLAKY CI GATE: `PerformanceBenchmarkTest` 100x cache-speedup assertion**~~
   — **DONE 2026-08-14, `32340312e`.** Replaced with a monotonic check (cached
