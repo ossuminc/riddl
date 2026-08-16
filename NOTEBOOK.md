@@ -69,8 +69,19 @@ is already sharded by identity.
     ranges — a construct in use that no document specifies — and that one needed
     your ruling before any check could enforce it.
 
-**Q4 — the cross-context `tell` seam (§ 1 item 11).** The mandatory count is
-built and run; the migration decision is yours. See the entry.
+**Q4 — the cross-context `tell` seam (§ 1 item 11): the count is in, and it
+changes the answer.** Measured by RESOLUTION over 188 corpus models:
+**7,537 tells, of which 18 cross a context — 0.24%.** The old text heuristic
+said 5,301 (64%); it was wrong by 294x, because a dotted path means the author
+qualified the target, not that it crosses anything. All 18 sit in two models
+(`ticket-sales` 4, `reactive-bbq` 14), all share a domain, none needs an adaptor.
+*My recommendation: skip the warn-then-flip and ship the Error with the
+18-site migration filed alongside it* — the ceremony exists to protect a wide
+migration, and this one is a morning's work. **Two things to settle first:**
+does the seam cover `send` as well as `tell` (the ruling does not say, and I
+counted only `tell`), and note the probe could not evaluate the exemption for
+`ValueRef` operands, so any exemption figure is a lower bound until the real
+check reports it.
 
 **Also worth knowing, needing no decision:** `Root2JsonCorpusTest` asserts strict
 EQUALITY while its name and its own reported metric both advertise a ≥95% gate,

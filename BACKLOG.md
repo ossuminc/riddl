@@ -394,23 +394,57 @@ each want an approved plan before implementation, per the standing rule.
   seam rule bites it will bite widely** — which is itself the argument for the
   warn-then-flip sequencing this repo now uses twice.
 
-- **Cross-context `tell` isolation seam — Error, but MEASURE FIRST.**
-  Reid ruled 2026-08-13 that a `tell` into a different context is an Error
-  unless the message type is declared in a domain ancestral to both; across
-  domains an
-  adaptor is always required. Separately and independently, a cross-context tell
-  is **always** a durable channel — the common-domain exemption waives the
-  adaptor, never the durability.
-  This completes **A4 (ACCEPTED)**, which already rejects foreign *message
-  types* outside adaptor scope; this extends the same seam to foreign
-  *processor targets*.
-  **Do not ship the Error before counting.** A heuristic says 5,301
-  cross-context tells (64% of all tells) but the method is unsound, and the
-  exemption's size is UNMEASURABLE by grep: 603 of 996 corpus files are include
-  fragments with no top-level construct, so nothing file-local can tell a
-  domain-level message type from a context-level one. Build the check with a
-  counting mode, run it under riddlc's real resolution, then decide the
-  migration.
+- **Cross-context `tell` isolation seam — MEASURED 2026-08-15. The heuristic was
+  wrong by 294x, and the migration is 18 sites.**
+  Reid ruled 2026-08-13 that a `tell` into a different context is an Error unless
+  the message type is declared in a domain ancestral to both; across domains an
+  adaptor is always required. Separately, a cross-context tell is **always** a
+  durable channel — the common-domain exemption waives the adaptor, never the
+  durability. This completes **A4 (ACCEPTED)**, extending to foreign processor
+  TARGETS the seam A4 already applies to foreign message TYPES.
+
+  **The count the entry demanded, done by RESOLUTION rather than text** (a
+  throwaway pass over 188 corpus models; each `tell`'s telling Context compared
+  against its RESOLVED target's Context):
+
+  | | count | share |
+  |---|---|---|
+  | `tell` statements | **7,537** | |
+  | target unresolved | 0 | — |
+  | same context | 7,519 | **99.76%** |
+  | **CROSS context** | **18** | **0.24%** |
+  | ...crossing DOMAINS (adaptor always required) | 0 | |
+
+  **The old heuristic said 5,301 (64%). The real figure is 18 (0.24%).** The
+  entry's conclusion drawn from that heuristic — *"qualified targets are
+  near-universal, so if the seam rule bites it will bite widely, which is itself
+  the argument for warn-then-flip"* — **does not survive the measurement.** A
+  dotted path means the author qualified the target, which is a house style, not
+  a boundary crossing; nearly every qualified target names something in the
+  teller's own context.
+
+  **All 18 sit in TWO models**, so the migration is a morning's work, not a
+  campaign: `ticket-sales/TicketContext.riddl` (4, all `TicketContext ->
+  MarketingService`) and `reactive-bbq` (14 — FrontOfHouse -> Kitchen/Bar/Loyalty,
+  OnlineOrdering -> Kitchen/Loyalty/Delivery, Delivery -> NotificationService x5,
+  MenuManagement -> FrontOfHouse). Every one shares a domain, so none needs an
+  adaptor; each needs its message type moved to the common ancestor domain, or an
+  adaptor by choice.
+
+  **CAVEAT, and it is the reason the exemption count is not quoted above.** The
+  probe could not evaluate the exemption for a `tell` whose operand is a
+  `ValueRef` (a `let`-bound constructed message) — there is no `MessageRef` to
+  resolve to a `Type`, so those sites' message-type domain is unknown. At least
+  the four `ticket-sales` sites are of that shape. **The 18 is solid; treat any
+  exemption figure as a lower bound** until the real check, which will have the
+  operand's resolved type in hand, reports it.
+
+  **What this changes about sequencing.** With 18 sites the warn-then-flip
+  ceremony buys little — the Error can ship with the migration filed alongside
+  it. That is a decision, not a deduction, and it is queued (NOTEBOOK §
+  QUESTIONS, Q4). Note also this census counted `tell` ONLY; whether `send` is in
+  scope for the same seam is unstated in the ruling and should be settled before
+  building.
 
 - **Clusterability: `clustered`, and `self.isClustered`.** Split out of the
   identity design 2026-08-13. NOT "multiplicity" — Reid ruled that **entity is
