@@ -2493,6 +2493,93 @@ object JsonModel:
     * type-expression kind; [[com.ossuminc.riddl.RiddlLib.parseJson]] catches and converts to a
     * clean failure.
     */
+
+  /** Every key any reader in this file ACCEPTS — the union of the literals the hand-written
+    * readers look up and the field names of the `macroRW`-derived DTOs.
+    *
+    * It exists because neither layer rejects an unknown key on its own. The hand-written readers
+    * build their result from selective `m("key")` lookups with no present-vs-consumed diff, and
+    * upickle's derived readers ignore unrecognized keys by construction and give us no hook. So a
+    * misspelled or obsolete key was silently DROPPED, and the document was accepted meaning
+    * something other than what was written. `JSON_INPUT.md:255` documented a `"negated"` field that
+    * outlived `WhenStatement.negated`; anyone following our own documentation produced silently
+    * wrong models.
+    *
+    * **Flat on purpose.** This says "no reader anywhere accepts this key", not "this key is wrong
+    * HERE" — it catches a typo and an obsolete field, which are the two failure modes that
+    * motivated it, and does not catch a valid key in the wrong position. A position-aware check
+    * would have to re-implement the reader dispatch, and would be a second thing to keep in step
+    * with the DTOs. This one is kept honest mechanically instead, by
+    * `JsonUnknownKeyVocabularyTest`, which re-derives the set from this file's own source.
+    *
+    * Includes the SIGIL keys `$kind` and `$at`, which no DTO field name or reader lookup spells
+    * and which a regex over identifiers therefore cannot find. Omitting them made every one of the
+    * 188 corpus models warn -- our own writer emits them on every node -- which is the failure mode
+    * this whole check exists to avoid, since a diagnostic that fires on correct input teaches
+    * authors to ignore it. Found by probing the writer's output, not by reading the readers.
+    *
+    * Objects keyed by DATA rather than by schema — a `Schema`'s `data` and `links` maps — are
+    * skipped via [[opaqueValueKeys]]; see the note there for why an earlier claim that no such
+    * object existed was wrong.
+    */
+  val knownKeys: Set[String] = Set(
+    "$at", "$kind", "adaptors", "aggregate", "alias", "arg", "args", "argument", "attachments",
+    "authors", "basis", "benefit", "binding", "blobKind", "block", "body", "bool", "brief",
+    "by", "byAuthors", "capability", "cardinality", "cases", "commands", "comments",
+    "comparand", "condition", "conditionIdentifier", "connectors", "constants",
+    "containedGroups", "contents", "context", "contexts", "copyright", "country", "data",
+    "default", "definition", "description", "dimensions", "direction", "do", "doStatements",
+    "domains", "element", "else", "elseStatements", "email", "entities", "entity",
+    "enumerators", "envelope", "epics", "events", "expr", "expression", "field", "fields",
+    "figmaRefs", "fileKey", "fractional", "from", "fullName", "function", "functions", "group",
+    "groups", "guard", "handler", "handlers", "importKind", "inFile", "indices", "inlets",
+    "inline", "input", "inputs", "intention", "intentions", "interaction", "interactions",
+    "invariant", "invariants", "isA", "isInitial", "items", "keys", "keyword", "kind", "label",
+    "language", "left", "lines", "links", "local", "locations", "max", "message", "metadata",
+    "methods", "mimeType", "min", "modules", "name", "nodeId", "nounAlias", "numeric", "of",
+    "onClauses", "op", "options", "organization", "origin", "outlets", "output", "outputs",
+    "parameters", "path", "pattern", "portlet", "predicate", "processor", "processorKind",
+    "projectors", "prompt", "putOut", "queries", "query", "reason", "recordType", "ref",
+    "refKind", "relationship", "relationships", "repositories", "repository", "requires",
+    "requiresKind", "results", "right", "sagas", "schema", "schemas", "scheme", "selector",
+    "shape", "shownBy", "source", "state", "statements", "states", "steps", "streamlets",
+    "subject", "takeIn", "target", "terms", "text", "then", "thenStatements", "timeout",
+    "timeoutStatements", "title", "to", "type", "typeEx", "typeExpression", "types", "undo",
+    "url", "urlDescription", "useCases", "usecase", "user", "userStory", "users", "value",
+    "valueElement", "values", "verbAlias", "version", "whole", "withProcessor", "yields",
+    "yieldsCommand", "zone"
+  )
+
+  /** Keys present in `value` (recursively) that no reader accepts, paired with a JSON-pointer-ish
+    * path so a diagnostic can say WHERE. Order is deterministic for stable diagnostics.
+    */
+  def unknownKeys(value: ujson.Value): Seq[(String, String)] =
+    val found = scala.collection.mutable.ListBuffer.empty[(String, String)]
+    def walk(v: ujson.Value, path: String, opaque: Boolean): Unit = v match
+      case ujson.Obj(fields) =>
+        fields.foreach { case (k, child) =>
+          val here = if path.isEmpty then k else s"$path.$k"
+          if !opaque && !knownKeys.contains(k) then found.append(k -> here)
+          walk(child, here, opaqueValueKeys.contains(k))
+        }
+      case ujson.Arr(items) =>
+        items.zipWithIndex.foreach { case (item, i) => walk(item, s"$path[$i]", opaque) }
+      case _ => ()
+    walk(value, "", opaque = false)
+    found.toSeq
+  end unknownKeys
+
+  /** Keys whose VALUE is an object keyed by user data rather than by schema — a `Schema`'s `data`
+    * and `links` maps, whose keys are the modeller's own identifiers (`orders`, `tickets`, …).
+    *
+    * Without this the check reported every such identifier as an unrecognized key: 184 of the 188
+    * corpus models, every one of them a false positive. **The claim that no object in this schema
+    * is keyed by data was mine, and it was wrong** -- it came from grepping the READERS for key
+    * iteration, which finds nothing because upickle's derived `Map[String, _]` reader does the
+    * iterating. Only running the writer's own output back through the check exposed it.
+    */
+  private val opaqueValueKeys: Set[String] = Set("data", "links")
+
   def readRoot(json: String): RootDto = readJson[RootDto](json)
 
   /** Serialize the wire model back to JSON. `indent` = 2 for pretty-printed output, -1 for compact.

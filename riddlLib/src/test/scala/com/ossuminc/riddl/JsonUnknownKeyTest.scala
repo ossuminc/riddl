@@ -10,14 +10,17 @@ import com.ossuminc.riddl.utils.pc
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-/** CHARACTERIZATION of BACKLOG § 1's "JsonModel's reader never rejects unknown/misspelled keys".
+/** Unknown/misspelled JSON keys now WARN (Reid's ruling, 2026-08-16).
   *
-  * These cases assert what happens TODAY, which is that an unknown key is silently dropped. They
-  * are written to go RED the moment that changes, so whichever strictness the ruling picks, the
-  * behaviour is pinned rather than assumed — and so the cost of the current behaviour is visible
-  * as executable fact rather than as a paragraph in a backlog entry.
+  * These cases began life as a characterization of the silent-drop behaviour, written before the
+  * ruling so that whichever strictness was chosen would land against pinned behaviour rather than
+  * an assumption. They now assert the warning, which is exactly what characterizing first buys:
+  * the change of behaviour is visible as a diff in the assertions.
   *
-  * The finding that matters for the design: the drop happens at BOTH reader layers, and they are
+  * Still ACCEPTED, not rejected — a Warning breaks no existing producer while making a typo
+  * visible immediately, and the flip to Error can be decided later with evidence.
+  *
+  * The finding that shaped the mechanism: the drop happened at BOTH reader layers, and they are
   * not the same mechanism.
   *
   *   - Hand-written readers (`readStatement`, `readValue`, `readTypeExpr`, …) build their result
@@ -26,12 +29,19 @@ import org.scalatest.wordspec.AnyWordSpec
   *   - Every other DTO is read by upickle's derived `macroRW`, which ignores unknown keys by
   *     construction and is not ours to change.
   *
-  * The backlog entry proposes "a shared consumed-keys tracker wrapping ujson.Obj, most likely".
-  * That would fix the first layer and CANNOT fix the second — a wrapper sees the lookups a
-  * hand-written reader makes, not the ones a derived reader makes internally. So the mechanism is
-  * a more open question than the entry assumed. See the entry for the two decisions this needs.
+  * The backlog entry proposed "a shared consumed-keys tracker wrapping ujson.Obj, most likely".
+  * That would have fixed the first layer and could not have fixed the second — a wrapper sees the
+  * lookups a hand-written reader makes, never the ones a derived reader makes internally. Hence
+  * the shipped design: validate the raw tree against `JsonModel.knownKeys` BEFORE any reader runs,
+  * which is the one place both layers are visible at once.
   */
 class JsonUnknownKeyTest extends AnyWordSpec with Matchers {
+
+  private def warningsFor(json: String): Seq[String] =
+    RiddlLib.parseJsonWithMessages(json)._2
+      .filter(_.message.contains("not recognized by any RIDDL reader"))
+      .map(_.message)
+      .toSeq
 
   private def parses(json: String): Boolean =
     RiddlLib.parseJson(json) match
@@ -60,13 +70,35 @@ class JsonUnknownKeyTest extends AnyWordSpec with Matchers {
 
   "JsonModel's readers" should {
 
-    "TODAY: silently accept a misspelled key on a macro-derived reader" in {
-      // `breif` is dropped, so the domain simply has no brief. No diagnostic of any kind.
+    // Still ACCEPTED -- a Warning, not an Error, so no existing producer breaks -- but no longer
+    // SILENT. These two cases previously asserted the silence; that they now assert the warning is
+    // the whole point of having characterized the behaviour before changing it.
+    "warn about a misspelled key on a macro-derived reader" in {
       parses(misspelledOnDerivedReader) mustBe true
+      val w = warningsFor(misspelledOnDerivedReader)
+      withClue(w.mkString("\n")) {
+        w.exists(_.contains("'breif'")) mustBe true
+      }
     }
 
-    "TODAY: silently accept an obsolete key on a hand-written reader" in {
+    "warn about an obsolete key on a hand-written reader" in {
       parses(obsoleteOnHandWrittenReader) mustBe true
+      val w = warningsFor(obsoleteOnHandWrittenReader)
+      withClue(w.mkString("\n")) {
+        w.exists(_.contains("'negated'")) mustBe true
+      }
+    }
+
+    "say WHERE the unknown key is, not merely that there is one" in {
+      // A document is a deep tree and the same key name may appear at many depths; a diagnostic
+      // that named only the key would send the author hunting.
+      warningsFor(misspelledOnDerivedReader).head must include("domains[0].breif")
+    }
+
+    "stay SILENT for a document whose keys are all recognized" in {
+      // The false-positive guard. Without it, a vocabulary that had accidentally lost a legitimate
+      // key would warn on correct documents and this suite would still be green.
+      warningsFor(obsoleteOnHandWrittenReader.replace(""""negated": true, """, "")) mustBe empty
     }
 
     // The isolation control for the case above: the SAME document with the obsolete key removed.

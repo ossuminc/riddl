@@ -645,8 +645,35 @@ object RiddlLib extends RiddlLib:
         // The JSON TEXT goes through so a document declaring `basis: "document"` can resolve its
         // own offsets against itself, giving exact line/col in diagnostics.
         val (result, messages) = JsonAstBuilder.buildWithMessages(dto, json)
-        (RiddlResult.fromEither(result), messages)
+        (RiddlResult.fromEither(result), unknownKeyWarnings(json, origin) ++ messages)
   end parseJsonWithMessages
+
+  /** A `Warning` for every key in the document that NO reader accepts (Reid's ruling, 2026-08-16).
+    *
+    * Warning rather than Error, deliberately, and this is the repo's warn-then-flip sequencing:
+    * it breaks no existing producer, surfaces a typo immediately, and leaves the decision about
+    * rejecting outright to be made with evidence.
+    *
+    * It runs on the RAW TEXT, before the readers, because that is the only place both reader
+    * layers can be covered at once — the derived `macroRW` readers, which are most of them, drop
+    * unknown keys inside upickle where nothing of ours can observe it.
+    *
+    * A key that is MISSING is not reported and must never be: readers use `m.get`, so a document
+    * predating a field still reads, which is the schema-evolution direction that has to keep
+    * working. See `JsonUnknownKeyTest`'s control case.
+    */
+  private def unknownKeyWarnings(json: String, origin: String): Messages =
+    try
+      JsonModel.unknownKeys(ujson.read(json)).map { case (key, path) =>
+        Messages.warning(
+          s"JSON key '$key' at '$path' is not recognized by any RIDDL reader ($origin), " +
+            "so its value is ignored",
+          suggestion = "Check the spelling against JSON_INPUT.md; an obsolete key should be removed."
+        )
+      }.toList
+    catch case NonFatal(_) => Nil // unreadable JSON is the readers' error to report, not ours
+  end unknownKeyWarnings
+
 
   override def parseNebula(
     source: String,
