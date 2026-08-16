@@ -537,5 +537,46 @@ class TellAddressingTest extends AbstractValidatingTest {
         .filter(_.kind == Messages.CompletenessWarning)
         .map(_.message).mkString("\n") must not include "instance"
     }
+
+    /** The `elements` gap. `checkTellAddressing` is reached at ANY depth -- including inside a
+      * `foreach` body, as its own call site comments say -- but it was invoked without the
+      * `foreach` element bindings, so a `tell` whose operand IS the loop element resolved to
+      * nothing and every addressing check silently skipped it.
+      *
+      * `widenedOperandType`'s scaladoc asserted the opposite: "none of this function's three call
+      * sites resolve an operand from inside a `foreach` body, so there is no position at which an
+      * element binding could be in scope." That was a claim about code elsewhere, and it was
+      * false -- `checkTellAddressing` is called from `checkStatementScopes`, which recurses into
+      * `foreach` bodies precisely so it can thread those bindings.
+      */
+    "REJECT an ambiguous derivation when the operand is a `foreach` element" in { (td: TestData) =>
+      val src =
+        """domain Dom is {
+          |  context Ctx is {
+          |    command Ship is { fromOrder: Id(entity Order), toOrder: Id(entity Order) } with { briefly "s" }
+          |    record Batch is { ships: many Ship } with { briefly "b" }
+          |    command Go is { batch: Batch } with { briefly "g" }
+          |    record R is { total: Integer } with { briefly "r" }
+          |    entity Order is {
+          |      state OS of record R is {
+          |        handler OH is { on command Ship { do "ship" } } with { briefly "oh" }
+          |      } with { briefly "os" }
+          |    } with { briefly "e" }
+          |    entity Caller is {
+          |      state CS of record R is {
+          |        handler CH is {
+          |          on command Go { foreach s in field batch.ships { tell s to entity Order } }
+          |        } with { briefly "ch" }
+          |      } with { briefly "cs" }
+          |    } with { briefly "ce" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val text = diagnostics(src, "addr-foreach").justErrors.map(_.message).mkString("\n")
+      withClue(text) {
+        text must include("fromOrder")
+        text must include("toOrder")
+      }
+    }
   }
 }

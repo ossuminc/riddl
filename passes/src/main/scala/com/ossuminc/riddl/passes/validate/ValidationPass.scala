@@ -837,18 +837,27 @@ case class ValidationPass(
     * receive a widened `ValueRef` (see its doc); this is for the ones that CAN: `send`/`tell`
     * completeness checks and `checkTellAddressing`.
     *
-    * `elements` (`foreach` bindings) is NOT threaded — none of this function's three call sites
-    * (`validateOnMessageClause`'s two completeness checks, `checkTellAddressing`) resolve an
-    * operand from inside a `foreach` body, so there is no position at which an element binding
-    * could be in scope for the `ValueRef` being resolved. Named explicitly rather than left
-    * silently narrow, per the task-1 review.
+    * `elements` (`foreach` bindings) IS threaded, and the claim that used to stand here — "none of
+    * this function's three call sites resolve an operand from inside a `foreach` body, so there is
+    * no position at which an element binding could be in scope" — was FALSE. `checkTellAddressing`
+    * is called from `checkStatementScopes`, which recurses into `when`/`match`/`foreach` bodies
+    * precisely so it can thread those bindings; its own call site says it is "reached at ANY
+    * depth". So `foreach s in field batch.ships { tell s to entity Order }` resolved its operand
+    * to nothing, and every addressing check — the `by`/ambiguity Errors and the three completeness
+    * checks — skipped it in silence.
+    *
+    * The parameter is DEFAULTED because the remaining call sites are walks that genuinely have no
+    * element scope to offer (`classifyHandlers`' event/result sweeps, `checkYieldConformance`);
+    * passing `Map.empty` there is the truth, not a shortcut. Only the `checkTellAddressing` path
+    * has real bindings to hand over.
     */
   private def widenedOperandType(
     m: MessageRef | Constructor | ValueRef,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression] = Map.empty[String, TypeExpression]
   ): Option[Type] = m match
-    case vr: ValueRef => valueRefType(vr, parents, lets, Map.empty[String, TypeExpression])
+    case vr: ValueRef => valueRefType(vr, parents, lets, elements)
     case other        => operandType(other)
 
   /** The `widenedOperandType`-based counterpart to [[operandMessageKind]] — see its doc for why the
@@ -859,9 +868,10 @@ case class ValidationPass(
   private def widenedOperandMessageKind(
     m: MessageRef | Constructor | ValueRef,
     parents: Parents,
-    lets: Seq[LetStatement]
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression] = Map.empty[String, TypeExpression]
   ): Option[AggregateUseCase] = m match
-    case vr: ValueRef => valueRefType(vr, parents, lets, Map.empty[String, TypeExpression])
+    case vr: ValueRef => valueRefType(vr, parents, lets, elements)
         .flatMap(t => typeExprMessageKind(t.typEx))
     case other => operandMessageKind(other)
 
@@ -6167,9 +6177,14 @@ case class ValidationPass(
     * so its Errors never fired. Threading `lets` costs nothing new here: `checkStatementScopes`'s
     * `TellStatement` case already has it, at the one call site below.
     */
-  private def checkTellAddressing(ts: TellStatement, parents: Parents, lets: Seq[LetStatement]): Unit =
+  private def checkTellAddressing(
+    ts: TellStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
     checkRef[Processor[?]](ts.processorRef, parents).foreach { p =>
-      widenedOperandType(ts.msg, parents, lets).foreach { mt =>
+      widenedOperandType(ts.msg, parents, lets, elements).foreach { mt =>
         val fieldsAndOwners = fieldsWithOwner(mt)
         if fieldsAndOwners.nonEmpty then
           // Match candidates by RESOLVED IDENTITY, not by the last path segment's NAME (Reid,
@@ -7532,7 +7547,7 @@ case class ValidationPass(
         // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
         // point invoked at every container root AND recursively for when/match/foreach bodies) --
         // mirrors checkTerminate's reachability, immediately below.
-        checkTellAddressing(s, parents, lets)
+        checkTellAddressing(s, parents, lets, elements)
       // Task 2: the `case _ => ()` these three carried is now ENUMERATED. It was correct while the
       // operand could only be a MessageRef; the moment a ValueRef became legal it would have
       // silently accepted `yield garbage` -- the exact shape of fall-through this repo forbids.
