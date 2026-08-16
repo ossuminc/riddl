@@ -1321,6 +1321,23 @@ to the right group rather than appending to a list.
   argument. That is a different defect (a missing check, not broken output) at
   an overlapping set of positions — see BACKLOG § 1.
 
+- **Inlet/outlet direction — the one people invert, Reid included (2026-08-16).**
+  **An OUTLET is an exit and an INLET is an entrance.** A processor PLACES a
+  message on its outlet; the connector carries it; the message ARRIVES at the
+  receiver's inlet. Source-of-truth: `Connector(from: OutletRef, to: InletRef)`
+  (`AST.scala:5232`) — from an outlet, to an inlet — plus the CM's "validated on
+  arrival … per-inlet ordering preserved" for Inlet and "name WHICH outlet they
+  place the message on" for Outlet.
+  **The reliable mnemonic is the arity table, not the words**: a `sink` has
+  inlets and NO outlets. A sink only consumes, so an inlet must be an entrance;
+  everything else follows. The inverted rule — "inlets push into a connector" —
+  reads plausibly and survives casual checking because `send … to <portlet>`
+  accepts BOTH kinds, so a sentence about "sending to an inlet" is grammatical
+  and still wrong about direction.
+  Consequence that keeps coming up: an extra INLET raises the inlet count, so a
+  1-in/1-out `flow` that also hosts an `error-sink` inlet derives as a `merge`
+  (≥2 inlets, 1 outlet) — never a `split`, which is ≥2 OUTLETS.
+
 - **AST.Set shadows scala.Set** — use selective imports or
   qualify as `scala.collection.immutable.Set`.
 - **Schema match ordering** — Schema extends `Leaf` (Definition)
