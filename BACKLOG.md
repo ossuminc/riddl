@@ -574,94 +574,41 @@ that needs a ruling before either can be fixed.
   probably belongs in riddl-gen. Filed here so it is tracked somewhere; move it
   when that repo grows a backlog.
 
-- **[2.2]** **A38 — the refusal step's operand should name an invariant, not prose.**
-  The step kind shipped as `any_interaction_ref "refuses" user_ref
-  literal_string`, so the reason is a **prose string**. A38's whole purpose was
-  closing the loop between the requirement's named invariant, the `require` that
-  enforces it, and the InvariantViolated result a generated test asserts — and a
-  string closes none of it. Change the operand to an `invariant_ref`, or admit
-  both and warn on the prose form.
-  Verified: the rule is in `ebnf-grammar.ebnf` under `step_interactions`.
+- **[2.2]** **A38 — ADMIT an invariant reference as an ALTERNATIVE refusal operand.**
+  **CORRECTED 2026-08-16 by Reid, and the previous framing was wrong.** This
+  entry said the operand "should name an invariant, NOT prose", and offered as a
+  fallback "admit both and warn on the prose form". Both are incorrect, for the
+  same reason: **RIDDL has two legitimate refusal mechanisms, and only one of
+  them has an invariant to name.** A handler refuses either with
+  `require invariant X` or with `error "<prose>"` — the validator treats them as
+  equivalent discharges in two independent places
+  (`ValidationPass.scala:678` and `:1729`, both matching
+  `case _: ErrorStatement | _: RequireStatement`).
+  So narrowing the step's operand to an `invariant_ref` would make an
+  error-based refusal **undocumentable**, and warning on the prose form would fire
+  on models that are correct — the false-positive failure mode this repo has now
+  hit twice in two days.
+  **The work that remains is purely ADDITIVE:** allow
+  `any_interaction_ref "refuses" user_ref (literal_string | invariant_ref)`.
+  Prose stays valid, unwarned, and is the honest spelling when the refusal is an
+  `error`. A38's goal — closing the loop to the `require` and the
+  `InvariantViolated` a generated test asserts — is then met exactly where an
+  invariant exists to close it to, and claims nothing where one does not.
   Touches parser + EBNF + GBNF + prettify + BAST + JSON, so it needs a
-  `FORMAT_REVISION` bump; the corpus must be surveyed for existing prose
-  refusals before the string form is removed.
+  `FORMAT_REVISION` bump. **No corpus survey is needed to REMOVE the string form,
+  because the string form is not being removed** — which is most of what made the
+  original framing expensive.
 
-- **[2.3]** **RULED 2026-08-14 — `on other` is necessary to the LANGUAGE, not required in
-  every handler. A5's generalization is DECLINED; omission is correct.**
-  Reid, correcting a first reading of this ruling that took "it MUST be there"
-  to mean per-handler:
+- ~~**RULED 2026-08-14 — `on other` is necessary to the LANGUAGE, not required in
+  every handler.**~~ — **REMOVED from the backlog 2026-08-16 (Reid: "if there's
+  nothing to build, why is it on this list?"). Nothing to build; the ruling is
+  already implemented and documented.** A5's generalization is DECLINED and
+  omission is correct; the check says so at its own site, and CLAUDE.md carries
+  the reasoning. Struck rather than deleted only so the next reader does not
+  re-derive the question — a backlog is for OPEN WORK, and a recorded decision
+  with no task attached belongs in CLAUDE.md, which has it.
 
-  > *"`on other` is necessary to the language, not necessary in every handler.
-  > If there is nothing to do for a message that is not otherwise handled, then
-  > it can be omitted and that is fine. It's better than an `on other { do
-  > "nothing" }` kind of nonsense construct, even if that would be good
-  > validation."*
-
-  So the construct's job is real — it is the fall-through of a switch, firing
-  when a processor receives a message no on-message clause in the handler
-  matches — but **an author who has nothing to do on that path writes nothing.**
-  Note what the last clause concedes and then overrules: requiring the clause
-  WOULD make validation better, and is rejected anyway, because a language that
-  forces a do-nothing construct buys its diagnostics by making models lie about
-  intent. **Do not re-open this by arguing the validation benefit; it was already
-  weighed.**
-
-  **Consequences — three, and the third is an open question:**
-
-  1. **No new presence check.** A5's *"consider generalizing the presence and
-     completeness check across all processor kinds"* is considered and DECLINED.
-     The comment at `ValidationPass.scala:3492` promising to generalize "later"
-     is now stale and should be corrected in place, or the next reader will
-     build it.
-  2. **The empty-`on other` warning STAYS, and its advice is now clearly the
-     right one.** `ValidationPass.scala:553-563` warns that an empty clause
-     "will silently discard unhandled messages" and suggests adding statements
-     *"or remove it if discarding is intentional"*. That second branch is
-     exactly this ruling: the fix for a do-nothing clause is deletion, not
-     filling. No change needed.
-  3. **ANSWERED 2026-08-14 — the ADAPTOR Error STANDS, and it is not an
-     exception.** Reid:
-
-     > *"Adaptors are special since they are translators. They must translate
-     > everything, including messages they are not designed to translate! Even
-     > if that translation is 'Sorry, I can't translate that'. Doing nothing on
-     > an unknown message is to silently omit from an inter-context
-     > conversation."*
-
-     This is an **application** of the general ruling, not a carve-out from it.
-     The general rule is "nothing to do → omit the clause"; for an adaptor there
-     is **never nothing to do**, because refusing to translate is itself a
-     translation that the other context is owed. That is exactly why the clause
-     is required here and nowhere else — and it means the rule needs no special
-     pleading if it is ever questioned again.
-     **Corollary worth knowing, not yet acted on:** by the same argument an
-     adaptor's `on other` with an EMPTY body is as wrong as a missing one — it
-     drops the message just as silently. Today that is only the model-wide
-     Completeness warning (`:553-563`), not the adaptor Error. Whether to raise
-     it for adaptors specifically was not asked and is not assumed.
-
-     *Comment at `ValidationPass.scala:3489` corrected 2026-08-14 to record all
-     of this in place, since the stale "generalize later" promise was what put
-     the question on the table.*
-
-  **The corpus measurement now reads the other way, and supports the ruling.**
-  Brace-matched over riddl-models, 2026-08-14: of **3,606** handler blocks,
-  **2,311 (64.1%)** carry an `on other` and **1,295 (35.9%)** do not, across 22
-  of 29 model dirs. Under the first (wrong) reading that was migration scope.
-  Under the ruling it is evidence: **roughly a third of handlers legitimately
-  have nothing to do on the fall-through path**, and a presence check would have
-  told all 1,295 of them to write nonsense. Kept because it is the number that
-  would have been re-derived to justify the check.
-
-  **A5's sentence is still struck from `../RIDDL-Tools-To-Do-List.md`, but for a
-  different reason than first recorded.** The sentence — *"Silence is only a
-  deliberate filter when an explicit 'on other' clause exists and does nothing
-  with the message"* — is wrong because **omission IS the deliberate filter**.
-  It required an explicit do-nothing clause as the marker of intent, which is
-  precisely the construct this ruling calls nonsense. (The first correction said
-  it was wrong because presence is mandatory. That was the misreading.)
-
-- **[2.4]** **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
+- **[2.3]** **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
   rule.** **Add `Finder.fieldChildren` to the list** (2026-08-15): it is 29
   hand-written cases ending in `case _ => Seq.empty`, so a future node holding
   statements or values in a FIELD returns nothing rather than failing loudly.
@@ -742,7 +689,7 @@ that needs a ruling before either can be fixed.
   is worth running once. Fixed here with `immutable.VectorMap`, which preserves
   the declared `Map` type.
 
-- **[2.5]** **Finish the `Streamlet` → `Processor` migration in the remaining passes.**
+- **[2.4]** **Finish the `Streamlet` → `Processor` migration in the remaining passes.**
   Filed by Reid 2026-08-10 when the same defect was fixed in
   `StreamingValidation` (`70b0f527a`). These sites narrow to the concrete
   `Streamlet` case class the same way the streaming graph did, so they see one
@@ -762,7 +709,7 @@ that needs a ruling before either can be fixed.
   and `RiddlFileEmitter`/`PrettifyVisitor`'s uses are NOT in this list: those
   are legitimately about the case class (visitor hooks, keyword emission).
 
-- **[2.6]** **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10, syntax his
+- **[2.5]** **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10, syntax his
   suggestion. Wants a plan. Filed out of the `foreach`-over-a-mapping question:
   the destructuring form below covers the loop body, but **outside a loop a
   mapping is currently write-only** — there is no way to name the value stored
@@ -790,7 +737,7 @@ that needs a ruling before either can be fixed.
     `collectionElementType` (ValidationPass) already computes the latter.
   - Whether `at` reads well in a `when` guard, its most likely home.
 
-- **[2.7]** **A keyword-named field reports the error several tokens upstream.** From
+- **[2.6]** **A keyword-named field reports the error several tokens upstream.** From
   riddl-generator 2026-08-03, filed here because it is a real diagnostic defect
   even though they marked it "no action needed". A field in a message
   aggregation named after a keyword — `command Store is { entity: Order }` —
@@ -802,84 +749,54 @@ that needs a ruling before either can be fixed.
   here likely means a cut/`~/` placement change in the aggregation rule, and
   those interact with `rep` termination (see the statement-restriction pattern
   note in memory). Low priority; a nuisance, not a blocker.
-- **[2.8]** **Move ResolutionPass off `ClassTag` for type differentiation.** A measured
-  cleanup, NOT a fix for anything currently slow — filed 2026-08-03 after the
-  ClassTag hypothesis was tested and refuted as the cause of the Scala.js
-  resolution cost (that was the source-file hashing; see NOTEBOOK).
-  `isSameKind` (ResolutionPass.scala:661) does
-  `classTag[DEF].runtimeClass.isAssignableFrom(d.getClass)`. Measured over
-  168,400 tests by `TypeTestCostBenchmark` (`passes/src/test/scala/`):
+- ~~**Move ResolutionPass off `ClassTag` for type differentiation.**~~ — **WON'T
+  FIX (Reid, 2026-08-16).** It was filed as a measured cleanup and never as a fix
+  for anything: the ClassTag-is-slow hypothesis was TESTED AND REFUTED in 2026-08
+  (the Scala.js resolution cost was source-file hashing). So it proposed churn in
+  the most delicate pass in the compiler for no measured benefit, which is a bad
+  trade at any time and a worse one before 2.0.
 
-  | strategy | JVM | JS | Native |
-  |---|---:|---:|---:|
-  | current (classTag per call) | 19.5 ms | 3.6 ms | 0.9 ms |
-  | hoisted (runtimeClass once) | 17.2 ms | 3.8 ms | 0.2 ms |
-  | predicate (stored lambda) | 2.9 ms | 2.0 ms | 0.5 ms |
-  | direct (isInstanceOf) | 0.9 ms | 0.9 ms | 0.1 ms |
+- **[2.7]** **BUILD: an imported definition must RESOLVE without an explicit
+  flatten.** **RULED 2026-08-16 by Reid — "Yes, it should."** Was a question; it
+  is now work.
+  Today the two halves disagree: the content accessors report a `.bast`-imported
+  definition (`domain.types` lists it, since 2026-08-03), but a REFERENCE to it
+  does not resolve until `FlattenPass` runs, because the symbol table is built by
+  TRAVERSAL and `BASTImport` is a wrapper the traversal does not descend. So a
+  model can SEE an imported type and cannot NAME it, which is the kind of split
+  that makes imports feel broken without ever producing a clear error.
+  **The known obstacle, recorded so it is not rediscovered:** `ResolutionPass`
+  keeps its own manual walk that descends `Include` and deliberately NOT
+  `BASTImport`, reading `directDefinitions` at 7 sites, precisely because
+  `Contents.filterThroughWrappers` cannot express "includes but not imports". That
+  asymmetry is what has to change, and it is the reason this was filed as a
+  question rather than a chore. Pinned today by `BASTImportLoadingTest` and
+  `IncludeAndImportTest`, both of which assert the CURRENT behaviour and will need
+  to move with it.
 
-  So ClassTag costs 20x a direct `isInstanceOf` on the JVM, 15x on Native, 4x
-  on JS — worst, in absolute terms, on the platform nobody is complaining
-  about. A stored predicate recovers most of it and adds NO data to any node;
-  Scala 3's `TypeTest[Definition, T]` reaches the `direct` row outright,
-  because at call sites where `T` is statically known the compiler emits a
-  plain `isInstanceOf`.
-  **Why it needs a plan rather than a patch:** ResolutionPass does not only
-  TEST with the ClassTag, it also reads `classTag[T].runtimeClass.getSimpleName`
-  for error messages (:922, :946) and compares exact class identity (:1271,
-  :1275). Moving off ClassTag therefore wants a small `Kind` abstraction
-  carrying both a predicate and a display name, threaded through ~13 generic
-  methods. That is a real refactor for a few milliseconds on the JVM, so it is
-  explicitly LOW priority — do not bundle it with performance work that has a
-  measured user impact.
-- ~~`BASTPerformanceBenchmark` is timing-flaky~~ — **DONE 2026-08-07,
-  `5c3d5cbc8`.** Cold single-shot measurement now reported, not asserted; the
-  warmed 50-iteration benchmark gates on the MEDIAN rather than the mean.
-- ~~`BASTParserInput`'s synthetic line index is unreachable dead code~~ — **DONE
-  2026-08-07, `307812fa8`, but the premise here was FALSE and cost a wrong
-  first move.** This entry claimed "with `positionsKnown = false`, `At` never
-  consults its `lineOf`/`offsetOf`". It did: `At.endLine` and the `endCol`
-  inside `At.toLong` were UNGUARDED, so the 10000-chars-per-line scheme was
-  live, and every BAST-sourced message formatted as `(0:0->1:N)` — honest start
-  line, fabricated end line. It was wrong OUTPUT, not dead code. Deleting the
-  overrides under the stated premise would have moved the fabrication into the
-  base class instead of removing it. Guarding `endLine`/`endCol` came first;
-  only then was the machinery genuinely dead.
-- **[2.9]** **Should an imported definition RESOLVE without an explicit flatten?** The
-  accessors now report `.bast`-imported definitions (2026-08-03), so
-  `domain.types` lists an imported type — but a reference to it still fails to
-  resolve until `FlattenPass` runs, because the symbol table is built by
-  traversal rather than by the accessors. That split is currently pinned by
-  `BASTImportLoadingTest`, and it is defensible (reading is the client's
-  question, resolving is the model's), but it means a model can name a type its
-  own accessors report. Decide whether SymbolsPass should index wrapper
-  contents, or whether the flatten requirement should be stated more loudly.
-- ~~**A conditionally refusing clause escapes yield conformance**~~ — **DONE
-  2026-08-07, `1d87a109a`**, at BOTH sites (Reid's call): the Error in
-  `checkYieldConformance` and its CompletenessWarning sibling.
-  `dischargesOnEveryPath` replaces "does a refusal appear ANYWHERE in the
-  clause". A `when` needs both branches, a `match` needs every case AND a
-  `default`, a `foreach` never discharges. Error wording moved to "does not
-  yield it on every path" — "never" stopped being true.
-  **Two findings worth keeping:**
-  1. **Emitting ANY message settles a path**, not just yielding the declared
-     event or refusing with `error`/`require`. The first version assumed
-     declining means `error`/`require`, and NO in-repo fixture could have
-     contradicted it, because every fixture shared the assumption. riddl-models
-     reactive-bbq (`LoyaltyAccount.riddl:579`) declines by RECORDING a rejection
-     event — the more faithful design for an event-sourced entity. The external
-     corpus was the only thing that could catch this.
-  2. **An empty `else { }` is a PARSE ERROR** — an empty pseudo-code block does
-     not parse. So the escape is not an empty else but a NON-EMPTY one that
-     neither yields nor refuses. Making `else`/`default` mandatory in the
-     grammar was considered and REJECTED (Reid, 2026-08-07): ~56 sites across
-     three repos, and it would not have closed the hole anyway.
-- **[2.10]** **The QueryCase completeness check shares the "anywhere in the clause"
-  shape.** Filed 2026-08-07 out of `1d87a109a`, deliberately not changed there —
-  it was not the approved hole, and it has no refusal exemption, so the
-  conditional-refusal escape does not apply to it in the same way. QueryCase
-  still asks whether a result-emitting statement appears anywhere rather than on
-  every path. Decide whether it should use `dischargesOnEveryPath` too; if so,
-  expect the same kind of corpus correction the command case needed.
+- **[2.8]** **Decide whether a query must REPLY on every path, as a command must
+  already discharge on every path.** (Description expanded 2026-08-16 at Reid's
+  request.)
+  **What the check does today.** For a query handler, validation asks whether a
+  `reply` appears ANYWHERE in the clause. For a command handler it used to ask the
+  same thing, and `1d87a109a` changed that to `dischargesOnEveryPath` — does every
+  branch either emit or refuse.
+  **The gap that leaves.** A query handler written as
+  `when isReady then reply result R end` — with no `else` — satisfies "anywhere"
+  and is accepted. On the other branch it answers nothing at all, and **a query
+  that does not answer leaves its caller waiting**: `ask` is defined as taking the
+  value a `reply` provides, so an unanswered path is not a style matter, it is a
+  hang.
+  **Why it was not changed with the command case.** It was not the approved hole,
+  and it differs in one respect: the command check has a REFUSAL exemption
+  (`error`/`require` count as discharging), and a query has no equivalent — which
+  is exactly the question. May a query refuse instead of replying? If yes, the
+  same exemption applies and this is a small change; if no, it is stricter than
+  the command rule.
+  **Expect corpus corrections.** The command change needed them, and this check is
+  the same shape over a comparable population; measure before shipping, as with
+  the isolation seam.
+
 - ~~`Comment` in a `Group`'s contents cannot be rebuilt~~ — **STALE, resolved
   somewhere along the way; removed after verifying 2026-08-06.** Both halves of
   the claim are now false: `OccursInGroup` DOES include `Comment`
@@ -887,7 +804,7 @@ that needs a ruling before either can be fixed.
   (`GroupParser.scala:28`). The "3 pinned occurrences" are gone —
   `Root2JsonFixturesTest` reports `identical=91`, `lossy=0`, `divergent=0`, and
   the test carries no Comment allowance. No decision needed; nothing to do.
-- **[2.11]** **Saga step statements are NEVER VALIDATED — not just reachability.**
+- **[2.9]** **Saga step statements are NEVER VALIDATED — not just reachability.**
   **⚠ LIKELY ALREADY FIXED — verify and close before doing any work here.**
   Found 2026-08-11: `git log -S "case sagaStep: SagaStep =>" -- passes/…/Pass.scala`
   gives **`a1bce0d50` (2026-08-07) "Traverse saga step statements, which were
@@ -981,7 +898,7 @@ that needs a ruling before either can be fixed.
   3. **Drop `Unknown`.** Nothing behind it — no AST node, no parser rule, just
      the reservation and a tokenizer entry.
 
-- **[2.12]** **`TypeParserTest` has never run on Native.** Found 2026-08-07 while checking
+- **[2.10]** **`TypeParserTest` has never run on Native.** Found 2026-08-07 while checking
   where new tests executed. It is `abstract class TypeParserTest` with concrete
   subclasses ONLY in `language/src/test/scalajvm/.../JVMTests.scala:22` and
   `language/src/test/scalajs/.../JSTests.scala:22` — there is no Native one, so
@@ -992,8 +909,31 @@ that needs a ruling before either can be fixed.
   large parser suite on a platform that has never run it, and this repo's own
   history says to expect findings on a first run. Worth checking whether other
   `language` suites have the same gap; the audit is the task, not the one-liner.
-- **[2.13]** **Arity exemption for `error-sink` inlets** — riddl-models asked; deferred as a
-  design decision, then FIXED in rc.9. Verify nothing else wants it.
+- **[2.11]** **Audit every other port-COUNTING site for the `error-sink`
+  exemption.** (Description expanded 2026-08-16 at Reid's request.)
+  **Background.** A processor's stream SHAPE is derived from its arity — 1-in/1-out
+  is a `flow`, 1-out/2-in a `merge`, and so on. An `option error-sink` inlet is
+  INFRASTRUCTURE, not dataflow: it is where a domain's hard errors go. But it is
+  still an inlet, so it changes the arity, and a processor that is logically a
+  `flow` while also hosting its domain's error sink derives as a `merge` and
+  contradicts its own `as flow` ascription.
+  **What was fixed in rc.9**, at ONE site: `validateProcessorShape` now accepts
+  EITHER reading — with the error-sink inlet counted, or without it (via
+  `dataflowInlets`) — so `as flow` and `as sink` both validate. riddl-models had
+  previously had to move api-management's sink into a sibling context because only
+  the first reading was allowed.
+  **What "verify nothing else wants it" means concretely.** Every OTHER place that
+  counts ports may have the same blind spot, and each needs checking:
+  - **`StreamingParser`'s per-shape `minInlets`/`maxInlets`/`minOutlets`/
+    `maxOutlets`.** This is the important one: CLAUDE.md records that the arity
+    table is encoded in TWO places that must move together, and only one of them
+    was taught the exemption. `sink R` and `repository R as sink` must agree about
+    what a sink is.
+  - the streaming/connector graph checks, which reason about unconnected inlets;
+  - `DiagramsPass`, which draws from the same counts;
+  - any completeness warning phrased in terms of inlet or outlet counts.
+  Cheap to start: `grep -rn "dataflowInlets\|numInlets\|inlets.size" passes/ language/`
+  and ask of each whether an infrastructure inlet belongs in that number.
 
 ### 3. Owed to other repos
 
