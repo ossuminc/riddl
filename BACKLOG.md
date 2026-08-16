@@ -107,7 +107,7 @@ task files, so they were NOT physically reshuffled; this index carries the order
 | ~~2~~ | ~~Close the two stale entries~~ | — | **DONE `d46646e10`** — one of them was the sole holder of a live design rationale, graduated to CLAUDE.md before deletion. |
 | ~~3~~ | ~~`valueTypeExpr` predefined types **and** `PromptValue.typeEx`~~ | — | **DONE `141486ed4`** — merged as planned; one function, one corpus A/B. |
 | ~~4~~ | ~~Wire `checkPromptAscription` at the remaining A20 positions~~ | — | **DONE `0fd7bb54e`** — all seven wired; the "decide per position" premise dissolved once every position turned out to already hold its expected type. |
-| 5 | Close the JVM/Native test gap | — | **PARTLY DONE `682e835bc`** — `commands` wired and +5; gap 560 → 555. Its central question is answered: the corpus gate is JVM-bound AND mutates a shared directory, so the hoped-for ~200 needs a design call, not a chore. `language` (−156) and `passes` (−156) remain, with the candidate scan recorded. |
+| 5 | Close the JVM/Native test gap | — | **MOSTLY DONE 2026-08-15** (`682e835bc`, `54ff5fe73`, `6cf60baf2`, `0919f191e`). Gap **560 → 275**, Native **1840 → 2393**. What remains is ~191 in `commands`, of which 189 are the corpus gate — blocked on a **decision** (isolating the shared corpus per platform), not on effort. |
 | 6 | `!` into `Punctuation.tokenPunctuation` | — | Isolated, tooling-facing (idea-plugin, synapify). Fits any gap. |
 | 7 | JSON strict-key rejection | — | Needs a design decision before code. Independent. |
 | 8 | Three CM amendments owed by the identity design | — | Documents work already SHIPPED, so it is overdue debt under the definition of done. **Fold into § 0's CM sweep — do that once, not twice.** |
@@ -244,6 +244,39 @@ each want an approved plan before implementation, per the standing rule.
   | testkit | 2 | 1 | −1 |
   | riddlc | 21 | 21 | 0 |
   | **total** | **2400** | **1840** | **−560** |
+
+  **PROGRESS 2026-08-15: the gap is HALVED, −560 → −275, and what remains is
+  essentially ONE suite that needs a decision.** Commits `682e835bc`
+  (commands + wiring), `54ff5fe73` (language), `6cf60baf2` (passes),
+  `0919f191e` (utils). Measured per module, JVM and Native, after:
+
+  | module | JVM | Native | gap |
+  |---|---|---|---|
+  | commands | 243 (+2 red) | 52 | **−191** |
+  | passes | 1397 | 1355 | −42 |
+  | language | 726 | 709 | −17 |
+  | utils | 148 | 134 | −14 |
+  | riddlLib | 134 | 124 | −10 |
+  | testkit | 2 | 1 | −1 |
+  | riddlc | 18 | 18 | 0 |
+  | **total** | **2668** | **2393** | **−275** |
+
+  **Native went 1840 → 2393 (+553).** The old "expected floor 1840" note below
+  is superseded; the floor may only be RAISED by a certified tri-platform run,
+  so treat 2393 as the number to certify against, not as an already-raised floor.
+
+  **Nearly all of the remaining −275 is `commands`, and nearly all of THAT is
+  `RiddlModelsRoundTripTest`'s 189 cases** — blocked on the shared-corpus
+  decision recorded under item 1 below, not on effort. Subtract it and the whole
+  repo is within ~86 cases of parity.
+
+  **The entry's per-module predictions were wrong in both directions, which is
+  worth remembering before estimating this kind of work again.** `commands` was
+  called "probably the cheapest win" and delivered +5. `passes` was to be
+  "audited last" because its residue was "likely genuinely JVM-bound", and 26 of
+  its 32 files moved with no source change at all. The shape that predicts
+  portability is not the module's general hygiene; it is whether a file names a
+  JVM-only TYPE, which no import scan reveals.
 
   **PROGRESS 2026-08-14 (`546f2f834`): `language` closed from −325 to −156.**
   The 13 abstract parser suites now run on Native — their concrete runners moved
