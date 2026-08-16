@@ -703,6 +703,21 @@ def keyword(definition: Definition): String =
     case _: Projector      => Keyword.projector
     case _: Repository     => Keyword.repository
     case _: Relationship   => Keyword.relationship
-    case _: Definition     => "unknown"
+    // THROW rather than emit a placeholder (Reid's no-silent-fallthrough rule). This arm read
+    // `case _: Definition => "unknown"`, which meant a Definition kind nobody had taught this
+    // function about was prettified as `unknown Foo is { … }` — text that does not parse, produced
+    // silently, by the one pass whose entire contract is that its output re-parses. RIDDL is
+    // reflective: anything that can be parsed MUST be emitted, so a definition this cannot name is
+    // a hole in that contract and has to say so.
+    //
+    // Unreachable today by construction — every concrete Definition is handled above, which the
+    // corpus round trip demonstrates rather than assumes. It is a tripwire for the next Definition
+    // added, and it fires at the first test that prettifies one.
+    case other =>
+      throw new IllegalStateException(
+        s"PrettifyVisitor.keyword has no keyword for ${other.getClass.getSimpleName} " +
+          s"('${other.id.value}'). Add an arm: prettified output must re-parse, and a placeholder " +
+          "would emit source that does not."
+      )
   end match
 end keyword

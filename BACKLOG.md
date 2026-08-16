@@ -654,6 +654,29 @@ that needs a ruling before either can be fixed.
   select anything and then carry on as if nothing happened."* Offered as a
   follow-up and never answered, so it is filed rather than lost.
 
+  **AUDIT PROGRESS 2026-08-16.** Sized: **198** `case _ =>` sites across
+  `passes/src/main` + `language/src/main`, 94 of them in `ValidationPass` alone.
+  A classifier that flags "catch-all whose siblings name a growable union" marked
+  182 of the 198 — **useless, and worth recording as a dead end**: it counts typed
+  arms (`case _: Foo =>`, which are not catch-alls at all) and any sibling type
+  name. **Classification has to be by what the arm MEANS, which is reading, not
+  grepping** — which is what this entry has said from the start.
+  **FIXED:** `PrettifyVisitor.keyword`'s `case _: Definition => "unknown"`, the
+  one CLAUDE.md already flagged. It emitted `unknown Foo is { … }` — text that
+  does not parse — silently, from the one pass whose whole contract is that its
+  output re-parses. Now throws, naming the kind and the id. Unreachable today,
+  demonstrated rather than assumed: `passes` 1404 green and the corpus round trip
+  unchanged at 186/3, with no `IllegalStateException`.
+  **EXAMINED AND LEGITIMATE — do not "fix" these:** `AST.scala:2898`
+  (`Type.kind`'s `case _ => "Type"` — a plain `type X is String` genuinely IS kind
+  "Type") and `AST.scala:4735` (`Declaration.ascription`'s `case _ => ""` — a type
+  with no `yields` genuinely has no ascription). Both are the *"nothing to do
+  here"* class, which the rule explicitly permits.
+  **The remaining 195 are unexamined.** The useful next slice is the same shape as
+  the one fixed: arms whose fallback produces OUTPUT (a placeholder string, a
+  default keyword) rather than emptiness, since those fail as wrong answers rather
+  than as missing ones.
+
   **What is already done** (do not redo): the total dispatches were fixed at
   `286ef8157` and around it — `Pass.processValue` now throws on an unhandled
   `Value` rather than returning unit, `BASTWriter`/`BASTReader` throw instead of
