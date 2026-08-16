@@ -107,7 +107,7 @@ task files, so they were NOT physically reshuffled; this index carries the order
 | ~~2~~ | ~~Close the two stale entries~~ | — | **DONE `d46646e10`** — one of them was the sole holder of a live design rationale, graduated to CLAUDE.md before deletion. |
 | ~~3~~ | ~~`valueTypeExpr` predefined types **and** `PromptValue.typeEx`~~ | — | **DONE `141486ed4`** — merged as planned; one function, one corpus A/B. |
 | ~~4~~ | ~~Wire `checkPromptAscription` at the remaining A20 positions~~ | — | **DONE `0fd7bb54e`** — all seven wired; the "decide per position" premise dissolved once every position turned out to already hold its expected type. |
-| 5 | Close the JVM/Native test gap (560 cases) | — | **Confidence infrastructure — do it before more language change.** Every later item lands on a base whose Native behaviour is unverified. Its `commands` sub-item also settles whether the corpus gate runs JVM-only, which decides how much the A/Bs in 3 and 11 are worth. |
+| 5 | Close the JVM/Native test gap | — | **PARTLY DONE `682e835bc`** — `commands` wired and +5; gap 560 → 555. Its central question is answered: the corpus gate is JVM-bound AND mutates a shared directory, so the hoped-for ~200 needs a design call, not a chore. `language` (−156) and `passes` (−156) remain, with the candidate scan recorded. |
 | 6 | `!` into `Punctuation.tokenPunctuation` | — | Isolated, tooling-facing (idea-plugin, synapify). Fits any gap. |
 | 7 | JSON strict-key rejection | — | Needs a design decision before code. Independent. |
 | 8 | Three CM amendments owed by the identity design | — | Documents work already SHIPPED, so it is overdue debt under the definition of done. **Fold into § 0's CM sweep — do that once, not twice.** |
@@ -259,12 +259,37 @@ each want an approved plan before implementation, per the standing rule.
 
   **Remaining: 510 of the 560 sit in three modules.** In this order:
 
-  1. **`commands` (−198) is the alarming one, and probably the cheapest win.**
-     245 JVM against 47 Native, and the module has NO `src/test/scala-jvm-native`
-     directory at all — 14 shared test files and 7 under `scalajvm`. The JVM
-     count matches the riddl-models corpus gate exactly, which means **our single
-     largest regression net almost certainly runs JVM-only.** Confirm that first;
-     if the corpus round trip can run on Native, that one change is worth ~200.
+  1. **`commands` (−198) — PARTLY DONE 2026-08-15, `682e835bc`, and its central
+     question is ANSWERED: NO.** The module gained the `jvmNativeSrc("commands")`
+     wiring it lacked, and three suites now run on both platforms
+     (`RegressionTests`, `BastGenCommandTest`, `UnbastifyCommandTest`). Native
+     47 → **52**; JVM unchanged at 245, so the gap is now **−193**.
+     **The ~200 win hoped for here is NOT available.** The corpus gate
+     (`RiddlModelsRoundTripTest`, 189 cases) does run JVM-only, as suspected — but
+     it imports `org.apache.commons.io.FileUtils` and `scala.jdk.StreamConverters`.
+     The usage is shallow (ONE `forceDeleteOnExit` on the CI download path, TWO
+     `.toScala(Seq)` conversions of a `Files.walk`), so the rewrite is small.
+     **The rewrite is not the blocker.** That suite WRITES a `.bast` beside every
+     model in `../riddl-models` and restores each in a `finally`; running it on
+     two platforms means two runs mutating one shared external directory, and sbt
+     may run those rows concurrently. **Porting it needs a decision about
+     isolating the corpus per platform, not a dependency swap** — that is the
+     open question, and it is a design call rather than a chore.
+     Also still JVM-bound: `RunCommandOnExamplesTest` (commons-io `FileUtils` +
+     `filefilter`) and, through it, `RunCommandsOnExamplesTest` and
+     `NamespaceTest`.
+     **Method note that cost a cycle: scanning imports OVERSTATES what is
+     movable.** `NamespaceTest` imports nothing JVM-only and is still unmovable,
+     because it EXTENDS `RunCommandOnExamplesTest`. Check the base class too —
+     moved it, watched it fail to compile, moved it back.
+     **Candidate scan for the next two modules** (files under `src/test/scalajvm`
+     importing no `commons-io`/`scala.jdk`/`java.io`/reflection), recorded so it
+     is not re-derived — but treat it as an UPPER BOUND, per the base-class trap
+     above, and note several are deliberate JVM runners for shared abstract
+     suites (`JVMASTTest`, `JVMValidationTest`, `JVMDiagramsPassTest`) that may
+     already have Native twins: **language 19 files**, **passes 32** (dominated by
+     one homogeneous block of ~20 `*BAST*` suites, which is the obvious next
+     batch), **utils 6**.
   2. **`language` (−156, was −325)** — the abstract-suite half is DONE (see
      PROGRESS above). What remains is its 22 `src/test/scalajvm` files, which
      need the per-file triage below rather than a wiring fix.
