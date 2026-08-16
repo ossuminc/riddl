@@ -39,6 +39,24 @@ already covered by the 26 BAST suites that moved to Native in `6cf60baf2`.
 **Q3 — clusterability (§ 1 item 10).** Written up as a plan, NOT implemented,
 per the standing rule that design items get approval first. See the entry.
 
+**Q5 — two findings from the `self`-fields survey (§ 1 item 9, now done).**
+  - **`self.state`?** The admission test gives two answers. Inside a handler
+    declared in a `State`, the current state is known statically and the field
+    would be redundant; in a handler declared on the ENTITY, which runs whatever
+    state the instance is in, it is genuinely runtime-only and there is no other
+    way to ask. Admit it, admit it only for the entity-level position, or
+    decline? *No recommendation — this one turns on whether you want `self` to
+    carry a field that is redundant in one position, which is a taste call about
+    the language rather than a technical one.*
+  - **`self.version` means nothing yet.** It is in the closed field set, typed
+    `String`, used in one fixture, and defined in NO document — CM, scaladoc, or
+    language reference. State version? Event-sourced sequence number?
+    Optimistic-concurrency token? Each implies different generator behaviour and
+    a generator must currently guess. *My recommendation: rule on it soon.* This
+    is the same shape as `Integer`/`Whole`/`Natural` shipping with no defined
+    ranges — a construct in use that no document specifies — and that one needed
+    your ruling before any check could enforce it.
+
 **Q4 — the cross-context `tell` seam (§ 1 item 11).** The mandatory count is
 built and run; the migration decision is yours. See the entry.
 

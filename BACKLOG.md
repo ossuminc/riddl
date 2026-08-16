@@ -420,13 +420,50 @@ each want an approved plan before implementation, per the standing rule.
   addressability. `self.isClustered` was deliberately kept out of the identity
   spec because it would have forward-referenced vocabulary this item defines.
 
-- **Survey the CM and every A item for future `self` fields.** Reid, 2026-08-13.
-  `self` currently carries `id` and `version`. Find the other usually-available
-  pieces of processor information that belong there, classifying each by whether
-  it is statically knowable — in which case a generator inlines it and it does
-  NOT belong on `self` — or genuinely runtime-only, which is the admission test
-  the design settled on. `self.isClustered` is already claimed by the
-  clusterability item above.
+- ~~**Survey the CM and every A item for future `self` fields.**~~ — **DONE
+  2026-08-15.** Reid's admission test applied: is it runtime-only? Anything a
+  generator can know statically it should inline, which is why `version` is in
+  and `isClustered` is not. Result — **one genuine candidate, one documentation
+  debt, and everything else rejected with a reason.**
+
+  **CANDIDATE: `self.state`** — the FSM state the instance currently occupies
+  (§4.5: "the entity occupies exactly one named state at a time", changed by
+  `morph`). **The interesting part is that it is only sometimes runtime-only.**
+  Inside a handler declared within a `State`, the current state is known
+  STATICALLY by construction — the clause could not be running otherwise — so
+  there `self.state` is exactly the kind of thing the admission test excludes.
+  But a handler declared directly on the ENTITY handles its message whatever
+  state the instance is in, and there the current state is genuinely unknowable
+  until run time. So the candidate is real but narrow, and admitting it would
+  put a field on `self` that is redundant in one position and essential in
+  another. **Queued for a ruling (NOTEBOOK § QUESTIONS, Q5)** rather than
+  decided: the admission test gives two different answers depending on where you
+  stand, which is precisely the sort of thing this survey was meant to surface.
+
+  **DEBT: `self.version` is in the CLOSED set and its MEANING is defined
+  NOWHERE** — not in the Computational Model, not in `AST.scala`'s scaladoc, not
+  in the language reference. It is used in one fixture (`language/input/
+  values.riddl:173`) and typed `String`. Is it a state version, an event-sourced
+  sequence number, an optimistic-concurrency token, or an opaque change marker?
+  Each implies different generator behaviour, and a generator today must guess.
+  **This is the same defect class as `Integer`/`Whole`/`Natural` having no
+  defined ranges** — a construct shipped, used, and never specified — which took
+  a ruling to settle. Same fix needed: state what it means, then let checks
+  enforce it. Also queued in Q5.
+
+  **REJECTED, with the reason, so they are not re-proposed:**
+  - `isClustered`, enclosing context/domain names, the processor's own kind,
+    the handler name — all **statically knowable**; a generator inlines them.
+  - `correlationId`, `messageId`, `source`, `time`, `replyTo` — these belong to
+    the **Envelope** (CloudEvents context attributes, reachable via `option
+    message_envelope` and `on other as x`). Duplicating a modelled concept onto
+    `self` would create two ways to say one thing, and they would be free to
+    disagree.
+  - `isActive` / `isPassivated` / shard / partition — **the CM says these are
+    invisible to the model.** §4.5 makes activation and passivation "the
+    runtime's business", and clustering treats instances as interchangeable.
+    Exposing them would let a model depend on something the CM explicitly
+    reserves to the runtime, which is worse than merely redundant.
 
 - **Computational Model amendments owed by the identity design.** Three, all
   from 2026-08-13: (a) "activate on first message" (§4, line 999) must become
