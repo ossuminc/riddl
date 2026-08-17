@@ -1262,9 +1262,18 @@ object AST:
       * GENERATOR emits at run time, and nothing in the model produces them. A processor ascribed
       * `as flow` that also hosts its domain's error sink should still BE a flow.
       *
-      * Deliberately NOT used by [[arityShape]], which reports the honest port counts -- subtracting
-      * there would make a dedicated `as sink` receiver whose only inlet IS the error sink compute
-      * as `void`. Shape VALIDATION accepts either reading; see `validateProcessorShape`.
+      * USED BY [[arityShape]] since 2026-08-16, per Reid's ruling: *"the error-sink should not be
+      * counted in the shape/arity of the processor; it is merely a way to deliver out-of-band
+      * errors through the existing infrastructure."* Before that, `arityShape` counted every inlet
+      * and shape validation accepted EITHER reading, which let an infrastructure inlet justify
+      * whatever shape the author had written -- riddl-models has 177 `application context … as
+      * merge` whose second "inlet" is the error sink and whose dataflow is a plain flow.
+      *
+      * **The one allowance** (Reid, option B): a processor whose ONLY inlets are error sinks has
+      * dataflow arity (0, 0) and so derives as `void`, but `as sink` stays legal for it -- such a
+      * processor genuinely IS a sink, of errors, and `void` is the less informative description.
+      * That allowance lives in `validateProcessorShape`, not here: this function reports the
+      * dataflow arity truthfully and the ascription check decides what to accept.
       *
       * It is an ordinary inlet everywhere else: it must be connected, and it is subject to the
       * usual cardinality rules.
@@ -1276,7 +1285,7 @@ object AST:
       * ascribed shape. [[shapeForArity]] is TOTAL over non-negative arities, so there is no
       * fallback and no arity this cannot name.
       */
-    def arityShape: StreamletShape = shapeForArity(outlets.size, inlets.size)
+    def arityShape: StreamletShape = shapeForArity(outlets.size, dataflowInlets.size)
 
     /** The shape a given (outlet, inlet) arity denotes.
       *

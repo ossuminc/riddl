@@ -3771,23 +3771,28 @@ case class ValidationPass(
       // contradiction: it is flagged elsewhere as "should have content". Only compare the
       // ascription against the arity once at least one port is declared.
       case Some(ascribed) if numOutlets + numInlets >= 1 =>
+        // ONE reading, not two (Reid, 2026-08-16): an `error-sink` inlet is infrastructure, never
+        // dataflow, so `arityShape` already excludes it. The dual acceptance that used to live
+        // here is gone -- accepting either reading let an infrastructure inlet justify whatever
+        // shape the author had written, which is the distortion the ruling removes rather than a
+        // flexibility worth keeping.
         val derived = processor.arityShape
-        // An `error-sink` inlet is infrastructure rather than dataflow, so a processor may be
-        // read either way: WITH it (a dedicated `as sink` receiver whose only inlet is the error
-        // sink) or WITHOUT it (an `as flow` that also happens to host its domain's sink). Accept
-        // whichever the author ascribed. riddl-models had to move api-management's sink to a
-        // sibling context because only the first reading was allowed -- there is nothing wrong
-        // with an inlet on a flow.
-        val derivedWithoutErrorSinks =
-          processor.shapeForArity(numOutlets, processor.dataflowInlets.size)
-        val matchesEitherReading =
-          ascribed.keyword == derived.keyword ||
-            ascribed.keyword == derivedWithoutErrorSinks.keyword
-        if !matchesEitherReading then
+        // THE ONE ALLOWANCE (Reid's option B). A processor whose only inlets are error sinks has
+        // no dataflow ports at all, so it derives as `void` -- but it genuinely IS a sink, of
+        // errors, and `void` describes it less well than `sink` does. Accept both for exactly that
+        // shape. Deliberately narrow: it applies only when there is no dataflow whatsoever, so it
+        // cannot excuse a flow ascribed as a merge, which is the case the ruling exists to catch.
+        val isPureErrorReceiver =
+          processor.dataflowInlets.isEmpty && numOutlets == 0 && numInlets >= 1
+        val acceptable: Seq[String] =
+          if isPureErrorReceiver then Seq(derived.keyword, Sink(At.empty).keyword)
+          else Seq(derived.keyword)
+        if !acceptable.contains(ascribed.keyword) then
           messages.addError(
             processor.errorLoc,
-            s"${processor.identify} is ascribed 'as ${ascribed.keyword}' but its arity " +
-              s"($numOutlets outlets, $numInlets inlets) is ${derived.keyword}",
+            s"${processor.identify} is ascribed 'as ${ascribed.keyword}' but its DATAFLOW arity " +
+              s"($numOutlets outlets, ${processor.dataflowInlets.size} inlets, excluding " +
+              s"${numInlets - processor.dataflowInlets.size} error-sink) is ${derived.keyword}",
             suggestion =
               s"Change the ascription to 'as ${derived.keyword}', or adjust the inlets/outlets so the " +
                 s"arity matches 'as ${ascribed.keyword}'."

@@ -205,4 +205,67 @@ class ErrorSinkTest extends AbstractValidatingTest {
         withClue(s"messages were: ${clue(msgs)}") { arity(msgs) must not be empty }
     }
   }
+
+  /** ARITY (Reid, 2026-08-16). An `error-sink` inlet is infrastructure, never dataflow, so it does
+    * not count toward the shape a processor derives. Before this, validation accepted EITHER
+    * reading, which let the infrastructure inlet justify whatever shape the author had written --
+    * riddl-models has 177 contexts ascribed `as merge` whose second "inlet" is the error sink and
+    * whose dataflow is a plain flow.
+    */
+  "error-sink arity" should {
+
+    "NOT let an error-sink inlet turn a flow into a merge" in { (td: TestData) =>
+      // The case the ruling exists to catch, and the exact shape of those 177 corpus contexts:
+      // one dataflow inlet, one outlet, plus the error sink.
+      val src =
+        """domain D is {
+          |  context C as merge is {
+          |    inlet In is record Riddl.GeneratorError with { briefly "data" }
+          |    inlet Errs is record Riddl.GeneratorError with { option error-sink() briefly "e" }
+          |    outlet Out is record Riddl.GeneratorError with { briefly "o" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      val text = messagesFor(src, td).justErrors.map(_.message).mkString("\n")
+      withClue(text) { text must include("DATAFLOW arity") }
+    }
+
+    "ACCEPT the same processor ascribed as the flow it actually is" in { (td: TestData) =>
+      val src =
+        """domain D is {
+          |  context C as flow is {
+          |    inlet In is record Riddl.GeneratorError with { briefly "data" }
+          |    inlet Errs is record Riddl.GeneratorError with { option error-sink() briefly "e" }
+          |    outlet Out is record Riddl.GeneratorError with { briefly "o" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      messagesFor(src, td).justErrors.map(_.message).mkString("\n") must not include "DATAFLOW arity"
+    }
+
+    // THE ALLOWANCE, and its boundary. A processor whose ONLY inlets are error sinks has no
+    // dataflow at all, so it derives as `void` -- but it genuinely IS a sink, of errors, and
+    // `void` describes it less well. Both spellings are accepted for exactly that shape.
+    "ACCEPT `as sink` on a processor whose only inlet is the error sink" in { (td: TestData) =>
+      val src =
+        """domain D is {
+          |  context C as sink is {
+          |    inlet Errs is record Riddl.GeneratorError with { option error-sink() briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      messagesFor(src, td).justErrors.map(_.message).mkString("\n") must not include "DATAFLOW arity"
+    }
+
+    "ACCEPT `as void` on that same processor -- the derived reading" in { (td: TestData) =>
+      val src =
+        """domain D is {
+          |  context C as void is {
+          |    inlet Errs is record Riddl.GeneratorError with { option error-sink() briefly "e" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin
+      messagesFor(src, td).justErrors.map(_.message).mkString("\n") must not include "DATAFLOW arity"
+    }
+  }
 }
