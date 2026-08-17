@@ -33,19 +33,28 @@ moment someone commits.
 recorded. `[2.3]` remains open but is at a clean stopping point with its next
 slice named.
 
+**`release/2` is AHEAD of the `2.0.0-rc.15` tag.** `[2.6]` (imports resolve
+without flatten) landed AFTER the tag, so it is **not in rc.15** — it ships in
+rc.16. Check `git log 2.0.0-rc.15..HEAD` before attributing anything to the RC.
+
 **What landed 2026-08-17** (autonomous run): the MessageFlowPass `let`-local task
 (`b6b3dd03e`) and the `DependencyAnalysisPass.typeDeps` defect its sweep found
 (`1a3c1cf05`); `[2.3]`'s output-producing slice (`7296cfc27`); `[2.4]`
 Streamlet→Processor (`2c19d6d70`); `[2.2]` A38 plus the JSON
-interaction-metadata hole its fixture exposed (`e4f6f33f3`). CM updated for A38
-in the `ossuminc` repo (`adfce7c`) — that is a SEPARATE git repo, commit there
-separately.
+interaction-metadata hole its fixture exposed (`e4f6f33f3`); and — after the RC
+tag — `[2.6]` imports resolving without flatten (`f99bd3d27`). CM updated for A38
+(`adfce7c`) and for `[2.6]` (`c92af7f`) in the `ossuminc` repo — that is a
+SEPARATE git repo, commit there separately.
 
 **READ `BACKLOG.md` § 4 FIRST.** Five decisions were made under Reid's "queue
 questions, proceed with your best recommendation" instruction. All five are
 implemented and green; none blocks anything; each says what changing it costs.
 `[4.1]` (kind-named accessors kept, `processors` added) and `[4.2]`
 (`typeDeps`' source is the handled message) are the two most worth a ruling.
+**`[4.6]` is different from the other five: it is NOT built.** It is the
+shadowing question `[2.6]` creates — an imported and a local definition may now
+share a name, with declaration order deciding and nothing warning — and it needs
+a ruling before code.
 
 **Test baseline, all executed 2026-08-17 — memorize the RED ones or you will
 chase them:**
