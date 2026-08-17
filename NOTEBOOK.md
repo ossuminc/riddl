@@ -46,15 +46,14 @@ tag — `[2.6]` imports resolving without flatten (`f99bd3d27`). CM updated for 
 (`adfce7c`) and for `[2.6]` (`c92af7f`) in the `ossuminc` repo — that is a
 SEPARATE git repo, commit there separately.
 
-**READ `BACKLOG.md` § 4 FIRST.** Five decisions were made under Reid's "queue
-questions, proceed with your best recommendation" instruction. All five are
-implemented and green; none blocks anything; each says what changing it costs.
-`[4.1]` (kind-named accessors kept, `processors` added) and `[4.2]`
-(`typeDeps`' source is the handled message) are the two most worth a ruling.
-**`[4.6]` is different from the other five: it is NOT built.** It is the
-shadowing question `[2.6]` creates — an imported and a local definition may now
-share a name, with declaration order deciding and nothing warning — and it needs
-a ruling before code.
+**ALL EIGHT QUESTIONS WERE RULED on 2026-08-17 and every one is now IMPLEMENTED.**
+`BACKLOG.md` § 4 records the rulings and the commits. Three reversed what had been
+built on my recommendation, which is the point of asking: `[4.1]` (`streamlets`
+now means every port-bearing processor, not the `Streamlet` case class — the
+accessors I had added are deleted), `[4.2]` (`typeDeps` is a full TYPE-DEPENDENCY
+graph, not a message one), `[4.4]` (every processor's shape counts). `[2.1]`
+needed no code at all — the ruling was already implemented and tested. `[4.5]`
+went moot when riddl-models shipped.
 
 **Test baseline, all executed 2026-08-17 — memorize the RED ones or you will
 chase them:**
@@ -62,14 +61,16 @@ chase them:**
 - JVM: `language` 71 suites/731, `passes` 218/1446, `riddlLib` 143, `utils`,
   `commands` — all green EXCEPT the known-red corpus suites below.
 - `tJS` fully green. `tNative` green except the same known-red suites.
-- **FOUR known-red suites, every one A/B-verified against a stashed tree today
-  and IDENTICAL:** `Root2JsonCorpusTest` validation-parity (**187/190**),
-  `RiddlModelsRoundTripTest` (**3 failed**), `ReportedIssuesTest` "should 406",
-  and riddlc's local-corpus cases (`riddl-examples` dokn, shopify-cart).
-- **The corpus number MOVED and BACKLOG was stale about it**: `[3.4]` recorded
-  188/190; it is 187, with `reactive-bbq` newly failing on context-isolation-seam
-  errors. Filed as `[4.5]` — it is either drift in the live `../riddl-models`
-  checkout or a seam-check defect, and deciding needs a look at their model.
+- **THE CORPUS GATE IS MET.** `Root2JsonCorpusTest` validation-parity reads
+  **190/190** and `RiddlModelsRoundTripTest` is green, after riddl-models shipped
+  `99fc29d1` (*"the corpus validates 188/188 with zero errors"*) on 2026-08-17.
+  `ReportedIssuesTest` "should 406" is green too — that fixture was OURS, using
+  the pre-2.0 `morph … with record X` operand, and is migrated.
+- **TWO known-red cases remain, and BOTH belong to `../riddl-examples`**:
+  `RunRiddlcOnLocalTest`'s `dokn` and `shopify-cart`, exiting 7 because that
+  corpus has not made the 2.0 migration riddl-models completed. A task is filed
+  in `riddl-examples/task/2026-08-17-migrate-to-2.0-syntax.md`. **When it lands
+  this repo is fully green** — do not treat those two as permanent.
 
 **Traps — every one bit someone here.**
 
