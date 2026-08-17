@@ -103,9 +103,18 @@ case class ValidationPass(
       // meaning: the Streamlet definitions in the model. The graph's node buffer is now wider
       // (every Processor kind), so narrow it back here rather than changing what callers get.
       processors.collect { case s: Streamlet => s }.toSeq,
-      computedHandlerCompleteness
+      computedHandlerCompleteness,
+      deliverableTypes.toMap
     )
   }
+
+  /** The message [[Type]] each `send`/`tell` delivers, filled by [[checkStatementScopes]] — see
+    * [[ValidationOutput.deliverableTypes]] for why this pass is the only one that can answer it.
+    * Keyed by the statement value: statements are ordinary case classes (only [[Definition]]
+    * overrides `equals` structurally-without-contents), and every statement carries its own `At`,
+    * so two distinct statements can never collide.
+    */
+  private val deliverableTypes: mutable.HashMap[Statement, Type] = mutable.HashMap.empty
 
   private var computedHandlerCompleteness: Seq[HandlerCompleteness] =
     Seq.empty
@@ -861,6 +870,27 @@ case class ValidationPass(
   ): Option[Type] = m match
     case vr: ValueRef => valueRefType(vr, parents, lets, elements)
     case other        => operandType(other)
+
+  /** Publish what a `send`/`tell` delivers, so a LATER pass does not have to re-derive it — and, for
+    * a `ValueRef` operand naming a `let`-local, could not.
+    *
+    * Recorded HERE, in `checkStatementScopes`, because this is the single point reached at any
+    * depth (`when`/`match`/`foreach` bodies included) WITH the lexical `let` scope and `foreach`
+    * element bindings in hand. A pass that finds statements by a flat sweep — as `MessageFlowPass`
+    * does — has the statement but not the scope, which is exactly why its own lookup could only
+    * ever see operands the refMap already held.
+    *
+    * Silence is meaningful: an operand whose type is not statically determinable records nothing,
+    * so a consumer can tell "not determinable" from "no such statement". It never records a guess.
+    */
+  private def recordDeliverableType(
+    s: Statement,
+    msg: MessageRef | Constructor | ValueRef,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    widenedOperandType(msg, parents, lets, elements).foreach(t => deliverableTypes.put(s, t))
 
   /** The `widenedOperandType`-based counterpart to [[operandMessageKind]] — see its doc for why the
     * split exists. Filters through [[typeExprMessageKind]] so a widened resolution that lands on a
@@ -7732,11 +7762,13 @@ case class ValidationPass(
           // `checkMessageOperandSource` resolves it against — unavailable in `validateStatement`.
           case vr: ValueRef => checkMessageOperandSource(vr, "send", parents, lets, elements)
           case mr: MessageRef => checkBareMessageOperand(mr, "send") // Task 4
+        recordDeliverableType(s, s.msg, parents, lets, elements)
       case s: TellStatement =>
         s.msg match
           case c: Constructor => validateValue(c, parents, lets, elements)
           case vr: ValueRef => checkMessageOperandSource(vr, "tell", parents, lets, elements)
           case mr: MessageRef => checkBareMessageOperand(mr, "tell") // Task 4
+        recordDeliverableType(s, s.msg, parents, lets, elements)
         // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
         // point invoked at every container root AND recursively for when/match/foreach bodies) --
         // mirrors checkTerminate's reachability, immediately below.
