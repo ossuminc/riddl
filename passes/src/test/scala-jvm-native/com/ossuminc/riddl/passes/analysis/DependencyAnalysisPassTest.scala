@@ -119,6 +119,72 @@ class DependencyAnalysisPassTest extends AbstractValidatingTest {
       }
     }
 
+    /* [4.2], RULED 2026-08-17 by Reid, in his own example: *"if a record references a set that has
+     * a value that references a named integer type then record->set->named-integer-type must be
+     * represented in that map"*. The edges are DIRECT, so a consumer walks the chain — which is
+     * what makes both cycle detection and hierarchy traversal possible. */
+    "record the chain record -> set -> named integer type" in { (td: TestData) =>
+      runDependencyPass(
+        """domain D is {
+          |  context C is {
+          |    type Count is Integer
+          |    type Counters is set of D.C.Count
+          |    record Tally is { counters: D.C.Counters }
+          |  }
+          |}
+          |""".stripMargin
+      ) { out =>
+        val deps = out.typeDeps.map { case (k, v) => k.id.value -> v.map(_.id.value) }
+        // The record depends on the set it names -- recorded against the FIELD by the resolver,
+        // and folded up to the owning type here. This is the half that answers nothing without
+        // the field walk.
+        deps.get("Tally") mustBe Some(scala.collection.immutable.Set("Counters"))
+        // ...and the set depends on the named integer type it holds.
+        deps.get("Counters") mustBe Some(scala.collection.immutable.Set("Count"))
+      }
+    }
+
+    "walk through cardinality and collection wrappers, and through nested aggregates" in {
+      (td: TestData) =>
+        runDependencyPass(
+          """domain D is {
+            |  context C is {
+            |    type Name is String
+            |    type Age is Integer
+            |    record Inner is { name: D.C.Name }
+            |    record Outer is {
+            |      maybe: D.C.Age?,
+            |      many: many D.C.Name,
+            |      nested: { deep: D.C.Age }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+        ) { out =>
+          val deps = out.typeDeps.map { case (k, v) => k.id.value -> v.map(_.id.value) }
+          deps.get("Inner") mustBe Some(scala.collection.immutable.Set("Name"))
+          // `?` and `many` are cardinality wrappers, and `nested` is an inline aggregate whose
+          // field sits a level down -- all three must still reach the owning record.
+          deps.get("Outer") mustBe Some(scala.collection.immutable.Set("Age", "Name"))
+        }
+    }
+
+    /* A recursive type is legal and must NOT appear as a one-node cycle, or every consumer looking
+     * for loops finds a false one in every model that has a tree in it. */
+    "not record a type as its own dependency" in { (td: TestData) =>
+      runDependencyPass(
+        """domain D is {
+          |  context C is {
+          |    record Node is { children: many D.C.Node }
+          |  }
+          |}
+          |""".stripMargin
+      ) { out =>
+        val deps = out.typeDeps.map { case (k, v) => k.id.value -> v.map(_.id.value) }
+        deps.get("Node") mustBe None
+      }
+    }
+
     "record the adaptor bridge and the types it carries" in { (td: TestData) =>
       runDependencyPass(
         """domain D is {
