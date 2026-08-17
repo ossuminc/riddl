@@ -29,15 +29,26 @@ moment someone commits.
   revision 17). The `at` lookup rode 18. The next BAST change rides 18 too —
   **re-check `git tag` first**; bump to 19 only after 18 ships.
 
-**In flight: nothing.** Six § 2 items landed this session, each with its ruling
-recorded in the CM (a separate git repo — commit there separately).
+**In flight: `[2.3]` only, and it is PART-DONE — the rest of the session's six
+§ 2 items landed complete**, each with its ruling recorded in the CM (a separate
+git repo — commit there separately).
 
-**NEXT, and it needs YOU before code:** `[2.4]` Streamlet → Processor carries a
+**`[2.3]` the catch-all audit stopped mid-sweep.** 198 `case _ =>` sites sized,
+**3 resolved, 195 unexamined**; see the `AUDIT PROGRESS` block in that entry
+(`BACKLOG.md:664`) for what was fixed, what was examined and cleared, and — the
+part worth having — a dead end: a classifier that flags "catch-all whose sibling
+arms name a growable union" marked 182 of 198 and is useless, because it counts
+typed arms. **Classification is reading, not grepping.** The next slice is named
+there: arms whose fallback produces OUTPUT (a placeholder string, a default
+keyword) rather than emptiness, since those fail as wrong answers rather than
+missing ones.
+
+**NEXT, and both need YOU before code:** `[2.4]` Streamlet → Processor carries a
 public-API decision — does `AnalysisResult.streamlets` mean "the Streamlet
 definitions" or "the port-bearing processors"? Adding a second accessor is the
 additive option the compatibility policy prefers. `[2.1]` (Figma) is planned and
-also awaits a ruling: its first question is whether it belongs in this repo at
-all, since A42 says part (iii) is riddlg's work.
+awaits a different ruling: whether it belongs in this repo at all, since A42
+assigns part (iii) to riddlg.
 
 **Traps — every one bit someone here.**
 
