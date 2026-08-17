@@ -770,117 +770,26 @@ that needs a ruling before either can be fixed.
   and `RiddlFileEmitter`/`PrettifyVisitor`'s uses are NOT in this list: those
   are legitimately about the case class (visitor hooks, keyword emission).
 
-- **[2.5]** **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10,
-  syntax his. **PLANNED 2026-08-16; two narrow confirmations needed before code.**
-  Filed out of the `foreach`-over-a-mapping question: the destructuring form
-  covers the loop body, but **outside a loop a mapping is write-only** — a model
-  can declare one and never read it. The same holds inside a loop for any key
-  other than the one being iterated.
-
-  **Verified absent, not assumed.** The `Value` union (`AST.scala:2933`) is
-  `LiteralString | PromptValue | Constructor | ValueRef | GetValue |
-  BooleanExpression | Call | Ask` — nothing indexes. `GetValue` is `get from
-  <inlet|state>`, a read of a port or state, not a subscript. `index on <field>`
-  (`ebnf-grammar.ebnf:439`) is schema metadata.
-
-  **The hard question ANSWERS ITSELF from precedent, which is the main finding.**
-  What does `at` yield when the key is absent? The entry listed three unpalatable
-  options (an `Optional` RIDDL cannot interrogate, an untrue Error, a default
-  nobody declared) — but **`GetValue` already is exactly this shape**: a VALUE
-  that yields its result on success, can fail, and is counted as one A12 fail
-  point (`countValueFailPoints`, `ValidationPass:5250`). `get from state` can fail
-  because the state may not be loaded; `at` can fail because the key may be
-  absent. Same category, same machinery, **no new failure vocabulary and no
-  ruling required** — `canFail = true` and A12 carries it.
-
-  **The rest follows:**
-  - **Applies to `Mapping` (by key) and `Sequence` (by ordinal).** `Set` and
-    `Graph` have no index and must be rejected — this is not "any collection".
-  - **Result type:** a `Mapping`'s `to`, a `Sequence`'s `of`.
-    `collectionElementType` (ValidationPass) already computes the latter.
-  - **Reads fine in a `when` guard**, its most likely home:
-    `when inventory at "sku" > 0`.
-
-  **The two confirmations wanted, both narrow:**
-  1. **`Table`?** It carries `dimensions: Seq[Long]` (`AST.scala:2138`), so it is
-     multi-dimensional and `at` would need one index per dimension —
-     `grid at 2, 3`. Include it, or leave `Table` out of v1 and add it once the
-     single-index form has settled? *Recommendation: leave it out; the syntax for
-     N indices is a separate decision and Mapping is the motivating case.*
-  2. **Index type checking.** A `Mapping`'s key type is declared (`from`), so
-     `at` can check the index against it; a `Sequence` index must be a whole
-     number. Enforce both, or accept any value in v1? *Recommendation: enforce —
-     the types are right there, and an unchecked index is a silent wrong answer.*
-
-  **ATTEMPTED 2026-08-17 and REVERTED at the grammar. The design is settled and
-  the non-parser work is straightforward; the parser integration is the whole
-  problem, and it is characterized here so the next attempt does not rediscover
-  it.**
-
-  **Reid's rulings (2026-08-17):** `Table` IS in scope, one index per dimension,
-  comma-separated (`grid at 2, 3`); indices MUST be type-checked.
-
-  **What worked, and was thrown away only because it is useless without a
-  parser:** `LookupValue(loc, collection: ValueRef, indices: Seq[Value])` added to
-  `Value` AND `Comparand`; arms in `resolveValue`, `validateValue`,
-  `valueType`, `valueTypeExpr`, `resolveComparand` and the two comparand
-  helpers; `countValueFailPoints`/`stateReadsIn`/`initiatesIn`/`asksIn` recursing
-  into collection + indices; `lookupResultType`/`lookupIndexType` helpers
-  (a `Mapping`'s `to` and `from`, a `Sequence`/`Table`'s `of` and `Whole`,
-  arity = `dimensions.size` for a Table); and `validateLookup` checking
-  indexability, index COUNT against arity, and index type. **`-Werror` found only
-  3 of those sites** — the rest are behind catch-alls, exactly as CLAUDE.md warns.
-
-  **⚠ THE GRAMMAR HAZARD, which is the real content of this entry.** A lookup must
-  be reachable from TWO places: `comparand` (so `when inv at "sku" > 0` parses as
-  a comparison) and `booleanAtom` (so a bare `let n = inv at "sku"` parses at all).
-  **Every arrangement tried satisfies one and breaks the other**, verified by
-  removing one arm at a time:
-  - lookup in `comparand` only → the comparison works; the bare `let` fails with
-    *"Expected one of ("!=" | "," | "<" | … | "yield")"* at the END of a perfectly
-    good subscript.
-  - lookup in `booleanAtom` only → the bare `let` works; the comparison fails.
-  - lookup in BOTH → the bare `let` still fails.
-  - ONE rule that parses a ref and OPTIONALLY extends it with `at …`, used in both
-    places (so nothing chooses between two overlapping alternatives) → **still
-    fails the bare case.**
-  The failure context is always
-  `(anyDefStatements | morphStatement | becomeStatement | yieldStatement |
-  replyStatement)` at the token AFTER the subscript, i.e. the statement
-  alternation refusing to end. Removing the `~/` cut after `at` did not change it.
-  **So the cause is above `comparand`/`booleanAtom`, not inside the lookup rule** —
-  most likely `comparison`'s first alternative consuming input and a cut higher up
-  (in `letStatement`'s `~/ value ~/ Index ./`, or in the statement rep) preventing
-  the backtrack to `booleanAtom`.
-  **Next attempt should start by instrumenting the layered boolean parser** —
-  `booleanExpr → andExpr → notExpr → comparison → booleanAtom` — rather than by
-  adding arms. The likely real fix is to make `comparison` draw its operands from
-  the SAME atom rule instead of a parallel `comparand` rule, which would remove the
-  duplication that creates the hazard; that is a grammar refactor with its own
-  blast radius, and it should be planned as such.
-
-  **Cost, so the size is not a surprise.** A new `Value` arm touches **EIGHT**
-  sites, not five (CLAUDE.md counted them when `NumericLiteral` landed):
-  `ValidationPass`'s four walks, `validateValue`, `AST.NonDefinitionValues`,
-  `ValidationPass.valueType`, and `JsonifierPass`. Plus prettify, BAST and JSON
-  with a `FORMAT_REVISION` bump, EBNF+GBNF regeneration, and a corpus fixture so
-  the CI grammar validators cover the new syntax.
-
-- ~~**A keyword-named field reports the error several tokens upstream.**~~ —
-  **DONE 2026-08-16, `8746e6635`.** The message now names the offending word and
-  the escape: *"a field name, but 'entity' introduces a definition and cannot be
-  one unqualified; write it quoted as 'entity' to use it as a field name"*,
-  replacing *"Expected one of ("(" | "replies" | "yields")"* pointed several
-  tokens upstream.
-  **Three things worth keeping.** (1) The escape is REAL and single-quoted:
-  `'entity': Order` parses, `"entity": Order` does not — the latter is a
-  `LiteralString`. My first draft suggested double quotes, and testing the
-  suggestion is what caught it; **a suggestion that does not work is worse than
-  none.** (2) Scope is narrow — only DEFINITION-introducing keywords are filtered,
-  so `version:` and `copyright:` stay legal, as A53/A47 intended, and a test pins
-  it. (3) The new alternative needs a **cut** (`./`): without it the `Fail.opaque`
-  was discarded and the old upstream message still won, which is indistinguishable
-  from the arm not existing at all.
+- ~~**A lookup value: `<mapping|array> at <index>`.**~~ — **DONE 2026-08-17,
+  `9ec30c5b5` (parser) + `977813b58` (the rest).** Mapping by key, Sequence by
+  ordinal, Table by one ordinal per dimension; `Set`/`Graph` rejected; literal
+  indices type-checked against the collection's key type. CM §3.6 records it.
+  **The blocker was a parser CUT, not the syntax.** `Keywords.keyword` ends in
+  `./` (`Keywords.scala:39`), so matching the word `at` COMMITS the parser. A
+  lookup is reachable from both `comparand` (a comparison operand) and
+  `booleanAtom` (a bare value); with the cut, whichever route ran first poisoned
+  the other, because only the bare case has to backtrack out of `comparison`'s
+  first alternative. `when inv at "sku" > 0` worked while `let n = inv at "sku"`
+  failed, moving the rule between the two only traded one failure for the other,
+  and removing my own `~/` after `at` changed nothing — **the cut was never mine.**
+  Fixed with `NoCut` around the optional clause, plus ONE rule that parses a ref
+  and optionally extends it rather than two alternatives, since anything that
+  makes the parser CHOOSE must backtrack across that keyword.
+  **`-Werror` found 3 of the ~13 sites**; the rest were behind catch-alls. Two
+  guards caught real omissions: BASTWriter's total dispatch threw the moment a
+  lookup reached it, and the JSON vocabulary guard caught `collection` missing
+  from `knownKeys` — without which the unknown-key warning would have fired on
+  every document containing a lookup.
 
 - **[2.6]** **BUILD: an imported definition must RESOLVE without an explicit
   flatten.** **RULED 2026-08-16 by Reid — "Yes, it should."** Was a question; it
