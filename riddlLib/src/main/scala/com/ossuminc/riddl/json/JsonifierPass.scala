@@ -611,9 +611,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           )
         )
       case a: Adaptor =>
+        // [2.3] catch-all audit: `case _ => "outbound"` was a WRONG ANSWER waiting for a third
+        // direction, in the surface whose whole contract is exact AST recovery. Enumerated so a
+        // new `AdaptorDirection` is a compile error here (-Werror) rather than every instance of
+        // it silently round-tripping as outbound -- which reverses producer and consumer.
         val dir = a.direction match
-          case _: InboundAdaptor => "inbound"
-          case _                 => "outbound"
+          case _: InboundAdaptor  => "inbound"
+          case _: OutboundAdaptor => "outbound"
         Some(
           AdaptorDto(
             a.id.value,
@@ -1333,7 +1337,11 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     */
   private def aggregateFlavour(a: AggregateTypeExpression): String = a match
     case aucte: AggregateUseCaseTypeExpression => aucte.usecase.useCase.toLowerCase
-    case _                                     => "aggregation"
+    // [2.3] catch-all audit: enumerated rather than defaulted. "aggregation" is the right answer
+    // for a bare `{…}` and the WRONG one for any third kind of aggregate, which would round-trip
+    // as `type X is {…}` and lose its keyword silently. `AggregateTypeExpression` is sealed, so
+    // this arm keeps the compiler on the hook for the next one.
+    case _: Aggregation => "aggregation"
 
   /** `Statements` is `Statement | Comment`, so a comment between two statements is part of the list
     * and is serialized in place rather than dropped.

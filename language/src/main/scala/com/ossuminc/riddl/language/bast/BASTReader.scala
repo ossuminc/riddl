@@ -791,7 +791,14 @@ class BASTReader(
     val direction: AdaptorDirection = directionTag match {
       case ADAPTOR_INBOUND  => InboundAdaptor(loc)
       case ADAPTOR_OUTBOUND => OutboundAdaptor(loc)
-      case _                => InboundAdaptor(loc) // Default
+      // [2.3] catch-all audit: this defaulted to `InboundAdaptor`, which is the worst available
+      // answer -- direction decides which side of the bridge PRODUCES and which CONSUMES
+      // (`MessageFlowPass.processAdaptor`), so a byte the writer never emits was silently read back
+      // as an adaptor pointing the other way. A misaligned stream is the likely cause, and this is
+      // where it must stop, not where it should be smoothed over. Same policy as the rest of this
+      // reader, which throws rather than fabricate a node.
+      case other =>
+        throw new RuntimeException(s"Invalid adaptor direction tag: $other")
     }
     val referent = readContextRef()
     val ascribedShape = readAscribedShape()
