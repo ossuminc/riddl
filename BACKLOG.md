@@ -805,6 +805,53 @@ that needs a ruling before either can be fixed.
      number. Enforce both, or accept any value in v1? *Recommendation: enforce —
      the types are right there, and an unchecked index is a silent wrong answer.*
 
+  **ATTEMPTED 2026-08-17 and REVERTED at the grammar. The design is settled and
+  the non-parser work is straightforward; the parser integration is the whole
+  problem, and it is characterized here so the next attempt does not rediscover
+  it.**
+
+  **Reid's rulings (2026-08-17):** `Table` IS in scope, one index per dimension,
+  comma-separated (`grid at 2, 3`); indices MUST be type-checked.
+
+  **What worked, and was thrown away only because it is useless without a
+  parser:** `LookupValue(loc, collection: ValueRef, indices: Seq[Value])` added to
+  `Value` AND `Comparand`; arms in `resolveValue`, `validateValue`,
+  `valueType`, `valueTypeExpr`, `resolveComparand` and the two comparand
+  helpers; `countValueFailPoints`/`stateReadsIn`/`initiatesIn`/`asksIn` recursing
+  into collection + indices; `lookupResultType`/`lookupIndexType` helpers
+  (a `Mapping`'s `to` and `from`, a `Sequence`/`Table`'s `of` and `Whole`,
+  arity = `dimensions.size` for a Table); and `validateLookup` checking
+  indexability, index COUNT against arity, and index type. **`-Werror` found only
+  3 of those sites** — the rest are behind catch-alls, exactly as CLAUDE.md warns.
+
+  **⚠ THE GRAMMAR HAZARD, which is the real content of this entry.** A lookup must
+  be reachable from TWO places: `comparand` (so `when inv at "sku" > 0` parses as
+  a comparison) and `booleanAtom` (so a bare `let n = inv at "sku"` parses at all).
+  **Every arrangement tried satisfies one and breaks the other**, verified by
+  removing one arm at a time:
+  - lookup in `comparand` only → the comparison works; the bare `let` fails with
+    *"Expected one of ("!=" | "," | "<" | … | "yield")"* at the END of a perfectly
+    good subscript.
+  - lookup in `booleanAtom` only → the bare `let` works; the comparison fails.
+  - lookup in BOTH → the bare `let` still fails.
+  - ONE rule that parses a ref and OPTIONALLY extends it with `at …`, used in both
+    places (so nothing chooses between two overlapping alternatives) → **still
+    fails the bare case.**
+  The failure context is always
+  `(anyDefStatements | morphStatement | becomeStatement | yieldStatement |
+  replyStatement)` at the token AFTER the subscript, i.e. the statement
+  alternation refusing to end. Removing the `~/` cut after `at` did not change it.
+  **So the cause is above `comparand`/`booleanAtom`, not inside the lookup rule** —
+  most likely `comparison`'s first alternative consuming input and a cut higher up
+  (in `letStatement`'s `~/ value ~/ Index ./`, or in the statement rep) preventing
+  the backtrack to `booleanAtom`.
+  **Next attempt should start by instrumenting the layered boolean parser** —
+  `booleanExpr → andExpr → notExpr → comparison → booleanAtom` — rather than by
+  adding arms. The likely real fix is to make `comparison` draw its operands from
+  the SAME atom rule instead of a parallel `comparand` rule, which would remove the
+  duplication that creates the hazard; that is a grammar refactor with its own
+  blast radius, and it should be planned as such.
+
   **Cost, so the size is not a surprise.** A new `Value` arm touches **EIGHT**
   sites, not five (CLAUDE.md counted them when `NumericLiteral` landed):
   `ValidationPass`'s four walks, `validateValue`, `AST.NonDefinitionValues`,
