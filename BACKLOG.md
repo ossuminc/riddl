@@ -15,11 +15,18 @@ them as items are touched rather than in one sweep.
 Large items get their own plan (`~/.claude/plans/`) before implementation; the
 plan is discarded once built.
 
-**ITEM IDs.** Every open item carries a stable `[section.n]` identifier so it can
-be named in conversation without quoting its title. **IDs are positional and are
-reassigned when an item closes** — they are a handle for today, not a permanent
-key. Struck-through entries are kept for the diagnosis they record and are not
-numbered.
+**ITEM IDs — STABLE, never reassigned (corrected 2026-08-17).** Every open item
+carries a `[section.n]` identifier so it can be named in conversation without
+quoting its title.
+
+**An ID belongs to an item for life.** When an item closes its number RETIRES with
+it and is never reused, so gaps in the sequence are expected and correct.
+
+They were positional and renumbered on every close for one day, which was a
+mistake: it silently moved items under the person reading them, and it did — the
+lookup-value item was 2.5 in one message and read as 2.6 in the next, in a
+conversation where both of us were naming items by number. **A handle that changes
+is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 0. Just before 2.0.0 is released
 
