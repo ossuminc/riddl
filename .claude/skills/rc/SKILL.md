@@ -138,16 +138,29 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2469** | 7 |
-| JS | **753** | 5 |
-| Native | **1908** | 7 |
+| JVM | **2737** | 7 |
+| JS | **840** | 5 |
+| Native | **2456** | 7 |
 
-**The JVM row includes 17 cases that FAIL on purpose** as of 2026-08-14 —
-`RiddlModelsRoundTripTest` (16 of 189) and `Root2JsonCorpusTest`'s validation-
-parity case (173/189) — because `ccd278c00` taught the addressing check to
-resolve `Id` aliases and exposed 49 real defects in riddl-models. The minimum
-above is cases RUN, which is what guards against skipping; do not read a green
-JVM leg as achievable until that repo is fixed. See BACKLOG § 3.
+**Raised 2026-08-17 at 2.0.0-rc.15 (2737 / 840 / 2456).** This was a LARGE jump
+— +268 / +87 / +548 — and it does not reconcile against one session's work,
+because the floors were simply not raised by the sessions between 08-14 and
+08-17 (the `at` lookup, A20 typed holes, numeric literals, `!`/`not` synonymy,
+and rc.15's own four items all landed in between). **A floor that lags is a
+weaker gate than one that tracks**, since a skipping bug hides in the slack;
+raise it every time, even when nothing else about the run is interesting.
+
+**The JVM row includes 7 cases that FAIL on purpose** as of 2026-08-17, in FOUR
+suites — `RiddlModelsRoundTripTest` (3), `Root2JsonCorpusTest`'s validation-parity
+case (1), `ReportedIssuesTest` "should 406" (1), and riddlc's local-corpus cases
+against `riddl-examples` (2, dokn and shopify-cart). The Native row carries the
+same last two. This is DOWN from 17 on 2026-08-14 because riddl-models cleared
+the 49 `Id`-alias defects; `reactive-bbq` has since joined the corpus failures on
+context-isolation-seam errors, which is filed as BACKLOG `[4.5]`. The minimum
+above is cases RUN, which is what guards against skipping. **A/B every one of
+these against a stashed tree before a release** — that is the only way to tell a
+new failure from an inherited one, and it took four stash-and-rerun cycles to
+certify rc.15.
 
 **Consequence for the JVM leg: `tJVM` cannot be run as one `;` chain.** The
 chain aborts at `commands`, so `riddlLib` and `riddlc` never run and the leg
