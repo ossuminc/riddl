@@ -1087,7 +1087,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       // Find matching item at head of stack and return the candidates derived
       // from it for the next loop. If nothing is returned, the head of stack
       // didn't match the sought name.
-      findMatchingCandidate(soughtName, stack) match
+      findMatchingCandidate(soughtName, stack, pathId) match
         case None =>
           // None of the candidates match the name we're seeking, so this PathId doesn't match the
           // model. When the head is a field whose cardinality is what stopped the walk, say THAT:
@@ -1282,7 +1282,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
 
   private def findMatchingCandidate(
     soughtName: String,
-    defStack: DefinitionStack
+    defStack: DefinitionStack,
+    pathId: PathIdentifier
   ): Option[Definition] =
     require(defStack.nonEmpty, "No stack to consider in findCandidates")
     defStack.headOption match
@@ -1363,16 +1364,97 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             // cannot express — dissolves with the ruling, because the two wrappers should now be
             // treated alike.
             case vital: VitalDefinition[?] =>
-              vital.contents.definitions
+              localsThenImported(vital.contents.toSeq)
             case p: Branch[?] =>
-              p.contents.definitions
+              localsThenImported(p.contents.toSeq)
             case _ =>
               // No match so no candidates
               Seq.empty[Definition]
           end match
-        candidates.find(_.id.value == soughtName)
+        // [4.6], RULED 2026-08-17 by Reid (option C): a LOCAL declaration always wins over an
+        // imported one -- regardless of which was written first -- AND the ambiguity is warned,
+        // naming EVERY side of it. `candidates` is ordered locals-first by `localsThenImported`,
+        // so `.headOption` IS the precedence rule; there is no separate sorting step to keep in
+        // step with it.
+        //
+        // Position was the alternative and was rejected: it would make the same source mean
+        // different things before and after an upgrade that reordered an import.
+        val matches = candidates.filter(_.id.value == soughtName)
+        if matches.sizeIs > 1 then reportShadowedImport(soughtName, defStack.head, pathId, matches)
+        matches.headOption
     end match
   end findMatchingCandidate
+
+  /** Definitions reachable from `contents`, **LOCAL ONES FIRST**, then imported ones.
+    *
+    * [4.6]. An `Include` is semantically transparent -- it is file organization, and its contents
+    * ARE the container's -- so an included definition counts as LOCAL. A `BASTImport` brings in
+    * definitions from another module, and those yield to a local declaration of the same name.
+    *
+    * This is the "includes but not imports" distinction the backlog recorded as inexpressible via
+    * `filterThroughWrappers`, which is true: it cannot express it, so this walks the wrappers
+    * itself and keeps the two apart by construction rather than by a later filter.
+    */
+  private def localsThenImported(contents: Seq[RiddlValue]): Definitions =
+    val locals = mutable.ListBuffer.empty[Definition]
+    val imported = mutable.ListBuffer.empty[Definition]
+    def walk(values: Seq[RiddlValue], viaImport: Boolean): Unit =
+      values.foreach {
+        case inc: Include[?]   => walk(inc.contents.toSeq, viaImport)
+        case bi: BASTImport    => walk(bi.contents.toSeq, viaImport = true)
+        case definition: Definition =>
+          if viaImport then imported += definition else locals += definition
+        case _ => ()
+      }
+    walk(contents, viaImport = false)
+    (locals ++ imported).toSeq
+  end localsThenImported
+
+  /** [4.6]: warn that a name resolves to more than one definition because an import collides with
+    * something else, naming EVERY side.
+    *
+    * Reid's ruling is explicit that the warning must name all sides and that **there may be more
+    * than two** -- several imports can each carry the name -- so this lists the whole set with
+    * locations, in the precedence order actually used, mirroring `ambiguous`'s existing format.
+    *
+    * Silent when every match is LOCAL: two local definitions sharing a name in one scope is
+    * `checkUniqueContent`'s report to make (per-scope duplicate-content-name, in validation), and
+    * saying it twice in two different vocabularies helps nobody. This warning exists for the case
+    * that check cannot see, where the collision spans a module boundary.
+    */
+  private def reportShadowedImport(
+    soughtName: String,
+    container: Definition,
+    pathId: PathIdentifier,
+    matches: Seq[Definition]
+  ): Unit =
+    val importedHere: Seq[Definition] =
+      container match
+        case b: Branch[?] =>
+          val locals = mutable.ListBuffer.empty[Definition]
+          val imported = mutable.ListBuffer.empty[Definition]
+          def walk(values: Seq[RiddlValue], viaImport: Boolean): Unit =
+            values.foreach {
+              case inc: Include[?] => walk(inc.contents.toSeq, viaImport)
+              case bi: BASTImport  => walk(bi.contents.toSeq, viaImport = true)
+              case d: Definition   => if viaImport then imported += d else locals += d
+              case _               => ()
+            }
+          walk(b.contents.toSeq, viaImport = false)
+          imported.toSeq.filter(_.id.value == soughtName)
+        case _ => Seq.empty
+    if importedHere.nonEmpty then
+      val winner = matches.head
+      val sides = matches
+        .map(d => s"  ${d.identify} (${d.loc})" + (if d eq winner then "  <-- wins" else ""))
+        .mkString("\n")
+      messages.addWarning(
+        pathId.loc,
+        s"The name '$soughtName' in '${pathId.format}' is ambiguous in ${container.identify}: " +
+          s"${matches.size} definitions carry it, at least one of them imported. " +
+          s"The local declaration wins.\n" + sides
+      )
+  end reportShadowedImport
 
   private def resolveAMessageRef(ref: MessageRef, parents: Parents): Resolution[Type] =
     val loc: At = ref.loc

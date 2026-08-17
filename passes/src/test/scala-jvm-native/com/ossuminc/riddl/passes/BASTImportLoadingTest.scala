@@ -231,6 +231,66 @@ class BASTImportLoadingTest extends AnyWordSpec with Matchers {
       }
     }
 
+    /* [4.6], RULED 2026-08-17 by Reid (option C): a LOCAL declaration always wins over an imported
+     * one, REGARDLESS OF POSITION, and the ambiguity is warned with every side named.
+     *
+     * Position was the rejected alternative, so both orderings are tested: if precedence were
+     * positional, exactly one of these two cases would resolve to the import, and the pair would
+     * disagree. That they agree IS the ruling. */
+    def shadowing(importFirst: Boolean): String =
+      val importLine = "  import type Money from \"LIBPATH\""
+      val localLine = "  type Money is String"
+      val body = if importFirst then s"$importLine\n$localLine" else s"$localLine\n$importLine"
+      s"""domain App is {
+         |$body
+         |  context C is {
+         |    type Amount is App.Money
+         |  }
+         |}
+         |""".stripMargin
+
+    for (label, importFirst) <- Seq("import-before-local" -> true, "local-before-import" -> false)
+    do
+      s"let the LOCAL declaration win when the import comes $label" in {
+        withLibrary(s"shadow-$label") { lib =>
+          val root = parse(
+            shadowing(importFirst).replace("LIBPATH", lib.toAbsolutePath.toString),
+            s"shadow-$label"
+          )
+          val result = Pass.runThesePasses(PassInput(root), Pass.standardPasses)
+
+          // The LOCAL `type Money is String` wins in both orderings. The imported one is
+          // `Number`, so the resolved type distinguishes them without relying on identity.
+          val money = root.domains.head.types.filter(_.id.value == "Money")
+          money.size mustBe 2 // both are visible; one of them is imported
+          val resolved = result.refMap.definitionOf[Type]("App.Money")
+          withClue(s"messages:\n${result.messages.format}\n") {
+            resolved.map(_.typEx.getClass.getSimpleName) mustBe Some("String_")
+          }
+        }
+      }
+
+      s"warn about the ambiguity, naming EVERY side, when the import comes $label" in {
+        withLibrary(s"warn-$label") { lib =>
+          val root = parse(
+            shadowing(importFirst).replace("LIBPATH", lib.toAbsolutePath.toString),
+            s"warn-$label"
+          )
+          val msgs = Pass.runThesePasses(PassInput(root), Pass.standardPasses).messages
+          val ambiguity = msgs.filter(_.message.contains("is ambiguous in"))
+          withClue(s"messages were:\n${msgs.format}\n") {
+            ambiguity.size mustBe 1
+            // Reid: the warning must name ALL sides -- there may be more than two.
+            ambiguity.head.message must include("2 definitions carry it")
+            ambiguity.head.message must include("The local declaration wins")
+            // Both sides appear, and the winner is marked.
+            ambiguity.head.message.linesIterator.count(_.contains("Type 'Money'")) mustBe 2
+            ambiguity.head.message must include("<-- wins")
+          }
+        }
+      }
+    end for
+
     // `definitions` joined the include-transparent accessors on 2026-08-06 (synapify's task), so
     // it now answers the READING question above for imports as well, exactly like `types` does.
     // `directDefinitions` is the literal reading that ResolutionPass keeps -- which is what lets
