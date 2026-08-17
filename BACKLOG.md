@@ -196,8 +196,15 @@ each want an approved plan before implementation, per the standing rule.
   both checks are permanent tests rather than things verified once.
   Corpus: 0 unrecognized keys across 188 models.
 
-- **[1.1]** **STRATEGIC, raised by Reid 2026-08-16: should the JSON input surface exist at
-  all?** Not urgent — the warning above protects today's users either way — but it
+- ~~**[1.1]** **STRATEGIC: should the JSON input surface exist at all?**~~ — **RULED
+  2026-08-17 by Reid: option C — keep it for hosted models, point self-hosted
+  users at GBNF/XGrammar, and DOCUMENT the split.** Done in `61d028e4e`: the
+  rationale now sits at the top of `JsonModel`, where anyone extending 131 DTOs
+  will read it — the deciding fact, the price, and what JSON does not buy. **The
+  documentation WAS the deliverable**: the surface was drifting without a stated
+  justification, which is what made the question live. Original analysis kept
+  below.
+  Not urgent — the warning above protects today's users either way — but it
   outlives that fix and should be decided rather than drift.
   **The argument for retiring it.** JSON guarantees SHAPE only. Our own path runs
   the identical validation passes afterwards, so "correct-by-construction" covers
@@ -590,8 +597,25 @@ on a grammar-only grep and was wrong, because the REST client lives in `utils`.
 A seventh entry closes the section: a contradiction between the two documents
 that needs a ruling before either can be fixed.
 
-- **[2.1]** **A42 (iii) — Figma bidirectional scaffolding.** **PLANNED 2026-08-16;
-  needs a scoping ruling before any code.** Parts (i) and (ii) shipped: the
+- ~~**[2.1]** **A42 (iii) — Figma bidirectional scaffolding.**~~ — **RULED 2026-08-17
+  by Reid, and the ruling is NEITHER option I offered.** Scaffolding is DROPPED
+  entirely: *"Just allow the Figma metadata URL on RIDDL UI elements and don't
+  worry about the mapping or framing or correctness. It is only to keep an
+  association. Allow it in an application intended context too so an entire
+  application design can be referenced at that level."*
+  **NO CODE WAS NEEDED — the ruling was already implemented.**
+  `DefinitionValidation.mayCarryFigmaRef` already admits exactly `Input`, `Output`,
+  `Group` and a `Context` whose intention is `Application`, and `FigmaRefTest`
+  already pins both halves ("be accepted on input, output, group and an
+  application-intended context" / "be rejected on a context that is not
+  application-intended"). Verified rather than assumed.
+  **Drift validation (part ii) is KEPT.** It is opt-in behind
+  `--check-figma-drift`, off by default, so it does not contradict "only to keep an
+  association" — the association is what you get by default and verification is
+  there for whoever wants it. Removing shipped, working, opt-in functionality would
+  have been over-reading the ruling; say so if it was meant.
+  The (a)/(b) analysis below is retained ONLY because it records a platform fact
+  worth not rediscovering: **Figma's REST API cannot create frames.** Superseded: Parts (i) and (ii) shipped: the
   `shown by figma "fileKey" node "1:23"` reference form with placement enforced by
   `mayCarryFigmaRef`, and drift validation through `FigmaClient`, four-valued and
   off by default behind `--check-figma-drift`.
@@ -661,7 +685,14 @@ that needs a ruling before either can be fixed.
   bare `Seq[InteractionDto]` with no wrapper to carry it, so closing it is a
   schema change, not a wiring fix. Filed as **[1.5]** below.
 
-- **[1.5]** **JSON drops metadata on a NESTED interaction step.** A step inside a
+- ~~**[1.5]** **JSON drops metadata on a NESTED interaction step.**~~ — **DONE
+  2026-08-17, `61d028e4e`**, unblocked by [1.1]'s ruling. Composites now hold
+  `InteractionContentDto`, but **the JSON stays FLAT** — a nested step keeps its
+  own object with `brief`/`metadata` as optional keys beside `kind`, rather than
+  gaining a `{"interaction": {…}}` wrapper. So the schema gains keys, not a
+  nesting level, and an old-shape reader is unaffected. The fixture that measured
+  it is back in permanently and `Root2JsonFixturesTest` reports lossy=0.
+  Original analysis: A step inside a
   `sequential`/`parallel`/`optional` composite is serialized as a bare
   `InteractionDto`, with no `InteractionContentDto` wrapper to carry `brief`/
   `metadata` — so `sequence { step … with { briefly "x" } }` loses the brief on
@@ -1158,7 +1189,18 @@ that needs a ruling before either can be fixed.
   `github.com/ossuminc/riddl` and `opensource.org/license/apache-2-0`, neither of
   which is an ossum.tech URL.
 
-### 4. RULED by Reid 2026-08-17 — now compliance work
+### 4. RULED by Reid 2026-08-17 — **ALL COMPLIANCE WORK COMPLETE**
+
+**Every ruling is implemented, tested and committed** (`5919d0234` [4.4],
+`2dc789ec4` [4.1], `0e8441aca` [4.6], `b1b78c389` [4.2], `61d028e4e` [1.1]+[1.5]).
+`[2.1]` needed no code — see below. `[4.5]` went moot on its own.
+
+**The corpus gate is now MET: validation-parity 190/190**, after riddl-models
+shipped `99fc29d1` the same day. Three of the four long-standing known-red suites
+are green; the fourth is riddl-examples, another repo, and a task has been dropped
+there.
+
+
 
 All eight questions were answered in one pass. **Three confirmed what was built
 (`[4.3]`), and five changed it** — so this section is now a work list, not a
@@ -1175,7 +1217,7 @@ what it costs. Struck items are complete.
 | `[4.2]` | **A, but far broader** — `typeDeps` is a TYPE-DEPENDENCY graph, not a message one |
 | `[4.3]` | **A** — keep as built. No work. |
 | `[4.4]` | **B** — count the shape spec for any processor that can ascribe one |
-| `[4.5]` | **C** — investigate enough to route it; may be moot once rc.15 reaches riddl-models |
+| `[4.5]` | **C** — investigate enough to route it; may be moot once rc.15 reaches riddl-models. **MOOT, exactly as predicted: riddl-models shipped `99fc29d1` the same day and the corpus is 190/190.** |
 | `[4.6]` | **C** — local always wins, AND warn, and **the warning must name ALL sides** (there may be more than two) |
 
 - **[4.1]** **`AnalysisResult.streamlets` / `DataFlowDiagramData.streamlets` keep
@@ -1223,8 +1265,15 @@ what it costs. Struck items are complete.
   ones. I believe the current behaviour is right and did not change it.
   Sites: `StatsPass.scala:354` and `:439`.
 
-- **[4.5]** **`reactive-bbq` now fails the corpus validation-parity gate and I do
-  not know whose defect it is.** Re-measured 2026-08-17: 187/190, not the 188
+- ~~**[4.5]** **`reactive-bbq` now fails the corpus validation-parity gate.**~~ —
+  **MOOT 2026-08-17, exactly as Reid predicted when ruling C.** riddl-models
+  shipped `99fc29d1` (*"Upgrade to riddl 2.0.0-rc.15; the corpus validates 188/188
+  with zero errors"*) and validation-parity went **187/190 → 190/190**. Neither
+  investigation nor routing was needed; the answer was "theirs, and already fixed".
+  **The lesson is about sequencing, not about the defect**: this was filed as a
+  question at 15:00 and answered by another repo's commit before anyone looked at
+  it. When a corpus number moves and the corpus is a live checkout, WAIT one beat
+  before spending effort attributing it. Original analysis: Re-measured 2026-08-17: 187/190, not the 188
   recorded in [3.4]. The two new errors are context-isolation-seam errors
   (*"receiveDrinkOrder is not declared in a domain ancestral to both"*), a
   different class from the bare-message-operand errors the other two models
