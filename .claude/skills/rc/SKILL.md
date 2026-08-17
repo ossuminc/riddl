@@ -150,17 +150,23 @@ and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
 
-**The JVM row includes 7 cases that FAIL on purpose** as of 2026-08-17, in FOUR
-suites — `RiddlModelsRoundTripTest` (3), `Root2JsonCorpusTest`'s validation-parity
-case (1), `ReportedIssuesTest` "should 406" (1), and riddlc's local-corpus cases
-against `riddl-examples` (2, dokn and shopify-cart). The Native row carries the
-same last two. This is DOWN from 17 on 2026-08-14 because riddl-models cleared
-the 49 `Id`-alias defects; `reactive-bbq` has since joined the corpus failures on
-context-isolation-seam errors, which is filed as BACKLOG `[4.5]`. The minimum
-above is cases RUN, which is what guards against skipping. **A/B every one of
-these against a stashed tree before a release** — that is the only way to tell a
-new failure from an inherited one, and it took four stash-and-rerun cycles to
-certify rc.15.
+**The deliberate-failure count is now TWO, down from 17 on 08-14 and 7 earlier on
+08-17.** The riddl-models corpus gate is **MET**: `Root2JsonCorpusTest`
+validation-parity reads **190/190** and `RiddlModelsRoundTripTest` is green, after
+riddl-models shipped `99fc29d1` on 2026-08-17. `ReportedIssuesTest` "should 406"
+is green too — that fixture was OURS and was migrated to 2.0's `morph` operand
+(`70cf5c648`).
+
+**The two that remain belong to `../riddl-examples`**, not to this repo:
+`RunRiddlcOnLocalTest`'s `dokn` and `shopify-cart` cases, both exiting 7 because
+that corpus has not made the 2.0 syntax migration riddl-models completed. A task
+is filed in `riddl-examples/task/2026-08-17-migrate-to-2.0-syntax.md`. **When it
+lands, this repo's suite is fully green and this paragraph should say ZERO.**
+
+The minimum above is cases RUN, which is what guards against skipping. **A/B any
+remaining failure against a stashed tree before a release** — it is the only way
+to tell a new failure from an inherited one, and certifying rc.15 took four
+stash-and-rerun cycles to establish that all seven were inherited.
 
 **Consequence for the JVM leg: `tJVM` cannot be run as one `;` chain.** The
 chain aborts at `commands`, so `riddlLib` and `riddlc` never run and the leg
