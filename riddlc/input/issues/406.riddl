@@ -10,14 +10,19 @@ domain Example is {
 	    state FooExample of record FooExampleState
       handler HandleFoo1 is {
         on command ToBar {
-          morph entity FooEntity to state BarExample with record BarExampleState
+          // 2.0: `morph ... with` takes a VALUE saying where the new state's fields come from,
+          // not the bare record TYPE name -- the same migration riddl-models made. The issue this
+          // fixture reproduces (morphing to a state declared later in the entity) is unchanged.
+          let newBar: BarExampleState = prompt("the bar state this command morphs to")
+          morph entity FooEntity to state BarExample with newBar
         }
       }
       record BarExampleState is { bar: String }
 	    state BarExample of record BarExampleState
       handler HandleFoo2 is {
         on command ToFoo {
-          morph entity FooEntity to state FooExample with record FooExampleState
+          let newFoo: FooExampleState = prompt("the foo state this command morphs to")
+          morph entity FooEntity to state FooExample with newFoo
         }
       }
     }
