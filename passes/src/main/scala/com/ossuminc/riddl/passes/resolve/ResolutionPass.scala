@@ -1345,14 +1345,27 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                   .collect { case agg: Aggregation => agg.contents.filter[Field] }
                   .getOrElse(Seq.empty) ++
                 function.contents.directDefinitions
+            // [2.6], RULED 2026-08-16 by Reid ("Yes, it should"): a `.bast`-imported definition
+            // must RESOLVE without an explicit flatten. It already READ — the content accessors
+            // have been import- and include-transparent since 2026-08-06 — so a model could SEE an
+            // imported type and not NAME it, and the failure was the generic "Path 'App.Money' was
+            // not resolved", which says nothing about imports at all.
+            //
+            // These two arms were the whole seam. A `BASTImport` is a Container but NOT a
+            // Definition, so it fell through the flatMap's `case _ => Seq.empty` and was excluded
+            // by `directDefinitions` — twice, silently, in exactly the shape BACKLOG [2.3] names
+            // as its next slice: an empty answer in a RESOLUTION position, read downstream as "no
+            // such thing".
+            //
+            // `definitions` is the transparent accessor and descends BOTH wrappers, which is now
+            // what is wanted; `directDefinitions` is the literal one. The asymmetry the backlog
+            // recorded as the obstacle — "includes but not imports", which `filterThroughWrappers`
+            // cannot express — dissolves with the ruling, because the two wrappers should now be
+            // treated alike.
             case vital: VitalDefinition[?] =>
-              vital.contents.toSeq.flatMap {
-                case include: Include[RiddlValue] @unchecked => include.contents.directDefinitions
-                case value: Definition                       => Seq(value)
-                case _                                       => Seq.empty[Definition]
-              }
+              vital.contents.definitions
             case p: Branch[?] =>
-              p.contents.directDefinitions
+              p.contents.definitions
             case _ =>
               // No match so no candidates
               Seq.empty[Definition]

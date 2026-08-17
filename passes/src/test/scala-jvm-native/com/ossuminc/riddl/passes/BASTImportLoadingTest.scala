@@ -203,15 +203,20 @@ class BASTImportLoadingTest extends AnyWordSpec with Matchers {
         // bookkeeping, not the client's. (This assertion used to be `mustNot contain`.)
         root.domains.head.types.map(_.id.value) must contain("Money")
 
-        // RESOLVING: a reference to it still does NOT resolve before flatten. Loading fills
-        // wrappers; a self-contained model requires an explicit flatten. That contract is
-        // unchanged -- the symbol table is built by traversal, not by these accessors.
-        Pass
+        // RESOLVING: a reference to it now resolves too, WITHOUT an explicit flatten.
+        //
+        // [2.6], RULED 2026-08-16 by Reid ("Yes, it should"). This assertion was the exact
+        // opposite until 2026-08-17 -- it required an error mentioning `App.Money` -- and the
+        // split it pinned was the defect: a model could SEE an imported type (the accessor
+        // assertion above) and not NAME it, failing with the generic "Path 'App.Money' was not
+        // resolved", which says nothing about imports.
+        val preFlatten = Pass
           .runThesePasses(PassInput(root), Pass.standardPasses)
           .messages
           .filter(_.kind.isError)
-          .map(_.message)
-          .mkString must include("App.Money")
+        withClue(s"pre-flatten errors:\n${preFlatten.map(_.message).mkString("\n")}\n") {
+          preFlatten mustBe empty
+        }
 
         Pass.runThesePasses(PassInput(root), Seq(FlattenPass.creator(PassOptions.empty)))
 
