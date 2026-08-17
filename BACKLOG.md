@@ -763,33 +763,54 @@ that needs a ruling before either can be fixed.
   and `RiddlFileEmitter`/`PrettifyVisitor`'s uses are NOT in this list: those
   are legitimately about the case class (visitor hooks, keyword emission).
 
-- **[2.5]** **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10, syntax his
-  suggestion. Wants a plan. Filed out of the `foreach`-over-a-mapping question:
-  the destructuring form below covers the loop body, but **outside a loop a
-  mapping is currently write-only** — there is no way to name the value stored
-  at a key, so a model can declare a mapping and never read it. The same holds
-  inside a loop for any key other than the one being iterated.
+- **[2.5]** **A lookup value: `<mapping|array> at <index>`.** Reid, 2026-08-10,
+  syntax his. **PLANNED 2026-08-16; two narrow confirmations needed before code.**
+  Filed out of the `foreach`-over-a-mapping question: the destructuring form
+  covers the loop body, but **outside a loop a mapping is write-only** — a model
+  can declare one and never read it. The same holds inside a loop for any key
+  other than the one being iterated.
 
-  **Verified absent, not assumed.** The `Value` union is `LiteralString |
-  PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
-  Ask` (AST.scala:2933) — nothing indexes. `GetValue` (AST.scala:3081) is `get
-  from <inlet|state>`, a read of a port or state, not a subscript. The grammar
-  has no subscript form either; `index on <field>` (ebnf-grammar.ebnf:439) is
-  schema metadata.
+  **Verified absent, not assumed.** The `Value` union (`AST.scala:2933`) is
+  `LiteralString | PromptValue | Constructor | ValueRef | GetValue |
+  BooleanExpression | Call | Ask` — nothing indexes. `GetValue` is `get from
+  <inlet|state>`, a read of a port or state, not a subscript. `index on <field>`
+  (`ebnf-grammar.ebnf:439`) is schema metadata.
 
-  **Design questions the plan must answer:**
-  - **What it yields when the key is absent** — the hard one. An Optional
-    result needs a way to interrogate it, which RIDDL has no syntax for; an
-    Error is untrue, since a missing key is ordinary; a total function needs a
-    default nobody declared. Most likely `canFail = true` and let the value's
-    existing failure machinery carry it, which is what `countValueFailPoints`
-    already does for `send`/`tell`/`call`/`yield`/`reply`/`put`/`get`.
-  - **What it applies to.** `Mapping` by key is the motivating case. A
-    `Sequence`/`Table` by ordinal is the "array" half of Reid's syntax, and
-    `Set`/`Graph` have no index at all, so this is not simply "any collection".
-  - **The result type** — `to` for a Mapping, the element type for a sequence.
+  **The hard question ANSWERS ITSELF from precedent, which is the main finding.**
+  What does `at` yield when the key is absent? The entry listed three unpalatable
+  options (an `Optional` RIDDL cannot interrogate, an untrue Error, a default
+  nobody declared) — but **`GetValue` already is exactly this shape**: a VALUE
+  that yields its result on success, can fail, and is counted as one A12 fail
+  point (`countValueFailPoints`, `ValidationPass:5250`). `get from state` can fail
+  because the state may not be loaded; `at` can fail because the key may be
+  absent. Same category, same machinery, **no new failure vocabulary and no
+  ruling required** — `canFail = true` and A12 carries it.
+
+  **The rest follows:**
+  - **Applies to `Mapping` (by key) and `Sequence` (by ordinal).** `Set` and
+    `Graph` have no index and must be rejected — this is not "any collection".
+  - **Result type:** a `Mapping`'s `to`, a `Sequence`'s `of`.
     `collectionElementType` (ValidationPass) already computes the latter.
-  - Whether `at` reads well in a `when` guard, its most likely home.
+  - **Reads fine in a `when` guard**, its most likely home:
+    `when inventory at "sku" > 0`.
+
+  **The two confirmations wanted, both narrow:**
+  1. **`Table`?** It carries `dimensions: Seq[Long]` (`AST.scala:2138`), so it is
+     multi-dimensional and `at` would need one index per dimension —
+     `grid at 2, 3`. Include it, or leave `Table` out of v1 and add it once the
+     single-index form has settled? *Recommendation: leave it out; the syntax for
+     N indices is a separate decision and Mapping is the motivating case.*
+  2. **Index type checking.** A `Mapping`'s key type is declared (`from`), so
+     `at` can check the index against it; a `Sequence` index must be a whole
+     number. Enforce both, or accept any value in v1? *Recommendation: enforce —
+     the types are right there, and an unchecked index is a silent wrong answer.*
+
+  **Cost, so the size is not a surprise.** A new `Value` arm touches **EIGHT**
+  sites, not five (CLAUDE.md counted them when `NumericLiteral` landed):
+  `ValidationPass`'s four walks, `validateValue`, `AST.NonDefinitionValues`,
+  `ValidationPass.valueType`, and `JsonifierPass`. Plus prettify, BAST and JSON
+  with a `FORMAT_REVISION` bump, EBNF+GBNF regeneration, and a corpus fixture so
+  the CI grammar validators cover the new syntax.
 
 - ~~**A keyword-named field reports the error several tokens upstream.**~~ —
   **DONE 2026-08-16, `8746e6635`.** The message now names the offending word and
