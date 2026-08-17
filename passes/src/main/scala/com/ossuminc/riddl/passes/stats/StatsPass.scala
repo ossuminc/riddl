@@ -328,6 +328,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
           + 1 // Handlers
           + 1 // Inlets
           + 1 // Outlets
+          + 1 // [4.4] shape -- every processor kind may ascribe one
         p match {
           case _: Adaptor =>
             specsForProcessor
@@ -351,9 +352,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             specsForProcessor
               + 1 // invariants
           case _: Repository => specsForProcessor
-          case _: Streamlet =>
-            specsForProcessor
-              + 1 // shape
+          case _: Streamlet  => specsForProcessor // [4.4]: shape now in specsForProcessor
         }
       case _: Domain =>
         specsForDefinition
@@ -407,6 +406,17 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
     if p.handlers.nonEmpty then result += 1
     if p.functions.nonEmpty then result += 1
     if p.constants.nonEmpty then result += 1
+    // [4.4], RULED 2026-08-17 by Reid (option B): a shape is a specification EVERY processor may
+    // complete, not only a Streamlet -- since the unified processor model, any of the six kinds
+    // may carry an `ascribedShape`. Counted here rather than per-kind below so the numerator and
+    // the denominator (`specsForProcessor`) move together; they were previously both
+    // Streamlet-only, at two sites that had to be kept in step by hand.
+    //
+    // A Streamlet still counts unconditionally. Its shape is REQUIRED and is known even when
+    // `ascribedShape` is None, because the keyword form (`source X is …`) states it and the
+    // arity derives it -- so testing `ascribedShape` alone would have SILENTLY DROPPED every
+    // keyword-declared streamlet's score from 1 to 0, which is a regression dressed as a ruling.
+    if p.ascribedShape.nonEmpty || p.isInstanceOf[Streamlet] then result += 1
     result
 
   private def completedCount(v: RiddlValue): Int = {
@@ -436,7 +446,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             countForProcessor
               + { if p.invariants.nonEmpty then 1 else 0 }
           case _: Repository => countForProcessor
-          case _: Streamlet  => countForProcessor + 1 // shape required
+          case _: Streamlet  => countForProcessor // [4.4]: shape now counted in processorCount
         }
       case d: Domain =>
         definitionCount(d)
