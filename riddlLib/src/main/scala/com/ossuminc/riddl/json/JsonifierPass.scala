@@ -1458,6 +1458,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ls: LiteralString => LiteralValueDto(ls.s)
     case pv: PromptValue   => PromptValueDto(pv.prompt.s, pv.typeEx.map(serializeTypeExpr))
     case vr: ValueRef      => ValueRefDto(path(vr.path))
+    case lv: LookupValue   => LookupValueDto(path(lv.collection.path), lv.indices.map(serializeValue))
     case gv: GetValue =>
       gv.source match
         case ir: InputRef => GetValueDto("input", Some(ir.keyword), path(ir.pathId))
@@ -1500,6 +1501,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   // serializeValue uses for a bare numeric literal -- so the comparand and general-value surfaces
   // agree on the wire shape.
   private def serializeComparand(c: Comparand): ValueDto = c match
+    case lv: LookupValue    => LookupValueDto(path(lv.collection.path), lv.indices.map(serializeValue))
     case vr: ValueRef       => ValueRefDto(path(vr.path))
     case cr: ConstantRef    => ConstantRefDto(path(cr.pathId))
     case nl: NumericLiteral => NumericLiteralDto(nl.text)

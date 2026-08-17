@@ -1509,6 +1509,8 @@ object JsonAstBuilder:
       case PromptValueDto(prompt, typeEx) =>
         PromptValue(curAt, LiteralString(curAt, prompt), typeEx.map(buildTypeExpr))
       case ValueRefDto(p)         => ValueRef(curAt, pathId(p))
+      case LookupValueDto(coll, indices) =>
+        LookupValue(curAt, ValueRef(curAt, pathId(coll)), indices.map(buildValue))
       case GetValueDto(source, keyword, ref) =>
         val src: InputRef | StateRef = source match
           case "input" => InputRef(curAt, keyword.getOrElse("input"), pathId(ref))
@@ -1549,6 +1551,8 @@ object JsonAstBuilder:
   // ValueRef.
   private def buildComparand(v: ValueDto)(using ctx: Ctx): Comparand =
     v match
+      case LookupValueDto(coll, indices) =>
+        LookupValue(curAt, ValueRef(curAt, pathId(coll)), indices.map(buildValue))
       case ValueRefDto(p)          => ValueRef(curAt, pathId(p))
       case ConstantRefDto(p)       => ConstantRef(curAt, pathId(p))
       case NumericLiteralDto(text) => NumericLiteral(curAt, text)

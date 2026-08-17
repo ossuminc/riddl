@@ -381,7 +381,14 @@ boolean_expression = and_expression {"or" and_expression} ;
 and_expression = not_expression {"and" not_expression} ;
 not_expression = ("not" | "!") not_expression | comparison ;
 comparison = comparand comparison_operator comparand | boolean_atom ;
-comparand = get_value | constant_ref | numeric_literal | value_ref ;
+comparand = get_value | constant_ref | numeric_literal | ref_or_lookup ;
+(* `<collection> at <index>[, <index>...]` -- a mapping by key, a sequence by ordinal, or a table  *)
+(* by one ordinal per dimension. Expressed as a value_ref with an OPTIONAL `at` clause rather than *)
+(* as a separate alternative alongside value_ref, mirroring the fastparse rule: anything that makes *)
+(* the parser CHOOSE between "ref" and "ref at index" must backtrack across the `at` keyword, and  *)
+(* in fastparse that keyword cuts.                                                                 *)
+ref_or_lookup = value_ref [ "at" lookup_index { "," lookup_index } ] ;
+lookup_index = literal_string | numeric_literal | get_value | value_ref ;
 comparison_operator = "==" | "!=" | "<=" | ">=" | "<" | ">" ;
 (* `invariant X [with <value>]` names an invariant in a condition. It MUST precede value_ref:
    without it, `invariant` is taken as an ordinary identifier and the parser then demands a
@@ -389,7 +396,7 @@ comparison_operator = "==" | "!=" | "<=" | ">=" | "<" | ">" ;
    via value_ref, and always has. `self_value` likewise MUST precede value_ref: `self` is not a
    definition keyword, so a bare `self` would otherwise be consumed as an ordinary path. *)
 boolean_atom = boolean_literal | "(" boolean_expression ")" | get_value | invariant_test
-             | self_value | value_ref ;
+             | self_value | ref_or_lookup ;
 invariant_test = "invariant" path_identifier ["with" value] ;
 boolean_literal = "true" | "false" ;
 (* `self` -- the currently executing processor instance -- and `self.<field>` on it. Its type is

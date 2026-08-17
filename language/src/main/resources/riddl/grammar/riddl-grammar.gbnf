@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-15 19:36 UTC
+# Generated: 2026-08-17 11:31 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -251,9 +251,13 @@ boolean-expression ::= and-expression ws ("or" and-expression)*
 and-expression ::= not-expression ws ("and" not-expression)*
 not-expression ::= ("not" | "!") ws not-expression | comparison
 comparison ::= comparand ws1 comparison-operator ws1 comparand | boolean-atom
-comparand ::= get-value | constant-ref | numeric-literal | value-ref
+comparand ::= get-value | constant-ref | numeric-literal | ref-or-lookup
+
+# in fastparse that keyword cuts.
+ref-or-lookup ::= value-ref ws ("at" lookup-index ("," lookup-index)*)?
+lookup-index ::= literal-string | numeric-literal | get-value | value-ref
 comparison-operator ::= "==" | "!=" | "<=" | ">=" | "<" | ">"
-boolean-atom ::= boolean-literal | "(" ws boolean-expression ws ")" | get-value | invariant-test | self-value | value-ref
+boolean-atom ::= boolean-literal | "(" ws boolean-expression ws ")" | get-value | invariant-test | self-value | ref-or-lookup
 invariant-test ::= "invariant" ws1 path-identifier ws ("with" value)?
 boolean-literal ::= "true" | "false"
 self-value ::= "self" ws ("." identifier)?

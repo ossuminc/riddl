@@ -1400,6 +1400,16 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(2)
         writeLocation(vr.loc)
         writePathIdentifierInline(vr.path)
+      // Tag 11 (2026-08-17). Payload: location, the collection's ValueRef inline, then a COUNT
+      // followed by that many values -- the count is what lets a Table's multi-index form round
+      // trip, and omitting it would misalign every byte after a lookup.
+      case lv: LookupValue =>
+        writer.writeU8(11)
+        writeLocation(lv.loc)
+        writeLocation(lv.collection.loc)
+        writePathIdentifierInline(lv.collection.path)
+        writer.writeVarInt(lv.indices.size)
+        lv.indices.foreach(writeValue)
       case gv: GetValue =>
         writer.writeU8(3)
         writeLocation(gv.loc)
@@ -1485,6 +1495,15 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     */
   def writeComparand(c: Comparand): Unit = {
     c match
+      // Comparand tag 4, mirroring value tag 11: a lookup is legal on either side of a
+      // comparison (`when inv at "sku" > 0`), which is the construct's most likely home.
+      case lv: LookupValue =>
+        writer.writeU8(4)
+        writeLocation(lv.loc)
+        writeLocation(lv.collection.loc)
+        writePathIdentifierInline(lv.collection.path)
+        writer.writeVarInt(lv.indices.size)
+        lv.indices.foreach(writeValue)
       case vr: ValueRef =>
         writer.writeU8(0)
         writeLocation(vr.loc)

@@ -1,0 +1,32 @@
+// Corpus fixture for `<collection> at <index>` (Reid, 2026-08-10; Table arity 2026-08-17).
+// Exercises every shape the CI grammar validators must accept: a mapping by key, a sequence by
+// ordinal, a table by one ordinal per dimension, a reference used as an index, and -- the case
+// that needs `NoCut` in the fastparse rule -- a lookup as a COMPARISON OPERAND as well as bare.
+domain LookupDomain is {
+  context LookupContext is {
+    type Inventory is mapping from String to Integer with { briefly "stock by sku" }
+    type Grid is table of Integer of [3,3] with { briefly "a 3x3 grid" }
+    type Names is sequence of String with { briefly "ordered names" }
+    command Check is { sku: String } with { briefly "check stock" }
+    record Store is {
+      inv: Inventory, grid: Grid, names: Names
+    } with { briefly "the store's state" }
+    entity Warehouse is {
+      state Stocked of record Store is {
+        handler Behavior is {
+          on command Check is {
+            let count = inv at "widget"
+            let cell = grid at 1, 2
+            let first = names at 0
+            let dynamic = inv at sku
+            when inv at "widget" > 0 then
+              do "fulfil the order"
+            else
+              do "backorder"
+            end
+          }
+        } with { briefly "handles a stock check" }
+      } with { briefly "stocked state" }
+    } with { briefly "the warehouse" }
+  } with { briefly "lookup context" }
+} with { briefly "lookup domain" }

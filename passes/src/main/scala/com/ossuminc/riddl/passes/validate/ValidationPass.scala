@@ -5549,6 +5549,98 @@ case class ValidationPass(
     * [[foreachBindings]], which reads `from` and `to` directly. Guessing `to` here would silently
     * mistype every key access.
     */
+  /** What `<collection> at <index>` YIELDS, paired with how many indices it takes.
+    *
+    * Separate from [[collectionElementType]] because the two answer opposite questions. That one is
+    * "what does ITERATING this produce", which is why it returns `None` for a `Mapping` (iterating
+    * a mapping yields pairs) and `Some` for a `Set`/`Graph`. Indexing reverses both: a `Mapping` is
+    * the motivating case, and a `Set`/`Graph` has no index at all.
+    *
+    * Arity is 1 for a `Mapping` (its key) and a `Sequence` (an ordinal), and one per dimension for
+    * a `Table` (Reid, 2026-08-17).
+    */
+  private def lookupResultType(te: TypeExpression): Option[(TypeExpression, Int)] =
+    te match
+      case m: Mapping  => Some(m.to -> 1)
+      case s: Sequence => Some(s.of -> 1)
+      case t: Table    => Some(t.of -> math.max(1, t.dimensions.size))
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => lookupResultType(t.typEx))
+      case _ => None // Set and Graph have no index; anything else is not a collection
+
+  /** The type an INDEX must have: a `Mapping`'s declared key type, or a whole number for the
+    * ordinal of a `Sequence`/`Table`.
+    */
+  private def lookupIndexType(te: TypeExpression): Option[TypeExpression] =
+    te match
+      case m: Mapping  => Some(m.from)
+      case s: Sequence => Some(Whole(s.loc))
+      case t: Table    => Some(Whole(t.loc))
+      case ate: AliasedTypeExpression =>
+        resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => lookupIndexType(t.typEx))
+      case _ => None
+
+  /** Validate `<collection> at <index>[, <index>…]` — indexable, right number of indices, right
+    * kind of index. Each check exists because its absence is a silent wrong answer rather than a
+    * loud one.
+    *
+    * STAYS SILENT when the collection's type is not determinable, the same conservative rule
+    * `checkTerminate` follows: reporting there would be reasoning from absence.
+    */
+  private def validateLookup(
+    lv: LookupValue,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    valueTypeExpr(lv.collection, parents, lets, elements).foreach { te =>
+      lookupResultType(te) match
+        case None =>
+          messages.addError(
+            lv.loc,
+            s"'at' requires a mapping, sequence or table, but ${lv.collection.format} is " +
+              s"'${te.format}'",
+            suggestion = "Index a mapping by its key, or a sequence/table by ordinal."
+          )
+        case Some((_, arity)) =>
+          if lv.indices.sizeIs != arity then
+            messages.addError(
+              lv.loc,
+              s"${lv.collection.format} takes $arity " +
+                s"${if arity == 1 then "index" else "indices"}, but ${lv.indices.size} given",
+              suggestion =
+                if arity == 1 then "Supply exactly one index."
+                else s"Supply one index per dimension, e.g. 'at ${List.fill(arity)("0").mkString(", ")}'."
+            )
+          else
+            lookupIndexType(te).foreach { expected =>
+              lv.indices.foreach { idx =>
+                // Only LITERAL indices are judged here -- their value is visible, and they are what
+                // a modeller most often gets wrong. A reference goes through the ordinary type
+                // machinery, which is the same split `checkNumericLiteralConformance` already makes.
+                (idx, expected) match
+                  case (nl: NumericLiteral, ite: IntegerTypeExpression) =>
+                    checkNumericLiteralConformance(nl, ite)
+                  case (_: NumericLiteral, _) =>
+                    messages.addError(
+                      idx.loc,
+                      s"index ${idx.format} is a number, but ${lv.collection.format} is keyed by " +
+                        s"'${expected.format}'",
+                      suggestion = s"Supply an index of type '${expected.format}'."
+                    )
+                  case (_: LiteralString, _: IntegerTypeExpression) =>
+                    messages.addError(
+                      idx.loc,
+                      s"index ${idx.format} is a string, but ${lv.collection.format} is indexed " +
+                        "by ordinal",
+                      suggestion = "Supply a whole number."
+                    )
+                  case _ => ()
+              }
+            }
+    }
+  end validateLookup
+
   private def collectionElementType(te: TypeExpression): Option[TypeExpression] =
     te match
       case s: Sequence           => Some(s.of)
@@ -6609,6 +6701,10 @@ case class ValidationPass(
       // `prompt(...)`. Note this reports the type the author WROTE; whether that ascription agrees
       // with the position's own expected type is `checkPromptAscription`'s separate question.
       case pv: PromptValue => pv.typeEx
+      // What indexing yields. Needed HERE rather than only in `valueType` because an element type
+      // is often written directly (`to Integer`) and so has no named Type to return.
+      case lv: LookupValue =>
+        valueTypeExpr(lv.collection, parents, lets, elements).flatMap(lookupResultType).map(_._1)
       case _               => valueType(v, parents, lets, elements).map(_.typEx)
 
   /** A54/A55: the named [[Type]] a [[ValueRef]] resolves to, if determinable. A bare on-clause
@@ -6677,6 +6773,7 @@ case class ValidationPass(
       case lv: LookupValue  =>
         validateValue(lv.collection, parents, lets, elements)
         lv.indices.foreach(i => validateValue(i, parents, lets, elements))
+        validateLookup(lv, parents, lets, elements)
       case _: PromptValue   => () // literal AI prompt, nothing to resolve
       case c: Constructor   => validateConstructor(c, parents, lets, elements)
       case call: Call       => validateCall(call, parents, lets, elements)

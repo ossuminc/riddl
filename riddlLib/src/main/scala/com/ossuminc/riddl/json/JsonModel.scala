@@ -839,6 +839,11 @@ object JsonModel:
   /** `{ "value": "valueRef", "path": "<path>" }` */
   case class ValueRefDto(path: String) extends ValueDto
 
+  /** `{ "value": "lookup", "collection": "<path>", "indices": [<value>] }` — `<collection> at
+    * <index>[, <index>…]`. `indices` is an ARRAY because a Table takes one ordinal per dimension.
+    */
+  case class LookupValueDto(collection: String, indices: Seq[ValueDto]) extends ValueDto
+
   /** `{ "value": "constantRef", "path": "<path>" }` — a `constant <path>` comparison operand (A28).
     */
   case class ConstantRefDto(path: String) extends ValueDto
@@ -1681,6 +1686,8 @@ object JsonModel:
       case "numeric"     => NumericLiteralDto(m("text").str)
       case "prompt"      => PromptValueDto(m("prompt").str, m.get("type").map(readTypeExpr))
       case "valueRef"    => ValueRefDto(m("path").str)
+      case "lookup" =>
+        LookupValueDto(m("collection").str, m("indices").arr.map(readValue).toSeq)
       case "constantRef" => ConstantRefDto(m("path").str)
       case "get"         => GetValueDto(m("source").str, m.get("keyword").map(_.str), m("ref").str)
       case "boolLiteral" => BooleanLiteralDto(m("bool").bool)
@@ -1733,6 +1740,12 @@ object JsonModel:
         // ALWAYS a JSON string, never ujson.Num -- a Double would turn 1.50 into 1.5. See the
         // DTO's doc comment.
         ujson.Obj("value" -> ujson.Str("numeric"), "text" -> ujson.Str(text))
+      case LookupValueDto(collection, indices) =>
+        ujson.Obj(
+          "value" -> ujson.Str("lookup"),
+          "collection" -> ujson.Str(collection),
+          "indices" -> ujson.Arr.from(indices.map(writeValue))
+        )
       case PromptValueDto(prompt, typeEx) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("value" -> ujson.Str("prompt"), "prompt" -> ujson.Str(prompt))
@@ -2525,8 +2538,8 @@ object JsonModel:
   val knownKeys: Set[String] = Set(
     "$at", "$kind", "adaptors", "aggregate", "alias", "arg", "args", "argument", "attachments",
     "authors", "basis", "benefit", "binding", "blobKind", "block", "body", "bool", "brief",
-    "by", "byAuthors", "capability", "cardinality", "cases", "commands", "comments",
-    "comparand", "condition", "conditionIdentifier", "connectors", "constants",
+    "by", "byAuthors", "capability", "cardinality", "cases", "collection", "commands",
+    "comments", "comparand", "condition", "conditionIdentifier", "connectors", "constants",
     "containedGroups", "contents", "context", "contexts", "copyright", "country", "data",
     "default", "definition", "description", "dimensions", "direction", "do", "doStatements",
     "domains", "element", "else", "elseStatements", "email", "entities", "entity",

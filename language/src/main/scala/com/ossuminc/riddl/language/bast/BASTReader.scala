@@ -2552,6 +2552,13 @@ class BASTReader(
         val what = readLiteralString()
         val typeEx = readOption(readTypeExpression()) // A20: optional `as <type>` ascription
         PromptValue(loc, what, typeEx)
+      case 11 => // LookupValue -- `<collection> at <index>[, <index>…]`
+        val loc = readLocation()
+        val collLoc = readLocation()
+        val collPath = readPathIdentifierInline()
+        val count = reader.readVarInt()
+        val indices = (0 until count).map(_ => readValue()).toSeq
+        LookupValue(loc, ValueRef(collLoc, collPath), indices)
       case 1 => // Constructor
         readConstructor()
       case 6 => // A24: Call
@@ -2641,6 +2648,13 @@ class BASTReader(
     */
   private def readComparand(): Comparand = {
     reader.readU8() match
+      case 4 => // LookupValue -- mirrors value tag 11
+        val loc = readLocation()
+        val collLoc = readLocation()
+        val collPath = readPathIdentifierInline()
+        val count = reader.readVarInt()
+        val indices = (0 until count).map(_ => readValue()).toSeq
+        LookupValue(loc, ValueRef(collLoc, collPath), indices)
       case 0 => // ValueRef
         val loc = readLocation()
         val pid = readPathIdentifierInline()

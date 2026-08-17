@@ -127,6 +127,10 @@ package object bast {
     // rest of the WhenStatement's subtree. No shipped `.bast` carries the placeholder byte (it was
     // only ever written by task 2's still-unreleased code), so this is folded into revision 18
     // rather than bumping to 19.
+    // 18 also carries the `at` lookup value (value tag 11, comparand tag 4, 2026-08-17). It RIDES
+    // 18 rather than bumping to 19 because 18 has not shipped -- the latest tag is 2.0.0-rc.14,
+    // which is revision 17 -- so no file in anyone's hands carries an 18 without it. Bump to 19
+    // for the next BAST change made AFTER 18 ships.
     18 // numeric literals + Constant carries a tagged value + URL carries scheme/authority + A20
     // typed holes + WhenStatement drops the legacy negated-flag byte
 
