@@ -100,10 +100,10 @@ chase them:**
 report is DONE and moved to `task/done/` with a Results section (which also
 corrects three claims the report itself made).
 
-**`2.0.0-rc.15` IS FULLY VERIFIED (2026-08-17).** GitHub's REST API was 503 for
-about two hours immediately after the release was created — `/user` included, so
-it was not scoped to packages — and the four skill-required checks were run once
-it recovered. All four pass:
+**`2.0.0-rc.15` IS FULLY VERIFIED (2026-08-17).** Every `gh api` call failed with
+a 503 for about two hours immediately after the release was created — `/user`
+included, so it was not scoped to packages — and the four skill-required checks
+were run once it recovered. All four pass:
 
 1. **All 11 Maven coordinates** published at `2.0.0-rc.15`, confirmed against the
    registry itself, `sbt-riddl_sbt2_3` included.
@@ -115,11 +115,20 @@ it recovered. All four pass:
 4. **`release.yml`**: jvm-build and both native builds succeeded, and
    **`notify-blog: skipped`** — the prerelease guard held, so no blog post.
 
-The lesson worth keeping is about the outage rather than the release: the tag,
-the prerelease and the publish all completed BEFORE the API failed, and every one
-of them uses the git protocol or an upload endpoint rather than the REST API. **A
-release can be complete and unverifiable at the same time**, so record which of
-the two you are looking at.
+**Whose outage it was is NOT settled, and the first write-up here asserted
+GitHub without qualification — corrected.** Reid reported a **Claude** incident
+13:56-15:29 UTC that day, which matches the window closely. The evidence is
+genuinely mixed: the response body was GitHub's own 503 text, but **`git push`
+succeeded throughout the same window while every `gh api` call failed**, and a
+GitHub-wide outage would normally take both down. Record the symptom (`gh api`
+503 while git worked) rather than a cause, and check both status pages before
+blaming either.
+
+The lesson worth keeping is about the release: the tag, the prerelease and the
+publish all completed BEFORE the failures began (published 13:39:29Z, failures
+from ~13:56), and every one of them uses the git protocol or an upload endpoint
+rather than the REST API. **A release can be complete and unverifiable at the
+same time**, so record which of the two you are looking at.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
 driver's call, not the handoff's.
