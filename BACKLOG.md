@@ -791,26 +791,23 @@ that needs a ruling before either can be fixed.
     `collectionElementType` (ValidationPass) already computes the latter.
   - Whether `at` reads well in a `when` guard, its most likely home.
 
-- **[2.6]** **A keyword-named field reports the error several tokens upstream.** From
-  riddl-generator 2026-08-03, filed here because it is a real diagnostic defect
-  even though they marked it "no action needed". A field in a message
-  aggregation named after a keyword — `command Store is { entity: Order }` —
-  reports `Expected one of ("(" | "yields")` pointing at the `is`, several
-  tokens BEFORE the offending `entity`. The rule (keywords are not field names)
-  is correct; the attribution is what costs time, and it is the same class of
-  cost as the saga-comment defect fixed in `867ab0333` — a message that does not
-  name the thing that is actually wrong. Wants a plan because good attribution
-  here likely means a cut/`~/` placement change in the aggregation rule, and
-  those interact with `rep` termination (see the statement-restriction pattern
-  note in memory). Low priority; a nuisance, not a blocker.
-- ~~**Move ResolutionPass off `ClassTag` for type differentiation.**~~ — **WON'T
-  FIX (Reid, 2026-08-16).** It was filed as a measured cleanup and never as a fix
-  for anything: the ClassTag-is-slow hypothesis was TESTED AND REFUTED in 2026-08
-  (the Scala.js resolution cost was source-file hashing). So it proposed churn in
-  the most delicate pass in the compiler for no measured benefit, which is a bad
-  trade at any time and a worse one before 2.0.
+- ~~**A keyword-named field reports the error several tokens upstream.**~~ —
+  **DONE 2026-08-16, `8746e6635`.** The message now names the offending word and
+  the escape: *"a field name, but 'entity' introduces a definition and cannot be
+  one unqualified; write it quoted as 'entity' to use it as a field name"*,
+  replacing *"Expected one of ("(" | "replies" | "yields")"* pointed several
+  tokens upstream.
+  **Three things worth keeping.** (1) The escape is REAL and single-quoted:
+  `'entity': Order` parses, `"entity": Order` does not — the latter is a
+  `LiteralString`. My first draft suggested double quotes, and testing the
+  suggestion is what caught it; **a suggestion that does not work is worse than
+  none.** (2) Scope is narrow — only DEFINITION-introducing keywords are filtered,
+  so `version:` and `copyright:` stay legal, as A53/A47 intended, and a test pins
+  it. (3) The new alternative needs a **cut** (`./`): without it the `Fail.opaque`
+  was discarded and the old upstream message still won, which is indistinguishable
+  from the arm not existing at all.
 
-- **[2.7]** **BUILD: an imported definition must RESOLVE without an explicit
+- **[2.6]** **BUILD: an imported definition must RESOLVE without an explicit
   flatten.** **RULED 2026-08-16 by Reid — "Yes, it should."** Was a question; it
   is now work.
   Today the two halves disagree: the content accessors report a `.bast`-imported
