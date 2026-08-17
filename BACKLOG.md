@@ -878,9 +878,41 @@ that needs a ruling before either can be fixed.
   from `knownKeys` — without which the unknown-key warning would have fired on
   every document containing a lookup.
 
-- **[2.6]** **BUILD: an imported definition must RESOLVE without an explicit
-  flatten.** **RULED 2026-08-16 by Reid — "Yes, it should."** Was a question; it
-  is now work.
+- ~~**[2.6]** **BUILD: an imported definition must RESOLVE without an explicit
+  flatten.**~~ — **DONE 2026-08-17, `f99bd3d27`.** Two arms of
+  `findMatchingCandidate` switched from `directDefinitions` to `definitions`. The
+  obstacle this entry recorded — that `filterThroughWrappers` cannot express
+  "includes but not imports" — DISSOLVED with the ruling, since the two wrappers
+  are now meant to be treated alike, which is why it was two words rather than a
+  redesign. **Both arms are instances of [2.3]'s named next slice** (an empty
+  answer in a resolution position); this is the third example and the first found
+  by deliberately looking for the shape.
+  **The method mattered more than the fix.** My first attempt patched a
+  plausible-looking `case _ => Seq.empty` in `candidatesFromContents`, and the
+  suite stayed GREEN — the arm is unreachable for a `BASTImport`, because every
+  caller passes it `directDefinitions`, which has already filtered wrappers out.
+  Only printing the actual messages showed the error was still there. **A green
+  suite after a fix is not evidence the fix did anything**; instrument.
+  **Zero corpus movement, and that is evidence about the corpus** — riddl-models
+  uses no `.bast` imports. The real evidence is `BASTImportLoadingTest`'s pinned
+  contract, INVERTED: it required an error naming `App.Money` and now requires
+  none.
+  **NEW, filed as [4.6]:** a local and an imported definition may now share a
+  name, and declaration order decides which wins.
+
+- **[4.6]** **An imported definition can now shadow, or be shadowed by, a local
+  one — silently.** Consequence of [2.6]: `findMatchingCandidate` takes the FIRST
+  match in contents order, so whether `type Money` declared in a domain beats a
+  `Money` imported into that domain depends on which was written first. Nothing
+  warns. Options, none of them obviously right: leave it (position is a
+  defensible rule and matches how includes already behave); warn on the
+  collision; or make local always win regardless of position. **My
+  recommendation is to WARN and not to change the winner**, because the ambiguity
+  is what the author needs told, and silently reordering precedence would make
+  the same source mean different things before and after an upgrade. Not built —
+  this one genuinely needs a ruling, and no corpus model exercises it.
+
+  **~~Superseded framing~~** (kept so the reasoning is not re-derived):
   Today the two halves disagree: the content accessors report a `.bast`-imported
   definition (`domain.types` lists it, since 2026-08-03), but a REFERENCE to it
   does not resolve until `FlattenPass` runs, because the symbol table is built by
