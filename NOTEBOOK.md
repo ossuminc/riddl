@@ -100,23 +100,26 @@ chase them:**
 report is DONE and moved to `task/done/` with a Results section (which also
 corrects three claims the report itself made).
 
-**RC VERIFICATION LEFT OUTSTANDING — GitHub's API went to 503 mid-release.**
-The tag, the prerelease and the `sbt publish` all completed BEFORE the outage and
-are evidenced locally (sbt `[success]`; the publish log shows all 20 coordinates
-at `2.0.0-rc.15`, including `sbt-riddl_sbt2_3`, with no retired module present;
-the native binary reports `2.0.0-rc.15` at commit `61f50224d` and parses the A38
-fixture). **Four checks the skill requires could NOT be run and are owed:**
+**`2.0.0-rc.15` IS FULLY VERIFIED (2026-08-17).** GitHub's REST API was 503 for
+about two hours immediately after the release was created — `/user` included, so
+it was not scoped to packages — and the four skill-required checks were run once
+it recovered. All four pass:
 
-1. `gh api /orgs/ossuminc/packages/maven/...` confirming each coordinate — the
-   registry's own word, as opposed to the uploader's.
-2. `npm-publish.yml` logged `with tag rc`, and the `latest` dist-tag did NOT move.
-3. The homebrew-tap dispatch touched **only** `Formula/riddlc-rc.rb` —
-   `git -C ../homebrew-tap show --stat --oneline origin/main`.
-4. `release.yml` built the native binaries and its `notify-blog` job stayed
-   SKIPPED (the prerelease guard).
+1. **All 11 Maven coordinates** published at `2.0.0-rc.15`, confirmed against the
+   registry itself, `sbt-riddl_sbt2_3` included.
+2. **npm** published under dist-tag **`rc`** (*"Publishing under dist-tag 'rc'"*),
+   and `latest` did NOT move — `npm dist-tag ls` reads `latest: 1.31.0`,
+   `rc: 2.0.0-rc.15`.
+3. **homebrew-tap** commit `58b9350` touched **only** `Formula/riddlc-rc.rb`;
+   `Formula/riddlc.rb` is still on stable `1.31.0`.
+4. **`release.yml`**: jvm-build and both native builds succeeded, and
+   **`notify-blog: skipped`** — the prerelease guard held, so no blog post.
 
-Nothing suggests any of these failed; they are simply unverified, and this repo's
-own rule is that an unverified claim is not a result.
+The lesson worth keeping is about the outage rather than the release: the tag,
+the prerelease and the publish all completed BEFORE the API failed, and every one
+of them uses the git protocol or an upload endpoint rather than the REST API. **A
+release can be complete and unverifiable at the same time**, so record which of
+the two you are looking at.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
 driver's call, not the handoff's.
