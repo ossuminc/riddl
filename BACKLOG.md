@@ -845,34 +845,29 @@ that needs a ruling before either can be fixed.
   command change needed corpus corrections and this is the same shape over a
   comparable population. Sweep and count before shipping the Error.
 
-- **[2.9]** **BUILD: exclude `error-sink` inlets from arity EVERYWHERE.** **RULED
-  2026-08-16 by Reid — "I don't think the error-sink should be counted in the
-  shape/arity of the processor; it is merely a way to deliver out-of-band errors
-  through the existing infrastructure."**
-  **This SIMPLIFIES what rc.9 did.** That fix made `validateProcessorShape` accept
-  EITHER reading — arity with the error-sink inlet counted, or without it. The
-  ruling says there is only one correct reading, so the dual acceptance can go and
-  every other port-counting site must exclude it too.
-  **Why an infrastructure inlet distorts the shape.** An `error-sink` is an
-  **Inlet** (`RecognizedOptions`: `OptionSpec(Seq("Inlet"))`), so it raises the
-  inlet count. A 1-in/1-out `flow` that also hosts its domain's error sink has 2
-  inlets and 1 outlet, which is the definition of a **`merge`** — not a `split`,
-  which is ≥2 OUTLETS. (Direction is easy to invert; see CLAUDE.md's inlet/outlet
-  note.)
-  **Evidence the ruling is right, from the corpus:** riddl-models' order-
-  orchestration declares `application context OrderOrchestrationApp as merge`
-  while hosting an `ErrorSink` inlet — an infrastructure port inflating the arity
-  and driving the author's shape ascription. That is the distortion, in the wild.
-  **Sites to fix.** `validateProcessorShape` (drop the dual reading), and above all
-  **`StreamingParser`'s per-shape `minInlets`/`maxInlets`/`minOutlets`/
-  `maxOutlets`** — CLAUDE.md records that the arity table is encoded in TWO places
-  that must move together, and only one was taught the exemption. Then the
-  streaming/connector graph checks, `DiagramsPass`, and any completeness warning
-  phrased in port counts. Start with
-  `grep -rn "dataflowInlets\|numInlets\|inlets.size" passes/ language/`.
-  **Expect corpus fallout in the GOOD direction:** models that ascribed a shape to
-  satisfy an inflated count may be able to drop or correct it. Measure before and
-  after.
+- ~~**BUILD: exclude `error-sink` inlets from arity everywhere.**~~ — **DONE
+  2026-08-16, `500392d46`, as Reid's option B.** `arityShape` derives from
+  `dataflowInlets`; the dual acceptance in `validateProcessorShape` is gone.
+  **Measurement changed the plan, which is the point of measuring.** Strict
+  implementation broke **188 of 190** corpus models and an in-repo fixture,
+  because a processor whose only inlet is the error sink derives as `void` and
+  `as sink` became illegal. Reid chose the narrow allowance: `as sink` stays legal
+  for a processor with NO dataflow ports at all. That saved the 3 `as sink` models
+  and the fixture, and cannot excuse a flow ascribed as a merge.
+  **Corpus migration filed** (`../riddl-models/task/2026-08-16-error-sink-no-longer-
+  counts-toward-shape.md`): **187 models, three mechanical patterns** — 177
+  `merge`→`flow`, 8 `router`→`split`, 2 `flow`→`source`. That 177 share one wrong
+  ascription is evidence FOR the ruling: they follow one template (1 dataflow
+  inlet + 1 error sink + 1 outlet) and every one was calling itself a merge
+  because of the error sink.
+  Recorded in CM §3.6, including the generator consequence — do not infer a fan-in
+  from an error-sink inlet.
+  **Known asymmetry, unexercised:** `StreamingParser` enforces streamlet arity
+  syntactically (`inlet./.rep(min, max)`), so the keyword form `sink X is {…}`
+  cannot honour this exemption without moving arity enforcement into validation.
+  No corpus error-sink is declared inside a streamlet keyword form — they are all
+  on contexts — so the two surfaces cannot yet disagree. **If that changes, this is
+  the CLAUDE.md "arity table encoded twice" trap arriving for real.**
 
 ### 3. Owed to other repos
 
