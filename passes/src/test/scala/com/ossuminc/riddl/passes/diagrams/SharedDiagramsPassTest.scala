@@ -110,6 +110,49 @@ abstract class SharedDiagramsPassTest(using PlatformContext) extends AbstractVal
         data.actors.keys.toSeq.take(2) mustBe Seq("Patron", "Waiter")
       }
     }
+    /* [2.4] Streamlet -> Processor. A data flow diagram was built from `context.streamlets` and
+     * from a port-to-owner walk that matched the concrete `Streamlet` case class, falling back to
+     * the PORT itself. Since the unified processor model any Processor may declare its own ports,
+     * so a flow between two entities' ports drew arrows from an outlet to an inlet, with neither
+     * entity appearing in the diagram at all. */
+    "draw a data flow between processors that own the ports, not the ports themselves" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain D is {
+            |  context C is {
+            |    event Evt is { id: String }
+            |    entity Source is {
+            |      outlet Out is type D.C.Evt
+            |      handler H is { on event D.C.Evt is { ??? } }
+            |    }
+            |    entity Target is {
+            |      inlet In is type D.C.Evt
+            |      handler H is { on event D.C.Evt is { ??? } }
+            |    }
+            |    connector Pipe from outlet D.C.Source.Out to inlet D.C.Target.In
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        parseAndValidateAggregate(input) { passesResult =>
+          val pass = new DiagramsPass(passesResult.input, passesResult.outputs)
+          val output =
+            Pass.runPass[DiagramsPassOutput](passesResult.input, passesResult.outputs, pass)
+          val data = output.dataFlowDiagrams.values.headOption.getOrElse(
+            fail("no data flow diagram was produced")
+          )
+          val connection = data.connections.headOption.getOrElse(
+            fail("no data flow connection was resolved")
+          )
+          connection.from.id.value mustBe "Source"
+          connection.to.id.value mustBe "Target"
+          // `streamlets` keeps its exact meaning — there are none here — and the port-bearing
+          // processors are reported alongside it rather than in place of it.
+          data.streamlets mustBe empty
+          data.portBearing.map(_.id.value).toSet mustBe Set("Source", "Target")
+        }
+    }
     "creator with empty PassesOutput yields IllegalArgumentException" in { (td: TestData) =>
       val creator = DiagramsPass.creator()
       val input = PassInput(Root())

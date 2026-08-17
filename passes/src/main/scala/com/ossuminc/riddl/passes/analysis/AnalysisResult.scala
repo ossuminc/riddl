@@ -174,9 +174,30 @@ case class AnalysisResult(
   def repositories: Seq[Repository] =
     symbols.parentage.keys.collect { case r: Repository => r }.toSeq
 
-  /** Get all streamlets in the model */
+  /** Get all streamlets in the model.
+    *
+    * [2.4] Streamlet → Processor: this keeps meaning "the `Streamlet` definitions", unchanged. Its
+    * whole family (`domains`, `contexts`, `entities`, `sagas`, `repositories`, `projectors`,
+    * `adaptors`, `functions`, `types`) is named after a KIND and answers about that kind, so
+    * redefining this one to mean "everything port-bearing" would make it the only accessor here
+    * whose name does not say what it returns — and would silently change the answer under every
+    * existing caller. Ask [[processors]] for the port-bearing question.
+    */
   def streamlets: Seq[Streamlet] =
     symbols.parentage.keys.collect { case s: Streamlet => s }.toSeq
+
+  /** Get all processors in the model — Adaptor, Context, Entity, Projector, Repository and
+    * Streamlet.
+    *
+    * [2.4]: added rather than widening [[streamlets]], per the compatibility policy's "add, don't
+    * change". Since the unified processor model, EVERY processor is port-bearing and may carry an
+    * ascribed shape, so a consumer asking "what can sit in a stream?" wants this, and one asking
+    * "which definitions are Streamlets?" wants `streamlets`. Before this existed, the port-bearing
+    * question had no accessor at all and callers reached for `streamlets`, getting an answer that
+    * silently omitted five of the six kinds.
+    */
+  def processors: Seq[Processor[?]] =
+    symbols.parentage.keys.collect { case p: Processor[?] => p }.toSeq
 
   /** Get all projectors in the model */
   def projectors: Seq[Projector] =

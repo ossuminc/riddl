@@ -49,13 +49,23 @@ case class DataFlowConnection(
   *   All streamlets within the context
   * @param connections
   *   Resolved connection data with source, target, and message type
+  * @param portBearing
+  *   Every processor within the context that declares a port of its own — the wider set a data
+  *   flow diagram actually needs to draw.
+  *
+  * [2.4] Streamlet → Processor: `streamlets` keeps its exact meaning and type, per the
+  * compatibility policy; `portBearing` is added alongside because since the unified processor
+  * model a Context, Entity, Projector, Repository or Adaptor may declare its own inlets and
+  * outlets, and a diagram drawn from `streamlets` alone omits every one of them. Defaulted and
+  * last, so existing positional construction is unaffected.
   */
 @JSExportTopLevel("DataFlowDiagramData")
 case class DataFlowDiagramData(
   context: Context,
   connectors: Seq[Connector] = Seq.empty,
   streamlets: Seq[Streamlet] = Seq.empty,
-  connections: Seq[DataFlowConnection] = Seq.empty
+  connections: Seq[DataFlowConnection] = Seq.empty,
+  portBearing: Seq[Processor[?]] = Seq.empty
 )
 
 /** The information needed to generate a Use Case Diagram. The diagram for a use case is very
@@ -207,17 +217,29 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     val rel3 = makeHandlerRelationships(context, processor.handlers)
     val rel4 = makeInletRelationships(context, processor.streamlets.flatMap(_.inlets), processor)
     val rel5 = makeOutletRelationships(context, processor.streamlets.flatMap(_.outlets), processor)
-    val rel6 = processor match {
+    // [2.4] Streamlet → Processor: a processor's OWN ports, hoisted out of the match below.
+    // Every Processor has been port-bearing since the unified processor model (`WithInlets` /
+    // `WithOutlets` are mixed into the Processor base), but only the `Streamlet` arm looked at
+    // them — so a Context, Entity, Projector, Repository or Adaptor declaring its own inlet or
+    // outlet contributed no relationship to the diagram.
+    //
+    // That arm was ALSO dropping half its own work: it called `makeInletRelationships` and then
+    // `makeOutletRelationships`, and a block's value is its LAST expression, so the inlet
+    // relationships were computed and thrown away. Both defects disappear by asking the question
+    // once, of the base trait, rather than per kind.
+    val rel6 = makeInletRelationships(context, processor.inlets, processor)
+    val rel7 = makeOutletRelationships(context, processor.outlets, processor)
+    val rel8 = processor match {
       case a: Adaptor    => inferRelationship(context, a)
-      case _: Context    => Seq.empty[ContextRelationship]
       case e: Entity     => makeHandlerRelationships(context, e.handlers)
+      // Enumerated, not defaulted: these four add nothing BEYOND their ports and handlers, which
+      // rel1-rel7 already cover for every kind alike.
+      case _: Context    => Seq.empty[ContextRelationship]
       case _: Projector  => Seq.empty[ContextRelationship]
       case _: Repository => Seq.empty[ContextRelationship]
-      case s: Streamlet =>
-        makeInletRelationships(context, s.inlets, s)
-        makeOutletRelationships(context, s.outlets, s)
+      case _: Streamlet  => Seq.empty[ContextRelationship]
     }
-    val result = rel1 ++ rel2 ++ rel3 ++ rel4 ++ rel5 ++ rel6
+    val result = rel1 ++ rel2 ++ rel3 ++ rel4 ++ rel5 ++ rel6 ++ rel7 ++ rel8
     result.distinct
   }
 
@@ -460,27 +482,37 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     UseCaseDiagramData(title, actors, uc.contents.filter[Interaction])
   }
 
+  /** The definition a data-flow arrow should attach to for a port: the processor that owns it.
+    *
+    * [2.4] Streamlet → Processor: this matched the concrete `Streamlet` and otherwise fell back to
+    * the PORT itself, so a connector between two Contexts' own ports drew arrows from and to
+    * inlets and outlets rather than the processors holding them. Falling back to the port is still
+    * right when the owner genuinely is not a processor — it keeps the arrow rather than dropping
+    * the connection.
+    */
+  private def portOwner(portlet: Portlet): Definition =
+    symTab.parentOf(portlet).collect { case p: Processor[?] => p: Definition }.getOrElse(portlet)
+
   private def captureDataFlow(context: Context): Unit = {
     val ctxConnectors = context.connectors.toSeq
     val ctxStreamlets = context.streamlets.toSeq
+    // [2.4]: every processor in the context that declares a port of its own. A Streamlet always
+    // qualifies; since the unified processor model so may a Context, Entity, Projector, Repository
+    // or Adaptor, and those are exactly what `ctxStreamlets` cannot report.
+    // `filterThroughWrappers`, not `contents.processors`: the latter is deliberately LITERAL (see
+    // its note in Contents.scala), and this must see an included processor exactly as
+    // `context.streamlets` on the line above does.
+    val ctxPortBearing = context.contents
+      .filterThroughWrappers[Processor[?]]
+      .filter(p => p.inlets.nonEmpty || p.outlets.nonEmpty)
     val connections = ctxConnectors.flatMap { connector =>
       if connector.nonEmpty then
         val maybeOutlet = refMap.definitionOf[Outlet](connector.from, context)
         val maybeInlet = refMap.definitionOf[Inlet](connector.to, context)
         (maybeOutlet, maybeInlet) match
           case (Some(outlet), Some(inlet)) =>
-            val fromDef: Definition = symTab
-              .parentOf(outlet)
-              .collect { case s: Streamlet =>
-                s: Definition
-              }
-              .getOrElse(outlet)
-            val toDef: Definition = symTab
-              .parentOf(inlet)
-              .collect { case s: Streamlet =>
-                s: Definition
-              }
-              .getOrElse(inlet)
+            val fromDef: Definition = portOwner(outlet)
+            val toDef: Definition = portOwner(inlet)
             val outletParent = symTab
               .parentOf(outlet)
               .collect { case b: Branch[?] =>
@@ -495,10 +527,13 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
           case _ => None
       else None
     }
-    if ctxConnectors.nonEmpty || ctxStreamlets.nonEmpty then
+    // `ctxStreamlets` stays in the gate. `ctxPortBearing` is not a superset of it: a Streamlet with
+    // no ports (a stub, or a `void` shape) is a streamlet and is not port-bearing, and a context
+    // holding only one of those produced a diagram before this change and must keep doing so.
+    if ctxConnectors.nonEmpty || ctxStreamlets.nonEmpty || ctxPortBearing.nonEmpty then
       dataFlowDiagrams.put(
         context,
-        DataFlowDiagramData(context, ctxConnectors, ctxStreamlets, connections)
+        DataFlowDiagramData(context, ctxConnectors, ctxStreamlets, connections, ctxPortBearing)
       )
   }
 

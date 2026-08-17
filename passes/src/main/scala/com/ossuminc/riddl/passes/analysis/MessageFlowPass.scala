@@ -123,6 +123,29 @@ case class MessageFlowPass(
     omc: OnMessageLikeClause
   ): Option[Type] = DeliverableTypes.of(outputs, stmt, msg, omc)
 
+  /** The [[Processor]] a port belongs to.
+    *
+    * [2.4] Streamlet → Processor: this used to match the concrete `Streamlet` case class and fall
+    * back to the port's GRANDparent for anything else. Under the unified processor model EVERY
+    * processor is port-bearing, so a port on a Context, Entity, Projector, Repository or Adaptor
+    * missed the first test — and then the fallback SUCCEEDED, on the wrong definition. An entity's
+    * own outlet resolved to the enclosing CONTEXT, because a Context is a Processor too, so the
+    * flow graph reported the container as producer and the entity not at all.
+    *
+    * That is worse than the dropped edge it was assumed to be: a wrong answer that looks like a
+    * right one. Demonstrated, not supposed — reverting this method makes
+    * `ProcessorPortConnectorTest` report `"C" was not equal to "Source"`.
+    *
+    * The grandparent step is KEPT, for a port reached through a container that is not itself a
+    * processor; it is now what it always should have been, a second chance rather than the only one
+    * that can match a non-Streamlet.
+    */
+  private def owningProcessor(portlet: Portlet): Option[Processor[?]] =
+    symTab.parentOf(portlet).flatMap {
+      case p: Processor[?] => Some(p)
+      case other           => symTab.parentOf(other).collect { case proc: Processor[?] => proc }
+    }
+
   private val collectedEdges: mutable.ListBuffer[MessageFlowEdge] =
     mutable.ListBuffer.empty
 
@@ -297,30 +320,8 @@ case class MessageFlowPass(
       (maybeOutlet, maybeInlet) match
         case (Some(outlet), Some(inlet)) =>
           // Walk up from outlet/inlet to find their parent processor
-          val fromProcessor = symTab
-            .parentOf(outlet)
-            .collect { case s: Streamlet =>
-              s: Processor[?]
-            }
-            .orElse(
-              symTab.parentOf(outlet).flatMap { p =>
-                symTab.parentOf(p).collect { case proc: Processor[?] =>
-                  proc
-                }
-              }
-            )
-          val toProcessor = symTab
-            .parentOf(inlet)
-            .collect { case s: Streamlet =>
-              s: Processor[?]
-            }
-            .orElse(
-              symTab.parentOf(inlet).flatMap { p =>
-                symTab.parentOf(p).collect { case proc: Processor[?] =>
-                  proc
-                }
-              }
-            )
+          val fromProcessor = owningProcessor(outlet)
+          val toProcessor = owningProcessor(inlet)
 
           // Resolve the outlet's type reference using
           // its parent as context
