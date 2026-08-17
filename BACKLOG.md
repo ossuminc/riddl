@@ -298,7 +298,28 @@ each want an approved plan before implementation, per the standing rule.
   is superseded; the floor may only be RAISED by a certified tri-platform run,
   so treat 2393 as the number to certify against, not as an already-raised floor.
 
-  **Nearly all of the remaining −275 is `commands`, and nearly all of THAT is
+  **RE-MEASURED 2026-08-17 at the `2.0.0-rc.15` certification (clean, tri-platform,
+  `testOnly *`), and the picture is UNCHANGED — which is the useful finding:**
+
+  | module | JVM | Native | gap |
+  |---|---|---|---|
+  | commands | 245 | 52 | **−193** |
+  | passes | 1446 | 1403 | −43 |
+  | language | 731 | 714 | −17 |
+  | utils | 148 | 134 | −14 |
+  | riddlLib | 144 | 131 | −13 |
+  | testkit | 2 | 1 | −1 |
+  | riddlc | 21 | 21 | 0 |
+  | **total** | **2737** | **2456** | **−281** |
+
+  The gap moved −275 → −281 only because new tests landed JVM-side; **no module
+  regressed and none improved**. So the 2026-08-15 conclusion holds exactly:
+  subtract `commands` and the repo is within ~88 cases of parity, and `commands`
+  is blocked on a decision rather than on effort. Re-measuring cost one grep of a
+  certification log that had to be produced anyway — worth doing at every RC, so
+  the entry can never drift as far as the ~800 estimate it opened with.
+
+  **Nearly all of the remaining gap is `commands`, and nearly all of THAT is
   `RiddlModelsRoundTripTest`'s 189 cases** — blocked on the shared-corpus
   decision recorded under item 1 below, not on effort. Subtract it and the whole
   repo is within ~86 cases of parity.
