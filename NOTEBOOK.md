@@ -4,214 +4,68 @@ Records open work, blockers, and design nuances that future AI
 sessions need to know. Release history lives in git tags and
 GitHub release notes — don't reproduce it here.
 
-## QUESTIONS FOR REID (queued overnight 2026-08-15)
-
-Four decisions I did not make for you. Everything else on the § 1 list was
-either built or is genuinely blocked on one of these. Each says what I would do
-and why, so a one-word answer is enough.
-
-**Q1 — ANSWERED and BUILT 2026-08-16 (`927898a97`): validate before upickle,
-emit a Warning.** Zero false positives across 188 corpus models — after two
-near-misses that would each have warned on every correct document (writer sigil
-keys; `Schema.data`/`links` keyed by modeller identifiers). Reid also asked the
-bigger question — why have a JSON surface at all? — now filed in § 1.
-
-**Q1 (original) — which layer, and how strict?** (§ 1, `4bb0ba01a`
-characterizes it.) The entry's proposed mechanism does not work: a consumed-keys
-tracker wrapping `ujson.Obj` fixes the hand-written readers but CANNOT fix the
-macro-derived ones, which are most of them — upickle's `macroRW` ignores unknown
-keys by construction and is not ours to instrument. So the real choice is:
-  - **(a)** validate the `ujson` tree against a key inventory BEFORE upickle
-    sees it — covers both layers, one new component, no reader changes; or
-  - **(b)** instrument only the hand-written readers and accept that the larger
-    layer stays silent.
-And separately: **Error or Warning?** *My recommendation: (a), emitting a
-Warning first.* A Warning breaks no existing producer, makes typos visible
-immediately, and matches the warn-then-flip sequencing this repo has now used
-twice. The flip to Error is then a separate, informed call.
-
-**Q2 — the corpus gate on Native.** (§ 1 item 1, `682e835bc`.) Nearly the whole
-remaining JVM/Native gap (−191 of −275) is `RiddlModelsRoundTripTest`'s 189
-cases. Its two JVM dependencies are shallow and easily replaced. The real
-blocker is that it **writes a `.bast` beside every model in `../riddl-models`
-and restores them**, so running it on two platforms means two runs mutating one
-shared external checkout, and sbt may run those rows concurrently. Options:
-copy the corpus to a per-platform temp dir (costs I/O per run), run the suite on
-one platform only (status quo, honest), or serialise the two rows. *My
-recommendation: leave it JVM-only and record WHY* — the suite's value is
-corpus coverage, which is platform-independent, and BAST's platform behaviour is
-already covered by the 26 BAST suites that moved to Native in `6cf60baf2`.
-
-**Q3 — clusterability (§ 1 item 10): the item as filed contains a
-contradiction.** Planned, not built. It promises both a `clustered` keyword and
-`self.isClustered`, and **you can have either but not both**: your own admission
-test for `self` is *runtime-only*, so the moment `clustered` is written in the
-model, "is this clustered" becomes statically knowable and the field is exactly
-what the test excludes. The field is admissible only if clustering stays a
-deployment-time fact ABSENT from the model — in which case there is no keyword.
-The `self`-survey reached the same place independently.
-Given that, the real question is just: **advisory `option`, or grammar
-intention?** *My reading: an `option`* — a generator may legitimately deploy one
-instance, and the one genuinely MANDATORY part (a correlating projector must
-distribute by key, §6.1/§6.6) is already implied by declaring correlations, so it
-needs no keyword. Applying it to an Entity is meaningless either way: an entity
-is already sharded by identity.
-
-**Q5 — ANSWERED 2026-08-16, and one half was my error.**
-  - **`self.version` is NOT undefined.** Reid: it is the fully-qualified version
-    from RIDDL's `version` definition — static, computed at generation time by
-    joining components with `.`. That is A53, already implemented
-    (`composedVersionString`, e.g. `"Jellyfish.Garibaldi.4.2"`). I searched for a
-    definition, found none, and concluded there was none, without asking what
-    already-shipped thing it might be naming. Documented now in `SelfValue`'s
-    scaladoc and CM §4.5; nothing to rule on.
-  - **`self.state` is still open** — admit it, admit it only for entity-level
-    handlers, or decline. Not urgent; nothing depends on it.
-
-**ANSWERED 2026-08-16:** `Root2JsonCorpusTest`'s equality assertion was right and
-its NAME was wrong. Reid: the corpus at 100% is the release gate; ">95%" is
-contrived. Renamed, and it now reports a count rather than a percentage. **It
-stays red until riddl-models migrates its last two models — that is the gate
-working.**
-
 ## HANDOFF
 
 Orientation for a session with no memory of this work. **Open work is in
-`BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
-NOTEBOOK's body. Ask `git` for branch, tree and unpushed span — anything written
-here about those is stale the moment someone commits.
+`BACKLOG.md`** (items carry stable `[section.n]` IDs); durable facts are in
+`CLAUDE.md`; what things TAUGHT us is in this NOTEBOOK's body. Ask `git` for
+branch, tree and unpushed span — anything written here about those is stale the
+moment someone commits.
 
-**Build state — verified by running the command, 2026-08-15:**
+**Build state — every line below was verified by running the command, 2026-08-17:**
 
-- **`~/Code/ossuminc/bin/riddlc` (NATIVE) is CURRENT as of 2026-08-15**, at
-  `2.0.0-rc.14-121-fe768026` = HEAD, restaged via `scripts/publish-and-stage.sh`
-  so the ivy artifacts match it exactly. **Verified by BEHAVIOUR, not the version
-  string**: it accepts a numeric literal in `initiate entity Order(1)` and
-  rejects the old `terminate entity X`. Restage if you touch code.
-- **The staged JVM one is STILL STALE** —
-  `target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc` is dated
-  Aug 14 21:26 at `2.0.0-rc.14-39-f8f93893-20260814-2124`, and `publish-and-stage.sh`
-  does NOT refresh it (it links the native binary). Run `sbt riddlc/stage` if you
-  need that path specifically; prefer the native one.
-- **BAST `FORMAT_REVISION` is 18**, unshipped (latest tag `2.0.0-rc.14`). Numeric
-  literals spent it; A20, `!`/`not` and now `terminate` all RODE it. The next BAST
-  change rides 18 too — re-check `git tag` first.
+- **`~/Code/ossuminc/bin/riddlc` (NATIVE) is STALE at `2.0.0-rc.14-164-d1d87009`**,
+  and the local ivy artifacts match it. HEAD is `rc.14-172`. **Verified by
+  BEHAVIOUR, not the version string: it REJECTS `language/input/lookup-value.riddl`**
+  — it predates the `at` lookup. Restage with `scripts/publish-and-stage.sh`
+  before handing anything to a consumer or validating the corpus.
+  **Deliberately left stale (Reid, 2026-08-17): riddlg is mid-analysis and no
+  consumer is waiting.** Not an oversight.
+- **The staged JVM binary's version string LIES.** It reads
+  `rc.14-167-f586ca14-20260817-0630` — the `-2026…` suffix means dynver saw a
+  dirty tree — but it was built from working-tree code and DOES accept `at`.
+  Trust behaviour over the string for this one.
+- **BAST `FORMAT_REVISION` is 18, still unshipped** (latest tag `2.0.0-rc.14` =
+  revision 17). The `at` lookup rode 18. The next BAST change rides 18 too —
+  **re-check `git tag` first**; bump to 19 only after 18 ships.
 
-**In flight: nothing.** `terminate` landed complete this session (`7b356120a`), CM
-section included (`aee6462`, in the `ossuminc` coordination repo, which is its own
-git repo — commit there separately).
+**In flight: nothing.** Six § 2 items landed this session, each with its ruling
+recorded in the CM (a separate git repo — commit there separately).
 
-**The 49-alias list is CLOSED and was never owed** — riddl-models cleared all 49
-itself in `29598ad1` (2026-08-14), a day before our backlog demanded the list.
-Verified 2026-08-15 by sweeping all 190 entry points at HEAD: zero ambiguity
-Errors, with a positive control proving the check can fire in both the inline and
-alias spellings. BACKLOG § 3 and the riddl-models task file are corrected.
+**NEXT, and it needs YOU before code:** `[2.4]` Streamlet → Processor carries a
+public-API decision — does `AnalysisResult.streamlets` mean "the Streamlet
+definitions" or "the port-bearing processors"? Adding a second accessor is the
+additive option the compatibility policy prefers. `[2.1]` (Figma) is planned and
+also awaits a ruling: its first question is whether it belongs in this repo at
+all, since A42 says part (iii) is riddlg's work.
 
-**§ 1 IS CLEARED.** All twelve items worked through overnight 2026-08-15: nine
-built and committed, three left as rulings in § QUESTIONS above. Nothing in § 1
-is now blocked on effort — only on those four answers.
+**Traps — every one bit someone here.**
 
-| # | item | state |
-|---|---|---|
-| 1 | `OnInit`/`OnTerm` param defaults | `c530337d9` |
-| 2 | two stale entries closed | `d46646e10` |
-| 3 | `valueTypeExpr` predefined + `typeEx` | `141486ed4` |
-| 4 | A20 ascription wiring, 7 positions | `0fd7bb54e` |
-| 5 | JVM/Native gap **560 → 275** | `682e835bc` `54ff5fe73` `6cf60baf2` `0919f191e` |
-| 6 | `!` tokenized as punctuation | `66388821c` |
-| 7 | JSON unknown keys — characterized | `4bb0ba01a` → **Q1** |
-| 8 | three CM amendments | `18bdb8f` (ossuminc repo) |
-| 9 | `self`-fields survey | `c478e9d6b` → **Q5** |
-| 10 | clusterability — planned only | `38fa65dd5` → **Q3** |
-| 11 | cross-context tell — **counted: 18, not 5,301** | `69f50bf9a` → **Q4** |
-| 12 | `foreach` element threading | `faf7551c0` (part 2 split out, last) |
+- **`Keywords.keyword` ends in `./`, a CUT** (`Keywords.scala:39`). Any optional
+  keyword-led clause must be wrapped in `NoCut` or the enclosing alternative
+  cannot backtrack. This cost hours on the `at` lookup: a lookup as a comparison
+  operand worked while a bare one failed, and the cut was never in the new code.
+- **`-Werror` is NOT a net for a new `Value` arm.** It found 3 of ~13 sites; the
+  rest sit behind catch-alls. `language`/`commands` also compile `--no-warnings`.
+- **A green corpus proves nothing about a construct the corpus lacks.** Two
+  changes shipped on corpora containing zero instances of what they changed.
+- **Verify a backlog item before working it.** SEVEN entries this week described
+  finished work, one closed by a batch move nobody connected to it.
+- **Re-measure any corpus number before quoting it.** `../riddl-models` is a live
+  checkout another session edits; `git status` there changed between two
+  consecutive commands of mine.
 
-**Verified at the end of the run, per module (JVM):** utils 148, language 728,
-passes 1398, riddlLib 138, commands 243, riddlc 18. **Every failure is known and
-filed:** riddlLib 1 (`Root2JsonCorpusTest` — the 100% corpus gate, red until
-riddl-models migrates its last 2 models),
-commands 2 (riddl-models' two `patterns/entity/*` stragglers), riddlc 3
-(pre-existing, all in `riddl-examples`, not riddl-models). `cJS` and `cNative`
-both compile.
+**Certainty.** Branch/tree/tests and both binary behaviours were executed just
+now (language 71 suites/731, passes 214/1425, both green). NOT verified: whether
+riddl-models or riddl-generator have acted on the five task files dropped for
+them.
 
-**Corpus suites — riddl-models landed its migration at 19:19 and almost all of
-this went green. Re-measured AFTER their `2e619c44`:**
+**`task/` — TWO files, both awaiting triage.** `2026-08-04-security.md` is Reid's
+own RBAC draft marked *"do not act on this"*. **`2026-08-15-messageflowpass-cannot-
+resolve-a-let-local.md` is NEW and unread by anyone.**
 
-| Suite | State |
-|---|---|
-| `RiddlModelsRoundTripTest` | **187 ok / 2 failed** (was 115/130) |
-| `Root2JsonCorpusTest` json-identity | **190/190, 100%** (was 189/190) |
-| `Root2JsonCorpusTest` validation-parity | **188 (98.9%)**, still RED — see the assertion note below |
-| `PassCostBenchmark` | **GREEN** (was red on reactive-bbq's `terminate`) |
-| `RunRiddlcOnLocalTest` ("should 406", riddl-examples dokn, shopify-cart) | pre-existing, unchanged |
-
-**Only TWO corpus models are still red**, and they are the same two by every
-instrument: `patterns/entity/aggregate-root/example` and
-`patterns/entity/event-sourced/example`, both still carrying bare-message
-operands. Both files are named `example.riddl`, so a failure list reads
-"example.riddl, example.riddl" — that is two models, not one repeated.
-
-**`Root2JsonCorpusTest` is RED ON PURPOSE and must stay that way until the
-corpus is clean.** Reid ruled 2026-08-16 that **the corpus at 100% is the release
-gate** and that a ">95%" bar is contrived. Its equality assertion was always
-right — its own comment says *"NO allowance"* — and only the case NAME and its
-percentage readout were wrong; both are fixed. Do not "fix" this by relaxing the
-assertion. It goes green when riddl-models migrates its last two models.
-
-**Traps — every one already bit someone here.**
-
-- **"Accepted" and "never examined" look identical from outside a validation check.**
-  `checkTerminate` resolved nothing for the two idiomatic target spellings and three
-  tests passed anyway. A check's ACCEPT cases prove nothing unless something
-  independently proves the check can fire on that input shape.
-- **A corpus sweep needs its own canary.** Keying per-model output on the `.conf`
-  BASENAME silently overwrites ten of the 190 models — ten basenames collide
-  (`benefits-administration`, `case-management`, `order-management`, …). Key on the
-  relative path, and reconcile the output-file count against the entry-point count
-  before reading any total. "It ran and produced output" is not evidence of
-  coverage; this is the `Suites: completed` discipline in another costume.
-- **A BACKLOG item can be stale about whether the work still exists.** § 3's
-  49-alias item was written a day after riddl-models had finished the work. Check
-  the other repo's `git log` before acting on anything filed as owed by them.
-- **The refMap holds only WRITTEN paths.** `valueTypeExpr` synthesizes `UniqueId`s
-  (for `initiate`, for `self.id`) with fully-qualified paths that have no refMap
-  entry, so a refMap-only lookup silently returns `None`. Fall back to
-  `symbols.lookup`.
-- **A known-red suite stops being measured, so its recorded count rots.** Re-measure
-  with `git stash push -u` A/B before believing any number in BACKLOG.
-- **`sbt -batch "; a ; b ; c"` aborts the whole chain at the first red module**, so
-  later modules never run. Count `Suites: completed` against the modules you asked
-  for, every time.
-- **Grep by NODE NAME, not field name** when changing a field. Positional patterns
-  (`TerminateStatement(_, x, _)`) never mention what they destructure, and
-  `language`/`commands` compile `--no-warnings`.
-- **A green corpus on a construct the corpus does not contain is not evidence.**
-
-**Certainty.** Everything above was executed this session. Both previously-unverified
-items are now settled: riddl-models HAS acted (`29598ad1` cleared the 49), and the
-59-vs-173 gap IS explained (the bare-message-operand class, 130 of 131 models).
-NOT verified: whether riddl-generator has acted on the `Finder` or `terminate`
-drops, or on the use-case-actors reply left for it this session.
-
-**`task/` — ONE file left, and it is parked.** `2026-08-04-security.md` is Reid's own
-RBAC draft marked *"do not act on this"*, with empty acceptance criteria and issue
-#535 untouched since 2023-12-21. It is a language feature the Computational Model
-does not require, so it is not 2.0 work and is deliberately NOT in BACKLOG.
-The use-case-actors report was triaged, fixed and moved to `task/done/` this
-session. Replies owed to other repos are all dropped: riddl-generator has the
-`Finder` defect, the closed `terminate` ruling, the use-case-actors reply
-(`2026-08-15-usecase-actors-fixed-and-reordered.md`) and an FYI of everything in
-the 93 commits since its pin (`2026-08-15-FYI-whats-in-rc14-121.md` — explicitly
-informational, riddlg owes nothing); riddl-models has the corpus migration, the
-`terminate` migration, and a corrected Migration-1 block.
-
-**riddl-generator is pinned at `2.0.0-rc.14-28-1f2c496d`**
-(`../riddl-generator/project/Dependencies.scala:265`) — 93 commits behind. The
-bump is theirs to take when they want it; five AST changes in the range are
-source-incompatible and are tabulated in the FYI.
-
-**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
-call, not the handoff's.
+**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
+driver's call, not the handoff's.
 
 ## A night spent on BACKLOG § 1 — what the list itself got wrong (2026-08-15)
 
