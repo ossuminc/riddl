@@ -1602,8 +1602,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case SequentialInteractions(_, contents, _) => SequentialIxnDto(serIxns(contents))
     case OptionalInteractions(_, contents, _)   => OptionalIxnDto(serIxns(contents))
 
-  private def serIxns(c: Contents[InteractionContainerContents]): Seq[InteractionDto] =
-    c.toSeq.collect { case i: Interaction => serializeInteraction(i) }
+  /** [1.5]: a nested step carries its own metadata, exactly as a top-level one does. Before this
+    * the composite held bare `InteractionDto`s with nowhere to put a brief.
+    */
+  private def serIxns(c: Contents[InteractionContainerContents]): Seq[InteractionContentDto] =
+    c.toSeq.collect { case i: Interaction =>
+      InteractionContentDto(serializeInteraction(i), briefOf(i.metadata), metaOf(i.metadata))
+    }
 
   private def serializeUserStory(us: UserStory): UserStoryDto =
     UserStoryDto(path(us.user.pathId), us.capability.s, us.benefit.s)

@@ -49,6 +49,15 @@ domain Retail is {
       step entity Retail.Ordering.Order refuses user Retail.Buyer
         invariant Retail.Ordering.Order.MustBePaid
         with { briefly "refused for want of payment" }
+
+      // [1.5]: the same, NESTED inside a composite. Metadata on a nested step travels a different
+      // path through the JSON surface than on a top-level one, and was DROPPED until 2026-08-17.
+      // This is the fixture that measured it (BriefDescription 2 -> 1) and now pins the fix.
+      sequence {
+        step entity Retail.Ordering.Order refuses user Retail.Buyer
+          invariant Retail.Ordering.Order.MustHaveItems
+          with { briefly "refused for want of items" }
+      }
     }
   }
 }

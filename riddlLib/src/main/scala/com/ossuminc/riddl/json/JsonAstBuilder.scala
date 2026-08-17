@@ -1193,16 +1193,20 @@ object JsonAstBuilder:
         ctx.err(s"unknown reference kind '$other' for an interaction")
         UserRef(curAt, pathId(r.path))
 
-  /** A step reached WITHOUT its `InteractionContentDto` wrapper, and therefore with no metadata to
-    * rebuild: a step nested inside a `sequential`/`parallel`/`optional` composite, whose DTO holds a
-    * bare `Seq[InteractionDto]`, and the deprecated flat `interactions` list a use case may carry
-    * instead of ordered contents.
-    *
-    * So metadata on a NESTED step is still dropped. Named here rather than papered over — closing it
-    * means the composites' `interactions` becoming wrappers too, which is a schema change, not a
-    * wiring fix. Filed in BACKLOG.
+  /** [1.5], CLOSED 2026-08-17: a step nested inside a `sequential`/`parallel`/`optional` composite
+    * now carries its metadata, because those composites hold `InteractionContentDto` rather than
+    * bare `InteractionDto`. This helper used to hardcode `Contents.empty[MetaData]()` and was the
+    * marker for the gap.
     */
-  private def nestedInteraction(i: InteractionDto)(using Ctx): Interaction =
+  private def nestedInteraction(d: InteractionContentDto)(using Ctx): Interaction =
+    buildInteraction(d.interaction, meta(d.brief, d.metadata))
+
+  /** The DEPRECATED flat `UseCaseDto.interactions` list, which a use case may carry instead of
+    * ordered contents. It holds bare `InteractionDto`s with nowhere to put metadata, so there is
+    * genuinely none to rebuild — unlike the composite children above, where the absence was a
+    * defect. Ordered `contents` is the form that carries everything.
+    */
+  private def bareInteraction(i: InteractionDto)(using Ctx): Interaction =
     buildInteraction(i, Contents.empty[MetaData]())
 
   private def buildInteraction(i: InteractionDto, nm: Contents[MetaData])(using
@@ -1297,7 +1301,7 @@ object JsonAstBuilder:
         u.contents,
         "UseCase",
         Legal.useCase,
-        contentsOf[UseCaseContents](u.interactions.map(nestedInteraction), comments(u.comments))
+        contentsOf[UseCaseContents](u.interactions.map(bareInteraction), comments(u.comments))
       ),
       meta(u.brief, u.metadata)
     )

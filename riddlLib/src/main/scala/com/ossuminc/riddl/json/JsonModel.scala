@@ -13,6 +13,27 @@ package com.ossuminc.riddl.json
   * [[JsonAstBuilder]] maps a [[JsonModel.RootDto]] onto an `AST.Root`, applying RIDDL's required
   * defaults so the result is correct-by-construction for the supported subset.
   *
+  * ==Why this surface exists at all — RULED 2026-08-17 by Reid==
+  *
+  * The question was raised by Reid on 2026-08-16 and answered on the 17th: **keep JSON for hosted
+  * models, and point self-hosted users at GBNF/XGrammar.**
+  *
+  * The fact that decides it: **hosted frontier models (Claude, GPT, Gemini) expose JSON Schema and
+  * tool schemas only.** There is no logit-level hook for an arbitrary context-free grammar, so for
+  * those models JSON is the ONLY constrained-decoding channel available. A self-hosted user has
+  * better options — this repo already generates `riddl-grammar.gbnf` from the EBNF and CI-checks it
+  * against drift, and XGrammar is the modern retry if GBNF's performance on a 263-rule grammar is
+  * the problem — so they should use those and not this.
+  *
+  * What that costs, stated plainly because it is the price of the ruling: **131 DTOs shadowing the
+  * AST**, a second serialization surface that has to be kept in step by hand. It is the surface
+  * that produced the unknown-key defect class and, on 2026-08-17, the discovery that every
+  * interaction's metadata was silently dropped. Anything added to the AST must be added here too.
+  *
+  * What JSON does NOT buy, so nobody re-argues it: correctness. It guarantees SHAPE. The identical
+  * validation passes run afterwards either way, so an AI emitting JSON still has to learn RIDDL's
+  * semantics — it is spared only malformed syntax.
+  *
   * Serialization uses upickle, which is cross-compiled for JVM, JS, and Native, keeping the whole
   * path Native-safe (no I/O, no JVM-only dependency).
   *
@@ -1212,9 +1233,19 @@ object JsonModel:
     reason: Option[String],
     invariant: Option[String] = None
   ) extends InteractionDto
-  case class ParallelIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
-  case class SequentialIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
-  case class OptionalIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
+  /** The composite steps. Their children are [[InteractionContentDto]], not bare
+    * [[InteractionDto]], so a NESTED step carries its `brief`/`metadata` exactly as a top-level one
+    * does — [1.5].
+    *
+    * **The JSON stays FLAT**: a nested step is still written as its own object with `kind` beside
+    * the optional `brief`/`metadata` keys, NOT wrapped in `{"interaction": {…}}`. The wrapper is a
+    * Scala-side carrier only. That keeps the document schema backward compatible (a reader of the
+    * old shape sees the same objects, plus keys it ignores) and avoids a nesting level that would
+    * have made nested and top-level steps read differently for no gain.
+    */
+  case class ParallelIxnDto(interactions: Seq[InteractionContentDto]) extends InteractionDto
+  case class SequentialIxnDto(interactions: Seq[InteractionContentDto]) extends InteractionDto
+  case class OptionalIxnDto(interactions: Seq[InteractionContentDto]) extends InteractionDto
 
   /** `{ "name": "Pay", "userStory": <userStory>, "interactions": [<interaction>], "brief"?: ... }`
     */
@@ -2115,8 +2146,17 @@ object JsonModel:
     )
   private def readRef(v: ujson.Value): RefDto =
     RefDto(v.obj("kind").str, v.obj("path").str, v.obj.get("keyword").map(_.str))
-  private def readIxns(o: Option[ujson.Value]): Seq[InteractionDto] =
-    o.map(_.arr.map(readInteraction).toSeq).getOrElse(Nil)
+  /** [1.5]: a nested step's `brief`/`metadata` sit on the SAME object as its `kind`, so they are
+    * read from that object rather than from a wrapper around it.
+    */
+  private def readIxns(o: Option[ujson.Value]): Seq[InteractionContentDto] =
+    o.map(_.arr.map { v =>
+      InteractionContentDto(
+        readInteraction(v),
+        v.obj.get("brief").map(_.str),
+        v.obj.get("metadata").map(j => readJson[MetaDto](j))
+      )
+    }.toSeq).getOrElse(Nil)
 
   private def readInteraction(v: ujson.Value): InteractionDto =
     val m = v.obj
@@ -2155,8 +2195,16 @@ object JsonModel:
     end match
   end readInteraction
 
-  private def ixnArr(ixns: Seq[InteractionDto]): ujson.Value =
-    ujson.Arr.from(ixns.map(writeInteraction))
+  /** [1.5]: merge the carrier's `brief`/`metadata` INTO the step's own object, keeping the array
+    * flat. `writeInteraction` always yields a `ujson.Obj`, so the merge is a key addition.
+    */
+  private def ixnArr(ixns: Seq[InteractionContentDto]): ujson.Value =
+    ujson.Arr.from(ixns.map { entry =>
+      val base = writeInteraction(entry.interaction).obj
+      entry.brief.foreach(b => base("brief") = ujson.Str(b))
+      entry.metadata.foreach(m => base("metadata") = writeJs(m))
+      ujson.Obj(base)
+    })
 
   private def writeInteraction(dto: InteractionDto): ujson.Value =
     dto match
