@@ -112,29 +112,16 @@ case class MessageFlowPass(
   private lazy val refMap = outputs.refMap
   private lazy val symTab = outputs.symbols
 
-  /** What ValidationPass resolved each `send`/`tell` operand to. See
-    * [[com.ossuminc.riddl.passes.validate.ValidationOutput.deliverableTypes]].
-    */
-  private lazy val deliverableTypes = outputs.validation.deliverableTypes
-
-  /** The message [[Type]] a `send`/`tell` delivers.
+  /** The message [[Type]] a `send`/`tell` delivers — see [[DeliverableTypes]].
     *
-    * The refMap answers first, so every edge this pass produced before keeps being produced by the
-    * same route. It cannot answer for a `ValueRef` operand naming a `let`-local, because
-    * `let`-locals are LEXICAL by design and never enter the symbol table — for those, and only
-    * those, ValidationPass's threaded-scope resolution supplies the answer.
-    *
-    * `None` from both still warns. Widening the resolution must not silence a genuinely dangling
-    * operand, which is what the negative case in `LetLocalMessageFlowTest` pins.
+    * `None` still warns. Widening the resolution must not silence a genuinely dangling operand,
+    * which is what the negative case in `LetLocalMessageFlowTest` pins.
     */
   private def deliverableType(
     stmt: Statement,
     msg: MessageRef | Constructor | ValueRef,
     omc: OnMessageLikeClause
-  ): Option[Type] =
-    refMap
-      .definitionOf[Type](msg.deliverableOperandPathId, omc)
-      .orElse(deliverableTypes.get(stmt))
+  ): Option[Type] = DeliverableTypes.of(outputs, stmt, msg, omc)
 
   private val collectedEdges: mutable.ListBuffer[MessageFlowEdge] =
     mutable.ListBuffer.empty

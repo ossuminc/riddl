@@ -196,19 +196,24 @@ case class DependencyAnalysisPass(
           ) += target
         }
 
-        // Record type dependency for the message
-        val maybeType = refMap.definitionOf[Type](tell.msg.deliverableOperandPathId, omc)
-        maybeType.foreach { msgType =>
-          val sourceType = parents.collectFirst { case t: Type =>
-            t
-          }
-          sourceType.foreach { src =>
-            typeDepsMap.getOrElseUpdate(
-              src,
-              mutable.Set.empty
-            ) += msgType
-          }
-        }
+        // Record type dependency for the message.
+        //
+        // The source is the HANDLED message, resolved from the enclosing clause. It used to be
+        // `parents.collectFirst { case t: Type => t }`, which CANNOT succeed: a tell's parents are
+        // its on-clause, handler, processor, context and domain — never a Type. So `typeDeps`, a
+        // public output documented as "map from each type to types it references", was empty for
+        // every model ever analyzed, and an empty analysis result looks exactly like a model that
+        // does not use the construct. There were no tests on this pass at all;
+        // `DependencyAnalysisPassTest` is now that gate.
+        //
+        // "Handling PlaceOrder leads to telling ShipOrder" is the edge the field documents, and the
+        // handled message is the only Type in a tell's surroundings, so it is the only candidate.
+        val maybeType = DeliverableTypes.of(outputs, tell, tell.msg, omc)
+        val sourceType = refMap.definitionOf[Type](omc.msg, omc)
+        (sourceType, maybeType) match
+          case (Some(src), Some(msgType)) =>
+            typeDepsMap.getOrElseUpdate(src, mutable.Set.empty) += msgType
+          case _ => () // one end unresolved: MessageFlowPass reports it, this pass stays quiet
       }
     }
   }
