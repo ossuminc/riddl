@@ -671,6 +671,24 @@ that needs a ruling before either can be fixed.
   `JsonAstBuilder.nestedInteraction`, which exists to make the gap visible at the
   code rather than only here.
 
+  **MEASURED 2026-08-17, not reasoned** — the entry was first written from
+  reading the code, and this repo's own rule is that a claim about behaviour
+  needs a run. Add a `with { briefly "…" }` to a step inside a `sequence` in
+  `language/input/refusal-reason.riddl` and run
+  `riddlLib/testOnly *Root2JsonFixturesTest*`: it reports
+  **`BriefDescription: 2 -> 1`** — the top-level step's brief survives, the
+  nested one does not. That is a two-minute reproduction for whoever takes this.
+  The fixture change was REVERTED rather than left in place, because it turns two
+  suites red and a permanently-red gate stops being read.
+
+  **DELIBERATELY NOT FIXED in the same session that found it**, and the reason is
+  [1.1]: Reid asked on 2026-08-16 whether the JSON INPUT surface should exist at
+  all. Closing this means changing that surface's document schema — nested steps
+  going from `{"kind": …}` to `{"interaction": {"kind": …}, "brief": …}` — which
+  is a compatibility event for every consumer reading it. **Settle [1.1] first;
+  if the input surface goes away, this fix is free (write-side only), and if it
+  stays, the schema change wants announcing rather than discovering.**
+
 - **~~[2.2] superseded framing~~ (kept only so the reasoning is not re-derived).**
   **CORRECTED 2026-08-16 by Reid, and the previous framing was wrong.** This
   entry said the operand "should name an invariant, NOT prose", and offered as a
