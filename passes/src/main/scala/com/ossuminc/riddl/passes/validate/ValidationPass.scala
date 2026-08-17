@@ -696,47 +696,49 @@ case class ValidationPass(
                   "Send, tell, or yield an event from this command handler, e.g. 'send event SomethingHappened to outlet ...' or 'yield event SomethingHappened'."
               )
           case AggregateUseCase.QueryCase =>
-            // scopedStatements (not Finder) so a send/tell's ValueRef operand resolves with its
-            // OWN lexical `let` scope, not the clause's outermost one -- the same widening
-            // checkMessageOperandSource applies. `reply`/`yield` operands stay MessageRef |
-            // Constructor only until Task 2, so operandMessageKind (unwidened) is still correct
-            // for them.
-            val scoped = scopedStatements(omc.contents, Seq.empty[LetStatement])
-            val sends: Seq[(SendStatement, Seq[LetStatement])] = scoped.collect {
-              case (s: SendStatement, curLets) => s -> curLets
+            // EVERY path, and a refusal counts (Reid, 2026-08-16: "queries SHOULD be answered,
+            // however, it is possible to let them refuse as well"). This makes the query rule
+            // exactly parallel to the command rule above rather than stricter than it.
+            //
+            // It used to ask whether a reply appeared ANYWHERE in the clause, so
+            // `when ready then reply result R end` -- with no `else` -- was accepted while
+            // answering nothing on the other branch. That is not a style matter: `ask` is defined
+            // as taking the value a `reply` provides, so an unanswered path leaves the caller
+            // waiting. Same weakness `checkYieldConformance` and the command check both had.
+            //
+            // REPLIES, not yields, is the canonical spelling as of 2.0 -- but both are accepted
+            // here, because a `yield result` is already an Error from `checkResponsePairing` and
+            // reporting it twice helps nobody.
+            val answered = dischargesOnEveryPath(omc.contents) { (stmt, curLets) =>
+              stmt match
+                case _: ErrorStatement | _: RequireStatement => true
+                case s: SendStatement =>
+                  widenedOperandMessageKind(s.msg, parents, curLets)
+                    .contains(AggregateUseCase.ResultCase)
+                case t: TellStatement =>
+                  widenedOperandMessageKind(t.msg, parents, curLets)
+                    .contains(AggregateUseCase.ResultCase)
+                // WIDENED for replies too, since 2026-08-16. The comment that used to stand here
+                // said reply/yield operands "stay MessageRef | Constructor only until Task 2" --
+                // Task 2 has landed, `ReplyStatement.msg` is `MessageRef | Constructor | ValueRef`,
+                // and leaving these narrow made the CANONICAL spelling invisible: riddl-models
+                // writes `let r: type X.Result = prompt(…)` then `reply r`, which the narrow
+                // `operandMessageKind` cannot resolve. That produced 10 false "should result in a
+                // reply" warnings across 6 models on handlers that plainly do reply.
+                case r: ReplyStatement =>
+                  widenedOperandMessageKind(r.msg, parents, curLets)
+                    .contains(AggregateUseCase.ResultCase)
+                case y: YieldStatement =>
+                  widenedOperandMessageKind(y.msg, parents, curLets)
+                    .contains(AggregateUseCase.ResultCase)
+                case _ => false
             }
-            val tells: Seq[(TellStatement, Seq[LetStatement])] = scoped.collect {
-              case (t: TellStatement, curLets) => t -> curLets
-            }
-            // REPLIES, not yields. A query answers with `reply` as of 2.0, so looking only for
-            // YieldStatement here made the canonical spelling invisible and reported a
-            // well-formed handler as incomplete. Both are accepted: a `yield result` is already
-            // an Error from `checkResponsePairing`, and reporting it twice helps nobody.
-            val replies: Seq[Statement] = scoped.collect {
-              case (r: ReplyStatement, _) => r
-              case (y: YieldStatement, _) => y
-            }
-            val foundSend = sends.nonEmpty &&
-              sends.exists { (s, curLets) =>
-                widenedOperandMessageKind(s.msg, parents, curLets).contains(AggregateUseCase.ResultCase)
-              }
-            val foundTell = tells.nonEmpty &&
-              tells.exists { (t, curLets) =>
-                widenedOperandMessageKind(t.msg, parents, curLets).contains(AggregateUseCase.ResultCase)
-              }
-            val foundReply = replies.exists { st =>
-              val operand = st match
-                case r: ReplyStatement => r.msg
-                case y: YieldStatement => y.msg
-                case _                 => MessageRef.empty
-              operandMessageKind(operand).contains(AggregateUseCase.ResultCase)
-            }
-            if !(foundSend || foundTell || foundReply) then
+            if !answered then
               messages.addCompleteness(
                 omc.errorLoc,
                 s"Query processing in ${entity.identify} should result in a reply or sending a result",
                 suggestion =
-                  "Yield a result or send a result type from this query handler, e.g. 'reply result QueryResult'."
+                  "Reply with a result on every path, or refuse, e.g. 'reply result QueryResult' or 'error \"not available\"'."
               )
           case _ =>
         }
