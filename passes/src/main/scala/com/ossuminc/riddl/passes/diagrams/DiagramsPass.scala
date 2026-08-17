@@ -46,26 +46,26 @@ case class DataFlowConnection(
   * @param connectors
   *   All connectors within the context
   * @param streamlets
-  *   All streamlets within the context
+  *   Every PORT-BEARING processor within the context — Adaptor, Context, Entity, Projector,
+  *   Repository and Streamlet alike.
   * @param connections
   *   Resolved connection data with source, target, and message type
-  * @param portBearing
-  *   Every processor within the context that declares a port of its own — the wider set a data
-  *   flow diagram actually needs to draw.
   *
-  * [2.4] Streamlet → Processor: `streamlets` keeps its exact meaning and type, per the
-  * compatibility policy; `portBearing` is added alongside because since the unified processor
-  * model a Context, Entity, Projector, Repository or Adaptor may declare its own inlets and
-  * outlets, and a diagram drawn from `streamlets` alone omits every one of them. Defaulted and
-  * last, so existing positional construction is unaffected.
+  * **[4.1], RULED 2026-08-17 by Reid:** `streamlets` means all port-bearing processors, because
+  * since the unified processor model every processor may declare portlets — so a diagram drawn
+  * from the `Streamlet` case class alone omitted five of the six kinds. This REPLACES the
+  * 2026-08-16 reading, under which a `portBearing` field was added alongside an unchanged
+  * `streamlets`; that field shipped in `2.0.0-rc.15` and is now DELETED rather than left as a
+  * synonym.
+  *
+  * **Breaking**: element type widened from `Streamlet` to `Processor[?]`.
   */
 @JSExportTopLevel("DataFlowDiagramData")
 case class DataFlowDiagramData(
   context: Context,
   connectors: Seq[Connector] = Seq.empty,
-  streamlets: Seq[Streamlet] = Seq.empty,
-  connections: Seq[DataFlowConnection] = Seq.empty,
-  portBearing: Seq[Processor[?]] = Seq.empty
+  streamlets: Seq[Processor[?]] = Seq.empty,
+  connections: Seq[DataFlowConnection] = Seq.empty
 )
 
 /** The information needed to generate a Use Case Diagram. The diagram for a use case is very
@@ -495,16 +495,15 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
 
   private def captureDataFlow(context: Context): Unit = {
     val ctxConnectors = context.connectors.toSeq
-    val ctxStreamlets = context.streamlets.toSeq
-    // [2.4]: every processor in the context that declares a port of its own. A Streamlet always
-    // qualifies; since the unified processor model so may a Context, Entity, Projector, Repository
-    // or Adaptor, and those are exactly what `ctxStreamlets` cannot report.
+    // [4.1]: every PROCESSOR in the context, not only the `Streamlet` case class.
     // `filterThroughWrappers`, not `contents.processors`: the latter is deliberately LITERAL (see
-    // its note in Contents.scala), and this must see an included processor exactly as
-    // `context.streamlets` on the line above does.
-    val ctxPortBearing = context.contents
-      .filterThroughWrappers[Processor[?]]
-      .filter(p => p.inlets.nonEmpty || p.outlets.nonEmpty)
+    // its note in Contents.scala), and this must see an included processor exactly as the AST's
+    // own `context.streamlets` containment accessor does.
+    val ctxProcessors = context.contents.filterThroughWrappers[Processor[?]]
+    // The DIAGRAM GATE stays on processors that actually declare a port. `ctxProcessors` is now
+    // true of nearly every context, so gating on it would emit a data-flow diagram for every
+    // context in the model, most of them with nothing to draw.
+    val ctxWithPorts = ctxProcessors.filter(p => p.inlets.nonEmpty || p.outlets.nonEmpty)
     val connections = ctxConnectors.flatMap { connector =>
       if connector.nonEmpty then
         val maybeOutlet = refMap.definitionOf[Outlet](connector.from, context)
@@ -527,13 +526,13 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
           case _ => None
       else None
     }
-    // `ctxStreamlets` stays in the gate. `ctxPortBearing` is not a superset of it: a Streamlet with
-    // no ports (a stub, or a `void` shape) is a streamlet and is not port-bearing, and a context
-    // holding only one of those produced a diagram before this change and must keep doing so.
-    if ctxConnectors.nonEmpty || ctxStreamlets.nonEmpty || ctxPortBearing.nonEmpty then
+    // A portless Streamlet (a stub, or a `void` shape) still earns a diagram, as it did before
+    // [4.1] widened the field: it is a streaming component whose ports are simply not written yet.
+    val ctxStreamletStubs = ctxProcessors.collect { case s: Streamlet => s }
+    if ctxConnectors.nonEmpty || ctxWithPorts.nonEmpty || ctxStreamletStubs.nonEmpty then
       dataFlowDiagrams.put(
         context,
-        DataFlowDiagramData(context, ctxConnectors, ctxStreamlets, connections, ctxPortBearing)
+        DataFlowDiagramData(context, ctxConnectors, ctxProcessors, connections)
       )
   }
 

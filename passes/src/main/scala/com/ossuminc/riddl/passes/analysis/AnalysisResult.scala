@@ -174,29 +174,25 @@ case class AnalysisResult(
   def repositories: Seq[Repository] =
     symbols.parentage.keys.collect { case r: Repository => r }.toSeq
 
-  /** Get all streamlets in the model.
+  /** Get all PORT-BEARING processors in the model — Adaptor, Context, Entity, Projector,
+    * Repository and Streamlet alike.
     *
-    * [2.4] Streamlet → Processor: this keeps meaning "the `Streamlet` definitions", unchanged. Its
-    * whole family (`domains`, `contexts`, `entities`, `sagas`, `repositories`, `projectors`,
-    * `adaptors`, `functions`, `types`) is named after a KIND and answers about that kind, so
-    * redefining this one to mean "everything port-bearing" would make it the only accessor here
-    * whose name does not say what it returns — and would silently change the answer under every
-    * existing caller. Ask [[processors]] for the port-bearing question.
-    */
-  def streamlets: Seq[Streamlet] =
-    symbols.parentage.keys.collect { case s: Streamlet => s }.toSeq
-
-  /** Get all processors in the model — Adaptor, Context, Entity, Projector, Repository and
-    * Streamlet.
+    * **[4.1], RULED 2026-08-17 by Reid: *"streamlets is now an older idea, but in the new model
+    * every processor is capable of having one or more portlets — so redefine streamlets to mean
+    * all port-bearing processors."*** This REPLACES the 2026-08-16 reading, which kept the name
+    * meaning "the `Streamlet` definitions" on the argument that every sibling accessor here is
+    * named after a kind. That argument loses to the language: `Streamlet` stopped being the
+    * port-bearing kind when the unified processor model made every processor port-bearing, so the
+    * accessor now answers the question the name was always ASKING.
     *
-    * [2.4]: added rather than widening [[streamlets]], per the compatibility policy's "add, don't
-    * change". Since the unified processor model, EVERY processor is port-bearing and may carry an
-    * ascribed shape, so a consumer asking "what can sit in a stream?" wants this, and one asking
-    * "which definitions are Streamlets?" wants `streamlets`. Before this existed, the port-bearing
-    * question had no accessor at all and callers reached for `streamlets`, getting an answer that
-    * silently omitted five of the six kinds.
+    * A separate `processors` accessor existed here for one day, added under the previous reading
+    * and shipped in `2.0.0-rc.15`. It is DELETED rather than kept as a synonym: two names for one
+    * answer is how a consumer ends up believing they differ.
+    *
+    * **Breaking**: the element type widened from `Streamlet` to `Processor[?]`. A caller wanting
+    * only the `Streamlet` case class writes `.collect { case s: Streamlet => s }`.
     */
-  def processors: Seq[Processor[?]] =
+  def streamlets: Seq[Processor[?]] =
     symbols.parentage.keys.collect { case p: Processor[?] => p }.toSeq
 
   /** Get all projectors in the model */

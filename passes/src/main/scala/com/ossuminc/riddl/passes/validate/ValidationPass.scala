@@ -99,10 +99,10 @@ case class ValidationPass(
       inlets.toSeq,
       outlets.toSeq,
       connectors.toSeq,
-      // `ValidationOutput.streamlets` is public API typed `Seq[Streamlet]` and keeps its exact
-      // meaning: the Streamlet definitions in the model. The graph's node buffer is now wider
-      // (every Processor kind), so narrow it back here rather than changing what callers get.
-      processors.collect { case s: Streamlet => s }.toSeq,
+      // [4.1], RULED 2026-08-17: `streamlets` means ALL port-bearing processors, so the graph's
+      // node buffer -- which is already every Processor kind -- passes through UNNARROWED. The
+      // `.collect { case s: Streamlet => s }` that used to sit here was the narrowing.
+      processors.toSeq,
       computedHandlerCompleteness,
       deliverableTypes.toMap
     )

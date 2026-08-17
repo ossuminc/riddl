@@ -82,7 +82,11 @@ case class ValidationOutput(
   inlets: Seq[Inlet] = Seq.empty[Inlet],
   outlets: Seq[Outlet] = Seq.empty[Outlet],
   connectors: Seq[Connector] = Seq.empty[Connector],
-  streamlets: Seq[Streamlet] = Seq.empty[Streamlet],
+  // [4.1], RULED 2026-08-17: `streamlets` means all PORT-BEARING processors, which since the
+  // unified processor model is every Processor kind -- not the `Streamlet` case class. Element
+  // type widened accordingly; a caller wanting only Streamlets writes
+  // `.collect { case s: Streamlet => s }`.
+  streamlets: Seq[Processor[?]] = Seq.empty[Processor[?]],
   handlerCompleteness: Seq[HandlerCompleteness] = Seq.empty[HandlerCompleteness],
   deliverableTypes: Map[Statement, Type] = Map.empty[Statement, Type]
 ) extends PassOutput

@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.passes.analysis
 
+import com.ossuminc.riddl.language.AST.Streamlet
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.wordspec.AnyWordSpec
@@ -127,7 +128,13 @@ class AnalysisPassSpec extends AnyWordSpec with Matchers {
           result.sagas mustBe empty
           result.epics mustBe empty
           result.repositories mustBe empty
-          result.streamlets mustBe empty
+          // [4.1], RULED 2026-08-17: `streamlets` means every PORT-BEARING processor, which since
+          // the unified processor model is every Processor kind. This model declares no `Streamlet`
+          // but does declare 2 contexts and 2 entities, and those ARE processors — so the old
+          // `mustBe empty` was asserting the narrow reading, not an empty model.
+          result.streamlets.map(_.id.value).toSet mustBe
+            Set("Orders", "Customers", "Order", "Customer")
+          result.streamlets.collect { case s: Streamlet => s } mustBe empty
           result.projectors mustBe empty
           result.adaptors mustBe empty
           result.functions mustBe empty
