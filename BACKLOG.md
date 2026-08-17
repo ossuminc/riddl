@@ -1158,13 +1158,25 @@ that needs a ruling before either can be fixed.
   `github.com/ossuminc/riddl` and `opensource.org/license/apache-2-0`, neither of
   which is an ossum.tech URL.
 
-### 4. Awaiting Reid's ruling — BUILT on my best recommendation
+### 4. RULED by Reid 2026-08-17 — now compliance work
 
-Filed 2026-08-17 during an autonomous run, under Reid's instruction to *"queue
-questions and proceed with your best recommendation"*. **Every item here is
-already implemented and green.** These are not blocked; they are decisions I
-made that Reid may want to make differently. Each says what I chose, why, and
-what changing it would cost — reworking any of them is cheap and expected.
+All eight questions were answered in one pass. **Three confirmed what was built
+(`[4.3]`), and five changed it** — so this section is now a work list, not a
+question list. Each item below records the RULING verbatim in substance, then
+what it costs. Struck items are complete.
+
+**The rulings, in one place:**
+
+| # | Ruling |
+|---|---|
+| `[1.1]` | **C** — keep JSON for hosted models, point self-hosted at GBNF/XGrammar, and DOCUMENT the split |
+| `[2.1]` | **Neither A nor B.** Drop scaffolding entirely; just allow the Figma URL as an ASSOCIATION on UI elements, and on an application-intent Context |
+| `[4.1]` | **B** — redefine `streamlets` to mean all port-bearing processors; delete the accessors added as redundant |
+| `[4.2]` | **A, but far broader** — `typeDeps` is a TYPE-DEPENDENCY graph, not a message one |
+| `[4.3]` | **A** — keep as built. No work. |
+| `[4.4]` | **B** — count the shape spec for any processor that can ascribe one |
+| `[4.5]` | **C** — investigate enough to route it; may be moot once rc.15 reaches riddl-models |
+| `[4.6]` | **C** — local always wins, AND warn, and **the warning must name ALL sides** (there may be more than two) |
 
 - **[4.1]** **`AnalysisResult.streamlets` / `DataFlowDiagramData.streamlets` keep
   meaning "the Streamlet definitions".** The [2.4] question, decided the additive
