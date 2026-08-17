@@ -829,4 +829,65 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         }
     }
   }
+
+  /** A field named after a DEFINITION keyword used to report several tokens upstream, with a
+    * message that named neither the offending word nor the escape (riddl-generator, 2026-08-03).
+    * `command Store is { entity: Order }` failed with *"Expected one of ("(" | "replies" |
+    * "yields")"* pointed at the `{`, because the whole aggregation alternative had to fail before
+    * the enclosing alternation could report.
+    */
+  "a field named after a definition keyword" should {
+    "name the offending word and the escape" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type Order is String with { briefly "o" }
+          |    command Store is { entity: Order } with { briefly "s" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(rpi) match
+        case Right(_) => fail("expected a parse failure for a keyword-named field")
+        case Left(messages) =>
+          val text = messages.map(_.message).mkString("\n")
+          withClue(text) {
+            text must include("entity")
+            text must include("introduces a definition")
+          }
+    }
+
+    "accept the quoted escape it suggests" in { (td: TestData) =>
+      // The suggestion has to be REAL. `quotedIdentifier` uses single quotes and bypasses the
+      // keyword filter, so this is the spelling that works -- double quotes would be a
+      // LiteralString and would not.
+      val rpi = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type Order is String with { briefly "o" }
+          |    command Store is { 'entity': Order } with { briefly "s" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(rpi).isRight mustBe true
+    }
+
+    "leave a NON-definition keyword usable as a field name" in { (td: TestData) =>
+      // Only definition-introducing keywords are filtered. `version` and `copyright` are ordinary
+      // field names that A53/A47 kept working on purpose, and this must not have narrowed that.
+      val rpi = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    command Store is { version: String, copyright: String } with { briefly "s" }
+          |  } with { briefly "c" }
+          |} with { briefly "d" }
+          |""".stripMargin,
+        td
+      )
+      TopLevelParser.parseInput(rpi).isRight mustBe true
+    }
+  }
 }

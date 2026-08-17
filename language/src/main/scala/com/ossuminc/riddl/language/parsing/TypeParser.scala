@@ -540,8 +540,38 @@ private[parsing] trait TypeParser {
     }
   }
 
+  /** A field whose name is a DEFINITION keyword, caught only so the diagnostic can say so.
+    *
+    * `simpleIdentifier` rejects the keywords that INTRODUCE a definition (`entity`, `context`,
+    * `domain`, …) — that is what stops `domain domain is { … }` parsing. The consequence for a
+    * field is a message pointing at the wrong place: `command Store is { entity: Order }` failed
+    * with *"Expected one of ("(" | "replies" | "yields")"* reported at the `{`, several tokens
+    * BEFORE the offending word, because the whole aggregation alternative had to fail before the
+    * enclosing alternation could report. Nothing in that message mentions `entity`, and nothing
+    * suggests the escape.
+    *
+    * Tried AFTER `field`, so a legal field is never affected, and gated on the keyword being
+    * followed by a colon so this cannot swallow any other construct. The escape it names is real
+    * and verified: `'entity': Order` parses, because `quotedIdentifier` accepts single quotes and
+    * bypasses the keyword filter. Note only DEFINITION keywords are affected — `version: String`
+    * and `copyright: String` are perfectly legal field names and stay that way.
+    */
+  private def keywordNamedField[u: P]: P[Nothing] = {
+    // Built from the SAME set `simpleIdentifier` filters against, so the two cannot disagree
+    // about which words are definition keywords.
+    P(
+      (CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_\\-").?).!
+        .filter(Keyword.definitionKeywords.contains) ~~ Punctuation.colon
+    )./.flatMap { kw =>
+      Fail.opaque(
+        s"a field name, but '$kw' introduces a definition and cannot be one unqualified; " +
+          s"write it quoted as '$kw' to use it as a field name"
+      )
+    }
+  }
+
   private def aggregateContent[u: P]: P[AggregateContents] = {
-    P(field | method | comment)./.asInstanceOf[P[AggregateContents]]
+    P(field | method | comment | keywordNamedField)./.asInstanceOf[P[AggregateContents]]
   }
 
   private def aggregateDefinitions[u: P]: P[Seq[AggregateContents]] = {
