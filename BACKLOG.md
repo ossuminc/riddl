@@ -679,10 +679,35 @@ that needs a ruling before either can be fixed.
   "Type") and `AST.scala:4735` (`Declaration.ascription`'s `case _ => ""` — a type
   with no `yields` genuinely has no ascription). Both are the *"nothing to do
   here"* class, which the rule explicitly permits.
-  **The remaining 195 are unexamined.** The useful next slice is the same shape as
-  the one fixed: arms whose fallback produces OUTPUT (a placeholder string, a
-  default keyword) rather than emptiness, since those fail as wrong answers rather
-  than as missing ones.
+  **AUDIT PROGRESS 2026-08-17, `7296cfc27`.** The output-producing slice named
+  below is now WORKED, and it was small: `grep -rn --include='*.scala'
+  'case _ *=> *"'` over `passes`/`language`/`riddlLib`/`commands` returns **10
+  sites**, not hundreds, so this slice cost an hour rather than the day the
+  198-site figure suggests. **Sizing a slice by grep is cheap even though
+  CLASSIFYING one is not.**
+  **FIXED (3):** `BASTReader.readAdaptorNode` defaulted an unrecognized direction
+  tag to `InboundAdaptor` — the worst answer available, since direction decides
+  which side of a bridge produces and which consumes; now throws, matching the
+  rest of that reader. `JsonifierPass`'s adaptor `case _ => "outbound"` and
+  `aggregateFlavour`'s `case _ => "aggregation"` are enumerated, so a third
+  `AdaptorDirection` or `AggregateTypeExpression` is a compile error (-Werror is
+  live in riddlLib) rather than a silent reversal or a lost keyword.
+  **EXAMINED AND LEGITIMATE — do not "fix" these:** `TypeParser.literalKindFor`'s
+  `case _ => "a numeric literal"` (its only caller has already established the
+  type is numeric-like; the `Bool` arm above it is the exception) and
+  `cardinality`'s `prefixStr` `case _ => ""` (**unreachable**: the three
+  suffix-only combinations are matched by earlier arms and `.!.?` can only yield
+  "many"/"optional"). Plus the two already cleared: `AST.scala:2907`, `:4748`.
+  **That is the whole output-producing slice.** `RiddlAPI.scala:156` carries its
+  own justification (Comment/Include have no identifier).
+
+  **The remaining ~185 are unexamined.** Next slice, by the same "cheap to size"
+  logic: `case _ => None` and `case _ => Seq.empty` in RESOLUTION positions,
+  where an empty answer is read downstream as "no such thing" — the shape that
+  produced both of this week's found defects (`DependencyAnalysisPass.typeDeps`
+  empty forever, `MessageFlowPass` dropping let-local edges). Neither of those
+  was a `case _ =>` arm at all, which is the caution: **this item's grep-shaped
+  framing cannot find the defects its own examples are made of.**
 
   **What is already done** (do not redo): the total dispatches were fixed at
   `286ef8157` and around it — `Pass.processValue` now throws on an unhandled
@@ -750,25 +775,28 @@ that needs a ruling before either can be fixed.
   is worth running once. Fixed here with `immutable.VectorMap`, which preserves
   the declared `Map` type.
 
-- **[2.4]** **Finish the `Streamlet` → `Processor` migration in the remaining passes.**
-  Filed by Reid 2026-08-10 when the same defect was fixed in
-  `StreamingValidation` (`70b0f527a`). These sites narrow to the concrete
-  `Streamlet` case class the same way the streaming graph did, so they see one
-  of the six processor kinds and silently ignore the rest:
-
-  - `AnalysisResult.scala:179` — `symbols.parentage.keys.collect { case s:
-    Streamlet => s }`. **Public API whose MEANING would change**, so it needs a
-    decision, not just an edit: does `AnalysisResult.streamlets` mean "the
-    Streamlet definitions" or "the port-bearing processors"? Adding a second
-    accessor is the additive option the compatibility policy prefers.
-  - `MessageFlowPass.scala:291,303`
-  - `DiagramsPass.scala:193,216,394,450,456`
-  - `StatsPass.scala:171`
-
-  Out of scope deliberately in `70b0f527a` — different consumers, and the
-  public-API question above. `Pass.scala`'s `openStreamlet`/`closeStreamlet`
-  and `RiddlFileEmitter`/`PrettifyVisitor`'s uses are NOT in this list: those
-  are legitimately about the case class (visitor hooks, keyword emission).
+- ~~**[2.4]** **Finish the `Streamlet` → `Processor` migration in the remaining
+  passes.**~~ — **DONE 2026-08-17, `2c19d6d70`.** The public-API question is
+  answered the additive way: `AnalysisResult.streamlets` and
+  `DataFlowDiagramData.streamlets` keep their exact meaning and type, and
+  `processors` / `portBearing` are added alongside. Every accessor in that family
+  is named after a KIND, so widening the one would have made it the only one
+  whose name does not say what it returns. **See [4.1] — Reid has not confirmed
+  this reading.**
+  **Both behavioural defects were WRONG ANSWERS, not dropped work**, which the
+  entry did not anticipate: MessageFlowPass's grandparent fallback SUCCEEDED on
+  the enclosing Context (a Context is a Processor too), so a flow from an
+  entity's own outlet named the container as producer; DiagramsPass fell back to
+  the PORT, drawing arrows from an outlet to an inlet with neither owner shown.
+  Demonstrated by reverting each helper, not assumed.
+  **A third defect rode along that no Streamlet-narrowing sweep would find**:
+  `makeProcessorRelationships`'s Streamlet arm called `makeInletRelationships`
+  and then `makeOutletRelationships`, and a block's value is its LAST expression
+  — the inlet relationships were computed and discarded. Same family as the
+  `.sortWith(…).toMap` discard recorded above.
+  **`StatsPass` was examined and is NOT part of this**: all three of its
+  `Streamlet` sites are arms of a total enumeration over the six kinds. Its
+  "+1 for shape" counting only Streamlets is a genuine question — see [4.4].
 
 - ~~**A lookup value: `<mapping|array> at <index>`.**~~ — **DONE 2026-08-17,
   `9ec30c5b5` (parser) + `977813b58` (the rest).** Mapping by key, Sequence by
@@ -886,6 +914,17 @@ that needs a ruling before either can be fixed.
   bare-message operands (18 message-type + 2 record-type). Note both files are
   named `example.riddl`, so a failure list shows "example.riddl, example.riddl"
   — do not read that as one model reported twice.
+
+  **RE-MEASURED 2026-08-17 and it is now THREE, not two.** validation-parity is
+  **187/190**, and the third model is **`reactive-bbq.riddl`**, failing on two
+  errors of a kind not in the list above:
+  *"crosses the context isolation seam from Context 'X' to Context 'X':
+  receiveDrinkOrder is not declared in a domain ancestral to both"* (and the same
+  for `sendPushNotification`). Measured against `origin/release/2` with my own
+  changes STASHED, so this is corpus drift or a pre-existing seam defect, not
+  anything landed this session. **Whose side it belongs on is unresolved — see
+  [4.5].** The 188 figure above is what was true on 2026-08-15; it is left in
+  place because the delta is the interesting part.
 
   **~~`Root2JsonCorpusTest`'s name and assertion disagree~~ — RESOLVED
   2026-08-16 by Reid: "Corpus at 100% should be the release gate, > 95% is
@@ -1009,3 +1048,70 @@ that needs a ruling before either can be fixed.
   `/riddl/2.0/licenses/` 404 no longer exists — `riddlc info` prints
   `github.com/ossuminc/riddl` and `opensource.org/license/apache-2-0`, neither of
   which is an ossum.tech URL.
+
+### 4. Awaiting Reid's ruling — BUILT on my best recommendation
+
+Filed 2026-08-17 during an autonomous run, under Reid's instruction to *"queue
+questions and proceed with your best recommendation"*. **Every item here is
+already implemented and green.** These are not blocked; they are decisions I
+made that Reid may want to make differently. Each says what I chose, why, and
+what changing it would cost — reworking any of them is cheap and expected.
+
+- **[4.1]** **`AnalysisResult.streamlets` / `DataFlowDiagramData.streamlets` keep
+  meaning "the Streamlet definitions".** The [2.4] question, decided the additive
+  way: `processors` and `portBearing` were ADDED rather than widening the
+  existing accessors. Reasoning: every accessor in that family (`domains`,
+  `contexts`, `entities`, …) is named after a KIND, so widening this one alone
+  would make it the only one whose name does not say what it returns, and would
+  change the answer under existing callers without their asking. The
+  compatibility policy says add, don't change.
+  **If you want the other reading**, the change is two `collect` bodies plus a
+  type on each field; the accessors added here would then be redundant and
+  should be deleted rather than left as synonyms. Landed in `2c19d6d70`.
+
+- **[4.2]** **`DependencyAnalysisPass.typeDeps`' source is the HANDLED message.**
+  The field was empty for every model ever analyzed (its guard could not
+  succeed — see the note in `DependencyAnalysisPassTest`), so filling it required
+  choosing what its source means. I chose "handling PlaceOrder leads to telling
+  ShipOrder", because the handled message is the only Type in a `tell`'s
+  surroundings and it matches the field's own documentation, *"map from each type
+  to types it references"*.
+  **This makes a public field go from always-empty to populated.** No in-repo
+  consumer reads it, so nothing here changes behaviour, but riddl-gen or riddlsim
+  might. If the intended edge was something else, say so and it moves. Landed in
+  `1a3c1cf05`.
+
+- **[4.3]** **A `send`/`tell` operand's resolved type is now published on
+  `ValidationOutput.deliverableTypes`.** This is a new public field on a pass
+  output, keyed by the statement itself, and it is how MessageFlowPass and
+  DependencyAnalysisPass resolve a `let`-local operand without duplicating
+  ValidationPass's scope-threading walk.
+  **The design question is whether a pass output is the right place for it**, or
+  whether the resolution belongs in a shared utility both passes call directly
+  (which would mean re-walking the statement tree to rebuild the `let` scope, so
+  I did not). Landed in `b6b3dd03e`; the shared read path is
+  `DeliverableTypes.of`.
+
+- **[4.4]** **`StatsPass` counts "+1 for shape" only for a `Streamlet`.** Left
+  ALONE deliberately in [2.4], because unlike the other sites this is not a
+  narrowing bug — it is a question about what a maturity metric should count.
+  Every Processor may now carry an `ascribedShape`, so a Context or Entity that
+  ascribes one arguably has the same specification to complete. **The counter
+  argument is that a Streamlet is the only kind for which a shape is REQUIRED**,
+  and a maturity denominator should count required specifications, not available
+  ones. I believe the current behaviour is right and did not change it.
+  Sites: `StatsPass.scala:354` and `:439`.
+
+- **[4.5]** **`reactive-bbq` now fails the corpus validation-parity gate and I do
+  not know whose defect it is.** Re-measured 2026-08-17: 187/190, not the 188
+  recorded in [3.4]. The two new errors are context-isolation-seam errors
+  (*"receiveDrinkOrder is not declared in a domain ancestral to both"*), a
+  different class from the bare-message-operand errors the other two models
+  carry.
+  **Verified NOT caused by anything this session landed** — measured with my
+  changes stashed, giving the identical 187 and the identical three model names.
+  So it is either drift in `../riddl-models` (a live checkout another session
+  edits) or a pre-existing seam-check defect. **Deciding that needs a look at
+  the model, which is another repo's business** — hence a question rather than a
+  task. If it is ours, it is a real Error being reported on a correct model,
+  which is the false-positive shape this repo has been bitten by repeatedly.
