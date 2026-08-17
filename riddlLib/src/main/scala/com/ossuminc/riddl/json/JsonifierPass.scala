@@ -983,7 +983,14 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         // `UseCaseContents` is `Interaction | Comment`, so this match is exhaustive.
         val ordered: Seq[ContentEntry] = uc.contents.toSeq.map { v =>
           val dto: ContentDto = v match
-            case i: Interaction    => InteractionContentDto(serializeInteraction(i))
+            // A38 fallout: an interaction's metadata rides on the WRAPPER (see
+            // `InteractionContentDto`). It was dropped entirely until 2026-08-17.
+            case i: Interaction =>
+              InteractionContentDto(
+                serializeInteraction(i),
+                briefOf(i.metadata),
+                metaOf(i.metadata)
+              )
             case lc: LineComment   => CommentDto(lc.text)
             case ic: InlineComment => CommentDto(ic.lines.mkString("\n"), inline = true)
           ContentEntry(dto, if v.loc.isEmpty then None else Some((v.loc.offset, v.loc.endOffset)))
@@ -1584,7 +1591,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case TakeInputInteraction(_, user, input, _) =>
       TakeInputIxnDto(path(user.pathId), path(input.pathId), Some(input.keyword))
     case RefusalInteraction(_, from, user, reason, _) =>
-      RefusalIxnDto(refDto(from), path(user.pathId), reason.s)
+      // A38: prose and invariant-reference go to DIFFERENT keys — a path is not prose, and one
+      // key holding both leaves the reader guessing which was written.
+      reason match
+        case ls: LiteralString =>
+          RefusalIxnDto(refDto(from), path(user.pathId), Some(ls.s))
+        case ir: InvariantRef =>
+          RefusalIxnDto(refDto(from), path(user.pathId), None, Some(path(ir.pathId)))
     case ParallelInteractions(_, contents, _)   => ParallelIxnDto(serIxns(contents))
     case SequentialInteractions(_, contents, _) => SequentialIxnDto(serIxns(contents))
     case OptionalInteractions(_, contents, _)   => OptionalIxnDto(serIxns(contents))

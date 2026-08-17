@@ -1198,7 +1198,20 @@ object JsonModel:
       extends InteractionDto
   case class TakeInputIxnDto(user: String, input: String, keyword: Option[String] = None)
       extends InteractionDto
-  case class RefusalIxnDto(from: RefDto, user: String, reason: String) extends InteractionDto
+  /** `{ "kind": "refusal", "from": <ref>, "user": "<path>", "reason": "<prose>" }` or, for A38's
+    * invariant form, `{ ..., "invariant": "<path>" }`. Exactly one of the two is populated,
+    * mirroring `RequireStmtDto`'s condition/invariant pair — the same choice, in the same language,
+    * spelled the same way in JSON.
+    *
+    * `reason` became optional rather than being reused for both. A path is not prose, and a reader
+    * handed `"reason": "Order.MustBePaid"` has no way to tell which was meant.
+    */
+  case class RefusalIxnDto(
+    from: RefDto,
+    user: String,
+    reason: Option[String],
+    invariant: Option[String] = None
+  ) extends InteractionDto
   case class ParallelIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
   case class SequentialIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
   case class OptionalIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
@@ -1212,7 +1225,21 @@ object JsonModel:
     * two were concatenated rather than merged on the way back, and a comment written between two
     * steps moved to the front.
     */
-  case class InteractionContentDto(interaction: InteractionDto)
+  /** A38 fallout, 2026-08-17: `brief`/`meta` ride HERE, on the wrapper, rather than on each of the
+    * thirteen [[InteractionDto]] kinds. Until this existed `JsonAstBuilder.buildInteraction`
+    * hardcoded `Contents.empty[MetaData]()`, so EVERY interaction lost its metadata through a JSON
+    * round trip -- `step ... refuses ... with { briefly "..." }` came back without the brief. It
+    * went unnoticed because no fixture in the repo had put metadata on an interaction step; the
+    * A38 fixture is the first, and `Root2JsonFixturesTest` caught it the moment it existed.
+    *
+    * One wrapper carries it for all thirteen kinds, which is why this is a small change rather
+    * than fifty-two touch points -- and why the next interaction kind gets it for free.
+    */
+  case class InteractionContentDto(
+    interaction: InteractionDto,
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
+  )
 
   /** An `include "file"` wrapper, carrying its ALREADY-LOADED contents nested inside it.
     *
@@ -2114,7 +2141,13 @@ object JsonModel:
         SelectInputIxnDto(m("user").str, m("input").str, m.get("keyword").map(_.str))
       case "takeInput" =>
         TakeInputIxnDto(m("user").str, m("input").str, m.get("keyword").map(_.str))
-      case "refusal"    => RefusalIxnDto(readRef(m("from")), m("user").str, m("reason").str)
+      case "refusal" =>
+        RefusalIxnDto(
+          readRef(m("from")),
+          m("user").str,
+          m.get("reason").map(_.str),
+          m.get("invariant").map(_.str)
+        )
       case "parallel"   => ParallelIxnDto(readIxns(m.get("interactions")))
       case "sequential" => SequentialIxnDto(readIxns(m.get("interactions")))
       case "optional"   => OptionalIxnDto(readIxns(m.get("interactions")))
@@ -2194,12 +2227,15 @@ object JsonModel:
             "input" -> ujson.Str(input)
           ) ++ kw.map(k => "keyword" -> (ujson.Str(k): ujson.Value))
         )
-      case RefusalIxnDto(from, user, reason) =>
-        ujson.Obj(
-          "kind" -> ujson.Str("refusal"),
-          "from" -> refJs(from),
-          "user" -> ujson.Str(user),
-          "reason" -> ujson.Str(reason)
+      case RefusalIxnDto(from, user, reason, invariant) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("refusal"),
+            "from" -> refJs(from),
+            "user" -> ujson.Str(user)
+          )
+            ++ reason.map(x => "reason" -> (ujson.Str(x): ujson.Value))
+            ++ invariant.map(x => "invariant" -> (ujson.Str(x): ujson.Value))
         )
       case ParallelIxnDto(ixns) =>
         ujson.Obj("kind" -> ujson.Str("parallel"), "interactions" -> ixnArr(ixns))
@@ -2310,7 +2346,11 @@ object JsonModel:
       case ContentKind.Requires => RequiresDto(readArg(body.obj("arg")))
       case ContentKind.Returns  => ReturnsDto(readArg(body.obj("arg")))
       case ContentKind.Interaction =>
-        InteractionContentDto(readInteraction(body.obj("interaction")))
+        InteractionContentDto(
+          readInteraction(body.obj("interaction")),
+          body.obj.get("brief").map(_.str),
+          body.obj.get("metadata").map(j => readJson[MetaDto](j))
+        )
       case ContentKind.Include =>
         IncludeContentDto(body.obj("origin").str, readContents(body.obj.get("contents")))
       case ContentKind.BASTImport =>
@@ -2370,7 +2410,14 @@ object JsonModel:
       case d: RequiresDto => (ContentKind.Requires, ujson.Obj("arg" -> writeArg(d.arg)))
       case d: ReturnsDto  => (ContentKind.Returns, ujson.Obj("arg" -> writeArg(d.arg)))
       case d: InteractionContentDto =>
-        (ContentKind.Interaction, ujson.Obj("interaction" -> writeInteraction(d.interaction)))
+        (
+          ContentKind.Interaction,
+          ujson.Obj.from(
+            Seq[(String, ujson.Value)]("interaction" -> writeInteraction(d.interaction))
+              ++ d.brief.map(b => "brief" -> (ujson.Str(b): ujson.Value))
+              ++ d.metadata.map(m => "metadata" -> (writeJs(m): ujson.Value))
+          )
+        )
       case d: IncludeContentDto =>
         (
           ContentKind.Include,

@@ -582,7 +582,10 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         case ti: TakeInputInteraction =>
           rfe.addIndent(s"step take ${ti.to.format} from ${ti.from.format}")
         case ri: RefusalInteraction =>
-          rfe.addIndent(s"step ${ri.from.format} refuses ${ri.to.format} ${ri.reason.format}")
+          // A38: `reasonFormat` enumerates the prose/invariant union rather than calling `.format`
+          // on it, so a third member of that union reddens the compiler instead of emitting
+          // whatever `RiddlValue.format` happens to produce.
+          rfe.addIndent(s"step ${ri.from.format} refuses ${ri.to.format} ${ri.reasonFormat}")
       end match
       rfe.emitMetaData(interaction.metadata)
       if interaction.metadata.isEmpty then rfe.nl

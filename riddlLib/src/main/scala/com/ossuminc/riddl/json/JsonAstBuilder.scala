@@ -466,7 +466,10 @@ object JsonAstBuilder:
         Requires(curAt, argOf(Some(d.arg)).getOrElse(Aggregation(curAt)))
       case d: ReturnsDto =>
         Returns(curAt, argOf(Some(d.arg)).getOrElse(Aggregation(curAt)))
-      case d: InteractionContentDto => buildInteraction(d.interaction)
+      // A38 fallout: rebuild the interaction's metadata rather than discarding it. `buildInteraction`
+      // hardcoded `Contents.empty[MetaData]()` until 2026-08-17, losing every interaction's brief,
+      // description and terms on every round trip.
+      case d: InteractionContentDto => buildInteraction(d.interaction, meta(d.brief, d.metadata))
       // A wrapper holds whatever its PARENT holds, so its nested children are checked against the
       // same legal set. Its contents are already in the document, which is what keeps the builder
       // free of I/O and so usable on Native.
@@ -1190,8 +1193,21 @@ object JsonAstBuilder:
         ctx.err(s"unknown reference kind '$other' for an interaction")
         UserRef(curAt, pathId(r.path))
 
-  private def buildInteraction(i: InteractionDto)(using ctx: Ctx): Interaction =
-    val nm = Contents.empty[MetaData]()
+  /** A step reached WITHOUT its `InteractionContentDto` wrapper, and therefore with no metadata to
+    * rebuild: a step nested inside a `sequential`/`parallel`/`optional` composite, whose DTO holds a
+    * bare `Seq[InteractionDto]`, and the deprecated flat `interactions` list a use case may carry
+    * instead of ordered contents.
+    *
+    * So metadata on a NESTED step is still dropped. Named here rather than papered over — closing it
+    * means the composites' `interactions` becoming wrappers too, which is a schema change, not a
+    * wiring fix. Filed in BACKLOG.
+    */
+  private def nestedInteraction(i: InteractionDto)(using Ctx): Interaction =
+    buildInteraction(i, Contents.empty[MetaData]())
+
+  private def buildInteraction(i: InteractionDto, nm: Contents[MetaData])(using
+    ctx: Ctx
+  ): Interaction =
     i match
       case VagueIxnDto(from, rel, to) =>
         VagueInteraction(
@@ -1238,30 +1254,35 @@ object JsonAstBuilder:
           InputRef(curAt, kw.getOrElse("input"), pathId(input)),
           nm
         )
-      case RefusalIxnDto(from, user, reason) =>
-        RefusalInteraction(
-          curAt,
-          buildRef(from),
-          UserRef(curAt, pathId(user)),
-          LiteralString(curAt, reason),
-          nm
-        )
+      case RefusalIxnDto(from, user, reason, invariant) =>
+        // A38: invariant WINS when both are present. A document carrying both is malformed, and
+        // the invariant is the form that names something checkable — silently preferring prose
+        // would discard the only half a consumer can act on. Neither present is an error: a
+        // refusal with no stated reason documents nothing.
+        val why: LiteralString | InvariantRef = (invariant, reason) match
+          case (Some(inv), _)  => InvariantRef(curAt, pathId(inv))
+          case (None, Some(r)) => LiteralString(curAt, r)
+          case (None, None)    =>
+            throw new IllegalArgumentException(
+              "refusal interaction has neither a 'reason' nor an 'invariant'"
+            )
+        RefusalInteraction(curAt, buildRef(from), UserRef(curAt, pathId(user)), why, nm)
       case ParallelIxnDto(ixns) =>
         ParallelInteractions(
           curAt,
-          contentsOf[InteractionContainerContents](ixns.map(buildInteraction)),
+          contentsOf[InteractionContainerContents](ixns.map(nestedInteraction)),
           nm
         )
       case SequentialIxnDto(ixns) =>
         SequentialInteractions(
           curAt,
-          contentsOf[InteractionContainerContents](ixns.map(buildInteraction)),
+          contentsOf[InteractionContainerContents](ixns.map(nestedInteraction)),
           nm
         )
       case OptionalIxnDto(ixns) =>
         OptionalInteractions(
           curAt,
-          contentsOf[InteractionContainerContents](ixns.map(buildInteraction)),
+          contentsOf[InteractionContainerContents](ixns.map(nestedInteraction)),
           nm
         )
     end match
@@ -1276,7 +1297,7 @@ object JsonAstBuilder:
         u.contents,
         "UseCase",
         Legal.useCase,
-        contentsOf[UseCaseContents](u.interactions.map(buildInteraction), comments(u.comments))
+        contentsOf[UseCaseContents](u.interactions.map(nestedInteraction), comments(u.comments))
       ),
       meta(u.brief, u.metadata)
     )

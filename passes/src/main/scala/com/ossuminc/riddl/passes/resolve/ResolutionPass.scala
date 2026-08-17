@@ -855,6 +855,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         case ri: RefusalInteraction =>
           associateUsage[Definition](useCase, resolveARef[Definition](ri.from, parentsAsSeq))
           associateUsage[Definition](useCase, resolveARef[User](ri.to, parentsAsSeq))
+          // A38: an invariant-named reason is a REFERENCE and must resolve like every other one —
+          // that is the entire point of admitting it. Left unresolved it would name an invariant
+          // that need not exist while the model validates clean, and the Invariant it does name
+          // would be reported unused. Prose has nothing to resolve.
+          ri.reason match
+            case ir: InvariantRef  => associateUsage(useCase, resolveARef[Invariant](ir, parentsAsSeq))
+            case _: LiteralString  => ()
         case si: SelfInteraction =>
           associateUsage[Definition](useCase, resolveARef[Definition](si.from, parentsAsSeq))
         case SendMessageInteraction(_, from, message, to, _) =>

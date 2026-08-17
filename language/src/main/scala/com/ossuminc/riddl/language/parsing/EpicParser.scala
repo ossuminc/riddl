@@ -94,9 +94,29 @@ private[parsing] trait EpicParser {
     }
   }
 
+  /** A38: the reason may be prose OR the invariant the request violates. Additive — prose stays
+    * valid and unwarned, and is the honest spelling when the handler refuses with `error "…"`
+    * rather than `require invariant X`.
+    *
+    * Ordered prose-first, and the two cannot be confused: a [[LiteralString]] starts with a quote
+    * and the invariant form starts with the keyword. Mirrors `StatementParser.requireStatement`,
+    * which offers the same two shapes to `require` in the same order, and like it does NOT put a
+    * cut after `invariant` — `Keywords.keyword` already ends in `./`, so the keyword itself
+    * commits, and adding another `~/` only removes the parser's ability to report a better error.
+    */
+  private def refusalReason[u: P]: P[LiteralString | InvariantRef] = {
+    P(
+      literalString.map(ls => ls: LiteralString | InvariantRef) |
+        (Index ~ Keywords.invariant ~ pathIdentifier ~ Index).map { case (start, pid, end) =>
+          InvariantRef(at(start, end), pid): LiteralString | InvariantRef
+        }
+    )
+  }
+
   private def refusalStep[u: P]: P[RefusalInteraction] = {
     P(
-      Index ~ anyInteractionRef ~ Keywords.refuses ~/ userRef ~ literalString ~/ withMetaData ~ Index
+      Index ~ anyInteractionRef ~ Keywords.refuses ~/ userRef ~ refusalReason ~/
+        withMetaData ~ Index
     )./.map { case (start, from, user, reason, descriptives, end) =>
       RefusalInteraction(at(start, end), from = from, to = user, reason, descriptives.toContents)
     }

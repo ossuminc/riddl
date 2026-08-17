@@ -1494,7 +1494,13 @@ class BASTReader(
       case 19 => // Refusal (A38)
         val from = readReference()
         val to = readUserRef()
-        val reason = readLiteralString()
+        // A38 (revision 18): discriminated, mirroring `require`'s condition immediately in kind —
+        // inline path identifier, NOT the tagged form, or every byte after the path shifts by one.
+        val reason: LiteralString | InvariantRef = reader.readU8() match
+          case 0     => readLiteralString()
+          case 1     => InvariantRef(loc, readPathIdentifierInline())
+          case other =>
+            throw new RuntimeException(s"Invalid refusal reason discriminator: $other")
         val metadata = readMetadataDeferred()
         RefusalInteraction(loc, from, to, reason, metadata)
 

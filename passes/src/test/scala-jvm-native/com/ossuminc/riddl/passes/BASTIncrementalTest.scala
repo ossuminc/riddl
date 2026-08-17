@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.language.AST.{Root, RefusalInteraction}
+import com.ossuminc.riddl.language.AST.{Root, RefusalInteraction, LiteralString}
 import com.ossuminc.riddl.language.{Contents, Finder, *}
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
@@ -689,7 +689,8 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
               r.from.pathId.value shouldBe
                 Seq("ImprovingApp", "OrganizationContext", "Organization")
               r.to.pathId.value shouldBe Seq("ImprovingApp", "Owner")
-              r.reason.s shouldBe "not authorized"
+              // A38: `reason` is a union now; this fixture uses the prose form.
+              r.reason.asInstanceOf[LiteralString].s shouldBe "not authorized"
             case Left(errors) =>
               fail(s"BAST read failed:\n${errors.format}")
           }

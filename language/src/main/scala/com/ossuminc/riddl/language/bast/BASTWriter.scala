@@ -1042,7 +1042,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(ri.loc)
     writeReference(ri.from)
     writeUserRef(ri.to)
-    writeLiteralString(ri.reason)
+    // A38 (FORMAT_REVISION 18): the reason gained an invariant-reference form, so a DISCRIMINATOR
+    // now precedes it where a bare literal string used to sit. A revision-17 reader consumes that
+    // byte as the start of the string's length and derails on every byte after it — the same
+    // failure shape as revision 14's Constant/Method fix. Written as one byte per wire shape, the
+    // rule this format's hazards keep coming back to.
+    ri.reason match
+      case ls: LiteralString =>
+        writer.writeU8(0)
+        writeLiteralString(ls)
+      case ir: InvariantRef =>
+        writer.writeU8(1)
+        writePathIdentifierInline(ir.pathId)
   }
 
   // ========== UI Component Serialization ==========

@@ -131,8 +131,14 @@ package object bast {
     // 18 rather than bumping to 19 because 18 has not shipped -- the latest tag is 2.0.0-rc.14,
     // which is revision 17 -- so no file in anyone's hands carries an 18 without it. Bump to 19
     // for the next BAST change made AFTER 18 ships.
+    // 18 also carries A38's refusal reason (2026-08-17), which is the LAST of the three uses this
+    // bump was reserved for. `writeRefusalInteraction` now writes a discriminator byte (0 = prose,
+    // 1 = invariant reference) where a bare literal string used to begin, so a revision-17 reader
+    // consumes that byte as the head of the string's length and derails on everything after it.
+    // Re-verified before riding rather than bumping: `git tag --sort=-version:refname` still says
+    // 2.0.0-rc.14, i.e. revision 17. **18 is now fully spent -- the next BAST change bumps to 19.**
     18 // numeric literals + Constant carries a tagged value + URL carries scheme/authority + A20
-    // typed holes + WhenStatement drops the legacy negated-flag byte
+    // typed holes + WhenStatement drops the legacy negated-flag byte + A38 refusal reason
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.
     *

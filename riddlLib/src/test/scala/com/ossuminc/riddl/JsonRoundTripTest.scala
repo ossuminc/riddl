@@ -1517,5 +1517,74 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           fail(s"parse of the Id-keyword model failed: $errors")
       end match
     }
+
+    /* A38: a refusal's reason is prose OR the invariant the request violates. The two go to
+     * DIFFERENT keys — `reason` and `invariant` — because a path is not prose, and one key holding
+     * both leaves the reader guessing which was written. The lookalike case is what proves the
+     * split is load-bearing rather than decorative. */
+    "round-trip BOTH refusal reason forms losslessly, in separate keys" in {
+      def refusalModel(reason: String): String =
+        s"""domain d is {
+           |  context c is {
+           |    entity Order is {
+           |      invariant MustBePaid is "the order is paid for"
+           |      handler H is { on other is { ??? } }
+           |    }
+           |  }
+           |  user Buyer is "a person"
+           |  epic Buying is {
+           |    user d.Buyer wants "to buy" so that "goods arrive"
+           |    case primary is {
+           |      user d.Buyer wants "to pay" so that "the order ships"
+           |      step entity d.c.Order refuses user d.Buyer $reason
+           |    }
+           |  }
+           |}
+           |""".stripMargin
+
+      def check(reason: String, expectKey: String, rejectKey: String)(
+        assertReason: RefusalInteraction => org.scalatest.Assertion
+      ): org.scalatest.Assertion =
+        RiddlLib.parseString(refusalModel(reason)) match
+          case RiddlResult.Success(root0) =>
+            val json1 = RiddlLib.root2Json(root0)
+            json1 must include(expectKey)
+            json1 must not include rejectKey
+            RiddlLib.parseJson(json1) match
+              case RiddlResult.Success(root1) =>
+                RiddlLib.root2Json(root1) mustBe json1 // a fixed point, not merely re-readable
+                val refusals =
+                  Finder(root1.contents).recursiveFindByType[RefusalInteraction]
+                refusals.size mustBe 1
+                assertReason(refusals.head)
+              case RiddlResult.Failure(errors) =>
+                fail(s"parseJson of the refusal JSON failed: $errors")
+            end match
+          case RiddlResult.Failure(errors) =>
+            fail(s"parse of the refusal model failed: $errors")
+        end match
+
+      // The reject key carries its colon: the model DECLARES an invariant, which serializes as
+      // `"$kind": "invariant"`, so a bare `"invariant"` would match the declaration and fail the
+      // prose cases for the wrong reason. Only the refusal emits `"invariant":` as a key.
+      check(""""not authorized"""", "\"reason\": \"not authorized\"", "\"invariant\": ") { r =>
+        r.reason mustBe a[LiteralString]
+        r.reason.asInstanceOf[LiteralString].s mustBe "not authorized"
+      }
+
+      check(
+        "invariant d.c.Order.MustBePaid",
+        "\"invariant\": \"d.c.Order.MustBePaid\"",
+        "\"reason\": "
+      ) { r =>
+        r.reason mustBe a[InvariantRef]
+        r.reason.asInstanceOf[InvariantRef].pathId.format mustBe "d.c.Order.MustBePaid"
+      }
+
+      // Prose that spells a path stays prose — the reason the keys are separate at all.
+      check(""""d.c.Order.MustBePaid"""", "\"reason\": ", "\"invariant\": ") { r =>
+        r.reason mustBe a[LiteralString]
+      }
+    }
   }
 }

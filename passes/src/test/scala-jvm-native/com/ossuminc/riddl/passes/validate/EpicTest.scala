@@ -233,7 +233,8 @@ class EpicTest extends AbstractValidatingTest {
           val r = refusals.head
           r.from.pathId.value mustBe Seq("ImprovingApp", "OrganizationContext", "Organization")
           r.to.pathId.value mustBe Seq("ImprovingApp", "Owner")
-          r.reason.s mustBe "not authorized"
+          // A38: `reason` is a union now; this fixture uses the prose form.
+          r.reason.asInstanceOf[LiteralString].s mustBe "not authorized"
       }
     }
 

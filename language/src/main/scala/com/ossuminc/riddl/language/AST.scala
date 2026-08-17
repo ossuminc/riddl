@@ -5816,8 +5816,21 @@ object AST:
 
   /** An interaction where a system element refuses a User's request (A38). The refusing element is
     * the `from` side (a processor/context/entity or any interaction reference), the refused party
-    * is the `to` [[UserRef]], and `reason` is a literal string explaining why the request was
-    * refused.
+    * is the `to` [[UserRef]], and `reason` says why the request was refused — either as prose or
+    * by naming the [[Invariant]] the request violates.
+    *
+    * **Both spellings are first-class, and the prose form is not deprecated.** RIDDL has two
+    * legitimate refusal mechanisms in a handler and only one of them has an invariant to name: a
+    * handler refuses either with `require invariant X` or with `error "<prose>"`, and the
+    * validator treats them as equivalent discharges in two independent places
+    * (`ValidationPass`'s `case _: ErrorStatement | _: RequireStatement`). Narrowing this operand to
+    * an [[InvariantRef]] would make an error-based refusal undocumentable, and warning on the prose
+    * form would fire on models that are correct.
+    *
+    * What the [[InvariantRef]] form buys is A38's actual goal: a use-case step that closes the loop
+    * to the `require` it describes, and thence to the `InvariantViolated` a generated test asserts.
+    * It claims that link exactly where an invariant exists to claim it to, and nothing where one
+    * does not.
     *
     * @param loc
     *   The location of the interaction in the source
@@ -5826,7 +5839,7 @@ object AST:
     * @param to
     *   The user whose request is refused
     * @param reason
-    *   A literal string describing why the request is refused
+    *   Prose describing why the request is refused, or the invariant it violates
     * @param metadata
     *   The metadata for this RefusalInteraction
     */
@@ -5835,12 +5848,20 @@ object AST:
     loc: At,
     from: Reference[Definition],
     to: UserRef,
-    reason: LiteralString,
+    reason: LiteralString | InvariantRef,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends TwoReferenceInteraction {
     override def kind: String = "Refusal Interaction"
     def relationship: LiteralString = LiteralString(loc, "refuses")
-    def format: String = s"${from.format} refuses ${to.format} ${reason.format}"
+    def format: String = s"${from.format} refuses ${to.format} ${reasonFormat}"
+
+    /** The `reason` as source text. Enumerated rather than calling `.format` on the union, so a
+      * third member of it is a compile error here instead of falling through to a `RiddlValue`
+      * rendering that may not re-parse.
+      */
+    def reasonFormat: String = reason match
+      case ls: LiteralString => ls.format
+      case ir: InvariantRef  => ir.format
   }
 
   /** The definition of a Jacobsen Use Case RIDDL defines these epics by allowing a linkage between

@@ -573,7 +573,10 @@ step_interactions = "step" (focus_on_group_step | direct_user_to_url | select_in
 focus_on_group_step = "focus" user_ref "on" group_ref [with_metadata] ;
 direct_user_to_url = "direct" user_ref "to" http_url [with_metadata] ;
 select_input_step = user_ref "selects" input_ref [with_metadata] ;
-refusal_step = any_interaction_ref "refuses" user_ref literal_string [with_metadata] ;
+(* A38: the reason is prose OR the invariant the request violates. Both are first-class --
+   a handler refuses with either `error "<prose>"` or `require invariant X`, and only the
+   second has an invariant to name. *)
+refusal_step = any_interaction_ref "refuses" user_ref (literal_string | invariant_ref) [with_metadata] ;
 take_input_step = "take" input_ref "from" user_ref [with_metadata] ;
 show_output_step = "show" output_ref "to" user_ref [with_metadata] ;
 self_processing_step = "for" any_interaction_ref is literal_string [with_metadata] ;

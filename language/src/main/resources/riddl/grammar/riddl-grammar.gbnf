@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-08-17 11:31 UTC
+# Generated: 2026-08-17 13:04 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -386,7 +386,7 @@ step-interactions ::= "step" ws (focus-on-group-step | direct-user-to-url | sele
 focus-on-group-step ::= "focus" ws1 user-ref ws "on" ws1 group-ref ws (with-metadata)?
 direct-user-to-url ::= "direct" ws1 user-ref ws "to" ws1 http-url ws (with-metadata)?
 select-input-step ::= user-ref ws "selects" ws1 input-ref ws (with-metadata)?
-refusal-step ::= any-interaction-ref ws "refuses" ws1 user-ref ws1 literal-string ws (with-metadata)?
+refusal-step ::= any-interaction-ref ws "refuses" ws1 user-ref ws (literal-string | invariant-ref) ws (with-metadata)?
 take-input-step ::= "take" ws1 input-ref ws "from" ws1 user-ref ws (with-metadata)?
 show-output-step ::= "show" ws1 output-ref ws "to" ws1 user-ref ws (with-metadata)?
 self-processing-step ::= "for" ws1 any-interaction-ref ws1 is ws1 literal-string ws (with-metadata)?
