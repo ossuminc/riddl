@@ -612,7 +612,45 @@ that needs a ruling before either can be fixed.
   *could not ask* (`Unavailable` is not drift), and **a build must never fail
   because of the network** — off by default, never fatal.
 
-- **[2.2]** **A38 — ADMIT an invariant reference as an ALTERNATIVE refusal operand.**
+- ~~**[2.2]** **A38 — ADMIT an invariant reference as an ALTERNATIVE refusal operand.**~~
+  — **DONE 2026-08-17, `e4f6f33f3`.** Additive exactly as the corrected framing
+  said: prose stays valid and unwarned. Full reflective surface (parser, EBNF,
+  regenerated GBNF, prettify, BAST, JSON), rode `FORMAT_REVISION` 18 as reserved
+  — **18 is now fully spent; the next BAST change bumps to 19.** CM §29 records
+  it (`ossuminc` `adfce7c`), including that the taxonomy there had never listed
+  `refusal` at all.
+  **Three lessons worth keeping.** (1) The corrected framing was right that no
+  corpus survey was needed, and the reason generalizes: removing a form needs a
+  survey, adding one does not. (2) Keeping the two forms DISTINCT is what drove
+  every design choice — a BAST discriminator, two separate JSON keys, and a test
+  that prose spelling a path stays prose. One key holding both would have left
+  every reader guessing. (3) **The fixture found a defect the feature had nothing
+  to do with** — see the next entry.
+
+- ~~**JSON dropped EVERY interaction's metadata.**~~ — **DONE 2026-08-17, in
+  `e4f6f33f3`.** `JsonAstBuilder.buildInteraction` hardcoded
+  `Contents.empty[MetaData]()`, so `step … with { briefly "…" }` came back
+  without the brief, for all thirteen interaction kinds. **745 affected keys in
+  the corpus**, so this recovered real data. Undetected because no fixture in the
+  repo had ever put metadata on an interaction step; A38's fixture is the first,
+  and `Root2JsonFixturesTest` caught it the moment it existed. Fixed on the
+  `InteractionContentDto` WRAPPER, so one change covers all thirteen kinds.
+  **STILL OPEN, and named rather than papered over: metadata on a NESTED step**
+  (inside `sequential`/`parallel`/`optional`) is still dropped — those hold a
+  bare `Seq[InteractionDto]` with no wrapper to carry it, so closing it is a
+  schema change, not a wiring fix. Filed as **[1.5]** below.
+
+- **[1.5]** **JSON drops metadata on a NESTED interaction step.** A step inside a
+  `sequential`/`parallel`/`optional` composite is serialized as a bare
+  `InteractionDto`, with no `InteractionContentDto` wrapper to carry `brief`/
+  `metadata` — so `sequence { step … with { briefly "x" } }` loses the brief on
+  every round trip, while the same step at use-case top level now survives.
+  Closing it means the composites' `interactions` field becoming a `Seq` of
+  wrappers, which changes the document schema. Marked at
+  `JsonAstBuilder.nestedInteraction`, which exists to make the gap visible at the
+  code rather than only here.
+
+- **~~[2.2] superseded framing~~ (kept only so the reasoning is not re-derived).**
   **CORRECTED 2026-08-16 by Reid, and the previous framing was wrong.** This
   entry said the operand "should name an invariant, NOT prose", and offered as a
   fallback "admit both and warn on the prose form". Both are incorrect, for the
