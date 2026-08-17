@@ -12,71 +12,145 @@ Orientation for a session with no memory of this work. **Open work is in
 branch, tree and unpushed span — anything written here about those is stale the
 moment someone commits.
 
-**Build state — every line below was verified by running the command, 2026-08-17:**
+**Build state — verified by running the command, 2026-08-17:**
 
-- **`~/Code/ossuminc/bin/riddlc` (NATIVE) is STALE at `2.0.0-rc.14-164-d1d87009`**,
-  and the local ivy artifacts match it. HEAD is `rc.14-172`. **Verified by
-  BEHAVIOUR, not the version string: it REJECTS `language/input/lookup-value.riddl`**
-  — it predates the `at` lookup. Restage with `scripts/publish-and-stage.sh`
-  before handing anything to a consumer or validating the corpus.
-  **Deliberately left stale (Reid, 2026-08-17): riddlg is mid-analysis and no
-  consumer is waiting.** Not an oversight.
-- **The staged JVM binary's version string LIES.** It reads
-  `rc.14-167-f586ca14-20260817-0630` — the `-2026…` suffix means dynver saw a
-  dirty tree — but it was built from working-tree code and DOES accept `at`.
-  Trust behaviour over the string for this one.
-- **BAST `FORMAT_REVISION` is 18, still unshipped** (latest tag `2.0.0-rc.14` =
-  revision 17). The `at` lookup rode 18. The next BAST change rides 18 too —
-  **re-check `git tag` first**; bump to 19 only after 18 ships.
+- **`~/Code/ossuminc/bin/riddlc` (NATIVE) is STALE**, and the local ivy artifacts
+  with it. **Deliberately (Reid, 2026-08-17): riddlg is mid-analysis and no
+  consumer is waiting.** Not an oversight. It predates the `at` lookup, A38, and
+  everything below. Restage with `scripts/publish-and-stage.sh` before handing
+  anything to a consumer.
+- **BAST `FORMAT_REVISION` 18 is now FULLY SPENT.** It was reserved for three
+  changes — numeric literals, A20 typed holes, A38 — and A38 landed 2026-08-17.
+  **The next BAST change bumps to 19**, unless `git tag` still shows the latest
+  release as `2.0.0-rc.14` (revision 17) AND you have a reason as good as the
+  reservation was.
 
-**In flight: `[2.3]` only, and it is PART-DONE — the rest of the session's six
-§ 2 items landed complete**, each with its ruling recorded in the CM (a separate
-git repo — commit there separately).
+**In flight: nothing.** Every item touched on 2026-08-17 is committed, green, and
+recorded. `[2.3]` remains open but is at a clean stopping point with its next
+slice named.
 
-**`[2.3]` the catch-all audit stopped mid-sweep.** 198 `case _ =>` sites sized,
-**3 resolved, 195 unexamined**; see the `AUDIT PROGRESS` block in that entry
-(`BACKLOG.md:664`) for what was fixed, what was examined and cleared, and — the
-part worth having — a dead end: a classifier that flags "catch-all whose sibling
-arms name a growable union" marked 182 of 198 and is useless, because it counts
-typed arms. **Classification is reading, not grepping.** The next slice is named
-there: arms whose fallback produces OUTPUT (a placeholder string, a default
-keyword) rather than emptiness, since those fail as wrong answers rather than
-missing ones.
+**What landed 2026-08-17** (autonomous run): the MessageFlowPass `let`-local task
+(`b6b3dd03e`) and the `DependencyAnalysisPass.typeDeps` defect its sweep found
+(`1a3c1cf05`); `[2.3]`'s output-producing slice (`7296cfc27`); `[2.4]`
+Streamlet→Processor (`2c19d6d70`); `[2.2]` A38 plus the JSON
+interaction-metadata hole its fixture exposed (`e4f6f33f3`). CM updated for A38
+in the `ossuminc` repo (`adfce7c`) — that is a SEPARATE git repo, commit there
+separately.
 
-**NEXT, and both need YOU before code:** `[2.4]` Streamlet → Processor carries a
-public-API decision — does `AnalysisResult.streamlets` mean "the Streamlet
-definitions" or "the port-bearing processors"? Adding a second accessor is the
-additive option the compatibility policy prefers. `[2.1]` (Figma) is planned and
-awaits a different ruling: whether it belongs in this repo at all, since A42
-assigns part (iii) to riddlg.
+**READ `BACKLOG.md` § 4 FIRST.** Five decisions were made under Reid's "queue
+questions, proceed with your best recommendation" instruction. All five are
+implemented and green; none blocks anything; each says what changing it costs.
+`[4.1]` (kind-named accessors kept, `processors` added) and `[4.2]`
+(`typeDeps`' source is the handled message) are the two most worth a ruling.
+
+**Test baseline, all executed 2026-08-17 — memorize the RED ones or you will
+chase them:**
+
+- JVM: `language` 71 suites/731, `passes` 218/1446, `riddlLib` 143, `utils`,
+  `commands` — all green EXCEPT the known-red corpus suites below.
+- `tJS` fully green. `tNative` green except the same known-red suites.
+- **FOUR known-red suites, every one A/B-verified against a stashed tree today
+  and IDENTICAL:** `Root2JsonCorpusTest` validation-parity (**187/190**),
+  `RiddlModelsRoundTripTest` (**3 failed**), `ReportedIssuesTest` "should 406",
+  and riddlc's local-corpus cases (`riddl-examples` dokn, shopify-cart).
+- **The corpus number MOVED and BACKLOG was stale about it**: `[3.4]` recorded
+  188/190; it is 187, with `reactive-bbq` newly failing on context-isolation-seam
+  errors. Filed as `[4.5]` — it is either drift in the live `../riddl-models`
+  checkout or a seam-check defect, and deciding needs a look at their model.
 
 **Traps — every one bit someone here.**
 
+- **A "missing data" defect is often a WRONG ANSWER instead.** Three of four this
+  week were. The cheap discriminator: revert the fix and read what the test says
+  — `"C" was not equal to "Source"` is a wrong answer, `None was not equal to
+  Some(…)` is a missing one. Do it before writing the comment.
+- **A fixture is a detector, and the best ones exercise a COMBINATION.** A38's
+  fixture (a refusal step WITH metadata) found that all thirteen interaction
+  kinds lost their metadata through JSON. Neither half was untested; the
+  intersection was.
 - **`Keywords.keyword` ends in `./`, a CUT** (`Keywords.scala:39`). Any optional
   keyword-led clause must be wrapped in `NoCut` or the enclosing alternative
-  cannot backtrack. This cost hours on the `at` lookup: a lookup as a comparison
-  operand worked while a bare one failed, and the cut was never in the new code.
-- **`-Werror` is NOT a net for a new `Value` arm.** It found 3 of ~13 sites; the
-  rest sit behind catch-alls. `language`/`commands` also compile `--no-warnings`.
-- **A green corpus proves nothing about a construct the corpus lacks.** Two
-  changes shipped on corpora containing zero instances of what they changed.
-- **Verify a backlog item before working it.** SEVEN entries this week described
-  finished work, one closed by a batch move nobody connected to it.
-- **Re-measure any corpus number before quoting it.** `../riddl-models` is a live
-  checkout another session edits; `git status` there changed between two
-  consecutive commands of mine.
+  cannot backtrack.
+- **`-Werror` is NOT a net for a new `Value` arm**, and a wildcard arm makes a
+  match exhaustive — so the prescribed terminal `throw` is itself what silences
+  the compiler. `language`/`commands` also compile `--no-warnings`.
+- **A green corpus proves nothing about a construct the corpus lacks.**
+- **Verify a backlog item before working it.** Two entries this week described
+  work already done, and one number was stale by a whole model.
+- **Never `sbt … | tail -N` for a multi-module run** — it throws away the module
+  summaries that tell you what actually ran, and cost a full re-run today.
+  Redirect to a file and grep it. Count `Suites: completed` against the number of
+  modules you asked for.
 
-**Certainty.** Branch/tree/tests and both binary behaviours were executed just
-now (language 71 suites/731, passes 214/1425, both green). NOT verified: whether
-riddl-models or riddl-generator have acted on the five task files dropped for
-them.
-
-**`task/` — TWO files, both awaiting triage.** `2026-08-04-security.md` is Reid's
-own RBAC draft marked *"do not act on this"*. **`2026-08-15-messageflowpass-cannot-
-resolve-a-let-local.md` is NEW and unread by anyone.**
+**`task/` — ONE file. `2026-08-04-security.md` is Reid's own RBAC draft marked
+*"do not act on this"*** — a design seed, not a request. The MessageFlowPass
+report is DONE and moved to `task/done/` with a Results section (which also
+corrects three claims the report itself made).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
 driver's call, not the handoff's.
+
+## Four "missing data" bugs, three of which were WRONG ANSWERS (2026-08-17)
+
+An autonomous run over the MessageFlowPass task file, `[2.3]`, `[2.4]` and `[2.2]`.
+The code is in `b6b3dd03e`, `7296cfc27`, `1a3c1cf05`, `2c19d6d70`, `e4f6f33f3`. What
+belongs here is a pattern that showed up four times in one day and was NOT what the
+reports said it was.
+
+**I filed each of these expecting missing output. Three produced confident wrong
+output instead.**
+
+- riddl-models reported `MessageFlowPass` warning on `let`-local operands. The warning
+  was the cheap half: the pass took its `case _ =>` arm, so the EDGE was never added —
+  every flow whose operand was a `let`-local was silently absent from the graph the
+  simulator and generator consume, while the model reported zero errors.
+- `[2.4]`'s port-to-owner walk was filed as narrowing to `Streamlet`. It did narrow —
+  and then its FALLBACK SUCCEEDED, on the enclosing Context, because a Context is a
+  Processor too. The flow graph named the container as producer and the entity not at
+  all. `DiagramsPass` fell back to the port itself, drawing arrows outlet→inlet with
+  neither owner shown.
+- `DependencyAnalysisPass.typeDeps` was recorded only under
+  `parents.collectFirst { case t: Type => t }`. A `tell`'s parents are its on-clause,
+  handler, processor, context and domain — never a Type. The guard could not succeed, so
+  a public field documented as *"map from each type to types it references"* answered
+  "nothing references anything" for every model ever analyzed.
+
+**The check that separates the two is cheap and I nearly skipped it every time: revert
+the fix and read what the test actually says.** `"C" was not equal to "Source"` is a
+wrong answer. `None was not equal to Some(...)` is a missing one. I wrote "the edge was
+dropped in silence" in a comment before running that, and it was false.
+
+**A pass should publish what it resolved, not make the next pass re-derive it.**
+`let`-locals are LEXICAL by design — not Definitions, statement-ordered, deliberately
+outside the symbol table — so no path-keyed lookup can ever find one, and only
+`checkStatementScopes`, which threads the scope as it walks, can resolve an operand
+that names one. So `ValidationOutput.deliverableTypes` carries the answer and
+`DeliverableTypes.of` is the single read path. The alternative was copying the walk into
+each consumer, which is the "dispatch written twice" shape this repo keeps paying for.
+
+**A FIXTURE IS A DETECTOR, and the best ones exercise a COMBINATION neither half owns.**
+A38's fixture put `with { briefly "…" }` on a refusal step. That found a defect A38 had
+nothing to do with: `JsonAstBuilder.buildInteraction` hardcoded
+`Contents.empty[MetaData]()`, so **every one of the thirteen interaction kinds lost its
+metadata on every JSON round trip** — 745 affected keys in the corpus. It survived
+because no fixture in the repo had ever put metadata on an interaction step. Neither
+"interactions" nor "metadata" was untested; their intersection was. This is the same
+lesson as the corpus fixture that exposed the `1e3` EBNF divergence, one step further:
+add the fixture for the COMBINATION, not for the feature.
+
+**Sizing a slice by grep is cheap even when CLASSIFYING one is not.** `[2.3]` carried a
+198-site figure and a note that classification is reading, not grepping — both true, and
+together they made the next slice look like a day's work. One grep
+(`case _ *=> *"`) says the output-producing slice is **ten sites**. It took an hour:
+three fixed, four examined and cleared with the reasoning recorded, three already done.
+The item now names the next slice AND warns that its own grep-shaped framing cannot find
+the defects its examples are made of — neither the `typeDeps` guard nor the
+`let`-local gap was a `case _ =>` arm at all.
+
+**Two smaller things.** `sbt … | tail -100` threw away the two module summaries I needed
+and cost a full re-run; redirect to a file and grep it. And the JSON `knownKeys` guard
+earned its keep — it rejected a new `meta` key and pointed at `metadata`, which is what
+every other DTO already uses.
 
 ## A night spent on BACKLOG § 1 — what the list itself got wrong (2026-08-15)
 
