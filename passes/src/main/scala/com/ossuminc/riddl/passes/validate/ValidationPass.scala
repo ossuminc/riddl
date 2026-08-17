@@ -5248,6 +5248,8 @@ case class ValidationPass(
     // `call` immediately above.
     case init: Initiate           => 1 + init.args.map(a => countValueFailPoints(a.value)).sum
     case _: GetValue              => 1
+    case lv: LookupValue          =>
+      countValueFailPoints(lv.collection) + lv.indices.map(countValueFailPoints).sum
     case c: Constructor           => c.args.map(a => countValueFailPoints(a.value)).sum
     case le: LogicalExpression    => countValueFailPoints(le.left) + countValueFailPoints(le.right)
     case ne: NotExpression        => countValueFailPoints(ne.expr)
@@ -5344,6 +5346,7 @@ case class ValidationPass(
       gv.source match
         case sr: StateRef => Seq(gv -> sr)
         case _: InputRef  => Seq.empty
+    case lv: LookupValue          => stateReadsIn(lv.collection) ++ lv.indices.flatMap(stateReadsIn)
     case call: Call               => call.args.toSeq.flatMap(a => stateReadsIn(a.value))
     case c: Constructor           => c.args.toSeq.flatMap(a => stateReadsIn(a.value))
     // `initiate`'s arguments are full Values, exactly like a constructor's or a call's, so a
@@ -5397,6 +5400,7 @@ case class ValidationPass(
     */
   private def initiatesIn(v: RiddlValue): Seq[Initiate] = v match
     case init: Initiate           => Seq(init) ++ init.args.toSeq.flatMap(a => initiatesIn(a.value))
+    case lv: LookupValue          => initiatesIn(lv.collection) ++ lv.indices.flatMap(initiatesIn)
     case call: Call               => call.args.toSeq.flatMap(a => initiatesIn(a.value))
     case c: Constructor           => c.args.toSeq.flatMap(a => initiatesIn(a.value))
     case le: LogicalExpression    => initiatesIn(le.left) ++ initiatesIn(le.right)
@@ -5444,6 +5448,7 @@ case class ValidationPass(
 
   private def asksIn(v: RiddlValue): Seq[Ask] = v match
     case ask: Ask                 => Seq(ask)
+    case lv: LookupValue          => asksIn(lv.collection) ++ lv.indices.flatMap(asksIn)
     case call: Call               => call.args.toSeq.flatMap(a => asksIn(a.value))
     case c: Constructor           => c.args.toSeq.flatMap(a => asksIn(a.value))
     // `initiate`'s arguments are full Values, exactly like a constructor's or a call's, so an
@@ -6342,6 +6347,7 @@ case class ValidationPass(
   ): Option[Type] =
     v match
       case _: LiteralString => None // pseudo-code, untyped
+      case _: LookupValue   => None // element type is a TypeExpression; see valueTypeExpr
       case _: PromptValue   => None // AI-computed, untyped
       case c: Constructor   => resolution.refMap.definitionOf[Type](c.ref.pathId)
       case call: Call       =>
@@ -6668,6 +6674,9 @@ case class ValidationPass(
   ): Unit =
     v match
       case _: LiteralString => ()
+      case lv: LookupValue  =>
+        validateValue(lv.collection, parents, lets, elements)
+        lv.indices.foreach(i => validateValue(i, parents, lets, elements))
       case _: PromptValue   => () // literal AI prompt, nothing to resolve
       case c: Constructor   => validateConstructor(c, parents, lets, elements)
       case call: Call       => validateCall(call, parents, lets, elements)
@@ -6827,7 +6836,8 @@ case class ValidationPass(
     c match
       case cr: ConstantRef =>
         resolution.refMap.definitionOf[Constant](cr.pathId).flatMap(k => typeExprCategory(k.typeEx))
-      case gv: GetValue => valueCategory(gv, parents, lets, elements)
+      case gv: GetValue    => valueCategory(gv, parents, lets, elements)
+      case _: LookupValue  => None
       case vr: ValueRef =>
         valueCategory(vr, parents, lets, elements)
           .orElse(whenValueRefCategory(vr, parents, lets, elements))
@@ -6847,6 +6857,7 @@ case class ValidationPass(
     c match
       case cr: ConstantRef => checkRef[Constant](cr, parents)
       case gv: GetValue    => validateValue(gv, parents, lets, elements)
+      case lv: LookupValue => validateValue(lv, parents, lets, elements)
       case vr: ValueRef =>
         if !valueRefResolves(vr, parents, lets, elements) then
           messages.addError(

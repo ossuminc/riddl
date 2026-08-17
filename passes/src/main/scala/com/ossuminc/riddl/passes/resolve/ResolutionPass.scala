@@ -469,6 +469,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private def resolveValue(v: Value, parents: Parents): Unit =
     v match
       case _: LiteralString => () // no references
+      case lv: LookupValue  =>
+        resolveValue(lv.collection, parents); lv.indices.foreach(i => resolveValue(i, parents))
       case pv: PromptValue  =>
         // A20: the prompt TEXT is literal (nothing to resolve), but an optional `as <type>`
         // ascription carries a real TypeExpression that may hold a PathIdentifier -- e.g.
@@ -547,6 +549,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case cr: ConstantRef   => associateUsage(parents.head, resolveARef[Constant](cr, parents))
       case gv: GetValue      => resolveValue(gv, parents)
       case vr: ValueRef      => deferValueRef(vr, parents)
+      case lv: LookupValue   => resolveValue(lv, parents)
       case _: NumericLiteral => ()
 
   /** A29: resolve the reference-bearing parts of a [[MatchStatement]] — the subject (a GetValue

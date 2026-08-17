@@ -815,7 +815,7 @@ object AST:
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Initiate | NumericLiteral |
-    Requires | Returns | InvariantBlock
+    LookupValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3010,7 +3010,7 @@ object AST:
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
-      Ask | SelfValue | Initiate | NumericLiteral
+      Ask | SelfValue | Initiate | NumericLiteral | LookupValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -3254,6 +3254,22 @@ object AST:
     def format: String = s"get from ${source.format}"
   end GetValue
 
+  /** A `<collection> at <index>[, <index>…]` lookup — a `Mapping` by key, a `Sequence` by ordinal,
+    * or a `Table` by one ordinal per dimension (Reid, 2026-08-10; Table arity confirmed 2026-08-17).
+    *
+    * Exists because outside a `foreach` a mapping was WRITE-ONLY: nothing in [[Value]] indexed, so
+    * a model could declare a mapping and never name what it stored.
+    */
+  @JSExportTopLevel("LookupValue")
+  case class LookupValue(
+    loc: At,
+    collection: ValueRef,
+    indices: Seq[Value]
+  ) extends RiddlValue:
+    override def kind: String = "Lookup Value"
+    def format: String = s"${collection.format} at ${indices.map(_.format).mkString(", ")}"
+  end LookupValue
+
   /** A54: an AI-computed value expressed by a natural-language prompt (`prompt("…")`). Distinct
     * from the deprecated `prompt` STATEMENT (`prompt "…"`, no parens) by the parenthesized form. A
     * bare [[LiteralString]] in a value position is a literal constant; a `PromptValue` asks the
@@ -3394,7 +3410,7 @@ object AST:
     * Booleans remain excluded — `true`/`false` are boolean ATOMS, so `count > true` is still a
     * parse error.
     */
-  type Comparand = ValueRef | GetValue | ConstantRef | NumericLiteral
+  type Comparand = ValueRef | GetValue | ConstantRef | NumericLiteral | LookupValue
 
   /** A28: the boolean-expression sub-language. An arm of the [[Value]] union so `let`/`set`/`put`/
     * `return` accept booleans for free. All cases are [[RiddlValue]]s so `.format`/`.loc` work on

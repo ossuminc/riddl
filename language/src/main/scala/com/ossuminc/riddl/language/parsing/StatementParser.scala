@@ -618,8 +618,41 @@ private[parsing] trait StatementParser {
       getValue.map(gv => gv: Comparand) |
         constantRef.map(cr => cr: Comparand) |
         numericLiteral.map(nl => nl: Comparand) |
-        (!booleanLiteral ~ valueRef).map(vr => vr: Comparand)
+        refOrLookup.map(v => v.asInstanceOf[Comparand])
     )
+  }
+
+  private def lookupIndex[u: P]: P[Value] = {
+    P(
+      literalString.map(ls => ls: Value) |
+        numericLiteral.map(nl => nl: Value) |
+        getValue.map(gv => gv: Value) |
+        (!booleanLiteral ~ valueRef).map(vr => vr: Value)
+    )
+  }
+
+  /** A reference, OPTIONALLY extended with `at <index>[, <index>…]`.
+    *
+    * **`NoCut` is load-bearing and is the whole reason this works.** `Keywords.keyword` ends in
+    * `./` — a CUT (`Keywords.scala:39`). Without `NoCut`, matching the word `at` commits the
+    * parser, so when `comparison`'s first alternative then fails to find a comparison operator it
+    * cannot fall back to `booleanAtom`, and the failure escapes all the way to the statement
+    * alternation. The symptom is a bare `let n = inv at "sku"` reporting *"Expected one of ("!=" |
+    * "," | "<" | … | "yield")"* at the end of a perfectly good subscript, while
+    * `when inv at "sku" > 0` — where that alternative SUCCEEDS and never backtracks — works fine.
+    *
+    * One rule rather than two alternatives for the same reason a cut hurts here: the lookup is
+    * reachable from both `comparand` and `booleanAtom`, and any arrangement that makes the parser
+    * CHOOSE between "ref" and "ref at index" has to backtrack across that keyword.
+    */
+  private[parsing] def refOrLookup[u: P]: P[Value] = {
+    P(
+      Index ~ (!booleanLiteral ~ valueRef) ~
+        NoCut(Keywords.keyword("at") ~ lookupIndex.rep(min = 1, Punctuation.comma)).? ~ Index
+    ).map {
+      case (_, vr, None, _)            => vr: Value
+      case (start, vr, Some(idx), end) => LookupValue(at(start, end), vr, idx): Value
+    }
   }
 
   // Relational operators. `StringIn` is longest-match, so `<=`/`>=` win over `<`/`>` and `!=`/`==`
@@ -677,7 +710,7 @@ private[parsing] trait StatementParser {
         getValue.map(gv => gv: Value) |
         invariantCondition.map(ic => ic: Value) |
         selfValue.map(sv => sv: Value) | // before valueRef: `self` is a keyword, not a path
-        valueRef.map(vr => vr: Value)
+        refOrLookup
     )
   }
 
