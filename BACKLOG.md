@@ -828,46 +828,24 @@ that needs a ruling before either can be fixed.
   `IncludeAndImportTest`, both of which assert the CURRENT behaviour and will need
   to move with it.
 
-- **[2.8]** **BUILD: a query must REPLY or REFUSE on every path.** **RULED
-  2026-08-16 by Reid — "queries SHOULD be answered, however, it is possible to let
-  them refuse as well."** Was a question; it is now work, and the ruling makes the
-  query rule exactly PARALLEL to the command rule rather than stricter.
-  **The gap.** Today validation asks whether a `reply` appears ANYWHERE in a query
-  handler, so `when isReady then reply result R end` — no `else` — is accepted
-  while answering nothing on the other branch. **A query that does not answer
-  hangs its caller**: `ask` is defined as taking the value a `reply` provides, so
-  this is not a style matter.
-  **The change.** Move the QueryCase arm to `dischargesOnEveryPath`, carrying the
-  refusal exemption the command case already has (`ErrorStatement |
-  RequireStatement` count as discharging) — that is precisely what Reid's "it is
-  possible to let them refuse as well" grants. Mirrors `1d87a109a`.
-  **MEASURE FIRST**, per the standing rule and the isolation-seam precedent: the
-  command change needed corpus corrections and this is the same shape over a
-  comparable population. Sweep and count before shipping the Error.
-
-- ~~**BUILD: exclude `error-sink` inlets from arity everywhere.**~~ — **DONE
-  2026-08-16, `500392d46`, as Reid's option B.** `arityShape` derives from
-  `dataflowInlets`; the dual acceptance in `validateProcessorShape` is gone.
-  **Measurement changed the plan, which is the point of measuring.** Strict
-  implementation broke **188 of 190** corpus models and an in-repo fixture,
-  because a processor whose only inlet is the error sink derives as `void` and
-  `as sink` became illegal. Reid chose the narrow allowance: `as sink` stays legal
-  for a processor with NO dataflow ports at all. That saved the 3 `as sink` models
-  and the fixture, and cannot excuse a flow ascribed as a merge.
-  **Corpus migration filed** (`../riddl-models/task/2026-08-16-error-sink-no-longer-
-  counts-toward-shape.md`): **187 models, three mechanical patterns** — 177
-  `merge`→`flow`, 8 `router`→`split`, 2 `flow`→`source`. That 177 share one wrong
-  ascription is evidence FOR the ruling: they follow one template (1 dataflow
-  inlet + 1 error sink + 1 outlet) and every one was calling itself a merge
-  because of the error sink.
-  Recorded in CM §3.6, including the generator consequence — do not infer a fan-in
-  from an error-sink inlet.
-  **Known asymmetry, unexercised:** `StreamingParser` enforces streamlet arity
-  syntactically (`inlet./.rep(min, max)`), so the keyword form `sink X is {…}`
-  cannot honour this exemption without moving arity enforcement into validation.
-  No corpus error-sink is declared inside a streamlet keyword form — they are all
-  on contexts — so the two surfaces cannot yet disagree. **If that changes, this is
-  the CLAUDE.md "arity table encoded twice" trap arriving for real.**
+- ~~**BUILD: a query must REPLY or REFUSE on every path.**~~ — **DONE 2026-08-16,
+  `07228a9a6`.** Now uses `dischargesOnEveryPath` with the refusal exemption, so
+  the query rule is exactly PARALLEL to the command rule rather than stricter.
+  **Shipped with NO migration**, and that was measured rather than hoped: 943
+  on-query clauses in the corpus, only 5 files with a conditional inside one, and
+  every one already replies or refuses on every path. Contrast the error-sink
+  ruling, which needed 187.
+  **Measuring found an older, unrelated defect — the more valuable half.** The
+  check was producing **10 false warnings across 6 models** on handlers that
+  plainly do reply, because reply/yield operands were still resolved with the
+  NARROW `operandMessageKind`, which cannot see through a `ValueRef`. The comment
+  there said they "stay MessageRef | Constructor only until Task 2"; Task 2 landed
+  long ago and nothing came back to widen it, so the canonical spelling
+  riddl-models actually uses — `let r: type X.Result = prompt(…)` then `reply r` —
+  was invisible. Widened; corpus goes **10 → 0**.
+  That is the third "claim about code elsewhere that nothing verified" found in
+  this branch, and the second where the stale claim was a promissory note about
+  work that had since landed.
 
 ### 3. Owed to other repos
 
