@@ -135,8 +135,13 @@ package object bast {
     // bump was reserved for. `writeRefusalInteraction` now writes a discriminator byte (0 = prose,
     // 1 = invariant reference) where a bare literal string used to begin, so a revision-17 reader
     // consumes that byte as the head of the string's length and derails on everything after it.
-    // Re-verified before riding rather than bumping: `git tag --sort=-version:refname` still says
-    // 2.0.0-rc.14, i.e. revision 17. **18 is now fully spent -- the next BAST change bumps to 19.**
+    //
+    // **18 HAS SHIPPED, in 2.0.0-rc.15 (2026-08-17). THE NEXT BAST CHANGE MUST BUMP TO 19.**
+    // Every "rides 18 because 18 has not shipped" argument above is now HISTORY, not a licence --
+    // it was sound only while no file in anyone's hands carried an 18, and files carrying one now
+    // exist. Riding 18 again would make two mutually unreadable wire formats share a revision
+    // number, which is precisely the state the revision gate exists to prevent, and it would fail
+    // SILENTLY: the gate would pass and the reader would misalign.
     18 // numeric literals + Constant carries a tagged value + URL carries scheme/authority + A20
     // typed holes + WhenStatement drops the legacy negated-flag byte + A38 refusal reason
 

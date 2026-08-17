@@ -19,11 +19,15 @@ moment someone commits.
   consumer is waiting.** Not an oversight. It predates the `at` lookup, A38, and
   everything below. Restage with `scripts/publish-and-stage.sh` before handing
   anything to a consumer.
-- **BAST `FORMAT_REVISION` 18 is now FULLY SPENT.** It was reserved for three
-  changes — numeric literals, A20 typed holes, A38 — and A38 landed 2026-08-17.
-  **The next BAST change bumps to 19**, unless `git tag` still shows the latest
-  release as `2.0.0-rc.14` (revision 17) AND you have a reason as good as the
-  reservation was.
+- **BAST `FORMAT_REVISION` 18 HAS SHIPPED, in `2.0.0-rc.15`. THE NEXT BAST CHANGE
+  MUST BUMP TO 19 — no exceptions.** Revision 18 carried four changes on the
+  "18 has not shipped yet, so no file in anyone's hands has one" argument. That
+  argument is now spent, permanently: files carrying an 18 exist. Riding it again
+  would put two mutually unreadable wire formats under one revision number, and it
+  would fail SILENTLY — the gate passes and the reader misaligns.
+- **`2.0.0-rc.15` was cut 2026-08-17** from `release/2` (tag, prerelease, and all
+  20 Maven coordinates published from the tag). See "RC verification left
+  outstanding" below.
 
 **In flight: nothing.** Every item touched on 2026-08-17 is committed, green, and
 recorded. `[2.3]` remains open but is at a clean stopping point with its next
@@ -86,6 +90,24 @@ chase them:**
 *"do not act on this"*** — a design seed, not a request. The MessageFlowPass
 report is DONE and moved to `task/done/` with a Results section (which also
 corrects three claims the report itself made).
+
+**RC VERIFICATION LEFT OUTSTANDING — GitHub's API went to 503 mid-release.**
+The tag, the prerelease and the `sbt publish` all completed BEFORE the outage and
+are evidenced locally (sbt `[success]`; the publish log shows all 20 coordinates
+at `2.0.0-rc.15`, including `sbt-riddl_sbt2_3`, with no retired module present;
+the native binary reports `2.0.0-rc.15` at commit `61f50224d` and parses the A38
+fixture). **Four checks the skill requires could NOT be run and are owed:**
+
+1. `gh api /orgs/ossuminc/packages/maven/...` confirming each coordinate — the
+   registry's own word, as opposed to the uploader's.
+2. `npm-publish.yml` logged `with tag rc`, and the `latest` dist-tag did NOT move.
+3. The homebrew-tap dispatch touched **only** `Formula/riddlc-rc.rb` —
+   `git -C ../homebrew-tap show --stat --oneline origin/main`.
+4. `release.yml` built the native binaries and its `notify-blog` job stayed
+   SKIPPED (the prerelease guard).
+
+Nothing suggests any of these failed; they are simply unverified, and this repo's
+own rule is that an unverified claim is not a result.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
 driver's call, not the handoff's.
