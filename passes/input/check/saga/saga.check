@@ -1,7 +1,4 @@
 passes/input/check/saga/saga.riddl(2:3->18):
- Context 'ignore2' has entities but no inlet anywhere to receive messages for them:
-   context ignore2 is {
-passes/input/check/saga/saga.riddl(2:3->18):
  Context 'ignore2' has entities but no repository to persist them; entities are stateful and should be persisted:
    context ignore2 is {
 passes/input/check/saga/saga.riddl(5:5->26):
@@ -50,9 +47,6 @@ passes/input/check/saga/saga.riddl(12:5->16):
      entity blah is {
 passes/input/check/saga/saga.riddl(12:5->16):
  Entity 'blah' has no handlers to process messages:
-     entity blah is {
-passes/input/check/saga/saga.riddl(12:5->16):
- Entity 'blah' in Context 'ignore2' has no outlet anywhere to publish events on:
      entity blah is {
 passes/input/check/saga/saga.riddl(12:5->16):
  Entity 'blah' does not define an Id type for its identity:

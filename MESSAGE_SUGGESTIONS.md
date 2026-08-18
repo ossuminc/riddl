@@ -119,6 +119,8 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${sink} is a sink but has no upstream path from any source` (Completeness) | Add connectors routing a source's output into this sink so it receives data. |
 | `The persistence option on ${connector} is not needed …` (Warning) | `Remove the 'persistent' option from ${connector}; both ends are in the same context.` |
 | `The persistence option on ${connector} should be specified …` (Warning) | `Add the 'persistent' option to ${connector} since it spans a context boundary.` |
+| `${connector} crosses a context boundary but arrives at an inlet of ${owner}, which is inside ${ctx}; a context is the SINK for everything entering it` (Error) | `Declare an inlet on ${ctx} itself and connect to that; let its handlers dispatch or translate inward. Reaching past the boundary binds the sender to ${ctx}'s internals, which it is entitled to change.` |
+| `${connector} crosses a context boundary but leaves from an outlet of ${owner}, which is inside ${ctx}; a context is the SOURCE for everything leaving it` (Error) | `Declare an outlet on ${ctx} itself and connect it from there; route the inner definition's outlet to it within ${ctx}.` |
 | `${portlet} is not connected` (Completeness) | `Connect ${portlet} with a connector, or remove it if it is unused.` |
 
 ---
@@ -179,7 +181,8 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${state} … has an 'on init' clause but no 'set' statement …` (Completeness) | Add 'set' statements in the 'on init' clause to initialize the state's fields. |
 | `${entity} has no handlers to process messages` (Completeness) | Add a handler (on the entity or its state) to process incoming messages. |
 | `${entity} has no 'on query' clause; …` (Completeness) | Add an 'on query' clause so the entity's state can be read. |
-| `${entity} in ${context} has no outlet anywhere to publish events on` (Completeness) | `Give ${entity} an outlet of its own, or give ${context} one -- the context is then the source for anything leaving it -- so ${entity} can publish its events.` |
+| `${entity} handles messages but declares no inlet to receive them on` (Completeness) | `Declare an inlet on ${entity} typed with the messages it handles. A processor receives only through its OWN inlet -- a port on its context or on a sibling does not deliver to it.` |
+| `${entity} sends or publishes messages but declares no outlet to transmit them on` (Completeness) | `Declare an outlet on ${entity} for the messages it emits. Publishing goes out the entity's OWN outlet; its context's outlet is reached only by connecting the entity's outlet onward within the context.` |
 | `${entity} does not define an Id type for its identity` (Completeness) | `Define an Id type for ${entity} in its context, e.g. 'type Id = Id(${id})'.` |
 | `${idType} is defined inside ${entity}; move it to the containing context …` (Completeness) | `Move ${idType} from ${entity} up to the containing context so other entities can reference it.` |
 | `${idType} for ${entity} is defined outside the containing context; …` (Completeness) | `Move ${idType} into ${entity}'s context, and use adaptors for any inter-context references to it.` |
@@ -225,7 +228,6 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `A saga step with do statements must also have revert statements, and vice versa` | Provide both 'do' and 'revert' statements for the saga step so its action can be compensated on failure. |
 | `${step} do-step targets ${uncompensated} but the undo-step does not …` (Style) | `Add compensating revert statements targeting ${uncompensated} in the saga step's undo block.` |
 | `${step} do-statements contain no 'tell command' to effect state changes` (Completeness) | Add a 'tell command' statement to the saga step's do-statements to effect a state change. |
-| `${c} has entities but no inlet anywhere to receive messages for them` (Completeness) | `Give ${c} an inlet -- the context is then the sink, and its handlers receive and dispatch to contained definitions -- or give one of its contained processors an inlet; an entity's own inlet is fine, and a connector may drive it directly.` |
 | `${handler} in ${streamlet} handles messages but does not dispatch to any entity via 'tell'` (Completeness) | Add 'tell' statements so the streamlet handler dispatches incoming messages to an entity. |
 | `${epic} is missing a user story` (Missing) | `Add a user story to ${epic}, e.g. 'by user SomeUser I want to … so that …'.` |
 | `${user} is missing its role kind ('is a')` (Missing) | `Specify the user's role, e.g. '${id} is a "customer"'.` |

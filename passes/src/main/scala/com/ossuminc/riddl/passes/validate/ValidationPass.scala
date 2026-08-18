@@ -2775,24 +2775,68 @@ case class ValidationPass(
           s"${entity.identify} has no 'on query' clause; information cannot be extracted from it",
           suggestion = "Add an 'on query' clause so the entity's state can be read."
         )
-    // Completeness 4h: entity without event outlet in parent context
-    if entity.nonEmpty then
-      parents.headOption.collect { case c: Context => c }.foreach { context =>
-        // Same 2026-08-18 ruling as 4i, mirrored. An entity does not need an outlet STREAMLET in
-        // its context; it needs an outlet it can send to, and its OWN outlet is fine -- so is the
-        // context's. Both operands are needed: `context.streamlets` gives the ports of CONTAINED
-        // processors, `context.outlets` gives the context's OWN.
-        val hasOutlet = context.outlets.nonEmpty || context.streamlets.exists(_.outlets.nonEmpty)
-        if !hasOutlet then
-          messages.addCompleteness(
-            entity.errorLoc,
-            s"${entity.identify} in ${context.identify} has no outlet anywhere to publish events on",
-            suggestion =
-              s"Give ${entity.identify} an outlet of its own, or give ${context.identify} " +
-                s"one -- the context is then the source for anything leaving it -- so " +
-                s"${entity.identify} can publish its events."
-          )
+    // Completeness 4h/4i: an entity's OWN portlets, not its context's.
+    //
+    // **Reid, 2026-08-18: "inlets are needed to receive, outlets to transmit/publish."** A message
+    // reaches a processor through THAT processor's inlet -- not a sibling's, and not its
+    // container's. `tell` is no exception: it is the same operation as `send` unless a generator
+    // can lower it more efficiently while keeping RIDDL's semantics, so it too requires the target
+    // to have an inlet. (An "inbox" is a lowering detail with no presence at the RIDDL design
+    // level; do not reason about one here.)
+    //
+    // Both checks used to read the CONTEXT's ports, and 4h did not ask about the entity at all.
+    // That could never be right: a projector's inlet does not make an entity reachable, and an
+    // entity cannot publish on its context's outlet. Getting a message OUT of a context goes
+    // entity outlet -> connector -> context inlet -> handler -> context outlet, and the first step
+    // is the entity's own outlet, so no context-level port substitutes for it.
+    //
+    // Each is gated on the entity actually doing the thing: an entity that handles no message
+    // needs no inlet, and one that emits nothing needs no outlet. A `???` body is exempt via
+    // `entity.nonEmpty`, per the standing rule that a stub earns at most a Missing warning.
+    if entity.nonEmpty then {
+      // Fold STATE handlers in, exactly as `validateAsk` and the four checks above do. An entity's
+      // clauses commonly live inside a `State` rather than directly on the entity, so
+      // `entity.handlers` alone under-reports badly -- it saw 24 of the corpus's entities where the
+      // folded form sees far more.
+      val allHandlers = entity.handlers ++ entity.states.flatMap(_.handlers)
+      val receivesMessages = allHandlers.exists(_.clauses.exists {
+        case _: OnMessageClause => true
+        case _: OnEventClause   => true
+        case _                  => false
+      })
+      if receivesMessages && entity.inlets.isEmpty then
+        messages.addCompleteness(
+          entity.errorLoc,
+          s"${entity.identify} handles messages but declares no inlet to receive them on",
+          suggestion =
+            s"Declare an inlet on ${entity.identify} typed with the messages it handles. A " +
+              "processor receives only through its OWN inlet -- a port on its context or on a " +
+              "sibling does not deliver to it."
+        )
+      end if
+
+      var emits = false
+      allHandlers.foreach { handler =>
+        handler.clauses.foreach { clause =>
+          walkStatements(clause.contents) {
+            case _: SendStatement | _: TellStatement | _: YieldStatement | _: ReplyStatement =>
+              emits = true
+            case _ => ()
+          }
+        }
       }
+      if emits && entity.outlets.isEmpty then
+        messages.addCompleteness(
+          entity.errorLoc,
+          s"${entity.identify} sends or publishes messages but declares no outlet to transmit " +
+            s"them on",
+          suggestion =
+            s"Declare an outlet on ${entity.identify} for the messages it emits. Publishing goes " +
+              "out the entity's OWN outlet; its context's outlet is reached only by connecting " +
+              "the entity's outlet onward within the context."
+        )
+      end if
+    }
     // Completeness: entity Id type placement checks
     if entity.nonEmpty then {
       val parentContext = parents.collectFirst { case c: Context => c }
@@ -4541,42 +4585,11 @@ case class ValidationPass(
     checkAdaptorUniqueness(c)
     val nonEmptyEntities = c.entities.filter(_.nonEmpty)
     if nonEmptyEntities.nonEmpty && c.nonEmpty then {
-      // Completeness 4i: nothing anywhere can receive a message for this context's entities.
-      //
-      // **RULED 2026-08-18 by Reid, correcting this check outright.** It used to demand a separate
-      // `Sink` STREAMLET and to reject an entity's own inlet, on the reasoning that an inbound
-      // stream "belongs at the context boundary where it can be seen". That is wrong, and the
-      // model it was defending does not exist:
-      //
-      //   - An Entity IS a streamlet. It may carry its own inlets and outlets and needs NOTHING
-      //     from its context in order to process messages.
-      //   - A Context IS a streamlet. Given an inlet and handlers, **the context IS the sink** --
-      //     its handlers receive, dispatch to a contained definition, and may translate on the way.
-      //   - INTRA-CONTEXT, any processor, streamlet or connector may communicate with any other
-      //     without further encumbrance. A connector may drive an entity's inlet directly.
-      //   - The boundary is the only place a rule belongs: crossing OUT of a context the context
-      //     is the source, crossing IN it is the sink.
-      //
-      // So the demand for a dedicated Sink definition was ceremony. What survives is the one
-      // question still worth asking: is there ANY way in at all? A context with entities and no
-      // inlet anywhere has entities that nothing can reach.
-      //
-      // Both operands are needed because they answer different questions. `c.streamlets`
-      // enumerates the context's CHILDREN, so it reports the ports of CONTAINED processors.
-      // `c.inlets` is the context's OWN ports -- and that is precisely the "the context IS the
-      // sink" case, so neither operand subsumes the other.
-      val hasAnyInlet = c.inlets.nonEmpty || c.streamlets.exists(_.inlets.nonEmpty)
-      if !hasAnyInlet then {
-        messages.addCompleteness(
-          c.errorLoc,
-          s"${c.identify} has entities but no inlet anywhere to receive messages for them",
-          suggestion =
-            s"Give ${c.identify} an inlet -- the context is then the sink, and its handlers " +
-              "receive and dispatch to contained definitions -- or give one of its contained " +
-              "processors an inlet; an entity's own inlet is fine, and a connector may drive it " +
-              "directly."
-        )
-      }
+      // Completeness 4i was a CONTEXT-level inlet check ("has entities but no Sink streamlet to
+      // receive and dispatch") and is GONE, superseded by the per-entity rule in `validateEntity`.
+      // It asked whether anything in the context had an inlet, which answers a different question
+      // than the one it reported: a sibling's inlet never made an entity reachable. Reid,
+      // 2026-08-18 -- a processor receives only through its own inlet.
       // Completeness: a context with entities should persist them. Entities are
       // stateful and generally require durable storage, so a context that has
       // entities but no repository at all is incomplete. This is an always-on

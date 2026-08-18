@@ -531,94 +531,44 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
-    "warn when entity has no outlet anywhere for events" in { (td: TestData) =>
+    // ---- 2026-08-18 ruling (Reid): a processor receives ONLY through its OWN inlet ----
+    //
+    // "inlets are needed to receive, outlets to transmit/publish." A sibling's port does not
+    // deliver to an entity, and neither does its context's: getting a message out of a context is
+    // entity outlet -> connector -> context inlet -> handler -> context outlet, whose first step is
+    // the entity's own outlet. `tell` is the same operation as `send` for this purpose -- a
+    // generator may lower it more efficiently, but only while keeping RIDDL's semantics.
+    //
+    // These checks replace two context-scoped ones that asked whether ANYTHING in the context had a
+    // port. Each is gated on the entity actually doing the thing, so a passive or stubbed entity is
+    // not told to add ports it never uses.
+
+    "warn when an entity handles messages but declares no inlet" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
           |    command Cmd is { data: String }
-          |    query GetData is { id: String }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
-          |        on command D.C.Cmd {
-          |          do "handle command"
-          |        }
-          |        on query D.C.GetData {
-          |          do "return data"
-          |        }
+          |        on command D.C.Cmd { do "handle command" }
           |      }
           |    }
-          |    sink Incoming is { inlet in is type Cmd }
           |  }
           |}
           |""".stripMargin,
         td
       )
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        val cw = completenessWarnings(msgs)
-        cw.exists(
-          _.message.contains(
-            "no outlet anywhere to publish events on"
-          )
+        completenessWarnings(msgs).exists(
+          _.message.contains("declares no inlet to receive them on")
         ) mustBe true
       }
     }
 
-    "warn when context with entities has no inlet anywhere" in { (td: TestData) =>
-      val input = RiddlParserInput(
-        """domain D is {
-          |  context C is {
-          |    command Cmd is { data: String }
-          |    event Evt is { data: String }
-          |    query GetData is { id: String }
-          |    entity E is {
-          |      record Fields is { data: String }
-          |      state Main of record E.Fields
-          |      handler H is {
-          |        on init { set field E.Fields.data to "x" }
-          |        on command D.C.Cmd {
-          |          send event D.C.Evt to outlet D.C.Events.out
-          |        }
-          |        on query D.C.GetData {
-          |          do "return data"
-          |        }
-          |      }
-          |    }
-          |    source Events is { outlet out is type Evt }
-          |  }
-          |}
-          |""".stripMargin,
-        td
-      )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        val cw = completenessWarnings(msgs)
-        cw.exists(
-          _.message.contains(
-            "no inlet anywhere to receive messages for them"
-          )
-        ) mustBe true
-      }
-    }
-
-    // ---- 2026-08-18 ruling (Reid): intra-context messaging needs no extra streamlet ----
-    //
-    // An Entity IS a streamlet and may carry its own portlets; a Context IS a streamlet and, given
-    // an inlet and handlers, IS the sink. Any processor/streamlet/connector inside one context may
-    // communicate with any other without further encumbrance. Only crossing the context boundary
-    // makes the Context itself the sink (inbound) or source (outbound).
-    //
-    // These four cases pin the corrected rule. THREE of them were verified to fail against the
-    // previous implementation, which demanded a dedicated Sink/Source definition and explicitly
-    // rejected an entity's own inlet: both inlet cases and the context's-own-outlet case.
-    //
-    // The fourth -- "the entity declares its own outlet" -- already passed beforehand, because
-    // [4.1] had widened `streamlets` to mean any port-bearing processor and an Entity therefore
-    // already counted. It is kept deliberately: it is the regression guard for THAT change, and
-    // without it a narrowing of `streamlets` back to `Streamlet` would go unnoticed here.
-
-    "not warn about inlets when the entity declares its own" in { (td: TestData) =>
+    "not warn about an inlet when the entity declares its own" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
@@ -639,18 +589,19 @@ class CompletenessTest extends AbstractValidatingTest {
       )
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
         completenessWarnings(msgs).exists(
-          _.message.contains("no inlet anywhere to receive messages")
+          _.message.contains("declares no inlet to receive them on")
         ) mustBe false
       }
     }
 
-    "not warn about inlets when the context declares its own" in { (td: TestData) =>
-      // THE CONTEXT IS THE SINK: an inlet plus handlers is all it takes to receive and dispatch.
+    "not warn about an inlet when a sibling or the context declares one" in { (td: TestData) =>
+      // The whole point of the ruling: neither of these delivers to E, so E is still warned about.
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
           |    command Cmd is { data: String }
-          |    inlet in is type D.C.Cmd
+          |    inlet cin is type D.C.Cmd
+          |    sink Other is { inlet oin is type D.C.Cmd }
           |    entity E is {
           |      record Fields is { data: String }
           |      state Main of record E.Fields
@@ -666,24 +617,52 @@ class CompletenessTest extends AbstractValidatingTest {
       )
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
         completenessWarnings(msgs).exists(
-          _.message.contains("no inlet anywhere to receive messages")
-        ) mustBe false
+          _.message.contains("declares no inlet to receive them on")
+        ) mustBe true
       }
     }
 
-    "not warn about outlets when the entity declares its own" in { (td: TestData) =>
+    "warn when an entity emits messages but declares no outlet" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
           |    command Cmd is { data: String }
           |    event Evt is { data: String }
           |    entity E is {
+          |      inlet in is type D.C.Cmd
+          |      record Fields is { data: String }
+          |      state Main of record E.Fields
+          |      handler H is {
+          |        on init { set field E.Fields.data to "x" }
+          |        on command D.C.Cmd { yield event D.C.Evt }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        completenessWarnings(msgs).exists(
+          _.message.contains("declares no outlet to transmit them on")
+        ) mustBe true
+      }
+    }
+
+    "not warn about an outlet when the entity declares its own" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    command Cmd is { data: String }
+          |    event Evt is { data: String }
+          |    entity E is {
+          |      inlet in is type D.C.Cmd
           |      outlet out is type D.C.Evt
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
-          |        on command D.C.Cmd { do "handle command" }
+          |        on command D.C.Cmd { yield event D.C.Evt }
           |      }
           |    }
           |  }
@@ -693,20 +672,19 @@ class CompletenessTest extends AbstractValidatingTest {
       )
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
         completenessWarnings(msgs).exists(
-          _.message.contains("no outlet anywhere to publish events on")
+          _.message.contains("declares no outlet to transmit them on")
         ) mustBe false
       }
     }
 
-    "not warn about outlets when the context declares its own" in { (td: TestData) =>
-      // The context is the source for anything leaving it, so its own outlet satisfies the rule.
+    "not warn about an outlet when the entity emits nothing" in { (td: TestData) =>
+      // Gated on doing the thing: an entity that publishes nothing needs no outlet.
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
           |    command Cmd is { data: String }
-          |    event Evt is { data: String }
-          |    outlet out is type D.C.Evt
           |    entity E is {
+          |      inlet in is type D.C.Cmd
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
@@ -721,8 +699,26 @@ class CompletenessTest extends AbstractValidatingTest {
       )
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
         completenessWarnings(msgs).exists(
-          _.message.contains("no outlet anywhere to publish events on")
+          _.message.contains("declares no outlet to transmit them on")
         ) mustBe false
+      }
+    }
+
+    "not warn about ports for a stubbed entity" in { (td: TestData) =>
+      // The standing `???` rule: a stub earns at most a Missing warning, never a structural one.
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    entity E is { ??? }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("declares no inlet to receive them on")) mustBe false
+        cw.exists(_.message.contains("declares no outlet to transmit them on")) mustBe false
       }
     }
 
@@ -1114,6 +1110,15 @@ class CompletenessTest extends AbstractValidatingTest {
       * which is also why `Cmd` carries a `target: Id(C.E)` field for the addressing check to find.
       */
     "produce no completeness warnings for a well-formed model" in { (td: TestData) =>
+      // Rebuilt 2026-08-18 for the ruling that a processor receives only through its OWN inlet and
+      // publishes only through its OWN outlet. The previous version was "well-formed" only under
+      // the checks as they stood: a sibling `sink` told the entity, and the entity sent to a
+      // `source`'s outlet -- both disallowed now.
+      //
+      // Deliberately INTRA-context and free of boundary ports. Inside one context anything may
+      // talk to anything, and a connector may drive the entity's own inlet directly. Boundary
+      // ports are omitted because a single-context model has nothing on the other side of them,
+      // so they would (correctly) report as unconnected.
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
@@ -1123,7 +1128,11 @@ class CompletenessTest extends AbstractValidatingTest {
           |    result DataResult is { data: String }
           |    query GetData replies result D.C.DataResult is { id: String }
           |
+          |    source Ingress is { outlet out is type Cmd }
+          |
           |    entity E is {
+          |      inlet ein is type Cmd
+          |      outlet eout is type Evt
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
@@ -1131,7 +1140,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |          set field E.Fields.data to "default"
           |        }
           |        on command D.C.Cmd {
-          |          send event D.C.Evt(data = "changed") to outlet D.C.Events.out
+          |          send event D.C.Evt(data = "changed") to outlet D.C.E.eout
           |        }
           |        on query D.C.GetData {
           |          reply result D.C.DataResult(data = "answer")
@@ -1139,21 +1148,15 @@ class CompletenessTest extends AbstractValidatingTest {
           |      }
           |    }
           |
-          |    source Events is { outlet out is type Evt }
-          |
-          |    sink Incoming is {
-          |      inlet in is type Cmd
-          |      handler Dispatch is {
-          |        on cmd: command D.C.Cmd {
-          |          tell cmd to entity D.C.E
-          |        }
-          |      }
-          |    }
+          |    sink Egress is { inlet in is type Evt }
           |
           |    repository Store is { ??? }
           |
-          |    connector CmdPipe {
-          |      from outlet C.Events.out to inlet C.Incoming.in
+          |    connector Inbound {
+          |      from outlet C.Ingress.out to inlet C.E.ein
+          |    }
+          |    connector Outbound {
+          |      from outlet C.E.eout to inlet C.Egress.in
           |    }
           |  }
           |}
