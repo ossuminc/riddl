@@ -138,9 +138,9 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2737** | 7 |
+| JVM | **2747** | 7 |
 | JS | **840** | 5 |
-| Native | **2456** | 7 |
+| Native | **2708** | 7 |
 
 **Raised 2026-08-17 at 2.0.0-rc.15 (2737 / 840 / 2456).** This was a LARGE jump
 — +268 / +87 / +548 — and it does not reconcile against one session's work,
@@ -150,8 +150,17 @@ and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
 
-**The deliberate-failure count is now TWO, down from 17 on 08-14 and 7 earlier on
-08-17.** The riddl-models corpus gate is **MET**: `Root2JsonCorpusTest`
+**The deliberate-failure count is ZERO as of 2.0.0-rc.16 (2026-08-18).** riddl-examples
+completed its 2.0 migration, so the last two red cases are gone and every suite on
+every platform is green. **A red case is now a real signal — treat any failure as a
+regression rather than reaching for this list.**
+
+**The Native floor jumped +252 at rc.16** (2456 → 2708) because the corpus suites
+stopped downloading and started reading sibling checkouts, and because riddlLib
+finally got `scala-jvm-native` test wiring. The JVM/Native gap is −39, from −729.
+
+**Historical note, superseded:** the deliberate-failure count was TWO, down from 17 on
+08-14 and 7 earlier on 08-17. The riddl-models corpus gate is **MET**: `Root2JsonCorpusTest`
 validation-parity reads **190/190** and `RiddlModelsRoundTripTest` is green, after
 riddl-models shipped `99fc29d1` on 2026-08-17. `ReportedIssuesTest` "should 406"
 is green too — that fixture was OURS and was migrated to 2.0's `morph` operand
