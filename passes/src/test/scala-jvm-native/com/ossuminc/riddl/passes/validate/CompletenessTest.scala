@@ -64,6 +64,93 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    /* The two cases this suite lacked, and their absence is why an rc.16 regression reached two
+     * downstream repos. Every case here builds from `processor P as $shape` — a DECLARED
+     * streamlet — so the arity-derived-Sink path was never exercised. A Repository or Projector
+     * with one inlet and no outlets DERIVES the shape `Sink`, and once [4.1] widened
+     * `WithStreamlets.streamlets` to every port-bearing processor, both were asked to dispatch to
+     * an entity: 25 false positives in riddl-examples, 3 in riddl-models.
+     *
+     * They are written as separate literal models rather than through `streamletModel`, precisely
+     * because that helper can only produce declared streamlets — routing them through it would
+     * reproduce the blind spot.
+     *
+     * **Each model also contains a DECLARED sink that does dispatch, and it is load-bearing.**
+     * The block is gated on the context having a declared streamlet, so without one the gate
+     * alone suppresses the check and the test passes no matter what the loop does — verified by
+     * reverting the fix and watching these still pass. The sink makes the gate open so the loop
+     * is the thing under test, and it must stay silent itself. */
+    "not fire for a repository, whose boundary is into STORAGE, not into entities" in {
+      (td: TestData) =>
+        val model =
+          """domain D is {
+            |  context C is {
+            |    event Evt is { id: String }
+            |    entity E is {
+            |      record Fields is { id: String }
+            |      initial state Main of record D.C.E.Fields
+            |      handler EH is { on init { do "init" } }
+            |      outlet Announced is event D.C.Evt
+            |    }
+            |    sink Intake is {
+            |      inlet Requests is event D.C.Evt
+            |      handler IntakeH is {
+            |        on event D.C.Evt { tell event D.C.Evt(id = "x") to entity D.C.E }
+            |      }
+            |    }
+            |    repository Store is {
+            |      inlet Recorded is event D.C.Evt
+            |      handler StoreH is {
+            |        on event D.C.Evt { do "store the identifier carried by the event" }
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+        parseAndValidateInput(RiddlParserInput(model, td), shouldFailOnErrors = false) {
+          (_, _, msgs) =>
+            val hits = completenessWarnings(msgs).filter(_.message.contains(noDispatch))
+            if hits.nonEmpty then
+              info(s"Repository was asked to dispatch:\n${hits.map(_.format).mkString("\n")}")
+            hits mustBe empty
+        }
+    }
+
+    "not fire for a projector, which updates a projection rather than dispatching" in {
+      (td: TestData) =>
+        val model =
+          """domain D is {
+            |  context C is {
+            |    event Evt is { id: String }
+            |    entity E is {
+            |      record Fields is { id: String }
+            |      initial state Main of record D.C.E.Fields
+            |      handler EH is { on init { do "init" } }
+            |      outlet Announced is event D.C.Evt
+            |    }
+            |    sink Intake is {
+            |      inlet Requests is event D.C.Evt
+            |      handler IntakeH is {
+            |        on event D.C.Evt { tell event D.C.Evt(id = "x") to entity D.C.E }
+            |      }
+            |    }
+            |    projector View is {
+            |      inlet Seen is event D.C.Evt
+            |      record Fields is { id: String }
+            |      handler ViewH is { on event D.C.Evt { do "update the projection" } }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+        parseAndValidateInput(RiddlParserInput(model, td), shouldFailOnErrors = false) {
+          (_, _, msgs) =>
+            val hits = completenessWarnings(msgs).filter(_.message.contains(noDispatch))
+            if hits.nonEmpty then
+              info(s"Projector was asked to dispatch:\n${hits.map(_.format).mkString("\n")}")
+            hits mustBe empty
+        }
+    }
+
     "still fire for a sink that handles messages but never dispatches" in { (td: TestData) =>
       val input = RiddlParserInput(streamletModel("sink", "do \"nothing useful\""), td)
       parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>

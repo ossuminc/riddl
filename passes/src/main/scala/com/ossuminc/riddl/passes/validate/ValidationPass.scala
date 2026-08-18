@@ -4571,7 +4571,8 @@ case class ValidationPass(
         )
       }
     }
-    if c.streamlets.nonEmpty && nonEmptyEntities.nonEmpty then {
+    // Same narrowing as the loop below, so the gate and the body agree about what a streamlet is.
+    if c.streamlets.exists(_.isInstanceOf[Streamlet]) && nonEmptyEntities.nonEmpty then {
       // Completeness 4b: a SINK's handlers should dispatch to entities via tell.
       //
       // Restricted to Sink deliberately. A sink is the boundary that carries messages out of the
@@ -4587,7 +4588,20 @@ case class ValidationPass(
       //
       // `effectiveShape`, not `ascribedShape`: a shape may be derived from arity rather than
       // written down, and AST.scala:1249 warns consumers off hand-rolling that.
-      c.streamlets.foreach { streamlet =>
+      // GUARD ON THE CASE CLASS, not on the shape. [4.1] widened `c.streamlets` to every
+      // port-bearing processor, and a Repository or Projector with one inlet and no outlets
+      // therefore DERIVES the shape `Sink` from its arity — so this asked every such definition to
+      // dispatch to an entity. 25 false positives in riddl-examples, 3 in riddl-models, reported
+      // 2026-08-18 as an rc.16 regression. It is the same false positive the comment above already
+      // records for split/merge/flow, one level further out: a repository is the boundary into
+      // STORAGE, not into entities, and the event it receives was emitted BY the entity, so
+      // telling that entity back would invert the flow.
+      //
+      // `collect { case s: Streamlet => s }` is the idiom `WithStreamlets.streamlets` itself
+      // recommends for exactly this. Guarding on the case class rather than excluding Repository
+      // and Projector by name means a future port-bearing processor kind cannot silently inherit
+      // the bug — which is how this one arrived.
+      c.streamlets.collect { case s: Streamlet => s }.foreach { streamlet =>
         val isSink = streamlet.effectiveShape match
           case _: Sink => true
           case _       => false
