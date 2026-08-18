@@ -43,6 +43,31 @@ case class DOMPlatformContext() extends PlatformContext {
       }
   }
 
+  /** [1.3]: bytes, not text. Same `dom.fetch` [[load]] uses, taking `arrayBuffer()` rather than
+    * `text()` so binary content survives. A `file://` URL is unreachable from a browser, which is
+    * what [[load]] already says by throwing.
+    */
+  override def loadBytes(url: URL): Future[Array[Byte]] = {
+    import org.scalajs.dom.RequestInit
+    import org.scalajs.dom.HttpMethod
+    import scala.scalajs.js.typedarray.{ArrayBuffer, Int8Array}
+    if url.scheme == "file" then throw FileNotFoundException(url)
+    else
+      val requestInit = new RequestInit { method = HttpMethod.GET }
+      dom.fetch(url.toExternalForm, requestInit).toFuture.flatMap { response =>
+        if response.status != 200 then {
+          Future.failed(
+            new Exception(s"GET failed with status ${response.status} ${response.statusText}")
+          )
+        } else {
+          response.arrayBuffer().toFuture.map { (buf: ArrayBuffer) =>
+            val view = new Int8Array(buf)
+            Array.tabulate(view.length)(i => view(i))
+          }
+        }
+      }
+  }
+
   override def read(url: URL): String = {
     val fr = new dom.FileReader()
     val file: dom.File = ???

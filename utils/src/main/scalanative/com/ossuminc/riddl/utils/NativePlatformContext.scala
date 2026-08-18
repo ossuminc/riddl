@@ -69,6 +69,50 @@ class NativePlatformContext extends PlatformContext:
     end match
   end load
 
+  /** [1.3]: bytes, not text. `java.net.URL.openStream` is a STUB here — it compiles and throws
+    * `scala.NotImplementedError` — so this goes through sttp, exactly as [[load]] does above, and
+    * asks for `asByteArrayAlways` instead of a decoded String.
+    */
+  override def loadBytes(url: URL): Future[Array[Byte]] =
+    Future {
+      if url.scheme == URL.fileScheme then
+        java.nio.file.Files.readAllBytes(
+          java.nio.file.Path.of(url.toExternalForm.stripPrefix("file://"))
+        )
+      else fetchFollowingRedirects(url.toExternalForm, hopsLeft = 5)
+      end if
+    }(using ec)
+
+  /** Follow HTTP redirects EXPLICITLY rather than trusting the backend to do it.
+    *
+    * [1.3]: the riddl-examples archive URL
+    * (`github.com/…/archive/refs/heads/main.zip`) answers **302** with an EMPTY body, and the
+    * Native backend was returning that empty body rather than following the `Location`. The
+    * download then produced a 0-byte file and the failure surfaced two steps later as
+    * `java.util.zip.ZipException: too short to be Zip` — a corrupt-archive message for what was
+    * really an unfollowed redirect. Any redirecting URL would have hit this, and GitHub archive
+    * links always redirect.
+    *
+    * Bounded at five hops so a redirect loop fails with a clear message instead of hanging.
+    */
+  private def fetchFollowingRedirects(externalForm: String, hopsLeft: Int): Array[Byte] =
+    if hopsLeft <= 0 then
+      throw new RuntimeException(s"Too many HTTP redirects while fetching $externalForm")
+    else
+      val uri: Uri = Uri(java.net.URI.create(externalForm))
+      val response = basicRequest.get(uri).response(asByteArrayAlways).send(sttpBackend)
+      val code = response.code.code
+      if code >= 300 && code < 400 then
+        response.header("Location") match
+          case Some(next) => fetchFollowingRedirects(next, hopsLeft - 1)
+          case None =>
+            throw new RuntimeException(s"HTTP $code for $externalForm with no Location header")
+      else if code >= 400 then throw new RuntimeException(s"HTTP $code fetching $externalForm")
+      else response.body
+      end if
+    end if
+  end fetchFollowingRedirects
+
   override def read(file: URL): String =
     val source = Source.fromFile(file.toString)
     try {

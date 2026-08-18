@@ -63,6 +63,21 @@ class JVMPlatformContext extends PlatformContext {
     }
   }
 
+  /** [1.3]: bytes, not text. `openStream` is real on the JVM, so this is the direct answer; the
+    * `file` scheme is served by `Files.readAllBytes` rather than opening a stream on a URL, which
+    * keeps a missing file reporting as a plain `NoSuchFileException`.
+    */
+  override def loadBytes(url: URL): Future[Array[Byte]] =
+    Future {
+      if url.scheme == URL.fileScheme then
+        java.nio.file.Files.readAllBytes(java.nio.file.Path.of(url.toExternalForm.stripPrefix("file://")))
+      else
+        val in = java.net.URI.create(url.toExternalForm).toURL.openStream()
+        try in.readAllBytes()
+        finally in.close()
+      end if
+    }(using ec)
+
   override def read(file: URL): String =
     val source = Source.fromFile(file.toString)
     try {

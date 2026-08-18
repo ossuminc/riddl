@@ -12,6 +12,7 @@ import java.nio.file.{Files, Path, StandardCopyOption}
 import scala.jdk.Accumulator
 import java.nio.file.{Files, Path, StandardCopyOption}
 import scala.jdk.StreamConverters.StreamHasToScala
+import scala.concurrent.duration.DurationInt
 
 object PathUtils {
 
@@ -41,18 +42,24 @@ object PathUtils {
       .exists(p => Files.isExecutable(p.resolve(program)))
   }
 
-  def copyURLToDir(from: JNURL, destDir: Path): String = {
-    val nameParts = from.getFile.split('/')
+  def copyURLToDir(from: JNURL, destDir: Path)(using pc: PlatformContext): String = {
+    // [1.3]: `toExternalForm` + `PlatformContext.loadBytes`, NOT `getFile` + `openStream`. Both
+    // of those are STUBS on Scala Native (`java_net_url_stubs`) -- they compile and throw
+    // `scala.NotImplementedError` when called, which is how the `commands` example-corpus suites
+    // aborted on Native while passing on the JVM. `loadBytes` is the same operation with a real
+    // implementation on all THREE platforms: `openStream` on the JVM, sttp on Native, `dom.fetch`
+    // on Scala.js -- each the same stack that platform already uses for text.
+    //
+    // Query and fragment are stripped before taking the last segment, so a URL ending `?ref=main`
+    // does not become part of the filename.
+    val externalForm = from.toExternalForm
+    val nameParts = externalForm.takeWhile(c => c != '?' && c != '#').split('/')
     if nameParts.nonEmpty then {
       val fileName = scala.util.Random.self.nextLong.toString ++ nameParts.last
       Files.createDirectories(destDir)
       val dl_path = destDir.resolve(fileName)
-      val in: InputStream = from.openStream
-      if in == null then { "" }
-      else {
-        try { Files.copy(in, dl_path, StandardCopyOption.REPLACE_EXISTING) }
-        finally if in != null then in.close()
-      }
+      val bytes = Await.result(pc.loadBytes(URL(externalForm)), 5.minutes)
+      Files.write(dl_path, bytes)
       if Files.isRegularFile(dl_path) then { fileName }
       else { "" }
     } else { "" }

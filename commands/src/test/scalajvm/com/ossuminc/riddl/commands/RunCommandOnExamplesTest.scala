@@ -9,8 +9,9 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.{Messages, errors, warnings}
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.*
-import org.apache.commons.io.FileUtils
-import org.apache.commons.io.filefilter.{DirectoryFileFilter, NotFileFilter, TrueFileFilter}
+// [1.3]: `java.nio.file`, NOT `org.apache.commons.io`. commons-io is a JVM-only Java library and
+// was the COMPILE-time blocker keeping this base class — and the ~193 cases that extend it — off
+// Scala Native. Native's javalib has `java.nio.file`, which does the same three jobs.
 import org.scalatest.*
 
 import java.net.URL
@@ -52,9 +53,33 @@ trait RunCommandOnExamplesTest(
   }
 
   override def afterAll(): Unit = {
-    if shouldDelete then FileUtils.forceDeleteOnExit(tmpDir.toFile)
+    if shouldDelete then deleteRecursively(tmpDir)
     else info(s"Leaving $tmpDir undeleted")
   }
+
+  /** [1.3]: the three filesystem operations this base needs, on `java.nio.file` so Scala Native can
+    * run it. Each realises its `Seq` eagerly, because a `java.util.stream.Stream` holds an open
+    * directory handle and these results outlive the call.
+    */
+  private def walk(start: Path): Seq[Path] =
+    val stream = Files.walk(start)
+    try stream.iterator().asScala.toSeq
+    finally stream.close()
+
+  private def list(dir: Path): Seq[Path] =
+    val stream = Files.list(dir)
+    try stream.iterator().asScala.toSeq
+    finally stream.close()
+
+  /** Deepest paths FIRST, so a directory is removed only after its contents — the ordering
+    * `FileUtils.forceDelete` supplied and the reason a plain walk cannot replace it directly.
+    */
+  private def deleteRecursively(dir: Path): Unit =
+    if Files.exists(dir) then
+      walk(dir).sortBy(p => -p.toString.length).foreach { p =>
+        try Files.deleteIfExists(p)
+        catch { case _: java.io.IOException => () } // best effort: temp-dir cleanup
+      }
 
   private final val suffix = "conf"
 
@@ -63,19 +88,18 @@ trait RunCommandOnExamplesTest(
   private def forEachConfigFile[T](commandName: String)(
     f: (String, Path) => T
   ): Seq[Either[(String, Messages), T]] = {
-    val configs = FileUtils
-      .iterateFiles(srcDir.toFile, Array[String](suffix), true)
-      .asScala
-      .toSeq
+    val configs = walk(srcDir).filter { p =>
+      Files.isRegularFile(p) && p.getFileName.toString.endsWith("." + suffix)
+    }
     for
       config <- configs
-      name = config.getAbsolutePath.dropRight(suffix.length + 1)
+      name = config.toAbsolutePath.toString.dropRight(suffix.length + 1)
     yield {
       if validateTestName(name) then {
-        Commands.loadCandidateCommands(config.toPath) match {
+        Commands.loadCandidateCommands(config) match {
           case Right(commands) =>
             if commands.contains(commandName) then {
-              Right(f(name, config.toPath))
+              Right(f(name, config))
             } else {
               Left(name -> errors(s"Command $commandName not found in $config"))
             }
@@ -90,24 +114,17 @@ trait RunCommandOnExamplesTest(
   def forAFolder(folderName: String, commandName: String)(
     validate: (String, Path) => Either[Messages, PassesResult]
   ): Either[Messages, PassesResult] = {
-    FileUtils
-      .iterateFilesAndDirs(
-        srcDir.toFile,
-        DirectoryFileFilter.DIRECTORY,
-        new NotFileFilter(TrueFileFilter.INSTANCE)
-      )
-      .asScala
-      .toSeq
-      .find(file => file.isDirectory && file.getName == "riddl") match {
+    walk(srcDir)
+      .find(p => Files.isDirectory(p) && p.getFileName.toString == "riddl") match {
       case Some(riddlDir) =>
-        riddlDir.listFiles.toSeq
-          .filter(file => file.isDirectory)
-          .find(_.getName.endsWith(folderName)) match {
+        list(riddlDir)
+          .filter(Files.isDirectory(_))
+          .find(_.getFileName.toString.endsWith(folderName)) match {
           case Some(folder) =>
-            folder.listFiles.toSeq.find(fName => fName.getName == folderName + ".conf") match {
+            list(folder).find(_.getFileName.toString == folderName + ".conf") match {
               case Some(config) =>
-                Commands.loadCandidateCommands(config.toPath).flatMap { commands =>
-                  if commands.contains(commandName) then validate(folderName, config.toPath)
+                Commands.loadCandidateCommands(config).flatMap { commands =>
+                  if commands.contains(commandName) then validate(folderName, config)
                   else Left(errors(s"Config file $commandName not found in $config"))
 
                 }

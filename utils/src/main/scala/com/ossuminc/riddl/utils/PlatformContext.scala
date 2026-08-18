@@ -98,6 +98,25 @@ trait PlatformContext {
     end try
   end loadSafe
 
+  /** Load the BYTES at a URL asynchronously.
+    *
+    * The binary counterpart of [[load]], and it exists because decoding is lossy: [[load]] returns
+    * a `String`, so using it for a ZIP or a `.bast` file corrupts the content. Anything that is not
+    * text must come through here.
+    *
+    * **Added for [1.3].** `PathUtils.copyURLToDir` reached for `java.net.URL.openStream`, which is
+    * a STUB on Scala Native (`java_net_url_stubs`) — it compiles and throws
+    * `scala.NotImplementedError` when called. That is why the `commands` example-corpus suites
+    * aborted on Native while passing on the JVM. Each platform already has a working fetch for
+    * text; this asks the same stack for bytes.
+    *
+    * @param url
+    *   The URL to load, `file://` or `http(s)://`.
+    * @return
+    *   The bytes, asynchronously.
+    */
+  def loadBytes(url: URL): Future[Array[Byte]]
+
   /** Read the entire contents of a file and return it, synchronously
     *
     * @param file
