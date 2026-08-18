@@ -812,6 +812,52 @@ each want an approved plan before implementation, per the standing rule.
   "is not connected" messages today, because its tell-target entities declare no inlets
   at all. The interaction appears only as models comply.
 
+- **[1.8]** **The Native CI leg has been broken since the corpus moved onto it, and
+  every run since is a false red.** Found cutting rc.17 (2026-08-18). `1c318b844`
+  ("[1.3] Read sibling corpora, skip when absent") put `RiddlModelsRoundTripTest`'s
+  189 cases on Native — a real coverage win, and the thing item 5 above was asking
+  for. It also tripled the job: run **#2331** (`1679bb256`, the last green) took
+  **18 min**; **#2332** took 36 and failed; **#2348/#2349** took **55-56 min** and
+  failed. **Eighteen consecutive failures at the time of writing.**
+  **The signature is a lost runner, not a failing test**: the *"Build And Test Native
+  Versions"* step is still marked `in_progress` when the job dies, and GitHub holds
+  **no log blob at all** — `/actions/jobs/<id>/logs` returns `BlobNotFound` and the
+  attempt-level archive is an EMPTY zip. So there is nothing to read, which is why
+  this went unnoticed for a day. `timeout-minutes: 60` (`scala.yml:18`) is the
+  suspected ceiling; 55-56 min of work plus teardown collides with it.
+  **The tests themselves are FINE** — rc.17 certified Native locally at **2726** run
+  (floor 2708), and `release.yml`'s native-build succeeded on BOTH macos-latest and
+  ubuntu-latest for the rc.17 tag, so Native compiles and links in CI. Only the TEST
+  leg is over budget.
+  Options, unranked: raise `timeout-minutes`; split the Native leg into its own job
+  or matrix rows; or isolate the corpus per platform, which is the decision item 5
+  says the remaining gap is blocked on. **Do not "fix" it by taking the corpus back
+  off Native** — that re-opens the gap [1.3] closed.
+
+- **[1.9]** **CI's corpus-dependent greens are replayed from cache and cannot be
+  trusted.** Found cutting rc.17 (2026-08-18), and it is the reason [1.8] above was
+  the ONLY thing that looked wrong. CI's JVM leg reported `should validate
+  riddl-examples dokn` and `should validate shopify-cart` as PASSING at HEAD, while
+  both genuinely FAIL — verified locally on **JVM and Native alike**, exit 7, with
+  `dokn` reporting 20 boundary + 10 persistence errors from this branch's own new
+  rules.
+  **The tell is in the timestamps**: CI logged the two cases **0.4 ms apart**
+  (`17:57:56.8908` and `17:57:56.8912`), which cannot be two riddlc runs over two
+  full models. They were replayed.
+  **The mechanism is the known sbt 2 action-cache blindspot, reached through a new
+  door**: the cache keys on hashes of tracked inputs, and `../riddl-models` /
+  `../riddl-examples` are EXTERNAL directories cloned by a workflow step, so corpus
+  CONTENT is not part of any key. A result computed before the boundary Error
+  landed stays valid-looking forever, no matter what the corpus says now.
+  **Consequence to internalise: a green corpus suite in CI is evidence about the
+  CACHE, not about the corpus.** This is the same family as the `testQuick` skip and
+  the cancelled-not-failed corpus suite already recorded in `CLAUDE.md`, and it is
+  the fifth time a green run has turned out to have measured almost nothing.
+  Fix candidates: hash the corpus checkout into the cache key (e.g. mix the cloned
+  corpora's commit SHAs into a task input), or mark the corpus suites uncacheable.
+  Until one lands, **certify corpus-dependent suites locally before a release** —
+  which is what rc.17 did.
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
