@@ -15,19 +15,21 @@ scalafmt, `[0.2]` riddl-vscode, `[0.3]` regenerate checked-in `.bast`, `[0.5]`
 ossum.tech docs. Everything else closed on 2026-08-17/18. **There is no ordinary
 development work left on this branch** — what remains is what 2.0.0 final needs.
 
-**Completeness 4h/4i were WRONG and are corrected (2026-08-18, post-rc.16).** They
-demanded a dedicated `Sink`/`Source` streamlet for messaging *inside* one context,
-and 4i explicitly refused to count an entity's own inlet. Reid's ruling: an Entity
-IS a streamlet, a Context IS a streamlet, and **THE CONTEXT IS THE SINK** if it has
-an inlet — intra-context, anything may talk to anything; only the BOUNDARY makes the
-Context itself sink (in) or source (out). Now in `CLAUDE.md` and CM § 8.1. **The fix
-is on `release/2` but in NO TAG — rc.16 predates it**, so consumers still see the old
-warnings. Corpus A/B was byte-identical (neither rule ever had a population there),
-so `CompletenessTest`'s four cases are the only evidence.
+**Completeness 4h/4i were WRONG and are corrected (2026-08-18, post-rc.16).** Reid's
+ruling: **a processor receives only through its OWN inlet and publishes only through
+its OWN outlet** — `tell` included, since it is the same operation as `send`. Both
+checks had asked about the CONTEXT (4h never asked about the entity at all); both are
+now per-entity, and 4i's context-level form is gone. **A cross-context connector
+reaching past the boundary is now an ERROR** — binding a peer to a contained entity's
+command/query set is the coupling a bounded context exists to prevent. Recorded in
+`CLAUDE.md` and CM § 8.1.
 
-**Still unruled: the cross-context half.** "Crossing the boundary, the Context is the
-sink/source" is currently enforced by NOTHING. Proposing a check is a decision for
-Reid, not a gap to fill unasked.
+**Neither fix is in any tag — rc.16 predates all of it.** The boundary Error costs the
+corpus **491 violations across 184 of 198 models**, ruled acceptable in advance and
+filed as **[3.6]**. Two questions it raised are open: **[1.6]** whether an Adaptor —
+the CM's boundary translation seam, yet content of a context — is exempt, and
+**[1.7]** that an inlet fed only by `tell` still reports as unconnected, which is the
+common case at 7,635 tells vs 433 connectors.
 
 **Build state, verified 2026-08-18:**
 

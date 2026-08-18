@@ -699,6 +699,35 @@ each want an approved plan before implementation, per the standing rule.
   definition's ULID is not `Id(P)` — the failure modes are symmetric and both
   silent.
 
+- **[1.6]** **Does an Adaptor satisfy the cross-context boundary rule? NEEDS A RULING.**
+  The boundary Error shipped 2026-08-18 (`c67cfdbfd`) requires a cross-context
+  connector to terminate on the CONTEXT'S OWN portlet. An **Adaptor** is the
+  Computational Model's designated boundary translation seam (§ 7, *"a
+  message-transformation process at the context boundary … defends that context's
+  model"*) yet it is CONTENT of a context, so a cross-context connector landing on
+  an adaptor's port currently trips the Error. Implemented strictly rather than
+  inventing an exemption. Two readings, both defensible:
+  - The adaptor IS the boundary, so terminating there is the canonical correct
+    pattern and deserves an exemption.
+  - The context's own port is the boundary and an adaptor sits behind it, so the
+    strict rule is right and adaptor-terminated connectors are a modelling error.
+  **Do not decide this by measuring the corpus** — the corpus predates the rule
+  entirely. Verification already done: the check is `checkBoundaryEncapsulation`
+  in `StreamingValidation.scala`, keyed on `symbols.parentOf(portlet) eq ctx`, so
+  an exemption is a one-line widening of that test.
+
+- **[1.7]** **An inlet fed only by `tell` reports as "not connected".** Found
+  2026-08-18 while rebuilding `CompletenessTest`'s well-formed fixture. Reid ruled
+  the same day that a `tell` REQUIRES the target to have an inlet — but
+  `checkUnattachedOutlets`/A31 measure connectedness by counting CONNECTORS, and a
+  `tell` is not one. So the idiomatic dispatch pattern (context handler `tell`s a
+  contained entity) leaves that entity's inlet reported as unconnected. The corpus
+  has **7,635 `tell`s against 433 connectors**, so this is the common case, not an
+  edge one. Decide whether a `tell` naming a processor counts as attaching to its
+  inlet for connectedness purposes. Verified: the fixture at
+  `CompletenessTest.scala` had to be rewritten to route via connectors precisely
+  because the `tell` form reported `Inlet 'ein' is not connected`.
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
@@ -1397,6 +1426,18 @@ that needs a ruling before either can be fixed.
   `/riddl/2.0/licenses/` 404 no longer exists — `riddlc info` prints
   `github.com/ossuminc/riddl` and `opensource.org/license/apache-2-0`, neither of
   which is an ossum.tech URL.
+
+- **[3.6]** **Corpus migration for the cross-context boundary Error.** Shipped
+  2026-08-18 (`c67cfdbfd`) on Reid's ruling that reaching past a context boundary
+  is an Error, not a warning. Measured cost on the corpus, with the check live:
+  **250 inbound + 241 outbound violations across 184 of 198 entry points**
+  (riddl-models + riddl-examples). Reid ruled the cost acceptable and "remedied
+  quickly" before it shipped. The fix per site is mechanical — declare the portlet
+  on the CONTEXT and route the inner definition's port to it within the context —
+  but it is 491 sites and belongs to those repos, not this one. **This blocks
+  nothing here**; riddlc is correct. Task drops owed to `../riddl-models` and
+  `../riddl-examples`. Note [1.6] may reduce the count if an adaptor exemption is
+  ruled in.
 
 ### 4. RULED by Reid 2026-08-17 — **ALL COMPLIANCE WORK COMPLETE**
 
