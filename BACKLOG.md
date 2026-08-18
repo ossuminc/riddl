@@ -70,10 +70,12 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   that would have built for a language that no longer exists — which is precisely
   the failure this item exists to prevent, and an argument for sweeping the CM for
   WRONG statements, not only absent ones.
-  **`../RIDDL-Tools-To-Do-List.md` Part A checked too**: 77 items, of which exactly
-  **two are unresolved and both are PROPOSED, not ACCEPTED** — A13 (message and
-  type versioning) and A58 (parser continues after errors). Per the no-2.1-pile
-  rule neither is 2.0 work and neither is filed here; they want a ruling first.
+  **`../RIDDL-Tools-To-Do-List.md` Part A checked too**: 77 items, of which two were
+  undecided — A13 (message and type versioning) and A58 (parser continues after
+  errors). **RULED 2026-08-18 by Reid: both DEFERRED past 2.0** (`ossuminc`
+  `cff53d9`), so **Part A is now decided end to end with nothing ambiguous left
+  in it.** Deferred rather than declined — neither was rejected on merit. Per the
+  no-2.1-pile rule they stay out of this file until 2.0 ships.
   Superseded:
 - **~~[0.4] history~~: Update `../RIDDL-Computational-Model.md` with everything `release/2`
   changed.** Reid, 2026-08-06. That document is the authority for any lowering
