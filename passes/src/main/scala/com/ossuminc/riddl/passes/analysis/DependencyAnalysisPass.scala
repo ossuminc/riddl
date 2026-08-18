@@ -57,11 +57,14 @@ case class AdaptorBridge(
   * set whose value references a named integer type yields `record -> set` AND
   * `set -> namedInteger`; the edges are DIRECT and the chain is walked by the consumer.
   *
-  * It ALSO carries one message-flow edge per `tell`: the handled message depends on the message
-  * told. **Know the consequence before using this for cycle detection** — two processors that tell
-  * each other's messages produce a cycle here that is a legitimate protocol, not a structural type
-  * loop. If a consumer needs purely structural edges, the fix is to split this into two maps rather
-  * than to filter, and that is a change worth asking for rather than guessing at.
+  * **PURELY STRUCTURAL — RULED 2026-08-18 (option A).** It carried one message-flow edge per
+  * `tell` for a day, which broke the map's own purpose: two processors telling each other's
+  * messages produced a CYCLE, so cycle detection reported a healthy protocol as a type loop.
+  * Dropping it costs nothing, because `MessageFlowPass` already answers the message question
+  * properly (producer, consumer and mechanism) — the edge here was a strictly worse copy whose
+  * only distinct effect was to corrupt this analysis.
+  *
+  * So a cycle in this map means exactly one thing: **a type contains itself, transitively.**
   *
   * Empty for every model until 2026-08-17, because its only writer sat behind a guard that could
   * not succeed.
@@ -216,24 +219,19 @@ case class DependencyAnalysisPass(
           ) += target
         }
 
-        // Record type dependency for the message.
+        // NO type dependency is recorded here, and that is [4.2]=A, RULED 2026-08-18.
         //
-        // The source is the HANDLED message, resolved from the enclosing clause. It used to be
-        // `parents.collectFirst { case t: Type => t }`, which CANNOT succeed: a tell's parents are
-        // its on-clause, handler, processor, context and domain — never a Type. So `typeDeps`, a
-        // public output documented as "map from each type to types it references", was empty for
-        // every model ever analyzed, and an empty analysis result looks exactly like a model that
-        // does not use the construct. There were no tests on this pass at all;
-        // `DependencyAnalysisPassTest` is now that gate.
+        // A `tell` records a MESSAGE-FLOW edge (handling PlaceOrder leads to telling ShipOrder),
+        // which is a different relation from the STRUCTURAL one `typeDeps` exists to answer. Mixing
+        // them broke the map's stated purpose: two processors that tell each other's messages
+        // produce a cycle, and a consumer running cycle detection to ask "does this type contain
+        // itself?" gets a hit meaning "these messages are exchanged in a loop" — a healthy protocol
+        // reported as a defect.
         //
-        // "Handling PlaceOrder leads to telling ShipOrder" is the edge the field documents, and the
-        // handled message is the only Type in a tell's surroundings, so it is the only candidate.
-        val maybeType = DeliverableTypes.of(outputs, tell, tell.msg, omc)
-        val sourceType = refMap.definitionOf[Type](omc.msg, omc)
-        (sourceType, maybeType) match
-          case (Some(src), Some(msgType)) =>
-            typeDepsMap.getOrElseUpdate(src, mutable.Set.empty) += msgType
-          case _ => () // one end unresolved: MessageFlowPass reports it, this pass stays quiet
+        // Nothing is lost by dropping it. `MessageFlowPass` already answers the message question
+        // properly, with producer, consumer and mechanism, so this edge was a strictly worse copy
+        // of information available elsewhere whose only distinct effect was to corrupt the analysis
+        // `typeDeps` is for. See `typeDependenciesOf` for what this map DOES carry.
       }
     }
   }

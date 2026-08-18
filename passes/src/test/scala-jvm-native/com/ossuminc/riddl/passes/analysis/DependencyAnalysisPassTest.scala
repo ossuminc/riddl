@@ -81,42 +81,49 @@ class DependencyAnalysisPassTest extends AbstractValidatingTest {
       }
     }
 
-    /* The handled message is what `typeDeps`' source has to be: it is the only Type in the picture
-     * at a `tell`, and "handling PlaceOrder leads to ShipOrder" is exactly the edge the field's own
-     * documentation describes. Nothing else in a tell's surroundings is a Type. */
-    "record a type dependency from the HANDLED message to the message told" in { (td: TestData) =>
-      runDependencyPass(crossContextTell) { out =>
-        val deps = out.typeDeps.map { case (k, v) => k.id.value -> v.map(_.id.value) }
-        deps.get("PlaceOrder") mustBe Some(scala.collection.immutable.Set("ShipOrder"))
-      }
+    /* [4.2]=A, RULED 2026-08-18: `typeDeps` is PURELY STRUCTURAL. A `tell` records a message-flow
+     * edge, which `MessageFlowPass` already answers properly — and carrying it here made two
+     * processors telling each other's messages look like a type cycle, so cycle detection reported
+     * a healthy protocol as a defect. These two cases asserted that edge and now assert its
+     * ABSENCE, which is the guarantee consumers actually need. */
+    "record NO type dependency for a tell — that is MessageFlowPass's question" in {
+      (td: TestData) =>
+        runDependencyPass(crossContextTell) { out =>
+          val deps = out.typeDeps.map { case (k, v) => k.id.value -> v.map(_.id.value) }
+          deps.get("PlaceOrder") mustBe None
+          // The context and entity dependencies a tell creates are unaffected — only the TYPE
+          // edge was wrong, and dropping it must not take the other two with it.
+          out.contextDeps must not be empty
+          out.entityDeps must not be empty
+        }
     }
 
-    "record a type dependency when the told operand is a let-local" in { (td: TestData) =>
-      runDependencyPass(
-        """domain D is {
-          |  context Ordering is {
-          |    command PlaceOrder is { id: String }
-          |    entity Order is {
-          |      handler H is {
-          |        on command D.Ordering.PlaceOrder is {
-          |          let ship: D.Shipping.ShipOrder = prompt("the shipment request for this order")
-          |          tell ship to entity D.Shipping.Shipment
-          |        }
-          |      }
-          |    }
-          |  }
-          |  context Shipping is {
-          |    command ShipOrder is { id: String }
-          |    entity Shipment is {
-          |      handler H is { on command D.Shipping.ShipOrder is { ??? } }
-          |    }
-          |  }
-          |}
-          |""".stripMargin
-      ) { out =>
-        val deps = out.typeDeps.map { case (k, v) => k.id.value -> v.map(_.id.value) }
-        deps.get("PlaceOrder") mustBe Some(scala.collection.immutable.Set("ShipOrder"))
-      }
+    "keep a message-flow cycle OUT of typeDeps, so a cycle there means a real type loop" in {
+      (td: TestData) =>
+        runDependencyPass(
+          """domain D is {
+            |  context C is {
+            |    command Ping is { id: String }
+            |    command Pong is { id: String }
+            |    entity A is {
+            |      handler H is {
+            |        on command D.C.Ping is { tell command D.C.Pong(id = "x") to entity D.C.B }
+            |      }
+            |    }
+            |    entity B is {
+            |      handler H is {
+            |        on command D.C.Pong is { tell command D.C.Ping(id = "y") to entity D.C.A }
+            |      }
+            |    }
+            |  }
+            |}
+            |""".stripMargin
+        ) { out =>
+          // Ping -> Pong -> Ping is a perfectly good protocol and must not appear as a type loop.
+          val deps = out.typeDeps.map { case (k, v) => k.id.value -> v.map(_.id.value) }
+          deps.get("Ping") mustBe None
+          deps.get("Pong") mustBe None
+        }
     }
 
     /* [4.2], RULED 2026-08-17 by Reid, in his own example: *"if a record references a set that has
