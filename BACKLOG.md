@@ -435,7 +435,18 @@ each want an approved plan before implementation, per the standing rule.
   string literals, so no Native hazard was present. Rolled into the JVM/Native
   gap item above.
 
-- **[1.4]** **MEASUREMENT ATTEMPTED 2026-08-14 and it FAILED — a grep cannot answer this.**
+- ~~**[1.4]** **How many corpus `tell`s cross a context boundary?**~~ — **RETIRED
+  2026-08-18 by Reid (option B).** Not answered; retired. The measurement existed
+  to size the blast radius before the cross-context isolation seam became an
+  Error, and **that check shipped anyway** (`3059a43f8`), so the decision it was
+  meant to inform is already made. Reid's original framing was *"I don't really
+  care"*, and nothing has since made it matter.
+  **The one durable fact is kept below, because it is a trap, not a task**: a
+  grep CANNOT answer this. A dotted path means the author QUALIFIED the target,
+  not that it crosses a boundary, and comparing the first segment to the nearest
+  enclosing `context` is unsound because sagas and adaptors sit at DOMAIN level.
+  That approach reported 7,393 of 7,396 as crossing, which is not credible.
+  Anyone tempted to re-measure by text should read that and stop. Original:
   Reid: *"I don't really care, but go ahead and count how many models do this,
   probably not many."* Recorded so the next person does not repeat the attempt.
   What is solid: **7,561** lines carry a `tell`; of **8,254** `to <kind> <path>`
