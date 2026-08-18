@@ -26,10 +26,11 @@ command/query set is the coupling a bounded context exists to prevent. Recorded 
 
 **Neither fix is in any tag — rc.16 predates all of it.** The boundary Error costs the
 corpus **491 violations across 184 of 198 models**, ruled acceptable in advance and
-filed as **[3.6]**. Two questions it raised are open: **[1.6]** whether an Adaptor —
-the CM's boundary translation seam, yet content of a context — is exempt, and
-**[1.7]** that an inlet fed only by `tell` still reports as unconnected, which is the
-common case at 7,635 tells vs 433 connectors.
+filed as **[3.6]**. Both questions it raised are now RULED and needed no code:
+**[1.6]** an Adaptor gets **no exemption** — being the translator does not make it the
+boundary; **[1.7]** a `tell` target needs **both** a declared inlet **and** a connector,
+because `tell` implies a channel that must be modelled. Neither should be "fixed" later
+by someone finding the strictness surprising.
 
 **Build state, verified 2026-08-18:**
 

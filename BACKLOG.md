@@ -699,34 +699,29 @@ each want an approved plan before implementation, per the standing rule.
   definition's ULID is not `Id(P)` — the failure modes are symmetric and both
   silent.
 
-- **[1.6]** **Does an Adaptor satisfy the cross-context boundary rule? NEEDS A RULING.**
-  The boundary Error shipped 2026-08-18 (`c67cfdbfd`) requires a cross-context
-  connector to terminate on the CONTEXT'S OWN portlet. An **Adaptor** is the
-  Computational Model's designated boundary translation seam (§ 7, *"a
-  message-transformation process at the context boundary … defends that context's
-  model"*) yet it is CONTENT of a context, so a cross-context connector landing on
-  an adaptor's port currently trips the Error. Implemented strictly rather than
-  inventing an exemption. Two readings, both defensible:
-  - The adaptor IS the boundary, so terminating there is the canonical correct
-    pattern and deserves an exemption.
-  - The context's own port is the boundary and an adaptor sits behind it, so the
-    strict rule is right and adaptor-terminated connectors are a modelling error.
-  **Do not decide this by measuring the corpus** — the corpus predates the rule
-  entirely. Verification already done: the check is `checkBoundaryEncapsulation`
-  in `StreamingValidation.scala`, keyed on `symbols.parentOf(portlet) eq ctx`, so
-  an exemption is a one-line widening of that test.
+- ~~**[1.6]** **Does an Adaptor satisfy the cross-context boundary rule?**~~ — **RULED
+  2026-08-18 by Reid: NO EXEMPTION.** The Context's own portlet is the boundary and an
+  Adaptor sits BEHIND it, so a cross-context connector must still terminate on the
+  context's port; the context then routes inward to the adaptor. **No code change** —
+  `checkBoundaryEncapsulation` already implements this strictly.
+  Recorded so it is not re-opened: the case FOR an exemption was that CM § 7 calls an
+  adaptor a process *"at the context boundary … defending that context's model"*, which
+  reads like the canonical anti-corruption seam. The ruling says being the translator
+  does not make it the boundary — it is content of the context like anything else, and
+  one rule with no exceptions keeps the context's message set the single public surface.
+  **The cost was never the issue**: only **12** of the 491 corpus violations involve an
+  Adaptor at all, despite 1,475 adaptors declared.
 
-- **[1.7]** **An inlet fed only by `tell` reports as "not connected".** Found
-  2026-08-18 while rebuilding `CompletenessTest`'s well-formed fixture. Reid ruled
-  the same day that a `tell` REQUIRES the target to have an inlet — but
-  `checkUnattachedOutlets`/A31 measure connectedness by counting CONNECTORS, and a
-  `tell` is not one. So the idiomatic dispatch pattern (context handler `tell`s a
-  contained entity) leaves that entity's inlet reported as unconnected. The corpus
-  has **7,635 `tell`s against 433 connectors**, so this is the common case, not an
-  edge one. Decide whether a `tell` naming a processor counts as attaching to its
-  inlet for connectedness purposes. Verified: the fixture at
-  `CompletenessTest.scala` had to be rewritten to route via connectors precisely
-  because the `tell` form reported `Inlet 'ein' is not connected`.
+- ~~**[1.7]** **An inlet fed only by `tell` reports as "not connected".**~~ — **RULED
+  2026-08-18 by Reid: KEEP REQUIRING A CONNECTOR.** `tell` is sugar for a send on the
+  outlet connected to the target's inlet (CM § 25.7 / A6), so the connector genuinely
+  SHOULD exist and `checkUnattachedOutlets` is correctly telling the author to model the
+  channel. **No code change.**
+  **The consequence belongs to [3.6], not here**: a `tell` target now needs BOTH a
+  declared inlet AND a connector into it, so each of the 24 no-inlet warnings costs two
+  edits to clear, not one. There is no live corpus population — the corpus emits ZERO
+  "is not connected" messages today, because its tell-target entities declare no inlets
+  at all. The interaction appears only as models comply.
 
 ### 2. Queued, needs a plan
 
@@ -1436,8 +1431,11 @@ that needs a ruling before either can be fixed.
   on the CONTEXT and route the inner definition's port to it within the context —
   but it is 491 sites and belongs to those repos, not this one. **This blocks
   nothing here**; riddlc is correct. Task drops owed to `../riddl-models` and
-  `../riddl-examples`. Note [1.6] may reduce the count if an adaptor exemption is
-  ruled in.
+  `../riddl-examples`. **[1.6] was ruled with NO adaptor exemption, so the count stands
+  at 491** — the 12 adaptor-terminated sites migrate like the rest.
+  **Second, separate cost, from [1.7]'s ruling:** a `tell` target needs BOTH a declared
+  inlet AND a connector into it, so clearing each of the 24 no-inlet warnings takes two
+  edits. Those are additive to the 491.
 
 ### 4. RULED by Reid 2026-08-17 — **ALL COMPLIANCE WORK COMPLETE**
 

@@ -1846,10 +1846,29 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   The rule engages ONLY across contexts; intra-context it does not apply at all.
   **Cost, ruled acceptable:** 250 inbound + 241 outbound violations across 184 of
   198 corpus entry points.
-  **Open, deliberately not decided:** an **Adaptor** is the CM's designated boundary
-  translation seam yet is content of a context, so a cross-context connector landing
-  on an adaptor's port trips this check. Implemented strictly rather than inventing
-  an exemption — ask before adding one.
+  **NO ADAPTOR EXEMPTION** (Reid, 2026-08-18, asked and answered). An **Adaptor** is
+  the CM's boundary translation seam and reads like the canonical anti-corruption
+  layer, so the obvious question is whether a cross-context connector may terminate on
+  its port. It may not: **being the translator does not make it the boundary.** An
+  adaptor is content of the context like anything else and sits BEHIND the context's
+  own portlet; the context receives and routes inward to it. One rule, no exceptions,
+  so the context's message set stays the single public surface. Only 12 of the corpus's
+  491 violations involved an adaptor anyway, despite 1,475 adaptors declared — this was
+  never a cost question. **Do not add an exemption to
+  `checkBoundaryEncapsulation`.**
+
+- **A `tell` target needs BOTH a declared inlet AND a connector into it** (Reid,
+  2026-08-18). The two rules genuinely compound, and that is intended. A `tell`
+  requires the target to have an inlet (above); `checkUnattachedOutlets` separately
+  reports a declared inlet that no `connector` references as *"is not connected"*.
+  So declaring the inlet to satisfy the first rule then trips the second — asked
+  explicitly, and ruled that the CONNECTOR SHOULD EXIST: `tell` is sugar for a send
+  on the outlet connected to the target's inlet (CM § 25.7 / A6), so the warning is
+  correctly telling the author to model the channel rather than leave it implied.
+  **Do not "fix" this by teaching `checkUnattachedOutlets` to count tells.**
+  There is no corpus population today (ZERO "is not connected" messages) because the
+  corpus's tell-target entities declare no inlets at all; the interaction surfaces
+  only as models comply.
 
 - **`???` is a body that says "known to be incomplete" — validation must EXEMPT
   it** (Reid's ruling, 2026-08-11). Any definition whose body is `???` earns at
