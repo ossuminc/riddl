@@ -244,7 +244,13 @@ each want an approved plan before implementation, per the standing rule.
   construction sites (`HandlerParser` x2, `BASTReader`, `JsonAstBuilder` x2).
   Verified on cJS and cNative, which is the only place that hazard is visible.
 
-- **[1.2]** **`emittedMessageTypes` is still narrow.** The second of the two gaps, and the
+- ~~**[1.2]** **`emittedMessageTypes` is still narrow.**~~ — **DONE 2026-08-17.**
+  Closed by looking the answer up in `ValidationOutput.deliverableTypes` ([4.3])
+  rather than re-resolving. **The entry's size estimate was wrong**: it judged
+  the fix to be "walking the root container-by-container the way
+  `checkStatementScopes` already does", and `checkStatementScopes` already did
+  that walk — the obstacle had dissolved without anyone noticing. Second time
+  today ([2.6] was the first). Superseded: The second of the two gaps, and the
   one that really is a restructuring rather than a fix round. It is a whole-root
   `Finder` sweep with no per-clause scope, feeding A70's correlation-fold
   advisory (`ValidationPass.scala:158` documents the flatness). Still
