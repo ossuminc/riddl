@@ -333,6 +333,68 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     *     correctness).
     *   - A same-context connector that nonetheless declares `persistent` -> WARNING (not needed).
     */
+  /** THE CONTEXT IS THE SINK AT THE BOUNDARY (Reid's ruling, 2026-08-18).
+    *
+    * A connector that crosses a context boundary must terminate on the CONTEXT'S OWN portlet at
+    * each end -- the source context's own outlet, the target context's own inlet -- and never reach
+    * past the boundary onto a portlet declared by something the context contains.
+    *
+    * This is an **Error, not a warning**, and the reason is the whole point of a bounded context.
+    * Reaching straight at a context's contents contradicts the boundary rather than under-stating
+    * it: a context publishes a public API -- its message set -- while its representations and inner
+    * workings stay private. A cross-context connector wired to a contained entity's inlet binds a
+    * peer to that entity's existence and to its current command/query set, so the entity can no
+    * longer change without breaking a stranger. That is a contradiction of the model, which is what
+    * an Error means here, as against the omission a CompletenessWarning means.
+    *
+    * INTRA-context this rule does not apply at all, and deliberately: inside one context anything
+    * may talk to anything, and a connector may drive a contained entity's own inlet directly.
+    */
+  private def checkBoundaryEncapsulation(
+    connector: Connector,
+    maybeFromOutlet: Option[Outlet],
+    maybeToInlet: Option[Inlet],
+    outletCtx: Option[Context],
+    inletCtx: Option[Context]
+  ): Unit = {
+    // The port belongs to the context ITSELF when the context is its immediate parent. Anything
+    // else -- an entity, projector, repository, adaptor or shape-keyword streamlet -- is content
+    // the boundary exists to keep private.
+    def ownerOf(portlet: Definition): Option[Branch[?]] = symbols.parentOf(portlet)
+
+    for outlet <- maybeFromOutlet; ctx <- outletCtx do
+      val owner = ownerOf(outlet)
+      if !owner.exists(_ eq ctx) then
+        messages.addError(
+          connector.errorLoc,
+          s"${connector.identify} crosses a context boundary but leaves from an outlet of " +
+            s"${owner.map(_.identify).getOrElse("an unresolved definition")}, which is inside " +
+            s"${ctx.identify}; a context is the SOURCE for everything leaving it",
+          suggestion =
+            s"Declare an outlet on ${ctx.identify} itself and connect it from there; route the " +
+              s"inner definition's outlet to it within ${ctx.identify}. The boundary exists to " +
+              s"keep the context's contents private -- only its message set is public."
+        )
+      end if
+    end for
+
+    for inlet <- maybeToInlet; ctx <- inletCtx do
+      val owner = ownerOf(inlet)
+      if !owner.exists(_ eq ctx) then
+        messages.addError(
+          connector.errorLoc,
+          s"${connector.identify} crosses a context boundary but arrives at an inlet of " +
+            s"${owner.map(_.identify).getOrElse("an unresolved definition")}, which is inside " +
+            s"${ctx.identify}; a context is the SINK for everything entering it",
+          suggestion =
+            s"Declare an inlet on ${ctx.identify} itself and connect to that; let its handlers " +
+              s"dispatch or translate inward. Reaching past the boundary binds the sender to " +
+              s"${ctx.identify}'s internals, which it is entitled to change."
+        )
+      end if
+    end for
+  }
+
   private def checkConnectorPlacement(): Unit = {
     def domainOf(d: Definition): Option[Domain] =
       symbols.parentsOf(d).collectFirst { case dom: Domain => dom }
@@ -378,18 +440,21 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               s"Move ${connector.identify} into ${outletCtx.get.identify}; a connector whose ends " +
                 s"are in the same context belongs in that context, not the domain."
           )
-        else if crossContext && !connector.isPersistent then
-          // CompletenessWarning (not a plain Warning) so AI/tooling can adapt: durability across a
-          // context boundary can be required for model correctness, not merely a deployment concern.
-          messages.addCompleteness(
-            connector.errorLoc,
-            s"${connector.identify} spans a context boundary but is not 'persistent'; durability " +
-              s"across a context boundary can be required for model correctness, not merely a " +
-              s"deployment concern",
-            suggestion =
-              s"Add the 'persistent' option to ${connector.identify} so data is not lost across " +
-                s"faults at the context boundary."
-          )
+        else if crossContext then
+          checkBoundaryEncapsulation(connector, maybeFromOutlet, maybeToInlet, outletCtx, inletCtx)
+          if !connector.isPersistent then
+            // CompletenessWarning (not a plain Warning) so AI/tooling can adapt: durability across a
+            // context boundary can be required for model correctness, not merely a deployment concern.
+            messages.addCompleteness(
+              connector.errorLoc,
+              s"${connector.identify} spans a context boundary but is not 'persistent'; durability " +
+                s"across a context boundary can be required for model correctness, not merely a " +
+                s"deployment concern",
+              suggestion =
+                s"Add the 'persistent' option to ${connector.identify} so data is not lost across " +
+                  s"faults at the context boundary."
+            )
+          end if
         end if
       else // connector is at context scope
         if crossContext then

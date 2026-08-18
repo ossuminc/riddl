@@ -102,9 +102,9 @@ class StreamValidatorTest extends AbstractValidatingTest {
         val input = RiddlParserInput(
           """domain uno is {
             | type T = Integer
-            | context a is { source src is { outlet out is type uno.T } }
-            | context b is { sink snk is { inlet in is type uno.T } }
-            | connector c1 is { from outlet uno.a.src.out to inlet uno.b.snk.in }
+            | context a is { outlet out is type uno.T }
+            | context b is { inlet in is type uno.T }
+            | connector c1 is { from outlet uno.a.out to inlet uno.b.in }
             |}""".stripMargin,
           td
         )
@@ -122,15 +122,83 @@ class StreamValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain uno is {
           | type T = Integer
-          | context a is { source src is { outlet out is type uno.T } }
-          | context b is { sink snk is { inlet in is type uno.T } }
-          | connector c1 is { from outlet uno.a.src.out to inlet uno.b.snk.in } with { option persistent }
+          | context a is { outlet out is type uno.T }
+          | context b is { inlet in is type uno.T }
+          | connector c1 is { from outlet uno.a.out to inlet uno.b.in } with { option persistent }
           |}""".stripMargin,
         td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
         messages.hasErrors mustBe false
         messages.exists(_.message.contains("spans a context boundary")) mustBe false
+      }
+    }
+
+    // ---- Boundary encapsulation (Reid's ruling, 2026-08-18): C, an Error ----
+    //
+    // A cross-context connector must terminate on the CONTEXT'S OWN portlet at each end. Reaching
+    // past the boundary onto a contained definition's portlet contradicts the bounded context
+    // rather than under-stating it: a context publishes its message set and keeps its
+    // representations private, so binding a peer to a contained entity's existence and to its
+    // current command/query set means that entity can no longer change without breaking a
+    // stranger. Hence an Error, not a CompletenessWarning.
+
+    "error on a cross-context connector that reaches past the target's boundary" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain uno is {
+            | type T = Integer
+            | context a is { outlet out is type uno.T }
+            | context b is { sink snk is { inlet in is type uno.T } }
+            | connector c1 is { from outlet uno.a.out to inlet uno.b.snk.in }
+            |}""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          messages.hasErrors mustBe true
+          messages.exists(
+            _.message.contains("arrives at an inlet of")
+          ) mustBe true
+        }
+    }
+
+    "error on a cross-context connector that reaches past the source's boundary" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain uno is {
+            | type T = Integer
+            | context a is { source src is { outlet out is type uno.T } }
+            | context b is { inlet in is type uno.T }
+            | connector c1 is { from outlet uno.a.src.out to inlet uno.b.in }
+            |}""".stripMargin,
+          td
+        )
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+          messages.hasErrors mustBe true
+          messages.exists(
+            _.message.contains("leaves from an outlet of")
+          ) mustBe true
+        }
+    }
+
+    "not apply boundary encapsulation within a single context" in { (td: TestData) =>
+      // Intra-context, anything may talk to anything: a connector may drive a contained
+      // definition's own portlet directly, and the boundary rule does not engage at all.
+      val input = RiddlParserInput(
+        """domain uno is {
+          | type T = Integer
+          | context a is {
+          |   source src is { outlet out is type uno.T }
+          |   sink snk is { inlet in is type uno.T }
+          |   connector c1 is { from outlet uno.a.src.out to inlet uno.a.snk.in }
+          | }
+          |}""".stripMargin,
+        td
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+        messages.exists(
+          m => m.message.contains("arrives at an inlet of") || m.message.contains("leaves from an outlet of")
+        ) mustBe false
       }
     }
 
