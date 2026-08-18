@@ -355,6 +355,11 @@ lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Na
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     description := "Bundling of essential RIDDL libraries"
   )
+  // [1.3]: riddlLib was the ONE cross-platform module with no `scala-jvm-native` test wiring, so
+  // every one of its suites was JVM-only by accident of the build rather than by any platform
+  // constraint. The other four modules have had this since their own gap work.
+  .jvmConfigure(jvmNativeSrc("riddlLib"))
+  .nativeConfigure(jvmNativeSrc("riddlLib"))
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.MiMa(V.previous))
   .jvmConfigure(
