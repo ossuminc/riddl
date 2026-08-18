@@ -164,30 +164,39 @@ case class ValidationPass(
     * Computed ONCE over the whole root, and compared by resolved-definition identity rather than by
     * name: two contexts may each declare a `Paid`, and emitting one says nothing about the other.
     *
-    * **Named limitation (task-1 review, round 1): stays on the NARROW `operandType`, not
-    * `widenedOperandType`.** This is a single flat `Finder` sweep across the ENTIRE root, so a
-    * `send`/`tell` found here carries no notion of which on-clause/function/saga-step it came
-    * from, let alone that container's `let` scope -- unlike the three sites this review fixed
-    * (`checkTellAddressing`, and `validateOnMessageClause`'s two completeness checks), which each
-    * inspect ONE clause at a time and can compute that clause's scope. Widening this one would mean
-    * walking the root container-by-container the way `checkStatementScopes` already does, not
-    * merely passing an extra parameter -- a materially bigger change than this review's scope.
-    * Consequence: a correlation folding an event ONLY emitted via a widened-source `send`/`tell`
-    * (a state field/`let`-local/function-result/`ask`-result) can still draw
-    * `checkCorrelationEventSources`'s "nothing emits this event" warning even though something
-    * does. That warning is advisory (gated on a correlation existing) and reads as a false
-    * positive, not a false negative -- the same direction of error as every other narrowing this
-    * function's siblings had before this fix, so it is a known gap, not a new regression from this
-    * function itself.
+    * **[1.2], CLOSED 2026-08-17.** This used to stay on the NARROW `operandType` and could not see
+    * through a `ValueRef` at all, because a single flat sweep across the whole root has no notion
+    * of which clause a `send`/`tell` came from, let alone that clause's `let` scope. The stated
+    * consequence was real: an event emitted ONLY via a `let`-local, state field, function result or
+    * `ask` result drew `checkCorrelationEventSources`'s "nothing in the model emits it" while
+    * something plainly did.
+    *
+    * The entry judged the fix to be "walking the root container-by-container the way
+    * `checkStatementScopes` already does". That turned out to be unnecessary: `checkStatementScopes`
+    * ALREADY does that walk, and since [4.3] it records what each operand resolved to. So the sweep
+    * stays flat -- the right shape for a whole-root question -- and only the lookup changed.
+    * `EmittedViaLetLocalTest` pins it, and fails with exactly the old message when reverted.
     */
   private def emittedMessageTypes(root: PassRoot): mutable.Set[Type] = {
     val finder = Finder(root.contents)
     val emitted: mutable.Set[Type] = mutable.Set.empty
     def note(t: Option[Type]): Unit = t.foreach(emitted.addOne)
-    finder.recursiveFindByType[SendStatement].foreach(s => note(operandType(s.msg)))
-    finder.recursiveFindByType[TellStatement].foreach(s => note(operandType(s.msg)))
-    finder.recursiveFindByType[YieldStatement].foreach(s => note(operandType(s.msg)))
-    finder.recursiveFindByType[ReplyStatement].foreach(s => note(operandType(s.msg)))
+    // [1.2], CLOSED 2026-08-17. The flat sweep stays -- it is the right shape for a whole-root
+    // question -- but the RESOLUTION no longer has to be narrow. `deliverableTypes` was filled by
+    // `checkStatementScopes` during the traversal, which visits one clause at a time WITH its `let`
+    // scope and `foreach` bindings, so a widened operand is already resolved and merely has to be
+    // looked up here. This is filled before `postProcess` runs, which is where this is called.
+    //
+    // That closes the limitation this function's own scaladoc named: an event emitted only via a
+    // `let`-local, state field, function result or `ask` result used to be invisible, so a
+    // correlation folding it could draw "nothing emits this event" while something plainly did.
+    // The fallback to `operandType` remains for the narrow shapes it always handled correctly.
+    def noteStatement(stmt: Statement, msg: MessageRef | Constructor | ValueRef): Unit =
+      note(deliverableTypes.get(stmt).orElse(operandType(msg)))
+    finder.recursiveFindByType[SendStatement].foreach(s => noteStatement(s, s.msg))
+    finder.recursiveFindByType[TellStatement].foreach(s => noteStatement(s, s.msg))
+    finder.recursiveFindByType[YieldStatement].foreach(s => noteStatement(s, s.msg))
+    finder.recursiveFindByType[ReplyStatement].foreach(s => noteStatement(s, s.msg))
     finder
       .recursiveFindByType[Outlet]
       .foreach(o => note(resolution.refMap.definitionOf[Type](o.type_.pathId)))
@@ -7791,11 +7800,13 @@ case class ValidationPass(
           case c: Constructor => validateValue(c, parents, lets, elements)
           case vr: ValueRef   => checkMessageOperandSource(vr, "yield", parents, lets, elements)
           case mr: MessageRef => checkBareMessageOperand(mr, "yield") // Task 4
+        recordDeliverableType(s, s.msg, parents, lets, elements) // [1.2]
       // Mirrors YieldStatement, immediately above: `validateStatement`'s ReplyStatement case
       // claims "a Constructor is validated in checkStatementScopes", which was untrue until this
       // arm existed -- a `reply result Foo(x = self.id)` Constructor argument reached NOTHING,
       // found auditing `self`'s coverage (a self reference there was silently unchecked).
       case s: ReplyStatement =>
+        recordDeliverableType(s, s.msg, parents, lets, elements) // [1.2]
         s.msg match
           case c: Constructor => validateValue(c, parents, lets, elements)
           case vr: ValueRef   => checkMessageOperandSource(vr, "reply", parents, lets, elements)
