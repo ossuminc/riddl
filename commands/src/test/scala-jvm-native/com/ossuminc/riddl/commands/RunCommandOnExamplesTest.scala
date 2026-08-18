@@ -14,7 +14,6 @@ import com.ossuminc.riddl.utils.*
 // Scala Native. Native's javalib has `java.nio.file`, which does the same three jobs.
 import org.scalatest.*
 
-import java.net.URL
 import java.nio.file.{Files, Path}
 import scala.annotation.unused
 import scala.jdk.CollectionConverters.IteratorHasAsScala
@@ -35,21 +34,42 @@ trait RunCommandOnExamplesTest(
     extends AbstractTestingBasis
     with BeforeAndAfterAll {
 
-  val examplesRepo: String =
-    "https://github.com/ossuminc/riddl-examples/archive/refs/heads/main.zip"
-  val examplesURL: URL = java.net.URI.create(examplesRepo).toURL
-  val tmpDir: Path = Files.createTempDirectory("riddl-examples")
-  val examplesPath: Path = Path.of(s"riddl-examples-main/src/riddl")
-  val srcDir: Path = tmpDir.resolve(examplesPath)
+  /** [1.3], RULED 2026-08-18 by Reid: **read the sibling checkout; SKIP when it is absent.**
+    *
+    * These suites used to DOWNLOAD `riddl-examples` as a zip on every run. That is what kept them
+    * off Scala Native — `java.net.URL.openStream` is a stub there — and it also made every local
+    * run depend on GitHub. `RiddlModelsRoundTripTest` already prefers `../riddl-models`; this is
+    * the same arrangement, minus the download fallback.
+    *
+    * **A developer without the checkout gets a SKIP, never a failure.** CI keeps coverage by
+    * checking the repo out beside this one (see `.github/workflows`), which is also cheaper than
+    * fetching an archive per job.
+    */
+  val localExamples: Path = Path.of("../riddl-examples")
+  val srcDir: Path = localExamples.resolve("src/riddl")
+  val tmpDir: Path = Files.createTempDirectory("riddl-examples-out")
   val outDir: Path = tmpDir.resolve("out")
+
+  /** Whether the corpus is actually here. Every case must consult this and `cancel` when false. */
+  val examplesPresent: Boolean = Files.isDirectory(srcDir)
+
+  /** Cancel the calling test when the corpus is absent, saying WHERE it was looked for.
+    *
+    * Loudness is the point. CLAUDE.md records that a cancelled corpus suite "reads as green in a
+    * summary scan", and that has bitten this repo before — so the message names the absolute path
+    * rather than saying "skipped".
+    */
+  def requireExamples(): Unit =
+    if !examplesPresent then
+      cancel(
+        s"riddl-examples not found at ${srcDir.toAbsolutePath} — check it out beside riddl to " +
+          "run these; skipping rather than failing."
+      )
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    require(Files.isDirectory(tmpDir), "Temp directory failed to create")
-    val fileName = PathUtils.copyURLToDir(examplesURL, tmpDir)
-    val zip_path = tmpDir.resolve(fileName)
-    Zip.unzip(zip_path, tmpDir)
-    zip_path.toFile.delete()
+    if examplesPresent then info(s"Using riddl-examples at ${localExamples.toAbsolutePath}")
+    else info(s"riddl-examples ABSENT at ${localExamples.toAbsolutePath}; cases will be skipped")
   }
 
   override def afterAll(): Unit = {
@@ -144,6 +164,7 @@ trait RunCommandOnExamplesTest(
   /** Call this from your test suite subclass to run all the examples found.
     */
   def runTests(commandName: String): Unit = {
+    requireExamples()
     val results = forEachConfigFile(commandName) { case (name, path) =>
       val outputDir = outDir.resolve(name)
 
@@ -175,6 +196,7 @@ trait RunCommandOnExamplesTest(
     folderName: String,
     args: Array[String]
   ): Unit = {
+    requireExamples()
     val commandName = args.head
     forAFolder(folderName, commandName) { case (name, _) =>
       val outputDir = outDir.resolve(name)
@@ -192,6 +214,7 @@ trait RunCommandOnExamplesTest(
   /** Call this from your test suite subclass to run all the examples found.
     */
   def runTest(folderName: String, commandName: String): Unit = {
+    requireExamples()
     forAFolder(folderName, commandName) { case (name, config) =>
       val outputDir = outDir.resolve(name)
       val result = Commands.runCommandNamed(

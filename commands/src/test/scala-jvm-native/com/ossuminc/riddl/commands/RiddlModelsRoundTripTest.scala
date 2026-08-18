@@ -7,14 +7,12 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.utils.StringHelpers.dropRightWhile
-import com.ossuminc.riddl.utils.{PathUtils, PlatformContext, Zip, pc}
-import org.apache.commons.io.FileUtils
+import com.ossuminc.riddl.utils.{PlatformContext, pc}
 import org.ekrich.config.*
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.net.URL
 import java.nio.file.{Files, Path}
 import scala.jdk.StreamConverters.*
 
@@ -51,35 +49,27 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
     * grammar, while local runs passed against the developer's checkout. Set `RIDDL_MODELS_BRANCH`
     * to point CI at the right one; drop it when the corpus merges to `main`.
     */
+  /** Which riddl-models branch this corpus expects.
+    *
+    * Kept as documentation after the download was removed ([1.3]) and NAMED IN THE SKIP MESSAGE,
+    * so a developer whose checkout is on the wrong branch is told which one to be on. `release/2`
+    * rather than `main`, for the same reason CI pins `RIDDL_MODELS_BRANCH`: riddl-models `main`
+    * still holds the 1.x corpus until 2.0.0 final merges.
+    */
   private val modelsBranch: String =
-    Option(System.getenv("RIDDL_MODELS_BRANCH")).filter(_.nonEmpty).getOrElse("main")
+    Option(System.getenv("RIDDL_MODELS_BRANCH")).filter(_.nonEmpty).getOrElse("release/2")
 
-  private val modelsRepo: String =
-    s"https://github.com/ossuminc/riddl-models/archive/refs/heads/$modelsBranch.zip"
-  private val modelsURL: URL =
-    java.net.URI.create(modelsRepo).toURL
+  /** [1.3], RULED 2026-08-18 by Reid: **read the sibling checkout; SKIP when it is absent.**
+    *
+    * The download fallback is GONE. It was the last thing keeping this suite — 189 cases, the
+    * single largest block of the JVM/Native test gap — off Scala Native, because
+    * `java.net.URL.openStream` is a stub there. A developer without the checkout now gets a SKIP
+    * rather than a silent 40-second fetch, and CI keeps coverage by checking the repo out beside
+    * this one.
+    */
+  private val riddlModelsDir: Path = localDir
 
-  // Resolve riddl-models directory eagerly at construction
-  // time so test cases can be registered in the should block.
-  // Use local checkout if available, otherwise download.
-  private val (riddlModelsDir, tmpDir) = resolveModelsDir()
-
-  private def resolveModelsDir(): (Path, Option[Path]) = {
-    if Files.isDirectory(localDir) then (localDir, None)
-    else
-      val tmp = Files.createTempDirectory("riddl-models")
-      val fileName = PathUtils.copyURLToDir(modelsURL, tmp)
-      val zipPath = tmp.resolve(fileName)
-      Zip.unzip(zipPath, tmp)
-      Files.deleteIfExists(zipPath)
-      (tmp.resolve("riddl-models-main"), Some(tmp))
-    end if
-  }
-
-  override def afterAll(): Unit = {
-    tmpDir.foreach(dir => FileUtils.forceDeleteOnExit(dir.toFile))
-    super.afterAll()
-  }
+  override def afterAll(): Unit = super.afterAll()
 
   private val commonArgs = Array(
     "--quiet",
@@ -95,8 +85,14 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
   "BAST round-trip" should {
     val confFiles = discoverModels(riddlModelsDir)
     if confFiles.isEmpty then
-      "be skipped (no .conf files)" in {
-        cancel("No .conf files found in riddl-models")
+      // Loud on purpose: CLAUDE.md records that a cancelled corpus suite "reads as green in a
+      // summary scan", and that has bitten this repo. Name the absolute path that was searched
+      // so an absent checkout is distinguishable from an empty one.
+      "be skipped — riddl-models checkout not found" in {
+        cancel(
+          s"riddl-models not found at ${localDir.toAbsolutePath} (branch '$modelsBranch') — " +
+            "check it out beside riddl to run the corpus round trip; skipping rather than failing."
+        )
       }
     else
       confFiles.foreach { case (confFile, riddlFile) =>
