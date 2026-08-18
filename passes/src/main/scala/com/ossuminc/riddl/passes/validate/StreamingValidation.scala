@@ -89,12 +89,32 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       val outletCtx = maybeOutlet.flatMap(symbols.contextOf)
       val inletCtx = maybeInlet.flatMap(symbols.contextOf)
 
-      // Rule 4: persistence requirement. Emit once per distinct external context touched.
+      // Rule 4: persistence requirement. Emit once per distinct external context CROSSED.
+      //
+      // **It is CROSSING that matters, not touching (riddl-models, 2026-08-18; Reid's reading).**
+      // This used to fire on any connector with an endpoint in an external context, including one
+      // whose BOTH ends were inside the SAME external context -- which crosses nothing. That put
+      // the author in a trap with no legal spelling: without the keyword this Error demanded it,
+      // and with the keyword `checkConnectorPlacement` warned that "persistence is not needed
+      // since both ends of the connector connect within the same context". Same line, one word,
+      // two contradictory diagnostics and no third option.
+      //
+      // The shape is not exotic -- it is a DIRECT consequence of the cross-context boundary Error
+      // (`c67cfdbfd`): a peer may no longer land on a definition inside a context, so an external
+      // context that publishes must declare its own outlet, and its source processor reaches that
+      // outlet through a connector that is necessarily wholly inside the external context.
+      // riddl-models hit it 12 times across PaymentGateway, NotificationService, HRSystem,
+      // PrintingService, PhotographyService, AccountingSystem and SupplierSystem.
+      //
+      // `sameContext` is computed exactly as `checkConnectorPlacement` computes it, so the two
+      // checks can no longer disagree about what "the same context" means.
+      val sameContext = (outletCtx, inletCtx) match
+        case (Some(a), Some(b)) => a eq b
+        case _                  => false
       val fromExt = outletCtx.filter(isExternalContext)
       val toExt = inletCtx.filter(isExternalContext)
-      val externalTouched: Seq[Context] = (fromExt, toExt) match
-        case (Some(a), Some(b)) if a eq b => Seq(a)
-        case _                            => fromExt.toSeq ++ toExt.toSeq
+      val externalTouched: Seq[Context] =
+        if sameContext then Seq.empty else fromExt.toSeq ++ toExt.toSeq
       if externalTouched.nonEmpty && !connector.isPersistent then
         externalTouched.foreach { extCtx =>
           messages.addError(
@@ -123,15 +143,40 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       // A single connector between two *different* external contexts satisfies both
       // perspectives; emit only ONE advisory. Prefer the outlet (producer) side when
       // it is external, otherwise consider the inlet (consumer) side.
+      // Does `peer` already defend itself against `extCtx` with an anti-corruption layer?
+      //
+      // **Required since the boundary Error (riddl-models, 2026-08-18).** The owner test below is
+      // no longer sufficient on its own: a cross-context connector must now terminate on the
+      // CONTEXT'S OWN portlet, so `ownerProcessor` is always the Context and never an Adaptor.
+      // The advisory therefore fired unconditionally -- and asked for precisely the arrangement
+      // the Error forbids, since an Adaptor is content of a context and can no longer be the
+      // landing point. It was unsatisfiable by construction. (Reid ruled [1.6] the same day with
+      // NO adaptor exemption, so the fix belongs here, in the advisory, not in the Error.)
+      //
+      // Matching on `referent` rather than on "has any adaptor" keeps the advisory useful: a
+      // context defended against one external system still gets advised about a different one.
+      // Resolve with the PARENT-INDEPENDENT `definitionOf`, not `resolvePath`. `resolvePath` keys
+      // the refMap on `parents.head`, and for an adaptor's `referent` the recorded parent is the
+      // ADAPTOR itself -- `symbols.parentsOf(adaptor)` hands back its enclosing Context instead,
+      // so the lookup missed and the advisory kept firing. This is the same trap CLAUDE.md already
+      // records for adaptor cross-context TYPE resolution; it applies to the context ref too.
+      // Caught by a test, not by reading.
+      def hasAdaptorFor(peer: Context, extCtx: Context): Boolean =
+        peer.adaptors.exists { adaptor =>
+          resolution.refMap
+            .definitionOf[Context](adaptor.referent.pathId, adaptor)
+            .exists(_ eq extCtx)
+        }
+
       (outletCtx, inletCtx) match
         case (Some(oc), Some(ic)) if !(oc eq ic) =>
           if isExternalContext(oc) then
             maybeInlet.flatMap(ownerProcessor).foreach { toOwner =>
-              if !toOwner.isInstanceOf[Adaptor] then advise(oc, toOwner)
+              if !toOwner.isInstanceOf[Adaptor] && !hasAdaptorFor(ic, oc) then advise(oc, toOwner)
             }
           else if isExternalContext(ic) then
             maybeOutlet.flatMap(ownerProcessor).foreach { fromOwner =>
-              if !fromOwner.isInstanceOf[Adaptor] then advise(ic, fromOwner)
+              if !fromOwner.isInstanceOf[Adaptor] && !hasAdaptorFor(oc, ic) then advise(ic, fromOwner)
             }
           end if
         case _ => ()

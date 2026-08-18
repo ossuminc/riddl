@@ -204,6 +204,96 @@ class StreamValidatorTest extends AbstractValidatingTest {
       }
     }
 
+    // ---- Crossing, not touching; and do not advise an adaptor that exists ----
+    //
+    // Both filed by riddl-models 2026-08-18 as consequences of the boundary Error. The first was a
+    // TRAP: a connector wholly inside one external context got an Error demanding `persistent` and,
+    // once given it, a Warning saying persistence was unneeded -- no legal spelling existed.
+
+    "not demand persistence for a connector wholly inside one external context" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain uno is {
+            | type T = Integer
+            | external context Ext is {
+            |   inlet ein is type uno.T
+            |   source Src is { outlet Emitted is type uno.T }
+            |   connector Inside is { from outlet uno.Ext.Src.Emitted to inlet uno.Ext.ein }
+            | }
+            |}""".stripMargin,
+          td
+        )
+        pc.withOptions(CommonOptions.default) { _ =>
+          parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+            // Neither half of the old contradiction may fire.
+            messages.exists(_.message.contains("must be 'persistent'")) mustBe false
+            messages.exists(_.message.contains("is not needed")) mustBe false
+          }
+        }
+    }
+
+    "still demand persistence when a connector actually CROSSES into an external context" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain uno is {
+            | type T = Integer
+            | external context Ext is { outlet eout is type uno.T }
+            | context Home is { inlet hin is type uno.T }
+            | connector Crossing is { from outlet uno.Ext.eout to inlet uno.Home.hin }
+            |}""".stripMargin,
+          td
+        )
+        pc.withOptions(CommonOptions.default) { _ =>
+          parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+            messages.exists(_.message.contains("must be 'persistent'")) mustBe true
+          }
+        }
+    }
+
+    "not advise an adaptor when the peer context already has one for that external context" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain uno is {
+            | type T = Integer
+            | external context Ext is { outlet eout is type uno.T }
+            | context Home is {
+            |   inlet hin is type uno.T
+            |   adaptor Defender from context uno.Ext is { ??? }
+            | }
+            | persistent connector Crossing is { from outlet uno.Ext.eout to inlet uno.Home.hin }
+            |}""".stripMargin,
+          td
+        )
+        pc.withOptions(CommonOptions.default) { _ =>
+          parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+            messages.exists(_.message.contains("Consider an adaptor")) mustBe false
+          }
+        }
+    }
+
+    "still advise an adaptor when the peer context has none for that external context" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain uno is {
+            | type T = Integer
+            | external context Ext is { outlet eout is type uno.T }
+            | external context Other is { outlet oout is type uno.T }
+            | context Home is {
+            |   inlet hin is type uno.T
+            |   adaptor Defender from context uno.Other is { ??? }
+            | }
+            | persistent connector Crossing is { from outlet uno.Ext.eout to inlet uno.Home.hin }
+            |}""".stripMargin,
+          td
+        )
+        pc.withOptions(CommonOptions.default) { _ =>
+          parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
+            // Defended against `Other`, not against `Ext` -- the advisory is still useful here.
+            messages.exists(_.message.contains("Consider an adaptor")) mustBe true
+          }
+        }
+    }
+
     "error on a context-scoped connector that crosses contexts (under-scoped)" in {
       (td: TestData) =>
         val input = RiddlParserInput(
