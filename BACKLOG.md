@@ -32,10 +32,22 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 Things deliberately deferred to the release itself, not to be done piecemeal.
 
-- **[0.1]** **Run one `scalafmt` pass.** Formatting is not a gate before 2.0 (Reid,
-  2026-08-04); do not run `scalafmtCheckAll`, report it, or format
-  incrementally. `sbt scalafmtCheck` is red on HEAD — 7 committed files
-  reformat, 6 in `commands`.
+- ~~**[0.1]** **Run one `scalafmt` pass.**~~ — **DONE 2026-08-18** (`a6e740204`),
+  deferred since 2026-08-04 and done once as planned. 171 files. **It is
+  overwhelmingly COMMENT REFLOW**: of 165 reformatted `.scala` files, 164 differ
+  only in whitespace and docstring rewrapping.
+  **It required a scalafmt version bump, and that is the durable finding**
+  (`07b6e9c9e`): the pinned **3.8.3 emits Scala 3 that does not compile** — it
+  indented `end checkInvariantScope` to align with the `end match` above it,
+  giving `duplicate end marker` at `ValidationPass.scala:2069`, and then rejected
+  the hand-fixed (compiling) form, so no state satisfied both formatter and
+  compiler. **3.9.4** handles Scala 3 `end` markers correctly. Note `version =` in
+  `.scalafmt.conf` is SCALAFMT's version, not Scala's — the digits coincide
+  confusingly; Scala remains 3.9.0-RC4.
+  **Known artifact, do not "fix" it**: scalafmt escapes a `|` landing at the start
+  of a wrapped scaladoc line, so two comments read `\|`. Removing the backslash
+  makes `scalafmtCheck` red because the formatter re-adds it.
+
 - **[0.2]** **Upgrade riddl-vscode.** Reid, 2026-08-06 — deferred here deliberately, not
   overlooked. It consumes `@ossuminc/riddl-lib` via npm, which carries only
   PUBLISHED releases, so it cannot take a staged build at all and chasing it
@@ -57,6 +69,83 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   at byte 12 (the revision short) and nowhere else — check that, since a
   larger diff means the path got baked in. (`sbt clean` deletes the stage, so
   regenerate the fixture BEFORE certifying, not after.)
+- ~~**[0.4]** **Update the Computational Model with everything `release/2` changed.**~~
+  — **DONE 2026-08-18** (`ossuminc` `70d2cee` + `c7498d1`). Every item the entry
+  listed now has a home in its own section rather than a changelog: entity
+  intentions as GRAMMAR and the four event-sourcing rules (§4), the unified
+  processor model and the ruled definition of a streamlet (§8), the three integer
+  ranges (§11), `Riddl.Envelope` (§16), A55/A56/A57 (§18). A38 and [2.6] were
+  recorded when they landed.
+  **The sweep's most valuable find was a STALE CLAIM, not a missing one**: §9 said
+  `requires`/`returns` "should instead take a type reference... otherwise the saga
+  cannot be initiated with a message". A9 had shipped. A generator author reading
+  that would have built for a language that no longer exists — which is precisely
+  the failure this item exists to prevent, and an argument for sweeping the CM for
+  WRONG statements, not only absent ones.
+  **`../RIDDL-Tools-To-Do-List.md` Part A checked too**: 77 items, of which two were
+  undecided — A13 (message and type versioning) and A58 (parser continues after
+  errors). **RULED 2026-08-18 by Reid: both DEFERRED past 2.0** (`ossuminc`
+  `cff53d9`), so **Part A is now decided end to end with nothing ambiguous left
+  in it.** Deferred rather than declined — neither was rejected on merit. Per the
+  no-2.1-pile rule they stay out of this file until 2.0 ships.
+  Superseded:
+- **~~[0.4] history~~: Update `../RIDDL-Computational-Model.md` with everything `release/2`
+  changed.** Reid, 2026-08-06. That document is the authority for any lowering
+  decision — what a conforming generator MUST preserve versus may freely choose
+  — so a language change that does not reach it leaves generator authors working
+  from a stale contract. This branch has changed a lot of what it describes:
+  entity intentions and the four event-sourcing rules, the unified processor
+  model, implicit invariant scope, `requires`/`returns` in contents,
+  `Riddl.Envelope` + `option message_envelope`, A56 (`tell p`) and A57
+  (`on other as x`). Work from `git log 2.0.0-rc.1..HEAD` rather than memory.
+  Also add (2026-08-15, numeric-literals plan): the three integer types'
+  ranges — `Integer` signed, `Whole` non-negative, `Natural` positive
+  (Reid, 2026-08-14) — were undefined anywhere until this work, and a
+  `constant` literal outside its declared type's range is now a
+  validation Error (`checkNumericLiteralConformance`,
+  `passes/.../ValidationPass.scala`). The "vocabulary of information
+  shapes" passage that already lists the predefined types is the right
+  place for the range table; see the task dropped in
+  `../ossum.tech/task/2026-08-15-integer-type-ranges.md` for the
+  worked examples and the two related grammar widenings (`Constant`
+  accepting a bare literal, `Comparand` accepting one).
+  Also add (2026-08-15, A20 typed-holes plan): `prompt("...") as
+  <type>` ascribes a type to an AI-computed value — the type is known
+  and checkable, the computation is prose an AI fills in at generation
+  time. Legal in every position an ordinary value can occupy (`let`,
+  `constant`, constructor argument, `set`, `when` condition), with
+  either a predefined type or a declared alias. **The ascription
+  RESTATES the position's already-known type, it never OVERRIDES
+  it** — a contradicting ascription is a validation Error, and a
+  `constant` with a `prompt` value needs no ascription at all since
+  the constant already declares the type. See the task dropped in
+  `../ossum.tech/task/2026-08-15-a20-typed-holes.md` for the full
+  writeup and worked examples, and its caution that `Currency`
+  cannot be used bare in an example (it requires a `country`
+  argument).
+  Also add (2026-08-15, not-bang-synonymy plan): `not` and `!` are
+  synonymous EVERYWHERE, as the inverse of a boolean expression —
+  both spellings build the identical `NotExpression` AST node, so a
+  generator lowering a boolean expression needs to know there is only
+  ever one node to handle, never a spelling to branch on. `!` is not
+  related to the `!` in `!=` (an ordinary comparison operator). See
+  the task dropped in
+  `../ossum.tech/task/2026-08-15-not-bang-synonymy.md` for the
+  worked examples and the `!=` caution.
+- ~~**[0.5]** **Update the ossum.tech documentation site.**~~ — **DROPPED AS A TASK
+  2026-08-18**, which is what this item always was: ossum.tech is a separate repo,
+  so the work is not done here. File:
+  `../ossum.tech/task/2026-08-18-riddl-2.0-language-changes.md`.
+  It is organised BY CONSTRUCT, not by commit — 704 commits is not a usable index —
+  and every syntax claim cites a line in `ebnf-grammar.ebnf` so they check the
+  grammar rather than trusting the task file. It carries Reid's 2026-08-06
+  instruction to lighten the treatment of implicit/optional forms, the deprecated
+  spellings that should stop being taught, and the seven semantic rules readers get
+  wrong (inlet/outlet direction and own-port delivery especially).
+  Not diffed against ossum.tech's current content — with 704 commits that was the
+  wrong shape of work — so it reads as "what 2.0 contains", for them to skip what
+  they have covered.
+
 - ~~**[0.4]** **Update the Computational Model with everything `release/2` changed.**~~
   — **DONE 2026-08-18** (`ossuminc` `70d2cee` + `c7498d1`). Every item the entry
   listed now has a home in its own section rather than a changelog: entity

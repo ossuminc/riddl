@@ -10,10 +10,18 @@ Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
 NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
 
-**THE BACKLOG IS DOWN TO FOUR ITEMS, ALL OF THEM § 0 RELEASE-TIME WORK.** `[0.1]`
-scalafmt, `[0.2]` riddl-vscode, `[0.3]` regenerate checked-in `.bast`, `[0.5]`
-ossum.tech docs. Everything else closed on 2026-08-17/18. **There is no ordinary
-development work left on this branch** — what remains is what 2.0.0 final needs.
+**THE BACKLOG IS DOWN TO TWO ITEMS HERE, PLUS ONE OWED OUT.** `[0.2]` riddl-vscode
+and `[0.3]` regenerate checked-in `.bast` are all that remain in § 0 — `[0.1]`
+scalafmt and `[0.5]` ossum.tech docs closed 2026-08-18. `[3.6]` is corpus migration
+owed to riddl-models and riddl-examples.
+
+**THE IN-REPO CORPUS GATE IS RED, AND IT IS EXPECTED.** The cross-context boundary
+Error (`c67cfdbfd`) makes 192 JVM tests fail in `commands` (189), `riddlLib` (1) and
+`riddlc` (2) — the three suites that read `../riddl-models` and `../riddl-examples`.
+Those corpora have 491 violations and have not been migrated. **This reverses the
+"zero deliberate failures" state**, and it wants a decision: migrate the corpora,
+soften the check until they are migrated, or record a known-red gate. Every
+NON-corpus module is green on all three platforms, and JS is fully green at 840.
 
 **Completeness 4h/4i were WRONG and are corrected (2026-08-18, post-rc.16).** Reid's
 ruling: **a processor receives only through its OWN inlet and publishes only through
