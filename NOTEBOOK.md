@@ -7,132 +7,64 @@ GitHub release notes — don't reproduce it here.
 ## HANDOFF
 
 Orientation for a session with no memory of this work. **Open work is in
-`BACKLOG.md`** (items carry stable `[section.n]` IDs); durable facts are in
-`CLAUDE.md`; what things TAUGHT us is in this NOTEBOOK's body. Ask `git` for
-branch, tree and unpushed span — anything written here about those is stale the
-moment someone commits.
+`BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
+NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
 
-**Build state — verified by running the command, 2026-08-17:**
+**THE BACKLOG IS DOWN TO FOUR ITEMS, ALL OF THEM § 0 RELEASE-TIME WORK.** `[0.1]`
+scalafmt, `[0.2]` riddl-vscode, `[0.3]` regenerate checked-in `.bast`, `[0.5]`
+ossum.tech docs. Everything else closed on 2026-08-17/18. **There is no ordinary
+development work left on this branch** — what remains is what 2.0.0 final needs.
 
-- **`~/Code/ossuminc/bin/riddlc` (NATIVE) is STALE**, and the local ivy artifacts
-  with it. **Deliberately (Reid, 2026-08-17): riddlg is mid-analysis and no
-  consumer is waiting.** Not an oversight. It predates the `at` lookup, A38, and
-  everything below. Restage with `scripts/publish-and-stage.sh` before handing
-  anything to a consumer.
-- **BAST `FORMAT_REVISION` 18 HAS SHIPPED, in `2.0.0-rc.15`. THE NEXT BAST CHANGE
-  MUST BUMP TO 19 — no exceptions.** Revision 18 carried four changes on the
-  "18 has not shipped yet, so no file in anyone's hands has one" argument. That
-  argument is now spent, permanently: files carrying an 18 exist. Riding it again
-  would put two mutually unreadable wire formats under one revision number, and it
-  would fail SILENTLY — the gate passes and the reader misaligns.
-- **`2.0.0-rc.15` was cut 2026-08-17** from `release/2` (tag, prerelease, and all
-  20 Maven coordinates published from the tag). See "RC verification left
-  outstanding" below.
+**Build state, verified 2026-08-18:**
 
-**In flight: nothing.** Every item touched on 2026-08-17 is committed, green, and
-recorded. `[2.3]` remains open but is at a clean stopping point with its next
-slice named.
+- **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
+  coordinates, npm `rc` dist-tag with `latest` still 1.31.0, homebrew touched only
+  `riddlc-rc.rb`, `notify-blog: skipped`, both native binaries built.
+- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.15`** and Reid has ruled it stays
+  there until 2.0.0 FINAL ships. Do not restage it.
+- **BAST `FORMAT_REVISION` 18 has SHIPPED. The next BAST change MUST bump to 19.**
+  Every "rides 18 because it has not shipped" argument in the code is history.
 
-**`release/2` is AHEAD of the `2.0.0-rc.15` tag.** `[2.6]` (imports resolve
-without flatten) landed AFTER the tag, so it is **not in rc.15** — it ships in
-rc.16. Check `git log 2.0.0-rc.15..HEAD` before attributing anything to the RC.
+**EVERY SUITE ON EVERY PLATFORM IS GREEN. There are no known-red suites.** That is
+new as of 2026-08-18 and it changes how to read a failure: **a red case is now a
+real signal.** Do not go looking for a list of expected failures — there isn't one.
 
-**What landed 2026-08-17** (autonomous run): the MessageFlowPass `let`-local task
-(`b6b3dd03e`) and the `DependencyAnalysisPass.typeDeps` defect its sweep found
-(`1a3c1cf05`); `[2.3]`'s output-producing slice (`7296cfc27`); `[2.4]`
-Streamlet→Processor (`2c19d6d70`); `[2.2]` A38 plus the JSON
-interaction-metadata hole its fixture exposed (`e4f6f33f3`); and — after the RC
-tag — `[2.6]` imports resolving without flatten (`f99bd3d27`). CM updated for A38
-(`adfce7c`) and for `[2.6]` (`c92af7f`) in the `ossuminc` repo — that is a
-SEPARATE git repo, commit there separately.
+- JVM **2747**, JS **840**, Native **2708** (clean tri-platform certification).
+- riddl-models corpus validation-parity **190/190**; riddl-examples migrated too.
+- JVM/Native test gap **−39**, from −729. `commands`, `riddlLib`, `riddlc` at parity.
 
-**ALL EIGHT QUESTIONS WERE RULED on 2026-08-17 and every one is now IMPLEMENTED.**
-`BACKLOG.md` § 4 records the rulings and the commits. Three reversed what had been
-built on my recommendation, which is the point of asking: `[4.1]` (`streamlets`
-now means every port-bearing processor, not the `Streamlet` case class — the
-accessors I had added are deleted), `[4.2]` (`typeDeps` is a full TYPE-DEPENDENCY
-graph, not a message one), `[4.4]` (every processor's shape counts). `[2.1]`
-needed no code at all — the ruling was already implemented and tested. `[4.5]`
-went moot when riddl-models shipped.
-
-**Test baseline, all executed 2026-08-17 — memorize the RED ones or you will
-chase them:**
-
-- JVM: `language` 71 suites/731, `passes` 218/1446, `riddlLib` 143, `utils`,
-  `commands` — all green EXCEPT the known-red corpus suites below.
-- `tJS` fully green. `tNative` green except the same known-red suites.
-- **THE CORPUS GATE IS MET.** `Root2JsonCorpusTest` validation-parity reads
-  **190/190** and `RiddlModelsRoundTripTest` is green, after riddl-models shipped
-  `99fc29d1` (*"the corpus validates 188/188 with zero errors"*) on 2026-08-17.
-  `ReportedIssuesTest` "should 406" is green too — that fixture was OURS, using
-  the pre-2.0 `morph … with record X` operand, and is migrated.
-- **TWO known-red cases remain, and BOTH belong to `../riddl-examples`**:
-  `RunRiddlcOnLocalTest`'s `dokn` and `shopify-cart`, exiting 7 because that
-  corpus has not made the 2.0 migration riddl-models completed. A task is filed
-  in `riddl-examples/task/2026-08-17-migrate-to-2.0-syntax.md`. **When it lands
-  this repo is fully green** — do not treat those two as permanent.
+**Corpus suites now read SIBLING CHECKOUTS** (`../riddl-models`,
+`../riddl-examples`) and SKIP when absent — they no longer download. CI clones them
+with `git clone` (not actions/checkout, which cannot write outside the workspace).
+**The failure mode of that design is SILENCE**: a failed clone leaves the suites
+skipping and the log green, so check for "skipping rather than failing" before
+believing a corpus run passed.
 
 **Traps — every one bit someone here.**
 
-- **A "missing data" defect is often a WRONG ANSWER instead.** Three of four this
-  week were. The cheap discriminator: revert the fix and read what the test says
-  — `"C" was not equal to "Source"` is a wrong answer, `None was not equal to
-  Some(…)` is a missing one. Do it before writing the comment.
+- **A "missing data" defect is often a WRONG ANSWER instead.** Revert the fix and
+  read what the test says: `"C" was not equal to "Source"` is a wrong answer;
+  `None was not equal to Some(…)` is a missing one.
+- **A green suite after a fix is not evidence the fix did anything.** [2.6]'s first
+  attempt patched an unreachable arm and everything stayed green; only printing the
+  actual messages showed the error was still there.
+- **An entry's stated obstacle may have dissolved.** [1.2] and [2.6] were both
+  filed as "needs a plan" on obstacles later work had quietly removed. Re-read the
+  premise before believing the size estimate.
 - **A fixture is a detector, and the best ones exercise a COMBINATION.** A38's
-  fixture (a refusal step WITH metadata) found that all thirteen interaction
-  kinds lost their metadata through JSON. Neither half was untested; the
-  intersection was.
-- **`Keywords.keyword` ends in `./`, a CUT** (`Keywords.scala:39`). Any optional
-  keyword-led clause must be wrapped in `NoCut` or the enclosing alternative
-  cannot backtrack.
-- **`-Werror` is NOT a net for a new `Value` arm**, and a wildcard arm makes a
-  match exhaustive — so the prescribed terminal `throw` is itself what silences
-  the compiler. `language`/`commands` also compile `--no-warnings`.
-- **A green corpus proves nothing about a construct the corpus lacks.**
-- **Verify a backlog item before working it.** Two entries this week described
-  work already done, and one number was stale by a whole model.
-- **Never `sbt … | tail -N` for a multi-module run** — it throws away the module
-  summaries that tell you what actually ran, and cost a full re-run today.
-  Redirect to a file and grep it. Count `Suites: completed` against the number of
-  modules you asked for.
+  refusal-step-WITH-metadata fixture found that all thirteen interaction kinds lost
+  their metadata through JSON. Neither half was untested; the intersection was.
+- **`Keywords.keyword` ends in `./`, a CUT** — wrap an optional keyword-led clause
+  in `NoCut` or the enclosing alternative cannot backtrack.
+- **`AST.Set` shadows `scala.Set`** — three separate compile errors in one day.
+- **Never `sbt … | tail -N` for a multi-module run** — it discards the module
+  summaries that tell you what actually ran.
 
 **`task/` — ONE file. `2026-08-04-security.md` is Reid's own RBAC draft marked
-*"do not act on this"*** — a design seed, not a request. The MessageFlowPass
-report is DONE and moved to `task/done/` with a Results section (which also
-corrects three claims the report itself made).
+*"do not act on this"*** — a design seed, not a request.
 
-**`2.0.0-rc.15` IS FULLY VERIFIED (2026-08-17).** Every `gh api` call failed with
-a 503 for about two hours immediately after the release was created — `/user`
-included, so it was not scoped to packages — and the four skill-required checks
-were run once it recovered. All four pass:
-
-1. **All 11 Maven coordinates** published at `2.0.0-rc.15`, confirmed against the
-   registry itself, `sbt-riddl_sbt2_3` included.
-2. **npm** published under dist-tag **`rc`** (*"Publishing under dist-tag 'rc'"*),
-   and `latest` did NOT move — `npm dist-tag ls` reads `latest: 1.31.0`,
-   `rc: 2.0.0-rc.15`.
-3. **homebrew-tap** commit `58b9350` touched **only** `Formula/riddlc-rc.rb`;
-   `Formula/riddlc.rb` is still on stable `1.31.0`.
-4. **`release.yml`**: jvm-build and both native builds succeeded, and
-   **`notify-blog: skipped`** — the prerelease guard held, so no blog post.
-
-**Whose outage it was is NOT settled, and the first write-up here asserted
-GitHub without qualification — corrected.** Reid reported a **Claude** incident
-13:56-15:29 UTC that day, which matches the window closely. The evidence is
-genuinely mixed: the response body was GitHub's own 503 text, but **`git push`
-succeeded throughout the same window while every `gh api` call failed**, and a
-GitHub-wide outage would normally take both down. Record the symptom (`gh api`
-503 while git worked) rather than a cause, and check both status pages before
-blaming either.
-
-The lesson worth keeping is about the release: the tag, the prerelease and the
-publish all completed BEFORE the failures began (published 13:39:29Z, failures
-from ~13:56), and every one of them uses the git protocol or an upload endpoint
-rather than the REST API. **A release can be complete and unverifiable at the
-same time**, so record which of the two you are looking at.
-
-**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the
-driver's call, not the handoff's.
+**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
+call, not the handoff's.
 
 ## Four "missing data" bugs, three of which were WRONG ANSWERS (2026-08-17)
 
