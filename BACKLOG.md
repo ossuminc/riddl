@@ -332,6 +332,37 @@ each want an approved plan before implementation, per the standing rule.
   certification log that had to be produced anyway — worth doing at every RC, so
   the entry can never drift as far as the ~800 estimate it opened with.
 
+  **THE `commands` BLOCKER IS NOW IDENTIFIED PRECISELY (2026-08-18), by experiment
+  rather than by reading.** Three suites there — `RunCommandOnExamplesTest` and its
+  two subclasses — cannot run on Native, and the reason is NOT what the entry
+  assumed. Moving them to `scala-jvm-native` and compiling reveals a chain:
+
+  1. **`org.apache.commons.io`** (a JVM-only Java library) blocks COMPILATION.
+     Removable: all three uses (`iterateFiles`, `iterateFilesAndDirs`,
+     `forceDeleteOnExit`) map cleanly onto `java.nio.file`, which Native's javalib
+     does support. Verified — the rewrite compiles for Native and stays green on
+     JVM at 245.
+  2. **`java.net.URL.getFile` is `???` in Native's javalib** — compiles, then
+     throws `scala.NotImplementedError` at run time. Also removable: it is used
+     only to derive a filename, recoverable from `toExternalForm`.
+  3. **`java.net.URL.openStream` is `???` too — and this one is the wall.** These
+     suites DOWNLOAD the riddl-examples archive over HTTP in `beforeAll`. That is
+     network I/O; no string trick substitutes for it.
+
+  **So the "shared-corpus decision" this entry gestured at is a concrete
+  question:** should these suites keep downloading a pinned archive, or read the
+  sibling `../riddl-examples` checkout the way `RiddlModelsRoundTripTest` already
+  reads `../riddl-models`? Downloading is hermetic and Native-impossible; reading
+  a checkout is Native-possible and makes the tests depend on the working copy.
+  **That is Reid's call, and it is the whole of the remaining gap** — roughly 193
+  of the 281 cases.
+
+  **The experiment was REVERTED, deliberately.** Steps 1 and 2 work but unlock
+  nothing while step 3 stands, and moving the files leaves two suites ABORTING on
+  Native, which is worse than not running. The knowledge is the deliverable; the
+  edit would be churn. If the decision above goes the "read a checkout" way, steps
+  1 and 2 are an hour's work and are already known to compile.
+
   **Nearly all of the remaining gap is `commands`, and nearly all of THAT is
   `RiddlModelsRoundTripTest`'s 189 cases** — blocked on the shared-corpus
   decision recorded under item 1 below, not on effort. Subtract it and the whole
