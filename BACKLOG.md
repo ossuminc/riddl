@@ -357,11 +357,30 @@ each want an approved plan before implementation, per the standing rule.
   **That is Reid's call, and it is the whole of the remaining gap** — roughly 193
   of the 281 cases.
 
-  **The experiment was REVERTED, deliberately.** Steps 1 and 2 work but unlock
-  nothing while step 3 stands, and moving the files leaves two suites ABORTING on
-  Native, which is worse than not running. The knowledge is the deliverable; the
-  edit would be churn. If the decision above goes the "read a checkout" way, steps
-  1 and 2 are an hour's work and are already known to compile.
+  **UPDATED 2026-08-18: steps 1-3 are now FIXED and committed** (`e4f91525c`), on
+  Reid's steer to use sttp (already a dependency) or write the code, and with his
+  permission to extend `PlatformContext` provided all three platforms implement it.
+
+  - **`PlatformContext.loadBytes(url): Future[Array[Byte]]`** is new — the binary
+    counterpart of `load`, which returns a `String` and therefore corrupts a ZIP.
+    JVM uses `openStream`; Native uses sttp (the same stack `load` already uses
+    for text); Scala.js uses `dom.fetch` with `arrayBuffer()`.
+  - `PathUtils.copyURLToDir` no longer touches either stub.
+  - commons-io is gone from `RunCommandOnExamplesTest`.
+
+  **A FOURTH link is what remains, and it was invisible until the first three
+  were cleared**: the download arrives SHORT on Native, so unzip reports
+  `java.util.zip.ZipException: too short to be Zip`. Note what that error proves —
+  **`java.util.zip` WORKS on Native**, or it could not produce a real ZipException.
+  So this is one bug in the Native fetch, not another missing platform capability.
+  Verified with curl that the archive URL 302-redirects (0 bytes without `-L`,
+  207,955 with), and explicit redirect-following was added to the Native fetch
+  without resolving it — so the cause is elsewhere in that fetch, and that is
+  exactly where the next attempt starts.
+
+  **The three test files stay in `scalajvm`** until item 4 is fixed: moving them
+  leaves two suites ABORTING on Native, which is worse than not running them.
+  Moving them back is a one-line `git mv` each once the fetch is right.
 
   **Nearly all of the remaining gap is `commands`, and nearly all of THAT is
   `RiddlModelsRoundTripTest`'s 189 cases** — blocked on the shared-corpus
