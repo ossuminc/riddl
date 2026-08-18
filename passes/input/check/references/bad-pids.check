@@ -54,10 +54,10 @@ passes/input/check/references/bad-pids.riddl(7:5->21):
  Entity 'FooEntity' has no 'on query' clause; information cannot be extracted from it:
      entity FooEntity is {
 passes/input/check/references/bad-pids.riddl(7:5->21):
- Entity 'FooEntity' in Context 'ExampleContext' has no outlet streamlet to publish events on:
+ Entity 'FooEntity' in Context 'ExampleContext' has no outlet anywhere to publish events on:
      entity FooEntity is {
 passes/input/check/references/bad-pids.riddl(2:3->25):
- Context 'ExampleContext' has entities but no Sink streamlet to receive and dispatch incoming messages:
+ Context 'ExampleContext' has entities but no inlet anywhere to receive messages for them:
    context ExampleContext is {
 passes/input/check/references/bad-pids.riddl(7:5->21):
  Entity 'FooEntity' does not define an Id type for its identity:

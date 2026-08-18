@@ -17,7 +17,7 @@ passes/input/check/everything/everything.riddl(16:3->15):
  Context 'full' should have a description:
    context full is {
 passes/input/check/everything/everything.riddl(16:3->15):
- Context 'full' has entities but no Sink streamlet to receive and dispatch incoming messages:
+ Context 'full' has entities but no inlet anywhere to receive messages for them:
    context full is {
 passes/input/check/everything/everything.riddl(16:3->15):
  Context 'full' has entities but no repository to persist them; entities are stateful and should be persisted:
@@ -83,7 +83,7 @@ passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' has no 'on query' clause; information cannot be extracted from it:
      entity Something is {
 passes/input/check/everything/everything.riddl(42:5->21):
- Entity 'Something' in Context 'full' has no outlet streamlet to publish events on:
+ Entity 'Something' in Context 'full' has no outlet anywhere to publish events on:
      entity Something is {
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' does not define an Id type for its identity:
@@ -142,7 +142,7 @@ passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' has no 'on query' clause; information cannot be extracted from it:
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(66:5->26):
- Entity 'SomeOtherThing' in Context 'full' has no outlet streamlet to publish events on:
+ Entity 'SomeOtherThing' in Context 'full' has no outlet anywhere to publish events on:
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' does not define an Id type for its identity:

@@ -2778,13 +2778,19 @@ case class ValidationPass(
     // Completeness 4h: entity without event outlet in parent context
     if entity.nonEmpty then
       parents.headOption.collect { case c: Context => c }.foreach { context =>
-        val hasOutlet = context.streamlets.exists(_.outlets.nonEmpty)
+        // Same 2026-08-18 ruling as 4i, mirrored. An entity does not need an outlet STREAMLET in
+        // its context; it needs an outlet it can send to, and its OWN outlet is fine -- so is the
+        // context's. Both operands are needed: `context.streamlets` gives the ports of CONTAINED
+        // processors, `context.outlets` gives the context's OWN.
+        val hasOutlet = context.outlets.nonEmpty || context.streamlets.exists(_.outlets.nonEmpty)
         if !hasOutlet then
           messages.addCompleteness(
             entity.errorLoc,
-            s"${entity.identify} in ${context.identify} has no outlet streamlet to publish events on",
+            s"${entity.identify} in ${context.identify} has no outlet anywhere to publish events on",
             suggestion =
-              s"Add a Source or Flow streamlet with an outlet to ${context.identify} so ${entity.identify} can publish its events."
+              s"Give ${entity.identify} an outlet of its own, or give ${context.identify} " +
+                s"one -- the context is then the source for anything leaving it -- so " +
+                s"${entity.identify} can publish its events."
           )
       }
     // Completeness: entity Id type placement checks
@@ -4535,25 +4541,40 @@ case class ValidationPass(
     checkAdaptorUniqueness(c)
     val nonEmptyEntities = c.entities.filter(_.nonEmpty)
     if nonEmptyEntities.nonEmpty && c.nonEmpty then {
-      // Completeness 4i: context with entities must have a Sink
-      // [4.1]: `c.streamlets` now includes ANY port-bearing processor, entities included — so the
-      // Entity exclusion this check has always relied on must be written out. It used to ride on
-      // the accessor being narrow, which is precisely the kind of rule that disappears when an
-      // accessor is widened underneath it. The suggestion below states the rule; now the code does
-      // too: driving an entity from outside IS an inbound stream and belongs at the context
-      // boundary where it can be seen.
-      val hasSinkOrInlet = c.streamlets.exists { s =>
-        s.inlets.nonEmpty && !s.isInstanceOf[Entity]
-      }
-      if !hasSinkOrInlet then {
+      // Completeness 4i: nothing anywhere can receive a message for this context's entities.
+      //
+      // **RULED 2026-08-18 by Reid, correcting this check outright.** It used to demand a separate
+      // `Sink` STREAMLET and to reject an entity's own inlet, on the reasoning that an inbound
+      // stream "belongs at the context boundary where it can be seen". That is wrong, and the
+      // model it was defending does not exist:
+      //
+      //   - An Entity IS a streamlet. It may carry its own inlets and outlets and needs NOTHING
+      //     from its context in order to process messages.
+      //   - A Context IS a streamlet. Given an inlet and handlers, **the context IS the sink** --
+      //     its handlers receive, dispatch to a contained definition, and may translate on the way.
+      //   - INTRA-CONTEXT, any processor, streamlet or connector may communicate with any other
+      //     without further encumbrance. A connector may drive an entity's inlet directly.
+      //   - The boundary is the only place a rule belongs: crossing OUT of a context the context
+      //     is the source, crossing IN it is the sink.
+      //
+      // So the demand for a dedicated Sink definition was ceremony. What survives is the one
+      // question still worth asking: is there ANY way in at all? A context with entities and no
+      // inlet anywhere has entities that nothing can reach.
+      //
+      // Both operands are needed because they answer different questions. `c.streamlets`
+      // enumerates the context's CHILDREN, so it reports the ports of CONTAINED processors.
+      // `c.inlets` is the context's OWN ports -- and that is precisely the "the context IS the
+      // sink" case, so neither operand subsumes the other.
+      val hasAnyInlet = c.inlets.nonEmpty || c.streamlets.exists(_.inlets.nonEmpty)
+      if !hasAnyInlet then {
         messages.addCompleteness(
           c.errorLoc,
-          s"${c.identify} has entities but no Sink streamlet to receive and dispatch incoming messages",
+          s"${c.identify} has entities but no inlet anywhere to receive messages for them",
           suggestion =
-            s"Add a Sink streamlet with an inlet to ${c.identify} to receive and dispatch incoming messages. " +
-              "An entity's own inlet does not satisfy this even when a connector drives it: driving " +
-              "an entity from outside IS an inbound stream, and it belongs at the context boundary " +
-              "where it can be seen, not hidden inside the entity it happens to target."
+            s"Give ${c.identify} an inlet -- the context is then the sink, and its handlers " +
+              "receive and dispatch to contained definitions -- or give one of its contained " +
+              "processors an inlet; an entity's own inlet is fine, and a connector may drive it " +
+              "directly."
         )
       }
       // Completeness: a context with entities should persist them. Entities are

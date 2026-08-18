@@ -179,7 +179,7 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${state} … has an 'on init' clause but no 'set' statement …` (Completeness) | Add 'set' statements in the 'on init' clause to initialize the state's fields. |
 | `${entity} has no handlers to process messages` (Completeness) | Add a handler (on the entity or its state) to process incoming messages. |
 | `${entity} has no 'on query' clause; …` (Completeness) | Add an 'on query' clause so the entity's state can be read. |
-| `${entity} in ${context} has no outlet streamlet to publish events on` (Completeness) | `Add a Source or Flow streamlet with an outlet to ${context} so ${entity} can publish its events.` |
+| `${entity} in ${context} has no outlet anywhere to publish events on` (Completeness) | `Give ${entity} an outlet of its own, or give ${context} one -- the context is then the source for anything leaving it -- so ${entity} can publish its events.` |
 | `${entity} does not define an Id type for its identity` (Completeness) | `Define an Id type for ${entity} in its context, e.g. 'type Id = Id(${id})'.` |
 | `${idType} is defined inside ${entity}; move it to the containing context …` (Completeness) | `Move ${idType} from ${entity} up to the containing context so other entities can reference it.` |
 | `${idType} for ${entity} is defined outside the containing context; …` (Completeness) | `Move ${idType} into ${entity}'s context, and use adaptors for any inter-context references to it.` |
@@ -225,7 +225,7 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `A saga step with do statements must also have revert statements, and vice versa` | Provide both 'do' and 'revert' statements for the saga step so its action can be compensated on failure. |
 | `${step} do-step targets ${uncompensated} but the undo-step does not …` (Style) | `Add compensating revert statements targeting ${uncompensated} in the saga step's undo block.` |
 | `${step} do-statements contain no 'tell command' to effect state changes` (Completeness) | Add a 'tell command' statement to the saga step's do-statements to effect a state change. |
-| `${c} has entities but no Sink streamlet …` (Completeness) | `Add a Sink streamlet with an inlet to ${c} to receive and dispatch incoming messages.` — plus: an entity's own inlet does NOT satisfy this even when a connector drives it, because driving an entity from outside IS an inbound stream and belongs at the context boundary. |
+| `${c} has entities but no inlet anywhere to receive messages for them` (Completeness) | `Give ${c} an inlet -- the context is then the sink, and its handlers receive and dispatch to contained definitions -- or give one of its contained processors an inlet; an entity's own inlet is fine, and a connector may drive it directly.` |
 | `${handler} in ${streamlet} handles messages but does not dispatch to any entity via 'tell'` (Completeness) | Add 'tell' statements so the streamlet handler dispatches incoming messages to an entity. |
 | `${epic} is missing a user story` (Missing) | `Add a user story to ${epic}, e.g. 'by user SomeUser I want to … so that …'.` |
 | `${user} is missing its role kind ('is a')` (Missing) | `Specify the user's role, e.g. '${id} is a "customer"'.` |
