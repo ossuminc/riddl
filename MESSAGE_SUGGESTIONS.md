@@ -239,6 +239,7 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${output} showing ${typRef} … is invalid because … can only send Events and Results` | Show an Event or Result here; vital definitions can only emit events and results. |
 | `${input} sending ${putIn} … is invalid because … can only receive Commands and Queries` | Send a Command or Query here; vital definitions can only receive commands and queries. |
 | `${c} has entities but no repository to persist them; entities are stateful and should be persisted` (Completeness) | `Add a repository to ${c}, e.g. 'repository ${c.id}Repository is { ??? }'.` |
+| `${repository} answers queries but its schema declares no index, so every query reads the whole collection` (Completeness) | `Add 'index on field <Record>.<field>' to the schema of ${repository} for the fields its queries filter on. A generator emits the access method from the field's type and the target dialect; the model states only that the field is queried.` |
 
 The last row (context-with-entities-but-no-repository) is an **always-on**
 completeness check (gated only by `showCompletenessWarnings`): a context that

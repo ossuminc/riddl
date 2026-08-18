@@ -723,6 +723,99 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    // ---- A queried repository that declares no index (Reid, 2026-08-18, riddlg's request) ----
+    //
+    // Reading a store by a value it does not index is a sequential scan by construction. The check
+    // deliberately does not name a FIELD, because the model does not say which one: all 406
+    // repository `on query` bodies in the corpus are prose, and taking the query TYPE's fields as
+    // the operands instead maps to a stored field only 6% of the time. See the check's scaladoc.
+
+    "warn when a repository answers queries but declares no index" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    result R is { data: String }
+          |    query GetThing replies result D.C.R is { id: String }
+          |    repository Store is {
+          |      record Stored is { id: String, data: String }
+          |      schema S is relational of things as type Stored
+          |      handler H is {
+          |        on query D.C.GetThing is { do "read the thing" }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        completenessWarnings(msgs).exists(_.message.contains("answers queries but its schema declares no index")) mustBe true
+      }
+    }
+
+    "not warn when the repository's schema declares an index" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    result R is { data: String }
+          |    query GetThing replies result D.C.R is { id: String }
+          |    repository Store is {
+          |      record Stored is { id: String, data: String }
+          |      schema S is relational of things as type Stored
+          |        index on field Stored.id
+          |      handler H is {
+          |        on query D.C.GetThing is { do "read the thing" }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        completenessWarnings(msgs).exists(_.message.contains("answers queries but its schema declares no index")) mustBe false
+      }
+    }
+
+    "not warn about indices for a write-only repository" in { (td: TestData) =>
+      // Answers no queries, so nothing reads it by value and no index is implied.
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    command Put is { id: String }
+          |    repository Store is {
+          |      record Stored is { id: String, data: String }
+          |      schema S is relational of things as type Stored
+          |      handler H is {
+          |        on command D.C.Put is { do "write the thing" }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        completenessWarnings(msgs).exists(_.message.contains("answers queries but its schema declares no index")) mustBe false
+      }
+    }
+
+    "not warn about indices for a stubbed repository" in { (td: TestData) =>
+      // The standing `???` rule: a stub earns at most a Missing warning about its body.
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    repository Store is { ??? }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        completenessWarnings(msgs).exists(_.message.contains("answers queries but its schema declares no index")) mustBe false
+      }
+    }
+
     "warn when unconnected inlet or outlet exists" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

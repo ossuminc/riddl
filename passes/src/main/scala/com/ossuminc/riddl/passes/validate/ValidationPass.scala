@@ -3584,7 +3584,59 @@ case class ValidationPass(
           )
       }
     }
+    checkQueriedWithoutIndex(repository)
     checkRepositoryScopePlacement(repository, parents)
+  }
+
+  /** A repository that ANSWERS QUERIES but declares no index at all.
+    *
+    * Reid, 2026-08-18, on riddlg's request. Reading a store by a value it does not index is a
+    * sequential scan by construction, and the cost grows with the table rather than with the
+    * answer: benchmarked on PostgreSQL 16 at 20k rows, an indexed containment query ran in
+    * 0.053 ms against 2.728 ms unindexed -- 51x, widening. So a queried schema with no index is
+    * worth saying out loud.
+    *
+    * **It deliberately does NOT name a field, and that is a limit of what the model says, not
+    * timidity.** The obvious richer check -- "this query compares field F, so F should be
+    * indexed" -- cannot be derived today, measured rather than assumed across riddl-models +
+    * riddl-examples:
+    *
+    *   - Every one of the 406 repository `on query` bodies in the corpus is `prompt(...)` or
+    *     `do "..."`. ZERO contain a comparison, so the predicate is prose, by design -- a
+    *     repository on-clause is allowed to be a single `do` standing in for SQL.
+    *   - Taking the QUERY TYPE's own fields as the comparison operands instead (they are, in
+    *     principle) does not rescue it: of 284 query fields reachable from a repository's
+    *     on-query, exactly 1 maps to a stored record field BY NAME and 19 BY TYPE (6%). The
+    *     correspondence between a query's parameters and the storage it filters has simply never
+    *     been required of authors, so it is not in the models.
+    *
+    * Making that derivable needs the correspondence STATED -- prose in the query type would move
+    * the ambiguity, not remove it. Filed as a language question rather than guessed at here.
+    *
+    * A CompletenessWarning, not an Error: an unindexed store is under-specified, not
+    * self-contradictory, and the author may know the table is small. Silent for a `???` stub, for
+    * a repository with no schema (nothing to index), and for one that answers no queries -- a
+    * write-only sink legitimately needs no index.
+    */
+  private def checkQueriedWithoutIndex(repository: Repository): Unit = {
+    if repository.nonEmpty then {
+      val schemas = repository.contents.filter[Schema]
+      val answersQueries = repository.handlers
+        .flatMap(_.clauses)
+        .collect { case omc: OnMessageLikeClause if omc.msg.nonEmpty => omc }
+        .exists(_.msg.messageKind == AggregateUseCase.QueryCase)
+      if answersQueries && schemas.nonEmpty && schemas.forall(_.indices.isEmpty) then
+        messages.addCompleteness(
+          repository.errorLoc,
+          s"${repository.identify} answers queries but its schema declares no index, so every " +
+            "query reads the whole collection",
+          suggestion =
+            s"Add 'index on field <Record>.<field>' to the schema of ${repository.identify} for " +
+              "the fields its queries filter on. A generator emits the access method from the " +
+              "field's type and the target dialect; the model states only that the field is queried."
+        )
+      end if
+    }
   }
 
   /** Repository scope placement (domain vs context). A repository whose handlers synthesize
