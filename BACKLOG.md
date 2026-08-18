@@ -357,7 +357,45 @@ each want an approved plan before implementation, per the standing rule.
   **That is Reid's call, and it is the whole of the remaining gap** — roughly 193
   of the 281 cases.
 
-  **UPDATED 2026-08-18: steps 1-3 are now FIXED and committed** (`e4f91525c`), on
+  **RESOLVED 2026-08-18 for `commands` — the gap there is ZERO** (`1c318b844`).
+  Reid ruled the design: read the already-checked-out `../riddl-models` and
+  `../riddl-examples`, SKIP when absent rather than fail, and let CI clone them so
+  the runner has them locally. **That removes the download rather than repairing
+  it**, which is what three earlier attempts had been trying to do.
+
+  | module | JVM | Native | gap |
+  |---|---|---|---|
+  | commands | 245 | 245 | **0** |
+  | passes | 1456 | 1413 | −43 |
+  | language | 731 | 714 | −17 |
+  | utils | 148 | 134 | −14 |
+  | riddlLib | 144 | 131 | −13 |
+  | testkit | 2 | 1 | −1 |
+  | riddlc | 21 | 21 | 0 |
+  | **total** | **2745** | **2659** | **−86** |
+
+  **−281 → −86**, and `RiddlModelsRoundTripTest`'s 189 cases — the single largest
+  block — now run on both platforms. What remains is the ~86 spread thinly across
+  five modules, with no single blocker.
+  **The next RC certification should RAISE the Native floor substantially** (2456 →
+  ~2659); these numbers are from `testOnly *`, which ignores incremental state, but
+  the floor may only be raised by a certified clean tri-platform run.
+
+  **The skip is LOUD by design.** CLAUDE.md records that a cancelled corpus suite
+  "reads as green in a summary scan"; the message names the absolute path searched
+  and the branch expected. The CI step carries the same warning, because the
+  failure mode of this design is SILENCE — a clone that fails leaves the suites
+  skipping and the log green.
+
+  **Still open and worth knowing, since `loadBytes` is now public API:** the Native
+  fetch returns a SHORT body for a binary URL. Redirect-following did not fix it.
+  **Leading untested theory: sttp's Native backend truncates at the first NUL
+  byte**, treating the body as a C string — a ZIP's header contains NULs within
+  the first few bytes, which fits "too short to be Zip" exactly and explains why
+  the redirect fix changed nothing. Test it by fetching a known-length binary and
+  asserting the byte count. Nothing in the build depends on it now.
+
+  **Superseded — steps 1-3 were fixed** in `e4f91525c`, on
   Reid's steer to use sttp (already a dependency) or write the code, and with his
   permission to extend `PlatformContext` provided all three platforms implement it.
 
