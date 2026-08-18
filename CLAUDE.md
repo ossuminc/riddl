@@ -1803,6 +1803,36 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   is a Leaf and is never pushed; see `Pass.traverse`). Note `checkStatementScopes`
   is NOT that hook: it is wired only to on-clauses and function bodies.
 
+- **THE CONTEXT IS THE SINK — intra-context messaging needs no extra definition**
+  (Reid, 2026-08-18, correcting completeness checks 4h and 4i outright). An
+  **Entity IS a streamlet**: it may carry its own inlets and outlets and needs
+  NOTHING from its context in order to process messages. A **Context IS a
+  streamlet** too, so a context with an inlet and handlers *is* the sink — the
+  handlers receive, dispatch to a contained definition, and may translate on the
+  way. **Intra-context, any processor/streamlet/connector may communicate with
+  any other without further encumbrance**, and a connector may drive an entity's
+  inlet directly. The boundary is the ONLY place a placement rule belongs:
+  crossing OUT of a context the context is the source, crossing IN it is the
+  sink.
+  4i used to demand a dedicated `Sink` STREAMLET in any context holding entities
+  and explicitly refused to count an entity's own inlet; 4h asked for an outlet
+  streamlet in the parent context. Both now ask the one question that survives —
+  **is there ANY way in, or out, at all?** — since a context with entities and no
+  inlet anywhere has entities nothing can reach.
+  **Each condition needs TWO operands and neither subsumes the other**:
+  `c.streamlets` enumerates the container's CHILDREN, so it reports the ports of
+  CONTAINED processors, while `c.inlets`/`context.outlets` are the context's OWN
+  — and the context's own port is precisely the "the context IS the sink" case.
+  Recorded in `../RIDDL-Computational-Model.md` § 8.1, which had ALREADY implied
+  it (*"a generator may not treat an entity's own inlet as decoration because the
+  definition was not spelled `sink`"*, 2026-08-17) while the code enforced the
+  opposite — a reminder that a CM statement is not self-enforcing.
+  **The corpus is silent on this**: an A/B over 198 riddl-models +
+  riddl-examples entry points is BYTE-IDENTICAL before and after (7629 lines,
+  249 completeness warnings both ways), because neither rule ever had a
+  population there. `CompletenessTest`'s four cases are the only evidence, and
+  three of them were verified to fail against the previous implementation.
+
 - **`???` is a body that says "known to be incomplete" — validation must EXEMPT
   it** (Reid's ruling, 2026-08-11). Any definition whose body is `???` earns at
   most a **Missing** warning saying the body should be provided. Every other
