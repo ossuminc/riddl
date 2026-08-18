@@ -51,8 +51,15 @@ query bodies are prose, and query-type fields map to a stored field 6% of the ti
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
   coordinates, npm `rc` dist-tag with `latest` still 1.31.0, homebrew touched only
   `riddlc-rc.rb`, `notify-blog: skipped`, both native binaries built.
-- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.15`** and Reid has ruled it stays
-  there until 2.0.0 FINAL ships. Do not restage it.
+- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.16-18-3005b2ef`** (native binary),
+  installed 2026-08-18 so the corpora can be fixed against the new checks.
+  **This SUPERSEDES the earlier "leave it at rc.15 until 2.0.0 final" ruling** —
+  Reid asked for it explicitly. Previous binaries kept beside it as
+  `riddlc.rc15.bak` and `riddlc.rc16.bak`.
+  Libraries published locally at the same version (`~/.ivy2/local`), no clean and
+  no tests, per instruction — the tree had just compiled green on all three
+  platforms. Note it is `nativeLink` output, NOT `riddlc/stage`: what lives in
+  `../bin` is a single Mach-O binary, not the JVM universal stage.
 - **BAST `FORMAT_REVISION` 18 has SHIPPED. The next BAST change MUST bump to 19.**
   Every "rides 18 because it has not shipped" argument in the code is history.
 
