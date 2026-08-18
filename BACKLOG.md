@@ -857,8 +857,28 @@ that needs a ruling before either can be fixed.
   **That is the whole output-producing slice.** `RiddlAPI.scala:156` carries its
   own justification (Comment/Include have no identifier).
 
-  **The remaining ~185 are unexamined.** Next slice, by the same "cheap to size"
-  logic: `case _ => None` and `case _ => Seq.empty` in RESOLUTION positions,
+  **AUDIT PROGRESS 2026-08-18 — the resolution-position slice, sized and started.**
+  `grep -rn -E "case _ *=> *(None|Seq\.empty|Nil)"` over `passes`/`language`/
+  `riddlLib` returns **80 sites**, concentrated in `ValidationPass` (35),
+  `UseCaseWitnessPass` (9), `JsonifierPass` (7) and `AST.scala` (7).
+  **EXAMINED AND CLEARED, with a test rather than an opinion:**
+  `ResolutionPass.valueScopeField`'s `aggFields` (`:724`) — it reads a Type's
+  fields and answers `Seq.empty` for anything that is not an
+  `AggregateTypeExpression`, which does NOT see through an alias. That made it a
+  strong suspect, since `isAddressFieldFor` had exactly this defect and was taught
+  to follow alias chains in `ccd278c00` because aliasing is riddl-models' house
+  style. **It is not a defect**: an aliased state record resolves exactly as a
+  direct one, because `valueScopeField` is not the only route — the A55 `ValueRef`
+  walk reaches the field anyway. `AliasedValueScopeTest` pins both forms, so a
+  future change that made `valueScopeField` the sole route reddens here instead of
+  reddening riddl-models.
+  **Method note worth keeping: the suspicion was well-founded and still wrong.**
+  Reasoning from "this shape was a defect over there" got the site onto the list;
+  only running it settled the question. That is the same lesson as [2.6]'s
+  unreachable arm, in the opposite direction.
+
+  **The remaining ~78 are unexamined.** Continue with the same
+  slice: `case _ => None` and `case _ => Seq.empty` in RESOLUTION positions,
   where an empty answer is read downstream as "no such thing" — the shape that
   produced both of this week's found defects (`DependencyAnalysisPass.typeDeps`
   empty forever, `MessageFlowPass` dropping let-local edges). Neither of those
