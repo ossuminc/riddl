@@ -57,7 +57,25 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   at byte 12 (the revision short) and nowhere else — check that, since a
   larger diff means the path got baked in. (`sbt clean` deletes the stage, so
   regenerate the fixture BEFORE certifying, not after.)
-- **[0.4]** **Update `../RIDDL-Computational-Model.md` with everything `release/2`
+- ~~**[0.4]** **Update the Computational Model with everything `release/2` changed.**~~
+  — **DONE 2026-08-18** (`ossuminc` `70d2cee` + `c7498d1`). Every item the entry
+  listed now has a home in its own section rather than a changelog: entity
+  intentions as GRAMMAR and the four event-sourcing rules (§4), the unified
+  processor model and the ruled definition of a streamlet (§8), the three integer
+  ranges (§11), `Riddl.Envelope` (§16), A55/A56/A57 (§18). A38 and [2.6] were
+  recorded when they landed.
+  **The sweep's most valuable find was a STALE CLAIM, not a missing one**: §9 said
+  `requires`/`returns` "should instead take a type reference... otherwise the saga
+  cannot be initiated with a message". A9 had shipped. A generator author reading
+  that would have built for a language that no longer exists — which is precisely
+  the failure this item exists to prevent, and an argument for sweeping the CM for
+  WRONG statements, not only absent ones.
+  **`../RIDDL-Tools-To-Do-List.md` Part A checked too**: 77 items, of which exactly
+  **two are unresolved and both are PROPOSED, not ACCEPTED** — A13 (message and
+  type versioning) and A58 (parser continues after errors). Per the no-2.1-pile
+  rule neither is 2.0 work and neither is filed here; they want a ruling first.
+  Superseded:
+- **~~[0.4] history~~: Update `../RIDDL-Computational-Model.md` with everything `release/2`
   changed.** Reid, 2026-08-06. That document is the authority for any lowering
   decision — what a conforming generator MUST preserve versus may freely choose
   — so a language change that does not reach it leaves generator authors working
