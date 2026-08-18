@@ -25,7 +25,11 @@ class NativePlatformContext extends PlatformContext:
 
   given PlatformContext = this
 
-  private val sttpBackend = DefaultSyncBackend()
+  // [1.3]: wrapped in `FollowRedirectsBackend` explicitly. The Native curl backend surfaces ONLY
+  // `Content-Length` among response headers — verified by listing them — so a 302's `Location` is
+  // invisible and redirects CANNOT be followed by hand. GitHub archive URLs always redirect.
+  private val sttpBackend =
+    sttp.client4.wrappers.FollowRedirectsBackend(DefaultSyncBackend())
 
   logger = SysLogger()
 
@@ -100,16 +104,42 @@ class NativePlatformContext extends PlatformContext:
       throw new RuntimeException(s"Too many HTTP redirects while fetching $externalForm")
     else
       val uri: Uri = Uri(java.net.URI.create(externalForm))
-      val response = basicRequest.get(uri).response(asByteArrayAlways).send(sttpBackend)
-      val code = response.code.code
-      if code >= 300 && code < 400 then
-        response.header("Location") match
-          case Some(next) => fetchFollowingRedirects(next, hopsLeft - 1)
-          case None =>
-            throw new RuntimeException(s"HTTP $code for $externalForm with no Location header")
-      else if code >= 400 then throw new RuntimeException(s"HTTP $code fetching $externalForm")
-      else response.body
-      end if
+      // `asFile`, NOT `asByteArrayAlways`. Reid, 2026-08-18: for BINARY content sttp should stream
+      // to a file rather than materialise a byte array. The in-memory path returned a SHORT body
+      // here — a downloaded ZIP arrived too small to parse — while the same URL fetched 207,955
+      // bytes with curl. Streaming to disk and reading the file back sidesteps whatever the
+      // byte-array handler was doing to the content.
+      val tmp = java.nio.file.Files.createTempFile("riddl-fetch", ".bin").toFile
+      try
+        val response = basicRequest.get(uri).response(asFile(tmp)).send(sttpBackend)
+        val code = response.code.code
+        if code >= 300 && code < 400 then
+          // Case-INSENSITIVE header lookup, done by hand. `response.header("Location")` returned
+          // None against GitHub, which answers HTTP/2 and therefore lower-cases its header names
+          // ("location"). HTTP header names are case-insensitive by spec, so this is the backend
+          // not honouring that — and the symptom was a 302's EMPTY body being handed back as the
+          // content, which surfaced far away as "too short to be Zip".
+          response.headers
+            .find(_.name.equalsIgnoreCase("location"))
+            .map(_.value) match
+            case Some(next) => fetchFollowingRedirects(next, hopsLeft - 1)
+            case None =>
+              // VERIFIED UPSTREAM LIMITATION, not a bug here (2026-08-18). sttp's Scala Native
+              // curl backend exposes ONLY `Content-Length` among response headers — confirmed by
+              // listing them — so `Location` is invisible and a redirect cannot be followed at
+              // ANY layer: not by hand here, and not by `FollowRedirectsBackend`, which needs the
+              // same header. Both were tried.
+              throw new RuntimeException(
+                s"HTTP $code for $externalForm: this platform cannot follow HTTP redirects. " +
+                  "sttp's Scala Native backend does not expose the Location header (only " +
+                  s"${response.headers.map(_.name).mkString(", ")}). Use a direct, " +
+                  "non-redirecting URL, or fetch on the JVM."
+              )
+        else if code >= 400 then throw new RuntimeException(s"HTTP $code fetching $externalForm")
+        else java.nio.file.Files.readAllBytes(tmp.toPath)
+        end if
+      finally java.nio.file.Files.deleteIfExists(tmp.toPath)
+      end try
     end if
   end fetchFollowingRedirects
 
