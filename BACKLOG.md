@@ -271,7 +271,19 @@ each want an approved plan before implementation, per the standing rule.
   defect class was diagnosed once and its sibling missed, so when fixing a
   test-shape defect, grep for the shape rather than fixing the instance.
 
-- **[1.3]** **Close the JVM/Native test gap: 729 cases run on JVM that never run on
+- ~~**[1.3]** **Close the JVM/Native test gap.**~~ — **CLOSED 2026-08-18 by Reid:
+  *"find the easy/obvious ones... then declare victory — close enough: we are in
+  the thousands of common tests."*** Final: **JVM 2747 / Native 2708, gap −39**,
+  from −729 originally. `commands`, `riddlLib` and `riddlc` are at parity.
+  **The last big win was a BUILD omission, not a platform constraint**: riddlLib
+  was the one cross-platform module with no `scala-jvm-native` test wiring, so
+  every suite it had was JVM-only by accident. Two lines of `build.sbt`.
+  **What remains is deliberately JVM-bound** and should stay: benchmarks (timing),
+  `Tar`/`FigmaClient` (no Native impl), `LoaderTest` (names `JVMPlatformContext`),
+  `LoadingURLTests` (real behavioural difference in URL error handling — it
+  COMPILES on Native and fails, which is worth knowing), and two suites still on
+  commons-io. **Do not reopen this to chase the last 39.** Superseded detail:
+- **~~[1.3] history~~: Close the JVM/Native test gap: 729 cases run on JVM that never run on
   Native.** Reid, 2026-08-14, from the rc.14 certification. *"Testing on the JVM
   does not guarantee correctness on Native, and I can't believe there are ~800
   test cases that genuinely cannot run there."*
@@ -859,7 +871,20 @@ that needs a ruling before either can be fixed.
   re-derive the question — a backlog is for OPEN WORK, and a recorded decision
   with no task attached belongs in CLAUDE.md, which has it.
 
-- **[2.3]** **Audit the remaining catch-all matches against Reid's no-silent-fallthrough
+- ~~**[2.3]** **Audit the remaining catch-all matches.**~~ — **CLOSED 2026-08-18 by
+  Reid**, who asked whether exhaustiveness carries significant correctness value.
+  **My answer: no, and the audit's own record is the evidence.** Across three
+  slices, the hit rate was **5 real defects in ~25 sites read**, and every one of
+  the five was found by REASONING ABOUT A SYMPTOM rather than by sweeping — the
+  BASTReader direction default, the two JsonifierPass wrong answers,
+  `PrettifyVisitor.keyword`, and [2.6]'s resolution seam. Meanwhile the two most
+  expensive defects of the whole week (`typeDeps` empty forever, MessageFlowPass
+  dropping edges) were **not `case _ =>` arms at all**, so a complete sweep of
+  this shape would have missed both.
+  **The rule stands and is documented in CLAUDE.md**; what is retired is the
+  ambition to enumerate every site. Fix the shape when a symptom points at it.
+  Superseded detail:
+- **~~[2.3] history~~: Audit the remaining catch-all matches against Reid's no-silent-fallthrough
   rule.** **Add `Finder.fieldChildren` to the list** (2026-08-15): it is 29
   hand-written cases ending in `case _ => Seq.empty`, so a future node holding
   statements or values in a FIELD returns nothing rather than failing loudly.
@@ -1128,7 +1153,16 @@ that needs a ruling before either can be fixed.
 
 ### 3. Owed to other repos
 
-- **[3.1]** **DELIVERED 2026-08-15 to riddl-generator: `Finder` was returning incomplete
+- ~~**[3.1]** riddl-generator's `Finder` incompleteness.~~ — **CLOSED by THEM
+  2026-08-16**, verified 2026-08-18 in their `task/done/`: all four criteria met.
+  They re-pinned to `rc.14-121`, diffed against baselines (**longer, never
+  shorter — the direction predicted**), audited all 57 `recursiveFindByType`
+  sites, and found **no field still empty**.
+  **Their audit is worth keeping**: riddlg sweeps NO value type at all — every
+  sweep names a Statement or a Definition — so the whole value-composition half of
+  the fix could not affect them. The real delta was exactly TWO containers,
+  `Correlation.timeoutStatements` and `InvariantBlock.statements`. Superseded:
+- **~~[3.1] history~~: DELIVERED 2026-08-15 to riddl-generator: `Finder` was returning incomplete
   results across 27 node fields.** Task dropped at
   `../riddl-generator/task/2026-08-15-finder-was-missing-content-across-27-fields.md`
   — **verified written, not merely claimed** (the 49-alias entry below is what
@@ -1144,7 +1178,14 @@ that needs a ruling before either can be fixed.
   migration. reactive-bbq parses again; it is red now for a DIFFERENT and newer
   reason (the cross-context seam, § 3), which is worth not confusing with this.
 
-- **[3.2]** **AWAITING riddl-models: the exact `figma` input from their emitter report.**
+- ~~**[3.2]** The exact `figma` input behind riddl-models' emitter report.~~ —
+  **CLOSED 2026-08-18.** Reduced in scope by Reid and now moot: riddl-models'
+  `task/` is empty and nothing here was ever blocked on it. The behaviour was
+  NOT reproduced — riddlc prints a specific Error and exits 7, which is correct —
+  and [2.1]'s ruling has since settled what `figma` may decorate (UI elements and
+  an application-intent Context), which is the language question their report
+  might have been circling. Superseded:
+- **~~[3.2] history~~: AWAITING riddl-models: the exact `figma` input from their emitter report.**
   Their `2026-08-14-prettify-emitter-drops-method-and-shown-by.md` claimed
   `figma` on a domain or context "writes no file, exits 7, prints no error".
   **Not reproduced** — riddlc prints a specific Error (*"A 'figma' reference is
@@ -1156,7 +1197,13 @@ that needs a ruling before either can be fixed.
   section of that file (now in `task/done/`). **Nothing here is blocked on it**;
   if the real complaint is that A42 forbids `figma` on a domain at all, that is a
   language question and belongs in § 2, not a defect.
-- **[3.3]** **riddl-models' coverage model is being held out of their repo** until this
+- ~~**[3.3]** riddl-models' coverage model held out of their repo.~~ — **CLOSED
+  2026-08-18, verified rather than assumed**: `../riddl-models/language-coverage/`
+  exists (`.riddl`, `.conf` and `.bast`), so CI's EBNF validation — which walks
+  that repo — now exercises `method`, `shown by`, `table of … of […]`,
+  `attachment`, `replica of` and `figma` against the corpus. That was the gate
+  whose absence let six emitter defects through. Superseded:
+- **~~[3.3] history~~: riddl-models' coverage model is being held out of their repo** until this
   lands, so **CI grammar validation is NOT currently exercising `method`,
   `shown by`, `table of … of […]`, `attachment`, `replica of` or `figma` against
   the corpus** — precisely the gate that would have caught all six emitter
@@ -1302,7 +1349,13 @@ that needs a ruling before either can be fixed.
   `riddlcNative/nativeLink` in ONE sbt invocation, because the ivy artifacts and
   the CLI must never disagree about what the language accepts. Use the script;
   do not stage by hand.
-- **[3.5]** **synapify: `flattenAST` workaround can be dropped.** `Contents.definitions`
+- ~~**[3.5]** synapify's `flattenAST` workaround.~~ — **CLOSED 2026-08-18: already
+  delivered.** The task file is in their `task/` as
+  `2026-08-15-flattenAST-workaround-can-be-dropped.md`, so the guidance is with
+  them and nothing is owed from here. They still call `flattenAST` (3 sites, all
+  in one test) and their code stays correct either way — it is their call when to
+  take it. Superseded:
+- **~~[3.5] history~~: synapify: `flattenAST` workaround can be dropped.** `Contents.definitions`
   became include- and import-transparent on 2026-08-06 (their task file, now in
   `task/done/`), so their 33 `.definitions` sites no longer need the tree
   physically flattened first. Nothing owed until they take a build containing
