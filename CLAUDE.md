@@ -1803,35 +1803,53 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   is a Leaf and is never pushed; see `Pass.traverse`). Note `checkStatementScopes`
   is NOT that hook: it is wired only to on-clauses and function bodies.
 
-- **THE CONTEXT IS THE SINK — intra-context messaging needs no extra definition**
-  (Reid, 2026-08-18, correcting completeness checks 4h and 4i outright). An
-  **Entity IS a streamlet**: it may carry its own inlets and outlets and needs
-  NOTHING from its context in order to process messages. A **Context IS a
-  streamlet** too, so a context with an inlet and handlers *is* the sink — the
-  handlers receive, dispatch to a contained definition, and may translate on the
-  way. **Intra-context, any processor/streamlet/connector may communicate with
-  any other without further encumbrance**, and a connector may drive an entity's
-  inlet directly. The boundary is the ONLY place a placement rule belongs:
-  crossing OUT of a context the context is the source, crossing IN it is the
-  sink.
-  4i used to demand a dedicated `Sink` STREAMLET in any context holding entities
-  and explicitly refused to count an entity's own inlet; 4h asked for an outlet
-  streamlet in the parent context. Both now ask the one question that survives —
-  **is there ANY way in, or out, at all?** — since a context with entities and no
-  inlet anywhere has entities nothing can reach.
-  **Each condition needs TWO operands and neither subsumes the other**:
-  `c.streamlets` enumerates the container's CHILDREN, so it reports the ports of
-  CONTAINED processors, while `c.inlets`/`context.outlets` are the context's OWN
-  — and the context's own port is precisely the "the context IS the sink" case.
-  Recorded in `../RIDDL-Computational-Model.md` § 8.1, which had ALREADY implied
-  it (*"a generator may not treat an entity's own inlet as decoration because the
-  definition was not spelled `sink`"*, 2026-08-17) while the code enforced the
-  opposite — a reminder that a CM statement is not self-enforcing.
-  **The corpus is silent on this**: an A/B over 198 riddl-models +
-  riddl-examples entry points is BYTE-IDENTICAL before and after (7629 lines,
-  249 completeness warnings both ways), because neither rule ever had a
-  population there. `CompletenessTest`'s four cases are the only evidence, and
-  three of them were verified to fail against the previous implementation.
+- **A processor receives ONLY through its OWN inlet, and publishes ONLY through its
+  OWN outlet** (Reid, 2026-08-18). *"Inlets are needed to receive, outlets to
+  transmit/publish."* A message reaches a processor through THAT processor's inlet
+  — not a sibling's, and not its container's. **`tell` is no exception**: it is the
+  same operation as `send` unless a generator can lower it more efficiently while
+  keeping RIDDL's semantics, so a `tell` target must have an inlet. An "inbox" is a
+  LOWERING detail with no presence at the RIDDL design level — do not reason about
+  one in validation.
+  Consequences that are easy to get backwards:
+  - **An entity cannot publish on its context's outlet.** Getting a message out of
+    a context is entity outlet → connector → context inlet → handler → context
+    outlet, so the FIRST step is the entity's own outlet and no context-level port
+    substitutes for it.
+  - **Intra-context, nothing needs ceremony.** Inside one context any
+    processor/streamlet/connector may communicate with any other, and a connector
+    may drive a contained entity's own inlet directly. No dedicated `sink`/`source`
+    definition is required to carry a message between two definitions of one
+    context.
+  - **At the boundary, and only there, the CONTEXT is the port.** Crossing IN it is
+    the sink; crossing OUT it is the source.
+  **This corrected two completeness checks that had encoded the opposite.** 4h asked
+  whether the parent CONTEXT had an outlet (never asking about the entity at all)
+  and 4i whether anything in the context had an inlet; both are now per-entity, and
+  4i's context-level form is DELETED. Each is gated on the entity actually doing the
+  thing — handles no message ⇒ needs no inlet, emits nothing ⇒ needs no outlet — and
+  `???` is exempt.
+  **Fold STATE handlers in**: `entity.handlers ++ entity.states.flatMap(_.handlers)`,
+  the idiom `validateAsk` and four neighbouring checks already use. An entity's
+  clauses commonly live inside a `State`, which `entity.handlers` alone cannot see.
+  (Adding the fold moved NOTHING in the corpus — it is correct-by-idiom, not
+  evidenced by movement.)
+
+- **A cross-context connector must land on the CONTEXT'S OWN portlet — an Error**
+  (Reid, 2026-08-18, choosing Error over CompletenessWarning).
+  `StreamingValidation.checkBoundaryEncapsulation`. Reaching past the boundary onto
+  a contained definition's portlet **contradicts** the bounded context rather than
+  under-stating it: a context publishes its message set and keeps its
+  representations private, so binding a peer to a contained entity's existence and
+  to its current command/query set means that entity can no longer change without
+  breaking a stranger. That is why it is not a warning.
+  The rule engages ONLY across contexts; intra-context it does not apply at all.
+  **Cost, ruled acceptable:** 250 inbound + 241 outbound violations across 184 of
+  198 corpus entry points.
+  **Open, deliberately not decided:** an **Adaptor** is the CM's designated boundary
+  translation seam yet is content of a context, so a cross-context connector landing
+  on an adaptor's port trips this check. Implemented strictly rather than inventing
+  an exemption — ask before adding one.
 
 - **`???` is a body that says "known to be incomplete" — validation must EXEMPT
   it** (Reid's ruling, 2026-08-11). Any definition whose body is `???` earns at
