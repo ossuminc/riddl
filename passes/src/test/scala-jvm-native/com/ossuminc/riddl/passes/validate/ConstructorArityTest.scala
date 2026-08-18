@@ -106,7 +106,8 @@ class ConstructorArityTest extends AbstractValidatingTest {
            |""".stripMargin
       parseAndValidateDomain(RiddlParserInput(src, td), shouldFailOnErrors = false) {
         case (_, _, messages) =>
-          found = messages.justErrors.map(_.message)
+          found = messages.justErrors
+            .map(_.message)
             .filter(m => m.contains("Constructor of") || m.contains("is not a field of"))
           succeed
       }

@@ -79,16 +79,16 @@ object UnionMembers:
 
   /** A precomputed membership test for a union type.
     *
-    * Built once per container kind and then asked per call: no parse, no pass, no IO, no
-    * allocation -- a class walk over a small `Set`.
+    * Built once per container kind and then asked per call: no parse, no pass, no IO, no allocation
+    * -- a class walk over a small `Set`.
     */
   final class Contains(val classes: Set[Class[?]]):
 
     /** Is `value` an instance of one of the union's members?
       *
       * `isAssignableFrom`, not class equality, so a sealed trait named in the union (`Statement`,
-      * `Comment`, `Interaction`) answers for its subtypes without enumerating them -- the same
-      * rule `Contents.filter` uses.
+      * `Comment`, `Interaction`) answers for its subtypes without enumerating them -- the same rule
+      * `Contents.filter` uses.
       */
     def apply(value: Any): Boolean =
       val c = value.getClass

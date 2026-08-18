@@ -76,16 +76,17 @@ class InfixAlternationRoundTripTest extends AbstractValidatingTest {
       paths(alt) mustBe Seq("D.A", "D.B", "D.C")
     }
 
-    "prettify to the WORDS, not the bar -- the canonical form stays readable" in {
-      (td: TestData) =>
-        val pretty = prettify(parse(model("D.A | D.B"), "infix"))
-        pretty must include("one of {")
-        // The rendered `Choice` line must not carry a bar. Checked on that line alone, because
-        // `|` legitimately begins every `described as` margin line elsewhere in a document.
-        val choiceLine = pretty.linesIterator.find(_.contains("type Choice is")).getOrElse(
+    "prettify to the WORDS, not the bar -- the canonical form stays readable" in { (td: TestData) =>
+      val pretty = prettify(parse(model("D.A | D.B"), "infix"))
+      pretty must include("one of {")
+      // The rendered `Choice` line must not carry a bar. Checked on that line alone, because
+      // `|` legitimately begins every `described as` margin line elsewhere in a document.
+      val choiceLine = pretty.linesIterator
+        .find(_.contains("type Choice is"))
+        .getOrElse(
           fail(s"no 'type Choice' line in prettified output:\n$pretty")
         )
-        choiceLine mustNot include("|")
+      choiceLine mustNot include("|")
     }
 
     "round-trip: parse -> prettify -> parse preserves the alternation" in { (td: TestData) =>

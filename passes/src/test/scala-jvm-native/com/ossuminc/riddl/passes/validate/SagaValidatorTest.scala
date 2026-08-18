@@ -131,7 +131,9 @@ class SagaValidatorTest extends AbstractValidatingTest {
     // below. Full coverage of the prohibition lives in SagaAskProhibitedTest.
     "reject a lone ask outright, rather than counting it" in { (td: TestData) =>
       stepCheck("""let a = ask query d.c.Ask of entity d.c.q""", td) { messages =>
-        messages.filter(_.kind == Messages.Error).exists(_.message.contains("may not 'ask'")) mustBe true
+        messages
+          .filter(_.kind == Messages.Error)
+          .exists(_.message.contains("may not 'ask'")) mustBe true
       }
     }
 
@@ -141,7 +143,9 @@ class SagaValidatorTest extends AbstractValidatingTest {
           |        send command Go to inlet d.c.e.tank.inn""".stripMargin,
         td
       ) { messages =>
-        messages.filter(_.kind == Messages.Error).exists(_.message.contains("may not 'ask'")) mustBe true
+        messages
+          .filter(_.kind == Messages.Error)
+          .exists(_.message.contains("may not 'ask'")) mustBe true
         a12Warnings(messages) mustBe empty
       }
     }

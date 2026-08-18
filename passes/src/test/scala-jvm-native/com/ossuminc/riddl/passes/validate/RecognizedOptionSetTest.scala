@@ -71,22 +71,25 @@ class RecognizedOptionSetTest extends AbstractValidatingTest {
       * Computational Model already treats clusterability as a property of every processor.
       *
       * It is an OPTION rather than a grammar intention because it is genuinely ADVISORY -- a
-      * generator may honour it or deploy a single instance, which is what CM 4.2 means by
-      * advisory. The one HARD rule in the area needs no keyword: a correlating projector must
-      * distribute by key rather than round-robin, and that is already implied by declaring
-      * correlations.
+      * generator may honour it or deploy a single instance, which is what CM 4.2 means by advisory.
+      * The one HARD rule in the area needs no keyword: a correlating projector must distribute by
+      * key rather than round-robin, and that is already implied by declaring correlations.
       *
-      * `self.isClustered` was DECLINED with it: writing the option is exactly what makes
-      * clustering statically knowable, so a runtime field would be asking for something the
-      * generator can already see.
+      * `self.isClustered` was DECLINED with it: writing the option is exactly what makes clustering
+      * statically knowable, so a runtime field would be asking for something the generator can
+      * already see.
       */
     "advertise `clustered` on the singleton processors" in { (td: TestData) =>
       Seq("Context", "Projector", "Repository", "Adaptor").foreach { kind =>
-        withClue(s"$kind: ") { RecognizedOptions.optionSetFor(kind).current must contain("clustered") }
+        withClue(s"$kind: ") {
+          RecognizedOptions.optionSetFor(kind).current must contain("clustered")
+        }
       }
       // A Streamlet's kind is its SHAPE's simple name, never "Streamlet".
       Seq("Source", "Sink", "Flow", "Merge", "Split", "Router", "Void").foreach { shape =>
-        withClue(s"$shape: ") { RecognizedOptions.optionSetFor(shape).current must contain("clustered") }
+        withClue(s"$shape: ") {
+          RecognizedOptions.optionSetFor(shape).current must contain("clustered")
+        }
       }
     }
 

@@ -26,8 +26,8 @@ import org.scalatest.*
   *   - `countValueFailPoints` did not count a `reply`'s operand as an A12 failure point.
   *
   * riddl-models found the first by migrating 406 `yield result` sites to `reply result` and
-  * watching warnings go 96 -> 123 with no behavioural change. All 27 new warnings were this bug,
-  * in the two flavours the classifier's arithmetic predicts. They suggested grepping for siblings;
+  * watching warnings go 96 -> 123 with no behavioural change. All 27 new warnings were this bug, in
+  * the two flavours the classifier's arithmetic predicts. They suggested grepping for siblings;
   * that is how the other two were found.
   *
   * The shapes below are riddl-models' two repro cases, reduced.

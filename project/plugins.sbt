@@ -1,4 +1,5 @@
 // GitHub Packages resolver for sbt-ossuminc
+
 resolvers += "GitHub Packages" at "https://maven.pkg.github.com/ossuminc/sbt-ossuminc"
 
 // Credentials MUST live in the meta-build (here), not only in the global

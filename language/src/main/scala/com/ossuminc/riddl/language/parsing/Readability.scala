@@ -18,17 +18,17 @@ trait Readability {
     * MUST have the same word-boundary guarantee as [[Keywords.keyword]], and until 2026-08-15 it
     * did not: `readable(key)` was a bare `P(key)`, so `to` matched as a PREFIX of any longer
     * identifier. `boundMessageValue` (`StatementParser.scala`) guards its bare-path arm with `!to`
-    * expecting that guard to mean "does not START WITH the word `to`, followed by a boundary" —
-    * but without a boundary here, `!to` actually meant "does not start with the two characters `t`
+    * expecting that guard to mean "does not START WITH the word `to`, followed by a boundary" — but
+    * without a boundary here, `!to` actually meant "does not start with the two characters `t`
     * `o`", so `tell tourCompleted to …` failed the guard on `tourCompleted` itself and died with
     * `Expected one of (command | event | query | result)`, a message that names the wrong problem
     * entirely. Reported by riddl-models: 4 of 10,298 corpus-wide `ValueRef` migration sites hit
     * this (`TourCompleted`, `ToleranceEvaluated`, `TouchpointRecorded` x2).
     *
-    * Fixed at the SHAPE, not the one call site: every readability word gets the boundary, because
-    * a readability word matching the prefix of a longer identifier is wrong everywhere it appears,
-    * not just after `!to`. Confirmed empirically to be a tightening only, not a behavior change,
-    * by the full test suite and the riddl-models corpus (both green before and after) -- see
+    * Fixed at the SHAPE, not the one call site: every readability word gets the boundary, because a
+    * readability word matching the prefix of a longer identifier is wrong everywhere it appears,
+    * not just after `!to`. Confirmed empirically to be a tightening only, not a behavior change, by
+    * the full test suite and the riddl-models corpus (both green before and after) -- see
     * `docs/superpowers/plans/2026-08-15-three-task-fixes.md` Fix B.
     */
   def readable[u: P](key: String): P[Unit] = {

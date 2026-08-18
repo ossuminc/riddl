@@ -156,9 +156,10 @@ class SharedFinderTest extends AbstractTestingBasis {
           |  }
           |}
           |""".stripMargin
-      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "promptAscriptionTest"), true) match
-        case Left(messages) => fail(messages.justErrors.format)
-        case Right(r: Root) => r
+      val root2 =
+        TopLevelParser.parseInput(RiddlParserInput(content2, "promptAscriptionTest"), true) match
+          case Left(messages) => fail(messages.justErrors.format)
+          case Right(r: Root) => r
       val aliases = Finder(root2).recursiveFindByType[AliasedTypeExpression]
       aliases.map(_.pathId.format) must contain("OrderId")
       val paths = Finder(root2).recursiveFindByType[PathIdentifier]
@@ -183,9 +184,10 @@ class SharedFinderTest extends AbstractTestingBasis {
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
-      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "matchGuardTest"), true) match
-        case Left(messages) => fail(messages.justErrors.format)
-        case Right(r: Root) => r
+      val root2 =
+        TopLevelParser.parseInput(RiddlParserInput(content2, "matchGuardTest"), true) match
+          case Left(messages) => fail(messages.justErrors.format)
+          case Right(r: Root) => r
       val literals = Finder(root2).recursiveFindByType[NumericLiteral]
       // "3" is the pattern's comparand (`case > 3`) and "7" is the guard's operand (`when count >
       // 7`) -- neither field was traversed pre-fix; both are new.
@@ -211,9 +213,10 @@ class SharedFinderTest extends AbstractTestingBasis {
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
-      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "corrTimeoutTest"), true) match
-        case Left(messages) => fail(messages.justErrors.format)
-        case Right(r: Root) => r
+      val root2 =
+        TopLevelParser.parseInput(RiddlParserInput(content2, "corrTimeoutTest"), true) match
+          case Left(messages) => fail(messages.justErrors.format)
+          case Right(r: Root) => r
       val literals = Finder(root2).recursiveFindByType[NumericLiteral]
       literals.map(_.text) must contain("42")
     }
@@ -228,9 +231,10 @@ class SharedFinderTest extends AbstractTestingBasis {
           |  }
           |}
           |""".stripMargin
-      val root2 = TopLevelParser.parseInput(RiddlParserInput(content2, "requireArgTest"), true) match
-        case Left(messages) => fail(messages.justErrors.format)
-        case Right(r: Root) => r
+      val root2 =
+        TopLevelParser.parseInput(RiddlParserInput(content2, "requireArgTest"), true) match
+          case Left(messages) => fail(messages.justErrors.format)
+          case Right(r: Root) => r
       val literals = Finder(root2).recursiveFindByType[NumericLiteral]
       literals.map(_.text) must contain("42")
     }

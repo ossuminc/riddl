@@ -17,9 +17,9 @@ import scala.concurrent.duration.DurationInt
 
 /** Parity guard for Task 4's `initiate` value: the corpus fixture
   * `language/input/initiate-value.riddl` is validated against the EBNF grammar by the TatSu
-  * validator (which scans every input-directory riddl file). This test proves fastparse accepts
-  * the SAME file -- both the parenthesized (with arguments) and bare (no parameters) forms --
-  * so the documented grammar and the implementation stay in sync (see CLAUDE.md "Parser/EBNF
+  * validator (which scans every input-directory riddl file). This test proves fastparse accepts the
+  * SAME file -- both the parenthesized (with arguments) and bare (no parameters) forms -- so the
+  * documented grammar and the implementation stay in sync (see CLAUDE.md "Parser/EBNF
   * Synchronization Requirement").
   *
   * `Finder.recursiveFindByType` does not descend into a `LetStatement`'s `expression` field (its

@@ -41,8 +41,8 @@ private[parsing] trait GroupParser extends CommonParser:
 
   /** A46: the presentation verbs. `presents`/`shows`/`displays`/`writes`/`emits` are the original
     * five; the rest were accepted with A43's modality aliases and pair with them -- `plays` for a
-    * sound or animation, `speaks`/`announces` for speech, `vibrates`/`pulses`/`nudges` for
-    * haptics, `diffuses` for scent, and `serve`/`offer`/`taste` for taste.
+    * sound or animation, `speaks`/`announces` for speech, `vibrates`/`pulses`/`nudges` for haptics,
+    * `diffuses` for scent, and `serve`/`offer`/`taste` for taste.
     *
     * **The mixed grammatical person is deliberate and is the author's list verbatim** (Reid,
     * 2026-08-14, asked directly). Note this is the OPPOSITE call to the one recorded on

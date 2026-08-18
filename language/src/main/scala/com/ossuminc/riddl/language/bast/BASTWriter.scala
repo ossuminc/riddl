@@ -87,7 +87,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     // For subsequent nodes, skip if origin is "empty" (synthetic locations use same source)
     if currentSourcePath.isEmpty then
       // First node - always write marker to establish source
-      debugLog(f"[WRITER] FILE_CHANGE_MARKER at pos ${writer.position}: first node, path='${if origin == "empty" then "" else origin}'")
+      debugLog(f"[WRITER] FILE_CHANGE_MARKER at pos ${writer.position}: first node, path='${
+          if origin == "empty" then "" else origin
+        }'")
       writer.writeU8(FILE_CHANGE_MARKER)
       writeString(if origin == "empty" then "" else origin)
       currentSourcePath = if origin == "empty" then "" else origin
@@ -203,10 +205,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case saga: Saga       => writeSaga(saga)
 
       // Handler components
-      case h: Handler       => writeHandler(h)
-      case st: State        => writeState(st)
+      case h: Handler        => writeHandler(h)
+      case st: State         => writeState(st)
       case corr: Correlation => writeCorrelation(corr)
-      case inv: Invariant => writeInvariant(inv)
+      case inv: Invariant    => writeInvariant(inv)
 
       // OnClauses
       case oc: OnInitializationClause => writeOnInitializationClause(oc)
@@ -253,23 +255,23 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case output: Output     => writeOutput(output)
 
       // Statements (11 declarative statements)
-      case s: PromptStatement  => writePromptStatement(s)
-      case s: ErrorStatement   => writeErrorStatement(s)
-      case s: RequireStatement => writeRequireStatement(s)
-      case s: YieldStatement   => writeYieldStatement(s)
-      case s: ReplyStatement   => writeReplyStatement(s)
-      case s: SetStatement     => writeSetStatement(s)
-      case s: SendStatement    => writeSendStatement(s)
-      case s: MorphStatement   => writeMorphStatement(s)
-      case s: BecomeStatement  => writeBecomeStatement(s)
-      case s: TellStatement    => writeTellStatement(s)
-      case s: WhenStatement    => writeWhenStatement(s)
-      case s: MatchStatement   => writeMatchStatement(s)
-      case s: LetStatement     => writeLetStatement(s)
-      case s: CodeStatement    => writeCodeStatement(s)
-      case s: ForeachStatement => writeForeachStatement(s)
-      case s: PutStatement     => writePutStatement(s)
-      case s: ReturnStatement  => writeReturnStatement(s)
+      case s: PromptStatement    => writePromptStatement(s)
+      case s: ErrorStatement     => writeErrorStatement(s)
+      case s: RequireStatement   => writeRequireStatement(s)
+      case s: YieldStatement     => writeYieldStatement(s)
+      case s: ReplyStatement     => writeReplyStatement(s)
+      case s: SetStatement       => writeSetStatement(s)
+      case s: SendStatement      => writeSendStatement(s)
+      case s: MorphStatement     => writeMorphStatement(s)
+      case s: BecomeStatement    => writeBecomeStatement(s)
+      case s: TellStatement      => writeTellStatement(s)
+      case s: WhenStatement      => writeWhenStatement(s)
+      case s: MatchStatement     => writeMatchStatement(s)
+      case s: LetStatement       => writeLetStatement(s)
+      case s: CodeStatement      => writeCodeStatement(s)
+      case s: ForeachStatement   => writeForeachStatement(s)
+      case s: PutStatement       => writePutStatement(s)
+      case s: ReturnStatement    => writeReturnStatement(s)
       case s: TerminateStatement => writeTerminateStatement(s)
 
       // References
@@ -657,8 +659,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     * 0/1/2/10-19, see `writeParallelInteractions` etc. below), which all read through
     * `BASTReader.readPipeOrRelationshipOrInteraction` -- and that reader unconditionally reads a
     * discriminator byte BEFORE the location. Until 2026-08-14 this method wrote none: it went
-    * straight from the tag to `writeLocation`, so the reader consumed the location's own first
-    * byte as the discriminator and misread every byte of every `relationship` from there on --
+    * straight from the tag to `writeLocation`, so the reader consumed the location's own first byte
+    * as the discriminator and misread every byte of every `relationship` from there on --
     * corruption on every occurrence, not merely a risk of one. Discriminator 20 is the next free
     * value after the interaction kinds' 0-19.
     */
@@ -1364,11 +1366,11 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   /** A70/instance-identity: a target VALUE plus a [[writeSeq]]-framed arg list.
     *
     * **The wire shape CHANGED on 2026-08-15** when `terminate`'s `ProcessorRef` became a `Value`
-    * typed `Id(entity E)`: sub-kind 20 now begins with a `writeValue` where it used to begin with
-    * a `writeProcessorRef`. The two are not interchangeable, so an older reader handed these
-    * bytes misaligns rather than failing cleanly -- which is exactly what `FORMAT_REVISION`
-    * exists to prevent. It rides revision 18 (already spent by numeric literals and unshipped);
-    * re-check `git tag` before assuming a new bump is unnecessary.
+    * typed `Id(entity E)`: sub-kind 20 now begins with a `writeValue` where it used to begin with a
+    * `writeProcessorRef`. The two are not interchangeable, so an older reader handed these bytes
+    * misaligns rather than failing cleanly -- which is exactly what `FORMAT_REVISION` exists to
+    * prevent. It rides revision 18 (already spent by numeric literals and unshipped); re-check
+    * `git tag` before assuming a new bump is unnecessary.
     */
   def writeTerminateStatement(s: TerminateStatement): Unit = {
     writer.writeU8(NODE_STATEMENT)
@@ -1483,8 +1485,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   /** A70/instance-identity: a single [[ConstructorArg]] -- mirror of the inline arg-writing loop
     * duplicated in [[writeConstructor]] and [[writeCall]]. Not a refactor of those two (out of
-    * scope here; they write byte-identical output already), just a reusable form for [[writeValue]]'s
-    * `Initiate` arm, which frames its args with [[writeSeq]] instead.
+    * scope here; they write byte-identical output already), just a reusable form for
+    * [[writeValue]]'s `Initiate` arm, which frames its args with [[writeSeq]] instead.
     */
   private def writeConstructorArg(arg: ConstructorArg): Unit = {
     writeLocation(arg.loc)

@@ -20,9 +20,9 @@ import com.ossuminc.riddl.utils.{URL, PlatformContext}
   * overrides, a `syntheticLineNumberLookup` array, a `maxLine` parameter, and `createAt` /
   * `createAtFromOffsets` builders. All of it was WRONG, not merely unused: BAST stores REAL source
   * offsets (`BASTWriter.writeLocation` delta-encodes `loc.offset`), so decoding one as though line
-  * L began at L*10000 put every offset under 10000 on line 1 at col = offset -- a confidently
-  * wrong position, which a Problems pane renders as a squiggle on the wrong line. An absent
-  * position is strictly better than a plausible fiction.
+  * L began at L*10000 put every offset under 10000 on line 1 at col = offset -- a confidently wrong
+  * position, which a Problems pane renders as a squiggle on the wrong line. An absent position is
+  * strictly better than a plausible fiction.
   *
   * To get TRUE positions, supply the real source to `BASTReader.read` via its `suppliedSources`
   * map; that substitutes a genuine [[RiddlParserInput]] and this class is never constructed.

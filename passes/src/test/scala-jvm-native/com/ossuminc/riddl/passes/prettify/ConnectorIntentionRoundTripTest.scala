@@ -90,8 +90,8 @@ class ConnectorIntentionRoundTripTest extends AbstractValidatingTest {
 
     /** `exactly-once` became a third delivery intention on 2026-08-14 (Reid, asked directly). It
       * had been the ONE delivery spelling with no intention behind it, which is precisely what
-      * blocked deprecating the option forms: deprecating two of three and leaving the third
-      * current would have been its own inconsistency.
+      * blocked deprecating the option forms: deprecating two of three and leaving the third current
+      * would have been its own inconsistency.
       */
     "parse `exactly-once` as a delivery intention" in { (td: TestData) =>
       val c = connectorOf(parse(model("exactly-once"), "exactly-once-kw"))
@@ -216,9 +216,10 @@ class ConnectorIntentionRoundTripTest extends AbstractValidatingTest {
         Seq("at-least-once", "at-most-once", "exactly-once", "persistent")
     }
 
-    "be ordered longest-first so no keyword is matched as a prefix of another" in { (td: TestData) =>
-      val lengths = ConnectorIntention.keywords.map(_.length)
-      lengths mustBe lengths.sorted.reverse
+    "be ordered longest-first so no keyword is matched as a prefix of another" in {
+      (td: TestData) =>
+        val lengths = ConnectorIntention.keywords.map(_.length)
+        lengths mustBe lengths.sorted.reverse
     }
   }
 }

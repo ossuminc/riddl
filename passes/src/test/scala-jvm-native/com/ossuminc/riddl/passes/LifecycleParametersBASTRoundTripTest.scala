@@ -19,12 +19,13 @@ import org.scalatest.TestData
   *
   * Parameters are written directly in `writeOnInitializationClause`/`writeOnTerminationClause`
   * (mirroring `writeMethod`'s `args`), not through the generic `Pass` traversal that writes
-  * `contents` -- so this is the one surface the `LifecycleParametersTest` validation suite does
-  * not exercise at all.
+  * `contents` -- so this is the one surface the `LifecycleParametersTest` validation suite does not
+  * exercise at all.
   */
 class LifecycleParametersBASTRoundTripTest extends AbstractValidatingTest {
 
-  /** parse -> BAST -> decode. Returns the decoded Module (the nebula the writer wraps a Root in). */
+  /** parse -> BAST -> decode. Returns the decoded Module (the nebula the writer wraps a Root in).
+    */
   private def roundTrip(src: String, origin: String): Module =
     val root = TopLevelParser.parseInput(RiddlParserInput(src, origin), true) match
       case Right(r)   => r

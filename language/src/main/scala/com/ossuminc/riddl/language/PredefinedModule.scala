@@ -247,6 +247,5 @@ object PredefinedModule {
       case branch: Branch[?] =>
         val nested: Parents = branch +: parents
         branch.contents.definitions.flatMap(collectEntries(_, nested))
-      case _ => Seq.empty[(Definition, Parents)]
-    )
+      case _ => Seq.empty[(Definition, Parents)])
 }

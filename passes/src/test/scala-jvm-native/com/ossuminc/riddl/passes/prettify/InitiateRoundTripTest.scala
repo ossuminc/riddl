@@ -15,19 +15,19 @@ import com.ossuminc.riddl.utils.pc
 
 import org.scalatest.*
 
-/** Task 4 (processor-instance identity): `initiate` is a new [[com.ossuminc.riddl.language.AST.Value]],
-  * so RIDDL's reflectivity mandate requires a prettify round trip -- parse -> prettify(flatten=true)
-  * -> re-parse -- proving it survives at the SAME place, following the template of
-  * `RepositoryDomainScopeRoundTripTest` / `IdentifierQuotingRoundTripTest` /
-  * `LifecycleParametersRoundTripTest` (this module's own precedent for Task 3's sibling feature).
-  * Runs on JVM AND Native, unlike a plain `scalajvm` test -- put here rather than under
-  * `passes/src/test/scalajvm/` for that reason. The BAST round trip is legitimately JVM-only (BAST
-  * I/O has no Native-friendly harness in this test suite) and stays in
-  * `InitiateBASTRoundTripTest.scala`.
+/** Task 4 (processor-instance identity): `initiate` is a new
+  * [[com.ossuminc.riddl.language.AST.Value]], so RIDDL's reflectivity mandate requires a prettify
+  * round trip -- parse -> prettify(flatten=true) -> re-parse -- proving it survives at the SAME
+  * place, following the template of `RepositoryDomainScopeRoundTripTest` /
+  * `IdentifierQuotingRoundTripTest` / `LifecycleParametersRoundTripTest` (this module's own
+  * precedent for Task 3's sibling feature). Runs on JVM AND Native, unlike a plain `scalajvm` test
+  * -- put here rather than under `passes/src/test/scalajvm/` for that reason. The BAST round trip
+  * is legitimately JVM-only (BAST I/O has no Native-friendly harness in this test suite) and stays
+  * in `InitiateBASTRoundTripTest.scala`.
   *
   * `Finder.recursiveFindByType` does NOT descend into a `LetStatement`'s `expression` field (its
-  * `consider` walk only descends `Container`/`When`/`Match`/`Foreach`/`SagaStep`), so this test walks
-  * the tree directly to the `Initiate` node instead of relying on it -- same reasoning as
+  * `consider` walk only descends `Container`/`When`/`Match`/`Foreach`/`SagaStep`), so this test
+  * walks the tree directly to the `Initiate` node instead of relying on it -- same reasoning as
   * `InitiateFileTest`.
   */
 class InitiateRoundTripTest extends AbstractValidatingTest {
@@ -73,9 +73,9 @@ class InitiateRoundTripTest extends AbstractValidatingTest {
       .state
       .filesAsString
 
-  /** Walk down to the `Caller` entity's `on init` clause and pull out its single `let`'s
-    * `Initiate` expression -- mirrors `InitiateFileTest`'s direct walk, for the same reason
-    * (Finder does not descend into LetStatement).
+  /** Walk down to the `Caller` entity's `on init` clause and pull out its single `let`'s `Initiate`
+    * expression -- mirrors `InitiateFileTest`'s direct walk, for the same reason (Finder does not
+    * descend into LetStatement).
     */
   private def initiateIn(root: Root): Initiate =
     val domain =
@@ -85,7 +85,8 @@ class InitiateRoundTripTest extends AbstractValidatingTest {
     val caller = context.contents.toSeq
       .collectFirst { case e: Entity if e.id.value == "Caller" => e }
       .getOrElse(fail("no Caller entity"))
-    val state = caller.contents.toSeq.collectFirst { case s: State => s }.getOrElse(fail("no state"))
+    val state =
+      caller.contents.toSeq.collectFirst { case s: State => s }.getOrElse(fail("no state"))
     val handler =
       state.contents.toSeq.collectFirst { case h: Handler => h }.getOrElse(fail("no handler"))
     val onInit = handler.clauses
@@ -96,7 +97,7 @@ class InitiateRoundTripTest extends AbstractValidatingTest {
       .getOrElse(fail("no let statement"))
     let.expression match
       case init: Initiate => init
-      case other           => fail(s"expected an Initiate, got $other")
+      case other          => fail(s"expected an Initiate, got $other")
 
   "initiate" should {
     "round-trip through prettify (parse -> prettify -> re-parse)" in { (td: TestData) =>

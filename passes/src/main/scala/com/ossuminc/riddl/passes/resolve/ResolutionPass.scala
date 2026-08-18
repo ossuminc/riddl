@@ -469,9 +469,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private def resolveValue(v: Value, parents: Parents): Unit =
     v match
       case _: LiteralString => () // no references
-      case lv: LookupValue  =>
+      case lv: LookupValue =>
         resolveValue(lv.collection, parents); lv.indices.foreach(i => resolveValue(i, parents))
-      case pv: PromptValue  =>
+      case pv: PromptValue =>
         // A20: the prompt TEXT is literal (nothing to resolve), but an optional `as <type>`
         // ascription carries a real TypeExpression that may hold a PathIdentifier -- e.g.
         // `prompt("x") as Nonexistent`. Until this arm, NOTHING resolved it: the comment here used
@@ -519,7 +519,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       // there is nothing here for the resolver to resolve. Its type is synthesized entirely in
       // ValidationPass (see SelfValue.aggregation), which is the whole point of the design: no
       // resolution rule needs to know `self` exists.
-      case _: SelfValue => ()
+      case _: SelfValue           => ()
       case ic: InvariantCondition =>
         // `when invariant X [with <expr>]` — resolve the named invariant, and the handed value if
         // there is one. Without this the reference would sit unresolved and validation could only
@@ -860,15 +860,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           // that need not exist while the model validates clean, and the Invariant it does name
           // would be reported unused. Prose has nothing to resolve.
           ri.reason match
-            case ir: InvariantRef  => associateUsage(useCase, resolveARef[Invariant](ir, parentsAsSeq))
-            case _: LiteralString  => ()
+            case ir: InvariantRef =>
+              associateUsage(useCase, resolveARef[Invariant](ir, parentsAsSeq))
+            case _: LiteralString => ()
         case si: SelfInteraction =>
           associateUsage[Definition](useCase, resolveARef[Definition](si.from, parentsAsSeq))
         case SendMessageInteraction(_, from, message, to, _) =>
           associateUsage[Definition](useCase, resolveARef[Definition](from, parentsAsSeq))
           associateUsage[Definition](useCase, resolveAMessageRef(message, parentsAsSeq))
           associateUsage[Definition](useCase, resolveARef[Definition](to, parentsAsSeq))
-        case _: VagueInteraction => () // no references
+        case _: VagueInteraction      => () // no references
         case ic: InteractionContainer =>
           // These three used to be `() // no references`, and that comment was FALSE in the way
           // that matters: the CONTAINER carries none, but its CONTENTS do, and returning unit
@@ -1193,9 +1194,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     * to hide them, which is what makes it a style problem rather than an error (Reid, 2026-08-08).
     *
     * Deliberately scoped to calls from OUTSIDE. A function calling its own nested helper is the
-    * entire point of nesting; warning on that would make the feature unusable. "Outside" is
-    * decided by whether the enclosing function appears in the REFERENCE SITE's parents, not by
-    * name, so a same-named function elsewhere cannot suppress it.
+    * entire point of nesting; warning on that would make the feature unusable. "Outside" is decided
+    * by whether the enclosing function appears in the REFERENCE SITE's parents, not by name, so a
+    * same-named function elsewhere cannot suppress it.
     *
     * Runs under the same `quiet` guard as `notResolved`: the A55 ValueRef walk resolves
     * speculatively, and a style nag from a probe that was never a real reference is noise.
@@ -1400,8 +1401,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     val imported = mutable.ListBuffer.empty[Definition]
     def walk(values: Seq[RiddlValue], viaImport: Boolean): Unit =
       values.foreach {
-        case inc: Include[?]   => walk(inc.contents.toSeq, viaImport)
-        case bi: BASTImport    => walk(bi.contents.toSeq, viaImport = true)
+        case inc: Include[?] => walk(inc.contents.toSeq, viaImport)
+        case bi: BASTImport  => walk(bi.contents.toSeq, viaImport = true)
         case definition: Definition =>
           if viaImport then imported += definition else locals += definition
         case _ => ()

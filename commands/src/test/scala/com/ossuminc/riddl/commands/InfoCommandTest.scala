@@ -14,8 +14,8 @@ import com.ossuminc.riddl.utils.pc
   * The attribution block must be the LAST thing `riddlc info` prints. That ordering is easy to
   * break without noticing: `InfoFormatter.formatInfo` already appends the notices, so calling it
   * here instead of `formatBuildInfo` puts them ABOVE the JVM/OS lines this command adds — which is
-  * exactly what happened when the block was first added. A test on InfoFormatter alone cannot
-  * catch it, because InfoFormatter is not where the ordering is decided.
+  * exactly what happened when the block was first added. A test on InfoFormatter alone cannot catch
+  * it, because InfoFormatter is not where the ordering is decided.
   */
 class InfoCommandTest extends CommandTestBase("commands/input") {
 

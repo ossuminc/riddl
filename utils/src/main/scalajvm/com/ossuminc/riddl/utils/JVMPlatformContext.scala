@@ -70,7 +70,8 @@ class JVMPlatformContext extends PlatformContext {
   override def loadBytes(url: URL): Future[Array[Byte]] =
     Future {
       if url.scheme == URL.fileScheme then
-        java.nio.file.Files.readAllBytes(java.nio.file.Path.of(url.toExternalForm.stripPrefix("file://")))
+        java.nio.file.Files
+          .readAllBytes(java.nio.file.Path.of(url.toExternalForm.stripPrefix("file://")))
       else
         val in = java.net.URI.create(url.toExternalForm).toURL.openStream()
         try in.readAllBytes()

@@ -17,14 +17,14 @@ import org.scalatest.TestData
 
 /** `Id(P)` names any Processor, and the optional kind keyword must tell the truth.
   *
-  * The keyword form is CANONICAL, not deprecated (Reid, 2026-08-13): keyword-name
-  * disambiguation is a RIDDL-wide idiom, and `Order` alone could name a context, a message
-  * or an entity. Keeping it earns the check below — a keyword that contradicts the
-  * resolved kind is a lie a reader would believe.
+  * The keyword form is CANONICAL, not deprecated (Reid, 2026-08-13): keyword-name disambiguation is
+  * a RIDDL-wide idiom, and `Order` alone could name a context, a message or an entity. Keeping it
+  * earns the check below — a keyword that contradicts the resolved kind is a lie a reader would
+  * believe.
   *
-  * Lives in the SHARED test source set (it was `scala-jvm-native`, so JS never exercised it) —
-  * this is a pure validation rule with no platform surface, and the check it covers is now the
-  * one that decides a user-facing kind name.
+  * Lives in the SHARED test source set (it was `scala-jvm-native`, so JS never exercised it) — this
+  * is a pure validation rule with no platform surface, and the check it covers is now the one that
+  * decides a user-facing kind name.
   */
 class UniqueIdKindTest extends AbstractValidatingTest {
 
@@ -85,8 +85,8 @@ class UniqueIdKindTest extends AbstractValidatingTest {
       .state
       .filesAsString
 
-  /** parse -> prettify -> re-parse -> prettify, so the two prettified strings can be compared
-    * for a reflective round trip.
+  /** parse -> prettify -> re-parse -> prettify, so the two prettified strings can be compared for a
+    * reflective round trip.
     */
   private def prettifyTwice(src: String, origin: String): (String, String) =
     val first = prettify(parse(src, origin))
@@ -112,8 +112,9 @@ class UniqueIdKindTest extends AbstractValidatingTest {
     "REJECT a keyword that contradicts the resolved kind" in { (td: TestData) =>
       // THE case that justifies keeping the keyword. `Id(entity Inventory)` reads as a
       // promise about Inventory that is false.
-      val text = diagnostics(model("Id(entity Inventory)"), "id-mismatch")
-        .justErrors.map(_.message).mkString("\n")
+      val text = diagnostics(model("Id(entity Inventory)"), "id-mismatch").justErrors
+        .map(_.message)
+        .mkString("\n")
       text must include("declared as 'entity'")
       // The kind is named with the RIDDL KEYWORD, not a JVM class name: `getClass.getSimpleName`
       // worked only by the accident that all six Processor class names lowercase to their keyword,
@@ -131,8 +132,9 @@ class UniqueIdKindTest extends AbstractValidatingTest {
     */
   "the Id keyword check" should {
     "fire in a type-ALIAS position" in { (td: TestData) =>
-      val text = diagnostics(aliasModel("Id(entity Inventory)"), "alias-mismatch")
-        .justErrors.map(_.message).mkString("\n")
+      val text = diagnostics(aliasModel("Id(entity Inventory)"), "alias-mismatch").justErrors
+        .map(_.message)
+        .mkString("\n")
       text must include("declared as 'entity'")
       text must include("repository")
     }

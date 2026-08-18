@@ -300,7 +300,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     v match
       case pv: PromptValue =>
         add(s"prompt(${pv.prompt.format})")
-        pv.typeEx.foreach { te => add(" as "); emitTypeExpression(te) }
+        pv.typeEx.foreach { te =>
+          add(" as "); emitTypeExpression(te)
+        }
         this
       case Constructor(_, ref, args) =>
         add(s"${ref.format}(")
@@ -315,7 +317,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         if args.nonEmpty then add("(").emitConstructorArgs(args).add(")") else this
       case InvariantCondition(_, ref, argument) =>
         add(ref.format)
-        argument.foreach { a => add(" with "); emitValue(a) }
+        argument.foreach { a =>
+          add(" with "); emitValue(a)
+        }
         this
       case LogicalExpression(_, op, left, right) =>
         emitLogicalOperand(left)
@@ -360,7 +364,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     * `MorphStatement` (record). Only the `Constructor` arm can carry a nested `PromptValue`; the
     * refs have no nested `Value` to render, so they stay on `.format`.
     */
-  private def emitConstructorOperand(v: MessageRef | RecordRef | Constructor | ValueRef): this.type =
+  private def emitConstructorOperand(
+    v: MessageRef | RecordRef | Constructor | ValueRef
+  ): this.type =
     v match
       case c: Constructor => emitValue(c)
       case other          => add(other.format)
@@ -376,16 +382,16 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     * narrow, un-synced SECOND copy of the block dispatch (`InvariantBlock.format` vs.
     * `RiddlFileEmitter`) behaving differently from the other five, not a design decision — Reid,
     * 2026-08-15, ruling on the review that found it. `riddlc` accepts `invariant Inv is { let a = 1
-    * a > 0 }` today (verified against the staged binary, with a deliberately-broken negative control
-    * so the check is known to report errors), so this is a legibility/consistency fix plus closing
-    * the ascription gap below, NOT a grammar fix — the parser is untouched.
+    * a > 0 }` today (verified against the staged binary, with a deliberately-broken negative
+    * control so the check is known to report errors), so this is a legibility/consistency fix plus
+    * closing the ascription gap below, NOT a grammar fix — the parser is untouched.
     *
     * `statements` route through `emitStatement`, the SAME total dispatch every other statement
     * position uses — so a `let`/`require` here gets the SAME `PromptValue`-ascription fix as
     * everywhere else, for free, with no capture-and-squash machinery needed (that concern only
-    * existed to preserve a single-line layout this method no longer attempts).
-    * `predicate` — always a `BooleanExpression`, the block's own final expression — routes through
-    * `emitValue` on its own indented line, for the same reason.
+    * existed to preserve a single-line layout this method no longer attempts). `predicate` — always
+    * a `BooleanExpression`, the block's own final expression — routes through `emitValue` on its
+    * own indented line, for the same reason.
     */
   def emitInvariantBlock(block: InvariantBlock): this.type =
     add("{").nl.incr
@@ -543,7 +549,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case EntityReferenceTypeExpression(_, er) =>
         add(s"${Keyword.reference} to ${Keyword.entity} ${er.format}")
       case pattern: Pattern     => emitPattern(pattern)
-      case uid: UniqueId => this.add(s"${uid.format} ")
+      case uid: UniqueId        => this.add(s"${uid.format} ")
       case Optional(_, typex)   => emitTypeExpression(typex).add("?")
       case ZeroOrMore(_, typex) => emitTypeExpression(typex).add("*")
       case OneOrMore(_, typex)  => emitTypeExpression(typex).add("+")
@@ -600,7 +606,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           // nested `PromptValue` ascription (e.g. `when prompt("x") as Currency(USD)`) renders
           // correctly rather than falling to `PromptValue.ascriptionFormat`.
           addIndent(s"case ${mc.pattern.format}")
-          mc.guard.foreach { g => add(" when "); emitValue(g) }
+          mc.guard.foreach { g =>
+            add(" when "); emitValue(g)
+          }
           add(" {").nl.incr
           mc.statements.toSeq.foreach(emitStatement)
           decr.addLine("}")
@@ -692,7 +700,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           case ir: InvariantRef      => add(ir.format)
           case be: BooleanExpression => emitValue(be) // A28
         }
-        argument.foreach { a => add(" with "); emitValue(a) }
+        argument.foreach { a =>
+          add(" with "); emitValue(a)
+        }
         nl
       case TerminateStatement(_, target, args) =>
         // `target` is a VALUE since 2026-08-15, so it routes through `emitValue` rather than
@@ -708,8 +718,8 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           add(")")
         end if
         nl
-      case statement: Statement   => addLine(statement.format)
-      case comment: Comment       => emitComment(comment)
+      case statement: Statement => addLine(statement.format)
+      case comment: Comment     => emitComment(comment)
     end match
   end emitStatement
 

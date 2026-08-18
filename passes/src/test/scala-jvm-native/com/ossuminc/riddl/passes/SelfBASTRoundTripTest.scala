@@ -62,7 +62,8 @@ class SelfBASTRoundTripTest extends AnyWordSpec with Matchers {
       domain.contents.toSeq.collectFirst { case c: Context => c }.getOrElse(fail("no context"))
     val entity =
       context.contents.toSeq.collectFirst { case e: Entity => e }.getOrElse(fail("no entity"))
-    val state = entity.contents.toSeq.collectFirst { case s: State => s }.getOrElse(fail("no state"))
+    val state =
+      entity.contents.toSeq.collectFirst { case s: State => s }.getOrElse(fail("no state"))
     val handler =
       state.contents.toSeq.collectFirst { case h: Handler => h }.getOrElse(fail("no handler"))
     val clause = handler.clauses.headOption.getOrElse(fail("no on-clause"))

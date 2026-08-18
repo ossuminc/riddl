@@ -39,7 +39,7 @@ class LoadSafeTest extends AnyWordSpec with Matchers {
       try
         loadOf(URL.fromFullPath(dir.toString)) match
           case Left(f: LoadFailure.NotAFile) => f.describe must include("directory")
-          case Left(other) =>
+          case Left(other)                   =>
             // Previously this asserted only "some failure", which let a directory be reported as
             // "No such file" — accurate-sounding and wrong, and the loose assertion hid it.
             fail(s"a directory must be NotAFile, not $other")

@@ -25,9 +25,9 @@ import org.scalatest.TestData
   *
   *   - CRITICAL: `checkTellAddressing`'s `by`-field Error and ambiguity Error went unreachable for
   *     a widened-source `tell` — a malformed `by` or a genuinely ambiguous address validated clean.
-  *   - IMPORTANT: three Completeness checks (command→event, query→result, saga step
-  *     "do-statements contain a tell command") FALSE-POSITIVE on code that satisfies them only via
-  *     a widened operand, because `operandMessageKind` answered `None` for it.
+  *   - IMPORTANT: three Completeness checks (command→event, query→result, saga step "do-statements
+  *     contain a tell command") FALSE-POSITIVE on code that satisfies them only via a widened
+  *     operand, because `operandMessageKind` answered `None` for it.
   *
   * Every case here is proven load-bearing in the task-1 (round 1 fix) report by reverting the
   * consumer-side fix and confirming each one reverts to the WRONG outcome the review found.

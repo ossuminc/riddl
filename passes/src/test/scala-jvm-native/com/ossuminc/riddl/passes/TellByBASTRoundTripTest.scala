@@ -15,10 +15,11 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
 
 /** Task 6 (processor-instance identity): `tell ... by <field>` adds an optional trailing
-  * [[com.ossuminc.riddl.language.AST.Identifier]] to [[com.ossuminc.riddl.language.AST.TellStatement]]
-  * (BAST statement sub-kind 9, unchanged -- `by` is appended after the existing fields, per
-  * `FORMAT_REVISION` 15's note), so it needs its own targeted reflectivity proof. `tell` is a bare
-  * statement, so [[com.ossuminc.riddl.language.Finder]]'s `recursiveFindByType` finds it directly.
+  * [[com.ossuminc.riddl.language.AST.Identifier]] to
+  * [[com.ossuminc.riddl.language.AST.TellStatement]] (BAST statement sub-kind 9, unchanged -- `by`
+  * is appended after the existing fields, per `FORMAT_REVISION` 15's note), so it needs its own
+  * targeted reflectivity proof. `tell` is a bare statement, so
+  * [[com.ossuminc.riddl.language.Finder]]'s `recursiveFindByType` finds it directly.
   *
   * JVM-only, like `BASTRoundTripTest` itself (BAST I/O has no Native-friendly harness in this test
   * suite). The PRETTIFY round trip is a separate, cross-platform concern -- see
@@ -55,7 +56,9 @@ class TellByBASTRoundTripTest extends AnyWordSpec with Matchers {
       case Left(msgs)  => fail(s"parse of $origin failed:\n${msgs.format}")
 
   private def tellIn(root: Root): TellStatement =
-    Finder(root).recursiveFindByType[TellStatement].headOption
+    Finder(root)
+      .recursiveFindByType[TellStatement]
+      .headOption
       .getOrElse(fail("no TellStatement found"))
 
   "tell ... by" should {
@@ -72,7 +75,9 @@ class TellByBASTRoundTripTest extends AnyWordSpec with Matchers {
 
       BASTReader.read(output.bytes) match
         case Right(module) =>
-          val reconstructedTell = Finder(module).recursiveFindByType[TellStatement].headOption
+          val reconstructedTell = Finder(module)
+            .recursiveFindByType[TellStatement]
+            .headOption
             .getOrElse(fail("no TellStatement found in reconstructed module"))
 
           reconstructedTell.processorRef.pathId.format mustBe originalTell.processorRef.pathId.format
@@ -110,7 +115,9 @@ class TellByBASTRoundTripTest extends AnyWordSpec with Matchers {
       }
       BASTReader.read(output.bytes) match
         case Right(module) =>
-          val reconstructedTell = Finder(module).recursiveFindByType[TellStatement].headOption
+          val reconstructedTell = Finder(module)
+            .recursiveFindByType[TellStatement]
+            .headOption
             .getOrElse(fail("no TellStatement found in reconstructed module"))
           reconstructedTell.by mustBe None
         case Left(errors) =>

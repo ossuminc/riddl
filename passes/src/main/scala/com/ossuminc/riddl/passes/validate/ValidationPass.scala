@@ -172,10 +172,11 @@ case class ValidationPass(
     * something plainly did.
     *
     * The entry judged the fix to be "walking the root container-by-container the way
-    * `checkStatementScopes` already does". That turned out to be unnecessary: `checkStatementScopes`
-    * ALREADY does that walk, and since [4.3] it records what each operand resolved to. So the sweep
-    * stays flat -- the right shape for a whole-root question -- and only the lookup changed.
-    * `EmittedViaLetLocalTest` pins it, and fails with exactly the old message when reverted.
+    * `checkStatementScopes` already does". That turned out to be unnecessary:
+    * `checkStatementScopes` ALREADY does that walk, and since [4.3] it records what each operand
+    * resolved to. So the sweep stays flat -- the right shape for a whole-root question -- and only
+    * the lookup changed. `EmittedViaLetLocalTest` pins it, and fails with exactly the old message
+    * when reverted.
     */
   private def emittedMessageTypes(root: PassRoot): mutable.Set[Type] = {
     val finder = Finder(root.contents)
@@ -384,8 +385,9 @@ case class ValidationPass(
           messages.addCompleteness(
             evt.errorLoc,
             s"${evt.identify} is defined but nothing in the model emits it",
-            suggestion = s"Emit ${evt.identify} with a 'send', 'tell', 'yield' or 'reply' from the " +
-              s"definition that produces it, declare an outlet carrying it, or remove the unused event."
+            suggestion =
+              s"Emit ${evt.identify} with a 'send', 'tell', 'yield' or 'reply' from the " +
+                s"definition that produces it, declare an outlet carrying it, or remove the unused event."
           )
         }
       }
@@ -439,8 +441,9 @@ case class ValidationPass(
             inv.errorLoc,
             s"${inv.identify} declares 'requires <type>' so it is never applied implicitly, and " +
               "no 'require invariant' statement applies it either — it will never be checked",
-            suggestion = s"Apply it with 'require invariant ${inv.id.value} with <expr>', or drop " +
-              "its 'requires' clause so it applies implicitly across its scope."
+            suggestion =
+              s"Apply it with 'require invariant ${inv.id.value} with <expr>', or drop " +
+                "its 'requires' clause so it applies implicitly across its scope."
           )
         }
       }
@@ -700,9 +703,13 @@ case class ValidationPass(
                 // yield's operand is still MessageRef | Constructor only until Task 2, so it stays
                 // on the narrow (but here structurally sufficient) operandMessageKind.
                 case s: SendStatement =>
-                  widenedOperandMessageKind(s.msg, parents, curLets).contains(AggregateUseCase.EventCase)
+                  widenedOperandMessageKind(s.msg, parents, curLets).contains(
+                    AggregateUseCase.EventCase
+                  )
                 case t: TellStatement =>
-                  widenedOperandMessageKind(t.msg, parents, curLets).contains(AggregateUseCase.EventCase)
+                  widenedOperandMessageKind(t.msg, parents, curLets).contains(
+                    AggregateUseCase.EventCase
+                  )
                 case y: YieldStatement =>
                   operandMessageKind(y.msg).contains(AggregateUseCase.EventCase)
                 case _ => false
@@ -813,12 +820,12 @@ case class ValidationPass(
     * `ResolutionPass.resolveValueRef` records for one. It deliberately does NOT resolve a
     * state-record field, `let`-local, function result or `ask` result, even though
     * `checkMessageOperandSource` accepts those as legal `send`/`tell` operands (the
-    * message-value-source widening, 2026-08-14): most of this function's callers (`checkResponsePairing`
-    * via `operandMessageKind`, the `yields`/`replies` conformance loop) take a `yield`/`reply`
-    * operand, whose AST type is still `MessageRef | Constructor` — a `ValueRef` is structurally
-    * impossible there until Task 2 — so widening THIS function would thread `parents`/`lets`
-    * through call sites that can never exercise the new arm. Callers that DO need the widened
-    * resolution for a `send`/`tell` operand use [[widenedOperandType]] /
+    * message-value-source widening, 2026-08-14): most of this function's callers
+    * (`checkResponsePairing` via `operandMessageKind`, the `yields`/`replies` conformance loop)
+    * take a `yield`/`reply` operand, whose AST type is still `MessageRef | Constructor` — a
+    * `ValueRef` is structurally impossible there until Task 2 — so widening THIS function would
+    * thread `parents`/`lets` through call sites that can never exercise the new arm. Callers that
+    * DO need the widened resolution for a `send`/`tell` operand use [[widenedOperandType]] /
     * [[widenedOperandMessageKind]] instead, which take the scope explicitly.
     */
   private def operandType(m: MessageRef | Constructor | ValueRef): Option[Type] = m match
@@ -829,9 +836,9 @@ case class ValidationPass(
   /** A54/A56: the [[AggregateUseCase]] of a widened message operand — a bare ref, a constructor
     * whose ref names the constructed message/record, or a binding named by the enclosing on-clause.
     *
-    * **Optional on purpose.** A keyword-led ref carries its kind syntactically, but a binding's kind
-    * is only known once resolved, and [[AggregateUseCase]] has no "unknown" member to fall back to.
-    * Returning a wrong kind here would silently mis-answer the event-sourcing rules, so an
+    * **Optional on purpose.** A keyword-led ref carries its kind syntactically, but a binding's
+    * kind is only known once resolved, and [[AggregateUseCase]] has no "unknown" member to fall
+    * back to. Returning a wrong kind here would silently mis-answer the event-sourcing rules, so an
     * unresolved binding answers `None` and every caller's `contains` reads it as "not that kind".
     *
     * Same narrow-on-purpose note as [[operandType]] applies to its `ValueRef` arm — see
@@ -844,8 +851,7 @@ case class ValidationPass(
       case _: ValueRef =>
         operandType(m).flatMap(_.typEx match
           case auc: AggregateUseCaseTypeExpression => Some(auc.usecase)
-          case _                                   => None
-        )
+          case _                                   => None)
 
   /** Task-1-review-round-1: the `send`/`tell`-aware counterpart to [[operandType]] — resolves a
     * `ValueRef` operand through [[valueRefType]], the SAME A55/lifecycle-parameter walk
@@ -863,8 +869,8 @@ case class ValidationPass(
     * no position at which an element binding could be in scope" — was FALSE. `checkTellAddressing`
     * is called from `checkStatementScopes`, which recurses into `when`/`match`/`foreach` bodies
     * precisely so it can thread those bindings; its own call site says it is "reached at ANY
-    * depth". So `foreach s in field batch.ships { tell s to entity Order }` resolved its operand
-    * to nothing, and every addressing check — the `by`/ambiguity Errors and the three completeness
+    * depth". So `foreach s in field batch.ships { tell s to entity Order }` resolved its operand to
+    * nothing, and every addressing check — the `by`/ambiguity Errors and the three completeness
     * checks — skipped it in silence.
     *
     * The parameter is DEFAULTED because the remaining call sites are walks that genuinely have no
@@ -881,8 +887,8 @@ case class ValidationPass(
     case vr: ValueRef => valueRefType(vr, parents, lets, elements)
     case other        => operandType(other)
 
-  /** Publish what a `send`/`tell` delivers, so a LATER pass does not have to re-derive it — and, for
-    * a `ValueRef` operand naming a `let`-local, could not.
+  /** Publish what a `send`/`tell` delivers, so a LATER pass does not have to re-derive it — and,
+    * for a `ValueRef` operand naming a `let`-local, could not.
     *
     * Recorded HERE, in `checkStatementScopes`, because this is the single point reached at any
     * depth (`when`/`match`/`foreach` bodies included) WITH the lexical `let` scope and `foreach`
@@ -913,7 +919,8 @@ case class ValidationPass(
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression] = Map.empty[String, TypeExpression]
   ): Option[AggregateUseCase] = m match
-    case vr: ValueRef => valueRefType(vr, parents, lets, elements)
+    case vr: ValueRef =>
+      valueRefType(vr, parents, lets, elements)
         .flatMap(t => typeExprMessageKind(t.typEx))
     case other => operandMessageKind(other)
 
@@ -921,8 +928,8 @@ case class ValidationPass(
     *
     * RIDDL has two message pairings -- command/event and query/result -- and until 2.0 `yield`
     * spelled both while `reply` was a deprecated synonym for it. Reid split them (2026-08-08) so a
-    * handler body says which half of the language it is in, and so `ask` has something to name:
-    * the value an `ask` produces is the one a `reply` provides.
+    * handler body says which half of the language it is in, and so `ask` has something to name: the
+    * value an `ask` produces is the one a `reply` provides.
     *
     * Checked here rather than in the parser because the two statements are structurally identical
     * -- only the message KIND differs -- and `operandMessageKind` reads that kind from the ref
@@ -930,8 +937,8 @@ case class ValidationPass(
     * name both halves. A `Constructor` operand carries its kind through `c.ref.messageKind`, so
     * this covers both operand shapes.
     *
-    * `None` means the kind is not recoverable (a ValueRef whose type has not resolved); stay
-    * silent there rather than guess -- other checks report the unresolved reference.
+    * `None` means the kind is not recoverable (a ValueRef whose type has not resolved); stay silent
+    * there rather than guess -- other checks report the unresolved reference.
     */
   /** Task 2: the operand may now be a `ValueRef`. `operandMessageKind` answers `None` for one it
     * cannot resolve narrowly, and `foreach` then skips -- so a `let`-bound or state-field operand
@@ -1051,15 +1058,16 @@ case class ValidationPass(
     * legal source: a state-record field, a `let`-local, a function result, or an `ask` result. Each
     * of those resolves through [[valueRefTypeExpr]] — the SAME A55/lifecycle-parameter walk every
     * other bare `ValueRef` uses (elements, then lets, then the refMap) — not through the on-clause
-    * binding's Type key alone. So the rule is now one probe covering every source: `vr` must resolve
-    * to a [[TypeExpression]] that IS, or ALIASES to (see [[typeExprMessageKind]]), a
+    * binding's Type key alone. So the rule is now one probe covering every source: `vr` must
+    * resolve to a [[TypeExpression]] that IS, or ALIASES to (see [[typeExprMessageKind]]), a
     * command/event/query/result [[AggregateUseCaseTypeExpression]]. Nothing else can supply a
     * message value, so an unresolved or wrongly-shaped operand is an Error, not a warning.
     *
     * `self` is special-cased FIRST. It is a synthesized Aggregation (`id`/`version`, see
-    * [[SelfValue]]), not a message, and would otherwise fall through to the generic "does not name a
-    * message value" Error — true, but not the reason, and not what helps the author fix it. Guarded
-    * on `elements`/`lets` so a local that happens to be named `self` (shadowing) is not misreported.
+    * [[SelfValue]]), not a message, and would otherwise fall through to the generic "does not name
+    * a message value" Error — true, but not the reason, and not what helps the author fix it.
+    * Guarded on `elements`/`lets` so a local that happens to be named `self` (shadowing) is not
+    * misreported.
     *
     * This check is owned by validation, not the resolver, for the reason recorded in
     * `ResolutionPass.quietly` — a ValueRef may legitimately fail to resolve there (a `let`-local is
@@ -1155,8 +1163,9 @@ case class ValidationPass(
               vr.loc,
               s"'${vr.path.format}' has type '${te.format}', but state '${ms.state.format}' is " +
                 s"typed by ${want.identify}",
-              suggestion = s"Morph with a value of ${want.identify}, or morph to a state typed by " +
-                s"'${te.format}'."
+              suggestion =
+                s"Morph with a value of ${want.identify}, or morph to a state typed by " +
+                  s"'${te.format}'."
             )
           end if
         }
@@ -1180,11 +1189,12 @@ case class ValidationPass(
     * of the two already red by design. Do not read a red corpus as a regression while both are
     * outstanding, and do not soften this check to green them.
     *
-    * **A FIELD-LESS message is exempt** (design Q1, ruled 2026-08-14). `event Started is { }` has no
-    * data, so the type fully determines the value and there is nothing for the author to source;
-    * warning on it is the noise the standing `???` ruling exists to prevent. The exemption falls out
-    * of the same observation `checkTellAddressing` records: a `???` body parses to the SAME empty
-    * aggregate as an explicit `{ }`, so "zero fields after resolving" covers the stub shape too.
+    * **A FIELD-LESS message is exempt** (design Q1, ruled 2026-08-14). `event Started is { }` has
+    * no data, so the type fully determines the value and there is nothing for the author to source;
+    * warning on it is the noise the standing `???` ruling exists to prevent. The exemption falls
+    * out of the same observation `checkTellAddressing` records: a `???` body parses to the SAME
+    * empty aggregate as an explicit `{ }`, so "zero fields after resolving" covers the stub shape
+    * too.
     *
     * Resolution goes through [[aggregateFieldsOf]], which FOLLOWS the alias chain, because
     * `command Ship is Shipment` is riddl-models' house style — reading its (absent) direct fields
@@ -1275,13 +1285,13 @@ case class ValidationPass(
     *
     * Two distinct wrongs, one rule. Outside any entity there is no state to read — and in a saga
     * step this is the rule the `ask` ban already states (§9.5: a saga must not depend on dynamic
-    * state), which reading state directly would otherwise bypass by spelling it differently.
-    * Inside a DIFFERENT entity it crosses §4.6's encapsulation rule: an entity's data "is 100%
+    * state), which reading state directly would otherwise bypass by spelling it differently. Inside
+    * a DIFFERENT entity it crosses §4.6's encapsulation rule: an entity's data "is 100%
     * encapsulated by the entity and acted upon only by the entity's handlers", so only a message
     * may cross that boundary.
     *
-    * The second half is why this rule cannot live in the parser: it needs the resolved [[AST.State]]
-    * and its owner, neither of which exists at parse time.
+    * The second half is why this rule cannot live in the parser: it needs the resolved
+    * [[AST.State]] and its owner, neither of which exists at parse time.
     */
   private def checkStateReadScope(statement: Statement, parents: Parents): Unit =
     val reads = statementValues(statement).flatMap(stateReadsIn)
@@ -1304,8 +1314,9 @@ case class ValidationPass(
                   gv.loc,
                   s"'${gv.format}' reads ${state.identify}, which ${entity.identify} does not own; " +
                     "an entity's state is encapsulated by that entity",
-                  suggestion = s"Send a message to the entity owning ${state.identify} and let its " +
-                    "handler reply, rather than reading its state directly."
+                  suggestion =
+                    s"Send a message to the entity owning ${state.identify} and let its " +
+                      "handler reply, rather than reading its state directly."
                 )
             }
       }
@@ -1335,7 +1346,8 @@ case class ValidationPass(
     * still reached, mirroring [[checkTerminate]]'s and `checkTellAddressing`'s reachability. It is
     * NOT called from `validateStatement`: that dispatch never sees statements held in a FIELD
     * (`WhenStatement.thenStatements`, `MatchCase.statements`, `ForeachStatement.doStatements`), the
-    * same gap `checkStateReadScope`'s placement there is a known, filed defect for (see BACKLOG.md).
+    * same gap `checkStateReadScope`'s placement there is a known, filed defect for (see
+    * BACKLOG.md).
     */
   private def checkInstanceEffectScope(statement: Statement, parents: Parents): Unit =
     val offenders: Seq[(At, String)] =
@@ -1363,7 +1375,6 @@ case class ValidationPass(
         }
       }
   end checkInstanceEffectScope
-
 
   /** Task 5 of the message-value-source plan (Reid, 2026-08-14: *"no further task is needed, just
     * build it"*): `let x = initiate entity Order(…)` whose `x` is NEVER referenced afterwards.
@@ -1457,19 +1468,17 @@ case class ValidationPass(
     *     the enclosing Context's identity instead of being rejected.
     */
   private def enclosingProcessorOf(parents: Parents): Option[Processor[?]] =
-    parents
-      .collectFirst {
-        case p: Processor[?] => Some(p)
-        case _: Function      => None
-        case _: Saga          => None
-      }
-      .flatten
+    parents.collectFirst {
+      case p: Processor[?] => Some(p)
+      case _: Function     => None
+      case _: Saga         => None
+    }.flatten
 
   /** The fully-qualified [[PathIdentifier]] naming `p`, in the natural root-to-leaf written order
     * (`Dom.Ctx.Order`). [[SymbolsOutput.pathOf]] returns the SAME chain leaf-to-root (it is a
-    * symbol-table lookup key, not a path to render), so it is reversed here. No prior caller
-    * needed to build a path FROM a definition -- every other [[PathIdentifier]] in the codebase is
-    * either parsed from source or split from a dotted string -- so this is written fresh for
+    * symbol-table lookup key, not a path to render), so it is reversed here. No prior caller needed
+    * to build a path FROM a definition -- every other [[PathIdentifier]] in the codebase is either
+    * parsed from source or split from a dotted string -- so this is written fresh for
     * [[SelfValue.aggregation]]'s synthesized `Id(...)` field.
     */
   private def pathOf(p: Processor[?]): PathIdentifier =
@@ -1555,7 +1564,7 @@ case class ValidationPass(
               checkCrossContextReference(ref.pathId, typ, onClause, parents)
             }
           case _: Constructor => ()
-          case _: ValueRef     => ()
+          case _: ValueRef    => ()
       case WhenStatement(loc, condition, thenStatements, elseStatements) =>
         condition match {
           case ls: LiteralString =>
@@ -1784,11 +1793,10 @@ case class ValidationPass(
                   omc.errorLoc,
                   s"${handledType.identify} declares '$declKeyword ${declaredYield.format}' " +
                     s"but ${omc.identify} does not $verb it on every path",
-                  suggestion =
-                    s"Use '$stmtKeyword ${declaredYield.format}' (or refuse with " +
-                      "'error'/'require') on every path through this handler. A 'when' with no " +
-                      "'else', a 'match' with no 'default', and a 'foreach' all leave a path " +
-                      "that does neither."
+                  suggestion = s"Use '$stmtKeyword ${declaredYield.format}' (or refuse with " +
+                    "'error'/'require') on every path through this handler. A 'when' with no " +
+                    "'else', a 'match' with no 'default', and a 'foreach' all leave a path " +
+                    "that does neither."
                 )
               end if
               // Independent of `settled`: a clause may discharge by refusing on every path and
@@ -1809,30 +1817,30 @@ case class ValidationPass(
                   case (r: ReplyStatement, curLets) if isQuery  => (r: Statement, r.msg, curLets)
                 }
               scopedResponses.foreach { (ys, operand, curLets) =>
-                  // `omc +: parents`, NOT `parents`. A ValueRef resolves through
-                  // `refMap.anyDefinitionOf(path, parents.head)`, and ResolutionPass keyed these
-                  // against the ON-CLAUSE -- which `validateOnMessageClause` does not include in
-                  // the `parents` it passes here, so `parents.head` is the Handler and every
-                  // lookup missed. Verified by instrumenting both spellings: Handler gave None,
-                  // the on-clause gave Some(Event). `checkStatementScopes` never hit this because
-                  // it is invoked with the clause already on the stack.
-                  val operandParents = omc +: parents
-                  val kindOk = widenedOperandMessageKind(operand, operandParents, curLets)
-                    .contains(declaredYield.messageKind)
-                  val yieldedType = widenedOperandType(operand, operandParents, curLets)
-                  val typeOk = (declaredType, yieldedType) match {
-                    case (Some(dt), Some(yt)) => dt eq yt
-                    case _                    => true // unresolved — reported by other checks
-                  }
-                  if !(kindOk && typeOk) then
-                    messages.addError(
-                      ys.loc,
-                      s"'${operand.format}' does not match declared '$declKeyword " +
-                        s"${declaredYield.format}' of ${handledType.identify}",
-                      suggestion =
-                        s"Use the declared response: '$stmtKeyword ${declaredYield.format}'."
-                    )
+                // `omc +: parents`, NOT `parents`. A ValueRef resolves through
+                // `refMap.anyDefinitionOf(path, parents.head)`, and ResolutionPass keyed these
+                // against the ON-CLAUSE -- which `validateOnMessageClause` does not include in
+                // the `parents` it passes here, so `parents.head` is the Handler and every
+                // lookup missed. Verified by instrumenting both spellings: Handler gave None,
+                // the on-clause gave Some(Event). `checkStatementScopes` never hit this because
+                // it is invoked with the clause already on the stack.
+                val operandParents = omc +: parents
+                val kindOk = widenedOperandMessageKind(operand, operandParents, curLets)
+                  .contains(declaredYield.messageKind)
+                val yieldedType = widenedOperandType(operand, operandParents, curLets)
+                val typeOk = (declaredType, yieldedType) match {
+                  case (Some(dt), Some(yt)) => dt eq yt
+                  case _                    => true // unresolved — reported by other checks
                 }
+                if !(kindOk && typeOk) then
+                  messages.addError(
+                    ys.loc,
+                    s"'${operand.format}' does not match declared '$declKeyword " +
+                      s"${declaredYield.format}' of ${handledType.identify}",
+                    suggestion =
+                      s"Use the declared response: '$stmtKeyword ${declaredYield.format}'."
+                  )
+              }
             // `yields`/`replies` are OPTIONAL, so producing without a declared clause is allowed.
             // Phase B changes this only for `ask`: asking a query that declares no `replies` is an
             // error at the ASK site, since there is no type for the answer to have.
@@ -1980,7 +1988,7 @@ case class ValidationPass(
     i.condition.foreach {
       case be: BooleanExpression =>
         validateValue(be, parents, Seq.empty[LetStatement], Map.empty)
-      case _: LiteralString      => ()
+      case _: LiteralString => ()
       case blk: InvariantBlock =>
         val lets = blk.statements.toSeq.collect { case l: LetStatement => l }
         validateValue(blk.predicate, parents, lets, Map.empty)
@@ -2232,8 +2240,8 @@ case class ValidationPass(
     *
     * The fractional-value arm must precede the `Natural`/`Whole` range arms: both are
     * [[IntegerTypeExpression]]s, and reporting a range violation for `1.5` would be true and
-    * useless — the fraction is the more specific defect. Range arms are guarded on `isInteger` so
-    * a real-form literal is never range-checked as an integer. `Bool` is excluded explicitly even
+    * useless — the fraction is the more specific defect. Range arms are guarded on `isInteger` so a
+    * real-form literal is never range-checked as an integer. `Bool` is excluded explicitly even
     * though it extends [[IntegerTypeExpression]]: a Boolean-typed constant is not "a whole number
     * with a fractional part", it is a different kind entirely, and telling it so would be a
     * nonsense message.
@@ -3106,10 +3114,10 @@ case class ValidationPass(
     * passes the rest of the enclosing block, so a `set` in a branch that a later statement
     * overrides is caught too. Without it the check would only see straight-line lists.
     *
-    * The CROSS-clause case is not here: two different folds writing one field is a race and
-    * already an Error (see `raced` above), because arrival order across sources is not guaranteed.
-    * This is the within-one-fold complement, where order IS guaranteed and the defect is
-    * therefore only dead work.
+    * The CROSS-clause case is not here: two different folds writing one field is a race and already
+    * an Error (see `raced` above), because arrival order across sources is not guaranteed. This is
+    * the within-one-fold complement, where order IS guaranteed and the defect is therefore only
+    * dead work.
     */
   private def checkOverriddenSets(
     statements: Seq[RiddlValue],
@@ -3270,8 +3278,9 @@ case class ValidationPass(
               correlation.errorLoc,
               s"${correlation.identify} can never complete: ${typ.identify} requires " +
                 s"${unset.map(_.id.value).mkString("'", "', '", "'")}, which no fold sets",
-              suggestion = s"Add an 'on event ... is { set field ${unset.head.id.value} to ... }' " +
-                s"clause to ${correlation.identify}, or make the field optional."
+              suggestion =
+                s"Add an 'on event ... is { set field ${unset.head.id.value} to ... }' " +
+                  s"clause to ${correlation.identify}, or make the field optional."
             )
           end if
         case _ => () // a non-aggregate target is reported by the record-ref check itself
@@ -3320,7 +3329,8 @@ case class ValidationPass(
     // COMPLETENESS, not an Error (Reid's ruling; A70 had specified an Error). A repository lacking
     // the handler is under-specified rather than self-contradictory, and it sits beside the other
     // projector completeness warnings below.
-    val yieldedCommand: Option[Type] = resolution.refMap.definitionOf[Type](correlation.yields.pathId)
+    val yieldedCommand: Option[Type] =
+      resolution.refMap.definitionOf[Type](correlation.yields.pathId)
     parents.collectFirst { case p: Projector => p }.foreach { projector =>
       yieldedCommand.foreach { yielded =>
         projector.repositories.foreach { repoRef =>
@@ -3362,13 +3372,13 @@ case class ValidationPass(
       handler.clauses.foreach { clause =>
         walkStatements(clause.contents) { statement =>
           val effect: Option[String] = statement match
-            case _: TellStatement      => Some("tell")
-            case _: SendStatement      => Some("send")
-            case _: YieldStatement     => Some("yield")
-            case _: ReplyStatement     => Some("reply")
-            case _: PutStatement       => Some("put")
-            case _: MorphStatement     => Some("morph")
-            case _: BecomeStatement    => Some("become")
+            case _: TellStatement   => Some("tell")
+            case _: SendStatement   => Some("send")
+            case _: YieldStatement  => Some("yield")
+            case _: ReplyStatement  => Some("reply")
+            case _: PutStatement    => Some("put")
+            case _: MorphStatement  => Some("morph")
+            case _: BecomeStatement => Some("become")
             // A70/instance-identity: ending an instance is exactly the kind of effect a re-run of
             // a fold must not repeat.
             case _: TerminateStatement => Some("terminate")
@@ -4174,8 +4184,7 @@ case class ValidationPass(
               alt.of.toSeq.exists(
                 _.pathId.value.lastOption.contains(PredefinedModule.generatorError)
               )
-            case _ => false
-          )
+            case _ => false)
         check(
           accepts,
           s"${inlet.identify} is marked 'error-sink' but does not accept " +
@@ -5247,29 +5256,28 @@ case class ValidationPass(
     * question does not: a clause handling a command must, on every path, either produce what the
     * command declares or refuse it.
     *
-    * This replaced a much weaker predicate that asked only "does a refusal appear ANYWHERE in
-    * this clause?", via `Finder.recursiveFindByType`. Because that searches the whole nested
-    * tree, ONE refusal in ONE branch exempted the entire clause, so this validated clean despite
-    * producing nothing on the `amt > 0` path:
+    * This replaced a much weaker predicate that asked only "does a refusal appear ANYWHERE in this
+    * clause?", via `Finder.recursiveFindByType`. Because that searches the whole nested tree, ONE
+    * refusal in ONE branch exempted the entire clause, so this validated clean despite producing
+    * nothing on the `amt > 0` path:
     * {{{
     * on command Pay is {            // Pay declares `yields event Paid`
     *   when "amt <= 0" then { error "refused" } end
     * }
     * }}}
     *
-    * `exists` is the right combinator over a sequence: execution passes through every statement
-    * in it, so one statement that settles the obligation settles the whole block. The nested
-    * cases are where "every path" actually bites:
+    * `exists` is the right combinator over a sequence: execution passes through every statement in
+    * it, so one statement that settles the obligation settles the whole block. The nested cases are
+    * where "every path" actually bites:
     *
     *   - a `when` needs BOTH branches, and an absent `else` is an escape path, not a discharge;
-    *   - a `match` needs every case AND a `default`, since without one an unmatched value
-    *     escapes (RIDDL cannot know a pattern set is exhaustive);
+    *   - a `match` needs every case AND a `default`, since without one an unmatched value escapes
+    *     (RIDDL cannot know a pattern set is exhaustive);
     *   - a `foreach` NEVER discharges -- its body may iterate zero times.
     *
     * Making `else`/`default` mandatory in the grammar was considered and rejected (Reid,
-    * 2026-08-07): it would break ~56 sites across three repos and would NOT close this hole
-    * anyway, since an empty or non-discharging `else` still escapes. The analysis is what
-    * closes it.
+    * 2026-08-07): it would break ~56 sites across three repos and would NOT close this hole anyway,
+    * since an empty or non-discharging `else` still escapes. The analysis is what closes it.
     */
   private def dischargesOnEveryPath[CV <: RiddlValue](
     contents: Contents[CV]
@@ -5333,18 +5341,18 @@ case class ValidationPass(
     * all found.
     */
   private def countValueFailPoints(v: RiddlValue): Int = v match
-    case call: Call               => 1 + call.args.map(a => countValueFailPoints(a.value)).sum
+    case call: Call => 1 + call.args.map(a => countValueFailPoints(a.value)).sum
     // A12: the census extends to failure-bearing VALUES, not only statements (Reid, 2026-08-09).
     // An `ask` can fail exactly as a `call` can -- more obviously, since no answer may ever
     // arrive -- and `Call` was already counted here, so omitting `ask` would have let a saga
     // step hide a second failure point behind a `let`.
-    case _: Ask                   => 1
+    case _: Ask => 1
     // A70/instance-identity: `initiate` invokes `on init` and mints an instance -- it can fail
     // exactly as `call`/`ask` can, so it counts itself (1) PLUS its argument values, exactly like
     // `call` immediately above.
-    case init: Initiate           => 1 + init.args.map(a => countValueFailPoints(a.value)).sum
-    case _: GetValue              => 1
-    case lv: LookupValue          =>
+    case init: Initiate => 1 + init.args.map(a => countValueFailPoints(a.value)).sum
+    case _: GetValue    => 1
+    case lv: LookupValue =>
       countValueFailPoints(lv.collection) + lv.indices.map(countValueFailPoints).sum
     case c: Constructor           => c.args.map(a => countValueFailPoints(a.value)).sum
     case le: LogicalExpression    => countValueFailPoints(le.left) + countValueFailPoints(le.right)
@@ -5353,18 +5361,19 @@ case class ValidationPass(
     // A17's ASK form contributes NOTHING of its own -- consulting an invariant is a test, not an
     // action that can fail -- but its `with` operand is a full Value and is counted, exactly as a
     // comparison contributes nothing while its operands count.
-    case ic: InvariantCondition   => ic.argument.map(countValueFailPoints).getOrElse(0)
+    case ic: InvariantCondition => ic.argument.map(countValueFailPoints).getOrElse(0)
     // A bare message REFERENCE carries no failure point of its own -- the statement holding it
     // does, and that statement is counted by its own arm. Enumerated rather than absorbed by a
     // `case _ => 0`, because that catch-all is precisely how `ask` went uncounted: a new
     // failure-bearing value read as "contributes nothing" instead of failing the build.
-    case _: Reference[?]          => 0
+    case _: Reference[?] => 0
     // A name cannot fail; see the note in `stateReadsIn`.
-    case _: Identifier            => 0
+    case _: Identifier => 0
     // `self`/`self.<field>` is a keyword-anchored value, not an effect -- reading the running
     // instance's own identity cannot fail the way a call, ask, or get can.
-    case _: SelfValue             => 0
-    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral => 0
+    case _: SelfValue => 0
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
+      0
     case other =>
       throw new IllegalStateException(
         s"countValueFailPoints has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
@@ -5390,15 +5399,15 @@ case class ValidationPass(
     */
   private def statementValues(s: Statement): Seq[RiddlValue] =
     s match
-      case set: SetStatement     => Seq(set.value)
-      case let: LetStatement     => Seq(let.expression)
-      case put: PutStatement     => Seq(put.value)
-      case ret: ReturnStatement  => Seq(ret.value)
-      case snd: SendStatement    => Seq(snd.msg)
-      case tel: TellStatement    => Seq(tel.msg)
-      case yld: YieldStatement   => Seq(yld.msg)
-      case rpl: ReplyStatement   => Seq(rpl.msg)
-      case mor: MorphStatement   => Seq(mor.value)
+      case set: SetStatement    => Seq(set.value)
+      case let: LetStatement    => Seq(let.expression)
+      case put: PutStatement    => Seq(put.value)
+      case ret: ReturnStatement => Seq(ret.value)
+      case snd: SendStatement   => Seq(snd.msg)
+      case tel: TellStatement   => Seq(tel.msg)
+      case yld: YieldStatement  => Seq(yld.msg)
+      case rpl: ReplyStatement  => Seq(rpl.msg)
+      case mor: MorphStatement  => Seq(mor.value)
       // Review round 1: `req.argument` (the `with <expr>` operand) is a full Value -- `require`
       // is legal in both a function body and an activation clause (`guardStatements` in
       // `StatementParser` suppresses it only under `EventClause`), and `initiateValue` is a
@@ -5406,13 +5415,13 @@ case class ValidationPass(
       // initiate entity Order` could hide an `initiate` from every walk that consumes
       // `statementValues` (state-reads, asks, this task's instance-effect ban, the A12
       // fail-point census) unless the operand is included here too.
-      case req: RequireStatement  => Seq(req.condition) ++ req.argument.toSeq
-      case whn: WhenStatement     => Seq(whn.condition)
+      case req: RequireStatement => Seq(req.condition) ++ req.argument.toSeq
+      case whn: WhenStatement    => Seq(whn.condition)
       // Review round 1: a `MatchCase.guard` is the SAME shape as `req.argument` -- a full
       // `BooleanExpression | ValueRef` value that was never fed to any of these walks, even
       // though `validateMatch` already resolves/type-checks it independently via `validateValue`.
       // `mat.expression` (the subject) is unaffected; this only adds each case's guard.
-      case mat: MatchStatement    => Seq(mat.expression) ++ mat.cases.flatMap(_.guard.toSeq)
+      case mat: MatchStatement => Seq(mat.expression) ++ mat.cases.flatMap(_.guard.toSeq)
       // A70/instance-identity: `terminate`'s TARGET and arguments are full Values, exactly like a
       // constructor's or `initiate`'s, so a `get from state`/`ask`/nested call-fail-point can
       // hide inside one and must be counted rather than silently skipped. The target joined this
@@ -5424,9 +5433,9 @@ case class ValidationPass(
 
   /** Every [[Ask]] embedded in a value expression, at any depth.
     *
-    * Enumerated over the same arms as `countValueFailPoints` rather than absorbed by a catch-all:
-    * a new value kind that can CONTAIN an ask must fail the build here, not quietly hide one
-    * inside a saga.
+    * Enumerated over the same arms as `countValueFailPoints` rather than absorbed by a catch-all: a
+    * new value kind that can CONTAIN an ask must fail the build here, not quietly hide one inside a
+    * saga.
     */
   /** Every `get from state` embedded in a value expression, at any depth.
     *
@@ -5442,9 +5451,9 @@ case class ValidationPass(
       gv.source match
         case sr: StateRef => Seq(gv -> sr)
         case _: InputRef  => Seq.empty
-    case lv: LookupValue          => stateReadsIn(lv.collection) ++ lv.indices.flatMap(stateReadsIn)
-    case call: Call               => call.args.toSeq.flatMap(a => stateReadsIn(a.value))
-    case c: Constructor           => c.args.toSeq.flatMap(a => stateReadsIn(a.value))
+    case lv: LookupValue => stateReadsIn(lv.collection) ++ lv.indices.flatMap(stateReadsIn)
+    case call: Call      => call.args.toSeq.flatMap(a => stateReadsIn(a.value))
+    case c: Constructor  => c.args.toSeq.flatMap(a => stateReadsIn(a.value))
     // `initiate`'s arguments are full Values, exactly like a constructor's or a call's, so a
     // `get from state` can hide inside one and this must recurse rather than stop.
     case init: Initiate           => init.args.toSeq.flatMap(a => stateReadsIn(a.value))
@@ -5454,11 +5463,11 @@ case class ValidationPass(
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
     // CAN hold a state read and this must recurse rather than stop. `ref` needs no arm -- an
     // InvariantRef is a Reference and the arm below covers it.
-    case ic: InvariantCondition   => ic.argument.toSeq.flatMap(stateReadsIn)
+    case ic: InvariantCondition => ic.argument.toSeq.flatMap(stateReadsIn)
     // An `ask` holds only a QueryRef and a ProcessorRef -- no nested value -- so it cannot contain
     // a state read. (A saga's `ask` is separately banned outright; see `asksIn`.)
-    case _: Ask                   => Seq.empty
-    case _: Reference[?]          => Seq.empty
+    case _: Ask          => Seq.empty
+    case _: Reference[?] => Seq.empty
     // An IDENTIFIER is a NAME, not an expression: `when isValid` can bind a bare `Identifier`
     // naming a let-local or a field. A name has no sub-structure, so it can contain nothing --
     // decided deliberately, as the throw below instructs, not defaulted. (This arm predates, and is
@@ -5472,11 +5481,12 @@ case class ValidationPass(
     // PromptValue`, and `Identifier` is in none of the other members. Auditing `Value` alone (as
     // the InvariantCondition fix did on 2026-08-12) misses exactly this, which is how
     // `when !isValid` -- documented syntax that validated on rc.11 -- came to throw on rc.13.
-    case _: Identifier            => Seq.empty
+    case _: Identifier => Seq.empty
     // `self`/`self.<field>` holds no nested value -- an optional bare field Identifier, not a
     // sub-expression -- so it cannot contain a state read.
-    case _: SelfValue             => Seq.empty
-    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral => Seq.empty
+    case _: SelfValue => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
+      Seq.empty
     case other =>
       throw new IllegalStateException(
         s"stateReadsIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
@@ -5486,13 +5496,15 @@ case class ValidationPass(
 
   /** Every [[Initiate]] embedded in a value expression, at any depth -- the top-level `Initiate`
     * itself PLUS any nested inside its own arguments (`initiate entity Order(x = initiate entity
-    * Foo)`), exactly as `stateReadsIn` recurses into `Initiate.args` looking for a `get from state`.
+    * Foo)`), exactly as `stateReadsIn` recurses into `Initiate.args` looking for a
+    * `get from state`.
     *
     * Enumerated over the same arms as `stateReadsIn`/`asksIn` and for the same reason: a new value
-    * kind that can CONTAIN an `initiate` must fail the build here rather than quietly hide one. This
-    * is what lets `checkInstanceEffectScope` and `validateCorrelation`'s fold-purity check see
+    * kind that can CONTAIN an `initiate` must fail the build here rather than quietly hide one.
+    * This is what lets `checkInstanceEffectScope` and `validateCorrelation`'s fold-purity check see
     * `initiate` wherever it hides -- most importantly inside a `let x = initiate ...`, which is a
-    * [[LetStatement]], not a `TerminateStatement`-shaped statement a simple `case` match would catch.
+    * [[LetStatement]], not a `TerminateStatement`-shaped statement a simple `case` match would
+    * catch.
     */
   private def initiatesIn(v: RiddlValue): Seq[Initiate] = v match
     case init: Initiate           => Seq(init) ++ init.args.toSeq.flatMap(a => initiatesIn(a.value))
@@ -5505,15 +5517,16 @@ case class ValidationPass(
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
     // A `get from state`/`get from input` holds only a StateRef/InputRef -- no nested value -- so
     // it cannot contain an `initiate`.
-    case _: GetValue              => Seq.empty
+    case _: GetValue => Seq.empty
     // An `ask` holds only a QueryRef and a ProcessorRef -- no nested value.
-    case _: Ask                   => Seq.empty
-    case _: Reference[?]          => Seq.empty
+    case _: Ask          => Seq.empty
+    case _: Reference[?] => Seq.empty
     // A name contains nothing; see the note in `stateReadsIn`.
-    case _: Identifier            => Seq.empty
+    case _: Identifier => Seq.empty
     // `self`/`self.<field>` holds no nested value; see the same note in `stateReadsIn`.
-    case _: SelfValue             => Seq.empty
-    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral => Seq.empty
+    case _: SelfValue => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
+      Seq.empty
     case other =>
       throw new IllegalStateException(
         s"initiatesIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
@@ -5543,10 +5556,10 @@ case class ValidationPass(
     }
 
   private def asksIn(v: RiddlValue): Seq[Ask] = v match
-    case ask: Ask                 => Seq(ask)
-    case lv: LookupValue          => asksIn(lv.collection) ++ lv.indices.flatMap(asksIn)
-    case call: Call               => call.args.toSeq.flatMap(a => asksIn(a.value))
-    case c: Constructor           => c.args.toSeq.flatMap(a => asksIn(a.value))
+    case ask: Ask        => Seq(ask)
+    case lv: LookupValue => asksIn(lv.collection) ++ lv.indices.flatMap(asksIn)
+    case call: Call      => call.args.toSeq.flatMap(a => asksIn(a.value))
+    case c: Constructor  => c.args.toSeq.flatMap(a => asksIn(a.value))
     // `initiate`'s arguments are full Values, exactly like a constructor's or a call's, so an
     // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
     case init: Initiate           => init.args.toSeq.flatMap(a => asksIn(a.value))
@@ -5555,14 +5568,15 @@ case class ValidationPass(
     case ce: ComparisonExpression => asksIn(ce.left) ++ asksIn(ce.right)
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
     // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
-    case ic: InvariantCondition   => ic.argument.toSeq.flatMap(asksIn)
-    case _: GetValue              => Seq.empty
-    case _: Reference[?]          => Seq.empty
+    case ic: InvariantCondition => ic.argument.toSeq.flatMap(asksIn)
+    case _: GetValue            => Seq.empty
+    case _: Reference[?]        => Seq.empty
     // A name contains nothing; see the note in `stateReadsIn`.
-    case _: Identifier            => Seq.empty
+    case _: Identifier => Seq.empty
     // `self`/`self.<field>` holds no nested value; see the same note in `stateReadsIn`.
-    case _: SelfValue             => Seq.empty
-    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral => Seq.empty
+    case _: SelfValue => Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
+      Seq.empty
     case other =>
       throw new IllegalStateException(
         s"asksIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
@@ -5639,8 +5653,8 @@ case class ValidationPass(
 
   /** A25: the ELEMENT type a collection yields, the dual of [[isCollectionType]].
     *
-    * Needed so a `foreach` element is not merely in scope but TYPED: without it `line` resolves
-    * and `line.sku` still does not, which is the whole point of iterating. `Mapping` yields None
+    * Needed so a `foreach` element is not merely in scope but TYPED: without it `line` resolves and
+    * `line.sku` still does not, which is the whole point of iterating. `Mapping` yields None
     * because a map has no single element type -- it is DESTRUCTURED into two names instead, by
     * [[foreachBindings]], which reads `from` and `to` directly. Guessing `to` here would silently
     * mistype every key access.
@@ -5704,9 +5718,9 @@ case class ValidationPass(
               lv.loc,
               s"${lv.collection.format} takes $arity " +
                 s"${if arity == 1 then "index" else "indices"}, but ${lv.indices.size} given",
-              suggestion =
-                if arity == 1 then "Supply exactly one index."
-                else s"Supply one index per dimension, e.g. 'at ${List.fill(arity)("0").mkString(", ")}'."
+              suggestion = if arity == 1 then "Supply exactly one index."
+              else
+                s"Supply one index per dimension, e.g. 'at ${List.fill(arity)("0").mkString(", ")}'."
             )
           else
             lookupIndexType(te).foreach { expected =>
@@ -5739,17 +5753,19 @@ case class ValidationPass(
 
   private def collectionElementType(te: TypeExpression): Option[TypeExpression] =
     te match
-      case s: Sequence           => Some(s.of)
-      case s: AST.Set            => Some(s.of)
-      case g: Graph              => Some(g.of)
-      case t: Table              => Some(t.of)
-      case r: Replica            => Some(r.of)
-      case z: ZeroOrMore         => Some(z.typeExp)
-      case o: OneOrMore          => Some(o.typeExp)
-      case sr: SpecificRange     => Some(sr.typeExp)
-      case _: Mapping            => None
+      case s: Sequence       => Some(s.of)
+      case s: AST.Set        => Some(s.of)
+      case g: Graph          => Some(g.of)
+      case t: Table          => Some(t.of)
+      case r: Replica        => Some(r.of)
+      case z: ZeroOrMore     => Some(z.typeExp)
+      case o: OneOrMore      => Some(o.typeExp)
+      case sr: SpecificRange => Some(sr.typeExp)
+      case _: Mapping        => None
       case ate: AliasedTypeExpression =>
-        resolution.refMap.definitionOf[Type](ate.pathId).flatMap(t => collectionElementType(t.typEx))
+        resolution.refMap
+          .definitionOf[Type](ate.pathId)
+          .flatMap(t => collectionElementType(t.typEx))
       case _ => None
 
   /** Follow [[AliasedTypeExpression]] hops to the type expression underneath. An unresolvable alias
@@ -5773,7 +5789,7 @@ case class ValidationPass(
     parents: Parents
   ): Option[TypeExpression] =
     val raw: Option[TypeExpression] = fs.collection match
-      case fr: FieldRef  => resolution.refMap.definitionOf[Field](fr.pathId).map(_.typeEx)
+      case fr: FieldRef => resolution.refMap.definitionOf[Field](fr.pathId).map(_.typeEx)
       case id: Identifier =>
         val idx = letIndexOf(id.value, lets)
         if idx >= 0 then letType(lets(idx), lets.take(idx), parents, elements).map(_.typEx)
@@ -5807,8 +5823,9 @@ case class ValidationPass(
               fs.loc,
               s"'foreach' over a mapping binds a key AND a value, so it needs two names, " +
                 s"but only '${fs.element.value}' was given",
-              suggestion = s"Write 'foreach ${fs.element.value}, <value> in ...' — the first name " +
-                "binds the key, the second the value."
+              suggestion =
+                s"Write 'foreach ${fs.element.value}, <value> in ...' — the first name " +
+                  "binds the key, the second the value."
             )
             Map(fs.element.value -> m.from)
       case Some(other) =>
@@ -5819,8 +5836,7 @@ case class ValidationPass(
             messages.addError(
               v.loc,
               s"'foreach' binds a second name only over a mapping, and ${other.format} is not one",
-              suggestion =
-                s"Drop the second name: 'foreach ${fs.element.value} in ...'."
+              suggestion = s"Drop the second name: 'foreach ${fs.element.value} in ...'."
             )
             Map(fs.element.value -> elementType, v.value -> anything)
       case None =>
@@ -5830,12 +5846,12 @@ case class ValidationPass(
   /** The fields directly in scope at a statement: those of the enclosing entity's state record(s),
     * of the handled message, and of the enclosing function's `requires` input.
     *
-    * This is a NAMING aid only — it answers "would a reader take this bare name for a field?", which
-    * is what the on-clause binding's shadow warning asks. It is NOT an allow-list. It once gated
-    * `foreach ... in field <path>` by identity, which rejected `foreach line in field order.lines`
-    * for no better reason than that `lines` belongs to `Order` rather than to the message directly.
-    * Cardinality is the whole of that question: if the path resolves and lands on a collection, it
-    * is iterable, wherever it sits.
+    * This is a NAMING aid only — it answers "would a reader take this bare name for a field?",
+    * which is what the on-clause binding's shadow warning asks. It is NOT an allow-list. It once
+    * gated `foreach ... in field <path>` by identity, which rejected
+    * `foreach line in field order.lines` for no better reason than that `lines` belongs to `Order`
+    * rather than to the message directly. Cardinality is the whole of that question: if the path
+    * resolves and lands on a collection, it is iterable, wherever it sits.
     */
   private def fieldsInScope(parents: Parents): Seq[Field] =
     def aggFields(t: Type): Seq[Field] =
@@ -6061,8 +6077,8 @@ case class ValidationPass(
     * Error. (A `???` body and an explicitly empty one parse to the same empty `contents`, which is
     * what `p.isEmpty` reads.)
     *
-    * Argument VALUES are validated either way: they belong to the CALL site, and the callee being
-    * a stub says nothing about whether the names written here exist.
+    * Argument VALUES are validated either way: they belong to the CALL site, and the callee being a
+    * stub says nothing about whether the names written here exist.
     */
   private def checkLifecycleInvocation(
     loc: At,
@@ -6164,14 +6180,14 @@ case class ValidationPass(
   /** A70/instance-identity: `terminate <target> [with (args)]`, where `target` is a VALUE typed
     * `Id(entity E)` (Reid, 2026-08-15). See [[AST.TerminateStatement]] for the design.
     *
-    * The entity is DERIVED from the target's type rather than named by a second reference, so
-    * there is no ref/id pair that could contradict and nothing here checks for one.
+    * The entity is DERIVED from the target's type rather than named by a second reference, so there
+    * is no ref/id pair that could contradict and nothing here checks for one.
     *
     * **Silent when the target's type cannot be determined.** `valueTypeExpr` yields `None` for a
     * literal and for an unascribed `prompt(...)` typed hole; reporting those would be reasoning
-    * from absence, and the A20 ruling is that an unwired position stays quiet rather than
-    * guessing. A target that resolves to a type which is simply NOT an `Id` is a different
-    * matter -- that is determinable, and it is an Error.
+    * from absence, and the A20 ruling is that an unwired position stays quiet rather than guessing.
+    * A target that resolves to a type which is simply NOT an `Id` is a different matter -- that is
+    * determinable, and it is an Error.
     */
   private def checkTerminate(
     term: TerminateStatement,
@@ -6241,13 +6257,13 @@ case class ValidationPass(
   /** The [[Processor]] an `Id(...)` names.
     *
     * **Two lookups, because two kinds of path reach here and only one is in the refMap.** The
-    * refMap records what [[ResolutionPass]] actually resolved, so it holds paths that were
-    * WRITTEN. But `valueTypeExpr` also SYNTHESIZES `UniqueId`s -- for `initiate` (the new
-    * instance's id) and for `self.id` -- and those carry a fully-qualified `pathOf(p)` that was
-    * never a written reference and therefore has no refMap entry at all. Looking only in the
-    * refMap made every `terminate` whose target came from `initiate` or `self` resolve to `None`
-    * and skip its checks in silence, which is exactly the "no diagnostic at all" outcome this
-    * whole feature exists to remove.
+    * refMap records what [[ResolutionPass]] actually resolved, so it holds paths that were WRITTEN.
+    * But `valueTypeExpr` also SYNTHESIZES `UniqueId`s -- for `initiate` (the new instance's id) and
+    * for `self.id` -- and those carry a fully-qualified `pathOf(p)` that was never a written
+    * reference and therefore has no refMap entry at all. Looking only in the refMap made every
+    * `terminate` whose target came from `initiate` or `self` resolve to `None` and skip its checks
+    * in silence, which is exactly the "no diagnostic at all" outcome this whole feature exists to
+    * remove.
     *
     * So: refMap under the alias's owner (most precise -- disambiguates two same-named entities),
     * then refMap under the asking scope, then the symbol table by fully-qualified name.
@@ -6263,12 +6279,12 @@ case class ValidationPass(
       .orElse(symbols.lookup[Processor[?]](uid.entityPath.value.reverse).headOption)
 
   /** The one-line alias resolution step shared by `fieldsWithOwner`, `aggregateFieldsOf`,
-    * `typeExprCategory` and `typeExprMessageKind`: given an [[AliasedTypeExpression]] (`command Ship
-    * is Shipment`'s `Shipment` reference), the [[Type]] it names. Extracted per the task-1 review
-    * (round 1), which flagged `typeExprMessageKind` as a FOURTH near-identical copy of this exact
-    * expression — each of the four otherwise differs (return shape, terminal case), so this is the
-    * one line actually worth sharing rather than the whole alias-following recursion, which each
-    * function still writes for itself around its own terminal cases.
+    * `typeExprCategory` and `typeExprMessageKind`: given an [[AliasedTypeExpression]] (`command
+    * Ship is Shipment`'s `Shipment` reference), the [[Type]] it names. Extracted per the task-1
+    * review (round 1), which flagged `typeExprMessageKind` as a FOURTH near-identical copy of this
+    * exact expression — each of the four otherwise differs (return shape, terminal case), so this
+    * is the one line actually worth sharing rather than the whole alias-following recursion, which
+    * each function still writes for itself around its own terminal cases.
     */
   private def resolveTypeAlias(ate: AliasedTypeExpression): Option[Type] =
     resolution.refMap.definitionOf[Type](ate.pathId)
@@ -6292,19 +6308,19 @@ case class ValidationPass(
         case _ => Seq.empty[(Field, Type)]
 
   /** The cycle guard shared by [[fieldsWithOwner]] and [[isAddressTypeExpression]], and the reason
-    * both carry a `seen` list: `type A is B` / `type B is A` otherwise recurses forever. This was
-    * a real crash in rc.14 (`java.lang.StackOverflowError ... at
-    * ValidationPass.fieldsWithOwner`, reproduced against the released binary), which surfaces to
-    * the author as `[severe] Exception Thrown` with no line number -- strictly worse than any
-    * wrong message, since it takes the whole pass chain down with it.
+    * both carry a `seen` list: `type A is B` / `type B is A` otherwise recurses forever. This was a
+    * real crash in rc.14 (`java.lang.StackOverflowError ... at ValidationPass.fieldsWithOwner`,
+    * reproduced against the released binary), which surfaces to the author as
+    * `[severe] Exception Thrown` with no line number -- strictly worse than any wrong message,
+    * since it takes the whole pass chain down with it.
     *
-    * Reference identity (`eq`), NOT `contains`: [[Definition]] overrides `equals` structurally,
-    * so a `Set`/`contains` guard would treat two DISTINCT but identical alias declarations as the
-    * same node and silently truncate a legitimate chain. Alias chains are a handful of links, so
-    * the linear scan is free.
+    * Reference identity (`eq`), NOT `contains`: [[Definition]] overrides `equals` structurally, so
+    * a `Set`/`contains` guard would treat two DISTINCT but identical alias declarations as the same
+    * node and silently truncate a legitimate chain. Alias chains are a handful of links, so the
+    * linear scan is free.
     *
-    * A cycle is a modelling error in its own right and something may eventually want to REPORT
-    * it; terminating is a separate obligation from diagnosing, and this only does the former.
+    * A cycle is a modelling error in its own right and something may eventually want to REPORT it;
+    * terminating is a separate obligation from diagnosing, and this only does the former.
     */
   private def isAddressFieldFor(f: Field, owner: Type, p: Processor[?]): Boolean =
     isAddressTypeExpression(f.typeEx, owner, p, Nil)
@@ -6315,17 +6331,17 @@ case class ValidationPass(
     * the refMap using `owner` as the key's parent, which is the SAME parent [[ResolutionPass]]
     * recorded it under (see [[fieldsWithOwner]]).
     *
-    * The alias arm is riddl-models' rc.14 report: a field typed by the named alias `type OrderId
-    * is Id(entity Order)` was not recognised, because this matched `UniqueId` alone and fell to
+    * The alias arm is riddl-models' rc.14 report: a field typed by the named alias `type OrderId is
+    * Id(entity Order)` was not recognised, because this matched `UniqueId` alone and fell to
     * `false` for everything else. That alias is the DOCUMENTED house style, so the check caught
-    * only the rare inline spelling and misfired on the common one -- 72 of 86 distinct findings
-    * in reactive-bbq were false, and it aborted riddl-models' `checkAll`. [[fieldsWithOwner]]
-    * already followed aliases for the MESSAGE type; this is the same step for the FIELD's type,
-    * which is why the two now share a shape and a guard.
+    * only the rare inline spelling and misfired on the common one -- 72 of 86 distinct findings in
+    * reactive-bbq were false, and it aborted riddl-models' `checkAll`. [[fieldsWithOwner]] already
+    * followed aliases for the MESSAGE type; this is the same step for the FIELD's type, which is
+    * why the two now share a shape and a guard.
     *
-    * `owner` must become the resolved alias `Type` on the way down: a `Type`'s own type
-    * expression is resolved with that `Type` as `parents.head`, so looking `entityPath` up under
-    * the ORIGINAL owner would miss (see [[fieldsWithOwner]]'s note on the same point).
+    * `owner` must become the resolved alias `Type` on the way down: a `Type`'s own type expression
+    * is resolved with that `Type` as `parents.head`, so looking `entityPath` up under the ORIGINAL
+    * owner would miss (see [[fieldsWithOwner]]'s note on the same point).
     */
   private def isAddressTypeExpression(
     te: TypeExpression,
@@ -6361,28 +6377,27 @@ case class ValidationPass(
     * an ALIAS-declared message (`command Ship is Shipment`), whose `contents` is always empty
     * regardless of how many fields `Shipment` has. Gating on `mt.isEmpty` therefore treated every
     * alias-declared message as a `???` stub and silently skipped this whole check for it.
-    * `aggregateFieldsOf` already follows the alias chain (as `checkOnOtherBinding` and friends
-    * rely on elsewhere), so gating on ITS result lets aliases through while still catching the
-    * real stub shape: a `command Foo is { ??? }` body parses to the SAME empty-aggregate AST as an
-    * explicit `{ }` (both hit `TypeParser`'s `undefined(Seq.empty[AggregateContents])`
-    * alternative), so "zero fields after resolving" is exactly the stub condition the standing
-    * `???` ruling asks us to exempt -- its absent fields must not be read as "no Id(target)
-    * field".
+    * `aggregateFieldsOf` already follows the alias chain (as `checkOnOtherBinding` and friends rely
+    * on elsewhere), so gating on ITS result lets aliases through while still catching the real stub
+    * shape: a `command Foo is { ??? }` body parses to the SAME empty-aggregate AST as an explicit
+    * `{ }` (both hit `TypeParser`'s `undefined(Seq.empty[AggregateContents])` alternative), so
+    * "zero fields after resolving" is exactly the stub condition the standing `???` ruling asks us
+    * to exempt -- its absent fields must not be read as "no Id(target) field".
     *
     * `lets` added for the message-value-source widening (task-1 review, round 1): the operand's
     * TYPE now comes from [[widenedOperandType]], not the narrow [[operandType]], so a `tell`
     * addressing a state field/`let`-local/function-result/`ask`-result-sourced message is checked
     * for its `by`/ambiguity/missing-address obligations exactly as a keyword-led or bound one is --
-    * before this fix, a widened operand made this whole function silently see no message at all,
-    * so its Errors never fired. Threading `lets` costs nothing new here: `checkStatementScopes`'s
+    * before this fix, a widened operand made this whole function silently see no message at all, so
+    * its Errors never fired. Threading `lets` costs nothing new here: `checkStatementScopes`'s
     * `TellStatement` case already has it, at the one call site below.
     */
   /** A4 completion: the cross-context `tell` isolation seam (Reid, 2026-08-13).
     *
     * A `tell` into a DIFFERENT Context is an Error unless the message type is declared in a Domain
     * ancestral to BOTH. Across domains an adaptor is always required, so the exemption cannot
-    * apply. A4 already rejects naming a foreign context's message TYPES outside adaptor scope;
-    * this extends the same seam to foreign processor TARGETS, which A4 left open.
+    * apply. A4 already rejects naming a foreign context's message TYPES outside adaptor scope; this
+    * extends the same seam to foreign processor TARGETS, which A4 left open.
     *
     * **`send` is deliberately not covered.** `SendStatement.portlet` is a `PortletRef`, so `send`
     * names an Inlet or Outlet and structurally cannot name a foreign processor. A message crossing
@@ -6409,50 +6424,53 @@ case class ValidationPass(
     // adaptor sits inside a context and would otherwise be judged by it.
     val insideAdaptor = parents.exists(_.isInstanceOf[Adaptor])
     if !insideAdaptor then
-      (tellingCtx, resolution.refMap.definitionOf[Processor[?]](ts.processorRef.pathId, parents.head))
-        .match
-          case (Some(fromCtx), Some(target)) =>
-            val toCtx: Option[Context] = target match
-              case c: Context => Some(c)
-              case other      => symbols.parentsOf(other).collectFirst { case c: Context => c }
-            toCtx.foreach { targetCtx =>
-              if !(targetCtx eq fromCtx) then
-                val fromDomains = symbols.parentsOf(fromCtx).collect { case d: Domain => d }
-                val toDomains = symbols.parentsOf(targetCtx).collect { case d: Domain => d }
-                // Reference identity: `Definition.equals` is structural, so two same-named domains
-                // in different trees would otherwise fuse and manufacture a shared ancestor.
-                val shared = fromDomains.filter(fd => toDomains.exists(_ eq fd))
-                val msgType: Option[Type] = ts.msg match
-                  case mr: MessageRef => resolution.refMap.definitionOf[Type](mr.pathId, parents.head)
-                  case c: Constructor => resolution.refMap.definitionOf[Type](c.ref.pathId, parents.head)
-                  case vr: ValueRef   => valueRefType(vr, parents, lets, elements)
-                // The IMMEDIATE parent, not the ancestor chain. `parentsOf` returns every ancestor,
-                // so a type declared inside the TARGET's context still lists the shared domain
-                // among its ancestors -- as does everything else in the tree -- and the exemption
-                // would swallow the whole rule. The ruling says the type must be DECLARED IN a
-                // domain ancestral to both, which is a statement about where it is written.
-                val exempt = msgType.exists { mt =>
-                  symbols.parentOf(mt).exists(p => shared.exists(_ eq p))
-                }
-                if shared.isEmpty then
-                  messages.addError(
-                    ts.loc,
-                    s"'tell' crosses a DOMAIN boundary from ${fromCtx.identify} to " +
-                      s"${targetCtx.identify}, which the context isolation seam forbids: an " +
-                      "adaptor is always required across domains",
-                    suggestion = s"Route this through an adaptor in ${fromCtx.id.value}."
-                  )
-                else if !exempt then
-                  messages.addError(
-                    ts.loc,
-                    s"'tell' crosses the context isolation seam from ${fromCtx.identify} to " +
-                      s"${targetCtx.identify}: ${ts.msg.format} is not declared in a domain " +
-                      "ancestral to both",
-                    suggestion = s"Declare the message type in ${shared.head.identify}, or route " +
-                      "this through an adaptor."
-                  )
-            }
-          case _ => () // unresolved target -- ResolutionPass already reported it
+      (
+        tellingCtx,
+        resolution.refMap.definitionOf[Processor[?]](ts.processorRef.pathId, parents.head)
+      ).match
+        case (Some(fromCtx), Some(target)) =>
+          val toCtx: Option[Context] = target match
+            case c: Context => Some(c)
+            case other      => symbols.parentsOf(other).collectFirst { case c: Context => c }
+          toCtx.foreach { targetCtx =>
+            if !(targetCtx eq fromCtx) then
+              val fromDomains = symbols.parentsOf(fromCtx).collect { case d: Domain => d }
+              val toDomains = symbols.parentsOf(targetCtx).collect { case d: Domain => d }
+              // Reference identity: `Definition.equals` is structural, so two same-named domains
+              // in different trees would otherwise fuse and manufacture a shared ancestor.
+              val shared = fromDomains.filter(fd => toDomains.exists(_ eq fd))
+              val msgType: Option[Type] = ts.msg match
+                case mr: MessageRef => resolution.refMap.definitionOf[Type](mr.pathId, parents.head)
+                case c: Constructor =>
+                  resolution.refMap.definitionOf[Type](c.ref.pathId, parents.head)
+                case vr: ValueRef => valueRefType(vr, parents, lets, elements)
+              // The IMMEDIATE parent, not the ancestor chain. `parentsOf` returns every ancestor,
+              // so a type declared inside the TARGET's context still lists the shared domain
+              // among its ancestors -- as does everything else in the tree -- and the exemption
+              // would swallow the whole rule. The ruling says the type must be DECLARED IN a
+              // domain ancestral to both, which is a statement about where it is written.
+              val exempt = msgType.exists { mt =>
+                symbols.parentOf(mt).exists(p => shared.exists(_ eq p))
+              }
+              if shared.isEmpty then
+                messages.addError(
+                  ts.loc,
+                  s"'tell' crosses a DOMAIN boundary from ${fromCtx.identify} to " +
+                    s"${targetCtx.identify}, which the context isolation seam forbids: an " +
+                    "adaptor is always required across domains",
+                  suggestion = s"Route this through an adaptor in ${fromCtx.id.value}."
+                )
+              else if !exempt then
+                messages.addError(
+                  ts.loc,
+                  s"'tell' crosses the context isolation seam from ${fromCtx.identify} to " +
+                    s"${targetCtx.identify}: ${ts.msg.format} is not declared in a domain " +
+                    "ancestral to both",
+                  suggestion = s"Declare the message type in ${shared.head.identify}, or route " +
+                    "this through an adaptor."
+                )
+          }
+        case _ => () // unresolved target -- ResolutionPass already reported it
   end checkTellIsolation
 
   private def checkTellAddressing(
@@ -6514,16 +6532,15 @@ case class ValidationPass(
     * name-to-type bindings that are NOT statements (`foreach` elements, and since the final review
     * of the instance-identity branch, `on init`/`on term` parameters).
     *
-    * Six validators took `lets` alone and defaulted `elements` to empty:
-    * `validateComparand`, `checkWhenValueRef`, `validateMatch`, `validatePut`, `validateReturn`
-    * and `validateCall`. So `when seed > 5` inside `on init(seed: Integer)` was a false Error, and
-    * so — since A25 shipped — was `line.qty > 5` inside a `foreach`: the loop element resolved in
-    * the body's statements but not in any comparison, `when`, `match`, `put`, `return` or call
-    * argument within it.
+    * Six validators took `lets` alone and defaulted `elements` to empty: `validateComparand`,
+    * `checkWhenValueRef`, `validateMatch`, `validatePut`, `validateReturn` and `validateCall`. So
+    * `when seed > 5` inside `on init(seed: Integer)` was a false Error, and so — since A25 shipped
+    * — was `line.qty > 5` inside a `foreach`: the loop element resolved in the body's statements
+    * but not in any comparison, `when`, `match`, `put`, `return` or call argument within it.
     *
     * **The `= Map.empty` defaults were deleted from every one of these signatures**, which is what
-    * makes the invariant hold: a caller that forgets the scope is now a compile error rather than
-    * a silent narrowing. The genuinely scope-less callers (an `invariant` condition, which has no
+    * makes the invariant hold: a caller that forgets the scope is now a compile error rather than a
+    * silent narrowing. The genuinely scope-less callers (an `invariant` condition, which has no
     * enclosing statement list) pass `Map.empty` EXPLICITLY, so the absence is a written decision.
     * Do not reintroduce a default here.
     */
@@ -6567,15 +6584,15 @@ case class ValidationPass(
       // `self`'s type is a SYNTHESIZED Aggregation, not a named Type -- there is no declaration to
       // return here. `valueTypeExpr` computes the real TypeExpression (see its `SelfValue` arm);
       // this arm exists only so the match stays exhaustive.
-      case _: SelfValue         => None
+      case _: SelfValue => None
       // `initiate`'s type is a SYNTHESIZED UniqueId, not a named Type -- same reasoning as `self`,
       // immediately above. `valueTypeExpr` computes it (see its `Initiate` arm).
-      case _: Initiate          => None
+      case _: Initiate => None
       // A numeric literal denotes no NAMED Type -- it is a raw literal, not a reference to a
       // declaration. Best-effort numeric type-compatibility checking (matching it against a
       // field's declared numeric type) is Task 5's job and reads `.isInteger`/`.asBigDecimal`
       // directly rather than through this named-Type lookup.
-      case _: NumericLiteral    => None
+      case _: NumericLiteral => None
 
   /** A28: the broad category of a [[Value]] for best-effort boolean/comparison checks: `"boolean"`,
     * `"numeric"`, or `"string"`; `None` when it cannot be determined (skip the check). A
@@ -6613,13 +6630,12 @@ case class ValidationPass(
       AggregateUseCase.ResultCase
     )
 
-  /** A56 (widened): the [[AggregateUseCase]] a resolved [[TypeExpression]] denotes, following
-    * alias chains exactly as [[typeExprCategory]] does immediately above — answering "which
-    * message kind" instead of "boolean/numeric/string". Used by [[checkMessageOperandSource]] to
-    * decide whether a bare `ValueRef` operand names a legal `send`/`tell` message value: `Some`
-    * only for a command/event/query/result aggregate (see [[messageUseCases]]), `None` for a
-    * Record (a `morph` shape, not a message), a Type/Graph/Table aggregate, or any non-aggregate
-    * type.
+  /** A56 (widened): the [[AggregateUseCase]] a resolved [[TypeExpression]] denotes, following alias
+    * chains exactly as [[typeExprCategory]] does immediately above — answering "which message kind"
+    * instead of "boolean/numeric/string". Used by [[checkMessageOperandSource]] to decide whether a
+    * bare `ValueRef` operand names a legal `send`/`tell` message value: `Some` only for a
+    * command/event/query/result aggregate (see [[messageUseCases]]), `None` for a Record (a `morph`
+    * shape, not a message), a Type/Graph/Table aggregate, or any non-aggregate type.
     */
   private def typeExprMessageKind(te: TypeExpression): Option[AggregateUseCase] =
     te match
@@ -6644,9 +6660,9 @@ case class ValidationPass(
     * B` / `type B is A` otherwise recurses until the stack dies, which surfaces to the author as
     * `[severe] Exception Thrown` with no line number and takes the whole pass chain down. It was
     * missing here — the defect was diagnosed once for `fieldsWithOwner` (rc.14) and its sibling
-    * missed, the same "fix the instance, not the shape" miss the flaky-benchmark round recorded.
-    * It was latent only because no caller reached a cyclic alias; Task 4's bare-operand warning
-    * does, and `passes`'s own `CheckMessagesTest` corpus reproduced it on the first full run.
+    * missed, the same "fix the instance, not the shape" miss the flaky-benchmark round recorded. It
+    * was latent only because no caller reached a cyclic alias; Task 4's bare-operand warning does,
+    * and `passes`'s own `CheckMessagesTest` corpus reproduced it on the first full run.
     *
     * Reference identity (`eq`), NOT `contains`: [[Definition]] overrides `equals` structurally, so
     * a `Set` would fuse two distinct but identical alias declarations and truncate a legitimate
@@ -6694,9 +6710,9 @@ case class ValidationPass(
     * are deliberately never entered into the symbol table (see `PredefTypes.typeExpressionFor`'s
     * doc, and `PredefinedModule`'s note on why the standard module stays out of the shared maps).
     * So a `let` ascribed with a predefined keyword yielded `None` from every "what type is this
-    * value" query, and the type the author had WRITTEN OUT was invisible — while the alias
-    * spelling (`type Nat is Natural`) worked. That is a gap in what we LOOKED AT, not in what is
-    * knowable, which is why it deserves an answer rather than the silence reserved for genuinely
+    * value" query, and the type the author had WRITTEN OUT was invisible — while the alias spelling
+    * (`type Nat is Natural`) worked. That is a gap in what we LOOKED AT, not in what is knowable,
+    * which is why it deserves an answer rather than the silence reserved for genuinely
     * undeterminable types.
     *
     * The `sizeIs == 1` guard and the keyword set are shared with `ResolutionPass`, which skips
@@ -6732,8 +6748,7 @@ case class ValidationPass(
     // A25: a `foreach` element is typed by the collection it iterates, and the remaining path
     // components walk that type exactly as they walk a `let`'s. Checked BEFORE lets so an element
     // shadows an outer local of the same name, matching the lexical rule `let` already follows.
-    else if elements.contains(names.head) then
-      typeExprOfPath(elements(names.head), names.tail)
+    else if elements.contains(names.head) then typeExprOfPath(elements(names.head), names.tail)
     else
       val idx = letIndexOf(names.head, lets)
       if idx >= 0 then
@@ -6801,7 +6816,7 @@ case class ValidationPass(
       // is often written directly (`to Integer`) and so has no named Type to return.
       case lv: LookupValue =>
         valueTypeExpr(lv.collection, parents, lets, elements).flatMap(lookupResultType).map(_._1)
-      case _               => valueType(v, parents, lets, elements).map(_.typEx)
+      case _ => valueType(v, parents, lets, elements).map(_.typEx)
 
   /** A54/A55: the named [[Type]] a [[ValueRef]] resolves to, if determinable. A bare on-clause
     * binding denotes the whole message, so it yields the message's Type directly; a field yields
@@ -6866,15 +6881,15 @@ case class ValidationPass(
   ): Unit =
     v match
       case _: LiteralString => ()
-      case lv: LookupValue  =>
+      case lv: LookupValue =>
         validateValue(lv.collection, parents, lets, elements)
         lv.indices.foreach(i => validateValue(i, parents, lets, elements))
         validateLookup(lv, parents, lets, elements)
-      case _: PromptValue   => () // literal AI prompt, nothing to resolve
-      case c: Constructor   => validateConstructor(c, parents, lets, elements)
-      case call: Call       => validateCall(call, parents, lets, elements)
-      case ask: Ask         => validateAsk(ask, parents)
-      case init: Initiate   => checkInitiate(init, parents, lets, elements)
+      case _: PromptValue => () // literal AI prompt, nothing to resolve
+      case c: Constructor => validateConstructor(c, parents, lets, elements)
+      case call: Call     => validateCall(call, parents, lets, elements)
+      case ask: Ask       => validateAsk(ask, parents)
+      case init: Initiate => checkInitiate(init, parents, lets, elements)
       case vr: ValueRef =>
         if !valueRefResolves(vr, parents, lets, elements) then
           messages.addError(
@@ -7029,8 +7044,8 @@ case class ValidationPass(
     c match
       case cr: ConstantRef =>
         resolution.refMap.definitionOf[Constant](cr.pathId).flatMap(k => typeExprCategory(k.typeEx))
-      case gv: GetValue    => valueCategory(gv, parents, lets, elements)
-      case _: LookupValue  => None
+      case gv: GetValue   => valueCategory(gv, parents, lets, elements)
+      case _: LookupValue => None
       case vr: ValueRef =>
         valueCategory(vr, parents, lets, elements)
           .orElse(whenValueRefCategory(vr, parents, lets, elements))
@@ -7334,9 +7349,9 @@ case class ValidationPass(
     * named Type a `let`/`set` position declares (there is exactly one Type in play, found via its
     * own [[TypeRef]]), so re-wrapping its OWN name as a single-segment path lets
     * [[checkPromptAscription]] treat "the type this position resolved to" the same way it treats
-    * "the type this position was WRITTEN as". A `constant`'s declared type is NOT run through
-    * this: `c.typeEx` may be an unresolvable [[PredefinedType]] like `Real`, so
-    * `validateConstant` passes it directly.
+    * "the type this position was WRITTEN as". A `constant`'s declared type is NOT run through this:
+    * `c.typeEx` may be an unresolvable [[PredefinedType]] like `Real`, so `validateConstant` passes
+    * it directly.
     */
   private def selfNamedTypeExpression(t: Type): TypeExpression =
     AliasedTypeExpression(At.empty, "type", PathIdentifier(At.empty, Seq(t.id.value)))
@@ -7363,12 +7378,12 @@ case class ValidationPass(
     * resolved Type's own `id.value` — it has no knowledge of how the position's `TypeRef` was
     * qualified), so comparing it against an ascription's FULL path made every qualified restatement
     * a false contradiction: `let x: Common.OrderId = prompt("d") as Common.OrderId` compared
-    * `"OrderId"` to `"Common.OrderId"`. Using the last segment on both sides makes the two consistent.
-    * This does trade away one thing: two DIFFERENT types that happen to share a simple name in
-    * different scopes (`Common.OrderId` vs `Other.OrderId`) now compare equal here, exactly as
-    * `checkOnOtherBinding`'s own syntactic, non-resolving comparison already accepts for envelope
-    * names — a known, documented limitation of staying syntactic rather than resolving through the
-    * symbol table, not a new one this fix introduces.
+    * `"OrderId"` to `"Common.OrderId"`. Using the last segment on both sides makes the two
+    * consistent. This does trade away one thing: two DIFFERENT types that happen to share a simple
+    * name in different scopes (`Common.OrderId` vs `Other.OrderId`) now compare equal here, exactly
+    * as `checkOnOtherBinding`'s own syntactic, non-resolving comparison already accepts for
+    * envelope names — a known, documented limitation of staying syntactic rather than resolving
+    * through the symbol table, not a new one this fix introduces.
     */
   private def typeAscriptionName(te: TypeExpression): String = te match
     case ate: AliasedTypeExpression    => ate.pathId.value.lastOption.getOrElse("")
@@ -7381,25 +7396,24 @@ case class ValidationPass(
   /** A20: a typed hole's ascription (`prompt("…") as T`) RESTATES the type its position already
     * supplies — it never overrides it, mirroring A57's `on other as x: <envelope>` rule exactly
     * (see [[checkOnOtherBinding]]). Silent when the position carries no expected type: nothing to
-    * restate against, and nothing to warn about here either — an untyped position that ALSO has
-    * no ascription is the seam-CompletenessWarning's job (wired only at the one conservative site
-    * the ruling names: an unascribed `let`), not this method's. Silent when the ascription
-    * agrees. An Error when it names a DIFFERENT type: a contradiction, not an omission.
+    * restate against, and nothing to warn about here either — an untyped position that ALSO has no
+    * ascription is the seam-CompletenessWarning's job (wired only at the one conservative site the
+    * ruling names: an unascribed `let`), not this method's. Silent when the ascription agrees. An
+    * Error when it names a DIFFERENT type: a contradiction, not an omission.
     *
-    * The comparison is purely SYNTACTIC — by [[typeAscriptionName]], not by resolving through
-    * alias chains — exactly as [[checkOnOtherBinding]] compares `t.pathId.format` against the
-    * option's stored name rather than resolving either side. `type Score is Real` is a DIFFERENT
-    * declared type than bare `Real`, even though one is defined in terms of the other, so
-    * `constant G: Real = prompt(…) as Score` is a contradiction despite `Score` resolving to
-    * `Real` underneath — the ruling's table pins exactly this case as an Error. (`Currency` is NOT
-    * a usable example here: it is a predefined type requiring a `country` argument — bare `as
+    * The comparison is purely SYNTACTIC — by [[typeAscriptionName]], not by resolving through alias
+    * chains — exactly as [[checkOnOtherBinding]] compares `t.pathId.format` against the option's
+    * stored name rather than resolving either side. `type Score is Real` is a DIFFERENT declared
+    * type than bare `Real`, even though one is defined in terms of the other, so
+    * `constant G: Real = prompt(…) as Score` is a contradiction despite `Score` resolving to `Real`
+    * underneath — the ruling's table pins exactly this case as an Error. (`Currency` is NOT a
+    * usable example here: it is a predefined type requiring a `country` argument — bare `as
     * Currency` does not parse, only `as Currency(USD)` does — and it does not resolve to `Real` or
     * to anything else; it is its own distinct [[PredefinedType]].)
     */
   private def checkPromptAscription(pv: PromptValue, expected: Option[TypeExpression]): Unit =
     (pv.typeEx, expected) match
-      case (Some(ascribed), Some(exp))
-          if typeAscriptionName(ascribed) != typeAscriptionName(exp) =>
+      case (Some(ascribed), Some(exp)) if typeAscriptionName(ascribed) != typeAscriptionName(exp) =>
         messages.addError(
           ascribed.loc,
           s"'prompt(...) as ${typeAscriptionName(ascribed)}' contradicts the expected type " +
@@ -7691,18 +7705,18 @@ case class ValidationPass(
   /** Task 3 / final review: the LEXICAL name scope an `on init(...)`/`on term(...)` parameter list
     * introduces for the clause's body.
     *
-    * Without this the feature was declare-only: the parameters parsed, resolved and prettified,
-    * but READING one from the body was an Error ("Value reference 'seed' is not a 'let'-local, a
-    * field of the handled message or entity state, or a function input in scope"). A parameter
-    * resolved only by COINCIDENCE, when its name happened to collide with a state field — which is
-    * exactly what the original `language/input/lifecycle-parameters.riddl` did, and why the gap
-    * survived a task-scoped review.
+    * Without this the feature was declare-only: the parameters parsed, resolved and prettified, but
+    * READING one from the body was an Error ("Value reference 'seed' is not a 'let'-local, a field
+    * of the handled message or entity state, or a function input in scope"). A parameter resolved
+    * only by COINCIDENCE, when its name happened to collide with a state field — which is exactly
+    * what the original `language/input/lifecycle-parameters.riddl` did, and why the gap survived a
+    * task-scoped review.
     *
     * Parameters are threaded HERE rather than taught to `ResolutionPass` for the same reason a
     * `let` is: they are lexical and statement-scoped, and a [[MethodArgument]] is not a
     * [[Definition]], so the symbol table cannot hold one. They ride the existing
-    * name-to-[[TypeExpression]] scope map (`inScopeElements`), which is precisely the shape
-    * needed — [[typeExprOfPath]] then walks `buyer.tier` through the parameter's type with no new
+    * name-to-[[TypeExpression]] scope map (`inScopeElements`), which is precisely the shape needed
+    * — [[typeExprOfPath]] then walks `buyer.tier` through the parameter's type with no new
     * machinery. See [[checkStatementScopes]] for how an inner `let` shadows a parameter.
     */
   private def clauseParameterScope(oc: OnClause): Map[String, TypeExpression] =
@@ -7743,207 +7757,209 @@ case class ValidationPass(
       // is the placement that reaches a banned statement at any nesting depth.
       checkInstanceEffectScope(stmt, parents)
       stmt match {
-      case ls: LetStatement =>
-        // A54: validate the bound expression with the scope BEFORE this let (a let can't see itself),
-        // then check its type against a declared `let x: T = …`.
-        validateValue(ls.expression, parents, lets, elements)
-        checkLocalName(ls.identifier, "'let' local", parents) // A55
-        checkUnusedInitiateId(ls, stmts) // Task 5
-        ls.typeRef.foreach { tr =>
-          val expected = resolution.refMap.definitionOf[Type](tr.pathId)
-          expected match
-            case Some(_) =>
-              checkValueType(
-                expected,
-                ls.expression,
-                parents,
-                lets,
-                elements,
-                ls.loc,
-                s"'let ${ls.identifier.value}'"
-              )
-            case None =>
-              // Defect 2 (2026-08-15): a predefined type keyword (`Natural`, `Integer`, …) used as
-              // the ascription resolves to no `Type` Definition -- predefined types are deliberately
-              // never entered into the symbol table (see `PredefTypes.typeExpressionFor`'s doc) --
-              // so `checkValueType`'s Type-identity comparison has nothing to compare against and
-              // would otherwise silently skip the ascription entirely. Run the two checks that
-              // operate on a bare [[TypeExpression]] instead of a resolved [[Type]] -- the same
-              // ones `checkValueType`'s first match arm runs when a Type WAS found.
-              if tr.pathId.value.sizeIs == 1 then
-                PredefTypes.typeExpressionFor(tr.pathId.value.head, tr.loc).foreach { expectedTe =>
-                  ls.expression match
-                    case nl: NumericLiteral => checkNumericLiteralConformance(nl, expectedTe)
-                    case pv: PromptValue    => checkPromptAscription(pv, Some(expectedTe))
-                    case _                  => ()
-                }
-        }
-        // A20: the ONE seam-CompletenessWarning site, per the ruling's conservative table. An
-        // unascribed `let x = prompt(…)` has NOTHING that supplies a type -- not a `let x: T`
-        // annotation, not a `prompt(…) as T` ascription -- so the hole is genuinely untyped. Every
-        // other position (a `let` WITH either half present, `set`, a constructor argument, `when`,
-        // …) stays silent: "we have not wired this position" is not the same fact as "the
-        // language cannot type it", and this is the single position the corpus measurement (0 of
-        // 288 uses) showed was actually unascribed in the wild.
-        if ls.typeRef.isEmpty then
-          ls.expression match
-            case pv: PromptValue if pv.typeEx.isEmpty =>
-              messages.addCompleteness(
-                pv.loc,
-                s"'let ${ls.identifier.value}' binds an untyped 'prompt(…)' with no type anywhere " +
-                  "to check it against",
-                suggestion = "Add a type: 'let " + ls.identifier.value +
-                  ": T = prompt(…)', or ascribe the hole itself: 'prompt(…) as T'."
-              )
-            case _ => ()
-        lets = lets :+ ls
-        elements = elements - ls.identifier.value
-      case ss: SetStatement =>
-        // A54: validate the value expression, then check it against the target field/state type.
-        validateValue(ss.value, parents, lets, elements)
-        val expected: Option[Type] = ss.field match
-          case fr: FieldRef =>
-            resolution.refMap.definitionOf[Field](fr.pathId).flatMap { f =>
-              f.typeEx match
-                case ate: AliasedTypeExpression => resolution.refMap.definitionOf[Type](ate.pathId)
-                case _                          => None
-            }
-          case sr: StateRef =>
-            resolution.refMap
-              .definitionOf[State](sr.pathId)
-              .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
-        checkValueType(
-          expected,
-          ss.value,
-          parents,
-          lets,
-          elements,
-          ss.loc,
-          s"'set ${ss.field.format}'"
-        )
-      case s: SendStatement =>
-        s.msg match
-          case c: Constructor => validateValue(c, parents, lets, elements)
-          // A56/message-value-source: a bare operand needs the threaded `let`/element scope
-          // `checkMessageOperandSource` resolves it against — unavailable in `validateStatement`.
-          case vr: ValueRef => checkMessageOperandSource(vr, "send", parents, lets, elements)
-          case mr: MessageRef => checkBareMessageOperand(mr, "send") // Task 4
-        recordDeliverableType(s, s.msg, parents, lets, elements)
-      case s: TellStatement =>
-        s.msg match
-          case c: Constructor => validateValue(c, parents, lets, elements)
-          case vr: ValueRef => checkMessageOperandSource(vr, "tell", parents, lets, elements)
-          case mr: MessageRef => checkBareMessageOperand(mr, "tell") // Task 4
-        recordDeliverableType(s, s.msg, parents, lets, elements)
-        // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
-        // point invoked at every container root AND recursively for when/match/foreach bodies) --
-        // mirrors checkTerminate's reachability, immediately below.
-        checkTellAddressing(s, parents, lets, elements)
-        checkTellIsolation(s, parents, lets, elements)
-      // Task 2: the `case _ => ()` these three carried is now ENUMERATED. It was correct while the
-      // operand could only be a MessageRef; the moment a ValueRef became legal it would have
-      // silently accepted `yield garbage` -- the exact shape of fall-through this repo forbids.
-      case s: YieldStatement =>
-        s.msg match
-          case c: Constructor => validateValue(c, parents, lets, elements)
-          case vr: ValueRef   => checkMessageOperandSource(vr, "yield", parents, lets, elements)
-          case mr: MessageRef => checkBareMessageOperand(mr, "yield") // Task 4
-        recordDeliverableType(s, s.msg, parents, lets, elements) // [1.2]
-      // Mirrors YieldStatement, immediately above: `validateStatement`'s ReplyStatement case
-      // claims "a Constructor is validated in checkStatementScopes", which was untrue until this
-      // arm existed -- a `reply result Foo(x = self.id)` Constructor argument reached NOTHING,
-      // found auditing `self`'s coverage (a self reference there was silently unchecked).
-      case s: ReplyStatement =>
-        recordDeliverableType(s, s.msg, parents, lets, elements) // [1.2]
-        s.msg match
-          case c: Constructor => validateValue(c, parents, lets, elements)
-          case vr: ValueRef   => checkMessageOperandSource(vr, "reply", parents, lets, elements)
-          case mr: MessageRef => checkBareMessageOperand(mr, "reply") // Task 4
-      case s: MorphStatement =>
-        s.value match
-          case c: Constructor => validateValue(c, parents, lets, elements)
-          // NOT checkMessageOperandSource: a morph carries the RECORD that types the target state
-          // (A9b), so demanding a command/event/query/result here would reject every correct use.
-          case vr: ValueRef  => checkMorphOperandSource(vr, s, parents, lets, elements)
-          // Task 4: the record side of the same warning -- `morph … with record R` names R's TYPE.
-          case rr: RecordRef => checkBareMessageOperand(rr, "morph")
-      case fs: ForeachStatement =>
-        validateForeachCollection(fs, lets, elements, parents)
-        // Bind the loop's name(s) to their TYPES for the body's scope -- not merely the names.
-        // Without the types `line` resolves and `line.sku` does not, which is the whole point of
-        // iterating. An unresolvable collection still binds the names (to `Anything`), because the
-        // header's error is already reported and piling "unknown value reference" on top of it
-        // would blame the body for a defect above it.
-        val collType = foreachCollectionType(fs, lets, elements, parents)
-        checkStatementScopes(
-          fs.doStatements.toSeq.collect { case s: Statement => s },
-          lets,
-          parents,
-          elements ++ foreachBindings(fs, collType)
-        )
-      case ws: WhenStatement =>
-        // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
-        // the LiteralString/Identifier forms have no expression to check here. A17: a bare boolean
-        // ValueRef condition must resolve to a Boolean-typed value.
-        ws.condition match
-          case be: BooleanExpression => validateValue(be, parents, lets, elements)
-          case vr: ValueRef          => checkWhenValueRef(vr, parents, lets, elements) // A17
-          // A20: a `when` condition's position IMPLIES Boolean -- a constant expected type, not
-          // something threaded through call sites. This is the ruling's one MANDATORY wire.
-          // `checkPromptAscription` never WARNS on an absent ascription (only the `let`-no-
-          // ascription site does that, above), so an unascribed `when prompt(…)` -- 15 of them in
-          // the corpus -- stays silent with or without this arm; what this arm buys is
-          // CONTRADICTION detection: `when prompt(…) as Score` would otherwise fall to the
-          // catch-all below and silently accept an ascription that can never be a legal condition.
-          case pv: PromptValue       => checkPromptAscription(pv, Some(Bool(At.empty)))
-          case _                     => ()
-        checkStatementScopes(
-          ws.thenStatements.toSeq.collect { case s: Statement => s },
-          lets,
-          parents,
-          elements
-        )
-        checkStatementScopes(
-          ws.elseStatements.toSeq.collect { case s: Statement => s },
-          lets,
-          parents,
-          elements
-        )
-      case rs: RequireStatement =>
-        // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
-        // the LiteralString/InvariantRef forms are checked in validateStatement.
-        rs.condition match
-          case be: BooleanExpression => validateValue(be, parents, lets, elements)
-          case _                     => ()
-      case ms: MatchStatement =>
-        validateMatch(
-          ms,
-          parents,
-          lets,
-          elements
-        ) // A29: subject/pattern/guard resolution + type-compat + exhaustiveness
-        ms.cases.foreach { mc =>
+        case ls: LetStatement =>
+          // A54: validate the bound expression with the scope BEFORE this let (a let can't see itself),
+          // then check its type against a declared `let x: T = …`.
+          validateValue(ls.expression, parents, lets, elements)
+          checkLocalName(ls.identifier, "'let' local", parents) // A55
+          checkUnusedInitiateId(ls, stmts) // Task 5
+          ls.typeRef.foreach { tr =>
+            val expected = resolution.refMap.definitionOf[Type](tr.pathId)
+            expected match
+              case Some(_) =>
+                checkValueType(
+                  expected,
+                  ls.expression,
+                  parents,
+                  lets,
+                  elements,
+                  ls.loc,
+                  s"'let ${ls.identifier.value}'"
+                )
+              case None =>
+                // Defect 2 (2026-08-15): a predefined type keyword (`Natural`, `Integer`, …) used as
+                // the ascription resolves to no `Type` Definition -- predefined types are deliberately
+                // never entered into the symbol table (see `PredefTypes.typeExpressionFor`'s doc) --
+                // so `checkValueType`'s Type-identity comparison has nothing to compare against and
+                // would otherwise silently skip the ascription entirely. Run the two checks that
+                // operate on a bare [[TypeExpression]] instead of a resolved [[Type]] -- the same
+                // ones `checkValueType`'s first match arm runs when a Type WAS found.
+                if tr.pathId.value.sizeIs == 1 then
+                  PredefTypes.typeExpressionFor(tr.pathId.value.head, tr.loc).foreach {
+                    expectedTe =>
+                      ls.expression match
+                        case nl: NumericLiteral => checkNumericLiteralConformance(nl, expectedTe)
+                        case pv: PromptValue    => checkPromptAscription(pv, Some(expectedTe))
+                        case _                  => ()
+                  }
+          }
+          // A20: the ONE seam-CompletenessWarning site, per the ruling's conservative table. An
+          // unascribed `let x = prompt(…)` has NOTHING that supplies a type -- not a `let x: T`
+          // annotation, not a `prompt(…) as T` ascription -- so the hole is genuinely untyped. Every
+          // other position (a `let` WITH either half present, `set`, a constructor argument, `when`,
+          // …) stays silent: "we have not wired this position" is not the same fact as "the
+          // language cannot type it", and this is the single position the corpus measurement (0 of
+          // 288 uses) showed was actually unascribed in the wild.
+          if ls.typeRef.isEmpty then
+            ls.expression match
+              case pv: PromptValue if pv.typeEx.isEmpty =>
+                messages.addCompleteness(
+                  pv.loc,
+                  s"'let ${ls.identifier.value}' binds an untyped 'prompt(…)' with no type anywhere " +
+                    "to check it against",
+                  suggestion = "Add a type: 'let " + ls.identifier.value +
+                    ": T = prompt(…)', or ascribe the hole itself: 'prompt(…) as T'."
+                )
+              case _ => ()
+          lets = lets :+ ls
+          elements = elements - ls.identifier.value
+        case ss: SetStatement =>
+          // A54: validate the value expression, then check it against the target field/state type.
+          validateValue(ss.value, parents, lets, elements)
+          val expected: Option[Type] = ss.field match
+            case fr: FieldRef =>
+              resolution.refMap.definitionOf[Field](fr.pathId).flatMap { f =>
+                f.typeEx match
+                  case ate: AliasedTypeExpression =>
+                    resolution.refMap.definitionOf[Type](ate.pathId)
+                  case _ => None
+              }
+            case sr: StateRef =>
+              resolution.refMap
+                .definitionOf[State](sr.pathId)
+                .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
+          checkValueType(
+            expected,
+            ss.value,
+            parents,
+            lets,
+            elements,
+            ss.loc,
+            s"'set ${ss.field.format}'"
+          )
+        case s: SendStatement =>
+          s.msg match
+            case c: Constructor => validateValue(c, parents, lets, elements)
+            // A56/message-value-source: a bare operand needs the threaded `let`/element scope
+            // `checkMessageOperandSource` resolves it against — unavailable in `validateStatement`.
+            case vr: ValueRef   => checkMessageOperandSource(vr, "send", parents, lets, elements)
+            case mr: MessageRef => checkBareMessageOperand(mr, "send") // Task 4
+          recordDeliverableType(s, s.msg, parents, lets, elements)
+        case s: TellStatement =>
+          s.msg match
+            case c: Constructor => validateValue(c, parents, lets, elements)
+            case vr: ValueRef   => checkMessageOperandSource(vr, "tell", parents, lets, elements)
+            case mr: MessageRef => checkBareMessageOperand(mr, "tell") // Task 4
+          recordDeliverableType(s, s.msg, parents, lets, elements)
+          // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
+          // point invoked at every container root AND recursively for when/match/foreach bodies) --
+          // mirrors checkTerminate's reachability, immediately below.
+          checkTellAddressing(s, parents, lets, elements)
+          checkTellIsolation(s, parents, lets, elements)
+        // Task 2: the `case _ => ()` these three carried is now ENUMERATED. It was correct while the
+        // operand could only be a MessageRef; the moment a ValueRef became legal it would have
+        // silently accepted `yield garbage` -- the exact shape of fall-through this repo forbids.
+        case s: YieldStatement =>
+          s.msg match
+            case c: Constructor => validateValue(c, parents, lets, elements)
+            case vr: ValueRef   => checkMessageOperandSource(vr, "yield", parents, lets, elements)
+            case mr: MessageRef => checkBareMessageOperand(mr, "yield") // Task 4
+          recordDeliverableType(s, s.msg, parents, lets, elements) // [1.2]
+        // Mirrors YieldStatement, immediately above: `validateStatement`'s ReplyStatement case
+        // claims "a Constructor is validated in checkStatementScopes", which was untrue until this
+        // arm existed -- a `reply result Foo(x = self.id)` Constructor argument reached NOTHING,
+        // found auditing `self`'s coverage (a self reference there was silently unchecked).
+        case s: ReplyStatement =>
+          recordDeliverableType(s, s.msg, parents, lets, elements) // [1.2]
+          s.msg match
+            case c: Constructor => validateValue(c, parents, lets, elements)
+            case vr: ValueRef   => checkMessageOperandSource(vr, "reply", parents, lets, elements)
+            case mr: MessageRef => checkBareMessageOperand(mr, "reply") // Task 4
+        case s: MorphStatement =>
+          s.value match
+            case c: Constructor => validateValue(c, parents, lets, elements)
+            // NOT checkMessageOperandSource: a morph carries the RECORD that types the target state
+            // (A9b), so demanding a command/event/query/result here would reject every correct use.
+            case vr: ValueRef => checkMorphOperandSource(vr, s, parents, lets, elements)
+            // Task 4: the record side of the same warning -- `morph … with record R` names R's TYPE.
+            case rr: RecordRef => checkBareMessageOperand(rr, "morph")
+        case fs: ForeachStatement =>
+          validateForeachCollection(fs, lets, elements, parents)
+          // Bind the loop's name(s) to their TYPES for the body's scope -- not merely the names.
+          // Without the types `line` resolves and `line.sku` does not, which is the whole point of
+          // iterating. An unresolvable collection still binds the names (to `Anything`), because the
+          // header's error is already reported and piling "unknown value reference" on top of it
+          // would blame the body for a defect above it.
+          val collType = foreachCollectionType(fs, lets, elements, parents)
           checkStatementScopes(
-            mc.statements.toSeq.collect { case s: Statement => s },
+            fs.doStatements.toSeq.collect { case s: Statement => s },
+            lets,
+            parents,
+            elements ++ foreachBindings(fs, collType)
+          )
+        case ws: WhenStatement =>
+          // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
+          // the LiteralString/Identifier forms have no expression to check here. A17: a bare boolean
+          // ValueRef condition must resolve to a Boolean-typed value.
+          ws.condition match
+            case be: BooleanExpression => validateValue(be, parents, lets, elements)
+            case vr: ValueRef          => checkWhenValueRef(vr, parents, lets, elements) // A17
+            // A20: a `when` condition's position IMPLIES Boolean -- a constant expected type, not
+            // something threaded through call sites. This is the ruling's one MANDATORY wire.
+            // `checkPromptAscription` never WARNS on an absent ascription (only the `let`-no-
+            // ascription site does that, above), so an unascribed `when prompt(…)` -- 15 of them in
+            // the corpus -- stays silent with or without this arm; what this arm buys is
+            // CONTRADICTION detection: `when prompt(…) as Score` would otherwise fall to the
+            // catch-all below and silently accept an ascription that can never be a legal condition.
+            case pv: PromptValue => checkPromptAscription(pv, Some(Bool(At.empty)))
+            case _               => ()
+          checkStatementScopes(
+            ws.thenStatements.toSeq.collect { case s: Statement => s },
             lets,
             parents,
             elements
           )
-        }
-        checkStatementScopes(
-          ms.default.toSeq.collect { case s: Statement => s },
-          lets,
-          parents,
-          elements
-        )
-      case ps: PutStatement    => validatePut(ps, parents, lets, elements)
-      case rs: ReturnStatement => validateReturn(rs, parents, lets, elements)
-      // A70/instance-identity: reached at ANY depth (this function is the single entry point
-      // invoked at every container root AND recursively for when/match/foreach bodies), which is
-      // exactly what the nested-`terminate` regression test requires -- mirrors `checkInitiate`'s
-      // reachability via `validateValue`.
-      case ts: TerminateStatement => checkTerminate(ts, parents, lets, elements)
-      case _                      => ()
+          checkStatementScopes(
+            ws.elseStatements.toSeq.collect { case s: Statement => s },
+            lets,
+            parents,
+            elements
+          )
+        case rs: RequireStatement =>
+          // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
+          // the LiteralString/InvariantRef forms are checked in validateStatement.
+          rs.condition match
+            case be: BooleanExpression => validateValue(be, parents, lets, elements)
+            case _                     => ()
+        case ms: MatchStatement =>
+          validateMatch(
+            ms,
+            parents,
+            lets,
+            elements
+          ) // A29: subject/pattern/guard resolution + type-compat + exhaustiveness
+          ms.cases.foreach { mc =>
+            checkStatementScopes(
+              mc.statements.toSeq.collect { case s: Statement => s },
+              lets,
+              parents,
+              elements
+            )
+          }
+          checkStatementScopes(
+            ms.default.toSeq.collect { case s: Statement => s },
+            lets,
+            parents,
+            elements
+          )
+        case ps: PutStatement    => validatePut(ps, parents, lets, elements)
+        case rs: ReturnStatement => validateReturn(rs, parents, lets, elements)
+        // A70/instance-identity: reached at ANY depth (this function is the single entry point
+        // invoked at every container root AND recursively for when/match/foreach bodies), which is
+        // exactly what the nested-`terminate` regression test requires -- mirrors `checkInitiate`'s
+        // reachability via `validateValue`.
+        case ts: TerminateStatement => checkTerminate(ts, parents, lets, elements)
+        case _                      => ()
       }
     }
   end checkStatementScopes

@@ -22,22 +22,20 @@ import org.scalatest.*
   *   query   Ask replies result Answer ->  reply result Answer
   * }}}
   *
-  * Until 2.0 `yield` spelled BOTH and `reply` was a deprecated synonym for it
-  * (`type ReplyStatement = YieldStatement`), so a handler body did not say whether it was
-  * emitting an event or answering a question. Reid split them (2026-08-08) both for readability
-  * and because `ask` needs something to name: the value an `ask` produces is the one a `reply`
-  * provides.
+  * Until 2.0 `yield` spelled BOTH and `reply` was a deprecated synonym for it (`type ReplyStatement =
+  * YieldStatement`), so a handler body did not say whether it was emitting an event or answering a
+  * question. Reid split them (2026-08-08) both for readability and because `ask` needs something to
+  * name: the value an `ask` produces is the one a `reply` provides.
   *
-  * The split was a HARD SWITCH, not a deprecation: `yield result` is an Error immediately. That
-  * was Reid's call, made knowing it reddens `RiddlModelsRoundTripTest` until ../riddl-models
-  * migrates its 406 sites (../riddl-examples has 31 more). Task files went to both.
+  * The split was a HARD SWITCH, not a deprecation: `yield result` is an Error immediately. That was
+  * Reid's call, made knowing it reddens `RiddlModelsRoundTripTest` until ../riddl-models migrates
+  * its 406 sites (../riddl-examples has 31 more). Task files went to both.
   */
 class ReplyYieldPairingTest extends AbstractValidatingTest {
 
   /** Style warnings ON: the pairing diagnostics are Errors, but pinning options keeps this suite
-    * from depending on whichever suite last touched the global flags. See
-    * `PathThroughFunctionTest` for the run where that dependency produced an EMPTY message list
-    * and five vacuous passes.
+    * from depending on whichever suite last touched the global flags. See `PathThroughFunctionTest`
+    * for the run where that dependency produced an EMPTY message list and five vacuous passes.
     */
   private def diagnostics(src: String, origin: String): Messages =
     var captured: Messages = Messages.empty
@@ -56,13 +54,13 @@ class ReplyYieldPairingTest extends AbstractValidatingTest {
     *
     * The DECLARATION pairing (`query X yields` / `command X replies`) is caught in the parser, not
     * ValidationPass, because the AST records only the referenced message -- not which keyword was
-    * written -- so by validation time the evidence is gone. Checking it in the parser is what
-    * keeps a single `Option[MessageRef]` field instead of adding one whose only job is carrying a
+    * written -- so by validation time the evidence is gone. Checking it in the parser is what keeps
+    * a single `Option[MessageRef]` field instead of adding one whose only job is carrying a
     * syntactic choice forward.
     *
     * These messages DO reach users: `parseInputWithMessages` -> `PassInput.parseMessages` ->
-    * `PassesResult.additionalMessages`, so they appear under every riddlc command (verified
-    * against a staged binary). Only this test helper needs the other channel.
+    * `PassesResult.additionalMessages`, so they appear under every riddlc command (verified against
+    * a staged binary). Only this test helper needs the other channel.
     */
   private def parseErrorsFor(src: String, origin: String): String =
     TopLevelParser.parseInputWithMessages(RiddlParserInput(src, origin)) match
@@ -70,7 +68,11 @@ class ReplyYieldPairingTest extends AbstractValidatingTest {
       case Right((_, msgs)) => msgs.justErrors.map(_.message).mkString("\n")
 
   /** One model, parameterised on the query's declaration keyword and its clause's statement. */
-  private def model(queryDecl: String, queryStmt: String, cmdStmt: String = "yield event D.C.Paid(v = \"the amount\")"): String =
+  private def model(
+    queryDecl: String,
+    queryStmt: String,
+    cmdStmt: String = "yield event D.C.Paid(v = \"the amount\")"
+  ): String =
     s"""domain D is {
        |  context C is {
        |    result Answer is { v: Integer } with { briefly "r" }
@@ -105,7 +107,10 @@ class ReplyYieldPairingTest extends AbstractValidatingTest {
     }
 
     "reject `reply event`" in { (td: TestData) =>
-      val errs = errorsFor(model("replies", "reply result D.C.Answer(v = \"the answer\")", "reply event D.C.Paid"), td.name)
+      val errs = errorsFor(
+        model("replies", "reply result D.C.Answer(v = \"the answer\")", "reply event D.C.Paid"),
+        td.name
+      )
       errs must include("`reply` takes a Result")
       errs must include("is an Event")
     }

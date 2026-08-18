@@ -35,7 +35,8 @@ object ExceptionUtils {
       val header = if depth == 0 then thrown.toString else s"Caused by: ${thrown.toString}"
       val frames =
         try thrown.getStackTrace.take(MaxFrames).map(frame => s"\tat $frame").toList
-        catch case _: Throwable => Nil // a describing helper must never itself throw
+        catch
+          case _: Throwable => Nil // a describing helper must never itself throw
       // `filterNot(_ eq thrown)` because a Throwable whose cause is itself would otherwise
       // recurse to the depth guard and bury the useful first line.
       val causes = Option(thrown.getCause)

@@ -78,7 +78,9 @@ class DeprecationCodeTest extends AbstractTestingBasis {
       )
       val m = deps
         .find(_.deprecationCode.contains(DeprecationCode.TypeFirstAggregate))
-        .getOrElse(fail(s"no type-first-aggregate deprecation; got:\n${deps.map(_.format).mkString("\n")}"))
+        .getOrElse(
+          fail(s"no type-first-aggregate deprecation; got:\n${deps.map(_.format).mkString("\n")}")
+        )
       m.autoFixable mustBe true
     }
 

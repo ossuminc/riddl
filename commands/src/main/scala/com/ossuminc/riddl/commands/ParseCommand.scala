@@ -33,9 +33,9 @@ class ParseCommand(using pc: PlatformContext) extends InputFileCommand(ParseComm
       val future = RiddlParserInput.fromPathSafe(inputFile.toString).map {
         case Left(messages) => Left(messages)
         case Right(rpi) =>
-        TopLevelParser
-          .parseInputWithMessages(rpi)
-          .map { case (_, parseMessages) => PassesResult(additionalMessages = parseMessages) }
+          TopLevelParser
+            .parseInputWithMessages(rpi)
+            .map { case (_, parseMessages) => PassesResult(additionalMessages = parseMessages) }
       }
       Await.result(future, 10.seconds)
     }

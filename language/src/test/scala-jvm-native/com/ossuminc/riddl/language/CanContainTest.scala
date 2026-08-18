@@ -13,10 +13,10 @@ import org.scalatest.TestData
 
 /** `canContain` must agree with what the PARSER accepts.
   *
-  * This is the property that makes centralising containment worth anything. `canContain` is
-  * derived from the `XContents` unions, and the parser's rules are written separately from those
-  * unions -- so the two CAN disagree, and a consumer trusting the predicate would then reject a
-  * drop riddlc would have accepted (or offer one it would reject).
+  * This is the property that makes centralising containment worth anything. `canContain` is derived
+  * from the `XContents` unions, and the parser's rules are written separately from those unions --
+  * so the two CAN disagree, and a consumer trusting the predicate would then reject a drop riddlc
+  * would have accepted (or offer one it would reject).
   *
   * The check is by construction rather than by table: parse a model, walk every parent/child pair
   * it actually produced, and assert the parent admits the child. Anything the parser builds is by
@@ -87,7 +87,7 @@ class CanContainTest extends AbstractParsingTest {
           |""".stripMargin
 
       val root = parse(src, "cancontain")
-      val all = (root +: Seq.empty) .flatMap(r => pairs(r))
+      val all = (root +: Seq.empty).flatMap(r => pairs(r))
       all.size must be > 30 // the walk actually visited a real tree, not an empty one
 
       val violations = all.collect {
@@ -149,7 +149,11 @@ class CanContainTest extends AbstractParsingTest {
       // A Handler is not domain content; a State is not context content.
       domain.canContain(Handler(At.empty, Identifier(At.empty, "h"))) mustBe false
       context.canContain(
-        State(At.empty, Identifier(At.empty, "s"), RecordRef(At.empty, PathIdentifier(At.empty, Seq("R"))))
+        State(
+          At.empty,
+          Identifier(At.empty, "s"),
+          RecordRef(At.empty, PathIdentifier(At.empty, Seq("R")))
+        )
       ) mustBe false
       // An Entity cannot hold another Entity -- contexts do not nest and neither do entities.
       entity.canContain(Entity(At.empty, Identifier(At.empty, "e2"))) mustBe false

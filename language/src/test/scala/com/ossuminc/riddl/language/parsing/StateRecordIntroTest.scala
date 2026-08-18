@@ -33,8 +33,8 @@ class StateRecordIntroTest extends AbstractParsingTest {
       td
     )
     TopLevelParser.parseInputWithMessages(input) match
-      case Left(errors)             => (false, errors)
-      case Right((_, msgs))         => (true, msgs)
+      case Left(errors)     => (false, errors)
+      case Right((_, msgs)) => (true, msgs)
   end parseState
 
   "a state's record reference" should {

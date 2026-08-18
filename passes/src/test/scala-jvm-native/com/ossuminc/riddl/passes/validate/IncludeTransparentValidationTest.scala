@@ -83,7 +83,9 @@ class IncludeTransparentValidationTest extends JVMAbstractValidatingTest {
           "include-transparency/dup-across-include/main.riddl"
         ) { case (_, messages) =>
           val dups = messages.justErrors.filter(_.message.contains("duplicate content names"))
-          withClue(s"expected a duplicate-name ERROR across the include, got:\n${messages.format}") {
+          withClue(
+            s"expected a duplicate-name ERROR across the include, got:\n${messages.format}"
+          ) {
             dups mustNot be(empty)
           }
         }

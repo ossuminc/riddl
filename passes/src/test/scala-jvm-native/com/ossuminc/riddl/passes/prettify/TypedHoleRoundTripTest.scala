@@ -153,7 +153,7 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
         case pv: PromptValue =>
           pv.typeEx.get match
             case ate: AliasedTypeExpression => ate.pathId.value.last mustBe "OrderId"
-            case other                      => fail(s"expected an AliasedTypeExpression, got $other")
+            case other => fail(s"expected an AliasedTypeExpression, got $other")
         case other => fail(s"expected a PromptValue, got $other")
 
       val emitted = prettify(original)
@@ -177,7 +177,7 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
         case pv: PromptValue =>
           pv.typeEx.get match
             case ate: AliasedTypeExpression => ate.pathId.value.last mustBe "OrderId"
-            case other                      => fail(s"expected an AliasedTypeExpression, got $other")
+            case other => fail(s"expected an AliasedTypeExpression, got $other")
         case other => fail(s"expected a PromptValue, got $other")
     }
 
@@ -255,7 +255,8 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
         letExpression(original, "repeated") match
           case pv: PromptValue =>
             pv.typeEx.get match
-              case ZeroOrMore(_, ate: AliasedTypeExpression) => ate.pathId.value.last mustBe "OrderId"
+              case ZeroOrMore(_, ate: AliasedTypeExpression) =>
+                ate.pathId.value.last mustBe "OrderId"
               case other => fail(s"expected ZeroOrMore(AliasedTypeExpression), got $other")
           case other => fail(s"expected a PromptValue, got $other")
 
@@ -279,7 +280,8 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
         letExpression(regen, "repeated") match
           case pv: PromptValue =>
             pv.typeEx.get match
-              case ZeroOrMore(_, ate: AliasedTypeExpression) => ate.pathId.value.last mustBe "OrderId"
+              case ZeroOrMore(_, ate: AliasedTypeExpression) =>
+                ate.pathId.value.last mustBe "OrderId"
               case other => fail(s"expected ZeroOrMore(AliasedTypeExpression), got $other")
           case other => fail(s"expected a PromptValue, got $other")
     }

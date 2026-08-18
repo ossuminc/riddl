@@ -174,16 +174,16 @@ case class AnalysisResult(
   def repositories: Seq[Repository] =
     symbols.parentage.keys.collect { case r: Repository => r }.toSeq
 
-  /** Get all PORT-BEARING processors in the model — Adaptor, Context, Entity, Projector,
-    * Repository and Streamlet alike.
+  /** Get all PORT-BEARING processors in the model — Adaptor, Context, Entity, Projector, Repository
+    * and Streamlet alike.
     *
     * **[4.1], RULED 2026-08-17 by Reid: *"streamlets is now an older idea, but in the new model
-    * every processor is capable of having one or more portlets — so redefine streamlets to mean
-    * all port-bearing processors."*** This REPLACES the 2026-08-16 reading, which kept the name
-    * meaning "the `Streamlet` definitions" on the argument that every sibling accessor here is
-    * named after a kind. That argument loses to the language: `Streamlet` stopped being the
-    * port-bearing kind when the unified processor model made every processor port-bearing, so the
-    * accessor now answers the question the name was always ASKING.
+    * every processor is capable of having one or more portlets — so redefine streamlets to mean all
+    * port-bearing processors."*** This REPLACES the 2026-08-16 reading, which kept the name meaning
+    * "the `Streamlet` definitions" on the argument that every sibling accessor here is named after
+    * a kind. That argument loses to the language: `Streamlet` stopped being the port-bearing kind
+    * when the unified processor model made every processor port-bearing, so the accessor now
+    * answers the question the name was always ASKING.
     *
     * A separate `processors` accessor existed here for one day, added under the previous reading
     * and shipped in `2.0.0-rc.15`. It is DELETED rather than kept as a synonym: two names for one

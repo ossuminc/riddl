@@ -31,8 +31,8 @@ import org.scalatest.*
   * which caught it only because a model built to exercise rarely-used constructs was prettified
   * before being committed. The comment case was NOT in that report and was found by this sweep.
   *
-  * Sibling ORDER is asserted, not just membership: reflectivity means exact AST recovery, so a
-  * fix that emitted all fields and then all methods would still be wrong.
+  * Sibling ORDER is asserted, not just membership: reflectivity means exact AST recovery, so a fix
+  * that emitted all fields and then all methods would still be wrong.
   */
 class AggregateContentsRoundTripTest extends AbstractValidatingTest {
 

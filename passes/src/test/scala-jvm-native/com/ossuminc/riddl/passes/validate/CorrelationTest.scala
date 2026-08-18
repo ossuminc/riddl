@@ -45,8 +45,8 @@ class CorrelationTest extends AbstractValidatingTest {
     * the case that tests that rule overrides the event declarations.
     *
     * `repository Store is { ??? }` keeps the repository EXEMPT from the "has no handler for the
-    * yielded command" completeness warning, so the cases below see only the rule each is about.
-    * The two cases that exercise that warning declare a repository with a real body instead.
+    * yielded command" completeness warning, so the cases below see only the rule each is about. The
+    * two cases that exercise that warning declare a repository with a real body instead.
     */
   private def model(
     fields: String = "customerId: String, orderId: String, paidAmount: Number",
@@ -88,7 +88,9 @@ class CorrelationTest extends AbstractValidatingTest {
       // `shippedAt` is required, is not a key, and no fold sets it -- so no arrival of events
       // could ever populate the record. That is the whole point of the check.
       val errors = errorsFor(
-        model(fields = "customerId: String, orderId: String, paidAmount: Number, shippedAt: String"),
+        model(fields =
+          "customerId: String, orderId: String, paidAmount: Number, shippedAt: String"
+        ),
         "correlation-incomplete"
       )
       errors must include("can never complete")
@@ -149,7 +151,8 @@ class CorrelationTest extends AbstractValidatingTest {
     }
   }
 
-  /** The rules that make a correlation's RESULT well-defined, rather than its completion possible. */
+  /** The rules that make a correlation's RESULT well-defined, rather than its completion possible.
+    */
   "Correlation soundness" should {
 
     "reject a vague timeout duration" in { (td: TestData) =>
@@ -166,7 +169,7 @@ class CorrelationTest extends AbstractValidatingTest {
       )
     }
 
-    "reject two clauses writing the same field" in {  (td: TestData) =>
+    "reject two clauses writing the same field" in { (td: TestData) =>
       // A race: arrival order across sources is not guaranteed, so the completed record would
       // differ between runs over identical events. §6.6 rejects it rather than describing it.
       val errors = errorsFor(
@@ -434,8 +437,10 @@ class CorrelationTest extends AbstractValidatingTest {
          |      correlation FulfillmentJoin by customerId, orderId
          |        yields command RecordFulfillment is {
          |        handler Collect is {
-         |          ${if folds.isEmpty then "on e: event PaymentTaken is { set field paidAmount to e.amount }"
-          else folds}
+         |          ${
+          if folds.isEmpty then "on e: event PaymentTaken is { set field paidAmount to e.amount }"
+          else folds
+        }
          |        } with { briefly "folds" }
          |      } times out after "30 days" {
          |        do "escalate to operations"

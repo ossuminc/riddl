@@ -57,12 +57,12 @@ case class AdaptorBridge(
   * set whose value references a named integer type yields `record -> set` AND
   * `set -> namedInteger`; the edges are DIRECT and the chain is walked by the consumer.
   *
-  * **PURELY STRUCTURAL — RULED 2026-08-18 (option A).** It carried one message-flow edge per
-  * `tell` for a day, which broke the map's own purpose: two processors telling each other's
-  * messages produced a CYCLE, so cycle detection reported a healthy protocol as a type loop.
-  * Dropping it costs nothing, because `MessageFlowPass` already answers the message question
-  * properly (producer, consumer and mechanism) — the edge here was a strictly worse copy whose
-  * only distinct effect was to corrupt this analysis.
+  * **PURELY STRUCTURAL — RULED 2026-08-18 (option A).** It carried one message-flow edge per `tell`
+  * for a day, which broke the map's own purpose: two processors telling each other's messages
+  * produced a CYCLE, so cycle detection reported a healthy protocol as a type loop. Dropping it
+  * costs nothing, because `MessageFlowPass` already answers the message question properly
+  * (producer, consumer and mechanism) — the edge here was a strictly worse copy whose only distinct
+  * effect was to corrupt this analysis.
   *
   * So a cycle in this map means exactly one thing: **a type contains itself, transitively.**
   *
@@ -281,16 +281,16 @@ case class DependencyAnalysisPass(
     * in that map."* So the edges are DIRECT — record→set and set→namedInt — and a consumer walks
     * the chain, which is also what makes cycle detection possible.
     *
-    * **Reuses the resolution ResolutionPass already did** rather than re-resolving path
-    * identifiers here. That matters for correctness, not just effort: re-resolution would need to
-    * reconstruct the right parent scope for every reference, and a second resolver that disagrees
-    * with the first is worse than none.
+    * **Reuses the resolution ResolutionPass already did** rather than re-resolving path identifiers
+    * here. That matters for correctness, not just effort: re-resolution would need to reconstruct
+    * the right parent scope for every reference, and a second resolver that disagrees with the
+    * first is worse than none.
     *
     * The subtlety is WHERE those usages are recorded. `resolveTypeExpression` associates an
     * aggregate's field types with the FIELD, not with the enclosing Type -- so for
-    * `record R is { thing: MySet }` the recorded edge is `thing -> MySet`, and asking
-    * `getUses(R)` alone answers NOTHING. Field uses are therefore folded up into their owning
-    * type, recursively, which is what makes the record→set half of Reid's example appear at all.
+    * `record R is { thing: MySet }` the recorded edge is `thing -> MySet`, and asking `getUses(R)`
+    * alone answers NOTHING. Field uses are therefore folded up into their owning type, recursively,
+    * which is what makes the record→set half of Reid's example appear at all.
     */
   // NB `scala.collection.immutable.Set`, spelled out: `AST.Set` is the RIDDL collection TYPE
   // and shadows the Scala one on the wildcard import. `case Set(_, of)` in `fieldsWithin` below
@@ -308,22 +308,22 @@ case class DependencyAnalysisPass(
 
   /** Every [[Field]] inside a type expression, at any depth.
     *
-    * Recurses through the collection and cardinality wrappers as well as nested aggregates,
-    * because a field's uses are recorded against the field wherever it sits -- `set of record {…}`
-    * puts them two levels down.
+    * Recurses through the collection and cardinality wrappers as well as nested aggregates, because
+    * a field's uses are recorded against the field wherever it sits -- `set of record {…}` puts
+    * them two levels down.
     */
   private def fieldsWithin(te: TypeExpression): Seq[Field] =
     te match
       case agg: AggregateTypeExpression =>
         agg.fields.toSeq ++ agg.fields.toSeq.flatMap(f => fieldsWithin(f.typeEx))
-      case Sequence(_, of)     => fieldsWithin(of)
-      case Set(_, of)          => fieldsWithin(of)
-      case Graph(_, of)        => fieldsWithin(of)
-      case Replica(_, of)      => fieldsWithin(of)
-      case Table(_, of, _)     => fieldsWithin(of)
+      case Sequence(_, of)      => fieldsWithin(of)
+      case Set(_, of)           => fieldsWithin(of)
+      case Graph(_, of)         => fieldsWithin(of)
+      case Replica(_, of)       => fieldsWithin(of)
+      case Table(_, of, _)      => fieldsWithin(of)
       case Mapping(_, from, to) => fieldsWithin(from) ++ fieldsWithin(to)
-      case c: Cardinality      => fieldsWithin(c.typeExp)
-      case _                   => Seq.empty
+      case c: Cardinality       => fieldsWithin(c.typeExp)
+      case _                    => Seq.empty
   end fieldsWithin
 
   private def processTypeDependencies(typ: Type): Unit =

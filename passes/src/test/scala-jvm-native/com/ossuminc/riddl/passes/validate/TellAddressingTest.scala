@@ -17,9 +17,9 @@ import org.scalatest.TestData
   * told to two DIFFERENT processor types, and each target then needs its own address; structural
   * derivation gives each one for free.
   *
-  * A missing address is a CompletenessWarning, not an Error, and that is a measurement rather
-  * than a preference: riddl-models holds 7,556 tells against SEVEN Id-typed fields, so an Error
-  * would redden essentially every model and is not mechanically migratable.
+  * A missing address is a CompletenessWarning, not an Error, and that is a measurement rather than
+  * a preference: riddl-models holds 7,556 tells against SEVEN Id-typed fields, so an Error would
+  * redden essentially every model and is not mechanically migratable.
   */
 class TellAddressingTest extends AbstractValidatingTest {
 
@@ -59,9 +59,11 @@ class TellAddressingTest extends AbstractValidatingTest {
 
     "derive the address from the single Id(target) field" in { (td: TestData) =>
       val msgs = diagnostics(
-        model("orderId: Id(entity Order)",
-              """let oid = initiate entity Order
-                |            tell command Ship(orderId = oid) to entity Order""".stripMargin),
+        model(
+          "orderId: Id(entity Order)",
+          """let oid = initiate entity Order
+                |            tell command Ship(orderId = oid) to entity Order""".stripMargin
+        ),
         "addr-derived"
       )
       msgs.justErrors mustBe empty
@@ -73,9 +75,11 @@ class TellAddressingTest extends AbstractValidatingTest {
       // Id(entity Caller) is not a candidate for a tell to Order, so this must still be a
       // single unambiguous derivation and not an ambiguity error.
       val msgs = diagnostics(
-        model("orderId: Id(entity Order), from: Id(entity Caller)",
-              """let oid = initiate entity Order
-                |            tell command Ship(orderId = oid, from = self.id) to entity Order""".stripMargin),
+        model(
+          "orderId: Id(entity Order), from: Id(entity Caller)",
+          """let oid = initiate entity Order
+                |            tell command Ship(orderId = oid, from = self.id) to entity Order""".stripMargin
+        ),
         "addr-replyto"
       )
       msgs.justErrors mustBe empty
@@ -97,13 +101,16 @@ class TellAddressingTest extends AbstractValidatingTest {
         model("???", """tell command Ship to entity Order"""),
         "addr-stub"
       ).filter(_.kind == Messages.CompletenessWarning)
-        .map(_.message).mkString("\n") must not include "instance"
+        .map(_.message)
+        .mkString("\n") must not include "instance"
     }
 
     "REJECT an ambiguous derivation without 'by'" in { (td: TestData) =>
       val text = diagnostics(
-        model("fromOrder: Id(entity Order), toOrder: Id(entity Order)",
-              """tell command Ship(fromOrder = f, toOrder = t) to entity Order"""),
+        model(
+          "fromOrder: Id(entity Order), toOrder: Id(entity Order)",
+          """tell command Ship(fromOrder = f, toOrder = t) to entity Order"""
+        ),
         "addr-ambiguous"
       ).justErrors.map(_.message).mkString("\n")
       text must include("fromOrder")
@@ -116,10 +123,12 @@ class TellAddressingTest extends AbstractValidatingTest {
       // a when/match/foreach body (those are FIELD-held, not `Contents`, so the generic Pass
       // traversal does not descend into them). This proves the check is reached at that depth too.
       val text = diagnostics(
-        model("fromOrder: Id(entity Order), toOrder: Id(entity Order)",
-              """when true then {
+        model(
+          "fromOrder: Id(entity Order), toOrder: Id(entity Order)",
+          """when true then {
                 |              tell command Ship(fromOrder = f, toOrder = t) to entity Order
-                |            } end""".stripMargin),
+                |            } end""".stripMargin
+        ),
         "addr-ambiguous-nested-when"
       ).justErrors.map(_.message).mkString("\n")
       text must include("fromOrder")
@@ -132,18 +141,22 @@ class TellAddressingTest extends AbstractValidatingTest {
       // "value reference not resolved" error from the bare `f`/`t` operands, which is not what
       // this test is about.
       diagnostics(
-        model("fromOrder: Id(entity Order), toOrder: Id(entity Order)",
-              """let f = initiate entity Order
+        model(
+          "fromOrder: Id(entity Order), toOrder: Id(entity Order)",
+          """let f = initiate entity Order
                 |            let t = initiate entity Order
-                |            tell command Ship(fromOrder = f, toOrder = t) to entity Order by toOrder""".stripMargin),
+                |            tell command Ship(fromOrder = f, toOrder = t) to entity Order by toOrder""".stripMargin
+        ),
         "addr-by"
       ).justErrors mustBe empty
     }
 
     "REJECT 'by' naming a field that is not Id(target)" in { (td: TestData) =>
       val text = diagnostics(
-        model("orderId: Id(entity Order), why: String",
-              """tell command Ship(orderId = o, why = "x") to entity Order by why"""),
+        model(
+          "orderId: Id(entity Order), why: String",
+          """tell command Ship(orderId = o, why = "x") to entity Order by why"""
+        ),
         "addr-by-wrong"
       ).justErrors.map(_.message).mkString("\n")
       text must include("why")
@@ -188,13 +201,14 @@ class TellAddressingTest extends AbstractValidatingTest {
       msgs.map(_.message).mkString("\n") must not include "which Order instance"
     }
 
-    "NOT silently accept a garbage 'by' field for an ALIAS-declared message type" in { (td: TestData) =>
-      // Same regression as above, from the OTHER side: before the fix, an alias-declared message
-      // was treated as a stub and this whole check -- including 'by' validation -- never ran, so
-      // 'by nonsense' was accepted with no diagnostic at all. This is the review finding's exact
-      // failure scenario.
-      val src =
-        """domain Dom is {
+    "NOT silently accept a garbage 'by' field for an ALIAS-declared message type" in {
+      (td: TestData) =>
+        // Same regression as above, from the OTHER side: before the fix, an alias-declared message
+        // was treated as a stub and this whole check -- including 'by' validation -- never ran, so
+        // 'by nonsense' was accepted with no diagnostic at all. This is the review finding's exact
+        // failure scenario.
+        val src =
+          """domain Dom is {
           |  context Ctx is {
           |    command Shipment is {
           |      fromOrder: Id(entity Order), toOrder: Id(entity Order)
@@ -217,8 +231,8 @@ class TellAddressingTest extends AbstractValidatingTest {
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
-      val text = diagnostics(src, "addr-alias-by-wrong").justErrors.map(_.message).mkString("\n")
-      text must include("nonsense")
+        val text = diagnostics(src, "addr-alias-by-wrong").justErrors.map(_.message).mkString("\n")
+        text must include("nonsense")
     }
 
     "NOT be fooled by a foreign field typed 'Id' for a SAME-NAMED entity in another context" in {
@@ -394,7 +408,8 @@ class TellAddressingTest extends AbstractValidatingTest {
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
-      val text = diagnostics(src, "addr-alias-field-ambiguous").justErrors.map(_.message).mkString("\n")
+      val text =
+        diagnostics(src, "addr-alias-field-ambiguous").justErrors.map(_.message).mkString("\n")
       text must include("fromOrder")
       text must include("toOrder")
     }
@@ -535,7 +550,8 @@ class TellAddressingTest extends AbstractValidatingTest {
           |""".stripMargin
       diagnostics(src, "addr-repo")
         .filter(_.kind == Messages.CompletenessWarning)
-        .map(_.message).mkString("\n") must not include "instance"
+        .map(_.message)
+        .mkString("\n") must not include "instance"
     }
 
     /** The `elements` gap. `checkTellAddressing` is reached at ANY depth -- including inside a
@@ -545,8 +561,8 @@ class TellAddressingTest extends AbstractValidatingTest {
       *
       * `widenedOperandType`'s scaladoc asserted the opposite: "none of this function's three call
       * sites resolve an operand from inside a `foreach` body, so there is no position at which an
-      * element binding could be in scope." That was a claim about code elsewhere, and it was
-      * false -- `checkTellAddressing` is called from `checkStatementScopes`, which recurses into
+      * element binding could be in scope." That was a claim about code elsewhere, and it was false
+      * -- `checkTellAddressing` is called from `checkStatementScopes`, which recurses into
       * `foreach` bodies precisely so it can thread those bindings.
       */
     "REJECT an ambiguous derivation when the operand is a `foreach` element" in { (td: TestData) =>

@@ -15,12 +15,13 @@ import com.ossuminc.riddl.utils.pc
 
 import org.scalatest.*
 
-/** Task 5 (processor-instance identity): `terminate` is a new [[com.ossuminc.riddl.language.AST.Statement]],
-  * so RIDDL's reflectivity mandate requires a prettify round trip -- parse -> prettify(flatten=true)
-  * -> re-parse -- proving it survives at the SAME place, following `InitiateRoundTripTest`'s
-  * template (Task 4's sibling feature). Runs on JVM AND Native, unlike a plain `scalajvm` test --
-  * put here rather than under `passes/src/test/scalajvm/` for that reason. The BAST round trip is
-  * legitimately JVM-only (BAST I/O has no Native-friendly harness in this test suite) and stays in
+/** Task 5 (processor-instance identity): `terminate` is a new
+  * [[com.ossuminc.riddl.language.AST.Statement]], so RIDDL's reflectivity mandate requires a
+  * prettify round trip -- parse -> prettify(flatten=true) -> re-parse -- proving it survives at the
+  * SAME place, following `InitiateRoundTripTest`'s template (Task 4's sibling feature). Runs on JVM
+  * AND Native, unlike a plain `scalajvm` test -- put here rather than under
+  * `passes/src/test/scalajvm/` for that reason. The BAST round trip is legitimately JVM-only (BAST
+  * I/O has no Native-friendly harness in this test suite) and stays in
   * `TerminateBASTRoundTripTest.scala`.
   *
   * Unlike `initiate` (a VALUE, typically wrapped in a `let`, which `Finder.recursiveFindByType`
@@ -76,7 +77,9 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
       .filesAsString
 
   private def terminateIn(root: Root): TerminateStatement =
-    Finder(root).recursiveFindByType[TerminateStatement].headOption
+    Finder(root)
+      .recursiveFindByType[TerminateStatement]
+      .headOption
       .getOrElse(fail("no TerminateStatement found"))
 
   "terminate" should {

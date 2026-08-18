@@ -128,9 +128,10 @@ lazy val riddl: Project = Root("riddl", startYr = startYear, spdx = "Apache-2.0"
   )
 
 lazy val Utils = config("utils")
-/** The coverage instrumenter reports any value initializer or method body over 3000 tree nodes
-  * as "skipped", and -Werror turns that into a build failure whenever coverage is enabled. A
-  * large METHOD is worth splitting and has been (see JsonifierPass.buildContainer), but upickle's
+
+/** The coverage instrumenter reports any value initializer or method body over 3000 tree nodes as
+  * "skipped", and -Werror turns that into a build failure whenever coverage is enabled. A large
+  * METHOD is worth splitting and has been (see JsonifierPass.buildContainer), but upickle's
   * macro-generated picklers are over the threshold purely because of how many fields their DTOs
   * have — there is nothing to split and nothing to act on. Silence that one message so -Werror
   * keeps its teeth everywhere else.

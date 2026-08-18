@@ -72,11 +72,10 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     * `Correlation.timeoutStatements`, `RequireStatement.argument`.
     *
     * `recursiveFindByType`'s traversal was, until 2026-08-15, total over a handful of container-
-    * shaped statement kinds (When/Match/Foreach/SagaStep) but blind to every FIELD any node holds
-    * a nested value or statement block in — the same shape of defect `statementValues` had in
-    * `ValidationPass` (see CLAUDE.md "Total Dispatch"). This function is the fix, factored out
-    * so a new field-held site is added in ONE place rather than patched into a growing `consider`
-    * match.
+    * shaped statement kinds (When/Match/Foreach/SagaStep) but blind to every FIELD any node holds a
+    * nested value or statement block in — the same shape of defect `statementValues` had in
+    * `ValidationPass` (see CLAUDE.md "Total Dispatch"). This function is the fix, factored out so a
+    * new field-held site is added in ONE place rather than patched into a growing `consider` match.
     *
     * Deliberately excludes plain structural [[Reference]] fields (`processorRef`, `entity`,
     * `handler`, `output`, `portlet`, `collection`, …) — those are leaf path identifiers already
@@ -86,23 +85,24 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     */
   private def fieldChildren(v: RiddlValue): Seq[RiddlValue] = v match
     // Statement blocks held in fields, not in `contents`
-    case ws: WhenStatement    => Seq(ws.condition) ++ ws.thenStatements.toSeq ++ ws.elseStatements.toSeq
-    case ms: MatchStatement   => Seq(ms.expression) ++ ms.cases ++ ms.default.toSeq
-    case mc: MatchCase        => Seq(mc.pattern) ++ mc.guard.toSeq ++ mc.statements.toSeq
+    case ws: WhenStatement =>
+      Seq(ws.condition) ++ ws.thenStatements.toSeq ++ ws.elseStatements.toSeq
+    case ms: MatchStatement    => Seq(ms.expression) ++ ms.cases ++ ms.default.toSeq
+    case mc: MatchCase         => Seq(mc.pattern) ++ mc.guard.toSeq ++ mc.statements.toSeq
     case cp: ComparisonPattern => Seq(cp.comparand)
     case lp: LiteralPattern    => Seq(lp.literal)
     // Same-shaped bare-LiteralString fields as `lp.literal` immediately above — added for
     // audit consistency (review round 1, fix 2). A LiteralString is a leaf so these add no
     // actual reachability, but a table claiming to be exhaustive should not have unexplained
     // gaps next to a sibling it does cover.
-    case ps: PromptStatement   => Seq(ps.what)
-    case es: ErrorStatement    => Seq(es.message)
-    case cs: CodeStatement     => Seq(cs.language)
+    case ps: PromptStatement  => Seq(ps.what)
+    case es: ErrorStatement   => Seq(es.message)
+    case cs: CodeStatement    => Seq(cs.language)
     case fe: ForeachStatement => fe.doStatements.toSeq
     case ss: SagaStep         => ss.doStatements.toSeq ++ ss.undoStatements.toSeq
-    case cr: Correlation      => cr.timeoutStatements.toSeq // `.contents` already walked as a Container
-    case iv: Invariant        => iv.condition.toSeq
-    case ib: InvariantBlock   => ib.statements.toSeq :+ ib.predicate
+    case cr: Correlation => cr.timeoutStatements.toSeq // `.contents` already walked as a Container
+    case iv: Invariant   => iv.condition.toSeq
+    case ib: InvariantBlock => ib.statements.toSeq :+ ib.predicate
 
     // Statement leaves holding a single Value/BooleanExpression/message operand in a field
     case rq: RequireStatement => Seq(rq.condition) ++ rq.argument.toSeq
@@ -140,7 +140,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     // ascription's `TypeExpression` is surfaced here too (an `AliasedTypeExpression` — a NAMED
     // type ascription — recurses one further level into its `PathIdentifier`, so `prompt("…") as
     // SomeType` makes both the ascription node AND the path it names reachable).
-    case pv: PromptValue          => Seq(pv.prompt) ++ pv.typeEx.toSeq
+    case pv: PromptValue            => Seq(pv.prompt) ++ pv.typeEx.toSeq
     case ate: AliasedTypeExpression => Seq(ate.pathId)
 
     case _ => Seq.empty
@@ -162,7 +162,9 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
                 c.contents.foldLeft(list) { case (next, child) => consider(next, child) }
               case _ => list
           val afterFields =
-            fieldChildren(child).foldLeft(afterContents) { case (next, child) => consider(next, child) }
+            fieldChildren(child).foldLeft(afterContents) { case (next, child) =>
+              consider(next, child)
+            }
           if lookingFor.isAssignableFrom(child.getClass) then afterFields :+ child.asInstanceOf[T]
           else afterFields
         end consider

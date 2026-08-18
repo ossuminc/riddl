@@ -96,7 +96,9 @@ class InvariantRoundTripTest extends AbstractValidatingTest {
       val blk = blocky.condition.get.asInstanceOf[InvariantBlock]
       // The `let` is the whole reason the block form exists; losing it would leave a predicate
       // referring to a name nothing binds.
-      blk.statements.toSeq.collect { case l: LetStatement => l.identifier.value } mustBe Seq("headroom")
+      blk.statements.toSeq.collect { case l: LetStatement => l.identifier.value } mustBe Seq(
+        "headroom"
+      )
     }
 
     "keep the `with <expr>` argument on a require statement" in { (td: TestData) =>

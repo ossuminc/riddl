@@ -32,7 +32,10 @@ class IncludeHygieneTest extends JVMAbstractValidatingTest {
         validateFile("a51-empty", "a51-empty-include/main.riddl") { case (_, messages) =>
           val missing =
             messages.filter(m => m.message.contains("Include contributes no definitions"))
-          assert(missing.nonEmpty, s"expected empty-include MissingWarning, got:\n${messages.format}")
+          assert(
+            missing.nonEmpty,
+            s"expected empty-include MissingWarning, got:\n${messages.format}"
+          )
         }
       }
     }

@@ -17,14 +17,14 @@ import org.scalatest.*
 
 /** `foreach k, v in <mapping>` destructures an entry into its key and its value.
   *
-  * RIDDL is reflective, so the second name must survive prettify → re-parse. It is exactly the
-  * kind of thing that gets dropped silently: the emitter has a working single-name path, and a
-  * `valueElement` it never consults still produces output that parses and validates — it just
-  * means something else. A57's binding shipped with that defect for one commit for the same
-  * reason, which is why this test exists at the same time as the feature rather than after it.
+  * RIDDL is reflective, so the second name must survive prettify → re-parse. It is exactly the kind
+  * of thing that gets dropped silently: the emitter has a working single-name path, and a
+  * `valueElement` it never consults still produces output that parses and validates — it just means
+  * something else. A57's binding shipped with that defect for one commit for the same reason, which
+  * is why this test exists at the same time as the feature rather than after it.
   *
-  * The single-name form is re-asserted here too. Widening an emitter is a good way to break what
-  * it already did.
+  * The single-name form is re-asserted here too. Widening an emitter is a good way to break what it
+  * already did.
   */
 class ForeachDestructuringRoundTripTest extends AbstractValidatingTest {
 

@@ -25,7 +25,8 @@ class BoundValueReadabilityPrefixFileTest extends AnyWordSpec with Matchers {
 
   "bound-value-readability-prefix.riddl" should {
     "parse with fastparse (parity with the EBNF grammar)" in {
-      val url = PathUtils.urlFromCwdPath(Path.of("language/input/bound-value-readability-prefix.riddl"))
+      val url =
+        PathUtils.urlFromCwdPath(Path.of("language/input/bound-value-readability-prefix.riddl"))
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         TopLevelParser.parseInput(rpi) match
           case Left(messages) => fail(messages.format)

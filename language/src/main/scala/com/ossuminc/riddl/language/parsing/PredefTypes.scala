@@ -92,8 +92,8 @@ object PredefTypes {
   def Whole[u: P]: P[Unit] = keyword("Whole")
 
   /** A predefined type keyword's [[TypeExpression]], for the ONE spelling that is complete without
-    * arguments — `let x: Natural = …` names the keyword through the ordinary `TypeRef` grammar
-    * (the same production a user-declared alias uses), but predefined types are deliberately never
+    * arguments — `let x: Natural = …` names the keyword through the ordinary `TypeRef` grammar (the
+    * same production a user-declared alias uses), but predefined types are deliberately never
     * entered into the symbol table (see `PredefinedModule`'s note on why the standard module stays
     * out of the shared maps), so a `let` ascription naming one directly had nothing to resolve
     * against and always failed with "not resolved" until this existed.

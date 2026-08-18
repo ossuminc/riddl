@@ -820,7 +820,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 statements,
                 metadata = metaOf(oc.metadata),
                 brief = briefOf(oc.metadata),
-                parameters = oic.parameters.map(a => MethodArgDto(a.name, serializeTypeExpr(a.typeEx)))
+                parameters =
+                  oic.parameters.map(a => MethodArgDto(a.name, serializeTypeExpr(a.typeEx)))
               )
             )
           case otc: OnTerminationClause =>
@@ -831,7 +832,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 statements,
                 metadata = metaOf(oc.metadata),
                 brief = briefOf(oc.metadata),
-                parameters = otc.parameters.map(a => MethodArgDto(a.name, serializeTypeExpr(a.typeEx)))
+                parameters =
+                  otc.parameters.map(a => MethodArgDto(a.name, serializeTypeExpr(a.typeEx)))
               )
             )
           case _: OnActivationClause =>
@@ -1390,8 +1392,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     // Task 2: `yield`/`reply` carry the same widened operand as `send`/`tell`, so they use the
     // deliverable serializer. Using `serializeMsgOperand` here would not compile once the field
     // widened -- but had it been reachable, a ValueRef would have been silently unrepresentable.
-    case YieldStatement(_, msg) => YieldStmtDto(serializeDeliverableOperand(msg))
-    case ReplyStatement(_, msg) => ReplyStmtDto(serializeDeliverableOperand(msg))
+    case YieldStatement(_, msg)               => YieldStmtDto(serializeDeliverableOperand(msg))
+    case ReplyStatement(_, msg)               => ReplyStmtDto(serializeDeliverableOperand(msg))
     case WhenStatement(_, cond, thenS, elseS) =>
       // Negation is fully carried by a `NotExpression` inside `cond` (a `BooleanExpression`),
       // serialized via `serializeValue` -> `NotDto` in the `expression` field below -- there is no
@@ -1473,13 +1475,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ls: LiteralString => LiteralValueDto(ls.s)
     case pv: PromptValue   => PromptValueDto(pv.prompt.s, pv.typeEx.map(serializeTypeExpr))
     case vr: ValueRef      => ValueRefDto(path(vr.path))
-    case lv: LookupValue   => LookupValueDto(path(lv.collection.path), lv.indices.map(serializeValue))
+    case lv: LookupValue => LookupValueDto(path(lv.collection.path), lv.indices.map(serializeValue))
     case gv: GetValue =>
       gv.source match
         case ir: InputRef => GetValueDto("input", Some(ir.keyword), path(ir.pathId))
         case sr: StateRef => GetValueDto("state", None, path(sr.pathId))
-    case c: Constructor     => serializeConstructor(c)
-    case call: Call         => serializeCall(call) // A24
+    case c: Constructor => serializeConstructor(c)
+    case call: Call     => serializeCall(call) // A24
     case ask: Ask =>
       val (pp, pk) = processorRef(ask.processor)
       AskValueDto(path(ask.query.pathId), pp, pk)
@@ -1516,9 +1518,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   // serializeValue uses for a bare numeric literal -- so the comparand and general-value surfaces
   // agree on the wire shape.
   private def serializeComparand(c: Comparand): ValueDto = c match
-    case lv: LookupValue    => LookupValueDto(path(lv.collection.path), lv.indices.map(serializeValue))
-    case vr: ValueRef       => ValueRefDto(path(vr.path))
-    case cr: ConstantRef    => ConstantRefDto(path(cr.pathId))
+    case lv: LookupValue => LookupValueDto(path(lv.collection.path), lv.indices.map(serializeValue))
+    case vr: ValueRef    => ValueRefDto(path(vr.path))
+    case cr: ConstantRef => ConstantRefDto(path(cr.pathId))
     case nl: NumericLiteral => NumericLiteralDto(nl.text)
     case gv: GetValue =>
       gv.source match
@@ -1563,9 +1565,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   /** A54: a record operand for `morph … with` — a bare record ref or an inline constructor, and as
     * of Task 2 a bare [[ValueRef]].
     *
-    * The ValueRef reuses the reserved kind `"bound"`, exactly as
-    * [[serializeDeliverableOperand]] does: no record or message kind is spelled that way, so the
-    * reader tells them apart with no new DTO shape and no JSON schema change.
+    * The ValueRef reuses the reserved kind `"bound"`, exactly as [[serializeDeliverableOperand]]
+    * does: no record or message kind is spelled that way, so the reader tells them apart with no
+    * new DTO shape and no JSON schema change.
     */
   private def serializeRecordOperand(m: RecordRef | Constructor | ValueRef): MsgOperandDto =
     m match

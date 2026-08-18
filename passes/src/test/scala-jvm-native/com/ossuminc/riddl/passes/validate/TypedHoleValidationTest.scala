@@ -16,8 +16,8 @@ import org.scalatest.TestData
   * contradiction is an Error.
   *
   * The untyped-seam CompletenessWarning is deliberately CONSERVATIVE (Reid's ruling, 2026-08-15):
-  * it fires ONLY on an unascribed `let x = prompt(…)` with no declared type -- the ONE position
-  * the riddl-models corpus measurement showed was actually unascribed (0 of 288 uses). Every other
+  * it fires ONLY on an unascribed `let x = prompt(…)` with no declared type -- the ONE position the
+  * riddl-models corpus measurement showed was actually unascribed (0 of 288 uses). Every other
   * position (`when`, a constructor argument, `set`, …) stays silent, because "we have not wired
   * this position" is not the same fact as "the language cannot type it" -- widening the warning is
   * exactly the mistake that cost this project 1120 false external-context warnings and 854 hidden
@@ -229,7 +229,7 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
           entityModel("""let x: Score = prompt("d") as Score?"""),
           "let-restate-optional"
         ) mustBe empty
-    }
+      }
 
     "be silent on a 'let' whose qualified ascription restates its qualified declared type" +
       " (review finding 4)" in { (td: TestData) =>
@@ -240,7 +240,7 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
           qualifiedModel("""let x: D.Common.OrderId = prompt("d") as D.Common.OrderId"""),
           "let-restate-qualified"
         ) mustBe empty
-    }
+      }
 
     "be silent on a 'constant' whose ascription matches its declared type" in { (td: TestData) =>
       errorsFor(
@@ -332,7 +332,7 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
         withClue(errs.map(_.message).mkString("\n")) {
           errs.exists(_.message.contains("contradicts")) mustBe true
         }
-    }
+      }
 
     "be an Error on a 'when' condition ascribed to a non-Boolean type" in { (td: TestData) =>
       val errs = errorsFor(

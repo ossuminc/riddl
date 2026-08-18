@@ -28,7 +28,7 @@ class ValidateCommand(using pc: PlatformContext) extends InputFileCommand("valid
       val future = RiddlParserInput.fromPathSafe(inputFile.toString).map {
         case Left(messages) => Left(messages)
         case Right(rpi) =>
-        Riddl.parseAndValidate(rpi)
+          Riddl.parseAndValidate(rpi)
       }
       Await.result(future, 10.seconds)
     }

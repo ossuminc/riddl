@@ -103,7 +103,9 @@ class RefusalRoundTripTest extends AbstractValidatingTest {
       val pretty = prettify(parse(invariantSrc, "src"))
       pretty must include("refuses")
       // Emitted as source, not as a quoted string — a path in quotes would re-parse as prose.
-      pretty must include("invariant ImprovingApp.OrganizationContext.Organization.MustBeAuthorized")
+      pretty must include(
+        "invariant ImprovingApp.OrganizationContext.Organization.MustBeAuthorized"
+      )
 
       val refusals = Finder(parse(pretty, "regen")).recursiveFindByType[RefusalInteraction]
       refusals.size mustBe 1
@@ -124,7 +126,8 @@ class RefusalRoundTripTest extends AbstractValidatingTest {
         """"ImprovingApp.OrganizationContext.Organization.MustBeAuthorized""""
       )
       val refusals =
-        Finder(parse(prettify(parse(prose, "src")), "regen")).recursiveFindByType[RefusalInteraction]
+        Finder(parse(prettify(parse(prose, "src")), "regen"))
+          .recursiveFindByType[RefusalInteraction]
       refusals.size mustBe 1
       refusals.head.reason mustBe a[LiteralString]
     }

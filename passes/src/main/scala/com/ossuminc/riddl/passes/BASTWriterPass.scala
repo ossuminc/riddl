@@ -201,13 +201,13 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
     * is a `Leaf`, and the block's statements live in a FIELD of its `condition` (an
     * [[InvariantBlock]], itself not even a `Container`) -- so like [[Correlation]]'s
     * `timeoutStatements` and [[SagaStep]]'s `doStatements`/`undoStatements`, nothing generic ever
-    * walks them. `writeInvariant` already writes the statements COUNT (via `writeContents`) as
-    * part of the block's encoding, followed -- within that SAME call -- by the predicate and then
+    * walks them. `writeInvariant` already writes the statements COUNT (via `writeContents`) as part
+    * of the block's encoding, followed -- within that SAME call -- by the predicate and then
     * `requires`. So the items written here land AFTER `requires` on the wire, not right after the
-    * count: `process(inv, ...)` runs to completion (id, condition incl. predicate, requires)
-    * before this method gets control back, and whatever it appends next is what comes next on the
-    * wire. `BASTReader.readInvariantNode` mirrors this exactly: it reads the count, defers
-    * building the `InvariantBlock`, reads `requires`, and only THEN reads that many items.
+    * count: `process(inv, ...)` runs to completion (id, condition incl. predicate, requires) before
+    * this method gets control back, and whatever it appends next is what comes next on the wire.
+    * `BASTReader.readInvariantNode` mirrors this exactly: it reads the count, defers building the
+    * `InvariantBlock`, reads `requires`, and only THEN reads that many items.
     */
   private def traverseInvariant(inv: Invariant, parents: ParentStack): Unit = {
     process(inv, parents)

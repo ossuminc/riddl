@@ -13,8 +13,8 @@ import org.scalatest.TestData
 
 /** `initiate` mints an instance; `terminate` ends one.
   *
-  * Neither contradicts activate-on-first-message (CM line 999): construction still completes
-  * only when `on init` finishes, and what was missing was the invocation. The codebase already
+  * Neither contradicts activate-on-first-message (CM line 999): construction still completes only
+  * when `on init` finishes, and what was missing was the invocation. The codebase already
   * partitions the two -- `on init` is once-ever, `on activate` is per-rehydration.
   *
   * The model's argument uses a `String` field with quoted literals ("1"/"2"), NOT `Integer` with
@@ -76,8 +76,10 @@ class InitiateTerminateTest extends AbstractValidatingTest {
   "initiate" should {
     "accept matching arguments and yield an Id" in { (td: TestData) =>
       diagnostics(
-        model("""on init(total: String) is { do "start" }""",
-              """let oid = initiate entity Order("1")"""),
+        model(
+          """on init(total: String) is { do "start" }""",
+          """let oid = initiate entity Order("1")"""
+        ),
         "initiate-ok"
       ).justErrors mustBe empty
     }
@@ -91,8 +93,10 @@ class InitiateTerminateTest extends AbstractValidatingTest {
 
     "REJECT the wrong argument count" in { (td: TestData) =>
       val text = diagnostics(
-        model("""on init(total: String) is { do "start" }""",
-              """let oid = initiate entity Order("1", "2")"""),
+        model(
+          """on init(total: String) is { do "start" }""",
+          """let oid = initiate entity Order("1", "2")"""
+        ),
         "initiate-arity"
       ).justErrors.map(_.message).mkString("\n")
       text must include("2")
@@ -132,20 +136,24 @@ class InitiateTerminateTest extends AbstractValidatingTest {
     // PAYLOAD, so this clause declares none and the statement supplies none.
     "accept an Id-typed target" in { (td: TestData) =>
       diagnostics(
-        model("""on init is { do "start" }
+        model(
+          """on init is { do "start" }
                 |          on term is { do "end" }""".stripMargin,
-              """let oid = initiate entity Order
-                  |            terminate oid""".stripMargin),
+          """let oid = initiate entity Order
+                  |            terminate oid""".stripMargin
+        ),
         "terminate-ok"
       ).justErrors mustBe empty
     }
 
     "REJECT arguments that do not match on term" in { (td: TestData) =>
       val text = diagnostics(
-        model("""on init is { do "start" }
+        model(
+          """on init is { do "start" }
                 |          on term(why: String) is { do "end" }""".stripMargin,
-              """let oid = initiate entity Order
-                  |            terminate oid""".stripMargin),
+          """let oid = initiate entity Order
+                  |            terminate oid""".stripMargin
+        ),
         "terminate-arity"
       ).justErrors.map(_.message).mkString("\n")
       text must include("1")
@@ -177,16 +185,18 @@ class InitiateTerminateTest extends AbstractValidatingTest {
   }
 
   /** The standing `???` ruling: a definition whose body is `???` has said "don't expect much", so
-    * every check other than "provide a body" is skipped for it. `checkTellAddressing` already
-    * gated this way; `checkInitiate`/`checkTerminate` did not, so invoking a stub with arguments
-    * drew a hard Error reasoning from an unwritten body -- exactly the inference the ruling
-    * forbids. Both directions are pinned: the stub is exempt, and a REAL body is still checked
-    * (an exemption with no counter-example is indistinguishable from one applied too widely).
+    * every check other than "provide a body" is skipped for it. `checkTellAddressing` already gated
+    * this way; `checkInitiate`/`checkTerminate` did not, so invoking a stub with arguments drew a
+    * hard Error reasoning from an unwritten body -- exactly the inference the ruling forbids. Both
+    * directions are pinned: the stub is exempt, and a REAL body is still checked (an exemption with
+    * no counter-example is indistinguishable from one applied too widely).
     */
   "a `???` target" should {
     "exempt `initiate` from the arity check" in { (td: TestData) =>
-      diagnostics(stubModel("""let oid = initiate entity Order("1")"""), "initiate-stub")
-        .justErrors mustBe empty
+      diagnostics(
+        stubModel("""let oid = initiate entity Order("1")"""),
+        "initiate-stub"
+      ).justErrors mustBe empty
     }
 
     "exempt `terminate` from the arity check" in { (td: TestData) =>

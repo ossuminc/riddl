@@ -94,7 +94,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
             pv.typeEx.get match
               case e: Enumeration =>
                 e.enumerators.toSeq.map(_.id.value) mustBe Seq("Red", "Green")
-              case other          => fail(s"expected an Enumeration, got $other")
+              case other => fail(s"expected an Enumeration, got $other")
           case other => fail(s"expected a PromptValue, got $other")
       }
     }
@@ -178,6 +178,6 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
                   case other => fail(s"expected an AliasedTypeExpression, got $other")
               case other => fail(s"expected a Sequence, got $other")
           case other => fail(s"expected a PromptValue, got $other")
-    }
+      }
   }
 }

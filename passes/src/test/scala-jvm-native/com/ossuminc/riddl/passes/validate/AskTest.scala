@@ -107,10 +107,10 @@ class AskTest extends AbstractValidatingTest {
       // the deliberate trade for an AST that cannot hold the wrong thing.
       val src = model(askStmt = "let answer = ask command D.C.Go of entity D.C.Ledger")
       TopLevelParser.parseInput(RiddlParserInput(src, td.name)) match
-        case Left(msgs)  => msgs.format must include("query")
+        case Left(msgs) => msgs.format must include("query")
         case Right(root) =>
-          Finder(root).recursiveFindByType[LetStatement].map(_.expression).collect {
-            case a: Ask => a
+          Finder(root).recursiveFindByType[LetStatement].map(_.expression).collect { case a: Ask =>
+            a
           } mustBe empty
     }
   }

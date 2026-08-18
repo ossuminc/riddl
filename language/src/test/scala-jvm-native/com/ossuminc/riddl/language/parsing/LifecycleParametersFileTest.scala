@@ -16,10 +16,10 @@ import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
 /** Parity guard for Task 3's `on init`/`on term` parameter lists: the corpus fixture
-  * `language/input/lifecycle-parameters.riddl` is validated against the EBNF grammar by the
-  * TatSu validator (which scans every input-directory riddl file). This test proves fastparse
-  * accepts the SAME file, so the documented grammar and the implementation stay in sync (see
-  * CLAUDE.md "Parser/EBNF Synchronization Requirement").
+  * `language/input/lifecycle-parameters.riddl` is validated against the EBNF grammar by the TatSu
+  * validator (which scans every input-directory riddl file). This test proves fastparse accepts the
+  * SAME file, so the documented grammar and the implementation stay in sync (see CLAUDE.md
+  * "Parser/EBNF Synchronization Requirement").
   */
 class LifecycleParametersFileTest extends AnyWordSpec with Matchers {
 

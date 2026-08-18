@@ -335,8 +335,8 @@ object AST:
 
     /** The URL this path denotes, computed AT USE rather than stored.
       *
-      * The parser used to resolve `described in file "X.md"` against the source root and store
-      * the absolute result, which destroyed the authored string: prettify then emitted
+      * The parser used to resolve `described in file "X.md"` against the source root and store the
+      * absolute result, which destroyed the authored string: prettify then emitted
       * `file:///Users/reid/...`, so the round trip produced a model that would not resolve on any
       * other checkout, in CI, or for another developer. Reid ruled (2026-08-09) that the authored
       * string is what the AST holds and the URL is derived on demand.
@@ -831,8 +831,8 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Initiate | NumericLiteral |
-    LookupValue | Requires | Returns | InvariantBlock
+    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Initiate |
+    NumericLiteral | LookupValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -1016,8 +1016,10 @@ object AST:
   type RepositoryContents = OccursInRepository | Include[OccursInRepository]
 
   /** Type of definitions that occur in a [[Function]] */
-  /** [[Requires]] and [[Returns]] are content rather than fields on [[Function]]; see [[Requires]]. */
-  private type OccursInFunction = OccursInVitalDefinition | Statement | Function | Requires | Returns
+  /** [[Requires]] and [[Returns]] are content rather than fields on [[Function]]; see [[Requires]].
+    */
+  private type OccursInFunction = OccursInVitalDefinition | Statement | Function | Requires |
+    Returns
 
   /** Type of definitions that occur in a [[Function]]. Functions are self-contained and do not
     * support includes.
@@ -1110,8 +1112,8 @@ object AST:
       * Answered from [[Containment]], which derives it from the very `XContents` union the parser
       * is checked against — so this cannot disagree with what riddlc accepts. Every structural
       * editor (Synapify's drag-and-drop, the IDEA plugin, the VS Code extension) previously kept a
-      * hand-written copy of these rules; each copy drifts the moment the grammar gains a
-      * construct, and Synapify's was wrong in two ways before anyone noticed.
+      * hand-written copy of these rules; each copy drifts the moment the grammar gains a construct,
+      * and Synapify's was wrong in two ways before anyone noticed.
       *
       * DIRECT containment only: a Domain cannot contain an Entity, even though it can contain a
       * Context that can. Kind-level only: names, duplicates and reference validity are not
@@ -1313,7 +1315,7 @@ object AST:
     def shapeForArity(out: Int, in: Int): StreamletShape = {
       val loc = this.loc
       (out, in) match
-        case (0, 0)                     => Void(loc)
+        case (0, 0) => Void(loc)
         // A SINK is any pure drain and a SOURCE any pure origin, whatever the port count (Reid,
         // 2026-08-12). Both used to be pinned to exactly one port, which left `(0, >=2)` and
         // `(>=2, 0)` -- an ordinary fan-in drain and fan-out origin -- with no shape at all. They
@@ -2324,9 +2326,9 @@ object AST:
     contents: Contents[AggregateContents] = Contents.empty[AggregateContents](),
     yields: Option[MessageRef] = None
   ) extends AggregateTypeExpression(contents):
-    /** The keyword this use case declares its response with: `replies` for a query, `yields` for
-      * a command. Emitting `yields` for a query would produce source that no longer PARSES, which
-      * is how a prettify round trip caught this.
+    /** The keyword this use case declares its response with: `replies` for a query, `yields` for a
+      * command. Emitting `yields` for a query would produce source that no longer PARSES, which is
+      * how a prettify round trip caught this.
       */
     def responseKeyword: String =
       if usecase == AggregateUseCase.QueryCase then "replies" else "yields"
@@ -2434,8 +2436,8 @@ object AST:
   }
 
   /** A type expression for values that ensure a unique identifier for a specific Processor
-    * (Adaptor, Context, Entity, Projector, Repository, or Streamlet) -- widened from
-    * Entity-only 2026-08-13.
+    * (Adaptor, Context, Entity, Projector, Repository, or Streamlet) -- widened from Entity-only
+    * 2026-08-13.
     *
     * @param loc
     *   The location of the unique identifier type expression
@@ -2537,11 +2539,11 @@ object AST:
 
   /** A signed whole number: `… -2, -1, 0, 1, 2 …`.
     *
-    * The three integer types were undocumented until 2026-08-14 — nothing in the code, the
-    * grammar, the language reference or the Computational Model said what they meant, so a check
-    * could not enforce them. Ruled by Reid: `Integer` signed, [[Whole]] non-negative, [[Natural]]
-    * positive. Note the grammar's lexical `natural = /[0-9]+/` admits `0` and is UNAFFECTED — it
-    * is the rule for version components, not this type.
+    * The three integer types were undocumented until 2026-08-14 — nothing in the code, the grammar,
+    * the language reference or the Computational Model said what they meant, so a check could not
+    * enforce them. Ruled by Reid: `Integer` signed, [[Whole]] non-negative, [[Natural]] positive.
+    * Note the grammar's lexical `natural = /[0-9]+/` admits `0` and is UNAFFECTED — it is the rule
+    * for version components, not this type.
     */
   @JSExportTopLevel("Integer")
   case class Integer(loc: At) extends PredefinedType with IntegerTypeExpression
@@ -2968,10 +2970,10 @@ object AST:
 
   /** What a `constant` may hold. A narrowing of [[Value]], defined the same way [[Comparand]] is.
     *
-    * Deliberately NOT the full [[Value]] union, which would admit `Call`, `Ask` and `Initiate` in
-    * a constant. A [[PromptValue]] IS admitted and is a typed hole: the type is declared by the
-    * constant and the computation is prose an AI fills in at generation time, so it needs no
-    * `as T` ascription and is exempt from the conformance checks.
+    * Deliberately NOT the full [[Value]] union, which would admit `Call`, `Ask` and `Initiate` in a
+    * constant. A [[PromptValue]] IS admitted and is a typed hole: the type is declared by the
+    * constant and the computation is prose an AI fills in at generation time, so it needs no `as T`
+    * ascription and is exempt from the conformance checks.
     */
   type ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue
 
@@ -2999,11 +3001,11 @@ object AST:
 
     /** Format the node to a string.
       *
-      * This emitted `const` — not a keyword; `constant` is (`Keywords.scala:584`) — so the text
-      * did not re-parse. It survived because `PrettifyVisitor` routes through
-      * `RiddlFileEmitter.emitConstant`, which was correct: the same two-copies-of-one-dispatch
-      * trap as `WhenStatement.format` vs `emitStatement`, where the exercised copy concealed the
-      * broken one. Keep the two in step.
+      * This emitted `const` — not a keyword; `constant` is (`Keywords.scala:584`) — so the text did
+      * not re-parse. It survived because `PrettifyVisitor` routes through
+      * `RiddlFileEmitter.emitConstant`, which was correct: the same two-copies-of-one-dispatch trap
+      * as `WhenStatement.format` vs `emitStatement`, where the exercised copy concealed the broken
+      * one. Keep the two in step.
       */
     override def format: String =
       s"constant ${id.format}: ${typeEx.format} = ${value.format}"
@@ -3145,10 +3147,10 @@ object AST:
 
   /** `initiate <processor>(args)` -- bring an instance into being and yield its identity.
     *
-    * Creation still completes only when `on init` finishes, so this does NOT introduce a second
-    * way for an instance to exist (CM line 999): it supplies the invocation that was missing.
-    * The value is the newly minted `Id(P)`, which is system-generated and opaque -- a BUSINESS
-    * key belongs in `on init`'s parameters and lives in state.
+    * Creation still completes only when `on init` finishes, so this does NOT introduce a second way
+    * for an instance to exist (CM line 999): it supplies the invocation that was missing. The value
+    * is the newly minted `Id(P)`, which is system-generated and opaque -- a BUSINESS key belongs in
+    * `on init`'s parameters and lives in state.
     *
     * @param loc
     *   The location of the `initiate` in the source
@@ -3172,10 +3174,10 @@ object AST:
 
   /** `self` -- the currently executing processor instance, and `self.<field>` on it.
     *
-    * Its TYPE is a synthesized [[Aggregation]] rather than a bespoke node. That is deliberate
-    * and load-bearing: because the type is an ordinary record, `let me = self` followed by
-    * `me.id` resolves through the SAME `ValueRef` path walk every other value uses, so no
-    * resolution rule anywhere needs to know `self` exists.
+    * Its TYPE is a synthesized [[Aggregation]] rather than a bespoke node. That is deliberate and
+    * load-bearing: because the type is an ordinary record, `let me = self` followed by `me.id`
+    * resolves through the SAME `ValueRef` path walk every other value uses, so no resolution rule
+    * anywhere needs to know `self` exists.
     *
     * The type cannot be user-nameable -- `self.id` is `Id(Order)` in an Order handler and
     * `Id(Shipping)` in a Shipping one -- so `let me: T = self` has no `T` to write, and `self`
@@ -3190,12 +3192,12 @@ object AST:
   object SelfValue:
     /** The CLOSED set of fields. Adding one is a language change, not a detail.
       *
-      * **The two members qualify for DIFFERENT reasons, and an earlier version of this comment
-      * got the second one wrong** (it said `self` "carries what cannot be known statically, which
-      * is why `version` is here" -- `version` is not runtime information at all):
+      * **The two members qualify for DIFFERENT reasons, and an earlier version of this comment got
+      * the second one wrong** (it said `self` "carries what cannot be known statically, which is
+      * why `version` is here" -- `version` is not runtime information at all):
       *
-      *   - **`id`** is genuinely RUNTIME-ONLY. It is minted by `initiate` and no generator can
-      *     know it statically.
+      *   - **`id`** is genuinely RUNTIME-ONLY. It is minted by `initiate` and no generator can know
+      *     it statically.
       *   - **`version`** is STATIC but COMPUTED -- it is A53's composed version coordinate for the
       *     enclosing processor, the one [[composedVersionString]] builds by joining each versioned
       *     ancestor's component with [[VersionSeparator]] (e.g. `"Jellyfish.Garibaldi.4.2"`). A
@@ -3205,8 +3207,8 @@ object AST:
       *
       * So the admission test is not "runtime-only" alone. A field belongs here when it describes
       * the enclosing processor and the author would otherwise have to restate something that can
-      * drift -- either because it is unknowable until run time (`id`) or because it is derived
-      * from context that changes without the author touching this definition (`version`).
+      * drift -- either because it is unknowable until run time (`id`) or because it is derived from
+      * context that changes without the author touching this definition (`version`).
       *
       * `isClustered` fails that test on both counts: with `option clustered` written on the
       * processor it is neither unknowable nor derived, just a property the author stated directly.
@@ -3272,7 +3274,8 @@ object AST:
   end GetValue
 
   /** A `<collection> at <index>[, <index>…]` lookup — a `Mapping` by key, a `Sequence` by ordinal,
-    * or a `Table` by one ordinal per dimension (Reid, 2026-08-10; Table arity confirmed 2026-08-17).
+    * or a `Table` by one ordinal per dimension (Reid, 2026-08-10; Table arity confirmed
+    * 2026-08-17).
     *
     * Exists because outside a `foreach` a mapping was WRITE-ONLY: nothing in [[Value]] indexed, so
     * a model could declare a mapping and never name what it stored.
@@ -3364,14 +3367,13 @@ object AST:
       case other                               => other.format
   end PromptValue
 
-  /** A numeric literal — an integer or a real number, written directly rather than quoted or
-    * named.
+  /** A numeric literal — an integer or a real number, written directly rather than quoted or named.
     *
     * **The text is stored AS WRITTEN, and that is the point.** `1.50`, `007` and `+3` are not
-    * recoverable from a parsed `Long`/`BigDecimal`, so a parsed payload would make prettify
-    * diverge from the source on its first use. Storing text makes the round trip byte-exact by
-    * construction, needs one BAST tag rather than two, and keeps `BigDecimal` off the Native and
-    * JS paths entirely. Same reasoning as `UniqueId.kindKeyword` and correlation keys.
+    * recoverable from a parsed `Long`/`BigDecimal`, so a parsed payload would make prettify diverge
+    * from the source on its first use. Storing text makes the round trip byte-exact by
+    * construction, needs one BAST tag rather than two, and keeps `BigDecimal` off the Native and JS
+    * paths entirely. Same reasoning as `UniqueId.kindKeyword` and correlation keys.
     *
     * `isEmpty` is deliberately NOT overridden: a literal is a non-container, so the inherited
     * `true` is correct. Emptiness asks whether a node HAS CONTENTS, never whether the author
@@ -3389,9 +3391,9 @@ object AST:
     override def kind: String = "Numeric Literal"
     def format: String = text
 
-    /** True when the literal has neither a fractional part nor an exponent. `1e3` is therefore
-      * NOT an integer literal: it denotes a real, and the type inference in ValidationPass
-      * depends on that reading.
+    /** True when the literal has neither a fractional part nor an exponent. `1e3` is therefore NOT
+      * an integer literal: it denotes a real, and the type inference in ValidationPass depends on
+      * that reading.
       */
     def isInteger: Boolean = !text.exists(c => c == '.' || c == 'e' || c == 'E')
     def asLong: Long = text.toLong
@@ -3419,13 +3421,12 @@ object AST:
   end LogicalOperator
 
   /** Comparison operands are [[Comparand]] — the refs plus a [[NumericLiteral]]. A28 originally
-    * narrowed this to refs ALONE so that "magic-constant comparisons cannot be constructed at
-    * all", forcing `count > MaxCount`. Reid reversed that 2026-08-14: in the whole riddl-models
-    * corpus there was exactly ONE constant, so the rule had no uptake to protect — plausibly
-    * because the only way to name a number was to put it in a string. The intent survives as
-    * advice, not structure: a literal comparand draws a StyleWarning suggesting a named constant.
-    * Booleans remain excluded — `true`/`false` are boolean ATOMS, so `count > true` is still a
-    * parse error.
+    * narrowed this to refs ALONE so that "magic-constant comparisons cannot be constructed at all",
+    * forcing `count > MaxCount`. Reid reversed that 2026-08-14: in the whole riddl-models corpus
+    * there was exactly ONE constant, so the rule had no uptake to protect — plausibly because the
+    * only way to name a number was to put it in a string. The intent survives as advice, not
+    * structure: a literal comparand draws a StyleWarning suggesting a named constant. Booleans
+    * remain excluded — `true`/`false` are boolean ATOMS, so `count > true` is still a parse error.
     */
   type Comparand = ValueRef | GetValue | ConstantRef | NumericLiteral | LookupValue
 
@@ -3435,8 +3436,8 @@ object AST:
     * because the layered precedence parser returns a bare `Value` atom — e.g. a [[ValueRef]] to a
     * boolean field — at any operand position; validation (not the type system) enforces that
     * logical/`not` operands are boolean. Comparison operands, by contrast, are typed as
-    * [[Comparand]] — the refs plus a bare [[NumericLiteral]] (A28, widened 2026-08-14; see the
-    * doc on [[Comparand]] for why the original ref-only ban was reversed).
+    * [[Comparand]] — the refs plus a bare [[NumericLiteral]] (A28, widened 2026-08-14; see the doc
+    * on [[Comparand]] for why the original ref-only ban was reversed).
     */
   sealed trait BooleanExpression extends RiddlValue
 
@@ -3543,8 +3544,8 @@ object AST:
     *
     * Only the path generalizes. There is deliberately no `operandMessageKind` counterpart here: a
     * ref carries its kind syntactically but a binding's kind is only known once resolved, so asking
-    * for it without a resolver would force a wrong answer. Use
-    * `ValidationPass.operandMessageKind`, which returns an Option.
+    * for it without a resolver would force a wrong answer. Use `ValidationPass.operandMessageKind`,
+    * which returns an Option.
     */
   extension (m: MessageRef | Constructor | ValueRef)
     def deliverableOperandPathId: PathIdentifier = m match
@@ -3753,7 +3754,8 @@ object AST:
   ) extends Statement {
     override def kind: String = "Tell Statement"
     override def canFail: Boolean = true // A12: telling a processor may fail
-    def format: String = s"tell ${msg.format} to ${processorRef.format}${by.map(b => s" by ${b.format}").getOrElse("")}"
+    def format: String =
+      s"tell ${msg.format} to ${processorRef.format}${by.map(b => s" by ${b.format}").getOrElse("")}"
   }
 
   /** A statement that sends a result message back to the sender of the current message. Used in
@@ -3789,14 +3791,14 @@ object AST:
     *   query   Ask replies result Answer ->  reply result Answer
     * }}}
     *
-    * `yield` served BOTH halves while `reply` was a deprecated alias pointing at it
-    * (`type ReplyStatement = YieldStatement`), so nothing in a handler body told a reader which
-    * half of the language they were in. Reid un-deprecated `reply` and restricted `yield` to
-    * events (2026-08-08).
+    * `yield` served BOTH halves while `reply` was a deprecated alias pointing at it (`type
+    * ReplyStatement = YieldStatement`), so nothing in a handler body told a reader which half of
+    * the language they were in. Reid un-deprecated `reply` and restricted `yield` to events
+    * (2026-08-08).
     *
-    * They are genuinely different operations, not two spellings: emitting an event as a
-    * consequence of a command is not the same act as answering a question, and a generator lowers
-    * them differently -- which is why this is a distinct case class and not a kind test on
+    * They are genuinely different operations, not two spellings: emitting an event as a consequence
+    * of a command is not the same act as answering a question, and a generator lowers them
+    * differently -- which is why this is a distinct case class and not a kind test on
     * [[YieldStatement]]. It is also what makes `ask` expressible: the value an `ask` produces is
     * the one a `reply` provides.
     *
@@ -4013,8 +4015,8 @@ object AST:
     * @param loc
     *   The location of the statement in the model
     * @param element
-    *   The local identifier bound to each element of the collection during iteration. For a
-    *   mapping this is the KEY.
+    *   The local identifier bound to each element of the collection during iteration. For a mapping
+    *   this is the KEY.
     * @param valueElement
     *   The local identifier bound to the VALUE of each mapping entry, present only for the
     *   destructuring form. `None` for every non-mapping collection.
@@ -4104,17 +4106,17 @@ object AST:
     * can never contradict and no "the keyword must tell the truth" check is needed here (contrast
     * [[UniqueId.kindKeyword]], which needs exactly that).
     *
-    * **A singleton's `Id` exists to SEND MESSAGES to it, and lifecycle operations are not
-    * permitted on one** (Reid, 2026-08-15). So `Id(P)` remains valid for all six processor kinds
-    * -- an `Id` of a singleton denotes its singular deployment, and addressing it means "select
-    * the right shard/partition and forward", the singleton being treated as a whole despite a
-    * clustered arrangement -- and the Entity restriction is an EXPLICIT validation check
-    * (`checkTerminate`), never a consequence of which types can hold an `Id`.
+    * **A singleton's `Id` exists to SEND MESSAGES to it, and lifecycle operations are not permitted
+    * on one** (Reid, 2026-08-15). So `Id(P)` remains valid for all six processor kinds -- an `Id`
+    * of a singleton denotes its singular deployment, and addressing it means "select the right
+    * shard/partition and forward", the singleton being treated as a whole despite a clustered
+    * arrangement -- and the Entity restriction is an EXPLICIT validation check (`checkTerminate`),
+    * never a consequence of which types can hold an `Id`.
     *
-    * **`args` are pure PAYLOAD.** They carry no addressing: `on term`'s leading `Id(...)`
-    * parameter used to be an addressing convention detectable only by position, and that
-    * convention is gone. A clause that wants the instance it is ending reads `self.id`, which is
-    * in scope for the whole `on term` body, so nothing was lost.
+    * **`args` are pure PAYLOAD.** They carry no addressing: `on term`'s leading `Id(...)` parameter
+    * used to be an addressing convention detectable only by position, and that convention is gone.
+    * A clause that wants the instance it is ending reads `self.id`, which is in scope for the whole
+    * `on term` body, so nothing was lost.
     *
     * @param loc
     *   The location of the `terminate` statement in the source
@@ -4122,8 +4124,8 @@ object AST:
     *   A value of type `Id(entity E)` denoting the instance to end
     * @param args
     *   The arguments supplied to the target entity's `on term` parameters, behind a `with`
-    *   separator. `with` rather than bare parentheses because `terminate order.id("x")` reads as
-    *   a call on `id`, and `with` is the established RIDDL idiom (`morph ... with`,
+    *   separator. `with` rather than bare parentheses because `terminate order.id("x")` reads as a
+    *   call on `id`, and `with` is the established RIDDL idiom (`morph ... with`,
     *   `require ... with`).
     */
   @JSExportTopLevel("TerminateStatement")
@@ -4221,8 +4223,7 @@ object AST:
   case class Requires(loc: At, what: TypeRef | Aggregation) extends RiddlValue:
     def format: String = "requires " + (what match
       case tr: TypeRef      => tr.format
-      case agg: Aggregation => agg.format
-    )
+      case agg: Aggregation => agg.format)
   end Requires
 
   /** The `returns` clause of a [[Function]] or [[Saga]]. See [[Requires]] for why it is content
@@ -4231,8 +4232,7 @@ object AST:
   case class Returns(loc: At, what: TypeRef | Aggregation) extends RiddlValue:
     def format: String = "returns " + (what match
       case tr: TypeRef      => tr.format
-      case agg: Aggregation => agg.format
-    )
+      case agg: Aggregation => agg.format)
   end Returns
 
   /** A function definition which can be part of a bounded referent or an entity.
@@ -4318,8 +4318,8 @@ object AST:
       * clause of that entity and may read only fields present in EVERY state record (the
       * intersection rule); declared inside a State it applies to that state's handlers.
       *
-      * `Some(StateRef)` -- declared at entity level but scoped to that one state; applies while
-      * the entity is in it.
+      * `Some(StateRef)` -- declared at entity level but scoped to that one state; applies while the
+      * entity is in it.
       *
       * `Some(TypeRef)` -- reads only the value handed to it, so it is NEVER implicit; it must be
       * invoked by `require invariant X with <expr>`, where the CLAUSE does any gathering. This is
@@ -4394,11 +4394,11 @@ object AST:
     *
     * A57: `on other as x [: <envelope>]` optionally binds the residual message's ENVELOPE. Unlike
     * an [[OnMessageLikeClause]] binding, `x` does not denote a message — the clause names none — it
-    * denotes the metadata the message travelled in, whose type comes from `option
-    * message_envelope` in scope. The ascription is an OPTIONAL restatement of that option, checked
-    * against it, so the type can be pulled to the use site where a reader benefits without being
-    * repeated everywhere. Validation owns both rules: an ascription that contradicts the option,
-    * and either form used with no envelope in scope.
+    * denotes the metadata the message travelled in, whose type comes from `option message_envelope`
+    * in scope. The ascription is an OPTIONAL restatement of that option, checked against it, so the
+    * type can be pulled to the use site where a reader benefits without being repeated everywhere.
+    * Validation owns both rules: an ascription that contradicts the option, and either form used
+    * with no envelope in scope.
     *
     * `binding` and `envelopeType` carry NO defaults and precede `contents`, because
     * `@JSExportTopLevel` requires a case class's defaulted parameters to be TRAILING.
@@ -4443,10 +4443,10 @@ object AST:
     *   -- move it after `contents`/`metadata`, since `@JSExportTopLevel` wants defaulted parameters
     *   trailing -- is NOT needed and would itself be source-breaking: that rule bites only while
     *   `parameters` has NO default, and once it has one, `loc` is the sole undefaulted parameter
-    *   and everything after it is defaulted, so the constraint is satisfied where it stands.
-    *   Moving it would have broken all five positional constructions in production code
-    *   (`HandlerParser` x2, `BASTReader`, `JsonAstBuilder` x2). Contrast A55's `binding` and A57's
-    *   `envelopeType`, which genuinely cannot be defaulted and so must precede the defaults.
+    *   and everything after it is defaulted, so the constraint is satisfied where it stands. Moving
+    *   it would have broken all five positional constructions in production code (`HandlerParser`
+    *   x2, `BASTReader`, `JsonAstBuilder` x2). Contrast A55's `binding` and A57's `envelopeType`,
+    *   which genuinely cannot be defaulted and so must precede the defaults.
     * @param contents
     *   A set of statements that define the behavior when a message doesn't match
     */
@@ -4821,7 +4821,6 @@ object AST:
     end typeKeyword
   }
 
-
   /** Definition of an Entity
     *
     * @param loc
@@ -5189,8 +5188,8 @@ object AST:
   /** A semantic declaration written as a keyword BEFORE `connector`.
     *
     * Same reasoning as [[EntityIntention]], and the same category error being fixed: `persistent`
-    * was an option, but the Computational Model calls options advisory ("honored if possible")
-    * and a DELIVERY GUARANTEE is not advisory. §25.7 is explicit -- delivery is at-least-once on
+    * was an option, but the Computational Model calls options advisory ("honored if possible") and
+    * a DELIVERY GUARANTEE is not advisory. §25.7 is explicit -- delivery is at-least-once on
     * durable realizations, "weaker only as a knowing deployment downgrade, never a silent one" --
     * and a keyword at the declaration site is exactly what makes the downgrade un-silent.
     *
@@ -5223,8 +5222,8 @@ object AST:
       case ExactlyOnce => "exactly-once"
 
     def group: String = this match
-      case Persistent                              => "durability"
-      case AtLeastOnce | AtMostOnce | ExactlyOnce  => "delivery"
+      case Persistent                             => "durability"
+      case AtLeastOnce | AtMostOnce | ExactlyOnce => "delivery"
   end ConnectorIntention
 
   object ConnectorIntention:
@@ -5266,7 +5265,6 @@ object AST:
     *   The meta data for this connector
     */
   @JSExportTopLevel("Connector")
-
 
   case class Connector(
     loc: At,
@@ -5833,16 +5831,16 @@ object AST:
 
   /** An interaction where a system element refuses a User's request (A38). The refusing element is
     * the `from` side (a processor/context/entity or any interaction reference), the refused party
-    * is the `to` [[UserRef]], and `reason` says why the request was refused — either as prose or
-    * by naming the [[Invariant]] the request violates.
+    * is the `to` [[UserRef]], and `reason` says why the request was refused — either as prose or by
+    * naming the [[Invariant]] the request violates.
     *
     * **Both spellings are first-class, and the prose form is not deprecated.** RIDDL has two
     * legitimate refusal mechanisms in a handler and only one of them has an invariant to name: a
-    * handler refuses either with `require invariant X` or with `error "<prose>"`, and the
-    * validator treats them as equivalent discharges in two independent places
-    * (`ValidationPass`'s `case _: ErrorStatement | _: RequireStatement`). Narrowing this operand to
-    * an [[InvariantRef]] would make an error-based refusal undocumentable, and warning on the prose
-    * form would fire on models that are correct.
+    * handler refuses either with `require invariant X` or with `error "<prose>"`, and the validator
+    * treats them as equivalent discharges in two independent places (`ValidationPass`'s
+    * `case _: ErrorStatement | _: RequireStatement`). Narrowing this operand to an [[InvariantRef]]
+    * would make an error-based refusal undocumentable, and warning on the prose form would fire on
+    * models that are correct.
     *
     * What the [[InvariantRef]] form buys is A38's actual goal: a use-case step that closes the loop
     * to the `require` it describes, and thence to the `InvariantViolated` a generated test asserts.
@@ -6459,15 +6457,15 @@ object AST:
         s"Map from ${errorDescription(from)} to ${errorDescription(to)}"
       case EntityReferenceTypeExpression(_, entity) =>
         s"Reference to entity ${entity.format}"
-      case p: Pattern              => p.format
-      case Decimal(_, whl, frac)   => s"Decimal($whl,$frac)"
+      case p: Pattern            => p.format
+      case Decimal(_, whl, frac) => s"Decimal($whl,$frac)"
       // Delegated rather than re-spelled: this line held a SECOND copy of the label, which is how
       // it kept saying `Range(2,4)` after `RangeType.kind` was lowered to the spelling that
       // actually parses. One source of truth means it cannot drift again.
-      case rt: RangeType           => rt.format
+      case rt: RangeType => rt.format
       // Same reasoning as RangeType above: delegate to format() so the keyword (added
       // 2026-08-13) can't drift out of sync with a hand-built second copy of the label.
-      case uid: UniqueId           => uid.format
+      case uid: UniqueId => uid.format
       case m @ AggregateUseCaseTypeExpression(_, messageKind, _, _) =>
         s"${messageKind.useCase} of ${m.fields.size} fields and ${m.methods.size} methods"
       case pt: PredefinedType => pt.kind
@@ -6477,8 +6475,8 @@ object AST:
   /** What each container may hold, derived from the containment unions themselves.
     *
     * The rules live in exactly one place already — the `OccursInX` / `XContents` aliases above,
-    * which are what the parser's return types are checked against. `utils.UnionMembers.contains` expands
-    * one of those unions into a membership test at COMPILE time, so every entry below is a
+    * which are what the parser's return types are checked against. `utils.UnionMembers.contains`
+    * expands one of those unions into a membership test at COMPILE time, so every entry below is a
     * restatement of nothing: add a member to `ContextContents` and `context.canContain` gains it
     * with no edit here.
     *
@@ -6519,27 +6517,27 @@ object AST:
     private lazy val onClauseIn = contains[Statements]
 
     def of(branch: Branch[?]): Contains = branch match
-      case _: Root       => rootIn
-      case _: Module     => moduleIn
-      case _: Domain     => domainIn
-      case _: Context    => contextIn
-      case _: Entity     => entityIn
-      case _: Adaptor    => adaptorIn
-      case _: Repository => repositoryIn
-      case _: Projector  => projectorIn
-      case _: Streamlet  => streamletIn
-      case _: Function   => functionIn
-      case _: Saga       => sagaIn
-      case _: Epic       => epicIn
-      case _: UseCase    => useCaseIn
-      case _: Type       => typeIn
+      case _: Root        => rootIn
+      case _: Module      => moduleIn
+      case _: Domain      => domainIn
+      case _: Context     => contextIn
+      case _: Entity      => entityIn
+      case _: Adaptor     => adaptorIn
+      case _: Repository  => repositoryIn
+      case _: Projector   => projectorIn
+      case _: Streamlet   => streamletIn
+      case _: Function    => functionIn
+      case _: Saga        => sagaIn
+      case _: Epic        => epicIn
+      case _: UseCase     => useCaseIn
+      case _: Type        => typeIn
       case _: Handler     => handlerIn
       case _: State       => stateIn
       case _: Correlation => correlationIn
-      case _: Group      => groupIn
-      case _: Output     => outputIn
-      case _: Input      => inputIn
-      case _: OnClause   => onClauseIn
+      case _: Group       => groupIn
+      case _: Output      => outputIn
+      case _: Input       => inputIn
+      case _: OnClause    => onClauseIn
     end of
   end Containment
 end AST

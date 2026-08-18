@@ -18,8 +18,8 @@ import org.scalatest.TestData
   *
   * `NumericType.isAssignmentCompatible` deliberately lets ANY numeric accept any other, and that
   * stays true for references. The last case pins that from the loose side: if someone "tidies up"
-  * by tightening `isAssignmentCompatible` itself, this suite goes red instead of silently
-  * changing behaviour far beyond literals.
+  * by tightening `isAssignmentCompatible` itself, this suite goes red instead of silently changing
+  * behaviour far beyond literals.
   */
 class NumericLiteralConformanceTest extends AbstractValidatingTest {
 
@@ -162,14 +162,13 @@ class NumericLiteralConformanceTest extends AbstractValidatingTest {
   }
 
   "a reference, unlike a literal" should {
-    "stay loosely compatible — a Real-typed field still assigns to a Natural" in {
-      (td: TestData) =>
-        // Exercises the ALIAS form (`type Nat is Natural`), which resolves through the ordinary
-        // symbol table and is unaffected by the direct-keyword fix above; kept as a second,
-        // independent path to the same conclusion — a Real-typed reference assigns into a
-        // Natural-aliased local without complaint.
-        val src =
-          """domain D is {
+    "stay loosely compatible — a Real-typed field still assigns to a Natural" in { (td: TestData) =>
+      // Exercises the ALIAS form (`type Nat is Natural`), which resolves through the ordinary
+      // symbol table and is unaffected by the direct-keyword fix above; kept as a second,
+      // independent path to the same conclusion — a Real-typed reference assigns into a
+      // Natural-aliased local without complaint.
+      val src =
+        """domain D is {
             |  context C is {
             |    type Nat is Natural with { briefly "nat" }
             |    record St is { rate: Real, note: String } with { briefly "st" }
@@ -184,10 +183,10 @@ class NumericLiteralConformanceTest extends AbstractValidatingTest {
             |  } with { briefly "c" }
             |} with { briefly "d" }
             |""".stripMargin
-        val errs = diagnostics(src, "ref-stays-loose").justErrors
-        withClue(errs.map(_.message).mkString("\n")) {
-          errs mustBe empty
-        }
+      val errs = diagnostics(src, "ref-stays-loose").justErrors
+      withClue(errs.map(_.message).mkString("\n")) {
+        errs mustBe empty
+      }
     }
   }
 }

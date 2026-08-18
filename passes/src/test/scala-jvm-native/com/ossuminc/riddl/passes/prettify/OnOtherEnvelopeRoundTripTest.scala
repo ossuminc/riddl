@@ -56,7 +56,9 @@ class OnOtherEnvelopeRoundTripTest extends AbstractValidatingTest {
        |""".stripMargin
 
   private def otherClause(root: Root): OnOtherClause =
-    Finder(root).recursiveFindByType[OnOtherClause].headOption
+    Finder(root)
+      .recursiveFindByType[OnOtherClause]
+      .headOption
       .getOrElse(fail("no OnOtherClause found"))
 
   "A57 on-other envelope binding" should {

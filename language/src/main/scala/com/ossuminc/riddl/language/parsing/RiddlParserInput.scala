@@ -361,9 +361,9 @@ protected[parsing] case class StringParserInput(
   override def hashCode(): Int = cachedHashCode
 
   /** Overriding `hashCode` on a case class suppresses the compiler-generated `equals` (Scala 3
-    * spec) — the same trap recorded on `AST.Definition` — so it must be written out. The `eq`
-    * fast path is a bonus fix: the generated `equals` compared [[data]] character-by-character,
-    * which was the same O(file) cost on every hash collision.
+    * spec) — the same trap recorded on `AST.Definition` — so it must be written out. The `eq` fast
+    * path is a bonus fix: the generated `equals` compared [[data]] character-by-character, which
+    * was the same O(file) cost on every hash collision.
     */
   override def equals(that: Any): Boolean = that match
     case other: StringParserInput =>

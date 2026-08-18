@@ -23,8 +23,8 @@ import scala.concurrent.duration.DurationInt
   * a `ShownBy` -- lost its scheme and host. `shown by { https://ossum.tech/... }` came back as
   * `shown by { file:///... }`; only `described at <url>` escaped notice, and only because it stores
   * the whole authored string as a plain `path` field on `URLDescription`, never going through
-  * `writeURL`/`readURL` at all -- it was never at risk, not "lucky" in the sense of sharing the code
-  * path and dodging the bug.
+  * `writeURL`/`readURL` at all -- it was never at risk, not "lucky" in the sense of sharing the
+  * code path and dodging the bug.
   *
   * Reported by riddl-models 2026-08-14
   * (`task/2026-08-14-shown-by-loses-its-url-scheme-and-host-through-bast.md`), reduced from their
@@ -72,7 +72,9 @@ class URLBASTRoundTripTest extends AbstractValidatingTest {
 
     "keep its scheme, authority AND path through a BAST round trip" in { (td: TestData) =>
       val root = roundTrip(src, "shownBy-scheme-authority-path")
-      val shown = Finder(root).recursiveFindByType[ShownBy].headOption
+      val shown = Finder(root)
+        .recursiveFindByType[ShownBy]
+        .headOption
         .getOrElse(fail("the ShownBy did not survive the BAST round trip"))
       val url = shown.urls.headOption.getOrElse(fail("the ShownBy carried no URL"))
       // Before the fix this was ("file", "", ..., "mockups/survey-map") -- scheme and authority
@@ -88,7 +90,8 @@ class URLBASTRoundTripTest extends AbstractValidatingTest {
     "keep its full authored text through a BAST round trip (the case that worked by luck)" in {
       (td: TestData) =>
         val root = roundTrip(src, "describedAt-luck")
-        val context = Finder(root).recursiveFindByType[Context]
+        val context = Finder(root)
+          .recursiveFindByType[Context]
           .find(_.id.value == "ui")
           .getOrElse(fail("the 'ui' context did not survive"))
         val described = context.metadata.toSeq
@@ -111,7 +114,9 @@ class URLBASTRoundTripTest extends AbstractValidatingTest {
       // exactly as many bytes as the old writer wrote, just mis-assigning them) -- so this guards
       // the field COUNT staying in sync between writer and reader, not merely "something decoded".
       val root = roundTrip(src, "after-url-definitions")
-      val after = Finder(root).recursiveFindByType[Context].find(_.id.value == "After")
+      val after = Finder(root)
+        .recursiveFindByType[Context]
+        .find(_.id.value == "After")
         .getOrElse(fail("the 'After' context did not survive"))
       val marker = Finder(after).recursiveFindByType[Type].find(_.id.value == "Marker")
       marker must not be empty
@@ -129,16 +134,18 @@ class URLBASTRoundTripTest extends AbstractValidatingTest {
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         TopLevelParser.parseInput(rpi) match
           case Left(errors) => fail(s"parse failed:\n${errors.format}")
-          case Right(root)  =>
+          case Right(root) =>
             val bytes = Pass
               .runThesePasses(PassInput(root), Seq(BASTWriterPass.creator()))
               .outputOf[BASTOutput](BASTWriterPass.name)
               .getOrElse(fail("BASTWriterPass produced no output"))
               .bytes
             BASTReader(bytes).read() match
-              case Left(msgs)     => fail(s"BAST round trip failed:\n${msgs.format}")
+              case Left(msgs) => fail(s"BAST round trip failed:\n${msgs.format}")
               case Right(decoded) =>
-                val include = Finder(decoded).recursiveFindByType[Include[?]].headOption
+                val include = Finder(decoded)
+                  .recursiveFindByType[Include[?]]
+                  .headOption
                   .getOrElse(fail("the Include did not survive the BAST round trip"))
                 include.origin.scheme mustBe URL.fileScheme
                 include.origin.authority mustBe ""

@@ -69,11 +69,12 @@ class YieldConformanceTest extends AbstractValidatingTest {
       parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
         val neverYields = errors(msgs).filter(_.message.contains("never yields"))
         if neverYields.nonEmpty then
-          info(s"Streamlet clause was held to the yield contract:\n${neverYields.map(_.format).mkString("\n")}")
+          info(
+            s"Streamlet clause was held to the yield contract:\n${neverYields.map(_.format).mkString("\n")}"
+          )
         neverYields mustBe empty
       }
     }
-
 
     "accept a yield that matches the declared yields clause" in { (td: TestData) =>
       val input = RiddlParserInput(model("""yield event E(data = "the data")"""), td)
@@ -137,7 +138,8 @@ class YieldConformanceTest extends AbstractValidatingTest {
 
     "allow a yield when the command declares no yields clause (yields is optional)" in {
       (td: TestData) =>
-        val input = RiddlParserInput(model("""yield event E(data = "the data")""", yieldsClause = ""), td)
+        val input =
+          RiddlParserInput(model("""yield event E(data = "the data")""", yieldsClause = ""), td)
         parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
           // No yields declared ⇒ conformance is not enforced; the yield must not error.
           errors(msgs).exists(m => m.message.contains("yields")) mustBe false

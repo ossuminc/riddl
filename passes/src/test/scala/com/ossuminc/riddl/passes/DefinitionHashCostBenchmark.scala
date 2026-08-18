@@ -26,10 +26,10 @@ import scala.collection.mutable
   *   id.hashCode * 31 + loc.hashCode, then * 31 + getClass.hashCode
   * }}}
   * and `loc` is an `At`, a case class whose FIRST FIELD is `source: RiddlParserInput`
-  * (At.scala:24). The concrete implementation `StringParserInput`
-  * (RiddlParserInput.scala:333) is itself a case class whose first field is `data: String` — the
-  * entire text of the source file. So the auto-generated hashCode chain ends up hashing the WHOLE
-  * SOURCE FILE on every `Definition.hashCode` call.
+  * (At.scala:24). The concrete implementation `StringParserInput` (RiddlParserInput.scala:333) is
+  * itself a case class whose first field is `data: String` — the entire text of the source file. So
+  * the auto-generated hashCode chain ends up hashing the WHOLE SOURCE FILE on every
+  * `Definition.hashCode` call.
   *
   * That is nearly free on the JVM, where `String.hashCode` memoises into the String's `hash` field
   * after the first call. A JS string cannot carry that field. If Scala.js recomputes the hash by
@@ -53,7 +53,9 @@ class DefinitionHashCostBenchmark extends AbstractTestingBasis {
     for c <- 0 until 60 do
       sb.append(s"  context C$c is {\n")
       for t <- 0 until 30 do
-        sb.append(s"    type T${c}_$t is String with { described as \"padding to grow the source\" }\n")
+        sb.append(
+          s"    type T${c}_$t is String with { described as \"padding to grow the source\" }\n"
+        )
       end for
       sb.append("  }\n")
     end for
@@ -167,7 +169,9 @@ class DefinitionHashCostBenchmark extends AbstractTestingBasis {
       // memoisation deliberately does NOT change. It stays slow on Scala.js and that is the point
       // — it is the underlying platform asymmetry, now paid once per file instead of per lookup.
       info(f"${"raw String.hashCode (CONTROL)"}%-38s $srcHashMs%9.1f ${perCall(srcHashMs)}%11.0f")
-      info(f"${"shortName.hashCode (18 chars)"}%-38s $shortHashMs%9.1f ${perCall(shortHashMs)}%11.0f")
+      info(
+        f"${"shortName.hashCode (18 chars)"}%-38s $shortHashMs%9.1f ${perCall(shortHashMs)}%11.0f"
+      )
       info(f"${"HashMap[Definition,_].put"}%-38s $mapPutMs%9.1f ${perCall(mapPutMs)}%11.0f")
       info("")
       if shortHashMs > 0 then

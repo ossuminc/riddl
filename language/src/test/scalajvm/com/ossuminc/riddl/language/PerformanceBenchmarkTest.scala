@@ -242,7 +242,10 @@ class PerformanceBenchmarkTest extends AbstractTestingBasis {
           // BASTPerformanceBenchmark.scala. A real cache regression collapses toward ~1x (the
           // cache not being consulted at all), so a 5x floor still fails hard on that while
           // tolerating shared-runner timing noise.
-          assert(secondTime < firstTime, s"Cached call should be faster than uncached (${firstTime / secondTime}x)")
+          assert(
+            secondTime < firstTime,
+            s"Cached call should be faster than uncached (${firstTime / secondTime}x)"
+          )
           assert(
             secondTime < firstTime / 5,
             s"Cache should provide meaningful (5x+) speedup, got ${firstTime / secondTime}x — possible cache regression"

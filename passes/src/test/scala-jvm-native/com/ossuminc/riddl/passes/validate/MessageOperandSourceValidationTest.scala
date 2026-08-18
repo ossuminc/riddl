@@ -17,16 +17,16 @@ import org.scalatest.TestData
   * aliases to, a command/event/query/result" — the same A55/lifecycle-parameter resolution walk
   * ([[ValidationPass.valueRefTypeExpr]]) every other bare `ValueRef` uses.
   *
-  * One case per legal source (state-record field, on-clause binding, `let`-local, function
-  * result, `ask` result), plus the two rejections: `self` (a synthesized record, not a message,
-  * gets its OWN message) and a genuinely unresolvable name (still an Error — the canary that
-  * proves the check still runs).
+  * One case per legal source (state-record field, on-clause binding, `let`-local, function result,
+  * `ask` result), plus the two rejections: `self` (a synthesized record, not a message, gets its
+  * OWN message) and a genuinely unresolvable name (still an Error — the canary that proves the
+  * check still runs).
   *
   * Every positive case here was an ERROR before this widening (`checkBoundMessageOperand` probed
-  * only `refMap.definitionOf[Type](vr.path)`, the on-clause-binding key). Reverting the widening
-  * — restoring `checkBoundMessageOperand`'s narrow probe — must turn every case below RED except
-  * "on-clause binding" and the two rejections, which is the load-bearing proof this suite exists
-  * to provide (see task-1-report.md for the actual revert-and-rerun).
+  * only `refMap.definitionOf[Type](vr.path)`, the on-clause-binding key). Reverting the widening —
+  * restoring `checkBoundMessageOperand`'s narrow probe — must turn every case below RED except
+  * "on-clause binding" and the two rejections, which is the load-bearing proof this suite exists to
+  * provide (see task-1-report.md for the actual revert-and-rerun).
   */
 class MessageOperandSourceValidationTest extends AbstractValidatingTest {
 
@@ -99,8 +99,7 @@ class MessageOperandSourceValidationTest extends AbstractValidatingTest {
     "accept a `let`-local bound to a constructed message as the operand" in { (td: TestData) =>
       val src = model(
         extraContext = "",
-        srcBody =
-          """let m = command d.c.Foo(a = "1")
+        srcBody = """let m = command d.c.Foo(a = "1")
             |tell m to entity d.c.target""".stripMargin
       )
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
@@ -110,13 +109,11 @@ class MessageOperandSourceValidationTest extends AbstractValidatingTest {
 
     "accept a function result as the operand" in { (td: TestData) =>
       val src = model(
-        extraContext =
-          """function MakeFoo is {
+        extraContext = """function MakeFoo is {
             |  returns command d.c.Foo
             |  return command d.c.Foo(a = "1")
             |}""".stripMargin,
-        srcBody =
-          """let m = call function d.c.MakeFoo()
+        srcBody = """let m = call function d.c.MakeFoo()
             |tell m to entity d.c.target""".stripMargin
       )
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
@@ -126,16 +123,14 @@ class MessageOperandSourceValidationTest extends AbstractValidatingTest {
 
     "accept an `ask` result as the operand" in { (td: TestData) =>
       val src = model(
-        extraContext =
-          """result Answer is { v: Integer }
+        extraContext = """result Answer is { v: Integer }
             |query Ask replies result d.c.Answer is { q: Integer }
             |entity Ledger is {
             |  handler H is {
             |    on query d.c.Ask is { reply result d.c.Answer(v = "the answer") }
             |  }
             |}""".stripMargin,
-        srcBody =
-          """let m = ask query d.c.Ask of entity d.c.Ledger
+        srcBody = """let m = ask query d.c.Ask of entity d.c.Ledger
             |tell m to entity d.c.target""".stripMargin
       )
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
@@ -146,8 +141,7 @@ class MessageOperandSourceValidationTest extends AbstractValidatingTest {
     "accept a widened `send` operand too, not only `tell`" in { (td: TestData) =>
       val src = model(
         extraContext = "",
-        srcBody =
-          """let m = command d.c.Foo(a = "1")
+        srcBody = """let m = command d.c.Foo(a = "1")
             |send m to outlet d.c.src.emitted""".stripMargin,
         srcExtra = "outlet emitted is command d.c.Foo"
       )

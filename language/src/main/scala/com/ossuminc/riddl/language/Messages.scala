@@ -581,7 +581,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def style(message: String, loc: At = At.empty, suggestion: String = "")(using
+    @inline
+    def style(message: String, loc: At = At.empty, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, message, StyleWarning, suggestion = suggestion))
@@ -596,7 +597,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def info(message: String, loc: At = At.empty, suggestion: String = "")(using
+    @inline
+    def info(message: String, loc: At = At.empty, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, message, Info, suggestion = suggestion))
@@ -611,7 +613,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def warning(message: String, loc: At = At.empty, suggestion: String = "")(using
+    @inline
+    def warning(message: String, loc: At = At.empty, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, message, Warning, suggestion = suggestion))
@@ -626,7 +629,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def error(message: String, loc: At = At.empty, suggestion: String = "")(using
+    @inline
+    def error(message: String, loc: At = At.empty, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, message, Error, suggestion = suggestion))
@@ -641,7 +645,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def severe(message: String, loc: At = At.empty, suggestion: String = "")(using
+    @inline
+    def severe(message: String, loc: At = At.empty, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, message, SevereError, suggestion = suggestion))
@@ -656,7 +661,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addStyle(loc: At, msg: String, suggestion: String = "")(using
+    @inline
+    def addStyle(loc: At, msg: String, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, StyleWarning, suggestion = suggestion))
@@ -671,13 +677,15 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addUsage(loc: At, msg: String, suggestion: String = "")(using
+    @inline
+    def addUsage(loc: At, msg: String, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, UsageWarning, suggestion = suggestion))
     }
 
-    @inline def addCompleteness(loc: At, msg: String, suggestion: String = "")(using
+    @inline
+    def addCompleteness(loc: At, msg: String, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, CompletenessWarning, suggestion = suggestion))
@@ -692,7 +700,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addDeprecation(loc: At, msg: String, suggestion: String = "")(using
+    @inline
+    def addDeprecation(loc: At, msg: String, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, Deprecation, suggestion = suggestion))
@@ -707,7 +716,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addTip(loc: At, msg: String, suggestion: String = "")(using
+    @inline
+    def addTip(loc: At, msg: String, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, Tip, suggestion = suggestion))
@@ -722,7 +732,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addMissing(loc: At, msg: String, suggestion: String = "")(using
+    @inline
+    def addMissing(loc: At, msg: String, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, MissingWarning, suggestion = suggestion))
@@ -737,7 +748,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addWarning(loc: At, msg: String, suggestion: String = "")(using
+    @inline
+    def addWarning(loc: At, msg: String, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, Warning, suggestion = suggestion))
@@ -752,7 +764,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addError(loc: At, msg: String, suggestion: String = "")(using
+    @inline
+    def addError(loc: At, msg: String, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, Error, suggestion = suggestion))
@@ -767,7 +780,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addSevere(loc: At, msg: String, suggestion: String = "")(using
+    @inline
+    def addSevere(loc: At, msg: String, suggestion: String = "")(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, SevereError, suggestion = suggestion))

@@ -24,9 +24,9 @@ import org.scalatest.TestData
   * `when invariant X` in an entity handler, which is what reaches the newest of the three.
   *
   * **Each case here asserts the RECURSION, not just the absence of a crash.** A `case ic:
-  * InvariantCondition => Seq.empty` would stop the throw and still be wrong, and every
-  * crash-only test would pass against it. So the `with <expr>` operand carries something each
-  * dispatch is looking for, and the case asserts that it was found.
+  * InvariantCondition => Seq.empty` would stop the throw and still be wrong, and every crash-only
+  * test would pass against it. So the `with <expr>` operand carries something each dispatch is
+  * looking for, and the case asserts that it was found.
   */
 class InvariantConditionValueWalkTest extends AbstractValidatingTest {
 

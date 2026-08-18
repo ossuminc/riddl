@@ -61,7 +61,7 @@ class NumericLiteralBASTRoundTripTest extends AbstractValidatingTest {
         val decoded = roundTrip(constantModel(s"constant K: Real = $form"), s"bast-$form")
         constantValueOf(decoded, "K") match
           case nl: NumericLiteral => withClue(s"form $form: ") { nl.text mustBe form }
-          case other => fail(s"form $form decoded as ${other.getClass.getSimpleName}")
+          case other              => fail(s"form $form decoded as ${other.getClass.getSimpleName}")
       end for
     }
 

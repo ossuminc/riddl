@@ -68,7 +68,12 @@ class BangNotRoundTripTest extends AbstractValidatingTest {
   /** One position from Task 1's table: a statement written both as `not` and as `!`, plus the
     * fragment the `not` emission must literally contain.
     */
-  private case class Position(name: String, notStmt: String, bangStmt: String, expectedFragment: String)
+  private case class Position(
+    name: String,
+    notStmt: String,
+    bangStmt: String,
+    expectedFragment: String
+  )
 
   private val positions = Seq(
     Position(

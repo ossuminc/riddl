@@ -196,6 +196,7 @@ case class UseCaseTracePass(
       case uc: UseCase => walkSteps(uc, uc.contents.toSeq, mutable.Map.empty[Entity, State])
       case _           => () // interaction steps are reached from their enclosing UseCase
     end match
+
   /** Walk an ordered step sequence, honoring containers and threading per-entity FSM state. */
   private def walkSteps(
     uc: UseCase,

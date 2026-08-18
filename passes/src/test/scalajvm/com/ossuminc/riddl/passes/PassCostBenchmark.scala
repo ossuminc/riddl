@@ -26,9 +26,9 @@ import scala.concurrent.duration.*
   *
   * Deliberately NOT a gate:
   *   - Nothing here asserts a time threshold. `BASTPerformanceBenchmark` asserts `speedup > 1.0`
-  *     and was observed going 0.9956x (red), then 13.0x, 9.3x, 6.1x back to back on one machine —
-  *     a real effect compared against a number with more variance than headroom. That teaches
-  *     people to re-run reds. This reports numbers and asserts only that the passes ran.
+  *     and was observed going 0.9956x (red), then 13.0x, 9.3x, 6.1x back to back on one machine — a
+  *     real effect compared against a number with more variance than headroom. That teaches people
+  *     to re-run reds. This reports numbers and asserts only that the passes ran.
   *   - It CANCELS rather than fails when `../riddl-models` is absent, so CI without the corpus
   *     checked out stays green.
   *
@@ -114,7 +114,8 @@ class PassCostBenchmark extends AbstractTestingBasis {
 
       val parseSamples = scala.collection.mutable.ArrayBuffer.empty[Double]
       val passSamples =
-        scala.collection.mutable.LinkedHashMap.empty[String, scala.collection.mutable.ArrayBuffer[Double]]
+        scala.collection.mutable.LinkedHashMap
+          .empty[String, scala.collection.mutable.ArrayBuffer[Double]]
 
       for _ <- 1 to runs do
         val (parseMs, root) = parseModel()

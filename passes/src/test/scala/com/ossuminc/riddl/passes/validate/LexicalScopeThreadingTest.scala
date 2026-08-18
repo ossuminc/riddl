@@ -31,8 +31,8 @@ import org.scalatest.TestData
   * genuinely not in scope must still Error in each of the same positions.
   *
   * NOTE which positions each scope can actually REACH. A `foreach` element reaches all six. An
-  * `on init`/`on term` parameter cannot reach `return` (that statement is function-body-only, and
-  * a function has no lifecycle clause) and reaching `put` would require an application-context
+  * `on init`/`on term` parameter cannot reach `return` (that statement is function-body-only, and a
+  * function has no lifecycle clause) and reaching `put` would require an application-context
   * lifecycle clause; those two are covered by the `foreach` half, which shares the identical code
   * path.
   */
@@ -173,21 +173,22 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
 
     "resolve as a COMPARISON operand" in { (td: TestData) =>
       // The exact shape the re-review reported: guarding a lifecycle body on its own parameter.
-      diagnostics(initParams("""when seed > total then do "big" end"""), "param-comparison")
-        .justErrors mustBe empty
+      diagnostics(
+        initParams("""when seed > total then do "big" end"""),
+        "param-comparison"
+      ).justErrors mustBe empty
     }
 
     "resolve as a bare boolean WHEN condition" in { (td: TestData) =>
-      diagnostics(initParams("""when ok then do "yes" end"""), "param-when")
-        .justErrors mustBe empty
+      diagnostics(initParams("""when ok then do "yes" end"""), "param-when").justErrors mustBe empty
     }
 
     "be TYPED in a bare WHEN condition, not merely tolerated" in { (td: TestData) =>
       // The case above passes even WITHOUT the scope: `checkWhenValueRef` is best-effort, so an
       // undetermined category is silently skipped. This is its load-bearing twin -- a `String`
       // parameter as a boolean condition can only be reported once the scope reaches the check.
-      val errs = diagnostics(initParams("""when tag then do "no" end"""), "param-when-typed")
-        .justErrors
+      val errs =
+        diagnostics(initParams("""when tag then do "no" end"""), "param-when-typed").justErrors
       withClue(clue(errs)) { errs.exists(_.message.contains("must be a Boolean")) mustBe true }
     }
 
@@ -213,8 +214,10 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
     }
 
     "resolve through a FIELD WALK in a comparison" in { (td: TestData) =>
-      diagnostics(initParams("""when buyer.tier > total then do "vip" end"""), "param-walk-comparison")
-        .justErrors mustBe empty
+      diagnostics(
+        initParams("""when buyer.tier > total then do "vip" end"""),
+        "param-walk-comparison"
+      ).justErrors mustBe empty
     }
   }
 
@@ -248,15 +251,17 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
   "a parameter that COLLIDES with a state field" should {
 
     "still resolve in a comparison" in { (td: TestData) =>
-      diagnostics(collide("""when count > limit then do "big" end"""), "collide-resolves")
-        .justErrors mustBe empty
+      diagnostics(
+        collide("""when count > limit then do "big" end"""),
+        "collide-resolves"
+      ).justErrors mustBe empty
     }
 
     "resolve to the PARAMETER, not to the state field" in { (td: TestData) =>
       // If the state field (String) won, this ordering comparison would be
       // "Ordering operator '>' requires a numeric operand but got a string value".
-      val errs = diagnostics(collide("""when count > limit then do "big" end"""), "collide-which")
-        .justErrors
+      val errs =
+        diagnostics(collide("""when count > limit then do "big" end"""), "collide-which").justErrors
       withClue(clue(errs)) { errs.exists(_.message.contains("numeric operand")) mustBe false }
     }
   }
@@ -273,20 +278,24 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
       // STATE field from in here does not resolve either -- a separate, pre-existing gap that has
       // nothing to do with this threading and would silently make this case pass for the wrong
       // reason. Comparing `line.qty` to `line.max` keeps the case about what it claims to be.
-      diagnostics(loop("""when line.qty > line.max then do "big" end"""), "foreach-comparison")
-        .justErrors mustBe empty
+      diagnostics(
+        loop("""when line.qty > line.max then do "big" end"""),
+        "foreach-comparison"
+      ).justErrors mustBe empty
     }
 
     "resolve as a bare boolean WHEN condition" in { (td: TestData) =>
-      diagnostics(loop("""when line.ok then do "yes" end"""), "foreach-when")
-        .justErrors mustBe empty
+      diagnostics(
+        loop("""when line.ok then do "yes" end"""),
+        "foreach-when"
+      ).justErrors mustBe empty
     }
 
     "be TYPED in a bare WHEN condition, not merely tolerated" in { (td: TestData) =>
       // Load-bearing twin, as above: `line.sku` is a String, reportable only once the element
       // scope reaches `checkWhenValueRef`.
-      val errs = diagnostics(loop("""when line.sku then do "no" end"""), "foreach-when-typed")
-        .justErrors
+      val errs =
+        diagnostics(loop("""when line.sku then do "no" end"""), "foreach-when-typed").justErrors
       withClue(clue(errs)) { errs.exists(_.message.contains("must be a Boolean")) mustBe true }
     }
 
@@ -298,18 +307,24 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
     }
 
     "resolve as a CALL argument" in { (td: TestData) =>
-      diagnostics(loop("""let x = call function Score(a = line.qty)"""), "foreach-call")
-        .justErrors mustBe empty
+      diagnostics(
+        loop("""let x = call function Score(a = line.qty)"""),
+        "foreach-call"
+      ).justErrors mustBe empty
     }
 
     "resolve in a RETURN value" in { (td: TestData) =>
-      diagnostics(loopInFunction("""do "seen"""" + "\n      return record Sum(s = line.qty)"), "foreach-return")
-        .justErrors mustBe empty
+      diagnostics(
+        loopInFunction("""do "seen"""" + "\n      return record Sum(s = line.qty)"),
+        "foreach-return"
+      ).justErrors mustBe empty
     }
 
     "resolve in a PUT value" in { (td: TestData) =>
-      diagnostics(loopInApp("""put line.sku to output Panel"""), "foreach-put")
-        .justErrors mustBe empty
+      diagnostics(
+        loopInApp("""put line.sku to output Panel"""),
+        "foreach-put"
+      ).justErrors mustBe empty
     }
   }
 
@@ -319,8 +334,10 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
     // being no scope at all, so each newly-reached position keeps a negative twin.
 
     "still REJECT an unknown name in a comparison" in { (td: TestData) =>
-      val errs = diagnostics(initParams("""when nosuchname > total then do "x" end"""), "neg-comparison")
-        .justErrors
+      val errs = diagnostics(
+        initParams("""when nosuchname > total then do "x" end"""),
+        "neg-comparison"
+      ).justErrors
       withClue(clue(errs)) { errs.exists(_.message.contains("nosuchname")) mustBe true }
     }
 
@@ -339,16 +356,20 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
 
     "still REJECT an unknown name as a CALL argument" in { (td: TestData) =>
       val errs =
-        diagnostics(initParams("""let x = call function Score(a = nosuchname)"""), "neg-call")
-          .justErrors
+        diagnostics(
+          initParams("""let x = call function Score(a = nosuchname)"""),
+          "neg-call"
+        ).justErrors
       withClue(clue(errs)) { errs.exists(_.message.contains("nosuchname")) mustBe true }
     }
 
     "still REJECT a field the parameter's type does not have, in a comparison" in {
       (td: TestData) =>
         val errs =
-          diagnostics(initParams("""when buyer.nosuch > total then do "x" end"""), "neg-walk")
-            .justErrors
+          diagnostics(
+            initParams("""when buyer.nosuch > total then do "x" end"""),
+            "neg-walk"
+          ).justErrors
         withClue(clue(errs)) { errs.exists(_.message.contains("buyer.nosuch")) mustBe true }
     }
 
@@ -371,8 +392,10 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
       // parameters and foreach elements are in scope, a message that omits them is telling the
       // author to look in the wrong places.
       val errs =
-        diagnostics(initParams("""when nosuchname > total then do "x" end"""), "msg-text")
-          .justErrors
+        diagnostics(
+          initParams("""when nosuchname > total then do "x" end"""),
+          "msg-text"
+        ).justErrors
       val text = errs.map(_.message).mkString("\n")
       withClue(text) {
         text must include("on init")

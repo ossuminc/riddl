@@ -18,20 +18,20 @@ import org.scalatest.TestData
   *
   * **It shipped as a Warning and was FLIPPED to Error on 2026-08-14** (design D3's end state).
   * riddl-models held 14,730 bare refs and ZERO constructor uses, so the Error had to wait until
-  * that repo could migrate; Reid lifted the block once they began building against this branch.
-  * The severity is still PINNED here and must stay pinned: `bareErrors` selects on `Error`
+  * that repo could migrate; Reid lifted the block once they began building against this branch. The
+  * severity is still PINNED here and must stay pinned: `bareErrors` selects on `Error`
   * specifically, and `check` asserts that every OTHER error is absent. Those two together are what
   * make a silent severity change impossible in either direction — which is the whole reason this
   * suite exists separately from the ordinary validation tests.
   *
   * **A field-less message is EXEMPT** (design Q1, ruled 2026-08-14). A message with no data leaves
-  * the type fully determining the value, so there is nothing to source; warning on it is exactly the
-  * noise the standing `???` ruling exists to prevent.
+  * the type fully determining the value, so there is nothing to source; warning on it is exactly
+  * the noise the standing `???` ruling exists to prevent.
   *
-  * The design wrote that case as `event Started is { }`. **That spelling does not parse** — an empty
-  * brace pair is not an aggregation, and the parser reports `Expected one of ("(" | "replies" |
-  * "yields")` at the `is`. The field-less shape RIDDL actually admits is `is { ??? }`, which is what
-  * the case below uses, and it lands on the same empty `AggregateTypeExpression` the exemption
+  * The design wrote that case as `event Started is { }`. **That spelling does not parse** — an
+  * empty brace pair is not an aggregation, and the parser reports `Expected one of ("(" | "replies" |
+  * "yields")` at the `is`. The field-less shape RIDDL actually admits is `is { ??? }`, which is
+  * what the case below uses, and it lands on the same empty `AggregateTypeExpression` the exemption
   * tests — so the exemption is really "no fields OR an explicit stub", one condition, not two.
   */
 class BareMessageOperandErrorTest extends AbstractValidatingTest {

@@ -14,13 +14,13 @@ import com.ossuminc.riddl.utils.pc
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
 
-/** Task 5 (processor-instance identity): `terminate` is a new [[com.ossuminc.riddl.language.AST.Statement]]
-  * (BAST statement sub-kind 20), so it needs its own targeted reflectivity proof rather than
-  * relying on the coarse domain/context/entity-level [[DeepASTComparison]] (which does not
-  * descend into statement-level nodes). `terminate` is a bare statement, so
-  * [[com.ossuminc.riddl.language.Finder]]'s `recursiveFindByType` DOES find it directly (unlike
-  * `initiate`, a value typically wrapped in a `let`) -- mirrors `InitiateBASTRoundTripTest`'s
-  * style otherwise.
+/** Task 5 (processor-instance identity): `terminate` is a new
+  * [[com.ossuminc.riddl.language.AST.Statement]] (BAST statement sub-kind 20), so it needs its own
+  * targeted reflectivity proof rather than relying on the coarse domain/context/entity-level
+  * [[DeepASTComparison]] (which does not descend into statement-level nodes). `terminate` is a bare
+  * statement, so [[com.ossuminc.riddl.language.Finder]]'s `recursiveFindByType` DOES find it
+  * directly (unlike `initiate`, a value typically wrapped in a `let`) -- mirrors
+  * `InitiateBASTRoundTripTest`'s style otherwise.
   *
   * JVM-only, like `BASTRoundTripTest` itself (BAST I/O has no Native-friendly harness in this test
   * suite). The PRETTIFY round trip is a separate, cross-platform concern -- see
@@ -60,7 +60,9 @@ class TerminateBASTRoundTripTest extends AnyWordSpec with Matchers {
       case Left(msgs)  => fail(s"parse of $origin failed:\n${msgs.format}")
 
   private def terminateIn(root: Root): TerminateStatement =
-    Finder(root).recursiveFindByType[TerminateStatement].headOption
+    Finder(root)
+      .recursiveFindByType[TerminateStatement]
+      .headOption
       .getOrElse(fail("no TerminateStatement found"))
 
   "terminate" should {
@@ -76,7 +78,9 @@ class TerminateBASTRoundTripTest extends AnyWordSpec with Matchers {
 
       BASTReader.read(output.bytes) match
         case Right(module) =>
-          val reconstructedTerm = Finder(module).recursiveFindByType[TerminateStatement].headOption
+          val reconstructedTerm = Finder(module)
+            .recursiveFindByType[TerminateStatement]
+            .headOption
             .getOrElse(fail("no TerminateStatement found in reconstructed module"))
 
           // The target is a VALUE on the wire since 2026-08-15 (sub-kind 20 now begins with a

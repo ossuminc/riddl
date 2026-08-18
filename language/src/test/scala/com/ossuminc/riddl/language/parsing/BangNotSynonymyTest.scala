@@ -14,8 +14,8 @@ import org.scalatest.TestData
 /** Reid's 2026-08-14 ruling: `not` and `!` are synonymous everywhere, as the inverse of a boolean
   * expression. This suite pins the parser half of that ruling (task 1 of the
   * `2026-08-15-not-bang-synonymy` plan): both spellings must build the IDENTICAL AST node, not
-  * merely both parse. Task 2 removed `WhenStatement.negated` entirely; this suite never asserted
-  * on it and needs no change for that.
+  * merely both parse. Task 2 removed `WhenStatement.negated` entirely; this suite never asserted on
+  * it and needs no change for that.
   */
 abstract class BangNotSynonymyTest(using PlatformContext) extends AbstractParsingTest {
 
@@ -58,8 +58,13 @@ abstract class BangNotSynonymyTest(using PlatformContext) extends AbstractParsin
         blank(right).asInstanceOf[Comparand]
       )
     case LogicalExpression(_, op, left, right) =>
-      LogicalExpression(At.empty, op, blank(left).asInstanceOf[Value], blank(right).asInstanceOf[Value])
-    case ValueRef(_, path) => ValueRef(At.empty, blank(path).asInstanceOf[PathIdentifier])
+      LogicalExpression(
+        At.empty,
+        op,
+        blank(left).asInstanceOf[Value],
+        blank(right).asInstanceOf[Value]
+      )
+    case ValueRef(_, path)        => ValueRef(At.empty, blank(path).asInstanceOf[PathIdentifier])
     case PathIdentifier(_, value) => PathIdentifier(At.empty, value)
     case Identifier(_, value)     => Identifier(At.empty, value)
     case other                    => other
@@ -125,7 +130,7 @@ abstract class BangNotSynonymyTest(using PlatformContext) extends AbstractParsin
       blank(notForm) must be(blank(bangForm))
       notForm match
         case NotExpression(_, inner) => inner mustBe a[ComparisonExpression]
-        case other                   => fail(s"expected NotExpression(ComparisonExpression), got $other")
+        case other => fail(s"expected NotExpression(ComparisonExpression), got $other")
     }
 
     // ---- the `!=` guard: `!` must never swallow the `!` of `!=` ----

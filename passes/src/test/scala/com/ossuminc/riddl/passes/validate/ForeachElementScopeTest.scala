@@ -75,7 +75,10 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
 
     "resolve the element in a send" in { (td: TestData) =>
       val errors =
-        errorsFor("foreach line in field lines { send event Shipped(sku = line.sku) to outlet Out }", td)
+        errorsFor(
+          "foreach line in field lines { send event Shipped(sku = line.sku) to outlet Out }",
+          td
+        )
       errors mustBe empty
     }
 
@@ -203,7 +206,10 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
 
     "not leak the element past the loop body" in { (td: TestData) =>
       val errors =
-        errorsFor("""foreach line in field lines { do "nothing" } set field St.note to line.sku""", td)
+        errorsFor(
+          """foreach line in field lines { do "nothing" } set field St.note to line.sku""",
+          td
+        )
       withClue(clue(errors)) {
         errors.exists(_.message.contains("line.sku")) mustBe true
       }

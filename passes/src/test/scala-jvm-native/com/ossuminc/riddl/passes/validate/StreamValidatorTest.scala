@@ -196,8 +196,10 @@ class StreamValidatorTest extends AbstractValidatingTest {
         td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
-        messages.exists(
-          m => m.message.contains("arrives at an inlet of") || m.message.contains("leaves from an outlet of")
+        messages.exists(m =>
+          m.message.contains("arrives at an inlet of") || m.message.contains(
+            "leaves from an outlet of"
+          )
         ) mustBe false
       }
     }

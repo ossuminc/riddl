@@ -88,7 +88,8 @@ class TypedHoleJsonRoundTripTest extends AnyWordSpec with Matchers {
           walk(parsed)
           promptObjs.size mustBe 2
           promptObjs(0).value.get("type") mustBe None
-          val typeObj = promptObjs(1).value.getOrElse("type", fail("ascribed prompt has no 'type' key"))
+          val typeObj =
+            promptObjs(1).value.getOrElse("type", fail("ascribed prompt has no 'type' key"))
           typeObj.obj("kind").str mustBe "Alias"
           typeObj.obj("ref").str must endWith("OrderId")
         case RiddlResult.Failure(errors) =>

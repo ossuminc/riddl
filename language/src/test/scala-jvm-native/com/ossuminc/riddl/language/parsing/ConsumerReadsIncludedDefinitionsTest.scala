@@ -34,7 +34,7 @@ class ConsumerReadsIncludedDefinitionsTest extends ParsingTest {
   private def parseEverything(): Root =
     val url: URL = PathUtils.urlFromCwdPath(Path.of(testInput + "/everything.riddl"))
     Await.result(TopLevelParser.parseURL(url), 10.seconds) match
-      case Right(root: Root)          => root
+      case Right(root: Root)                 => root
       case Left(messages: Messages.Messages) => fail(messages.format)
   end parseEverything
 

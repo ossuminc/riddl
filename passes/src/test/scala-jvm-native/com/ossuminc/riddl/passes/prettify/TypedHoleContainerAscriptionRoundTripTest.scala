@@ -19,14 +19,14 @@ import org.scalatest.*
   * proved the four previously-broken ascription shapes (`as any of {…}`, `as table of T of […]`,
   * `as reference to entity E`, `as Currency(USD)`) round-trip correctly at the FOUR positions
   * `emitValue` was wired at (`constant`, `let`, `set`, `when`). It did not prove the same for a
-  * `PromptValue` nested INSIDE a container -- a `Constructor`/`Call` argument, an `InvariantCondition`
-  * `with` argument reached through a `LogicalExpression`/`NotExpression` -- because `emitValue`'s
-  * fallback for every OTHER `Value` shape was still `add(other.format)`, which recurses back into
-  * the un-fixed `.format`/`ascriptionFormat` path one level down. `emitValue` is now total over
-  * these containers too (`Constructor`, `Call`, `Initiate`, `InvariantCondition`,
-  * `LogicalExpression`, `NotExpression` all recurse back through `emitValue`), and this file proves
-  * it the same way: parse -> prettify -> re-parse, asserting the SAME broken-shape ascription
-  * survives at the same place.
+  * `PromptValue` nested INSIDE a container -- a `Constructor`/`Call` argument, an
+  * `InvariantCondition` `with` argument reached through a `LogicalExpression`/`NotExpression` --
+  * because `emitValue`'s fallback for every OTHER `Value` shape was still `add(other.format)`,
+  * which recurses back into the un-fixed `.format`/`ascriptionFormat` path one level down.
+  * `emitValue` is now total over these containers too (`Constructor`, `Call`, `Initiate`,
+  * `InvariantCondition`, `LogicalExpression`, `NotExpression` all recurse back through
+  * `emitValue`), and this file proves it the same way: parse -> prettify -> re-parse, asserting the
+  * SAME broken-shape ascription survives at the same place.
   *
   * Also covers the two structural asks from the review: a NAMED constructor/call argument (so the
   * `<name> = ` prefix is proven to survive alongside the routed value), and a nested
@@ -131,12 +131,13 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
             c.args.find(_.name.exists(_.value == "color")).map(_.value) match
               case Some(pv: PromptValue) =>
                 pv.typeEx.get match
-                  case e: Enumeration => e.enumerators.toSeq.map(_.id.value) mustBe Seq("Red", "Green")
-                  case other          => fail(s"expected an Enumeration, got $other")
+                  case e: Enumeration =>
+                    e.enumerators.toSeq.map(_.id.value) mustBe Seq("Red", "Green")
+                  case other => fail(s"expected an Enumeration, got $other")
               case other => fail(s"expected a PromptValue 'color' arg, got $other")
             c.args.find(_.name.exists(_.value == "active")).map(_.value) match
               case Some(BooleanLiteral(_, b)) => b mustBe true
-              case other                      => fail(s"expected a BooleanLiteral 'active' arg, got $other")
+              case other => fail(s"expected a BooleanLiteral 'active' arg, got $other")
           case other => fail(s"expected a Constructor, got $other")
     }
 
@@ -191,7 +192,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
                 case LogicalExpression(_, LogicalOperator.And, ic: InvariantCondition, _) =>
                   ic.argument match
                     case Some(pv: PromptValue) => pv
-                    case other                 => fail(s"expected a PromptValue IC argument, got $other")
+                    case other => fail(s"expected a PromptValue IC argument, got $other")
                 case other => fail(s"expected And on the left of Or, got $other")
             case other => fail(s"expected Or at the root, got $other")
 
@@ -216,7 +217,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
           val pv2 = refPromptOf(ws2.condition)
           pv2.typeEx.get match
             case er: EntityReferenceTypeExpression => er.entity.value.last mustBe "Target"
-            case other                              => fail(s"expected an EntityReferenceTypeExpression, got $other")
+            case other => fail(s"expected an EntityReferenceTypeExpression, got $other")
       }
 
     "survive a prettify round trip through a `not`, with an ascription to a Table" in {
@@ -290,8 +291,9 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
             .find(_.id.value == "HasFunds")
             .getOrElse(fail("no invariant named 'HasFunds' found"))
             .condition match
-              case Some(InvariantBlock(_, _, ic: InvariantCondition)) => ic
-              case other => fail(s"expected an InvariantBlock with an InvariantCondition predicate, got $other")
+            case Some(InvariantBlock(_, _, ic: InvariantCondition)) => ic
+            case other =>
+              fail(s"expected an InvariantBlock with an InvariantCondition predicate, got $other")
 
         val original = parse(src, "orig")
         predicateOf(original).argument match
@@ -345,8 +347,8 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
             .find(_.id.value == "HasFunds")
             .getOrElse(fail("no invariant named 'HasFunds' found"))
             .condition match
-              case Some(ib: InvariantBlock) => ib
-              case other                    => fail(s"expected an InvariantBlock, got $other")
+            case Some(ib: InvariantBlock) => ib
+            case other                    => fail(s"expected an InvariantBlock, got $other")
 
         def letAscriptionOf(root: Root): PromptValue =
           invariantBlockOf(root).statements.toSeq.headOption match
@@ -370,6 +372,6 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
         letAscriptionOf(regen).typeEx.get match
           case e: Enumeration => e.enumerators.toSeq.map(_.id.value) mustBe Seq("Red", "Green")
           case other          => fail(s"expected an Enumeration, got $other")
-    }
+      }
   }
 }

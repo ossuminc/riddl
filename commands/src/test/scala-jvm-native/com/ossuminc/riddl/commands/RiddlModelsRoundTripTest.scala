@@ -51,8 +51,8 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
     */
   /** Which riddl-models branch this corpus expects.
     *
-    * Kept as documentation after the download was removed ([1.3]) and NAMED IN THE SKIP MESSAGE,
-    * so a developer whose checkout is on the wrong branch is told which one to be on. `release/2`
+    * Kept as documentation after the download was removed ([1.3]) and NAMED IN THE SKIP MESSAGE, so
+    * a developer whose checkout is on the wrong branch is told which one to be on. `release/2`
     * rather than `main`, for the same reason CI pins `RIDDL_MODELS_BRANCH`: riddl-models `main`
     * still holds the 1.x corpus until 2.0.0 final merges.
     */

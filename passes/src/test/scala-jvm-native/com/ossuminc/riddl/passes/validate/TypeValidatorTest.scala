@@ -124,26 +124,27 @@ class TypeValidatorTest extends AbstractValidatingTest {
       }
     }
 
-    "identify when unique ID types reference something other than a Processor" in { (td: TestData) =>
-      val input = RiddlParserInput(
-        """
+    "identify when unique ID types reference something other than a Processor" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """
           |domain foo is {
           |type NotAProcessor is Integer
           |type Order is Id(NotAProcessor)
           |}
           |""".stripMargin,
-        td
-      )
-      pc.withOptions(CommonOptions.default) { _ =>
-        parseAndValidateDomain(input, shouldFailOnErrors = false) {
-          case (_: Domain, _, msgs: Messages) =>
-            assertValidationMessage(
-              msgs,
-              Error,
-              "but a Processor was expected"
-            )
+          td
+        )
+        pc.withOptions(CommonOptions.default) { _ =>
+          parseAndValidateDomain(input, shouldFailOnErrors = false) {
+            case (_: Domain, _, msgs: Messages) =>
+              assertValidationMessage(
+                msgs,
+                Error,
+                "but a Processor was expected"
+              )
+          }
         }
-      }
     }
 
     "check infrequently used TypeExpressions" in { (td: TestData) =>

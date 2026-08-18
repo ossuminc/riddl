@@ -87,7 +87,9 @@ class OptionsValidationTest extends AbstractValidatingTest {
           |""".stripMargin
       validateFor(input, "persistent on gateway context") { messages =>
         val errs = messages.justErrors.filter(_.message.contains("persistent"))
-        withClue(s"expected an ERROR for persistent on a gateway Context, got:\n${messages.format}") {
+        withClue(
+          s"expected an ERROR for persistent on a gateway Context, got:\n${messages.format}"
+        ) {
           errs mustNot be(empty)
         }
       }

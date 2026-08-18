@@ -23,11 +23,11 @@ import org.scalatest.TestData
   * five kinds from the walk: a connector endpoint owned by any of them contributed no edge, so a
   * sink downstream of one was reported as having no upstream source.
   *
-  * That produced a double bind the author could not escape. Rule 5 (`checkExternalContextConnectors`)
-  * advises inserting an adaptor between an external context and a processor in another context, but
-  * taking that advice severed the reachability walk — while a `processor as flow` in the same
-  * position kept the walk intact yet still drew the advisory, because the advisory clears only for
-  * an `Adaptor`. No processor kind satisfied both checks.
+  * That produced a double bind the author could not escape. Rule 5
+  * (`checkExternalContextConnectors`) advises inserting an adaptor between an external context and
+  * a processor in another context, but taking that advice severed the reachability walk — while a
+  * `processor as flow` in the same position kept the walk intact yet still drew the advisory,
+  * because the advisory clears only for an `Adaptor`. No processor kind satisfied both checks.
   */
 class ProcessorStreamGraphTest extends AbstractValidatingTest {
 

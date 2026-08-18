@@ -89,13 +89,12 @@ class NativePlatformContext extends PlatformContext:
 
   /** Follow HTTP redirects EXPLICITLY rather than trusting the backend to do it.
     *
-    * [1.3]: the riddl-examples archive URL
-    * (`github.com/…/archive/refs/heads/main.zip`) answers **302** with an EMPTY body, and the
-    * Native backend was returning that empty body rather than following the `Location`. The
-    * download then produced a 0-byte file and the failure surfaced two steps later as
-    * `java.util.zip.ZipException: too short to be Zip` — a corrupt-archive message for what was
-    * really an unfollowed redirect. Any redirecting URL would have hit this, and GitHub archive
-    * links always redirect.
+    * [1.3]: the riddl-examples archive URL (`github.com/…/archive/refs/heads/main.zip`) answers
+    * **302** with an EMPTY body, and the Native backend was returning that empty body rather than
+    * following the `Location`. The download then produced a 0-byte file and the failure surfaced
+    * two steps later as `java.util.zip.ZipException: too short to be Zip` — a corrupt-archive
+    * message for what was really an unfollowed redirect. Any redirecting URL would have hit this,
+    * and GitHub archive links always redirect.
     *
     * Bounded at five hops so a redirect loop fails with a clear message instead of hanging.
     */
@@ -123,7 +122,7 @@ class NativePlatformContext extends PlatformContext:
             .find(_.name.equalsIgnoreCase("location"))
             .map(_.value) match
             case Some(next) => fetchFollowingRedirects(next, hopsLeft - 1)
-            case None =>
+            case None       =>
               // VERIFIED UPSTREAM LIMITATION, not a bug here (2026-08-18). sttp's Scala Native
               // curl backend exposes ONLY `Content-Length` among response headers — confirmed by
               // listing them — so `Location` is invisible and a redirect cannot be followed at

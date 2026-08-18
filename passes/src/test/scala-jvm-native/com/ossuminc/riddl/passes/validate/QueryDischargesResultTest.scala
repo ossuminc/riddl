@@ -10,13 +10,13 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
-/** A query must answer — or refuse — on EVERY path (Reid, 2026-08-16: *"queries SHOULD be
-  * answered, however, it is possible to let them refuse as well"*).
+/** A query must answer — or refuse — on EVERY path (Reid, 2026-08-16: *"queries SHOULD be answered,
+  * however, it is possible to let them refuse as well"*).
   *
-  * The rule was "a reply appears ANYWHERE in the clause", so
-  * `when ready then reply result R end` with no `else` was accepted while answering nothing on the
-  * other branch. **That is not a style matter: `ask` is defined as taking the value a `reply`
-  * provides, so an unanswered path leaves the caller waiting.**
+  * The rule was "a reply appears ANYWHERE in the clause", so `when ready then reply result R end`
+  * with no `else` was accepted while answering nothing on the other branch. **That is not a style
+  * matter: `ask` is defined as taking the value a `reply` provides, so an unanswered path leaves
+  * the caller waiting.**
   *
   * The refusal exemption makes this exactly PARALLEL to the command rule rather than stricter — a
   * clause that refuses has decided, and a refusal is an answer.

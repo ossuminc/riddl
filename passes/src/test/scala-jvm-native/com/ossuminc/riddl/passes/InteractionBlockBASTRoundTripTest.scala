@@ -23,10 +23,11 @@ import org.scalatest.wordspec.AnyWordSpec
   * never written, desynchronising the stream -- reported far away as "Invalid string table index",
   * or in a large model as a node-boundary overrun naming some innocent earlier node.
   *
-  * Reported by riddl-models 2026-08-13 (`task/2026-08-13-interaction-blocks-break-bast-round-trip.md`),
-  * same family and same reporting mechanism as the `constant`/`method` fix in
-  * `ConstantAndMethodBASTRoundTripTest`: the node count went DOWN when the block was added (9
-  * without, 8 with), which is the tell that a writer emitted a container without its children.
+  * Reported by riddl-models 2026-08-13
+  * (`task/2026-08-13-interaction-blocks-break-bast-round-trip.md`), same family and same reporting
+  * mechanism as the `constant`/`method` fix in `ConstantAndMethodBASTRoundTripTest`: the node count
+  * went DOWN when the block was added (9 without, 8 with), which is the tell that a writer emitted
+  * a container without its children.
   *
   * Sweeping for the same defect shape turned up two more, fixed alongside this one and covered
   * below: an `invariant ... is { <statements> <predicate> }` block (A28 + 2026-08-04) has the
@@ -150,7 +151,7 @@ class InteractionBlockBASTRoundTripTest extends AnyWordSpec with Matchers {
       outer.contents.toSeq.size mustBe 2
       val inner = outer.contents.toSeq.collect { case pi: ParallelInteractions => pi } match
         case Seq(one) => one
-        case other    => fail(s"expected exactly one nested ParallelInteractions, got ${other.size}")
+        case other => fail(s"expected exactly one nested ParallelInteractions, got ${other.size}")
       inner.contents.toSeq.size mustBe 2
       // The whole tree must be reachable from the root too, not just from `outer` -- proves the
       // nested block's own contents were themselves traversed (recursively), not merely counted.

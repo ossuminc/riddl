@@ -17,14 +17,14 @@ import scala.concurrent.duration.DurationInt
 
 /** Parity guard for A70's `terminate` statement: the corpus fixture
   * `language/input/terminate-statement.riddl` is validated against the EBNF grammar by the TatSu
-  * validator (which scans every input-directory riddl file). This test proves fastparse accepts
-  * the SAME file, so the documented grammar and the implementation stay in sync (see CLAUDE.md
+  * validator (which scans every input-directory riddl file). This test proves fastparse accepts the
+  * SAME file, so the documented grammar and the implementation stay in sync (see CLAUDE.md
   * "Parser/EBNF Synchronization Requirement").
   *
-  * The target is a VALUE typed `Id(entity E)` since 2026-08-15, not a `processorRef`, and
-  * arguments sit behind `with (...)` rather than bare parentheses. Both are pinned below --
-  * `terminate` must NOT accept a processor name, or the old spelling would keep parsing into an
-  * AST whose target names a kind rather than an instance.
+  * The target is a VALUE typed `Id(entity E)` since 2026-08-15, not a `processorRef`, and arguments
+  * sit behind `with (...)` rather than bare parentheses. Both are pinned below -- `terminate` must
+  * NOT accept a processor name, or the old spelling would keep parsing into an AST whose target
+  * names a kind rather than an instance.
   *
   * Unlike `initiate` (a VALUE typically wrapped in a `let`), `terminate` is a bare STATEMENT
   * sitting directly in an on-clause's `contents`, so the two `terminate` occurrences are simply
@@ -46,7 +46,9 @@ class TerminateFileTest extends AnyWordSpec with Matchers {
             }.get
             val state = caller.contents.toSeq.collectFirst { case s: State => s }.get
             val handler = state.contents.toSeq.collectFirst { case h: Handler => h }.get
-            val onClause = handler.clauses.collectFirst { case oc: OnInitializationClause => oc }.get
+            val onClause = handler.clauses.collectFirst { case oc: OnInitializationClause =>
+              oc
+            }.get
             val terminates = onClause.contents.toSeq.collect { case ts: TerminateStatement => ts }
             terminates.size mustBe 2
 

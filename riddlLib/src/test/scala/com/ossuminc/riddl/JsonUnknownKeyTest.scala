@@ -14,14 +14,14 @@ import org.scalatest.wordspec.AnyWordSpec
   *
   * These cases began life as a characterization of the silent-drop behaviour, written before the
   * ruling so that whichever strictness was chosen would land against pinned behaviour rather than
-  * an assumption. They now assert the warning, which is exactly what characterizing first buys:
-  * the change of behaviour is visible as a diff in the assertions.
+  * an assumption. They now assert the warning, which is exactly what characterizing first buys: the
+  * change of behaviour is visible as a diff in the assertions.
   *
-  * Still ACCEPTED, not rejected — a Warning breaks no existing producer while making a typo
-  * visible immediately, and the flip to Error can be decided later with evidence.
+  * Still ACCEPTED, not rejected — a Warning breaks no existing producer while making a typo visible
+  * immediately, and the flip to Error can be decided later with evidence.
   *
-  * The finding that shaped the mechanism: the drop happened at BOTH reader layers, and they are
-  * not the same mechanism.
+  * The finding that shaped the mechanism: the drop happened at BOTH reader layers, and they are not
+  * the same mechanism.
   *
   *   - Hand-written readers (`readStatement`, `readValue`, `readTypeExpr`, …) build their result
   *     from selective `m("key")` / `m.get("key")` lookups against a `ujson.Obj`, with no step that
@@ -31,14 +31,16 @@ import org.scalatest.wordspec.AnyWordSpec
   *
   * The backlog entry proposed "a shared consumed-keys tracker wrapping ujson.Obj, most likely".
   * That would have fixed the first layer and could not have fixed the second — a wrapper sees the
-  * lookups a hand-written reader makes, never the ones a derived reader makes internally. Hence
-  * the shipped design: validate the raw tree against `JsonModel.knownKeys` BEFORE any reader runs,
+  * lookups a hand-written reader makes, never the ones a derived reader makes internally. Hence the
+  * shipped design: validate the raw tree against `JsonModel.knownKeys` BEFORE any reader runs,
   * which is the one place both layers are visible at once.
   */
 class JsonUnknownKeyTest extends AnyWordSpec with Matchers {
 
   private def warningsFor(json: String): Seq[String] =
-    RiddlLib.parseJsonWithMessages(json)._2
+    RiddlLib
+      .parseJsonWithMessages(json)
+      ._2
       .filter(_.message.contains("not recognized by any RIDDL reader"))
       .map(_.message)
       .toSeq

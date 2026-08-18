@@ -15,8 +15,8 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 /** Task 4 (numeric-literals plan): `Constant.value` widened from a bare `LiteralString` to
-  * `ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue`, so a
-  * `constant` may hold a bare number, a boolean, or a prompt hole -- not only a quoted string.
+  * `ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue`, so a `constant`
+  * may hold a bare number, a boolean, or a prompt hole -- not only a quoted string.
   *
   * No parser change was needed for the `is`/`:` separator -- `CommonParser.is` already accepted
   * both (and `are`/`=`/omission) -- so cases 1 and 2 below are asserted to parse IDENTICALLY, not

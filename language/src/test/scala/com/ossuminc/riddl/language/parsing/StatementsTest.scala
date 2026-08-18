@@ -641,23 +641,24 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
             vref(left) must be("count")
             right match
               case nl: NumericLiteral => nl.text must be("5")
-              case other              => fail(s"expected a NumericLiteral right operand, got $other")
+              case other => fail(s"expected a NumericLiteral right operand, got $other")
           case other => fail(s"expected a ComparisonExpression, got $other")
     }
 
     // The ordering that was inert until this task: `value` tries `booleanExpr` (hence `comparison`,
     // hence `comparand`) BEFORE `numericLiteral`. Without it, `5` would be consumed whole by
     // `numericLiteral` and `> 3` would be left dangling instead of completing a comparison.
-    "parse `5 > 3` as a comparison, not a bare NumericLiteral (ordering, A28)" in { (td: TestData) =>
-      parseLetExpr("5 > 3", td) match
-        case ComparisonExpression(_, ComparisonOperator.GT, left, right) =>
-          left match
-            case nl: NumericLiteral => nl.text must be("5")
-            case other              => fail(s"expected a NumericLiteral left operand, got $other")
-          right match
-            case nl: NumericLiteral => nl.text must be("3")
-            case other              => fail(s"expected a NumericLiteral right operand, got $other")
-        case other => fail(s"expected a ComparisonExpression, got $other")
+    "parse `5 > 3` as a comparison, not a bare NumericLiteral (ordering, A28)" in {
+      (td: TestData) =>
+        parseLetExpr("5 > 3", td) match
+          case ComparisonExpression(_, ComparisonOperator.GT, left, right) =>
+            left match
+              case nl: NumericLiteral => nl.text must be("5")
+              case other              => fail(s"expected a NumericLiteral left operand, got $other")
+            right match
+              case nl: NumericLiteral => nl.text must be("3")
+              case other => fail(s"expected a NumericLiteral right operand, got $other")
+          case other => fail(s"expected a ComparisonExpression, got $other")
     }
 
     "reject a constructor comparison operand at PARSE: count > R(1) (A28 s3)" in { (td: TestData) =>
@@ -858,14 +859,14 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
          |""".stripMargin
 
     val toPrefixCases = Seq(
-      "tourCompleted",      // reported: message TourCompleted
+      "tourCompleted", // reported: message TourCompleted
       "toleranceEvaluated", // reported: message ToleranceEvaluated
       "totalX" // shape of the third reported collision (TouchpointRecorded), condensed
     )
     val controlCases = Seq(
       "abcCompleted", // control: does not start with `to`
-      "termX",        // control: starts with `te`, not `to`
-      "typeX"         // control: starts with `ty`, not `to`
+      "termX", // control: starts with `te`, not `to`
+      "typeX" // control: starts with `ty`, not `to`
     )
 
     (toPrefixCases ++ controlCases).foreach { binding =>

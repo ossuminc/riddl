@@ -52,8 +52,8 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
   private def parsedRoot(src: String, td: TestData): Root = {
     val input = RiddlParserInput(src, td)
     TopLevelParser.parseInput(input, true) match
-      case Left(msgs)   => fail(s"parse failed:\n${msgs.format}")
-      case Right(root)  => root
+      case Left(msgs)  => fail(s"parse failed:\n${msgs.format}")
+      case Right(root) => root
   }
 
   private def letExpression(root: Root, name: String): Value =

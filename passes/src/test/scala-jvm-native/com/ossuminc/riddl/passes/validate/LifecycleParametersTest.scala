@@ -13,14 +13,14 @@ import org.scalatest.TestData
 
 /** `on init` and `on term` become invocable, so they MAY take parameters.
   *
-  * Neither clause requires any. `on term`'s leading parameter was REQUIRED to be Id(this
-  * processor) until 2026-08-14, on the reasoning that the caller must say which instance --
-  * reversed by Reid because `self.id` is already live for the whole clause, so the requirement
-  * only forced the author to restate what the language supplies. `on init` never had one: there
-  * is no instance yet, and the identity is minted by initiating.
+  * Neither clause requires any. `on term`'s leading parameter was REQUIRED to be Id(this processor)
+  * until 2026-08-14, on the reasoning that the caller must say which instance -- reversed by Reid
+  * because `self.id` is already live for the whole clause, so the requirement only forced the
+  * author to restate what the language supplies. `on init` never had one: there is no instance yet,
+  * and the identity is minted by initiating.
   *
-  * Removing it also restored the bare `terminate P` form, whose absence had been justified
-  * SOLELY by the requirement -- see `TerminateRoundTripTest`.
+  * Removing it also restored the bare `terminate P` form, whose absence had been justified SOLELY
+  * by the requirement -- see `TerminateRoundTripTest`.
   */
 class LifecycleParametersTest extends AbstractValidatingTest {
 
@@ -36,8 +36,8 @@ class LifecycleParametersTest extends AbstractValidatingTest {
 
   /** The state record deliberately declares `total`/`tier` and the parameter cases below use
     * `seed`/`buyer`. A parameter whose name COLLIDES with a state field resolves through the state
-    * even when the parameter scope does not exist at all -- which is how the original fixture
-    * (`on init(total: Integer)` beside `record Fields is { total: Integer }`) made a declare-only
+    * even when the parameter scope does not exist at all -- which is how the original fixture (`on
+    * init(total: Integer)` beside `record Fields is { total: Integer }`) made a declare-only
     * feature look complete.
     */
   private def entityWith(clauses: String): String =
@@ -57,13 +57,13 @@ class LifecycleParametersTest extends AbstractValidatingTest {
   "on init parameters" should {
     "parse and validate" in { (td: TestData) =>
       diagnostics(
-        entityWith("""on init(total: Integer) is { do "start" }"""), "init-params"
+        entityWith("""on init(total: Integer) is { do "start" }"""),
+        "init-params"
       ).justErrors mustBe empty
     }
 
     "remain optional" in { (td: TestData) =>
-      diagnostics(entityWith("""on init is { do "start" }"""), "init-none")
-        .justErrors mustBe empty
+      diagnostics(entityWith("""on init is { do "start" }"""), "init-none").justErrors mustBe empty
     }
 
     "REJECT a parameter naming an undefined type" in { (td: TestData) =>
@@ -72,7 +72,8 @@ class LifecycleParametersTest extends AbstractValidatingTest {
       // its own traverse case this model validates clean while naming a type that need not
       // exist. Same shape as Correlation.timeoutStatements.
       val text = diagnostics(
-        entityWith("""on init(x: Nonexistent) is { do "start" }"""), "init-bad-type"
+        entityWith("""on init(x: Nonexistent) is { do "start" }"""),
+        "init-bad-type"
       ).justErrors.map(_.message).mkString("\n")
       text must include("Nonexistent")
     }
@@ -92,7 +93,8 @@ class LifecycleParametersTest extends AbstractValidatingTest {
       // clause, so requiring it as a parameter demands that the author restate what the language
       // already supplies. Argumentless `on term` is expected to be the COMMON form.
       diagnostics(
-        entityWith("""on term is { do "end" }"""), "term-no-params"
+        entityWith("""on term is { do "end" }"""),
+        "term-no-params"
       ).justErrors mustBe empty
     }
 
@@ -100,7 +102,8 @@ class LifecycleParametersTest extends AbstractValidatingTest {
       // The requirement is gone, not relaxed to "if present it must be an Id": a termination
       // reason is a perfectly ordinary thing to pass, and nothing about it needs to be an id.
       diagnostics(
-        entityWith("""on term(why: String) is { do "end" }"""), "term-non-id-param"
+        entityWith("""on term(why: String) is { do "end" }"""),
+        "term-non-id-param"
       ).justErrors mustBe empty
     }
 
@@ -116,7 +119,8 @@ class LifecycleParametersTest extends AbstractValidatingTest {
       // parameter), so the assertion never spoke to `self` at all. A test that passes in both
       // states measures nothing, which the revert proof is what caught.
       diagnostics(
-        entityWith("""on term is { let who = self.id }"""), "term-self-id"
+        entityWith("""on term is { let who = self.id }"""),
+        "term-self-id"
       ).justErrors mustBe empty
     }
   }

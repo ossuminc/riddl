@@ -37,8 +37,8 @@ abstract class MetaDataTest(using PlatformContext) extends AbstractParsingTest {
     }
 
     /** The ULID attachment could NOT be parsed at all until the three attachment forms were
-      * factored to share one `attachment` keyword: `Keywords.keyword` ends in a cut, so the
-      * general `attachment` rule — listed first in `metaData` — committed and the ULID rule was
+      * factored to share one `attachment` keyword: `Keywords.keyword` ends in a cut, so the general
+      * `attachment` rule — listed first in `metaData` — committed and the ULID rule was
       * unreachable. It had no fixture and no test anywhere, which is why nothing noticed.
       */
     "parse a ULID attachment" in { (td: TestData) =>
@@ -60,8 +60,8 @@ abstract class MetaDataTest(using PlatformContext) extends AbstractParsingTest {
     }
 
     /** An ordinary attachment that happens to be NAMED `ULID` must still take the general form —
-      * the ULID branch is tried first, so this proves the two branches backtrack against each
-      * other rather than the first one winning outright.
+      * the ULID branch is tried first, so this proves the two branches backtrack against each other
+      * rather than the first one winning outright.
       */
     "parse a normal attachment named ULID" in { (td: TestData) =>
       val input = RiddlParserInput(

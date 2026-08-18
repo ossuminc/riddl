@@ -13,9 +13,9 @@ import com.ossuminc.riddl.utils.{CommonOptions, pc}
 
 import org.scalatest.TestData
 
-/** A28 narrowed comparands to refs so a literal comparison could not be built at all. Reid
-  * reversed that 2026-08-14: the corpus held ONE constant across 189 models, so the rule had no
-  * uptake to protect. The intent survives as a StyleWarning.
+/** A28 narrowed comparands to refs so a literal comparison could not be built at all. Reid reversed
+  * that 2026-08-14: the corpus held ONE constant across 189 models, so the rule had no uptake to
+  * protect. The intent survives as a StyleWarning.
   *
   * **`showStyleWarnings` must be ON here.** The default suppresses exactly the message under test,
   * and a suite that cannot see its own signal reports a confident zero.
@@ -103,7 +103,7 @@ class NumericComparandTest extends AbstractValidatingTest {
       val input = RiddlParserInput(model("count > true"), td)
       TopLevelParser.parseInput(input) match
         case Left(messages) => messages.justErrors must not be empty
-        case Right(_)        => fail("expected a PARSE error for 'count > true'")
+        case Right(_)       => fail("expected a PARSE error for 'count > true'")
     }
   }
 }

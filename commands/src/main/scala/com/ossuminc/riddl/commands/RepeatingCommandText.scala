@@ -16,9 +16,9 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
   * bound changed in one and not the other diverges silently: the two commands would disagree about
   * how fast a refresh may be, and nothing would fail.
   *
-  * Only the text and the numbers live here. Each command still wires its own scopt arguments,
-  * since their `Options` types differ and a shared generic builder would cost more in ceremony
-  * than the duplication it removed.
+  * Only the text and the numbers live here. Each command still wires its own scopt arguments, since
+  * their `Options` types differ and a shared generic builder would cost more in ceremony than the
+  * duplication it removed.
   */
 private[commands] object RepeatingCommandText {
 

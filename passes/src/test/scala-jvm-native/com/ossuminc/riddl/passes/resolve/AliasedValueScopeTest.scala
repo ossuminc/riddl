@@ -22,8 +22,8 @@ import org.scalatest.TestData
   * that aliasing is riddl-models' documented house style — so the shape was a strong suspect.
   *
   * **VERDICT 2026-08-18: NOT a defect, and this suite is the evidence.** An aliased state record
-  * resolves exactly as a direct one does, because `valueScopeField` is not the only route — the
-  * A55 `ValueRef` walk reaches the field anyway. So the `case _ => Seq.empty` is the "nothing to do
+  * resolves exactly as a direct one does, because `valueScopeField` is not the only route — the A55
+  * `ValueRef` walk reaches the field anyway. So the `case _ => Seq.empty` is the "nothing to do
   * here" kind the no-silent-fall-through rule explicitly permits, not the "I do not know what this
   * is" kind.
   *

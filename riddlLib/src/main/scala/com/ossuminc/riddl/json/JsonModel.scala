@@ -54,8 +54,8 @@ object JsonModel:
   case class StringDto(min: Option[Long] = None, max: Option[Long] = None) extends TypeExprDto
 
   /** `{ "kind": "Id", "entity": "<path>", "keyword"?: "entity" }` — entity path required by
-    * builder. `keyword` is the AS-WRITTEN processor-kind keyword (`Id(entity Order)` ->
-    * `"entity"`, `Id(Order)` -> absent); added 2026-08-13 alongside `AST.UniqueId.kindKeyword`.
+    * builder. `keyword` is the AS-WRITTEN processor-kind keyword (`Id(entity Order)` -> `"entity"`,
+    * `Id(Order)` -> absent); added 2026-08-13 alongside `AST.UniqueId.kindKeyword`.
     */
   case class IdDto(entity: Option[String] = None, keyword: Option[String] = None)
       extends TypeExprDto
@@ -182,12 +182,11 @@ object JsonModel:
     */
   type ContentDto = DomainDto | ModuleDto | ContextDto | EntityDto | TypeDefDto | MessageDto |
     StateDto | CorrelationDto | HandlerDto | OnClauseDto | FunctionDto | AdaptorDto | StreamletDto |
-    ProjectorDto |
-    RepositoryDto | SchemaDto | ConnectorDto | RelationshipDto | SagaDto | SagaStepDto | EpicDto |
-    UseCaseDto | GroupDto | ContainedGroupDto | InputDto | OutputDto | AuthorDto | UserDto |
-    InvariantDto | ConstantDto | CommentDto | VersionDto | CopyrightDto | PortletDto | FieldDto |
-    MethodDto | TermDto | InteractionContentDto | IncludeContentDto | BASTImportContentDto |
-    RequiresDto | ReturnsDto
+    ProjectorDto | RepositoryDto | SchemaDto | ConnectorDto | RelationshipDto | SagaDto |
+    SagaStepDto | EpicDto | UseCaseDto | GroupDto | ContainedGroupDto | InputDto | OutputDto |
+    AuthorDto | UserDto | InvariantDto | ConstantDto | CommentDto | VersionDto | CopyrightDto |
+    PortletDto | FieldDto | MethodDto | TermDto | InteractionContentDto | IncludeContentDto |
+    BASTImportContentDto | RequiresDto | ReturnsDto
 
   /** One entry of an ordered `contents` array: a child, and where it came from.
     *
@@ -488,8 +487,8 @@ object JsonModel:
     *
     * `value` is a [[ValueDto]], not a bare string, because `AST.Constant.value` is
     * `ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue` -- a constant
-    * can hold any of the four. `valueDtoRW` (below) already handles the polymorphism, so
-    * `macroRW` picks it up with no further work.
+    * can hold any of the four. `valueDtoRW` (below) already handles the polymorphism, so `macroRW`
+    * picks it up with no further work.
     */
   case class ConstantDto(
     name: String,
@@ -763,19 +762,19 @@ object JsonModel:
   /** `{ "kind": "reply", "message": <msgRef|constructor> }` -- a query answering with its result.
     *
     * Until 2.0 `"kind": "reply"` was read as a LEGACY ALIAS for yield, because `reply` was a
-    * deprecated synonym in the language. It is now its own statement, so the two kinds are
-    * distinct on the wire as well as in the AST.
+    * deprecated synonym in the language. It is now its own statement, so the two kinds are distinct
+    * on the wire as well as in the AST.
     */
   case class ReplyStmtDto(message: MsgOperandDto) extends StatementDto
 
   /** `{ "kind": "when", "condition"|"conditionIdentifier"|"expression": ..., "then": [<stmt>],
-    * "else"?: [<stmt>] }`. A28's structured BooleanExpression condition is carried in
-    * `expression`; at most one of the three condition fields is populated. Negation is NOT a
-    * separate field -- it is a `NotDto`-wrapped value inside `expression` (not/! synonymy task 4,
-    * 2026-08-15), the same as everywhere else a `NotExpression` appears. The DTO carried its own
-    * `negated: Boolean` field until this task, mirroring the AST's now-deleted
-    * `WhenStatement.negated`; it was always written/read as a hardcoded `false` (task 2's minimal
-    * accommodation) since the real payload already round-trips through `expression`.
+    * "else"?: [<stmt>] }`. A28's structured BooleanExpression condition is carried in `expression`;
+    * at most one of the three condition fields is populated. Negation is NOT a separate field -- it
+    * is a `NotDto`-wrapped value inside `expression` (not/! synonymy task 4, 2026-08-15), the same
+    * as everywhere else a `NotExpression` appears. The DTO carried its own `negated: Boolean` field
+    * until this task, mirroring the AST's now-deleted `WhenStatement.negated`; it was always
+    * written/read as a hardcoded `false` (task 2's minimal accommodation) since the real payload
+    * already round-trips through `expression`.
     */
   case class WhenStmtDto(
     condition: Option[String],
@@ -852,8 +851,8 @@ object JsonModel:
   case class CallValueDto(function: String, args: Seq[ConstructorArgDto]) extends ValueDto
 
   /** `{ "value": "ask", "query": "<path>", "processor": "<path>" }` -- the correlation `ask`
-    * declares. No answer type is carried: it is the query's declared `replies result X`, so
-    * storing it would be a second place for the same fact to go stale.
+    * declares. No answer type is carried: it is the query's declared `replies result X`, so storing
+    * it would be a second place for the same fact to go stale.
     */
   case class AskValueDto(query: String, processor: String, processorKind: String) extends ValueDto
 
@@ -870,8 +869,8 @@ object JsonModel:
   case class ConstantRefDto(path: String) extends ValueDto
 
   /** `{ "value": "prompt", "prompt": "...", "type"?: <typeExpr> }` — an AI-computed value (A54).
-    * `type` is the optional `as <type>` ascription (A20 typed holes); omitted when unascribed, so an
-    * untyped prompt's JSON is unchanged.
+    * `type` is the optional `as <type>` ascription (A20 typed holes); omitted when unascribed, so
+    * an untyped prompt's JSON is unchanged.
     */
   case class PromptValueDto(prompt: String, typeEx: Option[TypeExprDto] = None) extends ValueDto
 
@@ -935,9 +934,9 @@ object JsonModel:
     *
     * A producer still emitting `processor`/`processorKind` gets them SILENTLY DROPPED and a
     * `target` of `null`: [[JsonModel]]'s readers never diff present keys against consumed keys
-    * (filed in BACKLOG § 1 as a defect class in its own right), so there is no diagnostic. That
-    * is precisely why this doc comment records the change rather than merely describing the
-    * current shape.
+    * (filed in BACKLOG § 1 as a defect class in its own right), so there is no diagnostic. That is
+    * precisely why this doc comment records the change rather than merely describing the current
+    * shape.
     */
   case class TerminateStmtDto(
     target: ValueDto,
@@ -1219,6 +1218,7 @@ object JsonModel:
       extends InteractionDto
   case class TakeInputIxnDto(user: String, input: String, keyword: Option[String] = None)
       extends InteractionDto
+
   /** `{ "kind": "refusal", "from": <ref>, "user": "<path>", "reason": "<prose>" }` or, for A38's
     * invariant form, `{ ..., "invariant": "<path>" }`. Exactly one of the two is populated,
     * mirroring `RequireStmtDto`'s condition/invariant pair — the same choice, in the same language,
@@ -1233,6 +1233,7 @@ object JsonModel:
     reason: Option[String],
     invariant: Option[String] = None
   ) extends InteractionDto
+
   /** The composite steps. Their children are [[InteractionContentDto]], not bare
     * [[InteractionDto]], so a NESTED step carries its `brief`/`metadata` exactly as a top-level one
     * does — [1.5].
@@ -1260,11 +1261,11 @@ object JsonModel:
     * thirteen [[InteractionDto]] kinds. Until this existed `JsonAstBuilder.buildInteraction`
     * hardcoded `Contents.empty[MetaData]()`, so EVERY interaction lost its metadata through a JSON
     * round trip -- `step ... refuses ... with { briefly "..." }` came back without the brief. It
-    * went unnoticed because no fixture in the repo had put metadata on an interaction step; the
-    * A38 fixture is the first, and `Root2JsonFixturesTest` caught it the moment it existed.
+    * went unnoticed because no fixture in the repo had put metadata on an interaction step; the A38
+    * fixture is the first, and `Root2JsonFixturesTest` caught it the moment it existed.
     *
-    * One wrapper carries it for all thirteen kinds, which is why this is a small change rather
-    * than fifty-two touch points -- and why the next interaction kind gets it for free.
+    * One wrapper carries it for all thirteen kinds, which is why this is a small change rather than
+    * fifty-two touch points -- and why the next interaction kind gets it for free.
     */
   case class InteractionContentDto(
     interaction: InteractionDto,
@@ -1516,7 +1517,7 @@ object JsonModel:
     else
       m("kind").str match
         case "String" => StringDto(m.get("min").map(_.num.toLong), m.get("max").map(_.num.toLong))
-        case "Id" => IdDto(m.get("entity").map(_.str), m.get("keyword").map(_.str))
+        case "Id"     => IdDto(m.get("entity").map(_.str), m.get("keyword").map(_.str))
         // Argument-less predefined kinds (Phase 1 + Phase 2)
         case k @ ("UUID" | "Boolean" | "Date" | "TimeStamp" | "Integer" | "Whole" | "Natural" |
             "Number" | "Real" | "UserId" | "Anything" | "Abstract" | "Location" | "Nothing" |
@@ -1740,10 +1741,10 @@ object JsonModel:
   private def readValueObj(v: ujson.Value): ValueDto =
     val m = v.obj
     m("value").str match
-      case "literal"     => LiteralValueDto(m("text").str)
-      case "numeric"     => NumericLiteralDto(m("text").str)
-      case "prompt"      => PromptValueDto(m("prompt").str, m.get("type").map(readTypeExpr))
-      case "valueRef"    => ValueRefDto(m("path").str)
+      case "literal"  => LiteralValueDto(m("text").str)
+      case "numeric"  => NumericLiteralDto(m("text").str)
+      case "prompt"   => PromptValueDto(m("prompt").str, m.get("type").map(readTypeExpr))
+      case "valueRef" => ValueRefDto(m("path").str)
       case "lookup" =>
         LookupValueDto(m("collection").str, m("indices").arr.map(readValue).toSeq)
       case "constantRef" => ConstantRefDto(m("path").str)
@@ -2146,17 +2147,22 @@ object JsonModel:
     )
   private def readRef(v: ujson.Value): RefDto =
     RefDto(v.obj("kind").str, v.obj("path").str, v.obj.get("keyword").map(_.str))
+
   /** [1.5]: a nested step's `brief`/`metadata` sit on the SAME object as its `kind`, so they are
     * read from that object rather than from a wrapper around it.
     */
   private def readIxns(o: Option[ujson.Value]): Seq[InteractionContentDto] =
-    o.map(_.arr.map { v =>
-      InteractionContentDto(
-        readInteraction(v),
-        v.obj.get("brief").map(_.str),
-        v.obj.get("metadata").map(j => readJson[MetaDto](j))
-      )
-    }.toSeq).getOrElse(Nil)
+    o.map(
+      _.arr
+        .map { v =>
+          InteractionContentDto(
+            readInteraction(v),
+            v.obj.get("brief").map(_.str),
+            v.obj.get("metadata").map(j => readJson[MetaDto](j))
+          )
+        }
+        .toSeq
+    ).getOrElse(Nil)
 
   private def readInteraction(v: ujson.Value): InteractionDto =
     val m = v.obj
@@ -2389,8 +2395,8 @@ object JsonModel:
       case ContentKind.Copyright      => readJson[CopyrightDto](body)
       case ContentKind.Field          => readJson[FieldDto](body)
       // MethodDto has no derived codec — its `args` need the hand-written pair.
-      case ContentKind.Method => readMethod(body)
-      case ContentKind.Term   => readJson[TermDto](body)
+      case ContentKind.Method   => readMethod(body)
+      case ContentKind.Term     => readJson[TermDto](body)
       case ContentKind.Requires => RequiresDto(readArg(body.obj("arg")))
       case ContentKind.Returns  => ReturnsDto(readArg(body.obj("arg")))
       case ContentKind.Interaction =>
@@ -2455,8 +2461,8 @@ object JsonModel:
       case d: FieldDto          => (ContentKind.Field, writeJs(d))
       case d: MethodDto         => (ContentKind.Method, writeMethod(d))
       case d: TermDto           => (ContentKind.Term, writeJs(d))
-      case d: RequiresDto => (ContentKind.Requires, ujson.Obj("arg" -> writeArg(d.arg)))
-      case d: ReturnsDto  => (ContentKind.Returns, ujson.Obj("arg" -> writeArg(d.arg)))
+      case d: RequiresDto       => (ContentKind.Requires, ujson.Obj("arg" -> writeArg(d.arg)))
+      case d: ReturnsDto        => (ContentKind.Returns, ujson.Obj("arg" -> writeArg(d.arg)))
       case d: InteractionContentDto =>
         (
           ContentKind.Interaction,
@@ -2602,8 +2608,8 @@ object JsonModel:
     * clean failure.
     */
 
-  /** Every key any reader in this file ACCEPTS — the union of the literals the hand-written
-    * readers look up and the field names of the `macroRW`-derived DTOs.
+  /** Every key any reader in this file ACCEPTS — the union of the literals the hand-written readers
+    * look up and the field names of the `macroRW`-derived DTOs.
     *
     * It exists because neither layer rejects an unknown key on its own. The hand-written readers
     * build their result from selective `m("key")` lookups with no present-vs-consumed diff, and
@@ -2620,9 +2626,9 @@ object JsonModel:
     * with the DTOs. This one is kept honest mechanically instead, by
     * `JsonUnknownKeyVocabularyTest`, which re-derives the set from this file's own source.
     *
-    * Includes the SIGIL keys `$kind` and `$at`, which no DTO field name or reader lookup spells
-    * and which a regex over identifiers therefore cannot find. Omitting them made every one of the
-    * 188 corpus models warn -- our own writer emits them on every node -- which is the failure mode
+    * Includes the SIGIL keys `$kind` and `$at`, which no DTO field name or reader lookup spells and
+    * which a regex over identifiers therefore cannot find. Omitting them made every one of the 188
+    * corpus models warn -- our own writer emits them on every node -- which is the failure mode
     * this whole check exists to avoid, since a diagnostic that fires on correct input teaches
     * authors to ignore it. Found by probing the writer's output, not by reading the readers.
     *
@@ -2631,31 +2637,194 @@ object JsonModel:
     * object existed was wrong.
     */
   val knownKeys: Set[String] = Set(
-    "$at", "$kind", "adaptors", "aggregate", "alias", "arg", "args", "argument", "attachments",
-    "authors", "basis", "benefit", "binding", "blobKind", "block", "body", "bool", "brief",
-    "by", "byAuthors", "capability", "cardinality", "cases", "collection", "commands",
-    "comments", "comparand", "condition", "conditionIdentifier", "connectors", "constants",
-    "containedGroups", "contents", "context", "contexts", "copyright", "country", "data",
-    "default", "definition", "description", "dimensions", "direction", "do", "doStatements",
-    "domains", "element", "else", "elseStatements", "email", "entities", "entity",
-    "enumerators", "envelope", "epics", "events", "expr", "expression", "field", "fields",
-    "figmaRefs", "fileKey", "fractional", "from", "fullName", "function", "functions", "group",
-    "groups", "guard", "handler", "handlers", "importKind", "inFile", "indices", "inlets",
-    "inline", "input", "inputs", "intention", "intentions", "interaction", "interactions",
-    "invariant", "invariants", "isA", "isInitial", "items", "keys", "keyword", "kind", "label",
-    "language", "left", "lines", "links", "local", "locations", "max", "message", "metadata",
-    "methods", "mimeType", "min", "modules", "name", "nodeId", "nounAlias", "numeric", "of",
-    "onClauses", "op", "options", "organization", "origin", "outlets", "output", "outputs",
-    "parameters", "path", "pattern", "portlet", "predicate", "processor", "processorKind",
-    "projectors", "prompt", "putOut", "queries", "query", "reason", "recordType", "ref",
-    "refKind", "relationship", "relationships", "repositories", "repository", "requires",
-    "requiresKind", "results", "right", "sagas", "schema", "schemas", "scheme", "selector",
-    "shape", "shownBy", "source", "state", "statements", "states", "steps", "streamlets",
-    "subject", "takeIn", "target", "terms", "text", "then", "thenStatements", "timeout",
-    "timeoutStatements", "title", "to", "type", "typeEx", "typeExpression", "types", "undo",
-    "url", "urlDescription", "useCases", "usecase", "user", "userStory", "users", "value",
-    "valueElement", "values", "verbAlias", "version", "whole", "withProcessor", "yields",
-    "yieldsCommand", "zone"
+    "$at",
+    "$kind",
+    "adaptors",
+    "aggregate",
+    "alias",
+    "arg",
+    "args",
+    "argument",
+    "attachments",
+    "authors",
+    "basis",
+    "benefit",
+    "binding",
+    "blobKind",
+    "block",
+    "body",
+    "bool",
+    "brief",
+    "by",
+    "byAuthors",
+    "capability",
+    "cardinality",
+    "cases",
+    "collection",
+    "commands",
+    "comments",
+    "comparand",
+    "condition",
+    "conditionIdentifier",
+    "connectors",
+    "constants",
+    "containedGroups",
+    "contents",
+    "context",
+    "contexts",
+    "copyright",
+    "country",
+    "data",
+    "default",
+    "definition",
+    "description",
+    "dimensions",
+    "direction",
+    "do",
+    "doStatements",
+    "domains",
+    "element",
+    "else",
+    "elseStatements",
+    "email",
+    "entities",
+    "entity",
+    "enumerators",
+    "envelope",
+    "epics",
+    "events",
+    "expr",
+    "expression",
+    "field",
+    "fields",
+    "figmaRefs",
+    "fileKey",
+    "fractional",
+    "from",
+    "fullName",
+    "function",
+    "functions",
+    "group",
+    "groups",
+    "guard",
+    "handler",
+    "handlers",
+    "importKind",
+    "inFile",
+    "indices",
+    "inlets",
+    "inline",
+    "input",
+    "inputs",
+    "intention",
+    "intentions",
+    "interaction",
+    "interactions",
+    "invariant",
+    "invariants",
+    "isA",
+    "isInitial",
+    "items",
+    "keys",
+    "keyword",
+    "kind",
+    "label",
+    "language",
+    "left",
+    "lines",
+    "links",
+    "local",
+    "locations",
+    "max",
+    "message",
+    "metadata",
+    "methods",
+    "mimeType",
+    "min",
+    "modules",
+    "name",
+    "nodeId",
+    "nounAlias",
+    "numeric",
+    "of",
+    "onClauses",
+    "op",
+    "options",
+    "organization",
+    "origin",
+    "outlets",
+    "output",
+    "outputs",
+    "parameters",
+    "path",
+    "pattern",
+    "portlet",
+    "predicate",
+    "processor",
+    "processorKind",
+    "projectors",
+    "prompt",
+    "putOut",
+    "queries",
+    "query",
+    "reason",
+    "recordType",
+    "ref",
+    "refKind",
+    "relationship",
+    "relationships",
+    "repositories",
+    "repository",
+    "requires",
+    "requiresKind",
+    "results",
+    "right",
+    "sagas",
+    "schema",
+    "schemas",
+    "scheme",
+    "selector",
+    "shape",
+    "shownBy",
+    "source",
+    "state",
+    "statements",
+    "states",
+    "steps",
+    "streamlets",
+    "subject",
+    "takeIn",
+    "target",
+    "terms",
+    "text",
+    "then",
+    "thenStatements",
+    "timeout",
+    "timeoutStatements",
+    "title",
+    "to",
+    "type",
+    "typeEx",
+    "typeExpression",
+    "types",
+    "undo",
+    "url",
+    "urlDescription",
+    "useCases",
+    "usecase",
+    "user",
+    "userStory",
+    "users",
+    "value",
+    "valueElement",
+    "values",
+    "verbAlias",
+    "version",
+    "whole",
+    "withProcessor",
+    "yields",
+    "yieldsCommand",
+    "zone"
   )
 
   /** Keys present in `value` (recursively) that no reader accepts, paired with a JSON-pointer-ish

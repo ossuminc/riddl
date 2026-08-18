@@ -14,18 +14,18 @@ import scala.concurrent.duration.DurationInt
 
 /** `PlatformContext.loadBytes` must return BINARY content intact.
   *
-  * This exists because it did not. The Native implementation used sttp's
-  * `asByteArrayAlways` and returned a SHORT body for a ZIP — the same URL fetched 207,955 bytes
-  * with curl — which surfaced two steps later as `java.util.zip.ZipException: too short to be
-  * Zip`, a corrupt-archive message for what was really a truncated read. Reid's guidance
-  * (2026-08-18): for binary content sttp should STREAM TO A FILE rather than materialise a byte
-  * array. The Native implementation now uses `asFile`.
+  * This exists because it did not. The Native implementation used sttp's `asByteArrayAlways` and
+  * returned a SHORT body for a ZIP — the same URL fetched 207,955 bytes with curl — which surfaced
+  * two steps later as `java.util.zip.ZipException: too short to be Zip`, a corrupt-archive message
+  * for what was really a truncated read. Reid's guidance (2026-08-18): for binary content sttp
+  * should STREAM TO A FILE rather than materialise a byte array. The Native implementation now uses
+  * `asFile`.
   *
   * **OPT-IN.** It reaches the network, so it skips unless `RIDDL_NETWORK_TESTS` is set — the same
   * loud-skip discipline the corpus suites use. A test that silently needs the internet is worse
   * than no test, and CLAUDE.md records that a cancelled suite reads as green in a summary scan.
   *
-  * Run it with:  `RIDDL_NETWORK_TESTS=1 sbt 'utilsNative/testOnly *LoadBytesNetworkTest*'`
+  * Run it with: `RIDDL_NETWORK_TESTS=1 sbt 'utilsNative/testOnly *LoadBytesNetworkTest*'`
   */
 class LoadBytesNetworkTest extends AnyWordSpec with Matchers {
 
@@ -33,11 +33,11 @@ class LoadBytesNetworkTest extends AnyWordSpec with Matchers {
     Option(System.getenv("RIDDL_NETWORK_TESTS")).exists(_.nonEmpty)
 
   /** A DIRECT, non-redirecting URL. It was a GitHub archive link, which 302-redirects — and that
-    * turned out to be untestable on Native for a reason worth recording: **sttp's Scala Native
-    * curl backend exposes only `Content-Length` among response headers**, so `Location` is
-    * invisible and redirects cannot be followed at any layer (tried by hand and via
-    * `FollowRedirectsBackend`; both fail identically). That is an upstream limitation, so this
-    * test checks the thing that IS ours — whether fetched content arrives intact.
+    * turned out to be untestable on Native for a reason worth recording: **sttp's Scala Native curl
+    * backend exposes only `Content-Length` among response headers**, so `Location` is invisible and
+    * redirects cannot be followed at any layer (tried by hand and via `FollowRedirectsBackend`;
+    * both fail identically). That is an upstream limitation, so this test checks the thing that IS
+    * ours — whether fetched content arrives intact.
     */
   private val directUrl =
     "https://raw.githubusercontent.com/ossuminc/riddl-examples/main/README.md"

@@ -14,10 +14,9 @@ import org.scalatest.TestData
 /** A context may adapt to and from another context, but only ONCE in each direction.
   *
   * Two adaptors with the same direction to the same foreign context split that context's
-  * translation across two places, and nothing says which handles a given message. Direction is
-  * part of the key because the computational model §7.1 states that "a bidirectional relationship
-  * is two adaptors" — inbound plus outbound is the sanctioned way to say "both ways", not
-  * duplication.
+  * translation across two places, and nothing says which handles a given message. Direction is part
+  * of the key because the computational model §7.1 states that "a bidirectional relationship is two
+  * adaptors" — inbound plus outbound is the sanctioned way to say "both ways", not duplication.
   */
 class AdaptorUniquenessTest extends AbstractValidatingTest {
 
@@ -58,7 +57,8 @@ class AdaptorUniquenessTest extends AbstractValidatingTest {
 
   "two adaptors with the SAME direction to the same context" should {
     "be an error, because nothing says which one prevails" in { (td: TestData) =>
-      val second = inbound.replace("adaptor In ", "adaptor AlsoIn ").replace("handler H ", "handler H2 ")
+      val second =
+        inbound.replace("adaptor In ", "adaptor AlsoIn ").replace("handler H ", "handler H2 ")
       val msgs = messagesFor(model(s"$inbound\n$second"), td)
       withClue(s"messages were: ${clue(msgs)}") {
         val dupes = duplicates(msgs)

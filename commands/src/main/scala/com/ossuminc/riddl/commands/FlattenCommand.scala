@@ -58,14 +58,14 @@ class FlattenCommand(using pc: PlatformContext)
       val future = RiddlParserInput.fromPathSafe(inputFile.toString).map {
         case Left(messages) => Left(messages)
         case Right(rpi) =>
-        Riddl.parse(rpi) match
-          case Left(errors) => return Left(errors)
-          case Right(root) =>
-            val input = PassInput(root)
-            val passes: Seq[PassCreator] =
-              Pass.standardPasses.appended(FlattenPass.creator(options))
-            Right(Pass.runThesePasses(input, passes))
-        end match
+          Riddl.parse(rpi) match
+            case Left(errors) => return Left(errors)
+            case Right(root) =>
+              val input = PassInput(root)
+              val passes: Seq[PassCreator] =
+                Pass.standardPasses.appended(FlattenPass.creator(options))
+              Right(Pass.runThesePasses(input, passes))
+          end match
       }
       Await.result(future, 10.seconds)
     }

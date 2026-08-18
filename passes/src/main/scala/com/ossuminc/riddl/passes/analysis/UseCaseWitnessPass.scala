@@ -265,6 +265,7 @@ case class UseCaseWitnessPass(
       case uc: UseCase => witnessSteps(uc, uc.contents.toSeq)
       case _           => () // interaction steps are reached from their enclosing UseCase
     end match
+
   /** Recurse the interaction structure (into containers) and apply the per-step witness rules. */
   private def witnessSteps(uc: UseCase, contents: Seq[RiddlValue]): Unit =
     contents.foreach {

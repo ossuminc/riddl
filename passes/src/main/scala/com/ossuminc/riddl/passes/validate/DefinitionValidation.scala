@@ -428,44 +428,44 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     * extensible.
     */
   /** Options whose FIRST argument states a duration. Their values are a contract for code
-    * generators, but a value nobody can read is a defect wherever it is noticed, and noticing it
-    * in riddlc beats noticing it in a generator.
+    * generators, but a value nobody can read is a defect wherever it is noticed, and noticing it in
+    * riddlc beats noticing it in a generator.
     */
   // `AST.Set` shadows `scala.Set` in this file, hence the qualification.
   /** Which ARGUMENT of a temporal option states a duration, by option name.
     *
     * Not a flat set, because the duration is not always the first argument: `retry("3", "2s")`
-    * takes a COUNT then an optional backoff, so only index 1 is a duration. Mapping name to
-    * index keeps the check honest as options are added.
+    * takes a COUNT then an optional backoff, so only index 1 is a duration. Mapping name to index
+    * keeps the check honest as options are added.
     */
   private val temporalArgIndex: Map[String, Int] =
     Map("timeout" -> 0, "delay" -> 0, "retry" -> 1)
 
   /** ISO-8601 durations (`PT1M30S`, `P1DT2H`). `java.time.Duration.parse` handles these but is
-    * JVM-only, and this validation must behave identically under Scala.js and Native, so the
-    * shape is matched directly.
+    * JVM-only, and this validation must behave identically under Scala.js and Native, so the shape
+    * is matched directly.
     *
-    * NO LOOKAHEAD. The first version used `(?!$)` and `(?=\d)` to reject a bare `P` or `PT`,
-    * which the JVM and Scala.js both accept but Scala NATIVE does not: the pattern is a `val`
-    * compiled at class initialisation, so it threw before any validation ran and surfaced as a
-    * Severe message with EMPTY text -- every predefined-module test failed on the Native row
-    * alone with `Message(empty(0->0), "", Severe, ...)`. The degenerate cases are rejected by
-    * the digit check in [[isIso8601Duration]] instead.
+    * NO LOOKAHEAD. The first version used `(?!$)` and `(?=\d)` to reject a bare `P` or `PT`, which
+    * the JVM and Scala.js both accept but Scala NATIVE does not: the pattern is a `val` compiled at
+    * class initialisation, so it threw before any validation ran and surfaced as a Severe message
+    * with EMPTY text -- every predefined-module test failed on the Native row alone with
+    * `Message(empty(0->0), "", Severe, ...)`. The degenerate cases are rejected by the digit check
+    * in [[isIso8601Duration]] instead.
     */
   private val iso8601Duration =
     """^P(\d+D)?(T(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$""".r
 
-  /** True for an ISO-8601 duration carrying at least one component. The digit test is what
-    * rejects a bare `P` or `PT`, which the shape above would otherwise admit.
+  /** True for an ISO-8601 duration carrying at least one component. The digit test is what rejects
+    * a bare `P` or `PT`, which the shape above would otherwise admit.
     */
   private def isIso8601Duration(text: String): Boolean =
     iso8601Duration.matches(text) && text.exists(_.isDigit)
 
   /** True when an ISO-8601 duration names at least one NON-ZERO component.
     *
-    * The shape carries no sign, so a negative ISO duration cannot be written and zero is the
-    * only non-positive case. Checking the digits directly avoids parsing: `PT0S` and `P0D` have
-    * digits but no magnitude, which `isIso8601Duration` alone cannot tell apart from `PT1S`.
+    * The shape carries no sign, so a negative ISO duration cannot be written and zero is the only
+    * non-positive case. Checking the digits directly avoids parsing: `PT0S` and `P0D` have digits
+    * but no magnitude, which `isIso8601Duration` alone cannot tell apart from `PT1S`.
     */
   private def isPositiveIso8601(text: String): Boolean =
     text.exists(c => c.isDigit && c != '0')
@@ -474,13 +474,13 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     *
     * Two distinct defects, two distinct messages, because they need different fixes:
     *
-    *   - VAGUE: `timeout("30")` is ambiguous between seconds and milliseconds and every
-    *     generator has to guess. `scala.concurrent.duration.Duration` rejects a bare number and
-    *     accepts `30s`, `1500 ms`, `5 minutes`; ISO-8601 is accepted separately because
-    *     riddl-generator documents that form and rejecting it would break working models.
-    *   - NON-POSITIVE: `timeout("0s")` is perfectly readable and still unusable -- a saga
-    *     bounded by zero has expired before its first step starts, and `delay("0s")` says
-    *     nothing that omitting the option does not say better.
+    *   - VAGUE: `timeout("30")` is ambiguous between seconds and milliseconds and every generator
+    *     has to guess. `scala.concurrent.duration.Duration` rejects a bare number and accepts
+    *     `30s`, `1500 ms`, `5 minutes`; ISO-8601 is accepted separately because riddl-generator
+    *     documents that form and rejecting it would break working models.
+    *   - NON-POSITIVE: `timeout("0s")` is perfectly readable and still unusable -- a saga bounded
+    *     by zero has expired before its first step starts, and `delay("0s")` says nothing that
+    *     omitting the option does not say better.
     *
     * ERRORS rather than warnings in both cases: unlike an unrecognized option NAME, which a
     * generator can ignore, neither of these has a sensible fallback. Inventing a positive bound
@@ -502,7 +502,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     */
   protected def checkPreciseDuration(arg: LiteralString, subject: String, zeroHint: String): Unit =
     val text = arg.s.trim
-    val parsed = scala.util.Try(scala.concurrent.duration.Duration(text)).toOption.filter(_.isFinite)
+    val parsed =
+      scala.util.Try(scala.concurrent.duration.Duration(text)).toOption.filter(_.isFinite)
     val isIso = isIso8601Duration(text)
     if parsed.isEmpty && !isIso then
       messages.addError(

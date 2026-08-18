@@ -52,11 +52,10 @@ case class DataFlowConnection(
   *   Resolved connection data with source, target, and message type
   *
   * **[4.1], RULED 2026-08-17 by Reid:** `streamlets` means all port-bearing processors, because
-  * since the unified processor model every processor may declare portlets — so a diagram drawn
-  * from the `Streamlet` case class alone omitted five of the six kinds. This REPLACES the
-  * 2026-08-16 reading, under which a `portBearing` field was added alongside an unchanged
-  * `streamlets`; that field shipped in `2.0.0-rc.15` and is now DELETED rather than left as a
-  * synonym.
+  * since the unified processor model every processor may declare portlets — so a diagram drawn from
+  * the `Streamlet` case class alone omitted five of the six kinds. This REPLACES the 2026-08-16
+  * reading, under which a `portBearing` field was added alongside an unchanged `streamlets`; that
+  * field shipped in `2.0.0-rc.15` and is now DELETED rather than left as a synonym.
   *
   * **Breaking**: element type widened from `Streamlet` to `Processor[?]`.
   */
@@ -230,8 +229,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     val rel6 = makeInletRelationships(context, processor.inlets, processor)
     val rel7 = makeOutletRelationships(context, processor.outlets, processor)
     val rel8 = processor match {
-      case a: Adaptor    => inferRelationship(context, a)
-      case e: Entity     => makeHandlerRelationships(context, e.handlers)
+      case a: Adaptor => inferRelationship(context, a)
+      case e: Entity  => makeHandlerRelationships(context, e.handlers)
       // Enumerated, not defaulted: these four add nothing BEYOND their ports and handlers, which
       // rel1-rel7 already cover for every kind alike.
       case _: Context    => Seq.empty[ContextRelationship]
@@ -333,22 +332,22 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private def operandRefOpt(
     m: MessageRef | RecordRef | Constructor | ValueRef
   ): Option[Reference[Definition]] = m match
-    case _: ValueRef                                    => None
-    case other: (MessageRef | RecordRef | Constructor)  => Some(operandRef(other))
+    case _: ValueRef                                   => None
+    case other: (MessageRef | RecordRef | Constructor) => Some(operandRef(other))
 
   private def getStatementReferences(statement: Statements): Seq[Reference[Definition]] = {
     statement match
       // A56: a bound operand (`tell p to …`) contributes no Reference of its own — `p` is a local
       // name, not a reference to a definition. The message it denotes is already reachable through
       // the on-clause that declared it, so the diagram loses nothing by taking only the target.
-      case SendStatement(_, msg, portlet)   => operandRefOpt(msg).toSeq :+ portlet
+      case SendStatement(_, msg, portlet)      => operandRefOpt(msg).toSeq :+ portlet
       case TellStatement(_, msg, processor, _) => operandRefOpt(msg).toSeq :+ processor
-      case YieldStatement(_, msg)                  => operandRefOpt(msg).toSeq
-      case SetStatement(_, field, _)               => Seq(field)
+      case YieldStatement(_, msg)              => operandRefOpt(msg).toSeq
+      case SetStatement(_, field, _)           => Seq(field)
       case MorphStatement(_, entity, state, value) =>
         Seq(entity, state) ++ operandRefOpt(value).toSeq
-      case BecomeStatement(_, entity, handler)     => Seq(entity, handler)
-      case _                                       => Seq.empty
+      case BecomeStatement(_, entity, handler) => Seq(entity, handler)
+      case _                                   => Seq.empty
   }
 
   private def getTypeReferences(typEx: TypeExpression): Seq[Reference[Definition]] = {
@@ -485,10 +484,10 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   /** The definition a data-flow arrow should attach to for a port: the processor that owns it.
     *
     * [2.4] Streamlet → Processor: this matched the concrete `Streamlet` and otherwise fell back to
-    * the PORT itself, so a connector between two Contexts' own ports drew arrows from and to
-    * inlets and outlets rather than the processors holding them. Falling back to the port is still
-    * right when the owner genuinely is not a processor — it keeps the arrow rather than dropping
-    * the connection.
+    * the PORT itself, so a connector between two Contexts' own ports drew arrows from and to inlets
+    * and outlets rather than the processors holding them. Falling back to the port is still right
+    * when the owner genuinely is not a processor — it keeps the arrow rather than dropping the
+    * connection.
     */
   private def portOwner(portlet: Portlet): Definition =
     symTab.parentOf(portlet).collect { case p: Processor[?] => p: Definition }.getOrElse(portlet)

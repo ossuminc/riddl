@@ -39,8 +39,8 @@ private[parsing] trait SagaParser {
 
   /** A55/saga: `vitalDefinitionContents` (`typeDef | comment`) leads, as it does in every other
     * container of this family — DomainParser:38, FunctionParser:35, EpicParser:170,
-    * ProcessorParser:69. Saga was the only one omitting it, which is why a `//` comment between
-    * two steps was a PARSE ERROR whose message never mentioned comments.
+    * ProcessorParser:69. Saga was the only one omitting it, which is why a `//` comment between two
+    * steps was a PARSE ERROR whose message never mentioned comments.
     *
     * This is not a widening of what a Saga may hold: `OccursInSaga` is
     * `OccursInVitalDefinition | SagaStep` (AST.scala:931), so `Type` and `Comment` were always
@@ -48,9 +48,9 @@ private[parsing] trait SagaParser {
     *
     * The `rep(2)` is retained but is NOT the guard it looks like: the real rule — a saga needs at
     * least two STEPS — lives in ValidationPass:2585, which counts `sagaSteps` specifically and
-    * reports a proper Error with a suggestion. So a body whose two contents are comments now
-    * parses and then earns that message, which is strictly better than a parse failure pointing at
-    * the wrong token.
+    * reports a proper Error with a suggestion. So a body whose two contents are comments now parses
+    * and then earns that message, which is strictly better than a parse failure pointing at the
+    * wrong token.
     */
   private[parsing] def sagaDefinitions[u: P]: P[Seq[SagaContents]] = {
     P(

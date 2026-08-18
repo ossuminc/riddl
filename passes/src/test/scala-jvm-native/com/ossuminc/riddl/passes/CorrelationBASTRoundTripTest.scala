@@ -54,9 +54,10 @@ class CorrelationBASTRoundTripTest extends AnyWordSpec with Matchers {
   "Correlation BAST round trip" should {
 
     "preserve keys, target, timeout and both statement lists" in {
-      val original: Root = TopLevelParser.parseInput(RiddlParserInput(source, "corr-bast"), true) match
-        case Right(root) => root
-        case Left(msgs)  => fail(s"parse failed:\n${msgs.format}")
+      val original: Root =
+        TopLevelParser.parseInput(RiddlParserInput(source, "corr-bast"), true) match
+          case Right(root) => root
+          case Left(msgs)  => fail(s"parse failed:\n${msgs.format}")
 
       val writerResult = Pass.runThesePasses(PassInput(original), Seq(BASTWriterPass.creator()))
       val bytes = writerResult

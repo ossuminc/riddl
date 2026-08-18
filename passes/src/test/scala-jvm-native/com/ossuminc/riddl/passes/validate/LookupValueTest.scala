@@ -81,11 +81,15 @@ class LookupValueTest extends AbstractValidatingTest {
     }
 
     "REJECT indexing something that is not a collection" in { (td: TestData) =>
-      errorsIn("", """let n = plain at 0""", td) must include("requires a mapping, sequence or table")
+      errorsIn("", """let n = plain at 0""", td) must include(
+        "requires a mapping, sequence or table"
+      )
     }
 
     "REJECT indexing a set, which has no index" in { (td: TestData) =>
-      errorsIn("", """let n = tags at 0""", td) must include("requires a mapping, sequence or table")
+      errorsIn("", """let n = tags at 0""", td) must include(
+        "requires a mapping, sequence or table"
+      )
     }
 
     "REJECT too few indices for a table" in { (td: TestData) =>
@@ -93,7 +97,9 @@ class LookupValueTest extends AbstractValidatingTest {
     }
 
     "REJECT too many indices for a mapping" in { (td: TestData) =>
-      errorsIn("", """let n = inv at "sku", "other"""", td) must include("takes 1 index, but 2 given")
+      errorsIn("", """let n = inv at "sku", "other"""", td) must include(
+        "takes 1 index, but 2 given"
+      )
     }
 
     // Index type checking (Reid, 2026-08-17: "they must be type-checked").

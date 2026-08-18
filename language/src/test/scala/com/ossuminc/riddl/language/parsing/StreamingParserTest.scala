@@ -260,7 +260,7 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
     "recognize a generic processor with no ascribed shape" in { (td: TestData) =>
       val input = RiddlParserInput("processor P is { ??? }", td)
       TopLevelParser.parseAsContext(input) match {
-        case Left(errors) => fail(errors.format)
+        case Left(errors)   => fail(errors.format)
         case Right(context) =>
           // [4.1]: `context.streamlets` is every processor WITH PORTLETS, and `processor P is
           // { ??? }` declares none — so it is deliberately NOT a streamlet and this case must ask

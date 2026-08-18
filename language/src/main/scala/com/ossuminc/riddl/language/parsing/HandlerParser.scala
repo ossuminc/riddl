@@ -36,7 +36,13 @@ private[parsing] trait HandlerParser
     P(
       Index ~ Keywords.onOther ~ onOtherBinding ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
     )./ map { case (start, (binding, envelope), statements, descriptives, end) =>
-      OnOtherClause(at(start, end), binding, envelope, statements.toContents, descriptives.toContents)
+      OnOtherClause(
+        at(start, end),
+        binding,
+        envelope,
+        statements.toContents,
+        descriptives.toContents
+      )
     }
   }
 

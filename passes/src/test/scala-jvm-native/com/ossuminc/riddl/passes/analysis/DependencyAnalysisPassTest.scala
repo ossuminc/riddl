@@ -17,10 +17,10 @@ import org.scalatest.*
 
 /** `DependencyAnalysisPass` had NO tests at all, which is how `typeDeps` came to be permanently
   * empty without anyone noticing: it was filled only under
-  * `parents.collectFirst { case t: Type => t }`, and a `tell` statement's parents are its on-clause,
-  * handler, processor, context, domain — never a `Type`. The guard could not succeed, so a public
-  * output field documented as "map from each type to types it references" answered "nothing
-  * references anything" for every model ever analyzed.
+  * `parents.collectFirst { case t: Type => t }`, and a `tell` statement's parents are its
+  * on-clause, handler, processor, context, domain — never a `Type`. The guard could not succeed, so
+  * a public output field documented as "map from each type to types it references" answered
+  * "nothing references anything" for every model ever analyzed.
   *
   * Same family as `MessageFlowPass`'s `let`-local blindness (see `LetLocalMessageFlowTest`) and
   * reported alongside it: an empty analysis result is indistinguishable from a model that does not

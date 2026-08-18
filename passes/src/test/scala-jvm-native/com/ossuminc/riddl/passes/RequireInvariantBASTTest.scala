@@ -18,9 +18,9 @@ import org.scalatest.wordspec.AnyWordSpec
   *
   * Written because the two path-identifier codecs are NOT interchangeable and the pairing is easy
   * to get wrong silently: `writePathIdentifier` emits a leading `NODE_PATH_IDENTIFIER` tag byte,
-  * while `readPathIdentifierInline` starts at the location and never consumes one. Pair them
-  * across a write/read and the stream misaligns AFTER the path — which surfaces far downstream as
-  * "Invalid string table index" or a nonsense node, not as an error at the path itself.
+  * while `readPathIdentifierInline` starts at the location and never consumes one. Pair them across
+  * a write/read and the stream misaligns AFTER the path — which surfaces far downstream as "Invalid
+  * string table index" or a nonsense node, not as an error at the path itself.
   */
 class RequireInvariantBASTTest extends AnyWordSpec with Matchers {
 

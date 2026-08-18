@@ -19,10 +19,10 @@ import org.scalatest.wordspec.AnyWordSpec
   * thread without re-parsing, because a diagnostic's position does not survive the round trip.
   *
   * The defect was never "positions are not stored". `BASTWriter.writeLocation` delta-encodes the
-  * REAL source offset, and `DeepASTComparison` confirms offsets round-trip exactly. What went
-  * wrong is that the reader attached a source which decoded those real offsets as if they were
-  * SYNTHETIC ones (line L starting at L*10000), so every offset below 10000 landed on line 1 with
-  * the column equal to the offset. It answered confidently and wrongly.
+  * REAL source offset, and `DeepASTComparison` confirms offsets round-trip exactly. What went wrong
+  * is that the reader attached a source which decoded those real offsets as if they were SYNTHETIC
+  * ones (line L starting at L*10000), so every offset below 10000 landed on line 1 with the column
+  * equal to the offset. It answered confidently and wrongly.
   */
 class BASTLocationFidelityTest extends AnyWordSpec with Matchers {
 

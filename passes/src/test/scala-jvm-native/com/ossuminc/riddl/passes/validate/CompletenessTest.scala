@@ -52,7 +52,8 @@ class CompletenessTest extends AbstractValidatingTest {
       val input = RiddlParserInput(streamletModel("split", "send event D.C.Evt to outlet Out"), td)
       parseAndValidateInput(input, shouldFailOnErrors = false) { (_, _, msgs) =>
         val hits = completenessWarnings(msgs).filter(_.message.contains(noDispatch))
-        if hits.nonEmpty then info(s"Routing streamlet was asked to dispatch:\n${hits.map(_.format).mkString("\n")}")
+        if hits.nonEmpty then
+          info(s"Routing streamlet was asked to dispatch:\n${hits.map(_.format).mkString("\n")}")
         hits mustBe empty
       }
     }
@@ -781,9 +782,9 @@ class CompletenessTest extends AbstractValidatingTest {
       * identity type and NEITHER warned; only `Two.Order` actually has one, so `One.Order` must.
       *
       * This mattered more once `Id(P)` widened from Entity to any Processor on this branch: an
-      * `Id(repository Foo)` whose last segment happens to match an entity name was being counted
-      * as that entity's identity type. Reid overruled name matching twice for the same class of
-      * bug (`isAddressFieldFor`, and the `on term` leading parameter); this site predated both and
+      * `Id(repository Foo)` whose last segment happens to match an entity name was being counted as
+      * that entity's identity type. Reid overruled name matching twice for the same class of bug
+      * (`isAddressFieldFor`, and the `on term` leading parameter); this site predated both and
       * survived the sweep they prompted.
       */
     "attribute an Id type by identity, not by its path's last segment" in { (td: TestData) =>

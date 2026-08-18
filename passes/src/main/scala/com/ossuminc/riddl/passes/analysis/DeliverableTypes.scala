@@ -15,8 +15,8 @@ import com.ossuminc.riddl.utils.PlatformContext
   * Lives here, as ONE function, rather than in each pass that needs it. Two passes ask the same
   * question — `MessageFlowPass` to build a flow edge, `DependencyAnalysisPass` to record a type
   * dependency — and a dispatch written twice is the shape this repo keeps getting bitten by: the
-  * tested copy says nothing about the other. Any further consumer should call this rather than
-  * grow a third.
+  * tested copy says nothing about the other. Any further consumer should call this rather than grow
+  * a third.
   *
   * Every caller must `requires(ValidationPass)`; both current ones already do.
   */

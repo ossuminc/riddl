@@ -18,15 +18,14 @@ import org.scalatest.*
 /** Two type expressions were emitted with the wrong separators.
   *
   *   - `table of T of [ d… ]` lost its SECOND `of`, emitting `table of T[ d… ]`. That is not a
-  *     cosmetic defect: the output is a hard parse error
-  *     (`Expected one of ("(" | "*" | "+" | "." | "?" | "of" | "|")`), so prettify produced source
-  *     that riddlc itself rejects.
+  *     cosmetic defect: the output is a hard parse error (`Expected one of ("(" | "*" | "+" | "." |
+  *     "?" | "of" | "|")`), so prettify produced source that riddlc itself rejects.
   *   - `replica of T` lost the space after `of`, emitting `replica ofT`. This one reparses, so it
   *     is ugly rather than lossy — but it is the same missing-separator bug and is fixed together.
   *
   * Both are asserted by RE-PARSING the prettified output rather than by matching strings, because
-  * the defect that matters is unparseability, and a string assertion would pass against output
-  * that still failed to parse for some other reason.
+  * the defect that matters is unparseability, and a string assertion would pass against output that
+  * still failed to parse for some other reason.
   *
   * Reported by riddl-models (`task/2026-08-14-prettify-emitter-drops-method-and-shown-by.md`).
   */

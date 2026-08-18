@@ -24,11 +24,11 @@ case class OptionSpec(
     *
     * Deprecation is per (option, kind), not per name: `consistent`, `available` and `transient`
     * became entity INTENTIONS in 2.0 and are deprecated on an Entity, while remaining perfectly
-    * current on a Repository, which has no intentions. A flat "this name is deprecated" table
-    * would wrongly condemn the Repository spelling.
+    * current on a Repository, which has no intentions. A flat "this name is deprecated" table would
+    * wrongly condemn the Repository spelling.
     *
-    * Empty means not deprecated anywhere. The name still parses and is still RECOGNIZED either
-    * way — this marks the AUTHORING surface only.
+    * Empty means not deprecated anywhere. The name still parses and is still RECOGNIZED either way
+    * — this marks the AUTHORING surface only.
     */
   deprecatedFor: Seq[String] = Seq.empty,
   /** What to write instead, phrased for a human. Present whenever `deprecatedFor` is non-empty. */
@@ -37,17 +37,17 @@ case class OptionSpec(
     *
     * StyleWarning by default, because most misplaced options are a tidiness matter: the option is
     * simply ignored where it sits. It is `Error` when putting the option there asserts something
-    * about the model that is not true, which no generator could honour and no reader should
-    * believe -- see `persistent` below. Per-option on purpose: promoting every violation to an
-    * Error would be a corpus-wide behaviour change nobody asked for.
+    * about the model that is not true, which no generator could honour and no reader should believe
+    * -- see `persistent` below. Per-option on purpose: promoting every violation to an Error would
+    * be a corpus-wide behaviour change nobody asked for.
     */
   severity: Messages.KindOfMessage = Messages.StyleWarning
 )
 
 /** The current and deprecated option names for one definition kind, together.
   *
-  * Returned as one structure rather than two independent calls because an authoring tool needs
-  * BOTH and they must agree: the picker offers `current`, but a model already using a deprecated
+  * Returned as one structure rather than two independent calls because an authoring tool needs BOTH
+  * and they must agree: the picker offers `current`, but a model already using a deprecated
   * spelling must still be RECOGNIZED when rendered, or the tool reports "not a recognized RIDDL
   * option" about a name RIDDL accepts. Two calls let a consumer use one and forget the other.
   * (Asked for by synapify, 2026-08-05, whose option picker was offering the deprecated spellings
@@ -103,7 +103,13 @@ end DeprecatedOptions
 object RecognizedOptions:
   val registry: Map[String, OptionSpec] = Map(
     // Existing well-known options
-    "aggregate" -> OptionSpec(Seq("Entity"), 0, 0, Seq("Entity"), Some("write `aggregate` before `entity`")),
+    "aggregate" -> OptionSpec(
+      Seq("Entity"),
+      0,
+      0,
+      Seq("Entity"),
+      Some("write `aggregate` before `entity`")
+    ),
     "auto-id" -> OptionSpec(Seq("Entity"), 0, 0),
     "finite-state-machine" -> OptionSpec(Seq("Entity"), 0, 0),
     // `persistent` states DOMAIN DURABILITY, so it is only meaningful where there is state to
@@ -206,15 +212,39 @@ object RecognizedOptions:
     // options that were published by KnownOptions.entity but never registered here,
     // so every use of one drew a spurious "not a recognized RIDDL option" warning.
     // All are simple markers with no arguments.
-    "event-sourced" -> OptionSpec(Seq("Entity"), 0, 0, Seq("Entity"), Some("write `event-sourced` before `entity`")),
-    "value" -> OptionSpec(Seq("Entity"), 0, 0, Seq("Entity"), Some("write `persistent` before `entity`")),
+    "event-sourced" -> OptionSpec(
+      Seq("Entity"),
+      0,
+      0,
+      Seq("Entity"),
+      Some("write `event-sourced` before `entity`")
+    ),
+    "value" -> OptionSpec(
+      Seq("Entity"),
+      0,
+      0,
+      Seq("Entity"),
+      Some("write `persistent` before `entity`")
+    ),
     // CAP markers. Meaningful on a Repository as well as an Entity: the computational model
     // (§5.6) rules that a Repository is a Processor, so its WRITE side is single-writer by
     // default and `available` hands write arbitration to the storage engine, permitting
     // concurrent writes. Queries are side-effect-free and always concurrent either way. Same
     // "meaningful on both" reasoning as `transient` below.
-    "consistent" -> OptionSpec(Seq("Entity", "Repository"), 0, 0, Seq("Entity"), Some("write `consistent` before `entity`")),
-    "available" -> OptionSpec(Seq("Entity", "Repository"), 0, 0, Seq("Entity"), Some("write `available` before `entity`")),
+    "consistent" -> OptionSpec(
+      Seq("Entity", "Repository"),
+      0,
+      0,
+      Seq("Entity"),
+      Some("write `consistent` before `entity`")
+    ),
+    "available" -> OptionSpec(
+      Seq("Entity", "Repository"),
+      0,
+      0,
+      Seq("Entity"),
+      Some("write `available` before `entity`")
+    ),
     "message-queue" -> OptionSpec(Seq("Entity"), 0, 0),
     // Marks the inlet that receives hard-error notifications, redirecting them from the
     // predefined `Riddl.Operations` sink to a receiver the model owns. On the INLET rather than
@@ -224,7 +254,13 @@ object RecognizedOptions:
     "error-sink" -> OptionSpec(Seq("Inlet"), 0, 0),
     // `transient` marks state that is NOT durably persisted. That is meaningful both
     // for an Entity and for a Repository (a cache-like, non-durable store).
-    "transient" -> OptionSpec(Seq("Entity", "Repository"), 0, 0, Seq("Entity"), Some("write `transient` before `entity`")),
+    "transient" -> OptionSpec(
+      Seq("Entity", "Repository"),
+      0,
+      0,
+      Seq("Entity"),
+      Some("write `transient` before `entity`")
+    ),
     // Epic-level marker: the epic's interactions are synchronous.
     "sync" -> OptionSpec(Seq("Epic"), 0, 0),
     // Temporal options (C1)

@@ -50,8 +50,10 @@ class TellIsolationTest extends AbstractValidatingTest {
     * level (the exemption), "local" leaves it inside the target's context (the violation).
     */
   private def oneDomain(where: String): String =
-    val shared = if where == "shared" then """command Ship is { why: String } with { briefly "s" }""" else ""
-    val local = if where == "local" then """command Ship is { why: String } with { briefly "s" }""" else ""
+    val shared =
+      if where == "shared" then """command Ship is { why: String } with { briefly "s" }""" else ""
+    val local =
+      if where == "local" then """command Ship is { why: String } with { briefly "s" }""" else ""
     s"""domain Dom is {
        |  $shared
        |  context Target is {

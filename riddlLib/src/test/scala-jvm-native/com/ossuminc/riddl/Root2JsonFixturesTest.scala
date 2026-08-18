@@ -72,7 +72,6 @@ class Root2JsonFixturesTest extends AnyWordSpec with Matchers {
     */
   private val ParsedFloor: Int = 40
 
-
   /** How many nodes of each kind the tree holds, counting metadata as well as contents.
     *
     * This is what makes the round trip a FIDELITY check and not merely an idempotence one. A

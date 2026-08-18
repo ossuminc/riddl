@@ -22,9 +22,9 @@ import org.scalatest.TestData
   * while `isClustered` waits for the clusterability spec.
   *
   * The type is a SYNTHESIZED Aggregation rather than a bespoke node, which is what makes
-  * `let me = self` + `me.id` work through the ordinary ValueRef walk. A test for that indirect
-  * form is therefore worth more than a test for `self.id`: it proves the type is real, not that
-  * one parser arm fires.
+  * `let me = self` + `me.id` work through the ordinary ValueRef walk. A test for that indirect form
+  * is therefore worth more than a test for `self.id`: it proves the type is real, not that one
+  * parser arm fires.
   */
 class SelfValueTest extends AbstractValidatingTest {
 
@@ -67,15 +67,18 @@ class SelfValueTest extends AbstractValidatingTest {
     "support `let me = self` then `me.id`" in { (td: TestData) =>
       // THE case that proves self's type is a real Aggregation rather than a parser trick.
       // If self were special-cased at the `self.<field>` syntax only, this would fail to resolve.
-      diagnostics(inEntity("""let me = self
-                             |            let mine = me.id""".stripMargin), "self-let")
-        .justErrors mustBe empty
+      diagnostics(
+        inEntity("""let me = self
+                             |            let mine = me.id""".stripMargin),
+        "self-let"
+      ).justErrors mustBe empty
     }
 
     "REJECT an unknown field" in { (td: TestData) =>
       // The field set is CLOSED. A fall-through would silently accept self.anything.
-      val text = diagnostics(inEntity("""let x = self.nonesuch"""), "self-bad-field")
-        .justErrors.map(_.message).mkString("\n")
+      val text = diagnostics(inEntity("""let x = self.nonesuch"""), "self-bad-field").justErrors
+        .map(_.message)
+        .mkString("\n")
       text must include("nonesuch")
       text must include("id")
       text must include("version")

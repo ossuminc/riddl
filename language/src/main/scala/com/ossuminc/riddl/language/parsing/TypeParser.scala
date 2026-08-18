@@ -387,8 +387,12 @@ private[parsing] trait TypeParser {
     // `Id(context Registry)`, same hazard as `event` inside `event-sourced` (Keywords.scala:19).
     def kindKw[u: P]: P[String] = Keywords.keywords(
       StringIn(
-        Keyword.adaptor, Keyword.context, Keyword.entity,
-        Keyword.projector, Keyword.repository, Keyword.streamlet
+        Keyword.adaptor,
+        Keyword.context,
+        Keyword.entity,
+        Keyword.projector,
+        Keyword.repository,
+        Keyword.streamlet
       ).!
     )
     (Index ~ PredefType.Id ~ Punctuation.roundOpen ~/
@@ -560,8 +564,9 @@ private[parsing] trait TypeParser {
     // Built from the SAME set `simpleIdentifier` filters against, so the two cannot disagree
     // about which words are definition keywords.
     P(
-      (CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_\\-").?).!
-        .filter(Keyword.definitionKeywords.contains) ~~ Punctuation.colon
+      (CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_\\-").?).!.filter(
+        Keyword.definitionKeywords.contains
+      ) ~~ Punctuation.colon
     )./.flatMap { kw =>
       Fail.opaque(
         s"a field name, but '$kw' introduces a definition and cannot be one unqualified; " +
@@ -768,8 +773,8 @@ private[parsing] trait TypeParser {
     * The pairing is checked HERE rather than in ValidationPass because both facts are known at
     * parse time and neither needs resolution, and because `error(...)` in this rule is non-fatal
     * and accumulating -- the sibling type-alias check just below has emitted errors this way all
-    * along. A parse FAILURE would be the wrong tool: it could only point at the keyword, where
-    * this can name the keyword and the use case together.
+    * along. A parse FAILURE would be the wrong tool: it could only point at the keyword, where this
+    * can name the keyword and the use case together.
     */
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
@@ -876,9 +881,9 @@ private[parsing] trait TypeParser {
   // table, which does not exist at parse time.
   private def isNumericLike(typeEx: TypeExpression, text: String): Boolean = {
     typeEx match
-      case _: Bool         => text == "true" || text == "false"
-      case _: NumericType  => text.matches("""[+-]?\d+(\.\d+)?([eE][+-]?\d+)?""")
-      case _               => false
+      case _: Bool        => text == "true" || text == "false"
+      case _: NumericType => text.matches("""[+-]?\d+(\.\d+)?([eE][+-]?\d+)?""")
+      case _              => false
     end match
   }
 

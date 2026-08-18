@@ -14,15 +14,15 @@ import org.scalatest.*
 /** A command's `yields` contract must be settled on EVERY path, not merely somewhere.
   *
   * `checkYieldConformance` used to ask only "does an `error` or `require` appear ANYWHERE in this
-  * clause?", via `Finder.recursiveFindByType`, which searches the whole nested tree. One refusal
-  * in one branch therefore exempted the entire clause -- so a handler that refused on one path
-  * and produced NOTHING on the other validated completely clean, silently leaving the command's
+  * clause?", via `Finder.recursiveFindByType`, which searches the whole nested tree. One refusal in
+  * one branch therefore exempted the entire clause -- so a handler that refused on one path and
+  * produced NOTHING on the other validated completely clean, silently leaving the command's
   * declared event unrecorded.
   *
-  * Making `else`/`default` mandatory in the grammar was considered and rejected (Reid,
-  * 2026-08-07) on migration cost. Note that an EMPTY `else { }` is not the escape it appears to
-  * be -- an empty pseudo-code block is a parse error, so it cannot be written. The escape that
-  * does exist, and that this pins, is an `else` that is non-empty but neither yields nor refuses.
+  * Making `else`/`default` mandatory in the grammar was considered and rejected (Reid, 2026-08-07)
+  * on migration cost. Note that an EMPTY `else { }` is not the escape it appears to be -- an empty
+  * pseudo-code block is a parse error, so it cannot be written. The escape that does exist, and
+  * that this pins, is an `else` that is non-empty but neither yields nor refuses.
   */
 class ConditionalRefusalYieldTest extends AbstractValidatingTest {
 

@@ -23,8 +23,8 @@ import org.scalatest.wordspec.AnyWordSpec
   *
   * Note what prettify emits: `domain D is { // c }`, WITHOUT the `???`. That is not a loss. The
   * `???` is not represented in the AST at all — `{ // c ??? }` and `{ // c }` parse to the same
-  * tree — so this is normalisation to the canonical spelling, exactly as `String(0,255)` renders
-  * as `String`.
+  * tree — so this is normalisation to the canonical spelling, exactly as `String(0,255)` renders as
+  * `String`.
   */
 class CommentedStubSurfacesTest extends AnyWordSpec with Matchers {
 

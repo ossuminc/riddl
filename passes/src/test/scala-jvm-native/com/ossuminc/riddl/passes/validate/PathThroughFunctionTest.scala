@@ -18,10 +18,10 @@ import org.scalatest.*
   * Until 2.0 any such path CRASHED the resolver. `findMatchingCandidate`'s Function arm did
   * `function.input.collect{…}.asInstanceOf[Definitions]`, but `Function.input`/`output` are
   * `Option[TypeRef | Aggregation]`, so it cast an `Option` to a `Seq[Definition]`. It threw
-  * reliably, and BEFORE any name comparison -- which is why a nonexistent target failed
-  * identically to a real one. Worse, it surfaced as a bare `[severe] empty(1:1->1):` with no text,
-  * no source line and no location, so ossum.tech spent about half an hour bisecting a model by
-  * hand to find it (task file 2026-08-08-empty-severe-on-dotted-path-through-function.md).
+  * reliably, and BEFORE any name comparison -- which is why a nonexistent target failed identically
+  * to a real one. Worse, it surfaced as a bare `[severe] empty(1:1->1):` with no text, no source
+  * line and no location, so ossum.tech spent about half an hour bisecting a model by hand to find
+  * it (task file 2026-08-08-empty-severe-on-dotted-path-through-function.md).
   *
   * Resolving is the intended behaviour (Reid, 2026-08-07), consistent with the general rule that
   * each path element is a child of the one before, and with what the arm already intended -- it
@@ -39,8 +39,8 @@ class PathThroughFunctionTest extends AbstractValidatingTest {
     * StyleWarning, and `Messages.Accumulator` DROPS those unless `showStyleWarnings` is set.
     * `pc.options` is GLOBAL mutable state that other suites change via `withOptions`, so without
     * this the suite passed in isolation and failed inside the full run -- observed here on NATIVE
-    * only, where a different suite ordering had left the flag off, while JVM stayed green. The
-    * same trap is documented at `PortletOptionTest.scala:22`.
+    * only, where a different suite ordering had left the flag off, while JVM stayed green. The same
+    * trap is documented at `PortletOptionTest.scala:22`.
     *
     * It also removes a VACUOUS-PASS mode: with all warning categories suppressed the message list
     * came back empty, and every `mustBe empty` assertion below would have passed while checking

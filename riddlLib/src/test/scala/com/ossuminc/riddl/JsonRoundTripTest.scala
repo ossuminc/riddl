@@ -394,7 +394,9 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           json1 must include("offsets.riddl")
           RiddlLib.parseJson(json1) match
             case RiddlResult.Success(root1) =>
-              def spans(r: Root) = Finder(r).recursiveFindByType[Type].toSeq
+              def spans(r: Root) = Finder(r)
+                .recursiveFindByType[Type]
+                .toSeq
                 .map(t => (t.id.value, t.loc.offset, t.loc.endOffset))
               spans(root1) mustBe spans(root0)
               spans(root1).head._2 must be > 0
@@ -426,7 +428,9 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
         case RiddlResult.Success(root0) =>
           RiddlLib.parseJson(RiddlLib.root2Json(root0)) match
             case RiddlResult.Success(root1) =>
-              val ports = Finder(root1).recursiveFindByType[Inlet].toSeq
+              val ports = Finder(root1)
+                .recursiveFindByType[Inlet]
+                .toSeq
                 .filter(_.id.value == "FromEntity")
               ports.size mustBe 2
               withClue("two distinct ports must not compare equal once locations are carried: ") {
@@ -1480,10 +1484,10 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
     }
 
     /** processor-instance-identity task 1 (2026-08-13): `Id(P)` widened from Entity-only to any
-      * Processor, and its optional kind keyword is now CAPTURED (`AST.UniqueId.kindKeyword`)
-      * rather than discarded. The keyword must survive AST -> JSON -> AST, or an AI-authored /
-      * round-tripped model would silently lose `Id(entity Order)` down to the bare `Id(Order)`
-      * form on its next save.
+      * Processor, and its optional kind keyword is now CAPTURED (`AST.UniqueId.kindKeyword`) rather
+      * than discarded. The keyword must survive AST -> JSON -> AST, or an AI-authored /
+      * round-tripped model would silently lose `Id(entity Order)` down to the bare `Id(Order)` form
+      * on its next save.
       */
     "round-trip the Id(P) kind keyword losslessly" in {
       val idModel =

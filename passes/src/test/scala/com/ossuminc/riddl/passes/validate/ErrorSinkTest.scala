@@ -240,7 +240,9 @@ class ErrorSinkTest extends AbstractValidatingTest {
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
-      messagesFor(src, td).justErrors.map(_.message).mkString("\n") must not include "DATAFLOW arity"
+      messagesFor(src, td).justErrors
+        .map(_.message)
+        .mkString("\n") must not include "DATAFLOW arity"
     }
 
     // THE ALLOWANCE, and its boundary. A processor whose ONLY inlets are error sinks has no
@@ -254,7 +256,9 @@ class ErrorSinkTest extends AbstractValidatingTest {
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
-      messagesFor(src, td).justErrors.map(_.message).mkString("\n") must not include "DATAFLOW arity"
+      messagesFor(src, td).justErrors
+        .map(_.message)
+        .mkString("\n") must not include "DATAFLOW arity"
     }
 
     "ACCEPT `as void` on that same processor -- the derived reading" in { (td: TestData) =>
@@ -265,7 +269,9 @@ class ErrorSinkTest extends AbstractValidatingTest {
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
-      messagesFor(src, td).justErrors.map(_.message).mkString("\n") must not include "DATAFLOW arity"
+      messagesFor(src, td).justErrors
+        .map(_.message)
+        .mkString("\n") must not include "DATAFLOW arity"
     }
   }
 }

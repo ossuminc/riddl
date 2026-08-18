@@ -468,7 +468,9 @@ object TopLevelParser:
       // Revision: `requires`/`returns` are contents now, so a caller-supplied input/output is
       // prepended as Requires/Returns rather than passed as fields.
       val prefix: Seq[SagaContents] =
-        sagaInput.map(v => Requires(At.empty, v)).toSeq ++ sagaOutput.map(v => Returns(At.empty, v)).toSeq
+        sagaInput.map(v => Requires(At.empty, v)).toSeq ++ sagaOutput
+          .map(v => Returns(At.empty, v))
+          .toSeq
       Saga(loc, Identifier.empty, (prefix ++ contents).toContents)
     }
   end parseAsSaga

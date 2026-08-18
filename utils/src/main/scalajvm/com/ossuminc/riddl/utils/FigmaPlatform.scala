@@ -188,8 +188,7 @@ private[utils] object FigmaJson:
     def skipWhitespace(): Unit =
       while pos < text.length && (text.charAt(pos) match
           case ' ' | '\t' | '\n' | '\r' => true
-          case _                        => false
-        )
+          case _                        => false)
       do pos += 1
       end while
     end skipWhitespace
@@ -295,8 +294,7 @@ private[utils] object FigmaJson:
       while pos < text.length && (text.charAt(pos) match
           case c if c.isDigit              => true
           case '.' | 'e' | 'E' | '+' | '-' => true
-          case _                           => false
-        )
+          case _                           => false)
       do pos += 1
       end while
       if start == pos then fail("a number")

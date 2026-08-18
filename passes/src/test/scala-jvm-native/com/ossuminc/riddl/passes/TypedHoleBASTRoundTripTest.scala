@@ -17,15 +17,15 @@ import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 /** A20 typed holes, Task 4: `writeValue`'s `PromptValue` arm (tag 4) now APPENDS an optional `as
-  * <type>` ascription (`writeOption`/`writeTypeExpression`) after the prompt literal, so an
-  * untyped prompt's bytes carry one extra "none" flag byte and a typed one carries the flag plus
-  * the encoded type. This rides the unreleased revision 18 (shared with numeric literals and the
-  * URL fix) -- see [[com.ossuminc.riddl.language.bast.FORMAT_REVISION]].
+  * <type>` ascription (`writeOption`/`writeTypeExpression`) after the prompt literal, so an untyped
+  * prompt's bytes carry one extra "none" flag byte and a typed one carries the flag plus the
+  * encoded type. This rides the unreleased revision 18 (shared with numeric literals and the URL
+  * fix) -- see [[com.ossuminc.riddl.language.bast.FORMAT_REVISION]].
   *
-  * Every case below is exercised BOTH unascribed (`typeEx` must decode back to `None`) and
-  * ascribed (`typeEx` must decode back to the SAME `TypeExpression`, not merely "present"), since a
-  * codec that always writes a type would break every existing model, and one that writes the wrong
-  * bytes for the type would still look "present" without asserting identity.
+  * Every case below is exercised BOTH unascribed (`typeEx` must decode back to `None`) and ascribed
+  * (`typeEx` must decode back to the SAME `TypeExpression`, not merely "present"), since a codec
+  * that always writes a type would break every existing model, and one that writes the wrong bytes
+  * for the type would still look "present" without asserting identity.
   *
   * A definition AFTER the prompt-bearing constructs is asserted to decode intact: a BAST error
   * names where the reader DERAILED, never what derailed it, so a writer/reader field-count mismatch
@@ -125,7 +125,9 @@ class TypedHoleBASTRoundTripTest extends AbstractValidatingTest {
   "a definition AFTER the prompt-bearing constructs" should {
     "still decode intact" in { (td: TestData) =>
       val root = roundTrip(src, "after-prompt-definitions")
-      val after = Finder(root).recursiveFindByType[Context].find(_.id.value == "After")
+      val after = Finder(root)
+        .recursiveFindByType[Context]
+        .find(_.id.value == "After")
         .getOrElse(fail("the 'After' context did not survive"))
       val marker = Finder(after).recursiveFindByType[Type].find(_.id.value == "Marker")
       marker must not be empty

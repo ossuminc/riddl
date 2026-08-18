@@ -435,15 +435,15 @@ class BASTReader(
         case NODE_SAGA       => readSagaNode()
 
         // Handler components
-        case NODE_HANDLER   => readHandlerNode()
-        case NODE_STATEMENT => readStatementNode()
-        case NODE_SAGA_STEP => readSagaStepNode()
+        case NODE_HANDLER     => readHandlerNode()
+        case NODE_STATEMENT   => readStatementNode()
+        case NODE_SAGA_STEP   => readSagaStepNode()
         case NODE_STATE       => readStateNode()
         case NODE_CORRELATION => readCorrelationNode()
-        case NODE_INVARIANT => readInvariantNode()
-        case NODE_VERSION   => readVersionNode()
-        case NODE_COPYRIGHT => readCopyrightNode()
-        case NODE_ON_CLAUSE => readOnClauseNode()
+        case NODE_INVARIANT   => readInvariantNode()
+        case NODE_VERSION     => readVersionNode()
+        case NODE_COPYRIGHT   => readCopyrightNode()
+        case NODE_ON_CLAUSE   => readOnClauseNode()
 
         // Streamlet components
         case NODE_INLET     => readInletNode()
@@ -753,8 +753,8 @@ class BASTReader(
 
   /** Inverse of `BASTWriter.writeMethodArgument`, which writes a RAW `NODE_FIELD` byte (not
     * `writeNodeTag`, so there is no metadata flag) followed by loc, the name as a STRING, and the
-    * type. The string-vs-identifier difference is what lets a MethodArgument still share
-    * NODE_FIELD with Field without ambiguity.
+    * type. The string-vs-identifier difference is what lets a MethodArgument still share NODE_FIELD
+    * with Field without ambiguity.
     */
   private def readMethodArgument(): MethodArgument = {
     reader.readU8() // NODE_FIELD, written raw
@@ -1497,8 +1497,8 @@ class BASTReader(
         // A38 (revision 18): discriminated, mirroring `require`'s condition immediately in kind —
         // inline path identifier, NOT the tagged form, or every byte after the path shifts by one.
         val reason: LiteralString | InvariantRef = reader.readU8() match
-          case 0     => readLiteralString()
-          case 1     => InvariantRef(loc, readPathIdentifierInline())
+          case 0 => readLiteralString()
+          case 1 => InvariantRef(loc, readPathIdentifierInline())
           case other =>
             throw new RuntimeException(s"Invalid refusal reason discriminator: $other")
         val metadata = readMetadataDeferred()

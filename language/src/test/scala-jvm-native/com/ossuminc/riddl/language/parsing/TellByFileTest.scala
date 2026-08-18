@@ -17,8 +17,8 @@ import scala.concurrent.duration.DurationInt
 
 /** Parity guard for Task 6's `tell ... by <field>` clause: the corpus fixture
   * `language/input/tell-by-clause.riddl` is validated against the EBNF grammar by the TatSu
-  * validator (which scans every input-directory riddl file). This test proves fastparse accepts
-  * the SAME file, so the documented grammar and the implementation stay in sync (see CLAUDE.md
+  * validator (which scans every input-directory riddl file). This test proves fastparse accepts the
+  * SAME file, so the documented grammar and the implementation stay in sync (see CLAUDE.md
   * "Parser/EBNF Synchronization Requirement"). Mirrors `TerminateFileTest`'s style.
   */
 class TellByFileTest extends AnyWordSpec with Matchers {
@@ -37,7 +37,9 @@ class TellByFileTest extends AnyWordSpec with Matchers {
             }.get
             val state = caller.contents.toSeq.collectFirst { case s: State => s }.get
             val handler = state.contents.toSeq.collectFirst { case h: Handler => h }.get
-            val onClause = handler.clauses.collectFirst { case oc: OnInitializationClause => oc }.get
+            val onClause = handler.clauses.collectFirst { case oc: OnInitializationClause =>
+              oc
+            }.get
             val tells = onClause.contents.toSeq.collect { case ts: TellStatement => ts }
             tells.size mustBe 1
 

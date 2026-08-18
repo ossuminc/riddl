@@ -15,10 +15,10 @@ import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
 
 import org.scalatest.TestData
 
-/** Not/! synonymy task 4 (2026-08-15): `WhenStatement` no longer carries a `negated` field, so
-  * task 2's placeholder byte (always written/read as a hardcoded `0`) is now GONE from the wire,
-  * not merely zeroed. Negation is fully carried by the `NotExpression` inside `condition` (BAST
-  * value tag 3, already round-tripping since before this task).
+/** Not/! synonymy task 4 (2026-08-15): `WhenStatement` no longer carries a `negated` field, so task
+  * 2's placeholder byte (always written/read as a hardcoded `0`) is now GONE from the wire, not
+  * merely zeroed. Negation is fully carried by the `NotExpression` inside `condition` (BAST value
+  * tag 3, already round-tripping since before this task).
   *
   * Modeled on `ConstantAndMethodBASTRoundTripTest` -- same lesson: a BAST deserialization error
   * names where the reader DERAILED, never what derailed it, so the case that actually proves the
@@ -45,13 +45,13 @@ class BangNotBASTRoundTripTest extends AbstractValidatingTest {
       case Right(decoded) => decoded
       case Left(msgs)     => fail(s"BAST round trip failed:\n${msgs.format}")
 
-  /** Strip `At` locations so a condition from a freshly-decoded tree compares on SHAPE, not on
-    * byte offsets -- mirrors `BangNotSynonymyTest`'s `blank` helper (parser-level sibling of this
+  /** Strip `At` locations so a condition from a freshly-decoded tree compares on SHAPE, not on byte
+    * offsets -- mirrors `BangNotSynonymyTest`'s `blank` helper (parser-level sibling of this
     * suite).
     */
   private def blank(v: RiddlValue): RiddlValue = v match
-    case NotExpression(_, expr) => NotExpression(At.empty, blank(expr).asInstanceOf[Value])
-    case ValueRef(_, path)      => ValueRef(At.empty, blank(path).asInstanceOf[PathIdentifier])
+    case NotExpression(_, expr)   => NotExpression(At.empty, blank(expr).asInstanceOf[Value])
+    case ValueRef(_, path)        => ValueRef(At.empty, blank(path).asInstanceOf[PathIdentifier])
     case PathIdentifier(_, value) => PathIdentifier(At.empty, value)
     case other                    => other
 

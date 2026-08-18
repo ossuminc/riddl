@@ -14,12 +14,13 @@ import com.ossuminc.riddl.utils.pc
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
 
-/** Task 4 (processor-instance identity): `initiate` is a new [[com.ossuminc.riddl.language.AST.Value]]
-  * (BAST tag 8), so it needs its own targeted reflectivity proof rather than relying on the coarse
-  * domain/context/entity-level [[DeepASTComparison]] (which does not descend into statement-level
-  * Value nodes) or [[com.ossuminc.riddl.language.Finder]] (whose `recursiveFindByType` does not
-  * descend into a `LetStatement`'s `expression` field). Walked to the `Initiate` node directly and
-  * compared field-by-field, mirroring `BASTRoundTripTest`'s style.
+/** Task 4 (processor-instance identity): `initiate` is a new
+  * [[com.ossuminc.riddl.language.AST.Value]] (BAST tag 8), so it needs its own targeted
+  * reflectivity proof rather than relying on the coarse domain/context/entity-level
+  * [[DeepASTComparison]] (which does not descend into statement-level Value nodes) or
+  * [[com.ossuminc.riddl.language.Finder]] (whose `recursiveFindByType` does not descend into a
+  * `LetStatement`'s `expression` field). Walked to the `Initiate` node directly and compared
+  * field-by-field, mirroring `BASTRoundTripTest`'s style.
   *
   * JVM-only, like `BASTRoundTripTest` itself (BAST I/O has no Native-friendly harness in this test
   * suite). The PRETTIFY round trip is a separate, cross-platform concern -- see
@@ -54,18 +55,20 @@ class InitiateBASTRoundTripTest extends AnyWordSpec with Matchers {
       case Right(root) => root
       case Left(msgs)  => fail(s"parse of $origin failed:\n${msgs.format}")
 
-  /** Walk down to the `Caller` entity's `on init` clause and pull out its single `let`'s
-    * `Initiate` expression -- mirrors `InitiateFileTest`'s direct walk, for the same reason
-    * (Finder does not descend into LetStatement).
+  /** Walk down to the `Caller` entity's `on init` clause and pull out its single `let`'s `Initiate`
+    * expression -- mirrors `InitiateFileTest`'s direct walk, for the same reason (Finder does not
+    * descend into LetStatement).
     */
   private def initiateIn(root: Root): Initiate =
-    val domain = root.contents.toSeq.collectFirst { case d: Domain => d }.getOrElse(fail("no domain"))
+    val domain =
+      root.contents.toSeq.collectFirst { case d: Domain => d }.getOrElse(fail("no domain"))
     val context =
       domain.contents.toSeq.collectFirst { case c: Context => c }.getOrElse(fail("no context"))
     val caller = context.contents.toSeq
       .collectFirst { case e: Entity if e.id.value == "Caller" => e }
       .getOrElse(fail("no Caller entity"))
-    val state = caller.contents.toSeq.collectFirst { case s: State => s }.getOrElse(fail("no state"))
+    val state =
+      caller.contents.toSeq.collectFirst { case s: State => s }.getOrElse(fail("no state"))
     val handler =
       state.contents.toSeq.collectFirst { case h: Handler => h }.getOrElse(fail("no handler"))
     val onInit = handler.clauses
@@ -76,7 +79,7 @@ class InitiateBASTRoundTripTest extends AnyWordSpec with Matchers {
       .getOrElse(fail("no let statement"))
     let.expression match
       case init: Initiate => init
-      case other           => fail(s"expected an Initiate, got $other")
+      case other          => fail(s"expected an Initiate, got $other")
 
   "initiate" should {
     "round-trip through BAST (write tag 8, read it back)" in {
@@ -111,7 +114,7 @@ class InitiateBASTRoundTripTest extends AnyWordSpec with Matchers {
             .getOrElse(fail("no let statement"))
           val reconstructedInit = let.expression match
             case init: Initiate => init
-            case other           => fail(s"expected an Initiate, got $other")
+            case other          => fail(s"expected an Initiate, got $other")
 
           reconstructedInit.processor.pathId.format mustBe originalInit.processor.pathId.format
           reconstructedInit.args.size mustBe originalInit.args.size

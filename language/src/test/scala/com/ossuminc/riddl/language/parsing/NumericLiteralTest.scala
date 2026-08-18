@@ -11,8 +11,8 @@ import com.ossuminc.riddl.language.Finder
 import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
-/** Numeric literals store their text AS WRITTEN so prettify is byte-exact:
-  * `1.50`, `007` and `+3` are not recoverable from a parsed number.
+/** Numeric literals store their text AS WRITTEN so prettify is byte-exact: `1.50`, `007` and `+3`
+  * are not recoverable from a parsed number.
   */
 // ABSTRACT with `(using PlatformContext)`, matching every sibling in this directory. ScalaTest
 // cannot instantiate a suite that takes parameters, so the concrete subclasses live in the two
@@ -22,7 +22,7 @@ abstract class NumericLiteralTest(using PlatformContext) extends AbstractParsing
   private def firstLetValue(src: String, td: TestData): Value =
     val input = RiddlParserInput(src, td)
     TopLevelParser.parseInput(input, true) match
-      case Left(msgs) => fail(s"parse failed:\n${msgs.format}")
+      case Left(msgs)  => fail(s"parse failed:\n${msgs.format}")
       case Right(root) =>
         // `Finder` takes the CONTAINER, not its contents.
         val lets = Finder(root).recursiveFindByType[LetStatement]

@@ -23,20 +23,20 @@ import org.scalatest.wordspec.AnyWordSpec
   * `[severe] empty(1:1->1):` carrying no text, no source line and no location. It says only
   * "something threw somewhere".
   *
-  * This has now cost real time twice. ossum.tech bisected a model by hand for about half an hour
-  * to find a `ClassCastException` in ResolutionPass, and the note at
-  * `DefinitionValidation.scala:451` records an earlier hunt where a regex throwing at
-  * class-initialisation under Scala Native produced exactly `Message(empty(0->0), "", Severe, ...)`.
+  * This has now cost real time twice. ossum.tech bisected a model by hand for about half an hour to
+  * find a `ClassCastException` in ResolutionPass, and the note at `DefinitionValidation.scala:451`
+  * records an earlier hunt where a regex throwing at class-initialisation under Scala Native
+  * produced exactly `Message(empty(0->0), "", Severe, ...)`.
   *
-  * The contract pinned here is deliberately weaker than "reports the right thing" and stronger
-  * than "does not crash": whatever happens, the author is told SOMETHING identifiable.
+  * The contract pinned here is deliberately weaker than "reports the right thing" and stronger than
+  * "does not crash": whatever happens, the author is told SOMETHING identifiable.
   */
 class PassExceptionReportingTest extends AnyWordSpec with Matchers {
 
   given io: PlatformContext = pc
 
-  /** A pass that throws with NO stack trace, which is the condition that produced an empty
-    * message. `fillInStackTrace` is overridden to return `this` without capturing frames.
+  /** A pass that throws with NO stack trace, which is the condition that produced an empty message.
+    * `fillInStackTrace` is overridden to return `this` without capturing frames.
     */
   private class ThrowingPass(in: PassInput, out: PassesOutput)(using PlatformContext)
       extends Pass(in, out) {

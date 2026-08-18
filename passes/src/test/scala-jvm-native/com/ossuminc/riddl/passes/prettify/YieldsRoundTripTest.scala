@@ -92,21 +92,24 @@ class YieldsRoundTripTest extends AbstractValidatingTest {
       |""".stripMargin
 
   "yield statement" should {
-    "emit `yield` for a command and `reply` for a query through prettify" in {
-      (td: TestData) =>
-        // Prettify no longer NORMALISES one to the other: they are different statements as of
-        // 2.0, and emitting `yield` for a query would produce source that does not re-parse.
-        val pretty = prettify(parse(stmtSrc, "stmt"))
-        pretty must include("yield event OrderPlaced")
-        pretty must include("reply result OrderFound")
+    "emit `yield` for a command and `reply` for a query through prettify" in { (td: TestData) =>
+      // Prettify no longer NORMALISES one to the other: they are different statements as of
+      // 2.0, and emitting `yield` for a query would produce source that does not re-parse.
+      val pretty = prettify(parse(stmtSrc, "stmt"))
+      pretty must include("yield event OrderPlaced")
+      pretty must include("reply result OrderFound")
 
-        val regen = parse(pretty, "regen2")
-        Finder(regen).recursiveFindByType[YieldStatement]
-          .map(_.msg.deliverableOperandPathId.value.last).toSet mustBe
-          scala.collection.immutable.Set("OrderPlaced")
-        Finder(regen).recursiveFindByType[ReplyStatement]
-          .map(_.msg.deliverableOperandPathId.value.last).toSet mustBe
-          scala.collection.immutable.Set("OrderFound")
+      val regen = parse(pretty, "regen2")
+      Finder(regen)
+        .recursiveFindByType[YieldStatement]
+        .map(_.msg.deliverableOperandPathId.value.last)
+        .toSet mustBe
+        scala.collection.immutable.Set("OrderPlaced")
+      Finder(regen)
+        .recursiveFindByType[ReplyStatement]
+        .map(_.msg.deliverableOperandPathId.value.last)
+        .toSet mustBe
+        scala.collection.immutable.Set("OrderFound")
     }
   }
 }

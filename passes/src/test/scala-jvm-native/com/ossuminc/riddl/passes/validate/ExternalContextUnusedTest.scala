@@ -15,8 +15,8 @@ import org.scalatest.TestData
 /** riddl-models 2026-08-05: "X is unused" is exempt INSIDE an `external context`.
   *
   * The warning means "you declared vocabulary and nothing references it, so it is probably dead".
-  * That premise fails for a context which by definition describes something outside the system:
-  * its types document the other side's payloads and a modeller references only the subset actually
+  * That premise fails for a context which by definition describes something outside the system: its
+  * types document the other side's payloads and a modeller references only the subset actually
   * exchanged, so non-use is the expected state.
   *
   * Every suppression here is paired with the case that must STAY reported. A test that only proves

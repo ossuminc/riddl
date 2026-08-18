@@ -25,8 +25,8 @@ import org.scalatest.*
   * `self` is a VALUE, so it is reached inside a `let`'s `expression` field -- which
   * `Finder.recursiveFindByType` does not descend into (same reason `InitiateRoundTripTest` walks
   * the tree by hand). Both spellings are covered: the bare `self` (whose type is the synthesized
-  * Aggregation) and the field form `self.id`, since the field is an `Option` the emitter could
-  * drop without any other test noticing.
+  * Aggregation) and the field form `self.id`, since the field is an `Option` the emitter could drop
+  * without any other test noticing.
   */
 class SelfRoundTripTest extends AbstractValidatingTest {
 
@@ -71,13 +71,15 @@ class SelfRoundTripTest extends AbstractValidatingTest {
 
   /** The `SelfValue`s bound by the on-clause's `let`s, in source order. */
   private def selvesIn(root: Root): Seq[SelfValue] =
-    val domain = root.contents.toSeq.collectFirst { case d: Domain => d }.getOrElse(fail("no domain"))
+    val domain =
+      root.contents.toSeq.collectFirst { case d: Domain => d }.getOrElse(fail("no domain"))
     val context =
       domain.contents.toSeq.collectFirst { case c: Context => c }.getOrElse(fail("no context"))
     val entity = context.contents.toSeq
       .collectFirst { case e: Entity => e }
       .getOrElse(fail("no entity"))
-    val state = entity.contents.toSeq.collectFirst { case s: State => s }.getOrElse(fail("no state"))
+    val state =
+      entity.contents.toSeq.collectFirst { case s: State => s }.getOrElse(fail("no state"))
     val handler =
       state.contents.toSeq.collectFirst { case h: Handler => h }.getOrElse(fail("no handler"))
     val clause = handler.clauses.headOption.getOrElse(fail("no on-clause"))

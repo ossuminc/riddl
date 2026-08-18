@@ -139,7 +139,7 @@ class IncludeAndImportTest extends ParsingTest {
       // wants the domains of `foo`; how each one arrived -- written inline, included, or imported
       // from a .bast -- is riddl's bookkeeping, not theirs. So the wrapper stays and the accessor
       // sees through it. This assertion used to read `foo.domains must be(empty)`.
-      foo.contents.filter[Domain] must be(empty)      // structure: still nothing spliced in
+      foo.contents.filter[Domain] must be(empty) // structure: still nothing spliced in
       foo.domains.map(_.id.value) must be(Seq("NotImplemented")) // reporting: the client's answer
     }
   }

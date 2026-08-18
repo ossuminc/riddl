@@ -22,8 +22,8 @@ import org.scalatest.TestData
   * — it is a check that must KEEP WORKING, which is why the wrong-type cases below matter at least
   * as much as the accepting ones.
   *
-  * `morph … with` is the same widening on the record side, and is riddlg's other 37.6% of `AI
-  * FILL` holes.
+  * `morph … with` is the same widening on the record side, and is riddlg's other 37.6% of `AI FILL`
+  * holes.
   *
   * Before this task all six accepting cases were PARSE errors: `messageValue`/`recordValue` are
   * keyword-led, so a bare identifier could not be an operand at all.

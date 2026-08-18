@@ -84,8 +84,8 @@ class IDEIntegrationTest extends ParsingTest {
       typeSteps.foreach { step =>
         val fullInput = base + step + "\n}"
         parseModel(fullInput) match {
-          case Left(_)      => succeed // an incomplete prefix reports, never throws
-          case Right(root)  => root.domains.head.types.size must be <= 1
+          case Left(_)     => succeed // an incomplete prefix reports, never throws
+          case Right(root) => root.domains.head.types.size must be <= 1
         }
       }
 

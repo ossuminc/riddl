@@ -63,7 +63,8 @@ class DeclarationFormatTest extends AbstractValidatingTest {
 
     "render a Context's intention" in { (td: TestData) =>
       parseAndValidateInput(RiddlParserInput(model, td), shouldFailOnErrors = false) {
-        (root, _, _) => formatOf[Context](root, "Storefront") mustBe "application context Storefront"
+        (root, _, _) =>
+          formatOf[Context](root, "Storefront") mustBe "application context Storefront"
       }
     }
 

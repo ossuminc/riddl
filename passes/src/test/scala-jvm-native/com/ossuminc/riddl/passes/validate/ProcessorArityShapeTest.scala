@@ -18,8 +18,7 @@ import org.scalatest.TestData
   * inlets)` — an ordinary fan-in drain and fan-out origin — with no shape at all. They fell to a
   * catch-all returning `Void`, so a correct model drew
   *
-  *   Repository 'MachineRegistry' is ascribed 'as sink' but its arity
-  *   (0 outlets, 2 inlets) is void
+  * Repository 'MachineRegistry' is ascribed 'as sink' but its arity (0 outlets, 2 inlets) is void
   *
   * which is a confident wrong answer, not a near miss. Found 2026-08-12 in a synapify Domain Model
   * Wizard run, where it was the last remaining error and the repair loop would have "fixed" a valid

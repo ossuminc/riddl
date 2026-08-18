@@ -80,13 +80,13 @@ class BangNotJsonRoundTripTest extends AnyWordSpec with Matchers {
         case o: ujson.Obj =>
           ujson.Obj.from(o.value.view.filterKeys(_ != "$at").mapValues(stripLocations).toSeq)
         case a: ujson.Arr => ujson.Arr.from(a.value.map(stripLocations))
-        case other         => other
+        case other        => other
 
       val notJson = RiddlLib.parseString(model("not")) match
-        case RiddlResult.Success(root) => RiddlLib.root2Json(root)
+        case RiddlResult.Success(root)   => RiddlLib.root2Json(root)
         case RiddlResult.Failure(errors) => fail(s"parse of the 'not' model failed: $errors")
       val bangJson = RiddlLib.parseString(model("!")) match
-        case RiddlResult.Success(root) => RiddlLib.root2Json(root)
+        case RiddlResult.Success(root)   => RiddlLib.root2Json(root)
         case RiddlResult.Failure(errors) => fail(s"parse of the '!' model failed: $errors")
 
       val notStripped = stripLocations(ujson.read(notJson))
@@ -101,7 +101,7 @@ class BangNotJsonRoundTripTest extends AnyWordSpec with Matchers {
       // sides -- this inspects the raw text directly, which a dropped-field bug cannot fake.
       for spelling <- Seq("not", "!") do
         val json = RiddlLib.parseString(model(spelling)) match
-          case RiddlResult.Success(root) => RiddlLib.root2Json(root)
+          case RiddlResult.Success(root)   => RiddlLib.root2Json(root)
           case RiddlResult.Failure(errors) => fail(s"parse failed for '$spelling': $errors")
         withClue(s"spelling '$spelling', JSON was:\n$json\n") {
           json must not include "\"negated\""

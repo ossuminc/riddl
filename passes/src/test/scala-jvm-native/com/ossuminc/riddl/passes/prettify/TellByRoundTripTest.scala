@@ -16,10 +16,11 @@ import com.ossuminc.riddl.utils.pc
 import org.scalatest.*
 
 /** Task 6 (processor-instance identity): `tell ... by <field>` adds an optional trailing
-  * [[com.ossuminc.riddl.language.AST.Identifier]] to [[com.ossuminc.riddl.language.AST.TellStatement]],
-  * so RIDDL's reflectivity mandate requires a prettify round trip -- parse -> prettify(flatten=true)
-  * -> re-parse -- proving `by` survives at the SAME place. Follows `TerminateRoundTripTest`'s
-  * template (Task 5's sibling feature). Runs on JVM AND Native, unlike a plain `scalajvm` test.
+  * [[com.ossuminc.riddl.language.AST.Identifier]] to
+  * [[com.ossuminc.riddl.language.AST.TellStatement]], so RIDDL's reflectivity mandate requires a
+  * prettify round trip -- parse -> prettify(flatten=true) -> re-parse -- proving `by` survives at
+  * the SAME place. Follows `TerminateRoundTripTest`'s template (Task 5's sibling feature). Runs on
+  * JVM AND Native, unlike a plain `scalajvm` test.
   */
 class TellByRoundTripTest extends AbstractValidatingTest {
 
@@ -66,7 +67,9 @@ class TellByRoundTripTest extends AbstractValidatingTest {
       .filesAsString
 
   private def tellIn(root: Root): TellStatement =
-    Finder(root).recursiveFindByType[TellStatement].headOption
+    Finder(root)
+      .recursiveFindByType[TellStatement]
+      .headOption
       .getOrElse(fail("no TellStatement found"))
 
   "tell ... by" should {

@@ -44,8 +44,8 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     diagnostics(src, origin).justErrors.map(_.message).mkString("\n")
 
   /** Every model below declares the same `entity Order` so `initiate entity Order` resolves, and
-    * declares `on term` so `terminate oid` resolves too; only the CONTEXT the
-    * offending statement sits in differs, which is the variable under test.
+    * declares `on term` so `terminate oid` resolves too; only the CONTEXT the offending statement
+    * sits in differs, which is the variable under test.
     */
   private def wrap(inner: String): String =
     s"""domain Dom is {
@@ -68,23 +68,20 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
        |} with { briefly "d" }
        |""".stripMargin
 
-  private def functionModel(stmt: String): String = wrap(
-    s"""    function F is {
+  private def functionModel(stmt: String): String = wrap(s"""    function F is {
        |      requires { a: Integer }
        |      returns { b: Integer }
        |      $stmt
        |      return a
        |    } with { briefly "fn" }""".stripMargin)
 
-  private def entityModel(stmt: String): String = wrap(
-    s"""    entity Caller is {
+  private def entityModel(stmt: String): String = wrap(s"""    entity Caller is {
        |      state CS of record R is {
        |        handler CH is { on command Go { $stmt } } with { briefly "ch" }
        |      } with { briefly "cs" }
        |    } with { briefly "ce" }""".stripMargin)
 
-  private def activateModel(stmt: String): String = wrap(
-    s"""    entity Caller is {
+  private def activateModel(stmt: String): String = wrap(s"""    entity Caller is {
        |      state CS of record R is {
        |        handler CH is { on activate is { $stmt } } with { briefly "ch" }
        |      } with { briefly "cs" }
@@ -93,8 +90,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
   // Review round 1 addendum: `on passivate` shares `checkInstanceEffectScope`'s match arm (and
   // its message) with `on activate` -- one case pins that the claim is actually true for both,
   // not merely for the one the original brief happened to test.
-  private def passivateModel(stmt: String): String = wrap(
-    s"""    entity Caller is {
+  private def passivateModel(stmt: String): String = wrap(s"""    entity Caller is {
        |      state CS of record R is {
        |        handler CH is { on passivate is { $stmt } } with { briefly "ch" }
        |      } with { briefly "cs" }
@@ -104,8 +100,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
   // correlation's only key field, so no fold is even REQUIRED to set it for the yielded command to
   // be completable, but every fold handler must terminate in SOME `set` or a separate, unrelated
   // rule ("every fold must terminate in a 'set'") fires and would otherwise pollute these cases.
-  private def foldModel(stmt: String): String = wrap(
-    s"""    repository Repo is {
+  private def foldModel(stmt: String): String = wrap(s"""    repository Repo is {
        |      handler RH is { on command Record { do "save" } } with { briefly "rh" }
        |    } with { briefly "repo" }
        |    projector Proj is {
@@ -120,8 +115,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
        |      } times out after "1 hour" { do "give up" }
        |    } with { briefly "proj" }""".stripMargin)
 
-  private def timeoutModel(stmt: String): String = wrap(
-    s"""    repository Repo is {
+  private def timeoutModel(stmt: String): String = wrap(s"""    repository Repo is {
        |      handler RH is { on command Record { do "save" } } with { briefly "rh" }
        |    } with { briefly "repo" }
        |    projector Proj is {
@@ -140,7 +134,8 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     * Adding `on init` to `wrap` would have changed the arity every other case sends through it.
     *
     * The second, inert step is not padding: a Saga must declare at least two (`Sagas must define at
-    * least 2 steps`), so a one-step model would fail this case for a reason unrelated to the ruling.
+    * least 2 steps`), so a one-step model would fail this case for a reason unrelated to the
+    * ruling.
     */
   private def sagaModel(stmt: String): String =
     s"""domain SDom is {

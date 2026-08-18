@@ -18,15 +18,15 @@ import org.scalatest.*
 /** `Blob(<kind>)` -- the predefined type for opaque bulk content.
   *
   * Until 2.0 this was RESERVED BUT UNUSABLE. `AST.Blob`, the `BlobKind` enum, BASTWriter/Reader
-  * support and the JSON `BlobDto` all existed, and `Blob` sat in `PredefType.allPredefTypes` --
-  * so `type B is Blob` failed with "Path 'Blob' was not resolved" AND `type Blob is String` failed
+  * support and the JSON `BlobDto` all existed, and `Blob` sat in `PredefType.allPredefTypes` -- so
+  * `type B is Blob` failed with "Path 'Blob' was not resolved" AND `type Blob is String` failed
   * with "redefines built-in type 'Blob'". Every surface was ready except the parser rule.
   *
   * This pins the reflection contract for it: anything that parses must also EMIT and survive a
   * round trip. Prettify needs no `case Blob` of its own because `AST.Blob.format` is
   * `s"$kind($blobKind)"` and `RiddlFileEmitter.emitTypeExpression` falls through to
-  * `case p: PredefinedType => add(p.format)` -- but "it should just work" is exactly the
-  * assumption this repo requires proving rather than believing.
+  * `case p: PredefinedType => add(p.format)` -- but "it should just work" is exactly the assumption
+  * this repo requires proving rather than believing.
   */
 class BlobRoundTripTest extends AbstractValidatingTest {
 

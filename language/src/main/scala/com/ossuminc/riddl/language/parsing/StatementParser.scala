@@ -317,12 +317,20 @@ private[parsing] trait StatementParser {
   private def whenCondition[u: P]
     : P[LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue] = {
     P(
-      booleanExprOnly.map(be => be: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue) |
-        promptValue.map(pv => pv: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue) |
-        valueRef.map(vr => vr: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue) |
+      booleanExprOnly.map(be =>
+        be: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue
+      ) |
+        promptValue.map(pv =>
+          pv: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue
+        ) |
+        valueRef.map(vr =>
+          vr: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue
+        ) |
         deprecatedStringCondition
           .map(ls => ls: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue) |
-        identifier.map(id => id: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue)
+        identifier.map(id =>
+          id: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue
+        )
     )
   }
 
@@ -477,9 +485,9 @@ private[parsing] trait StatementParser {
 
   /** A numeric literal — `[+-]? digits [ . digits ] [ (e|E) [+-] digits ]`.
     *
-    * Captured as raw text, not converted: the AST stores what the author wrote. No digit
-    * separators and no radix prefixes — declined deliberately (Reid, 2026-08-14); both are pure
-    * additions later if wanted.
+    * Captured as raw text, not converted: the AST stores what the author wrote. No digit separators
+    * and no radix prefixes — declined deliberately (Reid, 2026-08-14); both are pure additions
+    * later if wanted.
     *
     * There is no lexical ambiguity with identifiers or paths: an identifier must begin with a
     * letter (`simpleIdentifier`), so nothing beginning with a digit or a sign can be one.
@@ -754,9 +762,9 @@ private[parsing] trait StatementParser {
   /** `ask query Foo of entity Bar` -- a request whose answer is a value.
     *
     * The operand is a `queryRef` SPECIFICALLY, not a general messageRef, so "ask takes a query" is
-    * structural: asking a command cannot be built, only mis-parsed, and the resulting message
-    * names the shape the author actually wrote. Validation still reports an unresolved query and a
-    * query that declares no `replies`, since neither is decidable here.
+    * structural: asking a command cannot be built, only mis-parsed, and the resulting message names
+    * the shape the author actually wrote. Validation still reports an unresolved query and a query
+    * that declares no `replies`, since neither is decidable here.
     */
   private def askValue[u: P]: P[Ask] = {
     P(
@@ -768,8 +776,8 @@ private[parsing] trait StatementParser {
     *
     * Parens are OPTIONAL and present exactly when there are arguments (Reid, 2026-08-13: one
     * keyword, not two). ARITY IS NOT CHECKED HERE -- a parser error() preempts the whole pass
-    * chain, so the argument diagnostics live in ValidationPass, which is also the only place
-    * that has resolved `on init`.
+    * chain, so the argument diagnostics live in ValidationPass, which is also the only place that
+    * has resolved `on init`.
     */
   private def initiateValue[u: P]: P[Initiate] = {
     P(
@@ -826,18 +834,18 @@ private[parsing] trait StatementParser {
 
   /** `terminate <target> [with (args)]` -- end the instance denoted by `target`.
     *
-    * `target` is a VALUE (Reid, 2026-08-15), not a `processorRef`: it must be typed
-    * `Id(entity E)` and the entity terminated is derived from that type. See
-    * [[AST.TerminateStatement]] for why, and for why a singleton's `Id` -- which is legal, and
-    * exists so messages can be SENT to it -- is nonetheless not a legal `terminate` target.
+    * `target` is a VALUE (Reid, 2026-08-15), not a `processorRef`: it must be typed `Id(entity E)`
+    * and the entity terminated is derived from that type. See [[AST.TerminateStatement]] for why,
+    * and for why a singleton's `Id` -- which is legal, and exists so messages can be SENT to it --
+    * is nonetheless not a legal `terminate` target.
     *
     * Arguments sit behind a `with` separator rather than bare parentheses, because
-    * `terminate order.id("x")` reads as a call on `id`. `with ()` parses: an empty list is
-    * accepted rather than made an error, since the grammar is not the place to encode arity.
+    * `terminate order.id("x")` reads as a call on `id`. `with ()` parses: an empty list is accepted
+    * rather than made an error, since the grammar is not the place to encode arity.
     *
-    * NEITHER the target's TYPE nor the argument ARITY is checked here -- a parser error()
-    * preempts the whole pass chain, so both diagnostics live in ValidationPass, which is also the
-    * only place that has the target's resolved type and the target entity's `on term`.
+    * NEITHER the target's TYPE nor the argument ARITY is checked here -- a parser error() preempts
+    * the whole pass chain, so both diagnostics live in ValidationPass, which is also the only place
+    * that has the target's resolved type and the target entity's `on term`.
     */
   private def terminateStatement[u: P]: P[TerminateStatement] = {
     P(

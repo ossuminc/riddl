@@ -218,11 +218,11 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
   /** The `Id(<keyword> …)` spelling that names Processor `p`'s kind.
     *
     * Written out rather than derived, because both derivations are wrong. `getClass.getSimpleName`
-    * (which this used until the final review of the instance-identity branch) couples a
-    * user-facing diagnostic to a JVM class name and works only by the accident that all six
-    * Processor class names lowercase to their keyword. `Definition.kind` is riddl's own answer
-    * everywhere else, but a [[Streamlet]] OVERRIDES it to its SHAPE (`"Sink"`, `"Flow"`, …), so
-    * `Id(streamlet Feed)` would be reported as a lie.
+    * (which this used until the final review of the instance-identity branch) couples a user-facing
+    * diagnostic to a JVM class name and works only by the accident that all six Processor class
+    * names lowercase to their keyword. `Definition.kind` is riddl's own answer everywhere else, but
+    * a [[Streamlet]] OVERRIDES it to its SHAPE (`"Sink"`, `"Flow"`, …), so `Id(streamlet Feed)`
+    * would be reported as a lie.
     *
     * Total over `Processor`'s six concrete kinds — matching the six keywords `TypeParser`'s
     * `uniqueIdType` accepts — so a seventh kind is a compile error here rather than a silent
@@ -241,15 +241,15 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
     * happened to key it under.
     *
     * This exists because the obvious `refMap.definitionOf[Processor[?]](pid, parents.head)` is
-    * right in exactly one position and silently wrong in the others, and `.foreach` turned the
-    * miss into "skip the check". The keys differ because `ResolutionPass.process` PREPENDS a
-    * `Branch` to its own parents before resolving it:
+    * right in exactly one position and silently wrong in the others, and `.foreach` turned the miss
+    * into "skip the check". The keys differ because `ResolutionPass.process` PREPENDS a `Branch` to
+    * its own parents before resolving it:
     *   - a Field's `Id(…)` is keyed under the owning `Type` (validation's `parents.head` there is
     *     also the Type — the one position that matched, which is why the check appeared to work);
     *   - a type ALIAS's `Id(…)` is keyed under the `Type` ITSELF, while validation's `parents.head`
     *     is the enclosing Context — so the lookup missed and the check never fired. riddl-models
-    *     holds 232 `type X is Id(…)` aliases against 7 field-position uses, so the check was
-    *     silent in 97% of real usage;
+    *     holds 232 `type X is Id(…)` aliases against 7 field-position uses, so the check was silent
+    *     in 97% of real usage;
     *   - an `on init`/`on term` PARAMETER's `Id(…)` is keyed under the on-clause.
     *
     * `anyDefinitionOf` is used rather than the typed `definitionOf`, because the typed overload

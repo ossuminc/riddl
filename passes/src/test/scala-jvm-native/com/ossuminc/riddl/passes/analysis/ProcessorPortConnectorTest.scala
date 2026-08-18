@@ -52,7 +52,9 @@ class ProcessorPortConnectorTest extends AbstractValidatingTest {
           val pass = MessageFlowPass(passInput, pr.outputs)
           val mfo = Pass.runPass[MessageFlowOutput](passInput, pr.outputs, pass)
           val pipes = mfo.edges.filter(_.mechanism == FlowMechanism.ConnectorPipe)
-          withClue(s"edges were: ${mfo.edges.map(e => e.producer.id.value -> e.consumer.id.value)}") {
+          withClue(
+            s"edges were: ${mfo.edges.map(e => e.producer.id.value -> e.consumer.id.value)}"
+          ) {
             pipes must not be empty
           }
           pipes.head.producer.id.value mustBe "Source"

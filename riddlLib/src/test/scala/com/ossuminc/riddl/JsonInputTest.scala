@@ -39,6 +39,7 @@ class JsonInputTest extends AnyWordSpec with Matchers {
       case RiddlResult.Failure(errors) =>
         fail("parseJson failed: " + errors.map(_.format).mkString("\n"))
     end match
+
   /** Assert a model parses and its rendered RIDDL re-parses (syntax-level round-trip). Used for
     * statements whose references are the JSON author's concern to resolve — here we only prove the
     * emitted RIDDL is well-formed.
@@ -56,6 +57,7 @@ class JsonInputTest extends AnyWordSpec with Matchers {
       case RiddlResult.Failure(errors) =>
         fail("parseJson failed: " + errors.map(_.format).mkString("\n"))
     end match
+
   /** Render a single field's type expression to RIDDL text (for defaults). */
   private def renderFieldType(typeExpr: String): String =
     val json =

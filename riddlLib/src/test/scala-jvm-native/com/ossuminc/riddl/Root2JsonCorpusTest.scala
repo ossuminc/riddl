@@ -19,7 +19,7 @@ import scala.io.Source
   *      json2`. If the serializer drops or reorders anything, the second JSON diverges from the
   *      first, so a stable fixed-point proves the AST<->JSON mapping is lossless and deterministic.
   *      2. Validation-parity (the weak check): the re-parsed AST introduces no new validation
-  *      errors vs the original.
+  *         errors vs the original.
   *
   * **This suite GATES.** It was expected-red by standing policy while `../riddl-models` was being
   * migrated to 2.0 syntax; that migration is done, the corpus parses 189/189 and round-trips

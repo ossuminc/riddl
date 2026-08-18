@@ -12,14 +12,14 @@ import com.ossuminc.riddl.utils.{AbstractTestingBasis, pc}
 /** Targeted deprecation fixing: the edits must resolve the deprecation and change NOTHING else.
   *
   * The whole point of an edit list over `root2RiddlSource` is that a user with carefully arranged
-  * source does not pay for a wholesale reformat to fix three keywords. So these tests assert on
-  * the resulting TEXT, not merely that edits were produced — a reformat that happened to fix the
+  * source does not pay for a wholesale reformat to fix three keywords. So these tests assert on the
+  * resulting TEXT, not merely that edits were produced — a reformat that happened to fix the
   * deprecation would pass a weaker test and defeat the feature.
   */
 class DeprecationEditsTest extends AbstractTestingBasis {
 
-  /** Apply edits the way a consumer would. They arrive in descending order precisely so this
-    * naive loop is correct; applying ascending without adjusting offsets would corrupt the file.
+  /** Apply edits the way a consumer would. They arrive in descending order precisely so this naive
+    * loop is correct; applying ascending without adjusting offsets would corrupt the file.
     */
   private def applyEdits(source: String, edits: Seq[SourceEdit]): String =
     edits.foldLeft(source) { (text, e) =>

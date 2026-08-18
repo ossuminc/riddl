@@ -15,8 +15,8 @@ import com.ossuminc.riddl.utils.pc
 
 import org.scalatest.*
 
-/** Task 3: RIDDL is reflective, so `on init`/`on term` parameter lists must survive
-  * prettify -> re-parse, just like A55's message binding and A57's envelope binding before them.
+/** Task 3: RIDDL is reflective, so `on init`/`on term` parameter lists must survive prettify ->
+  * re-parse, just like A55's message binding and A57's envelope binding before them.
   */
 class LifecycleParametersRoundTripTest extends AbstractValidatingTest {
 

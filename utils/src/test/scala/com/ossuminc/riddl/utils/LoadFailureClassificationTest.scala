@@ -8,29 +8,29 @@ package com.ossuminc.riddl.utils
 
 /** `LoadFailure.from` must classify correctly AND link on every platform.
   *
-  * This suite lives in SHARED test sources deliberately. The bug it guards was not a logic error
-  * — it was `LoadFailure.from` naming `java.io.FileNotFoundException` and friends, which compile
-  * everywhere and are absent from the Scala.js javalib. Any consumer whose reachable graph
-  * included the method failed at LINK time:
+  * This suite lives in SHARED test sources deliberately. The bug it guards was not a logic error —
+  * it was `LoadFailure.from` naming `java.io.FileNotFoundException` and friends, which compile
+  * everywhere and are absent from the Scala.js javalib. Any consumer whose reachable graph included
+  * the method failed at LINK time:
   *
   * {{{
   * Referring to non-existent class java.io.FileNotFoundException
   *   called from com.ossuminc.riddl.utils.LoadFailure$.from(...)
   * }}}
   *
-  * riddl's own `riddlLibJS/fullLinkJS` never caught it, because dead-code elimination did not
-  * reach the method from riddl-lib's exports. Synapify found it, where every parse reaches here.
+  * riddl's own `riddlLibJS/fullLinkJS` never caught it, because dead-code elimination did not reach
+  * the method from riddl-lib's exports. Synapify found it, where every parse reaches here.
   *
-  * Being in shared sources, this suite forces `LoadFailure.from` into the reachable graph of the
-  * JS TEST link, so the same mistake fails riddl's own build instead of a consumer's.
+  * Being in shared sources, this suite forces `LoadFailure.from` into the reachable graph of the JS
+  * TEST link, so the same mistake fails riddl's own build instead of a consumer's.
   */
 class LoadFailureClassificationTest extends AbstractTestingBasis {
 
   private val url = URL.empty
 
   /** A stand-in whose SIMPLE NAME is what the classifier reads. Constructing a real
-    * `java.io.FileNotFoundException` here would reintroduce the very JVM-only reference this
-    * suite exists to keep out of shared code.
+    * `java.io.FileNotFoundException` here would reintroduce the very JVM-only reference this suite
+    * exists to keep out of shared code.
     */
   private class FileNotFoundException(msg: String) extends RuntimeException(msg)
   private class NoSuchFileException(msg: String) extends RuntimeException(msg)

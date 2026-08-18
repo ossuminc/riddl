@@ -33,13 +33,13 @@ class DumpCommand(using pc: PlatformContext) extends InputFileCommand(DumpComman
       val future = RiddlParserInput.fromPathSafe(inputFile.toString).map {
         case Left(messages) => Left(messages)
         case Right(rpi) =>
-        Riddl.parseAndValidate(rpi).map { result =>
-          if !pc.options.quiet then
-            pc.log.info(s"AST of $inputFile is:")
-            pc.log.info(StringHelpers.toPrettyString(result, 1, None))
-          end if
-          result
-        }
+          Riddl.parseAndValidate(rpi).map { result =>
+            if !pc.options.quiet then
+              pc.log.info(s"AST of $inputFile is:")
+              pc.log.info(StringHelpers.toPrettyString(result, 1, None))
+            end if
+            result
+          }
       }
       Await.result(future, 10.seconds)
     }

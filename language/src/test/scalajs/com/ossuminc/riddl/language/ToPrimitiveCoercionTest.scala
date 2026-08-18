@@ -16,8 +16,8 @@ import com.ossuminc.riddl.utils.{pc, URL, AbstractTestingBasis}
   * class: the concatenation throws `TypeError: Cannot convert object to primitive value`.
   *
   * This is not hypothetical and it is not cheap. `At` carried that annotation, so every validation
-  * of a model that produced a message containing `at $loc` CRASHED on Scala.js while passing on
-  * the JVM. It was invisible twice over: nothing at compile time flags it, and the pass runner's
+  * of a model that produced a message containing `at $loc` CRASHED on Scala.js while passing on the
+  * JVM. It was invisible twice over: nothing at compile time flags it, and the pass runner's
   * catch-all rendered it through a JS shim that returned no stack trace, so it reached riddl-vscode
   * as a Severe message with EMPTY text -- a blank squiggle on line 1 of the user's file.
   *

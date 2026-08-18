@@ -340,6 +340,7 @@ object JsonAstBuilder:
     val streamlet: Kinds = processor
     val projector: Kinds = processor + K.Correlation
     val repository: Kinds = processor + K.Schema
+
     /** A saga's and a function's `requires`/`returns` are ordinary contents, so they are legal
       * children here rather than fields lifted out of the body.
       */
@@ -1031,7 +1032,8 @@ object JsonAstBuilder:
               md
             )
       case "init" =>
-        val parameters = oc.parameters.map(a => MethodArgument(curAt, a.name, buildTypeExpr(a.`type`)))
+        val parameters =
+          oc.parameters.map(a => MethodArgument(curAt, a.name, buildTypeExpr(a.`type`)))
         OnInitializationClause(curAt, parameters, statements, md)
       case "other" =>
         // A57: rebuild the optional envelope binding and its optional explicit type.
@@ -1043,7 +1045,8 @@ object JsonAstBuilder:
           md
         )
       case "term" =>
-        val parameters = oc.parameters.map(a => MethodArgument(curAt, a.name, buildTypeExpr(a.`type`)))
+        val parameters =
+          oc.parameters.map(a => MethodArgument(curAt, a.name, buildTypeExpr(a.`type`)))
         OnTerminationClause(curAt, parameters, statements, md)
       case "activate"  => OnActivationClause(curAt, statements, md)
       case "passivate" => OnPassivationClause(curAt, statements, md)
@@ -1266,7 +1269,7 @@ object JsonAstBuilder:
         val why: LiteralString | InvariantRef = (invariant, reason) match
           case (Some(inv), _)  => InvariantRef(curAt, pathId(inv))
           case (None, Some(r)) => LiteralString(curAt, r)
-          case (None, None)    =>
+          case (None, None) =>
             throw new IllegalArgumentException(
               "refusal interaction has neither a 'reason' nor an 'invariant'"
             )
@@ -1529,11 +1532,11 @@ object JsonAstBuilder:
   // A54: ValueDto -> AST Value.
   private def buildValue(v: ValueDto)(using ctx: Ctx): Value =
     v match
-      case LiteralValueDto(text)  => LiteralString(curAt, text)
+      case LiteralValueDto(text)   => LiteralString(curAt, text)
       case NumericLiteralDto(text) => NumericLiteral(curAt, text)
       case PromptValueDto(prompt, typeEx) =>
         PromptValue(curAt, LiteralString(curAt, prompt), typeEx.map(buildTypeExpr))
-      case ValueRefDto(p)         => ValueRef(curAt, pathId(p))
+      case ValueRefDto(p) => ValueRef(curAt, pathId(p))
       case LookupValueDto(coll, indices) =>
         LookupValue(curAt, ValueRef(curAt, pathId(coll)), indices.map(buildValue))
       case GetValueDto(source, keyword, ref) =>
@@ -1548,7 +1551,7 @@ object JsonAstBuilder:
       case c: CallValueDto        => buildCall(c) // A24
       case a: AskValueDto =>
         Ask(curAt, QueryRef(curAt, pathId(a.query)), processorRef(a.processor, a.processorKind))
-      case BooleanLiteralDto(b)   => BooleanLiteral(curAt, b)
+      case BooleanLiteralDto(b) => BooleanLiteral(curAt, b)
       case ComparisonDto(op, left, right) =>
         val cop = ComparisonOperator.values
           .find(_.symbol == op)
@@ -1792,8 +1795,8 @@ object JsonAstBuilder:
     )
 
   /** Rebuild a Connector's intentions from their keywords, dropping any that are unknown (a
-    * document written against a newer schema stays readable) and canonicalising the order --
-    * same contract as `parseEntityIntentions`.
+    * document written against a newer schema stays readable) and canonicalising the order -- same
+    * contract as `parseEntityIntentions`.
     */
   private def parseConnectorIntentions(keywords: Seq[String]): Seq[ConnectorIntention] =
     ConnectorIntention.canonical(keywords.flatMap(ConnectorIntention.fromKeyword))

@@ -94,12 +94,14 @@ class RequiresReturnsRoundTripTest extends AbstractValidatingTest {
       f.input.get mustBe a[TypeRef]
       f.output.get mustBe a[TypeRef]
       // Order, not just presence: the clauses sit BETWEEN the comments, where they were written.
-      f.contents.toSeq.map {
-        case _: Requires => "requires"
-        case _: Returns  => "returns"
-        case _: Comment  => "comment"
-        case other       => other.getClass.getSimpleName
-      }.mustBe(Seq("comment", "requires", "comment", "returns", "comment"))
+      f.contents.toSeq
+        .map {
+          case _: Requires => "requires"
+          case _: Returns  => "returns"
+          case _: Comment  => "comment"
+          case other       => other.getClass.getSimpleName
+        }
+        .mustBe(Seq("comment", "requires", "comment", "returns", "comment"))
     }
 
     "keep a comment above `requires` above it through a prettify round trip" in { (td: TestData) =>
@@ -141,12 +143,14 @@ class RequiresReturnsRoundTripTest extends AbstractValidatingTest {
         .headOption
         .getOrElse(fail("saga s did not parse"))
       saga.input.get mustBe a[TypeRef]
-      saga.contents.toSeq.map {
-        case _: Requires => "requires"
-        case _: Comment  => "comment"
-        case _: SagaStep => "step"
-        case other       => other.getClass.getSimpleName
-      }.mustBe(Seq("comment", "requires", "step", "step"))
+      saga.contents.toSeq
+        .map {
+          case _: Requires => "requires"
+          case _: Comment  => "comment"
+          case _: SagaStep => "step"
+          case other       => other.getClass.getSimpleName
+        }
+        .mustBe(Seq("comment", "requires", "step", "step"))
 
       val pretty = prettify(parse(src, "saga-comments"))
       pretty.indexOf("// what the saga needs") must be < pretty.indexOf("requires record Args")

@@ -14,15 +14,15 @@ import org.scalatest.*
 /** Saga step statements must be RESOLVED and VALIDATED like any others.
   *
   * Until 2.0 they were neither. `SagaStep` is a `Leaf` whose statements live in the
-  * `doStatements`/`undoStatements` FIELDS rather than in `contents`, and the base
-  * `Pass.traverse` matched it as an ordinary Leaf -- processing the step and never descending.
-  * Since BOTH `ResolutionPass` and `ValidationPass` extend `Pass` directly, neither ever saw a
-  * saga statement, so a step could name definitions that DO NOT EXIST and validate completely
-  * clean. It was a silent correctness hole, not a missing warning.
+  * `doStatements`/`undoStatements` FIELDS rather than in `contents`, and the base `Pass.traverse`
+  * matched it as an ordinary Leaf -- processing the step and never descending. Since BOTH
+  * `ResolutionPass` and `ValidationPass` extend `Pass` directly, neither ever saw a saga statement,
+  * so a step could name definitions that DO NOT EXIST and validate completely clean. It was a
+  * silent correctness hole, not a missing warning.
   *
-  * The shape of the bug is worth remembering: the same `tell` statement was reported when
-  * written in an entity handler and IGNORED when written in a saga step. The test below pins
-  * exactly that asymmetry closed.
+  * The shape of the bug is worth remembering: the same `tell` statement was reported when written
+  * in an entity handler and IGNORED when written in a saga step. The test below pins exactly that
+  * asymmetry closed.
   */
 class SagaStepStatementValidationTest extends AbstractValidatingTest {
 
