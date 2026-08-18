@@ -140,7 +140,21 @@ certified nothing.
 |---|---|---|
 | JVM | **2747** | 7 |
 | JS | **840** | 5 |
-| Native | **2708** | 7 |
+| Native | **2726** | 7 |
+
+**Native raised to 2726 at 2.0.0-rc.17 (2026-08-18).** JVM and JS were NOT
+re-measured locally — CI certified them on the exact tagged commit, so there is no
+comparable LOCAL total for those two rows and mixing a CI number into a local floor
+would corrupt it. Leave a row alone rather than raise it from the wrong measurement.
+
+**rc.17's Native leg is also the worked example of a stitched run.** The seven-module
+chain died mid-way with `fatal signal 9` naming `JsonImportRoundTripTest`; that suite
+passes alone, and the full `riddlLibNative` suite then passed too (17/144), so it was
+transient resource pressure and SIGKILL merely named whichever test was in flight.
+`riddlcNative` was run separately afterwards because the `;` chain had aborted before
+reaching it. 2726 is therefore a sum across three invocations, every module accounted
+for — which is fine for a floor, since the floor counts cases RUN, but say so rather
+than implying one clean pass.
 
 **Raised 2026-08-17 at 2.0.0-rc.15 (2737 / 840 / 2456).** This was a LARGE jump
 — +268 / +87 / +548 — and it does not reconcile against one session's work,
@@ -150,10 +164,23 @@ and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
 
-**The deliberate-failure count is ZERO as of 2.0.0-rc.16 (2026-08-18).** riddl-examples
-completed its 2.0 migration, so the last two red cases are gone and every suite on
-every platform is green. **A red case is now a real signal — treat any failure as a
-regression rather than reaching for this list.**
+**The deliberate-failure count is TWO again as of 2.0.0-rc.17 (2026-08-18)**, and it
+went back up for a legitimate reason. `RunRiddlcOnLocalTest`'s `dokn` and
+`shopify-cart` cases exit 7 against `../riddl-examples`, which has NOT migrated to
+rc.17's cross-context boundary Error and external-context persistence rule — `dokn`
+alone reports 20 boundary + 10 persistence errors. It could not have migrated first:
+**the rules ship in the RC the corpus needs in order to validate against them.** They
+reproduce identically on JVM and Native, so a platform divergence is ruled out, and
+they are BACKLOG [3.6], ruled acceptable when the Error was chosen over a warning.
+Expect this to return to ZERO once riddl-examples migrates.
+**Everything else is green.** The bar is unchanged: confirm a red case is one of these
+TWO, by the exit-7-plus-boundary-errors signature, before accepting it. Anything else
+is a regression.
+
+**Do NOT take CI's word for these two.** At rc.17 CI reported both PASSING at the
+tagged commit while they genuinely failed — it logged them 0.4 ms apart, replaying a
+cached result, because the corpora are external directories whose CONTENT is in no
+cache key. See BACKLOG [1.9]. **Certify corpus-dependent suites locally.**
 
 **The Native floor jumped +252 at rc.16** (2456 → 2708) because the corpus suites
 stopped downloading and started reading sibling checkouts, and because riddlLib
