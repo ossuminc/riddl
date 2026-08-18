@@ -1870,6 +1870,29 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   corpus's tell-target entities declare no inlets at all; the interaction surfaces
   only as models comply.
 
+- **A queried repository with no index draws a CompletenessWarning — and the check
+  deliberately does NOT name a field** (Reid, 2026-08-18, on riddlg's request).
+  `checkQueriedWithoutIndex`. Fires when a repository has a schema, answers at least
+  one query, and declares no `index on` at all. 26 corpus sites.
+  **The ruling that produced it: an index belongs to the REPOSITORY, not to a
+  field.** riddlg asked for an `indexed` option on `Field`; declined, because a
+  database index is a persistence concern and putting it on an entity's field leaks
+  a generator's lowering choice into the model. `Schema.indices` is the mechanism —
+  517 uses across 228 corpus schemas.
+  **Do not try to make it name the field. Both routes were MEASURED and neither is
+  derivable:** all **406** repository `on query` bodies in the corpus are
+  `prompt(...)`/`do "..."` with **zero** comparisons (by design — a repository
+  on-clause may be a single `do` standing in for SQL); and taking the query TYPE's
+  fields as the comparison operands — the better idea, since a query's parameters
+  ARE its operands — maps to a stored record field **1 time by name and 19 by type
+  out of 284 (6%)**. The correspondence between a query's parameters and the
+  storage it filters has never been required of authors, so it is not in the
+  models. Making it derivable needs a language change; **prose on the query type
+  would move the ambiguity, not remove it.**
+  **The no-repository case is already diagnosed**: an entity with no repository
+  draws *"has entities but no repository to persist them"*, so it is an
+  under-specified model rather than a shape needing new syntax.
+
 - **`???` is a body that says "known to be incomplete" — validation must EXEMPT
   it** (Reid's ruling, 2026-08-11). Any definition whose body is `???` earns at
   most a **Missing** warning saying the body should be provided. Every other

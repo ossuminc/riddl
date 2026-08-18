@@ -40,6 +40,12 @@ boundary; **[1.7]** a `tell` target needs **both** a declared inlet **and** a co
 because `tell` implies a channel that must be modelled. Neither should be "fixed" later
 by someone finding the strictness surprising.
 
+**riddlg's index task is CLOSED** (`task/done/2026-08-18-declare-an-index-without-a-repository.md`).
+Ruled: `Schema.indices` owns it, no field option. Built a CompletenessWarning for a
+queried repository with no index (26 corpus sites, predicted 26). **The measurement
+worth keeping**: naming the queried FIELD is not derivable — 406/406 repository
+query bodies are prose, and query-type fields map to a stored field 6% of the time.
+
 **Build state, verified 2026-08-18:**
 
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
