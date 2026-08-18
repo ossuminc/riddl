@@ -949,8 +949,13 @@ that needs a ruling before either can be fixed.
   **NEW, filed as [4.6]:** a local and an imported definition may now share a
   name, and declaration order decides which wins.
 
-- **[4.6]** **An imported definition can now shadow, or be shadowed by, a local
-  one — silently.** Consequence of [2.6]: `findMatchingCandidate` takes the FIRST
+- ~~**[4.6]** import/local shadowing.~~ — **RULED C, DONE `0e8441aca`: the LOCAL
+  declaration always wins, regardless of position, AND the ambiguity warns naming
+  EVERY side** (Reid: there may be more than two). Precedence is expressed as
+  ORDERING (`localsThenImported`), so `.headOption` IS the rule and there is no
+  second place to keep in step. The warning stays silent when all matches are
+  local — that is `checkUniqueContent`'s report. Both orderings are tested, and
+  that pair IS the ruling. Superseded: Consequence of [2.6]: `findMatchingCandidate` takes the FIRST
   match in contents order, so whether `type Money` declared in a domain beats a
   `Money` imported into that domain depends on which was written first. Nothing
   warns. Options, none of them obviously right: leave it (position is a
@@ -1035,7 +1040,13 @@ that needs a ruling before either can be fixed.
   (`AggregateContentsRoundTripTest`, `ShownByRoundTripTest`,
   `TypeExpressionSpacingRoundTripTest`, `AttachmentRoundTripTest`).
 
-- **[3.4]** **NEARLY UNBLOCKED — riddl-models landed the migration mid-session
+- ~~**[3.4]** riddl-models corpus migration.~~ — **COMPLETE 2026-08-17.** Their
+  `99fc29d1` (*"Upgrade to riddl 2.0.0-rc.15; the corpus validates 188/188 with
+  zero errors"*) took validation-parity to **190/190** and `RiddlModelsRoundTripTest`
+  to green. **Reid's release gate — "corpus at 100%" — is MET.** The last two red
+  cases anywhere in this repo's suite belong to `../riddl-examples`, which now has
+  a migration task (`task/2026-08-17-migrate-to-2.0-syntax.md`). History:
+- **~~[3.4] superseded~~ NEARLY UNBLOCKED — riddl-models landed the migration mid-session
   (2026-08-15 19:19).** Their `2e619c44`, *"Upgrade to riddl
   2.0.0-rc.14-121-fe768026 and validate the corpus cleanly"*, took the binary
   staged an hour earlier and did the `terminate` AND bare-message-operand
@@ -1220,8 +1231,12 @@ what it costs. Struck items are complete.
 | `[4.5]` | **C** — investigate enough to route it; may be moot once rc.15 reaches riddl-models. **MOOT, exactly as predicted: riddl-models shipped `99fc29d1` the same day and the corpus is 190/190.** |
 | `[4.6]` | **C** — local always wins, AND warn, and **the warning must name ALL sides** (there may be more than two) |
 
-- **[4.1]** **`AnalysisResult.streamlets` / `DataFlowDiagramData.streamlets` keep
-  meaning "the Streamlet definitions".** The [2.4] question, decided the additive
+- ~~**[4.1]** `streamlets` meaning.~~ — **RULED B, DONE `2dc789ec4`: `streamlets`
+  now means every PORT-BEARING processor**, and `processors`/`portBearing` are
+  deleted. Reid: *"streamlets is now an older idea, but in the new model every
+  processor is capable of having one or more portlets."* The AST CONTAINMENT
+  accessor `WithStreamlets.streamlets` is deliberately UNCHANGED — say so if the
+  ruling was meant to reach it. Superseded reasoning: The [2.4] question, decided the additive
   way: `processors` and `portBearing` were ADDED rather than widening the
   existing accessors. Reasoning: every accessor in that family (`domains`,
   `contexts`, `entities`, …) is named after a KIND, so widening this one alone
@@ -1232,7 +1247,15 @@ what it costs. Struck items are complete.
   type on each field; the accessors added here would then be redundant and
   should be deleted rather than left as synonyms. Landed in `2c19d6d70`.
 
-- **[4.2]** **`DependencyAnalysisPass.typeDeps`' source is the HANDLED message.**
+- ~~**[4.2]** `typeDeps`' meaning.~~ — **RULED A-but-broader, DONE `b1b78c389`:
+  it is a TYPE-DEPENDENCY graph.** Reid's example is the contract —
+  record→set→named-integer — so a consumer can find loops and walk the hierarchy.
+  Reuses the resolver's existing usage edges, folding FIELD-level uses up to the
+  owning type (without that fold the record→set half is simply absent). **Known
+  caveat recorded on the field**: the `tell` edges remain, so two processors
+  telling each other's messages read as a cycle here; if a consumer needs purely
+  structural edges the answer is to SPLIT the map, which is worth asking about.
+  Superseded:
   The field was empty for every model ever analyzed (its guard could not
   succeed — see the note in `DependencyAnalysisPassTest`), so filling it required
   choosing what its source means. I chose "handling PlaceOrder leads to telling
@@ -1244,8 +1267,8 @@ what it costs. Struck items are complete.
   might. If the intended edge was something else, say so and it moves. Landed in
   `1a3c1cf05`.
 
-- **[4.3]** **A `send`/`tell` operand's resolved type is now published on
-  `ValidationOutput.deliverableTypes`.** This is a new public field on a pass
+- ~~**[4.3]** `deliverableTypes` on the pass output.~~ — **RULED A: keep as built.**
+  The only ruling that confirmed what was there. Superseded: This is a new public field on a pass
   output, keyed by the statement itself, and it is how MessageFlowPass and
   DependencyAnalysisPass resolve a `let`-local operand without duplicating
   ValidationPass's scope-threading walk.
@@ -1255,7 +1278,12 @@ what it costs. Struck items are complete.
   I did not). Landed in `b6b3dd03e`; the shared read path is
   `DeliverableTypes.of`.
 
-- **[4.4]** **`StatsPass` counts "+1 for shape" only for a `Streamlet`.** Left
+- ~~**[4.4]** shape counting.~~ — **RULED B, DONE `5919d0234`: every processor's
+  shape counts**, numerator and denominator both, moved into the shared helpers so
+  they cannot drift apart. A Streamlet still counts unconditionally (its shape is
+  required and known even when `ascribedShape` is None). **Expect maturity
+  percentages to DROP** for processors that ascribe no shape — that is the ruling,
+  not a side effect. Superseded:
   ALONE deliberately in [2.4], because unlike the other sites this is not a
   narrowing bug — it is a question about what a maturity metric should count.
   Every Processor may now carry an `ascribedShape`, so a Context or Entity that
