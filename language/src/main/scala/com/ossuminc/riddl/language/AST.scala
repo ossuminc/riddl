@@ -749,8 +749,25 @@ object AST:
   /** Base trait to use in any [[Definition]] that can define [[Streamlet]]s */
   sealed trait WithStreamlets[CV <: RiddlValue] extends Container[CV]:
 
-    /** A lazily constructed [[Seq]] of [[Streamlet]] filtered from the contents */
-    def streamlets: Seq[Streamlet] = contents.filterThroughWrappers[Streamlet]
+    /** Every STREAMLET in this container's purview — which since [4.1] means **every contained
+      * [[Processor]] with a non-zero portlet count**, not merely the [[Streamlet]] case class.
+      *
+      * **RULED 2026-08-17 by Reid:** *"Is an entity with portlets a streamlet? Yes, it is. Is a
+      * projector with inlets and outlets a streamlet? Yes it is. So when a definition includes
+      * WithStreamlets, it includes all the processor definitions in its purview that have portlets,
+      * including entities, repositories, projectors."*
+      *
+      * A streamlet is therefore defined by what it HAS, not by which keyword declared it. That is
+      * the whole content of the unified processor model: `Streamlet` was the port-bearing kind
+      * until every processor became port-bearing, at which point the case class stopped being the
+      * useful boundary and the portlet count started being it.
+      *
+      * **A processor with no portlets is NOT a streamlet**, including a `void`-shaped or stubbed
+      * `Streamlet` — it has nothing in a stream to be. Callers wanting the case class regardless
+      * write `.collect { case s: Streamlet => s }` on `contents`.
+      */
+    def streamlets: Seq[Processor[?]] =
+      contents.filterThroughWrappers[Processor[?]].filter(_.ports.nonEmpty)
   end WithStreamlets
 
   /** Base trait to use in any [[Definition]] that can define [[Connector]]s */

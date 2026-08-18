@@ -262,7 +262,10 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
       TopLevelParser.parseAsContext(input) match {
         case Left(errors) => fail(errors.format)
         case Right(context) =>
-          val streamlet = context.streamlets.head
+          // [4.1]: `context.streamlets` is every processor WITH PORTLETS, and `processor P is
+          // { ??? }` declares none — so it is deliberately NOT a streamlet and this case must ask
+          // for the declaration itself. That distinction is the ruling, not an accident of it.
+          val streamlet = context.contents.filter[Streamlet].head
           streamlet.id.value mustBe "P"
           streamlet.ascribedShape mustBe None
       }

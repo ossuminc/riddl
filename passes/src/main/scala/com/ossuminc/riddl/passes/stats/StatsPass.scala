@@ -406,17 +406,25 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
     if p.handlers.nonEmpty then result += 1
     if p.functions.nonEmpty then result += 1
     if p.constants.nonEmpty then result += 1
-    // [4.4], RULED 2026-08-17 by Reid (option B): a shape is a specification EVERY processor may
-    // complete, not only a Streamlet -- since the unified processor model, any of the six kinds
-    // may carry an `ascribedShape`. Counted here rather than per-kind below so the numerator and
-    // the denominator (`specsForProcessor`) move together; they were previously both
-    // Streamlet-only, at two sites that had to be kept in step by hand.
+    // [4.4], RULED 2026-08-17 by Reid (option B), then CORRECTED by him the same day:
+    // *"they shouldn't drop if the shape is consistent with the number of inlets and outlets;
+    // having those line up is AN INDICATOR of maturity, so make it count that way."*
     //
-    // A Streamlet still counts unconditionally. Its shape is REQUIRED and is known even when
-    // `ascribedShape` is None, because the keyword form (`source X is …`) states it and the
-    // arity derives it -- so testing `ascribedShape` alone would have SILENTLY DROPPED every
-    // keyword-declared streamlet's score from 1 to 0, which is a regression dressed as a ruling.
-    if p.ascribedShape.nonEmpty || p.isInstanceOf[Streamlet] then result += 1
+    // So the credit is for COHERENCE, not for the mere presence of an `as <shape>` clause. A
+    // processor whose ascribed shape matches its arity has said something true about itself and
+    // scores; one whose ascription CONTRADICTS its ports has not, and does not. A processor that
+    // ascribes nothing scores too — its shape is derived from arity and so cannot disagree with
+    // it — which is what keeps percentages from dropping across the corpus for models that simply
+    // never write the clause.
+    //
+    // My first implementation counted `ascribedShape.nonEmpty`, which measured whether the author
+    // had TYPED something rather than whether the model hangs together, and would have penalised
+    // every correct model that leaves the shape implicit.
+    // Compared by KEYWORD, not by `==`. `StreamletShape` is a case class carrying a `loc`, and
+    // `arityShape` builds one at the PROCESSOR's location while an ascribed shape carries its own
+    // — so `==` would be false for every processor alive, scoring zero everywhere and looking
+    // like a corpus-wide maturity collapse.
+    if p.ascribedShape.forall(_.keyword == p.arityShape.keyword) then result += 1
     result
 
   private def completedCount(v: RiddlValue): Int = {

@@ -559,6 +559,7 @@ class ASTTest extends AbstractTestingBasis {
       val connector = Connector(At.empty, Identifier(At.empty, "channel"), outletRef, inletRef)
       val plant =
         Context(At.empty, Identifier(At.empty, "plant"), Contents(source, sink, connector))
+      // [4.1]: a streamlet is any processor WITH PORTLETS, so this asserts on the port-bearing set.
       plant.streamlets.map(_.id.value) mustBe Seq("Source", "Sink")
       plant.connectors.map(_.id.value) mustBe Seq("channel")
       source.effectiveShape mustBe Source(At.empty)

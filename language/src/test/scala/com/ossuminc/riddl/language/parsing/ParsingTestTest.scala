@@ -151,7 +151,12 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
 
     "parseTopLevelDomain[Processor]" in { (td: TestData) =>
       val input = RiddlParserInput("domain foo is { context C is { source X is { ??? } } }", td)
-      parseTopLevelDomain[Streamlet](input, _.domains.head.contexts.head.streamlets.head) match {
+      // [4.1]: `streamlets` means processors WITH PORTLETS, and `source X is { ??? }` has none,
+      // so this case asks the contents for the Streamlet declaration rather than the accessor.
+      parseTopLevelDomain[Streamlet](
+        input,
+        _.domains.head.contexts.head.contents.filter[Streamlet].head
+      ) match {
         case Left(messages)  => fail(messages.format)
         case Right((src, _)) => src.id.value mustBe "X"
       }

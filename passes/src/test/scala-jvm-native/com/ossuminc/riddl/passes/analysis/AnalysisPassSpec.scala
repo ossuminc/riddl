@@ -128,13 +128,12 @@ class AnalysisPassSpec extends AnyWordSpec with Matchers {
           result.sagas mustBe empty
           result.epics mustBe empty
           result.repositories mustBe empty
-          // [4.1], RULED 2026-08-17: `streamlets` means every PORT-BEARING processor, which since
-          // the unified processor model is every Processor kind. This model declares no `Streamlet`
-          // but does declare 2 contexts and 2 entities, and those ARE processors — so the old
-          // `mustBe empty` was asserting the narrow reading, not an empty model.
-          result.streamlets.map(_.id.value).toSet mustBe
-            Set("Orders", "Customers", "Order", "Customer")
-          result.streamlets.collect { case s: Streamlet => s } mustBe empty
+          // [4.1], RULED 2026-08-17: a streamlet is any processor with a NON-ZERO PORTLET COUNT.
+          // This model's contexts and entities declare no inlets or outlets, so none of them is a
+          // streamlet and the answer is empty — the same result as before the ruling, for a
+          // completely different reason. Worth stating: the old assertion passed because nothing
+          // here is a `Streamlet` case class; this one passes because nothing here has a port.
+          result.streamlets mustBe empty
           result.projectors mustBe empty
           result.adaptors mustBe empty
           result.functions mustBe empty

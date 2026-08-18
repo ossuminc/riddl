@@ -79,9 +79,12 @@ class ReferenceMapTest extends AbstractValidatingTest {
       refMap.definitionOf[Inlet](pid) match {
         case Some(actual: Inlet) =>
           actual.id.value mustBe ("InCommands")
+          // [4.1]: `streamlets` is `Seq[Processor[?]]` now, so this match is no longer exhaustive
+          // on `Some(_: Streamlet)` — which `-Werror` caught. The case wants the port-bearing
+          // processor named "Sink" whatever kind declared it, so it matches on the wider type.
           val expected = context.streamlets.find("Sink")
           expected match {
-            case Some(streamlet: Streamlet) =>
+            case Some(streamlet) =>
               streamlet.id.value mustBe ("Sink")
               streamlet.inlets must (not be (empty))
               val expected = streamlet.inlets.head

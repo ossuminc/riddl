@@ -189,11 +189,14 @@ case class AnalysisResult(
     * and shipped in `2.0.0-rc.15`. It is DELETED rather than kept as a synonym: two names for one
     * answer is how a consumer ends up believing they differ.
     *
+    * A streamlet is defined by a NON-ZERO PORTLET COUNT, not by which keyword declared it, so a
+    * portless processor — including a stubbed or `void`-shaped `Streamlet` — is not one.
+    *
     * **Breaking**: the element type widened from `Streamlet` to `Processor[?]`. A caller wanting
     * only the `Streamlet` case class writes `.collect { case s: Streamlet => s }`.
     */
   def streamlets: Seq[Processor[?]] =
-    symbols.parentage.keys.collect { case p: Processor[?] => p }.toSeq
+    symbols.parentage.keys.collect { case p: Processor[?] if p.ports.nonEmpty => p }.toSeq
 
   /** Get all projectors in the model */
   def projectors: Seq[Projector] =

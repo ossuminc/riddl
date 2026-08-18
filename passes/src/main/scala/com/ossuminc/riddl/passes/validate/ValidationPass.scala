@@ -99,10 +99,11 @@ case class ValidationPass(
       inlets.toSeq,
       outlets.toSeq,
       connectors.toSeq,
-      // [4.1], RULED 2026-08-17: `streamlets` means ALL port-bearing processors, so the graph's
-      // node buffer -- which is already every Processor kind -- passes through UNNARROWED. The
-      // `.collect { case s: Streamlet => s }` that used to sit here was the narrowing.
-      processors.toSeq,
+      // [4.1], RULED 2026-08-17: a streamlet is any processor with a NON-ZERO PORTLET COUNT. The
+      // graph's node buffer is already every Processor kind, so the old
+      // `.collect { case s: Streamlet => s }` narrowing is gone -- but the portlet test is real,
+      // not a formality: a processor with no ports is not in a stream.
+      processors.toSeq.filter(_.ports.nonEmpty),
       computedHandlerCompleteness,
       deliverableTypes.toMap
     )
@@ -4526,7 +4527,15 @@ case class ValidationPass(
     val nonEmptyEntities = c.entities.filter(_.nonEmpty)
     if nonEmptyEntities.nonEmpty && c.nonEmpty then {
       // Completeness 4i: context with entities must have a Sink
-      val hasSinkOrInlet = c.streamlets.exists(_.inlets.nonEmpty)
+      // [4.1]: `c.streamlets` now includes ANY port-bearing processor, entities included — so the
+      // Entity exclusion this check has always relied on must be written out. It used to ride on
+      // the accessor being narrow, which is precisely the kind of rule that disappears when an
+      // accessor is widened underneath it. The suggestion below states the rule; now the code does
+      // too: driving an entity from outside IS an inbound stream and belongs at the context
+      // boundary where it can be seen.
+      val hasSinkOrInlet = c.streamlets.exists { s =>
+        s.inlets.nonEmpty && !s.isInstanceOf[Entity]
+      }
       if !hasSinkOrInlet then {
         messages.addCompleteness(
           c.errorLoc,

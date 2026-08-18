@@ -499,11 +499,11 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     // `filterThroughWrappers`, not `contents.processors`: the latter is deliberately LITERAL (see
     // its note in Contents.scala), and this must see an included processor exactly as the AST's
     // own `context.streamlets` containment accessor does.
-    val ctxProcessors = context.contents.filterThroughWrappers[Processor[?]]
-    // The DIAGRAM GATE stays on processors that actually declare a port. `ctxProcessors` is now
-    // true of nearly every context, so gating on it would emit a data-flow diagram for every
-    // context in the model, most of them with nothing to draw.
-    val ctxWithPorts = ctxProcessors.filter(p => p.inlets.nonEmpty || p.outlets.nonEmpty)
+    // [4.1]: `context.streamlets` IS this question now — every contained processor with a
+    // non-zero portlet count — so ask the accessor rather than re-deriving it here. The manual
+    // `filterThroughWrappers` that stood here was doing the accessor's job while the accessor was
+    // still narrow.
+    val ctxStreamlets = context.streamlets
     val connections = ctxConnectors.flatMap { connector =>
       if connector.nonEmpty then
         val maybeOutlet = refMap.definitionOf[Outlet](connector.from, context)
@@ -526,13 +526,17 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
           case _ => None
       else None
     }
-    // A portless Streamlet (a stub, or a `void` shape) still earns a diagram, as it did before
-    // [4.1] widened the field: it is a streaming component whose ports are simply not written yet.
-    val ctxStreamletStubs = ctxProcessors.collect { case s: Streamlet => s }
-    if ctxConnectors.nonEmpty || ctxWithPorts.nonEmpty || ctxStreamletStubs.nonEmpty then
+    // A portless `Streamlet` (a stub, or a `void` shape) is NOT a streamlet under [4.1], but it is
+    // still a streaming component whose ports are merely unwritten, and a context holding one
+    // produced a data flow diagram before this change. Keep it in the GATE so a stub context does
+    // not silently lose its diagram — while keeping it out of the DATA, which now answers the
+    // portlet question exactly.
+    val ctxStreamletStubs =
+      context.contents.filterThroughWrappers[Streamlet].filter(_.ports.isEmpty)
+    if ctxConnectors.nonEmpty || ctxStreamlets.nonEmpty || ctxStreamletStubs.nonEmpty then
       dataFlowDiagrams.put(
         context,
-        DataFlowDiagramData(context, ctxConnectors, ctxProcessors, connections)
+        DataFlowDiagramData(context, ctxConnectors, ctxStreamlets, connections)
       )
   }
 

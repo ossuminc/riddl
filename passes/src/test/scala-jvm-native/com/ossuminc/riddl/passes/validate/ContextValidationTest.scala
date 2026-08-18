@@ -149,8 +149,13 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
           Identifier((2, 9, rpi), "src"),
           Some(Source(At.empty))
         )
-        context.streamlets.size mustBe 1
-        context.streamlets.head mustBe expected
+        // [4.1]: `source src is { ??? }` declares NO portlets, so it is not a streamlet under the
+        // ruling — a streamlet is a processor with a non-zero portlet count, whatever keyword
+        // declared it. The case is about what the PARSER produced, so it asks the contents.
+        context.streamlets mustBe empty
+        val declared = context.contents.filter[Streamlet]
+        declared.size mustBe 1
+        declared.head mustBe expected
       }
     }
     "allow projectors" in { (td: TestData) =>
