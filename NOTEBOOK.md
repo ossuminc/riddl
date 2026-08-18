@@ -40,6 +40,16 @@ with `git clone` (not actions/checkout, which cannot write outside the workspace
 skipping and the log green, so check for "skipping rather than failing" before
 believing a corpus run passed.
 
+**`loadBytes` on Native: content is INTACT; REDIRECTS are what it cannot do.** sttp's
+Scala Native curl backend exposes only `Content-Length` among response headers, so
+`Location` is invisible and a 302 cannot be followed — by hand or via
+`FollowRedirectsBackend`. Use a direct URL on Native, or fetch on the JVM.
+**An earlier note here claimed the backend truncated binary content at the first NUL.
+That was a theory, it was wrong, and it survived three sessions because it fitted the
+symptom** — the "short body" was the 302's own empty body. It was settled by making the
+error print its own evidence (`Headers present: [Content-Length]`) rather than guessing
+a fourth time.
+
 **Traps — every one bit someone here.**
 
 - **A "missing data" defect is often a WRONG ANSWER instead.** Revert the fix and
@@ -57,6 +67,9 @@ believing a corpus run passed.
 - **`Keywords.keyword` ends in `./`, a CUT** — wrap an optional keyword-led clause
   in `NoCut` or the enclosing alternative cannot backtrack.
 - **`AST.Set` shadows `scala.Set`** — three separate compile errors in one day.
+- **A WARM SBT SERVER does not see an env var set on a later invocation.** An opt-in
+  test gated on `RIDDL_NETWORK_TESTS` cancelled and read as "disabled" when the real
+  cause was a server started before the variable existed. `sbt -batch shutdown` first.
 - **Never `sbt … | tail -N` for a multi-module run** — it discards the module
   summaries that tell you what actually ran.
 
