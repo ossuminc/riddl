@@ -1520,7 +1520,11 @@ that needs a ruling before either can be fixed.
   on the CONTEXT and route the inner definition's port to it within the context —
   but it is 491 sites and belongs to those repos, not this one. **This blocks
   nothing here**; riddlc is correct. Task drops owed to `../riddl-models` and
-  `../riddl-examples`. **[1.6] was ruled with NO adaptor exemption, so the count stands
+  `../riddl-examples`. **riddl-models is DONE as of 2026-08-18** — 190 entry points at
+  0 errors / 0 completeness / 0 usage, verified with `2.0.0-rc.16-20-c075f1af`. What
+  remains is **riddl-examples alone: 49 errors, 48 completeness**, and it is the only
+  thing keeping riddl's own corpus gate red. Task dropped in that repo.
+  **[1.6] was ruled with NO adaptor exemption, so the original count stood
   at 491** — the 12 adaptor-terminated sites migrate like the rest.
   **Second, separate cost, from [1.7]'s ruling:** a `tell` target needs BOTH a declared
   inlet AND a connector into it, so clearing each of the 24 no-inlet warnings takes two

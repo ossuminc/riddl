@@ -46,6 +46,18 @@ queried repository with no index (26 corpus sites, predicted 26). **The measurem
 worth keeping**: naming the queried FIELD is not derivable — 406/406 repository
 query bodies are prose, and query-type fields map to a stored field 6% of the time.
 
+**riddl-models is CLEAN and riddl-examples is the only thing keeping the gate red.**
+Verified with `2.0.0-rc.16-20-c075f1af`: riddl-models 190 entry points at 0 errors /
+0 completeness / 0 usage (12 warnings + 2 style left, both now removable by them);
+riddl-examples still at 49 errors / 48 completeness. Task drops in both repos.
+**rc.17 cannot certify clean until riddl-examples is migrated** — its 44 boundary
+errors are what fail the 192 tests in `commands`/`riddlLib`/`riddlc`.
+
+**Two riddlc defects riddl-models found are FIXED** (`c075f1af0`): the `persistent`
+contradiction (fire on CROSSING, not touching) and the unsatisfiable "consider an
+adaptor" advisory. **The trap worth remembering: a check whose demand no legal
+spelling could satisfy** — Error without the keyword, Warning with it.
+
 **Build state, verified 2026-08-18:**
 
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
