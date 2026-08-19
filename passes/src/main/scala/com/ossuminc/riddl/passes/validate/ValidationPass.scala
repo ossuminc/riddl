@@ -3112,6 +3112,7 @@ case class ValidationPass(
     }
     checkEntityIntentions(entity)
     checkEventSourcing(entity)
+    checkSnapshotsOption(entity)
     // Completeness: an entity should define command and event types, and its
     // handlers should cover each command. These checks were previously emitted
     // as AIHelperPass tips. They are advisory (message types are often defined
@@ -3184,6 +3185,42 @@ case class ValidationPass(
     * event (R3/R4). These are Errors, not warnings: a model failing them is not incompletely
     * described, it is impossible to event-source.
     */
+  /** `option snapshots` says journal-derived snapshots are taken, so rehydration replays only the
+    * entries after the newest one. It means nothing without a journal, so it is an ERROR on an
+    * entity that is not event-sourced.
+    *
+    * Error rather than the registry's parent-kind style nudge, for the reason a misplaced
+    * `persistent` is an Error: the option asserts something the entity cannot provide, and there is
+    * no reading under which it is a weaker-but-legitimate choice. The registry restricts it to
+    * `Entity`; this narrows it to the entities where it can mean anything at all.
+    *
+    * **Absence is NOT "unspecified" — it is the default, and it means take no snapshots and replay
+    * the whole log** (author's ruling, 2026-08-19). Many entities see fewer than a hundred events
+    * in their lifespan, and an ephemeral one goes through a handful of transitions before it
+    * terminates; snapshotting those spends storage and write volume to save a replay that was
+    * never expensive. So there is deliberately no diagnostic for an event-sourced entity that
+    * omits it.
+    *
+    * Reads the INTENTION, which is the only spelling that reaches here: `EntityParser` consumes any
+    * deprecated `option event-sourced` into `EntityIntention.EventSourced` and drops it from the
+    * metadata, so an entity carrying the old spelling arrives indistinguishable from one written
+    * the current way.
+    */
+  private def checkSnapshotsOption(entity: Entity): Unit = {
+    if !entity.isEventSourced then
+      entity.options.find(_.name == "snapshots").foreach { opt =>
+        messages.addError(
+          opt.loc,
+          s"${entity.identify} declares 'option snapshots' but is not event-sourced; there is no " +
+            "event journal to snapshot",
+          suggestion = "Write 'event-sourced entity' if its state really is rebuilt by replaying " +
+            "events, or remove the option. Snapshots bound the cost of replaying a journal, so " +
+            "they mean nothing where there is no journal."
+        )
+      }
+    end if
+  }
+
   private def checkEventSourcing(entity: Entity): Unit = {
     if entity.isEmpty || !entity.isEventSourced then return
 

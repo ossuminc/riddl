@@ -212,6 +212,28 @@ object RecognizedOptions:
     // options that were published by KnownOptions.entity but never registered here,
     // so every use of one drew a spurious "not a recognized RIDDL option" warning.
     // All are simple markers with no arguments.
+    // `snapshots` asks the generator to keep journal-derived snapshots so rehydration replays only
+    // the entries after the newest one, instead of the whole log.
+    //
+    // **Its ABSENCE is meaningful and is the default (author's ruling, 2026-08-19): take NO
+    // snapshots, and rehydrate by replaying every event.** That is the right default more often
+    // than it looks -- many entities see fewer than a hundred events in their whole lifespan, and
+    // an ephemeral one goes through a handful of transitions before it terminates. Snapshotting
+    // those costs storage and write volume to save a replay that was never expensive.
+    //
+    // It is NOT a policy enum. An earlier shape offered `none`/`row`/`periodic N`; the ruling is
+    // that the model says only WHETHER to snapshot, and the generator picks the mechanism and the
+    // interval -- those depend on update rate, read/write mix and physical layout, none of which
+    // is in the model.
+    //
+    // Entity only. Snapshotting a journal means nothing where there is no journal, which is why
+    // `checkSnapshotsOption` makes it an Error on an entity that is not event-sourced rather than
+    // leaving it as a parent-kind style nudge.
+    "snapshots" -> OptionSpec(
+      Seq("Entity"),
+      0,
+      0
+    ),
     "event-sourced" -> OptionSpec(
       Seq("Entity"),
       0,
