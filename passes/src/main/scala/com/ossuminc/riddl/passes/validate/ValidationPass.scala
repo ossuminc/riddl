@@ -667,6 +667,7 @@ case class ValidationPass(
       )
     // A23: refusals (require/error) must precede any effect within each linear statement list.
     checkRefusalsFirst(onClause.statements)
+    checkErrorTerminal(onClause.statements)
   end validateOnClause
 
   private def validateOnMessageClause(omc: OnMessageLikeClause, parents: Parents): Unit = {
@@ -4660,6 +4661,7 @@ case class ValidationPass(
     // A23: refusals must precede any effect in the do-step's statement list (undo/compensation is
     // NOT checked — it has different, compensation semantics and is out of A23's scope).
     checkRefusalsFirst(s.doStatements.toSeq.collect { case st: Statement => st })
+    checkErrorTerminal(s.doStatements.toSeq.collect { case st: Statement => st })
     check(
       s.doStatements.nonEmpty == s.undoStatements.nonEmpty,
       "A saga step with do statements must also have revert statements, and vice versa",
@@ -5856,18 +5858,96 @@ case class ValidationPass(
       )
   end asksIn
 
-  /** A23: is `s` an EFFECT statement — one that mutates state, changes behavior, or emits a
-    * message? This is the shared A23 effect set: A26's pure-function bans
-    * (`set`/`morph`/`become`/`send`/ `tell`/`yield`) plus A45's `put` and A70/instance-identity's
-    * `terminate` (ends an instance — as much an effect as `tell`). It deliberately EXCLUDES the
-    * refusals themselves (`require`/`error`) and the opaque `CodeStatement` (unclassifiable — not
-    * treated as an effect).
+  /** A23: is `s` an effect for the "refusals first" rule — one that transforms THIS instance's
+    * state before a refusal could abandon it?
+    *
+    * **NARROWED 2026-08-19 (author's ruling) to LOCAL state transformation only.** The set was
+    * `set`/`morph`/`become`/`send`/`tell`/`yield`/`put`/`terminate`, borrowed wholesale from A26's
+    * pure-function bans — but A26 asks "is this pure?" and A23 asks "would refusing now leave a
+    * partial change?", and those are different questions. A transmission leaves nothing partial
+    * HERE. It may cause a state change somewhere else, later, when something receives it, and the
+    * author's ruling is that this remote "maybe" is acceptable: it is *"locally immutable"*, which
+    * is what A23 is actually about.
+    *
+    * Out, and why:
+    *   - `send`/`tell` — transmissions; any state they cause is elsewhere and later.
+    *   - `yield` — also a transmission. In an event-sourced entity the state change is applied by
+    *     the entity's OWN `on event` clause, and R3/R4 already FORCE the `set` to live there
+    *     rather than beside the `yield`, so the yield itself transforms nothing locally.
+    *   - `become` — a BEHAVIOR transition, not a state transition (author's ruling, explicit).
+    *   - `put` — delivers to a UI Output; a transmission, not this instance's state.
+    *
+    * In, and why: `set` and `morph` transform the state record; `terminate` ends the instance,
+    * which is the most complete state change available. Refusing after any of those really does
+    * leave the partial change A23 exists to prevent.
+    *
+    * **This narrowing is what makes the `error`-is-terminal rule migratable.** The corpus idiom is
+    * "refuse AND publish a rejection event", 268 sites in reactive-bbq; with `error` terminal the
+    * `send` must move BEFORE it, and under the old set that was itself an A23 error — so neither
+    * order was legal and the idiom became inexpressible. Now it is a reordering.
+    *
+    * Still EXCLUDES the refusals themselves (`require`/`error`) and the opaque `CodeStatement`.
     */
   private def isEffectStatement(s: Statement): Boolean = s match
-    case _: SetStatement | _: MorphStatement | _: BecomeStatement | _: SendStatement |
-        _: TellStatement | _: YieldStatement | _: PutStatement | _: TerminateStatement =>
-      true
-    case _ => false
+    case _: SetStatement | _: MorphStatement | _: TerminateStatement => true
+    case _                                                           => false
+
+  /** `error` is TERMINAL in its block: a statement after one is unreachable (author's ruling,
+    * 2026-08-19).
+    *
+    * `error` refuses unconditionally, so nothing after it can run. riddl-generator lowers it to a
+    * terminal `return`, which made every following statement unreachable Java — a compile error —
+    * at 268 sites in reactive-bbq. The alternative reading, that the following statements "record
+    * the refusal and carry on", was considered and rejected outright: it *"suggests 'throw out
+    * control flow, it's not important!' which is ridiculous"*.
+    *
+    * **`require` is deliberately NOT terminal.** `require X` refuses only when X fails and
+    * continues when it holds, so statements after it are ordinary and must not be flagged. Only
+    * `error` refuses unconditionally. This is why the check matches `ErrorStatement` alone rather
+    * than the refusal pair A23 uses.
+    *
+    * Per statement LIST and recursing the same way `checkRefusalsFirst` does — each `when` branch,
+    * `match` case and `foreach` body is its own list. An `error` inside a branch says nothing about
+    * statements following the `when` itself, because that branch may not be taken.
+    *
+    * It found 268 sites the generator could not compile and that riddlc had accepted for the whole
+    * life of the language, which is the same shape as every other check added this month: the
+    * silence was the defect.
+    */
+  private def checkErrorTerminal(stmts: Seq[Statement]): Unit =
+    var refusedAt: Option[At] = None
+    stmts.foreach { stmt =>
+      refusedAt match
+        case Some(eLoc) =>
+          messages.addError(
+            stmt.loc,
+            s"this statement is unreachable: the 'error' at ${eLoc.toShort} refuses, which ends " +
+              "the block",
+            suggestion = "Move this statement BEFORE the 'error' — a transmission there is legal, " +
+              "since A23 bans only local state changes ahead of a refusal — or remove it. An " +
+              "'error' is unconditional; use 'require' if the refusal is conditional and later " +
+              "statements should still run."
+          )
+        case None =>
+          stmt match
+            case e: ErrorStatement => refusedAt = Some(e.loc)
+            case _                 => ()
+      end match
+      // Nested bodies are their OWN lists, exactly as in `checkRefusalsFirst`.
+      stmt match
+        case ws: WhenStatement =>
+          checkErrorTerminal(ws.thenStatements.toSeq.collect { case s: Statement => s })
+          checkErrorTerminal(ws.elseStatements.toSeq.collect { case s: Statement => s })
+        case ms: MatchStatement =>
+          ms.cases.foreach(mc =>
+            checkErrorTerminal(mc.statements.toSeq.collect { case s: Statement => s })
+          )
+          checkErrorTerminal(ms.default.toSeq.collect { case s: Statement => s })
+        case fs: ForeachStatement =>
+          checkErrorTerminal(fs.doStatements.toSeq.collect { case s: Statement => s })
+        case _ => ()
+    }
+  end checkErrorTerminal
 
   /** A23 ("refusals first"): within a single linear statement list, no EFFECT statement may appear
     * before a REFUSAL (`require`/`error`). Performing effects before refusing would leave partial

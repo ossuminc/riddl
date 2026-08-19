@@ -73,12 +73,21 @@ class RefusalsFirstTest extends AbstractValidatingTest {
       ) mustBe 1
     }
 
-    "reject an error after an effect (send then error)" in { (td: TestData) =>
+    // REVERSED 2026-08-19 by the author's ruling narrowing A23 to LOCAL state transformation.
+    // A `send` leaves nothing partial HERE -- any state it causes is elsewhere and later -- so it
+    // is no longer an effect for this rule, and `send` then `error` is legal.
+    //
+    // This is not a softening for its own sake: it is what makes the new "error is terminal" rule
+    // migratable. The corpus idiom is "refuse AND publish a rejection event" (268 sites in
+    // reactive-bbq); with `error` terminal the send must move BEFORE it, and under the old effect
+    // set that was itself an A23 error -- so neither order was legal and the idiom became
+    // inexpressible. See ErrorTerminalTest.
+    "ACCEPT a transmission before a refusal (send then error)" in { (td: TestData) =>
       onClauseA23Count(
         """send event Ev to outlet O
           |error "reject"""".stripMargin,
         td
-      ) mustBe 1
+      ) mustBe 0
     }
 
     "check each nested branch as its own list (effect then error inside a when)" in {
@@ -144,9 +153,15 @@ class RefusalsFirstTest extends AbstractValidatingTest {
 
   "A23 refusals-first (saga step)" should {
 
+    // The EFFECT here is `terminate`, not the `send` this case used before 2026-08-19. A `send` is
+    // no longer an A23 effect (see the on-clause case above), and flipping this to 0 would have
+    // made it indistinguishable from its companion below -- both would assert 0, and nothing would
+    // still prove that saga do-statements are checked AT ALL. `terminate` keeps the case honest:
+    // it remains an effect (ending an instance is the most complete state change there is) and a
+    // saga step is permitted to use one.
     "reject an effect before a refusal in do-statements" in { (td: TestData) =>
       sagaA23Count(
-        """send command Go to inlet d.c.e.tank.inn error "no"""",
+        """terminate self.id error "no"""",
         """send command UndoGo to inlet d.c.e.tank.inn""",
         td
       ) mustBe 1
