@@ -15,6 +15,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.{Files, Path}
 import scala.jdk.StreamConverters.*
+import scala.util.Using
 
 /** Comprehensive BAST round-trip test against all riddl-models.
   *
@@ -119,10 +120,16 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
     base: Path
   ): Seq[(Path, Path)] = {
     if !Files.isDirectory(base) then return Seq.empty
-    val allConf = Files
-      .walk(base, 5)
-      .filter(p => p.toString.endsWith(".conf") && Files.isRegularFile(p))
-      .toScala(Seq)
+    // `Files.walk`/`Files.list` return a Stream that HOLDS OPEN DirectoryStreams, and the javadoc
+    // is explicit that it must be closed. This suite opens one per model plus one per directory in
+    // every temp tree it deletes -- roughly two thousand per run -- and until 2026-08-19 closed
+    // none of them. That is native memory and file descriptors held until GC happens to run, which
+    // on Scala Native (gc = "none", see build.sbt) is NEVER.
+    val allConf = Using.resource(Files.walk(base, 5)) { stream =>
+      stream
+        .filter(p => p.toString.endsWith(".conf") && Files.isRegularFile(p))
+        .toScala(Seq)
+    }
 
     allConf.flatMap { confFile =>
       val depth = base.relativize(confFile).getNameCount - 1
@@ -230,10 +237,11 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
       }
 
       // Find the unbastify output file
-      val outputRiddlFiles = Files
-        .list(unbastDir)
-        .filter(p => p.toString.endsWith(".riddl"))
-        .toScala(Seq)
+      val outputRiddlFiles = Using.resource(Files.list(unbastDir)) { stream =>
+        stream
+          .filter(p => p.toString.endsWith(".riddl"))
+          .toScala(Seq)
+      }
       assert(
         outputRiddlFiles.nonEmpty,
         "No .riddl files in unbastify output"
@@ -312,9 +320,11 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
 
   private def deleteRecursively(path: Path): Unit = {
     if Files.isDirectory(path) then
-      Files
-        .list(path)
-        .forEach(p => deleteRecursively(p.asInstanceOf[Path]))
+      // Collect the children and CLOSE the stream before recursing. Recursing inside `forEach`
+      // keeps a DirectoryStream open for every level of the tree at once, so the deepest model
+      // path decided how many were held simultaneously.
+      val children = Using.resource(Files.list(path))(_.toScala(Seq))
+      children.foreach(deleteRecursively)
     end if
     Files.deleteIfExists(path)
   }
