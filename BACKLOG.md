@@ -812,27 +812,42 @@ each want an approved plan before implementation, per the standing rule.
   "is not connected" messages today, because its tell-target entities declare no inlets
   at all. The interaction appears only as models comply.
 
-- **[1.8]** **The Native CI leg has been broken since the corpus moved onto it, and
-  every run since is a false red.** Found cutting rc.17 (2026-08-18). `1c318b844`
-  ("[1.3] Read sibling corpora, skip when absent") put `RiddlModelsRoundTripTest`'s
-  189 cases on Native — a real coverage win, and the thing item 5 above was asking
-  for. It also tripled the job: run **#2331** (`1679bb256`, the last green) took
-  **18 min**; **#2332** took 36 and failed; **#2348/#2349** took **55-56 min** and
-  failed. **Eighteen consecutive failures at the time of writing.**
-  **The signature is a lost runner, not a failing test**: the *"Build And Test Native
-  Versions"* step is still marked `in_progress` when the job dies, and GitHub holds
-  **no log blob at all** — `/actions/jobs/<id>/logs` returns `BlobNotFound` and the
-  attempt-level archive is an EMPTY zip. So there is nothing to read, which is why
-  this went unnoticed for a day. `timeout-minutes: 60` (`scala.yml:18`) is the
-  suspected ceiling; 55-56 min of work plus teardown collides with it.
-  **The tests themselves are FINE** — rc.17 certified Native locally at **2726** run
-  (floor 2708), and `release.yml`'s native-build succeeded on BOTH macos-latest and
-  ubuntu-latest for the rc.17 tag, so Native compiles and links in CI. Only the TEST
-  leg is over budget.
-  Options, unranked: raise `timeout-minutes`; split the Native leg into its own job
-  or matrix rows; or isolate the corpus per platform, which is the decision item 5
-  says the remaining gap is blocked on. **Do not "fix" it by taking the corpus back
-  off Native** — that re-opens the gap [1.3] closed.
+- **[1.8]** **The Native CI leg was one row that died as a LOST RUNNER; split per module 2026-08-19.**
+  `1c318b844` put `RiddlModelsRoundTripTest`'s 189 corpus cases onto Native — the coverage win item
+  5 asked for — and the single Native row went **18 min → 36 → 55–56**, then failed **18 runs in a
+  row**.
+
+  **It was NOT the `timeout-minutes: 60` cap, and an earlier version of this entry said it was.**
+  Recorded so nobody loops on it again: the two failure modes are DISTINGUISHABLE, and both
+  occurred here.
+
+  | | duration | step state | logs |
+  |---|---|---|---|
+  | real timeout | 60:23 | `cancelled` | present |
+  | what actually kept happening | **55:01** | still `in_progress` | **none — `BlobNotFound`, empty attempt archive** |
+
+  A job that hits the cap is cancelled by GitHub and keeps its logs. One that vanishes mid-step
+  having written nothing has lost its agent. **Raising the timeout would therefore have fixed
+  nothing** — it never reached it.
+
+  **Leading cause: memory, and the prime suspect is `gc = "none"`.** sbt-ossuminc's `With.Native`
+  defaults the GC to `none` and `build.sbt` never overrides it (zero occurrences of `gc`). Scala
+  Native's `none` GC is a bump allocator that **never reclaims** — correct for a short-lived
+  binary, wrong for a test binary that runs 189 models × 4 riddlc invocations in one process.
+  Direct supporting evidence: the same seven-module `tNative` chain run locally died with
+  **`fatal signal 9`** (SIGKILL), while every module passed when re-run on its own.
+
+  **Done:** the Native leg is now **seven per-module matrix rows** (`scala.yml`), each a fresh
+  runner with its own memory, running in parallel, and naming the module when it fails instead of
+  vanishing. Exactly one row (`Native-riddlc`) carries the release artifacts. Every row is
+  bracketed by `free -m` / `df -h`, runs sbt under `/usr/bin/time -v` for **Maximum resident set
+  size**, and greps `dmesg` for kernel OOM lines.
+
+  **Still open — needs the owner's call:** whether to change the Native GC from `none` to `immix`
+  or `commix`. It is not a test-only setting: it also governs the **shipped `riddlc` binary**, so
+  it trades a little throughput for bounded memory in a long-running compile. The per-module split
+  may well be enough on its own; the diagnostics above are what will say. **Do not change the GC
+  without measuring first** — that is what the RSS numbers are for.
 
 - **[1.9]** **CI's corpus-dependent greens are replayed from cache and cannot be
   trusted.** Found cutting rc.17 (2026-08-18), and it is the reason [1.8] above was

@@ -31,8 +31,57 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Native is SPLIT PER MODULE, the others are not. Until 2026-08-19 Native was one row
+      # running `cNative; tNative` for all seven modules, and after `1c318b844` put
+      # RiddlModelsRoundTripTest's 189 corpus cases onto Native that row went 18 min -> 36 -> 55
+      # and then died 18 runs in a row. It did NOT hit `timeout-minutes`: it died at 55-56 of 60
+      # with the step still `in_progress` and NO log blob at all -- a lost runner, not a timeout.
+      # (A real timeout looks different, and we have one to compare against: an earlier attempt
+      # ran to 60:23 and GitHub marked the step `cancelled`, with its logs intact.)
+      #
+      # Per-module rows buy three things: each row is a fresh runner with its own memory, they run
+      # in parallel so wall-clock drops rather than rises, and a failure names the MODULE instead
+      # of vanishing with the agent. The cost is recompiling Native once per row.
       matrix:
-        platform: [JVM, Native, JS]
+        include:
+          - platform: JVM
+            row: JVM
+            test-cmd: "; clean; cJVM; tJVM"
+            artifacts: 'yes'
+          - platform: JS
+            row: JS
+            test-cmd: "; clean; cJS; tJS"
+            artifacts: 'yes'
+          - platform: Native
+            row: Native-utils
+            test-cmd: "; clean; cNative; utilsNative/testOnly *"
+            artifacts: 'no'
+          - platform: Native
+            row: Native-language
+            test-cmd: "; clean; cNative; languageNative/testOnly *"
+            artifacts: 'no'
+          - platform: Native
+            row: Native-passes
+            test-cmd: "; clean; cNative; passesNative/testOnly *"
+            artifacts: 'no'
+          - platform: Native
+            row: Native-testkit
+            test-cmd: "; clean; cNative; testkitNative/testOnly *"
+            artifacts: 'no'
+          # The heaviest row by far: 189 corpus round trips, each running riddlc four times.
+          - platform: Native
+            row: Native-commands
+            test-cmd: "; clean; cNative; commandsNative/testOnly *"
+            artifacts: 'no'
+          - platform: Native
+            row: Native-riddlLib
+            test-cmd: "; clean; cNative; riddlLibNative/testOnly *"
+            artifacts: 'no'
+          # Carries the Native release artifacts, so exactly one Native row uploads them.
+          - platform: Native
+            row: Native-riddlc
+            test-cmd: "; clean; cNative; riddlcNative/testOnly *"
+            artifacts: 'yes'
     steps:
     - name: Checkout Code
       uses: actions/checkout@v6
@@ -110,9 +159,34 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libcurl4-openssl-dev libidn2-dev
 
-    - name: Build And Test ${{ matrix.platform }} Versions
+    # Resource diagnostics bracket the build because the Native failure mode is a LOST RUNNER
+    # with no logs, and a lost runner cannot tell you why it died. Memory is the leading
+    # suspicion: Scala Native is built with `gc = "none"` (sbt-ossuminc's default, never
+    # overridden here), which never reclaims, so a long-running test binary grows monotonically.
+    # `Maximum resident set size` from /usr/bin/time is the number that settles it.
+    - name: Resources before ${{ matrix.row }}
       run: |
-        sbt "; clean; c${{ matrix.platform }}; t${{ matrix.platform }}"
+        echo "cpus: $(nproc)"
+        free -m
+        df -h .
+
+    - name: Build And Test ${{ matrix.row }}
+      run: |
+        if command -v /usr/bin/time >/dev/null 2>&1; then
+          /usr/bin/time -v sbt "${{ matrix.test-cmd }}"
+        else
+          echo "note: /usr/bin/time absent; running without RSS measurement"
+          sbt "${{ matrix.test-cmd }}"
+        fi
+
+    - name: Resources after ${{ matrix.row }}
+      if: always()
+      run: |
+        free -m
+        df -h .
+        echo "--- kernel OOM evidence (empty means the kernel did not kill anything) ---"
+        sudo dmesg 2>/dev/null | grep -iE "out of memory|oom-kill|killed process" | tail -20 \
+          || echo "none found"
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@12fa20e14d449d310778f2d0af1e3b2f57dde2a7 # v2
@@ -135,7 +209,7 @@ jobs:
         sbt "; riddlc/Universal/packageBin; riddlLib/Universal/packageBin"
 
     - name: Package Native Release Artifacts
-      if: matrix.platform == 'Native'
+      if: matrix.platform == 'Native' && matrix.artifacts == 'yes'
       run: |
         sbt "; riddlcNative/nativeLink; riddlLibNative/nativeLink"
 
@@ -155,7 +229,7 @@ jobs:
           target/out/jvm/scala-3.9.0-RC4/riddl-lib/universal/*.zip
 
     - name: Collect Release Artifacts (Native)
-      if: matrix.platform == 'Native'
+      if: matrix.platform == 'Native' && matrix.artifacts == 'yes'
       uses: actions/upload-artifact@v6
       with:
         name: collect-release-artifacts-native
