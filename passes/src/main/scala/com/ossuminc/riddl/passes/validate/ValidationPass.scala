@@ -887,6 +887,99 @@ case class ValidationPass(
     case vr: ValueRef => valueRefType(vr, parents, lets, elements)
     case other        => operandType(other)
 
+  /** Expand a type to everything it stands for, following alias chains and — when asked —
+    * alternation members.
+    *
+    * REFERENCE IDENTITY throughout (`eq`, a `List`, never a `Set`). `Definition` overrides `equals`
+    * structurally, so a `Set` would fuse two DISTINCT types that happen to have identical contents
+    * and silently truncate a legitimate chain. Same reason `fieldsWithOwner` carries a visited list
+    * rather than a `Set`.
+    *
+    * The cycle guard is not hypothetical: `type A is B` / `type B is A` killed the stack in rc.14.
+    */
+  private def expandType(t: Type, throughAlternations: Boolean, seen: List[Type]): List[Type] =
+    if seen.exists(_ eq t) then Nil
+    else
+      val deeper: List[Type] = t.typEx match
+        case ate: AliasedTypeExpression =>
+          resolution.refMap
+            .definitionOf[Type](ate.pathId)
+            .toList
+            .flatMap(next => expandType(next, throughAlternations, t :: seen))
+        case alt: Alternation if throughAlternations =>
+          alt.of.toSeq.toList.flatMap { member =>
+            resolution.refMap
+              .definitionOf[Type](member.pathId)
+              .toList
+              .flatMap(next => expandType(next, throughAlternations, t :: seen))
+          }
+        case _ => Nil
+      t :: deeper
+
+  /** A `send`'s message must be ADMITTED by the portlet's DECLARED type (riddl-generator, measured
+    * 2026-08-19; author ruled Error the same day).
+    *
+    * It was 299 of 386 remaining javac errors in reactive-bbq — 77% — across 55 message types sent
+    * to outlets that do not admit them, in a model validating 100% clean. The declared type is the
+    * contract the connector and every downstream consumer are built on: riddlg lowers an
+    * alternation to a sealed interface, so an outlet becomes `Emitter<BarEvent>` and a non-member
+    * `send` has no lowering at all.
+    *
+    * ERROR, not a warning: unlike the non-persistent cross-context connector, there is no reading
+    * under which this is a deployment knowingly accepting a weaker guarantee. The consumer on the
+    * far end is typed by the portlet's type and cannot receive the value.
+    *
+    * BOTH portlet kinds, because `send` names either and both declare a type. This is NOT the
+    * symmetric inlet-side check riddl-generator also asked about — the author ruled that delivery
+    * is matched to a handler's `on` clause and an unmatched message is a no-op, and there is no
+    * `receive X from inlet Foo` to attach such a check to. That implicitness is deliberate: it is
+    * what keeps generator implementations free to choose how delivery happens.
+    *
+    * SILENT when either side is not statically determinable — an operand whose type cannot be
+    * resolved reports nothing rather than guessing, the same conservative rule `checkTerminate`
+    * follows. Both sides are expanded through aliases (reactive-bbq types its ports as
+    * `type SupplierEvent is SupplierSystem.ShipmentDelivered`), so the corpus's ordinary shape is
+    * admitted rather than newly condemned.
+    */
+  private def checkSendPortletType(
+    s: SendStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    // TWO-ARG lookup, and the parent is not optional. The refMap keys on (pathId, PARENT), so the
+    // single-argument form -- which is what `operandType` can use for a message, because a message
+    // ref is registered globally -- answers None for a portlet every time. Instrumented, not
+    // reasoned: `portletDef=None` on all six fixtures while the message side resolved fine. Same
+    // trap CLAUDE.md already records for an adaptor's `referent` and for `resolveIdTarget`.
+    val declaredRef: Option[TypeRef] =
+      parents.headOption
+        .flatMap(p => resolution.refMap.definitionOf[Portlet](s.portlet.pathId, p))
+        .flatMap {
+          case i: Inlet  => Some(i.type_)
+          case o: Outlet => Some(o.type_)
+        }
+    for
+      sent <- widenedOperandType(s.msg, parents, lets, elements)
+      ref <- declaredRef
+      declared <- resolution.refMap.definitionOf[Type](ref.pathId)
+    do
+      val admitted = expandType(declared, throughAlternations = true, Nil)
+      val offered = expandType(sent, throughAlternations = false, Nil)
+      if !offered.exists(o => admitted.exists(_ eq o)) then
+        messages.addError(
+          s.loc,
+          s"${s.portlet.format} is declared as ${declared.identify}, which does not admit " +
+            s"${sent.identify}",
+          suggestion = s"Send a message the portlet's declared type admits, or widen " +
+            s"${declared.identify} — if it is an alternation, add ${sent.identify} as a member. " +
+            "The consumer on the other end of this connection is typed by the declared type and " +
+            "cannot receive anything else."
+        )
+      end if
+    end for
+  end checkSendPortletType
+
   /** Publish what a `send`/`tell` delivers, so a LATER pass does not have to re-derive it — and,
     * for a `ValueRef` operand naming a `let`-local, could not.
     *
@@ -7931,6 +8024,7 @@ case class ValidationPass(
             case vr: ValueRef   => checkMessageOperandSource(vr, "send", parents, lets, elements)
             case mr: MessageRef => checkBareMessageOperand(mr, "send") // Task 4
           recordDeliverableType(s, s.msg, parents, lets, elements)
+          checkSendPortletType(s, parents, lets, elements)
         case s: TellStatement =>
           s.msg match
             case c: Constructor => validateValue(c, parents, lets, elements)

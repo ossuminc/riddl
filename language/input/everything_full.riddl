@@ -87,8 +87,10 @@ context full is {
       // Handle the ACommand
       on command ACommand {
         when "Something arrives" then
-          // we want to send an event
-          send event Inebriated to outlet APlant.Source.OutCommands
+          // APlant.Source.OutCommands is declared `type DoAThing`, so only a DoAThing may be
+          // placed on it. This used to send `event Inebriated`, which nothing rejected until the
+          // send/portlet conformance check landed (2026-08-19).
+          send command DoAThing(thingField = "another thing") to outlet APlant.Source.OutCommands
         end
       }
     }

@@ -130,7 +130,11 @@ class PathResolutionTest extends SharedResolvingTest {
         refMap.definitionOf[Type]("NoteList") must not be (empty)
         refMap.definitionOf[Inlet]("CompanyEvents_in") must not be (empty)
         refMap.definitionOf[Field]("LocationBase.address") must not be (empty)
-        refMap.definitionOf[Inlet]("Driver_in") must not be (empty)
+        // `Driver_in` is no longer asserted: dokn's only reference to it was
+        // `send result Location.LocationDetails to inlet Driver_in`, and that inlet is typed
+        // `DriverCommands` -- a Result is not a command. The send/portlet conformance check
+        // (2026-08-19) rejected it, and the correct model answers a query with `reply`, which
+        // names no portlet. Inlet resolution is still covered by `CompanyEvents_in` above.
         refMap.definitionOf[Type]("dokn.Address") must not be (empty)
         refMap.definitionOf[Type]("dokn.Address") must not be (empty)
       end onSuccess

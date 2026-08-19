@@ -40,7 +40,17 @@ domain dokn is {
               primaryContactEmail: EmailAddress
             }
             event CompanyAdded is { when: TimeStamp }
-            type CompanyEvent is one of { event CompanyAdded }
+            // Locations.Location publishes its events on this same outlet (there is only one
+            // event channel in this model), so the declared type has to admit them. Until the
+            // send/portlet conformance check landed (2026-08-19) the alternation named only
+            // CompanyAdded while four Location events were placed on it, and nothing said so.
+            type CompanyEvent is one of {
+              event CompanyAdded or
+              event dokn.Locations.Location.DeliveryLocationAdded or
+              event dokn.Locations.Location.LocationNameChanged or
+              event dokn.Locations.Location.TicketReportedAtLocation or
+              event dokn.Locations.Location.NotesForLocationModified
+            }
 
             record fields is {
               companyId: CompanyId,
@@ -201,10 +211,10 @@ domain dokn is {
                 set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"
               }
               on query Location.getLocationDetails {
-                send result Location.LocationDetails to inlet Driver_in
+                reply result Location.LocationDetails
               }
               on query Location.getLocationNotes {
-                send result Location.LocationNotes(notes = "the notes") to outlet Driver_out
+                reply result Location.LocationNotes(notes = "the notes")
               }
             }
         } with {

@@ -2,6 +2,10 @@ domain ignore1 is {
   context ignore2 is {
     command Something = { ??? }
     command UndoSomething = { ??? }
+    // The saga step sends Something and its reversion sends UndoSomething, both to the one inlet,
+    // so the inlet must admit both. Declared as an alternation rather than as two inlets so the
+    // sink keeps one arrival point, which is what the step pair actually models.
+    type SomethingOrUndo is one of { command Something or command UndoSomething }
     function AnotherThing {
       requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
     } with { explained as "A simple function for another" }
@@ -10,7 +14,7 @@ domain ignore1 is {
     } with { explained as "A reversion function for undoing AnotherThing" }
 
     entity blah is {
-      sink trashCan is { inlet in is command Something }
+      sink trashCan is { inlet in is type SomethingOrUndo }
      }
     saga name is {
       requires { p1: String, p2: String }

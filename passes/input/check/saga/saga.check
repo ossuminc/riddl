@@ -1,128 +1,128 @@
 passes/input/check/saga/saga.riddl(2:3->18):
  Context 'ignore2' has entities but no repository to persist them; entities are stateful and should be persisted:
    context ignore2 is {
-passes/input/check/saga/saga.riddl(5:5->26):
+passes/input/check/saga/saga.riddl(9:5->26):
  Function 'AnotherThing' in Context 'ignore2' should have statements:
      function AnotherThing {
-passes/input/check/saga/saga.riddl(6:18->19):
+passes/input/check/saga/saga.riddl(10:18->19):
  Field identifier 'a' is too short. The minimum length is 3:
        requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
-passes/input/check/saga/saga.riddl(6:16->57):
+passes/input/check/saga/saga.riddl(10:16->57):
  Inline aggregation on 'requires'/'returns' of Function 'AnotherThing' is deprecated:
        requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
-passes/input/check/saga/saga.riddl(6:67->68):
+passes/input/check/saga/saga.riddl(10:67->68):
  Field identifier 'b' is too short. The minimum length is 3:
        requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
-passes/input/check/saga/saga.riddl(6:65->7:5):
+passes/input/check/saga/saga.riddl(10:65->11:5):
  Inline aggregation on 'requires'/'returns' of Function 'AnotherThing' is deprecated:
        requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
      } with { explained as "A simple function for another" }
-passes/input/check/saga/saga.riddl(8:5->30):
+passes/input/check/saga/saga.riddl(12:5->30):
  Function 'UndoAnotherThing' in Context 'ignore2' should have statements:
      function UndoAnotherThing {
-passes/input/check/saga/saga.riddl(9:18->19):
+passes/input/check/saga/saga.riddl(13:18->19):
  Field identifier 'c' is too short. The minimum length is 3:
        requires { c: Integer with { described by "c" } } returns { d: Integer with { described by "d"} }
-passes/input/check/saga/saga.riddl(9:16->57):
+passes/input/check/saga/saga.riddl(13:16->57):
  Inline aggregation on 'requires'/'returns' of Function 'UndoAnotherThing' is deprecated:
        requires { c: Integer with { described by "c" } } returns { d: Integer with { described by "d"} }
-passes/input/check/saga/saga.riddl(9:67->68):
+passes/input/check/saga/saga.riddl(13:67->68):
  Field identifier 'd' is too short. The minimum length is 3:
        requires { c: Integer with { described by "c" } } returns { d: Integer with { described by "d"} }
-passes/input/check/saga/saga.riddl(9:65->10:5):
+passes/input/check/saga/saga.riddl(13:65->14:5):
  Inline aggregation on 'requires'/'returns' of Function 'UndoAnotherThing' is deprecated:
        requires { c: Integer with { described by "c" } } returns { d: Integer with { described by "d"} }
      } with { explained as "A reversion function for undoing AnotherThing" }
-passes/input/check/saga/saga.riddl(12:5->16):
+passes/input/check/saga/saga.riddl(16:5->16):
  Metadata in Entity 'blah' should not be empty:
      entity blah is {
-passes/input/check/saga/saga.riddl(12:5->16):
+passes/input/check/saga/saga.riddl(16:5->16):
  Entity 'blah' should have a description:
      entity blah is {
-passes/input/check/saga/saga.riddl(12:5->16):
+passes/input/check/saga/saga.riddl(16:5->16):
  Entity 'blah' must define at least one state:
      entity blah is {
-passes/input/check/saga/saga.riddl(12:5->16):
+passes/input/check/saga/saga.riddl(16:5->16):
  Entity 'blah' has no handlers and no states with handlers. Add a handler to the entity or add a state with a handler.:
      entity blah is {
-passes/input/check/saga/saga.riddl(12:5->16):
+passes/input/check/saga/saga.riddl(16:5->16):
  Entity 'blah' has no handlers to process messages:
      entity blah is {
-passes/input/check/saga/saga.riddl(12:5->16):
+passes/input/check/saga/saga.riddl(16:5->16):
  Entity 'blah' does not define an Id type for its identity:
      entity blah is {
-passes/input/check/saga/saga.riddl(13:7->20):
+passes/input/check/saga/saga.riddl(17:7->20):
  Metadata in Sink 'trashCan' should not be empty:
-       sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(13:7->20):
+       sink trashCan is { inlet in is type SomethingOrUndo }
+passes/input/check/saga/saga.riddl(17:7->20):
  Sink 'trashCan' should have a description:
-       sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(13:7->20):
+       sink trashCan is { inlet in is type SomethingOrUndo }
+passes/input/check/saga/saga.riddl(17:7->20):
  Sink 'trashCan' should have a handler:
-       sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(13:32->34):
+       sink trashCan is { inlet in is type SomethingOrUndo }
+passes/input/check/saga/saga.riddl(17:32->34):
  Inlet identifier 'in' is too short. The minimum length is 3:
-       sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(16:18->20):
+       sink trashCan is { inlet in is type SomethingOrUndo }
+passes/input/check/saga/saga.riddl(20:18->20):
  Field identifier 'p1' is too short. The minimum length is 3:
        requires { p1: String, p2: String }
-passes/input/check/saga/saga.riddl(16:18->20):
+passes/input/check/saga/saga.riddl(20:18->20):
  Metadata in Field 'p1' should not be empty:
        requires { p1: String, p2: String }
-passes/input/check/saga/saga.riddl(16:18->20):
+passes/input/check/saga/saga.riddl(20:18->20):
  Field 'p1' should have a description:
        requires { p1: String, p2: String }
-passes/input/check/saga/saga.riddl(16:30->32):
+passes/input/check/saga/saga.riddl(20:30->32):
  Field identifier 'p2' is too short. The minimum length is 3:
        requires { p1: String, p2: String }
-passes/input/check/saga/saga.riddl(16:30->32):
+passes/input/check/saga/saga.riddl(20:30->32):
  Metadata in Field 'p2' should not be empty:
        requires { p1: String, p2: String }
-passes/input/check/saga/saga.riddl(16:30->32):
+passes/input/check/saga/saga.riddl(20:30->32):
  Field 'p2' should have a description:
        requires { p1: String, p2: String }
-passes/input/check/saga/saga.riddl(16:16->17:7):
+passes/input/check/saga/saga.riddl(20:16->21:7):
  Inline aggregation on 'requires'/'returns' of Saga 'name' is deprecated:
        requires { p1: String, p2: String }
        returns {s: String }
-passes/input/check/saga/saga.riddl(17:16->17):
+passes/input/check/saga/saga.riddl(21:16->17):
  Field identifier 's' is too short. The minimum length is 3:
        returns {s: String }
-passes/input/check/saga/saga.riddl(17:16->17):
+passes/input/check/saga/saga.riddl(21:16->17):
  Metadata in Field 's' should not be empty:
        returns {s: String }
-passes/input/check/saga/saga.riddl(17:16->17):
+passes/input/check/saga/saga.riddl(21:16->17):
  Field 's' should have a description:
        returns {s: String }
-passes/input/check/saga/saga.riddl(17:15->18:7):
+passes/input/check/saga/saga.riddl(21:15->22:7):
  Inline aggregation on 'requires'/'returns' of Saga 'name' is deprecated:
        returns {s: String }
        step One is {
-passes/input/check/saga/saga.riddl(18:7->15):
+passes/input/check/saga/saga.riddl(22:7->15):
  SagaStep 'One' do-statements contain no 'tell command' to effect state changes:
        step One is {
-passes/input/check/saga/saga.riddl(25:7->15):
+passes/input/check/saga/saga.riddl(29:7->15):
  SagaStep 'Two' do-statements contain no 'tell command' to effect state changes:
        step Two is {
-passes/input/check/saga/saga.riddl(13:7->20):
+passes/input/check/saga/saga.riddl(17:7->20):
  Sink 'trashCan' has no connections to any connector:
-       sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(13:26->34):
+       sink trashCan is { inlet in is type SomethingOrUndo }
+passes/input/check/saga/saga.riddl(17:26->34):
  Inlet 'in' is not connected:
-       sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(5:5->26):
+       sink trashCan is { inlet in is type SomethingOrUndo }
+passes/input/check/saga/saga.riddl(9:5->26):
  Function 'AnotherThing' is unused:
      function AnotherThing {
-passes/input/check/saga/saga.riddl(8:5->30):
+passes/input/check/saga/saga.riddl(12:5->30):
  Function 'UndoAnotherThing' is unused:
      function UndoAnotherThing {
-passes/input/check/saga/saga.riddl(13:7->11):
+passes/input/check/saga/saga.riddl(17:7->11):
  The `sink` keyword is deprecated; use `processor trashCan as sink` instead:
-       sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(19:35->57):
+       sink trashCan is { inlet in is type SomethingOrUndo }
+passes/input/check/saga/saga.riddl(23:35->57):
  send to an inlet is deprecated and will be removed in 3.0; send to your outlet and connect it with a connector, or use `tell` to deliver directly to a processor:
          send command Something to inlet blah.trashCan.in
-passes/input/check/saga/saga.riddl(21:39->61):
+passes/input/check/saga/saga.riddl(25:39->61):
  send to an inlet is deprecated and will be removed in 3.0; send to your outlet and connect it with a connector, or use `tell` to deliver directly to a processor:
          send command UndoSomething to inlet blah.trashCan.in
 passes/input/check/saga/saga.riddl(1:1->15):
