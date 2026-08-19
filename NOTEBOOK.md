@@ -129,6 +129,57 @@ a fourth time.
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
 
+## Two silent-acceptance bugs, and a check that fired on nothing (2026-08-19) — DONE
+
+Both arrived as task files and both were verified against the released binary before
+a line was written — `2.0.0-rc.17` accepted each repro at exit 0 with no message of
+any kind.
+
+**A duplicate field name was invisible** (riddl-examples). `command C is { x is
+String, x is Integer }` validated clean AND survived an idempotent prettify round
+trip. Their whole corpus read as zero messages of every kind while 13 ShopifyCart
+definitions carried the same name twice; they found it by parsing their own output
+and counting names. Now an Error naming both locations, plus the call-site half
+(`C(x = 1, x = 2)`), which was equally silent.
+
+**The lesson is where the check had to GO, not what it does.** Putting it with the
+other aggregate checks fired on NOTHING, and the tests stayed red in a way that
+looked like the check was broken. `validateType` guards its type-expression walk
+with `if !t.typEx.isInstanceOf[AggregateTypeExpression]`, so `checkAggregation` and
+`checkAggregateUseCase` run ONLY for a nested inline aggregate — never for a
+top-level `command`/`type`, which is every aggregate a model actually writes. Their
+neighbours (field naming, identifier length, metadata) have the same blind spot and
+nobody has audited what else that guard silently excludes.
+
+**A `send` was never checked against the portlet's declared type** (riddl-generator,
+who measured it as 299 of 386 remaining javac errors in reactive-bbq — 77%, across
+55 message types, in a model validating 100% clean). Now an Error. Reid ruled Error
+because there is no reading under which it is a knowing deployment tradeoff: the
+consumer on the far end is typed by the portlet's type and cannot receive the value.
+
+**Reid's ruling on the symmetric question is worth keeping**, because it looks like
+an omission and is not: there is NO inlet-side check on what a handler claims to
+receive, because delivery is matched to an `on` clause and an unmatched message is a
+no-op — and there is no `receive X from inlet Foo` to attach a check to. That
+implicitness is deliberate, and it is what keeps generators free to choose how
+delivery happens. Of the four statements worth suspecting, `yield`/`reply` already
+had conformance and `tell` names a processor, which has no single declared type; only
+`send` had the hole.
+
+**Two traps this cost.** The portlet lookup needs the TWO-argument
+`definitionOf[Portlet](pathId, parent)` — the single-arg form answers `None` every
+time, and that was found by instrumenting, not by reading, because the message side
+resolved fine and only the portlet did not. And three of our OWN fixtures turned out
+to be wrong (`everything_full` sent an event to a command outlet; `saga` sent
+`UndoSomething` to an inlet admitting only `Something`; `dokn` under-declared an
+alternation and answered two queries by pushing a Result onto a stream port). Fixing
+fixtures rather than exempting them is the whole point — but note that editing a
+`.check` fixture shifts every hardcoded position in its golden, and the golden also
+embeds the source snippet.
+
+Corpus cost, accepted in advance with the Error ruling: **569 findings in 23 of 189
+models**, plus the 2 duplicate fields. Filed to riddl-models.
+
 ## Four "missing data" bugs, three of which were WRONG ANSWERS (2026-08-17)
 
 An autonomous run over the MessageFlowPass task file, `[2.3]`, `[2.4]` and `[2.2]`.
