@@ -159,6 +159,7 @@ is covered in that construct's phase. The builder emits references as
 | SendStatement | ✅ Phase 3 / A54 / A56 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); + PortletRef |
 | MorphStatement | ✅ Phase 3 / A54 / message-value T2 | value = RecordRef, Constructor, or ValueRef (kind `"bound"`, the same reserved spelling the message operands use) |
 | BecomeStatement | ✅ Phase 3 | |
+| ForwardStatement | ✅ 2026-08-19 | `{ "kind": "forward", "message": <msgRef\|constructor\|bound>, "to": "<path>", "target": "inlet"\|"outlet"\|"entity"\|… }` — ONE `target` field, not send's `portlet` plus tell's `processor`: `forward` takes both shapes and the kind string already says which, so two fields would make "both set" and "neither set" representable for no gain |
 | TellStatement | ✅ Phase 3 / A54 / A56 / A70 task 6 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); optional `"by": "<field-name>"` disambiguates which `Id(target)`-typed field is the address (task 6 of processor-instance-identity, 2026-08-13) |
 | YieldStatement | ✅ Phase 3 / A54 / message-value T2 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); `"kind": "yield"` |
 | ReplyStatement | ✅ 2.0 / message-value T2 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); `"kind": "reply"`. Its own node and DTO since `reply` stopped being a deprecated synonym for `yield` — a command yields an event, a query replies a result |
