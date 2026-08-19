@@ -63,12 +63,13 @@ spelling could satisfy** — Error without the keyword, Warning with it.
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
   coordinates, npm `rc` dist-tag with `latest` still 1.31.0, homebrew touched only
   `riddlc-rc.rb`, `notify-blog: skipped`, both native binaries built.
-- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.18-3-1cd1f4bd`** (native binary), staged
-  2026-08-19 so the corpus can migrate to the `forward` statement, which rc.18 does NOT
-  have. Libraries `publishLocal`ed at the same version. **The corpus gate is RED by
-  design**: 178 findings across 12 of 189 models, filed to riddl-models — Reid is taking
-  it. Same sequence as rc.17's boundary Error and rc.18's send/portlet check.
-  It was briefly the clean tagged `2.0.0-rc.18` build at `231925a4c`. Replaced 2026-08-19 once rc.18 shipped, so
+- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.19`** (native binary, the CLEAN tagged
+  build at `6facf3b43` — not a snapshot), staged 2026-08-19. Both corpora need it: the
+  `forward` statement and the narrowed discharge rule ship in rc.19 and are not in
+  rc.18. **The corpus gate is RED by design** — 12 riddl-models models (178 findings)
+  and riddl-examples' `dokn` (10), tasks filed in both. Same sequence as rc.17's
+  boundary Error and rc.18's send/portlet check: the rule ships, the corpus migrates
+  against it, the gate returns to green. Replaced 2026-08-19 once rc.18 shipped, so
   the staged binary again names something released and reproducible; the tap's
   `riddlc-rc` now carries the same version. It was briefly the snapshot
   `2.0.0-rc.17-10-59e5d7f5`, staged so the corpora could migrate against the

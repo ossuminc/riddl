@@ -154,9 +154,23 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2775** | 7 |
-| JS | **850** | 5 |
-| Native | **2736** | 7 |
+| JVM | **2791** | 7 |
+| JS | **863** | 5 |
+| Native | **2752** | 7 |
+
+**Raised at 2.0.0-rc.19 (2026-08-19) to 2791 / 863 / 2752.** The delta was
+**+16 / +13 / +16**, and it reconciles exactly: 13 shared cases (`ForwardStatementTest`
+6, `SnapshotsOptionTest` 4, `ForwardStatementJsonRoundTripTest` 3) that all three rows
+see, plus 3 in `passes/src/test/scala-jvm-native` that JS correctly does not. **This is
+the mixed case worth studying** — a run where some rows move by more than others is the
+one where a skipping bug hides, and the only way to tell "JS is 3 lower because the
+suite is jvm-native" from "JS silently skipped a suite" is to have predicted the split
+first.
+
+**Note these floors count cases RUN, and rc.19 ran them with 15 FAILING** (see the
+deliberate-failure section below). A floor is a guard against tests being SKIPPED, not
+a claim that they passed; keep raising it on a red run, or the next green run inherits
+a floor that has quietly fallen behind.
 
 **Raised at 2.0.0-rc.18 (2026-08-19) to 2775 / 850 / 2736 — fully green on all three
 rows, zero failures, zero deliberate failures.** The delta was **+10 on EVERY row**,
@@ -200,11 +214,27 @@ and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
 
-**The deliberate-failure count is ZERO again as of 2026-08-19.** riddl-examples
-completed its rc.17 migration (`ba4bd22`, *"Record the rc.17 migration and the checks
-that now hold the corpus at zero"*), so `dokn` and `shopify-cart` validate clean and
-`RunRiddlcOnLocalTest` is green on **both** JVM and Native. **A red case is a real
-signal again — there is no expected-failure list to reach for.**
+**The deliberate-failure count is FIFTEEN as of 2.0.0-rc.19 (2026-08-19), and every
+one is a corpus that cannot migrate until the RC it migrates to exists.** rc.19 shipped
+the `forward` statement and NARROWED what discharges a `yields`/`replies` obligation --
+only `yield`/`reply`, `error`/`require` and `forward` settle a path now, where a bare
+`send`/`tell` used to. The reds:
+
+| count | what |
+|---|---|
+| 12 | `RiddlModelsRoundTripTest` -- riddl-models models whose handlers only `send` |
+| 1 | `Root2JsonCorpusTest` validation parity, reporting those same models |
+| 1 | `RunRiddlcOnLocalTest` `dokn` -- riddl-examples, 10 findings |
+| 1 | `Root2JsonFixturesTest`-adjacent parity, same cause |
+
+Tasks are filed in BOTH corpora (`2026-08-19-forward-the-delegated-message.md` in each).
+**Confirm a red case is one of these by its message -- "does not yield"/"does not
+reply" -- before accepting it.** Anything else is a regression.
+
+**Two shapes need DIFFERENT fixes, and only one is mechanical.** A handler that passes
+the message on becomes `forward`; a handler that declines by emitting a `*Rejected`
+event cannot forward anything and needs an explicit `error`/`require`, which changes
+what the model MEANS. Do not let a bulk edit turn the second into the first.
 
 **It was TWO for about a day, and the shape of that is worth keeping.** Those two
 cases failed at the moment rc.17 was cut, with exit 7 — 20 boundary + 10 persistence
