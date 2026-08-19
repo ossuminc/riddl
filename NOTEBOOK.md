@@ -63,8 +63,11 @@ spelling could satisfy** — Error without the keyword, Warning with it.
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
   coordinates, npm `rc` dist-tag with `latest` still 1.31.0, homebrew touched only
   `riddlc-rc.rb`, `notify-blog: skipped`, both native binaries built.
-- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.19`** (native binary, the CLEAN tagged
-  build at `6facf3b43` — not a snapshot), staged 2026-08-19. Both corpora need it: the
+- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.19-3-003aab99`** (native binary), staged
+  2026-08-19 with libraries `publishLocal`ed at the same version (17/17 coordinates in
+  `~/.ivy2/local`). It is a SNAPSHOT past the rc.19 tag on purpose: `error`-is-terminal
+  and the narrowed A23 are not in rc.19, and reactive-bbq needs both to migrate. It
+  briefly held the clean tagged `2.0.0-rc.19` build at `6facf3b43`. Both corpora need it: the
   `forward` statement and the narrowed discharge rule ship in rc.19 and are not in
   rc.18. **The corpus gate is RED by design** — 12 riddl-models models (178 findings)
   and riddl-examples' `dokn` (10), tasks filed in both. Same sequence as rc.17's
