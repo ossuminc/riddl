@@ -63,11 +63,17 @@ spelling could satisfy** — Error without the keyword, Warning with it.
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
   coordinates, npm `rc` dist-tag with `latest` still 1.31.0, homebrew touched only
   `riddlc-rc.rb`, `notify-blog: skipped`, both native binaries built.
-- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.16-18-3005b2ef`** (native binary),
-  installed 2026-08-18 so the corpora can be fixed against the new checks.
-  **This SUPERSEDES the earlier "leave it at rc.15 until 2.0.0 final" ruling** —
-  Reid asked for it explicitly. Previous binaries kept beside it as
-  `riddlc.rc15.bak` and `riddlc.rc16.bak`.
+- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.17-10-59e5d7f5`** (native binary),
+  installed 2026-08-19 so the corpora can be fixed against the duplicate-field and
+  send/portlet checks. **`2.0.0-rc.17` itself does NOT have them**, so re-validating
+  with the released binary — or the tap's `riddlc-rc` — will keep reporting the
+  corpus clean. **This SUPERSEDES the earlier "leave it at rc.15 until 2.0.0 final"
+  ruling** — Reid asked for a staged build explicitly. Previous binaries kept beside
+  it as `riddlc.rc15.bak`, `riddlc.rc16.bak` and `riddlc.rc17.bak`.
+  Verified on staging, not assumed: it reports the duplicate field, the duplicate
+  constructor argument, and the send/portlet mismatch on their repros, and **299
+  `does not admit` findings on reactive-bbq — the same number riddl-generator
+  measured independently as javac errors.**
   Libraries published locally at the same version (`~/.ivy2/local`), no clean and
   no tests, per instruction — the tree had just compiled green on all three
   platforms. Note it is `nativeLink` output, NOT `riddlc/stage`: what lives in
