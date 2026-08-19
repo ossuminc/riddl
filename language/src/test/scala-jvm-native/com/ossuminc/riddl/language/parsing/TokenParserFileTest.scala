@@ -58,8 +58,11 @@ class TokenParserFileTest extends AbstractParsingTest {
           // fixture's one type-first aggregate moved to kind-first -- `type X is command {` is
           // five tokens, `command X is {` is four. 2026-08-14: +5, because the fixture's one bare
           // `send command DoAThing` gained a constructor when a bare message operand became an
-          // Error -- `(thingField = "the thing")` is five tokens.
-          tokens.length must be(413)
+          // Error -- `(thingField = "the thing")` is five tokens. 2026-08-19: +7, because the
+          // fixture's `send event Inebriated` went to an outlet declared `type DoAThing` and the
+          // send/portlet conformance check made that an Error; it now sends a DoAThing, and a
+          // constructor plus its three comment lines is seven tokens more than a bare event ref.
+          tokens.length must be(420)
           val tasStr = tokens.toString
           tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
           tasStr must include("LiteralCode")
