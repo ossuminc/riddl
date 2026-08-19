@@ -142,6 +142,46 @@ a fourth time.
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
 
+## `error` is terminal, and the check that had to be RELAXED to allow it (2026-08-19) — DONE
+
+riddlg found 268 statements after an `error` in reactive-bbq, every one lowered to
+unreachable Java. They had never appeared in a build log because **javac suppresses its
+unreachable-code phase for any class that also has an attribution error** — so the
+diagnostic that would have caught them was itself suppressed by other errors. They were
+found by walking generated source.
+
+**The task file's most valuable content was a caveat, not its ask.** It said the fix is a
+reorder *"only if that rule permits a transmission — check that interaction before
+migrating: if effects-before-refusal forbids the send too, then neither order is legal."*
+It did forbid it. So making `error` terminal, on its own, would have made a 268-site idiom
+inexpressible in both orders.
+
+**A23's effect set had been borrowed from A26, and the two ask different questions.** A26
+asks *is this pure?*; A23 asks *would refusing now leave a partial change?* Reid narrowed
+A23 to local state transformation: `set`/`morph`/`terminate` stay, while `send`/`tell`/
+`yield`/`put` (transmissions — any state they cause is elsewhere and later) and `become`
+(a behavior transition, not a state one) come out. A borrowed predicate that reads
+plausibly is worth re-deriving from its own question.
+
+**Two lessons about the tests, both about not taking the cheap fix.**
+
+Two `RefusalsFirstTest` cases encoded the old rule. The on-clause one was genuinely
+reversed and says so. The saga one asserted a `send` before a refusal was rejected — and
+flipping it to 0 would have made it identical to its companion "undo-statements are not
+checked", so **nothing would still prove saga do-statements are checked at all**. It now
+uses `terminate`, which remains an effect and is legal in a saga step.
+
+**A grep that silently matched nothing nearly inverted my triage.** `grep '^\[error\]'`
+against riddlc output returns 0 whether there are no errors or the lines start with an
+ANSI colour escape. I reported "both orderings are accepted" from that, which was the
+opposite of the truth, and only caught it because the conclusion contradicted a rule I
+could see implemented in the source. **Strip ANSI before counting riddlc messages**, and
+treat a count that contradicts the code as a measurement bug before treating it as a
+finding.
+
+Third convergence in two days: riddlg's 268, my independent structural count of 268 across
+7 files, and the finished check's 268 corpus findings.
+
 ## `option snapshots`, and a CM gap found by asking the scope question (2026-08-19) — DONE
 
 riddlg asked for a snapshot policy declaration because it had been choosing for the
