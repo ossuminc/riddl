@@ -141,6 +141,49 @@ a fourth time.
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
 
+## `option snapshots`, and a CM gap found by asking the scope question (2026-08-19) — DONE
+
+riddlg asked for a snapshot policy declaration because it had been choosing for the
+modeller: it makes the row the snapshot, so every event rewrites the whole row. The
+cost argument is real (~100 MB of writes and WAL over 1000 events against ~11 MB) but
+it is not what settled it.
+
+**The triage question turned out to be the valuable part.** Before recommending
+anything I checked whether the Computational Model supported riddlg's stronger claim —
+that row-as-snapshot forecloses point-in-time reconstruction, and that reconstructability
+is a principal reason to choose event sourcing. **It did not.** §4 said only that replay
+must reproduce the same state changes, and explicitly listed *"snapshot and passivation
+policy"* as free to choose. So riddlg was CONFORMING while doing something Reid
+considered wrong, and the honest report was that the two readings led to different work:
+either the CM is incomplete (correctness) or the option is new capability (feature).
+
+Reid ruled the CM missed it. That turned a small option registration into a
+**must-preserve amendment**: state as of any past point must be reconstructible, how is
+free, and a current-state row that is the ONLY reconstruction mechanism is now
+non-conforming — which riddlg's is.
+
+**Two things I would have got wrong by building from the task file.**
+
+The filed shape was a policy enum with a parameter (`none`/`row`/`periodic N`). Reid cut
+it to presence-or-absence: the model says WHETHER, the generator picks mechanism and
+interval, because whether snapshotting pays turns on update rate, read/write mix and
+physical layout and none of that is in the model.
+
+And the task proposed absence meaning "unspecified, generator states its choice" —
+consistent with how options behave elsewhere. **Reid overruled it**: absence means take
+NO snapshots and replay the whole log, because many entities see under a hundred events
+in their lifespan and ephemeral ones a handful. Asking that question was worth it; it is
+the one place the sender's own suggestion was rejected, and building it their way would
+have left every silent model still at the generator's discretion.
+
+**A correction to my own reading, from Reid:** I described checking whether a deprecated
+`option event-sourced` could cause a false negative. Entity intentions replaced that
+spelling because event-sourcing materially affects implementation rather than being
+codegen advice. The check is safe either way — `EntityParser` consumes the deprecated
+option into the intention and drops it from metadata — but the framing was a step behind
+the language. The deprecated mapping does still exist in the parser; removing it is a 3.0
+change under the compatibility policy.
+
 ## `forward`, and what it cost to get the rule right (2026-08-19) — BUILT
 
 riddl-generator's last language gap before its 1.0.0: `yields` is declared on the
