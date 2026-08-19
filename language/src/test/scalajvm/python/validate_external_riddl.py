@@ -43,8 +43,13 @@ DEFAULT_EXTERNAL_REPO = RIDDL_ROOT.parent / "riddl-examples"
 
 # Files with known issues that should be expected to fail
 EXPECTED_FAILURES: Set[str] = {
-    # Trello model has missing definitions and invalid syntax - needs AI regeneration
-    "src/riddl/Trello/trello-riddl-model.riddl",
+    # Trello was listed here for "missing definitions and invalid syntax". It PASSES as of
+    # riddl-examples' rc.17 migration (2026-08-18), and the validator was printing
+    # "! ... (expected to fail but passed)" every run. Removed 2026-08-19.
+    #
+    # An entry that no longer fails is not harmless: this list is how the validator distinguishes
+    # a known-bad fixture from a regression, so a stale entry quietly withdraws a file from the
+    # gate it is supposed to be under.
 }
 
 

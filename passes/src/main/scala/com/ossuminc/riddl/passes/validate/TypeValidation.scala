@@ -93,7 +93,49 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
       )
   }
 
+  /** A field name may appear only ONCE in one aggregate.
+    *
+    * Reported by riddl-examples 2026-08-18: a duplicate survived validation AND an idempotent
+    * prettify round trip, so their whole corpus read as zero messages of every kind while 13
+    * ShopifyCart definitions carried the same name twice. They found it by parsing their own
+    * output and counting names -- nothing riddlc said pointed at it.
+    *
+    * ERROR, not a style warning: a repeated name makes the aggregate's SHAPE ambiguous, and every
+    * downstream consumer -- a generator, a BAST reader, riddlg -- has to pick one silently. That is
+    * a contradiction rather than untidiness, which is the line this repo draws for Error.
+    *
+    * Both locations are named. The author is looking at one of them and needs the other; a message
+    * that says only "declared twice" leaves them grepping.
+    *
+    * Called from BOTH aggregate sites -- plain `Aggregation` and `AggregateUseCaseTypeExpression`
+    * -- because the defect is in the shape, not in one container. The reported repro was a
+    * `command`, which is the second of those, so fixing only the first would have looked right and
+    * closed nothing.
+    */
+  protected def checkDuplicateFieldNames(fields: Seq[Field], container: String): this.type = {
+    fields
+      .groupBy(_.id.value)
+      .collect { case (name, fs) if fs.sizeIs > 1 => name -> fs.sortBy(_.loc.offset) }
+      .toSeq
+      .sortBy { case (_, fs) => fs.head.loc.offset } // stable output regardless of Map ordering
+      .foreach { case (name, fs) =>
+        val first = fs.head
+        fs.tail.foreach { dupe =>
+          messages.addError(
+            dupe.loc,
+            s"Field '$name' is declared more than once in $container; " +
+              s"the first declaration is at ${first.loc.format}",
+            suggestion = s"Rename one of them, or delete the redundant declaration. Two fields " +
+              s"named '$name' leave the aggregate's shape ambiguous, and every consumer has to " +
+              "choose one silently."
+          )
+        }
+      }
+    this
+  }
+
   private def checkAggregation(agg: Aggregation): this.type = {
+    checkDuplicateFieldNames(agg.fields, "this aggregation")
     checkSequence(agg.fields) { (field: Field) =>
       checkIdentifierLength(field)
         .check(
@@ -114,6 +156,7 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
     typeDef: Definition,
     parents: Parents
   ): this.type = {
+    checkDuplicateFieldNames(mt.fields, s"this ${mt.usecase.useCase}")
     checkSequence(mt.fields) { (field: Field) =>
       checkIdentifierLength(field)
         .check(

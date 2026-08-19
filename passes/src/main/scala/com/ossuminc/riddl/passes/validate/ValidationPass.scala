@@ -2211,9 +2211,20 @@ case class ValidationPass(
       checkTypeExpression(t.typEx, t, parents)
     }
     // A19: message types (AUCTE) skip checkTypeExpression above, so validate a `yields` clause here.
+    //
+    // The SAME skip is why the duplicate-field check is wired here rather than left in
+    // `checkAggregation`/`checkAggregateUseCase`. Those run only for a NESTED inline aggregate,
+    // reached through `checkTypeExpression` -- and the guard above excludes every
+    // `AggregateTypeExpression`, which is the shape a top-level `command`/`type` declaration has,
+    // i.e. essentially every aggregate a model actually writes. Putting the check with its
+    // siblings looked right and fired on nothing; this is the seam where a top-level aggregate is
+    // reachable at all. The calls in TypeValidation stay, and cover the nested case.
     t.typEx match {
-      case auc: AggregateUseCaseTypeExpression => checkUseCaseYields(auc, parents)
-      case _                                   => ()
+      case auc: AggregateUseCaseTypeExpression =>
+        checkUseCaseYields(auc, parents)
+        checkDuplicateFieldNames(auc.fields, t.identify)
+      case agg: Aggregation => checkDuplicateFieldNames(agg.fields, t.identify)
+      case _                => ()
     }
   }
 
@@ -7550,6 +7561,29 @@ case class ValidationPass(
         // because `Definition.equals` is structural and a `Set` would fuse two distinct identical
         // alias declarations and truncate a legitimate chain).
         val fields: Seq[Field] = aggregateFieldsOf(typ.typEx)
+        // The call-site half of the duplicate-field defect riddl-examples reported (2026-08-18):
+        // `Cmd(alpha = "a", alpha = "b")` was as silent as a doubly-declared field, and their
+        // migration produced BOTH at once -- renaming a field to a name already present duplicated
+        // the declaration AND every constructor argument that supplied it. Same reasoning for
+        // Error: two values for one field means a consumer picks one silently.
+        c.args
+          .filter(_.name.isDefined)
+          .groupBy(_.name.get.value)
+          .collect { case (name, as) if as.sizeIs > 1 => name -> as.sortBy(_.loc.offset) }
+          .toSeq
+          .sortBy { case (_, as) => as.head.loc.offset }
+          .foreach { case (name, as) =>
+            val first = as.head
+            as.tail.foreach { dupe =>
+              messages.addError(
+                dupe.loc,
+                s"Argument '$name' is supplied more than once in constructor of " +
+                  s"${typ.identify}; the first is at ${first.loc.format}",
+                suggestion = s"Supply '$name' once. Two values for one field leave it ambiguous " +
+                  "which the constructed message carries."
+              )
+            }
+          }
         // Ordering: positional args must precede named args.
         val firstNamed = c.args.indexWhere(_.name.isDefined)
         if firstNamed >= 0 && c.args.drop(firstNamed).exists(_.name.isEmpty) then
