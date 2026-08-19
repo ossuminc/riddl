@@ -400,6 +400,7 @@ lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Na
     )
   )
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
+  .nativeConfigure(nativeTestGC)
   .nativeConfigure(With.noMiMa)
   // See note on passes_cp re: Scala 3.8.x scaladoc race condition.
   .nativeConfigure(With.NoDocs)
@@ -415,6 +416,28 @@ val riddlLibNative =
   riddlLib_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
 
 val Commands = config("commands")
+// Scala Native's default GC is `none` (sbt-ossuminc's default, and riddl never overrides it): a
+// bump allocator that NEVER reclaims. That is right for a short-lived binary and catastrophic for a
+// test binary that runs the whole 189-model corpus in ONE process.
+//
+// MEASURED 2026-08-19, sampling the `riddl-commands-test` process while it ran the corpus suite:
+//
+//     gc = "none"    peak RSS  18.18 GB
+//     gc = "immix"   peak RSS   1.11 GB     (16x less, identical test results)
+//
+// A GitHub `ubuntu-latest` runner has 16 GB, so the Native corpus rows needed MORE MEMORY THAN THE
+// MACHINE HAD and the host killed them -- exit 143, "the runner has received a shutdown signal",
+// with no log blob to say why. That is the whole story of the 18-run Native CI outage.
+//
+// Scoped to `Test` DELIBERATELY. `nativeConfig` at project level also governs the SHIPPED riddlc
+// binary, and trading its throughput for bounded memory is a separate decision with a different
+// blast radius. Applied only to the two rows that read the corpus; the other five peak far below
+// the limit at `none` and are left alone.
+// A `def`, not a `val`: a top-level `val` here is initialized while the build file is still being
+// evaluated and blew up with `ExceptionInInitializerError` / a null Function1.
+def nativeTestGC(p: Project): Project =
+  p.settings(Test / nativeConfig ~= { _.withGC(scala.scalanative.build.GC.immix) })
+
 lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, Native)
   .settings(guardEmptyModule)
   .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
@@ -433,6 +456,7 @@ lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, N
   // NOTE: A JS variant is not supported because executing commands from
   // JavaScript is not easy.
   .nativeConfigure(With.Native(mode = "fast"))
+  .nativeConfigure(nativeTestGC)
   .nativeConfigure(jvmNativeSrc("commands"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
