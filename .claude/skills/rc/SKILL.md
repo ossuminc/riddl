@@ -138,9 +138,20 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2747** | 7 |
+| JVM | **2765** | 7 |
 | JS | **840** | 5 |
 | Native | **2726** | 7 |
+
+**All three rows re-measured on 2026-08-19 from a genuinely COLD cache** —
+2765 / 840 / 2726 across 765 suites and 6,331 cases, 19 module-legs each in its own
+sbt invocation. JVM rises 2747 -> 2765; JS and Native were already exact. The
+JVM/Native gap is **39**, unchanged, so nothing regressed when the corpus moved onto
+Native.
+**Two earlier attempts at that same run were NOT cold and both looked fine.** One
+passed `--sbt-cache`, which does not exist; the other used `set
+ThisBuild/localCacheDirectory`, which changes the reported value while the shared
+store keeps taking the writes. **Proof of coldness is the throwaway directory
+existing and growing** (12K -> 261M here), not the flag you passed.
 
 **Native raised to 2726 at 2.0.0-rc.17 (2026-08-18).** JVM and JS were NOT
 re-measured locally — CI certified them on the exact tagged commit, so there is no
@@ -164,23 +175,27 @@ and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
 
-**The deliberate-failure count is TWO again as of 2.0.0-rc.17 (2026-08-18)**, and it
-went back up for a legitimate reason. `RunRiddlcOnLocalTest`'s `dokn` and
-`shopify-cart` cases exit 7 against `../riddl-examples`, which has NOT migrated to
-rc.17's cross-context boundary Error and external-context persistence rule — `dokn`
-alone reports 20 boundary + 10 persistence errors. It could not have migrated first:
-**the rules ship in the RC the corpus needs in order to validate against them.** They
-reproduce identically on JVM and Native, so a platform divergence is ruled out, and
-they are BACKLOG [3.6], ruled acceptable when the Error was chosen over a warning.
-Expect this to return to ZERO once riddl-examples migrates.
-**Everything else is green.** The bar is unchanged: confirm a red case is one of these
-TWO, by the exit-7-plus-boundary-errors signature, before accepting it. Anything else
-is a regression.
+**The deliberate-failure count is ZERO again as of 2026-08-19.** riddl-examples
+completed its rc.17 migration (`ba4bd22`, *"Record the rc.17 migration and the checks
+that now hold the corpus at zero"*), so `dokn` and `shopify-cart` validate clean and
+`RunRiddlcOnLocalTest` is green on **both** JVM and Native. **A red case is a real
+signal again — there is no expected-failure list to reach for.**
 
-**Do NOT take CI's word for these two.** At rc.17 CI reported both PASSING at the
-tagged commit while they genuinely failed — it logged them 0.4 ms apart, replaying a
-cached result, because the corpora are external directories whose CONTENT is in no
-cache key. See BACKLOG [1.9]. **Certify corpus-dependent suites locally.**
+**It was TWO for about a day, and the shape of that is worth keeping.** Those two
+cases failed at the moment rc.17 was cut, with exit 7 — 20 boundary + 10 persistence
+errors on `dokn` — because the corpus could not migrate to rules that had not shipped
+yet. **That is the normal order of events for a rule with corpus cost, not a
+regression**: cut the RC, the corpus migrates against it, the gate returns to green.
+Expect the same the next time a check with corpus impact lands, and do not treat the
+temporary red as a reason to withhold the RC — withholding it is what prevents the
+fix.
+
+**When re-checking a corpus failure, use a FRESH cache.** The action cache does not
+hash the external corpus directories, so re-running against a warm cache replays the
+old verdict — a stale FAILURE just as readily as a stale pass. The re-check above
+used `-Dsbt.global.localcache` pointed at a new directory; the tell that it genuinely
+re-ran was that the cached result had been a failure and the run came back green with
+fresh validation output. See BACKLOG [1.9].
 
 **The Native floor jumped +252 at rc.16** (2456 → 2708) because the corpus suites
 stopped downloading and started reading sibling checkouts, and because riddlLib
@@ -238,7 +253,9 @@ Earlier floors: 2346 / 715 / 1619 on 2026-08-13; 2267 / 712 / 1552 earlier the s
 2230 / 712 / 1520
 and 2229 / 712 / 1519 on 2026-08-12; 2225 / 712 / 1515 at rc.12; 1846 / 674 /
 1339 at rc.10). These are
-LOCAL `testOnly *` totals, measured under a throwaway `--sbt-cache`. Local
+LOCAL `testOnly *` totals, measured under a throwaway cache pointed at with
+`-Dsbt.global.localcache=<dir>` (**NOT** `--sbt-cache`, which is not a real flag —
+see `../CLAUDE.md`). Local
 totals differ from CI's because platform-specific suites vary, so compare CI
 against CI and local against local.
 
