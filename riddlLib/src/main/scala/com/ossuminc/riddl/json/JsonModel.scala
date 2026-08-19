@@ -737,6 +737,16 @@ object JsonModel:
     */
   case class SendStmtDto(message: MsgOperandDto, to: String, portlet: String) extends StatementDto
 
+  /** `{ "kind": "forward", "message": <msgRef|constructor>, "to": "<path>", "target":
+    * "inlet"|"outlet"|"entity"|"context"|"projector"|"repository"|"adaptor" }`
+    *
+    * ONE `target` field rather than send's `portlet` and tell's `processor`, because `forward`
+    * takes both shapes and the kind string already says which: a portlet kind is `inlet`/`outlet`
+    * and a processor kind is never either. Two fields would make the invalid states -- both set,
+    * neither set -- representable for no gain.
+    */
+  case class ForwardStmtDto(message: MsgOperandDto, to: String, target: String) extends StatementDto
+
   /** `{ "kind": "morph", "entity": "<path>", "state": "<path>", "value": <msgRef|constructor> }` */
   case class MorphStmtDto(entity: String, state: String, value: MsgOperandDto) extends StatementDto
 
@@ -1937,6 +1947,8 @@ object JsonModel:
           case "set" =>
             SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), readValue(m("value")))
           case "send" => SendStmtDto(readMsgOperand(m("message")), m("to").str, m("portlet").str)
+          case "forward" =>
+            ForwardStmtDto(readMsgOperand(m("message")), m("to").str, m("target").str)
           case "morph" =>
             MorphStmtDto(m("entity").str, m("state").str, readMsgOperand(m("value")))
           case "become" => BecomeStmtDto(m("entity").str, m("handler").str)
@@ -2046,6 +2058,13 @@ object JsonModel:
           "message" -> writeMsgOperand(message),
           "to" -> ujson.Str(to),
           "portlet" -> ujson.Str(portlet)
+        )
+      case ForwardStmtDto(message, to, target) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("forward"),
+          "message" -> writeMsgOperand(message),
+          "to" -> ujson.Str(to),
+          "target" -> ujson.Str(target)
         )
       case MorphStmtDto(entity, state, value) =>
         ujson.Obj(

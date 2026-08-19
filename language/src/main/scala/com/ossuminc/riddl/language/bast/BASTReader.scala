@@ -1180,6 +1180,19 @@ class BASTReader(
         val args = readSeq(() => readConstructorArg())
         TerminateStatement(loc, target, args)
 
+      case 21 => // Forward (delegation; discharges the yields/replies obligation)
+        val msg = readMessageOperand()
+        val shape = reader.readU8()
+        val target: PortletRef[Portlet] | ProcessorRef[Processor[?]] = shape match
+          case 0 => readPortletRef()
+          case 1 => readProcessorRef()
+          case other =>
+            throw new IllegalStateException(
+              s"BAST forward target shape $other is neither portlet (0) nor processor (1) at " +
+                s"${loc.format}; the file may be from a newer build or corrupt"
+            )
+        ForwardStatement(loc, msg, target)
+
       case _ =>
         // THROW, do not fabricate. This arm used to return a PromptStatement carrying
         // "<unknown statement N>", so an unreadable tag decoded into a PLAUSIBLE model that

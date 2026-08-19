@@ -265,6 +265,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: MorphStatement     => writeMorphStatement(s)
       case s: BecomeStatement    => writeBecomeStatement(s)
       case s: TellStatement      => writeTellStatement(s)
+      case s: ForwardStatement   => writeForwardStatement(s)
       case s: WhenStatement      => writeWhenStatement(s)
       case s: MatchStatement     => writeMatchStatement(s)
       case s: LetStatement       => writeLetStatement(s)
@@ -1184,6 +1185,24 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeMessageOperand(s.msg) // A54: bare ref or constructor
     writePortletRef(s.portlet)
+  }
+
+  def writeForwardStatement(s: ForwardStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(21) // Forward statement — next free sub-kind after 20
+    writeLocation(s.loc)
+    writeMessageOperand(s.msg)
+    // ONE discriminator byte before the ref, because `forward` takes both transmission shapes and
+    // the two refs have different wire encodings. Without it the reader cannot know which to read
+    // and would misalign every byte after -- the failure mode that names the DERAIL point rather
+    // than the cause.
+    s.target match
+      case portlet: PortletRef[?] =>
+        writer.writeU8(0)
+        writePortletRef(portlet)
+      case processor: ProcessorRef[?] =>
+        writer.writeU8(1)
+        writeProcessorRef(processor)
   }
 
   def writeMorphStatement(s: MorphStatement): Unit = {

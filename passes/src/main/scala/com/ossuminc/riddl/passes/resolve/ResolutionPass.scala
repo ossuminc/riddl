@@ -388,6 +388,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case TellStatement(_, msg, processorRef, _) =>
         resolveMessageOperand(msg, parents)
         associateUsage(parents.head, resolveARef[Processor[?]](processorRef, parents))
+      case ForwardStatement(_, msg, target) =>
+        // `forward` takes BOTH transmission shapes, so the target is resolved as whichever it is.
+        // Enumerated rather than given a wildcard: the union has exactly two members, and a
+        // wildcard here would silently stop resolving a third if one were ever added.
+        resolveMessageOperand(msg, parents)
+        target match
+          case portlet: PortletRef[?] =>
+            associateUsage[Portlet](parents.head, resolveARef[Portlet](portlet, parents))
+          case processor: ProcessorRef[?] =>
+            associateUsage(parents.head, resolveARef[Processor[?]](processor, parents))
       case _: PromptStatement => () // no references
       case _: ErrorStatement  => () // no references
       case rs: RequireStatement =>

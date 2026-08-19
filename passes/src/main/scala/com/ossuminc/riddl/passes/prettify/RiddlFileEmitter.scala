@@ -658,6 +658,14 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         emitConstructorOperand(msg)
         add(s" to ${processorRef.format}${by.map(b => s" by ${b.format}").getOrElse("")}")
         nl
+      case ForwardStatement(_, msg, target) =>
+        // Same reasoning as `SendStatement`: the operand may be a `Constructor` carrying a
+        // `PromptValue` ascription, so it must go through `emitConstructorOperand` rather than
+        // `.format`. `target.format` is safe -- a reference renders no nested value.
+        addIndent("forward ")
+        emitConstructorOperand(msg)
+        add(s" to ${target.format}")
+        nl
       case YieldStatement(_, msg) =>
         addIndent("yield ")
         emitConstructorOperand(msg)

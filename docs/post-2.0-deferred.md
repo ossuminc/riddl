@@ -29,3 +29,34 @@ deliberately out of scope for the 2.0 release — BACKLOG.md holds
   `aggregation` alternative in `func_input`/`func_output` in the EBNF + a GBNF
   regen, the `ArgDto.fields` read path in JSON, and an external-corpus re-run.
   Sequence: deprecate loudly for a release, then remove.
+
+## RBAC / authorization in the language (Issue #535)
+
+Reid, filed 2026-08-04 as a DRAFT ("do not act on this"), moved here 2026-08-19
+and **not to be raised again until 2.0.0 has shipped**.
+
+Security is a cross-cutting design element that should be expressible in the
+model. The sketch:
+
+```riddl
+role RWAccess is read, write with { briefly "A role that allows read-write access" }
+role ROAccess is read with { briefly "A role that allows read-only access" }
+context Foo is {
+  accessible by RWAccess
+  handler Writeables is {
+    accessible by ROAccess
+    ???
+  }
+}
+```
+
+`role` becomes a new definition, and definitions may declare who may access them.
+At context level it covers every message in every handler in that context; on a
+handler it covers the messages that handler handles. **Most-specific-specification
+wins.**
+
+**Status when moved: genuinely a draft.** "Why we cannot derive it ourselves",
+"Semantics we are assuming" and "Acceptance criteria" were all empty. It needs a
+design pass before it needs an implementation, and that pass is post-2.0 work by
+the author's ruling.
+

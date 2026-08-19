@@ -887,6 +887,69 @@ case class ValidationPass(
     case vr: ValueRef => valueRefType(vr, parents, lets, elements)
     case other        => operandType(other)
 
+  /** `forward` is legal ONLY where there is something to delegate (author's ruling, 2026-08-19):
+    * a command that declares `yields`, or a query that declares `replies`.
+    *
+    * **You cannot delegate an event or a result.** Those record what happened; they owe no answer,
+    * so there is no obligation for a `forward` to discharge and the statement would be claiming to
+    * pass on a responsibility that does not exist. A command or query with NO declaration is
+    * rejected for the same reason -- nothing is owed.
+    *
+    * The operand's TYPE must match the handled message. Values are not compared: a handler may
+    * adjust field contents -- incrementing a counter, say -- and still be forwarding "the same
+    * message". Alias chains are followed on both sides, so the corpus's `type X is Y.Z` house
+    * style is not condemned.
+    */
+  private def checkForward(
+    f: ForwardStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    val handled: Option[Type] = parents
+      .collectFirst { case omc: OnMessageClause if omc.msg.nonEmpty => omc }
+      .flatMap(omc => resolution.refMap.definitionOf[Type](omc.msg.pathId))
+
+    val delegable: Boolean = handled.exists { h =>
+      h.typEx match
+        case auc: AggregateUseCaseTypeExpression =>
+          (auc.usecase == AggregateUseCase.CommandCase ||
+            auc.usecase == AggregateUseCase.QueryCase) && auc.yields.isDefined
+        case _ => false
+    }
+
+    if !delegable then
+      messages.addError(
+        f.loc,
+        "'forward' is only allowed in a clause handling a command that declares 'yields' or a " +
+          "query that declares 'replies'; there is no response obligation here to delegate",
+        suggestion = "Use 'send' or 'tell' to transmit a message that discharges nothing. " +
+          "'forward' says the declared response is produced by whatever handles this message " +
+          "downstream, so it needs a declared response to speak about -- an event or a result " +
+          "records what happened and owes no answer."
+      )
+    else
+      // Shape, not contents. Both sides expand through aliases; `expandType` guards cycles by
+      // reference identity for the reason recorded at its definition.
+      for
+        h <- handled
+        sent <- widenedOperandType(f.msg, parents, lets, elements)
+      do
+        val handledSide = expandType(h, throughAlternations = false, Nil)
+        val sentSide = expandType(sent, throughAlternations = false, Nil)
+        if !sentSide.exists(x => handledSide.exists(_ eq x)) then
+          messages.addError(
+            f.loc,
+            s"'forward' must pass on the message this clause handles: ${h.identify} is handled " +
+              s"but ${sent.identify} is forwarded",
+            suggestion = s"Forward the handled message, or a value of ${h.identify}. To transmit " +
+              "something else use 'send' or 'tell' -- that is a different message, not a delegation."
+          )
+        end if
+      end for
+    end if
+  end checkForward
+
   /** Expand a type to everything it stands for, following alias chains and — when asked —
     * alternation members.
     *
@@ -941,8 +1004,10 @@ case class ValidationPass(
     * `type SupplierEvent is SupplierSystem.ShipmentDelivered`), so the corpus's ordinary shape is
     * admitted rather than newly condemned.
     */
-  private def checkSendPortletType(
-    s: SendStatement,
+  private def checkTransmittedPortletType(
+    loc: At,
+    msg: MessageRef | Constructor | ValueRef,
+    portlet: PortletRef[?],
     parents: Parents,
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
@@ -954,13 +1019,13 @@ case class ValidationPass(
     // trap CLAUDE.md already records for an adaptor's `referent` and for `resolveIdTarget`.
     val declaredRef: Option[TypeRef] =
       parents.headOption
-        .flatMap(p => resolution.refMap.definitionOf[Portlet](s.portlet.pathId, p))
+        .flatMap(p => resolution.refMap.definitionOf[Portlet](portlet.pathId, p))
         .flatMap {
           case i: Inlet  => Some(i.type_)
           case o: Outlet => Some(o.type_)
         }
     for
-      sent <- widenedOperandType(s.msg, parents, lets, elements)
+      sent <- widenedOperandType(msg, parents, lets, elements)
       ref <- declaredRef
       declared <- resolution.refMap.definitionOf[Type](ref.pathId)
     do
@@ -968,17 +1033,17 @@ case class ValidationPass(
       val offered = expandType(sent, throughAlternations = false, Nil)
       if !offered.exists(o => admitted.exists(_ eq o)) then
         messages.addError(
-          s.loc,
-          s"${s.portlet.format} is declared as ${declared.identify}, which does not admit " +
+          loc,
+          s"${portlet.format} is declared as ${declared.identify}, which does not admit " +
             s"${sent.identify}",
-          suggestion = s"Send a message the portlet's declared type admits, or widen " +
+          suggestion = s"Transmit a message the portlet's declared type admits, or widen " +
             s"${declared.identify} — if it is an alternation, add ${sent.identify} as a member. " +
             "The consumer on the other end of this connection is typed by the declared type and " +
             "cannot receive anything else."
         )
       end if
     end for
-  end checkSendPortletType
+  end checkTransmittedPortletType
 
   /** Publish what a `send`/`tell` delivers, so a LATER pass does not have to re-derive it — and,
     * for a `ValueRef` operand naming a `let`-local, could not.
@@ -1625,6 +1690,18 @@ case class ValidationPass(
           case _: Constructor  => ()
           case _: ValueRef     => ()
         checkRef[Portlet](portlet, parents)
+      case ForwardStatement(_, msg, target) =>
+        // Same operand split as send/tell: a bare MessageRef is checked here, while a Constructor
+        // and a bare ValueRef need the threaded `let`/element scope only `checkStatementScopes`
+        // has. Everything specific to `forward` -- which clauses may hold it, whether the operand
+        // matches the handled message, what may follow it -- lives there too, for the same reason.
+        msg match
+          case ref: MessageRef => checkRef[Type](ref, parents)
+          case _: Constructor  => ()
+          case _: ValueRef     => ()
+        target match
+          case portlet: PortletRef[?]     => checkRef[Portlet](portlet, parents)
+          case processor: ProcessorRef[?] => checkRef[Processor[?]](processor, parents)
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
         checkRef[State](state, parents)
@@ -1875,8 +1952,10 @@ case class ValidationPass(
               // report the same mistake twice -- `checkResponsePairing` already names a `yield` in a
               // query clause, and a second "does not reply on every path" adds nothing.
               case _: YieldStatement | _: ReplyStatement => true
-              case _: SendStatement | _: TellStatement   => true
-              case _                                     => false
+              // `forward` settles by DELEGATING: whatever handles the message downstream produces
+              // the declared response.
+              case _: ForwardStatement => true
+              case _                   => false
           }
           auc.yields match {
             case Some(declaredYield) =>
@@ -7927,7 +8006,44 @@ case class ValidationPass(
     // `lets`, so the shadowing has to be expressed by DROPPING the name here rather than by
     // consultation order.
     var elements = inScopeElements
+    // `forward` is NOT terminal (author's ruling): statements may follow it. But the response has
+    // been delegated, so producing it here too is a contradiction, and anything else after it is
+    // usually a sign the forward wanted to be last. Tracked per statement LIST -- a nested
+    // when/match body recurses with its own tracker, which is right: a `forward` in one branch
+    // says nothing about the other.
+    var forwardedAt: Option[At] = None
     stmts.foreach { stmt =>
+      forwardedAt.foreach { fLoc =>
+        stmt match
+          case y: YieldStatement =>
+            messages.addError(
+              y.loc,
+              "'yield' after a 'forward' in the same clause: the response was delegated, so this " +
+                "clause cannot also produce it",
+              suggestion = s"Remove the 'yield', or remove the 'forward' at ${fLoc.format}. " +
+                "Exactly one of them answers for this message."
+            )
+          case r: ReplyStatement =>
+            messages.addError(
+              r.loc,
+              "'reply' after a 'forward' in the same clause: the response was delegated, so this " +
+                "clause cannot also produce it",
+              suggestion = s"Remove the 'reply', or remove the 'forward' at ${fLoc.format}. " +
+                "Exactly one of them answers for this message."
+            )
+          case _: SendStatement | _: TellStatement =>
+            messages.addStyle(
+              stmt.loc,
+              "a 'forward' should generally be the last statement in its clause; transmitting " +
+                "again after delegating is legal but usually unintended",
+              suggestion = s"Move the 'forward' at ${fLoc.format} after this statement, unless " +
+                "transmitting after delegating is deliberate."
+            )
+          case _ => ()
+      }
+      stmt match
+        case f: ForwardStatement => if forwardedAt.isEmpty then forwardedAt = Some(f.loc)
+        case _                   => ()
       // A70/instance-identity Task 7: initiate/terminate are effects banned in a function body and
       // in an on-activate/on-passivate clause. Checked for EVERY statement in this list, ahead of
       // the per-kind match below -- mirrors `checkStateReadScope`'s placement ahead of
@@ -8024,7 +8140,20 @@ case class ValidationPass(
             case vr: ValueRef   => checkMessageOperandSource(vr, "send", parents, lets, elements)
             case mr: MessageRef => checkBareMessageOperand(mr, "send") // Task 4
           recordDeliverableType(s, s.msg, parents, lets, elements)
-          checkSendPortletType(s, parents, lets, elements)
+          checkTransmittedPortletType(s.loc, s.msg, s.portlet, parents, lets, elements)
+        case s: ForwardStatement =>
+          s.msg match
+            case c: Constructor => validateValue(c, parents, lets, elements)
+            case vr: ValueRef   => checkMessageOperandSource(vr, "forward", parents, lets, elements)
+            case mr: MessageRef => checkBareMessageOperand(mr, "forward")
+          recordDeliverableType(s, s.msg, parents, lets, elements)
+          checkForward(s, parents, lets, elements)
+          // A `forward` is still a transmission, so rc.18's portlet-admits rule applies unchanged
+          // -- but only to the portlet shape; a processor target has no single declared type.
+          s.target match
+            case portlet: PortletRef[?] =>
+              checkTransmittedPortletType(s.loc, s.msg, portlet, parents, lets, elements)
+            case _: ProcessorRef[?] => ()
         case s: TellStatement =>
           s.msg match
             case c: Constructor => validateValue(c, parents, lets, elements)
@@ -8163,9 +8292,9 @@ case class ValidationPass(
           // flavours the arithmetic predicts exactly: a `do`+`reply` handler counted as
           // PromptOnly, a `reply`-only handler as Empty. The Empty branch's own suggestion
           // already names `reply` as a fix, so a user could follow the advice and still be warned.
-          case _: TellStatement | _: SendStatement | _: YieldStatement | _: ReplyStatement |
-              _: MorphStatement | _: SetStatement | _: BecomeStatement | _: ErrorStatement |
-              _: CodeStatement | _: PutStatement | _: TerminateStatement =>
+          case _: TellStatement | _: SendStatement | _: ForwardStatement | _: YieldStatement |
+              _: ReplyStatement | _: MorphStatement | _: SetStatement | _: BecomeStatement |
+              _: ErrorStatement | _: CodeStatement | _: PutStatement | _: TerminateStatement =>
             // A45: `put` publishes to a UI output — an executable effect. A70/instance-identity:
             // `terminate` ends an instance -- as executable an effect as `tell`. (ReturnStatement
             // is not added here: it only occurs in function bodies, which are classified by

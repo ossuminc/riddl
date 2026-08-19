@@ -162,9 +162,13 @@ class URLBASTRoundTripTest extends AbstractValidatingTest {
 
   "the format revision" should {
 
-    "stay at 18 -- this fix rides the unreleased numeric-literals bump, it does not add one" in {
+    // Was "stay at 18": that assertion was correct only while 18 was UNRELEASED and this fix
+    // could ride it. 18 shipped in 2.0.0-rc.15, so the next wire-format change had to bump, and
+    // the `forward` statement (sub-kind 21) is it. The assertion is kept rather than deleted --
+    // it is what makes an accidental bump visible -- but it now tracks the shipped revision.
+    "be 19 -- `forward` bumped it, because 18 has shipped and cannot be ridden again" in {
       (td: TestData) =>
-        FORMAT_REVISION mustBe 18.toShort
+        FORMAT_REVISION mustBe 19.toShort
     }
   }
 }

@@ -173,6 +173,7 @@ object Keywords {
   def `for`[u: P]: P[Unit] = keyword(Keyword.for_)
 
   def foreach[u: P]: P[Unit] = keyword(Keyword.foreach)
+  def forward[u: P]: P[Unit] = keyword(Keyword.forward)
 
   def from[u: P]: P[Unit] = keyword(Keyword.from)
 
@@ -620,6 +621,7 @@ object Keyword {
   final val focus = "focus"
   final val for_ = "for"
   final val foreach = "foreach"
+  final val forward = "forward"
   final val form = "form"
   final val from = "from"
   final val fully = "fully"
@@ -793,6 +795,7 @@ object Keyword {
     focus,
     for_,
     foreach,
+    forward,
     form,
     from,
     fully,

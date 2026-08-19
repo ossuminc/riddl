@@ -135,9 +135,11 @@ class TypedHoleBASTRoundTripTest extends AbstractValidatingTest {
   }
 
   "the format revision" should {
-    "stay at 18 -- this rides the unreleased shared bump, it does not add one" in {
+    // See URLBASTRoundTripTest: "stay at 18" held only while 18 was unreleased. It shipped in
+    // 2.0.0-rc.15, so `forward` bumped to 19.
+    "be 19 -- `forward` bumped it, because 18 has shipped and cannot be ridden again" in {
       (td: TestData) =>
-        FORMAT_REVISION mustBe 18.toShort
+        FORMAT_REVISION mustBe 19.toShort
     }
   }
 }

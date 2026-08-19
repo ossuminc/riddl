@@ -1380,6 +1380,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         case sr: StateRef => SetStmtDto(None, Some(path(sr.pathId)), serializeValue(value))
     case SendStatement(_, msg, portlet) =>
       val (pp, pk) = portletRef(portlet); SendStmtDto(serializeDeliverableOperand(msg), pp, pk)
+    case ForwardStatement(_, msg, target) =>
+      // Both shapes collapse to one (path, kind) pair -- the kind string distinguishes them.
+      val (fp, fk) = target match
+        case portlet: PortletRef[?]     => portletRef(portlet)
+        case processor: ProcessorRef[?] => processorRef(processor)
+      ForwardStmtDto(serializeDeliverableOperand(msg), fp, fk)
     case MorphStatement(_, entity, state, value) =>
       // A9b/A54: morph value is a RecordRef (serialized as a record-kinded MessageRefDto) or a
       // Constructor.

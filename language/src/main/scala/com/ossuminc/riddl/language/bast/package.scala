@@ -142,7 +142,12 @@ package object bast {
     // exist. Riding 18 again would make two mutually unreadable wire formats share a revision
     // number, which is precisely the state the revision gate exists to prevent, and it would fail
     // SILENTLY: the gate would pass and the reader would misalign.
-    18 // numeric literals + Constant carries a tagged value + URL carries scheme/authority + A20
+    // 19 adds the `forward` statement (sub-kind 21), whose payload is a message operand followed
+    // by ONE discriminator byte (0 = portlet, 1 = processor) and then that reference. A revision-18
+    // reader has no arm for sub-kind 21 at all, so it THROWS rather than misreading -- which is the
+    // good failure, and the reason the reader's default arm was made to throw instead of
+    // fabricating a PromptStatement. Bumped rather than ridden because 18 SHIPPED in 2.0.0-rc.15.
+    19 // forward statement (sub-kind 21, portlet/processor discriminator)
     // typed holes + WhenStatement drops the legacy negated-flag byte + A38 refusal reason
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.

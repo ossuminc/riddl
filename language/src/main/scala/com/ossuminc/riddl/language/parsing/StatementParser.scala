@@ -235,6 +235,30 @@ private[parsing] trait StatementParser {
     }
   }
 
+  /** `forward <operand> to <portlet|processor>` -- pass the handled message on and discharge the
+    * response obligation.
+    *
+    * BOTH transmission shapes, and they are told apart by the KEYWORD that leads the reference:
+    * `outlet`/`inlet` give a portlet, an entity/context/projector/... keyword gives a processor.
+    * No ambiguity to resolve, so no cut is needed between them.
+    *
+    * Everything else about `forward` is a VALIDATION question, not a parse one -- which clauses may
+    * contain it, whether the operand's type matches the handled message, and what may follow it.
+    * Those need the resolved message type, and a parse-time `error()` would preempt the whole pass
+    * chain (CLAUDE.md: put a check in the parser only when validation cannot make it).
+    */
+  private def forwardStatement[u: P]: P[ForwardStatement] = {
+    // Each branch is ASCRIBED to the union. Written as a bare `(a | b) | c` the alternation
+    // collapses to the least upper bound -- `Reference[Outlet | Inlet | Processor[?]]` -- which is
+    // not the union the AST field declares, and the mismatch is a compile error rather than a
+    // silent widening.
+    type Target = PortletRef[Portlet] | ProcessorRef[Processor[?]]
+    P(
+      Index ~ Keywords.forward ~/ deliverableMessageValue ~/ to ~
+        ((outletRef | inletRef).map(p => p: Target) | processorRef.map(p => p: Target)) ~/ Index
+    )./.map { case (start, msg, target, end) => ForwardStatement(at(start, end), msg, target) }
+  }
+
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
       Index ~ Keywords.tell ~/ deliverableMessageValue ~/ to ~ processorRef ~
@@ -887,11 +911,11 @@ private[parsing] trait StatementParser {
     else if set.processor == ProcessorKind.Function then
       // A26: a Function is pure — no outbound messaging. (reply/morph/become are already not offered
       // to a function by `statement`; set is banned in `setStatements`.)
-      (P(Keywords.send | Keywords.tell) ~/ Fail.opaque(
-        "'send'/'tell' are not allowed in a function body; a function is pure — messaging happens in " +
-          "the calling on-clause based on the function's result"
+      (P(Keywords.send | Keywords.tell | Keywords.forward) ~/ Fail.opaque(
+        "'send'/'tell'/'forward' are not allowed in a function body; a function is pure — messaging " +
+          "happens in the calling on-clause based on the function's result"
       )).asInstanceOf[P[Statements]]
-    else (sendStatement | tellStatement).asInstanceOf[P[Statements]]
+    else (sendStatement | tellStatement | forwardStatement).asInstanceOf[P[Statements]]
 
   // A26: a Function is pure — it may not write entity state, so `set` is rejected in a function body.
   private def setStatements[u: P](set: StatementsSet): P[Statements] =

@@ -1445,6 +1445,14 @@ object JsonAstBuilder:
         SetStatement(curAt, target, buildValue(value))
       case SendStmtDto(message, to, portlet) =>
         SendStatement(curAt, buildDeliverableOperand(message), portletRef(to, portlet))
+      case ForwardStmtDto(message, to, target) =>
+        // The kind string says which shape it is: portlet kinds are exactly inlet/outlet, and a
+        // processor kind is never either, so the discrimination is total without a fallback that
+        // could quietly build the wrong reference.
+        val built: PortletRef[Portlet] | ProcessorRef[Processor[?]] =
+          if target == "inlet" || target == "outlet" then portletRef(to, target)
+          else processorRef(to, target)
+        ForwardStatement(curAt, buildDeliverableOperand(message), built)
       case MorphStmtDto(entity, state, value) =>
         MorphStatement(
           curAt,

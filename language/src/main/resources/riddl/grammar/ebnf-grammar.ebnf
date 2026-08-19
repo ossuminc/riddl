@@ -261,6 +261,7 @@ message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 (* Statements *)
 (* Core statements available in all contexts *)
 statement = when_statement | match_statement | foreach_statement | send_statement | tell_statement |
+   forward_statement |
     yield_statement | reply_statement | the_set_statement | let_statement | put_statement |
     return_statement | terminate_statement | prompt_statement | code_statement | error_statement |
     require_statement | morph_statement | become_statement | comment ;
@@ -305,6 +306,19 @@ deliverable_message_value = message_value | path_identifier ;
    parses; use `tell` for direct delivery to a processor. *)
 send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref) ;
 tell_statement = "tell" deliverable_message_value "to" processor_ref [ "by" identifier ] ;
+
+(* `forward` passes the handled message on and DISCHARGES the response obligation, because
+   whatever handles it downstream produces the declared `yields`/`replies`. It takes BOTH
+   transmission shapes -- a portlet like `send`, a processor like `tell` -- told apart by the
+   keyword leading the reference, so no ambiguity needs resolving here.
+
+   Everything that constrains it is a VALIDATION rule, not a grammatical one: it is legal only in
+   a clause handling a command that declares `yields` or a query that declares `replies`, its
+   operand's type must match the handled message, a `yield`/`reply` may not follow it, and the
+   portlet-admits rule applies to the portlet shape. Those need a resolved message type, and a
+   parse-time error would preempt the whole pass chain. *)
+forward_statement = "forward" deliverable_message_value "to"
+                    ( outlet_ref | inlet_ref | processor_ref ) ;
 (* `yield` emits a command's declared EVENT; `reply` answers a query with its declared RESULT.
    Until 2.0 `reply` was a deprecated synonym for `yield` and both parsed to one node. They are
    now distinct statements, and the wrong pairing (`yield result` / `reply event`) is an Error. *)

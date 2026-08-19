@@ -26,7 +26,10 @@ class KeywordsTest extends AbstractTestingBasis {
       // with its reply. Before those, 156 rather than 152 because `get`, `put`, `refuses` and
       // `require_` were declared as Keyword constants but omitted from allKeywords, so anything
       // driven by that list silently under-counted.
-      Keyword.allKeywords.size must be(163)
+      // 164 as of 2026-08-19: `forward` joined for the delegation statement. It IS registered in
+      // allKeywords, unlike the group/output/input ALIASES, because it leads a statement and must
+      // not be usable as a bare identifier there.
+      Keyword.allKeywords.size must be(164)
     }
   }
 

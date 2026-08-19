@@ -3678,6 +3678,40 @@ object AST:
     def format: String = s"send ${msg.format} to ${portlet.format}"
   }
 
+  /** Pass the handled message onward and DISCHARGE the response obligation, because whatever
+    * handles it downstream produces the declared `yields`/`replies`.
+    *
+    * The delegation pattern. `yields` is declared on the MESSAGE, so every handler of a command
+    * declaring `yields event E` owes an `E` -- but a boundary handler that merely passes the
+    * command along has nothing to produce and, before this statement existed, no way to SAY it has
+    * nothing to produce. riddl-generator had to emit a method typed to return `E` with an `AI FILL`
+    * where the return belonged, 82 times in reactive-bbq alone.
+    *
+    * Legal ONLY in a clause handling a command that declares `yields`, or a query that declares
+    * `replies` (author's ruling, 2026-08-19): **you cannot delegate an event or a result.** Those
+    * are records of what happened, not requests owing an answer.
+    *
+    * Takes BOTH transmission shapes -- a portlet like [[SendStatement]] and a processor like
+    * [[TellStatement]] -- because a boundary handler that `tell`s a command onward has the
+    * identical hole.
+    *
+    * @param msg
+    *   The message being passed on. Any constructed or bound value whose TYPE matches the message
+    *   the clause handles, so a handler may adjust field VALUES -- incrementing a counter, say --
+    *   while still forwarding "the same message". The SHAPE is what is checked, never the contents.
+    * @param target
+    *   Where it goes: a portlet or a processor.
+    */
+  case class ForwardStatement(
+    loc: At,
+    msg: MessageRef | Constructor | ValueRef,
+    target: PortletRef[Portlet] | ProcessorRef[Processor[?]]
+  ) extends Statement {
+    override def kind: String = "Forward Statement"
+    override def canFail: Boolean = true // A12: transmitting may fail, exactly as send/tell do
+    def format: String = s"forward ${msg.format} to ${target.format}"
+  }
+
   /** An statement that morphs the state of an entity to a new structure
     *
     * @param loc
