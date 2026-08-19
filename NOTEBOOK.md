@@ -63,11 +63,13 @@ spelling could satisfy** — Error without the keyword, Warning with it.
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
   coordinates, npm `rc` dist-tag with `latest` still 1.31.0, homebrew touched only
   `riddlc-rc.rb`, `notify-blog: skipped`, both native binaries built.
-- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.17-10-59e5d7f5`** (native binary),
-  installed 2026-08-19 so the corpora can be fixed against the duplicate-field and
-  send/portlet checks. **`2.0.0-rc.17` itself does NOT have them**, so re-validating
-  with the released binary — or the tap's `riddlc-rc` — will keep reporting the
-  corpus clean. **This SUPERSEDES the earlier "leave it at rc.15 until 2.0.0 final"
+- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.18`** (native binary, the CLEAN tagged
+  build at `231925a4c` — not a snapshot). Replaced 2026-08-19 once rc.18 shipped, so
+  the staged binary again names something released and reproducible; the tap's
+  `riddlc-rc` now carries the same version. It was briefly the snapshot
+  `2.0.0-rc.17-10-59e5d7f5`, staged so the corpora could migrate against the
+  duplicate-field and send/portlet checks BEFORE they shipped — that need is gone,
+  both corpora are migrated and validate clean. **This SUPERSEDES the earlier "leave it at rc.15 until 2.0.0 final"
   ruling** — Reid asked for a staged build explicitly. Previous binaries kept beside
   it as `riddlc.rc15.bak`, `riddlc.rc16.bak` and `riddlc.rc17.bak`.
   Verified on staging, not assumed: it reports the duplicate field, the duplicate
