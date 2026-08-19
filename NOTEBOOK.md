@@ -63,8 +63,12 @@ spelling could satisfy** — Error without the keyword, Warning with it.
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
   coordinates, npm `rc` dist-tag with `latest` still 1.31.0, homebrew touched only
   `riddlc-rc.rb`, `notify-blog: skipped`, both native binaries built.
-- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.18`** (native binary, the CLEAN tagged
-  build at `231925a4c` — not a snapshot). Replaced 2026-08-19 once rc.18 shipped, so
+- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.18-3-1cd1f4bd`** (native binary), staged
+  2026-08-19 so the corpus can migrate to the `forward` statement, which rc.18 does NOT
+  have. Libraries `publishLocal`ed at the same version. **The corpus gate is RED by
+  design**: 178 findings across 12 of 189 models, filed to riddl-models — Reid is taking
+  it. Same sequence as rc.17's boundary Error and rc.18's send/portlet check.
+  It was briefly the clean tagged `2.0.0-rc.18` build at `231925a4c`. Replaced 2026-08-19 once rc.18 shipped, so
   the staged binary again names something released and reproducible; the tap's
   `riddlc-rc` now carries the same version. It was briefly the snapshot
   `2.0.0-rc.17-10-59e5d7f5`, staged so the corpora could migrate against the
@@ -136,6 +140,49 @@ a fourth time.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
+
+## `forward`, and what it cost to get the rule right (2026-08-19) — BUILT
+
+riddl-generator's last language gap before its 1.0.0: `yields` is declared on the
+MESSAGE, so every handler of a command declaring `yields event E` owes an `E` — and a
+boundary handler that merely passes the command along had no way to say it produces
+nothing. riddlg had to emit a method typed to return `E` with an `AI FILL` in it, 82
+times in reactive-bbq.
+
+**The design was settled; the DISCHARGE rule was not, and I nearly built the wrong
+one.** I put a three-option question to Reid, he picked one, and I restated his choice
+as "re-transmitting the message you were handed doesn't discharge; sending a different
+message still does". He said that was not his reading. Re-presenting it as **two
+independent axes** — what happens to a send of the HANDLED message, and whether a send
+of a DIFFERENT message still discharges — produced a different answer on the second
+axis than my paraphrase had assumed.
+
+**The lesson is about the question, not the answer.** My original option bundled two
+decisions into one label, so picking it could not distinguish them, and my summary then
+picked a reading the option's own text had left ambiguous. When a choice has two axes,
+ask two questions — a compound option makes agreement unverifiable, and the mistake
+surfaces only when someone reads the restatement carefully enough to object.
+
+**What the ruling cost, and why it was still right.** Only `yield`/`reply`,
+`error`/`require` and `forward` discharge now. That retires the documented "emitting ANY
+message settles a path" allowance and the worked example defending it — the
+event-sourced *decline by recording a `*Rejected` event* idiom, ~269 uses in reactive-bbq
+alone. Those paths now need `error`/`require`, which is a semantic change rather than a
+mechanical edit, and Reid ruled it knowing that: *"changing it is easy; correctness is
+not."*
+
+**Three independent counts agreed, which is the strongest evidence available here.**
+riddlg counted 82 `AI FILL` markers; the finished check reports 82 "does not yield" in
+reactive-bbq; and the 83 `yields`/`replies`-declaring messages I counted while verifying
+the task bracket both. Different routes, same number.
+
+**Mechanics worth keeping.** A new `Statement` needs all four reflection surfaces, and
+the compiler found exactly three dispatch gaps (`-Werror` is live in `passes`) —
+ResolutionPass, validateStatement, and classifyHandlers. It found none in `language` or
+`commands`, which compile with `--no-warnings`, so those still need reading. The BAST
+revision gate did its job on the checked-in `.bast` fixture: it failed cleanly with
+"regenerate .bast files" rather than misaligning, which is exactly the good failure the
+reader's throwing default arm was built for.
 
 ## Two silent-acceptance bugs, and a check that fired on nothing (2026-08-19) — DONE
 
