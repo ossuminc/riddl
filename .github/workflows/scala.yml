@@ -15,6 +15,10 @@ on:
 
 jobs:
   scala-build:
+    # Without this, GitHub labels each job with EVERY matrix field, so a row reads
+    # `scala-build (Native, Native-commands, ; clean; cNative; commandsNative/testOnly *, no)`.
+    # `matrix.row` is the whole point of that field existing.
+    name: ${{ matrix.row }}
     timeout-minutes: 60
     permissions:
       contents: read
