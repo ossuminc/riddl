@@ -106,7 +106,23 @@ against the wrong toolchain. `reload` does NOT fix it; only `shutdown` (or
 ```bash
 sbt -batch shutdown                       # stop any warm server
 sbt -batch "show sbtVersion"              # MUST equal project/build.properties
+sbt -batch shutdown                       # AND AGAIN -- see below
 ```
+
+**Shut down a SECOND time, because the version check you just ran poisons the cold
+cache.** `-Dsbt.global.localcache` takes effect only when the sbt server BOOTS. The
+`show sbtVersion` line above boots one WITHOUT it, and every later `sbt -D...` merely
+attaches to that server, so the flag sits on each command line doing nothing. Found
+cutting 2.0.0-rc.18: the certification came back green in 11 minutes with the
+throwaway directory never created and `~/Library/Caches/sbt/v2/{ac,cas}` stamped at
+the run's own end time. **Two mandated steps of this skill were in direct conflict.**
+
+That is the THIRD silent way cold caching has failed here — after `--sbt-cache`,
+which is not a real flag, and `set ThisBuild/localCacheDirectory`, which changes the
+reported value while the shared store keeps taking the writes. All three look
+identical from the outside: a fast, green, meaningless run. **The only reliable check
+is that the throwaway directory EXISTS and GROWS** (140K -> 262M at rc.18); make the
+first `-D` invocation the one that boots the server, and verify the size.
 
 Then certify:
 
@@ -138,9 +154,18 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2765** | 7 |
-| JS | **840** | 5 |
-| Native | **2726** | 7 |
+| JVM | **2775** | 7 |
+| JS | **850** | 5 |
+| Native | **2736** | 7 |
+
+**Raised at 2.0.0-rc.18 (2026-08-19) to 2775 / 850 / 2736 — fully green on all three
+rows, zero failures, zero deliberate failures.** The delta was **+10 on EVERY row**,
+and it reconciles exactly: two new suites (`DuplicateFieldNameTest` 4 cases,
+`SendPortletTypeTest` 6 cases) both live in shared `passes/src/test/scala`, which all
+three platforms see. A shared-suite addition moving all three rows equally is the
+easy case; the traps are the two recorded further down, where a suite lives in
+`scala-jvm-native` (JS does not move) or is abstract with runners only in
+JVMTests/JSTests (Native does not move). Predict the shape before running.
 
 **All three rows re-measured on 2026-08-19 from a genuinely COLD cache** —
 2765 / 840 / 2726 across 765 suites and 6,331 cases, 19 module-legs each in its own
