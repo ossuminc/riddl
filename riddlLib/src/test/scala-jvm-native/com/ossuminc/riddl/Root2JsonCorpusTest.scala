@@ -85,6 +85,20 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
     "produce byte-identical JSON on the second round-trip (json1 == json2)" in {
       val files = modelFiles
       if files.isEmpty then cancel("../riddl-models corpus not found relative to the build root")
+      // [1.9], 2026-08-20: ABSENT is a skip; PRESENT-BUT-PARTIAL is a FAILURE.
+      //
+      // The assertions at the end of this method are all RELATIVE -- `identical mustBe reparsed`,
+      // `reparsed mustBe parsed`, `parsed mustBe files.size` -- so they are equally satisfied by
+      // 190 models and by 3. This suite has ALREADY been bitten by exactly that: the docstring
+      // above records the period when every read failed, every failure was skipped, and the
+      // assertions reduced to `0 mustBe 0` for months. A relative assertion cannot notice that
+      // its own population vanished, so the population needs an absolute floor of its own.
+      withClue(
+        s"found ${files.size} corpus models — the assertions below are RELATIVE and pass at any " +
+          "size, so a partial corpus makes them vacuous: "
+      ) {
+        files.size must be >= Root2JsonCorpusTest.MinimumModels
+      }
 
       var parsed = 0
       var reparsed = 0
@@ -134,6 +148,20 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
     "introduce no new validation errors on the re-parsed AST (EVERY model)" in {
       val files = modelFiles
       if files.isEmpty then cancel("../riddl-models corpus not found relative to the build root")
+      // [1.9], 2026-08-20: ABSENT is a skip; PRESENT-BUT-PARTIAL is a FAILURE.
+      //
+      // The assertions at the end of this method are all RELATIVE -- `identical mustBe reparsed`,
+      // `reparsed mustBe parsed`, `parsed mustBe files.size` -- so they are equally satisfied by
+      // 190 models and by 3. This suite has ALREADY been bitten by exactly that: the docstring
+      // above records the period when every read failed, every failure was skipped, and the
+      // assertions reduced to `0 mustBe 0` for months. A relative assertion cannot notice that
+      // its own population vanished, so the population needs an absolute floor of its own.
+      withClue(
+        s"found ${files.size} corpus models — the assertions below are RELATIVE and pass at any " +
+          "size, so a partial corpus makes them vacuous: "
+      ) {
+        files.size must be >= Root2JsonCorpusTest.MinimumModels
+      }
 
       var reparsed = 0
       var clean = 0
@@ -179,4 +207,14 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
       }
     }
   }
+}
+
+object Root2JsonCorpusTest {
+
+  /** The corpus must have at least this many entry points, or the run measured a fragment.
+    *
+    * 190 as of 2026-08-20. A FLOOR, not the exact count: adding models must not redden the
+    * suite, losing them must. Raise it when the corpus grows; never lower it to make a run pass.
+    */
+  val MinimumModels: Int = 190
 }

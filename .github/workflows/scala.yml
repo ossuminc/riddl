@@ -123,6 +123,33 @@ jobs:
     - name: Coursier Caching
       uses: coursier/cache-action@v7
 
+    # [1.9]: DISCARD the sbt 2 ACTION CACHE, keep everything else.
+    #
+    # `sbt/setup-sbt` restores `$HOME/.cache/sbt` under a key of the form
+    # `Linux-X64-sbt-runner-<sbtVersion>-<actionVersion>` -- keyed on VERSIONS, not on content.
+    # `v2/ac` inside it is sbt 2's action cache: a map from task-input hashes to task RESULTS,
+    # test results included. It therefore survives across runs.
+    #
+    # That is fine for tasks whose inputs sbt can see, and WRONG for the corpus suites. They read
+    # `../riddl-models` and `../riddl-examples`, which are cloned by the step above and are not
+    # build inputs at all, so their CONTENT is in no cache key. A result computed before a rule
+    # landed -- or before the corpus migrated -- stays valid-looking indefinitely, and a green
+    # corpus suite becomes evidence about the CACHE rather than about the corpus.
+    #
+    # Deleting `ac` alone costs only incremental task-result reuse. The expensive parts are
+    # untouched: dependency downloads stay in the Coursier and ivy2 caches, the sbt launcher and
+    # JDK stay in their own, and `v2/cas` (the content-addressed blob store) is left in place.
+    #
+    # This is the CI half of [1.9]. The other half is in the suites themselves, which now assert
+    # a MINIMUM MODEL COUNT -- because a replayed result and a truncated corpus look identical
+    # from the outside, and neither is caught by an assertion that only compares one count to
+    # another.
+    - name: Discard sbt action cache so corpus suites cannot replay
+      shell: bash
+      run: |
+        rm -rf "$HOME/.cache/sbt/v2/ac" || true
+        echo "sbt action cache removed; task results will be recomputed"
+
     - name: Configure sbt GitHub Packages credentials
       run: |
         mkdir -p ~/.sbt/2

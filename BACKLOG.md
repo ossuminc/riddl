@@ -53,22 +53,17 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   PUBLISHED releases, so it cannot take a staged build at all and chasing it
   between RCs means cutting an RC for its benefit. It is on `2.0.0-rc.9`
   (`package.json:128`); bring it to 2.0.0 when 2.0.0 exists.
-- **[0.3]** **Regenerate every checked-in `.bast`.** Reid, 2026-08-06 — same reasoning:
-  `FORMAT_REVISION` has moved twice in one day (6 -> 7 -> 8) and may move again
-  before 2.0, so regenerating now buys nothing. riddl-models is the known holder.
-  In-repo fixtures are NOT deferred — `language/input/import/NotImplemented.bast`
-  must be regenerated at each bump or `IncludeAndImportTest` reddens.
-  **Regenerate it FROM ITS OWN DIRECTORY**, or the `.bast` embeds a different
-  source path than the committed one and the diff stops being a one-field
-  revision bump:
-  ```
-  sbt riddlc/stage
-  cd language/input/import && <repo>/target/out/jvm/scala-<ver>/riddlc/universal/stage/bin/riddlc bastify NotImplemented.riddl
-  ```
-  Done right the file is 93 bytes and `cmp` against the committed one differs
-  at byte 12 (the revision short) and nowhere else — check that, since a
-  larger diff means the path got baked in. (`sbt clean` deletes the stage, so
-  regenerate the fixture BEFORE certifying, not after.)
+- ~~**[0.3]** **Regenerate every checked-in `.bast`.**~~ — **HANDED OFF 2026-08-20** to
+  `../riddl-models/task/2026-08-20-regenerate-checked-in-bast-after-2.0.0.md`, to be run
+  shortly after 2.0.0 ships. It waited because `FORMAT_REVISION` kept moving — 6 → 7 → 8 →
+  … → **19** — and regenerating against a number about to change again buys nothing. The
+  files live in riddl-models, so tracking it here as well was duplicate bookkeeping.
+  **riddl's OWN fixture is not part of that hand-off**: `language/input/import/
+  NotImplemented.bast` is regenerated at every bump as a matter of course, or
+  `IncludeAndImportTest` reddens. Regenerate it FROM ITS OWN DIRECTORY, or the `.bast`
+  embeds a different source path and the diff stops being a one-field revision bump —
+  done right it is 93 bytes and `cmp` differs at byte 12 and nowhere else. (`sbt clean`
+  deletes the stage, so regenerate BEFORE certifying, not after.)
 - ~~**[0.4]** **Update the Computational Model with everything `release/2` changed.**~~
   — **DONE 2026-08-18** (`ossuminc` `70d2cee` + `c7498d1`). Every item the entry
   listed now has a home in its own section rather than a changelog: entity
@@ -862,29 +857,38 @@ each want an approved plan before implementation, per the standing rule.
   may well be enough on its own; the diagnostics above are what will say. **Do not change the GC
   without measuring first** — that is what the RSS numbers are for.
 
-- **[1.9]** **CI's corpus-dependent greens are replayed from cache and cannot be
-  trusted.** Found cutting rc.17 (2026-08-18), and it is the reason [1.8] above was
-  the ONLY thing that looked wrong. CI's JVM leg reported `should validate
-  riddl-examples dokn` and `should validate shopify-cart` as PASSING at HEAD, while
-  both genuinely FAIL — verified locally on **JVM and Native alike**, exit 7, with
-  `dokn` reporting 20 boundary + 10 persistence errors from this branch's own new
-  rules.
-  **The tell is in the timestamps**: CI logged the two cases **0.4 ms apart**
-  (`17:57:56.8908` and `17:57:56.8912`), which cannot be two riddlc runs over two
-  full models. They were replayed.
-  **The mechanism is the known sbt 2 action-cache blindspot, reached through a new
-  door**: the cache keys on hashes of tracked inputs, and `../riddl-models` /
-  `../riddl-examples` are EXTERNAL directories cloned by a workflow step, so corpus
-  CONTENT is not part of any key. A result computed before the boundary Error
-  landed stays valid-looking forever, no matter what the corpus says now.
-  **Consequence to internalise: a green corpus suite in CI is evidence about the
-  CACHE, not about the corpus.** This is the same family as the `testQuick` skip and
-  the cancelled-not-failed corpus suite already recorded in `CLAUDE.md`, and it is
-  the fifth time a green run has turned out to have measured almost nothing.
-  Fix candidates: hash the corpus checkout into the cache key (e.g. mix the cloned
-  corpora's commit SHAs into a task input), or mark the corpus suites uncacheable.
-  Until one lands, **certify corpus-dependent suites locally before a release** —
-  which is what rc.17 did.
+- ~~**[1.9]** **CI's corpus-dependent greens are replayed from cache.**~~ — **FIXED 2026-08-20,
+  in BOTH halves.** The corpus suites now assert what they actually cover, and CI can no longer
+  serve a stale result for them.
+
+  **The mechanism, confirmed from a CI log rather than inferred:** `sbt/setup-sbt` restores
+  `$HOME/.cache/sbt` under key `Linux-X64-sbt-runner-<sbtVersion>-<actionVersion>` — keyed on
+  VERSIONS, not content — and `v2/ac` inside it maps task-input hashes to task RESULTS, test
+  results included. The corpora are cloned by a workflow step and are not build inputs, so their
+  content is in no key and a result computed before a rule landed stayed valid-looking. A new
+  step deletes `v2/ac` after restore; dependency downloads, the launcher, the JDK and `v2/cas`
+  are all untouched, so only task-result reuse is given up.
+
+  **The second half matters more, and was found while trying to reproduce the first.** Neither
+  corpus suite asserted that the corpus was FULL. `Root2JsonCorpusTest`'s three assertions are
+  RELATIVE (`identical mustBe reparsed`, `reparsed mustBe parsed`, `parsed mustBe files.size`),
+  so they are equally satisfied by 190 models and by 3; `RiddlModelsRoundTripTest` generates one
+  case per model found, so a truncated corpus produced fewer green cases and said nothing. That
+  suite's own docstring already recorded the same shape biting once before — every read failing,
+  every failure skipped, and the assertions reducing to `0 mustBe 0` for months.
+
+  Both now carry an absolute `MinimumModels` floor (189 and 190), FAIL rather than cancel when
+  the corpus is present but partial, and keep Reid's [1.3] ruling that an ABSENT corpus is a
+  skip. **Both floors were canary-tested** by raising them to 9999 and confirming the expected
+  cases redden — a check that has only ever passed is not evidence.
+
+  Raise the floors when the corpus grows; never lower one to make a run pass.
+
+  **A note on the original evidence, since it was weaker than it read:** this entry cited two CI
+  cases logged 0.4 ms apart as proof of replay. `runMainForTest` runs IN-PROCESS, so a small
+  model completing sub-millisecond is not impossible, and the local runs could not be made to
+  replay at all. The cache-restore path is real and is now closed, but the timing observation
+  was not the proof it was presented as.
 
 ### 2. Queued, needs a plan
 

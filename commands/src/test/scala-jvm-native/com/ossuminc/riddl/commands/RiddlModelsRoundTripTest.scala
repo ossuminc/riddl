@@ -96,6 +96,24 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
         )
       }
     else
+      // [1.9]: ABSENT is a skip (Reid's [1.3] ruling -- a developer without the checkout is not
+      // blocked), but PRESENT-BUT-PARTIAL must FAIL. Until 2026-08-20 a truncated corpus passed
+      // silently: this suite generates one case per model found, so three models produced three
+      // green cases and said nothing, and `Root2JsonCorpusTest` asserted only `parsed mustBe
+      // files.size`, which is internally consistent at ANY size. "The corpus suite is green" has
+      // to mean "the whole corpus was exercised", or it means nothing at all.
+      //
+      // RAISE this floor when models are added, exactly like the RC test-count floors, and never
+      // lower it to make a run pass -- a number below it means models went missing, not that the
+      // threshold was wrong.
+      "cover the WHOLE corpus, not merely some of it" in {
+        withClue(
+          s"found ${confFiles.size} models under ${riddlModelsDir.toAbsolutePath} — a partial " +
+            "corpus makes every other case in this suite meaningless: "
+        ) {
+          confFiles.size must be >= RiddlModelsRoundTripTest.MinimumModels
+        }
+      }
       confFiles.foreach { case (confFile, riddlFile) =>
         val relPath =
           riddlModelsDir.relativize(confFile.getParent)
@@ -328,4 +346,14 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndA
     end if
     Files.deleteIfExists(path)
   }
+}
+
+object RiddlModelsRoundTripTest {
+
+  /** The corpus must have at least this many entry points, or the run has measured a fragment.
+    *
+    * 189 as of 2026-08-20 (riddl-models `release/2`). This is a FLOOR, not the exact count —
+    * adding models must not redden the suite, but losing them must.
+    */
+  val MinimumModels: Int = 189
 }

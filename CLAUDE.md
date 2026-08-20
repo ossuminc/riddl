@@ -2080,6 +2080,33 @@ validation — resolution and type-checking — in `checkStatementScopes`.
 - **GitHub Packages npm auth** — `gh auth refresh -s write:packages`
   is required.
 
+### A corpus suite must assert it covered the WHOLE corpus
+
+**A relative assertion cannot notice that its own population vanished.** Both corpus suites
+compared one count to another — `identical mustBe reparsed`, `reparsed mustBe parsed`,
+`parsed mustBe files.size` — which is equally satisfied by 190 models and by 3, and
+`RiddlModelsRoundTripTest` simply generates one case per model FOUND. A truncated corpus
+therefore produced fewer green cases and said nothing.
+
+`Root2JsonCorpusTest`'s own docstring already recorded the same shape biting once: every read
+failed, every failure was skipped, and its assertions reduced to `0 mustBe 0` for months.
+
+Both now carry an absolute floor (`MinimumModels`, 189 and 190) and **FAIL when the corpus is
+present but partial**, while an ABSENT corpus still SKIPS — Reid's [1.3] ruling, so a developer
+without the sibling checkout is not blocked. Raise a floor when the corpus grows; never lower
+one to make a run pass. **Both floors were canary-tested** by setting them to 9999 and
+confirming the right cases redden: a check that has only ever passed is not evidence it works.
+
+**CI could also serve a stale result for these suites, and that is closed separately.**
+`sbt/setup-sbt` restores `$HOME/.cache/sbt` under a key of the form
+`Linux-X64-sbt-runner-<sbtVersion>-<actionVersion>` — keyed on VERSIONS, not content — and
+`v2/ac` maps task-input hashes to task RESULTS. The corpora are cloned by a workflow step and
+are not build inputs, so their CONTENT is in no key. `scala.yml` now deletes `v2/ac` after
+restore; the expensive caches (Coursier, ivy2, launcher, JDK, `v2/cas`) are untouched.
+
+**Both halves were needed because they are indistinguishable from outside:** a replayed result
+and a truncated corpus both present as a fast green suite.
+
 ### Measuring riddlc output — three ways to get a FALSE ZERO
 
 **All three were hit in one session (2026-08-19), each looked like a finding rather than a
