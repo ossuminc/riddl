@@ -145,6 +145,45 @@ a fourth time.
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
 
+## The GBNF grammar is gone, and what "documentation, lowest priority" hid (2026-08-20) — DONE
+
+Reid's ruling: *"We could do without the reflectivity tax, it's high enough without it."*
+The bundled 258-rule GBNF, its generator, its validator and its overrides are deleted.
+
+**The evidence was better than anyone's recollection, and it was already written down.**
+riddl-generator dropped it in June for PERFORMANCE, not quality: llama.cpp's grammar engine
+could not run the full RIDDL grammar at a usable speed — **an 8-token constrained generation
+did not finish in seven minutes**, against seconds unconstrained, proven through the FFI.
+Their own audit then recorded that nothing consumed the bundled file. Both facts sat in
+riddlg's repo for weeks. **When a decision keeps coming back, look for the measurement
+somebody already made rather than re-deriving the argument.**
+
+**Two items filed as "documentation, lowest priority" were actually wiring**, and finding them
+is the whole reason to grep rather than work the task's table:
+
+1. **`/rc`'s certification block RUNS `gbnf_validator.py`.** Deleting the script and leaving
+   the skill would have broken the next release candidate at step 1 — the failure would have
+   surfaced during a release, which is the worst time.
+2. **`ebnf-grammar.ebnf` justified `numeric_literal`'s single-regex form partly by how the
+   GBNF generator classified it.** Deleting the generator makes that reason void while the
+   regex stays correct for reasons 1-3. A rationale citing a deleted tool is worse than no
+   rationale, because the next reader cannot tell which parts still hold.
+
+The distinction that made the sweep tractable: **correct anything stated as a CURRENT rule or
+obligation; leave history alone.** Struck BACKLOG entries, NOTEBOOK, and `docs/superpowers/`
+plans are records of what was true then. BACKLOG's `[1.1]` ruling was AMENDED rather than
+rewritten — the decision (JSON for hosted models) was real and stands; only its pointer at
+the bundled grammar was wrong.
+
+**Removing public API was legitimate here and nowhere else.** `Grammar.loadGbnfGrammar*` were
+public, and the compatibility policy forbids removal without deprecating to the next major —
+but 2.0.0 has not shipped, so 2.0 IS that major. Reid: *"that's the deal with RCs, things
+could disappear."* After 2.0.0 the same deletion would have cost a deprecation cycle to 3.0.
+
+Coverage did not change: the EBNF stays authoritative, TatSu still gates it at 112/135 with
+zero unexpected failures, and constrained decoding survives via JSON-schema-derived grammars
+that llama.cpp builds itself — which need no file from this repo.
+
 ## Answering an undeclared response, and THREE measurements that returned a false zero (2026-08-19) — DONE
 
 A `reply` in a clause whose query declares no `replies` was silent, and so was the
