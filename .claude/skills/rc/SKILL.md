@@ -154,9 +154,23 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2791** | 7 |
-| JS | **863** | 5 |
-| Native | **2752** | 7 |
+| JVM | **2801** | 7 |
+| JS | **872** | 5 |
+| Native | **2762** | 7 |
+
+**Raised at 2.0.0-rc.20 (2026-08-20) to 2801 / 872 / 2762**, from a cold cache
+(`/tmp/sbt-verify-rc20`, 140K -> 264M), 19 module-legs each its own sbt invocation, zero
+failures and zero `No tests to run`. The delta was **+10 / +9 / +10** and reconciles
+exactly: 9 shared cases in `passes/src/test/scala` (`ErrorTerminalTest` 5,
+`UndeclaredResponseTest` 4) that every row sees, plus 1 in
+`commands/src/test/scala-jvm-native` (`RiddlModelsRoundTripTest`'s new whole-corpus
+fullness case, 4 -> 5) that JS correctly does not, `commands` having no JS row.
+
+**The GBNF removal moved no test counts, which was PREDICTED before the run** — nothing
+compiled against the deleted grammar and the two deleted Python scripts were CI steps,
+not ScalaTest suites. A prediction of "no movement" is worth making explicitly: had a
+count dropped, the deletion would have taken a suite with it and the totals were the
+only place that would have shown.
 
 **Raised at 2.0.0-rc.19 (2026-08-19) to 2791 / 863 / 2752.** The delta was
 **+16 / +13 / +16**, and it reconciles exactly: 13 shared cases (`ForwardStatementTest`
