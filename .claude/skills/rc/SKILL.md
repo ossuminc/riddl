@@ -214,27 +214,23 @@ and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
 
-**The deliberate-failure count is FIFTEEN as of 2.0.0-rc.19 (2026-08-19), and every
-one is a corpus that cannot migrate until the RC it migrates to exists.** rc.19 shipped
-the `forward` statement and NARROWED what discharges a `yields`/`replies` obligation --
-only `yield`/`reply`, `error`/`require` and `forward` settle a path now, where a bare
-`send`/`tell` used to. The reds:
+**The deliberate-failure count is ZERO as of 2.0.0-rc.20 (2026-08-20).** Both corpora
+migrated against rc.19's rules and CI has been fully green twice since. **A red case is a
+real signal again — there is no expected-failure list to reach for.**
 
-| count | what |
-|---|---|
-| 12 | `RiddlModelsRoundTripTest` -- riddl-models models whose handlers only `send` |
-| 1 | `Root2JsonCorpusTest` validation parity, reporting those same models |
-| 1 | `RunRiddlcOnLocalTest` `dokn` -- riddl-examples, 10 findings |
-| 1 | `Root2JsonFixturesTest`-adjacent parity, same cause |
+**It was FIFTEEN at rc.19, and that is the pattern, not an incident.** rc.19 shipped the
+`forward` statement and narrowed what discharges a `yields`/`replies` obligation, which
+condemned 12 riddl-models models plus riddl-examples' `dokn` until they migrated —
+and they COULD not migrate until the RC defining the rule existed. riddl-models then
+landed `18becabf` (forward) and `2b10b613` (268 error-terminal reorders) and
+`a985c814` (446 replies/yields declarations); riddl-examples followed.
 
-Tasks are filed in BOTH corpora (`2026-08-19-forward-the-delegated-message.md` in each).
-**Confirm a red case is one of these by its message -- "does not yield"/"does not
-reply" -- before accepting it.** Anything else is a regression.
-
-**Two shapes need DIFFERENT fixes, and only one is mechanical.** A handler that passes
-the message on becomes `forward`; a handler that declines by emitting a `*Rejected`
-event cannot forward anything and needs an explicit `error`/`require`, which changes
-what the model MEANS. Do not let a bulk edit turn the second into the first.
+**So expect this every time a rule with corpus cost ships**, and read the count as a
+phase rather than a defect: the RC goes out red, the corpora migrate against it, the
+gate returns to green. Withholding the RC is what would prevent the fix. What must NOT
+happen is the count staying non-zero once the corpora have moved — this section said
+FIFTEEN for a day after it was already zero, which is exactly the stale gate that makes
+a future session hunt a phantom regression or, worse, accept a real one.
 
 **It was TWO for about a day, and the shape of that is worth keeping.** Those two
 cases failed at the moment rc.17 was cut, with exit 7 — 20 boundary + 10 persistence
