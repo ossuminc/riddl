@@ -63,7 +63,7 @@ spelling could satisfy** — Error without the keyword, Warning with it.
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
   coordinates, npm `rc` dist-tag with `latest` still 1.31.0, homebrew touched only
   `riddlc-rc.rb`, `notify-blog: skipped`, both native binaries built.
-- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.19-3-003aab99`** (native binary), staged
+- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.19-5-1d329772`** (native binary), staged
   2026-08-19 with libraries `publishLocal`ed at the same version (17/17 coordinates in
   `~/.ivy2/local`). It is a SNAPSHOT past the rc.19 tag on purpose: `error`-is-terminal
   and the narrowed A23 are not in rc.19, and reactive-bbq needs both to migrate. It
@@ -144,6 +144,40 @@ a fourth time.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
+
+## Answering an undeclared response, and THREE measurements that returned a false zero (2026-08-19) — DONE
+
+A `reply` in a clause whose query declares no `replies` was silent, and so was the
+`yield`/`yields` half. Now a StyleWarning (Reid: it *"doesn't rise to the level of an
+error"* — the model is untidy, not self-contradictory). The asymmetry that made it
+findable: `forward` already required the declaration and Errored without it, so the
+strictest of the three response statements checked what the two ordinary ones did not.
+
+**Reid's second ask needed no code**, and checking beat assuming: all four converse
+combinations were already Errors (declare-and-produce-nothing, declare-and-produce-wrong-type,
+for both command and query), and `forward` correctly discharges. A duplicate check would
+only have double-reported.
+
+**The lasting lesson is that three separate measurements returned zero for three
+unrelated reasons, and every one looked like a finding.**
+
+1. `grep '^\[error\]'` — matches nothing when the line begins with an ANSI colour escape.
+   Reported "both orderings are accepted", the opposite of the truth.
+2. `--show-style-warnings=true` — **suppresses** them. The same probe gave 2 findings on
+   default flags and 0 with the flag that names them.
+3. Every corpus `.conf` sets `show-style-warnings = false`, so
+   `riddlc from <model>.conf validate` reports ZERO style findings corpus-wide. The real
+   number appears only when validating the `.riddl` directly.
+
+Each time the honest-looking output was `0`, and only a contradiction caught it — a rule I
+could see implemented, a probe that disagreed with the corpus, a count that disagreed with
+an earlier estimate. **A zero from a measurement you have not calibrated is not evidence of
+absence.** Calibrate on a case known to be positive before trusting a zero.
+
+That last point also corrected the report: riddlg said 4 sites in reactive-bbq; the check
+finds **11 there and 452 across 189 of 190 models**. Their 4 were the ones reaching their
+generator. My earlier structural estimate of ~453 had been right, and I had wrongly
+discounted it as over-counting because it disagreed with their number.
 
 ## `error` is terminal, and the check that had to be RELAXED to allow it (2026-08-19) — DONE
 
