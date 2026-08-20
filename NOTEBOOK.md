@@ -10,18 +10,37 @@ Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
 NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
 
-**THE BACKLOG IS DOWN TO TWO ITEMS HERE, PLUS ONE OWED OUT.** `[0.2]` riddl-vscode
-and `[0.3]` regenerate checked-in `.bast` are all that remain in § 0 — `[0.1]`
-scalafmt and `[0.5]` ossum.tech docs closed 2026-08-18. `[3.6]` is corpus migration
-owed to riddl-models and riddl-examples.
+**THE BACKLOG HAS ONE OPEN ITEM.** `[0.2]` upgrade riddl-vscode — and it is blocked
+BY DESIGN, not overlooked: it consumes `@ossuminc/riddl-lib` from npm, which carries
+only published releases, so it cannot take a staged build and chasing it between RCs
+would mean cutting an RC for its benefit. Everything else in `BACKLOG.md` is struck
+(32 items). **That is not a licence to invent work** — per `CLAUDE.md`, 2.0 ships when
+the Computational Model is met, not when the backlog empties, and there is no
+"defer to 2.1" pile.
 
-**THE IN-REPO CORPUS GATE IS RED, AND IT IS EXPECTED.** The cross-context boundary
-Error (`c67cfdbfd`) makes 192 JVM tests fail in `commands` (189), `riddlLib` (1) and
-`riddlc` (2) — the three suites that read `../riddl-models` and `../riddl-examples`.
-Those corpora have 491 violations and have not been migrated. **This reverses the
-"zero deliberate failures" state**, and it wants a decision: migrate the corpora,
-soften the check until they are migrated, or record a known-red gate. Every
-NON-corpus module is green on all three platforms, and JS is fully green at 840.
+**`2.0.0-rc.20` IS CUT, PUBLISHED AND FULLY VERIFIED (2026-08-20).** All five
+channels checked against the registries rather than the logs: **20/20** Maven
+coordinates at exactly `2.0.0-rc.20`, npm `@ossuminc/riddl-lib@2.0.0-rc.20` under the
+**`rc`** dist-tag, Homebrew touched only `riddlc-rc.rb` (`riddlc.rb` still 1.31.0),
+**`notify-blog: skipped`**, and both native binaries built. The retired
+`diagrams`/`prettify`/`stats` coordinates carry no rc.20 — their newest are 1.1.1 and
+0.40.0, i.e. historical packages, not republished ones.
+
+**THE CORPUS GATE IS GREEN AND THERE ARE ZERO DELIBERATE FAILURES.** Both corpora have
+migrated through rc.19's `forward` statement, narrowed discharge rule and
+`error`-is-terminal rule; riddl-models validates at 0 errors / 0 warnings and
+riddl-examples at 9/9. **A red case is a real signal — there is no expected-failure
+list to reach for.** This reverses the red state recorded here on 2026-08-18, and it is
+the same shape every time: a rule with corpus cost ships in an RC, the corpora migrate
+against it, the gate returns to green. Withholding the RC is what would prevent the fix.
+
+**Certified from a genuinely COLD cache** (`-Dsbt.global.localcache=/tmp/sbt-verify-rc20`,
+140K → 264M), 19 module-legs each in its own sbt invocation, zero failures and zero
+`No tests to run`: **JVM 2801, JS 872, Native 2762** (floors raised to match). The
++10/+9/+10 delta reconciles exactly — 9 shared cases in `passes/src/test/scala`
+(`ErrorTerminalTest` 5, `UndeclaredResponseTest` 4) plus 1 in
+`commands/src/test/scala-jvm-native` (`RiddlModelsRoundTripTest`'s whole-corpus fullness
+case) that JS correctly does not see, `commands` having no JS row.
 
 **Completeness 4h/4i were WRONG and are corrected (2026-08-18, post-rc.16).** Reid's
 ruling: **a processor receives only through its OWN inlet and publishes only through
@@ -63,41 +82,31 @@ spelling could satisfy** — Error without the keyword, Warning with it.
 - **`2.0.0-rc.16` is cut, published and FULLY VERIFIED** — 11/11 Maven
   coordinates, npm `rc` dist-tag with `latest` still 1.31.0, homebrew touched only
   `riddlc-rc.rb`, `notify-blog: skipped`, both native binaries built.
-- **`~/Code/ossuminc/bin/riddlc` is `2.0.0-rc.19-5-1d329772`** (native binary), staged
-  2026-08-19 with libraries `publishLocal`ed at the same version (17/17 coordinates in
-  `~/.ivy2/local`). It is a SNAPSHOT past the rc.19 tag on purpose: `error`-is-terminal
-  and the narrowed A23 are not in rc.19, and reactive-bbq needs both to migrate. It
-  briefly held the clean tagged `2.0.0-rc.19` build at `6facf3b43`. Both corpora need it: the
-  `forward` statement and the narrowed discharge rule ship in rc.19 and are not in
-  rc.18. **The corpus gate is RED by design** — 12 riddl-models models (178 findings)
-  and riddl-examples' `dokn` (10), tasks filed in both. Same sequence as rc.17's
-  boundary Error and rc.18's send/portlet check: the rule ships, the corpus migrates
-  against it, the gate returns to green. Replaced 2026-08-19 once rc.18 shipped, so
-  the staged binary again names something released and reproducible; the tap's
-  `riddlc-rc` now carries the same version. It was briefly the snapshot
-  `2.0.0-rc.17-10-59e5d7f5`, staged so the corpora could migrate against the
-  duplicate-field and send/portlet checks BEFORE they shipped — that need is gone,
-  both corpora are migrated and validate clean. **This SUPERSEDES the earlier "leave it at rc.15 until 2.0.0 final"
-  ruling** — Reid asked for a staged build explicitly. Previous binaries kept beside
-  it as `riddlc.rc15.bak`, `riddlc.rc16.bak` and `riddlc.rc17.bak`.
-  Verified on staging, not assumed: it reports the duplicate field, the duplicate
-  constructor argument, and the send/portlet mismatch on their repros, and **299
-  `does not admit` findings on reactive-bbq — the same number riddl-generator
-  measured independently as javac errors.**
-  Libraries published locally at the same version (`~/.ivy2/local`), no clean and
-  no tests, per instruction — the tree had just compiled green on all three
-  platforms. Note it is `nativeLink` output, NOT `riddlc/stage`: what lives in
-  `../bin` is a single Mach-O binary, not the JVM universal stage.
-- **BAST `FORMAT_REVISION` 18 has SHIPPED. The next BAST change MUST bump to 19.**
-  Every "rides 18 because it has not shipped" argument in the code is history.
+- **`~/Code/ossuminc/bin/riddlc` is the clean tagged `2.0.0-rc.20`** (native binary),
+  staged 2026-08-20 from the tag with `reload` first. **Verified, not assumed**: it
+  reports `2.0.0-rc.20` exactly, validates a riddl-models model silently clean, and a
+  negative control (an unresolvable type) still produces findings — silence alone is
+  not evidence a binary is working. It is `nativeLink` output, a single Mach-O binary,
+  NOT `riddlc/stage`'s JVM universal. Reid's purpose for it: teaching Synapify the 2.0
+  language, GBNF's removal included.
+  Previous binaries kept beside it as `riddlc.rc15/16/17.bak`.
+  **This supersedes the earlier "leave it at rc.15 until 2.0.0 final" ruling** — Reid
+  asked for a staged build explicitly.
+- **BAST `FORMAT_REVISION` 19 has SHIPPED. The next BAST change MUST bump to 20.**
+  Every "rides 19 because it has not shipped" argument in the code is history.
 
-**EVERY SUITE ON EVERY PLATFORM IS GREEN. There are no known-red suites.** That is
-new as of 2026-08-18 and it changes how to read a failure: **a red case is now a
-real signal.** Do not go looking for a list of expected failures — there isn't one.
+**EVERY SUITE ON EVERY PLATFORM IS GREEN. There are no known-red suites.**
 
-- JVM **2747**, JS **840**, Native **2708** (clean tri-platform certification).
-- riddl-models corpus validation-parity **190/190**; riddl-examples migrated too.
-- JVM/Native test gap **−39**, from −729. `commands`, `riddlLib`, `riddlc` at parity.
+- JVM **2801**, JS **872**, Native **2762** (cold-cache tri-platform certification,
+  2026-08-20). riddl-models validation-parity **190/190**; riddl-examples 9/9.
+- JVM/Native gap **−39**, unchanged. `commands`, `riddlLib`, `riddlc` at parity.
+- **The corpus suites now assert they covered the WHOLE corpus.** Their assertions
+  were all RELATIVE, so three models satisfied them as well as 190 and a truncated
+  corpus passed silently; both now carry an absolute floor and fail when the corpus
+  is present but partial. CI additionally discards `v2/ac` after cache restore,
+  because the corpora are cloned by a workflow step and are in no cache key — so a
+  verdict computed before a rule landed could replay as valid. A replayed result and
+  a truncated corpus look identical from outside: a fast, green suite.
 
 **Corpus suites now read SIBLING CHECKOUTS** (`../riddl-models`,
 `../riddl-examples`) and SKIP when absent — they no longer download. CI clones them
