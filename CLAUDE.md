@@ -1338,6 +1338,57 @@ to the right group rather than appending to a list.
   1-in/1-out `flow` that also hosts an `error-sink` inlet derives as a `merge`
   (≥2 inlets, 1 outlet) — never a `split`, which is ≥2 OUTLETS.
 
+- **`forward` — delegation, and the ONLY statement that discharges by passing on (rc.19+).**
+  `forward <operand> to <portlet|processor>` says the declared `yields`/`replies` is produced
+  by whatever handles the message downstream. Legal ONLY in a clause handling a command that
+  declares `yields` or a query that declares `replies` — **you cannot delegate an event or a
+  result** (author's ruling): those record what happened and owe no answer. The operand's TYPE
+  must match the handled message; its VALUES need not, so a handler may adjust a field and
+  still be forwarding the same message. NOT terminal: a `yield`/`reply` after it is an Error
+  (the response was delegated), a `send`/`tell` after it a style warning. Both transmission
+  shapes, told apart by the keyword leading the reference. BAST sub-kind 21 with ONE
+  discriminator byte before the ref; **`FORMAT_REVISION` 19**.
+
+- **What DISCHARGES a `yields`/`replies` obligation NARROWED at rc.19, and this is the part
+  that breaks models.** Only `yield`/`reply`, `error`/`require`, and `forward` settle a path.
+  A `send`/`tell` no longer does — **neither of the handled message nor of a different one**.
+  That retired the previous "emitting ANY message settles a path" allowance and the
+  event-sourcing example defending it. Two corpus shapes need DIFFERENT fixes and a bulk edit
+  must not conflate them: a handler that passes the message on becomes `forward`
+  (mechanical), while one that declines by emitting a `*Rejected` event cannot forward
+  anything and needs an explicit `error`/`require` — a semantic change.
+
+- **`error` is TERMINAL in its block; `require` is not.** A statement after an `error` is
+  unreachable and an Error. `require X` refuses only when X fails, so statements after it are
+  ordinary — the check matches `ErrorStatement` alone. Per statement LIST, recursing into
+  `when`/`match`/`foreach` bodies as their own lists.
+
+- **A23 ("refusals first") asks a DIFFERENT question from A26, and its effect set was
+  borrowed from A26 for months.** A26 asks *is this pure?*; A23 asks *would refusing now
+  leave a partial change?* Narrowed 2026-08-19 to LOCAL state transformation: **`set`,
+  `morph`, `terminate` are effects; `send`, `tell`, `yield`, `put` and `become` are not.**
+  Transmissions leave nothing partial HERE — any state they cause is elsewhere and later, a
+  remote "maybe" that is acceptable for a locally immutable statement — and `become` is a
+  BEHAVIOR transition, not a state one. **The narrowing is load-bearing**: without it, making
+  `error` terminal left the corpus's "refuse AND publish a rejection event" idiom illegal in
+  BOTH orders, i.e. inexpressible. When a check is borrowed wholesale from another, re-derive
+  it from its own question.
+
+- **`option snapshots` (Entity, event-sourced only) — and reconstructability is a CM
+  MUST-PRESERVE.** The option says WHETHER journal-derived snapshots are taken, never how; no
+  policy enum and no interval, because whether snapshotting pays turns on update rate,
+  read/write mix and physical layout, none of which is in the model. **Its ABSENCE is the
+  default and is meaningful: take NO snapshots, replay the whole log** — right more often than
+  it looks, since many entities see under a hundred events in their lifespan. An Error on a
+  non-event-sourced entity. The CM gained a must-preserve with it: **state as of any past
+  point must be reconstructible**, so a current-state row kept as an optimization is fine but
+  a current-state row that is the ONLY reconstruction mechanism is not.
+
+- **A clause that answers should handle a message that DECLARES what it answers with** —
+  StyleWarning, not an Error (author: it *"doesn't rise to the level of an error"*). The
+  converse is already an Error in all four combinations (declare and produce nothing; declare
+  and produce the wrong type; command and query alike), so do not add a check for it.
+
 - **AST.Set shadows scala.Set** — use selective imports or
   qualify as `scala.collection.immutable.Set`.
 - **Schema match ordering** — Schema extends `Leaf` (Definition)
@@ -2029,6 +2080,30 @@ validation — resolution and type-checking — in `checkStatementScopes`.
 - **GitHub Packages npm auth** — `gh auth refresh -s write:packages`
   is required.
 
+### Measuring riddlc output — three ways to get a FALSE ZERO
+
+**All three were hit in one session (2026-08-19), each looked like a finding rather than a
+broken instrument, and each was caught only by a CONTRADICTION.** A zero from a measurement
+you have not calibrated is not evidence of absence — calibrate on a case known to be
+positive before trusting a zero.
+
+1. **`grep '^\[error\]'` matches nothing when output is ANSI-coloured.** riddlc colours by
+   default, so the line starts with an escape sequence, not `[`. This produced the report
+   "both statement orderings are accepted" when one of them was rejected — the opposite of
+   the truth. **Pipe through `sed 's/\x1b\[[0-9;]*m//g'` before counting anything.**
+2. **`--show-style-warnings=true` SUPPRESSES style warnings.** The same probe gave 2 findings
+   on default flags and 0 with the flag that names them. Default already shows them; passing
+   the flag explicitly is worse than passing nothing.
+3. **Every riddl-models `.conf` sets `show-style-warnings = false`**, so
+   `riddlc from <model>.conf validate` reports ZERO style findings across all 190 models. A
+   style-warning census must validate the `.riddl` DIRECTLY. This is why a 452-site finding
+   read as 0 corpus-wide.
+
+Related, and the same family as the false-green traps below: **validate ENTRY POINTS, not
+include fragments.** A fragment validated alone reports errors by construction, which reads
+as corpus breakage. riddl-examples' `FooBarSameDomain` is a further trap — it is a
+DELIBERATELY ambiguous fixture, so its duplicate-name errors are the fixture working.
+
 ### Build / CI / Tooling
 
 - **Three ways a test suite passes without running** (all found in
@@ -2134,6 +2209,18 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   `PassesResult.additionalMessages`, so deprecations show under every
   `riddlc` command, not just `validate`. New parse-time warnings
   therefore appear in `.check` goldens.
+- **Scala Native builds with `gc = "none"` — a bump allocator that NEVER reclaims.** It is
+  sbt-ossuminc's `With.Native` default and `build.sbt` does not override it. Right for a
+  short-lived binary; catastrophic for a test binary that runs the whole corpus in one
+  process. **Measured 2026-08-19 by sampling the live `riddl-commands-test` process: 18.18 GB
+  peak RSS with `none`, 1.11 GB with `immix`** — 16x, identical results. A GitHub runner has
+  15,989 MB, so the Native corpus rows needed more memory than the machine had; the host
+  killed them for 18 consecutive runs, always with the build step still `in_progress` and NO
+  log blob, which is why it stayed invisible. `immix` is now scoped to `Test` on the two
+  corpus-reading rows (`nativeTestGC` in `build.sbt`); the SHIPPED riddlc still builds with
+  `none`, deliberately — changing that is a separate decision. **A CI job that dies with no
+  logs at all is a lost runner, not a timeout**: a real `timeout-minutes` kill is marked
+  `cancelled` and KEEPS its logs.
 - **release.yml** — triggered by `gh release create`. Builds
   native riddlc (macOS ARM64, Linux x86_64) + JVM universal.
   Sends `repository_dispatch` to homebrew-tap with SHA256s.

@@ -209,7 +209,11 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   the task dropped in
   `../ossum.tech/task/2026-08-15-not-bang-synonymy.md` for the
   worked examples and the `!=` caution.
-- **[0.5]** **Update the ossum.tech documentation site** with the same syntax changes,
+- ~~**[0.5]** **Update the ossum.tech documentation site**~~ — **DROPPED 2026-08-19.** The
+  task file is in `../ossum.tech/task/2026-08-18-riddl-2.0-language-changes.md` and is
+  that repo's to execute; nothing here is waiting on it. (NOTEBOOK briefly called this
+  "closed" while the task sat undone — dropped is not done, and only the receiving repo
+  can close it.) Original ask, for the record: the same syntax changes,
   **plus a LIGHTER treatment of the implied syntax.** Reid, 2026-08-06 — the
   reference currently spells out more of the implicit forms than a reader needs,
   and the balance should shift toward what someone actually writes. Same source
@@ -812,7 +816,16 @@ each want an approved plan before implementation, per the standing rule.
   "is not connected" messages today, because its tell-target entities declare no inlets
   at all. The interaction appears only as models comply.
 
-- **[1.8]** **The Native CI leg was one row that died as a LOST RUNNER; split per module 2026-08-19.**
+- ~~**[1.8]** **The Native CI leg died as a LOST RUNNER.**~~ — **DONE 2026-08-19**
+  (`962e62638`, `59e5d7f5c`, `b4af3a3e6`). **The cause was memory, and it was measurable:**
+  Scala Native builds with `gc = "none"` (sbt-ossuminc's default, never overridden), a bump
+  allocator that never reclaims. Sampling the live `riddl-commands-test` process while it ran
+  the corpus suite: **18.18 GB peak RSS with `none`, 1.11 GB with `immix`** — 16x, identical
+  results. A runner has 15,989 MB, so the Native corpus rows needed MORE MEMORY THAN THE
+  MACHINE HAD and the host killed them. Fixed by scoping `immix` to `Test` on the two
+  corpus-reading rows; the SHIPPED riddlc still builds with `none`, deliberately. The leg is
+  also split into seven per-module rows and instrumented. All rows green on the rc.19 tag.
+  Original entry follows for the diagnosis trail:
   `1c318b844` put `RiddlModelsRoundTripTest`'s 189 corpus cases onto Native — the coverage win item
   5 asked for — and the single Native row went **18 min → 36 → 55–56**, then failed **18 runs in a
   row**.
@@ -1572,7 +1585,13 @@ that needs a ruling before either can be fixed.
   `github.com/ossuminc/riddl` and `opensource.org/license/apache-2-0`, neither of
   which is an ossum.tech URL.
 
-- **[3.6]** **Corpus migration for the cross-context boundary Error.** Shipped
+- ~~**[3.6]** **Corpus migration for the cross-context boundary Error.**~~ — **DONE
+  2026-08-19, both corpora.** Verified rather than assumed: every riddl-examples ENTRY POINT
+  validates at 0 errors, and riddl-models is clean. The one apparent exception,
+  `FooBarSameDomain`, is a DELIBERATELY ambiguous fixture — duplicate content names and an
+  ambiguous `Info` are it doing its job, not migration debt. (Validate entry points, not
+  include fragments: a fragment validated alone reports errors by construction.) Original
+  entry follows for the measured cost:
   2026-08-18 (`c67cfdbfd`) on Reid's ruling that reaching past a context boundary
   is an Error, not a warning. Measured cost on the corpus, with the check live:
   **250 inbound + 241 outbound violations across 184 of 198 entry points**
