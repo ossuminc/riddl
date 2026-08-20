@@ -22,6 +22,9 @@ destroys the instance) rather than matching the two together, which was the sugg
 fix and would have told authors their `terminate` "refuses" and offered `require` as the
 conditional alternative. `on term` needs no exemption — different statement list.
 Canary-tested, corpus impact zero (measured two ways), CM §4.5 updated.
+**CONFIRMED BY THE REPORTER and CLOSED** — riddl-models re-verified it against the
+staged `2.0.0-rc.20-2-c1212d73`: one error per unreachable statement (two statements
+⇒ two errors), `on term` exempt, their corpus clean. Task in `task/done/`.
 
 **THE BACKLOG HAS ONE OPEN ITEM.** `[0.2]` upgrade riddl-vscode — and it is blocked
 BY DESIGN, not overlooked: it consumes `@ossuminc/riddl-lib` from npm, which carries
