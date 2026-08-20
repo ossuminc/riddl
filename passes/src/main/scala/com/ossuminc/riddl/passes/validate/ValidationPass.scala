@@ -2014,10 +2014,43 @@ case class ValidationPass(
                       s"Use the declared response: '$stmtKeyword ${declaredYield.format}'."
                   )
               }
-            // `yields`/`replies` are OPTIONAL, so producing without a declared clause is allowed.
-            // Phase B changes this only for `ask`: asking a query that declares no `replies` is an
-            // error at the ASK site, since there is no type for the answer to have.
-            case None => ()
+            // `yields`/`replies` are OPTIONAL, so producing without a declared clause PARSES and
+            // is not an error. But a clause that answers should be handling a message that says
+            // what it answers with, and until 2026-08-19 nothing said so.
+            //
+            // A19 makes the declaration the CONTRACT: a generator derives the handler's return
+            // type from it and never from the body, because inferring from the body would let a
+            // body silently redefine the interface. With no declaration the generated method is
+            // `void` and the `reply` becomes a `return x;` inside it, which does not compile --
+            // and the modeller learns that from javac several steps away rather than from riddlc.
+            //
+            // **StyleWarning, by the author's ruling**: *"a reply should be symmetric with the
+            // replies clause, but not having that symmetry doesn't rise to the level of an
+            // error"*. The model is untidy rather than self-contradictory -- it answers, it just
+            // never declared that it does.
+            //
+            // The asymmetry that made this findable: `forward` ALREADY requires the declaration
+            // and Errors without it (`checkForward`), so the strictest of the three response
+            // statements checked a precondition the two ordinary ones did not.
+            //
+            // The CONVERSE is already an Error in all four combinations -- declaring and then not
+            // producing ("does not yield/reply it on every path"), and producing the wrong type
+            // ("does not match declared …") -- verified 2026-08-19 rather than assumed, so no
+            // duplicate check was added for it.
+            case None =>
+              val answered: Seq[Statement] =
+                if isQuery then finder.recursiveFindByType[ReplyStatement]
+                else finder.recursiveFindByType[YieldStatement]
+              answered.headOption.foreach { stmt =>
+                messages.addStyle(
+                  stmt.loc,
+                  s"this '$verb' answers for ${handledType.identify}, which declares no " +
+                    s"'$declKeyword' clause",
+                  suggestion = s"Declare what it answers with — '$declKeyword <type>' on " +
+                    s"${handledType.identify} — so the response is part of its contract rather " +
+                    "than something a reader has to infer from this body."
+                )
+              }
           }
         case _ => () // not a command/query, or unresolved — no 'yields' contract to enforce
       }
