@@ -20,10 +20,19 @@ package com.ossuminc.riddl.json
   *
   * The fact that decides it: **hosted frontier models (Claude, GPT, Gemini) expose JSON Schema and
   * tool schemas only.** There is no logit-level hook for an arbitrary context-free grammar, so for
-  * those models JSON is the ONLY constrained-decoding channel available. A self-hosted user has
-  * better options — this repo already generates `riddl-grammar.gbnf` from the EBNF and CI-checks it
-  * against drift, and XGrammar is the modern retry if GBNF's performance on a 263-rule grammar is
-  * the problem — so they should use those and not this.
+  * those models JSON is the ONLY constrained-decoding channel available.
+  *
+  * **CORRECTED 2026-08-20.** This said a self-hosted user has better options because "this repo
+  * already generates `riddl-grammar.gbnf` from the EBNF". That grammar, its generator and its
+  * validator are DELETED. The measurement that killed it: llama.cpp's grammar engine could not run
+  * the full RIDDL grammar at a usable speed — a single 8-token constrained generation did not
+  * finish in **7 minutes**, against seconds for unconstrained, proven through the FFI. Roughly
+  * three orders of magnitude, and nothing ever consumed it.
+  *
+  * The self-hosted route is still open and is a BETTER one: llama.cpp builds a GBNF from a JSON
+  * Schema itself, so a generator derives a small grammar on the fly from the IR shape it actually
+  * wants. That needs no file from this repo — which is why deleting the bundled grammar removes a
+  * 258-rule artifact rather than removing constrained decoding as an option.
   *
   * What that costs, stated plainly because it is the price of the ruling: **131 DTOs shadowing the
   * AST**, a second serialization surface that has to be kept in step by hand. It is the surface

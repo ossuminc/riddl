@@ -1,7 +1,7 @@
 // A55: corpus fixture for the OPTIONAL local name bound to an on-clause's message. The `:` is
 // ordinary type ascription — the same rule as `let x: T = ...` and a field declaration `p1: String`
 // — so `on foo: command Foo` reads "foo has type command Foo". Both the fastparse parser and the
-// EBNF/TatSu + GBNF grammars must accept every shape below:
+// The EBNF/TatSu grammar must accept every shape below:
 //   - a binding on an `on command` clause and on an `on event` clause
 //   - a binding used bare (the whole message) and dotted (a field of the message)
 //   - a binding together with a `from [<name>:] <origin>` clause

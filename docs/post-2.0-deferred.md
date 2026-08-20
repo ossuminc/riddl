@@ -26,7 +26,7 @@ deliberately out of scope for the 2.0 release — BACKLOG.md holds
   `language/input/module/mixed-module.riddl:17`,
   `language/input/requires-returns-ref.riddl` — plus two tests that ASSERT the
   deprecation fires (`FunctionValidatorTest:106`, `SagaValidatorTest:56`), the
-  `aggregation` alternative in `func_input`/`func_output` in the EBNF + a GBNF
+  `aggregation` alternative in `func_input`/`func_output` in the EBNF
   regen, the `ArgDto.fields` read path in JSON, and an external-corpus re-run.
   Sequence: deprecate loudly for a release, then remove.
 

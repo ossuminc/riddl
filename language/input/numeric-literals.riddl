@@ -1,5 +1,5 @@
 // Task 8 (numeric-literals plan): a corpus fixture under `**/input/**/*.riddl` so the CI
-// TatSu/GBNF grammar validators actually see the new syntax added by this plan -- without a
+// TatSu grammar validator actually sees the new syntax added by this plan -- without a
 // fixture here, the parser/EBNF sync is asserted (Tasks 1-7) but never checked in CI.
 //
 // Exercises every literal shape numericLiteral accepts (StatementParser.scala), a bare

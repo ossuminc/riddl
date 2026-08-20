@@ -1,5 +1,5 @@
 // Task 5 (A20 typed-holes plan): a corpus fixture under `**/input/**/*.riddl` so the CI
-// TatSu/GBNF grammar validators actually see the new syntax added by this plan -- without a
+// TatSu grammar validator actually sees the new syntax added by this plan -- without a
 // fixture here, the parser/EBNF sync is asserted (Tasks 1-4) but never checked in CI. Modeled on
 // `numeric-literals.riddl` (same plan shape, same reason for existing).
 //

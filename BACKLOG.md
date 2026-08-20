@@ -331,6 +331,14 @@ each want an approved plan before implementation, per the standing rule.
     No constrained decoding, but far more viable than when JSON was chosen.
   **Options:** keep JSON; retire it in favour of repair loops; or keep it only for
   hosted models and point self-hosted users at GBNF/XGrammar.
+  **AMENDED 2026-08-20 — the second half of that ruling is void.** The bundled
+  `riddl-grammar.gbnf`, its generator and its validator are DELETED: llama.cpp could not run the
+  full RIDDL grammar at a usable speed (an 8-token constrained generation did not finish in 7
+  minutes, against seconds unconstrained) and nothing consumed it. The DECISION to keep JSON for
+  hosted models is unchanged and is why this entry stayed struck; what changed is where
+  self-hosted users are pointed — llama.cpp derives a small GBNF from a JSON Schema on the fly,
+  so that route needs no file from this repo. `JsonModel.scala`'s docstring carries the
+  correction. Left in place rather than rewritten, since the ruling itself was real.
 
 - ~~**`Punctuation.tokenPunctuation` does not include `!`.**~~ — **DONE
   2026-08-15, `66388821c`.** The damage was worse than filed: not `!isValid` but

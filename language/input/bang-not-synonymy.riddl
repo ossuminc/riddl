@@ -1,5 +1,5 @@
 // Corpus fixture for the `2026-08-15-not-bang-synonymy` plan (task 5): a fixture under
-// `**/input/**/*.riddl` so the CI TatSu/GBNF grammar validators actually see `!` syntax --
+// `**/input/**/*.riddl` so the CI TatSu grammar validator actually sees `!` syntax --
 // without one here, the parser/EBNF sync is asserted by the unit suites (tasks 1-4) but never
 // checked in CI. Precedent: `numeric-literals.riddl` immediately exposed a real TatSu divergence
 // (`1e3`) that no internal test could have found.

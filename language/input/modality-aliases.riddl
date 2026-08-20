@@ -1,5 +1,5 @@
 // A43/A46: every modality alias and presentation verb accepted, in one model, so the CI
-// grammar validators (TatSu over ebnf-grammar.ebnf, and the generated GBNF) actually cover
+// grammar validator (TatSu over ebnf-grammar.ebnf) actually covers
 // them. Without a fixture the EBNF rules are only asserted against themselves.
 domain Modalities is {
   application context Multimodal is {

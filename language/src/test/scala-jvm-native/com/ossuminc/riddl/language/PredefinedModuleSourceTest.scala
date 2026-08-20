@@ -14,7 +14,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.nio.file.{Files, Paths}
 
 /** The bundled standard-module source lives in a Scala string constant so it is available on JVM,
-  * JS and Native without resource loading. That puts it OUT of reach of the CI TatSu/GBNF grammar
+  * JS and Native without resource loading. That puts it OUT of reach of the CI TatSu grammar
   * validators, which only scan the repository's `input` directories for `.riddl` files.
   *
   * `language/input/predefined/riddl-standard-module.riddl` is a verbatim copy that those validators

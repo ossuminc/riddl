@@ -127,7 +127,7 @@ domain Values is {
   }
   // A29: structured `match` — type-cases over a closed enumeration (exhaustive, no default needed),
   // value-comparison patterns with an explicit operator, a `when` guard, and the legacy pseudo-code
-  // string form. All parse via fastparse and the EBNF/TatSu + GBNF grammars, and validate cleanly.
+  // string form. All parse via fastparse and the EBNF/TatSu grammar, and validate cleanly.
   context Matching is {
     type OrderStatus is any of { Pending, Shipped, Delivered }
     command Track is { status: OrderStatus, count: Integer }

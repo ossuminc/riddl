@@ -341,16 +341,6 @@ jobs:
         cd language/src/test/scalajvm/python
         python validate_external_riddl.py --repo ${{ github.workspace }}/riddl-models
 
-    - name: Verify GBNF is up-to-date
-      run: |
-        cd language/src/test/scalajvm/python
-        python ebnf_to_gbnf.py --check
-
-    - name: Validate GBNF Grammar
-      run: |
-        cd language/src/test/scalajvm/python
-        python gbnf_validator.py --skip-freshness
-
   dependency-check:
     timeout-minutes: 15
     permissions:

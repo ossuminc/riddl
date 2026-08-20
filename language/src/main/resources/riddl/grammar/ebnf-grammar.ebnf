@@ -358,10 +358,9 @@ prompt_value = "prompt" "(" literal_string ")" [ "as" type_expression ] ;
 (*     by a digit (`1e3`, no sign) fails to match even though fastparse accepts it (found            *)
 (*     2026-08-15 adding the numeric-literals corpus fixture). A regex bypasses nameguard entirely   *)
 (*     (see `letter`/`digit` above and `mime_type` below for the same inline-regex idiom).           *)
-(* A single whole-body regex also keeps the rule classified TERMINAL by `ebnf_to_gbnf.py` (a         *)
-(* whole-body regex qualifies directly, Phase 1), so no spurious `ws` tokens appear between its      *)
-(* parts in the generated GBNF -- a structural classification would reopen reason 2 above in the     *)
-(* LLM-constrained-generation grammar even though the TatSu/fastparse validators stay correct.       *)
+(* A fourth reason used to live here -- keeping the rule classified TERMINAL by the GBNF           *)
+(* generator -- and is VOID as of 2026-08-20: the bundled GBNF grammar and its generator are        *)
+(* deleted. Reasons 1-3 stand on their own and are why the regex form remains correct.              *)
 numeric_literal = /[+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?/ ;
 (* A24: call a pure function to get a result. "Functions only" — the callee is a function_ref. *)
 call = "call" function_ref "(" [constructor_arg {"," constructor_arg}] ")" ;

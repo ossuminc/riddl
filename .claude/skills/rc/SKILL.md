@@ -354,8 +354,11 @@ Then every validator CI gates on:
 
 ```bash
 cd language/src/test/scalajvm/python
+# The GBNF validator was here until 2026-08-20. The bundled GBNF grammar and its
+# generator/validator are DELETED -- no consumer, and llama.cpp could not run the
+# 258-rule grammar at a usable speed. The EBNF remains authoritative and TatSu still
+# gates it, so grammar coverage is unchanged.
 .venv/bin/python ebnf_tatsu_validator.py     # MUST report zero "Unexpected failures"
-.venv/bin/python gbnf_validator.py
 .venv/bin/python validate_external_riddl.py --repo ../../../../../riddl-examples
 .venv/bin/python validate_external_riddl.py --repo ../../../../../riddl-models
 # ^ both of these now run in CI's ebnf-grammar-validation job, so a green CI run

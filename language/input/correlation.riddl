@@ -1,4 +1,4 @@
-// A70: correlations in projectors. A fixture for the EBNF/GBNF grammar validators, which walk
+// A70: correlations in projectors. A fixture for the EBNF grammar validator, which walks
 // every **/input/**/*.riddl file, so the new syntax is actually covered by the Python CI job
 // rather than only by the fastparse tests.
 //
