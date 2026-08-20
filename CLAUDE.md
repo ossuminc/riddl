@@ -1358,11 +1358,24 @@ to the right group rather than appending to a list.
   (mechanical), while one that declines by emitting a `*Rejected` event cannot forward
   anything and needs an explicit `error`/`require` — a semantic change.
 
-- **`error` is TERMINAL in its block; `require` is not.** A statement after an `error` is
-  unreachable and an Error. `require X` refuses only when X fails, so statements after it are
-  ordinary — the check matches `ErrorStatement` alone. Per statement LIST, recursing into
-  `when`/`match`/`foreach` bodies as their own lists.
-
+- **`error` AND `terminate` are TERMINAL in their block; `require` is not.** A statement after
+  either is unreachable and an Error. `error` REFUSES, `terminate` DESTROYS the instance — same
+  rule, different reasons, and **the message must state the one that applies**. `require X` refuses
+  only when X fails, so statements after it are ordinary. Per statement LIST, recursing into
+  `when`/`match`/`foreach` bodies as their own lists. **`on term` needs no exemption**: it is a
+  different list, and it runs BECAUSE of the termination rather than after it.
+  **The `terminate` half was missing for a full release, and that is the lesson.** rc.19 shipped
+  the `error` half and reordered 268 corpus statements for exactly this reason, while a `set state`
+  sitting after a `terminate` in reactive-bbq survived that pass and every validation since —
+  because the check matched `ErrorStatement` alone. riddl-models found it BY EYE. **When a rule is
+  about unreachability, ask what ELSE ends a block**; enumerating one terminator is how the next
+  one stays invisible.
+  **Do not "simplify" this by matching the two terminators together.** That was the reported
+  suggestion and it is the smaller change; it also yields a TRUE diagnostic with a FALSE
+  explanation, telling an author their `terminate` "refuses" and offering `require` as the
+  conditional alternative, which is not a conditional `terminate` at all. `BlockEnder` carries each
+  terminator's own reason and advice. Same trap as A23 borrowing A26's effect set: **a check
+  inherited wholesale stops answering its own question.**
 - **A23 ("refusals first") asks a DIFFERENT question from A26, and its effect set was
   borrowed from A26 for months.** A26 asks *is this pure?*; A23 asks *would refusing now
   leave a partial change?* Narrowed 2026-08-19 to LOCAL state transformation: **`set`,

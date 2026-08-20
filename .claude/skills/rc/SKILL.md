@@ -154,9 +154,14 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2801** | 7 |
-| JS | **872** | 5 |
-| Native | **2762** | 7 |
+| JVM | **2806** | 7 |
+| JS | **877** | 5 |
+| Native | **2767** | 7 |
+
+**Raised after 2.0.0-rc.20 (2026-08-20) to 2806 / 877 / 2767.** `TerminateTerminalTest`,
+5 cases in shared `passes/src/test/scala`, so **+5 on every row** — the easy shape, and it
+was predicted before running and confirmed on all three platforms. **This work is NOT in
+rc.20**; the next RC certifies against these numbers.
 
 **Raised at 2.0.0-rc.20 (2026-08-20) to 2801 / 872 / 2762**, from a cold cache
 (`/tmp/sbt-verify-rc20`, 140K -> 264M), 19 module-legs each its own sbt invocation, zero

@@ -667,7 +667,7 @@ case class ValidationPass(
       )
     // A23: refusals (require/error) must precede any effect within each linear statement list.
     checkRefusalsFirst(onClause.statements)
-    checkErrorTerminal(onClause.statements)
+    checkBlockTerminal(onClause.statements)
   end validateOnClause
 
   private def validateOnMessageClause(omc: OnMessageLikeClause, parents: Parents): Unit = {
@@ -4694,7 +4694,7 @@ case class ValidationPass(
     // A23: refusals must precede any effect in the do-step's statement list (undo/compensation is
     // NOT checked — it has different, compensation semantics and is out of A23's scope).
     checkRefusalsFirst(s.doStatements.toSeq.collect { case st: Statement => st })
-    checkErrorTerminal(s.doStatements.toSeq.collect { case st: Statement => st })
+    checkBlockTerminal(s.doStatements.toSeq.collect { case st: Statement => st })
     check(
       s.doStatements.nonEmpty == s.undoStatements.nonEmpty,
       "A saga step with do statements must also have revert statements, and vice versa",
@@ -5925,62 +5925,107 @@ case class ValidationPass(
     case _: SetStatement | _: MorphStatement | _: TerminateStatement => true
     case _                                                           => false
 
-  /** `error` is TERMINAL in its block: a statement after one is unreachable (author's ruling,
-    * 2026-08-19).
+  /** What ended a block, and WHY.
     *
-    * `error` refuses unconditionally, so nothing after it can run. riddl-generator lowers it to a
-    * terminal `return`, which made every following statement unreachable Java — a compile error —
-    * at 268 sites in reactive-bbq. The alternative reading, that the following statements "record
-    * the refusal and carry on", was considered and rejected outright: it *"suggests 'throw out
-    * control flow, it's not important!' which is ridiculous"*.
+    * `error` and `terminate` both make everything after them unreachable, but for DIFFERENT
+    * reasons: an `error` REFUSES, a `terminate` DESTROYS the instance. The reason travels with the
+    * location so the message can state the one that actually applies.
+    *
+    * Reusing `error`'s wording for `terminate` would have been the smaller change and would have
+    * produced a true diagnostic with a false explanation — telling an author their `terminate`
+    * "refuses", and pointing them at `require` as the conditional alternative, which is not a
+    * conditional `terminate` at all. That is the same trap A23 fell into by borrowing A26's effect
+    * set: a check inherited wholesale stops answering its own question.
+    */
+  private case class BlockEnder(loc: At, keyword: String, why: String, advice: String)
+
+  private object BlockEnder {
+    def refusal(loc: At): BlockEnder = BlockEnder(
+      loc,
+      "error",
+      "refuses",
+      "Move this statement BEFORE the 'error' — a transmission there is legal, since A23 bans " +
+        "only local state changes ahead of a refusal — or remove it. An 'error' is unconditional; " +
+        "use 'require' if the refusal is conditional and later statements should still run."
+    )
+
+    def termination(loc: At): BlockEnder = BlockEnder(
+      loc,
+      "terminate",
+      "destroys the instance",
+      "Move this statement BEFORE the 'terminate', where the instance still exists, or remove it. " +
+        "Nothing can read or change an instance that no longer exists. If the work belongs to the " +
+        "end of the instance's life, put it in an 'on term' clause — that clause runs BECAUSE of " +
+        "the termination, so it is not 'after' it in this block."
+    )
+  }
+
+  /** `error` and `terminate` are TERMINAL in their block: a statement after either is unreachable.
+    *
+    * Two author's rulings, a day apart, and the second is why this check is no longer named for
+    * `error` alone. **`error` refuses** unconditionally (2026-08-19), so nothing after it can run;
+    * riddl-generator lowers it to a terminal `return`, which made every following statement
+    * unreachable Java at 268 sites in reactive-bbq. **`terminate` destroys the instance**
+    * (2026-08-20), so nothing after it can read or change one — *"having a set state, or any
+    * statement after a terminate is something riddlc should error about (because the statements
+    * must be ignored)"*. The alternative reading for `error`, that following statements "record the
+    * refusal and carry on", was rejected outright: it *"suggests 'throw out control flow, it's not
+    * important!' which is ridiculous"*.
+    *
+    * **The asymmetry lasted one release and was found BY EYE, not by a check.** rc.19 shipped the
+    * `error` half and reordered 268 corpus statements for exactly this reason, while a `set state`
+    * sitting after a `terminate` in reactive-bbq's `TableOrder` survived that pass and every
+    * validation since — because the rule matched `ErrorStatement` alone. riddl-models noticed it
+    * while adding `on term`. **When a rule is about unreachability, ask what ELSE ends a block**;
+    * enumerating one terminator is how the next one stays invisible.
     *
     * **`require` is deliberately NOT terminal.** `require X` refuses only when X fails and
-    * continues when it holds, so statements after it are ordinary and must not be flagged. Only
-    * `error` refuses unconditionally. This is why the check matches `ErrorStatement` alone rather
-    * than the refusal pair A23 uses.
+    * continues when it holds, so statements after it are ordinary. This is why the check matches
+    * `ErrorStatement` rather than the refusal pair A23 uses — and note A23 asks a DIFFERENT
+    * question from this one (*would refusing now leave a partial change?*), so its effect set is
+    * not this one's terminator set.
     *
-    * Per statement LIST and recursing the same way `checkRefusalsFirst` does — each `when` branch,
-    * `match` case and `foreach` body is its own list. An `error` inside a branch says nothing about
-    * statements following the `when` itself, because that branch may not be taken.
+    * **`on term` needs no exemption**, and this is the question riddl-models raised. The check runs
+    * per statement LIST, and an `on term` clause is a different list — it runs BECAUSE of the
+    * termination, so it is never "after" the `terminate` in the same block. All three corpus
+    * `terminate` sites are followed by a sibling `on term` clause and none is affected.
     *
-    * It found 268 sites the generator could not compile and that riddlc had accepted for the whole
-    * life of the language, which is the same shape as every other check added this month: the
-    * silence was the defect.
+    * Recursion follows `checkRefusalsFirst`: each `when` branch, `match` case and `foreach` body is
+    * its own list, because a terminator inside a branch says nothing about statements following the
+    * branch, which may not be taken.
     */
-  private def checkErrorTerminal(stmts: Seq[Statement]): Unit =
-    var refusedAt: Option[At] = None
+  private def checkBlockTerminal(stmts: Seq[Statement]): Unit =
+    var endedBy: Option[BlockEnder] = None
     stmts.foreach { stmt =>
-      refusedAt match
-        case Some(eLoc) =>
+      endedBy match
+        case Some(ender) =>
           messages.addError(
             stmt.loc,
-            s"this statement is unreachable: the 'error' at ${eLoc.toShort} refuses, which ends " +
-              "the block",
-            suggestion = "Move this statement BEFORE the 'error' — a transmission there is legal, " +
-              "since A23 bans only local state changes ahead of a refusal — or remove it. An " +
-              "'error' is unconditional; use 'require' if the refusal is conditional and later " +
-              "statements should still run."
+            s"this statement is unreachable: the '${ender.keyword}' at ${ender.loc.toShort} " +
+              s"${ender.why}, which ends the block",
+            suggestion = ender.advice
           )
         case None =>
           stmt match
-            case e: ErrorStatement => refusedAt = Some(e.loc)
-            case _                 => ()
+            case e: ErrorStatement     => endedBy = Some(BlockEnder.refusal(e.loc))
+            case t: TerminateStatement => endedBy = Some(BlockEnder.termination(t.loc))
+            case _                     => ()
       end match
       // Nested bodies are their OWN lists, exactly as in `checkRefusalsFirst`.
       stmt match
         case ws: WhenStatement =>
-          checkErrorTerminal(ws.thenStatements.toSeq.collect { case s: Statement => s })
-          checkErrorTerminal(ws.elseStatements.toSeq.collect { case s: Statement => s })
+          checkBlockTerminal(ws.thenStatements.toSeq.collect { case s: Statement => s })
+          checkBlockTerminal(ws.elseStatements.toSeq.collect { case s: Statement => s })
         case ms: MatchStatement =>
           ms.cases.foreach(mc =>
-            checkErrorTerminal(mc.statements.toSeq.collect { case s: Statement => s })
+            checkBlockTerminal(mc.statements.toSeq.collect { case s: Statement => s })
           )
-          checkErrorTerminal(ms.default.toSeq.collect { case s: Statement => s })
+          checkBlockTerminal(ms.default.toSeq.collect { case s: Statement => s })
         case fs: ForeachStatement =>
-          checkErrorTerminal(fs.doStatements.toSeq.collect { case s: Statement => s })
+          checkBlockTerminal(fs.doStatements.toSeq.collect { case s: Statement => s })
         case _ => ()
     }
-  end checkErrorTerminal
+  end checkBlockTerminal
 
   /** A23 ("refusals first"): within a single linear statement list, no EFFECT statement may appear
     * before a REFUSAL (`require`/`error`). Performing effects before refusing would leave partial

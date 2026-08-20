@@ -282,13 +282,22 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
       // The asymmetric half Task 5 left: `terminate` in a fold was ALREADY banned before this task.
       // This case is the regression proof that extending the same check site for `initiate` did not
       // turn `terminate`'s existing single error into two.
+      //
+      // It counts FOLD-BAN lines, not all lines. `foldModel` puts `set field oid to e.oid` after
+      // the statement under test, so as of 2026-08-20 a `terminate` here also draws the
+      // unreachability Error -- a DIFFERENT and equally correct defect (the `set` cannot run once
+      // the instance is destroyed), not a second report of this one. Counting every line would
+      // conflate "the fold ban fired twice", which is the bug this case exists to catch, with
+      // "two distinct rules each fired once", which is the system working.
       val errors = errorsIn(
         foldModel("""terminate e.oid"""),
         "ban-fold-terminate"
       )
       errors must include("fold")
       errors must include("terminate")
-      errors.linesIterator.count(_.nonEmpty) mustBe 1
+      errors.linesIterator.count(l => l.nonEmpty && l.contains("fold")) mustBe 1
+      // And pin the companion so its arrival is a recorded fact rather than a surprise.
+      errors must include("unreachable")
     }
 
     "be LEGAL in a correlation timeout block" in { (td: TestData) =>

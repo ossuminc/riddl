@@ -10,6 +10,19 @@ Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
 NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
 
+**`terminate` IS NOW TERMINAL IN ITS BLOCK (2026-08-20), and it is NOT in rc.20.** The
+task arrived from riddl-models at 14:51, during the rc.20 run. `checkErrorTerminal` is
+now `checkBlockTerminal` and matches `terminate` as well as `error`. **The lesson is the
+asymmetry, not the fix**: rc.19 made `error` terminal and reordered 268 corpus statements
+for exactly this reason, and walked straight past a `set state` after a `terminate` in
+reactive-bbq — for a full release, until riddl-models spotted it BY EYE. When a rule is
+about unreachability, ask what ELSE ends a block.
+**The message states each terminator's OWN reason** (`error` refuses, `terminate`
+destroys the instance) rather than matching the two together, which was the suggested
+fix and would have told authors their `terminate` "refuses" and offered `require` as the
+conditional alternative. `on term` needs no exemption — different statement list.
+Canary-tested, corpus impact zero (measured two ways), CM §4.5 updated.
+
 **THE BACKLOG HAS ONE OPEN ITEM.** `[0.2]` upgrade riddl-vscode — and it is blocked
 BY DESIGN, not overlooked: it consumes `@ossuminc/riddl-lib` from npm, which carries
 only published releases, so it cannot take a staged build and chasing it between RCs
@@ -148,8 +161,11 @@ a fourth time.
 - **Never `sbt … | tail -N` for a multi-module run** — it discards the module
   summaries that tell you what actually ran.
 
-**`task/` — ONE file. `2026-08-04-security.md` is Reid's own RBAC draft marked
-*"do not act on this"*** — a design seed, not a request.
+**`task/` is EMPTY of pending files** (2026-08-20). The last incoming task —
+`terminate` must end its block — is done and in `task/done/`. An earlier note here
+claimed `task/` held Reid's `2026-08-04-security.md` RBAC draft; **that file is not
+there, is not in `done/`, and being gitignored has no history to consult**, so the
+claim is retired rather than repeated.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.
