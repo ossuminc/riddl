@@ -49,12 +49,30 @@ trait BasicValidation(using pc: PlatformContext) {
       }
   }
 
+  /** Resolve a path to a definition of the EXPECTED kind, or to nothing.
+    *
+    * **This used to `asInstanceOf[T]` with no `ClassTag`, and that is a defect worth remembering.**
+    * `T` erases, so the cast always "succeeded" here and handed back a definition of the WRONG kind
+    * typed as `T`. Nothing failed at this line; the `ClassCastException` surfaced far away, at
+    * whichever caller first touched a `T`-specific member — and only for callers that touch one, so
+    * the same mistyped value crashed one model and passed silently through another. That made the
+    * failure depend on which check ran first, which is exactly what riddl-generator reported: a
+    * clean diagnosis followed by a stack trace that swallowed every remaining error in the model.
+    *
+    * The type test is `isInstance`-based (via the `ClassTag`), so a legitimate SUBTYPE still
+    * resolves — `resolvePath[Processor[?]]` on an `Entity` is a match, as it must be.
+    *
+    * **Returning `None` loses no diagnostic.** A path that resolves to the wrong kind is already
+    * reported by `ResolutionPass` ("… resolved to Field 'x' …, but a Processor was expected"),
+    * which runs BEFORE validation. This function's job is to hand validation a value it can trust,
+    * and the honest answer for a mismatch is that there isn't one.
+    */
   @inline
-  def resolvePath[T <: Definition](
+  def resolvePath[T <: Definition: ClassTag](
     pid: PathIdentifier,
     parents: Parents
   ): Option[T] = {
-    pathIdToDefinition(pid, parents).map(_.asInstanceOf[T])
+    pathIdToDefinition(pid, parents).collect { case definition: T => definition }
   }
 
   def checkPathRef[T <: Definition: ClassTag](

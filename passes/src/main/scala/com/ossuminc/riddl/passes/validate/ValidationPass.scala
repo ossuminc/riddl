@@ -3955,7 +3955,7 @@ case class ValidationPass(
     parents.headOption match {
       case Some(c: Context) =>
         checkContainer(parents, adaptor)
-        resolvePath(adaptor.referent.pathId, parents).map { (target: Context) =>
+        resolvePath[Context](adaptor.referent.pathId, parents).map { (target: Context) =>
           if target == c then {
             val message =
               s"${adaptor.identify} may not specify a target context that is " +
