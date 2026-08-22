@@ -1338,6 +1338,60 @@ to the right group rather than appending to a list.
   1-in/1-out `flow` that also hosts an `error-sink` inlet derives as a `merge`
   (≥2 inlets, 1 outlet) — never a `split`, which is ≥2 OUTLETS.
 
+- **`tell` addresses an INSTANCE as well as a named processor (rc.21+).** `TellStatement.target`
+  is `ProcessorRef | Value`: keyword-led means a static processor, a bare path or `self.id` means
+  a value typed `Id(...)` naming WHICH INSTANCE. Told apart by the leading keyword, exactly as
+  `forward` is; `Value` excludes `ProcessorRef`, so the union is disjoint.
+  **The instance is NEVER resolved and nothing needs it** (Reid, 2026-08-22: *"You CANNOT know the
+  specific instance at validation time, but fortunately you don't need to."*). Every question asked
+  of a tell target is answered by the processor KIND the `Id` names. `TellTarget.processorOf` is the
+  one place that answers it: `self` by a LEXICAL parent walk with no lookup, a reference by the one
+  refMap lookup the static case already makes.
+  **This is why an earlier "it needs a new resolution-output map" analysis was WRONG** — it assumed
+  resolving a value target required `ValidationPass`'s general value-typing machinery. Reuse of a
+  general helper is not the same fact as a capability being unavailable; check which one you have.
+  **`checkTellAddressing` is SKIPPED for a value target, and that is the feature.** It exists to
+  recover the address structurally from a message field typed `Id(target)` when the tell does not
+  say which instance; a value target says it outright, so demanding the field would ask for
+  something the statement made unnecessary.
+  **NOT entity-only** (unlike `terminate`): only an entity can be *ended*, but any processor can be
+  *addressed*. **`send` is untouched** — it takes a PORTLET, so `Id(entity E)` cannot apply there.
+  **Diagnostics must use the bare PATH, not `ProcessorRef.format`**, which prepends the keyword and
+  silently rewrites every existing message from `target 'E'` to `target 'entity E'`.
+  BAST gains a target-shape discriminator at **`FORMAT_REVISION` 20**; JSON adds `targetValue`
+  beside the `to`/`processor` pair (register new keys in `knownKeys` or the vocabulary guard reddens).
+
+- **A message delivered where nothing can receive it — two CompletenessWarnings (rc.21+).**
+  `checkTellDeliverability` is the SENDING end (a `tell` whose target declares no clause receiving
+  that type); `checkInletsAreReceived` is the RECEIVING end (a processor declares `inlet I is type
+  T` and handles `T` nowhere). Not redundant — one needs a delivery to exist, the other fires on the
+  declaration alone.
+  **The receiving-end question had to be RESTATED before it could be built**, and the restatement is
+  the durable part: "an inlet no handler consumes" relates two things that are never directly
+  related. Handlers do not consume, they CONTAIN `on` clauses, and an `on` clause names a MESSAGE
+  TYPE, never an inlet. Nothing in the AST links the two; the relation is INDIRECT, through the type.
+  **`on other` satisfies both** — it states a policy for anything unmatched, and is the idiom
+  `Riddl.BottomlessPit` is built from. Both reuse ONE helper (`receivesMessageType`) rather than a
+  second copy of `validateAsk`'s identical logic; `validateAsk` now calls it too.
+  **Two interactions found by RUNNING it, not reading it:** a deliberate-discard sink is now exempt
+  from *"contains only 'do' statements"* (otherwise the two checks form a demand no legal spelling
+  satisfies — same trap as the adaptor advisory in `c075f1af0`); and `checkInletsAreReceived` is
+  silent when a processor declares NO handlers at all, because *"should have a handler"* already
+  reports that — adding the exclusion took fixture churn from 7 edits to zero, which is evidence the
+  existing diagnostics covered those cases.
+  **Corpus cost 6,379 + 906 across 190 models — 84% of all tells — and they are TRUE POSITIVES.**
+  Verified by hand before reporting: the corpus idiom is *tell the event to the entity, handle it
+  somewhere else*. Migration filed in riddl-models. Reid: *"Correct is correct."*
+
+- **`resolvePath` had NO `ClassTag` and cast unchecked, for the whole life of the function.**
+  `T` erases, so `pathIdToDefinition(...).map(_.asInstanceOf[T])` always "succeeded" and returned a
+  definition of the WRONG kind typed as `T`. Nothing failed there; the `ClassCastException` fired at
+  whichever caller first touched a `T`-specific member — and only for callers that touch one, so the
+  same mistyped value crashed one model and passed silently through another. **A crash whose
+  occurrence depends on which check ran first is this shape.** `ReferenceMap.definitionOf` does the
+  same job correctly with a `ClassTag`; the two resolution paths disagreed about whether to check.
+  Returning `None` loses no diagnostic — `ResolutionPass` reports a wrong-kind path first.
+
 - **`forward` — delegation, and the ONLY statement that discharges by passing on (rc.19+).**
   `forward <operand> to <portlet|processor>` says the declared `yields`/`replies` is produced
   by whatever handles the message downstream. Legal ONLY in a clause handling a command that
