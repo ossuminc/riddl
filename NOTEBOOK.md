@@ -34,13 +34,27 @@ would mean cutting an RC for its benefit. Everything else in `BACKLOG.md` is str
 the Computational Model is met, not when the backlog empties, and there is no
 "defer to 2.1" pile.
 
-**`2.0.0-rc.20` IS CUT, PUBLISHED AND FULLY VERIFIED (2026-08-20).** All five
-channels checked against the registries rather than the logs: **20/20** Maven
-coordinates at exactly `2.0.0-rc.20`, npm `@ossuminc/riddl-lib@2.0.0-rc.20` under the
-**`rc`** dist-tag, Homebrew touched only `riddlc-rc.rb` (`riddlc.rb` still 1.31.0),
-**`notify-blog: skipped`**, and both native binaries built. The retired
-`diagrams`/`prettify`/`stats` coordinates carry no rc.20 — their newest are 1.1.1 and
-0.40.0, i.e. historical packages, not republished ones.
+**`2.0.0-rc.21` IS CUT, PUBLISHED AND FULLY VERIFIED (2026-08-22).** All five channels
+checked against the registries: **20/20** Maven at exactly `2.0.0-rc.21`, npm under the
+**`rc`** dist-tag, Homebrew touching only `riddlc-rc.rb` (`riddlc.rb` still 1.31.0),
+**`notify-blog: skipped`**, both native binaries built. Cold-cache certification
+(140K -> 265M, 19 legs): **2822 / 890 / 2783**, zero failures, and the +16/+13/+16 delta
+reconciled TO THE CASE against a prediction written first. Floors raised to match.
+`../bin/riddlc` and `~/.ivy2/local` (20 coordinates) both at rc.21.
+
+**rc.21 carries four changes, three of them reported by riddlg.** `tell` may address an
+INSTANCE (a value typed `Id(...)`, incl. `self.id` and alias-reached fields); two new
+CompletenessWarnings for a message delivered where nothing can receive it; `terminate`
+ends its block; and `resolvePath`'s unchecked cast is fixed. **BAST `FORMAT_REVISION`
+20** — the next BAST change must bump to 21.
+
+**THE CORPUS NOW DRAWS 7,285 COMPLETENESS WARNINGS, AND THEY ARE TRUE POSITIVES.**
+6,379 tell-side + 906 inlet-side across 190 models, **0 errors**. That is 84% of all
+corpus tells — checked by hand before being reported, because a number that size usually
+means a broken check. It does not: the corpus systematically tells an event to an entity
+and handles it somewhere else. Migration filed at
+`riddl-models/task/2026-08-22-handle-the-messages-you-are-told.md`. Reid: *"Correct is
+correct."* **Do not soften the checks to make this number go down.**
 
 **THE CORPUS GATE IS GREEN AND THERE ARE ZERO DELIBERATE FAILURES.** Both corpora have
 migrated through rc.19's `forward` statement, narrowed discharge rule and
