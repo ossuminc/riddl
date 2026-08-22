@@ -131,6 +131,8 @@ case class ValidationPass(
     if mode == ValidationMode.Full then
       checkStreaming(root)
       checkTellReachability()
+      checkTellDeliverability()
+      checkInletsAreReceived(root)
       // MUST precede checkCompletenessPostProcess, which asks whether each event is emitted.
       emittedEventTypes = emittedMessageTypes(root)
       computedHandlerCompleteness = classifyHandlers()
@@ -220,6 +222,104 @@ case class ValidationPass(
     * Direct-connector reachability only (transitive reachability is a later refinement). Targets
     * that did not resolve are skipped — another check already reports the missing reference.
     */
+  /** A message told to a processor that declares no clause able to receive it (Reid, 2026-08-22).
+    *
+    * *"You can't generate code from something that is underspecified. In fact, this ought to be
+    * something found by riddlc."* Reported by riddl-generator, which lowers a cross-processor
+    * `tell` into one consumer per (message, sender) pair: with no clause to dispatch to, the
+    * consumer's body has nothing to BE, so it emits a hole that no later AI pass can close, because
+    * the answer is not in the model. 15 such holes in one generated file from
+    * `logistics/warehousing/inventory-control`, which validated CLEANLY under rc.20.
+    *
+    * **CompletenessWarning, not an Error** — the model is under-specified rather than
+    * self-contradictory, and either remedy is legitimate: add the clause, or drop the `tell`. The
+    * message names both, because a diagnostic that states only one of two valid fixes pushes
+    * authors toward the wrong one.
+    *
+    * **This is the SENDING end.** Its twin, an inlet whose type nothing receives, is the same defect
+    * seen from the RECEIVING end and is `checkInletsAreReceived`. They are not redundant: this one
+    * needs a delivery to exist, that one fires on a declared entrance whether or not anything sends
+    * to it.
+    *
+    * **Note the severity asymmetry with `validateAsk`, which Errors on the same shape.** That is
+    * deliberate, not drift: an `ask` states a correlation between two halves of one interaction, so
+    * an unanswerable ask contradicts itself, while an unreceived `tell` merely goes nowhere.
+    *
+    * Silent when the message type does not resolve (ref-integrity reports that already), when the
+    * target's body is `???` (the standing ruling: a stub has said "do not expect much"), and for
+    * the predefined terminators.
+    */
+  /** An inlet whose type the owning processor receives nowhere (Reid, 2026-08-22).
+    *
+    * **The question this answers is not the one it was first asked as.** riddl-generator filed it
+    * as "an inlet no handler consumes", which relates two things that are never directly related:
+    * handlers do not consume, they CONTAIN `on` clauses, and an `on` clause names a MESSAGE TYPE,
+    * never an inlet. `Inlet` knows only its own type; nothing in the AST links an inlet to a
+    * handler. The relation is INDIRECT, through the type — which is why the check compares the
+    * inlet's resolved type against the clauses of the processor that OWNS the inlet.
+    *
+    * So: `P` declares `inlet I is type T`, a connector may deliver a `T` to it, and `P` has no
+    * clause that receives a `T`. `P` declares an arrival point and never says what arriving means.
+    *
+    * **`on other` satisfies it** (ruled explicitly, and it is the hinge): it states a policy for
+    * anything unmatched, which is saying what arriving means, and it is the idiom
+    * `Riddl.BottomlessPit` is built from. Requiring a named clause would flag every deliberate
+    * generic catch. The accepted cost is a much smaller yield — `on other` is pervasive.
+    *
+    * **This is the converse of the 2026-08-18 ruling** that an entity which HANDLES messages must
+    * declare an inlet; this says one that DECLARES an inlet should handle something.
+    *
+    * Distinct from `checkUnattachedOutlets`, which asks whether anything is CONNECTED to the
+    * portlet — a different question about the same declaration, and already answered.
+    */
+  private def checkInletsAreReceived(root: PassRoot): Unit = {
+    Finder(root.contents).recursiveFindByType[Inlet].foreach { inlet =>
+      if !isPredefined(inlet) then
+        symbols.parentOf(inlet) match
+          // A processor declaring NO handlers at all is a different defect, and one already
+          // reported -- `${streamlet.identify} should have a handler`. Firing here too would
+          // double-report it, so this check speaks only to the genuinely new case: handlers EXIST
+          // and none of them receives what this inlet admits. Note `checkTellDeliverability` does
+          // NOT make the same exclusion, and the asymmetry is deliberate: that check is driven by
+          // an actual delivery, so naming the specific message that cannot land is actionable even
+          // when the target is empty-handed.
+          case Some(proc: Processor[?]) if !proc.isEmpty && proc.handlers.nonEmpty =>
+            resolution.refMap.definitionOf[Type](inlet.type_.pathId).foreach { inletType =>
+              if !receivesMessageType(proc, inletType) then
+                messages.addCompleteness(
+                  inlet.errorLoc,
+                  s"${inlet.identify} admits ${inletType.identify} but ${proc.identify} declares " +
+                    "no handler clause that receives it, so nothing happens when one arrives",
+                  suggestion = s"Add an `on` clause for ${inletType.identify} to one of " +
+                    s"${proc.identify}'s handlers, add an `on other` clause if anything arriving " +
+                    s"should be handled generically, or remove ${inlet.identify}."
+                )
+              end if
+            }
+          case _ => ()
+        end match
+      end if
+    }
+  }
+
+  private def checkTellDeliverability(): Unit = {
+    collectedTells.foreach { case (ts, target) =>
+      if !target.isEmpty && !isPredefined(target) then
+        operandType(ts.msg).foreach { msgType =>
+          if !receivesMessageType(target, msgType) then
+            messages.addCompleteness(
+              ts.loc,
+              s"${target.identify} is told ${msgType.identify} but declares no handler clause " +
+                "that receives it, so the message cannot be delivered",
+              suggestion = s"Add an `on` clause for ${msgType.identify} to one of " +
+                s"${target.identify}'s handlers, or remove the `tell`."
+            )
+          end if
+        }
+      end if
+    }
+  }
+
   private def checkTellReachability(): Unit = {
     val liveConnectors = connectors.filterNot(_.isEmpty).toSeq
     collectedTells.foreach { case (ts, target) =>
@@ -306,7 +406,16 @@ case class ValidationPass(
           // Nagging them had a real cost: reactive-bbq added 97 `set` statements to repository
           // handlers purely to silence this, which is what made `set` look like something a
           // repository does. Do not reinstate this without also un-banning `set` there.
-          case BehaviorCategory.PromptOnly if !hc.parent.isInstanceOf[Repository] =>
+          // A SINK is exempt for the same reason, and it became necessary the moment
+          // `checkInletsAreReceived` landed (2026-08-22). That check tells a sink declaring an inlet
+          // to say what arriving means; the only honest thing a DISCARDING sink can say is
+          // `on other is { do "discard" }` -- there is no executable statement, because discarding
+          // is doing nothing, and a sink has no outlet to send on. Without this exemption the two
+          // checks form a demand no legal spelling satisfies: fix the first and you trip the second.
+          // `Riddl.BottomlessPit` is written in exactly this shape and escapes only by being
+          // predefined. Same trap as the adaptor advisory fixed in c075f1af0.
+          case BehaviorCategory.PromptOnly
+              if !hc.parent.isInstanceOf[Repository] && !isDiscardingSink(hc.parent) =>
             messages.addCompleteness(
               hc.handler.errorLoc,
               // `do`, NOT `prompt`. `do` is the canonical spelling and `prompt` is a deprecated
@@ -6406,6 +6515,49 @@ case class ValidationPass(
     * check the interaction can actually happen: the thing asked must be answerable, must say what
     * it answers with, and must be asked of something that handles it.
     */
+  /** Does `proc` have a clause that receives a message of type `tpe`?
+    *
+    * One helper for two questions that were the same question: `ask`'s "the thing asked must
+    * answer" and `tell`'s "the thing told must receive". Writing it twice is the pattern this
+    * codebase keeps getting bitten by — two copies of one dispatch drift, and the tested copy says
+    * nothing about the other.
+    *
+    * Three properties, all deliberate and all inherited from `validateAsk`, which had them first:
+    *   - **An `on other` clause counts.** It states a policy for anything unmatched, which IS
+    *     receiving the message. `Riddl.BottomlessPit` is built from exactly this.
+    *   - **A State's handlers count as the Entity's.** An entity commonly holds its clauses inside
+    *     a `State`, so `proc.handlers` alone cannot see them — the same fold five neighbouring
+    *     checks make.
+    *   - **Identity, not name.** `eq` on the resolved `Type`, because two contexts may each declare
+    *     a `Created`.
+    */
+  /** A `sink` whose clauses are all `on other` — the deliberate-discard shape.
+    *
+    * Narrow on purpose: a sink that names the messages it drops, or does real work, is not this.
+    * Only the catch-everything form is exempted, because that is the one with nothing executable
+    * left to say.
+    */
+  private def isDiscardingSink(d: Definition): Boolean = d match
+    // `effectiveShape`, not the `Streamlet` class: sink-ness is ARITY (no outlets, >=1 inlet), and
+    // it is derived when not ascribed. Asking the class would miss `processor X as sink`.
+    case p: Processor[?] if p.effectiveShape.isInstanceOf[Sink] =>
+      val clauses = p.handlers.flatMap(_.clauses)
+      clauses.nonEmpty && clauses.forall(_.isInstanceOf[OnOtherClause])
+    case _ => false
+  end isDiscardingSink
+
+  private def receivesMessageType(proc: Processor[?], tpe: Type): Boolean =
+    val stateHandlers = proc match
+      case e: Entity => e.states.flatMap(_.handlers)
+      case _         => Seq.empty
+    val clauses = (proc.handlers ++ stateHandlers).flatMap(_.clauses)
+    clauses.exists(_.isInstanceOf[OnOtherClause]) || clauses.exists {
+      case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+        resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(_ eq tpe)
+      case _ => false
+    }
+  end receivesMessageType
+
   private def validateAsk(ask: Ask, parents: Parents): Unit =
     // 1. The target must resolve, and it must be a query. The ref TYPE makes the kind structural
     //    -- a QueryRef cannot name a command -- so this catches an unresolved or mis-kinded path.
@@ -6424,17 +6576,7 @@ case class ValidationPass(
       qt <- queryType
       proc <- target
     do
-      val stateHandlers = proc match
-        case e: Entity => e.states.flatMap(_.handlers)
-        case _         => Seq.empty
-      val clauses = (proc.handlers ++ stateHandlers).flatMap(_.clauses)
-      val handlesAnything = clauses.exists(_.isInstanceOf[OnOtherClause])
-      val handlesThis = clauses.exists {
-        case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
-          resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(_ eq qt)
-        case _ => false
-      }
-      if !handlesThis && !handlesAnything then
+      if !receivesMessageType(proc, qt) then
         messages.addError(
           ask.loc,
           s"${proc.identify} has no clause handling ${qt.identify}, so this `ask` cannot be " +

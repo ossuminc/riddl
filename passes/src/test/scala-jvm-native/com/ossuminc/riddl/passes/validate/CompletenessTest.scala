@@ -1242,7 +1242,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |      }
           |    }
           |
-          |    sink Egress is { inlet in is type Evt }
+          |    sink Egress is {
+          |      inlet in is type Evt
+          |      // `on other` is what makes this sink DISCARD deliberately rather than merely fail to
+          |      // say what arriving means. `sink` describes ARITY (no outlets), never behaviour --
+          |      // `Riddl.BottomlessPit`, the canonical discard, states it exactly this way. Without
+          |      // the clause, `checkInletsAreReceived` correctly reports the inlet as unreceived.
+          |      handler Discard is { on other is { do "discard the event" } }
+          |    }
           |
           |    repository Store is { ??? }
           |
