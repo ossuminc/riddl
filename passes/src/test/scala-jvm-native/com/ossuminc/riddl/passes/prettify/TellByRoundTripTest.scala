@@ -84,7 +84,7 @@ class TellByRoundTripTest extends AbstractValidatingTest {
       val regen = parse(pretty, "regen")
       val regenTell = tellIn(regen)
 
-      regenTell.processorRef.pathId.format mustBe originalTell.processorRef.pathId.format
+      regenTell.target.format mustBe originalTell.target.format
       regenTell.by.map(_.value) mustBe originalTell.by.map(_.value)
     }
 

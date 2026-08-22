@@ -1025,9 +1025,18 @@ class BASTReader(
 
       case 9 => // Tell
         val msg = readMessageOperand() // A54: bare ref or constructor
-        val processorRef = readProcessorRef()
+        // Target shape discriminator, FORMAT_REVISION 20 -- see writeTellStatement.
+        val shape = reader.readU8()
+        val target: ProcessorRef[Processor[?]] | Value = shape match
+          case 0 => readProcessorRef()
+          case 1 => readValue()
+          case other =>
+            throw new IllegalStateException(
+              s"BAST tell target shape $other is neither processor (0) nor value (1) at " +
+                s"${loc.format}; the file may be from a newer build or corrupt"
+            )
         val by = readOption(readIdentifierInline()) // the optional 'by' disambiguator
-        TellStatement(loc, msg, processorRef, by)
+        TellStatement(loc, msg, target, by)
 
       case 10 => // When
         val conditionType = reader.readU8()

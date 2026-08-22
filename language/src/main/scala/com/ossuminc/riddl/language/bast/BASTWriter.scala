@@ -1269,7 +1269,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(9) // Tell statement
     writeLocation(s.loc)
     writeMessageOperand(s.msg) // A54: bare ref or constructor
-    writeProcessorRef(s.processorRef)
+    // Target shape discriminator, added at FORMAT_REVISION 20 when a `tell` gained the ability to
+    // address an INSTANCE by a value typed `Id(entity E)`. A revision-19 reader handed these bytes
+    // reads the value as a processor ref and MISALIGNS rather than failing cleanly, which is the
+    // whole reason the revision gate exists.
+    s.target match
+      case pr: ProcessorRef[?] =>
+        writer.writeU8(0)
+        writeProcessorRef(pr.asInstanceOf[ProcessorRef[Processor[?]]])
+      case v: Value =>
+        writer.writeU8(1)
+        writeValue(v)
+    end match
     writeOption(s.by)(writeIdentifierInline) // the optional 'by' disambiguator
   }
 

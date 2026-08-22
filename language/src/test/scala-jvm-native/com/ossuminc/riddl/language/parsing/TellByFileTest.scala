@@ -43,7 +43,7 @@ class TellByFileTest extends AnyWordSpec with Matchers {
             val tells = onClause.contents.toSeq.collect { case ts: TellStatement => ts }
             tells.size mustBe 1
 
-            tells.head.processorRef mustBe a[EntityRef]
+            tells.head.target mustBe a[EntityRef]
             tells.head.by.map(_.value) mustBe Some("toOrder")
       }
       Await.result(future, 10.seconds)

@@ -385,9 +385,18 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[State](parents.head, resolveARef[State](state, parents))
         resolveMessageOperand(message, parents)
-      case TellStatement(_, msg, processorRef, _) =>
+      case TellStatement(_, msg, target, _) =>
+        // Enumerated, not wildcarded, for the same reason `forward` below is: the union has exactly
+        // two members and a wildcard would silently stop resolving a third.
         resolveMessageOperand(msg, parents)
-        associateUsage(parents.head, resolveARef[Processor[?]](processorRef, parents))
+        target match
+          case processor: ProcessorRef[?] =>
+            associateUsage(parents.head, resolveARef[Processor[?]](processor, parents))
+          case value: Value =>
+            // A value target names WHICH INSTANCE to tell. Resolving the value is what puts its
+            // field (and so its `Id(entity E)` type) in the refMap, which is what lets every later
+            // pass answer "which processor" with one lookup.
+            resolveValue(value, parents)
       case ForwardStatement(_, msg, target) =>
         // `forward` takes BOTH transmission shapes, so the target is resolved as whichever it is.
         // Enumerated rather than given a wildcard: the union has exactly two members, and a
@@ -817,7 +826,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case s: TellStatement =>
         quietly {
           resolveMessageOperand(s.msg, parents)
-          associateUsage(parents.head, resolveARef[Processor[?]](s.processorRef, parents))
+          s.target match
+            case processor: ProcessorRef[?] =>
+              associateUsage(parents.head, resolveARef[Processor[?]](processor, parents))
+            case value: Value => resolveValue(value, parents)
         }
       case s: YieldStatement =>
         s.msg match { case c: Constructor => resolveValue(c, parents); case _ => () }

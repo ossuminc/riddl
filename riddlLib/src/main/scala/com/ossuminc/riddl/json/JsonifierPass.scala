@@ -1392,9 +1392,19 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       MorphStmtDto(path(entity.pathId), path(state.pathId), serializeRecordOperand(value))
     case BecomeStatement(_, entity, handler) =>
       BecomeStmtDto(path(entity.pathId), path(handler.pathId))
-    case TellStatement(_, msg, proc, by) =>
-      val (pp, pk) = processorRef(proc)
-      TellStmtDto(serializeDeliverableOperand(msg), pp, pk, by.map(_.value))
+    case TellStatement(_, msg, target, by) =>
+      target match
+        case proc: ProcessorRef[?] =>
+          val (pp, pk) = processorRef(proc)
+          TellStmtDto(serializeDeliverableOperand(msg), Some(pp), Some(pk), None, by.map(_.value))
+        case v: Value =>
+          TellStmtDto(
+            serializeDeliverableOperand(msg),
+            None,
+            None,
+            Some(serializeValue(v)),
+            by.map(_.value)
+          )
     // Task 2: `yield`/`reply` carry the same widened operand as `send`/`tell`, so they use the
     // deliverable serializer. Using `serializeMsgOperand` here would not compile once the field
     // widened -- but had it been reachable, a ValueRef would have been silently unrepresentable.

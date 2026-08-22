@@ -260,10 +260,15 @@ private[parsing] trait StatementParser {
   }
 
   private def tellStatement[u: P]: P[TellStatement] = {
+    // Told apart by the KEYWORD leading the reference, exactly as `forwardStatement` does: every
+    // `processorRef` alternative is keyword-led, so a bare path can only be a value. `processorRef`
+    // must be tried FIRST -- `value` would otherwise swallow `entity Order` as a path.
+    type Target = ProcessorRef[Processor[?]] | Value
     P(
-      Index ~ Keywords.tell ~/ deliverableMessageValue ~/ to ~ processorRef ~
+      Index ~ Keywords.tell ~/ deliverableMessageValue ~/ to ~
+        (processorRef.map(p => p: Target) | value.map(v => v: Target)) ~
         (by ~/ identifier).? ~/ Index
-    )./.map { (start, msg, proc, byId, end) => TellStatement(at(start, end), msg, proc, byId) }
+    )./.map { (start, msg, target, byId, end) => TellStatement(at(start, end), msg, target, byId) }
   }
 
   /** The processor context a statement occurs in — drives which extra statements are added (Entity

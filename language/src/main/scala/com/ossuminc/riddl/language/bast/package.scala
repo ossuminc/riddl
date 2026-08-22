@@ -147,7 +147,9 @@ package object bast {
     // reader has no arm for sub-kind 21 at all, so it THROWS rather than misreading -- which is the
     // good failure, and the reason the reader's default arm was made to throw instead of
     // fabricating a PromptStatement. Bumped rather than ridden because 18 SHIPPED in 2.0.0-rc.15.
-    19 // forward statement (sub-kind 21, portlet/processor discriminator)
+    20 // tell target: sub-kind 9 now carries a processor/value discriminator before the target,
+    // so a revision-19 reader would take a value's bytes as a processor ref and misalign
+    // everything after it. 19 was the forward statement (sub-kind 21).
     // typed holes + WhenStatement drops the legacy negated-flag byte + A38 refusal reason
 
   /** Constants and Methods used to share [[NODE_FIELD]] with Field, distinguished by nothing.

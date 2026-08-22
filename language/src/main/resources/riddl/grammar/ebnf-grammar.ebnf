@@ -305,7 +305,13 @@ deliverable_message_value = message_value | path_identifier ;
    to a downstream inlet). The `inlet_ref` form is DEPRECATED (soft, removed in 3.0) but still
    parses; use `tell` for direct delivery to a processor. *)
 send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref) ;
-tell_statement = "tell" deliverable_message_value "to" processor_ref [ "by" identifier ] ;
+(* The addressee is EITHER a keyword-led processor_ref naming a processor statically, OR a value
+   typed `Id(entity E)` naming WHICH INSTANCE to tell (`to self.id`, `to order.siteId`). They are
+   told apart by the keyword leading the reference -- every processor_ref alternative is
+   keyword-led -- so a bare path is unambiguously a value. Same discriminator forward_statement
+   uses. *)
+tell_statement = "tell" deliverable_message_value "to" ( processor_ref | value )
+                 [ "by" identifier ] ;
 
 (* `forward` passes the handled message on and DISCHARGES the response obligation, because
    whatever handles it downstream produces the declared `yields`/`replies`. It takes BOTH

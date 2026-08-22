@@ -768,10 +768,18 @@ object JsonModel:
     * `by` is the optional disambiguator, needed only when the message carries more than one field
     * typed `Id(target)`. Absent everywhere before this, so older JSON still reads.
     */
+  /** `{ "kind": "tell", "message": …, … }` — the addressee is EITHER a static processor
+    * (`to` + `processor`) OR a value naming an instance (`targetValue`), never both.
+    *
+    * The static pair stays non-optional-looking in the JSON (both keys are written together or not
+    * at all) so an existing consumer reading `to`/`processor` is unaffected by the addition. A
+    * value target writes `targetValue` instead, the same `ValueDto` [[TerminateStmtDto]] uses.
+    */
   case class TellStmtDto(
     message: MsgOperandDto,
-    to: String,
-    processor: String,
+    to: Option[String] = None,
+    processor: Option[String] = None,
+    targetValue: Option[ValueDto] = None,
     by: Option[String] = None
   ) extends StatementDto
 
@@ -1964,8 +1972,9 @@ object JsonModel:
           case "tell" =>
             TellStmtDto(
               readMsgOperand(m("message")),
-              m("to").str,
-              m("processor").str,
+              m.get("to").map(_.str),
+              m.get("processor").map(_.str),
+              m.get("targetValue").map(readValue),
               m.get("by").map(_.str)
             )
           case "yield" => YieldStmtDto(readMsgOperand(m("message")))
@@ -2088,14 +2097,15 @@ object JsonModel:
           "entity" -> ujson.Str(entity),
           "handler" -> ujson.Str(handler)
         )
-      case TellStmtDto(message, to, processor, by) =>
+      case TellStmtDto(message, to, processor, targetValue, by) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)](
             "kind" -> ujson.Str("tell"),
-            "message" -> writeMsgOperand(message),
-            "to" -> ujson.Str(to),
-            "processor" -> ujson.Str(processor)
-          ) ++ by.map(x => "by" -> (ujson.Str(x): ujson.Value))
+            "message" -> writeMsgOperand(message)
+          ) ++ to.map(x => "to" -> (ujson.Str(x): ujson.Value))
+            ++ processor.map(x => "processor" -> (ujson.Str(x): ujson.Value))
+            ++ targetValue.map(v => "targetValue" -> (writeValue(v): ujson.Value))
+            ++ by.map(x => "by" -> (ujson.Str(x): ujson.Value))
         )
       case YieldStmtDto(message) =>
         ujson.Obj("kind" -> ujson.Str("yield"), "message" -> writeMsgOperand(message))
@@ -2823,6 +2833,8 @@ object JsonModel:
     "subject",
     "takeIn",
     "target",
+    // `tell`'s value target -- the addressee when it names an INSTANCE rather than a processor.
+    "targetValue",
     "terms",
     "text",
     "then",

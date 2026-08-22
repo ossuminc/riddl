@@ -80,7 +80,7 @@ class TellByBASTRoundTripTest extends AnyWordSpec with Matchers {
             .headOption
             .getOrElse(fail("no TellStatement found in reconstructed module"))
 
-          reconstructedTell.processorRef.pathId.format mustBe originalTell.processorRef.pathId.format
+          reconstructedTell.target.format mustBe originalTell.target.format
           reconstructedTell.by.map(_.value) mustBe originalTell.by.map(_.value)
         case Left(errors) =>
           fail(s"BAST deserialization failed: ${errors.format}")

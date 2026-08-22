@@ -19,6 +19,7 @@ import com.ossuminc.riddl.utils.*
 
 import scala.collection.mutable
 import scala.collection.immutable.Seq
+import com.ossuminc.riddl.passes.TellTarget
 
 /** Controls which validation checks are performed.
   *   - Full: all checks including streaming analysis and handler classification (suitable for
@@ -332,10 +333,10 @@ case class ValidationPass(
       if !reachable then
         messages.addWarning(
           ts.loc,
-          s"'tell' target '${ts.processorRef.pathId.format}' is not reachable via any connector; " +
+          s"'tell' target '${tellTargetLabel(ts)}' is not reachable via any connector; " +
             s"a connector to one of its inlets is required for delivery",
           suggestion =
-            s"Add a connector whose 'to' inlet belongs to '${ts.processorRef.pathId.format}' so the " +
+            s"Add a connector whose 'to' inlet belongs to '${tellTargetLabel(ts)}' so the " +
               s"told message can be delivered."
         )
       end if
@@ -1752,6 +1753,32 @@ case class ValidationPass(
   private def pathOf(p: Processor[?]): PathIdentifier =
     PathIdentifier(At.empty, symbols.pathOf(p).reverse)
 
+  /** The PathIdentifier a `tell` writes for its target, when it writes one.
+    *
+    * `None` for a value target: `to self.id` and `to order.siteId` name an INSTANCE, and there is
+    * no processor path in the source to report. Callers that need a path for the resolved processor
+    * build one with [[pathOf]] instead of reasoning from its absence.
+    */
+  private def tellTargetPath(ts: TellStatement): Option[PathIdentifier] = ts.target match
+    case pr: ProcessorRef[?] => Some(pr.pathId)
+    case _: Value            => None
+
+  /** How to NAME a tell's target in a diagnostic.
+    *
+    * A static target renders as its bare PATH, not `ProcessorRef.format` -- the latter prepends the
+    * keyword (`entity E`), which silently changed every existing message from "target 'E'" to
+    * "target 'entity E'". A value target has no path and renders as itself.
+    */
+  private def tellTargetLabel(ts: TellStatement): String =
+    tellTargetPath(ts).map(_.format).getOrElse(ts.target.format)
+
+  /** The processor a `tell` addresses, for either target shape. See [[TellTarget]] for why the
+    * INSTANCE is deliberately not resolved — no check needs it, and the kind is what `Id(entity E)`
+    * names.
+    */
+  private def tellTargetProcessor(ts: TellStatement, parents: Parents): Option[Processor[?]] =
+    TellTarget.processorOf(ts.target, parents, resolution.refMap, symbols)
+
   private def validateStatement(
     statement: Statement,
     parents: Parents
@@ -1829,10 +1856,20 @@ case class ValidationPass(
         checkRef[Handler](handlerRef, parents).foreach { handler =>
           checkCrossContextReference(handlerRef.pathId, handler, onClause, parents)
         }
-      case ts @ TellStatement(_, msg, processorRef, _) =>
-        val maybeProc = checkRef[Processor[?]](processorRef, parents)
+      case ts @ TellStatement(_, msg, target, _) =>
+        // A ProcessorRef goes through `checkRef`, which REPORTS an unresolved or mis-kinded path.
+        // A value target is resolved instead of checked here: whether it is a legal addressee --
+        // that its type is an `Id(entity E)` at all -- is `checkTellTargetValue`'s question, and
+        // asking it twice would double-report.
+        val maybeProc = target match
+          case pr: ProcessorRef[?] => checkRef[Processor[?]](pr, parents)
+          case _: Value            => tellTargetProcessor(ts, parents)
         maybeProc.foreach { entity =>
-          checkCrossContextReference(processorRef.pathId, entity, onClause, parents)
+          // The seam check needs a path. A value target writes none, so the resolved processor's
+          // own path stands in -- the alternative, skipping, would silently exempt instance-
+          // addressed tells from context isolation.
+          val path = tellTargetPath(ts).getOrElse(pathOf(entity))
+          checkCrossContextReference(path, entity, onClause, parents)
           collectedTells.addOne((ts, entity))
         }
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
@@ -3797,8 +3834,8 @@ case class ValidationPass(
         handler.clauses.foreach { clause =>
           walkStatements(clause.contents) {
             case ts: TellStatement =>
-              resolution.refMap
-                .definitionOf[Repository](ts.processorRef.pathId)
+              tellTargetPath(ts)
+                .flatMap(resolution.refMap.definitionOf[Repository](_))
                 .filter(repo => repositoriesOf.exists(_ eq repo))
                 .foreach { repo =>
                   // Resolve the operand's TYPE rather than matching on how it was written -- a
@@ -3895,7 +3932,7 @@ case class ValidationPass(
         projector.repositories.foreach { repoRef =>
           val repoName = repoRef.pathId.value.lastOption.getOrElse("")
           val isTold = allTells.exists { tell =>
-            tell.processorRef.pathId.value.lastOption.contains(repoName)
+            tellTargetPath(tell).flatMap(_.value.lastOption).contains(repoName)
           }
           if !isTold then
             messages.addUsage(
@@ -4815,14 +4852,14 @@ case class ValidationPass(
     if s.doStatements.nonEmpty && s.undoStatements.nonEmpty then {
       val doTargets = mutable.Set.empty[String]
       walkStatements(s.doStatements) {
-        case t: TellStatement   => doTargets += t.processorRef.pathId.format
+        case t: TellStatement   => doTargets += tellTargetLabel(t)
         case snd: SendStatement => doTargets += snd.portlet.pathId.format
         case _                  => ()
       }
       if doTargets.nonEmpty then {
         val undoTargets = mutable.Set.empty[String]
         walkStatements(s.undoStatements) {
-          case t: TellStatement   => undoTargets += t.processorRef.pathId.format
+          case t: TellStatement   => undoTargets += tellTargetLabel(t)
           case snd: SendStatement => undoTargets += snd.portlet.pathId.format
           case _                  => ()
         }
@@ -6985,6 +7022,44 @@ case class ValidationPass(
     * wrong by 294x -- a dotted path means the author QUALIFIED the target, not that it crosses
     * anything.
     */
+  /** A value target must actually name an instance — its type has to be an `Id(...)`.
+    *
+    * Mirrors [[checkTerminate]], with ONE deliberate difference: `terminate` additionally requires
+    * an `Id(entity E)`, because only an entity is multiply-instantiated and so only an entity can
+    * be ended. `tell` has no such restriction — `Id(context C)` is a perfectly good addressee.
+    * *"A singleton's `Id` is how you SEND IT MESSAGES"* (Reid, 2026-08-15): it denotes the singular
+    * deployment, and addressing it means select the right shard and forward. So this check asks
+    * only that the value be an `Id` of SOMETHING.
+    *
+    * **Silent when the type is undeterminable** (a bare `let n = 5`, an unascribed `prompt(…)`),
+    * the same conservative rule `checkTerminate` follows: reporting there would be reasoning from
+    * absence.
+    */
+  private def checkTellTargetValue(
+    ts: TellStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    ts.target match
+      case _: ProcessorRef[?] => () // a static target is checked by `checkRef` in validateStatement
+      case v: Value =>
+        validateValue(v, parents, lets, elements)
+        valueTypeExpr(v, parents, lets, elements).foreach { te =>
+          if uniqueIdOf(te, Nil).isEmpty then
+            messages.addError(
+              ts.loc,
+              s"'${Keyword.tell}' to a value requires a value of type 'Id(...)' naming the " +
+                s"instance to tell, but ${v.format} is '${te.format}'",
+              suggestion = "Address an instance with a value whose type is 'Id(entity ...)' — " +
+                "'tell <msg> to self.id' or a field typed 'Id(entity ...)' — or name a processor " +
+                "statically with a keyword, e.g. 'to entity Order'."
+            )
+          end if
+        }
+    end match
+  end checkTellTargetValue
+
   private def checkTellIsolation(
     ts: TellStatement,
     parents: Parents,
@@ -6998,7 +7073,7 @@ case class ValidationPass(
     if !insideAdaptor then
       (
         tellingCtx,
-        resolution.refMap.definitionOf[Processor[?]](ts.processorRef.pathId, parents.head)
+        tellTargetProcessor(ts, parents)
       ).match
         case (Some(fromCtx), Some(target)) =>
           val toCtx: Option[Context] = target match
@@ -7051,7 +7126,16 @@ case class ValidationPass(
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
   ): Unit =
-    checkRef[Processor[?]](ts.processorRef, parents).foreach { p =>
+    // A VALUE target is skipped entirely, and that is the point of the feature rather than a gap.
+    // This check exists because a statically-named `tell` does not say WHICH instance it addresses,
+    // so the address has to be recovered structurally from a message field typed `Id(target)`. A
+    // value target states the address outright. Running the search anyway would demand an address
+    // field that the statement has made unnecessary, and report an ambiguity between two fields
+    // neither of which is being used.
+    val staticTarget: Option[ProcessorRef[Processor[?]]] = ts.target match
+      case pr: ProcessorRef[?] => Some(pr.asInstanceOf[ProcessorRef[Processor[?]]])
+      case _: Value            => None
+    staticTarget.flatMap(pr => checkRef[Processor[?]](pr, parents)).foreach { p =>
       widenedOperandType(ts.msg, parents, lets, elements).foreach { mt =>
         val fieldsAndOwners = fieldsWithOwner(mt)
         if fieldsAndOwners.nonEmpty then
@@ -8500,6 +8584,7 @@ case class ValidationPass(
           // A70/instance-identity task 6: reached at ANY depth (this function is the single entry
           // point invoked at every container root AND recursively for when/match/foreach bodies) --
           // mirrors checkTerminate's reachability, immediately below.
+          checkTellTargetValue(s, parents, lets, elements)
           checkTellAddressing(s, parents, lets, elements)
           checkTellIsolation(s, parents, lets, elements)
         // Task 2: the `case _ => ()` these three carried is now ENUMERATED. It was correct while the

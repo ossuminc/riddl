@@ -1462,13 +1462,21 @@ object JsonAstBuilder:
         )
       case BecomeStmtDto(entity, handler) =>
         BecomeStatement(curAt, EntityRef(curAt, pathId(entity)), HandlerRef(curAt, pathId(handler)))
-      case TellStmtDto(message, to, processor, by) =>
-        TellStatement(
-          curAt,
-          buildDeliverableOperand(message),
-          processorRef(to, processor),
-          by.map(ident)
-        )
+      case TellStmtDto(message, to, processor, targetValue, by) =>
+        // THROW rather than fabricate a target. A tell with neither shape present is a malformed
+        // document, and the pre-existing habit in this builder of degrading a missing operand into
+        // an empty reference is exactly how a literal once disappeared silently (see
+        // `buildComparand`). There is no defensible default addressee.
+        val target: ProcessorRef[Processor[?]] | Value =
+          (to, processor, targetValue) match
+            case (Some(t), Some(k), None) => processorRef(t, k)
+            case (None, None, Some(v))    => buildValue(v)
+            case _ =>
+              throw new IllegalStateException(
+                "tell statement must carry either 'to'+'processor' or 'targetValue', not both " +
+                  "and not neither"
+              )
+        TellStatement(curAt, buildDeliverableOperand(message), target, by.map(ident))
       case YieldStmtDto(message) => YieldStatement(curAt, buildDeliverableOperand(message))
       case ReplyStmtDto(message) => ReplyStatement(curAt, buildDeliverableOperand(message))
       case WhenStmtDto(condition, conditionId, thenS, elseS, expression) =>

@@ -16,6 +16,7 @@ import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.collection.mutable
 import scala.scalajs.js.annotation.*
+import com.ossuminc.riddl.passes.TellTarget
 
 /** Describes a bridge between two contexts via an adaptor
   *
@@ -198,7 +199,7 @@ case class DependencyAnalysisPass(
 
     parentClause.foreach { omc =>
       val maybeTarget =
-        refMap.definitionOf[Processor[?]](tell.processorRef, omc)
+        TellTarget.processorOf(tell.target, Seq(omc), refMap, symTab)
       maybeTarget.foreach { target =>
         val targetContext = symTab.contextOf(target)
 

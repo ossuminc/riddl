@@ -16,6 +16,7 @@ import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.collection.mutable
 import scala.scalajs.js.annotation.*
+import com.ossuminc.riddl.passes.TellTarget
 
 /** The mechanism by which a message flows between producer and consumer */
 enum FlowMechanism:
@@ -184,7 +185,7 @@ case class MessageFlowPass(
 
     tells.foreach { tell =>
       val maybeTarget =
-        refMap.definitionOf[Processor[?]](tell.processorRef, omc)
+        TellTarget.processorOf(tell.target, Seq(omc), refMap, symTab)
       val maybeType = deliverableType(tell, tell.msg, omc)
       (maybeTarget, maybeType) match
         case (Some(target), Some(msgType)) =>
@@ -201,7 +202,7 @@ case class MessageFlowPass(
             messages.addWarning(
               tell.loc,
               s"MessageFlowPass: could not resolve tell target" +
-                s" '${tell.processorRef.format}' in ${processor.identify}"
+                s" '${tell.target.format}' in ${processor.identify}"
             )
           if maybeType.isEmpty then
             messages.addWarning(

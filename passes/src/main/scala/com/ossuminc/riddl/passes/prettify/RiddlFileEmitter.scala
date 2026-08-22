@@ -653,10 +653,17 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         emitConstructorOperand(msg)
         add(s" to ${portlet.format}")
         nl
-      case TellStatement(_, msg, processorRef, by) =>
+      case TellStatement(_, msg, target, by) =>
         addIndent("tell ")
         emitConstructorOperand(msg)
-        add(s" to ${processorRef.format}${by.map(b => s" by ${b.format}").getOrElse("")}")
+        add(" to ")
+        // A ProcessorRef has no nested Value and stays on `.format`; a VALUE target must route
+        // through `emitValue`, the total dispatch, or a nested `prompt(...) as T` falls back to
+        // `PromptValue.ascriptionFormat`'s narrower copy and can emit source that does not parse.
+        target match
+          case pr: ProcessorRef[?] => add(pr.format)
+          case v: Value            => emitValue(v)
+        add(by.map(b => s" by ${b.format}").getOrElse(""))
         nl
       case ForwardStatement(_, msg, target) =>
         // Same reasoning as `SendStatement`: the operand may be a `Constructor` carrying a

@@ -3783,13 +3783,24 @@ object AST:
     // tell p to entity F }`. The binding is DECLARED by the enclosing clause, so both the Type and
     // the message kind are recovered from `omc.msg`; see `operandMessageKind`.
     msg: MessageRef | Constructor | ValueRef,
-    processorRef: ProcessorRef[Processor[?]],
+    // The addressee. A keyword-led `ProcessorRef` names a processor STATICALLY (`to entity Order`);
+    // a `Value` typed `Id(entity E)` names WHICH INSTANCE to tell (`to self.id`, `to order.siteId`).
+    // Reid, 2026-08-20: *"a simple value expression could hold an `Id(entity E)` that indicates the
+    // instance to tell."* Without the second form a handler could only ever address a statically
+    // named processor, never the instance its own state refers to -- the ordinary case in an
+    // aggregate holding a reference to another. `terminate` took a value target first (§4.5) and
+    // this is the same capability, so the question was only why `tell` did not share it.
+    //
+    // The two are told apart by the KEYWORD leading the reference, exactly as `forward` does: every
+    // `processorRef` alternative is keyword-led (`entity`/`context`/…), so a bare path is
+    // unambiguously a value. `Value` does not include `ProcessorRef`, so the union is disjoint.
+    target: ProcessorRef[Processor[?]] | Value,
     by: Option[Identifier] = None
   ) extends Statement {
     override def kind: String = "Tell Statement"
     override def canFail: Boolean = true // A12: telling a processor may fail
     def format: String =
-      s"tell ${msg.format} to ${processorRef.format}${by.map(b => s" by ${b.format}").getOrElse("")}"
+      s"tell ${msg.format} to ${target.format}${by.map(b => s" by ${b.format}").getOrElse("")}"
   }
 
   /** A statement that sends a result message back to the sender of the current message. Used in
