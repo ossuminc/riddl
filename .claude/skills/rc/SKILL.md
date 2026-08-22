@@ -154,9 +154,18 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2806** | 7 |
-| JS | **877** | 5 |
-| Native | **2767** | 7 |
+| JVM | **2822** | 7 |
+| JS | **890** | 5 |
+| Native | **2783** | 7 |
+
+**Raised at 2.0.0-rc.21 (2026-08-22) to 2822 / 890 / 2783**, from a cold cache
+(`/tmp/sbt-verify-rc21`, 140K -> 265M), 19 module-legs each its own sbt invocation, zero
+failures and zero `No tests to run`. The delta was **+16 / +13 / +16** and reconciles to
+the CASE against a prediction written down before the run: `UndeliverableMessageTest` (7)
+and `TellValueTargetTest` (6) are shared `passes/src/test/scala`, so +13 on every row,
+plus `TellValueTargetRoundTripTest` (3) in `scala-jvm-native`, which JS correctly does not
+see. This is the mixed shape worth practising on — predict the split first, and a
+mismatch is a skipping bug rather than a number to accept.
 
 **Raised after 2.0.0-rc.20 (2026-08-20) to 2806 / 877 / 2767.** `TerminateTerminalTest`,
 5 cases in shared `passes/src/test/scala`, so **+5 on every row** — the easy shape, and it
