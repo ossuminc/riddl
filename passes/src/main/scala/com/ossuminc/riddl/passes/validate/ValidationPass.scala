@@ -286,14 +286,30 @@ case class ValidationPass(
           // when the target is empty-handed.
           case Some(proc: Processor[?]) if !proc.isEmpty && proc.handlers.nonEmpty =>
             resolution.refMap.definitionOf[Type](inlet.type_.pathId).foreach { inletType =>
-              if !receivesMessageType(proc, inletType) then
+              val unreceived = unreceivedMembers(proc, inletType)
+              if unreceived.nonEmpty then
+                // NAME the members that have no clause (Reid, 2026-08-22). A union inlet is the
+                // corpus norm -- `type XEvent is one of {...}` for streaming -- and "declares no
+                // handler clause" is both untrue and useless when the processor handles four of a
+                // union's nine members. The author needs to know WHICH four are unhandled to
+                // decide about them; a bare count would send them to re-derive it by hand.
+                val members = alternationMembers(inletType)
+                val isUnion = members.size > 1 || !members.headOption.exists(_ eq inletType)
+                val names = unreceived.map(_.id.value).sorted.mkString(", ")
+                val what =
+                  if isUnion then
+                    s"declares no handler clause for ${unreceived.size} of its ${members.size} " +
+                      s"members ($names), so nothing happens when one of those arrives"
+                  else "declares no handler clause that receives it, so nothing happens when one " +
+                    "arrives"
                 messages.addCompleteness(
                   inlet.errorLoc,
-                  s"${inlet.identify} admits ${inletType.identify} but ${proc.identify} declares " +
-                    "no handler clause that receives it, so nothing happens when one arrives",
-                  suggestion = s"Add an `on` clause for ${inletType.identify} to one of " +
-                    s"${proc.identify}'s handlers, add an `on other` clause if anything arriving " +
-                    s"should be handled generically, or remove ${inlet.identify}."
+                  s"${inlet.identify} admits ${inletType.identify} but ${proc.identify} $what",
+                  suggestion =
+                    (if isUnion then s"Add an `on` clause for each of $names to one of "
+                     else s"Add an `on` clause for ${inletType.identify} to one of ") +
+                      s"${proc.identify}'s handlers, add an `on other` clause if anything arriving " +
+                      s"should be handled generically, or remove ${inlet.identify}."
                 )
               end if
             }
@@ -6583,16 +6599,83 @@ case class ValidationPass(
     case _ => false
   end isDiscardingSink
 
-  private def receivesMessageType(proc: Processor[?], tpe: Type): Boolean =
+  /** The concrete message types a [[Type]] stands for: an alternation's MEMBERS, else itself.
+    *
+    * Follows declared aliases and nests, so `type AccountEvent is one of { Opened or Closed }` and
+    * an alias to it both expand to the same two members.
+    *
+    * **The visited list is reference identity and is not optional.** `type A is B` / `type B is A`
+    * sent an earlier alias walk into infinite recursion and killed the stack; a `Set`/`contains`
+    * guard would be wrong here because `Definition.equals` is structural and would fuse two
+    * distinct identical declarations, truncating a legitimate chain.
+    */
+  private def alternationMembers(t: Type, visited: Seq[Type] = Nil): Seq[Type] =
+    if visited.exists(_ eq t) then Nil
+    else
+      val seen = visited :+ t
+      def expand(te: TypeExpression): Seq[Type] = te match
+        case alt: Alternation =>
+          alt.of.toSeq.flatMap(a =>
+            resolution.refMap.definitionOf[Type](a.pathId).toSeq.flatMap(m =>
+              alternationMembers(m, seen)
+            )
+          )
+        case ate: AliasedTypeExpression =>
+          resolution.refMap
+            .definitionOf[Type](ate.pathId)
+            .toSeq
+            .flatMap(a => alternationMembers(a, seen))
+        case _ => Seq(t)
+      expand(t.typEx)
+  end alternationMembers
+
+  /** Does `proc` have a clause that receives a message of type `tpe`?
+    *
+    * One helper for two questions that were the same question: `ask`'s "the thing asked must
+    * answer", `tell`'s "the thing told must receive", and an inlet's "what arrives must be handled".
+    * Writing it three times is the pattern this codebase keeps getting bitten by.
+    *
+    * Four properties, all deliberate:
+    *   - **An `on other` clause counts.** It states a policy for anything unmatched, which IS
+    *     receiving the message. `Riddl.BottomlessPit` is built from exactly this.
+    *   - **A State's handlers count as the Entity's.** An entity commonly holds its clauses inside
+    *     a `State`, so `proc.handlers` alone cannot see them.
+    *   - **Identity, not name.** `eq` on the resolved `Type`, because two contexts may each declare
+    *     a `Created`.
+    *   - **ALTERNATIONS EXPAND ON BOTH SIDES**, which the first version of this check got wrong in
+    *     both directions and ossum.tech caught. An inlet typed `one of { A or B }` is satisfied by
+    *     clauses for A AND B (every member must be handled -- handling only A leaves a B arriving
+    *     with nothing to do); and a clause naming `one of { A or B }` receives a `tell` of A. The
+    *     identity-only version demanded, for the corpus's near-universal `type XEvent is one of
+    *     {...}` inlet idiom, something no legal spelling could satisfy except `on other` -- the
+    *     same unsatisfiable-demand trap the discard-sink exemption exists to avoid.
+    */
+  private def unreceivedMembers(proc: Processor[?], tpe: Type): Seq[Type] =
     val stateHandlers = proc match
       case e: Entity => e.states.flatMap(_.handlers)
       case _         => Seq.empty
     val clauses = (proc.handlers ++ stateHandlers).flatMap(_.clauses)
-    clauses.exists(_.isInstanceOf[OnOtherClause]) || clauses.exists {
-      case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
-        resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(_ eq tpe)
-      case _ => false
-    }
+    if clauses.exists(_.isInstanceOf[OnOtherClause]) then Nil
+    else
+      // What the clauses receive, each expanded through any alternation it names.
+      val received: Seq[Type] = clauses.flatMap {
+        case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+          resolution.refMap
+            .definitionOf[Type](omc.msg.pathId)
+            .toSeq
+            .flatMap(c => c +: alternationMembers(c))
+        case _ => Seq.empty
+      }
+      // What must be received: EVERY member the type admits. `alternationMembers` returns the type
+      // itself when it is not an alternation, so the ordinary case is a one-element list. An empty
+      // result means nothing was determinable, which is reported rather than passed silently.
+      alternationMembers(tpe) match
+        case Nil     => Seq(tpe)
+        case members => members.filterNot(w => received.exists(_ eq w))
+  end unreceivedMembers
+
+  private def receivesMessageType(proc: Processor[?], tpe: Type): Boolean =
+    unreceivedMembers(proc, tpe).isEmpty
   end receivesMessageType
 
   private def validateAsk(ask: Ask, parents: Parents): Unit =
