@@ -1338,6 +1338,32 @@ to the right group rather than appending to a list.
   1-in/1-out `flow` that also hosts an `error-sink` inlet derives as a `merge`
   (≥2 inlets, 1 outlet) — never a `split`, which is ≥2 OUTLETS.
 
+- **`empty` — the minimum-cardinality inhabitant of a type (rc.23+).** `EmptyValue(loc,
+  typeEx: Option[TypeExpression])`. **`none` is a SYNONYM producing the identical node** — no flag
+  records the spelling, the same choice `not`/`!` made, and prettify converges `none` to `empty`.
+  **The rule is minimum cardinality ZERO**: legal for `T?`, `T*`, `T{0,n}`; an Error for `T+`,
+  `T{1,n}` and a bare `T`. That one rule is why ONE literal covers both the absent optional and the
+  empty collection — same inhabitant, different upper bounds — and it makes `admitsEmpty` total over
+  the four `Cardinality` wrappers instead of special-casing two.
+  **The ascribed form is load-bearing, not sugar.** A bare `empty` takes its type from the position,
+  and only `let`/`constant`/`set` wire an expected type — NOT a constructor argument, which is the
+  position this was requested from. **And the expected-type machinery resolves only NAMED types**,
+  so a field typed INLINE (`note: String(1,20)+`) cannot be checked at all against a bare `empty`.
+  Pre-existing, shared with A20.
+  **Two traps this hit, both worth re-reading before adding a `Value` arm:**
+  1. **The four throw-terminated walks are INVISIBLE to `-Werror`** (`countValueFailPoints`,
+     `stateReadsIn`, `initiatesIn`, `asksIn`) — the terminal `throw` that enforces totality is
+     itself what makes the match exhaustive, exactly as the Total Dispatch section warns. `-Werror`
+     found three sites; the fourth family threw at RUN time and aborted `checkStatementScopes`
+     before the new checks could run. **Grep for `has no arm for` and add an arm to each.**
+  2. **An optional trailing TypeExpression SWALLOWS THE NEXT STATEMENT.** An aliased type is a bare
+     path and RIDDL statements are whitespace-separated with no terminator, so `set x to empty`
+     followed by `set y to …` parsed the second statement as the first's ascription. Guarded by
+     refusing statement-leading keywords (`statementStart`), which is COMPLETE rather than
+     heuristic because a type can never be named a reserved word. The EBNF carries the same guard —
+     without it the two parsers disagree and TatSu reddens.
+  BAST tag **12** at `FORMAT_REVISION` **21**; JSON `{"value":"empty"}` with an optional `type`.
+
 - **`tell` addresses an INSTANCE as well as a named processor (rc.21+).** `TellStatement.target`
   is `ProcessorRef | Value`: keyword-led means a static processor, a bare path or `self.id` means
   a value typed `Id(...)` naming WHICH INSTANCE. Told apart by the leading keyword, exactly as
