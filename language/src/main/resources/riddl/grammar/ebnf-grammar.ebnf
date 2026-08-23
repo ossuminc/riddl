@@ -341,8 +341,27 @@ let_statement = "let" identifier [":" type_ref] "=" value ;
    ordering is LOAD-BEARING now that `comparand` (widened 2026-08-14) accepts numeric_literal:
    trying boolean_expression first is what keeps `5 > 3` parsing as a comparison rather than
    numeric_literal matching the bare `5` and leaving `> 3` dangling. *)
+(* `empty_value` sits BEFORE boolean_expression: that rule's atom accepts a bare path and would
+   otherwise swallow `empty` as a value_ref, leaving any ascription dangling. *)
 value = literal_string | prompt_value | call | ask | initiate | constructor | get_value
-      | boolean_expression | numeric_literal ;
+      | empty_value | boolean_expression | numeric_literal ;
+
+(* The minimum-cardinality inhabitant of a type. `none` is a SYNONYM, not a second construct: both
+   spellings produce the identical AST and prettify converges them to `empty`. Legal exactly where
+   the minimum cardinality is zero -- `T?`, `T*`, `T{0,n}` -- and an error on `T+`, `T{1,n}` or a
+   bare `T`. The ascription is what lets it be written where the position supplies no expected
+   type, notably a constructor argument. *)
+empty_value = ( "empty" | "none" ) [ !statement_start type_expression ] ;
+
+(* The ascription is OPTIONAL and an aliased type expression is a bare path, while RIDDL statements
+   are whitespace-separated with no terminator -- so without this guard `set x to empty` followed by
+   `set y to ...` parses the second statement as the first's ascription. Every statement begins with
+   a reserved keyword, so refusing those is a complete fix rather than a heuristic: a type can never
+   be named one. Kept in step with `statementStart` in StatementParser.scala. *)
+statement_start = ( "set" | "tell" | "send" | "forward" | "yield" | "reply" | "morph" | "become"
+                  | "do" | "prompt" | "let" | "call" | "foreach" | "when" | "match" | "error"
+                  | "require" | "put" | "return" | "terminate" | "code" | "focus" | "stop"
+                  | "read" | "write" | "ask" | "initiate" | "if" | "else" ) ;
 prompt_value = "prompt" "(" literal_string ")" [ "as" type_expression ] ;
 (* Numeric literals - integers and reals, written directly. No digit separators and no radix     *)
 (* prefixes: declined deliberately, and pure additions later if wanted.                           *)

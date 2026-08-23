@@ -505,6 +505,40 @@ private[parsing] trait StatementParser {
   // identifier, a keyword, or an import string, never a value expression (surveyed sites:
   // `selective_bast_import`, `on_other_clause`, `as_shape`, `byAs`), and here it follows the
   // closing `)` of the prompt's parenthesized literal string, which is the same shape.
+  /** `empty` / `none`, optionally ascribed: `empty T*`.
+    *
+    * `none` is a SYNONYM producing the identical node -- no flag records which was written, the
+    * same choice `not`/`!` made, because a spelling flag lets two ASTs meaning the same thing
+    * compare unequal. Prettify converges to `empty`.
+    *
+    * `Keywords.keyword` supplies the word boundary, so a field named `emptyThing` is untouched. It
+    * also CUTS, which is correct here: in value position these two words are the literal, and that
+    * shadowing was measured as free -- neither appears as an identifier anywhere in either corpus.
+    */
+  private[parsing] def emptyValue[u: P]: P[EmptyValue] = {
+    P(
+      Index ~ (Keywords.keyword("empty") | Keywords.keyword("none")) ~/
+        (!statementStart ~ typeExpression).? ~~ Index
+    )./.map { case (start, typeEx, end) => EmptyValue(at(start, end), typeEx) }
+  }
+
+  /** Guards the OPTIONAL ascription after `empty` from swallowing the NEXT statement.
+    *
+    * An aliased type expression is a bare path, and RIDDL statements are whitespace-separated with
+    * no terminator, so `set x to empty` followed on the next line by `set y to …` parsed the second
+    * `set` as the first's ascription. Every statement begins with a reserved keyword, so refusing
+    * those here is a COMPLETE fix rather than a heuristic -- a type can never be named one.
+    */
+  private def statementStart[u: P]: P[Unit] = {
+    P(
+      StringIn(
+        "set", "tell", "send", "forward", "yield", "reply", "morph", "become", "do", "prompt",
+        "let", "call", "foreach", "when", "match", "error", "require", "put", "return", "terminate",
+        "code", "focus", "stop", "read", "write", "ask", "initiate", "if", "else"
+      ) ~~ &(Keywords.isNotKeywordChar)
+    )
+  }
+
   private[parsing] def promptValue[u: P]: P[PromptValue] = {
     P(
       Index ~ Keywords.prompt ~ Punctuation.roundOpen ~/ literalString ~
@@ -552,6 +586,9 @@ private[parsing] trait StatementParser {
         initiateValue.map(i => i: Value) | // `initiate <processor>[(args)]` (keyword-led)
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
+        // BEFORE `booleanExpr`: its atom accepts a bare path, which would swallow `empty` as a
+        // ValueRef and leave any ascription dangling.
+        emptyValue.map(ev => ev: Value) |
         booleanExpr |
         // LAST, and deliberately: `booleanExpr` must get first refusal. This ordering is now
         // LOAD-BEARING (it was inert when written -- `comparand` accepted only

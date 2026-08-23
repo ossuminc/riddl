@@ -298,6 +298,16 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     */
   def emitValue(v: Value): this.type =
     v match
+      // `empty` is CANONICAL: `none` is a synonym and converges here, the same way `!` converges
+      // to `not`. The ascription routes through `emitTypeExpression` -- the total dispatch -- rather
+      // than a narrower `.format` copy, which is the mistake `PromptValue.ascriptionFormat` made and
+      // that produced source riddlc could not re-parse for four TypeExpression shapes.
+      case ev: EmptyValue =>
+        add("empty")
+        ev.typeEx.foreach { te =>
+          add(" "); emitTypeExpression(te)
+        }
+        this
       case pv: PromptValue =>
         add(s"prompt(${pv.prompt.format})")
         pv.typeEx.foreach { te =>

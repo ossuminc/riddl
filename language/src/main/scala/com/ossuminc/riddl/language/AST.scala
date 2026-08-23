@@ -832,7 +832,7 @@ object AST:
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Initiate |
-    NumericLiteral | LookupValue | Requires | Returns | InvariantBlock
+    NumericLiteral | LookupValue | EmptyValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3029,7 +3029,7 @@ object AST:
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
-      Ask | SelfValue | Initiate | NumericLiteral | LookupValue
+      Ask | SelfValue | Initiate | NumericLiteral | LookupValue | EmptyValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -3312,6 +3312,42 @@ object AST:
   // bit A55/A57 does not apply here, and the default keeps existing `PromptValue(loc, str)`
   // call sites source-compatible.
   @JSExportTopLevel("PromptValue")
+  /** The minimum-cardinality inhabitant of a type: `empty`, or `empty <type>` when ascribed.
+    *
+    * **One literal, and `none` is a SYNONYM for it, not a second node** (Reid, 2026-08-23). Both
+    * spellings build this node with no flag recording which was written, exactly as `not` and `!`
+    * do -- a spelling flag would let two ASTs meaning the same thing compare unequal. `none` reads
+    * better for `T?`/`T{0,1}` and prettify converges it to `empty`.
+    *
+    * **`empty` is legal exactly where the minimum cardinality is 0** -- `T?`, `T*`, and `T{0,n}`.
+    * That single rule is what lets ONE literal serve both the absent optional and the empty
+    * collection: they are the same inhabitant under different upper bounds. It is an Error on `T+`,
+    * on `T{1,n}` and on a bare `T`, all of which require at least one element.
+    *
+    * **The ascription is load-bearing, not sugar.** Bare `empty` needs the position to supply an
+    * expected type, and only `let`/`constant`/`set` wire one today -- notably NOT a constructor
+    * argument, which is the very position riddl-models asked for this from (`record Data(items =
+    * empty)`). The ascribed form is the one that works everywhere; the bare form is the convenience
+    * for positions that happen to be wired.
+    *
+    * @param typeEx
+    *   The ascribed type, or `None` when the position supplies it. Trailing and defaulted because
+    *   `@JSExportTopLevel` requires defaulted params last -- the same constraint that forced A55's
+    *   and A57's fields to go undefaulted.
+    */
+  @JSExportTopLevel("EmptyValue")
+  case class EmptyValue(
+    loc: At,
+    typeEx: Option[TypeExpression] = None
+  ) extends RiddlValue:
+    override def kind: String = "Empty Value"
+    // `TypeExpression.format` is safe here where `PromptValue` needed `ascriptionFormat`: an
+    // `AliasedTypeExpression` renders as `type Foo`, and `empty type Foo` re-parses to an IDENTICAL
+    // node because `aliasedTypeExpression` defaults an omitted keyword to `type`. Prettify still
+    // routes through `emitTypeExpression` for the exotic shapes.
+    def format: String = typeEx.map(t => s"empty ${t.format}").getOrElse("empty")
+  end EmptyValue
+
   case class PromptValue(
     loc: At,
     prompt: LiteralString,

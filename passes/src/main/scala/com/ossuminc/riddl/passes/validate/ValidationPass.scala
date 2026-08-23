@@ -5835,6 +5835,7 @@ case class ValidationPass(
     // does, and that statement is counted by its own arm. Enumerated rather than absorbed by a
     // `case _ => 0`, because that catch-all is precisely how `ask` went uncounted: a new
     // failure-bearing value read as "contributes nothing" instead of failing the build.
+    case _: EmptyValue   => 0 // An `empty` is a LITERAL: its only payload is a TypeExpression, which holds no values.
     case _: Reference[?] => 0
     // A name cannot fail; see the note in `stateReadsIn`.
     case _: Identifier => 0
@@ -5936,6 +5937,7 @@ case class ValidationPass(
     // An `ask` holds only a QueryRef and a ProcessorRef -- no nested value -- so it cannot contain
     // a state read. (A saga's `ask` is separately banned outright; see `asksIn`.)
     case _: Ask          => Seq.empty
+    case _: EmptyValue   => Seq.empty // An `empty` is a LITERAL: its only payload is a TypeExpression, which holds no values.
     case _: Reference[?] => Seq.empty
     // An IDENTIFIER is a NAME, not an expression: `when isValid` can bind a bare `Identifier`
     // naming a let-local or a field. A name has no sub-structure, so it can contain nothing --
@@ -5989,6 +5991,7 @@ case class ValidationPass(
     case _: GetValue => Seq.empty
     // An `ask` holds only a QueryRef and a ProcessorRef -- no nested value.
     case _: Ask          => Seq.empty
+    case _: EmptyValue   => Seq.empty // An `empty` is a LITERAL: its only payload is a TypeExpression, which holds no values.
     case _: Reference[?] => Seq.empty
     // A name contains nothing; see the note in `stateReadsIn`.
     case _: Identifier => Seq.empty
@@ -6039,6 +6042,7 @@ case class ValidationPass(
     // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
     case ic: InvariantCondition => ic.argument.toSeq.flatMap(asksIn)
     case _: GetValue            => Seq.empty
+    case _: EmptyValue   => Seq.empty // An `empty` is a LITERAL: its only payload is a TypeExpression, which holds no values.
     case _: Reference[?]        => Seq.empty
     // A name contains nothing; see the note in `stateReadsIn`.
     case _: Identifier => Seq.empty
@@ -7291,6 +7295,9 @@ case class ValidationPass(
   ): Option[Type] =
     v match
       case _: LiteralString => None // pseudo-code, untyped
+      // An `empty T*` names no single Type -- `T*` is a cardinality wrapper, not a declaration --
+      // so the TypeExpression-level answer in `valueTypeExpr` is the one with content here.
+      case _: EmptyValue    => None
       case _: LookupValue   => None // element type is a TypeExpression; see valueTypeExpr
       case _: PromptValue   => None // AI-computed, untyped
       case c: Constructor   => resolution.refMap.definitionOf[Type](c.ref.pathId)
@@ -7515,6 +7522,19 @@ case class ValidationPass(
   /** A55: the [[TypeExpression]] any [[Value]] denotes, for the cases where a named [[Type]] is too
     * narrow (a directly-typed `flag: Boolean` field has no named Type).
     */
+  /** Does `te` admit an empty value — is its MINIMUM cardinality zero?
+    *
+    * This one rule is what lets a single `empty` literal serve both the absent optional and the
+    * empty collection: they are the same inhabitant under different upper bounds. Total over the
+    * four cardinality wrappers, so a bare `T` (exactly one) and `T+` (at least one) correctly
+    * answer false rather than falling through a catch-all.
+    */
+  private def admitsEmpty(te: TypeExpression): Boolean = te match
+    case _: Optional       => true
+    case _: ZeroOrMore     => true
+    case sr: SpecificRange => sr.min == 0
+    case _                 => false
+
   private def valueTypeExpr(
     v: Value,
     parents: Parents,
@@ -7522,7 +7542,10 @@ case class ValidationPass(
     elements: Map[String, TypeExpression]
   ): Option[TypeExpression] =
     v match
-      case vr: ValueRef => valueRefTypeExpr(vr, parents, lets, elements)
+      // `let e = empty T*` infers `T*` -- the ascription IS the type, which is the whole point of
+      // the ascribed form. A bare `empty` has no type of its own; the position supplies it.
+      case ev: EmptyValue => ev.typeEx
+      case vr: ValueRef   => valueRefTypeExpr(vr, parents, lets, elements)
       // A55/`self`: the SYNTHESIZED Aggregation is the only place `self`'s type is materialized.
       // `let me = self` then `me.id` reaches this ARM through `valueRefTypeExpr`'s
       // `valueTypeExpr(ls.expression, …)` fallback, walked by `typeExprOfPath` exactly like any
@@ -7624,6 +7647,21 @@ case class ValidationPass(
         validateValue(lv.collection, parents, lets, elements)
         lv.indices.foreach(i => validateValue(i, parents, lets, elements))
         validateLookup(lv, parents, lets, elements)
+      case ev: EmptyValue =>
+        // The ascribed form is checkable with no context at all: whatever type it names must be one
+        // that HAS an empty inhabitant. The bare form is checked where an expected type is wired --
+        // see `checkValueType`.
+        ev.typeEx.foreach { te =>
+          if !admitsEmpty(te) then
+            messages.addError(
+              ev.loc,
+              s"'empty' requires a type whose minimum cardinality is zero, but '${te.format}' " +
+                "requires at least one value",
+              suggestion = "Use 'empty' with an optional ('T?'), a collection ('T*') or a range " +
+                "starting at zero ('T{0,n}'). A 'T+' or a bare 'T' always has at least one value."
+            )
+          end if
+        }
       case _: PromptValue => () // literal AI prompt, nothing to resolve
       case c: Constructor => validateConstructor(c, parents, lets, elements)
       case call: Call     => validateCall(call, parents, lets, elements)
@@ -8065,6 +8103,20 @@ case class ValidationPass(
     // hand for a literal, so it is where the literal-only range/fraction check belongs.
     (v, expected) match
       case (nl: NumericLiteral, Some(e)) => checkNumericLiteralConformance(nl, e.typEx)
+      // A BARE `empty` takes its type from the position, so this is the only place its
+      // minimum-cardinality rule can be enforced. The ASCRIBED form is checked context-free in
+      // `validateValue`; checking it again here would double-report, so it is skipped.
+      case (ev: EmptyValue, Some(e)) if ev.typeEx.isEmpty =>
+        if !admitsEmpty(e.typEx) then
+          messages.addError(
+            ev.loc,
+            s"'empty' is not a value of ${e.identify}: '${e.typEx.format}' requires at least one " +
+              "value",
+            suggestion = "Only an optional ('T?'), a collection ('T*') or a range starting at zero " +
+              s"('T{0,n}') has an empty value. Give ${e.identify} such a type, or supply a real " +
+              "value here."
+          )
+        end if
       // A20: `let`/`set` are the two carriers `checkValueType` serves, and both wire the
       // restate/contradict check for free by living here rather than being duplicated at each
       // call site. `expected` is already the RESOLVED Type the position declares, so it is

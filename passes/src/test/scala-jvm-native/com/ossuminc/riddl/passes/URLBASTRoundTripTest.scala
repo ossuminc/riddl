@@ -166,9 +166,9 @@ class URLBASTRoundTripTest extends AbstractValidatingTest {
     // could ride it. 18 shipped in 2.0.0-rc.15, so the next wire-format change had to bump, and
     // the `forward` statement (sub-kind 21) is it. The assertion is kept rather than deleted --
     // it is what makes an accidental bump visible -- but it now tracks the shipped revision.
-    "be 20 -- the tell value target bumped it; 19 has shipped and cannot be ridden again" in {
+    "be 21 -- the `empty` value bumped it; 20 has shipped and cannot be ridden again" in {
       (td: TestData) =>
-        FORMAT_REVISION mustBe 20.toShort
+        FORMAT_REVISION mustBe 21.toShort
     }
   }
 }

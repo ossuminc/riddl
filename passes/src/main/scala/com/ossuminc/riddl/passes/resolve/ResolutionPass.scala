@@ -490,6 +490,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: LiteralString => () // no references
       case lv: LookupValue =>
         resolveValue(lv.collection, parents); lv.indices.foreach(i => resolveValue(i, parents))
+      case ev: EmptyValue =>
+        // Same lesson the PromptValue arm below records: an ascription carries a real
+        // TypeExpression whose PathIdentifier must RESOLVE, or `empty Nonexistent*` validates clean
+        // while naming a type that need not exist.
+        ev.typeEx.foreach(te => resolveTypeExpression(parents.head, te, parents))
       case pv: PromptValue =>
         // A20: the prompt TEXT is literal (nothing to resolve), but an optional `as <type>`
         // ascription carries a real TypeExpression that may hold a PathIdentifier -- e.g.

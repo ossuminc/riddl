@@ -1490,6 +1490,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   private def serializeValue(v: Value): ValueDto = v match
     case ls: LiteralString => LiteralValueDto(ls.s)
     case pv: PromptValue   => PromptValueDto(pv.prompt.s, pv.typeEx.map(serializeTypeExpr))
+    case ev: EmptyValue    => EmptyValueDto(ev.typeEx.map(serializeTypeExpr))
     case vr: ValueRef      => ValueRefDto(path(vr.path))
     case lv: LookupValue => LookupValueDto(path(lv.collection.path), lv.indices.map(serializeValue))
     case gv: GetValue =>

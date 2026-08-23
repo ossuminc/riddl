@@ -899,6 +899,12 @@ object JsonModel:
     * `type` is the optional `as <type>` ascription (A20 typed holes); omitted when unascribed, so
     * an untyped prompt's JSON is unchanged.
     */
+  /** `{ "value": "empty" }` or `{ "value": "empty", "type": <typeExpr> }` — the
+    * minimum-cardinality inhabitant. `none` is a synonym with no separate encoding, exactly as it
+    * has no separate AST node.
+    */
+  case class EmptyValueDto(typeEx: Option[TypeExprDto] = None) extends ValueDto
+
   case class PromptValueDto(prompt: String, typeEx: Option[TypeExprDto] = None) extends ValueDto
 
   /** `{ "value": "get", "source": "input"|"state", "keyword": "<kw>", "ref": "<path>" }` — the
@@ -1771,6 +1777,7 @@ object JsonModel:
       case "literal"  => LiteralValueDto(m("text").str)
       case "numeric"  => NumericLiteralDto(m("text").str)
       case "prompt"   => PromptValueDto(m("prompt").str, m.get("type").map(readTypeExpr))
+      case "empty"    => EmptyValueDto(m.get("type").map(readTypeExpr))
       case "valueRef" => ValueRefDto(m("path").str)
       case "lookup" =>
         LookupValueDto(m("collection").str, m("indices").arr.map(readValue).toSeq)
@@ -1835,6 +1842,11 @@ object JsonModel:
       case PromptValueDto(prompt, typeEx) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("value" -> ujson.Str("prompt"), "prompt" -> ujson.Str(prompt))
+            ++ typeEx.map(t => "type" -> writeTypeExpr(t))
+        )
+      case EmptyValueDto(typeEx) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("value" -> ujson.Str("empty"))
             ++ typeEx.map(t => "type" -> writeTypeExpr(t))
         )
       case ValueRefDto(path) =>

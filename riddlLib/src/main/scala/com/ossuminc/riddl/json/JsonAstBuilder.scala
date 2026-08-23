@@ -1552,6 +1552,7 @@ object JsonAstBuilder:
       case NumericLiteralDto(text) => NumericLiteral(curAt, text)
       case PromptValueDto(prompt, typeEx) =>
         PromptValue(curAt, LiteralString(curAt, prompt), typeEx.map(buildTypeExpr))
+      case EmptyValueDto(typeEx) => EmptyValue(curAt, typeEx.map(buildTypeExpr))
       case ValueRefDto(p) => ValueRef(curAt, pathId(p))
       case LookupValueDto(coll, indices) =>
         LookupValue(curAt, ValueRef(curAt, pathId(coll)), indices.map(buildValue))
