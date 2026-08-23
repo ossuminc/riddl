@@ -154,9 +154,14 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2822** | 7 |
-| JS | **890** | 5 |
-| Native | **2783** | 7 |
+| JVM | **2826** | 7 |
+| JS | **894** | 5 |
+| Native | **2787** | 7 |
+
+**Raised at 2.0.0-rc.22 (2026-08-22) to 2826 / 894 / 2787**, cold cache
+(`/tmp/sbt-verify-rc22`, 140K -> 265M), zero failures, zero `No tests to run`. The delta
+was **+4 on every row** — four alternation cases added to `UndeliverableMessageTest` in
+shared `passes/src/test/scala` — predicted before the run and matched to the case.
 
 **Raised at 2.0.0-rc.21 (2026-08-22) to 2822 / 890 / 2783**, from a cold cache
 (`/tmp/sbt-verify-rc21`, 140K -> 265M), 19 module-legs each its own sbt invocation, zero
