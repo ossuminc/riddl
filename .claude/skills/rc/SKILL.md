@@ -279,22 +279,28 @@ and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
 
-**The deliberate-failure count is 190 as of 2.0.0-rc.24 (2026-08-24): 189 in `commands` and
-1 in `riddlc`, all corpus cost from the two rules that landed after rc.23.**
+**The deliberate-failure count is ONE as of 2026-08-24 (post-rc.24): riddl-examples' `dokn`,
+failing on exactly 5 `may not follow the 'morph'` errors.** `commands` is **297/297 GREEN** --
+`RiddlModelsRoundTripTest` included.
 
-`RiddlModelsRoundTripTest` fails at "Step 1 (validate original)" for **189 of 190** models --
-riddl-models has 2,309 partial constructors and 115 set-after-morph sites. `RunRiddlcOnLocalTest`'s
-**`dokn`** fails with exit 7 on exactly **5** `may not follow the 'morph'` errors, which is
-riddl-EXAMPLES' share of the same bill. `utils`, `language`, `passes`, `testkit` and `riddlLib` are
-fully green on every platform, and `riddlLib` reads **190/190** on both validation parity and JSON
-identity.
+**It was 190 for about ninety minutes, and the speed of that is the point.** rc.24 shipped red at
+189 `commands` + 1 `riddlc`; riddl-models then migrated its 2,309 partial constructors and 115
+set-after-morph sites the same afternoon (`e645e9d9`, `4a566707`) -- **driven by rc.24's own
+`dump --json` projection**, which is the tooling that shipped in the same RC. Cut the RC, the
+corpus migrates against it, the gate returns to green: this is the third time that cycle is on
+record and the first where riddl provided the migration tool.
+
+**So re-measure before trusting this paragraph.** The corpus is a live sibling checkout, not a
+build input, and a count here goes stale in hours rather than releases. Re-measure on a FRESH
+cache (`-Dsbt.global.localcache=<new dir>`) -- the corpus is not in the cache key, so a warm
+store replays a stale FAILURE as readily as a stale pass.
 
 **Confirm a red case by its message before accepting it** -- `does not supply N field` or
 `may not follow the 'morph'`. Anything else is a regression. Verify `dokn` by RUNNING it
 (`riddlc from .../dokn.conf validate`), because the suite reports only the exit code: an
 exit 7 for a different reason looks identical.
 
-**Historical (superseded): it was 189 and `commands`-only.** `RiddlModelsRoundTripTest` fails at "Step 1 (validate original)"
+**Historical (superseded): 190 at rc.24, 189 `commands`-only before it.** `RiddlModelsRoundTripTest` fails at "Step 1 (validate original)"
 for 189 of 190 models because riddl-models has **2,309 partial constructors** that the rule now
 rejects. `language`, `passes` and `riddlLib` are fully green; only `commands` is red.
 

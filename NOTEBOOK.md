@@ -75,11 +75,12 @@ binaries built. Cold cache (116K -> 269M), floors raised to **2903 / 917 / 2864*
 every-field constructor rule and the no-`set`-after-`morph` rule to migrate against, and
 verified enforcing them (dokn: exit 7, 5 morph errors) before being announced.
 
-**Deliberate failures are 190 and all corpus cost:** 189 `commands`
-(`RiddlModelsRoundTripTest`, riddl-models' 2,309 partial constructors + 115 morph sites)
-and 1 `riddlc` (riddl-examples' `dokn`, exactly 5 morph errors). `utils`, `language`,
-`passes`, `testkit`, `riddlLib` are green on every platform; `riddlLib` reads 190/190 on
-both validation parity and JSON identity. **Confirm any red by its MESSAGE**, not its
+**Deliberate failures are now ONE — riddl-examples' `dokn`, 5 morph errors.** `commands` is
+**297/297 green**, re-measured on a fresh cache after riddl-models migrated its 2,309
+partial constructors and 115 set-after-morph sites the same afternoon (`e645e9d9`,
+`4a566707`) **using rc.24's own `dump --json` projection**. It was 190 for about ninety
+minutes. Do not trust a count here without re-measuring: the corpus is a live sibling
+checkout, so this number goes stale in hours. **Confirm any red by its MESSAGE**, not its
 count.
 
 **A corpus suite went red mid-certification because the CORPUS MOVED**, and this is worth
