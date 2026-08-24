@@ -10,6 +10,36 @@ Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
 NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
 
+**`riddlc find` IS COMPLETE — all three phases (2026-08-24).** `dump --json` is the
+projection, `find` queries it, and `-exec`/`-replace`/`-delete` edit through it. The
+reason it exists: riddl-models drives its migrations from ~10 regex-over-text Python
+scripts, which produced NINE defects in one session, three of them the dangerous shape
+where the run succeeds and reports a confident number computed over nothing.
+
+**The editing gate is the part to understand before changing it.** Nothing is written
+until every script has run, no two spans overlap, and the rewritten model has been
+re-parsed AND re-validated; a model that stops parsing OR merely gains errors is fully
+restored. Overlaps are REFUSED rather than ordered — a nested pair is an overlap, so
+which rewrite survived would depend on application order — and that is what makes
+back-to-front application within a file correct.
+
+**Three defects surfaced only because a test ran from somewhere other than the model's
+directory, or searched a file grep had quietly given up on:**
+- `fileOf` resolved a node's `origin` — the SHORT name error messages use — as a path,
+  so editing worked from the model's own directory and failed everywhere else.
+- The argument split ate the expression's `(`, `)` and `;`, so parentheses had never
+  worked at all. Phase 2 shipped with grouping broken because no end-to-end test used it.
+- A literal NUL byte in `FindCommand.scala` (phase 2's `-print0`) made the file BINARY to
+  grep, which then returned nothing for every search against it — silently, exit 0. The
+  same false-absence family as the recursive-grep trap in `../CLAUDE.md`.
+
+**`-replace` scripts get the span's SOURCE TEXT**, as a `source` key on the JSON record.
+Without it the identity transform is not expressible: a script that cannot see what it is
+replacing must reconstruct it from the structured record, so leaving a node alone would
+already be a rewrite. `find -type entity -replace 'jq -r .source' \;` being
+byte-identical is the gate on span accuracy, and is a test.
+
+
 **`terminate` IS NOW TERMINAL IN ITS BLOCK (2026-08-20), and it is NOT in rc.20.** The
 task arrived from riddl-models at 14:51, during the rc.20 run. `checkErrorTerminal` is
 now `checkBlockTerminal` and matches `terminate` as well as `error`. **The lesson is the

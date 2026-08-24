@@ -1,3 +1,51 @@
+### Adding a New Command
+
+**Corrected 2026-08-24** — this section previously named a `def name: String`
+and a `context: PlatformContext` parameter, neither of which exists. It was
+copied from an API that predates `Command`'s current shape.
+
+1. **Options** live in the command's companion, with the name as a constant:
+   ```scala
+   object MyCommand {
+     final val cmdName = "mine"
+     case class Options(inputFile: Option[Path] = None) extends CommandOptions {
+       def command: String = cmdName
+     }
+   }
+   ```
+2. **The class takes `using PlatformContext` and passes the name to the base**:
+   `class MyCommand(using pc: PlatformContext) extends Command[MyCommand.Options](MyCommand.cmdName)`
+3. **Implement**:
+   - `override def getOptionsParser: (OParser[Unit, Options], Options)` — a
+     scopt `cmd(...)` plus the default `Options()`
+   - `override def run(options: Options, outputDirOverride: Option[Path]): Either[Messages, PassesResult]`
+   - `override def interpretConfig(config: Config): Options` — required for
+     `riddlc from <conf> <cmd>`; read the block named by `commandName`
+   - `override def loadOptionsFrom(...)` calling `resolveInputFileToConfigFile`,
+     and `override protected def replaceInputFile(...)`, so a `.conf`'s
+     `input-file` resolves relative to the `.conf` rather than the cwd
+   - `override def run(args: Array[String], ...)` ONLY when the command needs
+     arguments scopt cannot model — `find` does, because its expression is full
+     of bare `(`, `)` and `;` tokens.
+4. **Register it in THREE places**, or it is missing on one platform:
+   - `commands/src/main/scalajvm/.../CommandLoader.scala` — `loadCommandNamed`
+     **and** the `optionParsers` Seq that `riddlc help` renders from
+   - `commands/src/main/scalanative/.../CommandLoader.scala` — the same two
+   - `commands/src/main/scala/.../Commands.scala` — `loadCommandNamed`, a third
+     copy
+5. **Add a block to `commands/input/cmdoptions.conf`** so `from` works and the
+   standard options-reading test covers it.
+
+**Diagnostics go to STDERR** (`pc.log`, since 2026-08-23); anything a script is
+meant to parse goes to stdout with `println`. A command that prints its result
+through `pc.log` produces a stream whose lines are prefixed `[info]`, which is
+invisible to the eye and fatal to a pipe.
+
+**The global `--dry-run` cannot be implemented on top of.**
+`Commands.handleCommandRun` short-circuits on it and logs "Would have
+executed…" *without ever invoking the command*. A command needing a real dry run
+declares its own flag, as `find -dry-run` does.
+
 # RIDDL Project Guide for Claude Code
 
 This file provides specific guidance for working with the RIDDL project. For general ossuminc organization patterns, see `../CLAUDE.md` (parent directory).
