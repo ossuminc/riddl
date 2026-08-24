@@ -154,9 +154,16 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2826** | 7 |
-| JS | **894** | 5 |
-| Native | **2787** | 7 |
+| JVM | **2838** | 7 |
+| JS | **903** | 5 |
+| Native | **2799** | 7 |
+
+**Raised at 2.0.0-rc.23 (2026-08-24) to 2838 / 903 / 2799**, cold cache
+(`/tmp/sbt-verify-rc23`, 140K -> 265M), zero failures, zero `No tests to run`. The delta
+was **+12 / +9 / +12**, predicted to the case: `EmptyValueTest` (9) is shared
+`passes/src/test/scala` so every row moves, plus `EmptyValueRoundTripTest` (3) in
+`scala-jvm-native`, which JS correctly does not see. Fourth consecutive RC whose delta
+reconciled exactly against a prediction written down first.
 
 **Raised at 2.0.0-rc.22 (2026-08-22) to 2826 / 894 / 2787**, cold cache
 (`/tmp/sbt-verify-rc22`, 140K -> 265M), zero failures, zero `No tests to run`. The delta
