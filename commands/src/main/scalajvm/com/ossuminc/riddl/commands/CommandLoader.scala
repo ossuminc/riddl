@@ -28,6 +28,7 @@ object CommandLoader:
       case "advise"    => Right(AdviseCommand())
       case "bastify"   => Right(BastifyCommand())
       case "dump"      => Right(DumpCommand())
+      case "find"      => Right(FindCommand())
       case "unbastify" => Right(UnbastifyCommand())
       case "flatten"   => Right(FlattenCommand())
       case "from"      => Right(FromCommand())
@@ -51,6 +52,7 @@ object CommandLoader:
       BastifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       DumpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       UnbastifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
+      FindCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       FlattenCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       FromCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       HelpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],

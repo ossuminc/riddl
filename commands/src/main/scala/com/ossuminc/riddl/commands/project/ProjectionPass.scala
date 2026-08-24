@@ -60,17 +60,19 @@ case class ProjectionPass(
   private lazy val symbols: SymbolsOutput =
     outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
-  private val records: mutable.ListBuffer[ujson.Obj] = mutable.ListBuffer.empty
+  private val nodes: mutable.ListBuffer[ProjectedNode] = mutable.ListBuffer.empty
 
   override def process(value: RiddlValue, parents: ParentStack): Unit = {
     // The Root is the file parse-root, not model content; emitting it adds a record no query wants.
-    if !value.isInstanceOf[Root] then records.append(recordFor(value, parents.toParents))
+    if !value.isInstanceOf[Root] then
+      val ps = parents.toParents
+      nodes.append(ProjectedNode(value, ps, recordFor(value, ps)))
   }
 
   override def postProcess(root: PassRoot): Unit = ()
 
   override def result(root: PassRoot): ProjectionOutput =
-    ProjectionOutput(root, messages.toMessages, records.toSeq)
+    ProjectionOutput(root, messages.toMessages, nodes.toSeq)
 
   // ---------------------------------------------------------------------------------------------
   // Record construction
@@ -241,14 +243,38 @@ case class ProjectionPass(
     * so the key is absent rather than an empty array — "not an alternation" and "an alternation
     * with no members" are different facts.
     */
-  private def alternationMemberRefs(te: TypeExpression, parents: Parents): Option[ujson.Arr] = te match {
-    case alt: Alternation =>
-      Some(ujson.Arr.from(alt.of.toSeq.map(a => refRecord(a.pathId, parents))))
-    case _ => None
-  }
+  private def alternationMemberRefs(te: TypeExpression, parents: Parents): Option[ujson.Arr] =
+    te match {
+      case alt: Alternation =>
+        Some(ujson.Arr.from(alt.of.toSeq.map { a =>
+          val o = refRecord(a.pathId, parents)
+          // Each member carries its OWN message kind. Without this an alternation-typed port has no
+          // `carries` anywhere -- the union itself is not an AggregateUseCaseTypeExpression, so
+          // `messageKindOf` answers None for it -- and "every repository inlet whose type resolves
+          // to an event" silently returns zero against a corpus where `type XEvent is one of {...}`
+          // is the prevailing idiom. That is the same alternation blindness the delivery checks
+          // shipped with and had to be corrected for.
+          if resolve then
+            resolveType(a.pathId, parents)
+              .flatMap(t => messageKindOf(t.typEx, parents))
+              .foreach(k => o("carries") = ujson.Str(k))
+          end if
+          o
+        }))
+      case _ => None
+    }
 
   private def messageKindOf(te: TypeExpression, parents: Parents): Option[String] = te match {
     case auc: AggregateUseCaseTypeExpression => Some(auc.usecase.useCase)
+    // An alternation reports a kind only when EVERY member agrees. A mixed union has no single
+    // answer, and inventing one would make `-carries event` true of a type that also admits
+    // commands -- per-member `carries` is what a caller should read in that case.
+    case alt: Alternation =>
+      val kinds = alt.of.toSeq
+        .flatMap(a => resolveType(a.pathId, parents))
+        .flatMap(t => messageKindOf(t.typEx, parents))
+        .distinct
+      if kinds.sizeIs == 1 && alt.of.toSeq.sizeIs > 0 then kinds.headOption else None
     case ate: AliasedTypeExpression =>
       resolution.refMap.definitionOf[Type](ate.pathId.format).flatMap(t => messageKindOf(t.typEx, parents))
     case _ => None
@@ -291,11 +317,21 @@ case class ProjectionPass(
       )
 }
 
+/** One projected node: the AST value, its parent chain, and its JSON record.
+  *
+  * `dump` needs only the record; `find` needs the value and parents too, because predicates such as
+  * `-under-a <kind>` ask about the ANCESTORS' kinds, which a flat record cannot express without
+  * duplicating the whole chain into every record. One pass serves both.
+  */
+case class ProjectedNode(value: RiddlValue, parents: Parents, record: ujson.Obj)
+
 case class ProjectionOutput(
   root: PassRoot,
   messages: Messages.Messages,
-  records: Seq[ujson.Obj]
-) extends PassOutput
+  nodes: Seq[ProjectedNode]
+) extends PassOutput {
+  def records: Seq[ujson.Obj] = nodes.map(_.record)
+}
 
 object ProjectionPass {
   val name: String = "Projection"

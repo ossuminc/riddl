@@ -36,6 +36,7 @@ object Commands:
       case "advise"    => Right(AdviseCommand())
       case "bastify"   => Right(BastifyCommand())
       case "dump"      => Right(DumpCommand())
+      case "find"      => Right(FindCommand())
       case "flatten"   => Right(FlattenCommand())
       case "from"      => Right(FromCommand())
       case "help"      => Right(HelpCommand())
