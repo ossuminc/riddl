@@ -34,13 +34,24 @@ would mean cutting an RC for its benefit. Everything else in `BACKLOG.md` is str
 the Computational Model is met, not when the backlog empties, and there is no
 "defer to 2.1" pile.
 
-**`2.0.0-rc.22` IS CUT, PUBLISHED AND FULLY VERIFIED (2026-08-22).** All five channels
-checked against the registries: **20/20** Maven at exactly `2.0.0-rc.22`, npm under the
+**`2.0.0-rc.23` IS CUT, PUBLISHED AND FULLY VERIFIED (2026-08-24).** All five channels
+checked against the registries: **20/20** Maven at exactly `2.0.0-rc.23`, npm under the
 **`rc`** dist-tag, Homebrew touching only `riddlc-rc.rb` (`riddlc.rb` still 1.31.0),
 **`notify-blog: skipped`**, both native binaries built. Cold cache (140K -> 265M):
-**2826 / 894 / 2787**, zero failures, +4 on every row and predicted to the case.
-`../bin/riddlc` and `~/.ivy2/local` (20 coordinates) at rc.22; rc.21 kept as
-`riddlc.rc21.bak`.
+**2838 / 903 / 2799**, zero failures, +12/+9/+12 predicted to the case — the FOURTH
+consecutive RC whose delta reconciled exactly against a prediction written first.
+`../bin/riddlc` and `~/.ivy2/local` (20 coordinates) at rc.23; rc.22 kept as
+`riddlc.rc22.bak`.
+
+**rc.23 adds `empty`** — the minimum-cardinality inhabitant of a type, with `none` as a
+SYNONYM producing the identical node. Legal exactly where the minimum cardinality is zero;
+the ascribed `empty T*` is the form that works where the position supplies no type.
+**BAST `FORMAT_REVISION` 21** — the next BAST change must bump to 22.
+
+**Two `empty` limitations, both PRE-EXISTING and both worth knowing before they read as
+new bugs:** a bare `empty` is not checked against a field typed INLINE (the expected-type
+machinery resolves only NAMED types), and `let e: T* = empty` does not parse because
+`let`'s ascription is a type REFERENCE. `let e = empty T*` works.
 
 **rc.22 EXISTS BECAUSE rc.21 SHIPPED A DEFECT — do not use rc.21 for corpus work.**
 ossum.tech found that rc.21's two delivery checks were blind to ALTERNATIONS in both
