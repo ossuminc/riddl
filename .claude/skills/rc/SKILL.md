@@ -254,7 +254,20 @@ and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
 
-**The deliberate-failure count is ZERO as of 2.0.0-rc.20 (2026-08-20).** Both corpora
+**The deliberate-failure count is 189 as of 2026-08-24, and every one is corpus cost from the
+every-field constructor rule.** `RiddlModelsRoundTripTest` fails at "Step 1 (validate original)"
+for 189 of 190 models because riddl-models has **2,309 partial constructors** that the rule now
+rejects. `language`, `passes` and `riddlLib` are fully green; only `commands` is red.
+
+**Confirm a red case by its message before accepting it** — `does not supply N field` (2,309 sites)
+or `may not follow the 'morph'` (115). Anything else is a regression.
+
+**This is the same phase rc.19 went through**, at ten times the scale: the rule ships, the corpus
+migrates against it, the gate returns to green. The corpus could not migrate first, because
+`empty` — the spelling that makes "explicitly supply an absent optional" possible at all — only
+shipped in rc.23.
+
+**Historical: it was ZERO as of 2.0.0-rc.20 (2026-08-20).** Both corpora
 migrated against rc.19's rules and CI has been fully green twice since. **A red case is a
 real signal again — there is no expected-failure list to reach for.**
 
