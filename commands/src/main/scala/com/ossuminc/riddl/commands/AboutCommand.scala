@@ -35,6 +35,7 @@ class AboutCommand(using io: PlatformContext) extends Command[AboutCommand.Optio
     val obj = config.getObject(commandName)
     Options(commandName)
 
+  // Product, not diagnostic: stdout, unprefixed. See VersionCommand for the full rule.
   override def run(
     options: AboutCommand.Options,
     outputDirOverride: Option[Path]
@@ -45,7 +46,7 @@ class AboutCommand(using io: PlatformContext) extends Command[AboutCommand.Optio
           "Extensive Documentation here: https://riddl.tech"
       }
 
-      io.log.info(about)
+      io.stdoutln(about)
     }
     Right(PassesResult())
   }

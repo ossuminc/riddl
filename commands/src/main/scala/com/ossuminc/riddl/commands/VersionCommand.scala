@@ -35,12 +35,21 @@ class VersionCommand(using pc: PlatformContext) extends Command[VersionCommand.O
     Options(commandName)
   end interpretConfig
 
+  /** The output of this command IS its product, so it goes to STDOUT, unprefixed.
+    *
+    * `pc.log` writes to stderr with an `[info]` prefix, which is right for diagnostics and wrong
+    * here: rc.24 moved the logger to stderr and thereby emptied this command's stdout entirely,
+    * which broke sbt-riddl's version check (`riddlc version () has insufficient semantic
+    * versioning parts`) and with it every build gate pinning rc.24. The rule that resolves it:
+    * **diagnostics on stderr, the command's product on stdout** -- so `validate`'s messages are
+    * stderr, while `version`, `info`, `about`, `help` and `stats` print their result on stdout.
+    */
   override def run(
     options: VersionCommand.Options,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     if pc.options.verbose || !pc.options.quiet then {
-      pc.log.info(RiddlBuildInfo.version)
+      pc.stdoutln(RiddlBuildInfo.version)
     }
     Right(PassesResult())
   }

@@ -36,6 +36,7 @@ class InfoCommand(using pc: PlatformContext) extends Command[InfoCommand.Options
     Options(commandName)
   end interpretConfig
 
+  // Product, not diagnostic: stdout, unprefixed. See VersionCommand for the full rule.
   override def run(
     options: InfoCommand.Options,
     outputDirOverride: Option[Path]
@@ -44,16 +45,16 @@ class InfoCommand(using pc: PlatformContext) extends Command[InfoCommand.Options
 
     // Build info first -- `formatBuildInfo`, NOT `formatInfo`, because the latter already
     // appends the notices and would bury them above the JVM lines below.
-    InfoFormatter.formatBuildInfo.split("\n").foreach(line => pc.log.info(line))
+    InfoFormatter.formatBuildInfo.split("\n").foreach(line => pc.stdoutln(line))
 
     // Add JVM-specific info (only available on JVM platform)
-    pc.log.info(s"       jvm name: ${System.getProperty("java.vm.name")}")
-    pc.log.info(s"    jvm version: ${System.getProperty("java.runtime.version")}")
-    pc.log.info(s"  operating sys: ${System.getProperty("os.name")}")
+    pc.stdoutln(s"       jvm name: ${System.getProperty("java.vm.name")}")
+    pc.stdoutln(s"    jvm version: ${System.getProperty("java.runtime.version")}")
+    pc.stdoutln(s"  operating sys: ${System.getProperty("os.name")}")
 
     // Attribution goes LAST, after everything else.
-    pc.log.info("")
-    ThirdPartyNotices.formatted.split("\n").foreach(line => pc.log.info(line))
+    pc.stdoutln("")
+    ThirdPartyNotices.formatted.split("\n").foreach(line => pc.stdoutln(line))
     Right(PassesResult())
   }
 }

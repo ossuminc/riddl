@@ -134,14 +134,25 @@ trait PlatformContext {
     */
   def write(file: URL, content: String): Unit
 
-  /** Write a message to the standard output or equivalent for this platform
+  /** **MISNAMED: this writes to STDERR on JVM and Native, not stdout.** Its one caller is a debug
+    * diagnostic, so the behaviour is right and only the name lies -- but do NOT reach for it to
+    * emit a command's product. Use [[stdoutln]] for that.
+    *
+    * Left as-is deliberately: `PlatformContext` is published API under a no-breaking-changes
+    * policy, so renaming it breaks every implementor for a cosmetic gain. Recorded here instead,
+    * because a method called `stdout` that writes to stderr is exactly the trap that emptied
+    * `riddlc version`'s stdout and broke sbt-riddl.
     *
     * @param message
-    *   The message to write to the standard output
+    *   The message to write (to the standard ERROR stream, despite the name)
     */
   def stdout(message: String): Unit
 
-  /** Write a newline appended message to the stnadard output or equivalent for this platform
+  /** Write a newline appended message to the standard output, or this platform's equivalent.
+    *
+    * **This is the stream for a command's PRODUCT** -- `version`, `info`, `about`, `help`, `stats`,
+    * `dump --json`, `find`'s matches. Anything a script would parse. Diagnostics go to
+    * [[stderrln]], and `pc.log` already routes there.
     *
     * @param message
     *   The message to write to the standard output

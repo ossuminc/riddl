@@ -6265,6 +6265,21 @@ case class ValidationPass(
                 suggestion = "Move these values into the 'morph' statement's own record " +
                   "constructor, or handle them in an `on` clause of the state being morphed TO."
               )
+            // A second transition on one path is WORSE than a stale `set`, not merely similar: a
+            // `set` at least writes real values to a stale record, while here an entire declared
+            // state transition has no observable effect and a generator has no basis for choosing
+            // which one to honour. Its OWN reason and OWN advice, deliberately -- borrowing the
+            // `set` message would tell an author their morph "writes a record", which is not what
+            // is wrong with it. Same rule as `BlockEnder`: a check inherited wholesale stops
+            // answering its own question.
+            case _: MorphStatement =>
+              messages.addError(
+                stmt.loc,
+                s"a 'morph' may not follow the 'morph' at ${mLoc.toShort}: the entity would " +
+                  "transition twice for one message and only the last could take effect",
+                suggestion = "Keep the transition this clause actually intends, or split the " +
+                  "behaviour across `on` clauses of the states being morphed TO."
+              )
             case _ => ()
         case None => ()
       stmt match

@@ -73,17 +73,18 @@ class StatsCommand(using pc: PlatformContext) extends PassCommand[StatsCommand.O
     standardPasses :+ StatsPass.creator(options)
   }
 
+  // Product, not diagnostic: stdout, unprefixed. See VersionCommand for the full rule.
   private def logStats(stats: StatsOutput): Unit = {
     val totalStats: KindStats = stats.categories.getOrElse("All", KindStats())
     val s: String =
       "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
-    pc.log.info(s)
+    pc.stdoutln(s)
     for {
       key <- stats.categories.keys.toSeq.sorted
       v <- stats.categories.get(key)
     } do {
       val p_of_all = v.percent_of_all(totalStats.count)
-      pc.log.info(
+      pc.stdoutln(
         f"$key%15s ${v.count}%5d ${v.numEmpty}%5d $p_of_all%8.2f ${v.percent_documented}12.2f ${v.completeness}%12.2f ${v.complexity}%10.2f ${v.averageContainment}%11.2f\n"
       )
     }

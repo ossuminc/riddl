@@ -36,6 +36,7 @@ class HelpCommand(using val pc: PlatformContext) extends Command[HelpCommand.Opt
     Options(commandName)
   end interpretConfig
 
+  // Product, not diagnostic: stdout, unprefixed. See VersionCommand for the full rule.
   override def run(
     options: HelpCommand.Options,
     outputDirOverride: Option[Path]
@@ -57,7 +58,7 @@ class HelpCommand(using val pc: PlatformContext) extends Command[HelpCommand.Opt
           .mkString(pc.newline)
         common ++ "\n\n" ++ improved_commands
       }
-      pc.log.info(usage)
+      pc.stdoutln(usage)
     }
     Right(PassesResult())
   }

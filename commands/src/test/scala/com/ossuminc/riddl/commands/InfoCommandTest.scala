@@ -6,8 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{StringLogger, ThirdPartyNotices}
-import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.{StringBuildingPrintStream, ThirdPartyNotices}
 
 /** Unit Tests For InfoCommand.
   *
@@ -19,11 +18,25 @@ import com.ossuminc.riddl.utils.pc
   */
 class InfoCommandTest extends CommandTestBase("commands/input") {
 
-  private def infoOutput: Seq[String] =
-    pc.withLogger(StringLogger()) { logger =>
-      runCommand(Seq("info"))
-      logger.toString.split("\n").toSeq
+  /** Captures STDOUT, which is where `info` writes as of 2026-08-24.
+    *
+    * It read the LOGGER until then. `info`'s output is the command's PRODUCT, not a diagnostic, so
+    * it moved to stdout when rc.24's logger-to-stderr change emptied its stdout entirely and broke
+    * sbt-riddl's version check. The assertions below are unchanged — only the stream they watch has
+    * moved, which is the point.
+    */
+  private def infoOutput: Seq[String] = {
+    val old = System.out
+    val captured = StringBuildingPrintStream()
+    synchronized {
+      try
+        System.setOut(captured)
+        runCommand(Seq("info"))
+        captured.flush()
+        captured.mkString().split("\n").toSeq
+      finally System.setOut(old)
     }
+  }
 
   "InfoCommand" should {
 
