@@ -64,6 +64,15 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
     RiddlLib.parseString(read(f), f.getAbsolutePath)
 
   /** Collapse names/paths/quotes so error categories aggregate. */
+  /** Strip byte-offset spans like  from a message.
+    *
+    * Several diagnostics name a RELATED location inside their own text -- "the 'morph' at (…)",
+    * "the 'error' at (…)" -- which is genuinely useful to an author and fatal to a set difference
+    * across a round trip, because the round-tripped AST is one synthetic document with different
+    * offsets. Without this, eleven models reported their own pre-existing errors as "new".
+    */
+  private def stripLocs(m: String): String = m.replaceAll("""\(\d+->\d+\)""", "(LOC)")
+
   private def normalize(e: String): String =
     e.replaceAll("'[^']*'", "'X'")
       .replaceAll("\"[^\"]*\"", "\"X\"")
@@ -171,12 +180,23 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
       for f <- files do
         parseModel(f) match
           case RiddlResult.Success(root) =>
-            val base = RiddlLib.validateRoot(root).errors.map(_.format).toSet
+            val base = RiddlLib.validateRoot(root).errors.map(m => stripLocs(m.message)).toSet
             val json = RiddlLib.root2Json(root)
             RiddlLib.parseJson(json, f.getName) match
               case RiddlResult.Success(root2) =>
                 reparsed += 1
-                val after = RiddlLib.validateRoot(root2).errors.map(_.format).toSet
+                // Compare MESSAGE TEXT, not .  embeds the location, and the
+                // round-tripped AST is one synthetic document while the original is many files --
+                // so every pre-existing error's format differs and reads as "added". That made this
+                // gate pass only while the corpus had ZERO errors: it was measuring corpus
+                // cleanliness, not round-trip fidelity, and the first rule with corpus cost turned
+                // all 190 models red at once for a defect the round trip had not introduced.
+                //
+                // The trade is real and worth stating: a set of messages loses MULTIPLICITY, so a
+                // round trip that duplicated an existing error would slip through. Against a gate
+                // that cannot tolerate a single pre-existing error at all, that is the better
+                // failure mode -- and a genuinely new defect nearly always says something new.
+                val after = RiddlLib.validateRoot(root2).errors.map(m => stripLocs(m.message)).toSet
                 val added = after -- base
                 if added.isEmpty then clean += 1
                 else

@@ -794,6 +794,7 @@ case class ValidationPass(
     // A23: refusals (require/error) must precede any effect within each linear statement list.
     checkRefusalsFirst(onClause.statements)
     checkBlockTerminal(onClause.statements)
+    checkNoSetAfterMorph(onClause.statements)
   end validateOnClause
 
   private def validateOnMessageClause(omc: OnMessageLikeClause, parents: Parents): Unit = {
@@ -6160,6 +6161,137 @@ case class ValidationPass(
     * its own list, because a terminator inside a branch says nothing about statements following the
     * branch, which may not be taken.
     */
+  /** No `set` of any kind may follow a `morph` in the same clause (Reid, 2026-08-24).
+    *
+    * *"Morph statements should be followed by set statements because the state has changed and the
+    * subsequent state changes either should have been part of the morph statement's record
+    * constructor or placed in the new state's handler's on clauses."*
+    *
+    * **This rule is what makes the current-state check LEXICAL.** riddl-generator warned that a
+    * lexical "the state named must be the enclosing state" rule would produce 36 false positives in
+    * reactive-bbq, because the corpus writes `morph` and `set state` as a pair and the `morph` has
+    * already transitioned. Under this rule that pair is illegal outright, so no `set` can ever run
+    * after a transition — the current state is ALWAYS the enclosing state, and the flow-sensitive
+    * tracking (with branch joins) they asked for is unnecessary. The 36 sites become errors either
+    * way; they are simply reported for the clearer reason.
+    *
+    * **A `morph` inside a `when`/`match` arm poisons everything after the branch** (confirmed with
+    * Reid). The branch may have executed, so a following `set` may be writing the wrong state's
+    * record; treating "may have morphed" as "has morphed" is the conservative direction and the
+    * only one that cannot be wrong.
+    */
+  /** `set state S` may only name the state the entity is actually in (Reid, 2026-08-24).
+    *
+    * *"A set statement can only ever change the values in the current state's record. To attempt
+    * to do `set state S` when the state is not S is an error that riddl should catch."*
+    *
+    * **Lexical, and only because `checkNoSetAfterMorph` exists.** riddl-generator measured that a
+    * lexical rule would misfire on 36 reactive-bbq sites where a `morph` earlier in the clause had
+    * already transitioned, and asked for flow-sensitive tracking with branch joins. Banning `set`
+    * after `morph` removes that case entirely: no `set` can follow a transition, so the current
+    * state is always the enclosing one. The expensive analysis was made unnecessary by the simpler
+    * rule rather than implemented.
+    *
+    * **An entity-level handler (no enclosing state) is NOT reported here.** With more than one
+    * state the entity could be in any of them, which is a real restriction — riddl-generator's
+    * criterion 3, that such a handler may only touch fields common to every state record. That is
+    * a separate check about FIELDS and is not attempted by this one; a single-state entity, which
+    * is all the corpus has in this shape, is unambiguous either way.
+    */
+  private def checkSetStateIsCurrent(ss: SetStatement, parents: Parents): Unit =
+    ss.field match
+      case sr: StateRef =>
+        val enclosing = parents.collectFirst { case st: State => st }
+        for
+          named <- resolution.refMap.definitionOf[State](sr.pathId, parents.head)
+          current <- enclosing
+        do
+          // Reference identity: `Definition.equals` is structural, so two same-named states in
+          // different entities would otherwise compare equal.
+          if !(named eq current) then
+            messages.addError(
+              ss.loc,
+              s"${named.identify} is not the state this entity is in here; a 'set' may only " +
+                s"change the record of the CURRENT state, which is ${current.identify}",
+              suggestion = s"Name ${current.identify}, or use 'morph entity <E> to state " +
+                s"${named.id.value} with record <R>(…)' to transition -- noting that no 'set' " +
+                "may follow a morph."
+            )
+          end if
+      case _ => () // a FieldRef target is not about states
+  end checkSetStateIsCurrent
+
+  /** Does this statement morph, ANYWHERE inside it — including in a `when`/`match` arm?
+    *
+    * A morph nested in a branch may have run, so everything after the enclosing statement is
+    * suspect. Reading only the top level was a real defect: `KitchenTicket.riddl:665` morphs inside
+    * a `when … then … end` and the `set state` after it was reported TWICE — once truly by
+    * `checkNoSetAfterMorph`, which does look inside branches, and once falsely by
+    * `checkSetStateIsCurrent`, which named the enclosing state as current when the branch may have
+    * changed it.
+    */
+  private def containsMorph(stmt: Statement): Boolean = stmt match
+    case _: MorphStatement => true
+    case ws: WhenStatement =>
+      (ws.thenStatements.toSeq ++ ws.elseStatements.toSeq).exists {
+        case st: Statement => containsMorph(st)
+        case _             => false
+      }
+    case ms: MatchStatement =>
+      (ms.cases.flatMap(_.statements.toSeq) ++ ms.default.toSeq).exists {
+        case st: Statement => containsMorph(st)
+        case _             => false
+      }
+    case fs: ForeachStatement =>
+      fs.doStatements.toSeq.exists {
+        case st: Statement => containsMorph(st)
+        case _             => false
+      }
+    case _ => false
+  end containsMorph
+
+  private def checkNoSetAfterMorph(stmts: Seq[Statement]): Unit =
+    var morphedAt: Option[At] = None
+    stmts.foreach { stmt =>
+      // Report BEFORE noting this statement, so a `morph` does not flag itself.
+      morphedAt match
+        case Some(mLoc) =>
+          stmt match
+            case _: SetStatement =>
+              messages.addError(
+                stmt.loc,
+                s"a 'set' may not follow the 'morph' at ${mLoc.toShort}: the entity is in a " +
+                  "different state by now, so this writes a record that is no longer current",
+                suggestion = "Move these values into the 'morph' statement's own record " +
+                  "constructor, or handle them in an `on` clause of the state being morphed TO."
+              )
+            case _ => ()
+        case None => ()
+      stmt match
+        case m: MorphStatement => morphedAt = Some(m.loc)
+        // A morph inside a branch may have run, so everything after the branch is suspect.
+        case ws: WhenStatement =>
+          // Each arm is its own list, walked on its own terms.
+          checkNoSetAfterMorph(ws.thenStatements.toSeq.collect { case st: Statement => st })
+          checkNoSetAfterMorph(ws.elseStatements.toSeq.collect { case st: Statement => st })
+          val branches = (ws.thenStatements.toSeq ++ ws.elseStatements.toSeq).collect {
+            case st: Statement => st
+          }
+          if branches.exists(_.isInstanceOf[MorphStatement]) then morphedAt = Some(ws.loc)
+        case ms: MatchStatement =>
+          val arms = ms.cases.flatMap(_.statements.toSeq) ++ ms.default.toSeq
+          val armStmts = arms.collect { case st: Statement => st }
+          ms.cases.foreach(mc =>
+            checkNoSetAfterMorph(mc.statements.toSeq.collect { case st: Statement => st })
+          )
+          checkNoSetAfterMorph(ms.default.toSeq.collect { case st: Statement => st })
+          if armStmts.exists(_.isInstanceOf[MorphStatement]) then morphedAt = Some(ms.loc)
+        case fs: ForeachStatement =>
+          checkNoSetAfterMorph(fs.doStatements.toSeq.collect { case st: Statement => st })
+        case _ => ()
+    }
+  end checkNoSetAfterMorph
+
   private def checkBlockTerminal(stmts: Seq[Statement]): Unit =
     var endedBy: Option[BlockEnder] = None
     stmts.foreach { stmt =>
@@ -8372,19 +8504,52 @@ case class ValidationPass(
               s"has only ${count(fields.size, "field")}",
             suggestion = s"Supply at most ${count(fields.size, "argument")}."
           )
-        // NO `nonEmpty` guard: an EMPTY argument list is a positional arity of zero, and must
-        // still match. `command Checkout()` is legal syntax — a constructor of a message with no
-        // fields — but against a type that HAS fields it is a mistake, and guarding this branch on
-        // `nonEmpty` let exactly that case through silently. Named arguments are exempt because
-        // they may legitimately supply a subset.
-        else if c.args.forall(_.name.isEmpty) && c.args.sizeIs != fields.size
-        then
+        // EVERY field must be supplied explicitly (Reid, 2026-08-24). *"If the constructor does
+        // not explicitly set every field, it is invalid. We don't want to guess what the default
+        // should be nor do we want to let old state values creep through."*
+        //
+        // Ruled for ALL constructors, not just state records, so there is no exception to remember
+        // -- asked explicitly, and the long-windedness was accepted. The reason bites hardest on a
+        // state record, where an omitted field means either an invented default or a silent
+        // carry-forward, but one rule with no exceptions is more defensible than a split.
+        //
+        // **This is only sayable because `empty` exists.** Before rc.23 an optional field had no
+        // spelling for "absent", so omission was not a shortcut -- it was the ONLY way to say it.
+        // Naming the missing fields follows the same principle as the union-inlet diagnostic: a
+        // count would send the author to re-derive by hand what the checker already knows.
+        // EVERY field must be supplied explicitly (Reid, 2026-08-24). *"If the constructor does
+        // not explicitly set every field, it is invalid. We don't want to guess what the default
+        // should be nor do we want to let old state values creep through."*
+        //
+        // Ruled for ALL constructors, not just state records, so there is no exception to remember
+        // -- asked explicitly, and the long-windedness accepted. The reason bites hardest on a
+        // state record, where an omitted field means either an invented default or a silent
+        // carry-forward, but one rule with no exceptions is more defensible than a split.
+        //
+        // **This is only sayable because `empty` exists.** Before rc.23 an optional field had no
+        // spelling for "absent", so omission was not a shortcut -- it was the ONLY way to say it.
+        //
+        // This REPLACES the former positional-arity branch, whose comment recorded the superseded
+        // rule ("Named arguments are exempt because they may legitimately supply a subset"). Naming
+        // the missing fields is strictly more useful than an arity count, and follows the
+        // union-inlet precedent: a count sends the author to re-derive what the checker knows.
+        // `scala.collection.immutable.Set`, qualified: `AST.Set` shadows it, which CLAUDE.md
+        // records as having caused three compile errors in one day.
+        val suppliedNames: scala.collection.immutable.Set[String] =
+          c.args.flatMap(_.name.map(_.value)).toSet
+        val positionalCount = c.args.count(_.name.isEmpty)
+        val missing: Seq[Field] = fields.zipWithIndex.collect {
+          case (f, idx) if idx >= positionalCount && !suppliedNames.contains(f.id.value) => f
+        }
+        if missing.nonEmpty then
           messages.addError(
             c.loc,
-            s"Constructor of ${typ.identify} has ${count(c.args.size, "positional argument")} but " +
-              s"the type has ${count(fields.size, "field")}",
-            suggestion =
-              s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset."
+            s"Constructor of ${typ.identify} does not supply " +
+              s"${count(missing.size, "field")}: ${missing.map(_.id.value).mkString(", ")}",
+            suggestion = "Supply every field explicitly. An omitted field would have to take an " +
+              "invented default or carry an old value forward, and neither is stated by the " +
+              "model. An optional or collection field that should have no value is written " +
+              "'<field> = empty'."
           )
         checkArgumentTypes(c.args, fields, "field", parents, lets, elements)
         // Recurse into argument values (nested constructors, value refs), CARRYING the foreach
@@ -8586,6 +8751,11 @@ case class ValidationPass(
     inScopeElements: Map[String, TypeExpression] = Map.empty
   ): Unit =
     var lets = inScopeLets
+    // Whether a `morph` has already run in THIS statement list. `checkNoSetAfterMorph` reports the
+    // `set` itself; this flag exists so `checkSetStateIsCurrent` STAYS QUIET there, because after a
+    // morph its explanation would be false -- it would name the enclosing state as "the state this
+    // entity is in", which the morph has just changed. One defect, one message, and the true one.
+    var morphed = false
     // A parameter/element scope is a MAP threaded by value, but a `let` declared partway through
     // this list shadows a same-named clause parameter or enclosing `foreach` element from that
     // point on -- the local is the inner binding. `valueRefTypeExpr` consults `elements` BEFORE
@@ -8695,6 +8865,7 @@ case class ValidationPass(
           lets = lets :+ ls
           elements = elements - ls.identifier.value
         case ss: SetStatement =>
+          if !morphed then checkSetStateIsCurrent(ss, parents)
           // A54: validate the value expression, then check it against the target field/state type.
           validateValue(ss.value, parents, lets, elements)
           val expected: Option[Type] = ss.field match
@@ -8857,6 +9028,10 @@ case class ValidationPass(
         case ts: TerminateStatement => checkTerminate(ts, parents, lets, elements)
         case _                      => ()
       }
+      // Conservative and deliberately AFTER the arms: a morph anywhere in this statement --
+      // including inside a `when`/`match` arm that may have run -- makes the enclosing state no
+      // longer reliably current, so `checkSetStateIsCurrent` must stay quiet from here on.
+      if containsMorph(stmt) then morphed = true
     }
   end checkStatementScopes
 
