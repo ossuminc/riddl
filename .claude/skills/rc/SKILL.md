@@ -154,9 +154,34 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2838** | 7 |
-| JS | **903** | 5 |
-| Native | **2799** | 7 |
+| JVM | **2903** | 7 |
+| JS | **917** | 5 |
+| Native | **2864** | 7 |
+
+**Raised at 2.0.0-rc.24 (2026-08-24) to 2903 / 917 / 2864**, cold cache
+(`/tmp/sbt-verify-rc24`, 116K -> 269M), all three platforms compiling, zero `No tests to
+run`. The delta was **+65 / +14 / +65**, predicted to the case: 14 shared cases in
+`passes/src/test/scala` (`SetAndConstructorRulesTest` 9, `EmptyValueTest` +5) that every
+row sees, plus 51 in `commands/src/test/scala` (`DumpProjectionTest` 7, `FindCommandTest`
+24, `FindEditingTest` 20) that JS correctly does not, `commands` having no JS row. Fifth
+consecutive RC whose delta reconciled exactly against a prediction written down first.
+
+**A corpus suite went red mid-run because the CORPUS MOVED, and that is a distinct
+failure mode from every other one on this page.** `Root2JsonCorpusTest` failed on
+reactive-bbq with a duplicate-on-clause error the round trip had supposedly introduced;
+re-running it alone afterwards read **190/190 clean**. riddl-models had committed twice
+DURING the certification (`a115495d`, `c42f83c5` at 15:50-15:51), one of them converting
+reactive-bbq's ShiftRepository. Nothing in riddl changed.
+
+The corpus suites read the LIVE `../riddl-models` checkout, so a long certification is
+not a snapshot: **the tree can differ between the leg that reads it and the leg that
+reads it next.** Two consequences worth keeping:
+
+- **Before treating a corpus failure as a regression, check `git -C ../riddl-models log`
+  for commits timestamped inside your run.** That is one command and it is decisive.
+- **Re-check on a FRESH cache** (the corpus is not in the cache key, so a warm store
+  replays the old verdict — a stale FAILURE as readily as a stale pass), and record which
+  corpus commit the result belongs to.
 
 **Raised at 2.0.0-rc.23 (2026-08-24) to 2838 / 903 / 2799**, cold cache
 (`/tmp/sbt-verify-rc23`, 140K -> 265M), zero failures, zero `No tests to run`. The delta
@@ -254,8 +279,22 @@ and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
 
-**The deliberate-failure count is 189 as of 2026-08-24, and every one is corpus cost from the
-every-field constructor rule.** `RiddlModelsRoundTripTest` fails at "Step 1 (validate original)"
+**The deliberate-failure count is 190 as of 2.0.0-rc.24 (2026-08-24): 189 in `commands` and
+1 in `riddlc`, all corpus cost from the two rules that landed after rc.23.**
+
+`RiddlModelsRoundTripTest` fails at "Step 1 (validate original)" for **189 of 190** models --
+riddl-models has 2,309 partial constructors and 115 set-after-morph sites. `RunRiddlcOnLocalTest`'s
+**`dokn`** fails with exit 7 on exactly **5** `may not follow the 'morph'` errors, which is
+riddl-EXAMPLES' share of the same bill. `utils`, `language`, `passes`, `testkit` and `riddlLib` are
+fully green on every platform, and `riddlLib` reads **190/190** on both validation parity and JSON
+identity.
+
+**Confirm a red case by its message before accepting it** -- `does not supply N field` or
+`may not follow the 'morph'`. Anything else is a regression. Verify `dokn` by RUNNING it
+(`riddlc from .../dokn.conf validate`), because the suite reports only the exit code: an
+exit 7 for a different reason looks identical.
+
+**Historical (superseded): it was 189 and `commands`-only.** `RiddlModelsRoundTripTest` fails at "Step 1 (validate original)"
 for 189 of 190 models because riddl-models has **2,309 partial constructors** that the rule now
 rejects. `language`, `passes` and `riddlLib` are fully green; only `commands` is red.
 
