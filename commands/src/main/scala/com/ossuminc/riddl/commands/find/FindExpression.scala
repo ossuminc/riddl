@@ -53,11 +53,44 @@ object FindExpr {
   */
 object FindExpression {
 
-  final case class Parsed(expr: FindExpr, actions: Seq[FindAction], expectMin: Option[Int])
+  final case class Parsed(
+    expr: FindExpr,
+    actions: Seq[FindAction],
+    expectMin: Option[Int],
+    dryRun: Boolean = false,
+    keepGoing: Boolean = false,
+    allowEmpty: Boolean = false
+  ) {
+    def mutates: Boolean = actions.exists {
+      case _: FindAction.Replace | FindAction.Delete => true
+      case _                                         => false
+    }
+  }
 
   def parse(args: Seq[String]): Either[String, Parsed] = {
     val actions = scala.collection.mutable.ListBuffer.empty[FindAction]
     var expectMin: Option[Int] = None
+    var dryRun = false
+    var keepGoing = false
+    var allowEmpty = false
+
+    /** Consumes a command up to its `;` or `+` terminator, as find does.
+      *
+      * The shell strips the backslash from `\;`, so what arrives is a bare `;`.
+      */
+    def commandUntilTerminator(from: Int): Either[String, (Seq[String], Boolean, Int)] =
+      val buf = scala.collection.mutable.ListBuffer.empty[String]
+      var j = from
+      var term: Option[Boolean] = None // Some(true) == batched `+`
+      while j < args.length && term.isEmpty do
+        args(j) match
+          case ";" => term = Some(false); j += 1
+          case "+" => term = Some(true); j += 1
+          case a   => buf.append(a); j += 1
+      term match
+        case None => Left("-exec/-replace must be terminated by ';' or '+'")
+        case Some(batched) =>
+          if buf.isEmpty then Left("-exec/-replace needs a command") else Right((buf.toSeq, batched, j))
 
     // Actions and `-expect-min` are pulled out first: in find they sit in the expression and always
     // succeed, so treating them as terms would make `-type entity -print` mean `entity AND true`.
@@ -85,6 +118,22 @@ object FindExpression {
         // `-path` is BOTH a test (glob against the dotted path) and, in find, nothing else. The
         // identity-only OUTPUT is `-printpath`, so that `-path '*.Order'` keeps its find meaning.
         case "-printpath" => actions.append(FindAction.PathOnly); i += 1
+        case "-dry-run"   => dryRun = true; i += 1
+        case "-keep-going" => keepGoing = true; i += 1
+        case "-allow-empty" => allowEmpty = true; i += 1
+        case "-delete"    => actions.append(FindAction.Delete); i += 1
+        case "-exec" =>
+          commandUntilTerminator(i + 1) match
+            case Left(e)                       => error = Some(e)
+            case Right((cmd, batched, nextI))  => actions.append(FindAction.Exec(cmd, batched)); i = nextI
+        case "-replace" =>
+          commandUntilTerminator(i + 1) match
+            case Left(e) => error = Some(e)
+            case Right((cmd, batched, nextI)) =>
+              // Batching makes no sense for a replacement: one stdout cannot be the new text of
+              // several distinct spans. Refused rather than silently treated as `;`.
+              if batched then error = Some("-replace cannot be batched with '+'; use ';'")
+              else { actions.append(FindAction.Replace(cmd)); i = nextI }
         case other        => terms.append(other); i += 1
       end match
     end while
@@ -94,7 +143,7 @@ object FindExpression {
       case None =>
         parseOr(terms.toList).flatMap { case (expr, rest) =>
           if rest.nonEmpty then Left(s"unexpected '${rest.head}'")
-          else Right(Parsed(expr, actions.toSeq, expectMin))
+          else Right(Parsed(expr, actions.toSeq, expectMin, dryRun, keepGoing, allowEmpty))
         }
   }
 
@@ -132,9 +181,7 @@ object FindExpression {
       case _   => FindPredicates.parse(toks)
 }
 
-/** What to do with a match. Phase 2 is READ-ONLY: `-exec`, `-replace` and `-delete` are phase 3, so
-  * nothing here can alter a model.
-  */
+/** What to do with a match. */
 sealed trait FindAction
 object FindAction {
   case object Print extends FindAction
@@ -144,4 +191,13 @@ object FindAction {
   case object ListTable extends FindAction
   case object Quit extends FindAction
   case class Printf(fmt: String) extends FindAction
+
+  /** Run a command per match (`;`) or once for all matches (`+`), inheriting stdout as find does. */
+  case class Exec(cmd: Seq[String], batched: Boolean) extends FindAction
+
+  /** Run a command per match and use its stdout as the match's replacement text. */
+  case class Replace(cmd: Seq[String]) extends FindAction
+
+  /** Remove the matched node's span. */
+  case object Delete extends FindAction
 }
