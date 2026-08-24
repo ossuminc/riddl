@@ -10,6 +10,33 @@ Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
 NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
 
+**`../bin/riddlc` IS AHEAD OF rc.24 — it is `2.0.0-rc.24-3-40c0574f`, staged with
+`publishLocal`, and that is deliberate (2026-08-24).** Reid's call: *"don't build an RC,
+just stage riddlc to ../bin and publishLocal — I want to avoid this round-trip between
+riddl-models and riddlc before cutting another RC."* Two fixes ride on it that rc.24 does
+NOT have.
+
+**1. A command's PRODUCT goes to stdout; diagnostics stay on stderr** (Reid's rule).
+rc.24 moved the logger to stderr — right for `validate` — and thereby emptied the stdout
+of `version`, `info`, `about`, `help` and `stats`, which emit through that same logger.
+sbt-riddl reads `riddlc version` from stdout, got an empty string, and **every build gate
+pinning rc.24 died**. Those five now use `pc.stdoutln`, unprefixed.
+**Nothing at this end failed when it broke**: no test asserted which STREAM a command
+used, so the contract lived only in a consumer's expectations. `ProductGoesToStdoutTest`
+is that gate now, canary-tested by reverting `VersionCommand`.
+**`PlatformContext.stdout` writes to STDERR despite its name** — one caller, a debug
+diagnostic, so the behaviour is right and only the name lies. Left unrenamed (published
+API) and documented, because it is this same trap in miniature.
+
+**2. `morph` after `morph` on one path is an Error.** One new arm on the existing
+`set`-after-`morph` walk, with its OWN reason — borrowing the `set` message would tell an
+author their morph "writes a record that is no longer current", which is not what is
+wrong with it. **The rule is SEQUENCE ON ONE PATH, never morph count per clause**: two
+morphs on different `when` branches stay legal, pinned by a test, because a count-based
+rule would break every conditional transition in the corpus. Corpus cost measured across
+all 190 models: **ONE site** (`admission-discharge`), a true positive, filed there.
+
+
 **`riddlc find` IS COMPLETE — all three phases (2026-08-24).** `dump --json` is the
 projection, `find` queries it, and `-exec`/`-replace`/`-delete` edit through it. The
 reason it exists: riddl-models drives its migrations from ~10 regex-over-text Python
