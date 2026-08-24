@@ -165,6 +165,9 @@ class NativePlatformContext extends PlatformContext:
   override def stdoutln(message: String): Unit =
     System.out.println(message)
 
+  override def stderrln(message: String): Unit =
+    System.err.println(message)
+
   override def newline: String = System.lineSeparator()
 
   override def ec: ExecutionContext = scala.concurrent.ExecutionContext.global

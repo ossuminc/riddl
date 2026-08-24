@@ -19,8 +19,9 @@ class ReadRiddlOptionsTest extends CommandTestBase("commands/input/") {
 
   "RiddlOptions" should {
     "read for dump" in {
-      val expected = InputFileCommand
-        .Options(Some(Path.of(s"$inputDir/dump.riddl")), "dump")
+      // DumpCommand gained its own Options when `--json` landed; it is no longer a plain
+      // InputFileCommand, because the projection needs flags of its own.
+      val expected = DumpCommand.Options(Some(Path.of(s"$inputDir/dump.riddl")))
       check(new DumpCommand, expected)
     }
     "read for from" in {

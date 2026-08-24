@@ -152,11 +152,18 @@ trait Logger(using pc: PlatformContext) {
   }
 }
 
-/** A logger that writes to "stdout" per the PlatformContext */
+/** A logger that writes DIAGNOSTICS to stderr per the PlatformContext.
+  *
+  * It wrote to stdout until 2026-08-24, which made stdout unusable for any machine-readable output:
+  * `dump --json` emitted valid JSON followed by riddlc's messages and a ten-line summary, so a
+  * reader's parser threw on output that looked fine to the eye. `--quiet` was not a fix — the
+  * summary prints regardless — and no per-command logger swap could cover it, because the framework
+  * logs AFTER the command returns.
+  */
 case class SysLogger()(using pc: PlatformContext) extends Logger:
   override def write(level: Logging.Lvl, s: String): Unit = {
     super.count(level)
-    pc.stdoutln(highlight(level, s))
+    pc.stderrln(highlight(level, s))
   }
 end SysLogger
 

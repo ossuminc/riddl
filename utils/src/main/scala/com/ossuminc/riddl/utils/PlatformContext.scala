@@ -148,6 +148,18 @@ trait PlatformContext {
     */
   def stdoutln(message: String): Unit
 
+  /** Write a newline appended message to the standard ERROR stream, or this platform's equivalent.
+    *
+    * Diagnostics belong here, not on stdout: a command whose stdout is a machine-readable artifact
+    * (`dump --json`, `find -print`) cannot share that stream with messages, and `--quiet` is not a
+    * fix because the run summary prints regardless.
+    *
+    * **Concrete, with a stdout default, on purpose.** An abstract method here would be a binary
+    * incompatibility for every existing implementor of this published trait; defaulting to
+    * `stdoutln` means an implementation that does not override it behaves exactly as it did before.
+    */
+  def stderrln(message: String): Unit = stdoutln(message)
+
   /** The newline character for this platform */
   def newline: String
 

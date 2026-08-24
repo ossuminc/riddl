@@ -450,7 +450,10 @@ lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, N
   .jvmConfigure(With.MiMa(V.previous))
   .jvmConfigure(jvmNativeSrc("commands"))
   .jvmSettings(
-    libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig, Dep.scalajs_stubs),
+    // upickle: `dump --json` emits the analysis projection. Descriptions legitimately contain
+    // quotes and newlines, so hand-rolled escaping is exactly the wrong risk to take with output
+    // that riddl-models will read with Python's `json`.
+    libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig, Dep.scalajs_stubs, Dep.upickle),
     coverageExcludedFiles := """<empty>;$anon"""
   )
   // NOTE: A JS variant is not supported because executing commands from
@@ -460,7 +463,11 @@ lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, N
   .nativeConfigure(jvmNativeSrc("commands"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
-    libraryDependencies ++= Seq(Dep.scopt_nojvm.value, Dep.sconfig_nojvm.value)
+    libraryDependencies ++= Seq(
+      Dep.scopt_nojvm.value,
+      Dep.sconfig_nojvm.value,
+      Dep.upickle_nojvm.value
+    )
   )
 val commands: Project = commands_cp.jvm.dependsOn(pDep(utils), pDep(language), pDep(passes))
 val commandsNative =

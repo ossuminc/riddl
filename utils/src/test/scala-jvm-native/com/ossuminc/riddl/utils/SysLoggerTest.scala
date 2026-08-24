@@ -23,19 +23,27 @@ class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecu
     *   assert(result == (123, "hi there!\n")
     * }}}
     */
-  def capturingStdOut[A](f: () => A): (A, String) = {
-    val out = System.out
+  /** Captures STDERR, which is where `SysLogger` writes as of 2026-08-24.
+    *
+    * It captured stdout until then, and these five cases are the ones that pinned the old contract.
+    * Diagnostics moved to stderr because a command whose stdout is a machine-readable artifact
+    * (`dump --json`) cannot share that stream with messages — `--quiet` was not a fix, since the run
+    * summary prints regardless. The assertions here are unchanged; only the stream they watch has
+    * moved, which is the point.
+    */
+  def capturingStdErr[A](f: () => A): (A, String) = {
+    val err = System.err
     val printStream = StringBuildingPrintStream()
     synchronized {
-      System.out.flush()
+      System.err.flush()
       try {
-        System.setOut(printStream)
+        System.setErr(printStream)
         val a = f()
         printStream.flush()
         val output = printStream.mkString()
         (a, output)
       } finally {
-        System.setOut(out)
+        System.setErr(err)
         printStream.close()
       }
     }
@@ -47,7 +55,7 @@ class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecu
       pc.withLogger(SysLogger()) { sl =>
         var captured: (Unit, String) = () -> ""
         pc.withOptions(CommonOptions.noANSIMessages) { _ =>
-          captured = capturingStdOut(() => pc.log.error("asdf"))
+          captured = capturingStdErr(() => pc.log.error("asdf"))
           captured._2 mustBe expected
         }
       }
@@ -56,7 +64,7 @@ class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecu
   }
   // These three were commented out for an intermittent failure -- the capture
   // picking up "random garbage" -- which was never a bug in SysLogger. utils'
-  // suites ran in parallel while capturingStdOut swapped the global System.out,
+  // suites ran in parallel while capturingStdErr swapped the global System.out,
   // so a concurrent suite's output landed in the capture. `Test /
   // parallelExecution := false` for utils removes the interference, so they are
   // back on.
@@ -65,7 +73,7 @@ class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecu
       val expected = "[severe] asdf\n"
       val result = pc.withLogger(SysLogger()) { (sl: SysLogger) =>
         pc.withOptions(CommonOptions.noANSIMessages) { _ =>
-          val captured = capturingStdOut(() => pc.log.severe("asdf"))
+          val captured = capturingStdErr(() => pc.log.severe("asdf"))
           captured._2 mustBe expected
         }
       }
@@ -78,7 +86,7 @@ class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecu
       val expected = "[warning] asdf\n"
       pc.withLogger(SysLogger()) { (sl: SysLogger) =>
         pc.withOptions(CommonOptions.noANSIMessages) { _ =>
-          val captured = capturingStdOut(() => pc.log.warn("asdf"))
+          val captured = capturingStdErr(() => pc.log.warn("asdf"))
           captured._2 mustBe expected
         }
       }
@@ -90,7 +98,7 @@ class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecu
       val expected = "[info] asdf\n"
       pc.withLogger(SysLogger()) { (sl: SysLogger) =>
         pc.withOptions(CommonOptions.noANSIMessages) { _ =>
-          val captured = capturingStdOut(() => pc.log.info("asdf"))
+          val captured = capturingStdErr(() => pc.log.info("asdf"))
           captured._2 mustBe expected
         }
       }
@@ -123,7 +131,7 @@ class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecu
     "print many message" in {
       pc.withLogger(SysLogger()) { (sl: SysLogger) =>
         pc.withOptions(CommonOptions.noANSIMessages) { _ =>
-          val captured = capturingStdOut { () =>
+          val captured = capturingStdErr { () =>
             pc.log.error("a")
             pc.log.info("b")
             pc.log.info("c")
