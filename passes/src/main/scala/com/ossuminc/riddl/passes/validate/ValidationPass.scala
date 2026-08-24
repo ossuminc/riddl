@@ -8333,6 +8333,36 @@ case class ValidationPass(
               )
           }
         }
+        // A bare `empty` argument must be checked against the FIELD's cardinality (riddl-models,
+        // 2026-08-24). This is the position models actually write `empty` in, and it was the one
+        // place the rc.23 check could not see: `checkValueType` takes an expected *named* Type, and
+        // a field typed `TimeStamp` or `OrderLine+` names none. But the field itself is right here
+        // -- `fields` is already resolved for the arity and name checks above -- so the cardinality
+        // is one lookup away, and an earlier claim that constructor arguments carry no expected
+        // type was too pessimistic: what they lack is a *named Type*, not the type.
+        //
+        // The ASCRIBED form is skipped: `validateConstructor` runs alongside `validateValue`, which
+        // checks an ascription context-free, and reporting both would double up on one mistake.
+        def fieldForArg(arg: ConstructorArg, idx: Int): Option[Field] = arg.name match
+          case Some(id) => fields.find(_.id.value == id.value)
+          case None     => fields.lift(idx) // positional; arity is reported separately
+        c.args.zipWithIndex.foreach { case (arg, idx) =>
+          arg.value match
+            case ev: EmptyValue if ev.typeEx.isEmpty =>
+              fieldForArg(arg, idx).foreach { f =>
+                if !admitsEmpty(f.typeEx) then
+                  messages.addError(
+                    ev.loc,
+                    s"'empty' is not a value of field '${f.id.value}' in ${typ.identify}: " +
+                      s"'${f.typeEx.format}' requires at least one value",
+                    suggestion = "Only an optional ('T?'), a collection ('T*') or a range starting " +
+                      s"at zero ('T{0,n}') has an empty value. Supply a real value for " +
+                      s"'${f.id.value}', or give it a type that can be empty."
+                  )
+                end if
+              }
+            case _ => ()
+        }
         // Arity.
         def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
         if c.args.sizeIs > fields.size then

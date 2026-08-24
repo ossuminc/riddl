@@ -1304,12 +1304,6 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case vr: ValueRef => // A17: bare boolean value reference
         writer.writeU8(3)
         writeValue(vr)
-      // Tag 12 (FORMAT_REVISION 21): `empty`, with its optional ascription. `none` is a synonym
-      // with no separate encoding -- it is not a separate node, so there is nothing to distinguish.
-      case ev: EmptyValue =>
-        writer.writeU8(12)
-        writeLocation(ev.loc)
-        writeOption(ev.typeEx)(writeTypeExpression)
       case pv: PromptValue =>
         writer.writeU8(4)
         writeValue(pv)
@@ -1431,6 +1425,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(0)
         writeLocation(ls.loc)
         writeString(ls.s)
+      // Tag 12 (FORMAT_REVISION 21): `empty`, with its optional ascription. `none` is a synonym
+      // with no separate encoding -- it is not a separate node, so there is nothing to distinguish.
+      case ev: EmptyValue =>
+        writer.writeU8(12)
+        writeLocation(ev.loc)
+        writeOption(ev.typeEx)(writeTypeExpression)
       case pv: PromptValue =>
         writer.writeU8(4)
         writeLocation(pv.loc)

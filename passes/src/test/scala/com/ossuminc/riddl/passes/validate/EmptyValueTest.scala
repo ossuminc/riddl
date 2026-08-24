@@ -133,4 +133,72 @@ class EmptyValueTest extends AbstractValidatingTest {
       withClue(msgs.map(_.message).mkString("\n")) { errs(msgs) mustBe empty }
     }
   }
+
+  /** A bare `empty` as a CONSTRUCTOR ARGUMENT, which rc.23 shipped unchecked (riddl-models,
+    * 2026-08-24). This is the position models actually write it in, and it was the one place the
+    * check could not see: `checkValueType` takes an expected *named* Type and a field typed
+    * `TimeStamp` names none. The field itself is available in `validateConstructor`, so an earlier
+    * claim that constructor arguments carry no expected type was too pessimistic — what they lack
+    * is a named Type, not the type.
+    */
+  private def ctorModel(args: String): String =
+    s"""domain Dom is {
+       |  context Ctx is {
+       |    event Cleared is { why: String(1,20) }
+       |    record R is {
+       |      opt: String(1,20)?
+       |      req: TimeStamp
+       |      lots: String(1,20)+
+       |    }
+       |    entity Ent is {
+       |      state S of record Ctx.R is {
+       |        handler H is {
+       |          on event Ctx.Cleared is { set state S to record Ctx.R($args) }
+       |        }
+       |      }
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+
+  "a bare `empty` constructor argument" should {
+    "be accepted for an optional field" in { (td: TestData) =>
+      val msgs = messagesFor(ctorModel("""opt = empty"""), td)
+      withClue(msgs.map(_.message).mkString("\n")) {
+        errs(msgs).filter(_.message.contains("is not a value of field")) mustBe empty
+      }
+    }
+
+    "be an Error for a required field, naming the field and its type" in { (td: TestData) =>
+      val msgs = messagesFor(ctorModel("""req = empty"""), td)
+      val found = errs(msgs).filter(_.message.contains("is not a value of field"))
+      withClue(msgs.map(_.message).mkString("\n")) {
+        found must not be empty
+        found.head.message must include("'req'")
+        found.head.message must include("TimeStamp")
+      }
+    }
+
+    "be an Error for a one-or-more collection" in { (td: TestData) =>
+      val msgs = messagesFor(ctorModel("""lots = empty"""), td)
+      val found = errs(msgs).filter(_.message.contains("is not a value of field"))
+      withClue(msgs.map(_.message).mkString("\n")) {
+        found must not be empty
+        found.head.message must include("'lots'")
+      }
+    }
+
+    "report each offending argument, not just the first" in { (td: TestData) =>
+      val msgs = messagesFor(ctorModel("""opt = empty, req = empty, lots = empty"""), td)
+      val found = errs(msgs).filter(_.message.contains("is not a value of field"))
+      withClue(msgs.map(_.message).mkString("\n")) { found.size mustBe 2 }
+    }
+
+    "be checked for POSITIONAL arguments too" in { (td: TestData) =>
+      // Positional args pair to fields by index; arity is reported separately.
+      val msgs = messagesFor(ctorModel("""empty, empty, empty"""), td)
+      val found = errs(msgs).filter(_.message.contains("is not a value of field"))
+      withClue(msgs.map(_.message).mkString("\n")) { found.size mustBe 2 }
+    }
+  }
 }
