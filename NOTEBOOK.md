@@ -64,14 +64,31 @@ would mean cutting an RC for its benefit. Everything else in `BACKLOG.md` is str
 the Computational Model is met, not when the backlog empties, and there is no
 "defer to 2.1" pile.
 
-**`2.0.0-rc.23` IS CUT, PUBLISHED AND FULLY VERIFIED (2026-08-24).** All five channels
-checked against the registries: **20/20** Maven at exactly `2.0.0-rc.23`, npm under the
-**`rc`** dist-tag, Homebrew touching only `riddlc-rc.rb` (`riddlc.rb` still 1.31.0),
-**`notify-blog: skipped`**, both native binaries built. Cold cache (140K -> 265M):
-**2838 / 903 / 2799**, zero failures, +12/+9/+12 predicted to the case — the FOURTH
-consecutive RC whose delta reconciled exactly against a prediction written first.
-`../bin/riddlc` and `~/.ivy2/local` (20 coordinates) at rc.23; rc.22 kept as
-`riddlc.rc22.bak`.
+**`2.0.0-rc.24` IS CUT, PUBLISHED AND FULLY VERIFIED (2026-08-24), AND IS STAGED AT
+`../bin/riddlc`.** All five channels checked against the registries: **20/20** Maven at
+exactly `2.0.0-rc.24`, npm `rc` dist-tag (with `latest` still 1.31.0), Homebrew touching
+only `riddlc-rc.rb` (`riddlc.rb` still 1.31.0), **`notify-blog: skipped`**, both native
+binaries built. Cold cache (116K -> 269M), floors raised to **2903 / 917 / 2864**, delta
++65/+14/+65 reconciled to the case against a prediction written first.
+
+**The staged `../bin/riddlc` IS rc.24 and is deliberate** — riddl-models needs the
+every-field constructor rule and the no-`set`-after-`morph` rule to migrate against, and
+verified enforcing them (dokn: exit 7, 5 morph errors) before being announced.
+
+**Deliberate failures are 190 and all corpus cost:** 189 `commands`
+(`RiddlModelsRoundTripTest`, riddl-models' 2,309 partial constructors + 115 morph sites)
+and 1 `riddlc` (riddl-examples' `dokn`, exactly 5 morph errors). `utils`, `language`,
+`passes`, `testkit`, `riddlLib` are green on every platform; `riddlLib` reads 190/190 on
+both validation parity and JSON identity. **Confirm any red by its MESSAGE**, not its
+count.
+
+**A corpus suite went red mid-certification because the CORPUS MOVED**, and this is worth
+recognising on sight: `Root2JsonCorpusTest` failed on reactive-bbq, and re-running it
+alone read 190/190 clean. riddl-models had committed twice *during* the run, one commit
+converting that very model. Nothing in riddl changed. Check
+`git -C ../riddl-models log` for commits timestamped inside your run before believing a
+corpus regression, and re-check on a FRESH cache — the corpus is not in the cache key, so
+a warm store replays a stale FAILURE as readily as a stale pass.
 
 **rc.23 adds `empty`** — the minimum-cardinality inhabitant of a type, with `none` as a
 SYNONYM producing the identical node. Legal exactly where the minimum cardinality is zero;
