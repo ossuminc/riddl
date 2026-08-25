@@ -1077,6 +1077,11 @@ verification is carried here so it is not repeated.**
   breaks them. Adding a SECOND field beside it would be the "two fields describing one thing"
   shape this repo keeps recording as a defect. Decide the shape first.
 
+
+- ~~**[1.17]** **Multi-line `do` and `prompt`.**~~ — **DONE 2026-08-25** (`21e65251a`).
+  Braced like `doc_block`; `Seq[LiteralString]` plus a derived `.text` for riddlg; additive
+  at every layer so no corpus model moves. FORMAT_REVISION 23. Riddlg was the requester.
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
