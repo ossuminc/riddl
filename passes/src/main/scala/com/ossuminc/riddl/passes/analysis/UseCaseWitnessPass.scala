@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.analysis
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, Finder, Messages, toSeq}
+import com.ossuminc.riddl.language.{At, Finder, Messages, toSeq, RuleId}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
@@ -284,7 +284,8 @@ case class UseCaseWitnessPass(
         "— no handler/put/get realizes it",
       suggestion =
         "Add the handler on-clause, wiring (connector/adaptor/tell), put-to-output, or " +
-          "get-from-input that realizes this step, or remove/soften the step."
+          "get-from-input that realizes this step, or remove/soften the step.",
+      ruleId = Some(RuleId.StepUnwitnessed)
     )
 
   private def witnessSend(uc: UseCase, s: SendMessageInteraction): Unit =

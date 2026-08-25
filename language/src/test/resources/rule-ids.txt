@@ -1,0 +1,31 @@
+# Every rule id this project has ever published, one per line, sorted.
+# RuleIdTest fails if a code disappears from RuleId without being added to RuleId.retired.
+# APPEND-ONLY: never delete a line. Retiring a rule means adding its code to `retired`,
+# not removing it here -- the point is that a code can never be reused for a different rule.
+abstract-type
+anonymous-nebula
+bare-string-condition
+connector-option-to-intention
+entity-option-to-intention
+epic-step-guarded-in-state
+epic-step-not-handled-in-state
+epic-step-unwitnessed
+field-duplicate-name
+msg-flow-unresolved-adaptor-context
+msg-flow-unresolved-message-type
+msg-flow-unresolved-send-portlet
+msg-flow-unresolved-tell-target
+msg-yields-only-command-or-query
+name-empty-non-implicit
+prompt-statement
+quoted-constant-literal
+ref-path-unresolved
+send-to-inlet
+shape-keyword
+single-alternation
+state-is-record
+type-first-aggregate
+type-replica-has-cardinality
+type-replica-not-replicable
+use-only-in-path-identifiers
+use-unused-definition

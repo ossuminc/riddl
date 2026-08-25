@@ -42,12 +42,14 @@ object CommonOptionsHelper:
   private inline val debug = "debug"
   private inline val quiet = "quiet"
   private inline val no_ansi_messages = "no-ansi-messages"
+  private inline val no_msg_ids = "no-msg-ids"
   private inline val show_warnings = "show-warnings"
   private inline val show_missing_warnings = "show-missing-warnings"
   private inline val show_style_warnings = "show-style-warnings"
   private inline val show_usage_warnings = "show-usage-warnings"
   private inline val show_completeness_warnings = "show-completeness-warnings"
   private inline val show_info_messages = "show-info-messages"
+  private inline val show_message_ids = "show-message-ids"
   private inline val sort_messages_by_location = "sort-messages-by-location"
   private inline val group_messages_by_kind = "group-messages-by-kind"
   private inline val max_parallel_parsing = "max-parallel-parsing"
@@ -93,6 +95,12 @@ object CommonOptionsHelper:
         .optional()
         .action((_, c) => c.copy(noANSIMessages = true))
         .text("Do not print messages with ANSI formatting"),
+      // Negative flag because the ids are ON by default: this asks for the PREVIOUS output, which
+      // is the thing a caller with an existing golden or scraper actually wants to name.
+      opt[Unit](no_msg_ids)
+        .optional()
+        .action((_, c) => c.copy(showMessageIds = false))
+        .text("Do not print the stable rule id beside each message"),
       opt[Boolean]('w', name = show_warnings)
         .optional()
         .action((s, c) =>
@@ -226,6 +234,12 @@ object CommonOptionsHelper:
     val noANSIMessages =
       if obj.hasPath(no_ansi_messages) then obj.getBoolean(no_ansi_messages)
       else default.noANSIMessages
+    // HOCON spells it positively (`show-message-ids = false`); the CLI spells it negatively
+    // (`--no-msg-ids`). Both set the same field -- a config file reads better stating what it wants
+    // on, and a command line reads better naming the departure from the default.
+    val showMessageIds =
+      if obj.hasPath(show_message_ids) then obj.getBoolean(show_message_ids)
+      else default.showMessageIds
     val sortMessagesByLocation =
       if obj.hasPath(sort_messages_by_location) then obj.getBoolean(sort_messages_by_location)
       else default.sortMessagesByLocation
@@ -295,6 +309,7 @@ object CommonOptionsHelper:
       warningsAreFatal,
       autoGenerateBAST,
       provideTips,
+      showMessageIds,
       checkFigmaDrift
     )
   end commonOptionsReader

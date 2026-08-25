@@ -16,6 +16,25 @@ import scala.concurrent.duration.DurationInt
 
 class CommonOptionsTest extends AbstractTestingBasis {
   "CommonOptions" should {
+    "default to showing message ids" in {
+      // The default matters: rule ids are ON so a consumer gets them without asking, which is the
+      // whole reason they exist. Asserted separately from the flag so a change to the DEFAULT
+      // cannot hide behind a test that only ever passes the flag.
+      val (common, _) = CommonOptionsHelper.parseCommonOptions(Array.empty[String])
+      common match {
+        case Some(config) => config.showMessageIds mustBe true
+        case None         => fail("Failed to parse options")
+      }
+    }
+
+    "handle --no-msg-ids" in {
+      val (common, _) = CommonOptionsHelper.parseCommonOptions(Array("--no-msg-ids"))
+      common match {
+        case Some(config) => config.showMessageIds mustBe false
+        case None         => fail("Failed to parse options")
+      }
+    }
+
     "handle --show-warnings options" in {
       val args = Array("--show-warnings=false")
       val (common, _) = CommonOptionsHelper.parseCommonOptions(args)

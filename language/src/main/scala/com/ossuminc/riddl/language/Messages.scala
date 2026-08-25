@@ -177,7 +177,6 @@ object Messages {
     *   [[Accumulator]] strips it. Any pass may attach one. Placeholders in the text should mirror
     *   those in `message`.
     */
-  @JSExportTopLevel("Message")
   /** Stable identifiers for the deprecations 2.0 can emit.
     *
     * A migration tool needs to GROUP deprecations, count them, and say which ones a mechanical
@@ -188,65 +187,53 @@ object Messages {
     * human message is always safe; changing or reusing a code is not.
     */
   object DeprecationCode {
-    val StateIsRecord: String = "state-is-record"
-    val DoStatement: String = "prompt-statement"
-    val SendToInlet: String = "send-to-inlet"
-    val BareStringCondition: String = "bare-string-condition"
-    val AnonymousNebula: String = "anonymous-nebula"
-    val ShapeKeyword: String = "shape-keyword"
-    val AbstractType: String = "abstract-type"
-    val SingleAlternation: String = "single-alternation"
-    val EntityOptionToIntention: String = "entity-option-to-intention"
-    val TypeFirstAggregate: String = "type-first-aggregate"
-    val ConnectorOptionToIntention: String = "connector-option-to-intention"
-    val QuotedConstantLiteral: String = "quoted-constant-literal"
+    val StateIsRecord: String = RuleId.StateIsRecord.code
+    val DoStatement: String = RuleId.DoStatement.code
+    val SendToInlet: String = RuleId.SendToInlet.code
+    val BareStringCondition: String = RuleId.BareStringCondition.code
+    val AnonymousNebula: String = RuleId.AnonymousNebula.code
+    val ShapeKeyword: String = RuleId.ShapeKeyword.code
+    val AbstractType: String = RuleId.AbstractType.code
+    val SingleAlternation: String = RuleId.SingleAlternation.code
+    val EntityOptionToIntention: String = RuleId.EntityOptionToIntention.code
+    val TypeFirstAggregate: String = RuleId.TypeFirstAggregate.code
+    val ConnectorOptionToIntention: String = RuleId.ConnectorOptionToIntention.code
+    val QuotedConstantLiteral: String = RuleId.QuotedConstantLiteral.code
 
-    /** Codes whose fix is a pure SPAN REPLACEMENT: the deprecation's `loc` covers exactly the
-      * offending keyword, so replacing that range with this text resolves it and touches nothing
-      * else.
+    /** Codes whose fix is a pure SPAN REPLACEMENT. Derived from [[RuleId.mechanicalFix]].
       *
       * Deliberately a subset of the auto-fixable set. `shape-keyword` rewrites `flow X is` to
-      * `processor X as flow is` — an insertion at a different place than the keyword — and
+      * `processor X as flow is` -- an insertion at a different place than the keyword -- and
       * `state-is-record` may need to INSERT `of` where nothing stands today. Those need the full
       * prettify path, and claiming otherwise would corrupt source.
       */
-    val mechanicalReplacement: Map[String, String] = Map(
-      DoStatement -> "do",
-      AbstractType -> "Anything"
-    )
+    def mechanicalReplacement: Map[String, String] = RuleId.mechanicalReplacements
 
-    /** Every code, for a consumer building an exhaustive migration report. */
-    val all: Seq[String] = Seq(
-      StateIsRecord,
-      DoStatement,
-      SendToInlet,
-      BareStringCondition,
-      AnonymousNebula,
-      ShapeKeyword,
-      AbstractType,
-      SingleAlternation,
-      // Added 2026-08-06: this one was DEFINED but never listed, so an "exhaustive" migration
-      // report silently omitted every entity option-to-intention deprecation since 2.0.0-rc.10.
-      EntityOptionToIntention,
-      TypeFirstAggregate,
-      // Added 2026-08-13 WITH its definition, deliberately: the entry above records that
-      // EntityOptionToIntention was defined but not listed for months, so every entity
-      // option-to-intention deprecation was missing from "exhaustive" migration reports.
-      ConnectorOptionToIntention,
-      QuotedConstantLiteral
-    )
+    /** Every code, for a consumer building an exhaustive migration report.
+      *
+      * DERIVED from `RuleId.values` since 2026-08-25, and that is the point. This was a
+      * hand-maintained `Seq` beside the definitions, and TWICE a code was defined but never added
+      * to it -- `EntityOptionToIntention` for months, silently omitting every entity
+      * option-to-intention deprecation from reports that called themselves exhaustive. There is no
+      * longer a second list to forget.
+      */
+    def all: Seq[String] = RuleId.deprecations.map(_.code)
   }
 
+  @JSExportTopLevel("Message")
   case class Message(
     loc: At,
     message: String,
     kind: KindOfMessage = Error,
     context: String = "",
     suggestion: String = "",
-    /** Stable identity for a deprecation — see [[DeprecationCode]]. `None` for every other kind of
-      * message, and for a deprecation that predates the registry.
+    /** The stable identity of the RULE that produced this message — see [[RuleId]].
+      *
+      * `None` only where a diagnostic has not yet been given one; every rule is expected to carry
+      * one, and new diagnostics must. It is what lets a consumer filter, suppress, count or fix
+      * without regex-matching prose that gets reworded.
       */
-    deprecationCode: Option[String] = None,
+    ruleId: Option[RuleId] = None,
     /** True when `prettify` resolves this deprecation with NO human decision.
       *
       * This is what lets a migration UI say "9 of 14 will be fixed automatically" honestly instead
@@ -265,6 +252,18 @@ object Messages {
     def isDeprecation: Boolean = kind.isDeprecation
     def isError: Boolean = kind.isError
     def isSevere: Boolean = kind.isSevereError
+
+    /** The published code of the rule that produced this, if it has one. */
+    def ruleCode: Option[String] = ruleId.map(_.code)
+
+    /** Retained for consumers written against the deprecation-only predecessor of [[ruleId]].
+      *
+      * Reports a code only for an actual deprecation, which is what those consumers meant by the
+      * name -- a rule id is now attached to messages of every kind, so returning it here would
+      * silently widen what a caller filtering on "deprecations" receives.
+      */
+    @deprecated("Use ruleId (or ruleCode) instead", "2.0.0")
+    def deprecationCode: Option[String] = if isDeprecation then ruleCode else None
 
     override def compare(that: Message): Int = {
       val comparison = this.loc.compare(that.loc)
@@ -449,18 +448,34 @@ object Messages {
     list.highestSeverity
   }
 
+  /** Renders a message for the log, with its rule id where rustc puts one.
+    *
+    * The id belongs HERE and not in `Message.format` for two reasons. The logger already supplies
+    * the kind prefix, so `[error] [saga-no-timeout] file(...)` reads the way `error[E0433]:` does;
+    * and `format` is what `CheckMessagesTest` compares its goldens against, so putting the id there
+    * would churn every golden for a fact those files do not exist to pin -- `RuleIdSnapshotTest`
+    * guarantees ids cannot change silently, which is the assurance goldens would have added.
+    *
+    * `--no-msg-ids` sets `showMessageIds` false and restores the previous output exactly.
+    */
+  private def renderForLog(message: Message)(using io: PlatformContext): String =
+    if io.options.showMessageIds then
+      message.ruleId.map(r => s"[${r.code}] ${message.format}").getOrElse(message.format)
+    else message.format
+
   private def logMessage(message: Message)(using io: PlatformContext): Unit = {
+    val text = renderForLog(message)
     message.kind match {
-      case Tip                 => io.log.tip(message.format)
-      case Info                => io.log.info(message.format)
-      case StyleWarning        => io.log.style(message.format)
-      case MissingWarning      => io.log.missing(message.format)
-      case UsageWarning        => io.log.usage(message.format)
-      case CompletenessWarning => io.log.completeness(message.format)
-      case Deprecation         => io.log.deprecate(message.format)
-      case Warning             => io.log.warn(message.format)
-      case Error               => io.log.error(message.format)
-      case SevereError         => io.log.severe(message.format)
+      case Tip                 => io.log.tip(text)
+      case Info                => io.log.info(text)
+      case StyleWarning        => io.log.style(text)
+      case MissingWarning      => io.log.missing(text)
+      case UsageWarning        => io.log.usage(text)
+      case CompletenessWarning => io.log.completeness(text)
+      case Deprecation         => io.log.deprecate(text)
+      case Warning             => io.log.warn(text)
+      case Error               => io.log.error(text)
+      case SevereError         => io.log.severe(text)
     }
   }
 
@@ -662,10 +677,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addStyle(loc: At, msg: String, suggestion: String = "")(using
+    def addStyle(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
       pc: PlatformContext
     ): this.type = {
-      add(Message(loc, msg, StyleWarning, suggestion = suggestion))
+      add(Message(loc, msg, StyleWarning, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add a [[UsageWarning]] message to the accumulated [[Messages]]
@@ -678,17 +693,17 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addUsage(loc: At, msg: String, suggestion: String = "")(using
+    def addUsage(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
       pc: PlatformContext
     ): this.type = {
-      add(Message(loc, msg, UsageWarning, suggestion = suggestion))
+      add(Message(loc, msg, UsageWarning, suggestion = suggestion, ruleId = ruleId))
     }
 
     @inline
-    def addCompleteness(loc: At, msg: String, suggestion: String = "")(using
+    def addCompleteness(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
       pc: PlatformContext
     ): this.type = {
-      add(Message(loc, msg, CompletenessWarning, suggestion = suggestion))
+      add(Message(loc, msg, CompletenessWarning, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add a [[Deprecation]] warning to the accumulated [[Messages]]
@@ -701,10 +716,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addDeprecation(loc: At, msg: String, suggestion: String = "")(using
+    def addDeprecation(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
       pc: PlatformContext
     ): this.type = {
-      add(Message(loc, msg, Deprecation, suggestion = suggestion))
+      add(Message(loc, msg, Deprecation, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add a [[Tip]] message to the accumulated [[Messages]]
@@ -733,10 +748,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addMissing(loc: At, msg: String, suggestion: String = "")(using
+    def addMissing(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
       pc: PlatformContext
     ): this.type = {
-      add(Message(loc, msg, MissingWarning, suggestion = suggestion))
+      add(Message(loc, msg, MissingWarning, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add a [[Warning]] message to the accumulated [[Messages]]
@@ -749,10 +764,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addWarning(loc: At, msg: String, suggestion: String = "")(using
+    def addWarning(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
       pc: PlatformContext
     ): this.type = {
-      add(Message(loc, msg, Warning, suggestion = suggestion))
+      add(Message(loc, msg, Warning, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add an [[Error]] message to the accumulated [[Messages]]
@@ -765,10 +780,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addError(loc: At, msg: String, suggestion: String = "")(using
+    def addError(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
       pc: PlatformContext
     ): this.type = {
-      add(Message(loc, msg, Error, suggestion = suggestion))
+      add(Message(loc, msg, Error, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add a [[SevereError]] message to the accumulated [[Messages]]
@@ -781,10 +796,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addSevere(loc: At, msg: String, suggestion: String = "")(using
+    def addSevere(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
       pc: PlatformContext
     ): this.type = {
-      add(Message(loc, msg, SevereError, suggestion = suggestion))
+      add(Message(loc, msg, SevereError, suggestion = suggestion, ruleId = ruleId))
     }
   }
 

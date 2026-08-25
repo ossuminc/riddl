@@ -53,7 +53,7 @@ private[parsing] trait EntityParser {
             s"${typRef.format} is { … }`. Introducing it with `is` (or with nothing) is deprecated " +
             "and will be removed in a future major version, because `is` introduces a definition's " +
             "BODY everywhere else in the language.",
-          code = Option(Messages.DeprecationCode.StateIsRecord),
+          code = Option(RuleId.StateIsRecord),
           autoFixable = true
         )
       }
@@ -206,7 +206,7 @@ private[parsing] trait EntityParser {
       deprecation(
         ov.loc,
         s"'option ${ov.name}' is deprecated; write '${intention.keyword}' before 'entity' instead",
-        code = Option(Messages.DeprecationCode.EntityOptionToIntention),
+        code = Option(RuleId.EntityOptionToIntention),
         autoFixable = false
       )
     }

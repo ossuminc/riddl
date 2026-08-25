@@ -61,6 +61,11 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   *   When set to true, automatically generate .bast files next to .riddl files after successful
   *   parsing. The .bast files serve as a cache (like Python's .pyc files) - if the .bast is newer
   *   than the .riddl, it will be loaded instead of parsing the .riddl file.
+  * @param showMessageIds
+  *   Render each diagnostic's stable rule id beside its severity, rustc-style
+  *   (`[error] [saga-no-timeout] ...`). ON by default -- the id is what lets a consumer filter,
+  *   suppress or fix a diagnostic without matching prose. `--no-msg-ids` turns it off and restores
+  *   the previous output exactly.
   * @param provideTips
   *   When set to true, the remediation `suggestion` carried by each
   *   [[com.ossuminc.riddl.language.Messages.Message]] is retained and included in the message's
@@ -99,6 +104,7 @@ case class CommonOptions(
   warningsAreFatal: Boolean = false,
   autoGenerateBAST: Boolean = false,
   provideTips: Boolean = false,
+  showMessageIds: Boolean = true,
   checkFigmaDrift: Boolean = false
 )
 

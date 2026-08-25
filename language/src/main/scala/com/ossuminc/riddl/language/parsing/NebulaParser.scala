@@ -33,7 +33,7 @@ private[parsing] trait NebulaParser {
       deprecation(
         loc,
         "an anonymous 'nebula' of definitions is deprecated; use 'module <id> is { ... }'",
-        code = Option(Messages.DeprecationCode.AnonymousNebula),
+        code = Option(RuleId.AnonymousNebula),
         autoFixable = false
       )
       Module.anonymous(loc, contents.toContents)

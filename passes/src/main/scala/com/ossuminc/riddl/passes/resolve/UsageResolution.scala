@@ -8,6 +8,7 @@ package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.RuleId
 import com.ossuminc.riddl.language.Messages
 
 import scala.collection.mutable
@@ -151,7 +152,8 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
             s"${defn.identify} is unused",
             suggestion =
               s"Reference ${defn.identify} from a handler, message flow, or another definition, " +
-                "or remove it if it is no longer needed."
+                "or remove it if it is no longer needed.",
+            ruleId = Some(RuleId.UnusedDefinition)
           )
         }
       }
@@ -177,7 +179,8 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
             "as the type of a field or state.",
           suggestion =
             s"Declare a field or state of type ${ty.identify} so it can actually carry data, " +
-              s"e.g. 'field someName: ${ty.id.value}'."
+              s"e.g. 'field someName: ${ty.id.value}'.",
+          ruleId = Some(RuleId.OnlyUsedInPath)
         )
       }
     }

@@ -91,7 +91,7 @@ private[parsing] trait StreamingParser {
       deprecation(
         ov.loc,
         s"'option ${ov.name}' is deprecated; write '${intention.keyword}' before 'connector' instead",
-        code = Option(Messages.DeprecationCode.ConnectorOptionToIntention),
+        code = Option(RuleId.ConnectorOptionToIntention),
         autoFixable = false
       )
     }
@@ -199,7 +199,7 @@ private[parsing] trait StreamingParser {
         deprecation(
           kwLoc,
           s"The `$keyword` keyword is deprecated; use `processor ${id.value} as $keyword` instead",
-          code = Option(Messages.DeprecationCode.ShapeKeyword),
+          code = Option(RuleId.ShapeKeyword),
           autoFixable = true
         )
       end if

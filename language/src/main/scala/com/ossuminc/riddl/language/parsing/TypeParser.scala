@@ -309,7 +309,7 @@ private[parsing] trait TypeParser {
           deprecation(
             loc,
             "The `Abstract` type is deprecated; use `Anything` instead",
-            code = Option(Messages.DeprecationCode.AbstractType),
+            code = Option(RuleId.AbstractType),
             autoFixable = true
           )
           AST.Anything(loc)
@@ -450,7 +450,7 @@ private[parsing] trait TypeParser {
             loc,
             "An alternation of a single alternative is deprecated; give it a second alternative " +
               "or use the type directly",
-            code = Option(Messages.DeprecationCode.SingleAlternation),
+            code = Option(RuleId.SingleAlternation),
             autoFixable = false
           )
         case _ => ()
@@ -850,7 +850,7 @@ private[parsing] trait TypeParser {
             loc,
             s"Declaring `${id.value}` as `type ${id.value} is $kw { … }` is deprecated; " +
               s"write `$kw ${id.value} is { … }` instead",
-            code = Option(Messages.DeprecationCode.TypeFirstAggregate),
+            code = Option(RuleId.TypeFirstAggregate),
             autoFixable = true
           )
         case _ => ()
@@ -912,7 +912,7 @@ private[parsing] trait TypeParser {
           deprecation(
             ls.loc,
             s"A ${typeEx.format} constant should hold ${literalKindFor(typeEx)}, not a string",
-            code = Option(Messages.DeprecationCode.QuotedConstantLiteral),
+            code = Option(RuleId.QuotedConstantLiteral),
             autoFixable = true
           )
           typeEx match

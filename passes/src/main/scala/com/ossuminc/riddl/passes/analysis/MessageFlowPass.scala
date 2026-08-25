@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.analysis
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{Finder, Messages}
+import com.ossuminc.riddl.language.{Finder, Messages, RuleId}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -202,13 +202,15 @@ case class MessageFlowPass(
             messages.addWarning(
               tell.loc,
               s"MessageFlowPass: could not resolve tell target" +
-                s" '${tell.target.format}' in ${processor.identify}"
+                s" '${tell.target.format}' in ${processor.identify}",
+              ruleId = Some(RuleId.FlowUnresolvedTellTarget)
             )
           if maybeType.isEmpty then
             messages.addWarning(
               tell.loc,
               s"MessageFlowPass: could not resolve message type" +
-                s" '${tell.msg.format}' in ${processor.identify}"
+                s" '${tell.msg.format}' in ${processor.identify}",
+              ruleId = Some(RuleId.FlowUnresolvedMessageType)
             )
     }
 
@@ -236,13 +238,15 @@ case class MessageFlowPass(
             messages.addWarning(
               send.loc,
               s"MessageFlowPass: could not resolve send portlet" +
-                s" '${send.portlet.format}' in ${processor.identify}"
+                s" '${send.portlet.format}' in ${processor.identify}",
+              ruleId = Some(RuleId.FlowUnresolvedSendPortlet)
             )
           if maybeType.isEmpty then
             messages.addWarning(
               send.loc,
               s"MessageFlowPass: could not resolve message type" +
-                s" '${send.msg.format}' in ${processor.identify}"
+                s" '${send.msg.format}' in ${processor.identify}",
+              ruleId = Some(RuleId.FlowUnresolvedMessageType)
             )
     }
   }
@@ -296,7 +300,8 @@ case class MessageFlowPass(
         messages.addWarning(
           adaptor.loc,
           s"MessageFlowPass: could not resolve adaptor context references" +
-            s" for ${adaptor.identify}"
+            s" for ${adaptor.identify}",
+          ruleId = Some(RuleId.FlowUnresolvedAdaptorContext)
         )
   }
 

@@ -127,7 +127,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
               s"the first declaration is at ${first.loc.format}",
             suggestion = s"Rename one of them, or delete the redundant declaration. Two fields " +
               s"named '$name' leave the aggregate's shape ambiguous, and every consumer has to " +
-              "choose one silently."
+              "choose one silently.",
+            ruleId = Some(RuleId.FieldDuplicateName)
           )
         }
       }
@@ -192,7 +193,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           messages.addError(
             yieldRef.pathId.loc,
             s"Only command and query types may declare `yields`, but ${other.useCase} does not",
-            suggestion = "Remove the `yields` clause, or declare the type as a command or query."
+            suggestion = "Remove the `yields` clause, or declare the type as a command or query.",
+            ruleId = Some(RuleId.YieldsOnlyCommandQuery)
           )
       }
     }
@@ -246,14 +248,16 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           replica.loc,
           s"Replica type expressions may not have cardinality",
           suggestion =
-            "Remove the cardinality from the replica's element type; a replica wraps a single replicable type."
+            "Remove the cardinality from the replica's element type; a replica wraps a single replicable type.",
+          ruleId = Some(RuleId.ReplicaHasCardinality)
         )
       case _: TypeExpression =>
         messages.addError(
           replica.loc,
           s"Type expression in Replica is not a replicable type",
           suggestion =
-            "Use a replicable element type for the replica: a mapping, sequence, set, or integer type."
+            "Use a replicable element type for the replica: a mapping, sequence, set, or integer type.",
+          ruleId = Some(RuleId.ReplicaNotReplicable)
         )
     }
   }

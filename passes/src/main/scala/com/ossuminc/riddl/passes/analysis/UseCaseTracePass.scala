@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.analysis
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, Messages, toSeq}
+import com.ossuminc.riddl.language.{At, Messages, toSeq, RuleId}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
@@ -321,7 +321,8 @@ case class UseCaseTracePass(
         s"'${s.id.value}' does not handle it — the scenario is not admissible",
       suggestion =
         s"Reorder the interaction steps so '${e.id.value}' reaches a state that handles " +
-          s"'${m.id.value}', or add an 'on ${m.id.value}' clause to state '${s.id.value}'."
+          s"'${m.id.value}', or add an 'on ${m.id.value}' clause to state '${s.id.value}'.",
+      ruleId = Some(RuleId.StepNotHandledInState)
     )
 
   private def warnGuarded(uc: UseCase, loc: At, m: Type, e: Entity, s: State): Unit =
@@ -332,7 +333,8 @@ case class UseCaseTracePass(
         "scenario may be inadmissible",
       suggestion =
         s"Ensure the guard on the '${m.id.value}' transition of '${e.id.value}' holds when this " +
-          "step runs, or make the transition unconditional."
+          "step runs, or make the transition unconditional.",
+      ruleId = Some(RuleId.StepGuardedInState)
     )
 
   override def result(root: PassRoot): UseCaseTraceOutput =

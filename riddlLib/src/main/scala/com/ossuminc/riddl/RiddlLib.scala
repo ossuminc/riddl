@@ -338,7 +338,8 @@ trait RiddlLib:
     * Edits are returned in DESCENDING start order, so applying them in sequence never invalidates a
     * later offset. Applying them in ascending order without adjusting offsets corrupts the file.
     *
-    * Only deprecations in [[Messages.DeprecationCode.mechanicalReplacement]] appear here — those
+    * Only deprecations whose [[com.ossuminc.riddl.language.RuleId.mechanicalFix]] is set appear
+    * here — those
     * whose location covers exactly the offending keyword. Deprecations needing an insertion
     * elsewhere, or a human decision, are deliberately absent rather than guessed at; compare the
     * result against `justDeprecations` to report what remains as hand work.
@@ -966,12 +967,13 @@ object RiddlLib extends RiddlLib:
     TopLevelParser.parseInputWithMessages(rpi) match
       case Left(errors) => RiddlResult.Failure(errors)
       case Right((_, msgs)) =>
+        // Reads the fix off the RULE rather than looking its code up in a side table: a rule that
+        // carries its own mechanical replacement cannot fall out of step with one.
         val edits = msgs.justDeprecations.toSeq.flatMap { m =>
-          m.deprecationCode
-            .flatMap(Messages.DeprecationCode.mechanicalReplacement.get)
-            .map { replacement =>
-              SourceEdit(m.loc.offset, m.loc.endOffset, replacement, m.deprecationCode.get, origin)
-            }
+          m.ruleId.flatMap(rule => rule.mechanicalFix.map(rule.code -> _)).map {
+            case (code, replacement) =>
+              SourceEdit(m.loc.offset, m.loc.endOffset, replacement, code, origin)
+          }
         }
         // Descending, so applying them in order never shifts an offset still to be used.
         RiddlResult.Success(edits.sortBy(-_.start))

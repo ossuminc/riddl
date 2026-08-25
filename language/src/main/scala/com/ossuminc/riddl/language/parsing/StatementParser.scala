@@ -43,7 +43,7 @@ private[parsing] trait StatementParser {
       deprecation(
         kwLoc,
         "The `prompt` statement is deprecated; use `do` instead",
-        code = Option(Messages.DeprecationCode.DoStatement),
+        code = Option(RuleId.DoStatement),
         autoFixable = true
       )
       DoStatement(at(start, end), str)
@@ -227,7 +227,7 @@ private[parsing] trait StatementParser {
             ref.loc,
             "send to an inlet is deprecated and will be removed in 3.0; send to your outlet and " +
               "connect it with a connector, or use `tell` to deliver directly to a processor",
-            code = Option(Messages.DeprecationCode.SendToInlet),
+            code = Option(RuleId.SendToInlet),
             autoFixable = false
           )
         case _ => ()
@@ -376,7 +376,7 @@ private[parsing] trait StatementParser {
         at(start, start),
         "A bare string `when` condition is deprecated; use `when prompt(\"...\")` for a condition " +
           "an AI evaluates, or a boolean expression for one the model decides",
-        code = Option(Messages.DeprecationCode.BareStringCondition),
+        code = Option(RuleId.BareStringCondition),
         autoFixable = false
       )
       ls
