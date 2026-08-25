@@ -3056,6 +3056,58 @@ case class ValidationPass(
     * `InventoryItemInitialized`. The structural fact is that the morph's target record and the read
     * record are the same definition, compared by identity.
     */
+  /** A message an entity handles must carry a field that identifies WHICH instance -- a
+    * CompletenessWarning (riddl-generator, ruled by Reid 2026-08-25).
+    *
+    * To send `M` to an instance of `E`, `M` must carry a field typed `Id(E)`: that field IS the id
+    * of the entity it is sent to. A message without one is deficient by design -- it is built to be
+    * told, and it cannot say where.
+    *
+    * **Reported at the `on` clause, which is what makes it different from [[checkTellAddressing]].**
+    * That check fires AT a `tell`: it takes the target from the statement and inspects the message.
+    * So when nothing tells `M` it has nothing to attach to and stays silent -- precisely when the
+    * deficiency most needs reporting, because the model is being written and the sends have not
+    * been added yet. Here both sides come from the declaration: `E` is the enclosing entity and `M`
+    * is the clause's message, so no `tell` need exist anywhere.
+    *
+    * **`self` is not an answer to this.** Inside the clause `self` names the instance, but it
+    * exists only BECAUSE routing already chose one; it cannot be what informs that choice. The
+    * information has to be in the message.
+    *
+    * Uses [[isAddressFieldFor]], so a field typed through the documented alias (`type OrderId is
+    * Id(entity Order)`) counts -- matching `UniqueId` alone caught only the rare inline spelling and
+    * misfired on the common one.
+    *
+    * `on other` is skipped: it names no message, so there is nothing to inspect. `???` is exempt.
+    */
+  private def checkHandledMessagesCanBeAddressed(entity: Entity): Unit =
+    if entity.nonEmpty then
+      val clauses = (entity.handlers ++ entity.states.flatMap(_.handlers)).flatMap(_.clauses)
+      // One warning per MESSAGE TYPE, not per clause: an entity handling the same message in two
+      // states has one deficient message, not two.
+      val reported = scala.collection.mutable.ListBuffer.empty[Type]
+      clauses.foreach {
+        case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+          resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach { mt =>
+            if !reported.exists(_ eq mt) then
+              val addresses = fieldsWithOwner(mt).exists { case (f, owner) =>
+                isAddressFieldFor(f, owner, entity)
+              }
+              if !addresses then
+                reported.append(mt)
+                messages.addCompleteness(
+                  omc.loc,
+                  s"${mt.identify} is handled by ${entity.identify} but carries no field typed " +
+                    s"'Id(${entity.id.value})', so nothing in it can say WHICH " +
+                    s"${entity.id.value} it is for",
+                  suggestion = s"Add a field typed 'Id(${entity.id.value})' to ${mt.identify} " +
+                    s"(or a named alias of it) and populate it wherever ${mt.identify} is sent."
+                )
+          }
+        case _ => ()
+      }
+  end checkHandledMessagesCanBeAddressed
+
   private def checkCreationReadsNothing(entity: Entity, parents: Parents): Unit =
     if entity.nonEmpty then
       // ENTITY-LEVEL handlers only -- `entity.handlers`, deliberately not folding in state handlers.
@@ -3147,6 +3199,7 @@ case class ValidationPass(
     checkContainer(parents, entity)
     checkTransitionsHaveSomewhereToGo(entity, parents)
     checkCreationReadsNothing(entity, parents)
+    checkHandledMessagesCanBeAddressed(entity)
     // At most one state may be the entity's initial (starting) state.
     val initialStates = entity.states.filter(_.isInitial)
     if initialStates.sizeIs > 1 then

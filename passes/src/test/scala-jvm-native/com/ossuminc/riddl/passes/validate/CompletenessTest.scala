@@ -917,7 +917,9 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context FrontOfHouse is {
           |    type ReservationId is Id(FrontOfHouse.Reservation)
-          |    event Evt is { data: String }
+          |    // Carries the id so the event can say WHICH Reservation it is for -- a message an
+          |    // entity handles is deficient without one (Reid, 2026-08-25).
+          |    event Evt is { data: String  who: FrontOfHouse.ReservationId }
           |    entity Reservation is {
           |      record Fields is { data: String }
           |      state Main of record Reservation.Fields
@@ -1220,7 +1222,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    command Cmd is { target: Id(C.E), data: String }
           |    event Evt is { data: String }
           |    result DataResult is { data: String }
-          |    query GetData replies result D.C.DataResult is { id: String }
+          |    query GetData replies result D.C.DataResult is { id: C.EId }
           |
           |    source Ingress is { outlet out is type Cmd }
           |

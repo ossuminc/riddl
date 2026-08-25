@@ -243,3 +243,16 @@ passes/input/check/everything/everything.riddl(63:7->24):
 passes/input/check/everything/everything.riddl(42:5->21):
  Metadata in Entity 'Something' should not be empty:
      entity Something is {
+passes/input/check/everything/everything.riddl(57:9->61:7):
+ Command 'ACommand' is handled by Entity 'Something' but carries no field typed 'Id(Something)', so nothing in it can say WHICH Something it is for:
+         on command ACommand {
+           send event full.SomeOtherThing.ItHappened to
+             inlet SomeOtherThing.trashBin.SOT_In
+         }
+       }
+passes/input/check/everything/everything.riddl(71:9->74:7):
+ Event 'ItHappened' is handled by Entity 'SomeOtherThing' but carries no field typed 'Id(SomeOtherThing)', so nothing in it can say WHICH SomeOtherThing it is for:
+         on event ItHappened {
+           set field SomeOtherThing.otherThingState.someField1 to "field ItHappened.when"
+         }
+       }
