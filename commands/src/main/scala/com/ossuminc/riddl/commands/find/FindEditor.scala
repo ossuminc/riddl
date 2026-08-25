@@ -7,7 +7,9 @@
 package com.ossuminc.riddl.commands.find
 
 import com.ossuminc.riddl.commands.project.ProjectedNode
-import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.{At, Messages}
+import com.ossuminc.riddl.language.Messages.Messages as Msgs
+import com.ossuminc.riddl.passes.PassesResult
 
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.mutable
@@ -70,6 +72,52 @@ object FindEditor {
     else Right(byFile.view.mapValues(_.sortBy(-_.start)).toMap)
   }
 
+  /** Writes rewritten files, re-validates, and RESTORES everything unless the model got no worse.
+    *
+    * This is the dangerous half of every rewriting command, so there is exactly one copy of it.
+    * `find -replace` and `validate --fix` ask the same question -- did my edit break the model? --
+    * and a second implementation would be the "dispatch written twice" defect this codebase keeps
+    * recording, where only one of the two copies is tested.
+    *
+    * The gate is deliberately "no NEW errors" rather than "no errors": a command that refuses to
+    * fix a deprecation until the whole model validates clean would be useless on exactly the models
+    * that need fixing. A rewrite that fails to PARSE is always refused.
+    *
+    * @param errorsBefore
+    *   error count from before the rewrite, so an already-broken model can still be edited.
+    * @param label
+    *   the command's name, so a message says which tool declined to write.
+    */
+  def applyVerified(
+    originals: Map[Path, String],
+    rewritten: Map[Path, String],
+    errorsBefore: Int,
+    revalidate: () => Either[Msgs, PassesResult],
+    label: String
+  ): Either[Msgs, PassesResult] = {
+    def restore(): Unit = originals.foreach { case (f, text) => Files.writeString(f, text) }
+    rewritten.foreach { case (f, text) => Files.writeString(f, text) }
+    val outcome =
+      try revalidate()
+      catch case e: Exception => Left(Messages.errors(s"re-parse threw: ${e.getMessage}"))
+    outcome match
+      case Left(messages) =>
+        restore()
+        Left(Messages.errors(s"$label: the rewrite does not parse; nothing written") ++ messages)
+      case Right(after) =>
+        val now = after.messages.count(_.isError)
+        if now > errorsBefore then
+          restore()
+          val introduced = after.messages.filter(_.isError).map(_.format).take(10)
+          Left(
+            Messages.errors(
+              (s"$label: the rewrite introduces ${now - errorsBefore} new error(s); nothing written"
+                +: introduced).mkString("\n")
+            )
+          )
+        else Right(after)
+  }
+
   /** Applies edits to text, back to front. */
   def apply(original: String, edits: Seq[Edit]): String = {
     val sb = new StringBuilder(original)
@@ -110,8 +158,19 @@ object FindEditor {
     * A `None` here is not always a defect: a model parsed from a string or fetched over http has
     * no file to rewrite, and refusing to edit it is correct.
     */
-  def fileOf(n: ProjectedNode): Option[Path] = {
-    val source = n.value.loc.source
+  def fileOf(n: ProjectedNode): Option[Path] = fileOfSource(n.value.loc.source)
+
+  /** The real file a parsed source came from, or None if it did not come from one.
+    *
+    * **`origin` alone is NOT a usable path.** It is the short name error messages render, so
+    * resolving it works from the model's own directory and silently fails everywhere else -- which
+    * is precisely how `find -replace` shipped able to edit only when run from the right cwd. The
+    * full path is tried first and `origin` kept as a fallback for sources that carry no root.
+    *
+    * Takes the SOURCE rather than a node so `validate --fix`, which has a message and not a node,
+    * shares this resolution instead of re-deriving it and inheriting the same bug.
+    */
+  def fileOfSource(source: com.ossuminc.riddl.language.parsing.RiddlParserInput): Option[Path] = {
     val candidates =
       (if source.root.isEmpty then Nil else Seq(source.root.toFullPathString)) ++
         (if source.origin.isEmpty || source.origin == "empty" then Nil else Seq(source.origin))

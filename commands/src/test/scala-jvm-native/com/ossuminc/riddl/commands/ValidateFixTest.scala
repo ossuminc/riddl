@@ -1,0 +1,104 @@
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl.commands
+
+import com.ossuminc.riddl.language.RuleId
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
+import java.nio.file.{Files, Path}
+
+/** `validate --fix`: each rule ships its own codemod.
+  *
+  * The rule carries the fix, so a rule and its remedy cannot drift apart. These cases assert the
+  * FILE ON DISK, not the reported count -- a fixer that says it fixed something and wrote nothing
+  * is the confident-wrong-answer shape this repo keeps recording.
+  */
+class ValidateFixTest extends AnyWordSpec with Matchers {
+
+  private val deprecated =
+    """domain Foo is {
+      |  context Bar is {
+      |    command Cmd is { ??? }
+      |    entity Baz is {
+      |      handler H is {
+      |        on command Cmd is { prompt "figure it out" }
+      |      }
+      |    }
+      |  }
+      |}
+      |""".stripMargin
+
+  private def withModel(body: String)(
+    check: (ValidateCommand.Options => Unit, () => String) => Unit
+  ): Unit = {
+    val dir = Files.createTempDirectory("riddl-validate-fix")
+    try
+      val f = dir.resolve("m.riddl")
+      Files.writeString(f, body)
+      def run(opts: ValidateCommand.Options): Unit =
+        pc.withOptions(CommonOptions()) { _ =>
+          StdStreamCapture.capturingStdOut { () =>
+            new ValidateCommand().run(opts.copy(inputFile = Some(f)), None)
+          }
+        }
+        ()
+      check(run, () => Files.readString(f))
+    finally
+      Files.walk(dir).sorted(java.util.Comparator.reverseOrder()).forEach(p => Files.delete(p))
+  }
+
+  "validate --fix" should {
+
+    "rewrite the source on disk, not merely report" in {
+      withModel(deprecated) { (run, read) =>
+        read() must include("prompt \"figure it out\"")
+        run(ValidateCommand.Options(fix = true))
+        val after = read()
+        after must include("do \"figure it out\"")
+        after mustNot include("prompt \"figure it out\"")
+      }
+    }
+
+    "leave a model with nothing to fix byte-identical" in {
+      // The no-op path writes nothing at all. Asserting byte equality catches a fixer that
+      // "successfully" rewrites a file to itself with, say, different line endings.
+      val clean = "domain Foo is { ??? }\n"
+      withModel(clean) { (run, read) =>
+        run(ValidateCommand.Options(fix = true))
+        read() mustBe clean
+      }
+    }
+
+    "apply only the named rule under --fix-rule" in {
+      withModel(deprecated) { (run, read) =>
+        run(ValidateCommand.Options(fix = true, fixRule = Some(RuleId.DoStatement.code)))
+        read() must include("do \"figure it out\"")
+      }
+    }
+
+    "do nothing when --fix-rule names a rule the model does not trip" in {
+      withModel(deprecated) { (run, read) =>
+        run(ValidateCommand.Options(fix = true, fixRule = Some(RuleId.AbstractType.code)))
+        // The deprecation this model DOES have must survive, or the filter is not filtering.
+        read() must include("prompt \"figure it out\"")
+      }
+    }
+  }
+
+  "the fixable set" should {
+    "contain only rules whose fix is a pure span replacement" in {
+      // shape-keyword rewrites `flow X is` to `processor X as flow is` -- an insertion elsewhere
+      // than the reported span -- and state-is-record may need to INSERT a keyword. Applying either
+      // as a span swap corrupts source, so their absence here is load-bearing, not an oversight.
+      RuleId.mechanicalReplacements.keySet mustNot contain(RuleId.ShapeKeyword.code)
+      RuleId.mechanicalReplacements.keySet mustNot contain(RuleId.StateIsRecord.code)
+      RuleId.mechanicalReplacements(RuleId.DoStatement.code) mustBe "do"
+    }
+  }
+}

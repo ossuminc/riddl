@@ -298,6 +298,11 @@ class FindCommand(using pc: PlatformContext)
     else Right(edits.toSeq)
   }
 
+  /** Writes and verifies through the ONE shared gate in [[FindEditor.applyVerified]].
+    *
+    * `validate --fix` asks the identical question, so the write-revalidate-restore logic lives
+    * there rather than being copied here.
+    */
   private def applyAndVerify(
     inputFile: Path,
     before: PassesResult,
@@ -306,32 +311,17 @@ class FindCommand(using pc: PlatformContext)
     count: Int,
     parsed: FindExpression.Parsed
   ): Either[Messages, PassesResult] = {
-    def restore(): Unit = originals.foreach { case (f, text) => Files.writeString(f, text) }
-    rewritten.foreach { case (f, text) => Files.writeString(f, text) }
-    val outcome =
-      try loadAndValidate(inputFile)
-      catch case e: Exception => Left(Messages.errors(s"re-parse threw: ${e.getMessage}"))
-    outcome match
-      case Left(messages) =>
-        restore()
-        Left(
-          Messages.errors("find: the rewrite does not parse; nothing written") ++ messages
-        )
+    FindEditor.applyVerified(
+      originals,
+      rewritten,
+      before.messages.count(_.isError),
+      () => loadAndValidate(inputFile),
+      "find"
+    ) match
+      case Left(messages) => Left(messages)
       case Right(after) =>
-        val was = before.messages.count(_.isError)
-        val now = after.messages.count(_.isError)
-        if now > was then
-          restore()
-          val introduced = after.messages.filter(_.isError).map(_.format).take(10)
-          Left(
-            Messages.errors(
-              (s"find: the rewrite introduces ${now - was} new error(s); nothing written" +:
-                introduced).mkString("\n")
-            )
-          )
-        else
-          pc.log.info(s"${rewritten.size} file(s) rewritten")
-          report(count, parsed.expectMin).map(_ => after)
+        pc.log.info(s"${rewritten.size} file(s) rewritten")
+        report(count, parsed.expectMin).map(_ => after)
   }
 
   /** A per-file line diff of what `-dry-run` would have done. Deliberately plain: a real unified

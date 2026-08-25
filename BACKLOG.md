@@ -1002,7 +1002,13 @@ blocked on the first.
   That is a review artifact, not the answer — the function name alone is insufficient
   because `validateSchema` carries 10 distinct rules and `validateEntity` 9.
 
-- **[1.12]** **`validate --fix` / `--fix-rule <id>`: ship each rule with its own codemod.**
+- ~~**[1.12]** **`validate --fix` / `--fix-rule <id>`: ship each rule with its own codemod.**~~
+  — **DONE 2026-08-25**. The rule carries its fix; the fixer is generic; writing goes through
+  the SAME gate as `find -replace`, now lifted to `FindEditor.applyVerified` rather than
+  copied. Two rules carry a fix today — see **[1.16]** for the one that is genuinely
+  mechanical and still excluded. Original entry follows.
+
+  **[1.12 — as filed]**
   **Blocked on [1.11]** — a fix has to name the rule it fixes.
 
   **Smaller than it first appears, because both halves already exist.**
@@ -1053,6 +1059,23 @@ verification is carried here so it is not repeated.**
   ratify, not a bug**: either accept the name as history (and the comment is
   already correct), or add `numDoStatements` alongside it and deprecate this one.
   Do NOT simply rename it.
+
+
+- **[1.16]** **A codemod whose replacement is COMPUTED from the matched text.**
+  `RuleId.mechanicalFix` is an `Option[String]` -- a CONSTANT replacement -- which covers
+  `prompt-statement` -> `do` and `abstract-type` -> `Anything` and cannot express a fix that
+  depends on what it matched.
+  **Verified**: of the five deprecations marked `autoFixable`, `type-first-aggregate` is a
+  REORDERING (`type X is command {…}` -> `command X is {…}`) and `shape-keyword` inserts
+  somewhere other than the reported span, so both are correctly excluded from mechanical
+  fixing. But **`quoted-constant-literal` IS a pure span replacement** — `constant N: Integer
+  = "5"` -> `5` — and is excluded only because the replacement is the matched text minus its
+  quotes, which a constant cannot say.
+  **Do not just widen the type.** `mechanicalFix` feeds
+  `Messages.DeprecationCode.mechanicalReplacement: Map[String, String]` and
+  `RiddlLib.deprecationEdits`, both published and both expecting constants; a function type
+  breaks them. Adding a SECOND field beside it would be the "two fields describing one thing"
+  shape this repo keeps recording as a defect. Decide the shape first.
 
 ### 2. Queued, needs a plan
 

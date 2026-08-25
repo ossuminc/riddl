@@ -7,7 +7,8 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.{Command, CommandOptions}
-import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.commands.find.FindEditor
+import com.ossuminc.riddl.language.{Messages, RuleId}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
@@ -17,7 +18,7 @@ import org.ekrich.config.Config
 import scopt.OParser
 
 import java.io.File
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
@@ -38,7 +39,9 @@ object ValidateCommand {
   case class Options(
     inputFile: Option[Path] = None,
     failOn: Option[String] = None,
-    json: Boolean = false
+    json: Boolean = false,
+    fix: Boolean = false,
+    fixRule: Option[String] = None
   ) extends CommandOptions {
     def command: String = cmdName
   }
@@ -83,7 +86,21 @@ class ValidateCommand(using pc: PlatformContext)
             s"(${Severities.mkString(", ")})"),
         opt[Unit]("json")
           .action((_, o) => o.copy(json = true))
-          .text("Emit diagnostics as a JSON array on stdout instead of the human summary")
+          .text("Emit diagnostics as a JSON array on stdout instead of the human summary"),
+        opt[Unit]("fix")
+          .action((_, o) => o.copy(fix = true))
+          .text("Apply every rule that carries a mechanical fix, then re-validate"),
+        opt[String]("fix-rule")
+          .validate(r =>
+            if RuleId.parse(r).exists(_.mechanicalFix.isDefined) then success
+            else
+              failure(
+                s"--fix-rule must name a rule with a mechanical fix; these have one: " +
+                  RuleId.mechanicalReplacements.keys.toSeq.sorted.mkString(", ")
+              )
+          )
+          .action((r, o) => o.copy(fix = true, fixRule = Some(r)))
+          .text("Apply only this rule's fix (implies --fix)")
       )
       .text("Validate a model and report a one-line summary of what was checked")
       -> Options()
@@ -95,7 +112,9 @@ class ValidateCommand(using pc: PlatformContext)
       if obj.hasPath("input-file") then Option(Path.of(obj.getString("input-file"))) else None
     val failOn = if obj.hasPath("fail-on") then Option(obj.getString("fail-on")) else None
     val json = obj.hasPath("json") && obj.getBoolean("json")
-    Options(inputFile, failOn, json)
+    val fix = obj.hasPath("fix") && obj.getBoolean("fix")
+    val fixRule = if obj.hasPath("fix-rule") then Option(obj.getString("fix-rule")) else None
+    Options(inputFile, failOn, json, fix || fixRule.isDefined, fixRule)
   }
 
   override def run(
@@ -119,13 +138,94 @@ class ValidateCommand(using pc: PlatformContext)
               report(options, 0, messages)
               Left(messages)
             case Right(result) =>
-              report(options, result.symbols.parentage.size, result.messages)
-              if result.messages.hasErrors then Left(result.messages)
-              else if failsThreshold(options.failOn, result.messages) then Left(result.messages)
-              else Right(result)
+              if options.fix then applyFixes(inputFile, options, result)
+              else
+                report(options, result.symbols.parentage.size, result.messages)
+                if result.messages.hasErrors then Left(result.messages)
+                else if failsThreshold(options.failOn, result.messages) then Left(result.messages)
+                else Right(result)
       }
       Await.result(future, 10.seconds)
     }
+  }
+
+  /** Applies every mechanical fix the model's own diagnostics ask for.
+    *
+    * **A rule carries its own fix** ([[RuleId.mechanicalFix]]) rather than a fixer holding a table
+    * of rules, so a rule and its remedy cannot drift apart -- the same reasoning that made
+    * `DeprecationCode.all` derived rather than hand-listed.
+    *
+    * Only rules whose fix is a pure SPAN REPLACEMENT qualify, and that set is deliberately smaller
+    * than the auto-fixable one. `shape-keyword` rewrites `flow X is` to `processor X as flow is`,
+    * an insertion somewhere other than the reported span, and `state-is-record` may need to INSERT
+    * a keyword where nothing stands. Applying those as span swaps would corrupt source, so they are
+    * absent rather than approximated.
+    *
+    * Writing goes through the SAME gate as `find -replace`: overlaps refused, applied back to
+    * front, re-parsed and re-validated, and every file restored unless the model got no worse.
+    */
+  private def applyFixes(
+    inputFile: Path,
+    options: Options,
+    before: PassesResult
+  ): Either[Messages, PassesResult] = {
+    val wanted: Messages.Message => Boolean = m =>
+      m.ruleId.exists(r =>
+        r.mechanicalFix.isDefined && options.fixRule.forall(_ == r.code)
+      )
+    val fixable = before.messages.filter(wanted)
+    if fixable.isEmpty then
+      // Says so out loud rather than exiting silently: "nothing to fix" and "the command did not
+      // run" must not share an observable, which is this command's whole premise.
+      val scope = options.fixRule.map(r => s" for rule '$r'").getOrElse("")
+      pc.stdoutln(s"validate --fix: nothing to fix$scope")
+      Right(before)
+    else
+      // `fileOfSource`, NOT `Path.of(loc.source.origin)`: origin is the SHORT name error messages
+      // render, so treating it as a path works only when the cwd happens to be the model's own
+      // directory. `find -replace` shipped with exactly that bug.
+      val edits = fixable.flatMap { m =>
+        for
+          rule <- m.ruleId
+          replacement <- rule.mechanicalFix
+          file <- FindEditor.fileOfSource(m.loc.source)
+        yield FindEditor.Edit(file, m.loc.offset, m.loc.endOffset, replacement, rule.code)
+      }
+      FindEditor.plan(edits) match
+        case Left(problems) =>
+          Left(Messages.errors(("validate --fix: nothing written" +: problems).mkString("\n")))
+        case Right(byFile) =>
+          val originals = byFile.keys.map(f => f -> Files.readString(f)).toMap
+          val rewritten = byFile.map { case (f, es) =>
+            f -> FindEditor.apply(originals(f), es)
+          }.toMap
+          FindEditor.applyVerified(
+            originals,
+            rewritten,
+            before.messages.count(_.isError),
+            () => loadAndValidate(inputFile),
+            "validate --fix"
+          ) match
+            case Left(messages) => Left(messages)
+            case Right(after) =>
+              val byRule = edits.groupBy(_.what).view.mapValues(_.size).toSeq.sorted
+              pc.stdoutln(
+                s"validate --fix: applied ${edits.size} fix(es) in ${rewritten.size} file(s): " +
+                  byRule.map { case (rule, n) => s"$rule x$n" }.mkString(", ")
+              )
+              Right(after)
+  }
+
+  /** Re-parse and re-validate from disk, for the post-rewrite check. */
+  private def loadAndValidate(inputFile: Path): Either[Messages, PassesResult] = {
+    implicit val ec: ExecutionContext = pc.ec
+    Await.result(
+      RiddlParserInput.fromPathSafe(inputFile.toString).map {
+        case Left(messages) => Left(messages)
+        case Right(rpi)     => Riddl.parseAndValidate(rpi, shouldFailOnError = false)
+      },
+      10.seconds
+    )
   }
 
   /** Emit whichever shape was asked for. Both go to STDOUT, because both are the product. */
