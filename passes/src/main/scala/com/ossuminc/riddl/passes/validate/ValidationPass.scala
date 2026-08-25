@@ -3028,6 +3028,72 @@ case class ValidationPass(
     * `???` is exempt (`nonEmpty`), and an unresolvable target is silent — reporting there would be
     * reasoning from absence.
     */
+  /** A clause that ESTABLISHES a state may not read that state's record -- an Error (riddl-models,
+    * 2026-08-25).
+    *
+    * The reported shape:
+    * {{{
+    * on menuItemCreated: event MenuItemCreated is {
+    *   morph ... with record MenuItemStateData(recipe = MenuItemStateData.recipe, ...)
+    * }
+    * }}}
+    * The constructor builds `MenuItemStateData` and reads `MenuItemStateData.recipe` in the same
+    * breath. On this path that record is not occupied, so the read has no defined source and lowers
+    * to code that compiles and is silently wrong. riddl-models' underlying cause was usually real:
+    * the creating COMMAND carried the data and the EVENT dropped it, so the clause reached for the
+    * only thing in scope.
+    *
+    * **Scoped to ENTITY-LEVEL handlers, and that is not an approximation -- it is the only case
+    * left.** A clause inside state `T` that reads state `S`'s record is already an Error from
+    * [[checkStateRecordInScope]], so including it here would double-report one mistake. A clause
+    * inside `S` that morphs to `S` is the legitimate carry-forward idiom -- the record IS occupied,
+    * and updating some fields while carrying the rest forward is exactly what it is for. What
+    * remains is the entity-level clause, where no state is in scope and the constructor is building
+    * the very record it reads.
+    *
+    * **Selected by STRUCTURE, never by name.** riddl-models' own first attempt picked creation
+    * clauses by matching `Create*`/`*Created` and missed `EnrollCustomer` and
+    * `InventoryItemInitialized`. The structural fact is that the morph's target record and the read
+    * record are the same definition, compared by identity.
+    */
+  private def checkCreationReadsNothing(entity: Entity, parents: Parents): Unit =
+    if entity.nonEmpty then
+      // ENTITY-LEVEL handlers only -- `entity.handlers`, deliberately not folding in state handlers.
+      entity.handlers.flatMap(_.clauses).foreach { clause =>
+        walkStatements(clause.contents) {
+          case m: MorphStatement =>
+            for
+              targetState <- resolvePath[State](m.state.pathId, entity +: parents)
+                .orElse(resolution.refMap.definitionOf[State](m.state.pathId))
+              targetRecord <- resolution.refMap.definitionOf[Type](targetState.typ.pathId)
+            do
+              m.value match
+                case c: Constructor =>
+                  c.args.foreach { arg =>
+                    arg.value match
+                      case vr: ValueRef =>
+                        for
+                          resolved <- valueRefDefinition(vr, clause +: (entity +: parents))
+                          owner <- symbols.parentOf(resolved)
+                          if owner eq targetRecord
+                        do
+                          messages.addError(
+                            vr.loc,
+                            s"'${vr.path.format}' reads ${targetRecord.identify}, which this " +
+                              s"'morph' is establishing for ${targetState.identify}: on this path " +
+                              "that record holds nothing yet",
+                            suggestion = "Carry the value in the message that triggers this " +
+                              "transition -- a creating command usually has it, and the event " +
+                              "that followed dropped it."
+                          )
+                      case _ => ()
+                  }
+                case _ => ()
+          case _ => ()
+        }
+      }
+  end checkCreationReadsNothing
+
   private def checkTransitionsHaveSomewhereToGo(entity: Entity, parents: Parents): Unit =
     if entity.nonEmpty then
       // An entity's clauses commonly live inside a State, which `entity.handlers` alone cannot see.
@@ -3080,6 +3146,7 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, entity)
     checkTransitionsHaveSomewhereToGo(entity, parents)
+    checkCreationReadsNothing(entity, parents)
     // At most one state may be the entity's initial (starting) state.
     val initialStates = entity.states.filter(_.isInitial)
     if initialStates.sizeIs > 1 then
@@ -7801,6 +7868,54 @@ case class ValidationPass(
     * `garbage.nonsense.conditionRed` used to validate. The refMap key is the path plus the
     * enclosing on-clause/function — the same `parents.head` ResolutionPass keyed it under.
     */
+  /** A value reference may only read the state record that is IN SCOPE on this path -- an Error
+    * (riddl-models, 2026-08-25).
+    *
+    * Inside `state Confirmed of record ConfirmedData`, writing `base = SeatedData.base` names a
+    * DIFFERENT state's record. Nothing rejected it: value references resolve by whether the field
+    * EXISTS -- the diagnostic itself says "a field of the handled message or entity state" -- not by
+    * whether that record is the state currently occupied.
+    *
+    * **It is an Error because the read has no defined source.** Only one state is occupied at a
+    * time, so on this path the other state's record holds nothing to carry forward. A generator
+    * lowers a carry-forward by reading the pre-transition record, so a wrong one lowers to code
+    * that compiles and is silently wrong -- the worst available outcome.
+    *
+    * **Comparison is by RESOLVED IDENTITY, never by name.** Two entities may each declare a state
+    * record called `Data`, and matching text would both miss a genuine mistake and invent one. The
+    * owner comes from the symbol table and is compared with `eq`.
+    *
+    * **Silent when no state encloses the reference.** An entity-level handler could be in any of
+    * the entity's states, so which record is "in scope" has no answer there -- reporting would be
+    * reasoning from absence. That is the same boundary `checkSetStateIsCurrent` draws, and the
+    * entity-level case is a genuinely different question (riddl-generator's criterion 3: such a
+    * handler may only touch fields common to EVERY state record).
+    */
+  private def checkStateRecordInScope(vr: ValueRef, parents: Parents): Unit =
+    for
+      entity <- parents.collectFirst { case e: Entity => e }
+      state <- parents.collectFirst { case s: State => s }
+      resolved <- valueRefDefinition(vr, parents)
+      owner <- symbols.parentOf(resolved)
+    do
+      // The record that types each of this entity's states, resolved -- not their names.
+      val stateRecords: Seq[(State, Type)] = entity.states.flatMap { st =>
+        resolution.refMap.definitionOf[Type](st.typ.pathId).map(st -> _)
+      }
+      val inScope: Option[Type] = stateRecords.collectFirst { case (st, t) if st eq state => t }
+      stateRecords.find { case (_, t) => t eq owner } match
+        case Some((otherState, otherRecord)) if !inScope.exists(_ eq otherRecord) =>
+          messages.addError(
+            vr.loc,
+            s"'${vr.path.format}' reads ${otherRecord.identify}, which types " +
+              s"${otherState.identify} -- but this path is in ${state.identify}, so that record " +
+              "holds nothing here",
+            suggestion = s"Read a field of ${inScope.map(_.identify).getOrElse("the state in scope")}" +
+              s", or carry the value in the message that entered ${state.identify}."
+          )
+        case _ => ()
+  end checkStateRecordInScope
+
   private def valueRefDefinition(vr: ValueRef, parents: Parents): Option[Definition] =
     parents.headOption.flatMap(p => resolution.refMap.anyDefinitionOf(vr.path, p))
 
@@ -8072,6 +8187,7 @@ case class ValidationPass(
       case ask: Ask       => validateAsk(ask, parents)
       case init: Initiate => checkInitiate(init, parents, lets, elements)
       case vr: ValueRef =>
+        checkStateRecordInScope(vr, parents)
         if !valueRefResolves(vr, parents, lets, elements) then
           messages.addError(
             vr.loc,
