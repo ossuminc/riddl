@@ -1372,7 +1372,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     }
 
   private def serializeStatement(s: Statement): StatementDto = s match
-    case PromptStatement(_, what) => PromptStmtDto(what.s)
+    case DoStatement(_, what) => DoStmtDto(what.s)
     case ErrorStatement(_, msg)   => ErrorStmtDto(msg.s)
     case LetStatement(_, id, tr, e) =>
       LetStmtDto(id.value, tr.map(t => path(t.pathId)), serializeValue(e))

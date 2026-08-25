@@ -95,7 +95,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     // audit consistency (review round 1, fix 2). A LiteralString is a leaf so these add no
     // actual reachability, but a table claiming to be exhaustive should not have unexplained
     // gaps next to a sibling it does cover.
-    case ps: PromptStatement  => Seq(ps.what)
+    case ps: DoStatement  => Seq(ps.what)
     case es: ErrorStatement   => Seq(es.message)
     case cs: CodeStatement    => Seq(cs.language)
     case fe: ForeachStatement => fe.doStatements.toSeq

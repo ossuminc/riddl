@@ -1406,8 +1406,8 @@ object JsonAstBuilder:
       // catch-all so that adding a statement kind still fails the exhaustivity check.
       case CommentStmtDto(text, _) =>
         ctx.err(s"a comment is not a statement and should not reach buildStatement: '$text'")
-        PromptStatement(curAt, LiteralString(curAt, text))
-      case PromptStmtDto(text)   => PromptStatement(curAt, LiteralString(curAt, text))
+        DoStatement(curAt, LiteralString(curAt, text))
+      case DoStmtDto(text)   => DoStatement(curAt, LiteralString(curAt, text))
       case ErrorStmtDto(message) => ErrorStatement(curAt, LiteralString(curAt, message))
       case LetStmtDto(name, t, expression) =>
         LetStatement(

@@ -27,26 +27,26 @@ private[parsing] trait StatementParser {
   // VitalDefinitionParser).
   this: ReferenceParser & CommonParser & TypeParser =>
 
-  // `do "…"` is the canonical AI-action statement (A54). It builds a PromptStatement.
-  private def doStatement[u: P]: P[PromptStatement] = {
+  // `do "…"` is the canonical AI-action statement (A54). It builds a DoStatement.
+  private def doStatement[u: P]: P[DoStatement] = {
     P(Index ~ Keywords.do_ ~ literalString ~/ Index)./ map { case (start, str, end) =>
-      PromptStatement(at(start, end), str)
+      DoStatement(at(start, end), str)
     }
   }
 
-  // `prompt "…"` is the DEPRECATED synonym for `do "…"`; it still builds a PromptStatement but emits a
+  // `prompt "…"` is the DEPRECATED synonym for `do "…"`; it still builds a DoStatement but emits a
   // deprecation at the keyword (pattern mirrors replyStatement's `reply` -> `yield`). Note: the
   // parenthesized `prompt("…")` value form is handled by `promptValue`, not here.
-  private def promptStatement[u: P]: P[PromptStatement] = {
+  private def promptStatement[u: P]: P[DoStatement] = {
     P(Index ~ Keywords.prompt ~ literalString ~/ Index)./ map { case (start, str, end) =>
       val kwLoc = at(start, start + Keyword.prompt.length)
       deprecation(
         kwLoc,
         "The `prompt` statement is deprecated; use `do` instead",
-        code = Option(Messages.DeprecationCode.PromptStatement),
+        code = Option(Messages.DeprecationCode.DoStatement),
         autoFixable = true
       )
-      PromptStatement(at(start, end), str)
+      DoStatement(at(start, end), str)
     }
   }
 

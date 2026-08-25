@@ -146,7 +146,7 @@ package object bast {
     // by ONE discriminator byte (0 = portlet, 1 = processor) and then that reference. A revision-18
     // reader has no arm for sub-kind 21 at all, so it THROWS rather than misreading -- which is the
     // good failure, and the reason the reader's default arm was made to throw instead of
-    // fabricating a PromptStatement. Bumped rather than ridden because 18 SHIPPED in 2.0.0-rc.15.
+    // fabricating a DoStatement. Bumped rather than ridden because 18 SHIPPED in 2.0.0-rc.15.
     22 // `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.
     // 21 // `empty` value: tag 12 in readValue/writeValue. A revision-20 reader hitting tag 12 throws

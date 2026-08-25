@@ -77,7 +77,7 @@ class LifecycleParametersBASTRoundTripTest extends AbstractValidatingTest {
       // Same failure mode Constant/Method hit sharing NODE_FIELD: misalignment surfaces at
       // whatever comes NEXT. Both on-clauses' bodies must survive intact.
       val root = roundTrip(src, "lifecycle-params-bast-followers")
-      Finder(root).recursiveFindByType[PromptStatement].size mustBe 2
+      Finder(root).recursiveFindByType[DoStatement].size mustBe 2
     }
   }
 }

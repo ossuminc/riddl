@@ -61,7 +61,10 @@ case class DefinitionStats(
   numOptions: Long = 0, // number of options declared
   numIncludes: Long = 0,
   numStatements: Long = 0,
-  numPromptStatements: Long = 0, // prompt "..." count
+  // NOT renamed with PromptStatement -> DoStatement (2026-08-25): `DefinitionStats` and
+  // `KindStats` are @JSExportTopLevel, so this field name is part of the published JS/TypeScript
+  // API and renaming it is a separate decision from the AST rename. It counts `do "..."`.
+  numPromptStatements: Long = 0, // `do "..."` count (formerly spelled `prompt "..."`)
   numExecutableStatements: Long = 0 // tell/send/morph/set/become/error/code
 )
 
@@ -137,7 +140,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
     var prompts = 0L
     var executables = 0L
     stmts.foreach {
-      case _: PromptStatement =>
+      case _: DoStatement =>
         total += 1; prompts += 1
       case _: TellStatement | _: SendStatement | _: MorphStatement | _: SetStatement |
           _: BecomeStatement | _: ErrorStatement | _: CodeStatement | _: TerminateStatement =>

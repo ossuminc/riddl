@@ -150,7 +150,7 @@ is covered in that construct's phase. The builder emits references as
 
 | Construct | Status | Notes |
 |---|---|---|
-| PromptStatement | ✅ Phase 1 | `do`/prompt text |
+| DoStatement | ✅ Phase 1 | `do`/prompt text |
 | ErrorStatement | ✅ Phase 3 | |
 | LetStatement | ✅ Phase 3 / A54 | expression widened to ValueDto |
 | CodeStatement | ✅ Phase 3 | |

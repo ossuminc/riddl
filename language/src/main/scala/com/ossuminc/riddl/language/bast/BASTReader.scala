@@ -994,7 +994,7 @@ class BASTReader(
     stmtType match {
       case 0 => // Prompt
         val what = readLiteralString()
-        PromptStatement(loc, what)
+        DoStatement(loc, what)
 
       case 1 => // Error
         val message = readLiteralString()
@@ -1203,7 +1203,7 @@ class BASTReader(
         ForwardStatement(loc, msg, target)
 
       case _ =>
-        // THROW, do not fabricate. This arm used to return a PromptStatement carrying
+        // THROW, do not fabricate. This arm used to return a DoStatement carrying
         // "<unknown statement N>", so an unreadable tag decoded into a PLAUSIBLE model that
         // validated and prettified like any other -- the corruption survived as content. A tag
         // with no reader arm means the stream was written by a newer build or is damaged; either

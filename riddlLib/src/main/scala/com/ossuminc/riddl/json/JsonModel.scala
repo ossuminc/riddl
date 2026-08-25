@@ -700,8 +700,10 @@ object JsonModel:
 
   sealed trait StatementDto
 
-  /** `"text"` or `{ "kind": "prompt", "text": "..." }` */
-  case class PromptStmtDto(text: String) extends StatementDto
+  /** `"text"` or `{ "kind": "do", "text": "..." }`. Reads `"prompt"` too, for files written
+    * before the discriminator was corrected.
+    */
+  case class DoStmtDto(text: String) extends StatementDto
 
   /** `{ "kind": "comment", "text": "...", "inline"?: true }`.
     *
@@ -1966,11 +1968,13 @@ object JsonModel:
 
   private def readStatement(v: ujson.Value): StatementDto =
     v match
-      case ujson.Str(s) => PromptStmtDto(s)
+      case ujson.Str(s) => DoStmtDto(s)
       case _ =>
         val m = v.obj
         m("kind").str match
-          case "prompt" => PromptStmtDto(m("text").str)
+          // BOTH spellings read. "prompt" is what every file written before 2026-08-25 carries,
+          // and a reader that rejected it would strand them for no gain.
+          case "do" | "prompt" => DoStmtDto(m("text").str)
           case "comment" =>
             CommentStmtDto(m("text").str, m.get("inline").exists(_.bool))
           case "error" => ErrorStmtDto(m("message").str)
@@ -2057,8 +2061,12 @@ object JsonModel:
 
   private def writeStatement(dto: StatementDto): ujson.Value =
     dto match
-      case PromptStmtDto(text) =>
-        ujson.Obj("kind" -> ujson.Str("prompt"), "text" -> ujson.Str(text))
+      case DoStmtDto(text) =>
+        // "do", not "prompt" (Reid, 2026-08-25). `do` is the canonical keyword and `prompt` the
+        // deprecated synonym, but the wire said "prompt" for the STATEMENT while `{"value":
+        // "prompt", ...}` means the typed-hole VALUE -- so one string meant two different things
+        // depending on which field it sat in. It now means only the value.
+        ujson.Obj("kind" -> ujson.Str("do"), "text" -> ujson.Str(text))
       case CommentStmtDto(text, inline) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("comment"), "text" -> ujson.Str(text))

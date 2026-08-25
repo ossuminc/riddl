@@ -1805,7 +1805,7 @@ case class ValidationPass(
     // statement carrying a value cannot skip them.
     checkStateReadScope(statement, parents)
     statement match
-      case PromptStatement(loc, what) =>
+      case DoStatement(loc, what) =>
         checkNonEmptyValue(
           what,
           "prompt statement",
@@ -9586,7 +9586,7 @@ case class ValidationPass(
             // is not added here: it only occurs in function bodies, which are classified by
             // validateFunction's statement-non-empty check, not classifyHandlers.)
             executableCount += 1
-          case _: PromptStatement =>
+          case _: DoStatement =>
             promptCount += 1
           // ENUMERATED, not a catch-all. These are the statements that are neither an effect nor
           // a prompt: control flow, binding, refusal, and `return` (function bodies only, checked

@@ -672,7 +672,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         addIndent(s"set ${field.format} to ")
         emitValue(value)
         nl
-      case PromptStatement(_, what) =>
+      case DoStatement(_, what) =>
         // A54: `do` is canonical; the deprecated `prompt` statement normalizes to `do` on emit.
         addLine(s"do ${what.format}")
       case SendStatement(_, msg, portlet) =>

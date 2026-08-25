@@ -160,9 +160,9 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
           |}
           |""".stripMargin
       val root = parsedRoot(src, td)
-      Finder(root).recursiveFindByType[PromptStatement].headOption match
+      Finder(root).recursiveFindByType[DoStatement].headOption match
         case Some(ps) => ps.what.s mustBe "do the thing"
-        case None     => fail("no PromptStatement found")
+        case None     => fail("no DoStatement found")
     }
 
     "leave the `do \"...\"` action statement form unaffected" in { (td: TestData) =>
@@ -180,9 +180,9 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
           |}
           |""".stripMargin
       val root = parsedRoot(src, td)
-      Finder(root).recursiveFindByType[PromptStatement].headOption match
+      Finder(root).recursiveFindByType[DoStatement].headOption match
         case Some(ps) => ps.what.s mustBe "do the thing"
-        case None     => fail("no PromptStatement found")
+        case None     => fail("no DoStatement found")
     }
   }
 }

@@ -57,7 +57,7 @@ class DeprecationCodeTest extends AbstractTestingBasis {
   "a deprecated `prompt` statement" should {
     "carry the prompt-statement code" in {
       val deps = deprecationsIn(modelWith("""prompt "do a thing" """))
-      deps.flatMap(_.deprecationCode) must contain(DeprecationCode.PromptStatement)
+      deps.flatMap(_.deprecationCode) must contain(DeprecationCode.DoStatement)
     }
   }
 

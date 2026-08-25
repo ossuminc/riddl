@@ -78,8 +78,8 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
   "Statements" must {
     "check Prompt Statements" in { td =>
       val comment = LiteralString(At.empty, "foo")
-      val prompt = PromptStatement(At.empty, comment)
-      prompt.kind must be("Prompt Statement")
+      val prompt = DoStatement(At.empty, comment)
+      prompt.kind must be("Do Statement")
       prompt.format must be(comment.format)
       checkStatement(prompt)
     }

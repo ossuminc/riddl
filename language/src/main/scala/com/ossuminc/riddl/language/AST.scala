@@ -3685,12 +3685,12 @@ object AST:
     * @param what
     *   The prompt text to provide to an AI simulator
     */
-  @JSExportTopLevel("PromptStatement")
-  case class PromptStatement(
+  @JSExportTopLevel("DoStatement")
+  case class DoStatement(
     loc: At,
     what: LiteralString
   ) extends Statement {
-    override def kind: String = "Prompt Statement"
+    override def kind: String = "Do Statement"
     def format: String = what.format
   }
 

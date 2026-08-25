@@ -76,7 +76,7 @@ class ForeachRoundTripTest extends AbstractValidatingTest {
         case id: Identifier => id.value mustBe "batch"
         case other          => fail(s"expected Identifier collection, got $other")
       // The nested prompt survives inside the inner foreach body.
-      Finder(inner.doStatements).recursiveFindByType[PromptStatement].size mustBe 1
+      Finder(inner.doStatements).recursiveFindByType[DoStatement].size mustBe 1
     }
   }
 }

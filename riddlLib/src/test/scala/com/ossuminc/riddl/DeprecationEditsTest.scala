@@ -51,7 +51,7 @@ class DeprecationEditsTest extends AbstractTestingBasis {
       edits must not be empty
       // Sample deprecation moved from `reply`->`yield` to `prompt`->`do` at 2.0: `reply` stopped
       // being deprecated when it became the query-result statement, so its code no longer exists.
-      edits.map(_.code) must contain(DeprecationCode.PromptStatement)
+      edits.map(_.code) must contain(DeprecationCode.DoStatement)
 
       val fixed = applyEdits(deprecated, edits)
       fixed must include("""do "note it"""")
@@ -65,7 +65,7 @@ class DeprecationEditsTest extends AbstractTestingBasis {
       val edits = RiddlLib.deprecationEdits(deprecated, "dep.riddl").toEither.toOption.get
       val fixed = applyEdits(deprecated, edits)
       val remaining = RiddlLib.deprecationEdits(fixed, "dep.riddl").toEither.toOption.get
-      remaining.map(_.code) must not contain DeprecationCode.PromptStatement
+      remaining.map(_.code) must not contain DeprecationCode.DoStatement
     }
 
     "return edits in descending start order so naive application is safe" in {

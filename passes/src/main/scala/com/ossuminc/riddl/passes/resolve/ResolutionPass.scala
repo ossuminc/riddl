@@ -407,7 +407,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             associateUsage[Portlet](parents.head, resolveARef[Portlet](portlet, parents))
           case processor: ProcessorRef[?] =>
             associateUsage(parents.head, resolveARef[Processor[?]](processor, parents))
-      case _: PromptStatement => () // no references
+      case _: DoStatement => () // no references
       case _: ErrorStatement  => () // no references
       case rs: RequireStatement =>
         rs.condition match {

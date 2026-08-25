@@ -189,7 +189,7 @@ object Messages {
     */
   object DeprecationCode {
     val StateIsRecord: String = "state-is-record"
-    val PromptStatement: String = "prompt-statement"
+    val DoStatement: String = "prompt-statement"
     val SendToInlet: String = "send-to-inlet"
     val BareStringCondition: String = "bare-string-condition"
     val AnonymousNebula: String = "anonymous-nebula"
@@ -211,14 +211,14 @@ object Messages {
       * prettify path, and claiming otherwise would corrupt source.
       */
     val mechanicalReplacement: Map[String, String] = Map(
-      PromptStatement -> "do",
+      DoStatement -> "do",
       AbstractType -> "Anything"
     )
 
     /** Every code, for a consumer building an exhaustive migration report. */
     val all: Seq[String] = Seq(
       StateIsRecord,
-      PromptStatement,
+      DoStatement,
       SendToInlet,
       BareStringCondition,
       AnonymousNebula,

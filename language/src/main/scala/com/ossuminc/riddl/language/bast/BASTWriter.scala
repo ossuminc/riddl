@@ -255,7 +255,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case output: Output     => writeOutput(output)
 
       // Statements (11 declarative statements)
-      case s: PromptStatement    => writePromptStatement(s)
+      case s: DoStatement    => writeDoStatement(s)
       case s: ErrorStatement     => writeErrorStatement(s)
       case s: RequireStatement   => writeRequireStatement(s)
       case s: YieldStatement     => writeYieldStatement(s)
@@ -1112,7 +1112,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // send, tell, morph, become, when, match, error, let, set, arbitrary
   // Phase 7: Statements use NODE_STATEMENT tag to distinguish from handlers
 
-  def writePromptStatement(s: PromptStatement): Unit = {
+  def writeDoStatement(s: DoStatement): Unit = {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(0) // Prompt statement type
     writeLocation(s.loc)
