@@ -10,6 +10,40 @@ Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
 NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
 
+**Constructor arguments are TYPE-CHECKED as of 2026-08-25**, and until then they were
+not checked for type AT ALL — only arity, duplication, ordering, name validity and
+`empty` cardinality. riddl-generator found it by generating Java that would not compile.
+**A generator finding a model defect a validator did not is the wrong division of
+labour**, and it is the second time that has happened this week.
+
+**It was never a missing policy.** `isAssignmentCompatible` already answered "no" for
+`Id(E)` → `UUID`; nothing at that position had ever asked it. Worth checking for the same
+shape elsewhere: `put`, `return` and `require … with` still ask nothing.
+
+**Two `Id`s must name the SAME processor, compared by RESOLVED IDENTITY.** The base rule
+is same-CLASS, so every `UniqueId` matched every other. Ruled in regardless of corpus
+frequency — the corpus had ZERO instances — because *"wrong is wrong … the point is to
+make the language and its expression bulletproof so reliable code can be generated from
+it."* `Id(Order)` and `Id(C.Order)` are one entity; two entities both named `Order` in
+different contexts are not. Text matching gets BOTH backwards, and the message must name
+them fully qualified or it reads "an id of Entity 'Order' is not an id of Entity 'Order'".
+
+**`isAssignmentCompatible` IS DIRECTIONAL and the direction is easy to invert** — it reads
+"is `other` assignable to `this`". `UniqueId` accepting `String_` since 2026-08-15 meant
+only that a String may fill an `Id` field; nothing said an id could be rendered INTO a
+String field, and that asymmetry was invisible until something type-checked the position.
+Reid ruled the reverse in (ids and UUIDs have canonical string forms, needed for logging
+and display); NOT for `Pattern`, whose whole purpose is to constrain the shape. My own
+test asserted the wrong direction first — that is how the asymmetry surfaced.
+
+**A stale background log read as a finished run.** The wait loop matched the PREVIOUS
+run's `### DONE` before the new run truncated the file, and reported totals from it —
+which showed `passes` unchanged at 1581 after adding two tests, and a failure that had
+already been fixed. **The tell was the delta not reconciling**, exactly as the RC skill
+prescribes: predict the movement first, and treat a mismatch as an instrument fault
+rather than a result. Wait on a completion marker AND a leg count, not the marker alone.
+
+
 **`../bin/riddlc` IS `2.0.0-rc.24-5-cb05e374`, ahead of rc.24, and riddl-models is
 ALREADY RUNNING IT (2026-08-24).** No RC was cut for it, deliberately. Beyond rc.24 it
 carries: product-on-stdout, morph-after-morph, and now **prefix truthfulness**.
