@@ -938,8 +938,14 @@ with their authors. Thirteen landed between `5b00bea1b` and `e226f240e`. **These
 the remainder, and NO code is written for either.** They are ordered: the second is
 blocked on the first.
 
-- **[1.11]** **Give every diagnostic a stable rule id, and a `--json` emitter for
-  `validate`.** Requested so riddl-models can filter, suppress and count diagnostics
+- ~~**[1.11]** **Give every diagnostic a stable rule id, and a `--json` emitter for
+  `validate`.**~~ — **DONE 2026-08-25** (`9eb75de02`, `8d82d183d`, `3ea9b7b9d`,
+  `1c7b7e34f`). 303 rules over 307 sites; `ruleId` is MANDATORY on the `add*` helpers, so a
+  new diagnostic does not compile without one. Non-reuse is enforced by an enum plus a
+  committed append-only ledger, both canary-tested. `--no-msg-ids` restores the previous
+  output. Original entry follows, for the reasoning.
+
+  **[1.11 — as filed]** Requested so riddl-models can filter, suppress and count diagnostics
   without matching on message TEXT, which reworks every time a message is reworded.
 
   **Reid's rulings, all made 2026-08-25:**
