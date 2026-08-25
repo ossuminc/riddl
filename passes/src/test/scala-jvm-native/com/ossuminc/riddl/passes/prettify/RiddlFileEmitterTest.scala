@@ -27,7 +27,10 @@ class RiddlFileEmitterTest extends AbstractTestingBasis {
       val twoStrings = Seq(string, string)
       rfe.clear()
       rfe.add(strings)
-      rfe.toString mustBe " \"string\" "
+      // No surrounding spaces as of 2026-08-25. The caller supplies its own separator, and the
+      // padding here produced `term Name is  "text" ` -- two spaces and a trailing one. The
+      // MULTI-string branch below is unchanged: it lays out its own lines, so it owns its spacing.
+      rfe.toString mustBe "\"string\""
       rfe.clear()
       rfe.add(twoStrings)
       rfe.toString mustBe "\n\"string\"\n\"string\"\n"

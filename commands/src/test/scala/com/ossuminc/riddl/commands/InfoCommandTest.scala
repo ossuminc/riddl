@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{StringBuildingPrintStream, ThirdPartyNotices}
+import com.ossuminc.riddl.utils.ThirdPartyNotices
 
 /** Unit Tests For InfoCommand.
   *
@@ -25,18 +25,8 @@ class InfoCommandTest extends CommandTestBase("commands/input") {
     * sbt-riddl's version check. The assertions below are unchanged — only the stream they watch has
     * moved, which is the point.
     */
-  private def infoOutput: Seq[String] = {
-    val old = System.out
-    val captured = StringBuildingPrintStream()
-    synchronized {
-      try
-        System.setOut(captured)
-        runCommand(Seq("info"))
-        captured.flush()
-        captured.mkString().split("\n").toSeq
-      finally System.setOut(old)
-    }
-  }
+  private def infoOutput: Seq[String] =
+    StdStreamCapture.capturingStdOut(() => runCommand(Seq("info")))._2.split("\n").toSeq
 
   "InfoCommand" should {
 

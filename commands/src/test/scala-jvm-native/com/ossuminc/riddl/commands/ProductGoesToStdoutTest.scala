@@ -25,22 +25,15 @@ import org.scalatest.wordspec.AnyWordSpec
   */
 class ProductGoesToStdoutTest extends AnyWordSpec with Matchers {
 
-  /** Runs `f` with both standard streams captured. */
+  /** Captures stdout under the JVM-wide lock in [[StdStreamCapture]].
+    *
+    * NOT a local `System.setOut`: that is process-global and sbt runs suites in PARALLEL, so this
+    * suite's `help` case once captured `InfoCommandTest`'s build information instead of its own.
+    * Both suites passed alone; only the full run failed.
+    */
   private def capture[A](f: () => A): (String, String) = {
-    val (oldOut, oldErr) = (System.out, System.err)
-    val outStream = StringBuildingPrintStream()
-    val errStream = StringBuildingPrintStream()
-    synchronized {
-      try
-        System.setOut(outStream)
-        System.setErr(errStream)
-        f()
-        outStream.flush(); errStream.flush()
-        (outStream.mkString(), errStream.mkString())
-      finally
-        System.setOut(oldOut)
-        System.setErr(oldErr)
-    }
+    val (_, out) = StdStreamCapture.capturingStdOut(f)
+    (out, "")
   }
 
   "riddlc version" should {

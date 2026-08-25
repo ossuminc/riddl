@@ -20,7 +20,14 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     if strings.sizeIs > 1 then {
       nl
       strings.foreach(s => sb.append(s"""$spc"${s.s}"$new_line"""))
-    } else { strings.foreach(s => sb.append(s""" "${s.s}" """)) }
+    } else {
+      // No surrounding spaces. The caller supplies its own separator -- `emitTerm` writes `" is "`
+      // -- so padding here produced `term Name is  "text" `: two spaces AND a trailing one. A
+      // SEPARATE defect from the brace doubling above, at a different site; fixing one does not
+      // fix the other, and riddl-models' CLAUDE.md carried a note for months that hand-written
+      // terms "always drift until prettify is run and copied back" because of exactly this.
+      strings.foreach(s => sb.append("\"" + s.s + "\""))
+    }
     this
   }
 
@@ -533,8 +540,21 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     this.add(line)
   }
 
+  /** No leading space: every caller has already emitted `… is ` with a trailing one.
+    *
+    * It added one, which is why `command X is  {` carried TWO spaces while `type X is {` and every
+    * container (`domain`, `context`, `entity`, `handler`, `on`) carried one. The doubling reached
+    * all seven aggregate-use-case keywords -- `command`, `event`, `query`, `result`, `record`,
+    * `graph`, `table` -- and only plain `type` escaped, because its `Aggregation` takes the other
+    * arm of the dispatch above.
+    *
+    * **Whitespace is load-bearing here, not cosmetic.** riddl-models diffs its 190 checked-in
+    * `.bast` files against source BYTE FOR BYTE, and that comparison can only be exact while the
+    * corpus is precisely what prettify emits. 188 of 188 models had drifted, and the dominant shape
+    * was this one.
+    */
   private def emitMessageType(mt: AggregateUseCaseTypeExpression): this.type = {
-    this.add(" ").emitAggregateContents(mt.contents.toSeq)
+    this.emitAggregateContents(mt.contents.toSeq)
   }
 
   private def emitMessageRef(mr: MessageRef): this.type = {
