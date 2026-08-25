@@ -937,6 +937,11 @@ object JsonModel:
     */
   case class SelfValueDto(field: Option[String] = None) extends ValueDto
 
+  /** `{ "value": "system", "field"?: "now" }` -- values supplied by the running system. The type is
+    * synthesized (see `AST.SystemValue`), so nothing here names a declared one.
+    */
+  case class SystemValueDto(field: Option[String] = None) extends ValueDto
+
   /** `{ "value": "initiate", "processor": "<path>", "processorKind": "<kind>", "args":
     * [<constructorArg>] }` — A70/instance-identity: bring an instance into being and yield its
     * identity. No answer type is carried: it is always the synthesized `Id(<processor>)`, so
@@ -1812,6 +1817,7 @@ object JsonModel:
       case "ask" =>
         AskValueDto(m("query").str, m("processor").str, m("processorKind").str)
       case "self" => SelfValueDto(m.get("field").map(_.str))
+      case "system" => SystemValueDto(m.get("field").map(_.str))
       case "initiate" =>
         val args = m
           .get("args")
@@ -1920,6 +1926,11 @@ object JsonModel:
       case SelfValueDto(field) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("value" -> ujson.Str("self"))
+            ++ field.map(f => "field" -> (ujson.Str(f): ujson.Value))
+        )
+      case SystemValueDto(field) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("value" -> ujson.Str("system"))
             ++ field.map(f => "field" -> (ujson.Str(f): ujson.Value))
         )
       case InitiateValueDto(processor, processorKind, args) =>

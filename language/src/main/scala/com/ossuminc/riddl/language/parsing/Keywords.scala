@@ -35,6 +35,19 @@ object Keywords {
     P(key ~~ &(isNotKeywordChar))./
   }
 
+  /** A keyword match that does NOT cut, for a rule that must be able to backtrack.
+    *
+    * [[keyword]] ends in `./`, which is right almost everywhere: once the keyword is seen the
+    * parser is committed and the error points at the real problem. It is WRONG where the rule sits
+    * in a position the grammar may have to abandon -- `comparison` tries `comparand ~ operator`
+    * and relies on backtracking when no operator follows, so a cut inside a comparand arm turns
+    * `set x to system.now` into "Expected one of (!= | < | <= | == | > | >=)" at the end of the
+    * statement. `self` never hit this because SelfValue is not a Comparand; `system` is.
+    */
+  private[parsing] def keywordNoCut[u: P](key: String): P[Unit] = {
+    P(key ~~ &(isNotKeywordChar))
+  }
+
   def keywords[u: P, T](keywordsRule: P[T]): P[T] = {
     P(keywordsRule ~~ &(isNotKeywordChar))./
   }
@@ -339,6 +352,7 @@ object Keywords {
   def schema[u: P]: P[Unit] = keywords(Keyword.schema)
 
   def self[u: P]: P[Unit] = keyword(Keyword.self)
+  def system[u: P]: P[Unit] = keywordNoCut(Keyword.system)
 
   def selects[u: P]: P[Unit] = keyword(Keyword.selects)
 
@@ -699,6 +713,7 @@ object Keyword {
   final val saga = "saga"
   final val schema = "schema"
   final val self = "self"
+  final val system = "system"
   final val selects = "selects"
   final val send = "send"
   final val sequence = "sequence"

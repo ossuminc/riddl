@@ -1835,6 +1835,22 @@ case class ValidationPass(
         value match
           case ls: LiteralString =>
             checkNonEmptyValue(ls, "value to set", onClause, loc, MissingWarning, required = true)
+          // A `system` member has a KNOWN synthesized type, so `set field f to system.now` where
+          // `f` is a `Duration` is checkable here -- an instant is not an interval, and the design
+          // asks for that to be an Error rather than a silent coercion.
+          //
+          // Scoped to SystemValue deliberately. `set`'s general type checking resolves only NAMED
+          // types (`checkValueType` takes an `Option[Type]`), so a field typed by a predefined type
+          // is unchecked for EVERY value kind. Widening that is a separate change with corpus-wide
+          // reach; this makes the one value whose type is always known tell the truth.
+          case sv: SystemValue =>
+            for
+              actual <- sv.field.map(_.value).flatMap(SystemValue.members.get).map(f => f(sv.loc))
+              fr <- field match
+                case f: FieldRef => Some(f)
+                case _           => None
+              target <- resolvePath[Field](fr.pathId, parents)
+            do checkAssignable(target.typeEx, actual, None, parents, sv.loc, s"Field '${target.id.value}'")
           case _ => ()
       case SendStatement(_, msg, portlet) =>
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
@@ -6112,6 +6128,7 @@ case class ValidationPass(
     // `self`/`self.<field>` is a keyword-anchored value, not an effect -- reading the running
     // instance's own identity cannot fail the way a call, ask, or get can.
     case _: SelfValue => 0
+    case _: SystemValue => 0
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
       0
     case other =>
@@ -6226,6 +6243,7 @@ case class ValidationPass(
     // `self`/`self.<field>` holds no nested value -- an optional bare field Identifier, not a
     // sub-expression -- so it cannot contain a state read.
     case _: SelfValue => Seq.empty
+    case _: SystemValue => Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
       Seq.empty
     case other =>
@@ -6267,6 +6285,7 @@ case class ValidationPass(
     case _: Identifier => Seq.empty
     // `self`/`self.<field>` holds no nested value; see the same note in `stateReadsIn`.
     case _: SelfValue => Seq.empty
+    case _: SystemValue => Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
       Seq.empty
     case other =>
@@ -6318,6 +6337,7 @@ case class ValidationPass(
     case _: Identifier => Seq.empty
     // `self`/`self.<field>` holds no nested value; see the same note in `stateReadsIn`.
     case _: SelfValue => Seq.empty
+    case _: SystemValue => Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
       Seq.empty
     case other =>
@@ -7824,6 +7844,9 @@ case class ValidationPass(
       case _: EmptyValue    => None
       case _: LookupValue   => None // element type is a TypeExpression; see valueTypeExpr
       case _: PromptValue   => None // AI-computed, untyped
+      // `system.now`/`system.random` name no declared Type -- their types are synthesized
+      // predefined ones, so the TypeExpression-level answer in `valueTypeExpr` is the real one.
+      case _: SystemValue   => None
       case c: Constructor   => resolution.refMap.definitionOf[Type](c.ref.pathId)
       case call: Call       =>
         // A24: a call's type is the called function's `output` Type (None for an inline-aggregate
@@ -7944,6 +7967,34 @@ case class ValidationPass(
     * entity-level case is a genuinely different question (riddl-generator's criterion 3: such a
     * handler may only touch fields common to EVERY state record).
     */
+  /** `system` must name one of its members -- an Error naming what it provides.
+    *
+    * Acceptance criterion 4 of the design: a bare `system`, or `system.<unknown>`, must be a CLEAN
+    * error rather than a confusing path-resolution failure. Because `system` is a keyword the
+    * parser consumes before `valueRef`, a typo cannot fall back to being read as an ordinary path
+    * -- so without this it would reach validation as a value with no type and be reported, if at
+    * all, as something unrelated.
+    *
+    * The message lists the members rather than describing them, since the set is closed and short.
+    */
+  private def checkSystemMember(sv: SystemValue): Unit =
+    val provided = SystemValue.fieldNames.map(n => s"'system.$n'").mkString(", ")
+    sv.field match
+      case None =>
+        messages.addError(
+          sv.loc,
+          s"'system' is not a value on its own; it provides $provided",
+          suggestion = s"Name one of them, e.g. 'system.${SystemValue.fieldNames.head}'."
+        )
+      case Some(id) if !SystemValue.members.contains(id.value) =>
+        messages.addError(
+          sv.loc,
+          s"'system.${id.value}' is not provided; 'system' provides $provided",
+          suggestion = s"Use one of $provided."
+        )
+      case _ => ()
+  end checkSystemMember
+
   private def checkStateRecordInScope(vr: ValueRef, parents: Parents): Unit =
     for
       entity <- parents.collectFirst { case e: Entity => e }
@@ -8122,6 +8173,11 @@ case class ValidationPass(
       // `let me = self` then `me.id` reaches this ARM through `valueRefTypeExpr`'s
       // `valueTypeExpr(ls.expression, …)` fallback, walked by `typeExprOfPath` exactly like any
       // other let's inferred type -- no special casing needed there.
+      // `system.now` is a TimeStamp and `system.random` a Real. A bare `system`, or an unknown
+      // member, has NO type -- `checkSystemMember` reports it, and answering here would let a
+      // typo type-check as whatever the position wanted.
+      case sv: SystemValue =>
+        sv.field.map(_.value).flatMap(SystemValue.members.get).map(f => f(sv.loc))
       case sv: SelfValue =>
         enclosingProcessorOf(parents).map { p =>
           val agg = SelfValue.aggregation(pathOf(p))
@@ -8215,6 +8271,7 @@ case class ValidationPass(
   ): Unit =
     v match
       case _: LiteralString => ()
+      case sv: SystemValue  => checkSystemMember(sv)
       case lv: LookupValue =>
         validateValue(lv.collection, parents, lets, elements)
         lv.indices.foreach(i => validateValue(i, parents, lets, elements))
@@ -8395,6 +8452,8 @@ case class ValidationPass(
       case cr: ConstantRef =>
         resolution.refMap.definitionOf[Constant](cr.pathId).flatMap(k => typeExprCategory(k.typeEx))
       case gv: GetValue   => valueCategory(gv, parents, lets, elements)
+      case sv: SystemValue =>
+        SystemValue.members.get(sv.field.map(_.value).getOrElse("")).map(f => typeExprCategory(f(sv.loc))).flatten
       case _: LookupValue => None
       case vr: ValueRef =>
         valueCategory(vr, parents, lets, elements)
@@ -8416,6 +8475,7 @@ case class ValidationPass(
       case cr: ConstantRef => checkRef[Constant](cr, parents)
       case gv: GetValue    => validateValue(gv, parents, lets, elements)
       case lv: LookupValue => validateValue(lv, parents, lets, elements)
+      case sv: SystemValue => checkSystemMember(sv)
       case vr: ValueRef =>
         if !valueRefResolves(vr, parents, lets, elements) then
           messages.addError(

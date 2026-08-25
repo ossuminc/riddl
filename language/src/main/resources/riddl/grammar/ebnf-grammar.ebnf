@@ -419,7 +419,9 @@ boolean_expression = and_expression {"or" and_expression} ;
 and_expression = not_expression {"and" not_expression} ;
 not_expression = ("not" | "!") not_expression | comparison ;
 comparison = comparand comparison_operator comparand | boolean_atom ;
-comparand = get_value | constant_ref | numeric_literal | ref_or_lookup ;
+(* system_value precedes ref_or_lookup for the same reason it does in boolean_atom: ordered
+   choice means a bare `system` would otherwise be consumed as an ordinary path. *)
+comparand = get_value | constant_ref | numeric_literal | system_value | ref_or_lookup ;
 (* `<collection> at <index>[, <index>...]` -- a mapping by key, a sequence by ordinal, or a table  *)
 (* by one ordinal per dimension. Expressed as a value_ref with an OPTIONAL `at` clause rather than *)
 (* as a separate alternative alongside value_ref, mirroring the fastparse rule: anything that makes *)
@@ -434,12 +436,18 @@ comparison_operator = "==" | "!=" | "<=" | ">=" | "<" | ">" ;
    via value_ref, and always has. `self_value` likewise MUST precede value_ref: `self` is not a
    definition keyword, so a bare `self` would otherwise be consumed as an ordinary path. *)
 boolean_atom = boolean_literal | "(" boolean_expression ")" | get_value | invariant_test
-             | self_value | ref_or_lookup ;
+             | self_value | system_value | ref_or_lookup ;
 invariant_test = "invariant" path_identifier ["with" value] ;
 boolean_literal = "true" | "false" ;
 (* `self` -- the currently executing processor instance -- and `self.<field>` on it. Its type is
    a synthesized record (`id`, `version`), not a user-nameable type. *)
 self_value = "self" ["." identifier] ;
+(* `system` -- values supplied by the running SYSTEM rather than by the model, the exact parallel
+   of `self_value`. `system.now` yields a TimeStamp and `system.random` a Real. Its type is
+   synthesized, not a user-nameable type, and the member set is closed. It carries the SAME
+   ordering constraint as `self_value`: `system` is not a definition keyword, so a bare `system`
+   would otherwise be consumed as an ordinary path. *)
+system_value = "system" ["." identifier] ;
 
 (* A45/A57: boundary value operations. `put` (application/context handlers only) publishes a value
    to a UI output; `return` (function bodies only) returns the function's result value. *)

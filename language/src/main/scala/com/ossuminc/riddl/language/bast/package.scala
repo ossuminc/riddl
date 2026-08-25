@@ -147,7 +147,9 @@ package object bast {
     // reader has no arm for sub-kind 21 at all, so it THROWS rather than misreading -- which is the
     // good failure, and the reason the reader's default arm was made to throw instead of
     // fabricating a PromptStatement. Bumped rather than ridden because 18 SHIPPED in 2.0.0-rc.15.
-    21 // `empty` value: tag 12 in readValue/writeValue. A revision-20 reader hitting tag 12 throws
+    22 // `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
+    // rather than misreading, which is what the revision gate is for.
+    // 21 // `empty` value: tag 12 in readValue/writeValue. A revision-20 reader hitting tag 12 throws
     // rather than misreading, but the gate is what makes that a clean failure.
     // 20 was the tell target: sub-kind 9 now carries a processor/value discriminator before the target,
     // so a revision-19 reader would take a value's bytes as a processor ref and misalign

@@ -1,0 +1,24 @@
+// `system` -- values supplied by the running system, the parallel of `self`.
+// Exercises every position the design requires: a `set`, a constructor argument,
+// and a comparison operand. The CI TatSu validator reads this file, so the EBNF
+// `system_value` rule is covered by it.
+domain SystemValues is {
+  context Clock is {
+    event Ticked is { at: TimeStamp  score: Real }
+    record Reading is { at: TimeStamp  startedAt: TimeStamp  score: Real }
+    entity Meter is {
+      state Running of record Clock.Reading is { ??? }
+      state Stopped of record Clock.Reading is { ??? }
+      handler Handle is {
+        on event Clock.Ticked is {
+          set field Reading.at to system.now
+          set field Reading.score to system.random
+          when Reading.startedAt < system.now then
+            do "it started before now"
+          end
+          yield event Clock.Ticked(at = system.now, score = system.random)
+        }
+      }
+    }
+  }
+}

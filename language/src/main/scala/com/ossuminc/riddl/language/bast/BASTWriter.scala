@@ -1412,7 +1412,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   /** A54/A28: self-contained value codec. A leading discriminator byte selects the arm
     * (0=LiteralString, 1=Constructor, 2=ValueRef, 3=GetValue, 4=PromptValue, 5=BooleanExpression,
-    * 6=Call, 7=Ask, 8=Initiate, 9=SelfValue); the reader mirrors this exactly. Discriminator 5 is
+    * 6=Call, 7=Ask, 8=Initiate, 9=SelfValue, 13=SystemValue); the reader mirrors this exactly. Discriminator 5 is
     * followed by a sub-tag byte selecting the boolean node (0=BooleanLiteral, 1=Comparison,
     * 2=Logical, 3=Not); operator enums are stored by ordinal. A20 (revision 18): discriminator 4
     * (PromptValue) APPENDS an optional `as <type>` ascription after the prompt literal, via
@@ -1508,6 +1508,11 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(9)
         writeLocation(sv.loc)
         writeOption(sv.field)(writeIdentifierInline)
+      // `system` -- tag 13, revision 22. Same shape as `self`: a location and an optional member.
+      case sv: SystemValue =>
+        writer.writeU8(13)
+        writeLocation(sv.loc)
+        writeOption(sv.field)(writeIdentifierInline)
       case init: Initiate =>
         writer.writeU8(8)
         writeLocation(init.loc)
@@ -1578,6 +1583,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(3)
         writeLocation(nl.loc)
         writeString(nl.text)
+      // `system` as a comparison operand (`when x < system.now`) -- comparand tag 5, revision 22.
+      // The Comparand family has its OWN writer/reader pair, separate from writeValue's: adding the
+      // value arm alone produced a MatchError here, which is the split CLAUDE.md warns about.
+      case sv: SystemValue =>
+        writer.writeU8(5)
+        writeLocation(sv.loc)
+        writeOption(sv.field)(writeIdentifierInline)
   }
 
   def writeConstructor(c: Constructor): Unit = {

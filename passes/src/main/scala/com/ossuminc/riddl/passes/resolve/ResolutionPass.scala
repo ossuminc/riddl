@@ -544,6 +544,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       // ValidationPass (see SelfValue.aggregation), which is the whole point of the design: no
       // resolution rule needs to know `self` exists.
       case _: SelfValue           => ()
+      // `system` names no path either: its members are synthesized, not looked up.
+      case _: SystemValue         => ()
       case ic: InvariantCondition =>
         // `when invariant X [with <expr>]` — resolve the named invariant, and the handed value if
         // there is one. Without this the reference would sit unresolved and validation could only
@@ -575,6 +577,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case vr: ValueRef      => deferValueRef(vr, parents)
       case lv: LookupValue   => resolveValue(lv, parents)
       case _: NumericLiteral => ()
+      // `system.now` in a comparison names no path: its members are synthesized, not looked up.
+      case _: SystemValue    => ()
 
   /** A29: resolve the reference-bearing parts of a [[MatchStatement]] — the subject (a GetValue
     * source; a bare ValueRef is queued for [[resolveValueRef]]), each pattern (a [[TypePattern]]'s

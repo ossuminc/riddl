@@ -831,7 +831,7 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | Initiate |
+    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Initiate |
     NumericLiteral | LookupValue | EmptyValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
@@ -3047,7 +3047,7 @@ object AST:
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
-      Ask | SelfValue | Initiate | NumericLiteral | LookupValue | EmptyValue
+      Ask | SelfValue | SystemValue | Initiate | NumericLiteral | LookupValue | EmptyValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -3206,6 +3206,55 @@ object AST:
     override def kind: String = "Self"
     def format: String = s"self${field.map("." + _.format).getOrElse("")}"
   end SelfValue
+
+  /** `system` -- values supplied by the running SYSTEM rather than by the model (Reid,
+    * 2026-08-25). The exact parallel of [[SelfValue]]: `self` is the currently executing processor
+    * instance, `system` is the currently executing system.
+    *
+    * The gap it closes: RIDDL has `TimeStamp`, `DateTime`, `Date`, `Time` and `Duration` as types
+    * and had no expression yielding the current one, so a field recording when something happened
+    * could never be populated. riddl-generator measured 155 of its 1,180 `AI FILL` holes on
+    * reactive-bbq naming a `java.time` type -- 13% of every hole was a clock read.
+    *
+    * Like `self`, its type is synthesized and NOT user-nameable, and the keyword is deliberately
+    * extensible: members can join without another keyword.
+    */
+  @JSExportTopLevel("SystemValue")
+  case class SystemValue(loc: At, field: Option[Identifier] = None) extends RiddlValue:
+    override def kind: String = "System"
+    def format: String = s"system${field.map("." + _.format).getOrElse("")}"
+  end SystemValue
+
+  object SystemValue:
+    /** The CLOSED set of members, and the type each yields.
+      *
+      * The admission test is the one [[SelfValue.fieldNames]] established, with a second question
+      * this one had to face:
+      *
+      *   - **RUNTIME-ONLY.** Anything a generator can know statically it should inline.
+      *   - **What does re-evaluation cost?** The CM makes state as of any past point
+      *     reconstructible, so a value that differs on replay can silently change reconstructed
+      *     state.
+      *
+      * `now` passes both in the position that matters: a command handler evaluates it once and the
+      * event it yields CARRIES the instant, so replay reads the recorded value rather than
+      * re-reading the clock.
+      *
+      * **`random` is in by Reid's ruling (2026-08-25)**, accepting the nondeterminism: it is
+      * genuinely useful to model writers even though it complicates testing. It yields `Real`, so it
+      * is compatible with a wide range of numeric values.
+      *
+      * Deliberately absent: `today`/`date` (derivable from `now`, and two spellings of one fact
+      * invite drift), `uuid` (fresh identity already has a construct -- `initiate` yields `Id(P)`),
+      * and `hostname`/`nodeId` (deployment detail, which is what kept `self.isClustered` out).
+      */
+    val members: Map[String, At => TypeExpression] = Map(
+      "now" -> (loc => TimeStamp(loc)),
+      "random" -> (loc => Real(loc))
+    )
+
+    val fieldNames: Seq[String] = members.keys.toSeq.sorted
+  end SystemValue
 
   object SelfValue:
     /** The CLOSED set of fields. Adding one is a language change, not a detail.
@@ -3482,7 +3531,9 @@ object AST:
     * structure: a literal comparand draws a StyleWarning suggesting a named constant. Booleans
     * remain excluded — `true`/`false` are boolean ATOMS, so `count > true` is still a parse error.
     */
-  type Comparand = ValueRef | GetValue | ConstantRef | NumericLiteral | LookupValue
+  // `system.now` must work in a comparison (`when partial.startedAt < system.now`), which is an
+  // acceptance criterion of the design, so SystemValue joins this union too.
+  type Comparand = ValueRef | GetValue | ConstantRef | NumericLiteral | LookupValue | SystemValue
 
   /** A28: the boolean-expression sub-language. An arm of the [[Value]] union so `let`/`set`/`put`/
     * `return` accept booleans for free. All cases are [[RiddlValue]]s so `.format`/`.loc` work on

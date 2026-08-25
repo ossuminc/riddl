@@ -692,6 +692,9 @@ private[parsing] trait StatementParser {
       getValue.map(gv => gv: Comparand) |
         constantRef.map(cr => cr: Comparand) |
         numericLiteral.map(nl => nl: Comparand) |
+        // `when partial.startedAt < system.now` is an acceptance criterion of the design, so this
+        // union accepts it too -- and it must precede refOrLookup for the keyword reason above.
+        systemValue.map(sv => sv: Comparand) |
         refOrLookup.map(v => v.asInstanceOf[Comparand])
     )
   }
@@ -784,6 +787,7 @@ private[parsing] trait StatementParser {
         getValue.map(gv => gv: Value) |
         invariantCondition.map(ic => ic: Value) |
         selfValue.map(sv => sv: Value) | // before valueRef: `self` is a keyword, not a path
+        systemValue.map(sv => sv: Value) | // same reason as `self`
         refOrLookup
     )
   }
@@ -874,6 +878,20 @@ private[parsing] trait StatementParser {
     P(
       Index ~ Keywords.self ~ (Punctuation.dot ~ identifier).? ~ Index
     )./.map { case (start, field, end) => SelfValue(at(start, end), field) }
+  }
+
+  // `system` -- values supplied by the running system. The exact parallel of `selfValue`, and it
+  // carries the SAME ordering constraint: `system` is not a `definitionKeywords` entry, so it must
+  // precede `valueRef` or the permissive bare-path parser consumes it as an ordinary identifier.
+  private def systemValue[u: P]: P[SystemValue] = {
+    // NO CUT, unlike `selfValue`, and the difference is load-bearing: `systemValue` is also an arm
+    // of `comparand`, and `comparison` tries `comparand ~ operator` -- so a cut here commits to the
+    // comparison and turns `set x to system.now` into "Expected one of (!= | < | <= | == | > | >=)"
+    // at the end of the statement. `self` never faced this because SelfValue is not a Comparand.
+    // Error quality is unaffected: `system.bogus` still parses and `checkSystemMember` reports it.
+    P(
+      Index ~ Keywords.system ~ (Punctuation.dot ~ identifier).? ~ Index
+    ).map { case (start, field, end) => SystemValue(at(start, end), field) }
   }
 
   // A54: a bare path identifier naming a value in scope. Resolved to a let-local, message field,

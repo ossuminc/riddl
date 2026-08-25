@@ -1584,6 +1584,7 @@ object JsonAstBuilder:
       case InvariantConditionDto(inv, argument) =>
         InvariantCondition(curAt, InvariantRef(curAt, pathId(inv)), argument.map(buildValue))
       case SelfValueDto(field) => SelfValue(curAt, field.map(f => Identifier(curAt, f)))
+      case SystemValueDto(field) => SystemValue(curAt, field.map(f => Identifier(curAt, f)))
       case i: InitiateValueDto => // A70/instance-identity
         Initiate(
           curAt,
@@ -1601,6 +1602,7 @@ object JsonAstBuilder:
       case ValueRefDto(p)          => ValueRef(curAt, pathId(p))
       case ConstantRefDto(p)       => ConstantRef(curAt, pathId(p))
       case NumericLiteralDto(text) => NumericLiteral(curAt, text)
+      case SystemValueDto(field)   => SystemValue(curAt, field.map(f => Identifier(curAt, f)))
       case GetValueDto(source, keyword, ref) =>
         val src: InputRef | StateRef = source match
           case "input" => InputRef(curAt, keyword.getOrElse("input"), pathId(ref))

@@ -1500,6 +1500,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ls: LiteralString => LiteralValueDto(ls.s)
     case pv: PromptValue   => PromptValueDto(pv.prompt.s, pv.typeEx.map(serializeTypeExpr))
     case ev: EmptyValue    => EmptyValueDto(ev.typeEx.map(serializeTypeExpr))
+    case sv: SystemValue   => SystemValueDto(sv.field.map(_.value))
     case vr: ValueRef      => ValueRefDto(path(vr.path))
     case lv: LookupValue => LookupValueDto(path(lv.collection.path), lv.indices.map(serializeValue))
     case gv: GetValue =>
@@ -1548,6 +1549,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case vr: ValueRef    => ValueRefDto(path(vr.path))
     case cr: ConstantRef => ConstantRefDto(path(cr.pathId))
     case nl: NumericLiteral => NumericLiteralDto(nl.text)
+    case sv: SystemValue    => SystemValueDto(sv.field.map(_.value))
     case gv: GetValue =>
       gv.source match
         case ir: InputRef => GetValueDto("input", Some(ir.keyword), path(ir.pathId))

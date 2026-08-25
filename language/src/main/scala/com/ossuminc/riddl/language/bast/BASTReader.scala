@@ -2664,6 +2664,10 @@ class BASTReader(
         val loc = readLocation()
         val field = readOption(readIdentifierInline())
         SelfValue(loc, field)
+      case 13 => // SystemValue -- `system` / `system.<member>` (revision 22)
+        val loc = readLocation()
+        val field = readOption(readIdentifierInline())
+        SystemValue(loc, field)
       case 10 => // NumericLiteral -- text as written
         val loc = readLocation()
         NumericLiteral(loc, readString())
@@ -2698,6 +2702,10 @@ class BASTReader(
         val loc = readLocation()
         val pid = readPathIdentifierInline()
         ValueRef(loc, pid)
+      case 5 => // SystemValue -- `system.<member>` as a comparison operand (revision 22)
+        val loc = readLocation()
+        val field = readOption(readIdentifierInline())
+        SystemValue(loc, field)
       case 1 => // GetValue
         val loc = readLocation()
         val srcType = reader.readU8()
