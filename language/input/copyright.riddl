@@ -41,7 +41,7 @@ domain CopyrightTest is {
       record Rec(id: Integer)
 
       schema Store is relational
-        of Rec as type Banking.Ledger.Rec
+        of Rec as record Banking.Ledger.Rec
     }
 
     // So is a projector ...
@@ -57,7 +57,7 @@ domain CopyrightTest is {
     processor Feed as source is {
       copyright Feed is "© 2026 Ossum Inc. (feed)"
       version 5
-      outlet Out is type Banking.Ping
+      outlet Out is command Banking.Ping
     }
 
     // ... and an adaptor.

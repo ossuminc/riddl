@@ -1946,9 +1946,21 @@ object JsonAstBuilder:
           RepositorySchemaKind.Other
         }
 
+  /** The `aggregate_use_case` keywords a `TypeRef` may carry (ebnf-grammar.ebnf:115). */
+  // `scala.collection.immutable.Set` in full: `AST.Set` shadows `scala.Set` here.
+  private val Keywords: scala.collection.immutable.Set[String] =
+    scala.collection.immutable
+      .Set("type", "command", "query", "event", "result", "record", "graph", "table")
+
   private def buildSchema(s: SchemaDto)(using ctx: Ctx): Schema =
+    // Accepts BOTH `"Path"` (keyword defaulted to `type`, what every file written before
+    // 2026-08-24 contains) and `"<kind> Path"`. A path identifier cannot contain a space, so the
+    // split is unambiguous.
     val data = s.data.map { case (k, v) =>
-      Identifier(curAt, k) -> TypeRef(curAt, "type", pathId(v))
+      val (kw, p) = v.split(' ').toList match
+        case kind :: rest if rest.nonEmpty && Keywords.contains(kind) => (kind, rest.mkString(" "))
+        case _                                                        => ("type", v)
+      Identifier(curAt, k) -> TypeRef(curAt, kw, pathId(p))
     }
     val links = s.links.flatMap { case (k, fields) =>
       if fields.sizeIs >= 2 then

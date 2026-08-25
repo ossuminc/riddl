@@ -37,7 +37,7 @@ domain ignore {
     page BlogEntryPage {
       contains HeaderMenu as group Header
       text BackToBlogHomeLink initiates command GotoBlogHome
-      output BlogContents shows BlogEntry
+      output BlogContents shows record BlogEntry
       output RelatedPosts shows BlogList
     }
   }

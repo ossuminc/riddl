@@ -6,10 +6,10 @@ passes/input/check/everything/everything.riddl(1:1->18):
  domain Everything is {
 passes/input/check/everything/everything.riddl(7:5->18):
  Source 'Source' should have a handler:
-     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
+     source Source is { outlet Commands is command DoAThing } with { described by "Data Source" }
 passes/input/check/everything/everything.riddl(8:5->14):
  Sink 'Sink' should have a handler:
-     sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
+     sink Sink is { inlet Commands is command DoAThing } with { explained as "Data Sink" }
 passes/input/check/everything/everything.riddl(16:3->15):
  Metadata in Context 'full' should not be empty:
    context full is {
@@ -149,13 +149,13 @@ passes/input/check/everything/everything.riddl(66:5->26):
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(67:7->20):
  Metadata in Sink 'trashBin' should not be empty:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(67:7->20):
  Sink 'trashBin' should have a description:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(67:7->20):
  Sink 'trashBin' should have a handler:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(69:7->28):
  Metadata in State 'otherThingState' should not be empty:
        state otherThingState of record Everything.StateType
@@ -167,15 +167,15 @@ passes/input/check/everything/everything.riddl(70:7->18):
        handler fee is {
 passes/input/check/everything/everything.riddl(7:24->39):
  Outlet 'Commands' is overloaded with 2 kinds:
-   Outlet 'Commands' at passes/input/check/everything/everything.riddl(7:24->52),
-   Inlet 'Commands' at passes/input/check/everything/everything.riddl(8:20->47):
-     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
+   Outlet 'Commands' at passes/input/check/everything/everything.riddl(7:24->60),
+   Inlet 'Commands' at passes/input/check/everything/everything.riddl(8:20->55):
+     source Source is { outlet Commands is command DoAThing } with { described by "Data Source" }
 passes/input/check/everything/everything.riddl(67:7->20):
  Sink 'trashBin' has no connections to any connector:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(67:26->38):
  Inlet 'SOT_In' is not connected:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' is unused:
      entity Something is {
@@ -214,13 +214,13 @@ passes/input/check/everything/everything.riddl(50:7->37):
        function whenUnderTheInfluence is {
 passes/input/check/everything/everything.riddl(67:7->11):
  The `sink` keyword is deprecated; use `processor trashBin as sink` instead:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(7:5->11):
  The `source` keyword is deprecated; use `processor Source as source` instead:
-     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
+     source Source is { outlet Commands is command DoAThing } with { described by "Data Source" }
 passes/input/check/everything/everything.riddl(8:5->9):
  The `sink` keyword is deprecated; use `processor Sink as sink` instead:
-     sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
+     sink Sink is { inlet Commands is command DoAThing } with { explained as "Data Sink" }
 passes/input/check/everything/everything.riddl(58:16->52):
  'event full.SomeOtherThing.ItHappened' in this 'send' names a message type, not a value, so nothing says where its 1 field(s) come from:
            send event full.SomeOtherThing.ItHappened to

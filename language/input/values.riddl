@@ -32,8 +32,8 @@ domain Values is {
     record Greeting is { text: String }
     command Refresh is { ??? }
     group Main is {
-      form Entry acquires type Greeting
-      output Panel presents type Greeting
+      form Entry acquires record Greeting
+      output Panel presents record Greeting
     }
     handler Screen is {
       on command Refresh {

@@ -21,7 +21,7 @@ class RepositoryTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain foo is {
           |  context bar is {
-          |    source itin is { outlet hereyougo is bar.fubar.Reply }
+          |    source itin is { outlet hereyougo is result bar.fubar.Reply }
           |    repository fubar is {
           |      query GetOne is { how: String }
           |      result Reply is { that: String }

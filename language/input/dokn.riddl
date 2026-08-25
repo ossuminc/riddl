@@ -24,8 +24,8 @@ domain dokn is {
 
     context Companies is {
         flow events is {
-          inlet CompanyEvents_in is event dokn.Companies.Company.CompanyEvent
-          outlet CompanyEvents_out is event dokn.Companies.Company.CompanyEvent
+          inlet CompanyEvents_in is type dokn.Companies.Company.CompanyEvent
+          outlet CompanyEvents_out is type dokn.Companies.Company.CompanyEvent
         }
         connector CompanyEvents is {
           from outlet CompanyEvents_out to inlet CompanyEvents_in

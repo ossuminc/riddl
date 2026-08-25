@@ -17,9 +17,9 @@ domain Restaurant is {
       }
     }
 
-    source Events is { outlet out is type ReservationMade }
+    source Events is { outlet out is event ReservationMade }
     sink Incoming is {
-      inlet in is type MakeReservation
+      inlet in is command MakeReservation
       handler Dispatch is {
         on command Restaurant.FrontOfHouse.MakeReservation {
           tell command Restaurant.FrontOfHouse.MakeReservation

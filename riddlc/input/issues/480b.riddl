@@ -6,7 +6,7 @@ domain Foo {
     }
     record NewUserRecord is { name: String }
     page NewUser {
-      form NewUserForm accepts NewUserRecord
+      form NewUserForm accepts record NewUserRecord
     }
   }
 

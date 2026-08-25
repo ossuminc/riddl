@@ -1142,7 +1142,16 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         SchemaDto(
           sc.id.value,
           Some(sc.schemaKind.toString),
-          sc.data.map { case (id, tr) => id.value -> path(tr.pathId) },
+          // The KEYWORD is part of the reference, not decoration: `of Rec as record X` and
+          // `as type X` are different references, and until 2026-08-24 this wrote the path alone
+          // so a JSON round trip silently rewrote every schema field to `type`. It was invisible
+          // while `type` was the only keyword anyone wrote; the prefix-truthfulness rule made it
+          // visible immediately. Emitted only when it is NOT the default, so existing output is
+          // byte-identical and the reader below accepts both shapes.
+          sc.data.map { case (id, tr) =>
+            val p = path(tr.pathId)
+            id.value -> (if tr.keyword == "type" then p else s"${tr.keyword} $p")
+          },
           sc.links.map { case (id, (a, b)) => id.value -> Seq(path(a.pathId), path(b.pathId)) },
           sc.indices.map(fr => path(fr.pathId)),
           briefOf(sc.metadata),

@@ -9,7 +9,7 @@ domain d is {
     record Result is { ok: Boolean }
     function Unary is {
       requires Age
-      returns Result
+      returns record Result
       ???
     }
     function WithRecord is {

@@ -3968,6 +3968,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, repository)
+    checkRepositoryInletKinds(repository)
     checkNonEmpty(
       repository.contents.filter[Schema],
       "schema",
@@ -4035,6 +4036,48 @@ case class ValidationPass(
     * a repository with no schema (nothing to index), and for one that answers no queries -- a
     * write-only sink legitimately needs no index.
     */
+  /** An event may not arrive at a repository's inlet -- an Error (Reid, 2026-08-24).
+    *
+    * *"It makes no sense for an event to be processed there. Events handled by entities or
+    * repositories should turn those into state-changing commands on the repository and send it to
+    * its inlet for those kinds of commands."*
+    *
+    * A repository is CHANGED by commands and READ by queries. An event is a record of something
+    * that already happened; routing one straight into storage skips the decision about what the
+    * event should change, and leaves that decision nowhere in the model. The correct shape names
+    * it: the entity handling the event emits a command, and the command is what the repository's
+    * inlet takes.
+    *
+    * **Alternation members are expanded, because that is the vector.** riddl-models' own
+    * `check-repository-ports.py` exists precisely because an event inlet typed with an alternation
+    * validated clean once an `on other` covered its members -- the inlet said `is type XEvent` and
+    * nothing looked at what `XEvent` was made of. `alternationMembers` follows alias chains with a
+    * reference-identity cycle guard, so `type A is B` / `type B is A` cannot spin here.
+    *
+    * Reported per offending MEMBER, naming it, so a mixed alternation says which parts are wrong
+    * rather than condemning the whole type.
+    */
+  private def checkRepositoryInletKinds(repository: Repository): Unit = {
+    repository.inlets.foreach { inlet =>
+      resolution.refMap.definitionOf[Type](inlet.type_.pathId).foreach { t =>
+        val offenders = alternationMembers(t).filter { m =>
+          typeExprMessageKind(m.typEx).contains(AggregateUseCase.EventCase)
+        }
+        offenders.foreach { m =>
+          val via =
+            if m eq t then "" else s" (through ${t.identify})"
+          messages.addError(
+            inlet.loc,
+            s"${inlet.identify} of ${repository.identify} carries event '${m.id.value}'$via: a " +
+              "repository is changed by commands and read by queries, never by events",
+            suggestion = s"Have whatever handles '${m.id.value}' turn it into a state-changing " +
+              s"command (e.g. 'command Persist${m.id.value}') and send THAT to this inlet."
+          )
+        }
+      }
+    }
+  }
+
   private def checkQueriedWithoutIndex(repository: Repository): Unit = {
     if repository.nonEmpty then {
       val schemas = repository.contents.filter[Schema]

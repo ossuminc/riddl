@@ -188,8 +188,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |      }
           |    }
           |    query GetData is { id: String }
-          |    source Events is { outlet out is type Evt }
-          |    sink Incoming is { inlet in is type Cmd }
+          |    source Events is { outlet out is event Evt }
+          |    sink Incoming is { inlet in is command Cmd }
           |  }
           |}
           |""".stripMargin,
@@ -223,8 +223,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |      }
           |    }
           |    query GetData is { id: String }
-          |    source Events is { outlet out is type Evt }
-          |    sink Incoming is { inlet in is type Cmd }
+          |    source Events is { outlet out is event Evt }
+          |    sink Incoming is { inlet in is command Cmd }
           |  }
           |}
           |""".stripMargin,
@@ -258,8 +258,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |      }
           |    }
           |    query GetData is { id: String }
-          |    source Events is { outlet out is type Evt }
-          |    sink Incoming is { inlet in is type Cmd }
+          |    source Events is { outlet out is event Evt }
+          |    sink Incoming is { inlet in is command Cmd }
           |  }
           |}
           |""".stripMargin,
@@ -290,7 +290,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |      }
           |    }
           |    query GetData is { id: String }
-          |    sink Incoming is { inlet in is type Cmd }
+          |    sink Incoming is { inlet in is command Cmd }
           |  }
           |}
           |""".stripMargin,
@@ -326,8 +326,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |      }
           |    }
           |    query GetData is { id: String }
-          |    source Events is { outlet out is type Evt }
-          |    sink Incoming is { inlet in is type Cmd }
+          |    source Events is { outlet out is event Evt }
+          |    sink Incoming is { inlet in is command Cmd }
           |  }
           |}
           |""".stripMargin,
@@ -359,7 +359,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    source Events is { outlet out is type Evt }
+          |    source Events is { outlet out is event Evt }
           |    sink Incoming is { inlet in is type Qry }
           |  }
           |}
@@ -515,8 +515,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    source Events is { outlet out is type Evt }
-          |    sink Incoming is { inlet in is type Cmd }
+          |    source Events is { outlet out is event Evt }
+          |    sink Incoming is { inlet in is command Cmd }
           |  }
           |}
           |""".stripMargin,
@@ -855,8 +855,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    source Events is { outlet out is type Evt }
-          |    sink Incoming is { inlet in is type Cmd }
+          |    source Events is { outlet out is event Evt }
+          |    sink Incoming is { inlet in is command Cmd }
           |  }
           |}
           |""".stripMargin,
@@ -1149,8 +1149,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    source Events is { outlet out is type Evt }
-          |    sink Incoming is { inlet in is type Cmd }
+          |    source Events is { outlet out is event Evt }
+          |    sink Incoming is { inlet in is command Cmd }
           |  }
           |}
           |""".stripMargin,
@@ -1320,8 +1320,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |        }
           |      }
           |    }
-          |    source Events is { outlet out is type Evt }
-          |    sink Incoming is { inlet in is type Cmd }
+          |    source Events is { outlet out is event Evt }
+          |    sink Incoming is { inlet in is command Cmd }
           |  }
           |}
           |""".stripMargin,
@@ -1555,7 +1555,7 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context C is {
           |    type Evt is String
-          |    source Events is { outlet out is type Evt } with { option protocol("kafka") }
+          |    source Events is { outlet out is event Evt } with { option protocol("kafka") }
           |    entity E is {
           |      handler h is { ??? }
           |    } with { option protocol("amqp") }
@@ -1780,7 +1780,7 @@ class CompletenessTest extends AbstractValidatingTest {
         """domain D is {
           |  context C is {
           |    type Evt is any of { A, B }
-          |    source Events is { outlet out is type Evt }
+          |    source Events is { outlet out is event Evt }
           |    sink Incoming is {
           |      inlet in is type Evt with { option unordered }
           |    }

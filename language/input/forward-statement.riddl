@@ -13,7 +13,7 @@ domain Delegation is {
     query AskIt replies result Boundary.Answer is { note: String } with { briefly "a query" }
 
     entity Worker is {
-      inlet Work is type Boundary.DoIt
+      inlet Work is command Boundary.DoIt
       handler w is {
         on command Boundary.DoIt is { yield event Boundary.Happened }
         on query Boundary.AskIt is { reply result Boundary.Answer }
@@ -21,7 +21,7 @@ domain Delegation is {
     } with { briefly "downstream worker" }
 
     entity Front is {
-      outlet Onward is type Boundary.DoIt
+      outlet Onward is command Boundary.DoIt
 
       handler h is {
         // Portlet shape: forward to an outlet, exactly where `send` would go.

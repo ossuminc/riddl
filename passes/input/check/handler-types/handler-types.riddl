@@ -6,7 +6,7 @@ domain HandlerTypes is {
 
     repository EventRepo is {
       schema RepoSchema is flat
-        of records as type RecordType
+        of records as record RecordType
       with { briefly as "Repo schema" }
 
       handler EventHandler is {

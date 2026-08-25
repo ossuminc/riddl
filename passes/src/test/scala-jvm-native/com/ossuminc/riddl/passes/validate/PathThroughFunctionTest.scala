@@ -68,10 +68,10 @@ class PathThroughFunctionTest extends AbstractValidatingTest {
        |    record TaxIn is { subtotal is Natural }
        |    function Tax is {
        |      $clauses
-       |      function Compute is { requires TaxIn returns TaxIn ??? }
+       |      function Compute is { requires record TaxIn returns record TaxIn ??? }
        |    }
        |    function Caller is {
-       |      requires TaxIn returns TaxIn
+       |      requires record TaxIn returns record TaxIn
        |      return call function Tax.Compute(subtotal)
        |    }
        |  }
@@ -84,7 +84,7 @@ class PathThroughFunctionTest extends AbstractValidatingTest {
     // `None` for the TypeRef and absent forms, `Some` for the inline Aggregation -- so each is
     // covered rather than assuming one stands for the rest.
     "resolve when the enclosing function uses a TypeRef requires/returns" in { (td: TestData) =>
-      hardFailures(nestedModel("requires TaxIn returns TaxIn"), td.name) mustBe empty
+      hardFailures(nestedModel("requires record TaxIn returns record TaxIn"), td.name) mustBe empty
     }
 
     "resolve when the enclosing function has NO requires/returns" in { (td: TestData) =>
@@ -103,7 +103,7 @@ class PathThroughFunctionTest extends AbstractValidatingTest {
       // Case C. The crash fired before any name comparison, so a missing target produced the
       // SAME empty severe as a present one. It must now name what could not be found.
       val errs = hardFailures(
-        nestedModel("requires TaxIn returns TaxIn").replace("Tax.Compute", "Tax.Nonexistent"),
+        nestedModel("requires record TaxIn returns record TaxIn").replace("Tax.Compute", "Tax.Nonexistent"),
         td.name
       ).mkString("\n")
       errs must include("Nonexistent")
@@ -117,11 +117,11 @@ class PathThroughFunctionTest extends AbstractValidatingTest {
         """domain Dom is {
           |  context Tax is {
           |    record TaxIn is { subtotal is Natural }
-          |    function Compute is { requires TaxIn returns TaxIn ??? }
+          |    function Compute is { requires record TaxIn returns record TaxIn ??? }
           |  }
           |  context Ctx is {
           |    function Caller is {
-          |      requires Tax.TaxIn returns Tax.TaxIn
+          |      requires record Tax.TaxIn returns record Tax.TaxIn
           |      return call function Tax.Compute(subtotal)
           |    }
           |  }
@@ -134,7 +134,7 @@ class PathThroughFunctionTest extends AbstractValidatingTest {
   "a nested function's privacy" should {
 
     "draw a style warning when called from OUTSIDE the enclosing function" in { (td: TestData) =>
-      val msgs = diagnostics(nestedModel("requires TaxIn returns TaxIn"), td.name)
+      val msgs = diagnostics(nestedModel("requires record TaxIn returns record TaxIn"), td.name)
         .map(_.message)
         .mkString("\n")
       msgs must include(privateNag)
@@ -150,8 +150,8 @@ class PathThroughFunctionTest extends AbstractValidatingTest {
           |  context Ctx is {
           |    record TaxIn is { subtotal is Natural }
           |    function Tax is {
-          |      requires TaxIn returns TaxIn
-          |      function Compute is { requires TaxIn returns TaxIn ??? }
+          |      requires record TaxIn returns record TaxIn
+          |      function Compute is { requires record TaxIn returns record TaxIn ??? }
           |      return call function Compute(subtotal)
           |    }
           |  }

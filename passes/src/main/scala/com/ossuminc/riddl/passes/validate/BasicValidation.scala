@@ -97,7 +97,54 @@ trait BasicValidation(using pc: PlatformContext) {
     reference: Reference[T],
     parents: Parents
   ): Option[T] = {
-    checkPathRef[T](reference.pathId, parents)
+    val resolved = checkPathRef[T](reference.pathId, parents)
+    // Every `TypeRef` in the model funnels through here, whether its caller went via
+    // `checkTypeRef` or called `checkRef[Type]` directly (invariant `requires` does). Putting the
+    // truthfulness check at this one point covers both without threading it through call sites,
+    // and cannot double-report: one call, one check. `MessageRef` is an `AggregateRef`, NOT a
+    // `TypeRef`, so on-clauses are untouched -- `checkMessageRef` already owns their kind rule.
+    reference match
+      case tr: TypeRef =>
+        resolved.foreach {
+          case t: Type => checkTypeRefKeyword(tr, t)
+          case _       => ()
+        }
+      case _ => ()
+    resolved
+  }
+
+  /** A reference's prefix must name what the target was DECLARED as (Reid, 2026-08-24).
+    *
+    * *"I required that kind-of-thing prefix for all references SPECIFICALLY to avoid ambiguity and
+    * to aid comprehension of the model when read. Using `type` undoes that requirement."*
+    *
+    * **Keyed off the DECLARATION, never off what the reference carries.** An alternation declared
+    * `type OrderEvent is one of { ... }` genuinely IS a type even though every member is an event,
+    * so `is type OrderEvent` stays correct. Asking what the reference *carries* would redden all
+    * 230 such references in reactive-bbq alone and be wrong about every one; asking what the target
+    * was *declared* flags only the references that point straight at a message.
+    *
+    * **An omitted prefix is indistinguishable from `type`**, because `TypeRef.keyword` defaults to
+    * `"type"` -- there is no "was it written?" bit in the AST. Reid ruled that the bare form is
+    * therefore held to the same standard: the prefix is required and must be truthful. The message
+    * below says "names it as a type" rather than "is prefixed type", because the latter is a lie to
+    * an author who wrote no prefix at all.
+    */
+  private def checkTypeRefKeyword(ref: TypeRef, target: Type): Unit = {
+    val declared: String = target.typEx match
+      case auc: AggregateUseCaseTypeExpression => auc.usecase.useCase.toLowerCase
+      case _                                   => "type"
+    val written = ref.keyword.toLowerCase
+    if written != declared then
+      val name = ref.pathId.format
+      messages.addError(
+        ref.loc,
+        s"'$name' is declared ${article(declared)}, but this reference names it as " +
+          s"${article(written)}",
+        suggestion = s"Write '$declared $name'. A reference's prefix must name what the target " +
+          "was declared as; an omitted prefix means 'type', which is correct only when the " +
+          "target really is a 'type'."
+      )
   }
 
   def checkRefAndExamine[T <: Definition: ClassTag](
