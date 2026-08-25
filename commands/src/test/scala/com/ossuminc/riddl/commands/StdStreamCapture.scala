@@ -33,12 +33,24 @@ object StdStreamCapture {
     * Sharing the ONE monitor removes the ordering question instead of documenting it: there is no
     * second lock to order against, and Java monitors are reentrant so nesting is safe either way.
     */
+  /** Redirects BOTH `System.out` and `scala.Console.out`, and the second is not redundant.
+    *
+    * `println` in Scala source is `Console.println`, and `Console.out` is a DynamicVariable
+    * initialised from `System.out` when the class loads -- so `System.setOut` alone does NOT
+    * redirect it. In production the two are the same object and nothing notices; under capture,
+    * output written with a bare `println` goes to the real stdout and the test sees an empty
+    * string. That reads as "the command printed nothing", which is precisely the failure this
+    * whole family of tests exists to detect, arriving as a false positive from the instrument.
+    *
+    * Found 2026-08-25 by `ValidateJsonTest`: the JSON was visibly in the sbt log while the
+    * assertion reported exhausted input.
+    */
   def capturingStdOut[A](f: () => A): (A, String) = pc.synchronized {
     val saved = System.out
     val captured = StringBuildingPrintStream()
     try
       System.setOut(captured)
-      val a = f()
+      val a = Console.withOut(captured) { f() }
       captured.flush()
       (a, captured.mkString())
     finally System.setOut(saved)

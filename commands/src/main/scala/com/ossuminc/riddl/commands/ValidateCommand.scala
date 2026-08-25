@@ -37,7 +37,8 @@ object ValidateCommand {
 
   case class Options(
     inputFile: Option[Path] = None,
-    failOn: Option[String] = None
+    failOn: Option[String] = None,
+    json: Boolean = false
   ) extends CommandOptions {
     def command: String = cmdName
   }
@@ -79,7 +80,10 @@ class ValidateCommand(using pc: PlatformContext)
           )
           .action((s, o) => o.copy(failOn = Some(s.toLowerCase)))
           .text(s"Exit non-zero if any message is at or above this severity " +
-            s"(${Severities.mkString(", ")})")
+            s"(${Severities.mkString(", ")})"),
+        opt[Unit]("json")
+          .action((_, o) => o.copy(json = true))
+          .text("Emit diagnostics as a JSON array on stdout instead of the human summary")
       )
       .text("Validate a model and report a one-line summary of what was checked")
       -> Options()
@@ -90,7 +94,8 @@ class ValidateCommand(using pc: PlatformContext)
     val inputFile =
       if obj.hasPath("input-file") then Option(Path.of(obj.getString("input-file"))) else None
     val failOn = if obj.hasPath("fail-on") then Option(obj.getString("fail-on")) else None
-    Options(inputFile, failOn)
+    val json = obj.hasPath("json") && obj.getBoolean("json")
+    Options(inputFile, failOn, json)
   }
 
   override def run(
@@ -103,7 +108,7 @@ class ValidateCommand(using pc: PlatformContext)
         case Left(messages) =>
           // A file that cannot be read has no counts to report beyond the messages themselves,
           // but it must still not be silent.
-          summarize(0, messages)
+          report(options, 0, messages)
           Left(messages)
         case Right(rpi) =>
           // `shouldFailOnError = false` so the RESULT is in hand either way and the summary can be
@@ -111,16 +116,56 @@ class ValidateCommand(using pc: PlatformContext)
           // with errors still returns Left, exactly as before.
           Riddl.parseAndValidate(rpi, shouldFailOnError = false) match
             case Left(messages) =>
-              summarize(0, messages)
+              report(options, 0, messages)
               Left(messages)
             case Right(result) =>
-              summarize(result.symbols.parentage.size, result.messages)
+              report(options, result.symbols.parentage.size, result.messages)
               if result.messages.hasErrors then Left(result.messages)
               else if failsThreshold(options.failOn, result.messages) then Left(result.messages)
               else Right(result)
       }
       Await.result(future, 10.seconds)
     }
+  }
+
+  /** Emit whichever shape was asked for. Both go to STDOUT, because both are the product. */
+  private def report(options: Options, definitions: Int, messages: Messages): Unit =
+    if options.json then emitJson(messages) else summarize(definitions, messages)
+
+  /** The machine-readable shape: one object per diagnostic, on stdout, and nothing else.
+    *
+    * **Printed with `println`, never `pc.log`**, which prefixes `[info]` and would produce a stream
+    * whose lines are not JSON -- invisible to the eye and fatal to a pipe. The same trap `dump
+    * --json` hit and the reason its count moved to stderr.
+    *
+    * An empty model emits `[]` rather than nothing: a consumer must be able to tell "validated
+    * clean" from "the command never ran", which is the whole reason this command always speaks.
+    *
+    * `rule` is null only for a diagnostic that has not been given an id. Every rule riddl emits
+    * has one, so in practice this is a parse-time message from a path that predates the ids.
+    */
+  private def emitJson(messages: Messages): Unit = {
+    val records = messages.map { m =>
+      val loc = m.loc
+      val fields = scala.collection.mutable.LinkedHashMap[String, ujson.Value](
+        "rule" -> m.ruleCode.map(ujson.Str(_)).getOrElse(ujson.Null),
+        "severity" -> ujson.Str(m.kind.toString),
+        "message" -> ujson.Str(m.message),
+        "file" -> ujson.Str(loc.source.origin),
+        "line" -> ujson.Num(loc.line),
+        "col" -> ujson.Num(loc.col)
+      )
+      if m.context.nonEmpty then fields("context") = ujson.Str(m.context)
+      // The suggestion is stripped by the Accumulator unless --provide-tips is on, so its
+      // presence here reflects what the user asked for rather than what the rule defines.
+      if m.suggestion.nonEmpty then fields("suggestion") = ujson.Str(m.suggestion)
+      ujson.Obj.from(fields.toSeq)
+    }
+    // `System.out.println`, NOT a bare `println`. A bare one is `Console.println`, whose stream is
+    // a THREAD-LOCAL initialised at class load -- and this runs inside the future, on an executor
+    // thread, so it would write to the real stdout even while a test has redirected it. Same
+    // object in production, invisibly different under capture.
+    System.out.println(ujson.write(ujson.Arr.from(records), indent = 2))
   }
 
   /** Does any message reach the `--fail-on` threshold? */

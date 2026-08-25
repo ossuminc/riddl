@@ -173,7 +173,11 @@ class DumpCommand(using pc: PlatformContext) extends Command[DumpCommand.Options
         Files.writeString(path, text + "\n")
         pc.log.info(s"${records.size} nodes written to $path")
       case None =>
-        println(text)
+        // `System.out.println`, NOT a bare `println`: the latter is `Console.println`, whose stream
+        // is a thread-local fixed at class load, and this runs on an executor thread inside the
+        // future. In production both name the same object; under a test that redirects stdout they
+        // do not, so the projection would appear to vanish. Found in ValidateCommand 2026-08-25.
+        System.out.println(text)
         // The count goes to the LOG, which now writes to stderr, so it cannot corrupt a piped
         // stream. Printed unconditionally, including zero: a script that received nothing must be
         // able to tell that apart from a model that contains nothing.
