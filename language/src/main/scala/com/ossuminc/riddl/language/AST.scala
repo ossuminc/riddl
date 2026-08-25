@@ -2422,8 +2422,26 @@ object AST:
       end if
     }
 
+    /** A `String` field also accepts a [[Pattern]], a [[UniqueId]] and a [[UUID]].
+      *
+      * The identity cases were added 2026-08-25 on Reid's ruling: *"RIDDL should allow an `Id(X)`
+      * or a `UUID` to be converted to a string since almost all UUIDs or ULIDs have string
+      * representations and that may be important for logging or communicating to the user."*
+      *
+      * **This is the OTHER direction of [[UniqueId]]'s own allowance, and the asymmetry was real
+      * until now.** `UniqueId.isAssignmentCompatible` has accepted `String_`/`Pattern` since
+      * 2026-08-15, but `isAssignmentCompatible` reads "is `other` assignable to `this`", so that
+      * only ever meant a String value could fill an `Id` field. Nothing said an id could be
+      * rendered into a String field — a gap invisible for as long as nothing type-checked the
+      * positions where it would matter.
+      *
+      * **It does NOT go on [[Pattern]].** A pattern constrains the shape of the string, and a
+      * generated ULID has no reason to satisfy an arbitrary one; permitting it there would make a
+      * constraint the model states unenforceable.
+      */
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]
+      super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern] ||
+      other.isInstanceOf[UniqueId] || other.isInstanceOf[UUID]
     }
   }
 

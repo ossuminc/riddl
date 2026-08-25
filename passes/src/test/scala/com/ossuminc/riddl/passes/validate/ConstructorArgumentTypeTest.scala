@@ -99,11 +99,28 @@ class ConstructorArgumentTypeTest extends AbstractValidatingTest {
       withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, Mismatch) mustBe empty }
     }
 
-    "REJECT an Id value supplied for a String field" in { (td: TestData) =>
-      // The consequence of applying the policy in its stated direction. Flagged to Reid rather
-      // than assumed: if storing an id in a String field should be legal, the fix is to widen
-      // `String_.isAssignmentCompatible`, not to stop checking this position.
+    "accept an Id value supplied for a String field" in { (td: TestData) =>
+      // Reid, 2026-08-25: *"RIDDL should allow an `Id(X)` or a `UUID` to be converted to a string
+      // since almost all UUIDs or ULIDs have string representations and that may be important for
+      // logging or communicating to the user."* This closed a real asymmetry -- `UniqueId` had
+      // accepted `String_` since 2026-08-15, but nothing said the reverse, and the gap was
+      // invisible until something type-checked the position. 20 reactive-bbq sites depend on it.
       val msgs = messagesFor(model("String(1,64)"), td)
+      withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, Mismatch) mustBe empty }
+    }
+
+    "accept a UUID value supplied for a String field" in { (td: TestData) =>
+      val src = model("String(1,64)").replace("ref = Ev.oid", "ref = Ev.uid")
+        .replace("oid: Id(C.Order)", "oid: Id(C.Order)  uid: UUID")
+      val msgs = messagesFor(src, td)
+      withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, Mismatch) mustBe empty }
+    }
+
+    "still REJECT an Id supplied for a Pattern field" in { (td: TestData) =>
+      // Deliberately NOT widened: a pattern constrains the shape of the string, and a generated
+      // ULID has no reason to satisfy an arbitrary one. Allowing it would make a constraint the
+      // model states unenforceable.
+      val msgs = messagesFor(model("Pattern(\"[a-z]+\")"), td)
       withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, Mismatch) must not be empty }
     }
 
