@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{StringBuildingPrintStream, pc}
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -32,7 +32,12 @@ class ProductGoesToStdoutTest extends AnyWordSpec with Matchers {
     * Both suites passed alone; only the full run failed.
     */
   private def capture[A](f: () => A): (String, String) = {
-    val (_, out) = StdStreamCapture.capturingStdOut(f)
+    // Options are PINNED: `about` and `help` are gated on `!options.quiet`, and `pc.options` is
+    // global mutable state that a suite running in parallel can change underneath this one. The
+    // `about` case failed in a full run for precisely that reason while passing alone.
+    val (_, out) = pc.withOptions(CommonOptions()) { _ =>
+      StdStreamCapture.capturingStdOut(f)
+    }
     (out, "")
   }
 

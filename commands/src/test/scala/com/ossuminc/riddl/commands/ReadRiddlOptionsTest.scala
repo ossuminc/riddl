@@ -66,8 +66,9 @@ class ReadRiddlOptionsTest extends CommandTestBase("commands/input/") {
       check(new ParseCommand, expected)
     }
     "read for validate" in {
-      val expected = InputFileCommand
-        .Options(Some(Path.of(s"$inputDir/validate.riddl")), "validate")
+      // ValidateCommand has its OWN Options as of 2026-08-25: it gained `--fail-on`, which
+      // InputFileCommand.Options has no field for.
+      val expected = ValidateCommand.Options(Some(Path.of(s"$inputDir/validate.riddl")), None)
       check(new ValidateCommand, expected)
     }
     "read common options" in {

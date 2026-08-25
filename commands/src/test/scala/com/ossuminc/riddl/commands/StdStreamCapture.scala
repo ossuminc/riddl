@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.StringBuildingPrintStream
+import com.ossuminc.riddl.utils.{StringBuildingPrintStream, pc}
 
 /** Captures `System.out` for the duration of a block, under a JVM-wide lock.
   *
@@ -22,7 +22,18 @@ import com.ossuminc.riddl.utils.StringBuildingPrintStream
   */
 object StdStreamCapture {
 
-  def capturingStdOut[A](f: () => A): (A, String) = synchronized {
+  /** Locks on the **PlatformContext**, deliberately, rather than on this object.
+    *
+    * A private monitor here DEADLOCKED the `commands` suite. `pc.withOptions` and `pc.withLogger`
+    * are `synchronized` on the PlatformContext, so a test that wraps `withOptions` around a capture
+    * takes pc-then-capture while a test that captures around a command takes capture-then-pc —
+    * classic opposite-order acquisition, and the run hung with threads BLOCKED on
+    * `PlatformContext.withOptions`.
+    *
+    * Sharing the ONE monitor removes the ordering question instead of documenting it: there is no
+    * second lock to order against, and Java monitors are reentrant so nesting is safe either way.
+    */
+  def capturingStdOut[A](f: () => A): (A, String) = pc.synchronized {
     val saved = System.out
     val captured = StringBuildingPrintStream()
     try
