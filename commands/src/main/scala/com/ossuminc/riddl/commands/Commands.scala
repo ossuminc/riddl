@@ -192,10 +192,84 @@ object Commands:
     else if io.options.dryRun then
       io.log.info(s"Would have executed: ${remaining.mkString(" ")}")
       0
+    else if remaining.contains(CorpusFlag) then runCorpus(remaining)
     else
       val result = runCommandWithArgs(remaining)
       handleCommandResult(result)
   end handleCommandRun
+
+  private final val CorpusFlag = "--corpus"
+
+  /** `riddlc <command> --corpus <dir>` -- one process over many models.
+    *
+    * Every corpus-wide operation in riddl-models is a shell loop starting a process per model: 188
+    * for a warning sweep, 190 to regenerate `.bast`, 188 x 3 for the round-trip check, run a dozen
+    * times in a session. The work per model is small, so process start dominates -- and the cost is
+    * entirely avoidable because the models are independent.
+    *
+    * **Independent by design, not merged.** Each model is validated in isolation and the results
+    * aggregated; nothing is combined into one AST, because models do not share a namespace.
+    *
+    * **A failing model does not abort the rest.** That is the acceptance criterion that matters: a
+    * sweep exists to find every problem, and stopping at the first one makes it report a prefix of
+    * the truth.
+    *
+    * **The total is riddlc's, not the caller's.** riddl-models' scripts each accumulate their own
+    * denominator across invocations, and getting a denominator right is precisely where they keep
+    * going wrong -- three of their nine scripted defects were a confident number computed over
+    * nothing. Printing `N models` here removes that arithmetic from the consumer.
+    *
+    * Discovery is every `.conf` beneath the root. A `.conf` IS an entry point by definition; an
+    * earlier draft filtered to those whose basename matches their directory, which is riddl-models'
+    * house convention and would have silently skipped their two pattern-example models, whose
+    * conf is named example.conf inside a differently-named directory.
+    */
+  private def runCorpus(remaining: Array[String])(using io: PlatformContext): Int =
+    val idx = remaining.indexOf(CorpusFlag)
+    val root = remaining.lift(idx + 1).getOrElse(".")
+    val command = remaining.take(idx).headOption.getOrElse("validate")
+    val confs = findConfFiles(root)
+    if confs.isEmpty then
+      io.log.error(s"No .conf entry points found beneath '$root'")
+      1
+    else
+      var failed = 0
+      confs.foreach { conf =>
+        val result = runCommandWithArgs(Array("from", conf, command))
+        result match
+          case Right(_) => ()
+          case Left(messages) =>
+            failed += 1
+            // Per-model detail so a failure names the model without re-running the sweep.
+            io.log.error(s"$conf: ${messages.count(_.isError)} error(s)")
+        end match
+      }
+      // The corpus total is the command's PRODUCT, so stdout -- diagnostics stayed on stderr.
+      io.stdoutln(
+        s"${confs.size} model${if confs.size == 1 then "" else "s"}, " +
+          s"$failed failed, ${confs.size - failed} ok"
+      )
+      if failed > 0 then 1 else 0
+  end runCorpus
+
+  /** Every `.conf` beneath `root`, skipping build output. */
+  private def findConfFiles(root: String): Seq[String] =
+    val start = java.nio.file.Path.of(root)
+    if !java.nio.file.Files.isDirectory(start) then Seq.empty
+    else
+      import scala.jdk.CollectionConverters.*
+      val stream = java.nio.file.Files.walk(start)
+      try
+        stream
+          .iterator()
+          .asScala
+          .filter(p => p.toString.endsWith(".conf"))
+          .filterNot(p => p.toString.contains("/target/"))
+          .map(_.toString)
+          .toSeq
+          .sorted
+      finally stream.close()
+  end findConfFiles
 
   def runMainForTest(args: Array[String])(using
     io: PlatformContext
