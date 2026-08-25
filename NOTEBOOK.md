@@ -8,7 +8,82 @@ GitHub release notes — don't reproduce it here.
 
 Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
-NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
+NOTEBOOK's body. Ask `git` for branch, tree and unpushed span. Everything that landed
+between 2026-08-18 and 2026-08-25 has been graduated to the dated section immediately
+below this one — read it if you need the reasoning behind a recent change, not to
+orient.
+
+### In flight
+
+**A 15-task batch from riddl-models and riddl-generator: 13 landed, 2 remain.** All
+were pre-approved by Reid with their authors. The two that remain are **`[1.11]`** (a
+stable rule id on every diagnostic, plus `validate --json`) and **`[1.12]`**
+(`validate --fix`), and **no code is written for either** — `[1.12]` is blocked on
+`[1.11]`. The rulings and the measurements are in BACKLOG.md; **start by reading
+`[1.11]` rather than re-deriving it**, in particular the finding that
+`Messages.DeprecationCode` is already this mechanism in kebab-case, which is what a
+fresh session is most likely to miss and duplicate.
+
+### Build and version state — verified 2026-08-25, not remembered
+
+**`../bin/riddlc` is `2.0.0-rc.24-5-cb05e374`, which is now 16 commits BEHIND this
+branch.** It predates all 13 of the completed tasks. riddl-models is running it and is
+not blocked, but **do not test a just-landed check against it** — it will report the old
+behaviour and read as a regression. Staging again means `publishLocal` **and** staging
+together; never one without the other, or library and CLI consumers disagree.
+
+**BAST `FORMAT_REVISION` is 22** (`language/.../bast/package.scala:150`). The corpus's
+190 checked-in `.bast` files are a revision behind; riddl-models knows.
+
+**Prettify's one-space-after-`is` fix (2026-08-25) has the widest byte-level reach of
+anything on this branch** — 188 of 188 corpus models had drifted. Whitespace is
+load-bearing here because riddl-models diffs checked-in `.bast` against source byte for
+byte.
+
+**Test floors are 2903 / 917 / 2864** (JVM / JS / Native), set at rc.24. Deliberate
+failures were ONE (riddl-examples' `dokn`, 5 morph errors) at rc.24 — but that count
+goes stale in hours, because the corpora are live sibling checkouts. **Confirm any red
+by its MESSAGE, never by comparing counts.**
+
+**Traps — every one bit someone here.**
+
+- **A "missing data" defect is often a WRONG ANSWER instead.** Revert the fix and
+  read what the test says: `"C" was not equal to "Source"` is a wrong answer;
+  `None was not equal to Some(…)` is a missing one.
+- **A green suite after a fix is not evidence the fix did anything.** [2.6]'s first
+  attempt patched an unreachable arm and everything stayed green; only printing the
+  actual messages showed the error was still there.
+- **An entry's stated obstacle may have dissolved.** [1.2] and [2.6] were both
+  filed as "needs a plan" on obstacles later work had quietly removed. Re-read the
+  premise before believing the size estimate.
+- **A fixture is a detector, and the best ones exercise a COMBINATION.** A38's
+  refusal-step-WITH-metadata fixture found that all thirteen interaction kinds lost
+  their metadata through JSON. Neither half was untested; the intersection was.
+- **`Keywords.keyword` ends in `./`, a CUT** — wrap an optional keyword-led clause
+  in `NoCut` or the enclosing alternative cannot backtrack.
+- **`AST.Set` shadows `scala.Set`** — three separate compile errors in one day.
+- **A WARM SBT SERVER does not see an env var set on a later invocation.** An opt-in
+  test gated on `RIDDL_NETWORK_TESTS` cancelled and read as "disabled" when the real
+  cause was a server started before the variable existed. `sbt -batch shutdown` first.
+- **Never `sbt … | tail -N` for a multi-module run** — it discards the module
+  summaries that tell you what actually ran.
+
+**`task/` is EMPTY of pending files** (2026-08-20). The last incoming task —
+`terminate` must end its block — is done and in `task/done/`. An earlier note here
+claimed `task/` held Reid's `2026-08-04-security.md` RBAC draft; **that file is not
+there, is not in `done/`, and being gitignored has no history to consult**, so the
+claim is retired rather than repeated.
+
+**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
+call, not the handoff's.
+
+## Landed on release/2, 2026-08-18 → 2026-08-25 — what each change taught
+
+Graduated out of § HANDOFF on 2026-08-25, verbatim. This is the reasoning behind the
+recent changes on the branch; none of it is orientation, and none of it was recorded
+anywhere else — it was pruned from HANDOFF rather than deleted precisely because it
+was the only copy.
+
 
 **PRETTIFY NOW EMITS ONE SPACE AFTER `is` (2026-08-25), so the whole corpus needs
 re-prettifying and `.bast` regeneration.** riddl-models knows and is not blocked. This
@@ -355,37 +430,6 @@ symptom** — the "short body" was the 302's own empty body. It was settled by m
 error print its own evidence (`Headers present: [Content-Length]`) rather than guessing
 a fourth time.
 
-**Traps — every one bit someone here.**
-
-- **A "missing data" defect is often a WRONG ANSWER instead.** Revert the fix and
-  read what the test says: `"C" was not equal to "Source"` is a wrong answer;
-  `None was not equal to Some(…)` is a missing one.
-- **A green suite after a fix is not evidence the fix did anything.** [2.6]'s first
-  attempt patched an unreachable arm and everything stayed green; only printing the
-  actual messages showed the error was still there.
-- **An entry's stated obstacle may have dissolved.** [1.2] and [2.6] were both
-  filed as "needs a plan" on obstacles later work had quietly removed. Re-read the
-  premise before believing the size estimate.
-- **A fixture is a detector, and the best ones exercise a COMBINATION.** A38's
-  refusal-step-WITH-metadata fixture found that all thirteen interaction kinds lost
-  their metadata through JSON. Neither half was untested; the intersection was.
-- **`Keywords.keyword` ends in `./`, a CUT** — wrap an optional keyword-led clause
-  in `NoCut` or the enclosing alternative cannot backtrack.
-- **`AST.Set` shadows `scala.Set`** — three separate compile errors in one day.
-- **A WARM SBT SERVER does not see an env var set on a later invocation.** An opt-in
-  test gated on `RIDDL_NETWORK_TESTS` cancelled and read as "disabled" when the real
-  cause was a server started before the variable existed. `sbt -batch shutdown` first.
-- **Never `sbt … | tail -N` for a multi-module run** — it discards the module
-  summaries that tell you what actually ran.
-
-**`task/` is EMPTY of pending files** (2026-08-20). The last incoming task —
-`terminate` must end its block — is done and in `task/done/`. An earlier note here
-claimed `task/` held Reid's `2026-08-04-security.md` RBAC draft; **that file is not
-there, is not in `done/`, and being gitignored has no history to consult**, so the
-claim is retired rather than repeated.
-
-**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
-call, not the handoff's.
 
 ## The GBNF grammar is gone, and what "documentation, lowest priority" hid (2026-08-20) — DONE
 

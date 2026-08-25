@@ -931,6 +931,82 @@ each want an approved plan before implementation, per the standing rule.
   ambiguity being removed. Measure the corpus-wide count before choosing; the
   542 above is one model.
 
+#### The 2026-08-25 task batch — 13 of 15 done, these two remain
+
+Fifteen tasks arrived from riddl-models and riddl-generator, all pre-approved by Reid
+with their authors. Thirteen landed between `5b00bea1b` and `e226f240e`. **These two are
+the remainder, and NO code is written for either.** They are ordered: the second is
+blocked on the first.
+
+- **[1.11]** **Give every diagnostic a stable rule id, and a `--json` emitter for
+  `validate`.** Requested so riddl-models can filter, suppress and count diagnostics
+  without matching on message TEXT, which reworks every time a message is reworded.
+
+  **Reid's rulings, all made 2026-08-25:**
+  - **Threaded, not a registry** — the id is a parameter at each diagnostic site.
+    *"The registry has multiple problems."*
+  - **kebab-case.**
+  - **Rendered rustc-style** (`error[saga-no-timeout]: …`).
+  - **More buckets than first proposed** — *"I think there aren't enough buckets. What
+    about domains, epics, options, …?"* Aim for ~23 subject prefixes, not 14.
+  - **A CODE mechanism must guarantee a number/id is never reused** — *"and I mean code
+    mechanism not documentation."* Mechanism is my choice.
+  - **Do it in isolation** from other changes, to keep the diff readable.
+
+  **The single most important finding, which changed the design: `Messages.DeprecationCode`
+  (`language/.../Messages.scala:190`) IS ALREADY THIS MECHANISM, in kebab-case.** It holds
+  14 stable codes (`state-is-record`, `send-to-inlet`, …), threaded through
+  `Message.deprecationCode: Option[String]` at 14 sites, and consumed at
+  `RiddlLib.scala:970` to build `SourceEdit`s. **So this work GENERALIZES an existing
+  field rather than introducing a scheme.** An earlier draft in that session proposed
+  `REF001`-style ids; that would have been a SECOND competing id scheme alongside this
+  one, and was dropped for exactly that reason. Do not reintroduce it.
+
+  **Use an enum, and the reason is a live bug in the current code.** `DeprecationCode.all`
+  is a hand-maintained `Seq` of the codes, and `EntityOptionToIntention` was **defined but
+  never added to it for months** — so every "exhaustive" migration report silently omitted
+  every entity option-to-intention deprecation since rc.10. The file's own comments record
+  this happening twice. An enum's `values` is exhaustive by construction, which is both the
+  non-reuse mechanism Reid asked for and the fix for that whole bug class. A uniqueness
+  test plus a committed snapshot of retired ids covers the rest.
+
+  **Measured, so the size is not a guess** (2026-08-25, over `passes` + `language`
+  `src/main`): **304 diagnostic sites, 154 distinct enclosing functions, 82 of which have
+  exactly one site.**
+
+  | File | Sites |   | Severity | Sites |
+  |---|---:|---|---|---:|
+  | `ValidationPass.scala` | 216 | | Error | 176 |
+  | `StreamingValidation.scala` | 16 | | Completeness | 49 |
+  | `ResolutionPass.scala` | 15 | | Warning | 34 |
+  | `DefinitionValidation.scala` | 13 | | Style | 17 |
+  | `BASTReader.scala` | 11 | | Missing | 15 |
+  | `BasicValidation.scala` | 9 | | Usage | 5 |
+  | `Messages.scala` | 8 | | Severe | 5 |
+  | 7 other files | 16 | | Deprecation | 3 |
+
+  **Settle SCOPE before threading anything.** Two of those groups are not rules a user can
+  act on: `BASTReader`'s 11 are internal corruption errors ("Unknown node type tag"), and
+  `Messages.scala`'s 8 are the `add*` method DEFINITIONS, not call sites. A rule id is for
+  a diagnostic about the user's MODEL.
+
+  **A mechanical draft is available and is worth generating again rather than naming 304
+  ids by hand**: subject-prefix (from the enclosing `check*`/`validate*` function) plus a
+  slug from the message text produced **293 distinct ids for 304 sites, 11 collisions**.
+  That is a review artifact, not the answer — the function name alone is insufficient
+  because `validateSchema` carries 10 distinct rules and `validateEntity` 9.
+
+- **[1.12]** **`validate --fix` / `--fix-rule <id>`: ship each rule with its own codemod.**
+  **Blocked on [1.11]** — a fix has to name the rule it fixes.
+
+  **Smaller than it first appears, because both halves already exist.**
+  `DeprecationCode.mechanicalReplacement` maps a code to its replacement text and
+  `RiddlLib.scala:970` already turns that into a `SourceEdit`, so the "rule carries its own
+  fix" shape is built and working for deprecations; this generalizes it beyond them.
+  And `FindEditor` (`commands/.../find/FindEditor.scala`) already does span rewriting with
+  overlap rejection, back-to-front application, and re-parse + re-validate + restore-if-worse
+  — which is the dangerous half. **Reuse it; do not write a second editor.**
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
