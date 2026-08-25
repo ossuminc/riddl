@@ -25,7 +25,13 @@ object PrettifyCommand {
     inputFile: Option[Path] = None,
     outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
     projectName: Option[String] = None,
-    singleFile: Boolean = false
+    singleFile: Boolean = false,
+    /** `--check`: report drift instead of writing. `gofmt -l` / `scalafmtCheck` semantics.
+      *
+      * NOT named `check`: `PassCommandOptions` already declares a `check` method returning
+      * Messages, and a same-named field silently becomes an override attempt.
+      */
+    checkOnly: Boolean = false
   ) extends TranslationCommand.Options
       with PassOptions
       with PassCommandOptions:
@@ -56,6 +62,9 @@ class PrettifyCommand(using pc: PlatformContext)
         opt[String]("project-name")
           .action((v, c) => c.copy(projectName = Option(v)))
           .text("The name of the project to prettify"),
+        opt[Unit]("check")
+          .action((_, c) => c.copy(checkOnly = true))
+          .text("Report files that are not in canonical form and exit non-zero; write nothing"),
         opt[Boolean]('s', name = "single-file")
           .action((v, c) => c.copy(singleFile = v))
           .text(
@@ -123,14 +132,64 @@ class PrettifyCommand(using pc: PlatformContext)
       case result @ Right(passesResult: PassesResult) =>
         passesResult.outputOf[PrettifyOutput](PrettifyPass.name) match
           case Some(output: PrettifyOutput) =>
-            writeOutput(output, originalOptions, outputDirOverride)
-            result
+            if originalOptions.checkOnly then checkOutput(output, originalOptions)
+            else
+              writeOutput(output, originalOptions, outputDirOverride)
+              result
           case None =>
             // shouldn't happen
             Left(List(Messages.error("No output from Prettify Pass", At.empty)))
         end match
     end match
   end run
+
+  /** `--check`: compare what the emitter WOULD write against what is on disk, change nothing.
+    *
+    * **188 of 188 models had drifted -- 396 files -- and no gate in riddl-models could see it.**
+    * `riddlcValidate`, the completeness sweep and the whole test suite were green throughout,
+    * because formatting is invisible to all of them. It did not surface as "your formatting
+    * drifted" either: it surfaced as every model failing the `.bast` round trip, naming the `.bast`
+    * files, whose actual cause was the source text. Real time went into confirming the `.bast` were
+    * fine.
+    *
+    * The count prints even at ZERO, for the reason `validate` now does the same: a check that says
+    * nothing cannot be told apart from one that never ran.
+    */
+  private def checkOutput(
+    output: PrettifyOutput,
+    options: Options
+  ): Either[List[Messages.Message], PassesResult] =
+    val sourceRoot: Path = options.inputFile
+      .flatMap(f => Option(f.getParent))
+      .getOrElse(Path.of("."))
+    val drifted = scala.collection.mutable.ListBuffer.empty[String]
+    var compared = 0
+    output.state.withFiles { (file: RiddlFileEmitter) =>
+      val target = sourceRoot.resolve(file.url.path)
+      compared += 1
+      val onDisk =
+        try if Files.exists(target) then Files.readString(target, StandardCharsets.UTF_8) else null
+        catch case _: java.io.IOException => null
+      if onDisk == null then drifted.append(s"${file.url.path} (no such file)")
+      else if onDisk != file.toString then drifted.append(file.url.path)
+    }
+    // The command's product, so stdout -- diagnostics stay on stderr (the rc.24-3 rule).
+    drifted.foreach(pc.stdoutln)
+    pc.stdoutln(
+      s"$compared file${if compared == 1 then "" else "s"} checked, " +
+        s"${drifted.size} not in canonical form"
+    )
+    if drifted.isEmpty then Right(PassesResult())
+    else
+      Left(
+        List(
+          Messages.error(
+            s"${drifted.size} file(s) are not in canonical form; run 'riddlc prettify' to fix",
+            At.empty
+          )
+        )
+      )
+  end checkOutput
 
   private def writeOutput(
     output: PrettifyOutput,

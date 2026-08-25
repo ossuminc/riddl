@@ -106,13 +106,29 @@ class UnbastifyCommand(using pc: PlatformContext)
         // actually wrote keeps its wrapper.
         val root: PassRoot =
           if Module.isSynthetic(rootModule) then Module.toRoot(rootModule) else rootModule
-        // Step 3: Determine output directory
-        val outputDir = outputDirOverride
-          .orElse(options.outputDir)
-          .getOrElse(inputPath.getParent match {
-            case null => Path.of(".")
-            case p    => p
-          })
+        // Step 3: Determine output directory.
+        //
+        // **`-o` is REQUIRED. It used to default to the INPUT'S OWN DIRECTORY**, so the obvious
+        // interactive form -- `riddlc unbastify model.bast`, reached for as a read-only "does this
+        // load?" check -- rewrote 398 `.riddl` sources in place. Nothing warned, every invocation
+        // exited 0 and printed a success message, and the damage was found only because someone
+        // ran `git status` afterwards. The changes were cosmetic whitespace, which is worse rather
+        // than better: a large semantic rewrite is obvious, while 398 files of whitespace churn
+        // slides into a commit unnoticed.
+        //
+        // A decoder whose default is to overwrite the thing it decoded from is surprising in a way
+        // nobody guesses right the first time, so there is no default at all now.
+        val maybeOutputDir = outputDirOverride.orElse(options.outputDir)
+        if maybeOutputDir.isEmpty then
+          return Left(
+            Messages.errors(
+              "unbastify requires an output directory: pass '-o <dir>'. It has no default " +
+                "because the previous one was the input's own directory, which silently " +
+                "overwrote the sources the .bast was made from."
+            )
+          )
+        end if
+        val outputDir = maybeOutputDir.get
 
         // Step 4: Determine the top-level output file name
         val inputName = inputPath.getFileName.toString
