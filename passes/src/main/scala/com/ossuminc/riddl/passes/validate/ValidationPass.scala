@@ -3001,11 +3001,78 @@ case class ValidationPass(
     checkMetadata(relationship)
   }
 
+  /** A `morph` or `become` that has nowhere to go -- an Error (riddl-generator, 2026-08-25).
+    *
+    * An entity with ONE state whose handler morphs has asked to transition to somewhere that does
+    * not exist. Unlike most things a generator reports, this is not under-specification: it is
+    * **wrong in every possible lowering**, so no generator can do anything useful with it and a
+    * compiler should refuse it. It is silent in the worst way too — the model reads as though it
+    * has a state machine, the modeller believes it has one, and what was built is a single state
+    * with a dead statement in it.
+    *
+    * **`morph` and `become` are checked against DIFFERENT counts, which the request conflated.**
+    * `morph` names a STATE, so it needs a second state to move to. `become` names a HANDLER, so it
+    * needs a second handler — and a single-state entity with two handlers may `become` between them
+    * perfectly legitimately. Counting states for both would reject that legal model.
+    *
+    * The counts are of the TARGET entity, not the enclosing one: `morph entity Other to state S`
+    * is about `Other`'s states. Usually they are the same entity, but nothing requires it.
+    *
+    * `???` is exempt (`nonEmpty`), and an unresolvable target is silent — reporting there would be
+    * reasoning from absence.
+    */
+  private def checkTransitionsHaveSomewhereToGo(entity: Entity, parents: Parents): Unit =
+    if entity.nonEmpty then
+      // An entity's clauses commonly live inside a State, which `entity.handlers` alone cannot see.
+      val allHandlers = entity.handlers ++ entity.states.flatMap(_.handlers)
+      // **Resolved from the entity's ANCESTORS, not from inside the entity.** Prepending the
+      // entity made the walk start within `Solo` looking for `C.Solo`, which cannot be found —
+      // the check entered, saw the morph, and resolved None, so it reported nothing at all. Found
+      // by instrumenting after two wrong guesses.
+      def entityTargetOf(pid: PathIdentifier, ps: Parents): Option[Entity] =
+        resolvePath[Entity](pid, ps).orElse(resolution.refMap.definitionOf[Entity](pid))
+      def statesOf(e: Entity): Int = e.states.size
+      def handlersOf(e: Entity): Int = (e.handlers ++ e.states.flatMap(_.handlers)).size
+      // A Handler's contents are CLAUSES, not statements -- walking `h.contents` directly matched
+      // nothing and the check silently found zero. Caught by canary-testing a fixture rather than
+      // by trusting a clean corpus run.
+      allHandlers.flatMap(_.clauses).foreach { clause =>
+        walkStatements(clause.contents) {
+          case m: MorphStatement =>
+            entityTargetOf(m.entity.pathId, parents).foreach { target =>
+              if statesOf(target) < 2 then
+                messages.addError(
+                  m.loc,
+                  s"'morph' cannot move ${target.identify}: it declares " +
+                    s"${statesOf(target)} state${if statesOf(target) == 1 then "" else "s"}, so " +
+                    "there is no other state to move to",
+                  suggestion = s"Declare the other states of ${target.identify}, or drop the " +
+                    "transition — as written it cannot take effect in any implementation."
+                )
+            }
+          case b: BecomeStatement =>
+            entityTargetOf(b.entity.pathId, parents).foreach { target =>
+              if handlersOf(target) < 2 then
+                messages.addError(
+                  b.loc,
+                  s"'become' cannot change the behaviour of ${target.identify}: it declares " +
+                    s"${handlersOf(target)} handler${if handlersOf(target) == 1 then "" else "s"}, " +
+                    "so there is no other handler to adopt",
+                  suggestion = s"Declare the other handlers of ${target.identify}, or drop the " +
+                    "transition — as written it cannot take effect in any implementation."
+                )
+            }
+          case _ => ()
+        }
+      }
+  end checkTransitionsHaveSomewhereToGo
+
   private def validateEntity(
     entity: Entity,
     parents: Parents
   ): Unit = {
     checkContainer(parents, entity)
+    checkTransitionsHaveSomewhereToGo(entity, parents)
     // At most one state may be the entity's initial (starting) state.
     val initialStates = entity.states.filter(_.isInitial)
     if initialStates.sizeIs > 1 then
@@ -4760,6 +4827,7 @@ case class ValidationPass(
       saga.errorLoc,
       suggestion = "Give each saga step a unique name."
     )
+    checkSagaTimeout(saga)
     // A9: validate saga requires/returns (previously unvalidated).
     saga.input.foreach(validateRequiresReturns(_, saga, parents))
     saga.output.foreach(validateRequiresReturns(_, saga, parents))
@@ -4889,6 +4957,37 @@ case class ValidationPass(
     case ce: ComparisonExpression => valueReferencedDefs(ce.left) ++ valueReferencedDefs(ce.right)
     case _                        => Seq.empty
   end valueReferencedDefs
+
+  /** A saga that states no `timeout` -- a CompletenessWarning (riddl-generator, 2026-08-25).
+    *
+    * A `correlation` MUST state `times out after "<duration>"`. A saga has no such requirement, so
+    * riddlg bounds the run with a built-in default of one minute and records the invention in its
+    * generation notes. That is the best a generator can do and it is not good enough: the bound
+    * decides WHEN COMPENSATION FIRES, so a checkout saga that legitimately needs ten minutes gets
+    * sixty seconds and starts reverting work that was about to succeed, with nothing in the model
+    * or the build saying so.
+    *
+    * **A warning rather than a mandate, and the choice follows this repo's own rule** rather than
+    * the correlation precedent. Under-specification warns; self-contradiction errors. An absent
+    * saga timeout is the model declining to say, not the model contradicting itself.
+    *
+    * The correlation case is genuinely different and should not be read as inconsistency: its
+    * timeout carries a STATEMENT BLOCK that must fire, and §4.2 calls options advisory, so a bound
+    * that must run code could not be an option. A saga's timeout is an option with no block.
+    *
+    * `???` is exempt, per the standing rule that a body declaring itself incomplete earns at most a
+    * Missing warning.
+    */
+  private def checkSagaTimeout(saga: Saga): Unit =
+    if saga.nonEmpty && !saga.hasOption("timeout") then
+      messages.addCompleteness(
+        saga.errorLoc,
+        s"${saga.identify} states no 'timeout', so the bound on its run is left to whatever " +
+          "processes it -- and that bound decides when compensation fires",
+        suggestion = "Add 'with { option timeout(\"PT5M\") }' to state the bound the saga " +
+          "actually needs, rather than leaving a generator to invent one."
+      )
+  end checkSagaTimeout
 
   private def validateSagaStep(
     s: SagaStep,

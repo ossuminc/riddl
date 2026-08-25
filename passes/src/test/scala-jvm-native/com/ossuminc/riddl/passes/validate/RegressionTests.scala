@@ -188,6 +188,7 @@ class RegressionTests extends AbstractValidatingTest {
           |        name: String
           |      }
           |      state FooExample of record FooExampleState
+          |      state BarExample of record FooExampleState
           |      handler FooExampleHandler {
           |        on other {
           |          error "You must first create an event using ScheduleEvent command."

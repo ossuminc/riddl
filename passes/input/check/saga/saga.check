@@ -63,6 +63,9 @@ passes/input/check/saga/saga.riddl(17:7->20):
 passes/input/check/saga/saga.riddl(17:32->34):
  Inlet identifier 'in' is too short. The minimum length is 3:
        sink trashCan is { inlet in is type SomethingOrUndo }
+passes/input/check/saga/saga.riddl(19:5->14):
+ Saga 'name' states no 'timeout', so the bound on its run is left to whatever processes it -- and that bound decides when compensation fires:
+     saga name is {
 passes/input/check/saga/saga.riddl(20:18->20):
  Field identifier 'p1' is too short. The minimum length is 3:
        requires { p1: String, p2: String }

@@ -138,6 +138,7 @@ class BareMessageOperandErrorTest extends AbstractValidatingTest {
           |    record Data is { n: Integer }
           |    entity src is {
           |      state S of record d.c.Data
+          |      state S2 of record d.c.Data
           |      handler Ops is {
           |        on command d.c.Foo is { morph entity d.c.src to state S with record d.c.Data }
           |      }
@@ -227,6 +228,7 @@ class BareMessageOperandErrorTest extends AbstractValidatingTest {
           |    record Data is { evt: d.c.Bar }
           |    entity src is {
           |      state S of record d.c.Data
+          |      state S2 of record d.c.Data
           |      handler Ops is {
           |        on command d.c.Foo is { yield evt }
           |      }

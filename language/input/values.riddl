@@ -53,6 +53,9 @@ domain Values is {
     entity Cart is {
       record CartData is { line: Line }
       state Open of record CartData
+      // A second state so the `morph` below has somewhere to go: a transition in a single-state
+      // entity cannot take effect in any lowering and is now an Error.
+      state Closed of record CartData
       handler Ops is {
         on command AddLine {
           // A54: `let` bound to an AI-computed prompt value.
