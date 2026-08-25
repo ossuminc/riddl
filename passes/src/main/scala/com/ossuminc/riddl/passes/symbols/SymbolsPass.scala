@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.symbols
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{Messages, PredefinedModule}
+import com.ossuminc.riddl.language.{Messages, PredefinedModule, RuleId}
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.{Parentage, SymTab, SymTabItem}
@@ -103,7 +103,8 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: Platfo
             namedValue.loc,
             "Non implicit value with empty name should not happen",
             suggestion =
-              "This is an internal RIDDL symbol-table error; please report it with the model that triggered it."
+              "This is an internal RIDDL symbol-table error; please report it with the model that triggered it.",
+            ruleId = Some(RuleId.EmptyNonImplicitName)
           )
         }
       // case rv: RiddlValue => // everything should be handled above

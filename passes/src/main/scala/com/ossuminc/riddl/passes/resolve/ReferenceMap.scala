@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.RuleId
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.utils.{PlatformContext, StringHelpers}
 
@@ -102,7 +103,8 @@ case class ReferenceMap(messages: Messages.Accumulator) {
           pid.loc,
           s"Path Id '${pid.value.mkString(".")} found ${x.identify} but a $className was expected",
           suggestion =
-            s"Point '${pid.value.mkString(".")}' at a $className, or rename the reference to match the intended $className."
+            s"Point '${pid.value.mkString(".")}' at a $className, or rename the reference to match the intended $className.",
+          ruleId = Some(RuleId.WrongKind)
         )
         None
   }

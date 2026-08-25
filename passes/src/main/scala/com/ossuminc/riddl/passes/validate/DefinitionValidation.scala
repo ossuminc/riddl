@@ -49,7 +49,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           definition.errorLoc,
           s"${definition.identify} has duplicate content names:\n  $details",
           suggestion =
-            s"Rename or remove the duplicate definitions so each name is unique within ${definition.identify}."
+            s"Rename or remove the duplicate definitions so each name is unique within ${definition.identify}.",
+          ruleId = Some(RuleId.DuplicateContentNames)
         )
       }
     }
@@ -71,7 +72,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
                 s"${authorRef.format} is not defined",
                 suggestion =
                   "Define the referenced author (e.g. 'author Name is { name is \"...\" email is \"...\" }'), " +
-                    "or correct the author reference to name an existing author."
+                    "or correct the author reference to name an existing author.",
+                ruleId = Some(RuleId.AuthorUndefined)
               )
             case _ =>
           end match
@@ -100,7 +102,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           definition.id.loc,
           s"'${definition.id.value}' evaded inclusion in symbol table!",
           suggestion =
-            "This is an internal RIDDL error; please report it with the model that triggered it."
+            "This is an internal RIDDL error; please report it with the model that triggered it.",
+          ruleId = Some(RuleId.NotInSymbolTable)
         )
       }
     }
@@ -137,7 +140,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         messages.addStyle(
           incl.loc,
           s"Included file '${incl.origin.path}' should end with .riddl",
-          suggestion = "Give the included file a '.riddl' extension."
+          suggestion = "Give the included file a '.riddl' extension.",
+          ruleId = Some(RuleId.IncludeExtension)
         )
       // A51(b): an include that parsed but contributed no definitions (e.g. only comments or
       // whitespace) adds nothing to the model.
@@ -146,7 +150,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           incl.loc,
           "Include contributes no definitions",
           suggestion =
-            "Add RIDDL definitions to the included file, or remove the include if it is not needed."
+            "Add RIDDL definitions to the included file, or remove the include if it is not needed.",
+          ruleId = Some(RuleId.IncludeContributesNothing)
         )
     }
 
@@ -272,14 +277,16 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         briefs(1).loc,
         s"$identity has multiple 'brief description' metadata; only the first is used",
         suggestion =
-          "Keep a single 'briefly \"...\"'; merge or remove the extra brief descriptions."
+          "Keep a single 'briefly \"...\"'; merge or remove the extra brief descriptions.",
+        ruleId = Some(RuleId.MultipleBriefs)
       )
     val ulids = definition.metadata.filter[ULIDAttachment]
     if ulids.size > 1 then
       messages.addStyle(
         ulids(1).loc,
         s"$identity has multiple 'ULID' metadata; only the first is used",
-        suggestion = "Keep a single ULID attachment; remove the extras."
+        suggestion = "Keep a single ULID attachment; remove the extras.",
+        ruleId = Some(RuleId.MultipleUlids)
       )
     // DELIBERATELY NOT HERE: "should have a description". Documentation is expected of
     // definitions a reader navigates to, not of every field and portlet -- moving it into
@@ -351,7 +358,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         s"A 'figma' reference is not allowed on $identity; it may only appear on an input, an " +
           "output, a group, or an application-intended context",
         suggestion = "Move the 'figma' reference onto the input, output, group or " +
-          "'application context' whose design frame it identifies."
+          "'application context' whose design frame it identifies.",
+        ruleId = Some(RuleId.FigmaRefNotAllowed)
       )
     else if summon[PlatformContext].options.checkFigmaDrift then
       checkFigmaDrift(figmaRef, identity, definition)
@@ -391,7 +399,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
               s"Figma node '$nodeId' referenced by $identity does not exist in Figma file " +
                 s"'$fileKey'",
               suggestion = "Update the node id to the frame's current id, or remove the 'figma' " +
-                "reference if the frame was deleted."
+                "reference if the frame was deleted.",
+              ruleId = Some(RuleId.FigmaNodeMissing)
             )
           case FigmaLookup.FileNotFound(_) =>
             // The message admits its own ambiguity, because Figma answers 404 for a file the token
@@ -404,7 +413,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
                 "deleted or moved, or the token in use cannot see it",
               suggestion = s"Check that the file key is current and that the " +
                 s"${FigmaClient.TokenEnvVar} token has access to it, or remove the 'figma' " +
-                "reference if the design has been retired."
+                "reference if the design has been retired.",
+              ruleId = Some(RuleId.FigmaFileUnreadable)
             )
           case FigmaLookup.Found(frameName) =>
             val expected = definition match
@@ -416,7 +426,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
                 s"Figma frame '$frameName' does not correspond to $identity; the design and the " +
                   "model have drifted apart",
                 suggestion = s"Rename the Figma frame to '$expected', rename the definition to " +
-                  s"'$frameName', or point the reference at the frame that does correspond."
+                  s"'$frameName', or point the reference at the frame that does correspond.",
+                ruleId = Some(RuleId.FigmaFrameDrift)
               )
             end if
         end match
@@ -510,7 +521,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         arg.loc,
         s"$subject has a vague duration '$text'; it must state a unit",
         suggestion = "Use a precise duration such as '30s', '1500ms', '5 minutes' or 'PT1M30S';" +
-          " a bare number is ambiguous between seconds and milliseconds."
+          " a bare number is ambiguous between seconds and milliseconds.",
+        ruleId = Some(RuleId.VagueDuration)
       )
     else
       val positive =
@@ -549,7 +561,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         s"Option '${option.name}' in $identity is deprecated" +
           s" since ${dep.sinceVersion}." +
           s" Use ${dep.replacement} instead",
-        suggestion = s"Replace option '${option.name}' with ${dep.replacement}."
+        suggestion = s"Replace option '${option.name}' with ${dep.replacement}.",
+        ruleId = Some(RuleId.OptionDeprecated)
       )
     }
     validateTemporalArgument(option, identity)

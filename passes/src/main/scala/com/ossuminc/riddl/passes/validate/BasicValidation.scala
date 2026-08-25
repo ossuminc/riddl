@@ -8,6 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.RuleId
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.resolve.ResolutionOutput
@@ -87,7 +88,8 @@ trait BasicValidation(using pc: PlatformContext) {
         pid.loc,
         message,
         suggestion = s"Provide a non-empty path that names ${article(tc.getSimpleName)}, " +
-          s"e.g. 'EnclosingScope.${tc.getSimpleName}Name'."
+          s"e.g. 'EnclosingScope.${tc.getSimpleName}Name'.",
+        ruleId = Some(RuleId.EmptyPath)
       )
       Option.empty[T]
     else resolvePath[T](pid, parents)
@@ -143,7 +145,8 @@ trait BasicValidation(using pc: PlatformContext) {
           s"${article(written)}",
         suggestion = s"Write '$declared $name'. A reference's prefix must name what the target " +
           "was declared as; an omitted prefix means 'type', which is correct only when the " +
-          "target really is a 'type'."
+          "target really is a 'type'.",
+        ruleId = Some(RuleId.WrongKeyword)
       )
   }
 
@@ -183,7 +186,8 @@ trait BasicValidation(using pc: PlatformContext) {
         ref.pathId.loc,
         s"${ref.identify} is empty",
         suggestion =
-          s"Name a message type here, e.g. '${kinds.headOption.map(_.useCase).getOrElse("command")} DoSomething'."
+          s"Name a message type here, e.g. '${kinds.headOption.map(_.useCase).getOrElse("command")} DoSomething'.",
+        ruleId = Some(RuleId.MessageRefEmpty)
       )
       this
     } else {
@@ -208,7 +212,8 @@ trait BasicValidation(using pc: PlatformContext) {
                   s"'${ref.identify} should reference one of these types: ${kinds.mkString(",")} but is a ${errorDescription(te)} type " + s"instead",
                   suggestion =
                     s"Point the reference at a type declared as one of: ${kinds.map(_.useCase).mkString(", ")} " +
-                      s"(e.g. 'type X = ${kinds.headOption.map(_.useCase).getOrElse("command")} { ??? }')."
+                      s"(e.g. 'type X = ${kinds.headOption.map(_.useCase).getOrElse("command")} { ??? }').",
+                  ruleId = Some(RuleId.MessageRefWrongKind)
                 )
             }
           case _ =>
@@ -216,7 +221,8 @@ trait BasicValidation(using pc: PlatformContext) {
               ref.pathId.loc,
               s"${ref.identify} was expected to be one of these types; ${kinds.mkString(",")}, but is ${article(definition.kind)} instead",
               suggestion =
-                s"Reference a message type (${kinds.map(_.useCase).mkString(", ")}) rather than ${article(definition.kind)}."
+                s"Reference a message type (${kinds.map(_.useCase).mkString(", ")}) rather than ${article(definition.kind)}.",
+              ruleId = Some(RuleId.MessageRefNotAMessage)
             )
         }
       }
@@ -264,7 +270,8 @@ trait BasicValidation(using pc: PlatformContext) {
           defList.head.loc,
           message,
           suggestion =
-            "Give the same-named fields a single consistent type, or rename them so each name maps to one type."
+            "Give the same-named fields a single consistent type, or rename them so each name maps to one type.",
+          ruleId = Some(RuleId.FieldOverloadedTypes)
         )
       end if
 
@@ -287,7 +294,8 @@ trait BasicValidation(using pc: PlatformContext) {
             defList.head.errorLoc,
             s"${defList.head.identify} is overloaded with ${map.size} kinds:\n  $tailStr",
             suggestion =
-              "Rename one of the definitions so the same name does not refer to different kinds of definition."
+              "Rename one of the definitions so the same name does not refer to different kinds of definition.",
+            ruleId = Some(RuleId.TypeOverloaded)
           )
         else if map.size == 1 then
           map.head._1 match {
@@ -312,7 +320,8 @@ trait BasicValidation(using pc: PlatformContext) {
                 defList.head.errorLoc,
                 message,
                 suggestion =
-                  s"Rename or merge the duplicate $name definitions so each name is unique within its scope."
+                  s"Rename or merge the duplicate $name definitions so each name is unique within its scope.",
+                ruleId = Some(RuleId.OverloadedDefinitions)
               )
             case _ => ()
           }
@@ -335,7 +344,8 @@ trait BasicValidation(using pc: PlatformContext) {
         d.id.loc,
         s"${d.kind} identifier '${d.id.value}' is too short. The minimum length is $min",
         suggestion =
-          s"Rename '${d.id.value}' to a more descriptive identifier of at least $min characters."
+          s"Rename '${d.id.value}' to a more descriptive identifier of at least $min characters.",
+        ruleId = Some(RuleId.NameTooShort)
       )
     }
     this

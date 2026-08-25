@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.RuleId
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.PredefinedModule
@@ -123,7 +124,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               s"and must be 'persistent'",
             suggestion =
               s"Add the 'persistent' option to ${connector.identify}; connectors to an external " +
-                s"context must be durable so data is not lost at the trust boundary."
+                s"context must be durable so data is not lost at the trust boundary.",
+            ruleId = Some(RuleId.ConnectorTouchesExternal)
           )
         }
       end if
@@ -137,7 +139,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             s"'${otherOwner.id.value}' so the external system stays plug-in replaceable",
           suggestion =
             s"Insert an adaptor between '${extCtx.id.value}' and '${otherOwner.id.value}' and " +
-              s"connect the external port to the adaptor instead of directly to ${otherOwner.identify}."
+              s"connect the external port to the adaptor instead of directly to ${otherOwner.identify}.",
+          ruleId = Some(RuleId.ConsiderAdaptor)
         )
 
       // A single connector between two *different* external contexts satisfies both
@@ -248,7 +251,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
                 s"${processor.identify} has no connections to any connector",
                 suggestion =
                   s"Connect ${processor.identify} to another processor with a connector, " +
-                    "e.g. 'connector c is { from outlet ThisOutlet to inlet ThatInlet }'."
+                    "e.g. 'connector c is { from outlet ThisOutlet to inlet ThatInlet }'.",
+                ruleId = Some(RuleId.ProcessorUnconnected)
               )
         }
       }
@@ -328,7 +332,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               source.errorLoc,
               s"${source.identify} is a source but has no downstream path to any sink",
               suggestion =
-                "Add connectors routing this source's outlet through to a sink so the data it produces is consumed."
+                "Add connectors routing this source's outlet through to a sink so the data it produces is consumed.",
+              ruleId = Some(RuleId.SourceReachesNoSink)
             )
         }
       }
@@ -359,7 +364,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               sink.errorLoc,
               s"${sink.identify} is a sink but has no upstream path from any source",
               suggestion =
-                "Add connectors routing a source's output into this sink so it receives data."
+                "Add connectors routing a source's output into this sink so it receives data.",
+              ruleId = Some(RuleId.SinkReachedByNoSource)
             )
         }
       }
@@ -418,7 +424,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
           suggestion =
             s"Declare an outlet on ${ctx.identify} itself and connect it from there; route the " +
               s"inner definition's outlet to it within ${ctx.identify}. The boundary exists to " +
-              s"keep the context's contents private -- only its message set is public."
+              s"keep the context's contents private -- only its message set is public.",
+          ruleId = Some(RuleId.BoundaryOutlet)
         )
       end if
     end for
@@ -434,7 +441,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
           suggestion =
             s"Declare an inlet on ${ctx.identify} itself and connect to that; let its handlers " +
               s"dispatch or translate inward. Reaching past the boundary binds the sender to " +
-              s"${ctx.identify}'s internals, which it is entitled to change."
+              s"${ctx.identify}'s internals, which it is entitled to change.",
+          ruleId = Some(RuleId.BoundaryInlet)
         )
       end if
     end for
@@ -473,7 +481,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             s"failure of domain analysis and is not allowed",
           suggestion =
             "Keep the connector within one domain; if two domains must communicate, model it with " +
-              "an adaptor and messaging rather than a direct stream connector."
+              "an adaptor and messaging rather than a direct stream connector.",
+          ruleId = Some(RuleId.CrossesDomains)
         )
       else if connectorInDomain then
         if sameContext then
@@ -483,7 +492,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               s"${outletCtx.get.identify}; the connector is over-scoped",
             suggestion =
               s"Move ${connector.identify} into ${outletCtx.get.identify}; a connector whose ends " +
-                s"are in the same context belongs in that context, not the domain."
+                s"are in the same context belongs in that context, not the domain.",
+            ruleId = Some(RuleId.DomainScopeUnnecessary)
           )
         else if crossContext then
           checkBoundaryEncapsulation(connector, maybeFromOutlet, maybeToInlet, outletCtx, inletCtx)
@@ -497,7 +507,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
                 s"deployment concern",
               suggestion =
                 s"Add the 'persistent' option to ${connector.identify} so data is not lost across " +
-                  s"faults at the context boundary."
+                  s"faults at the context boundary.",
+              ruleId = Some(RuleId.BoundaryNotPersistent)
             )
           end if
         end if
@@ -509,7 +520,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               s"${inletCtx.get.identify}) but is defined at context scope; it is under-scoped",
             suggestion =
               "Move the connector up to the domain that contains both contexts; a connector that " +
-                "crosses contexts must be defined at domain scope."
+                "crosses contexts must be defined at domain scope.",
+            ruleId = Some(RuleId.CrossesContexts)
           )
         else if sameContext && connector.isPersistent then
           // Point at the OPTION when it is still spelled that way, else at the connector itself.
@@ -523,7 +535,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             s"Persistence on ${connector.identify} is not needed " +
               s"since both ends of the connector connect within the same context",
             suggestion =
-              s"Remove 'persistent' from ${connector.identify}; both ends are in the same context."
+              s"Remove 'persistent' from ${connector.identify}; both ends are in the same context.",
+            ruleId = Some(RuleId.PersistenceNotNeeded)
           )
         end if
     }
@@ -588,7 +601,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             "(model fan-out with multiple outlets)",
           suggestion =
             "Attach only one connector to this outlet; to fan out, declare additional outlets on the " +
-              "processor (which makes it a split or router) and connect each separately."
+              "processor (which makes it a split or router) and connect each separately.",
+          ruleId = Some(RuleId.OutletCardinality)
         )
     }
 
@@ -601,7 +615,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             "(model fan-in with multiple inlets)",
           suggestion =
             "Attach only one connector to this inlet; to fan in, declare additional inlets on the " +
-              "processor (which makes it a merge or router) and connect each separately."
+              "processor (which makes it a merge or router) and connect each separately.",
+          ruleId = Some(RuleId.InletCardinality)
         )
     }
   }
@@ -695,7 +710,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               "it pays message-passing overhead at every boundary",
             suggestion =
               "Mark only the specific boundaries that genuinely need parallelism as 'async', and " +
-                "leave the rest un-marked so the code generator can fuse them into a single operator."
+                "leave the rest un-marked so the code generator can fuse them into a single operator.",
+            ruleId = Some(RuleId.AllPortletsAsync)
           )
       }
     }
@@ -722,7 +738,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
           portlet.errorLoc,
           message,
           suggestion =
-            s"Connect ${portlet.identify} with a connector, or remove it if it is unused."
+            s"Connect ${portlet.identify} with a connector, or remove it if it is unused.",
+          ruleId = Some(RuleId.PortletUnconnected)
         )
       }
     }

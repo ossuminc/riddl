@@ -1066,21 +1066,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                 messages.addSevere(
                   pathId.loc,
                   s"Invalid result from findAnchorInSymTab($topName, $parents): $anfis",
-                  suggestion = internalErrorSuggestion
+                  suggestion = internalErrorSuggestion,
+                  ruleId = Some(RuleId.InvalidSymTabAnchor)
                 )
                 anfis
           case anfis: AnchorCase =>
             messages.addSevere(
               pathId.loc,
               s"Invalid result from findAnchorInParents($topName, $parents): $anfis",
-              suggestion = internalErrorSuggestion
+              suggestion = internalErrorSuggestion,
+              ruleId = Some(RuleId.InvalidParentAnchor)
             )
             anfis
       case None =>
         messages.addSevere(
           pathId.loc,
           "PathId is empty; this should already be checked in resolveAPathId",
-          suggestion = internalErrorSuggestion
+          suggestion = internalErrorSuggestion,
+          ruleId = Some(RuleId.EmptyPathInternal)
         )
         AnchorNotFoundAnywhere("<unknown>")
   }
@@ -1208,7 +1211,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         message,
         suggestion =
           s"'${pathId.value.mkString(".")}' points at the wrong kind of definition. Point it at ${article(referTo)} " +
-            s"instead, or rename the reference to match the intended $referTo."
+            s"instead, or rename the reference to match the intended $referTo.",
+        ruleId = Some(RuleId.WrongKind)
       )
     if io.options.debug then
       println(
@@ -1247,7 +1251,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             s"calling it from outside couples this caller to that function's implementation",
           suggestion =
             s"Move '${nested.id.value}' out to the enclosing context if it is meant to be called " +
-              s"from elsewhere, or call '${owner.id.value}' instead and let it use its own helper."
+              s"from elsewhere, or call '${owner.id.value}' instead and let it use its own helper.",
+          ruleId = Some(RuleId.PrivateNestedFunction)
         )
       case _ => ()
     end match
@@ -1283,7 +1288,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         suggestion = suggestionOverride.getOrElse(
           s"Define ${article(referTo)} named by '${pathId.value.mkString(".")}', or correct the path so it names " +
             s"an existing $referTo reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
-        )
+        ),
+        ruleId = Some(RuleId.PathUnresolved)
       )
     if io.options.debug then println(s"Unresolved: ${pathId.format} ==> ???")
   end notResolved
@@ -1484,7 +1490,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         pathId.loc,
         s"The name '$soughtName' in '${pathId.format}' is ambiguous in ${container.identify}: " +
           s"${matches.size} definitions carry it, at least one of them imported. " +
-          s"The local declaration wins.\n" + sides
+          s"The local declaration wins.\n" + sides,
+        ruleId = Some(RuleId.AmbiguousSegment)
       )
   end reportShadowedImport
 
@@ -1505,7 +1512,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               s"All alternates of `${typeEx.format}` must be ${kind.useCase.dropRight(4)} aggregates",
               suggestion =
                 s"Declare every alternative as ${article(kind.useCase.dropRight(4))} aggregate, " +
-                  s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'."
+                  s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'.",
+              ruleId = Some(RuleId.MessageAlternatesNotAggregates)
             )
             None
           case typeEx: TypeExpression =>
@@ -1514,7 +1522,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               s"Type expression `${typeEx.format}` needs to be an aggregate for `${kind.useCase.dropRight(4)}`",
               suggestion =
                 s"Declare the referenced type as ${article(kind.useCase.dropRight(4))} aggregate, " +
-                  s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'."
+                  s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'.",
+              ruleId = Some(RuleId.MessageNeedsAggregate)
             )
             None
         end match
@@ -1538,7 +1547,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           typ.loc,
           s"All alternates of `${typeEx.format}` must be $useCase aggregates",
           suggestion = s"Declare every alternative as ${article(useCase.useCase)} aggregate, " +
-            s"e.g. 'type X = ${useCase.useCase} { ??? }'."
+            s"e.g. 'type X = ${useCase.useCase} { ??? }'.",
+          ruleId = Some(RuleId.TypeAlternatesNotAggregates)
         )
         None
       case typEx: AggregateUseCaseTypeExpression =>
@@ -1547,7 +1557,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           s"Type expression `${typEx.format}` is not compatible with keyword `$useCase`",
           suggestion =
             s"Declare the type with the matching aggregate use case so it is compatible with " +
-              s"`$useCase`, e.g. 'type X = ${useCase.useCase} { ??? }'."
+              s"`$useCase`, e.g. 'type X = ${useCase.useCase} { ??? }'.",
+          ruleId = Some(RuleId.TypeIncompatibleKeyword)
         )
         None
       case typEx: TypeExpression =>
@@ -1555,7 +1566,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           typ.loc,
           s"Type expression `${typEx.format}` needs to be an aggregate for `$useCase`",
           suggestion = s"Declare the type as ${article(useCase.useCase)} aggregate, " +
-            s"e.g. 'type X = ${useCase.useCase} { ??? }'."
+            s"e.g. 'type X = ${useCase.useCase} { ??? }'.",
+          ruleId = Some(RuleId.TypeNeedsAggregate)
         )
         None
     end match
@@ -1587,7 +1599,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                     typeEx.loc,
                     s"Type expression `${typeEx.format}` needs all elements to be a graph type for keyword `graph` at $loc",
                     suggestion =
-                      "Make every alternative a graph type, e.g. 'type X = graph of NodeType'."
+                      "Make every alternative a graph type, e.g. 'type X = graph of NodeType'.",
+                    ruleId = Some(RuleId.TypeNeedsGraphElements)
                   )
                   None
                 end if
@@ -1605,7 +1618,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                     typ.typEx.loc,
                     s"Type expression `${typ.typEx.format}` needs to be a table for keyword `table` at $loc",
                     suggestion =
-                      "Declare the referenced type as a table, e.g. 'type X = table of RowType'."
+                      "Declare the referenced type as a table, e.g. 'type X = table of RowType'.",
+                    ruleId = Some(RuleId.TypeNeedsTable)
                   )
                   None
                 end if
@@ -1716,7 +1730,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             message,
             suggestion =
               s"Disambiguate '${pid.value.mkString(".")}' with a more specific, fully-qualified path " +
-                "(e.g. 'Domain.Context.Entity.Name') so it matches exactly one definition."
+                "(e.g. 'Domain.Context.Entity.Name') so it matches exactly one definition.",
+            ruleId = Some(RuleId.Ambiguous)
           )
         Seq.empty[WithIdentifier]
     }

@@ -56,19 +56,47 @@ enum RuleId(
 ):
 
   // ---- ref: reference resolution and path identifiers -------------------------------------
+  // `ref-wrong-kind` is emitted from BOTH resolution paths -- ReferenceMap.definitionOf and
+  // ResolutionPass.wrongType -- because it is ONE rule reported in two places. That the two paths
+  // disagreed about whether to check at all (see CLAUDE.md on resolvePath's missing ClassTag) is
+  // exactly why they should answer to a single id.
+  case WrongKind extends RuleId("ref-wrong-kind")
+  case Ambiguous extends RuleId("ref-ambiguous")
+  case AmbiguousSegment extends RuleId("ref-ambiguous-segment")
+  case InvalidSymTabAnchor extends RuleId("ref-invalid-symtab-anchor")
+  case InvalidParentAnchor extends RuleId("ref-invalid-parent-anchor")
+  case EmptyPathInternal extends RuleId("ref-empty-path-internal")
+  case EmptyPath extends RuleId("ref-empty-path")
+  case WrongKeyword extends RuleId("ref-wrong-keyword")
   case PathUnresolved extends RuleId("ref-path-unresolved")
 
   // ---- name: identifiers and uniqueness ---------------------------------------------------
+  case NameTooShort extends RuleId("name-too-short")
+  case DuplicateContentNames extends RuleId("name-duplicate-content")
+  case NotInSymbolTable extends RuleId("name-not-in-symbol-table")
+  case OverloadedDefinitions extends RuleId("name-overloaded-definitions")
   case EmptyNonImplicitName extends RuleId("name-empty-non-implicit")
 
   // ---- field ------------------------------------------------------------------------------
+  case FieldOverloadedTypes extends RuleId("field-overloaded-types")
   case FieldDuplicateName extends RuleId("field-duplicate-name")
 
   // ---- type -------------------------------------------------------------------------------
+  case TypeAlternatesNotAggregates extends RuleId("type-alternates-not-aggregates")
+  case TypeIncompatibleKeyword extends RuleId("type-incompatible-keyword")
+  case TypeNeedsAggregate extends RuleId("type-needs-aggregate")
+  case TypeNeedsGraphElements extends RuleId("type-needs-graph-elements")
+  case TypeNeedsTable extends RuleId("type-needs-table")
+  case TypeOverloaded extends RuleId("type-overloaded")
   case ReplicaHasCardinality extends RuleId("type-replica-has-cardinality")
   case ReplicaNotReplicable extends RuleId("type-replica-not-replicable")
 
   // ---- msg: the four message kinds and what they declare ----------------------------------
+  case MessageAlternatesNotAggregates extends RuleId("msg-alternates-not-aggregates")
+  case MessageNeedsAggregate extends RuleId("msg-needs-aggregate")
+  case MessageRefEmpty extends RuleId("msg-ref-empty")
+  case MessageRefWrongKind extends RuleId("msg-ref-wrong-message-kind")
+  case MessageRefNotAMessage extends RuleId("msg-ref-not-a-message")
   case YieldsOnlyCommandQuery extends RuleId("msg-yields-only-command-or-query")
   case FlowUnresolvedTellTarget extends RuleId("msg-flow-unresolved-tell-target")
   case FlowUnresolvedMessageType extends RuleId("msg-flow-unresolved-message-type")
@@ -76,11 +104,47 @@ enum RuleId(
   case FlowUnresolvedAdaptorContext extends RuleId("msg-flow-unresolved-adaptor-context")
 
   // ---- epic: epics, use cases, users, interactions -----------------------------------------
+  case PrivateNestedFunction extends RuleId("func-private-nested")
+
+  // ---- stream: portlets, connectors and the shape of a pipeline -----------------------------
+  case ConnectorTouchesExternal extends RuleId("stream-connector-touches-external")
+  case ConsiderAdaptor extends RuleId("stream-consider-adaptor")
+  case ProcessorUnconnected extends RuleId("stream-processor-unconnected")
+  case SourceReachesNoSink extends RuleId("stream-source-reaches-no-sink")
+  case SinkReachedByNoSource extends RuleId("stream-sink-reached-by-no-source")
+  case BoundaryOutlet extends RuleId("stream-boundary-outlet")
+  case BoundaryInlet extends RuleId("stream-boundary-inlet")
+  case CrossesDomains extends RuleId("stream-crosses-domains")
+  case DomainScopeUnnecessary extends RuleId("stream-domain-scope-unnecessary")
+  case BoundaryNotPersistent extends RuleId("stream-boundary-not-persistent")
+  case CrossesContexts extends RuleId("stream-crosses-contexts")
+  case PersistenceNotNeeded extends RuleId("stream-persistence-not-needed")
+  case OutletCardinality extends RuleId("stream-outlet-cardinality")
+  case InletCardinality extends RuleId("stream-inlet-cardinality")
+  case AllPortletsAsync extends RuleId("stream-all-portlets-async")
+  case PortletUnconnected extends RuleId("stream-portlet-unconnected")
   case StepNotHandledInState extends RuleId("epic-step-not-handled-in-state")
   case StepGuardedInState extends RuleId("epic-step-guarded-in-state")
   case StepUnwitnessed extends RuleId("epic-step-unwitnessed")
 
   // ---- use: usage analysis ------------------------------------------------------------------
+  case VagueDuration extends RuleId("value-vague-duration")
+
+  // ---- module: modules, includes, imports --------------------------------------------------
+  case IncludeExtension extends RuleId("module-include-extension")
+  case IncludeContributesNothing extends RuleId("module-include-empty")
+
+  // ---- doc: metadata -- descriptions, authors, terms, figma --------------------------------
+  case AuthorUndefined extends RuleId("doc-author-undefined")
+  case MultipleBriefs extends RuleId("doc-multiple-briefs")
+  case MultipleUlids extends RuleId("doc-multiple-ulids")
+  case FigmaRefNotAllowed extends RuleId("doc-figma-ref-not-allowed")
+  case FigmaNodeMissing extends RuleId("doc-figma-node-missing")
+  case FigmaFileUnreadable extends RuleId("doc-figma-file-unreadable")
+  case FigmaFrameDrift extends RuleId("doc-figma-frame-drift")
+
+  // ---- opt: options -------------------------------------------------------------------------
+  case OptionDeprecated extends RuleId("opt-deprecated")
   case UnusedDefinition extends RuleId("use-unused-definition")
   case OnlyUsedInPath extends RuleId("use-only-in-path-identifiers")
 
