@@ -1116,7 +1116,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(0) // Prompt statement type
     writeLocation(s.loc)
-    writeLiteralString(s.what)
+    // FORMAT_REVISION 23: a SEQUENCE of strings, where revision 22 wrote exactly one.
+    writeSeq(s.what)(writeLiteralString)
   }
 
   def writeErrorStatement(s: ErrorStatement): Unit = {
@@ -1434,7 +1435,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case pv: PromptValue =>
         writer.writeU8(4)
         writeLocation(pv.loc)
-        writeLiteralString(pv.prompt)
+        // FORMAT_REVISION 23: a SEQUENCE, as for DoStatement.
+        writeSeq(pv.prompt)(writeLiteralString)
         writeOption(pv.typeEx)(writeTypeExpression) // A20: optional `as <type>` ascription
       case c: Constructor =>
         writer.writeU8(1)

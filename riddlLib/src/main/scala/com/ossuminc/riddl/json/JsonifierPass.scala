@@ -1372,7 +1372,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     }
 
   private def serializeStatement(s: Statement): StatementDto = s match
-    case DoStatement(_, what) => DoStmtDto(what.s)
+    case DoStatement(_, what) => DoStmtDto(what.map(_.s))
     case ErrorStatement(_, msg)   => ErrorStmtDto(msg.s)
     case LetStatement(_, id, tr, e) =>
       LetStmtDto(id.value, tr.map(t => path(t.pathId)), serializeValue(e))
@@ -1498,7 +1498,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   // A54: AST Value -> ValueDto.
   private def serializeValue(v: Value): ValueDto = v match
     case ls: LiteralString => LiteralValueDto(ls.s)
-    case pv: PromptValue   => PromptValueDto(pv.prompt.s, pv.typeEx.map(serializeTypeExpr))
+    case pv: PromptValue   => PromptValueDto(pv.prompt.map(_.s), pv.typeEx.map(serializeTypeExpr))
     case ev: EmptyValue    => EmptyValueDto(ev.typeEx.map(serializeTypeExpr))
     case sv: SystemValue   => SystemValueDto(sv.field.map(_.value))
     case vr: ValueRef      => ValueRefDto(path(vr.path))

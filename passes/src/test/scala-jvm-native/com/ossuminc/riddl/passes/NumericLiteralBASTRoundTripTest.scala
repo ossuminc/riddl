@@ -115,7 +115,7 @@ class NumericLiteralBASTRoundTripTest extends AbstractValidatingTest {
     "keep a prompt value" in { (td: TestData) =>
       val decl = """constant K: Real = prompt("the gravitational constant")"""
       constantValueOf(roundTrip(constantModel(decl), "c-prompt"), "K") match
-        case pv: PromptValue => pv.prompt.s must include("gravitational")
+        case pv: PromptValue => pv.text must include("gravitational")
         case other           => fail(s"decoded as ${other.getClass.getSimpleName}")
     }
 

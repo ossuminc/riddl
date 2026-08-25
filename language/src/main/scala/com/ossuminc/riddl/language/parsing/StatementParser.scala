@@ -29,7 +29,7 @@ private[parsing] trait StatementParser {
 
   // `do "…"` is the canonical AI-action statement (A54). It builds a DoStatement.
   private def doStatement[u: P]: P[DoStatement] = {
-    P(Index ~ Keywords.do_ ~ literalString ~/ Index)./ map { case (start, str, end) =>
+    P(Index ~ Keywords.do_ ~ literalStringBlock ~/ Index)./ map { case (start, str, end) =>
       DoStatement(at(start, end), str)
     }
   }
@@ -38,7 +38,7 @@ private[parsing] trait StatementParser {
   // deprecation at the keyword (pattern mirrors replyStatement's `reply` -> `yield`). Note: the
   // parenthesized `prompt("…")` value form is handled by `promptValue`, not here.
   private def promptStatement[u: P]: P[DoStatement] = {
-    P(Index ~ Keywords.prompt ~ literalString ~/ Index)./ map { case (start, str, end) =>
+    P(Index ~ Keywords.prompt ~ literalStringBlock ~/ Index)./ map { case (start, str, end) =>
       val kwLoc = at(start, start + Keyword.prompt.length)
       deprecation(
         kwLoc,
@@ -541,7 +541,7 @@ private[parsing] trait StatementParser {
 
   private[parsing] def promptValue[u: P]: P[PromptValue] = {
     P(
-      Index ~ Keywords.prompt ~ Punctuation.roundOpen ~/ literalString ~
+      Index ~ Keywords.prompt ~ Punctuation.roundOpen ~/ literalStringBlock ~
         Punctuation.roundClose ~ (Keywords.keyword("as") ~/ typeExpression).? ~/ Index
     )./.map { case (start, str, typeEx, end) => PromptValue(at(start, end), str, typeEx) }
   }

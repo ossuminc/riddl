@@ -794,7 +794,7 @@ class BASTRoundTripTest extends AnyWordSpec {
               import com.ossuminc.riddl.language.AST.*
               val lets = Finder(module.contents).recursiveFindByType[LetStatement]
               lets.find(_.identifier.value == "note").map(_.expression) match
-                case Some(pv: PromptValue) => assert(pv.prompt.s == "summarize the addition")
+                case Some(pv: PromptValue) => assert(pv.text == "summarize the addition")
                 case other                 => fail(s"expected a PromptValue let, got $other")
               val sets = Finder(module.contents).recursiveFindByType[SetStatement]
               sets.head.value match

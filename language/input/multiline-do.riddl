@@ -1,0 +1,24 @@
+domain MultilineDo is {
+  context Ordering is {
+    command PlaceOrder is { ??? }
+    entity Order is {
+      handler Orders is {
+        on command PlaceOrder is {
+          do "a single line stays exactly as it was"
+          do {
+            "first line of a longer instruction"
+            "second line, which a generator joins with a newline"
+            "third line"
+          }
+        }
+      }
+    }
+    function Score is {
+      requires { amount: Real }
+      returns { score: Real }
+      let one = prompt("a single-line hole")
+      let many = prompt({ "a hole whose prose" "runs to several lines" }) as Real
+      return many
+    }
+  }
+}

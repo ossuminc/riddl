@@ -147,7 +147,11 @@ package object bast {
     // reader has no arm for sub-kind 21 at all, so it THROWS rather than misreading -- which is the
     // good failure, and the reason the reader's default arm was made to throw instead of
     // fabricating a DoStatement. Bumped rather than ridden because 18 SHIPPED in 2.0.0-rc.15.
-    22 // `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
+    // 23 makes `do` and `prompt(...)` hold a SEQUENCE of literal strings rather than one, so a
+    // revision-22 file's bare string is read as a COUNT and everything after it derails. Not a
+    // clean failure -- which is the whole reason this gate exists.
+    23 // multi-line `do` / `prompt`
+    // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.
     // 21 // `empty` value: tag 12 in readValue/writeValue. A revision-20 reader hitting tag 12 throws
     // rather than misreading, but the gate is what makes that a clean failure.

@@ -992,8 +992,11 @@ class BASTReader(
 
   private def readStatement(loc: At, stmtType: Int): Statement = {
     stmtType match {
-      case 0 => // Prompt
-        val what = readLiteralString()
+      case 0 => // Do (spelled `prompt` before 2.0)
+        // FORMAT_REVISION 23: a SEQUENCE. A revision-22 file wrote a bare string here, so an older
+        // file misaligns rather than failing cleanly -- which is exactly what the revision gate is
+        // for.
+        val what = readSeq(() => readLiteralString())
         DoStatement(loc, what)
 
       case 1 => // Error
@@ -2584,7 +2587,8 @@ class BASTReader(
         LiteralString(loc, s)
       case 4 => // PromptValue
         val loc = readLocation()
-        val what = readLiteralString()
+        // FORMAT_REVISION 23: a SEQUENCE, as for DoStatement.
+        val what = readSeq(() => readLiteralString())
         val typeEx = readOption(readTypeExpression()) // A20: optional `as <type>` ascription
         PromptValue(loc, what, typeEx)
       case 12 => // EmptyValue -- `empty` / `empty <type>` (FORMAT_REVISION 21)

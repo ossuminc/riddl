@@ -93,7 +93,7 @@ class NumericLiteralJsonRoundTripTest extends AnyWordSpec with Matchers {
     "keep a prompt value" in {
       val decl = """constant K: Real = prompt("the gravitational constant")"""
       constantValueOf(roundTripped(model(decl)), "K") match
-        case pv: PromptValue => pv.prompt.s must include("gravitational")
+        case pv: PromptValue => pv.text must include("gravitational")
         case other           => fail(s"decoded as ${other.getClass.getSimpleName}")
     }
 

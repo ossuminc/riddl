@@ -95,7 +95,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     // audit consistency (review round 1, fix 2). A LiteralString is a leaf so these add no
     // actual reachability, but a table claiming to be exhaustive should not have unexplained
     // gaps next to a sibling it does cover.
-    case ps: DoStatement  => Seq(ps.what)
+    case ps: DoStatement  => ps.what
     case es: ErrorStatement   => Seq(es.message)
     case cs: CodeStatement    => Seq(cs.language)
     case fe: ForeachStatement => fe.doStatements.toSeq
@@ -140,7 +140,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     // ascription's `TypeExpression` is surfaced here too (an `AliasedTypeExpression` — a NAMED
     // type ascription — recurses one further level into its `PathIdentifier`, so `prompt("…") as
     // SomeType` makes both the ascription node AND the path it names reachable).
-    case pv: PromptValue            => Seq(pv.prompt) ++ pv.typeEx.toSeq
+    case pv: PromptValue            => pv.prompt ++ pv.typeEx.toSeq
     case ate: AliasedTypeExpression => Seq(ate.pathId)
 
     case _ => Seq.empty

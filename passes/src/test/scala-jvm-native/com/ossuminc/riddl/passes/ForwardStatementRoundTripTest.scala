@@ -122,8 +122,8 @@ class ForwardStatementRoundTripTest extends AbstractValidatingTest {
       Finder(decoded.contents).recursiveFindByType[Entity].map(_.id.value) must contain("Worker")
     }
 
-    "have bumped the format revision, because 21 has shipped" in { (td: TestData) =>
-      FORMAT_REVISION mustBe 22.toShort
+    "be 23 -- multi-line `do`/`prompt` bumped it; 22 has shipped" in { (td: TestData) =>
+      FORMAT_REVISION mustBe 23.toShort
     }
   }
 }

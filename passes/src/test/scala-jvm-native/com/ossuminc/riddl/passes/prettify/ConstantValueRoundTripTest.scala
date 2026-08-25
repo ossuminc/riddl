@@ -97,7 +97,7 @@ class ConstantValueRoundTripTest extends AbstractValidatingTest {
           case other              => fail(s"expected a BooleanLiteral, got $other")
 
         regen("Hint").value match
-          case pv: PromptValue => pv.prompt.s mustBe "give a hint"
+          case pv: PromptValue => pv.text mustBe "give a hint"
           case other           => fail(s"expected a PromptValue, got $other")
     }
 

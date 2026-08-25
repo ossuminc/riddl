@@ -208,7 +208,7 @@ class ASTTest extends AbstractTestingBasis {
   val messageRef: CommandRef = CommandRef(At(), PathIdentifier(At(), Seq("command")))
   val recordRef: RecordRef = RecordRef(At(), PathIdentifier(At(), Seq("record")))
   val statements: Contents[Statements] = Contents(
-    DoStatement(At.empty, LiteralString(At.empty, "prompt")),
+    DoStatement(At.empty, Seq(LiteralString(At.empty, "prompt"))),
     BecomeStatement(At.empty, entityRef, HandlerRef(At(), PathIdentifier(At(), Seq("Entity")))),
     CodeStatement(
       At.empty,
@@ -635,9 +635,9 @@ class ASTTest extends AbstractTestingBasis {
   }
   "SagaStep" should {
     "have a test" in {
-      val doIt = Contents[Statements](DoStatement(At.empty, LiteralString(At.empty, "do it")))
+      val doIt = Contents[Statements](DoStatement(At.empty, Seq(LiteralString(At.empty, "do it"))))
       val undoIt =
-        Contents[Statements](DoStatement(At.empty, LiteralString(At.empty, "undo it")))
+        Contents[Statements](DoStatement(At.empty, Seq(LiteralString(At.empty, "undo it"))))
       val step = SagaStep(At.empty, Identifier(At.empty, "step"), doIt, undoIt)
       step.id.value mustBe "step"
       step.format mustBe "step step"

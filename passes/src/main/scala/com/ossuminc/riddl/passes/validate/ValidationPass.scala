@@ -1841,8 +1841,12 @@ case class ValidationPass(
     checkStateReadScope(statement, parents)
     statement match
       case DoStatement(loc, what) =>
+        // The question is whether the block says ANYTHING, so it is asked of the joined prose:
+        // `do { "" "" }` is as empty as `do ""`. A synthetic LiteralString carries that text to a
+        // check whose contract is defined only for one (see CLAUDE.md on emptiness); `loc` for the
+        // report comes from the statement, so the synthetic node's own position is never used.
         checkNonEmptyValue(
-          what,
+          LiteralString(loc, what.map(_.s).mkString),
           "prompt statement",
           onClause,
           loc,
@@ -1962,7 +1966,7 @@ case class ValidationPass(
             // An AI-evaluated condition: nothing to type-check, but an empty prompt says nothing
             // for an AI to act on, so it gets the same emptiness check the bare string had.
             checkNonEmptyValue(
-              pv.prompt,
+              LiteralString(loc, pv.prompt.map(_.s).mkString),
               "condition",
               onClause,
               loc,

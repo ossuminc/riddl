@@ -190,6 +190,17 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
+  /** One string bare, or several inside braces -- the same shape `docBlock` uses for prose.
+    *
+    * The bare form takes EXACTLY ONE string, deliberately. Making it `literalStrings` would admit
+    * `do "a" "b"` by juxtaposition, and while that parses unambiguously (no statement begins with a
+    * quote), nothing would mark where the statement ends except the next keyword. The braces make
+    * the extent explicit, and this is the spelling RIDDL already uses for multi-line prose.
+    */
+  def literalStringBlock[u: P]: P[Seq[LiteralString]] = {
+    P((open ~ literalStrings ~ close) | literalString.map(Seq(_)))
+  }
+
   def markdownLines[u: P]: P[Seq[LiteralString]] = {
     P(markdownLine.rep(1))
   }

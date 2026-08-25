@@ -84,7 +84,7 @@ class WidenedValueRoundTripTest extends AbstractValidatingTest {
           .find(_.identifier.value == "note")
           .getOrElse(fail("let 'note' lost through round-trip"))
         promptLet.expression match
-          case pv: PromptValue => pv.prompt.s mustBe "summarize the addition"
+          case pv: PromptValue => pv.text mustBe "summarize the addition"
           case other           => fail(s"expected a PromptValue expression, got $other")
 
         // set field to a record constructor

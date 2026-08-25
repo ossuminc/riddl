@@ -316,7 +316,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         }
         this
       case pv: PromptValue =>
-        add(s"prompt(${pv.prompt.format})")
+        add(s"prompt(${LiteralString.blockFormat(pv.prompt)})")
         pv.typeEx.foreach { te =>
           add(" as "); emitTypeExpression(te)
         }
@@ -674,7 +674,17 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         nl
       case DoStatement(_, what) =>
         // A54: `do` is canonical; the deprecated `prompt` statement normalizes to `do` on emit.
-        addLine(s"do ${what.format}")
+        //
+        // A single string stays on one line, byte-identical to what it always was -- which is what
+        // keeps multi-line additive and leaves every existing model's output untouched. Several
+        // strings get one per line inside braces, the layout every other block in this emitter
+        // uses; squashing them onto one line would be the narrow second copy of a block dispatch
+        // that `InvariantBlock` was already caught being.
+        if what.sizeIs == 1 then addLine(s"do ${what.head.format}")
+        else
+          addIndent("do {").nl.incr
+          what.foreach(ls => addIndent(ls.format).nl)
+          decr.addIndent("}").nl
       case SendStatement(_, msg, portlet) =>
         // A20: `msg` is `MessageRef | Constructor | ValueRef`; a `Constructor` argument can carry a
         // `PromptValue` ascription, so this routes through `emitConstructorOperand` (-> `emitValue`)

@@ -67,7 +67,7 @@ class WhenPromptRoundTripTest extends AbstractValidatingTest {
 
     "parse as a PromptValue" in { (_: TestData) =>
       conditionOf(parse(model("""prompt("the order has drink items")"""), "p")) match
-        case pv: PromptValue => pv.prompt.s mustBe "the order has drink items"
+        case pv: PromptValue => pv.text mustBe "the order has drink items"
         case other           => fail(s"expected a PromptValue, got $other")
     }
 

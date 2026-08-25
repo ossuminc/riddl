@@ -68,7 +68,7 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
     "parse with typeEx == None when unascribed (unchanged behaviour)" in { (td: TestData) =>
       letExpression(parsedRoot(model, td), "plain") match
         case pv: PromptValue =>
-          pv.prompt.s mustBe "x"
+          pv.text mustBe "x"
           pv.typeEx mustBe None
         case other => fail(s"expected a PromptValue, got $other")
     }
@@ -76,7 +76,7 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
     "parse with typeEx a predefined type when ascribed with `as Real`" in { (td: TestData) =>
       letExpression(parsedRoot(model, td), "typed") match
         case pv: PromptValue =>
-          pv.prompt.s mustBe "x"
+          pv.text mustBe "x"
           pv.typeEx mustBe a[Some[?]]
           pv.typeEx.get mustBe a[Real]
         case other => fail(s"expected a PromptValue, got $other")
@@ -86,7 +86,7 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
       (td: TestData) =>
         letExpression(parsedRoot(model, td), "aliased") match
           case pv: PromptValue =>
-            pv.prompt.s mustBe "x"
+            pv.text mustBe "x"
             pv.typeEx.get match
               case ate: AliasedTypeExpression => ate.pathId.value.last mustBe "OrderId"
               case other => fail(s"expected an AliasedTypeExpression, got $other")
@@ -110,7 +110,7 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
         case c: Constructor =>
           c.args.headOption.map(_.value) match
             case Some(pv: PromptValue) =>
-              pv.prompt.s mustBe "x"
+              pv.text mustBe "x"
               pv.typeEx.get mustBe a[String_]
             case other => fail(s"expected a PromptValue arg, got $other")
         case other => fail(s"expected a Constructor set value, got $other")
@@ -127,7 +127,7 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
         .getOrElse(fail("no `set ... qty` statement found"))
       qtySet.value match
         case pv: PromptValue =>
-          pv.prompt.s mustBe "x"
+          pv.text mustBe "x"
           pv.typeEx.get mustBe a[Integer]
         case other => fail(s"expected a PromptValue set value, got $other")
     }
@@ -140,7 +140,7 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
         .getOrElse(fail("no when statement found"))
       when.condition match
         case pv: PromptValue =>
-          pv.prompt.s mustBe "x"
+          pv.text mustBe "x"
           pv.typeEx.get mustBe a[Bool]
         case other => fail(s"expected a PromptValue condition, got $other")
     }
@@ -161,7 +161,7 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
           |""".stripMargin
       val root = parsedRoot(src, td)
       Finder(root).recursiveFindByType[DoStatement].headOption match
-        case Some(ps) => ps.what.s mustBe "do the thing"
+        case Some(ps) => ps.text mustBe "do the thing"
         case None     => fail("no DoStatement found")
     }
 
@@ -181,7 +181,7 @@ abstract class TypedHoleTest(using PlatformContext) extends AbstractParsingTest 
           |""".stripMargin
       val root = parsedRoot(src, td)
       Finder(root).recursiveFindByType[DoStatement].headOption match
-        case Some(ps) => ps.what.s mustBe "do the thing"
+        case Some(ps) => ps.text mustBe "do the thing"
         case None     => fail("no DoStatement found")
     }
   }

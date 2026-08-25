@@ -186,6 +186,17 @@ object AST:
 
     /** Definition of the empty LiteralString */
     val empty: LiteralString = LiteralString(At.empty, "")
+
+    /** One string bare, several braced -- the shape `doc_block` already uses for prose.
+      *
+      * Single-line renders EXACTLY as it did before multi-line existed, which is what keeps the
+      * feature additive: no existing model's output moves. This is the ONE-LINE form, for messages
+      * and `.format`; the prettifier lays a multi-line block out one string per line, as it does
+      * for every other block, and owns that layout rather than deriving it from here.
+      */
+    def blockFormat(lines: Seq[LiteralString]): String =
+      if lines.sizeIs == 1 then lines.head.format
+      else lines.map(_.format).mkString("{ ", " ", " }")
   end LiteralString
 
   /** A RiddlValue that is a parsed identifier, typically the name of a definition.
@@ -3417,13 +3428,17 @@ object AST:
 
   case class PromptValue(
     loc: At,
-    prompt: LiteralString,
+    prompt: Seq[LiteralString],
     typeEx: Option[TypeExpression] = None
   ) extends RiddlValue:
     override def kind: String = "Prompt Value"
+
+    /** The prose as a generator wants it. See [[DoStatement.text]]. */
+    def text: String = prompt.map(_.s).mkString("\n")
+
     def format: String =
       val ascription = typeEx.map(t => s" as ${PromptValue.ascriptionFormat(t)}").getOrElse("")
-      s"prompt(${prompt.format})$ascription"
+      s"prompt(${LiteralString.blockFormat(prompt)})$ascription"
   end PromptValue
 
   object PromptValue:
@@ -3688,10 +3703,19 @@ object AST:
   @JSExportTopLevel("DoStatement")
   case class DoStatement(
     loc: At,
-    what: LiteralString
+    what: Seq[LiteralString]
   ) extends Statement {
     override def kind: String = "Do Statement"
-    def format: String = what.format
+
+    /** The prose as a generator wants it: the lines joined by newlines, without quotes.
+      *
+      * riddlg reads this. It is derived rather than stored, so there is no second representation to
+      * disagree with `what` -- the same reason a single-line `do` is a Seq of one instead of a
+      * special case.
+      */
+    def text: String = what.map(_.s).mkString("\n")
+
+    def format: String = LiteralString.blockFormat(what)
   }
 
   /** A statement that is intended to generate a runtime error in the application or otherwise

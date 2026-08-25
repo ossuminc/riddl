@@ -703,7 +703,13 @@ object JsonModel:
   /** `"text"` or `{ "kind": "do", "text": "..." }`. Reads `"prompt"` too, for files written
     * before the discriminator was corrected.
     */
-  case class DoStmtDto(text: String) extends StatementDto
+  /** `{ "kind": "do", "text": "..." }`, or `"text": ["...", "..."]` for the multi-line form.
+    *
+    * The wire keeps ONE key and lets it hold either shape, rather than adding a second. A
+    * single-line `do` therefore serializes byte-identically to what it always did, so no existing
+    * model's JSON moves -- the same additive rule the prettifier follows for the braced block.
+    */
+  case class DoStmtDto(text: Seq[String]) extends StatementDto
 
   /** `{ "kind": "comment", "text": "...", "inline"?: true }`.
     *
@@ -907,7 +913,9 @@ object JsonModel:
     */
   case class EmptyValueDto(typeEx: Option[TypeExprDto] = None) extends ValueDto
 
-  case class PromptValueDto(prompt: String, typeEx: Option[TypeExprDto] = None) extends ValueDto
+  /** `{"value": "prompt", "prompt": "..."}`, or an array of strings for the multi-line form. */
+  case class PromptValueDto(prompt: Seq[String], typeEx: Option[TypeExprDto] = None)
+      extends ValueDto
 
   /** `{ "value": "get", "source": "input"|"state", "keyword": "<kw>", "ref": "<path>" }` — the
     * `keyword` preserves the InputRef alias (input/form/…) for reflection fidelity; a StateRef has
@@ -1783,7 +1791,7 @@ object JsonModel:
     m("value").str match
       case "literal"  => LiteralValueDto(m("text").str)
       case "numeric"  => NumericLiteralDto(m("text").str)
-      case "prompt"   => PromptValueDto(m("prompt").str, m.get("type").map(readTypeExpr))
+      case "prompt"   => PromptValueDto(readProse(m("prompt")), m.get("type").map(readTypeExpr))
       case "empty"    => EmptyValueDto(m.get("type").map(readTypeExpr))
       case "valueRef" => ValueRefDto(m("path").str)
       case "lookup" =>
@@ -1849,7 +1857,7 @@ object JsonModel:
         )
       case PromptValueDto(prompt, typeEx) =>
         ujson.Obj.from(
-          Seq[(String, ujson.Value)]("value" -> ujson.Str("prompt"), "prompt" -> ujson.Str(prompt))
+          Seq[(String, ujson.Value)]("value" -> ujson.Str("prompt"), "prompt" -> writeProse(prompt))
             ++ typeEx.map(t => "type" -> writeTypeExpr(t))
         )
       case EmptyValueDto(typeEx) =>
@@ -1968,13 +1976,13 @@ object JsonModel:
 
   private def readStatement(v: ujson.Value): StatementDto =
     v match
-      case ujson.Str(s) => DoStmtDto(s)
+      case ujson.Str(s) => DoStmtDto(Seq(s))
       case _ =>
         val m = v.obj
         m("kind").str match
           // BOTH spellings read. "prompt" is what every file written before 2026-08-25 carries,
           // and a reader that rejected it would strand them for no gain.
-          case "do" | "prompt" => DoStmtDto(m("text").str)
+          case "do" | "prompt" => DoStmtDto(readProse(m("text")))
           case "comment" =>
             CommentStmtDto(m("text").str, m.get("inline").exists(_.bool))
           case "error" => ErrorStmtDto(m("message").str)
@@ -2059,6 +2067,21 @@ object JsonModel:
   private def stmtArr(stmts: Seq[StatementDto]): ujson.Value =
     ujson.Arr.from(stmts.map(writeStatement))
 
+  /** Prose that may be one line or several.
+    *
+    * Reads a bare string as a one-element sequence so every `.bast`/JSON written before multi-line
+    * existed still loads, and WRITES a bare string whenever there is exactly one -- which is what
+    * keeps the 190-model corpus's JSON byte-identical. A shape that always wrote an array would be
+    * correct and would still churn every model in the corpus for nothing.
+    */
+  private def readProse(v: ujson.Value): Seq[String] = v match
+    case ujson.Str(s)  => Seq(s)
+    case ujson.Arr(xs) => xs.map(_.str).toSeq
+    case other         => throw new IllegalArgumentException(s"prose must be a string or array: $other")
+
+  private def writeProse(lines: Seq[String]): ujson.Value =
+    if lines.sizeIs == 1 then ujson.Str(lines.head) else ujson.Arr.from(lines.map(ujson.Str(_)))
+
   private def writeStatement(dto: StatementDto): ujson.Value =
     dto match
       case DoStmtDto(text) =>
@@ -2066,7 +2089,7 @@ object JsonModel:
         // deprecated synonym, but the wire said "prompt" for the STATEMENT while `{"value":
         // "prompt", ...}` means the typed-hole VALUE -- so one string meant two different things
         // depending on which field it sat in. It now means only the value.
-        ujson.Obj("kind" -> ujson.Str("do"), "text" -> ujson.Str(text))
+        ujson.Obj("kind" -> ujson.Str("do"), "text" -> writeProse(text))
       case CommentStmtDto(text, inline) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)]("kind" -> ujson.Str("comment"), "text" -> ujson.Str(text))

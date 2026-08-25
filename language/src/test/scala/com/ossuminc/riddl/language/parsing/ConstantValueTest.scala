@@ -70,7 +70,7 @@ class ConstantValueTest extends AnyWordSpec with Matchers {
         "constant-prompt"
       )
       c.value match
-        case pv: PromptValue => pv.prompt.s mustBe "the gravitational constant"
+        case pv: PromptValue => pv.text mustBe "the gravitational constant"
         case other           => fail(s"expected a PromptValue, got $other")
     }
 

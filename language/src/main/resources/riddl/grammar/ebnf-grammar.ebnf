@@ -362,7 +362,7 @@ statement_start = ( "set" | "tell" | "send" | "forward" | "yield" | "reply" | "m
                   | "do" | "prompt" | "let" | "call" | "foreach" | "when" | "match" | "error"
                   | "require" | "put" | "return" | "terminate" | "code" | "focus" | "stop"
                   | "read" | "write" | "ask" | "initiate" | "if" | "else" ) ;
-prompt_value = "prompt" "(" literal_string ")" [ "as" type_expression ] ;
+prompt_value = "prompt" "(" literal_string_block ")" [ "as" type_expression ] ;
 (* Numeric literals - integers and reals, written directly. No digit separators and no radix     *)
 (* prefixes: declined deliberately, and pure additions later if wanted.                           *)
 (*                                                                                                 *)
@@ -468,7 +468,7 @@ return_statement = "return" value ;
 terminate_statement = "terminate" value [ "with" "(" [constructor_arg {"," constructor_arg}] ")" ] ;
 
 (* General statements. A54: `do` is canonical; the `prompt` statement is a deprecated synonym. *)
-prompt_statement = ("do" | "prompt") literal_string ;
+prompt_statement = ("do" | "prompt") literal_string_block ;
 code_statement = "```" ("scala" | "java" | "python" | "mojo") code_contents "```" ;
 code_contents = {any_char_except_triple_backtick} ;
 error_statement = "error" literal_string ;
@@ -662,5 +662,9 @@ doc_block = "{" {markdown_lines | literal_strings | undefined} "}" | literal_str
 markdown_lines = {markdown_line}+ ;
 markdown_line = "|" /[^\n]*\n?/ ;
 literal_strings = {literal_string}+ ;
+(* One string bare, or several inside braces -- the same shape doc_block uses for prose. The bare
+   form takes EXACTLY ONE string: admitting juxtaposition would leave nothing but the next keyword
+   to mark where the statement ends. *)
+literal_string_block = "{" literal_strings "}" | literal_string ;
 shown_by = "shown" "by" "{" {http_url} "}" ;
 mime_type = ("application" | "audio" | "example" | "font" | "image" | "model" | "text" | "video") "/" /[a-z.*-]*/ ;
