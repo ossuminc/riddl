@@ -10,6 +10,36 @@ Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
 NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
 
+**PRETTIFY NOW EMITS ONE SPACE AFTER `is` (2026-08-25), so the whole corpus needs
+re-prettifying and `.bast` regeneration.** riddl-models knows and is not blocked. This
+is the change with the widest byte-level reach on the branch — every model in the corpus
+had drifted (188 of 188).
+
+**Whitespace is load-bearing in this project.** riddl-models diffs 190 checked-in `.bast`
+files against source BYTE FOR BYTE, and that can only be exact while the corpus is
+precisely what prettify emits. Reid: *"Byte non-identical, especially with mere white
+space changes, is a source of frustration at best and a source of errors at worst."*
+
+**Two causes, two sites, and they are NOT one bug** — `emitMessageType` added a leading
+space its callers had already supplied (hitting all seven aggregate-use-case keywords but
+NOT plain `type`), and `add(Seq[LiteralString])` padded its single-string branch (hitting
+`term` only, with a trailing space too).
+
+**The durable lesson is about the TEST, not the spacing: idempotence cannot catch a
+formatting defect.** `prettify(prettify(x)) == prettify(x)` held the whole time, because
+whatever the emitter does is canonical BY CONSTRUCTION — the property is a tautology with
+respect to its own output. Only an assertion against a FIXED expectation can contradict
+the emitter. Same shape as rc.24-3's stream defect, where nothing asserted which stream a
+command wrote to. **When a component defines its own correctness, self-consistency proves
+nothing.**
+
+**A test that passes alone and fails in company is worse than no test.** Two suites here
+called `System.setOut`, which is process-global, while sbt runs suites in PARALLEL — so
+one captured the other's output and failed with a message that read like a code break.
+Both now go through `StdStreamCapture`'s JVM-wide lock. **Any suite redirecting a standard
+stream must use it**, or the race is back for everyone.
+
+
 **Constructor arguments are TYPE-CHECKED as of 2026-08-25**, and until then they were
 not checked for type AT ALL — only arity, duplication, ordering, name validity and
 `empty` cardinality. riddl-generator found it by generating Java that would not compile.
