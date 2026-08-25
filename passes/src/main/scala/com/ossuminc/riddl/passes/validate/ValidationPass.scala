@@ -309,7 +309,8 @@ case class ValidationPass(
                     (if isUnion then s"Add an `on` clause for each of $names to one of "
                      else s"Add an `on` clause for ${inletType.identify} to one of ") +
                       s"${proc.identify}'s handlers, add an `on other` clause if anything arriving " +
-                      s"should be handled generically, or remove ${inlet.identify}."
+                      s"should be handled generically, or remove ${inlet.identify}.",
+                  ruleId = Some(RuleId.InletNotReceived)
                 )
               end if
             }
@@ -329,7 +330,8 @@ case class ValidationPass(
               s"${target.identify} is told ${msgType.identify} but declares no handler clause " +
                 "that receives it, so the message cannot be delivered",
               suggestion = s"Add an `on` clause for ${msgType.identify} to one of " +
-                s"${target.identify}'s handlers, or remove the `tell`."
+                s"${target.identify}'s handlers, or remove the `tell`.",
+              ruleId = Some(RuleId.TellNotDeliverable)
             )
           end if
         }
@@ -353,7 +355,8 @@ case class ValidationPass(
             s"a connector to one of its inlets is required for delivery",
           suggestion =
             s"Add a connector whose 'to' inlet belongs to '${tellTargetLabel(ts)}' so the " +
-              s"told message can be delivered."
+              s"told message can be delivered.",
+          ruleId = Some(RuleId.TellTargetUnreachable)
         )
       end if
     }
@@ -382,7 +385,8 @@ case class ValidationPass(
               term.loc,
               s"term '${term.id.value}' is defined inconsistently: '$baseText' vs '$text'",
               suggestion =
-                s"Use a single consistent definition for term '${term.id.value}' across all scopes."
+                s"Use a single consistent definition for term '${term.id.value}' across all scopes.",
+              ruleId = Some(RuleId.TermInconsistent)
             )
           }
         }
@@ -415,7 +419,8 @@ case class ValidationPass(
               hc.handler.errorLoc,
               s"${hc.handler.identify} in ${hc.parent.identify} has no executable statements",
               suggestion =
-                "Add executable statements (tell, send, set, morph, become, reply) to the handler's on-clauses."
+                "Add executable statements (tell, send, set, morph, become, reply) to the handler's on-clauses.",
+              ruleId = Some(RuleId.HandlerNoExecutableStatements)
             )
           // A REPOSITORY is exempt (Reid, 2026-08-12). Most of a repository's on-clauses legitimately
           // hold a single `do` standing in for the SQL that will implement them -- naming the
@@ -441,7 +446,8 @@ case class ValidationPass(
               s"${hc.handler.identify} in ${hc.parent.identify} contains only 'do' statements; " +
                 "executable statements (tell, send, morph, set, etc.) are needed",
               suggestion =
-                "Add executable statements (tell, send, set, morph) alongside the 'do' statements so the handler does real work."
+                "Add executable statements (tell, send, set, morph) alongside the 'do' statements so the handler does real work.",
+              ruleId = Some(RuleId.HandlerOnlyDoStatements)
             )
           case BehaviorCategory.PromptOnly => () // a Repository: see above
           case BehaviorCategory.Executable => ()
@@ -483,7 +489,8 @@ case class ValidationPass(
               cmd.errorLoc,
               s"${cmd.identify} is a command with no fields; commands should carry data",
               suggestion =
-                s"Add fields to ${cmd.identify}, e.g. 'command X is { someField: Type }'."
+                s"Add fields to ${cmd.identify}, e.g. 'command X is { someField: Type }'.",
+              ruleId = Some(RuleId.CommandNoFields)
             )
           case _ => ()
         }
@@ -513,7 +520,8 @@ case class ValidationPass(
             s"${evt.identify} is defined but nothing in the model emits it",
             suggestion =
               s"Emit ${evt.identify} with a 'send', 'tell', 'yield' or 'reply' from the " +
-                s"definition that produces it, declare an outlet carrying it, or remove the unused event."
+                s"definition that produces it, declare an outlet carrying it, or remove the unused event.",
+            ruleId = Some(RuleId.EventNeverEmitted)
           )
         }
       }
@@ -523,7 +531,8 @@ case class ValidationPass(
           context.errorLoc,
           s"${context.identify} defines queries but no result types",
           suggestion =
-            s"Add a result type to ${context.identify}, e.g. 'type XResult = result { ??? }'."
+            s"Add a result type to ${context.identify}, e.g. 'type XResult = result { ??? }'.",
+          ruleId = Some(RuleId.QueriesWithoutResults)
         )
       }
       if results.nonEmpty && queries.isEmpty then {
@@ -531,7 +540,8 @@ case class ValidationPass(
           context.errorLoc,
           s"${context.identify} defines results but no query types",
           suggestion =
-            s"Add a query type to ${context.identify}, e.g. 'type XQuery = query { ??? }'."
+            s"Add a query type to ${context.identify}, e.g. 'type XQuery = query { ??? }'.",
+          ruleId = Some(RuleId.ResultsWithoutQueries)
         )
       }
     }
@@ -569,7 +579,8 @@ case class ValidationPass(
               "no 'require invariant' statement applies it either — it will never be checked",
             suggestion =
               s"Apply it with 'require invariant ${inv.id.value} with <expr>', or drop " +
-                "its 'requires' clause so it applies implicitly across its scope."
+                "its 'requires' clause so it applies implicitly across its scope.",
+            ruleId = Some(RuleId.InvariantNeverApplied)
           )
         }
       }
@@ -706,7 +717,8 @@ case class ValidationPass(
             ooc.errorLoc,
             "Empty 'on other' clause will silently discard unhandled messages",
             suggestion =
-              "Add statements to the 'on other' clause (e.g. log or error), or remove it if discarding is intentional."
+              "Add statements to the 'on other' clause (e.g. log or error), or remove it if discarding is intentional.",
+            ruleId = Some(RuleId.EmptyOnOther)
           )
         }
       case statement: Statement =>
@@ -847,7 +859,8 @@ case class ValidationPass(
                 omc.errorLoc,
                 s"Command processing in ${entity.identify} should result in sending an event",
                 suggestion =
-                  "Send, tell, or yield an event from this command handler, e.g. 'send event SomethingHappened to outlet ...' or 'yield event SomethingHappened'."
+                  "Send, tell, or yield an event from this command handler, e.g. 'send event SomethingHappened to outlet ...' or 'yield event SomethingHappened'.",
+                ruleId = Some(RuleId.CommandNoResponse)
               )
           case AggregateUseCase.QueryCase =>
             // EVERY path, and a refusal counts (Reid, 2026-08-16: "queries SHOULD be answered,
@@ -892,7 +905,8 @@ case class ValidationPass(
                 omc.errorLoc,
                 s"Query processing in ${entity.identify} should result in a reply or sending a result",
                 suggestion =
-                  "Reply with a result on every path, or refuse, e.g. 'reply result QueryResult' or 'error \"not available\"'."
+                  "Reply with a result on every path, or refuse, e.g. 'reply result QueryResult' or 'error \"not available\"'.",
+                ruleId = Some(RuleId.QueryNoReply)
               )
           case _ =>
         }
@@ -915,7 +929,8 @@ case class ValidationPass(
             "or entity state",
           suggestion =
             s"Rename the binding, or write '${id.value}.${id.value}' to reach the field " +
-              s"— bare '${id.value}' is the binding."
+              s"— bare '${id.value}' is the binding.",
+          ruleId = Some(RuleId.BindingShadowsField)
         )
     }
   }
@@ -931,13 +946,15 @@ case class ValidationPass(
         id.loc,
         s"$what '${id.value}' should begin with a lowercase letter",
         suggestion = s"Local names are conventionally lowerCamelCase; rename it to " +
-          s"'${id.value.head.toLower.toString + id.value.drop(1)}'."
+          s"'${id.value.head.toLower.toString + id.value.drop(1)}'.",
+        ruleId = Some(RuleId.ShouldBeLowercase)
       )
     if symbols.lookup[Definition](Seq(id.value)).nonEmpty then
       messages.addWarning(
         id.loc,
         s"$what '${id.value}' shadows a definition of the same name",
-        suggestion = s"Rename the local so a bare '${id.value}' is unambiguous to a reader."
+        suggestion = s"Rename the local so a bare '${id.value}' is unambiguous to a reader.",
+        ruleId = Some(RuleId.ShadowsDefinition)
       )
     end if
   end checkLocalName
@@ -1054,7 +1071,8 @@ case class ValidationPass(
         suggestion = "Use 'send' or 'tell' to transmit a message that discharges nothing. " +
           "'forward' says the declared response is produced by whatever handles this message " +
           "downstream, so it needs a declared response to speak about -- an event or a result " +
-          "records what happened and owes no answer."
+          "records what happened and owes no answer.",
+        ruleId = Some(RuleId.ForwardWrongClause)
       )
     else
       // Shape, not contents. Both sides expand through aliases; `expandType` guards cycles by
@@ -1071,7 +1089,8 @@ case class ValidationPass(
             s"'forward' must pass on the message this clause handles: ${h.identify} is handled " +
               s"but ${sent.identify} is forwarded",
             suggestion = s"Forward the handled message, or a value of ${h.identify}. To transmit " +
-              "something else use 'send' or 'tell' -- that is a different message, not a delegation."
+              "something else use 'send' or 'tell' -- that is a different message, not a delegation.",
+            ruleId = Some(RuleId.ForwardWrongMessage)
           )
         end if
       end for
@@ -1167,7 +1186,8 @@ case class ValidationPass(
           suggestion = s"Transmit a message the portlet's declared type admits, or widen " +
             s"${declared.identify} — if it is an alternation, add ${sent.identify} as a member. " +
             "The consumer on the other end of this connection is typed by the declared type and " +
-            "cannot receive anything else."
+            "cannot receive anything else.",
+          ruleId = Some(RuleId.PortletTypeMismatch)
         )
       end if
     end for
@@ -1253,7 +1273,8 @@ case class ValidationPass(
             s"${article(actual.useCase)}",
           suggestion =
             s"Use `$keyword` for a ${wanted.useCase} and `$other` for a ${otherWanted.useCase} — " +
-              s"a command yields an event, a query replies a result."
+              s"a command yields an event, a query replies a result.",
+          ruleId = Some(RuleId.WrongResponseKind)
         )
       end if
     }
@@ -1290,7 +1311,8 @@ case class ValidationPass(
           s"'on other' names the envelope type '${t.pathId.format}', but no " +
             s"'option message_envelope' is in scope, so there is no envelope to type",
           suggestion = s"Declare 'option message_envelope(\"${t.pathId.format}\")' on this " +
-            s"definition or an enclosing one, or drop the ': ${t.pathId.format}' ascription."
+            s"definition or an enclosing one, or drop the ': ${t.pathId.format}' ascription.",
+          ruleId = Some(RuleId.OnOtherNoEnvelope)
         )
       case (Some(b), None, None) =>
         messages.addError(
@@ -1298,7 +1320,8 @@ case class ValidationPass(
           s"'on other as ${b.value}' has no envelope to bind: no 'option message_envelope' is in " +
             s"scope, and without one '${b.value}' would have no type",
           suggestion = "Declare 'option message_envelope(\"Riddl.Envelope\")' on this definition " +
-            "or an enclosing one, or drop the binding and write 'on other'."
+            "or an enclosing one, or drop the binding and write 'on other'.",
+          ruleId = Some(RuleId.OnOtherUnbound)
         )
       case (_, Some(t), Some(named)) if t.pathId.format != named =>
         messages.addError(
@@ -1307,7 +1330,8 @@ case class ValidationPass(
             s"message_envelope' in scope names '$named'; the ascription restates the option, it " +
             s"does not override it",
           suggestion = s"Change the ascription to ': $named', or drop it — it is optional and is " +
-            s"inferred from the option."
+            s"inferred from the option.",
+          ruleId = Some(RuleId.OnOtherEnvelopeConflict)
         )
       case _ => () // binding with an envelope in scope, agreeing ascription, or no binding
 
@@ -1381,7 +1405,8 @@ case class ValidationPass(
           "'version'), not a message, so there is no message to deliver",
         suggestion = s"Send an actual message, e.g. '$statement event SomethingHappened(...) " +
           s"to …', or send one of its fields, e.g. '$statement self.id to …', if a value (not a " +
-          "message) is what the target expects."
+          "message) is what the target expects.",
+        ruleId = Some(RuleId.SelfNotAMessage)
       )
     else
       valueRefTypeExpr(vr, parents, lets, elements) match
@@ -1392,7 +1417,8 @@ case class ValidationPass(
             s"'${vr.path.format}' in this '$statement' names a value of type '${te.format}', not " +
               "a command, event, query or result, so there is no message to deliver",
             suggestion = s"Name a value whose type is a command, event, query or result, or name " +
-              s"the message explicitly, e.g. '$statement command SomeCommand to …'."
+              s"the message explicitly, e.g. '$statement command SomeCommand to …'.",
+            ruleId = Some(RuleId.OperandWrongType)
           )
         case None =>
           messages.addError(
@@ -1403,7 +1429,8 @@ case class ValidationPass(
             suggestion = s"Bind the handled message first, e.g. " +
               s"'on ${vr.path.format}: command SomeCommand is { $statement ${vr.path.format} to " +
               s"… }', declare a 'let ${vr.path.format} = …' local naming a message value, or " +
-              s"name the message explicitly, e.g. '$statement command SomeCommand to …'."
+              s"name the message explicitly, e.g. '$statement command SomeCommand to …'.",
+            ruleId = Some(RuleId.OperandNotAMessage)
           )
   end checkMessageOperandSource
 
@@ -1430,7 +1457,8 @@ case class ValidationPass(
           s"'${vr.path.format}' in this 'morph' does not name a value in scope",
           suggestion = "Name a value whose type is the target state's record — a state field, a " +
             "'let' local, a function result — or name the record explicitly, e.g. " +
-            "'morph … with record SomeRecord'."
+            "'morph … with record SomeRecord'.",
+          ruleId = Some(RuleId.MorphOperandUnresolved)
         )
       case Some(te) =>
         val wanted: Option[Type] = resolution.refMap
@@ -1451,7 +1479,8 @@ case class ValidationPass(
                 s"typed by ${want.identify}",
               suggestion =
                 s"Morph with a value of ${want.identify}, or morph to a state typed by " +
-                  s"'${te.format}'."
+                  s"'${te.format}'.",
+              ruleId = Some(RuleId.MorphOperandType)
             )
           end if
         }
@@ -1499,7 +1528,8 @@ case class ValidationPass(
             s"where its ${fields.size} field(s) come from",
           suggestion = s"Construct the $what in place, e.g. '$statement ${ref.format}(" +
             s"${fields.head.id.value} = …)', or name a value of that type — an on-clause " +
-            "binding, a state field, a 'let' local, a function result or an 'ask' result."
+            "binding, a state field, a 'let' local, a function result or an 'ask' result.",
+          ruleId = Some(RuleId.OperandIsTypeNotValue)
         )
       end if
     }
@@ -1561,7 +1591,8 @@ case class ValidationPass(
               "A repository's on-clause describes persistence — a 'do' statement standing in for " +
                 "the storage operation is the modelling, and needs no 'set'."
             case _ =>
-              "Move the 'set' into the handler of the entity that owns the state."
+              "Move the 'set' into the handler of the entity that owns the state.",
+          ruleId = Some(RuleId.SetNotAllowed)
         )
       case None => () // no enclosing processor at all; nothing meaningful to say
   end checkSetScope
@@ -1591,7 +1622,8 @@ case class ValidationPass(
               s"'${gv.format}' is not allowed here; state may be read only inside the entity that " +
                 "owns it",
               suggestion = "Send a message to the entity that owns the state and let its handler " +
-                "reply, rather than reading the state directly."
+                "reply, rather than reading the state directly.",
+              ruleId = Some(RuleId.StateReadNotAllowed)
             )
           case Some(entity) =>
             resolution.refMap.definitionOf[State](sr.pathId).foreach { state =>
@@ -1602,7 +1634,8 @@ case class ValidationPass(
                     "an entity's state is encapsulated by that entity",
                   suggestion =
                     s"Send a message to the entity owning ${state.identify} and let its " +
-                      "handler reply, rather than reading its state directly."
+                      "handler reply, rather than reading its state directly.",
+                  ruleId = Some(RuleId.StateReadForeign)
                 )
             }
       }
@@ -1656,7 +1689,8 @@ case class ValidationPass(
           messages.addError(
             loc,
             s"'$kw' is not allowed in $where",
-            suggestion = s"Move the '$kw' into an ordinary handler clause."
+            suggestion = s"Move the '$kw' into an ordinary handler clause.",
+            ruleId = Some(RuleId.EffectNotAllowed)
           )
         }
       }
@@ -1707,7 +1741,8 @@ case class ValidationPass(
               "else in this clause refers to it",
             suggestion = s"Refer to '$name' — address the new instance ('tell … to …'), keep it " +
               s"('set field … to $name'), pass it in a message, or 'terminate' it — or leave it " +
-              "as is if the new instance is self-terminating and never needs addressing."
+              "as is if the new instance is self-terminating and never needs addressing.",
+            ruleId = Some(RuleId.InitiateIdUnused)
           )
         end if
       // Every other bound expression: nothing to say. An unused `let` in general is a separate
@@ -2148,7 +2183,8 @@ case class ValidationPass(
                   suggestion = s"Use '$stmtKeyword ${declaredYield.format}' (or refuse with " +
                     "'error'/'require') on every path through this handler. A 'when' with no " +
                     "'else', a 'match' with no 'default', and a 'foreach' all leave a path " +
-                    "that does neither."
+                    "that does neither.",
+                  ruleId = Some(RuleId.YieldUndeclared)
                 )
               end if
               // Independent of `settled`: a clause may discharge by refusing on every path and
@@ -2190,7 +2226,8 @@ case class ValidationPass(
                     s"'${operand.format}' does not match declared '$declKeyword " +
                       s"${declaredYield.format}' of ${handledType.identify}",
                     suggestion =
-                      s"Use the declared response: '$stmtKeyword ${declaredYield.format}'."
+                      s"Use the declared response: '$stmtKeyword ${declaredYield.format}'.",
+                    ruleId = Some(RuleId.YieldMismatch)
                   )
               }
             // `yields`/`replies` are OPTIONAL, so producing without a declared clause PARSES and
@@ -2227,7 +2264,8 @@ case class ValidationPass(
                     s"'$declKeyword' clause",
                   suggestion = s"Declare what it answers with — '$declKeyword <type>' on " +
                     s"${handledType.identify} — so the response is part of its contract rather " +
-                    "than something a reader has to infer from this body."
+                    "than something a reader has to infer from this body.",
+                  ruleId = Some(RuleId.AnswersUndeclared)
                 )
               }
           }
@@ -2307,7 +2345,8 @@ case class ValidationPass(
         versions(1).loc,
         s"${wv.identify} declares ${versions.size} versions; a scope may declare at most one",
         suggestion =
-          s"Remove the extra 'version' declarations from ${wv.identify} so exactly one remains."
+          s"Remove the extra 'version' declarations from ${wv.identify} so exactly one remains.",
+        ruleId = Some(RuleId.MultipleVersions)
       )
     }
   }
@@ -2322,7 +2361,8 @@ case class ValidationPass(
         copyrights(1).loc,
         s"${wc.identify} declares ${copyrights.size} copyrights; a scope may declare at most one",
         suggestion =
-          s"Remove the extra 'copyright' declarations from ${wc.identify} so exactly one remains."
+          s"Remove the extra 'copyright' declarations from ${wc.identify} so exactly one remains.",
+        ruleId = Some(RuleId.MultipleCopyrights)
       )
     }
   }
@@ -2340,7 +2380,8 @@ case class ValidationPass(
         messages.addError(
           loc,
           s"${inv.identify} declares 'requires ${tr.format}', so it must be given a value here",
-          suggestion = s"Write 'require invariant ${inv.id.value} with <expr>'."
+          suggestion = s"Write 'require invariant ${inv.id.value} with <expr>'.",
+          ruleId = Some(RuleId.InvariantRequiresArgument)
         )
       case Some(tr: TypeRef) =>
         // Present, as required. A20: the `with` value may be an ascribed hole, and the type it must
@@ -2355,7 +2396,8 @@ case class ValidationPass(
         messages.addWarning(
           loc,
           s"${inv.identify} declares no 'requires <type>', so the 'with' value is ignored",
-          suggestion = "Remove the 'with' clause, or give the invariant a 'requires <type>'."
+          suggestion = "Remove the 'with' clause, or give the invariant a 'requires <type>'.",
+          ruleId = Some(RuleId.InvariantUnexpectedArgument)
         )
       case _ => ()
     end match
@@ -2413,7 +2455,8 @@ case class ValidationPass(
             s"${i.identify} shadows ${outer.identify} declared on ${entity.identify}; the " +
               s"innermost declaration takes precedence inside this state",
             suggestion = s"Rename one of them if both were meant to apply, or drop the outer one " +
-              s"if the state-level '${i.id.value}' is the only rule you want here."
+              s"if the state-level '${i.id.value}' is the only rule you want here.",
+            ruleId = Some(RuleId.InvariantShadows)
           )
         }
       }
@@ -2424,13 +2467,15 @@ case class ValidationPass(
           i.errorLoc,
           s"${i.identify} declares 'requires state', which is only meaningful inside an Entity",
           suggestion = "Move it into an Entity, or declare 'requires <type>' and apply it with " +
-            "'require invariant ... with <expr>'."
+            "'require invariant ... with <expr>'.",
+          ruleId = Some(RuleId.InvariantRequiresStateMisplaced)
         )
       case Some(_: StateRef) if inState =>
         messages.addWarning(
           i.errorLoc,
           s"${i.identify} is already scoped to its enclosing State; 'requires state' is redundant",
-          suggestion = "Drop the 'requires state' clause."
+          suggestion = "Drop the 'requires state' clause.",
+          ruleId = Some(RuleId.InvariantRequiresStateRedundant)
         )
       case None if enclosingEntity.isEmpty && !inState =>
         // Declared on a Context/Adaptor/Projector/Streamlet/Repository/Module: no state to read,
@@ -2446,7 +2491,8 @@ case class ValidationPass(
           s"${i.identify} is declared where there is no state to read, so it cannot be applied " +
             "implicitly and will never be checked",
           suggestion = "Give it 'requires <type>' and apply it with " +
-            s"'require invariant ${i.id.value} with <expr>', or move it into an Entity or State."
+            s"'require invariant ${i.id.value} with <expr>', or move it into an Entity or State.",
+          ruleId = Some(RuleId.InvariantNoStateToRead)
         )
       case _ => ()
     end match
@@ -2482,7 +2528,8 @@ case class ValidationPass(
         messages.addError(
           connector.errorLoc,
           s"${connector.identify} declares $names, but $group intentions are mutually exclusive",
-          suggestion = s"Keep exactly one $group keyword before 'connector'."
+          suggestion = s"Keep exactly one $group keyword before 'connector'.",
+          ruleId = Some(RuleId.ConflictingIntentions)
         )
     }
   end checkConnectorIntentions
@@ -2519,7 +2566,8 @@ case class ValidationPass(
                     s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} " +
                     s"which are not the same types",
                   suggestion =
-                    "Make the inlet and outlet use the same type, or insert a Flow streamlet to transform between them."
+                    "Make the inlet and outlet use the same type, or insert a Flow streamlet to transform between them.",
+                  ruleId = Some(RuleId.ConnectorTypeMismatch)
                 )
               end if
             case _ =>
@@ -2528,7 +2576,8 @@ case class ValidationPass(
                   outlet.loc,
                   s"Unresolved PathId, ${outlet.type_.pathId.format}, in ${outlet.identify}",
                   suggestion =
-                    s"Define the type '${outlet.type_.pathId.value.mkString(".")}', or correct the outlet's type reference."
+                    s"Define the type '${outlet.type_.pathId.value.mkString(".")}', or correct the outlet's type reference.",
+                  ruleId = Some(RuleId.OutletUnresolved)
                 )
               end if
               if inType.isEmpty then
@@ -2536,7 +2585,8 @@ case class ValidationPass(
                   inlet.loc,
                   s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}",
                   suggestion =
-                    s"Define the type '${inlet.type_.pathId.value.mkString(".")}', or correct the inlet's type reference."
+                    s"Define the type '${inlet.type_.pathId.value.mkString(".")}', or correct the inlet's type reference.",
+                  ruleId = Some(RuleId.InletUnresolved)
                 )
               end if
           end match
@@ -2658,19 +2708,22 @@ case class ValidationPass(
         messages.addError(
           nl.loc,
           s"${expected.format} requires a whole number, but ${nl.text} has a fractional part",
-          suggestion = s"Remove the fractional part, or declare the type as Real or Decimal."
+          suggestion = s"Remove the fractional part, or declare the type as Real or Decimal.",
+          ruleId = Some(RuleId.NotWholeNumber)
         )
       case _: Natural if nl.isInteger && nl.asBigDecimal < BigDecimal(1) =>
         messages.addError(
           nl.loc,
           s"Natural is a positive whole number, but ${nl.text} is not greater than zero",
-          suggestion = "Use Whole to admit zero, or Integer to admit negative values."
+          suggestion = "Use Whole to admit zero, or Integer to admit negative values.",
+          ruleId = Some(RuleId.NotNatural)
         )
       case _: Whole if nl.isInteger && nl.asBigDecimal < BigDecimal(0) =>
         messages.addError(
           nl.loc,
           s"Whole is a non-negative whole number, but ${nl.text} is negative",
-          suggestion = "Use Integer to admit negative values."
+          suggestion = "Use Integer to admit negative values.",
+          ruleId = Some(RuleId.NotWhole)
         )
       case _ => ()
   end checkNumericLiteralConformance
@@ -2689,7 +2742,8 @@ case class ValidationPass(
         s"${s.identify} marks ${initialHandlers.size} handlers 'initial'; a state has exactly one " +
           s"initial (live) handler",
         suggestion =
-          "Mark only one handler in this state 'initial' (or none, to default to the first)."
+          "Mark only one handler in this state 'initial' (or none, to default to the first).",
+        ruleId = Some(RuleId.MultipleInitialHandlers)
       )
     checkRefAndExamine[Type](s.typ, parents) { (typ: Type) =>
       typ.typEx match {
@@ -2700,7 +2754,8 @@ case class ValidationPass(
               s"${s.identify} references an empty aggregate but must have " +
                 s"at least one field",
               suggestion =
-                s"Add at least one field to the aggregate type used by ${s.identify}, e.g. 'field someName: Type'."
+                s"Add at least one field to the aggregate type used by ${s.identify}, e.g. 'field someName: Type'.",
+              ruleId = Some(RuleId.StateEmptyAggregate)
             )
           }
         case _ =>
@@ -2748,7 +2803,8 @@ case class ValidationPass(
       messages.addDeprecation(
         agg.loc,
         s"Inline aggregation on 'requires'/'returns' of ${definition.identify} is deprecated",
-        suggestion = "Define a named type (e.g. 'record Args is { ... }') and reference it instead."
+        suggestion = "Define a named type (e.g. 'record Args is { ... }') and reference it instead.",
+        ruleId = Some(RuleId.InlineAggregation)
       )
   }
 
@@ -2779,7 +2835,8 @@ case class ValidationPass(
               s"on-clause for '${later.msg.format}' shadows an earlier clause in this handler; " +
                 s"the earlier one is unreachable",
               suggestion =
-                s"Remove the redundant 'on ${later.msg.format}' clause or merge its statements into the earlier one."
+                s"Remove the redundant 'on ${later.msg.format}' clause or merge its statements into the earlier one.",
+              ruleId = Some(RuleId.ClauseShadowed)
             )
           }
       }
@@ -2794,7 +2851,8 @@ case class ValidationPass(
             messages.addWarning(
               h.errorLoc,
               s"${h.identify} in ${entity.identify} handles no commands or queries; entity handlers typically handle commands and queries",
-              suggestion = s"Add 'on command ...' or 'on query ...' clauses to ${h.identify}."
+              suggestion = s"Add 'on command ...' or 'on query ...' clauses to ${h.identify}.",
+              ruleId = Some(RuleId.EntityNoCommandsOrQueries)
             )
         }
       case Some(repo: Repository) =>
@@ -2807,7 +2865,8 @@ case class ValidationPass(
               h.errorLoc,
               s"${h.identify} in ${repo.identify} handles events; repositories typically handle commands and queries, not events",
               suggestion =
-                "Move event handling to a projector; have the repository handle commands (writes) and queries (reads) instead."
+                "Move event handling to a projector; have the repository handle commands (writes) and queries (reads) instead.",
+              ruleId = Some(RuleId.RepositoryHandlesEvents)
             )
         }
       // NOTE: A projector handling commands or queries is now rejected at PARSE time
@@ -2888,7 +2947,8 @@ case class ValidationPass(
               s"imported ${d.kind} '${d.id.value}' is not allowed at this location",
               suggestion = s"Move the load directive into a container that may hold a ${d.kind}" +
                 s" (a 'module' accepts any top-level definition), or select something that fits" +
-                s" here with 'im${"port"} <kind> <id> from \"${bi.path.s}\"'."
+                s" here with 'im${"port"} <kind> <id> from \"${bi.path.s}\"'.",
+              ruleId = Some(RuleId.ImportNotAllowedHere)
             )
           case _ => () // legal here, or no placement rule applies
         }
@@ -2917,14 +2977,16 @@ case class ValidationPass(
             schema.errorLoc,
             s"${schema.identify} is ${schema.schemaKind} and should not define links",
             suggestion =
-              s"Remove the links from this ${schema.schemaKind} schema, or change the schema kind to one that supports links."
+              s"Remove the links from this ${schema.schemaKind} schema, or change the schema kind to one that supports links.",
+            ruleId = Some(RuleId.SchemaShouldNotHaveLinks)
           )
         if schema.data.size > 1 then
           messages.addWarning(
             schema.errorLoc,
             s"${schema.identify} is flat but defines ${schema.data.size} data nodes; flat schemas typically represent a single table or collection",
             suggestion =
-              "Reduce the flat schema to a single data node, or change its kind to one that models multiple tables (e.g. relational)."
+              "Reduce the flat schema to a single data node, or change its kind to one that models multiple tables (e.g. relational).",
+            ruleId = Some(RuleId.FlatSchemaManyNodes)
           )
       case RepositorySchemaKind.Document | RepositorySchemaKind.Columnar |
           RepositorySchemaKind.Vector =>
@@ -2933,14 +2995,16 @@ case class ValidationPass(
             schema.errorLoc,
             s"${schema.identify} is ${schema.schemaKind} and should not define links",
             suggestion =
-              s"Remove the links from this ${schema.schemaKind} schema, or change the schema kind to one that supports links."
+              s"Remove the links from this ${schema.schemaKind} schema, or change the schema kind to one that supports links.",
+            ruleId = Some(RuleId.SchemaShouldNotHaveLinks)
           )
       case RepositorySchemaKind.TimeSeries =>
         if schema.indices.isEmpty then
           messages.addWarning(
             schema.errorLoc,
             s"${schema.identify} is a time-series schema but has no indices; time-series schemas should index the time dimension",
-            suggestion = "Add an index on the time dimension of the time-series schema."
+            suggestion = "Add an index on the time dimension of the time-series schema.",
+            ruleId = Some(RuleId.TimeSeriesNoIndices)
           )
       case RepositorySchemaKind.Hierarchical =>
         if schema.links.isEmpty && schema.data.size > 1 then
@@ -2948,14 +3012,16 @@ case class ValidationPass(
             schema.errorLoc,
             s"${schema.identify} is hierarchical with ${schema.data.size} data nodes but has no links; consider adding links to define the tree structure",
             suggestion =
-              "Add links between data nodes to define the parent/child tree structure of the hierarchical schema."
+              "Add links between data nodes to define the parent/child tree structure of the hierarchical schema.",
+            ruleId = Some(RuleId.HierarchicalNoLinks)
           )
       case RepositorySchemaKind.Star =>
         if schema.links.isEmpty && schema.data.size > 1 then
           messages.addWarning(
             schema.errorLoc,
             s"${schema.identify} is a star schema with ${schema.data.size} data nodes but has no links; consider adding links from fact table to dimension tables",
-            suggestion = "Add links from the fact table to the dimension tables in the star schema."
+            suggestion = "Add links from the fact table to the dimension tables in the star schema.",
+            ruleId = Some(RuleId.StarNoLinks)
           )
       case RepositorySchemaKind.Graphical =>
         if schema.links.isEmpty && schema.data.nonEmpty then
@@ -2963,7 +3029,8 @@ case class ValidationPass(
             schema.errorLoc,
             s"${schema.identify} is graphical but has no links (edges)",
             suggestion =
-              "Add links to define the edges connecting the nodes of the graphical schema."
+              "Add links to define the edges connecting the nodes of the graphical schema.",
+            ruleId = Some(RuleId.GraphNoLinks)
           )
       case RepositorySchemaKind.Relational =>
         if schema.links.isEmpty && schema.data.size > 1 then
@@ -2971,7 +3038,8 @@ case class ValidationPass(
             schema.errorLoc,
             s"${schema.identify} is relational with ${schema.data.size} data nodes but has no links; consider adding links to define relationships",
             suggestion =
-              "Add links between data nodes to define foreign-key relationships in the relational schema."
+              "Add links between data nodes to define foreign-key relationships in the relational schema.",
+            ruleId = Some(RuleId.RelationalNoLinks)
           )
         schema.links.values.foreach { case (fromRef, toRef) =>
           val fromType = resolvePath[Field](fromRef.pathId, parents).map(_.typeEx)
@@ -2983,7 +3051,8 @@ case class ValidationPass(
                   fromRef.loc,
                   s"Link in ${schema.identify} connects fields with incompatible types: ${fromRef.pathId.format} is ${ft.format} but ${toRef.pathId.format} is ${tt.format}",
                   suggestion =
-                    "Make the two linked fields share the same type so the relationship is type-consistent."
+                    "Make the two linked fields share the same type so the relationship is type-consistent.",
+                  ruleId = Some(RuleId.LinkTypeMismatch)
                 )
             case _ => () // unresolved fields already reported elsewhere
           }
@@ -2994,7 +3063,8 @@ case class ValidationPass(
       messages.addWarning(
         schema.errorLoc,
         s"${schema.identify} is a vector schema but defines ${schema.data.size} data nodes; typically only one is expected",
-        suggestion = "Keep the vector schema to a single data node."
+        suggestion = "Keep the vector schema to a single data node.",
+        ruleId = Some(RuleId.VectorManyNodes)
       )
     schema.data.values.foreach { typeRef =>
       checkRef[Type](typeRef, parents)
@@ -3117,7 +3187,8 @@ case class ValidationPass(
                     s"'Id(${entity.id.value})', so nothing in it can say WHICH " +
                     s"${entity.id.value} it is for",
                   suggestion = s"Add a field typed 'Id(${entity.id.value})' to ${mt.identify} " +
-                    s"(or a named alias of it) and populate it wherever ${mt.identify} is sent."
+                    s"(or a named alias of it) and populate it wherever ${mt.identify} is sent.",
+                  ruleId = Some(RuleId.NoInstanceAddress)
                 )
           }
         case _ => ()
@@ -3152,7 +3223,8 @@ case class ValidationPass(
                               "that record holds nothing yet",
                             suggestion = "Carry the value in the message that triggers this " +
                               "transition -- a creating command usually has it, and the event " +
-                              "that followed dropped it."
+                              "that followed dropped it.",
+                            ruleId = Some(RuleId.ReadBeforeCreation)
                           )
                       case _ => ()
                   }
@@ -3188,7 +3260,8 @@ case class ValidationPass(
                     s"${statesOf(target)} state${if statesOf(target) == 1 then "" else "s"}, so " +
                     "there is no other state to move to",
                   suggestion = s"Declare the other states of ${target.identify}, or drop the " +
-                    "transition — as written it cannot take effect in any implementation."
+                    "transition — as written it cannot take effect in any implementation.",
+                  ruleId = Some(RuleId.MorphSingleState)
                 )
             }
           case b: BecomeStatement =>
@@ -3200,7 +3273,8 @@ case class ValidationPass(
                     s"${handlersOf(target)} handler${if handlersOf(target) == 1 then "" else "s"}, " +
                     "so there is no other handler to adopt",
                   suggestion = s"Declare the other handlers of ${target.identify}, or drop the " +
-                    "transition — as written it cannot take effect in any implementation."
+                    "transition — as written it cannot take effect in any implementation.",
+                  ruleId = Some(RuleId.BecomeSingleHandler)
                 )
             }
           case _ => ()
@@ -3223,7 +3297,8 @@ case class ValidationPass(
         initialStates(1).loc,
         s"${entity.identify} marks ${initialStates.size} states 'initial'; an entity has exactly " +
           s"one initial (starting) state",
-        suggestion = "Mark only one state 'initial' (or none, to default to the first declared)."
+        suggestion = "Mark only one state 'initial' (or none, to default to the first declared).",
+        ruleId = Some(RuleId.MultipleInitialStates)
       )
     // Entity-scope handlers follow the same rule, at ANY number of states.
     //
@@ -3244,7 +3319,8 @@ case class ValidationPass(
         s"${entity.identify} marks ${initialHandlers.size} handlers 'initial'; only one handler " +
           s"may be the initial (live) one",
         suggestion =
-          "Mark only one entity-scope handler 'initial' (or none, to default to the first)."
+          "Mark only one entity-scope handler 'initial' (or none, to default to the first).",
+        ruleId = Some(RuleId.EntityMultipleInitialHandlers)
       )
     if entity.states.isEmpty && !entity.isEmpty then {
       messages.add(
@@ -3291,7 +3367,8 @@ case class ValidationPass(
           entity.errorLoc,
           s"${entity.identify} is declared as a finite-state-machine but its handlers contain no morph or become statements",
           suggestion =
-            "Add 'morph' or 'become' statements so the FSM transitions between its states."
+            "Add 'morph' or 'become' statements so the FSM transitions between its states.",
+          ruleId = Some(RuleId.FsmSingleState)
         )
     }
     if entity.states.nonEmpty then {
@@ -3336,7 +3413,8 @@ case class ValidationPass(
             state.errorLoc,
             s"${state.identify} in ${entity.identify} has no 'on init' clause to initialize its state",
             suggestion =
-              s"Add an 'on init' clause to a handler of ${state.identify} to initialize its fields."
+              s"Add an 'on init' clause to a handler of ${state.identify} to initialize its fields.",
+            ruleId = Some(RuleId.StateNoInit)
           )
         else
           val hasSet = onInits.exists { oic =>
@@ -3348,7 +3426,8 @@ case class ValidationPass(
               state.errorLoc,
               s"${state.identify} in ${entity.identify} has an 'on init' clause but no 'set' statement to initialize state values",
               suggestion =
-                "Add 'set' statements in the 'on init' clause to initialize the state's fields."
+                "Add 'set' statements in the 'on init' clause to initialize the state's fields.",
+              ruleId = Some(RuleId.StateInitSetsNothing)
             )
       }
     // Completeness 4f: entity with no handlers at all
@@ -3356,7 +3435,8 @@ case class ValidationPass(
       messages.addCompleteness(
         entity.errorLoc,
         s"${entity.identify} has no handlers to process messages",
-        suggestion = "Add a handler (on the entity or its state) to process incoming messages."
+        suggestion = "Add a handler (on the entity or its state) to process incoming messages.",
+        ruleId = Some(RuleId.EntityNoHandlers)
       )
     // Completeness 4g: entity without query handlers
     if entity.nonEmpty && entity.handlers.nonEmpty then
@@ -3371,7 +3451,8 @@ case class ValidationPass(
         messages.addCompleteness(
           entity.errorLoc,
           s"${entity.identify} has no 'on query' clause; information cannot be extracted from it",
-          suggestion = "Add an 'on query' clause so the entity's state can be read."
+          suggestion = "Add an 'on query' clause so the entity's state can be read.",
+          ruleId = Some(RuleId.EntityNoQueryClause)
         )
     // Completeness 4h/4i: an entity's OWN portlets, not its context's.
     //
@@ -3409,7 +3490,8 @@ case class ValidationPass(
           suggestion =
             s"Declare an inlet on ${entity.identify} typed with the messages it handles. A " +
               "processor receives only through its OWN inlet -- a port on its context or on a " +
-              "sibling does not deliver to it."
+              "sibling does not deliver to it.",
+          ruleId = Some(RuleId.EntityNoInlet)
         )
       end if
 
@@ -3431,7 +3513,8 @@ case class ValidationPass(
           suggestion =
             s"Declare an outlet on ${entity.identify} for the messages it emits. Publishing goes " +
               "out the entity's OWN outlet; its context's outlet is reached only by connecting " +
-              "the entity's outlet onward within the context."
+              "the entity's outlet onward within the context.",
+          ruleId = Some(RuleId.EntityNoOutlet)
         )
       end if
     }
@@ -3468,7 +3551,8 @@ case class ValidationPass(
           entity.errorLoc,
           s"${entity.identify} does not define an Id type for its identity",
           suggestion =
-            s"Define an Id type for ${entity.identify} in its context, e.g. 'type Id = Id(${entity.id.value})'."
+            s"Define an Id type for ${entity.identify} in its context, e.g. 'type Id = Id(${entity.id.value})'.",
+          ruleId = Some(RuleId.EntityNoIdType)
         )
       } else {
         allIdTypes.foreach { idType =>
@@ -3482,7 +3566,8 @@ case class ValidationPass(
                 s"${idType.identify} is defined inside ${entity.identify}; " +
                   "move it to the containing context so other entities can reference it",
                 suggestion =
-                  s"Move ${idType.identify} from ${entity.identify} up to the containing context so other entities can reference it."
+                  s"Move ${idType.identify} from ${entity.identify} up to the containing context so other entities can reference it.",
+                ruleId = Some(RuleId.IdDefinedInside)
               )
             case Some(c: Context) if parentContext.contains(c) =>
             // Correct placement — no warning
@@ -3498,7 +3583,8 @@ case class ValidationPass(
                   s"${idType.identify} for ${entity.identify} is defined outside the containing context; " +
                     "constrain it to the context scope and use adaptors for inter-context invocations",
                   suggestion =
-                    s"Move ${idType.identify} into ${entity.identify}'s context, and use adaptors for any inter-context references to it."
+                    s"Move ${idType.identify} into ${entity.identify}'s context, and use adaptors for any inter-context references to it.",
+                  ruleId = Some(RuleId.IdDefinedOutside)
                 )
               }
             case _ =>
@@ -3510,7 +3596,8 @@ case class ValidationPass(
                   s"${idType.identify} for ${entity.identify} is defined outside the containing context; " +
                     "constrain it to the context scope and use adaptors for inter-context invocations",
                   suggestion =
-                    s"Move ${idType.identify} into ${entity.identify}'s context, and use adaptors for any inter-context references to it."
+                    s"Move ${idType.identify} into ${entity.identify}'s context, and use adaptors for any inter-context references to it.",
+                  ruleId = Some(RuleId.IdDefinedOutside)
                 )
               }
           }
@@ -3535,13 +3622,15 @@ case class ValidationPass(
           entity.errorLoc,
           s"${entity.identify} defines no command types; commands are the input messages an entity receives",
           suggestion =
-            s"Add a command type, e.g. 'type ${entity.id.value}Command = command { ??? }'."
+            s"Add a command type, e.g. 'type ${entity.id.value}Command = command { ??? }'.",
+          ruleId = Some(RuleId.EntityNoCommandTypes)
         )
       if eventTypes.isEmpty then
         messages.addCompleteness(
           entity.errorLoc,
           s"${entity.identify} defines no event types; events record what happened when a command is processed",
-          suggestion = s"Add an event type, e.g. 'type ${entity.id.value}Event = event { ??? }'."
+          suggestion = s"Add an event type, e.g. 'type ${entity.id.value}Event = event { ??? }'.",
+          ruleId = Some(RuleId.EntityNoEventTypes)
         )
       if commandTypes.nonEmpty then
         val allHandlers = entity.handlers ++ entity.states.flatMap(_.handlers)
@@ -3556,7 +3645,8 @@ case class ValidationPass(
           messages.addCompleteness(
             cmd.errorLoc,
             s"Command ${cmd.identify} in ${entity.identify} is not handled by any on-clause",
-            suggestion = s"Add an on-clause for it, e.g. 'on command ${cmd.id.value} { ??? }'."
+            suggestion = s"Add an on-clause for it, e.g. 'on command ${cmd.id.value} { ??? }'.",
+            ruleId = Some(RuleId.CommandNotHandled)
           )
         end for
     }
@@ -3579,7 +3669,8 @@ case class ValidationPass(
             (if chosen.contains(EntityIntention.EventSourced) &&
                chosen.contains(EntityIntention.Persistent)
              then " 'event-sourced' already implies 'persistent'."
-             else "")
+             else ""),
+          ruleId = Some(RuleId.EntityConflictingIntentions)
         )
     }
   end checkEntityIntentions
@@ -3622,7 +3713,8 @@ case class ValidationPass(
             "event journal to snapshot",
           suggestion = "Write 'event-sourced entity' if its state really is rebuilt by replaying " +
             "events, or remove the option. Snapshots bound the cost of replaying a journal, so " +
-            "they mean nothing where there is no journal."
+            "they mean nothing where there is no journal.",
+          ruleId = Some(RuleId.SnapshotsNotEventSourced)
         )
       }
     end if
@@ -3652,7 +3744,8 @@ case class ValidationPass(
                   s"${entity.identify} is event-sourced but ${commandType.identify} declares no " +
                     s"'yields' clause, so there is no event to record",
                   suggestion = s"Declare the event it produces, e.g. " +
-                    s"'command ${commandType.id.value} yields event SomethingHappened is { ??? }'."
+                    s"'command ${commandType.id.value} yields event SomethingHappened is { ??? }'.",
+                  ruleId = Some(RuleId.EventSourcedCommandNoYields)
                 )
               case Some(yielded) =>
                 val yieldedType = resolution.refMap.definitionOf[Type](yielded.pathId)
@@ -3665,7 +3758,8 @@ case class ValidationPass(
                     s"${entity.identify} is event-sourced and ${commandType.identify} yields " +
                       s"'${yielded.format}', but no 'on event' clause applies it on replay",
                     suggestion = s"Add 'on ${yielded.format} { ??? }' to a handler of " +
-                      s"${entity.identify} so the event can be replayed."
+                      s"${entity.identify} so the event can be replayed.",
+                    ruleId = Some(RuleId.EventSourcedEventNoClause)
                   )
           case _ => () // not an aggregate command type; other checks report that
       }
@@ -3691,7 +3785,8 @@ case class ValidationPass(
                 case _: OnEventClause =>
                   s"Yield one of ${entity.identify}'s own events here and '$kw' in that event's clause."
                 case _ =>
-                  s"Move the '$kw' into the 'on event' clause for the event this yields, so replay reproduces it."
+                  s"Move the '$kw' into the 'on event' clause for the event this yields, so replay reproduces it.",
+              ruleId = Some(RuleId.EventSourcedMutationScope)
             )
           }
         }
@@ -3768,7 +3863,8 @@ case class ValidationPass(
               s"'$name' is set here and set again on every path before ${clause.identify} ends, " +
                 s"so this value never reaches ${correlation.yields.format}",
               suggestion = s"Remove this 'set', or move the later one into the branch where it " +
-                s"should win."
+                s"should win.",
+              ruleId = Some(RuleId.OverriddenSet)
             )
         case w: WhenStatement =>
           checkOverriddenSets(w.thenStatements.toSeq, rest, correlation, clause)
@@ -3846,7 +3942,8 @@ case class ValidationPass(
           clause.loc,
           s"Field '$name' of ${correlation.yields.format} is set by more than one clause of " +
             s"${correlation.identify}; the completed record would depend on arrival order",
-          suggestion = s"Set '$name' from exactly one event, or give each source its own field."
+          suggestion = s"Set '$name' from exactly one event, or give each source its own field.",
+          ruleId = Some(RuleId.CorrelationFieldSetTwice)
         )
       }
       names.toSet
@@ -3907,7 +4004,8 @@ case class ValidationPass(
                 s"${unset.map(_.id.value).mkString("'", "', '", "'")}, which no fold sets",
               suggestion =
                 s"Add an 'on event ... is { set field ${unset.head.id.value} to ... }' " +
-                  s"clause to ${correlation.identify}, or make the field optional."
+                  s"clause to ${correlation.identify}, or make the field optional.",
+              ruleId = Some(RuleId.CorrelationNeverCompletes)
             )
           end if
         case _ => () // a non-aggregate target is reported by the record-ref check itself
@@ -3935,7 +4033,8 @@ case class ValidationPass(
                             s"present on every handled event",
                           suggestion = s"Add ${missing.mkString("'", "', '", "'")} to " +
                             s"${msgType.identify}, or key the correlation on fields every handled " +
-                            "event carries."
+                            "event carries.",
+                          ruleId = Some(RuleId.CorrelationWrongClause)
                         )
                       end if
                     case _ => () // a non-aggregate message cannot carry a key; reported elsewhere
@@ -3985,7 +4084,8 @@ case class ValidationPass(
                   s"${repo.identify} has no handler for ${yielded.identify}, which " +
                     s"${correlation.identify} yields",
                   suggestion = s"Add an 'on command ${yielded.id.value}' clause to a handler of " +
-                    s"${repo.identify}, so the correlation's result is actually stored."
+                    s"${repo.identify}, so the correlation's result is actually stored.",
+                  ruleId = Some(RuleId.CorrelationRepoNoHandler)
                 )
             }
         }
@@ -4025,7 +4125,8 @@ case class ValidationPass(
               s"A fold of ${correlation.identify} may not '$kw': folds must be free of effects so " +
                 s"re-running them over the same events is safe",
               suggestion = s"Move the '$kw' into the correlation's 'times out after' block, or " +
-                "into an ordinary handler on the projector."
+                "into an ordinary handler on the projector.",
+              ruleId = Some(RuleId.FoldEffect)
             )
           }
         }
@@ -4103,7 +4204,8 @@ case class ValidationPass(
           stmt.loc,
           s"${typ.identify} populates ${repo.identify} but is not defined in it",
           suggestion = s"Move ${typ.identify} into ${repo.identify}, so the data that populates " +
-            s"the repository is associated with it."
+            s"the repository is associated with it.",
+          ruleId = Some(RuleId.ProjectionTypeNotInRepository)
         )
       end if
     }
@@ -4123,7 +4225,8 @@ case class ValidationPass(
         projector.errorLoc,
         s"${projector.identify} does not reference any repository to persist its projection",
         suggestion =
-          s"Reference a repository from ${projector.identify}, e.g. 'updates repository SomeRepository'."
+          s"Reference a repository from ${projector.identify}, e.g. 'updates repository SomeRepository'.",
+        ruleId = Some(RuleId.ProjectorNoRepository)
       )
     if projector.handlers.nonEmpty then {
       val allClauses = projector.handlers.flatMap(_.clauses).collect {
@@ -4138,7 +4241,8 @@ case class ValidationPass(
             projector.errorLoc,
             s"${projector.identify} handler does not handle any events; projectors typically handle events to build read models",
             suggestion =
-              "Add 'on event ...' clauses to the projector's handler to build its read model."
+              "Add 'on event ...' clauses to the projector's handler to build its read model.",
+            ruleId = Some(RuleId.ProjectorHandlesNoEvents)
           )
       }
       // Completeness: projector handlers must tell to a repository
@@ -4151,7 +4255,8 @@ case class ValidationPass(
           projector.errorLoc,
           s"${projector.identify} does not persist its projection; projector handlers should tell messages to a repository",
           suggestion =
-            "Add 'tell' statements in the projector's handler to write its read model to a repository."
+            "Add 'tell' statements in the projector's handler to write its read model to a repository.",
+          ruleId = Some(RuleId.ProjectorNoPersistence)
         )
       }
       // Check each declared repository is actually used in a tell
@@ -4166,7 +4271,8 @@ case class ValidationPass(
               repoRef.loc,
               s"${projector.identify} declares ${repoRef.format} but does not send it any messages",
               suggestion =
-                s"Send messages to ${repoRef.format} with 'tell', or remove the unused repository reference."
+                s"Send messages to ${repoRef.format} with 'tell', or remove the unused repository reference.",
+              ruleId = Some(RuleId.ProjectorRepositoryUnused)
             )
         }
       }
@@ -4192,7 +4298,8 @@ case class ValidationPass(
         repository.errorLoc,
         s"${repository.identify} should have at least one handler",
         suggestion =
-          s"Add a handler to ${repository.identify} to process commands (writes) and queries (reads)."
+          s"Add a handler to ${repository.identify} to process commands (writes) and queries (reads).",
+        ruleId = Some(RuleId.RepositoryNoHandler)
       )
     if repository.handlers.nonEmpty then {
       val allClauses = repository.handlers.flatMap(_.clauses).collect {
@@ -4208,7 +4315,8 @@ case class ValidationPass(
             repository.errorLoc,
             s"${repository.identify} handlers do not handle any commands or queries; repositories typically handle commands (for mutations) and queries (for reads)",
             suggestion =
-              "Add 'on command ...' (for mutations) and 'on query ...' (for reads) clauses to the repository's handler."
+              "Add 'on command ...' (for mutations) and 'on query ...' (for reads) clauses to the repository's handler.",
+            ruleId = Some(RuleId.RepositoryNoCommandsOrQueries)
           )
       }
     }
@@ -4281,7 +4389,8 @@ case class ValidationPass(
             s"${inlet.identify} of ${repository.identify} carries event '${m.id.value}'$via: a " +
               "repository is changed by commands and read by queries, never by events",
             suggestion = s"Have whatever handles '${m.id.value}' turn it into a state-changing " +
-              s"command (e.g. 'command Persist${m.id.value}') and send THAT to this inlet."
+              s"command (e.g. 'command Persist${m.id.value}') and send THAT to this inlet.",
+            ruleId = Some(RuleId.RepositoryInletCarriesEvent)
           )
         }
       }
@@ -4303,7 +4412,8 @@ case class ValidationPass(
           suggestion =
             s"Add 'index on field <Record>.<field>' to the schema of ${repository.identify} for " +
               "the fields its queries filter on. A generator emits the access method from the " +
-              "field's type and the target dialect; the model states only that the field is queried."
+              "field's type and the target dialect; the model states only that the field is queried.",
+          ruleId = Some(RuleId.QueriedWithoutIndex)
         )
       end if
     }
@@ -4342,7 +4452,8 @@ case class ValidationPass(
               "a domain-scoped repository must synthesize messages across multiple contexts",
             suggestion =
               s"Move ${repository.identify} into ${only.identify}, or add handlers that " +
-                "reference messages from other contexts."
+                "reference messages from other contexts.",
+            ruleId = Some(RuleId.RepositoryDomainScope)
           )
         }
       case Some(enclosing: Context) =>
@@ -4357,7 +4468,8 @@ case class ValidationPass(
               "context boundaries typically belongs at domain scope",
             suggestion =
               s"Consider moving ${repository.identify} up to the enclosing domain so it " +
-                "can synthesize across contexts."
+                "can synthesize across contexts.",
+            ruleId = Some(RuleId.RepositoryHandlesForeign)
           )
         }
       case _ => ()
@@ -4380,7 +4492,8 @@ case class ValidationPass(
               adaptor.errorLoc,
               message,
               suggestion =
-                s"Point the adaptor at a different context than its containing ${c.identify}."
+                s"Point the adaptor at a different context than its containing ${c.identify}.",
+              ruleId = Some(RuleId.AdaptorTargetsOwnContext)
             )
           }
         }
@@ -4389,14 +4502,16 @@ case class ValidationPass(
             adaptor.errorLoc,
             s"${adaptor.identify} should have at least one handler",
             suggestion =
-              s"Add a handler to ${adaptor.identify} to translate messages between the contexts."
+              s"Add a handler to ${adaptor.identify} to translate messages between the contexts.",
+            ruleId = Some(RuleId.AdaptorNoHandler)
           )
         else if adaptor.handlers.nonEmpty && adaptor.handlers.forall(_.clauses.isEmpty) then
           messages.addMissing(
             adaptor.errorLoc,
             s"${adaptor.identify} has only empty handlers",
             suggestion =
-              "Add on-clauses to the adaptor's handlers to translate messages between contexts."
+              "Add on-clauses to the adaptor's handlers to translate messages between contexts.",
+            ruleId = Some(RuleId.AdaptorEmptyHandlers)
           )
         // Completeness (adaptors): every non-empty handler must include an 'on other' clause so
         // that messages it does not explicitly translate are handled deliberately rather than
@@ -4424,7 +4539,8 @@ case class ValidationPass(
               handler.errorLoc,
               s"${handler.identify} in ${adaptor.identify} has no 'on other' clause; an adaptor must handle unmatched messages explicitly",
               suggestion =
-                "Add an 'on other' clause to the adaptor's handler to handle messages it does not explicitly translate."
+                "Add an 'on other' clause to the adaptor's handler to handle messages it does not explicitly translate.",
+              ruleId = Some(RuleId.AdaptorNoOnOther)
             )
         }
         // Check if adaptor handlers reference message types from the adapted context
@@ -4460,7 +4576,8 @@ case class ValidationPass(
                   adaptor.errorLoc,
                   s"${adaptor.identify} is ${adaptor.direction.format} ${targetContext.identify} but its handlers do not reference any message types defined in ${targetContext.identify}",
                   suggestion =
-                    s"Reference message types from ${targetContext.identify} in the adaptor's on-clauses."
+                    s"Reference message types from ${targetContext.identify} in the adaptor's on-clauses.",
+                  ruleId = Some(RuleId.AdaptorDirectionAdvisory)
                 )
               }
               // Check direction-specific message kind compatibility
@@ -4475,7 +4592,8 @@ case class ValidationPass(
                               omc.errorLoc,
                               s"Inbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.value.mkString(".")}' from ${targetContext.identify}, but inbound adaptors should handle events and results (the target's output)",
                               suggestion =
-                                "Inbound adaptors should handle the target's output (events and results). Move command/query handling to an outbound adaptor."
+                                "Inbound adaptors should handle the target's output (events and results). Move command/query handling to an outbound adaptor.",
+                              ruleId = Some(RuleId.AdaptorInboundWrongMessage)
                             )
                           case _ => ()
                         }
@@ -4486,7 +4604,8 @@ case class ValidationPass(
                               omc.errorLoc,
                               s"Outbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.value.mkString(".")}' from ${targetContext.identify}, but outbound adaptors should handle commands and queries (the target's input)",
                               suggestion =
-                                "Outbound adaptors should handle the target's input (commands and queries). Move event/result handling to an inbound adaptor."
+                                "Outbound adaptors should handle the target's input (commands and queries). Move event/result handling to an inbound adaptor.",
+                              ruleId = Some(RuleId.AdaptorOutboundWrongMessage)
                             )
                           case _ => ()
                         }
@@ -4559,7 +4678,8 @@ case class ValidationPass(
                       s"'${referentContext.id.value}'; this crosses the adaptor's isolation seam",
                     suggestion = "Keep the adaptor's translation within the two contexts it bridges: reference " +
                       "only messages owned by its parent context or its referent context (or shared " +
-                      "root-level types). Route a third context's messages through its own adaptor."
+                      "root-level types). Route a third context's messages through its own adaptor.",
+                    ruleId = Some(RuleId.AdaptorMessageNotInContext)
                   )
               }
             }
@@ -4574,7 +4694,8 @@ case class ValidationPass(
         messages.addError(
           adaptor.errorLoc,
           "Adaptor not contained within Context",
-          suggestion = "Define the adaptor inside a context or a module."
+          suggestion = "Define the adaptor inside a context or a module.",
+          ruleId = Some(RuleId.AdaptorNotInContext)
         )
     }
   }
@@ -4619,7 +4740,8 @@ case class ValidationPass(
               s"${numInlets - processor.dataflowInlets.size} error-sink) is ${derived.keyword}",
             suggestion =
               s"Change the ascription to 'as ${derived.keyword}', or adjust the inlets/outlets so the " +
-                s"arity matches 'as ${ascribed.keyword}'."
+                s"arity matches 'as ${ascribed.keyword}'.",
+            ruleId = Some(RuleId.AscribedShapeMismatch)
           )
       case Some(_) => () // ascribed shape but no ports yet: incomplete, handled elsewhere
       case None =>
@@ -4630,7 +4752,8 @@ case class ValidationPass(
               "(it documents intent and is validated)",
             suggestion =
               s"Add 'as ${processor.arityShape.keyword}' to ${processor.identify} to document and " +
-                "validate its stream shape."
+                "validate its stream shape.",
+            ruleId = Some(RuleId.PortsWithoutShape)
           )
     }
   }
@@ -4742,7 +4865,8 @@ case class ValidationPass(
       messages.addMissing(
         streamlet.errorLoc,
         s"${streamlet.identify} should have a handler",
-        suggestion = s"Add a handler to ${streamlet.identify} to process streamed messages."
+        suggestion = s"Add a handler to ${streamlet.identify} to process streamed messages.",
+        ruleId = Some(RuleId.StreamletNoHandler)
       )
     // Completeness: Flow/Split/Router handlers should send to their outlets
     if streamlet.nonEmpty && streamlet.handlers.nonEmpty then {
@@ -4757,7 +4881,8 @@ case class ValidationPass(
               streamlet.errorLoc,
               s"${streamlet.identify} handlers do not send any messages to its outlets",
               suggestion =
-                "Add 'send' statements to the handler so the streamlet emits to its outlets."
+                "Add 'send' statements to the handler so the streamlet emits to its outlets.",
+              ruleId = Some(RuleId.StreamletSendsNothing)
             )
           }
         case _: Source =>
@@ -4773,7 +4898,8 @@ case class ValidationPass(
             messages.addCompleteness(
               streamlet.errorLoc,
               s"${streamlet.identify} is a source but has no 'on init' or 'on other' clause to generate data",
-              suggestion = "Add an 'on init' or 'on other' clause so the source generates data."
+              suggestion = "Add an 'on init' or 'on other' clause so the source generates data.",
+              ruleId = Some(RuleId.SourceNoInit)
             )
           }
         case _ => ()
@@ -4868,7 +4994,8 @@ case class ValidationPass(
         s"${domain.identify} declares no 'error-sink' inlet, so hard errors have no destination",
         suggestion = "Mark the inlet that should receive hard-error notifications with " +
           "'option error-sink', e.g. 'inlet Alerts is command OpsAlert with { option error-sink }'. " +
-          "A sink on an enclosing domain covers its subdomains."
+          "A sink on an enclosing domain covers its subdomains.",
+        ruleId = Some(RuleId.NoErrorSink)
       )
     end if
     if sinks.sizeIs > 1 then
@@ -4879,7 +5006,8 @@ case class ValidationPass(
           s"${dupe.identify} is a second 'error-sink' in ${domain.identify}; " +
             s"${first.identify} already claims it",
           suggestion = "Keep one error-sink inlet per domain, or move the second to a domain " +
-            "of its own. Two leave a generator no way to choose between them."
+            "of its own. Two leave a generator no way to choose between them.",
+          ruleId = Some(RuleId.DuplicateErrorSink)
         )
       }
     end if
@@ -4995,7 +5123,8 @@ case class ValidationPass(
                   suggestion =
                     s"Reference only definitions within domain '${ownDomain.id.value}', " +
                       s"or move the saga into domain '${otherDomain.id.value}'. Coordinate across " +
-                      "domains through their contexts' adaptors rather than a single saga."
+                      "domains through their contexts' adaptors rather than a single saga.",
+                  ruleId = Some(RuleId.SagaStepReferencesForeign)
                 )
             }
           }
@@ -5128,7 +5257,8 @@ case class ValidationPass(
         s"${saga.identify} states no 'timeout', so the bound on its run is left to whatever " +
           "processes it -- and that bound decides when compensation fires",
         suggestion = "Add 'with { option timeout(\"PT5M\") }' to state the bound the saga " +
-          "actually needs, rather than leaving a generator to invent one."
+          "actually needs, rather than leaving a generator to invent one.",
+        ruleId = Some(RuleId.SagaNoTimeout)
       )
   end checkSagaTimeout
 
@@ -5194,7 +5324,8 @@ case class ValidationPass(
           s.errorLoc,
           s"${s.identify} do-statements contain no 'tell command' to effect state changes",
           suggestion =
-            "Add a 'tell command' statement to the saga step's do-statements to effect a state change."
+            "Add a 'tell command' statement to the saga step's do-statements to effect a state change.",
+          ruleId = Some(RuleId.SagaStepNoTell)
         )
       }
     }
@@ -5222,7 +5353,8 @@ case class ValidationPass(
         suggestion =
           "Acquire the value in a handler and pass it into the saga through the saga's 'requires', " +
             "so the saga is closed over its inputs and compensation sees the same data the " +
-            "forward action saw."
+            "forward action saw.",
+        ruleId = Some(RuleId.SagaStepMayNotAsk)
       )
     }
     // A12: a saga step's do-block is all-or-nothing (undo assumes all-or-none of it happened), so it
@@ -5267,7 +5399,8 @@ case class ValidationPass(
             s"but is ${c.effectiveShape.keyword}",
           suggestion =
             s"Give ${c.identify} exactly one inlet and one outlet (or ascribe 'as flow'); a " +
-              s"service exposes a single request/response flow."
+              s"service exposes a single request/response flow.",
+          ruleId = Some(RuleId.ServiceShape)
         )
       case Some(Intention.Gateway) if c.effectiveShape.keyword != "merge" =>
         messages.addError(
@@ -5276,7 +5409,8 @@ case class ValidationPass(
             s"but is ${c.effectiveShape.keyword}",
           suggestion =
             s"Give ${c.identify} two or more inlets and a single outlet (or ascribe 'as merge'); " +
-              s"a gateway funnels several inputs into one."
+              s"a gateway funnels several inputs into one.",
+          ruleId = Some(RuleId.GatewayShape)
         )
       case _ => ()
     end match
@@ -5291,7 +5425,8 @@ case class ValidationPass(
           s"has intention $intentionStr",
         suggestion =
           s"Either mark ${c.identify} as an 'application context' or move its UI groups into an " +
-            s"application-intended context."
+            s"application-intended context.",
+        ruleId = Some(RuleId.GroupsNeedApplicationContext)
       )
     end if
   }
@@ -5333,7 +5468,8 @@ case class ValidationPass(
                 s"${first.direction.format} ${first.referent.format}",
               suggestion = s"Merge the handlers of ${dupe.identify} into ${first.identify}. " +
                 "A context may adapt to and from another context, but only once in each " +
-                "direction, or it is ambiguous which adaptor handles a given message."
+                "direction, or it is ambiguous which adaptor handles a given message.",
+              ruleId = Some(RuleId.AdaptorDuplicate)
             )
           }
         }
@@ -5365,7 +5501,8 @@ case class ValidationPass(
           c.errorLoc,
           s"${c.identify} has entities but no repository to persist them; entities are stateful and should be persisted",
           suggestion =
-            s"Add a repository to ${c.identify}, e.g. 'repository ${c.id.value}Repository is { ??? }'."
+            s"Add a repository to ${c.identify}, e.g. 'repository ${c.id.value}Repository is { ??? }'.",
+          ruleId = Some(RuleId.EntitiesWithoutRepository)
         )
       }
     }
@@ -5414,7 +5551,8 @@ case class ValidationPass(
                   handler.errorLoc,
                   s"${handler.identify} in ${streamlet.identify} handles messages but does not dispatch to any entity via 'tell'",
                   suggestion =
-                    "Add 'tell' statements so the streamlet handler dispatches incoming messages to an entity."
+                    "Add 'tell' statements so the streamlet handler dispatches incoming messages to an entity.",
+                  ruleId = Some(RuleId.StreamletForeignMessage)
                 )
               }
             }
@@ -5434,7 +5572,8 @@ case class ValidationPass(
         epic.errorLoc,
         s"${epic.identify} is missing a user story",
         suggestion =
-          s"Add a user story to ${epic.identify}, e.g. 'by user SomeUser I want to ... so that ...'."
+          s"Add a user story to ${epic.identify}, e.g. 'by user SomeUser I want to ... so that ...'.",
+        ruleId = Some(RuleId.EpicMissingUserStory)
       )
     else checkRef[User](epic.userStory.user, parents)
   }
@@ -5465,7 +5604,8 @@ case class ValidationPass(
         s"a selection verb ('${input.verbAlias}') expects the input type to be an " +
           s"enumeration or alternation of choices; '${input.takeIn.pathId.format}' is not",
         suggestion = s"Use an entry verb (e.g. 'acquires') for '${input.takeIn.pathId.format}', " +
-          "or make its type an enumeration or a 'one of { ... }' alternation."
+          "or make its type an enumeration or a 'one of { ... }' alternation.",
+        ruleId = Some(RuleId.SelectionVerbType)
       )
     checkMetadata(input)
   }
@@ -5525,7 +5665,8 @@ case class ValidationPass(
       messages.addMissing(
         user.loc,
         s"${user.identify} is missing its role kind ('is a')",
-        suggestion = s"Specify the user's role, e.g. '${user.id.value} is a \"customer\"'."
+        suggestion = s"Specify the user's role, e.g. '${user.id.value} is a \"customer\"'.",
+        ruleId = Some(RuleId.UserMissingRole)
       )
     }
     checkMetadata(user)
@@ -5550,7 +5691,8 @@ case class ValidationPass(
             messages.addMissing(
               seq.loc,
               "Sequential interactions should not be empty",
-              suggestion = "Add interactions to the sequential block, or remove the empty block."
+              suggestion = "Add interactions to the sequential block, or remove the empty block.",
+              ruleId = Some(RuleId.SequentialEmpty)
             )
           } else validateInteractions(seq.contents.toSeq)
         case par: ParallelInteractions =>
@@ -5558,7 +5700,8 @@ case class ValidationPass(
             messages.addMissing(
               par.loc,
               "Parallel interaction should not be empty",
-              suggestion = "Add interactions to the parallel block, or remove the empty block."
+              suggestion = "Add interactions to the parallel block, or remove the empty block.",
+              ruleId = Some(RuleId.ParallelEmpty)
             )
           } else validateInteractions(par.contents.toSeq)
         case opt: OptionalInteractions =>
@@ -5566,7 +5709,8 @@ case class ValidationPass(
             messages.addMissing(
               opt.loc,
               "Optional interaction should not be empty",
-              suggestion = "Add interactions to the optional block, or remove the empty block."
+              suggestion = "Add interactions to the optional block, or remove the empty block.",
+              ruleId = Some(RuleId.OptionalEmpty)
             )
           } else validateInteractions(opt.contents.toSeq)
         case gi: GenericInteraction =>
@@ -5583,7 +5727,8 @@ case class ValidationPass(
                   is.loc,
                   s"Interactions must have a non-empty relationship",
                   suggestion =
-                    "Describe the relationship for the interaction, e.g. '... \"places\" order'."
+                    "Describe the relationship for the interaction, e.g. '... \"places\" order'.",
+                  ruleId = Some(RuleId.EmptyRelationship)
                 )
               }
             case _ => // Other interaction types handled by validateInteraction
@@ -5598,7 +5743,8 @@ case class ValidationPass(
           uc.loc,
           s"${uc.identify} doesn't define any interactions",
           suggestion =
-            s"Add interactions to ${uc.identify} describing the steps between users and the system."
+            s"Add interactions to ${uc.identify} describing the steps between users and the system.",
+          ruleId = Some(RuleId.NoInteractions)
         )
     }
     checkMetadata(uc)
@@ -5737,7 +5883,8 @@ case class ValidationPass(
               "context — route user interactions through the application, which then reaches the domain",
             suggestion =
               "Interact with an application UI element (input/output/group) or an element in an " +
-                "'application context'; let the application reach domain elements on the user's behalf."
+                "'application context'; let the application reach domain elements on the user's behalf.",
+            ruleId = Some(RuleId.InteractionOutsideBoundary)
           )
         case _ => () // unresolved (reported elsewhere) or already on the boundary
       end match
@@ -5876,7 +6023,8 @@ case class ValidationPass(
           s"interaction '${prose.trim}' uses no terms defined in scope, so it is unlikely to be " +
             "translatable into a generated test",
           suggestion = "Define the nouns and verbs it uses as 'term's, or add a 'briefly' / " +
-            "'described as' to the step that uses in-scope vocabulary."
+            "'described as' to the step that uses in-scope vocabulary.",
+          ruleId = Some(RuleId.InteractionNoTerms)
         )
       end if
     end if
@@ -6504,7 +6652,8 @@ case class ValidationPass(
                 s"change the record of the CURRENT state, which is ${current.identify}",
               suggestion = s"Name ${current.identify}, or use 'morph entity <E> to state " +
                 s"${named.id.value} with record <R>(…)' to transition -- noting that no 'set' " +
-                "may follow a morph."
+                "may follow a morph.",
+              ruleId = Some(RuleId.SetStateNotCurrent)
             )
           end if
       case _ => () // a FieldRef target is not about states
@@ -6552,7 +6701,8 @@ case class ValidationPass(
                 s"a 'set' may not follow the 'morph' at ${mLoc.toShort}: the entity is in a " +
                   "different state by now, so this writes a record that is no longer current",
                 suggestion = "Move these values into the 'morph' statement's own record " +
-                  "constructor, or handle them in an `on` clause of the state being morphed TO."
+                  "constructor, or handle them in an `on` clause of the state being morphed TO.",
+                ruleId = Some(RuleId.SetAfterMorph)
               )
             // A second transition on one path is WORSE than a stale `set`, not merely similar: a
             // `set` at least writes real values to a stale record, while here an entire declared
@@ -6567,7 +6717,8 @@ case class ValidationPass(
                 s"a 'morph' may not follow the 'morph' at ${mLoc.toShort}: the entity would " +
                   "transition twice for one message and only the last could take effect",
                 suggestion = "Keep the transition this clause actually intends, or split the " +
-                  "behaviour across `on` clauses of the states being morphed TO."
+                  "behaviour across `on` clauses of the states being morphed TO.",
+                ruleId = Some(RuleId.MorphAfterMorph)
               )
             case _ => ()
         case None => ()
@@ -6605,7 +6756,8 @@ case class ValidationPass(
             stmt.loc,
             s"this statement is unreachable: the '${ender.keyword}' at ${ender.loc.toShort} " +
               s"${ender.why}, which ends the block",
-            suggestion = ender.advice
+            suggestion = ender.advice,
+            ruleId = Some(RuleId.Unreachable)
           )
         case None =>
           stmt match
@@ -6654,7 +6806,8 @@ case class ValidationPass(
               "partial changes",
             suggestion =
               "Move all refusals (require/error preconditions) ahead of any effect statements " +
-                "(set/morph/become/send/tell/yield/put) in this statement list."
+                "(set/morph/become/send/tell/yield/put) in this statement list.",
+            ruleId = Some(RuleId.RefusalAfterEffect)
           )
         }
       case ws: WhenStatement =>
@@ -6742,7 +6895,8 @@ case class ValidationPass(
             lv.loc,
             s"'at' requires a mapping, sequence or table, but ${lv.collection.format} is " +
               s"'${te.format}'",
-            suggestion = "Index a mapping by its key, or a sequence/table by ordinal."
+            suggestion = "Index a mapping by its key, or a sequence/table by ordinal.",
+            ruleId = Some(RuleId.AtNeedsCollection)
           )
         case Some((_, arity)) =>
           if lv.indices.sizeIs != arity then
@@ -6752,7 +6906,8 @@ case class ValidationPass(
                 s"${if arity == 1 then "index" else "indices"}, but ${lv.indices.size} given",
               suggestion = if arity == 1 then "Supply exactly one index."
               else
-                s"Supply one index per dimension, e.g. 'at ${List.fill(arity)("0").mkString(", ")}'."
+                s"Supply one index per dimension, e.g. 'at ${List.fill(arity)("0").mkString(", ")}'.",
+              ruleId = Some(RuleId.AtWrongArity)
             )
           else
             lookupIndexType(te).foreach { expected =>
@@ -6768,14 +6923,16 @@ case class ValidationPass(
                       idx.loc,
                       s"index ${idx.format} is a number, but ${lv.collection.format} is keyed by " +
                         s"'${expected.format}'",
-                      suggestion = s"Supply an index of type '${expected.format}'."
+                      suggestion = s"Supply an index of type '${expected.format}'.",
+                      ruleId = Some(RuleId.IndexNumberMismatch)
                     )
                   case (_: LiteralString, _: IntegerTypeExpression) =>
                     messages.addError(
                       idx.loc,
                       s"index ${idx.format} is a string, but ${lv.collection.format} is indexed " +
                         "by ordinal",
-                      suggestion = "Supply a whole number."
+                      suggestion = "Supply a whole number.",
+                      ruleId = Some(RuleId.IndexStringMismatch)
                     )
                   case _ => ()
               }
@@ -6857,7 +7014,8 @@ case class ValidationPass(
                 s"but only '${fs.element.value}' was given",
               suggestion =
                 s"Write 'foreach ${fs.element.value}, <value> in ...' — the first name " +
-                  "binds the key, the second the value."
+                  "binds the key, the second the value.",
+              ruleId = Some(RuleId.ForeachMappingBindsTwo)
             )
             Map(fs.element.value -> m.from)
       case Some(other) =>
@@ -6868,7 +7026,8 @@ case class ValidationPass(
             messages.addError(
               v.loc,
               s"'foreach' binds a second name only over a mapping, and ${other.format} is not one",
-              suggestion = s"Drop the second name: 'foreach ${fs.element.value} in ...'."
+              suggestion = s"Drop the second name: 'foreach ${fs.element.value} in ...'.",
+              ruleId = Some(RuleId.ForeachSecondName)
             )
             Map(fs.element.value -> elementType, v.value -> anything)
       case None =>
@@ -6941,7 +7100,8 @@ case class ValidationPass(
                   s"'foreach' local '${id.value}' is not a collection; its type " +
                     s"'${typ.id.value}' is not iterable",
                   suggestion =
-                    "Iterate a local whose 'let' type is a collection, e.g. 'let batch: many Order = ...'."
+                    "Iterate a local whose 'let' type is a collection, e.g. 'let batch: many Order = ...'.",
+                  ruleId = Some(RuleId.ForeachLocalNotCollection)
                 )
               case Some(_) => () // resolves to a collection
               case None =>
@@ -6950,14 +7110,16 @@ case class ValidationPass(
                   s"'foreach' local '${id.value}' has no declared or inferable type, so it cannot " +
                     "be verified as a collection",
                   suggestion =
-                    s"Declare the local's collection type, e.g. 'let ${id.value}: many Order = ...'."
+                    s"Declare the local's collection type, e.g. 'let ${id.value}: many Order = ...'.",
+                  ruleId = Some(RuleId.ForeachLocalUntyped)
                 )
           else
             messages.addError(
               fs.loc,
               s"'foreach' collection '${id.value}' is not a 'let'-bound local in scope",
               suggestion =
-                "Bind the collection with a 'let' before the loop, or use 'field <path>' to iterate a field."
+                "Bind the collection with a 'let' before the loop, or use 'field <path>' to iterate a field.",
+              ruleId = Some(RuleId.ForeachNotALocal)
             )
           end if
       case fr: FieldRef =>
@@ -6969,7 +7131,8 @@ case class ValidationPass(
                 s"'foreach' field '${fr.pathId.format}' is not a collection type",
                 suggestion =
                   "Iterate a collection-typed field (Sequence/Set/Graph/Table/Replica/Mapping or a " +
-                    "'many'/'1+'/range cardinality)."
+                    "'many'/'1+'/range cardinality).",
+                ruleId = Some(RuleId.ForeachFieldNotCollection)
               )
             end if
             // There is deliberately NO second check that the field be a DIRECT field of the entity
@@ -7142,7 +7305,8 @@ case class ValidationPass(
           s"${proc.identify} has no clause handling ${qt.identify}, so this `ask` cannot be " +
             "answered",
           suggestion = s"Add `on query ${ask.query.pathId.format} is { … }` to ${proc.identify}, " +
-            s"or ask a processor that handles it."
+            s"or ask a processor that handles it.",
+          ruleId = Some(RuleId.AskNotHandled)
         )
       end if
     end for
@@ -7159,14 +7323,16 @@ case class ValidationPass(
               s"${qt.identify} declares no `${Keyword.replies}`, so `ask` has no answer to bind",
               suggestion = s"Declare what it answers with — `query ${qt.id.value} " +
                 s"${Keyword.replies} result <SomeResult> is { … }` — or use `tell` if no answer " +
-                "is expected."
+                "is expected.",
+              ruleId = Some(RuleId.AskNoReplies)
             )
         case _ =>
           messages.addError(
             ask.query.loc,
             s"`ask` takes a query, but ${qt.identify} is not one",
             suggestion = "Ask a query. A command, event, result or record is not answerable — " +
-              "use `tell` to deliver one."
+              "use `tell` to deliver one.",
+            ruleId = Some(RuleId.AskNotAQuery)
           )
     }
   end validateAsk
@@ -7240,7 +7406,8 @@ case class ValidationPass(
             loc,
             s"${p.identify} declares '$clauseKeyword' with no parameters, but " +
               s"${count(args.size, "argument")} supplied",
-            suggestion = s"Write '$noArgSpelling' with no arguments."
+            suggestion = s"Write '$noArgSpelling' with no arguments.",
+            ruleId = Some(RuleId.ClauseNoParameters)
           )
         else if declared.size != args.size then
           messages.addError(
@@ -7248,7 +7415,8 @@ case class ValidationPass(
             s"${p.identify} declares '$clauseKeyword' with ${count(declared.size, "parameter")}, but " +
               s"${count(args.size, "argument")} supplied",
             suggestion =
-              s"Supply ${declared.size}: ${declared.map(a => s"${a.name}: ${a.typeEx.format}").mkString(", ")}."
+              s"Supply ${declared.size}: ${declared.map(a => s"${a.name}: ${a.typeEx.format}").mkString(", ")}.",
+            ruleId = Some(RuleId.ClauseWrongArity)
           )
         else
           // Reuse the EXISTING per-argument helper (`checkArgumentTypes`) rather than writing a
@@ -7281,7 +7449,8 @@ case class ValidationPass(
       s"'$statementKeyword' is not allowed on ${p.identify}: only an entity has instances to " +
         s"create or destroy",
       suggestion = "A singleton's lifecycle is a deployment concern, outside the model. Its " +
-        "Id(...) may still be used to send it messages."
+        "Id(...) may still be used to send it messages.",
+      ruleId = Some(RuleId.NotInstantiable)
     )
 
   /** A70/instance-identity: `initiate <processor>[(args)]`. See [[checkLifecycleInvocation]]. */
@@ -7339,7 +7508,8 @@ case class ValidationPass(
               s"'${Keyword.terminate}' requires a value of type 'Id(entity ...)', but " +
                 s"${term.target.format} is '${te.format}'",
               suggestion = "Terminate names the INSTANCE to end, e.g. 'terminate self.id' or " +
-                "'terminate <field typed Id(entity ...)>'."
+                "'terminate <field typed Id(entity ...)>'.",
+              ruleId = Some(RuleId.TerminateNeedsId)
             )
             term.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
           case Some((uid, owner)) =>
@@ -7514,7 +7684,8 @@ case class ValidationPass(
             s"$what is declared ${eu.format} but the value is ${au.format}: an id of " +
               s"'$adPath' is not an id of '$edPath'",
             suggestion = s"Supply an id obtained from '$edPath' -- an id value identifies one " +
-              "instance of one processor and cannot stand in for another's."
+              "instance of one processor and cannot stand in for another's.",
+            ruleId = Some(RuleId.IdTypeMismatch)
           )
       case _ =>
         if !e.isAssignmentCompatible(a) then
@@ -7522,7 +7693,8 @@ case class ValidationPass(
             loc,
             s"$what is declared '${e.format}' but the value is '${a.format}'",
             suggestion = s"Supply a value of type '${e.format}', or declare the field as " +
-              s"'${a.format}'."
+              s"'${a.format}'.",
+            ruleId = Some(RuleId.IdEntityMismatch)
           )
   end checkAssignable
 
@@ -7684,7 +7856,8 @@ case class ValidationPass(
                 s"instance to tell, but ${v.format} is '${te.format}'",
               suggestion = "Address an instance with a value whose type is 'Id(entity ...)' — " +
                 "'tell <msg> to self.id' or a field typed 'Id(entity ...)' — or name a processor " +
-                "statically with a keyword, e.g. 'to entity Order'."
+                "statically with a keyword, e.g. 'to entity Order'.",
+              ruleId = Some(RuleId.TellValueNeedsId)
             )
           end if
         }
@@ -7736,7 +7909,8 @@ case class ValidationPass(
                   s"'tell' crosses a DOMAIN boundary from ${fromCtx.identify} to " +
                     s"${targetCtx.identify}, which the context isolation seam forbids: an " +
                     "adaptor is always required across domains",
-                  suggestion = s"Route this through an adaptor in ${fromCtx.id.value}."
+                  suggestion = s"Route this through an adaptor in ${fromCtx.id.value}.",
+                  ruleId = Some(RuleId.TellCrossesDomain)
                 )
               else if !exempt then
                 messages.addError(
@@ -7745,7 +7919,8 @@ case class ValidationPass(
                     s"${targetCtx.identify}: ${ts.msg.format} is not declared in a domain " +
                     "ancestral to both",
                   suggestion = s"Declare the message type in ${shared.head.identify}, or route " +
-                    "this through an adaptor."
+                    "this through an adaptor.",
+                  ruleId = Some(RuleId.TellCrossesContext)
                 )
           }
         case _ => () // unresolved target -- ResolutionPass already reported it
@@ -7799,7 +7974,8 @@ case class ValidationPass(
                   s"${mt.identify} carries ${candidates.size} fields typed 'Id(${p.id.value})' " +
                     s"(${candidates.map(_.id.value).mkString(", ")}), so which instance this " +
                     s"addresses is ambiguous",
-                  suggestion = s"Add 'by ${candidates.head.id.value}' to choose one."
+                  suggestion = s"Add 'by ${candidates.head.id.value}' to choose one.",
+                  ruleId = Some(RuleId.AddressAmbiguous)
                 )
               else if candidates.isEmpty && p.isInstanceOf[Entity] then
                 messages.addCompleteness(
@@ -7807,7 +7983,8 @@ case class ValidationPass(
                   s"${mt.identify} carries no field typed 'Id(${p.id.value})', so which " +
                     s"${p.id.value} instance this addresses is unspecified",
                   suggestion =
-                    s"Add a field typed 'Id(${p.id.value})' to ${mt.identify} and populate it."
+                    s"Add a field typed 'Id(${p.id.value})' to ${mt.identify} and populate it.",
+                  ruleId = Some(RuleId.NoAddressField)
                 )
       }
     }
@@ -7984,13 +8161,15 @@ case class ValidationPass(
         messages.addError(
           sv.loc,
           s"'system' is not a value on its own; it provides $provided",
-          suggestion = s"Name one of them, e.g. 'system.${SystemValue.fieldNames.head}'."
+          suggestion = s"Name one of them, e.g. 'system.${SystemValue.fieldNames.head}'.",
+          ruleId = Some(RuleId.SystemNotStandalone)
         )
       case Some(id) if !SystemValue.members.contains(id.value) =>
         messages.addError(
           sv.loc,
           s"'system.${id.value}' is not provided; 'system' provides $provided",
-          suggestion = s"Use one of $provided."
+          suggestion = s"Use one of $provided.",
+          ruleId = Some(RuleId.SystemUnknownMember)
         )
       case _ => ()
   end checkSystemMember
@@ -8015,7 +8194,8 @@ case class ValidationPass(
               s"${otherState.identify} -- but this path is in ${state.identify}, so that record " +
               "holds nothing here",
             suggestion = s"Read a field of ${inScope.map(_.identify).getOrElse("the state in scope")}" +
-              s", or carry the value in the message that entered ${state.identify}."
+              s", or carry the value in the message that entered ${state.identify}.",
+            ruleId = Some(RuleId.StateRecordOutOfScope)
           )
         case _ => ()
   end checkStateRecordInScope
@@ -8287,7 +8467,8 @@ case class ValidationPass(
               s"'empty' requires a type whose minimum cardinality is zero, but '${te.format}' " +
                 "requires at least one value",
               suggestion = "Use 'empty' with an optional ('T?'), a collection ('T*') or a range " +
-                "starting at zero ('T{0,n}'). A 'T+' or a bare 'T' always has at least one value."
+                "starting at zero ('T{0,n}'). A 'T+' or a bare 'T' always has at least one value.",
+              ruleId = Some(RuleId.EmptyNeedsZeroCardinality)
             )
           end if
         }
@@ -8307,7 +8488,8 @@ case class ValidationPass(
             suggestion =
               "Bind it with a 'let', or reference an 'on init'/'on term' parameter, a 'foreach' " +
                 "element, or a field of the on-clause message, entity state, or the function's " +
-                "'requires' input."
+                "'requires' input.",
+            ruleId = Some(RuleId.ValueRefUnresolved)
           )
       case gv: GetValue =>
         gv.source match
@@ -8333,7 +8515,8 @@ case class ValidationPass(
               sv.loc,
               "'self' names the running processor instance, so it is only meaningful inside a " +
                 "processor (context, entity, projector, repository, streamlet or adaptor)",
-              suggestion = "Remove the 'self' reference, or move this into a processor's handler."
+              suggestion = "Remove the 'self' reference, or move this into a processor's handler.",
+              ruleId = Some(RuleId.SelfMisplaced)
             )
           case Some(_) =>
             sv.field.foreach { f =>
@@ -8342,7 +8525,8 @@ case class ValidationPass(
                   f.loc,
                   s"'self' has no field '${f.value}'; it carries " +
                     SelfValue.fieldNames.map("'" + _ + "'").mkString(" and "),
-                  suggestion = s"Use ${SelfValue.fieldNames.map("self." + _).mkString(" or ")}."
+                  suggestion = s"Use ${SelfValue.fieldNames.map("self." + _).mkString(" or ")}.",
+                  ruleId = Some(RuleId.SelfUnknownField)
                 )
             }
       case ic: InvariantCondition =>
@@ -8387,7 +8571,8 @@ case class ValidationPass(
         messages.addError(
           v.loc,
           s"Operand of $what must be a boolean but is $other",
-          suggestion = "Use a comparison, a boolean field, or a boolean literal (true/false)."
+          suggestion = "Use a comparison, a boolean field, or a boolean literal (true/false).",
+          ruleId = Some(RuleId.OperandNotBoolean)
         )
       case None => () // undetermined — skip
 
@@ -8427,7 +8612,8 @@ case class ValidationPass(
           s"A 'when' condition must be a Boolean value; '${vr.path.format}' has type $other",
           suggestion =
             "Reference a Boolean field or constant, or use a comparison/logical expression " +
-              "(e.g. 'a > b', 'x and y', 'not z')."
+              "(e.g. 'a > b', 'x and y', 'not z').",
+          ruleId = Some(RuleId.WhenNotBoolean)
         )
       case None => () // undetermined — skip (best-effort)
 
@@ -8486,7 +8672,8 @@ case class ValidationPass(
             suggestion =
               "Bind it with a 'let'; reference an 'on init'/'on term' parameter, a 'foreach' " +
                 "element, or a field of the on-clause message, entity state, or the function's " +
-                "'requires' input; or declare and reference a 'constant'."
+                "'requires' input; or declare and reference a 'constant'.",
+            ruleId = Some(RuleId.ComparandUnresolved)
           )
       case nl: NumericLiteral =>
         // A28's original rule made this unconstructible; Reid reversed that 2026-08-14 and the
@@ -8495,7 +8682,8 @@ case class ValidationPass(
         messages.addStyle(
           nl.loc,
           s"Comparison against the literal ${nl.text} would read better as a named constant",
-          suggestion = s"Declare `constant SomeName is <type> = ${nl.text}` and compare against it."
+          suggestion = s"Declare `constant SomeName is <type> = ${nl.text}` and compare against it.",
+          ruleId = Some(RuleId.LiteralComparisonStyle)
         )
 
   /** A28: enforce type-safe comparisons. Equality (`==`/`!=`) requires both operands to share a
@@ -8518,7 +8706,8 @@ case class ValidationPass(
             messages.addError(
               ce.loc,
               s"Cannot compare a $a value to a $b value with '${ce.op.symbol}'",
-              suggestion = "Compare operands of the same type (both numeric, both strings, etc.)."
+              suggestion = "Compare operands of the same type (both numeric, both strings, etc.).",
+              ruleId = Some(RuleId.IncomparableKinds)
             )
           case _ => ()
       case _ =>
@@ -8530,7 +8719,8 @@ case class ValidationPass(
                 operand.loc,
                 s"Ordering operator '${ce.op.symbol}' requires a numeric operand but got a $other value",
                 suggestion =
-                  "Order only numeric operands; use '=='/'!=' for equality of non-numeric values."
+                  "Order only numeric operands; use '=='/'!=' for equality of non-numeric values.",
+                ruleId = Some(RuleId.OrderingNeedsNumeric)
               )
             case None => ()
         requireNumeric(lc, ce.left)
@@ -8633,7 +8823,8 @@ case class ValidationPass(
             s"match on ${subjType.get.identify} is not exhaustive; uncovered: " +
               uncovered.mkString(", "),
             suggestion =
-              "Add a case for each uncovered member, or add a 'default' branch to handle the rest."
+              "Add a case for each uncovered member, or add a 'default' branch to handle the rest.",
+            ruleId = Some(RuleId.MatchNotExhaustive)
           )
       }
   end validateMatch
@@ -8659,7 +8850,8 @@ case class ValidationPass(
         s"Unknown type-case '$name'; it does not name a known type, enumerator, or message",
         suggestion =
           "Name a type, an enumerator of the subject's enumeration, an alternant of its " +
-            "alternation, or a message subtype; or use a comparison pattern / 'default'."
+            "alternation, or a message subtype; or use a comparison pattern / 'default'.",
+        ruleId = Some(RuleId.UnknownTypeCase)
       )
     else
       memberDefs.foreach { members =>
@@ -8672,7 +8864,8 @@ case class ValidationPass(
             s"Pattern '$name' is not a member of ${subjType.get.identify}; expected one of: " +
               members.map(_.id.value).mkString(", "),
             suggestion =
-              "Match an alternant/enumerator of the subject's type, or use 'default' for other cases."
+              "Match an alternant/enumerator of the subject's type, or use 'default' for other cases.",
+            ruleId = Some(RuleId.PatternNotAMember)
           )
       }
   end validateTypePattern
@@ -8697,7 +8890,8 @@ case class ValidationPass(
             messages.addError(
               cp.loc,
               s"Cannot compare a $a subject to a $b value with '${cp.op.symbol}'",
-              suggestion = "Compare the subject against a value of the same type."
+              suggestion = "Compare the subject against a value of the same type.",
+              ruleId = Some(RuleId.PatternIncomparable)
             )
           case _ => ()
       case _ =>
@@ -8709,7 +8903,8 @@ case class ValidationPass(
                 loc,
                 s"Ordering operator '${cp.op.symbol}' requires a numeric $what but got a $other value",
                 suggestion =
-                  "Order only numeric operands; use '=='/'!=' for equality of non-numeric values."
+                  "Order only numeric operands; use '=='/'!=' for equality of non-numeric values.",
+                ruleId = Some(RuleId.PatternOrderingNumeric)
               )
             case None => ()
         requireNumeric(subjCat, cp.loc, "subject")
@@ -8747,7 +8942,8 @@ case class ValidationPass(
               "value",
             suggestion = "Only an optional ('T?'), a collection ('T*') or a range starting at zero " +
               s"('T{0,n}') has an empty value. Give ${e.identify} such a type, or supply a real " +
-              "value here."
+              "value here.",
+            ruleId = Some(RuleId.EmptyNotAllowed)
           )
         end if
       // A20: `let`/`set` are the two carriers `checkValueType` serves, and both wire the
@@ -8763,7 +8959,8 @@ case class ValidationPass(
         messages.addError(
           loc,
           s"$what value has type ${a.identify} but ${e.identify} is expected",
-          suggestion = s"Supply a value of type ${e.identify}."
+          suggestion = s"Supply a value of type ${e.identify}.",
+          ruleId = Some(RuleId.ValueTypeMismatch)
         )
       case _ => ()
   end checkValueType
@@ -8844,7 +9041,8 @@ case class ValidationPass(
             s"${typeAscriptionName(exp)}: the ascription restates the position's type, it does " +
             "not override it",
           suggestion = s"Change the ascription to 'as ${typeAscriptionName(exp)}', or drop it " +
-            "-- it is optional and inferred from the position."
+            "-- it is optional and inferred from the position.",
+          ruleId = Some(RuleId.PromptAscriptionContradicts)
         )
       case _ => () // agreement, no expectation to restate against, or no ascription written
   end checkPromptAscription
@@ -8893,7 +9091,8 @@ case class ValidationPass(
                   arg.loc,
                   s"Argument for $fieldNoun '${field.id.value}' has type ${a.identify} but " +
                     s"${field.id.value} expects ${e.identify}",
-                  suggestion = s"Supply a value of type ${e.identify} for '${field.id.value}'."
+                  suggestion = s"Supply a value of type ${e.identify} for '${field.id.value}'.",
+                  ruleId = Some(RuleId.ArgumentTypeMismatch)
                 )
               case _ => ()
           case _ => () // primitive/other field type — literals accepted, no check
@@ -8941,7 +9140,8 @@ case class ValidationPass(
                 s"Argument '$name' is supplied more than once in constructor of " +
                   s"${typ.identify}; the first is at ${first.loc.format}",
                 suggestion = s"Supply '$name' once. Two values for one field leave it ambiguous " +
-                  "which the constructed message carries."
+                  "which the constructed message carries.",
+                ruleId = Some(RuleId.ArgumentDuplicated)
               )
             }
           }
@@ -8952,7 +9152,8 @@ case class ValidationPass(
             c.loc,
             s"In constructor of ${typ.identify}, positional arguments must precede named arguments",
             suggestion =
-              "Reorder so all positional arguments come before any 'name = value' argument."
+              "Reorder so all positional arguments come before any 'name = value' argument.",
+            ruleId = Some(RuleId.PositionalAfterNamed)
           )
         // Named args must reference real fields.
         c.args.foreach { arg =>
@@ -8962,7 +9163,8 @@ case class ValidationPass(
                 arg.loc,
                 s"'${id.value}' is not a field of ${typ.identify}",
                 suggestion =
-                  s"Use one of the fields of ${typ.identify}: ${fields.map(_.id.value).mkString(", ")}."
+                  s"Use one of the fields of ${typ.identify}: ${fields.map(_.id.value).mkString(", ")}.",
+                ruleId = Some(RuleId.NotAField)
               )
           }
         }
@@ -8990,7 +9192,8 @@ case class ValidationPass(
                       s"'${f.typeEx.format}' requires at least one value",
                     suggestion = "Only an optional ('T?'), a collection ('T*') or a range starting " +
                       s"at zero ('T{0,n}') has an empty value. Supply a real value for " +
-                      s"'${f.id.value}', or give it a type that can be empty."
+                      s"'${f.id.value}', or give it a type that can be empty.",
+                    ruleId = Some(RuleId.EmptyNotAllowedForField)
                   )
                 end if
               }
@@ -9026,7 +9229,8 @@ case class ValidationPass(
             c.loc,
             s"Constructor of ${typ.identify} has ${count(c.args.size, "argument")} but the type " +
               s"has only ${count(fields.size, "field")}",
-            suggestion = s"Supply at most ${count(fields.size, "argument")}."
+            suggestion = s"Supply at most ${count(fields.size, "argument")}.",
+            ruleId = Some(RuleId.ConstructorTooManyArgs)
           )
         // EVERY field must be supplied explicitly (Reid, 2026-08-24). *"If the constructor does
         // not explicitly set every field, it is invalid. We don't want to guess what the default
@@ -9073,7 +9277,8 @@ case class ValidationPass(
             suggestion = "Supply every field explicitly. An omitted field would have to take an " +
               "invented default or carry an old value forward, and neither is stated by the " +
               "model. An optional or collection field that should have no value is written " +
-              "'<field> = empty'."
+              "'<field> = empty'.",
+            ruleId = Some(RuleId.ConstructorMissingFields)
           )
         checkArgumentTypes(c.args, fields, "field", parents, lets, elements)
         // Recurse into argument values (nested constructors, value refs), CARRYING the foreach
@@ -9113,7 +9318,8 @@ case class ValidationPass(
             call.loc,
             s"${fn.identify} has no 'returns' output, so a call to it produces no value",
             suggestion =
-              s"Give ${fn.identify} a 'returns' clause, or do not use its call as a value."
+              s"Give ${fn.identify} a 'returns' clause, or do not use its call as a value.",
+            ruleId = Some(RuleId.CallNoReturns)
           )
         // Ordering: positional args must precede named args.
         val firstNamed = call.args.indexWhere(_.name.isDefined)
@@ -9122,7 +9328,8 @@ case class ValidationPass(
             call.loc,
             s"In call of ${fn.identify}, positional arguments must precede named arguments",
             suggestion =
-              "Reorder so all positional arguments come before any 'name = value' argument."
+              "Reorder so all positional arguments come before any 'name = value' argument.",
+            ruleId = Some(RuleId.CallPositionalAfterNamed)
           )
         // Named args must reference real input fields.
         call.args.foreach { arg =>
@@ -9133,7 +9340,8 @@ case class ValidationPass(
                 s"'${id.value}' is not an input field of ${fn.identify}",
                 suggestion = if fields.isEmpty then s"${fn.identify} takes no input arguments."
                 else
-                  s"Use one of the input fields of ${fn.identify}: ${fields.map(_.id.value).mkString(", ")}."
+                  s"Use one of the input fields of ${fn.identify}: ${fields.map(_.id.value).mkString(", ")}.",
+                ruleId = Some(RuleId.CallNotAnInput)
               )
           }
         }
@@ -9144,7 +9352,8 @@ case class ValidationPass(
             call.loc,
             s"Call of ${fn.identify} has ${count(call.args.size, "argument")} but the function " +
               s"takes ${count(fields.size, "input field")}",
-            suggestion = s"Supply at most ${count(fields.size, "argument")}."
+            suggestion = s"Supply at most ${count(fields.size, "argument")}.",
+            ruleId = Some(RuleId.CallTooManyArgs)
           )
         else if call.args.nonEmpty && call.args.forall(
             _.name.isEmpty
@@ -9155,7 +9364,8 @@ case class ValidationPass(
             s"Call of ${fn.identify} has ${count(call.args.size, "positional argument")} but the " +
               s"function takes ${count(fields.size, "input field")}",
             suggestion =
-              s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset."
+              s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset.",
+            ruleId = Some(RuleId.CallTooManyPositional)
           )
         checkArgumentTypes(call.args, fields, "input", parents, lets, elements)
         // Recurse into argument values (nested constructors, calls, value refs).
@@ -9189,7 +9399,8 @@ case class ValidationPass(
           messages.addError(
             ps.loc,
             s"'put' value has type ${a.identify} but ${output.identify} expects ${e.identify}",
-            suggestion = s"Publish a value of type ${e.identify} to ${output.identify}."
+            suggestion = s"Publish a value of type ${e.identify} to ${output.identify}.",
+            ruleId = Some(RuleId.PutTypeMismatch)
           )
         case _ => ()
     }
@@ -9220,7 +9431,8 @@ case class ValidationPass(
             rs.loc,
             s"'return' value has type ${a.identify} but function '${fn.id.value}' returns ${e.identify}",
             suggestion =
-              s"Return a value of type ${e.identify}, or change the function's 'returns'."
+              s"Return a value of type ${e.identify}, or change the function's 'returns'.",
+            ruleId = Some(RuleId.ReturnTypeMismatch)
           )
         case _ => ()
     }
@@ -9301,7 +9513,8 @@ case class ValidationPass(
               "'yield' after a 'forward' in the same clause: the response was delegated, so this " +
                 "clause cannot also produce it",
               suggestion = s"Remove the 'yield', or remove the 'forward' at ${fLoc.format}. " +
-                "Exactly one of them answers for this message."
+                "Exactly one of them answers for this message.",
+              ruleId = Some(RuleId.YieldAfterForward)
             )
           case r: ReplyStatement =>
             messages.addError(
@@ -9309,7 +9522,8 @@ case class ValidationPass(
               "'reply' after a 'forward' in the same clause: the response was delegated, so this " +
                 "clause cannot also produce it",
               suggestion = s"Remove the 'reply', or remove the 'forward' at ${fLoc.format}. " +
-                "Exactly one of them answers for this message."
+                "Exactly one of them answers for this message.",
+              ruleId = Some(RuleId.ReplyAfterForward)
             )
           case _: SendStatement | _: TellStatement =>
             messages.addStyle(
@@ -9317,7 +9531,8 @@ case class ValidationPass(
               "a 'forward' should generally be the last statement in its clause; transmitting " +
                 "again after delegating is legal but usually unintended",
               suggestion = s"Move the 'forward' at ${fLoc.format} after this statement, unless " +
-                "transmitting after delegating is deliberate."
+                "transmitting after delegating is deliberate.",
+              ruleId = Some(RuleId.ForwardNotLast)
             )
           case _ => ()
       }
@@ -9383,7 +9598,8 @@ case class ValidationPass(
                   s"'let ${ls.identifier.value}' binds an untyped 'prompt(…)' with no type anywhere " +
                     "to check it against",
                   suggestion = "Add a type: 'let " + ls.identifier.value +
-                    ": T = prompt(…)', or ascribe the hole itself: 'prompt(…) as T'."
+                    ": T = prompt(…)', or ascribe the hole itself: 'prompt(…) as T'.",
+                  ruleId = Some(RuleId.UntypedPromptSeam)
                 )
               case _ => ()
           lets = lets :+ ls

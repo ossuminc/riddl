@@ -292,33 +292,33 @@ object Messages {
   }
 
   /** Generate a style warning */
-  @JSExport def style(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
-    Message(loc, message, StyleWarning, suggestion = suggestion)
+  @JSExport def style(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId] = None): Message = {
+    Message(loc, message, StyleWarning, suggestion = suggestion, ruleId = ruleId)
   }
 
   /** Generate a tip message */
-  @JSExport def tip(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
-    Message(loc, message, Tip, suggestion = suggestion)
+  @JSExport def tip(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId] = None): Message = {
+    Message(loc, message, Tip, suggestion = suggestion, ruleId = ruleId)
   }
 
   /** Generate a missing warning */
-  @JSExport def missing(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
-    Message(loc, message, MissingWarning, suggestion = suggestion)
+  @JSExport def missing(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId] = None): Message = {
+    Message(loc, message, MissingWarning, suggestion = suggestion, ruleId = ruleId)
   }
 
   /** Generate a usage warning */
-  @JSExport def usage(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
-    Message(loc, message, UsageWarning, suggestion = suggestion)
+  @JSExport def usage(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId] = None): Message = {
+    Message(loc, message, UsageWarning, suggestion = suggestion, ruleId = ruleId)
   }
 
   /** Generate an informative message */
-  @JSExport def info(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
-    Message(loc, message, Info, suggestion = suggestion)
+  @JSExport def info(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId] = None): Message = {
+    Message(loc, message, Info, suggestion = suggestion, ruleId = ruleId)
   }
 
   /** Generate a generic warning */
-  @JSExport def warning(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
-    Message(loc, message, Warning, suggestion = suggestion)
+  @JSExport def warning(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId] = None): Message = {
+    Message(loc, message, Warning, suggestion = suggestion, ruleId = ruleId)
   }
 
   /** Generate an error message */
@@ -326,8 +326,9 @@ object Messages {
   def error(
     message: String,
     loc: At = At.empty,
-    suggestion: String = ""
-  ): Message = { Message(loc, message, suggestion = suggestion) }
+    suggestion: String = "",
+    ruleId: Option[RuleId] = None
+  ): Message = { Message(loc, message, suggestion = suggestion, ruleId = ruleId) }
 
   /** Generate an error message resulting from an exception received */
   private def exceptionToError(
@@ -345,8 +346,8 @@ object Messages {
   }
 
   /** Generate a severe error message */
-  @JSExport def severe(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
-    Message(loc, message, SevereError, suggestion = suggestion)
+  @JSExport def severe(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId] = None): Message = {
+    Message(loc, message, SevereError, suggestion = suggestion, ruleId = ruleId)
   }
 
   /** Generate a [[scala.List]] with a single error message in it */
@@ -677,7 +678,7 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addStyle(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
+    def addStyle(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId])(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, StyleWarning, suggestion = suggestion, ruleId = ruleId))
@@ -693,14 +694,14 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addUsage(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
+    def addUsage(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId])(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, UsageWarning, suggestion = suggestion, ruleId = ruleId))
     }
 
     @inline
-    def addCompleteness(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
+    def addCompleteness(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId])(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, CompletenessWarning, suggestion = suggestion, ruleId = ruleId))
@@ -716,7 +717,7 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addDeprecation(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
+    def addDeprecation(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId])(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, Deprecation, suggestion = suggestion, ruleId = ruleId))
@@ -748,7 +749,7 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addMissing(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
+    def addMissing(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId])(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, MissingWarning, suggestion = suggestion, ruleId = ruleId))
@@ -764,7 +765,7 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addWarning(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
+    def addWarning(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId])(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, Warning, suggestion = suggestion, ruleId = ruleId))
@@ -780,7 +781,7 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addError(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
+    def addError(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId])(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, Error, suggestion = suggestion, ruleId = ruleId))
@@ -796,7 +797,7 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def addSevere(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId] = None)(using
+    def addSevere(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId])(using
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, SevereError, suggestion = suggestion, ruleId = ruleId))

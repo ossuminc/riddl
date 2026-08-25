@@ -285,12 +285,15 @@ class MessagesTest extends AbstractTestingBasis {
     }
     "have message add methods" in {
       acc.add(Messages.info("info", At.empty))
-      acc.addStyle(At.empty, "style")
-      acc.addMissing(At.empty, "missing")
-      acc.addUsage(At.empty, "usage")
-      acc.addWarning(At.empty, "warning")
-      acc.addError(At.empty, "error")
-      acc.addSevere(At.empty, "severe")
+      // `ruleId` is REQUIRED, so these pass None explicitly. That is the point of removing the
+      // default: a diagnostic cannot be added without deciding which rule it belongs to, and a
+      // test exercising the plumbing has to say out loud that it has no rule in mind.
+      acc.addStyle(At.empty, "style", ruleId = None)
+      acc.addMissing(At.empty, "missing", ruleId = None)
+      acc.addUsage(At.empty, "usage", ruleId = None)
+      acc.addWarning(At.empty, "warning", ruleId = None)
+      acc.addError(At.empty, "error", ruleId = None)
+      acc.addSevere(At.empty, "severe", ruleId = None)
       val msgs = acc.toMessages
       msgs.justErrors.size must be(2)
       msgs.justInfo.size must be(1)

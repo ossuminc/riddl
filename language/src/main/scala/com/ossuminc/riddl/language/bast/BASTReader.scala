@@ -533,7 +533,7 @@ class BASTReader(
               expectedValue = Some("valid node type (1-255)"),
               actualValue = Some(s"$nodeType at byte $posBeforeNode")
             )
-          )
+          , RuleId.BastUnknownNodeTag)
           // Return a placeholder with lastLocation for best-effort location on error
           LiteralString(lastLocation, s"<unknown node type $nodeType>")
       }
@@ -603,7 +603,7 @@ class BASTReader(
               expectedValue = Some("a valid STREAMLET_* shape tag"),
               actualValue = Some(s"$other")
             )
-          )
+          , RuleId.BastUnknownShapeTag)
           None
       }
     case other =>
@@ -613,7 +613,7 @@ class BASTReader(
           expectedValue = Some("0 (absent) or 1 (present)"),
           actualValue = Some(s"$other")
         )
-      )
+      , RuleId.BastInvalidShapePresence)
       None
   }
 
@@ -1925,7 +1925,7 @@ class BASTReader(
             Nothing(loc)
 
           case _ =>
-            addError(s"Unknown TYPE_REF subtype: $subtype")
+            addError(s"Unknown TYPE_REF subtype: $subtype", RuleId.BastUnknownTypeRefSubtype)
             Anything(loc)
         }
 
@@ -1949,7 +1949,7 @@ class BASTReader(
             Blob(loc, blobKind)
 
           case _ =>
-            addError(s"Unknown TYPE_STRING subtype: $subtype")
+            addError(s"Unknown TYPE_STRING subtype: $subtype", RuleId.BastUnknownTypeStringSubtype)
             String_(loc, None, None)
         }
 
@@ -1976,7 +1976,7 @@ class BASTReader(
             UserId(loc)
 
           case _ =>
-            addError(s"Unknown TYPE_UNIQUE_ID subtype: $subtype")
+            addError(s"Unknown TYPE_UNIQUE_ID subtype: $subtype", RuleId.BastUnknownUniqueIdSubtype)
             UUID(loc)
         }
 
@@ -2092,7 +2092,7 @@ class BASTReader(
         Duration(loc)
 
       case _ =>
-        addError(s"Unknown type expression tag: $typeTag at position ${reader.position}")
+        addError(s"Unknown type expression tag: $typeTag at position ${reader.position}", RuleId.BastUnknownTypeTag)
         // Use lastLocation for best-effort location on error
         Anything(lastLocation)
     }
@@ -2205,7 +2205,7 @@ class BASTReader(
           consumingTag(readDomainRefNode())
         case _ =>
           reader.readU8() // consume the unknown tag
-          addError(s"Unknown reference tag: $refTag")
+          addError(s"Unknown reference tag: $refTag", RuleId.BastUnknownReferenceTag)
           // Use lastLocation for best-effort location on error
           TypeRef(lastLocation, "", PathIdentifier(lastLocation, Seq.empty))
       }
@@ -2813,7 +2813,7 @@ class BASTReader(
     val refTag = reader.peekU8()
     messageRefByTag(refTag).getOrElse {
       // A9b: a record is not a message; only the 4 message tags are valid here.
-      addError(s"Unknown message ref tag: $refTag")
+      addError(s"Unknown message ref tag: $refTag", RuleId.BastUnknownMessageRefTag)
       // Use lastLocation for best-effort location on error
       CommandRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
     }
@@ -3009,7 +3009,7 @@ class BASTReader(
           // If we get something else, wrap it in an error and continue
           addError(
             s"Expected AliasedTypeExpression in Alternation, got ${other.getClass.getSimpleName}"
-          )
+          , RuleId.BastUnexpectedAlternationMember)
           buffer += AliasedTypeExpression(other.loc, "", PathIdentifier.empty)
       }
       i += 1
@@ -3065,7 +3065,7 @@ class BASTReader(
     Contents(buffer.toSeq: _*)
   }
 
-  private def addError(message: String): Unit = {
-    messages += Messages.error(message, At.empty)
+  private def addError(message: String, rule: RuleId): Unit = {
+    messages += Messages.error(message, At.empty, ruleId = Some(rule))
   }
 }

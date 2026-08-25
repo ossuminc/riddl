@@ -165,6 +165,281 @@ enum RuleId(
   case TypeFirstAggregate extends RuleId("type-first-aggregate", deprecates = true)
   case ConnectorOptionToIntention extends RuleId("connector-option-to-intention", deprecates = true)
   case QuotedConstantLiteral extends RuleId("quoted-constant-literal", deprecates = true)
+
+  // ---- handler: handlers and their on-clauses ----------------------------------------------
+  case HandlerNoExecutableStatements extends RuleId("handler-no-executable-statements")
+  case HandlerOnlyDoStatements extends RuleId("handler-only-do-statements")
+  case EmptyOnOther extends RuleId("handler-empty-on-other")
+  case CommandNoResponse extends RuleId("handler-command-no-response")
+  case QueryNoReply extends RuleId("handler-query-no-reply")
+  case BindingShadowsField extends RuleId("handler-binding-shadows-field")
+  case OnOtherNoEnvelope extends RuleId("handler-on-other-no-envelope")
+  case OnOtherUnbound extends RuleId("handler-on-other-unbound")
+  case OnOtherEnvelopeConflict extends RuleId("handler-on-other-envelope-conflict")
+
+  // ---- stmt: statements and their operands -------------------------------------------------
+  case ForwardWrongClause extends RuleId("stmt-forward-wrong-clause")
+  case ForwardWrongMessage extends RuleId("stmt-forward-wrong-message")
+  case SelfNotAMessage extends RuleId("stmt-self-not-a-message")
+  case OperandWrongType extends RuleId("stmt-operand-wrong-type")
+  case OperandNotAMessage extends RuleId("stmt-operand-not-a-message")
+  case MorphOperandUnresolved extends RuleId("stmt-morph-operand-unresolved")
+  case MorphOperandType extends RuleId("stmt-morph-operand-type")
+  case OperandIsTypeNotValue extends RuleId("stmt-operand-is-type-not-value")
+  case EffectNotAllowed extends RuleId("stmt-effect-not-allowed")
+  case InitiateIdUnused extends RuleId("stmt-initiate-id-unused")
+
+  // ---- state: entity state, and who may read or write it -----------------------------------
+  case SetNotAllowed extends RuleId("state-set-not-allowed")
+  case StateReadNotAllowed extends RuleId("state-read-not-allowed")
+  case StateReadForeign extends RuleId("state-read-foreign")
+  case MultipleInitialHandlers extends RuleId("state-multiple-initial-handlers")
+  case StateEmptyAggregate extends RuleId("state-empty-aggregate")
+
+  // ---- invariant ----------------------------------------------------------------------------
+  case InvariantNeverApplied extends RuleId("invariant-requires-never-applied")
+  case InvariantRequiresArgument extends RuleId("invariant-requires-argument")
+  case InvariantUnexpectedArgument extends RuleId("invariant-unexpected-argument")
+  case InvariantShadows extends RuleId("invariant-shadows")
+  case InvariantRequiresStateMisplaced extends RuleId("invariant-requires-state-misplaced")
+  case InvariantRequiresStateRedundant extends RuleId("invariant-requires-state-redundant")
+  case InvariantNoStateToRead extends RuleId("invariant-no-state-to-read")
+
+  // ---- context ------------------------------------------------------------------------------
+  case QueriesWithoutResults extends RuleId("context-queries-without-results")
+  case ResultsWithoutQueries extends RuleId("context-results-without-queries")
+
+  // ---- more msg -----------------------------------------------------------------------------
+  case TellNotDeliverable extends RuleId("msg-tell-not-deliverable")
+  case TellTargetUnreachable extends RuleId("msg-tell-target-unreachable")
+  case CommandNoFields extends RuleId("msg-command-no-fields")
+  case EventNeverEmitted extends RuleId("msg-event-never-emitted")
+  case YieldUndeclared extends RuleId("msg-yield-undeclared")
+  case YieldMismatch extends RuleId("msg-yield-mismatch")
+  case AnswersUndeclared extends RuleId("msg-answers-undeclared")
+  case WrongResponseKind extends RuleId("msg-wrong-response-kind")
+
+  // ---- more stream --------------------------------------------------------------------------
+  case InletNotReceived extends RuleId("stream-inlet-not-received")
+  case PortletTypeMismatch extends RuleId("stream-portlet-type-mismatch")
+  case ConflictingIntentions extends RuleId("stream-conflicting-intentions")
+  case ConnectorTypeMismatch extends RuleId("stream-connector-type-mismatch")
+  case OutletUnresolved extends RuleId("stream-outlet-unresolved")
+  case InletUnresolved extends RuleId("stream-inlet-unresolved")
+
+  // ---- more doc -----------------------------------------------------------------------------
+  case TermInconsistent extends RuleId("doc-term-inconsistent")
+  case MultipleVersions extends RuleId("doc-multiple-versions")
+  case MultipleCopyrights extends RuleId("doc-multiple-copyrights")
+
+  // ---- more name ----------------------------------------------------------------------------
+  case ShouldBeLowercase extends RuleId("name-should-be-lowercase")
+  case ShadowsDefinition extends RuleId("name-shadows-definition")
+
+  // ---- more value ---------------------------------------------------------------------------
+  case NotWholeNumber extends RuleId("value-not-whole-number")
+  case NotNatural extends RuleId("value-not-natural")
+  case NotWhole extends RuleId("value-not-whole")
+
+  // ---- repo: repositories and their schemas -------------------------------------------------
+  case SchemaShouldNotHaveLinks extends RuleId("repo-schema-should-not-have-links")
+  case FlatSchemaManyNodes extends RuleId("repo-flat-schema-many-nodes")
+  case TimeSeriesNoIndices extends RuleId("repo-time-series-no-indices")
+  case HierarchicalNoLinks extends RuleId("repo-hierarchical-no-links")
+  case StarNoLinks extends RuleId("repo-star-no-links")
+  case GraphNoLinks extends RuleId("repo-graph-no-links")
+  case RelationalNoLinks extends RuleId("repo-relational-no-links")
+  case LinkTypeMismatch extends RuleId("repo-link-type-mismatch")
+  case VectorManyNodes extends RuleId("repo-vector-many-nodes")
+  case RepositoryNoHandler extends RuleId("repo-no-handler")
+  case RepositoryNoCommandsOrQueries extends RuleId("repo-no-commands-or-queries")
+  case RepositoryInletCarriesEvent extends RuleId("repo-inlet-carries-event")
+
+  // ---- entity --------------------------------------------------------------------------------
+  case MultipleInitialStates extends RuleId("entity-multiple-initial-states")
+  case EntityMultipleInitialHandlers extends RuleId("entity-multiple-initial-handlers")
+  case FsmSingleState extends RuleId("entity-fsm-single-state")
+  case StateNoInit extends RuleId("entity-state-no-init")
+  case StateInitSetsNothing extends RuleId("entity-state-init-sets-nothing")
+  case EntityNoHandlers extends RuleId("entity-no-handlers")
+  case EntityNoQueryClause extends RuleId("entity-no-query-clause")
+  case EntityNoInlet extends RuleId("entity-no-inlet")
+  case EntityNoOutlet extends RuleId("entity-no-outlet")
+  case EntityNoIdType extends RuleId("entity-no-id-type")
+  case IdDefinedInside extends RuleId("entity-id-defined-inside")
+  case IdDefinedOutside extends RuleId("entity-id-defined-outside")
+  case EntityNoCommandTypes extends RuleId("entity-no-command-types")
+  case EntityNoEventTypes extends RuleId("entity-no-event-types")
+  case CommandNotHandled extends RuleId("entity-command-not-handled")
+  case EntityConflictingIntentions extends RuleId("entity-conflicting-intentions")
+  case SnapshotsNotEventSourced extends RuleId("entity-snapshots-not-event-sourced")
+  case EventSourcedCommandNoYields extends RuleId("entity-event-sourced-command-no-yields")
+  case EventSourcedEventNoClause extends RuleId("entity-event-sourced-event-no-clause")
+  case EventSourcedMutationScope extends RuleId("entity-event-sourced-mutation-scope")
+
+  // ---- proj: projectors and correlations -----------------------------------------------------
+  case CorrelationFieldSetTwice extends RuleId("proj-correlation-field-set-twice")
+  case CorrelationNeverCompletes extends RuleId("proj-correlation-never-completes")
+  case CorrelationWrongClause extends RuleId("proj-correlation-wrong-clause")
+  case CorrelationRepoNoHandler extends RuleId("proj-repository-no-handler")
+  case FoldEffect extends RuleId("proj-fold-effect")
+  case ProjectionTypeNotInRepository extends RuleId("proj-type-not-in-repository")
+  case ProjectorNoRepository extends RuleId("proj-no-repository")
+  case ProjectorHandlesNoEvents extends RuleId("proj-handles-no-events")
+  case ProjectorNoPersistence extends RuleId("proj-no-persistence")
+  case ProjectorRepositoryUnused extends RuleId("proj-repository-unused")
+
+  // ---- more handler / stmt / module / func ---------------------------------------------------
+  case ClauseShadowed extends RuleId("handler-clause-shadowed")
+  case EntityNoCommandsOrQueries extends RuleId("handler-entity-no-commands-or-queries")
+  case RepositoryHandlesEvents extends RuleId("handler-repository-handles-events")
+  case ImportNotAllowedHere extends RuleId("module-import-not-allowed-here")
+  case NoInstanceAddress extends RuleId("msg-no-instance-address")
+  case ReadBeforeCreation extends RuleId("state-read-before-creation")
+  case MorphSingleState extends RuleId("stmt-morph-single-state")
+  case BecomeSingleHandler extends RuleId("stmt-become-single-handler")
+  case OverriddenSet extends RuleId("stmt-overridden-set")
+  case InlineAggregation extends RuleId("func-inline-aggregation", deprecates = true)
+
+  // ---- adaptor -------------------------------------------------------------------------------
+  case AdaptorTargetsOwnContext extends RuleId("adaptor-targets-own-context")
+  case AdaptorNoHandler extends RuleId("adaptor-no-handler")
+  case AdaptorEmptyHandlers extends RuleId("adaptor-empty-handlers")
+  case AdaptorNoOnOther extends RuleId("adaptor-no-on-other")
+  case AdaptorDirectionAdvisory extends RuleId("adaptor-direction-advisory")
+  case AdaptorInboundWrongMessage extends RuleId("adaptor-inbound-wrong-message")
+  case AdaptorOutboundWrongMessage extends RuleId("adaptor-outbound-wrong-message")
+  case AdaptorMessageNotInContext extends RuleId("adaptor-message-not-in-context")
+  case AdaptorNotInContext extends RuleId("adaptor-not-in-context")
+  case AdaptorDuplicate extends RuleId("adaptor-duplicate")
+
+  // ---- saga ------------------------------------------------------------------------------------
+  case SagaStepReferencesForeign extends RuleId("saga-step-references-foreign")
+  case SagaNoTimeout extends RuleId("saga-no-timeout")
+  case SagaStepNoTell extends RuleId("saga-step-no-tell")
+  case SagaStepMayNotAsk extends RuleId("saga-step-may-not-ask")
+
+  // ---- more stream -----------------------------------------------------------------------------
+  case AscribedShapeMismatch extends RuleId("stream-ascribed-shape-mismatch")
+  case PortsWithoutShape extends RuleId("stream-ports-without-shape")
+  case StreamletNoHandler extends RuleId("stream-streamlet-no-handler")
+  case StreamletSendsNothing extends RuleId("stream-streamlet-sends-nothing")
+  case SourceNoInit extends RuleId("stream-source-no-init")
+  case NoErrorSink extends RuleId("stream-no-error-sink")
+  case DuplicateErrorSink extends RuleId("stream-duplicate-error-sink")
+
+  // ---- more context / app ----------------------------------------------------------------------
+  case ServiceShape extends RuleId("context-service-shape")
+  case GatewayShape extends RuleId("context-gateway-shape")
+  case EntitiesWithoutRepository extends RuleId("context-entities-without-repository")
+  case GroupsNeedApplicationContext extends RuleId("app-groups-need-application-context")
+  case SelectionVerbType extends RuleId("app-selection-verb-type")
+
+  // ---- more epic -------------------------------------------------------------------------------
+  case EpicMissingUserStory extends RuleId("epic-missing-user-story")
+  case UserMissingRole extends RuleId("epic-user-missing-role")
+  case SequentialEmpty extends RuleId("epic-sequential-empty")
+  case ParallelEmpty extends RuleId("epic-parallel-empty")
+  case OptionalEmpty extends RuleId("epic-optional-empty")
+  case EmptyRelationship extends RuleId("epic-empty-relationship")
+  case NoInteractions extends RuleId("epic-no-interactions")
+  case InteractionOutsideBoundary extends RuleId("epic-interaction-outside-boundary")
+  case InteractionNoTerms extends RuleId("epic-interaction-no-terms")
+
+  // ---- more repo / handler / state -------------------------------------------------------------
+  case QueriedWithoutIndex extends RuleId("repo-queried-without-index")
+  case RepositoryDomainScope extends RuleId("repo-domain-scope-misplaced")
+  case RepositoryHandlesForeign extends RuleId("repo-handles-foreign-contexts")
+  case StreamletForeignMessage extends RuleId("handler-streamlet-foreign-message")
+  case SetStateNotCurrent extends RuleId("state-set-not-current")
+
+  // ---- more stmt -------------------------------------------------------------------------------
+  case SetAfterMorph extends RuleId("stmt-set-after-morph")
+  case MorphAfterMorph extends RuleId("stmt-morph-after-morph")
+  case Unreachable extends RuleId("stmt-unreachable")
+  case RefusalAfterEffect extends RuleId("stmt-refusal-after-effect")
+  case ForeachMappingBindsTwo extends RuleId("stmt-foreach-mapping-binds-two")
+  case ForeachSecondName extends RuleId("stmt-foreach-second-name")
+  case ForeachLocalNotCollection extends RuleId("stmt-foreach-local-not-collection")
+  case ForeachLocalUntyped extends RuleId("stmt-foreach-local-untyped")
+  case ForeachNotALocal extends RuleId("stmt-foreach-not-a-local")
+  case ForeachFieldNotCollection extends RuleId("stmt-foreach-field-not-collection")
+
+  // ---- more value / msg ------------------------------------------------------------------------
+  case AtNeedsCollection extends RuleId("value-at-needs-collection")
+  case AtWrongArity extends RuleId("value-at-wrong-arity")
+  case IndexNumberMismatch extends RuleId("value-index-number-mismatch")
+  case IndexStringMismatch extends RuleId("value-index-string-mismatch")
+  case AskNotHandled extends RuleId("msg-ask-not-handled")
+
+  // ---- final ValidationPass batch: statements, values, calls and constructors -----------------
+  case AskNoReplies extends RuleId("msg-ask-no-replies")
+  case AskNotAQuery extends RuleId("msg-ask-not-a-query")
+  case AddressAmbiguous extends RuleId("msg-address-ambiguous")
+  case NoAddressField extends RuleId("msg-no-address-field")
+  case ClauseNoParameters extends RuleId("handler-clause-no-parameters")
+  case ClauseWrongArity extends RuleId("handler-clause-wrong-arity")
+  case NotInstantiable extends RuleId("stmt-not-instantiable")
+  case TerminateNeedsId extends RuleId("stmt-terminate-needs-id")
+  case IdTypeMismatch extends RuleId("stmt-id-type-mismatch")
+  case IdEntityMismatch extends RuleId("stmt-id-entity-mismatch")
+  case TellValueNeedsId extends RuleId("stmt-tell-value-needs-id")
+  case TellCrossesDomain extends RuleId("stmt-tell-crosses-domain")
+  case TellCrossesContext extends RuleId("stmt-tell-crosses-context")
+  case MatchNotExhaustive extends RuleId("stmt-match-not-exhaustive")
+  case PutTypeMismatch extends RuleId("stmt-put-type-mismatch")
+  case ReturnTypeMismatch extends RuleId("stmt-return-type-mismatch")
+  case YieldAfterForward extends RuleId("stmt-yield-after-forward")
+  case ReplyAfterForward extends RuleId("stmt-reply-after-forward")
+  case ForwardNotLast extends RuleId("stmt-forward-not-last")
+  case StateRecordOutOfScope extends RuleId("state-record-out-of-scope")
+  case UnknownTypeCase extends RuleId("type-unknown-type-case")
+  case PatternNotAMember extends RuleId("type-pattern-not-a-member")
+  case SystemNotStandalone extends RuleId("value-system-not-standalone")
+  case SystemUnknownMember extends RuleId("value-system-unknown-member")
+  case EmptyNeedsZeroCardinality extends RuleId("value-empty-needs-zero-cardinality")
+  case ValueRefUnresolved extends RuleId("value-ref-unresolved")
+  case SelfMisplaced extends RuleId("value-self-misplaced")
+  case SelfUnknownField extends RuleId("value-self-unknown-field")
+  case OperandNotBoolean extends RuleId("value-operand-not-boolean")
+  case WhenNotBoolean extends RuleId("value-when-not-boolean")
+  case ComparandUnresolved extends RuleId("value-comparand-unresolved")
+  case LiteralComparisonStyle extends RuleId("value-literal-comparison-style")
+  case IncomparableKinds extends RuleId("value-incomparable-kinds")
+  case OrderingNeedsNumeric extends RuleId("value-ordering-needs-numeric")
+  case PatternIncomparable extends RuleId("value-pattern-incomparable")
+  case PatternOrderingNumeric extends RuleId("value-pattern-ordering-numeric")
+  case EmptyNotAllowed extends RuleId("value-empty-not-allowed")
+  case ValueTypeMismatch extends RuleId("value-type-mismatch")
+  case PromptAscriptionContradicts extends RuleId("value-prompt-ascription-contradicts")
+  case ArgumentTypeMismatch extends RuleId("value-argument-type-mismatch")
+  case ArgumentDuplicated extends RuleId("value-argument-duplicated")
+  case PositionalAfterNamed extends RuleId("value-positional-after-named")
+  case NotAField extends RuleId("value-not-a-field")
+  case EmptyNotAllowedForField extends RuleId("value-empty-not-allowed-for-field")
+  case ConstructorTooManyArgs extends RuleId("value-constructor-too-many-args")
+  case ConstructorMissingFields extends RuleId("value-constructor-missing-fields")
+  case UntypedPromptSeam extends RuleId("value-untyped-prompt-seam")
+  case CallNoReturns extends RuleId("func-call-no-returns")
+  case CallPositionalAfterNamed extends RuleId("func-call-positional-after-named")
+  case CallNotAnInput extends RuleId("func-call-not-an-input")
+  case CallTooManyArgs extends RuleId("func-call-too-many-args")
+  case CallTooManyPositional extends RuleId("func-call-too-many-positional")
+
+  // ---- bast: reading a binary AST file --------------------------------------------------------
+  // A BAST error names where the reader DERAILED, never what derailed it -- the same constant
+  // surfaced as "Invalid string table index" in one model and "Invalid invariant condition kind"
+  // in another. So these ids identify the DECODE SITE, which is the only honest thing they know.
+  case BastUnknownNodeTag extends RuleId("bast-unknown-node-tag")
+  case BastUnknownShapeTag extends RuleId("bast-unknown-shape-tag")
+  case BastInvalidShapePresence extends RuleId("bast-invalid-shape-presence")
+  case BastUnknownTypeRefSubtype extends RuleId("bast-unknown-type-ref-subtype")
+  case BastUnknownTypeStringSubtype extends RuleId("bast-unknown-type-string-subtype")
+  case BastUnknownUniqueIdSubtype extends RuleId("bast-unknown-unique-id-subtype")
+  case BastUnknownTypeTag extends RuleId("bast-unknown-type-tag")
+  case BastUnknownReferenceTag extends RuleId("bast-unknown-reference-tag")
+  case BastUnknownMessageRefTag extends RuleId("bast-unknown-message-ref-tag")
+  case BastUnexpectedAlternationMember extends RuleId("bast-unexpected-alternation-member")
 end RuleId
 
 object RuleId:
@@ -187,7 +462,8 @@ object RuleId:
     * whose prefix is not here, which is what stops the vocabulary drifting one rule at a time.
     */
   val subjects: Set[String] = Set(
-    "adaptor", "app", "context", "doc", "domain", "entity", "epic", "field", "func", "handler",
+    "adaptor", "app", "bast", "context", "doc", "domain", "entity", "epic", "field", "func",
+    "handler",
     "invariant", "module", "msg", "name", "opt", "proj", "ref", "repo", "saga", "state", "stmt",
     "stream", "type", "use", "value"
   )
