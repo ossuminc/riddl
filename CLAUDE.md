@@ -1648,6 +1648,94 @@ to the right group rather than appending to a list.
   Opaque type `Contents[?]` erases to `ArrayBuffer` at runtime,
   so `case (_: Contents[?], …)` matches correctly.
 
+### Diagnostic rule ids — every message names the RULE that produced it
+
+**`RuleId`** (`language/.../RuleId.scala`) is a kebab-case, subject-prefixed enum: 303 rules
+covering all 307 diagnostic sites. `Message.ruleId: Option[RuleId]`, and `ruleId` is a
+**REQUIRED** parameter on the eight `Accumulator.add*` helpers — a new diagnostic does not
+compile until it names its rule. The six calls in `MessagesTest` pass `None` explicitly.
+
+**It GENERALIZES `Messages.DeprecationCode`; it does not sit beside it.** That object was
+already a threaded kebab-case id registry for deprecations, consumed at `RiddlLib.scala:970`
+to build `SourceEdit`s. Its 12 codes are reproduced EXACTLY — including `prompt-statement`,
+whose rule was renamed `DoStatement` while its code deliberately was not, because renaming a
+rule is a source change and renaming its code is an API break. **Do not introduce a second
+scheme** (an early draft proposed `REF001`-style ids; it was dropped for exactly this).
+
+**An id names a RULE, not a site.** Four rules are emitted from more than one place on
+purpose — `ref-wrong-kind` from BOTH `ReferenceMap.definitionOf` and
+`ResolutionPass.wrongType`, which is apt given those two paths once disagreed about whether
+to check the kind at all.
+
+**Non-reuse is enforced by CODE, in three parts** (all canary-tested by breaking them):
+`values` is generated so codes are checked unique; `RuleId.retired` names withdrawn codes and
+no live code may appear there; and a committed **append-only ledger**
+(`language/src/test/resources/rule-ids.txt`) catches what the in-memory checks cannot see — a
+rule DELETED without retiring its code, which is the one at risk of being reused later.
+**`RuleId.grandfathered` is CLOSED**: the 12 legacy codes predate the subject scheme and are
+exempt from it. A new rule that fits no subject needs a SUBJECT added, never an exemption.
+
+**Why the enum at all**: `DeprecationCode.all` was a hand-maintained `Seq` beside the
+definitions, and TWICE a code was defined but never added to it — `entity-option-to-intention`
+for months — so "exhaustive" migration reports silently omitted a whole family. `all` and the
+mechanical-replacement map are DERIVED now; there is no second list to forget.
+
+**The id renders in the LOGGER, not in `Message.format`.** The logger already supplies the
+kind prefix, so output reads `[error] [use-unused-definition] file(...)`, rustc's shape.
+`format` is what `CheckMessagesTest` compares its 13 goldens against, so putting it there
+churned every one of them for a fact those files do not exist to pin. **`--no-msg-ids`**
+(`CommonOptions.showMessageIds`, default TRUE) restores the previous output exactly.
+
+**`validate --json`** emits one object per diagnostic on stdout (rule, severity, message,
+file, line, col, and context/suggestion when present); `[]` when clean, never empty output.
+**`validate --fix` / `--fix-rule <id>`** applies the codemod a rule carries
+(`RuleId.mechanicalFix`), through the SAME gate as `find -replace` —
+`FindEditor.applyVerified`, lifted so there is one copy rather than two. Only PURE SPAN
+replacements qualify: `type-first-aggregate` is a reordering and `shape-keyword` inserts
+outside the reported span, so both are excluded rather than approximated. See BACKLOG [1.16]
+for `quoted-constant-literal`, which is genuinely mechanical but needs a COMPUTED replacement
+an `Option[String]` cannot express.
+
+**`FindEditor.fileOfSource`, never `Path.of(loc.source.origin)`.** `origin` is the SHORT name
+error messages render, so treating it as a path works only when the cwd happens to be the
+model's own directory — how `find -replace` originally shipped, and a bug `validate --fix`
+nearly reintroduced the same day.
+
+### A bare `println` is invisible to a test that redirects stdout
+
+**`println` is `Console.println`, and `Console.out` is a THREAD-LOCAL initialised at class
+load.** `System.setOut` therefore does not redirect it, and code printing from inside a
+`Future` — on an executor thread — writes to the real stdout regardless. In production the two
+name the same object and nothing is wrong with the output; **under capture the test reads an
+empty string, which presents as exactly the "command printed nothing" defect** the whole
+`ValidateSummaryTest`/`ProductGoesToStdoutTest` family exists to detect. A false positive from
+the instrument, not the code.
+
+**Emit a command's product with `System.out.println`.** `ValidateCommand.emitJson` and
+`DumpCommand.emit` both do. `StdStreamCapture` also wraps `Console.withOut`, which closes the
+same-thread half but CANNOT help across threads — the `System.out` form is what does.
+
+### Multi-line `do` and `prompt` (rc.25+)
+
+`do { "a" "b" "c" }` and `prompt({ "a" "b" })`, with the bare single-string form unchanged.
+The braced shape is **`doc_block`'s**, already RIDDL's spelling for prose, so no new syntax
+idiom was invented. **The bare form takes EXACTLY ONE string**: `do "a" "b"` by juxtaposition
+parses unambiguously (nothing else begins with a quote) but leaves nothing except the next
+keyword to mark where the statement ends.
+
+`DoStatement.what` and `PromptValue.prompt` are `Seq[LiteralString]`; **`.text`** derives the
+`\n`-separated prose riddlg reads. Derived, not stored, so there is no second field to
+disagree — and a single-line `do` is a Seq of one rather than a special case.
+
+**Additive at every layer, and that is load-bearing.** A one-line `do` prettifies
+byte-identically to before and serializes as a bare JSON string rather than an array, so none
+of the corpus's 190 models move for a feature they do not use. Several lines get ONE PER LINE
+inside braces — the layout every other block uses; squashing them onto one line would be the
+narrow second copy of a block dispatch `InvariantBlock` was already caught being.
+**BAST `FORMAT_REVISION` 23**: both now write a SEQUENCE where they wrote a bare string, so a
+revision-22 file's string is read as a COUNT and everything after it derails. The JSON reader
+accepts a string OR an array, so nothing already written stops loading.
+
 ### Total Dispatch — no silent fall-through
 
 **Reid's standing rule (2026-08-09): "There must be no non-sealed matches — it
