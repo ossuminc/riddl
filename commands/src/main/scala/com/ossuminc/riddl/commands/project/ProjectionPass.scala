@@ -67,6 +67,9 @@ case class ProjectionPass(
     if !value.isInstanceOf[Root] then
       val ps = parents.toParents
       nodes.append(ProjectedNode(value, ps, recordFor(value, ps)))
+      value match
+        case s: Statement => valueReferenceNodes(s, ps).foreach(nodes.append)
+        case _            => ()
   }
 
   override def postProcess(root: PassRoot): Unit = ()
@@ -155,6 +158,103 @@ case class ProjectionPass(
 
     case _ => ()
   }
+
+  /** One node per VALUE REFERENCE inside a statement (riddl-models, 2026-08-25).
+    *
+    * The projection gives statements their span, parent and ancestors, but their OPERANDS were
+    * opaque text — so consumers regexed them, and riddl-models' attempts went wrong three ways in
+    * one afternoon: reading only a statement's first line (missing 6 operands inside a `when`),
+    * summing over statement spans (which NEST, so a `when` counted its contents twice — 259 against
+    * a true 253), and assuming every state record type ends in `Data` (a house convention, not a
+    * language rule).
+    *
+    * **`resolvedKind` is the point.** riddlc already distinguishes these when it validates — its own
+    * error enumerates "a 'let'-local, an 'on init'/'on term' parameter, a 'foreach' element, a field
+    * of the handled message or entity state, or a function input" — and then throws the answer away.
+    *
+    * The classification here is by WHERE the resolved definition lives, which is a structural fact
+    * this pass can see. `let`-locals and `foreach` elements are deliberately reported as
+    * `unresolved` rather than guessed at: they are not Definitions, so no lookup can find them, and
+    * claiming a kind we cannot determine would be worse than saying we do not know.
+    */
+  private def valueReferenceNodes(s: Statement, parents: Parents): Seq[ProjectedNode] =
+    if !resolve then Seq.empty
+    else
+      valueRefsOf(s).map { vr =>
+        val obj = ujson.Obj(
+          "kind" -> ujson.Str("value-reference"),
+          "name" -> ujson.Str(vr.path.format),
+          "statement" -> ujson.Str(ProjectionPass.kindOf(s))
+        )
+        parents.headOption.foreach(p => obj("parent") = ujson.Str(symbols.pathOf(p).reverse.mkString(".")))
+        val resolved = parents.headOption.flatMap(p => resolution.refMap.anyDefinitionOf(vr.path, p))
+        resolved match
+          case Some(d) =>
+            obj("resolvedTo") = ujson.Str(symbols.pathOf(d).reverse.mkString("."))
+            obj("resolvedKind") = ujson.Str(classifyOperand(d, parents))
+          case None =>
+            obj("resolvedTo") = ujson.Null
+            obj("resolvedKind") = ujson.Str("unresolved")
+        spanOf(vr.loc).foreach(sp => obj("span") = sp)
+        ProjectedNode(vr, parents, obj)
+      }
+
+  /** Where the operand's definition lives: the fact a consumer actually wants. */
+  private def classifyOperand(d: Definition, parents: Parents): String = {
+    val owner = symbols.parentOf(d)
+    val stateRecords: Seq[Type] = parents
+      .collectFirst { case e: Entity => e }
+      .toSeq
+      .flatMap(_.states)
+      .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
+    // Keyed to the on-clause's OWN PARENT, which is the key ResolutionPass recorded it under. The
+    // parent-agnostic overload missed it, and the field then fell through to the generic
+    // `field-of-event` arm -- true, but not the distinction a consumer asked for.
+    val idx = parents.indexWhere(_.isInstanceOf[OnMessageLikeClause])
+    val handledMessage: Option[Type] =
+      if idx < 0 then None
+      else
+        val omc = parents(idx).asInstanceOf[OnMessageLikeClause]
+        parents
+          .lift(idx + 1)
+          .flatMap(p => resolution.refMap.definitionOf[Type](omc.msg.pathId, p))
+          .orElse(resolution.refMap.definitionOf[Type](omc.msg.pathId))
+    owner match
+      case Some(o) if stateRecords.exists(_ eq o)      => "state-field"
+      case Some(o) if handledMessage.exists(_ eq o)    => "message-field"
+      case Some(_: Function)                           => "function-input"
+      case Some(o)                                     => s"field-of-${ProjectionPass.kindOf(o)}"
+      case None                                        => "unknown"
+  }
+
+  /** Every [[ValueRef]] a statement carries, including those nested in constructor arguments. */
+  private def valueRefsOf(s: Statement): Seq[ValueRef] = {
+    def fromValue(v: Value): Seq[ValueRef] = v match
+      case vr: ValueRef   => Seq(vr)
+      case c: Constructor => c.args.toSeq.flatMap(a => fromValue(a.value))
+      case _              => Seq.empty
+    s match
+      case m: MorphStatement =>
+        m.value match
+          case v: ValueRef    => Seq(v)
+          case c: Constructor => fromValue(c)
+          case _              => Seq.empty
+      case st: SetStatement  => fromValue(st.value)
+      case t: TellStatement  => operandRefs(t.msg)
+      case sd: SendStatement => operandRefs(sd.msg)
+      case y: YieldStatement => operandRefs(y.msg)
+      case r: ReplyStatement => operandRefs(r.msg)
+      case _                 => Seq.empty
+  }
+
+  private def operandRefs(m: MessageRef | Constructor | ValueRef): Seq[ValueRef] = m match
+    case vr: ValueRef   => Seq(vr)
+    case c: Constructor => c.args.toSeq.flatMap(a => a.value match
+        case v: ValueRef    => Seq(v)
+        case cc: Constructor => operandRefs(cc)
+        case _              => Seq.empty
+      )
+    case _ => Seq.empty
 
   private def addStatementFacts(s: Statement, obj: ujson.Obj, parents: Parents): Unit = s match {
     case t: TellStatement =>

@@ -156,6 +156,34 @@ object FindPredicates {
             )
           )
         }
+      // Statement CONTENT selectors (riddl-models, 2026-08-25). `-regex` matches a definition's
+      // name or path, and a statement has neither -- so `-type morph-statement -regex '.*Data.*'`
+      // matched 0 and the selection fell back to Python over text, which is what `find` exists to
+      // stop.
+      case "-operand-kind" :: rest =>
+        arg("-operand-kind", rest) { v =>
+          val want = v.toLowerCase
+          // Keyed off the SAME classification `dump --json` emits, so selection and projection
+          // share one vocabulary rather than drifting into two.
+          Right(
+            FindExpr.Pred(
+              s"-operand-kind $v",
+              (n, c) => operandKinds(n, c).contains(want)
+            )
+          )
+        }
+      case "-source-regex" :: rest =>
+        arg("-source-regex", rest) { v =>
+          try
+            val rx = v.r
+            Right(FindExpr.Pred(s"-source-regex $v", (n, _) =>
+              FindEditor.spanText(n).exists(t => rx.findFirstIn(t).isDefined)))
+          catch case e: Exception => Left(s"bad regex '$v': ${e.getMessage}")
+        }
+      case "-reads-state" :: rest =>
+        // The common case, spelled directly: an operand resolving to a field of an entity state.
+        Right((FindExpr.Pred("-reads-state", (n, c) => operandKinds(n, c).contains("state-field")), rest))
+
       case "-arity" :: rest =>
         arg("-arity", rest)(v => arityPred(v))
 
@@ -167,6 +195,18 @@ object FindPredicates {
   // Record accessors — the projection is the single source of these facts, so `find` and
   // `dump --json` can never disagree about what a node is.
   // -----------------------------------------------------------------------------------------------
+
+  /** The operand kinds in play at this node.
+    *
+    * A `value-reference` node carries its own `resolvedKind`. A STATEMENT carries none — its
+    * operands are separate nodes — so a statement matches when a value reference INSIDE ITS SPAN
+    * does. That containment is what makes `-type morph-statement -reads-state` select the four
+    * statements riddl-models wanted rather than all fifty-nine.
+    */
+  private def operandKinds(n: ProjectedNode, c: FindContext): Seq[String] = {
+    val own = str(n, "resolvedKind").toSeq.map(_.toLowerCase)
+    if own.nonEmpty then own else c.operandKindsOf(n)
+  }
 
   private def str(n: ProjectedNode, key: String): Option[String] =
     n.record.value.get(key).collect { case s: ujson.Str => s.str }

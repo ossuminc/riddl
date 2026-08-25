@@ -23,8 +23,16 @@ sealed trait FindExpr {
   def matches(n: ProjectedNode, ctx: FindContext): Boolean
 }
 
-/** Facts a predicate needs that are not on the node itself. */
-case class FindContext(depthOf: ProjectedNode => Int)
+/** Facts a predicate needs that are not on the node itself.
+  *
+  * `operandKindsOf` exists because a STATEMENT does not carry its operands' kinds — each operand is
+  * its own `value-reference` node — so answering "does this morph read a state field?" needs the
+  * whole node set, which a predicate never sees. It is computed once in the command and handed in.
+  */
+case class FindContext(
+  depthOf: ProjectedNode => Int,
+  operandKindsOf: ProjectedNode => Seq[String] = _ => Seq.empty
+)
 
 object FindExpr {
   case class And(left: FindExpr, right: FindExpr) extends FindExpr {

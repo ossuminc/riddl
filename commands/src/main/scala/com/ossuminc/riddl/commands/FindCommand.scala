@@ -104,7 +104,11 @@ class FindCommand(using pc: PlatformContext)
     val (fileArgs, rest) =
       if afterCmd.headOption.exists(a => !a.startsWith("-") && a != "--") then afterCmd.splitAt(1)
       else (Array.empty[String], afterCmd)
-    val expression = rest.dropWhile(_ == "--").toSeq
+    // Every bare `--` is dropped, not just a leading one. `find m.riddl -dry-run -- -type X` used
+    // to fail with "unknown test '--'", which reads as a problem with the separator rather than
+    // with the flag's position -- riddl-models hit exactly that and reported the wrong cause. Both
+    // documented forms now work, and `--` is accepted anywhere it is written.
+    val expression = rest.filterNot(_ == "--").toSeq
     parseOptions(Array(FindCommand.cmdName) ++ fileArgs) match
       case None       => Left(Messages.errors("find: could not parse options"))
       case Some(opts) => run(opts.copy(expression = expression), outputDirOverride)
@@ -155,7 +159,19 @@ class FindCommand(using pc: PlatformContext)
       PassesOutput(),
       ProjectionPass(PassInput(result.root), result.outputs)
     )
-    val ctx = FindContext(depthOf = n => n.parents.size)
+    // A statement's operand kinds come from the `value-reference` nodes whose span sits inside its
+    // own. Statement spans NEST, so this is containment against THIS node only -- the same trap
+    // riddl-models hit summing over spans and counting a `when`'s contents twice.
+    val valueRefs = projection.nodes.filter { n =>
+      n.record.value.get("kind").contains(ujson.Str("value-reference"))
+    }
+    def kindsWithin(n: ProjectedNode): Seq[String] =
+      val loc = n.value.loc
+      valueRefs.collect {
+        case vr if vr.value.loc.offset >= loc.offset && vr.value.loc.endOffset <= loc.endOffset =>
+          vr.record.value.get("resolvedKind").collect { case s: ujson.Str => s.str.toLowerCase }
+      }.flatten
+    val ctx = FindContext(depthOf = n => n.parents.size, operandKindsOf = kindsWithin)
     val all = projection.nodes.filter(n => parsed.expr.matches(n, ctx))
     if parsed.actions.contains(FindAction.Quit) then all.take(1) else all
   }
