@@ -8,42 +8,89 @@ GitHub release notes — don't reproduce it here.
 
 Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
-NOTEBOOK's body. Ask `git` for branch, tree and unpushed span. Everything that landed
-between 2026-08-18 and 2026-08-25 has been graduated to the dated section immediately
-below this one — read it if you need the reasoning behind a recent change, not to
-orient.
+NOTEBOOK's body. Ask `git` for branch, tree and unpushed span — never trust a written
+answer to those. Everything that landed 2026-08-18 → 2026-08-25 was graduated verbatim
+to the dated section immediately below this one; read it for the reasoning behind a
+recent change, not to orient.
 
 ### In flight
 
 **A 15-task batch from riddl-models and riddl-generator: 13 landed, 2 remain.** All
-were pre-approved by Reid with their authors. The two that remain are **`[1.11]`** (a
-stable rule id on every diagnostic, plus `validate --json`) and **`[1.12]`**
-(`validate --fix`), and **no code is written for either** — `[1.12]` is blocked on
-`[1.11]`. The rulings and the measurements are in BACKLOG.md; **start by reading
-`[1.11]` rather than re-deriving it**, in particular the finding that
-`Messages.DeprecationCode` is already this mechanism in kebab-case, which is what a
-fresh session is most likely to miss and duplicate.
+were pre-approved by Reid with their authors. The remainder is **`[1.11]`** (a stable
+rule id on every diagnostic, plus `validate --json`) and **`[1.12]`** (`validate
+--fix`, blocked on it). **No code is written for either.**
 
-### Build and version state — verified 2026-08-25, not remembered
+**Read `[1.11]` in BACKLOG.md before designing anything.** The finding a fresh session
+is most likely to miss — and then duplicate — is that `Messages.DeprecationCode`
+(`language/.../Messages.scala:190`) is ALREADY this mechanism in kebab-case, threaded
+through `Message.deprecationCode` and consumed at `RiddlLib.scala:970` to build
+`SourceEdit`s. An earlier draft proposed `REF001`-style ids; that would have been a
+second competing scheme. The rulings, the 304-site census and the scope caveats are all
+in the entry.
 
-**`../bin/riddlc` is `2.0.0-rc.24-5-cb05e374`, which is now 16 commits BEHIND this
-branch.** It predates all 13 of the completed tasks. riddl-models is running it and is
-not blocked, but **do not test a just-landed check against it** — it will report the old
-behaviour and read as a regression. Staging again means `publishLocal` **and** staging
-together; never one without the other, or library and CLI consumers disagree.
+**`[1.13]`–`[1.15]` were flagged during the batch, verified against code, and left
+unowned** — type-checking `put`/`return`/`require`, `find -type <unknown>` matching
+nothing silently, and whether `StatsPass.numPromptStatements` gets renamed. Each entry
+carries its `file:line` evidence so it need not be re-derived.
+
+### Build state — verified 2026-08-25 by running the commands
+
+**`../bin/riddlc` is `2.0.0-rc.24-5-cb05e374`** and predates **all 13** of the
+completed tasks. riddl-models is running it and is not blocked. **Do not test a
+just-landed check against it** — it reports the old behaviour, which reads as a
+regression. Restaging means `publishLocal` **and** staging together; never one alone,
+or library and CLI consumers disagree.
+
+**Latest tag is `2.0.0-rc.24`; the branch is well ahead of it.** Run
+`git log 2.0.0-rc.24..HEAD` before attributing anything to the RC.
 
 **BAST `FORMAT_REVISION` is 22** (`language/.../bast/package.scala:150`). The corpus's
 190 checked-in `.bast` files are a revision behind; riddl-models knows.
 
-**Prettify's one-space-after-`is` fix (2026-08-25) has the widest byte-level reach of
-anything on this branch** — 188 of 188 corpus models had drifted. Whitespace is
-load-bearing here because riddl-models diffs checked-in `.bast` against source byte for
-byte.
+**Prettify's one-space-after-`is` fix has the widest byte-level reach of anything on
+this branch** — 188 of 188 corpus models had drifted. Whitespace is load-bearing
+because riddl-models diffs checked-in `.bast` against source byte for byte.
 
-**Test floors are 2903 / 917 / 2864** (JVM / JS / Native), set at rc.24. Deliberate
-failures were ONE (riddl-examples' `dokn`, 5 morph errors) at rc.24 — but that count
-goes stale in hours, because the corpora are live sibling checkouts. **Confirm any red
-by its MESSAGE, never by comparing counts.**
+**Test floors are 2903 / 917 / 2864** (JVM / JS / Native), set at rc.24, where
+deliberate failures were ONE (riddl-examples' `dokn`, 5 morph errors). **That count
+goes stale in hours** — the corpora are live sibling checkouts, and riddl-models has
+committed *during* a certification run and turned a suite red with nothing in riddl
+having changed. **Confirm any red by its MESSAGE, never by comparing counts.**
+
+### `task/` — 12 files present, 10 of them already satisfied
+
+**These are NOT untriaged.** Ten describe work that has landed and are awaiting only
+the Completion Procedure (a `## Results` section, then a move to `task/done/`); that
+was deliberately left for the next session rather than burning handoff context. The
+mapping is recorded here so the triage is mechanical:
+
+| `task/2026-08-25-*` | landed in |
+|---|---|
+| `validate-should-never-print-nothing` | `5b00bea1b` |
+| `unbastify-safety-and-prettify-check` | `f610406c6` |
+| `a-saga-with-no-timeout-is-undiagnosed` | `5f9f4e9b5` |
+| `morph-or-become-in-a-single-state-entity` | `fe5fdfbb6` |
+| `rules-riddlc-knows-enough-to-enforce` (umbrella: carry-forward, creation-reads, repo ports) | `d3039372f` and neighbours |
+| `entity-handled-message-that-names-no-instance` | `0bc27be96` |
+| `system-now-a-magic-value-for-the-current-time` | `236285432` |
+| `find-needs-a-statement-content-selector` | `edca8e74a` |
+| `value-references-as-nodes-in-dump-json` | `edca8e74a` |
+| `corpus-mode-one-process-many-models` | `fa452b99e` |
+
+The remaining two — `machine-readable-diagnostics-with-rule-ids` and
+`ship-each-rule-with-its-own-codemod` — are **genuinely open** and are `[1.11]` /
+`[1.12]`. **Verify before reporting any of the ten as done**; that mapping is my
+account of what I built, and the acceptance criteria live in the files.
+
+**No replies are owed to other repos** — neither `../riddl-models/task/` nor
+`../riddl-generator/task/` holds a pending file (checked 2026-08-25).
+
+### Certainty
+
+Verified by running the command this session: the staged binary's version, the
+`FORMAT_REVISION` literal, the `task/` listings, and the `file:line` citations in
+`[1.13]`–`[1.15]`. Taken on trust from earlier in the branch: the test floors and the
+deliberate-failure count, both of which are stale-prone by nature.
 
 **Traps — every one bit someone here.**
 
@@ -67,12 +114,6 @@ by its MESSAGE, never by comparing counts.**
   cause was a server started before the variable existed. `sbt -batch shutdown` first.
 - **Never `sbt … | tail -N` for a multi-module run** — it discards the module
   summaries that tell you what actually ran.
-
-**`task/` is EMPTY of pending files** (2026-08-20). The last incoming task —
-`terminate` must end its block — is done and in `task/done/`. An earlier note here
-claimed `task/` held Reid's `2026-08-04-security.md` RBAC draft; **that file is not
-there, is not in `done/`, and being gitignored has no history to consult**, so the
-claim is retired rather than repeated.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, not the handoff's.

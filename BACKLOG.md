@@ -1007,6 +1007,47 @@ blocked on the first.
   overlap rejection, back-to-front application, and re-parse + re-validate + restore-if-worse
   — which is the dangerous half. **Reuse it; do not write a second editor.**
 
+
+#### Flagged during the 2026-08-25 batch, verified, not yet owned
+
+Each was noticed while doing something else, checked against the code at the
+`file:line` cited, and deliberately not fixed in the same commit. **The
+verification is carried here so it is not repeated.**
+
+- **[1.13]** **Type-check `put`, `return` and `require … with`.** Constructor
+  arguments gained type checking on 2026-08-25 and these three did not.
+  **Verified**: `checkAssignable` (`ValidationPass.scala:7473`) has exactly two
+  call sites — `:1853` (constructor arguments) and `:9011` — while `put` and
+  `return` share an arm at `:2024` that performs no type check at all.
+  **It was never a missing policy**: `isAssignmentCompatible` already answers
+  these questions; nothing at these positions has ever asked it. That is the same
+  shape as the constructor gap, which riddl-generator found by emitting Java that
+  would not compile. Expect corpus cost, and measure it before ruling.
+
+- **[1.14]** **`find -type <unknown>` silently matches nothing.** A typo in a type
+  name produces `0 matched` and exit 0, which is indistinguishable from a correct
+  query with no hits — the exact "confident answer computed over nothing" failure
+  `find` was built to end.
+  **Verified**: `FindPredicates.scala:227` compares `ProjectionPass.kindOf(n.value)
+  == want` with no check that `want` is in the vocabulary. Unknown *tests* ARE
+  caught (`:190`, `unknown test '<x>'`); unknown *type values* are not.
+  The fix is a vocabulary guard rejecting an unknown `-type` argument, which needs
+  the single source of truth for the `-type` vocabulary that the `find` plan
+  already flagged as a risk — so do that first, and put it beside the AST rather
+  than in the command.
+
+- **[1.15]** **Decide whether `StatsPass.numPromptStatements` is renamed.** The
+  `PromptStatement` → `DoStatement` rename (`e226f240e`) deliberately stopped at
+  this field.
+  **Verified**: it survives at five sites in
+  `passes/.../stats/StatsPass.scala` (`:67`, `:84`, `:229`, `:254`, `:268`), with
+  `:67` already carrying the comment *"formerly spelled `prompt \"...\"`"*.
+  It was left because it is **published, JS-exported API** and the backward
+  compatibility policy in CLAUDE.md says add, don't change. **This is a decision to
+  ratify, not a bug**: either accept the name as history (and the comment is
+  already correct), or add `numDoStatements` alongside it and deprecate this one.
+  Do NOT simply rename it.
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
