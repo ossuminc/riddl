@@ -7172,6 +7172,114 @@ case class ValidationPass(
     * is the one line actually worth sharing rather than the whole alias-following recursion, which
     * each function still writes for itself around its own terminal cases.
     */
+  /** The type a [[TypeExpression]] really is: cardinality wrappers removed and alias chains
+    * followed to the end.
+    *
+    * Both steps are REQUIRED before comparing two type expressions, and skipping either produces
+    * false positives rather than misses. A field declared `note: Text?` is `Optional(Text)`, so a
+    * plain `Text` value would "mismatch" it; and riddl-models' house style names almost every field
+    * through an alias (`deliveryId: DeliveryId`), so an unresolved comparison would flag every one
+    * of them against its own underlying type.
+    *
+    * The visited list uses REFERENCE identity, not `contains` on a Set: `Definition.equals` is
+    * structural, so a Set would fuse two distinct identical alias declarations and truncate a
+    * legitimate chain. `type A is B` / `type B is A` is a real corpus hazard -- it killed the stack
+    * in rc.14 -- and this is the same guard `alternationMembers` and `fieldsWithOwner` carry.
+    */
+  private def underlyingTypeExpr(te: TypeExpression, visited: Seq[Type] = Nil): TypeExpression =
+    te match
+      case c: Cardinality => underlyingTypeExpr(c.typeExp, visited)
+      case ate: AliasedTypeExpression =>
+        resolveTypeAlias(ate) match
+          case Some(t) if !visited.exists(_ eq t) => underlyingTypeExpr(t.typEx, visited :+ t)
+          case _                                  => te
+      case other => other
+  end underlyingTypeExpr
+
+  /** Is a value of type `actual` acceptable where `expected` is declared? Reports if not.
+    *
+    * Two rules, and the second is the one that needed a ruling.
+    *
+    *   1. **The ordinary case defers to `isAssignmentCompatible`**, which already encodes RIDDL's
+    *      policy -- including the DELIBERATE allowance (2026-08-15) that an `Id(E)` may be supplied
+    *      for a `String_`/`Pattern` field, because the value is opaque and a business key belongs in
+    *      `on init`'s parameters instead. The defect riddl-generator reported (`Id(E)` into a
+    *      `UUID`) was never a missing policy: the policy already answered "no" and nothing at a
+    *      constructor argument ever asked it.
+    *
+    *   2. **Two `Id`s must name the SAME processor**, which `isAssignmentCompatible` cannot say.
+    *      Its base rule is same-CLASS, so every `UniqueId` matched every other and `Id(Order)` fed a
+    *      field declared `Id(Shipment)` silently. Reid ruled it wrong regardless of how often the
+    *      corpus does it: *"wrong is wrong ... the point is to make the language and its expression
+    *      bulletproof so reliable code can be generated from it."* A wrong id routes to the wrong
+    *      partition or reads the wrong row, and both look like working code.
+    *
+    * **The two ids are compared by RESOLVED IDENTITY, never by path text**, which is why this lives
+    * here and not on the AST node: `UniqueId` holds only a `PathIdentifier`, and `Order` versus
+    * `Delivery.Order` may name one entity while two entities named `Order` in different contexts
+    * are different. Matching on text would turn legal models into errors -- the exact mistake
+    * `isAddressFieldFor` made and had to be corrected for.
+    *
+    * **Silent when either side is undeterminable.** An unresolved path or an untyped value means
+    * this check has nothing to say; reporting there would be reasoning from absence, the same
+    * conservative rule `checkTerminate` follows.
+    */
+  private def checkAssignable(
+    expected: TypeExpression,
+    actual: TypeExpression,
+    declaredIn: Option[Definition],
+    parents: Parents,
+    loc: At,
+    what: String
+  ): Unit =
+    val e = underlyingTypeExpr(expected)
+    val a = underlyingTypeExpr(actual)
+    (e, a) match
+      case (eu: UniqueId, au: UniqueId) =>
+        // **Each path is resolved in the scope that DECLARED it, not at the call site.** The
+        // expected side comes from a field of some Type, and that Type may live in a different
+        // context from the constructor: resolving `C.Shipment` from inside a projector's on-clause
+        // returned None while `C.Order` resolved, purely because the latter happened to be named
+        // elsewhere in that clause. Comparing on that basis would have been silence masquerading as
+        // agreement -- found by instrumenting, not by reading.
+        def entityOf(u: UniqueId, scope: Option[Definition]): Option[Processor[?]] =
+          val anchored: Parents = scope.toSeq.flatMap { d =>
+            val self: Parents = d match
+              case b: Branch[?] => Seq(b)
+              case _            => Seq.empty
+            self ++ symbols.parentsOf(d)
+          }
+          resolvePath[Processor[?]](u.entityPath, anchored)
+            .orElse(resolvePath[Processor[?]](u.entityPath, parents))
+        for
+          ed <- entityOf(eu, declaredIn)
+          ad <- entityOf(au, None)
+          if !(ed eq ad)
+        do
+          // FULLY-QUALIFIED, not `identify`. Two entities named `Order` in different contexts is
+          // exactly the case this check exists to catch, and `identify` renders both as
+          // `Entity 'Order'` -- a message that is true and useless ("an id of Entity 'Order' is not
+          // an id of Entity 'Order'"). The whole point is that they are different, so the message
+          // has to show how.
+          val edPath = pathOf(ed).format
+          val adPath = pathOf(ad).format
+          messages.addError(
+            loc,
+            s"$what is declared ${eu.format} but the value is ${au.format}: an id of " +
+              s"'$adPath' is not an id of '$edPath'",
+            suggestion = s"Supply an id obtained from '$edPath' -- an id value identifies one " +
+              "instance of one processor and cannot stand in for another's."
+          )
+      case _ =>
+        if !e.isAssignmentCompatible(a) then
+          messages.addError(
+            loc,
+            s"$what is declared '${e.format}' but the value is '${a.format}'",
+            suggestion = s"Supply a value of type '${e.format}', or declare the field as " +
+              s"'${a.format}'."
+          )
+  end checkAssignable
+
   private def resolveTypeAlias(ate: AliasedTypeExpression): Option[Type] =
     resolution.refMap.definitionOf[Type](ate.pathId)
 
@@ -8551,7 +8659,30 @@ case class ValidationPass(
                   )
                 end if
               }
-            case _ => ()
+            // Every OTHER argument is type-checked against the field it supplies (riddl-generator,
+            // 2026-08-24). Until now a constructor argument was checked for arity, duplication,
+            // ordering, name validity and `empty` cardinality -- but never for TYPE, so
+            // `deliveryOrderId: UUID` accepted an `Id(DeliveryOrder)` and the defect surfaced only
+            // when a generator emitted Java that would not compile. A generator finding a model
+            // defect a validator did not is the wrong division of labour.
+            //
+            // A `PromptValue` is skipped: `validateValue` checks its ascription context-free, and
+            // reporting both would double up on one mistake. So is an undeterminable value type --
+            // `valueTypeExpr` returning None means this check has nothing to say.
+            case pv: PromptValue => ()
+            case other =>
+              fieldForArg(arg, idx).foreach { f =>
+                valueTypeExpr(other, parents, lets, elements).foreach { actual =>
+                  checkAssignable(
+                    f.typeEx,
+                    actual,
+                    Some(typ),
+                    parents,
+                    other.loc,
+                    s"Field '${f.id.value}' of ${typ.identify}"
+                  )
+                }
+              }
         }
         // Arity.
         def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
