@@ -10,6 +10,41 @@ Orientation for a session with no memory of this work. **Open work is in
 `BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
 NOTEBOOK's body. Ask `git` for branch, tree and unpushed span.
 
+**`../bin/riddlc` IS `2.0.0-rc.24-5-cb05e374`, ahead of rc.24, and riddl-models is
+ALREADY RUNNING IT (2026-08-24).** No RC was cut for it, deliberately. Beyond rc.24 it
+carries: product-on-stdout, morph-after-morph, and now **prefix truthfulness**.
+
+**A reference's prefix must name what the target was DECLARED as.** Keyed off the
+DECLARATION, never off what the reference carries — an alternation declared
+`type XEvent is one of { … }` IS a type, so `is type XEvent` stays legal, and keying
+off the carried kind would have reddened all 230 such references in reactive-bbq and
+been wrong about every one. **A BARE reference is held to the same standard** (Reid's
+ruling): `TypeRef.keyword` defaults to `"type"`, so the AST cannot tell an omitted
+prefix from a written one, and the prefix exists to remove exactly that ambiguity.
+**Corpus cost: 1,032 sites in 188 of 188 models** — no model is clean.
+**The rule fires in BOTH directions**, which the requesting task did not anticipate:
+riddl's own `dokn.riddl` had `is event CompanyEvent` where `CompanyEvent` is a declared
+*alternation*, so that site LOST a keyword rather than gaining one.
+
+**SCOPE IS PARTIAL AND TRACKED AS `[1.10]`.** Only `TypeRef` is covered — portlets,
+invariant `requires`, function `requires`/`returns`. A field's type and a type alias
+are `AliasedTypeExpression`, a different node, and are NOT checked. Deliberate: 283
+portlet vs **542** aliased field references in reactive-bbq alone. A test named *"NOT
+yet cover a field's type"* pins the boundary; if scope widens that test fails, which is
+the intended direction.
+
+**It also exposed a REFLECTIVITY defect worth remembering the shape of:** the JSON
+surface dropped a `TypeRef`'s keyword on schema fields, so a round trip rewrote
+`as record X` to `as type X`. BAST was already correct. It was invisible for as long as
+`type` was the only keyword anyone wrote — **a fidelity bug can hide behind a field
+that only ever holds its default value.**
+
+**`riddlc find -replace` did 13 of the 24 in-repo migration sites**, at Reid's
+suggestion, and found sites in an INCLUDED file that a grep on the entry file would
+have missed. The script reads `source` + `type.carries` from the projection and returns
+the source unchanged when `carries` is absent (an alternation), so those are left alone.
+
+
 **`../bin/riddlc` IS AHEAD OF rc.24 — it is `2.0.0-rc.24-3-40c0574f`, staged with
 `publishLocal`, and that is deliberate (2026-08-24).** Reid's call: *"don't build an RC,
 just stage riddlc to ../bin and publishLocal — I want to avoid this round-trip between

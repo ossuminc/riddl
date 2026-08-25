@@ -237,6 +237,8 @@ task files, so they were NOT physically reshuffled; this index carries the order
 | 11 | Cross-context `tell` isolation seam | 5 | Largest item and the biggest corpus-migration risk. Needs a counting mode built and run under real resolution before the Error ships. Wants its own plan. |
 | ~~12~~ | ~~Two narrow-operand gaps~~ | — | **Part 1 DONE `faf7551c0`** — and it was NOT false-positive-only as filed, it was a missed Error. Part 2 (`emittedMessageTypes`) split out and left last: genuinely advisory, genuinely a restructuring. |
 
+| 13 | **[1.10]** Prefix truthfulness for fields/aliases | — | A DECISION, not effort. Shipped for `TypeRef` 2026-08-24; extending to `AliasedTypeExpression` roughly triples an already 1,032-site migration, so measure first. |
+
 Three real dependency edges, not twelve: **4 ← 3**, **10 ← 9**, **11 ← 5**.
 Everything else is independent and may be reordered by appetite. Items 10 and 11
 each want an approved plan before implementation, per the standing rule.
@@ -897,6 +899,37 @@ each want an approved plan before implementation, per the standing rule.
   model completing sub-millisecond is not impossible, and the local runs could not be made to
   replay at all. The cache-restore path is real and is now closed, but the timing observation
   was not the proof it was presented as.
+
+- **[1.10]** **Does prefix truthfulness extend to a field's type and a type alias?**
+  — a DECISION, not effort. The check shipped 2026-08-24 (`cb05e3748`) covering
+  `TypeRef`: portlet types, invariant `requires`, a function's `requires`/`returns`.
+  A field's type (`two: Ctx.Cmd`) and a type alias (`type A is Ctx.Rec`) are
+  **`AliasedTypeExpression`** (`AST.scala:1958`) — a different node that carries its
+  own `keyword` and does NOT route through `checkRef`, so nothing checks them.
+  Verified against the staged binary: `record Holder is { two: Ctx.Cmd }` naming a
+  command draws zero errors.
+
+  **The requesting task asked for it** (`task/done/2026-08-24-reference-prefix-must-
+  match-declared-kind.md`): *"the rule is about `type_ref` generally — a field's
+  type, a `let`'s ascription, an `updates repository` … applying it everywhere at
+  once is the honest reading of the requirement."* It was deliberately NOT done,
+  and the reason is cost, measured rather than guessed: reactive-bbq alone holds
+  **283** portlet references and **542** aliased field references, so extending the
+  rule roughly TRIPLES a migration that already touches 1,032 sites in 188 of 188
+  models. That deserves its own estimate, not a ride-along.
+
+  **Pinned, so it cannot quietly become permanent**: `ReferencePrefixAndRepository
+  PortsTest` has a case named *"NOT yet cover a field's type, which is a different
+  AST node"*. If the scope widens, that test fails — which is the intended
+  direction; update it rather than narrowing the check back.
+
+  **What to decide:** whether a field typed by a record must read `two: record
+  Ctx.Cmd`. The argument for is Reid's own — the prefix exists to make a model
+  readable without chasing the declaration, and a field is where a reader most
+  often wants that. The argument against is that it is the single most common
+  syntactic position in the language, so the cost is not proportional to the
+  ambiguity being removed. Measure the corpus-wide count before choosing; the
+  542 above is one model.
 
 ### 2. Queued, needs a plan
 
