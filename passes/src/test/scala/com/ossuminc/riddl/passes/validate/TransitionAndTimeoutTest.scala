@@ -19,9 +19,12 @@ import org.scalatest.TestData
   *   2. A saga with no `timeout`, so a generator invents the bound that decides when compensation
   *      fires.
   *
-  * **`morph` and `become` are checked against DIFFERENT counts**, which the request conflated:
-  * `morph` names a STATE and `become` names a HANDLER, so a single-state entity with two handlers
-  * may `become` legitimately. Counting states for both would reject a legal model — pinned below.
+  * **`morph` and `become` are checked against DIFFERENT counts, because of what each one MOVES**
+  * (Reid, 2026-08-25). `morph` moves the state AND the handler with it, since a state may carry its
+  * own default handler — so at one state there is neither another state to occupy nor another
+  * default behaviour to adopt. `become` moves only the handler, so two handlers make it meaningful
+  * however many states exist. Counting states for `become` would reject that legal model, pinned
+  * below.
   */
 class TransitionAndTimeoutTest extends AbstractValidatingTest {
 

@@ -3010,10 +3010,17 @@ case class ValidationPass(
     * has a state machine, the modeller believes it has one, and what was built is a single state
     * with a dead statement in it.
     *
-    * **`morph` and `become` are checked against DIFFERENT counts, which the request conflated.**
-    * `morph` names a STATE, so it needs a second state to move to. `become` names a HANDLER, so it
-    * needs a second handler — and a single-state entity with two handlers may `become` between them
-    * perfectly legitimately. Counting states for both would reject that legal model.
+    * **`morph` and `become` are checked against DIFFERENT counts, and the reason is what each one
+    * MOVES** (Reid, 2026-08-25) — not what it costs any corpus to enforce.
+    *
+    *   - **`morph` moves the STATE, and with it the handler**, because a state may carry its own
+    *     default handler. With one state there is no other state to occupy and no other default
+    *     behaviour to adopt, so the statement cannot mean anything. Illegal at fewer than two
+    *     states, full stop.
+    *   - **`become` moves only the HANDLER.** With one handler there is no other behaviour to
+    *     adopt and it is useless; with two it is meaningful REGARDLESS of how many states exist,
+    *     so a single-state entity with two handlers may `become` between them. Counting states
+    *     for `become` would reject that legal model.
     *
     * The counts are of the TARGET entity, not the enclosing one: `morph entity Other to state S`
     * is about `Other`'s states. Usually they are the same entity, but nothing requires it.
