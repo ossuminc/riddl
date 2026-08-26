@@ -566,6 +566,21 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @JSExport
+    /** The one path into an accumulator that does NOT require a rule id, deliberately.
+      *
+      * [1.19], and riddl-examples' line that prompted it: *"mandatory to PASS is not the same as
+      * mandatory to BE."* Every OTHER entry point -- the eight `addX` helpers and the five
+      * lowercase ones -- now requires `ruleId`, so a validator diagnostic cannot be written
+      * without naming its rule. This overload takes a fully-built `Message` and is what carries
+      * the messages that legitimately have NO rule: parse failures from fastparse, thrown
+      * exceptions, and command-level errors like "find: nothing written", none of which come from
+      * the validator and none of which a rule id would describe.
+      *
+      * **So `Option[RuleId]` on `Message` is not laziness; it is the honest type for a message
+      * that may or may not be a model diagnostic.** What a compiler can enforce is that the
+      * VALIDATOR always names a rule, and that is enforced at the helpers rather than here.
+      * `EveryDiagnosticHasARuleIdTest` is the empirical backstop over actual output.
+      */
     def add(message0: Message)(using pc: PlatformContext): this.type = {
       // The provideTips option is the single chokepoint that governs whether a message's
       // remediation suggestion is retained. When disabled, strip it so the output stays
@@ -598,10 +613,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def style(message: String, loc: At = At.empty, suggestion: String = "")(using
-      pc: PlatformContext
+    def style(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId])(
+      using pc: PlatformContext
     ): this.type = {
-      add(Message(loc, message, StyleWarning, suggestion = suggestion))
+      add(Message(loc, message, StyleWarning, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add an [[Info]] message to the accumulated [[Messages]]
@@ -614,10 +629,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def info(message: String, loc: At = At.empty, suggestion: String = "")(using
-      pc: PlatformContext
+    def info(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId])(
+      using pc: PlatformContext
     ): this.type = {
-      add(Message(loc, message, Info, suggestion = suggestion))
+      add(Message(loc, message, Info, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add a [[Warning]] message to the accumulated [[Messages]]
@@ -630,10 +645,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def warning(message: String, loc: At = At.empty, suggestion: String = "")(using
-      pc: PlatformContext
+    def warning(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId])(
+      using pc: PlatformContext
     ): this.type = {
-      add(Message(loc, message, Warning, suggestion = suggestion))
+      add(Message(loc, message, Warning, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add an [[Error]] message to the accumulated [[Messages]]
@@ -646,10 +661,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def error(message: String, loc: At = At.empty, suggestion: String = "")(using
-      pc: PlatformContext
+    def error(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId])(
+      using pc: PlatformContext
     ): this.type = {
-      add(Message(loc, message, Error, suggestion = suggestion))
+      add(Message(loc, message, Error, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add a [[SevereError]] message to the accumulated [[Messages]]
@@ -662,10 +677,10 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @inline
-    def severe(message: String, loc: At = At.empty, suggestion: String = "")(using
-      pc: PlatformContext
+    def severe(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId])(
+      using pc: PlatformContext
     ): this.type = {
-      add(Message(loc, message, SevereError, suggestion = suggestion))
+      add(Message(loc, message, SevereError, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add a [[StyleWarning]] message to the accumulated [[Messages]]

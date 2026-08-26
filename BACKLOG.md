@@ -1110,7 +1110,21 @@ verification is carried here so it is not repeated.**
   platform that cannot honour it rather than appearing to work.
 
 
-- **[1.19]** **Make a validator diagnostic's rule id non-optional at the type level.**
+- ~~**[1.19]** **Make a validator diagnostic's rule id non-optional at the type level.**~~ —
+  **DONE 2026-08-26, with the boundary recorded.** Every entry point into an `Accumulator` now
+  REQUIRES a `ruleId`: the eight `addX` helpers already did, and the five lowercase ones
+  (`style`/`info`/`warning`/`error`/`severe`) do as of today — there was exactly ONE production
+  call site, which gained `doc-figma-unavailable`.
+
+  **`Message.ruleId` stays `Option[RuleId]`, and that is the right type rather than a
+  concession.** `Accumulator.add(Message)` is the deliberate remaining path, and it carries
+  messages that legitimately have no rule: parse failures from fastparse, thrown exceptions,
+  and command-level errors like *"find: nothing written"*. None come from the validator and no
+  rule id would describe them. Forcing a fake rule on those would make the id mean less, not
+  more. What a compiler CAN enforce is that the validator always names a rule, and that is now
+  enforced at the helpers. Original entry follows.
+
+  **[1.19 — as filed]**
   riddl-examples' line, and it is correct: *"`ruleId` being mandatory to PASS is not the same
   as mandatory to BE."* `Option[RuleId]` lets a site answer `None`, so the compiler cannot
   enforce what `3ea9b7b9d`'s message claimed -- which is exactly how 68 un-ruled diagnostics

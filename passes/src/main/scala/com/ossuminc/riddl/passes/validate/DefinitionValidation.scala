@@ -392,7 +392,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             s"Figma drift checking was requested but is unavailable: $reason",
             figmaRef.loc,
             suggestion = s"Set the ${FigmaClient.TokenEnvVar} environment variable to a Figma " +
-              "personal access token, or drop the --check-figma-drift option."
+              "personal access token, or drop the --check-figma-drift option.",
+            ruleId = Some(RuleId.FigmaUnavailable)
           )
         end if
       case FigmaAccess.Available(client) =>

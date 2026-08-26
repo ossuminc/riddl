@@ -510,6 +510,7 @@ enum RuleId(
   // fallback for a caller that has no more specific rule to name.
   case EmptyContent extends RuleId("def-empty-content")
   case EntityNoStates extends RuleId("entity-no-states")
+  case FigmaUnavailable extends RuleId("doc-figma-unavailable")
   case CrossContextReference extends RuleId("ref-crosses-context-boundary")
   case ClauseNoStatements extends RuleId("handler-clause-no-statements")
   case OutputShowsWrongKind extends RuleId("app-output-shows-wrong-kind")

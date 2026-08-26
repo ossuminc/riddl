@@ -47,6 +47,7 @@ doc-figma-file-unreadable
 doc-figma-frame-drift
 doc-figma-node-missing
 doc-figma-ref-not-allowed
+doc-figma-unavailable
 doc-metadata-empty
 doc-multiple-briefs
 doc-multiple-copyrights
