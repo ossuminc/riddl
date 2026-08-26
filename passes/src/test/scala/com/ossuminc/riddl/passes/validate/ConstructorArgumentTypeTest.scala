@@ -157,6 +157,66 @@ class ConstructorArgumentTypeTest extends AbstractValidatingTest {
     }
   }
 
+  "a COMMENT inside a record" should {
+
+    "not make the record incompatible with itself" in { (td: TestData) =>
+      // riddl-generator, 2026-08-26, against rc.25. `isAssignmentCompatible` counted the OTHER
+      // side's `contents` -- which holds comments -- against a validity list built only from its
+      // VALUES, so one comment made the counts disagree and the record failed to match itself.
+      // The message printed both sides character-for-character identical, because `format` renders
+      // the comment as part of the type, which made it unactionable as well as wrong.
+      //
+      // The bug was old and latent; it became reachable only when constructor arguments started
+      // being type-checked. A dormant comparison defect surfaces the moment something first asks.
+      val src =
+        """domain D is {
+          |  context C is {
+          |    record LineItem is {
+          |      id: String
+          |      // a comment, which used to break this
+          |    }
+          |    command Add is { child: LineItem }
+          |    entity E is {
+          |      record F is { child: LineItem }
+          |      initial state S of record C.E.F
+          |      handler H is {
+          |        on command C.Add { tell command C.Add(child = child) to entity C.E }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val msgs = messagesFor(src, td)
+      withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, Mismatch) mustBe empty }
+    }
+
+    "still catch a GENUINE mismatch when a comment is present" in { (td: TestData) =>
+      // The fix must not turn the count comparison into no comparison at all: a record with a
+      // comment AND a real type error must still report.
+      val src =
+        """domain D is {
+          |  context C is {
+          |    record LineItem is {
+          |      id: String
+          |      // a comment
+          |    }
+          |    record Other is { id: Integer }
+          |    command Add is { child: LineItem }
+          |    entity E is {
+          |      record F is { child: Other }
+          |      initial state S of record C.E.F
+          |      handler H is {
+          |        on command C.Add { tell command C.Add(child = child) to entity C.E }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val msgs = messagesFor(src, td)
+      withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, Mismatch) must not be empty }
+    }
+  }
+
   "an Id of the wrong entity" should {
     "be an Error even though both sides are Ids" in { (td: TestData) =>
       val msgs = messagesFor(model("Id(C.Shipment)"), td)

@@ -2276,8 +2276,20 @@ object AST:
     override def isAssignmentCompatible(other: TypeExpression): Boolean =
       other match
         case oate: AggregateTypeExpression =>
+          // **Count the VALUES on both sides, never `contents`.** `contents` also holds comments,
+          // so `validity.size == oate.contents.size` made one comment inside a record enough to
+          // declare the record incompatible WITH ITSELF -- and the message printed the two types
+          // as character-for-character identical, because `format` renders the comment as part of
+          // the type. Reported by riddl-generator against rc.25 with a 24-line repro and a
+          // measured blast radius: any comment inside a record broke every constructor passing a
+          // value of that record's type.
+          //
+          // The bug was old and latent. It became reachable only when constructor arguments
+          // started being type-checked (2026-08-24), which is the shape worth remembering: a
+          // dormant comparison defect surfaces the moment something first asks the question.
+          val otherValues = oate.contents.filter[AggregateValue].toSeq
           val validity: Seq[Boolean] = for
-            ofield: AggregateValue <- oate.contents.filter[AggregateValue].toSeq
+            ofield: AggregateValue <- otherValues
             named <- contents.find(ofield.id.value)
             myField: Field = named.asInstanceOf[Field] if named.isInstanceOf[Field]
             myTypEx = myField.typeEx
@@ -2285,7 +2297,7 @@ object AST:
           yield {
             myTypEx.isAssignmentCompatible(oTypeEx)
           }
-          (validity.size == oate.contents.size) && validity.forall(_ == true)
+          (validity.size == otherValues.size) && validity.forall(_ == true)
         case _ =>
           super.isAssignmentCompatible(other)
       end match
