@@ -154,9 +154,43 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **3036** | 7 |
-| JS | **979** | 5 |
-| Native | **2994** | 7 |
+| JVM | **3068** | 7 |
+| JS | **1005** | 5 |
+| Native | **3026** | 7 |
+
+**Raised at 2.0.0-rc.26 (2026-08-26) to 3068 / 1005 / 3026**, cold cache (0B -> 140K -> **285M**),
+19 module legs, zero failures, zero `No tests to run`, zero deliberate failures. Both corpora
+migrated against a staged binary BEFORE the tag -- the second RC to use the stage-first order,
+and the second to ship green.
+
+**The delta was +32 / +26 / +32, and the JS row is the one that made it reconcile.** JS landed on
+its prediction EXACTLY while JVM came in 3 SHORT, and chasing those 3 found a trap this page did
+not have:
+
+**A RENAME ACROSS SOURCE TREES CHANGES WHICH ROWS SEE A SUITE WHILE ADDING NO CASES.**
+`RuleIdLogRenderingTest` (3 cases) moved from `language/src/test/scala-jvm-native/` to
+`language/src/test/scala/`. Net new cases: **zero**. But it had been invisible to JS and is now
+shared, so the true delta is **+3 on JS ALONE** and **+0 on JVM and Native**.
+
+`git diff --name-only` COLLAPSES a rename to the new path, so a delta script asks
+`git show <tag>:<new path>`, gets nothing, and scores the file as brand new -- **+3 on every
+row**, which is wrong on two rows out of three. Use `--name-status` and look for `R###`, or the
+prediction silently inflates. The tell was arithmetic, exactly as it was when the rc.25 script
+double-counted: one row hitting its number exactly while another misses by a constant is a
+prediction bug, not a skipping bug -- **a real skipping bug does not spare a row.**
+
+**CI was RED on the tagged commit, and it was STALE rather than a regression.** Ten of eleven jobs
+were green; `RiddlModelsRoundTripTest` failed on reactive-bbq because rc.25-11's new `put`/`return`
+type-checking exposed two real corpus type errors. riddl-models fixed them in `3436993c` at
+**15:11 UTC** and CI had run at **14:58 UTC** -- thirteen minutes earlier. Verified by RUNNING it
+(`riddlc from reactive-bbq.conf validate` -> 0 errors, 0 warnings) rather than by re-reading the
+log. **Check the corpus commit timestamps against the run's before treating a corpus failure as a
+regression**; that check is one command and it is decisive.
+
+**Re-run the EXTERNAL grammar validators locally even when CI's grammar job is green.** CI
+validated the corpus as it stood at 14:58; riddl-models then adopted `system.now` in 68 fields.
+The EBNF covered it (190/190, 9/9), but CI could not have told you that -- its corpus predates the
+syntax being used.
 
 **Raised at 2.0.0-rc.25 (2026-08-25) to 3036 / 979 / 2994**, cold cache
 (`/tmp/sbt-verify-rc25`, 140K -> 283M), zero failures, zero `No tests to run`, 7/5/7 module
