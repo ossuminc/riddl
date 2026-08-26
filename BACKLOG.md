@@ -1153,6 +1153,27 @@ verification is carried here so it is not repeated.**
   than call sites -- a call-site census is what missed this twice, since the grep that finds
   `addError(` does not find `check(`, and neither finds `messages.add(warning(...))`.
 
+
+- **[1.20]** **Publish "resolve before you match" as guidance for AST consumers.**
+  **The same defect has now been written independently in two codebases.** riddl-models
+  reported it against riddlc on 2026-08-14 (`task/done/2026-08-14-instance-addressing-check-
+  does-not-resolve-id-aliases.md`): the instance-addressing check compared a field's *written*
+  type expression rather than its resolved one, so it saw the inline `Id(E)` spelling and
+  missed `campaignId: CampaignId` where `type CampaignId is Id(...)`. riddl fixed it.
+  **riddlg then carried the identical bug in its own copy of the same logic for another twelve
+  days**, finding it on 2026-08-26 while re-measuring: 80 sites it had reported as "not
+  derivable" were all its own defect, none the model's.
+  **Why it recurs**: the alias IS the documented house style, so a model written idiomatically
+  is exactly the one that breaks a consumer matching on `field.typeEx` shape. The wrong
+  instinct -- match the AST node you were handed -- is also the natural one.
+  **What to write**: guidance for anyone reading the riddl AST saying a type expression must be
+  RESOLVED before it is matched on, naming `refMap.definitionOf` as the way, and citing both
+  incidents so the advice carries its evidence. Candidate homes: a section in ossum.tech's riddl
+  docs, or a scaladoc note on `AliasedTypeExpression` itself, which is where a consumer is most
+  likely to be looking when they get it wrong.
+  **Not urgent, and not riddl code** -- but counting `resolvePath`'s missing `ClassTag`, this is
+  the third time the shape has cost someone a day.
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
