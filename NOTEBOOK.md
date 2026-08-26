@@ -64,33 +64,19 @@ goes stale in hours** — the corpora are live sibling checkouts, and riddl-mode
 committed *during* a certification run and turned a suite red with nothing in riddl
 having changed. **Confirm any red by its MESSAGE, never by comparing counts.**
 
-### `task/` — 12 files present, 10 of them already satisfied
+### `task/` — 2 open, everything else closed
 
-**These are NOT untriaged.** Ten describe work that has landed and are awaiting only
-the Completion Procedure (a `## Results` section, then a move to `task/done/`); that
-was deliberately left for the next session rather than burning handoff context. The
-mapping is recorded here so the triage is mechanical:
+**Ten of the twelve 2026-08-25 tasks are in `task/done/` with Results appended**, plus
+riddl-examples' null-rule report that arrived mid-session. Two remain OPEN, and neither
+is open by oversight:
 
-| `task/2026-08-25-*` | landed in |
-|---|---|
-| `validate-should-never-print-nothing` | `5b00bea1b` |
-| `unbastify-safety-and-prettify-check` | `f610406c6` |
-| `a-saga-with-no-timeout-is-undiagnosed` | `5f9f4e9b5` |
-| `morph-or-become-in-a-single-state-entity` | `fe5fdfbb6` |
-| `rules-riddlc-knows-enough-to-enforce` (umbrella: carry-forward, creation-reads, repo ports) | `d3039372f` and neighbours |
-| `entity-handled-message-that-names-no-instance` | `0bc27be96` |
-| `system-now-a-magic-value-for-the-current-time` | `236285432` |
-| `find-needs-a-statement-content-selector` | `edca8e74a` |
-| `value-references-as-nodes-in-dump-json` | `edca8e74a` |
-| `corpus-mode-one-process-many-models` | `fa452b99e` |
-
-The remaining two — `machine-readable-diagnostics-with-rule-ids` and
-`ship-each-rule-with-its-own-codemod` — are **genuinely open** and are `[1.11]` /
-`[1.12]`. **Verify before reporting any of the ten as done**; that mapping is my
-account of what I built, and the acceptance criteria live in the files.
-
-**No replies are owed to other repos** — neither `../riddl-models/task/` nor
-`../riddl-generator/task/` holds a pending file (checked 2026-08-25).
+- **`a-saga-with-no-timeout`** — its third criterion is a LANGUAGE REFERENCE change, so
+  it is ossum.tech's; a task is filed there. Not moved to `done/`, because filing it
+  done while a criterion the sender wrote is unmet would be a false report.
+- **`value-references-as-nodes-in-dump-json`** — `resolvedKind` lacks four of the seven
+  kinds asked for (`let-local`, `foreach-element`, `literal`, `prompt`), and two of those
+  are a modelling question rather than a gap: a literal has no target, so emitting it as
+  a `value-reference` needs a decision about what that node kind means. Awaiting a ruling.
 
 ### Certainty
 
