@@ -154,9 +154,27 @@ certified nothing.
 
 | Row | Minimum | Suites |
 |---|---|---|
-| JVM | **2903** | 7 |
-| JS | **917** | 5 |
-| Native | **2864** | 7 |
+| JVM | **3036** | 7 |
+| JS | **979** | 5 |
+| Native | **2994** | 7 |
+
+**Raised at 2.0.0-rc.25 (2026-08-25) to 3036 / 979 / 2994**, cold cache
+(`/tmp/sbt-verify-rc25`, 140K -> 283M), zero failures, zero `No tests to run`, 7/5/7 module
+legs. The delta was **+133 / +62 / +130** and every row landed on the predicted number
+EXACTLY -- sixth consecutive RC to do so. It reconciles two ways: JVM minus Native is 3,
+which is `RuleIdSnapshotTest` (the only `scalajvm`-only addition), and JVM minus JS is 71,
+the 68 `commands`/`scala-jvm-native` cases plus those same 3.
+
+**The prediction script double-counted on its first run and the tell was arithmetic, not an
+error.** Two overlapping regexes (`"\s+in\s*\{` and `"\s+in\s+\{`) matched the same
+cases, so every figure came out 2x -- caught because `RuleIdTest` showed 20 where it is
+known to have 10. A prediction is only evidence if you sanity-check the instrument against
+a count you already know.
+
+**Deliberate failures are ZERO.** Both corpora migrated against the STAGED binary BEFORE
+the tag, which is the first time that order has been used: rc.25 went out green instead of
+red. See the staging note below -- it is a better sequence than shipping red and is now the
+one to prefer.
 
 **Raised at 2.0.0-rc.24 (2026-08-24) to 2903 / 917 / 2864**, cold cache
 (`/tmp/sbt-verify-rc24`, 116K -> 269M), all three platforms compiling, zero `No tests to
@@ -278,6 +296,27 @@ because the floors were simply not raised by the sessions between 08-14 and
 and rc.15's own four items all landed in between). **A floor that lags is a
 weaker gate than one that tracks**, since a skipping bug hides in the slack;
 raise it every time, even when nothing else about the run is interesting.
+
+**Stage first, migrate the corpora, THEN tag — this is now the preferred order.**
+
+Every RC with corpus cost before rc.25 shipped RED and was migrated afterwards, on the
+reasoning that a corpus cannot migrate to a rule that does not exist. rc.25 showed the
+reasoning is only half right: the corpus needs the RULE, not a published RELEASE. Staging
+a binary to `../bin/riddlc` (with `scripts/publish-and-stage.sh`, so ivy and the binary
+move together) supplies the rule, the corpora migrate against it, and the tag then goes
+out GREEN.
+
+Reid's call, and his own practice from 2026-08-24: *"don't build an RC, just stage riddlc
+to ../bin and publishLocal — I want to avoid this round-trip between riddl-models and
+riddlc before cutting another RC."*
+
+Two things this buys beyond a green gate: the certification floors are measured on a run
+with no failures, and the corpus census that drives the migration can be exact rather than
+grepped, because `validate --json` names every diagnostic's rule.
+
+**The deliberate-failure count is ZERO as of 2026-08-25 (rc.25)**, with both corpora
+migrated before the tag rather than after. The paragraph below describes the OLD cycle and
+is kept because it is still what happens if you tag first.
 
 **The deliberate-failure count is ONE as of 2026-08-24 (post-rc.24): riddl-examples' `dokn`,
 failing on exactly 5 `may not follow the 'morph'` errors.** `commands` is **297/297 GREEN** --
