@@ -214,7 +214,7 @@ domain dokn is {
                 reply result Location.LocationDetails
               }
               on query Location.getLocationNotes {
-                reply result Location.LocationNotes(notes = "the notes")
+                reply result Location.LocationNotes(notes = prompt("the notes for this location"))
               }
             }
         } with {

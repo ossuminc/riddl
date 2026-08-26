@@ -71,7 +71,7 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
        |    function Score is {
        |      requires record Args
        |      returns record Sum
-       |      return record Sum(s = "0")
+       |      return record Sum(s = 0)
        |    } with { briefly "f" }
        |    entity E is {
        |      state S of record St is {
@@ -98,7 +98,7 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
        |    function Score is {
        |      requires record Args
        |      returns record Sum
-       |      return record Sum(s = "0")
+       |      return record Sum(s = 0)
        |    } with { briefly "f" }
        |    entity E is {
        |      state S of record St is {
@@ -142,7 +142,7 @@ class LexicalScopeThreadingTest extends AbstractValidatingTest {
        |      requires record Bag
        |      returns record Sum
        |      foreach line in field lines { $body }
-       |      return record Sum(s = "0")
+       |      return record Sum(s = 0)
        |    } with { briefly "f" }
        |  } with { briefly "c" }
        |} with { briefly "d" }

@@ -2396,6 +2396,37 @@ case class ValidationPass(
     * predicate with nothing to read, and a superfluous one reads as if it were being checked when
     * the invariant never looks at it.
     */
+  /** [1.13]: does the `with` value have the type the invariant `requires`?
+    *
+    * Separate from [[checkRequireArgument]], which answers a different question -- is a value
+    * PRESENT when one is required -- and runs where the `let` scope is not available.
+    *
+    * A `PromptValue` is skipped: `checkRequireArgument` already checks its ascription against the
+    * same `requires` type, and reporting both would double up on one mistake. So is an
+    * undeterminable value type: `valueTypeExpr` returning None means this check has nothing to say,
+    * which is the same conservative rule the constructor-argument check follows.
+    */
+  private def checkRequireArgumentType(
+    rs: RequireStatement,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    for
+      ir <- rs.condition match
+        case ir: InvariantRef => Some(ir)
+        case _                => None
+      inv <- resolution.refMap.definitionOf[Invariant](ir.pathId)
+      tr <- inv.requires match
+        case Some(tr: TypeRef) => Some(tr)
+        case _                 => None
+      expected <- resolution.refMap.definitionOf[Type](tr.pathId).map(_.typEx)
+      arg <- rs.argument
+      if !arg.isInstanceOf[PromptValue]
+      actual <- valueTypeExpr(arg, parents, lets, elements)
+    do checkAssignable(expected, actual, None, parents, arg.loc, s"${inv.identify} requires")
+  end checkRequireArgumentType
+
   private def checkRequireArgument(inv: Invariant, argument: Option[Value], loc: At): Unit =
     inv.requires match
       case Some(tr: TypeRef) if argument.isEmpty =>
@@ -7746,7 +7777,7 @@ case class ValidationPass(
               s"'$adPath' is not an id of '$edPath'",
             suggestion = s"Supply an id obtained from '$edPath' -- an id value identifies one " +
               "instance of one processor and cannot stand in for another's.",
-            ruleId = Some(RuleId.IdTypeMismatch)
+            ruleId = Some(RuleId.IdEntityMismatch)
           )
       case _ =>
         if !e.isAssignmentCompatible(a) then
@@ -7755,7 +7786,14 @@ case class ValidationPass(
             s"$what is declared '${e.format}' but the value is '${a.format}'",
             suggestion = s"Supply a value of type '${e.format}', or declare the field as " +
               s"'${a.format}'.",
-            ruleId = Some(RuleId.IdEntityMismatch)
+            // `value-type-mismatch`, NOT an id rule. This arm is ANY assignability failure -- a
+            // String where a record is wanted, say -- and it carried `stmt-id-entity-mismatch`
+            // until 2026-08-26, which told an author their plain type error was a problem with
+            // entity identity. The mislabel was invisible while the check ran only on constructor
+            // arguments whose failures happened to be Id-vs-UUID; extending it to `put`/`return`/
+            // `require` made it visible immediately. **A wrong id is worse than no id**: it is
+            // exactly what a consumer filters and suppresses on.
+            ruleId = Some(RuleId.ValueTypeMismatch)
           )
   end checkAssignable
 
@@ -8410,6 +8448,18 @@ case class ValidationPass(
       // `let e = empty T*` infers `T*` -- the ascription IS the type, which is the whole point of
       // the ascribed form. A bare `empty` has no type of its own; the position supplies it.
       case ev: EmptyValue => ev.typeEx
+      // [1.13]: a LITERAL denotes its own type, and until 2026-08-26 none of them did -- so every
+      // position built on this helper (constructor arguments, `put`, `return`, `require … with`)
+      // silently skipped an argument written as a literal. `require inv with "text"` where the
+      // invariant requires an Integer said nothing at all. Found by instrumenting the require
+      // check and watching `valueTypeExpr` answer None, not by reading it.
+      //
+      // A NumericLiteral deliberately gets NO arm: `checkNumericLiteralConformance` already judges
+      // a numeric literal against the expected type, and with a better message ("Natural is a
+      // positive whole number") than a bare assignability failure. Two checks on one mistake is
+      // the double-reporting this codebase keeps recording.
+      case _: LiteralString  => Some(String_(v.loc))
+      case _: BooleanLiteral => Some(Bool(v.loc))
       case vr: ValueRef   => valueRefTypeExpr(vr, parents, lets, elements)
       // A55/`self`: the SYNTHESIZED Aggregation is the only place `self`'s type is materialized.
       // `let me = self` then `me.id` reaches this ARM through `valueRefTypeExpr`'s
@@ -9465,6 +9515,19 @@ case class ValidationPass(
             ruleId = Some(RuleId.PutTypeMismatch)
           )
         case _ => ()
+      // [1.13]: the comparison above runs only when BOTH sides resolve to a NAMED type -- which is
+      // the stricter rule and the right one there, since RIDDL treats a declared alias as a distinct
+      // name rather than a transparent synonym. But `valueType` yields None for a PREDEFINED type,
+      // so `putting` a `String` where an `Id(E)` was wanted said nothing at all. Fall back to the
+      // TypeExpression level, which is what the constructor-argument check uses, and only when the
+      // named comparison could not run -- so the two can never double-report one mistake.
+      if expected.isEmpty || actual.isEmpty then
+        for
+          e <- output.putOut match
+            case tr: TypeRef => resolution.refMap.definitionOf[Type](tr.pathId).map(_.typEx)
+            case _           => None
+          a <- valueTypeExpr(ps.value, parents, lets, elements)
+        do checkAssignable(e, a, None, parents, ps.loc, "'put' value")
     }
   end validatePut
 
@@ -9497,6 +9560,19 @@ case class ValidationPass(
             ruleId = Some(RuleId.ReturnTypeMismatch)
           )
         case _ => ()
+      // [1.13]: the comparison above runs only when BOTH sides resolve to a NAMED type -- which is
+      // the stricter rule and the right one there, since RIDDL treats a declared alias as a distinct
+      // name rather than a transparent synonym. But `valueType` yields None for a PREDEFINED type,
+      // so `returning` a `String` where an `Id(E)` was wanted said nothing at all. Fall back to the
+      // TypeExpression level, which is what the constructor-argument check uses, and only when the
+      // named comparison could not run -- so the two can never double-report one mistake.
+      if expected.isEmpty || actual.isEmpty then
+        for
+          e <- fn.output match
+            case Some(tr: TypeRef) => resolution.refMap.definitionOf[Type](tr.pathId).map(_.typEx)
+            case _                 => None
+          a <- valueTypeExpr(rs.value, parents, lets, elements)
+        do checkAssignable(e, a, None, parents, rs.loc, "'return' value")
     }
   end validateReturn
 
@@ -9800,6 +9876,12 @@ case class ValidationPass(
           rs.condition match
             case be: BooleanExpression => validateValue(be, parents, lets, elements)
             case _                     => ()
+          // [1.13]: the `with` value is type-checked against what the invariant `requires`. Until
+          // now only its PRESENCE was checked (`checkRequireArgument`) plus a `prompt` ascription,
+          // so `require inv with someId` supplied an `Id(E)` where a `UUID` was wanted and nothing
+          // said so. Checked HERE rather than in `validateStatement` because `valueTypeExpr` needs
+          // the in-scope `let`s and `foreach` elements, which only this walk carries.
+          checkRequireArgumentType(rs, parents, lets, elements)
         case ms: MatchStatement =>
           validateMatch(
             ms,

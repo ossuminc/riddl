@@ -61,7 +61,7 @@ class AskTest extends AbstractValidatingTest {
        |    entity Ledger is {
        |      state S of record D.C.R is {
        |        handler H is {
-       |          on query D.C.Ask is { reply result D.C.Answer(v = "the answer") }
+       |          on query D.C.Ask is { reply result D.C.Answer(v = 1) }
        |        } with { briefly "h" }
        |      } with { briefly "st" }
        |    } with { briefly "en" }

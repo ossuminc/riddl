@@ -1026,7 +1026,10 @@ Each was noticed while doing something else, checked against the code at the
 `file:line` cited, and deliberately not fixed in the same commit. **The
 verification is carried here so it is not repeated.**
 
-- **[1.13]** **Type-check `put`, `return` and `require … with`.** Constructor
+- ~~**[1.13]** **Type-check `put`, `return` and `require … with`.**~~ — **DONE 2026-08-26.**
+  Reid: type-check them, corpus cost accepted. Original entry follows.
+
+  **[1.13 — as filed]** Constructor
   arguments gained type checking on 2026-08-25 and these three did not.
   **Verified**: `checkAssignable` (`ValidationPass.scala:7473`) has exactly two
   call sites — `:1853` (constructor arguments) and `:9011` — while `put` and
@@ -1036,7 +1039,10 @@ verification is carried here so it is not repeated.**
   shape as the constructor gap, which riddl-generator found by emitting Java that
   would not compile. Expect corpus cost, and measure it before ruling.
 
-- **[1.14]** **`find -type <unknown>` silently matches nothing.** A typo in a type
+- ~~**[1.14]** **`find -type <unknown>` silently matches nothing.**~~ — **DONE 2026-08-26**: a
+  typo is now a parameter error with close matches, exit 7. Original entry follows.
+
+  **[1.14 — as filed]** A typo in a type
   name produces `0 matched` and exit 0, which is indistinguishable from a correct
   query with no hits — the exact "confident answer computed over nothing" failure
   `find` was built to end.
@@ -1048,7 +1054,10 @@ verification is carried here so it is not repeated.**
   already flagged as a risk — so do that first, and put it beside the AST rather
   than in the command.
 
-- **[1.15]** **Decide whether `StatsPass.numPromptStatements` is renamed.** The
+- ~~**[1.15]** **Decide whether `StatsPass.numPromptStatements` is renamed.**~~ — **RULED
+  2026-08-26**: add `numDoStatements`, deprecate the old name. Done. Original entry follows.
+
+  **[1.15 — as filed]** The
   `PromptStatement` → `DoStatement` rename (`e226f240e`) deliberately stopped at
   this field.
   **Verified**: it survives at five sites in

@@ -1315,10 +1315,10 @@ class CompletenessTest extends AbstractValidatingTest {
           |      invariant BalanceNonNegative is "balance >= 0"
           |      state Main of record E.Fields
           |      handler H is {
-          |        on init { set field E.Fields.balance to "0" }
+          |        on init { set field E.Fields.balance to 0 }
           |        on command D.C.Cmd {
           |          require invariant BalanceNonNegative
-          |          send event D.C.Evt(amount = "the amount") to outlet D.C.Events.out
+          |          send event D.C.Evt(amount = 100) to outlet D.C.Events.out
           |        }
           |      }
           |    }

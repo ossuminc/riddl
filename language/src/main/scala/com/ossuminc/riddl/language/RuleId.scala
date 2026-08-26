@@ -381,7 +381,6 @@ enum RuleId(
   case ClauseWrongArity extends RuleId("handler-clause-wrong-arity")
   case NotInstantiable extends RuleId("stmt-not-instantiable")
   case TerminateNeedsId extends RuleId("stmt-terminate-needs-id")
-  case IdTypeMismatch extends RuleId("stmt-id-type-mismatch")
   case IdEntityMismatch extends RuleId("stmt-id-entity-mismatch")
   case TellValueNeedsId extends RuleId("stmt-tell-value-needs-id")
   case TellCrossesDomain extends RuleId("stmt-tell-crosses-domain")
@@ -527,7 +526,13 @@ object RuleId:
     *
     * Empty today because no rule has yet been withdrawn.
     */
-  val retired: Set[String] = Set.empty
+  val retired: Set[String] = Set(
+    // Published in 2.0.0-rc.25 on `checkAssignable`'s wrong-entity arm, which now answers to
+    // `stmt-id-entity-mismatch` -- the name that says what it means. Retired rather than reused:
+    // a consumer suppressing it, or keying a migration on it, must not have it silently come back
+    // attached to a different rule.
+    "stmt-id-type-mismatch"
+  )
 
   /** The closed set of subject prefixes -- the kind of thing a rule is ABOUT.
     *

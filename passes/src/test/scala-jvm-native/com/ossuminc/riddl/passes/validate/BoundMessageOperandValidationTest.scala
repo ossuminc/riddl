@@ -78,7 +78,7 @@ class BoundMessageOperandValidationTest extends AbstractValidatingTest {
 
     "leave a keyword-led operand unaffected" in { (td: TestData) =>
       val src = model(
-        """on command d.c.Foo is { tell command d.c.Foo(a = "the a") to entity d.c.target }"""
+        """on command d.c.Foo is { tell command d.c.Foo(a = 1) to entity d.c.target }"""
       )
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
         errorsOf(msgs) mustBe empty

@@ -139,10 +139,20 @@ class ConstructorArgumentTypeTest extends AbstractValidatingTest {
       withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, Mismatch) mustBe empty }
     }
 
-    "stay SILENT when the value's type cannot be determined" in { (td: TestData) =>
-      // A literal has no resolvable type expression here. Reporting would be reasoning from
-      // absence — the conservative rule `checkTerminate` follows.
+    "flag a string literal supplied for a UUID field" in { (td: TestData) =>
+      // **This case asserted SILENCE until 2026-08-26**, on the stated grounds that "a literal has
+      // no resolvable type expression here". That was true and is no longer: [1.13] gave literals
+      // a type, because a position that cannot type its most common argument shape is not really
+      // type-checked. The premise changed, so the expectation changed with it.
       val msgs = messagesFor(model("UUID", arg = "\"not-a-uuid\""), td)
+      withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, Mismatch) must not be empty }
+    }
+
+    "stay SILENT when the value's type genuinely cannot be determined" in { (td: TestData) =>
+      // The conservative rule still holds, and still needs a case -- it just needs a value that is
+      // actually undeterminable. `get from state` yields no TypeExpression here, so there is
+      // nothing to compare and reporting would be reasoning from absence.
+      val msgs = messagesFor(model("UUID", arg = "get from state C.P.R"), td)
       withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, Mismatch) mustBe empty }
     }
   }
