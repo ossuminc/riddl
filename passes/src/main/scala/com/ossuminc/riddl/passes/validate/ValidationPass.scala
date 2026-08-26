@@ -137,9 +137,60 @@ case class ValidationPass(
       // MUST precede checkCompletenessPostProcess, which asks whether each event is emitted.
       emittedEventTypes = emittedMessageTypes(root)
       computedHandlerCompleteness = classifyHandlers()
+      checkUnreachableGroups(root)
       checkCompletenessPostProcess()
     end if
   }
+
+  /** A `popup` or `dialog` nothing can open can never appear.
+    *
+    * Ruled 2026-08-26. There are exactly two ways a user reaches a group: an epic interaction in
+    * which a user focuses on it ([[FocusOnGroupInteraction]]), or another group naming it
+    * ([[ContainedGroup]]). A group nested INSIDE another group is reached through its parent, so
+    * only TOP-LEVEL groups are candidates.
+    *
+    * **Scoped to `popup` and `dialog` deliberately.** Those two names promise something that
+    * appears in response to an action, so one nothing triggers is a real omission. A `page` or
+    * `window` is a destination and may legitimately be entered by means the model does not
+    * describe -- warning on those would demand epics that a model is not obliged to have.
+    *
+    * A CompletenessWarning, not an Error: the opener may simply be unwritten, which is
+    * under-specification rather than contradiction. A `???` body is exempt as always.
+    */
+  private def checkUnreachableGroups(root: PassRoot): Unit =
+    val finder = Finder(root.contents)
+    val focused: scala.collection.immutable.Set[String] = finder
+      .recursiveFindByType[FocusOnGroupInteraction]
+      .flatMap(f => resolution.refMap.definitionOf[Group](f.to.pathId).map(g => idOf(g)))
+      .toSet
+    val contained: scala.collection.immutable.Set[String] = finder
+      .recursiveFindByType[ContainedGroup]
+      .flatMap(cg => resolution.refMap.definitionOf[Group](cg.group.pathId).map(g => idOf(g)))
+      .toSet
+    val reachable = focused ++ contained
+    finder.recursiveFindByType[Group].foreach { grp =>
+      val alias = grp.alias
+      if (alias == "popup" || alias == "dialog") && grp.nonEmpty then
+        // Only a TOP-LEVEL group is a candidate: one nested inside another is reached through its
+        // parent, and reporting it would be asking for an opener it does not need.
+        val nestedInGroup = symbols.parentOf(grp).exists(_.isInstanceOf[Group])
+        if !nestedInGroup && !reachable.contains(idOf(grp)) then
+          messages.addCompleteness(
+            grp.errorLoc,
+            s"${grp.identify} can never appear: no interaction focuses on it and no group " +
+              "contains it",
+            suggestion = s"Add an epic interaction in which a user focuses on ${grp.id.value}, " +
+              s"or have a group contain it.",
+            ruleId = Some(RuleId.GroupUnreachable)
+          )
+    }
+  end checkUnreachableGroups
+
+  /** Identity for the reachability sets. Reference equality would be wrong here: the refMap hands
+    * back the same definition a traversal finds, but comparing by resolved PATH is what makes two
+    * routes to one group agree.
+    */
+  private def idOf(g: Group): String = symbols.pathOf(g).reverse.mkString(".")
 
   /** A70: warn when a correlation folds an event that NOTHING in the model emits. Such a fold can
     * never run, so the correlation can never complete — the same class of defect as a required
@@ -5674,7 +5725,41 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, grp)
     checkMetadata(grp)
+    checkMenuHasChoice(grp)
   }
+
+  /** A `menu` a user cannot choose from is not a menu.
+    *
+    * Ruled 2026-08-26. A menu's whole purpose is to offer choices, so one containing nothing a user
+    * can act on is under-specified -- a CompletenessWarning rather than an Error, because the model
+    * is incomplete rather than self-contradictory.
+    *
+    * A choice is an `Input` (something the user provides) or a nested `Group` (a submenu, which is
+    * how a menu of menus is written). An `Output` alone is not: a menu that only displays is a
+    * panel wearing a menu's name.
+    *
+    * **A `???` menu is exempt**, under the standing rule that a body declaring itself incomplete
+    * earns at most a Missing warning -- and an EMPTY menu is exempt for the same reason:
+    * `checkContents` already says a container should have content, and saying it twice about one
+    * omission is double-reporting.
+    */
+  private def checkMenuHasChoice(grp: Group): Unit =
+    if grp.alias == "menu" && grp.nonEmpty then
+      // `Group` mixes in WithInputs/WithOutputs but NOT WithGroups, so a nested group is read
+      // from contents directly rather than through an accessor that does not exist here.
+      val hasChoice = grp.inputs.nonEmpty ||
+        grp.contents.filterThroughWrappers[Group].nonEmpty ||
+        grp.contents.filterThroughWrappers[ContainedGroup].nonEmpty
+      if !hasChoice then
+        messages.addCompleteness(
+          grp.errorLoc,
+          s"${grp.identify} offers nothing to choose: it contains no input and no submenu",
+          suggestion = s"Add an input the user can act on, or a contained group, or declare " +
+            s"${grp.id.value} with a container alias that does not promise choices, such as " +
+            "'pane' or 'section'.",
+          ruleId = Some(RuleId.MenuHasNoChoice)
+        )
+  end checkMenuHasChoice
 
   private def validateInput(
     input: Input,
@@ -5734,6 +5819,23 @@ case class ValidationPass(
       case const: ConstantRef => checkRef[Constant](const, parents)
       case str: LiteralString => checkNonEmpty(str.s, "string to put out", output, Messages.Error, ruleId = Some(RuleId.EmptyContent))
     }
+    // A presentation verb that contradicts its output's kind. A StyleWarning by ruling (Reid,
+    // 2026-08-26): `haptic Buzz shows …` reads wrongly, but saying so is not self-contradiction,
+    // and RIDDL does not invalidate a model over how it reads.
+    //
+    // Silent whenever the verb implies no modality, which is most of them -- see
+    // `UIVerbs.verbModalities` for why the map is deliberately partial.
+    if UIVerbs.verbContradicts(output.verbAlias, output.nounAlias) then
+      messages.addStyle(
+        output.loc,
+        // Phrased to avoid an a/an choice: the modality words vary ("visual", "auditory or
+        // animated", "spoken", "tactile") and a fixed article gets one of them wrong.
+        s"'${output.verbAlias}' implies ${UIVerbs.modalityOf(output.verbAlias)} output, but " +
+          s"'${output.nounAlias}' is a different kind",
+        suggestion = s"Use a verb that suits a '${output.nounAlias}', or declare this as an " +
+          s"output kind a '${output.verbAlias}' suits.",
+        ruleId = Some(RuleId.VerbModalityMismatch)
+      )
     checkMetadata(output)
   }
 

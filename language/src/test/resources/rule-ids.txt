@@ -14,10 +14,13 @@ adaptor-not-in-context
 adaptor-outbound-wrong-message
 adaptor-targets-own-context
 anonymous-nebula
+app-group-unreachable
 app-groups-need-application-context
 app-input-sends-wrong-kind
+app-menu-has-no-choice
 app-output-shows-wrong-kind
 app-selection-verb-type
+app-verb-modality-mismatch
 bare-string-condition
 bast-invalid-shape-presence
 bast-unexpected-alternation-member

@@ -45,4 +45,55 @@ object UIVerbs {
     * `emits`).
     */
   def isPresentationVerb(verb: String): Boolean = presentationVerbs.contains(verb)
+
+  /** The MODALITY a verb implies, for the verbs that imply one at all.
+    *
+    * Ruled by Reid, 2026-08-26: a verb that CONTRADICTS its output's kind draws a StyleWarning --
+    * never an Error. `haptic Buzz shows …` reads wrongly, but a model that says it is not
+    * self-contradictory, and RIDDL does not invalidate a model over how it reads.
+    *
+    * **The map is deliberately PARTIAL, and that is the whole design.** The verb vocabulary does
+    * not partition by modality:
+    *
+    *   - `presents` and `emits` are broad by meaning -- a system may present or emit through any
+    *     channel -- so mapping them would invent a rule the language never stated.
+    *   - `diffuses`, `serve`, `offer` and `taste` imply scent and taste, and there is NO scent or
+    *     taste output kind. They have no modality to belong to, so they cannot contradict one.
+    *
+    * A verb absent from this map is SILENT, always. Adding one is a language decision, not a
+    * tidy-up: it declares that RIDDL now has an opinion about a word it previously did not.
+    */
+  val verbModalities: Map[String, Set[String]] = Map(
+    // Visual. A thing that is shown, displayed or written is looked at.
+    "shows" -> visual,
+    "displays" -> visual,
+    "writes" -> visual,
+    // `plays` covers BOTH a sound and an animation -- both "play" -- so it is not purely auditory.
+    "plays" -> Set("sound", "animation"),
+    "speaks" -> Set("speech"),
+    "announces" -> Set("speech"),
+    "vibrates" -> Set("haptic"),
+    "pulses" -> Set("haptic"),
+    "nudges" -> Set("haptic")
+  )
+
+  /** Output kinds a reader looks at. `output` is the generic spelling and is treated as visual,
+    * since that is what an unqualified output means in practice.
+    */
+  private lazy val visual: Set[String] =
+    Set("output", "document", "list", "table", "graph", "animation", "picture")
+
+  /** Does `verb` contradict `nounAlias`? None when the verb implies no modality, or when the noun
+    * is one the verb admits -- both of which are silence rather than approval.
+    */
+  def verbContradicts(verb: String, nounAlias: String): Boolean =
+    verbModalities.get(verb).exists(admitted => nounAlias.nonEmpty && !admitted.contains(nounAlias))
+
+  /** How a verb's modality reads in a message, for the one place that reports a contradiction. */
+  def modalityOf(verb: String): String = verb match
+    case "shows" | "displays" | "writes"      => "visual"
+    case "plays"                              => "auditory or animated"
+    case "speaks" | "announces"               => "spoken"
+    case "vibrates" | "pulses" | "nudges"     => "tactile"
+    case _                                    => "unclassified"
 }
