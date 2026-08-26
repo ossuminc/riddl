@@ -35,11 +35,18 @@ carries its `file:line` evidence so it need not be re-derived.
 
 ### Build state — verified 2026-08-25 by running the commands
 
-**`../bin/riddlc` is `2.0.0-rc.24-5-cb05e374`** and predates **all 13** of the
-completed tasks. riddl-models is running it and is not blocked. **Do not test a
-just-landed check against it** — it reports the old behaviour, which reads as a
-regression. Restaging means `publishLocal` **and** staging together; never one alone,
-or library and CLI consumers disagree.
+**`../bin/riddlc` is `2.0.0-rc.24-33-f4076e2c`, staged 2026-08-25, and the local ivy
+artifacts are from THE SAME BUILD** (`scripts/publish-and-stage.sh` runs `publishLocal` and
+`nativeLink` in one sbt invocation, so both halves move together or neither does). It carries
+every one of the 17 completed tasks: rule ids, `validate --json/--fix/--no-msg-ids`, corpus
+mode, and multi-line `do`/`prompt`.
+
+**No RC was cut for it, deliberately (Reid's call).** The corpora have not migrated to the
+rules shipped since rc.24, so cutting now would publish a knowingly-red RC and measure the
+certification floors on a red run. The order is: stage -> migrate the corpora -> cut a GREEN
+rc.25. Task files with exact, rule-id-derived censuses are dropped in
+`../riddl-models/task/` (51 errors, 38 of 190 models) and `../riddl-examples/task/`
+(30 sites, 4 models).
 
 **Latest tag is `2.0.0-rc.24`; the branch is well ahead of it.** Run
 `git log 2.0.0-rc.24..HEAD` before attributing anything to the RC.
