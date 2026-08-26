@@ -57,7 +57,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           StyleWarning,
           id.loc,
           suggestion =
-            s"Start the enumerator name with an upper-case letter, e.g. '${id.value.capitalize}'."
+            s"Start the enumerator name with an upper-case letter, e.g. '${id.value.capitalize}'.",
+          ruleId = Some(RuleId.EnumeratorCapitalization)
         )
     }
     this
@@ -81,7 +82,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
       Warning,
       rt.loc,
       suggestion =
-        "Keep the minimum within the range of a 64-bit Long, or model the value with a different numeric type."
+        "Keep the minimum within the range of a 64-bit Long, or model the value with a different numeric type.",
+      ruleId = Some(RuleId.RangeMinTooSmall)
     )
       .check(
         rt.max <= BigInt.long2bigInt(Long.MaxValue),
@@ -89,7 +91,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
         Warning,
         rt.loc,
         suggestion =
-          "Keep the maximum within the range of a 64-bit Long, or model the value with a different numeric type."
+          "Keep the maximum within the range of a 64-bit Long, or model the value with a different numeric type.",
+        ruleId = Some(RuleId.RangeMaxTooLarge)
       )
   }
 
@@ -145,7 +148,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           StyleWarning,
           field.loc,
           suggestion =
-            s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'."
+            s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'.",
+          ruleId = Some(RuleId.FieldShouldBeLowercase)
         )
         .checkMetadata(field)
     }
@@ -166,7 +170,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           StyleWarning,
           field.loc,
           suggestion =
-            s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'."
+            s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'.",
+          ruleId = Some(RuleId.MessageFieldShouldBeLowercase)
         )
         .checkTypeExpression(field.typeEx, typeDef, parents)
         .checkMetadata(field)
@@ -352,21 +357,24 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           "Minimum cardinality must be non-negative",
           Error,
           typ.loc,
-          suggestion = "Use a minimum cardinality of 0 or greater."
+          suggestion = "Use a minimum cardinality of 0 or greater.",
+          ruleId = Some(RuleId.NegativeMinCardinality)
         )
         check(
           max >= 0,
           "Maximum cardinality must be non-negative",
           Error,
           typ.loc,
-          suggestion = "Use a maximum cardinality of 0 or greater."
+          suggestion = "Use a maximum cardinality of 0 or greater.",
+          ruleId = Some(RuleId.NegativeMaxCardinality)
         )
         check(
           min < max,
           "Minimum cardinality must be less than maximum cardinality",
           Error,
           typ.loc,
-          suggestion = "Make the minimum cardinality strictly less than the maximum (e.g. {1..5})."
+          suggestion = "Make the minimum cardinality strictly less than the maximum (e.g. {1..5}).",
+          ruleId = Some(RuleId.MinExceedsMax)
         )
       case UniqueId(loc, pid, kindKeyword) =>
         checkPathRef[Processor[?]](pid, parents)
@@ -381,7 +389,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
               s"Id names ${referent.identify}, which is a $actual, but it is declared as '$kw'",
               Error,
               loc,
-              suggestion = s"Write 'Id($actual ${pid.format})' or drop the keyword."
+              suggestion = s"Write 'Id($actual ${pid.format})' or drop the keyword.",
+              ruleId = Some(RuleId.IdNamesNonProcessor)
             )
           }
         }
@@ -392,7 +401,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           Error,
           loc,
           suggestion =
-            "Specify a whole-number part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'."
+            "Specify a whole-number part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'.",
+          ruleId = Some(RuleId.WholePartPositive)
         )
         check(
           fractional >= 1,
@@ -400,7 +410,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           Error,
           loc,
           suggestion =
-            "Specify a fractional part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'."
+            "Specify a fractional part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'.",
+          ruleId = Some(RuleId.FractionPartPositive)
         )
       case EntityReferenceTypeExpression(_, pid) =>
         checkPathRef[Entity](pid, parents)

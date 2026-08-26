@@ -118,6 +118,34 @@ object FindEditor {
         else Right(after)
   }
 
+  /** A per-file line diff of what a dry run WOULD have done.
+    *
+    * Deliberately plain: a real unified diff needs a diff algorithm, and what matters here is
+    * seeing the change, not patching with it. Shared by `find -dry-run` and `validate
+    * --fix-dry-run` so the two show the same thing.
+    *
+    * Printed with `System.out.println`: a bare `println` is `Console.println`, whose stream is a
+    * thread-local fixed at class load, so it escapes a test's stdout capture when the caller runs
+    * inside a Future. Same reason ValidateCommand.emitJson uses it.
+    */
+  def showDiff(originals: Map[Path, String], rewritten: Map[Path, String]): Unit = {
+    originals.toSeq.sortBy(_._1.toString).foreach { case (file, was) =>
+      val now = rewritten(file)
+      System.out.println(s"--- $file")
+      val wasLines = was.linesIterator.toSeq
+      val nowLines = now.linesIterator.toSeq
+      val common = wasLines.zip(nowLines).takeWhile { case (a, b) => a == b }.size
+      val tail = wasLines.reverse
+        .zip(nowLines.reverse)
+        .takeWhile { case (a, b) => a == b }
+        .size
+        .min(wasLines.size - common)
+        .min(nowLines.size - common)
+      wasLines.slice(common, wasLines.size - tail).foreach(l => System.out.println(s"-$l"))
+      nowLines.slice(common, nowLines.size - tail).foreach(l => System.out.println(s"+$l"))
+    }
+  }
+
   /** Applies edits to text, back to front. */
   def apply(original: String, edits: Seq[Edit]): String = {
     val sb = new StringBuilder(original)

@@ -254,7 +254,7 @@ class FindCommand(using pc: PlatformContext)
               // `-dry-run`, NOT the global `--dry-run`: `Commands.handleCommandRun` short-circuits
               // on the global flag and never invokes the command at all, so a command cannot
               // implement a meaningful dry run on top of it.
-              showDiff(originals, rewritten)
+              FindEditor.showDiff(originals, rewritten)
               report(matched.size, parsed.expectMin).map(_ => before)
             else applyAndVerify(inputFile, before, originals, rewritten, matched.size, parsed)
       }
@@ -322,27 +322,6 @@ class FindCommand(using pc: PlatformContext)
       case Right(after) =>
         pc.log.info(s"${rewritten.size} file(s) rewritten")
         report(count, parsed.expectMin).map(_ => after)
-  }
-
-  /** A per-file line diff of what `-dry-run` would have done. Deliberately plain: a real unified
-    * diff would need a diff algorithm, and what matters here is seeing the change, not patching it.
-    */
-  private def showDiff(originals: Map[Path, String], rewritten: Map[Path, String]): Unit = {
-    originals.toSeq.sortBy(_._1.toString).foreach { case (file, was) =>
-      val now = rewritten(file)
-      println(s"--- $file")
-      val wasLines = was.linesIterator.toSeq
-      val nowLines = now.linesIterator.toSeq
-      val common = wasLines.zip(nowLines).takeWhile { case (a, b) => a == b }.size
-      val tail = wasLines.reverse
-        .zip(nowLines.reverse)
-        .takeWhile { case (a, b) => a == b }
-        .size
-        .min(wasLines.size - common)
-        .min(nowLines.size - common)
-      wasLines.slice(common, wasLines.size - tail).foreach(l => println(s"-$l"))
-      nowLines.slice(common, nowLines.size - tail).foreach(l => println(s"+$l"))
-    }
   }
 
   private def render(matched: Seq[ProjectedNode], parsed: FindExpression.Parsed): Unit = {

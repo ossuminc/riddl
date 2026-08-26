@@ -121,7 +121,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
       container.errorLoc,
       suggestion =
         s"Add at least one definition inside ${container.identify} (or '???' as a placeholder), " +
-          "or remove it if it is not needed."
+          "or remove it if it is not needed.",
+      ruleId = Some(RuleId.ContainerShouldHaveContent)
     )
     checkIncludeHygiene(container)
   end checkContents
@@ -173,7 +174,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
       MissingWarning,
       loc,
       suggestion =
-        s"Add metadata to $identity, such as 'briefly \"...\"', 'described as { ... }', or 'by author ...'."
+        s"Add metadata to $identity, such as 'briefly \"...\"', 'described as { ... }', or 'by author ...'.",
+      ruleId = Some(RuleId.MetadataEmpty)
     )
     val hasDescription = checkMetadataContents(identity, definition, loc)
     check(
@@ -182,7 +184,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
       MissingWarning,
       loc,
       suggestion =
-        s"Add documentation to $identity, e.g. 'briefly \"A short summary\"' or 'described as { | ... | }'."
+        s"Add documentation to $identity, e.g. 'briefly \"A short summary\"' or 'described as { | ... | }'.",
+      ruleId = Some(RuleId.NoDescription)
     )
   end checkMetadata
 
@@ -208,7 +211,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             Warning,
             bd.loc,
             suggestion =
-              "Shorten the 'briefly' text to 80 characters or fewer; move any detail into a 'described as { ... }' block."
+              "Shorten the 'briefly' text to 80 characters or fewer; move any detail into a 'described as { ... }' block.",
+            ruleId = Some(RuleId.BriefTooShort)
           )
         case bd: BlockDescription =>
           check(
@@ -217,7 +221,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             MissingWarning,
             bd.loc,
             suggestion =
-              s"Add description text to the 'described as' block for $identity, or remove the empty block."
+              s"Add description text to the 'described as' block for $identity, or remove the empty block.",
+            ruleId = Some(RuleId.DescriptionDeclaredEmpty)
           )
           check(
             bd.lines.nonEmpty,
@@ -225,7 +230,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             MissingWarning,
             bd.loc,
             suggestion =
-              s"Add description text to the 'described as' block for $identity, or remove the empty block."
+              s"Add description text to the 'described as' block for $identity, or remove the empty block.",
+            ruleId = Some(RuleId.DescriptionEmpty)
           )
 
           hasDescription = true
@@ -236,7 +242,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             Error,
             ud.loc,
             suggestion =
-              "Use a valid absolute URL for the description link, e.g. 'https://example.com/docs'."
+              "Use a valid absolute URL for the description link, e.g. 'https://example.com/docs'.",
+            ruleId = Some(RuleId.DescriptionInvalid)
           )
           hasDescription = true
         case t: Term =>
@@ -246,7 +253,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             Warning,
             t.loc,
             suggestion =
-              s"Expand the definition of ${t.identify} to at least 10 characters so the glossary term is meaningful."
+              s"Expand the definition of ${t.identify} to at least 10 characters so the glossary term is meaningful.",
+            ruleId = Some(RuleId.TermDefinitionTooShort)
           )
           // A49: accumulate for the cross-scope consistency check in postProcess.
           collectedTerms.addOne(t)
@@ -256,7 +264,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             s"Option ${o.name}'s name is too short. It must be at least 3 characters'",
             StyleWarning,
             o.loc,
-            suggestion = "Use an option name of at least 3 characters."
+            suggestion = "Use an option name of at least 3 characters.",
+            ruleId = Some(RuleId.OptionNameTooShort)
           )
           validateRecognizedOption(o, identity, loc)
         case fr: FigmaRef        => validateFigmaRef(fr, identity, definition)
@@ -532,7 +541,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         s"$subject has a non-positive duration '$text'; it must be positive",
         Messages.Error,
         arg.loc,
-        suggestion = zeroHint
+        suggestion = zeroHint,
+        ruleId = Some(RuleId.NonPositiveDuration)
       )
     end if
   end checkPreciseDuration
@@ -578,7 +588,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             s"Option '${option.name}' in $identity expects $expected argument(s) but has $argCount",
             Warning,
             option.loc,
-            suggestion = s"Provide $expected argument(s) to option '${option.name}'."
+            suggestion = s"Provide $expected argument(s) to option '${option.name}'.",
+            ruleId = Some(RuleId.OptionWrongArity)
           )
         end if
         if spec.validParents.nonEmpty then
@@ -599,7 +610,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             spec.severity,
             option.loc,
             suggestion =
-              s"Move option '${option.name}' to one of: ${spec.validParents.mkString(", ")}, or remove it here."
+              s"Move option '${option.name}' to one of: ${spec.validParents.mkString(", ")}, or remove it here.",
+            ruleId = Some(RuleId.OptionMisplaced)
           )
         end if
       case None =>
@@ -609,7 +621,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           StyleWarning,
           option.loc,
           suggestion =
-            s"Check the spelling of '${option.name}' against the recognized RIDDL options, or remove it if unintended."
+            s"Check the spelling of '${option.name}' against the recognized RIDDL options, or remove it if unintended.",
+          ruleId = Some(RuleId.OptionUnrecognized)
         )
     end match
   end validateRecognizedOption

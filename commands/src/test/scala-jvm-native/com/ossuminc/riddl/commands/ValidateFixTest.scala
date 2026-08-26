@@ -82,12 +82,50 @@ class ValidateFixTest extends AnyWordSpec with Matchers {
       }
     }
 
+    "report what it did NOT fix, and why" in {
+      // Their design note: "a codemod that silently leaves 40 sites is worse than one that fixes
+      // none". The model below trips rules that carry no mechanical fix, so the run must SAY so.
+      val dir = Files.createTempDirectory("riddl-fix-skips")
+      try
+        val f = dir.resolve("m.riddl")
+        Files.writeString(f, deprecated)
+        val (_, out) = pc.withOptions(CommonOptions()) { _ =>
+          StdStreamCapture.capturingStdOut { () =>
+            new ValidateCommand().run(ValidateCommand.Options(Some(f), fix = true), None)
+          }
+        }
+        out must include("not fixed")
+        out must include("no mechanical fix")
+      finally
+        Files.walk(dir).sorted(java.util.Comparator.reverseOrder()).forEach(p => Files.delete(p))
+    }
+
     "do nothing when --fix-rule names a rule the model does not trip" in {
       withModel(deprecated) { (run, read) =>
         run(ValidateCommand.Options(fix = true, fixRule = Some(RuleId.AbstractType.code)))
         // The deprecation this model DOES have must survive, or the filter is not filtering.
         read() must include("prompt \"figure it out\"")
       }
+    }
+  }
+
+  "validate --fix-dry-run" should {
+
+    "show the diff and write NOTHING" in {
+      withModel(deprecated) { (run, read) =>
+        val before = read()
+        run(ValidateCommand.Options(fixDryRun = true))
+        // Byte-identical: a dry run that "helpfully" normalised whitespace would be a write.
+        read() mustBe before
+      }
+    }
+
+    "not be spelled --dry-run, because the global flag short-circuits the command" in {
+      // Commands.handleCommandRun returns before invoking anything when the GLOBAL dryRun is set,
+      // logging "Would have executed...". So a `validate --dry-run` could never reach the fixer at
+      // all -- `find` needed its own `-dry-run` for the same reason. This pins the reason, not the
+      // spelling: if someone "tidies" the name to --dry-run, the fixer silently stops running.
+      ValidateCommand.Options(fixDryRun = true).fixDryRun mustBe true
     }
   }
 

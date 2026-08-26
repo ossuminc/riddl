@@ -41,7 +41,8 @@ object ValidateCommand {
     failOn: Option[String] = None,
     json: Boolean = false,
     fix: Boolean = false,
-    fixRule: Option[String] = None
+    fixRule: Option[String] = None,
+    fixDryRun: Boolean = false
   ) extends CommandOptions {
     def command: String = cmdName
   }
@@ -100,7 +101,14 @@ class ValidateCommand(using pc: PlatformContext)
               )
           )
           .action((r, o) => o.copy(fix = true, fixRule = Some(r)))
-          .text("Apply only this rule's fix (implies --fix)")
+          .text("Apply only this rule's fix (implies --fix)"),
+        // NOT `--dry-run`. That name is a GLOBAL option, and `Commands.handleCommandRun`
+        // short-circuits on it -- logging "Would have executed..." WITHOUT invoking the command --
+        // so a `validate --dry-run` could never reach this code at all. `find` needed its own
+        // `-dry-run` for exactly the same reason.
+        opt[Unit]("fix-dry-run")
+          .action((_, o) => o.copy(fix = true, fixDryRun = true))
+          .text("Show the diff --fix would apply, and write nothing (implies --fix)")
       )
       .text("Validate a model and report a one-line summary of what was checked")
       -> Options()
@@ -114,7 +122,8 @@ class ValidateCommand(using pc: PlatformContext)
     val json = obj.hasPath("json") && obj.getBoolean("json")
     val fix = obj.hasPath("fix") && obj.getBoolean("fix")
     val fixRule = if obj.hasPath("fix-rule") then Option(obj.getString("fix-rule")) else None
-    Options(inputFile, failOn, json, fix || fixRule.isDefined, fixRule)
+    val fixDryRun = obj.hasPath("fix-dry-run") && obj.getBoolean("fix-dry-run")
+    Options(inputFile, failOn, json, fix || fixRule.isDefined || fixDryRun, fixRule, fixDryRun)
   }
 
   override def run(
@@ -169,51 +178,98 @@ class ValidateCommand(using pc: PlatformContext)
     options: Options,
     before: PassesResult
   ): Either[Messages, PassesResult] = {
-    val wanted: Messages.Message => Boolean = m =>
-      m.ruleId.exists(r =>
-        r.mechanicalFix.isDefined && options.fixRule.forall(_ == r.code)
-      )
-    val fixable = before.messages.filter(wanted)
+    // Every diagnostic is classified, so the report can say what it did NOT fix and why. Their
+    // design note is the reason this is not optional: "a codemod that silently leaves 40 sites is
+    // worse than one that fixes none".
+    val fixable = scala.collection.mutable.ListBuffer.empty[(Messages.Message, RuleId, String)]
+    // Grouped by REASON, listing the rules -- not one line per rule. The reason text is identical
+    // for every rule lacking a fix, so a line each turned a 20-finding model into 11 lines of the
+    // same sentence and buried the one that mattered.
+    val skipped = scala.collection.mutable.LinkedHashMap.empty[String, scala.collection.mutable.LinkedHashSet[String]]
+    val skipCount = scala.collection.mutable.LinkedHashMap.empty[String, Int]
+    def skip(reason: String, rule: String): Unit =
+      skipped.getOrElseUpdate(reason, scala.collection.mutable.LinkedHashSet.empty) += rule
+      skipCount(reason) = skipCount.getOrElse(reason, 0) + 1
+
+    before.messages.foreach { m =>
+      m.ruleId match
+        case None => skip("no rule id, so no rule can carry a fix", "(unidentified)")
+        case Some(rule) =>
+          if options.fixRule.exists(_ != rule.code) then
+            skip(s"filtered out by --fix-rule ${options.fixRule.get}", rule.code)
+          else
+            rule.mechanicalFix match
+              case None =>
+                skip(
+                  "no mechanical fix: needs a judgement call, or a rewrite outside the " +
+                    "reported span",
+                  rule.code
+                )
+              case Some(replacement) =>
+                FindEditor.fileOfSource(m.loc.source) match
+                  case None    => skip("not in a file this run can edit", rule.code)
+                  case Some(_) => fixable.append((m, rule, replacement))
+    }
+
+    def reportSkips(label: String): Unit =
+      if skipCount.nonEmpty then
+        pc.stdoutln(s"$label: ${skipCount.values.sum} not fixed:")
+        skipCount.toSeq.sortBy(-_._2).foreach { case (reason, n) =>
+          val rules = skipped(reason).toSeq.sorted
+          val named =
+            if rules == Seq("(unidentified)") then ""
+            else s" [${rules.mkString(", ")}]"
+          pc.stdoutln(s"  $n x $reason$named")
+        }
+
     if fixable.isEmpty then
       // Says so out loud rather than exiting silently: "nothing to fix" and "the command did not
       // run" must not share an observable, which is this command's whole premise.
       val scope = options.fixRule.map(r => s" for rule '$r'").getOrElse("")
       pc.stdoutln(s"validate --fix: nothing to fix$scope")
+      reportSkips("validate --fix")
       Right(before)
     else
       // `fileOfSource`, NOT `Path.of(loc.source.origin)`: origin is the SHORT name error messages
       // render, so treating it as a path works only when the cwd happens to be the model's own
       // directory. `find -replace` shipped with exactly that bug.
-      val edits = fixable.flatMap { m =>
-        for
-          rule <- m.ruleId
-          replacement <- rule.mechanicalFix
-          file <- FindEditor.fileOfSource(m.loc.source)
-        yield FindEditor.Edit(file, m.loc.offset, m.loc.endOffset, replacement, rule.code)
+      val edits = fixable.toSeq.flatMap { case (m, rule, replacement) =>
+        FindEditor
+          .fileOfSource(m.loc.source)
+          .map(file => FindEditor.Edit(file, m.loc.offset, m.loc.endOffset, replacement, rule.code))
       }
       FindEditor.plan(edits) match
         case Left(problems) =>
           Left(Messages.errors(("validate --fix: nothing written" +: problems).mkString("\n")))
         case Right(byFile) =>
           val originals = byFile.keys.map(f => f -> Files.readString(f)).toMap
-          val rewritten = byFile.map { case (f, es) =>
-            f -> FindEditor.apply(originals(f), es)
-          }.toMap
-          FindEditor.applyVerified(
-            originals,
-            rewritten,
-            before.messages.count(_.isError),
-            () => loadAndValidate(inputFile),
-            "validate --fix"
-          ) match
-            case Left(messages) => Left(messages)
-            case Right(after) =>
-              val byRule = edits.groupBy(_.what).view.mapValues(_.size).toSeq.sorted
-              pc.stdoutln(
-                s"validate --fix: applied ${edits.size} fix(es) in ${rewritten.size} file(s): " +
-                  byRule.map { case (rule, n) => s"$rule x$n" }.mkString(", ")
-              )
-              Right(after)
+          val rewritten = byFile.map { case (f, es) => f -> FindEditor.apply(originals(f), es) }.toMap
+          val byRule = edits.groupBy(_.what).view.mapValues(_.size).toSeq.sorted
+          val summary = byRule.map { case (rule, n) => s"$rule x$n" }.mkString(", ")
+          if options.fixDryRun then
+            FindEditor.showDiff(originals, rewritten)
+            pc.stdoutln(
+              s"validate --fix-dry-run: would apply ${edits.size} fix(es) in " +
+                s"${rewritten.size} file(s): $summary (nothing written)"
+            )
+            reportSkips("validate --fix-dry-run")
+            Right(before)
+          else
+            FindEditor.applyVerified(
+              originals,
+              rewritten,
+              before.messages.count(_.isError),
+              () => loadAndValidate(inputFile),
+              "validate --fix"
+            ) match
+              case Left(messages) => Left(messages)
+              case Right(after) =>
+                pc.stdoutln(
+                  s"validate --fix: applied ${edits.size} fix(es) in ${rewritten.size} " +
+                    s"file(s): $summary"
+                )
+                reportSkips("validate --fix")
+                Right(after)
   }
 
   /** Re-parse and re-validate from disk, for the post-rewrite check. */
@@ -249,7 +305,15 @@ class ValidateCommand(using pc: PlatformContext)
       val loc = m.loc
       val fields = scala.collection.mutable.LinkedHashMap[String, ujson.Value](
         "rule" -> m.ruleCode.map(ujson.Str(_)).getOrElse(ujson.Null),
-        "severity" -> ujson.Str(m.kind.toString),
+        // SEVERITY and CLASS are separate fields, deliberately. `kind` conflates them -- a
+        // consumer handed `"MissingWarning"` has to know riddl's taxonomy to learn that it is a
+        // WARNING, which is the one thing a triage script needs first. Severity answers "how bad",
+        // class answers "what kind", and the -w/-s/-m/-u flags switch on the class.
+        "severity" -> ujson.Str(severityOf(m)),
+        "class" -> ujson.Str(classOf_(m)),
+        // The raw kind is kept so nothing that already reads it breaks, and so the two derived
+        // fields can always be traced back to what produced them.
+        "kind" -> ujson.Str(m.kind.toString),
         "message" -> ujson.Str(m.message),
         "file" -> ujson.Str(loc.source.origin),
         "line" -> ujson.Num(loc.line),
@@ -267,6 +331,29 @@ class ValidateCommand(using pc: PlatformContext)
     // object in production, invisibly different under capture.
     System.out.println(ujson.write(ujson.Arr.from(records), indent = 2))
   }
+
+  /** Where the message sits on the severity ladder: how bad it is. */
+  private def severityOf(m: Messages.Message): String =
+    if m.isSevere then "severe"
+    else if m.isError then "error"
+    else if m.isWarning then "warning"
+    else "info"
+
+  /** What KIND of finding it is -- the axis the `-w`/`-s`/`-m`/`-u` flags switch on.
+    *
+    * Every warning class also answers `isWarning`, which is why severity alone cannot carry this:
+    * a style finding IS a warning, and a consumer filtering on severity would lose the distinction
+    * entirely. `general` is the plain Warning with no sub-class.
+    */
+  private def classOf_(m: Messages.Message): String =
+    if m.isStyle then "style"
+    else if m.isMissing then "missing"
+    else if m.isUsage then "usage"
+    else if m.isCompleteness then "completeness"
+    else if m.isDeprecation then "deprecation"
+    else if m.isTip then "tip"
+    else if m.isWarning then "general"
+    else severityOf(m)
 
   /** Does any message reach the `--fail-on` threshold? */
   private def failsThreshold(failOn: Option[String], messages: Messages): Boolean =

@@ -440,6 +440,77 @@ enum RuleId(
   case BastUnknownReferenceTag extends RuleId("bast-unknown-reference-tag")
   case BastUnknownMessageRefTag extends RuleId("bast-unknown-message-ref-tag")
   case BastUnexpectedAlternationMember extends RuleId("bast-unexpected-alternation-member")
+
+  // ---- emitted through `check(...)` ------------------------------------------------------------
+  // This family was MISSED when ids were first threaded: `check` builds a Message directly instead
+  // of going through `Accumulator.add*`, so 68 diagnostics carried a null rule. The lesson is about
+  // the CENSUS, not the code -- enumerating one chokepoint proved nothing about the other, and only
+  // running `validate --json` and seeing a null exposed it.
+  case StmtIdentifierTooShort extends RuleId("stmt-identifier-too-short")
+  case CodeBodyEmpty extends RuleId("stmt-code-body-empty")
+  case ForeachElementEmpty extends RuleId("stmt-foreach-element-empty")
+  case TypeShouldBeCapitalized extends RuleId("type-should-be-capitalized")
+  case TypeRedefinesBuiltin extends RuleId("type-redefines-builtin")
+  case TypeRedundantCaseVariant extends RuleId("type-redundant-case-variant")
+  case StateNameCollidesWithRecord extends RuleId("state-name-collides-with-record")
+  case FunctionNoStatements extends RuleId("func-no-statements")
+  case IncludeNoContent extends RuleId("module-include-no-content")
+  case IncludeNoSource extends RuleId("module-include-no-source")
+  case ImportNoPath extends RuleId("module-import-no-path")
+  case ImportExtension extends RuleId("module-import-extension")
+  case CorrelationSetsNoFields extends RuleId("proj-correlation-sets-no-fields")
+  case CorrelationNameCollision extends RuleId("proj-correlation-name-collision")
+  case CorrelationMustYieldCommand extends RuleId("proj-correlation-must-yield-command")
+  case ProjectorNoRecordType extends RuleId("proj-no-record-type")
+  case ProjectorNotOneHandler extends RuleId("proj-not-exactly-one-handler")
+  case SourceHasInlets extends RuleId("stream-source-has-inlets")
+  case SourceNoOutlets extends RuleId("stream-source-no-outlets")
+  case SinkNoInlets extends RuleId("stream-sink-no-inlets")
+  case SinkHasOutlets extends RuleId("stream-sink-has-outlets")
+  case FlowNoInlets extends RuleId("stream-flow-no-inlets")
+  case FlowNoOutlets extends RuleId("stream-flow-no-outlets")
+  case MergeTooFewInlets extends RuleId("stream-merge-too-few-inlets")
+  case MergeNoOutlets extends RuleId("stream-merge-no-outlets")
+  case SplitNoInlets extends RuleId("stream-split-no-inlets")
+  case SplitTooFewOutlets extends RuleId("stream-split-too-few-outlets")
+  case RouterTooFewInlets extends RuleId("stream-router-too-few-inlets")
+  case RouterTooFewOutlets extends RuleId("stream-router-too-few-outlets")
+  case ErrorSinkType extends RuleId("stream-error-sink-type")
+  case DomainSinglyNested extends RuleId("domain-singly-nested")
+  case DomainNoAuthor extends RuleId("doc-domain-no-author")
+  case SagaTooFewSteps extends RuleId("saga-too-few-steps")
+  case SagaStepNamesNotDistinct extends RuleId("saga-step-names-not-distinct")
+  case SagaStepNeedsRevert extends RuleId("saga-step-needs-revert")
+  case ByNamesWrongField extends RuleId("msg-by-names-wrong-field")
+  case IdentifierEmpty extends RuleId("name-identifier-empty")
+  case ContainerShouldHaveContent extends RuleId("def-container-should-have-content")
+  case MetadataEmpty extends RuleId("doc-metadata-empty")
+  case NoDescription extends RuleId("doc-no-description")
+  case BriefTooShort extends RuleId("doc-brief-too-short")
+  case DescriptionDeclaredEmpty extends RuleId("doc-description-declared-but-empty")
+  case DescriptionEmpty extends RuleId("doc-description-empty")
+  case DescriptionInvalid extends RuleId("doc-description-invalid")
+  case TermDefinitionTooShort extends RuleId("doc-term-definition-too-short")
+  case OptionNameTooShort extends RuleId("opt-name-too-short")
+  case NonPositiveDuration extends RuleId("value-non-positive-duration")
+  case OptionWrongArity extends RuleId("opt-wrong-arity")
+  case OptionMisplaced extends RuleId("opt-misplaced")
+  case OptionUnrecognized extends RuleId("opt-unrecognized")
+  case EnumeratorCapitalization extends RuleId("type-enumerator-capitalization")
+  case RangeMinTooSmall extends RuleId("type-min-too-small")
+  case RangeMaxTooLarge extends RuleId("type-max-too-large")
+  case FieldShouldBeLowercase extends RuleId("field-should-be-lowercase")
+  case MessageFieldShouldBeLowercase extends RuleId("field-message-should-be-lowercase")
+  case NegativeMinCardinality extends RuleId("type-negative-min-cardinality")
+  case NegativeMaxCardinality extends RuleId("type-negative-max-cardinality")
+  case MinExceedsMax extends RuleId("type-min-exceeds-max")
+  case IdNamesNonProcessor extends RuleId("type-id-names-non-processor")
+  case WholePartPositive extends RuleId("type-whole-part-positive")
+  case FractionPartPositive extends RuleId("type-fraction-part-positive")
+  // Supplied BY THE CALLER of `checkNonEmptyValue`/`checkNonEmpty`, whose own rule this is. The
+  // fallback for a caller that has no more specific rule to name.
+  case EmptyContent extends RuleId("def-empty-content")
+  case EntityNoStates extends RuleId("entity-no-states")
 end RuleId
 
 object RuleId:
@@ -462,7 +533,11 @@ object RuleId:
     * whose prefix is not here, which is what stops the vocabulary drifting one rule at a time.
     */
   val subjects: Set[String] = Set(
-    "adaptor", "app", "bast", "context", "doc", "domain", "entity", "epic", "field", "func",
+    "adaptor", "app", "bast", "context",
+    // `def` is the generic bucket: a rule that applies to ANY definition rather than to one kind
+    // of thing -- "this container should have content", "this is empty". Deliberately last resort;
+    // a rule that can name its subject should.
+    "def", "doc", "domain", "entity", "epic", "field", "func",
     "handler",
     "invariant", "module", "msg", "name", "opt", "proj", "ref", "repo", "saga", "state", "stmt",
     "stream", "type", "use", "value"

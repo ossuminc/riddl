@@ -204,7 +204,8 @@ trait BasicValidation(using pc: PlatformContext) {
                   ref.pathId.loc,
                   suggestion =
                     s"Reference a type declared as one of: ${kinds.map(_.useCase).mkString(", ")}; " +
-                      s"or redeclare the target type with one of those aggregate use cases."
+                      s"or redeclare the target type with one of those aggregate use cases.",
+                  ruleId = Some(RuleId.MessageRefWrongKind)
                 )
               case te: TypeExpression =>
                 messages.addError(
@@ -236,14 +237,23 @@ trait BasicValidation(using pc: PlatformContext) {
     s"$article $thing"
   }
 
+  /** `ruleId` is REQUIRED here for the same reason it is on the `add*` helpers: a diagnostic must
+    * name the rule it belongs to, or a consumer cannot filter, suppress or fix it without matching
+    * prose. This helper was MISSED when the ids were first threaded -- it builds a `Message`
+    * directly rather than going through `Accumulator.add*` -- and 68 diagnostics were emitted with
+    * a null rule as a result. Found by running `validate --json` and seeing the null, not by
+    * reading the code.
+    */
   def check(
     predicate: Boolean = true,
     message: => String,
     kind: KindOfMessage,
     loc: At,
-    suggestion: => String = ""
+    suggestion: => String = "",
+    ruleId: Option[RuleId]
   ): this.type = {
-    if !predicate then messages.add(Message(loc, message, kind, suggestion = suggestion))
+    if !predicate then
+      messages.add(Message(loc, message, kind, suggestion = suggestion, ruleId = ruleId))
     this
   }
 
@@ -337,7 +347,8 @@ trait BasicValidation(using pc: PlatformContext) {
       "Identifiers must not be empty",
       Error,
       d.errorLoc,
-      suggestion = s"Give this ${d.kind} a name of at least $min characters."
+      suggestion = s"Give this ${d.kind} a name of at least $min characters.",
+      ruleId = Some(RuleId.IdentifierEmpty)
     )
     if !d.isAnonymous && d.id.value.length < min then {
       messages.addStyle(
@@ -356,7 +367,8 @@ trait BasicValidation(using pc: PlatformContext) {
     name: String,
     thing: Definition,
     kind: KindOfMessage = Error,
-    required: Boolean = false
+    required: Boolean = false,
+    ruleId: Option[RuleId] = Some(RuleId.EmptyContent)
   ): this.type = {
     check(
       value.nonEmpty,
@@ -364,7 +376,8 @@ trait BasicValidation(using pc: PlatformContext) {
       kind,
       thing.errorLoc,
       suggestion =
-        s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration."
+        s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration.",
+      ruleId = ruleId
     )
   }
 
@@ -374,7 +387,10 @@ trait BasicValidation(using pc: PlatformContext) {
     thing: Definition,
     loc: At,
     kind: KindOfMessage,
-    required: Boolean
+    required: Boolean,
+    // NOT defaulted: Scala forbids two overloads that both carry default arguments, and the
+    // no-`loc` overload is the one that has them. Callers of this form name their rule.
+    ruleId: Option[RuleId]
   ): this.type = {
     check(
       value.nonEmpty,
@@ -383,7 +399,8 @@ trait BasicValidation(using pc: PlatformContext) {
       kind,
       thing.errorLoc,
       suggestion =
-        s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration."
+        s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration.",
+      ruleId = ruleId
     )
   }
 
@@ -392,14 +409,16 @@ trait BasicValidation(using pc: PlatformContext) {
     name: String,
     thing: Definition,
     kind: KindOfMessage = Error,
-    required: Boolean = false
+    required: Boolean = false,
+    ruleId: Option[RuleId] = Some(RuleId.EmptyContent)
   ): this.type = {
     check(
       list.nonEmpty,
       s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
       kind,
       thing.errorLoc,
-      suggestion = s"Add at least one $name to ${thing.identify}, or remove the empty declaration."
+      suggestion = s"Add at least one $name to ${thing.identify}, or remove the empty declaration.",
+      ruleId = ruleId
     )
   }
 
@@ -409,14 +428,18 @@ trait BasicValidation(using pc: PlatformContext) {
     thing: Definition,
     loc: At,
     kind: KindOfMessage,
-    required: Boolean
+    required: Boolean,
+    // NOT defaulted: Scala forbids two overloads that both carry default arguments, and the
+    // no-`loc` overload is the one that has them. Callers of this form name their rule.
+    ruleId: Option[RuleId]
   ): this.type = {
     check(
       list.nonEmpty,
       s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
       kind,
       loc,
-      suggestion = s"Add at least one $name to ${thing.identify}, or remove the empty declaration."
+      suggestion = s"Add at least one $name to ${thing.identify}, or remove the empty declaration.",
+      ruleId = ruleId
     )
   }
 

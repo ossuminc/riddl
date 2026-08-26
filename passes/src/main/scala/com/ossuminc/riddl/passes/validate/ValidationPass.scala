@@ -1852,6 +1852,8 @@ case class ValidationPass(
           loc,
           MissingWarning,
           required = true
+        ,
+          ruleId = Some(RuleId.EmptyContent)
         )
       case ErrorStatement(loc, message) =>
         checkNonEmptyValue(
@@ -1861,6 +1863,8 @@ case class ValidationPass(
           loc,
           MissingWarning,
           required = true
+        ,
+          ruleId = Some(RuleId.EmptyContent)
         )
       case ss @ SetStatement(loc, field, value) =>
         checkSetScope(ss, parents)
@@ -1873,7 +1877,7 @@ case class ValidationPass(
         // their real validation (resolution + type check) in `checkStatementScopes`.
         value match
           case ls: LiteralString =>
-            checkNonEmptyValue(ls, "value to set", onClause, loc, MissingWarning, required = true)
+            checkNonEmptyValue(ls, "value to set", onClause, loc, MissingWarning, required = true, ruleId = Some(RuleId.EmptyContent))
           // A `system` member has a KNOWN synthesized type, so `set field f to system.now` where
           // `f` is a `Duration` is checkable here -- an instant is not an interval, and the design
           // asks for that to be an Error rather than a silent coercion.
@@ -1957,9 +1961,9 @@ case class ValidationPass(
       case WhenStatement(loc, condition, thenStatements, elseStatements) =>
         condition match {
           case ls: LiteralString =>
-            checkNonEmptyValue(ls, "condition", onClause, loc, MissingWarning, required = true)
+            checkNonEmptyValue(ls, "condition", onClause, loc, MissingWarning, required = true, ruleId = Some(RuleId.EmptyContent))
           case id: Identifier =>
-            checkNonEmptyValue(id, "condition", onClause, loc, MissingWarning, required = true)
+            checkNonEmptyValue(id, "condition", onClause, loc, MissingWarning, required = true, ruleId = Some(RuleId.EmptyContent))
           case _: ValueRef          => () // A17: resolved + boolean-checked in checkStatementScopes
           case _: BooleanExpression => () // A28: type-checked in checkStatementScopes
           case pv: PromptValue      =>
@@ -1972,6 +1976,8 @@ case class ValidationPass(
               loc,
               MissingWarning,
               required = true
+            ,
+              ruleId = Some(RuleId.EmptyContent)
             )
         }
         checkNonEmpty(
@@ -1981,6 +1987,8 @@ case class ValidationPass(
           loc,
           MissingWarning,
           required = true
+        ,
+          ruleId = Some(RuleId.EmptyContent)
         )
       // elseStatements is optional, so no check needed
       case MatchStatement(loc, expression, cases, default) =>
@@ -1988,9 +1996,9 @@ case class ValidationPass(
         // structured subjects/patterns are resolved + type-checked in checkStatementScopes.
         expression match
           case ls: LiteralString =>
-            checkNonEmptyValue(ls, "expression", onClause, loc, MissingWarning, required = true)
+            checkNonEmptyValue(ls, "expression", onClause, loc, MissingWarning, required = true, ruleId = Some(RuleId.EmptyContent))
           case _ => ()
-        checkNonEmpty(cases, "cases", onClause, loc, MissingWarning, required = true)
+        checkNonEmpty(cases, "cases", onClause, loc, MissingWarning, required = true, ruleId = Some(RuleId.EmptyContent))
         cases.foreach { mc =>
           mc.pattern match
             case lp: LiteralPattern =>
@@ -2001,6 +2009,8 @@ case class ValidationPass(
                 mc.loc,
                 MissingWarning,
                 required = true
+              ,
+                ruleId = Some(RuleId.EmptyContent)
               )
             case _ => ()
         }
@@ -2010,22 +2020,24 @@ case class ValidationPass(
           s"Identifier '${identifier.value}' is too short",
           MissingWarning,
           identifier.loc,
-          suggestion = "Use an identifier of at least 3 characters in the 'let' statement."
+          suggestion = "Use an identifier of at least 3 characters in the 'let' statement.",
+          ruleId = Some(RuleId.StmtIdentifierTooShort)
         )
         // See the `set` case above: only a LiteralString's emptiness is a real question. Asking
         // unguarded reported every `let x = call/record/ref/true` in the language as empty.
         expression match
           case ls: LiteralString =>
-            checkNonEmptyValue(ls, "expression", onClause, loc, MissingWarning, required = true)
+            checkNonEmptyValue(ls, "expression", onClause, loc, MissingWarning, required = true, ruleId = Some(RuleId.EmptyContent))
           case _ => ()
       case CodeStatement(loc, language, body) =>
-        checkNonEmptyValue(language, "language", onClause, loc, MissingWarning, required = true)
+        checkNonEmptyValue(language, "language", onClause, loc, MissingWarning, required = true, ruleId = Some(RuleId.EmptyContent))
         check(
           body.nonEmpty,
           "Code statement body cannot be empty",
           MissingWarning,
           loc,
-          suggestion = "Provide a non-empty code body, or remove the empty code statement."
+          suggestion = "Provide a non-empty code body, or remove the empty code statement.",
+          ruleId = Some(RuleId.CodeBodyEmpty)
         )
       case RequireStatement(loc, condition, argument) =>
         condition match {
@@ -2037,6 +2049,8 @@ case class ValidationPass(
               loc,
               MissingWarning,
               required = true
+            ,
+              ruleId = Some(RuleId.EmptyContent)
             )
           case ir: InvariantRef =>
             checkRef[Invariant](ir, parents).foreach { inv =>
@@ -2074,7 +2088,8 @@ case class ValidationPass(
           "'foreach' element identifier must not be empty",
           MissingWarning,
           element.loc,
-          suggestion = "Name the loop element, e.g. 'foreach item in ...'."
+          suggestion = "Name the loop element, e.g. 'foreach item in ...'.",
+          ruleId = Some(RuleId.ForeachElementEmpty)
         )
         checkNonEmpty(
           doStatements.toSeq,
@@ -2083,6 +2098,8 @@ case class ValidationPass(
           loc,
           MissingWarning,
           required = true
+        ,
+          ruleId = Some(RuleId.EmptyContent)
         )
     end match
   end validateStatement
@@ -2412,7 +2429,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, i)
-    checkNonEmpty(i.condition.toList, "Condition", i, Messages.MissingWarning)
+    checkNonEmpty(i.condition.toList, "Condition", i, Messages.MissingWarning, ruleId = Some(RuleId.EmptyContent))
     // A28: type-check a structured BooleanExpression condition. A block form DOES have a `let`
     // scope -- that is most of why it exists -- so its statements are threaded, unlike the bare
     // expression form which has none.
@@ -2604,8 +2621,8 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, ai)
-    checkNonEmptyValue(ai.name, "name", ai, required = true)
-    checkNonEmptyValue(ai.email, "email", ai, required = true)
+    checkNonEmptyValue(ai.name, "name", ai, required = true, ruleId = Some(RuleId.EmptyContent))
+    checkNonEmptyValue(ai.email, "email", ai, required = true, ruleId = Some(RuleId.EmptyContent))
     checkMetadata(ai)
   }
 
@@ -2620,7 +2637,8 @@ case class ValidationPass(
       s"${t.identify} should start with a capital letter",
       StyleWarning,
       t.id.loc,
-      suggestion = s"Capitalize the type name, e.g. '${typeName.capitalize}'."
+      suggestion = s"Capitalize the type name, e.g. '${typeName.capitalize}'.",
+      ruleId = Some(RuleId.TypeShouldBeCapitalized)
     )
     // Check if the type name exactly matches a predefined type name
     check(
@@ -2628,7 +2646,8 @@ case class ValidationPass(
       s"${t.identify} redefines built-in type '$typeName'",
       Error,
       t.id.loc,
-      suggestion = s"Rename the type to something other than the built-in '$typeName'."
+      suggestion = s"Rename the type to something other than the built-in '$typeName'.",
+      ruleId = Some(RuleId.TypeRedefinesBuiltin)
     )
     // Check if the type name is a case-variant of a predefined type
     if !PredefType.allPredefTypes.contains(typeName) then
@@ -2642,7 +2661,8 @@ case class ValidationPass(
           StyleWarning,
           t.id.loc,
           suggestion =
-            s"Rename the type so it is not a case-variant of built-in '$predef', or use the built-in '$predef' directly."
+            s"Rename the type so it is not a case-variant of built-in '$predef', or use the built-in '$predef' directly.",
+          ruleId = Some(RuleId.TypeRedundantCaseVariant)
         )
       }
     end if
@@ -2770,7 +2790,8 @@ case class ValidationPass(
         Messages.Error,
         s.loc,
         suggestion =
-          s"Rename either the state or the type so they do not share the name '${s.id.value}'."
+          s"Rename either the state or the type so they do not share the name '${s.id.value}'.",
+        ruleId = Some(RuleId.StateNameCollidesWithRecord)
       )
     }
   }
@@ -2787,7 +2808,8 @@ case class ValidationPass(
       MissingWarning,
       f.errorLoc,
       suggestion =
-        s"Add statements to the body of ${f.identify} (use '???' as a placeholder if needed)."
+        s"Add statements to the body of ${f.identify} (use '???' as a placeholder if needed).",
+      ruleId = Some(RuleId.FunctionNoStatements)
     )
     f.input.foreach(validateRequiresReturns(_, f, parents))
     f.output.foreach(validateRequiresReturns(_, f, parents))
@@ -2898,14 +2920,16 @@ case class ValidationPass(
       Messages.Error,
       i.loc,
       suggestion =
-        "Ensure the included file exists and contains valid RIDDL content for this scope."
+        "Ensure the included file exists and contains valid RIDDL content for this scope.",
+      ruleId = Some(RuleId.IncludeNoContent)
     )
     check(
       i.origin.nonEmpty,
       "Include has no source provided",
       Messages.Error,
       i.loc,
-      suggestion = "Provide a file path to include, e.g. 'include \"entities.riddl\"'."
+      suggestion = "Provide a file path to include, e.g. 'include \"entities.riddl\"'.",
+      ruleId = Some(RuleId.IncludeNoSource)
     )
   }
 
@@ -2917,14 +2941,16 @@ case class ValidationPass(
       "BAST load has no path specified",
       Messages.Error,
       bi.loc,
-      suggestion = "Provide a .bast file path to import, e.g. 'import \"model.bast\"'."
+      suggestion = "Provide a .bast file path to import, e.g. 'import \"model.bast\"'.",
+      ruleId = Some(RuleId.ImportNoPath)
     )
     check(
       bi.path.s.endsWith(".bast"),
       s"BAST load path '${bi.path.s}' should end with .bast",
       Messages.Warning,
       bi.loc,
-      suggestion = "Give the imported file a '.bast' extension."
+      suggestion = "Give the imported file a '.bast' extension.",
+      ruleId = Some(RuleId.ImportExtension)
     )
     checkImportedDefinitionsMakeSenseHere(bi, parents)
   }
@@ -2973,6 +2999,8 @@ case class ValidationPass(
       schema.errorLoc,
       MissingWarning,
       required = true
+    ,
+      ruleId = Some(RuleId.EmptyContent)
     )
     schema.schemaKind match {
       case RepositorySchemaKind.Flat =>
@@ -3333,7 +3361,8 @@ case class ValidationPass(
           s"${entity.identify} must define at least one state",
           Messages.MissingWarning,
           suggestion =
-            s"Add a state to ${entity.identify}, e.g. 'state ${entity.id.value}State of ${entity.id.value}Data is { ??? }'."
+            s"Add a state to ${entity.identify}, e.g. 'state ${entity.id.value}State of ${entity.id.value}Data is { ??? }'.",
+          ruleId = Some(RuleId.EntityNoStates)
         )
       )
     }
@@ -3934,7 +3963,8 @@ case class ValidationPass(
             Messages.Error,
             clause.loc,
             suggestion = s"End ${clause.identify} with 'set field <name> to <value>', or remove " +
-              "the clause if the event contributes nothing to this correlation."
+              "the clause if the event contributes nothing to this correlation.",
+            ruleId = Some(RuleId.CorrelationSetsNoFields)
           )
         }
       }
@@ -3969,7 +3999,8 @@ case class ValidationPass(
         Messages.Error,
         correlation.loc,
         suggestion = s"Rename either the correlation or the record so they do not share the name " +
-          s"'${correlation.id.value}'."
+          s"'${correlation.id.value}'.",
+        ruleId = Some(RuleId.CorrelationNameCollision)
       )
       // A70 (Reid, 2026-08-12): the grammar already rejects the wrong KEYWORD -- `yields record R`
       // does not parse -- but only here is the referent resolved, so only here can `yields command
@@ -3987,7 +4018,8 @@ case class ValidationPass(
         Messages.Error,
         correlation.yields.pathId.loc,
         suggestion = s"Declare '${typ.id.value}' as a command, or yield a command the repository " +
-          s"handles."
+          s"handles.",
+        ruleId = Some(RuleId.CorrelationMustYieldCommand)
       )
 
       // Gated on the kind: reporting which fields "no fold sets" against a type that was never a
@@ -4195,7 +4227,8 @@ case class ValidationPass(
       Messages.Error,
       projector.errorLoc,
       suggestion = s"Send a message to ${projector.identify}'s repository (e.g. 'tell command " +
-        s"SomeCommand to repository R'), or add a record type to ${projector.identify}."
+        s"SomeCommand to repository R'), or add a record type to ${projector.identify}.",
+      ruleId = Some(RuleId.ProjectorNoRecordType)
     )
 
     // WHERE the sent type lives is a Warning, not an Error: the type is what populates the
@@ -4218,7 +4251,8 @@ case class ValidationPass(
       s"${projector.identify} must have exactly one Handler but has ${projector.handlers.length}",
       Messages.Error,
       projector.errorLoc,
-      suggestion = "Define exactly one handler for the projector."
+      suggestion = "Define exactly one handler for the projector.",
+      ruleId = Some(RuleId.ProjectorNotOneHandler)
     )
     projector.repositories.foreach { repoRef =>
       checkRef[Repository](repoRef, parents)
@@ -4296,6 +4330,8 @@ case class ValidationPass(
       repository.errorLoc,
       MissingWarning,
       required = false
+    ,
+      ruleId = Some(RuleId.EmptyContent)
     )
     if repository.handlers.isEmpty && repository.nonEmpty then
       messages.addMissing(
@@ -4778,14 +4814,16 @@ case class ValidationPass(
             s"${streamlet.identify} is a source but has $numInlets inlets; sources must have none",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Remove the inlets from the source; sources only produce data."
+            suggestion = "Remove the inlets from the source; sources only produce data.",
+            ruleId = Some(RuleId.SourceHasInlets)
           )
           check(
             numOutlets >= 1,
             s"${streamlet.identify} is a source but has no outlets; sources must have at least one",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Add at least one outlet to the source so it can emit data."
+            suggestion = "Add at least one outlet to the source so it can emit data.",
+            ruleId = Some(RuleId.SourceNoOutlets)
           )
         case _: Sink =>
           check(
@@ -4793,14 +4831,16 @@ case class ValidationPass(
             s"${streamlet.identify} is a sink but has no inlets; sinks must have at least one",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Add at least one inlet to the sink so it can receive data."
+            suggestion = "Add at least one inlet to the sink so it can receive data.",
+            ruleId = Some(RuleId.SinkNoInlets)
           )
           check(
             numOutlets == 0,
             s"${streamlet.identify} is a sink but has $numOutlets outlets; sinks must have none",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Remove the outlets from the sink; sinks only consume data."
+            suggestion = "Remove the outlets from the sink; sinks only consume data.",
+            ruleId = Some(RuleId.SinkHasOutlets)
           )
         case _: Flow =>
           check(
@@ -4808,14 +4848,16 @@ case class ValidationPass(
             s"${streamlet.identify} is a flow but has no inlets; flows must have at least one",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Add at least one inlet to the flow."
+            suggestion = "Add at least one inlet to the flow.",
+            ruleId = Some(RuleId.FlowNoInlets)
           )
           check(
             numOutlets >= 1,
             s"${streamlet.identify} is a flow but has no outlets; flows must have at least one",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Add at least one outlet to the flow."
+            suggestion = "Add at least one outlet to the flow.",
+            ruleId = Some(RuleId.FlowNoOutlets)
           )
         case _: Merge =>
           check(
@@ -4823,14 +4865,16 @@ case class ValidationPass(
             s"${streamlet.identify} is a merge but has $numInlets inlets; merges must have at least two",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Give the merge at least two inlets."
+            suggestion = "Give the merge at least two inlets.",
+            ruleId = Some(RuleId.MergeTooFewInlets)
           )
           check(
             numOutlets >= 1,
             s"${streamlet.identify} is a merge but has no outlets; merges must have at least one",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Add at least one outlet to the merge."
+            suggestion = "Add at least one outlet to the merge.",
+            ruleId = Some(RuleId.MergeNoOutlets)
           )
         case _: Split =>
           check(
@@ -4838,14 +4882,16 @@ case class ValidationPass(
             s"${streamlet.identify} is a split but has no inlets; splits must have at least one",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Add at least one inlet to the split."
+            suggestion = "Add at least one inlet to the split.",
+            ruleId = Some(RuleId.SplitNoInlets)
           )
           check(
             numOutlets >= 2,
             s"${streamlet.identify} is a split but has $numOutlets outlets; splits must have at least two",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Give the split at least two outlets."
+            suggestion = "Give the split at least two outlets.",
+            ruleId = Some(RuleId.SplitTooFewOutlets)
           )
         case _: Router =>
           check(
@@ -4853,14 +4899,16 @@ case class ValidationPass(
             s"${streamlet.identify} is a router but has $numInlets inlets; routers must have at least two",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Give the router at least two inlets."
+            suggestion = "Give the router at least two inlets.",
+            ruleId = Some(RuleId.RouterTooFewInlets)
           )
           check(
             numOutlets >= 2,
             s"${streamlet.identify} is a router but has $numOutlets outlets; routers must have at least two",
             Messages.Error,
             streamlet.errorLoc,
-            suggestion = "Give the router at least two outlets."
+            suggestion = "Give the router at least two outlets.",
+            ruleId = Some(RuleId.RouterTooFewOutlets)
           )
         case _: Void => ()
       }
@@ -5048,7 +5096,8 @@ case class ValidationPass(
           suggestion =
             s"Type the inlet by ${PredefinedModule.generatorError}, or by an alternation " +
               s"that includes it if the inlet also carries the model's own error messages. " +
-              s"${PredefinedModule.generatorError} is what generators send."
+              s"${PredefinedModule.generatorError} is what generators send.",
+          ruleId = Some(RuleId.ErrorSinkType)
         )
   end checkErrorSinkAcceptsGeneratorError
 
@@ -5064,7 +5113,8 @@ case class ValidationPass(
       StyleWarning,
       domain.errorLoc,
       suggestion =
-        "Merge the single nested domain into its parent, or add sibling domains to justify the nesting."
+        "Merge the single nested domain into its parent, or add sibling domains to justify the nesting.",
+      ruleId = Some(RuleId.DomainSinglyNested)
     )
     // A48: a Domain should identify an author, either directly (an author reference or a defined
     // author) or inherited from an enclosing domain. MissingWarning, so it is suppressible via the
@@ -5078,7 +5128,8 @@ case class ValidationPass(
       domain.errorLoc,
       suggestion =
         s"Identify an author for ${domain.identify}, e.g. 'by author Name', or define one in an " +
-          "enclosing domain."
+          "enclosing domain.",
+      ruleId = Some(RuleId.DomainNoAuthor)
     )
   }
 
@@ -5093,14 +5144,16 @@ case class ValidationPass(
       Messages.Error,
       saga.errorLoc,
       suggestion =
-        "Define at least two saga steps so the saga coordinates a multi-step transaction."
+        "Define at least two saga steps so the saga coordinates a multi-step transaction.",
+      ruleId = Some(RuleId.SagaTooFewSteps)
     )
     check(
       saga.nonEmpty && saga.sagaSteps.size >= 2 && saga.sagaSteps.map(_.id.value).allUnique,
       "Saga step names must all be distinct",
       Messages.Error,
       saga.errorLoc,
-      suggestion = "Give each saga step a unique name."
+      suggestion = "Give each saga step a unique name.",
+      ruleId = Some(RuleId.SagaStepNamesNotDistinct)
     )
     checkSagaTimeout(saga)
     // A9: validate saga requires/returns (previously unvalidated).
@@ -5271,8 +5324,8 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, s)
-    checkNonEmpty(s.doStatements.toSeq, "Do Statements", s, MissingWarning)
-    checkNonEmpty(s.undoStatements.toSeq, "Revert Statements", s, MissingWarning)
+    checkNonEmpty(s.doStatements.toSeq, "Do Statements", s, MissingWarning, ruleId = Some(RuleId.EmptyContent))
+    checkNonEmpty(s.undoStatements.toSeq, "Revert Statements", s, MissingWarning, ruleId = Some(RuleId.EmptyContent))
     // A23: refusals must precede any effect in the do-step's statement list (undo/compensation is
     // NOT checked — it has different, compensation semantics and is out of A23's scope).
     checkRefusalsFirst(s.doStatements.toSeq.collect { case st: Statement => st })
@@ -5283,7 +5336,8 @@ case class ValidationPass(
       Messages.Error,
       s.errorLoc,
       suggestion =
-        "Provide both 'do' and 'revert' statements for the saga step so its action can be compensated on failure."
+        "Provide both 'do' and 'revert' statements for the saga step so its action can be compensated on failure.",
+      ruleId = Some(RuleId.SagaStepNeedsRevert)
     )
     if s.doStatements.nonEmpty && s.undoStatements.nonEmpty then {
       val doTargets = mutable.Set.empty[String]
@@ -5646,7 +5700,7 @@ case class ValidationPass(
     output.putOut match {
       case typ: TypeRef       => checkTypeRef(typ, parents)
       case const: ConstantRef => checkRef[Constant](const, parents)
-      case str: LiteralString => checkNonEmpty(str.s, "string to put out", output, Messages.Error)
+      case str: LiteralString => checkNonEmpty(str.s, "string to put out", output, Messages.Error, ruleId = Some(RuleId.EmptyContent))
     }
     checkMetadata(output)
   }
@@ -5790,7 +5844,7 @@ case class ValidationPass(
                     checkRef[Constant](constRef, parents)
                     Option.empty[Message]
                   case str: LiteralString =>
-                    checkNonEmptyValue(str, "string to put out", parents.head, Messages.Error)
+                    checkNonEmptyValue(str, "string to put out", parents.head, Messages.Error, ruleId = Some(RuleId.EmptyContent))
                     Option.empty[Message]
                 }
               case _ => None
@@ -7969,7 +8023,8 @@ case class ValidationPass(
                    else candidates.map(_.id.value).mkString(", ")),
                 Error,
                 name.loc,
-                suggestion = s"Add a field typed 'Id(${p.id.value})' to ${mt.identify}."
+                suggestion = s"Add a field typed 'Id(${p.id.value})' to ${mt.identify}.",
+                ruleId = Some(RuleId.ByNamesWrongField)
               )
             case None =>
               if candidates.size > 1 then
