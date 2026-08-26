@@ -469,7 +469,8 @@ trait BasicValidation(using pc: PlatformContext) {
                   suggestion =
                     s"Add an Adaptor in ${containerContext.identify} to translate messages from " +
                       s"${definitionContext.identify}, or connect the contexts with a Streamlet (Source/Sink/Flow) " +
-                      "instead of referencing across the context boundary directly."
+                      "instead of referencing across the context boundary directly.",
+                  ruleId = Some(RuleId.CrossContextReference)
                 )
               )
             else ()

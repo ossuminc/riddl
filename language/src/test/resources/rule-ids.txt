@@ -15,6 +15,8 @@ adaptor-outbound-wrong-message
 adaptor-targets-own-context
 anonymous-nebula
 app-groups-need-application-context
+app-input-sends-wrong-kind
+app-output-shows-wrong-kind
 app-selection-verb-type
 bare-string-condition
 bast-invalid-shape-presence
@@ -102,6 +104,7 @@ func-no-statements
 func-private-nested
 handler-binding-shadows-field
 handler-clause-no-parameters
+handler-clause-no-statements
 handler-clause-shadowed
 handler-clause-wrong-arity
 handler-command-no-response
@@ -186,6 +189,7 @@ prompt-statement
 quoted-constant-literal
 ref-ambiguous
 ref-ambiguous-segment
+ref-crosses-context-boundary
 ref-empty-path
 ref-empty-path-internal
 ref-invalid-parent-anchor

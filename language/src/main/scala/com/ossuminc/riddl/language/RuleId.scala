@@ -511,6 +511,10 @@ enum RuleId(
   // fallback for a caller that has no more specific rule to name.
   case EmptyContent extends RuleId("def-empty-content")
   case EntityNoStates extends RuleId("entity-no-states")
+  case CrossContextReference extends RuleId("ref-crosses-context-boundary")
+  case ClauseNoStatements extends RuleId("handler-clause-no-statements")
+  case OutputShowsWrongKind extends RuleId("app-output-shows-wrong-kind")
+  case InputSendsWrongKind extends RuleId("app-input-sends-wrong-kind")
 end RuleId
 
 object RuleId:

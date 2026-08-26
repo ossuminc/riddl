@@ -1100,6 +1100,20 @@ verification is carried here so it is not repeated.**
   regardless) or simply predates `withLogger`. If the former, `withLogger` should FAIL LOUDLY on a
   platform that cannot honour it rather than appearing to work.
 
+
+- **[1.19]** **Make a validator diagnostic's rule id non-optional at the type level.**
+  riddl-examples' line, and it is correct: *"`ruleId` being mandatory to PASS is not the same
+  as mandatory to BE."* `Option[RuleId]` lets a site answer `None`, so the compiler cannot
+  enforce what `3ea9b7b9d`'s message claimed -- which is exactly how 68 un-ruled diagnostics
+  shipped and were found downstream rather than here.
+  **Why it is not a simple type tightening**: `Message.ruleId` is legitimately `None` for
+  parse failures and thrown exceptions, which do not come from the validator at all. The
+  change has to separate "a diagnostic the validator raised" from "a message riddlc emitted",
+  rather than just replacing `Option[RuleId]` with `RuleId` everywhere.
+  **The interim guard is `EveryDiagnosticHasARuleIdTest`**, which asserts over OUTPUT rather
+  than call sites -- a call-site census is what missed this twice, since the grep that finds
+  `addError(` does not find `check(`, and neither finds `messages.add(warning(...))`.
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built

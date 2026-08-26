@@ -800,7 +800,8 @@ case class ValidationPass(
           s"${onClause.identify} should have statements",
           onClause.loc,
           suggestion =
-            s"Add one or more statements to ${onClause.identify} (use '???' as a placeholder if needed)."
+            s"Add one or more statements to ${onClause.identify} (use '???' as a placeholder if needed).",
+          ruleId = Some(RuleId.ClauseNoStatements)
         )
       )
     // A23: refusals (require/error) must precede any effect within each linear statement list.
@@ -5834,7 +5835,8 @@ case class ValidationPass(
                                   s" because ${o.identify} is a vital definition which can only send Events and Results",
                                 loc,
                                 suggestion =
-                                  "Show an Event or Result here; vital definitions can only emit events and results."
+                                  "Show an Event or Result here; vital definitions can only emit events and results.",
+                                ruleId = Some(RuleId.OutputShowsWrongKind)
                               )
                             )
                         }
@@ -5868,7 +5870,8 @@ case class ValidationPass(
                             s"${input.identify} sending ${putIn.format} of type ${ty.format} is invalid " +
                               s" because ${d.identify} is a vital definition which can only receive Commands and Queries",
                             suggestion =
-                              "Send a Command or Query here; vital definitions can only receive commands and queries."
+                              "Send a Command or Query here; vital definitions can only receive commands and queries.",
+                            ruleId = Some(RuleId.InputSendsWrongKind)
                           )
                         )
                     }
