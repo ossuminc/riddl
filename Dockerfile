@@ -62,7 +62,7 @@ LABEL org.opencontainers.image.licenses="Apache-2.0"
 COPY --from=jre-builder /custom-jre /opt/java
 
 # Copy staged application from sbt builder (projectMatrix JVM row target)
-COPY --from=sbt-builder /app/target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage /opt/riddlc
+COPY --from=sbt-builder /app/target/out/jvm/scala-3.9.0-RC6/riddlc/universal/stage /opt/riddlc
 
 # Set up environment
 ENV JAVA_HOME=/opt/java

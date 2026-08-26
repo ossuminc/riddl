@@ -140,13 +140,13 @@ riddlg-sourced item as in-scope for 2.0 unless there is a specific reason not to
 ## Critical Build Information
 
 ### Scala Version & Syntax
-- **Scala 3.9.0-RC4** (not Scala 2!) — RIDDL 2.0 rides ahead of LTS
+- **Scala 3.9.0-RC6** (not Scala 2!) — RIDDL 2.0 rides ahead of LTS
   on Scala Next. Pinned via `V.scala` + `With.Scala3.configure(version
   = Some(V.scala))` on every CrossModule (sbt-ossuminc's `With.typical`
   otherwise pins its default 3.8.4, applied after `scalaVersion :=`, so
   the plain setting is a no-op — the `With.Scala3.configure` override is
   the real lever). Bump to `3.9.0` when the final release ships (and
-  re-grep the `scala-3.9.0-RC4` CI/target paths).
+  re-grep the `scala-3.9.0-RC6` CI/target paths).
 - **Build files are Scala 3 too** — since the sbt 2 upgrade,
   `build.sbt` and `project/*.scala` compile with Scala 3 (no more
   Scala 2.12 build-def rule).
@@ -173,9 +173,9 @@ CrossModule). Requires sbt **2.0.2+** — pinned in
 - **Build outputs** live under a central virtual-FS tree
   (`sbt.io.virtual=true`, the default): `target/out/<platform>/
   scala-<fullVersion>/<artifactName>/…` — e.g.
-  `target/out/jvm/scala-3.9.0-RC4/riddl-utils/`,
-  `target/out/sjs1/scala-3.9.0-RC4/riddl-lib/`,
-  `target/out/native0.5/scala-3.9.0-RC4/riddlc/`. NOT per-module
+  `target/out/jvm/scala-3.9.0-RC6/riddl-utils/`,
+  `target/out/sjs1/scala-3.9.0-RC6/riddl-lib/`,
+  `target/out/native0.5/scala-3.9.0-RC6/riddlc/`. NOT per-module
   `<mod>/target/…`. Platform dirs are `jvm`/`sjs1`/`native0.5`;
   the path carries the **full** Scala version, not a `-3` binary tag.
 - 3.0.3's CrossModule auto-adds `scalajs-stubs % provided` to the
@@ -185,7 +185,7 @@ CrossModule). Requires sbt **2.0.2+** — pinned in
 
 #### Common Configurations:
 ```scala
-// Scala 3.9.0-RC4 — override sbt-ossuminc's 3.8.4 default per module:
+// Scala 3.9.0-RC6 — override sbt-ossuminc's 3.8.4 default per module:
 .configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
 // (plain `scalaVersion := V.scala` is a no-op — With.typical wins over it)
 
@@ -407,18 +407,18 @@ target/out/<platform>/scala-<fullVersion>/<artifactName>/…
 ```
 
 - `<platform>` ∈ `jvm`, `sjs1`, `native0.5` (NOT `js`/`native`).
-- `<fullVersion>` is the **full** Scala version (`scala-3.9.0-RC4`), NOT a
+- `<fullVersion>` is the **full** Scala version (`scala-3.9.0-RC6`), NOT a
   `-3` binary tag — so a Scala patch bump (3.8.4 → 3.8.5 / 3.9.x) DOES
   move every hardcoded path.
 - `<artifactName>` is the `moduleName` (`riddl-utils`, `riddl-lib`,
   `riddlc`, …).
 
 Verified real paths:
-- native riddlc: `target/out/native0.5/scala-3.9.0-RC4/riddlc/riddlc`
-- native lib: `target/out/native0.5/scala-3.9.0-RC4/riddl-lib/libriddl-lib.a`
-- JS opt: `target/out/sjs1/scala-3.9.0-RC4/riddl-lib/riddl-lib-opt/main.js`
-- JVM stage: `target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc`
-- scoverage: `target/out/jvm/scala-3.9.0-RC4/<artifact>/scoverage-report/scoverage.xml`
+- native riddlc: `target/out/native0.5/scala-3.9.0-RC6/riddlc/riddlc`
+- native lib: `target/out/native0.5/scala-3.9.0-RC6/riddl-lib/libriddl-lib.a`
+- JS opt: `target/out/sjs1/scala-3.9.0-RC6/riddl-lib/riddl-lib-opt/main.js`
+- JVM stage: `target/out/jvm/scala-3.9.0-RC6/riddlc/universal/stage/bin/riddlc`
+- scoverage: `target/out/jvm/scala-3.9.0-RC6/<artifact>/scoverage-report/scoverage.xml`
 
 Files that hardcode these (update on any full-Scala-version bump):
 **scala.yml** (`RIDDLC_PATH`, cache `target/out`, artifact upload paths),
@@ -429,7 +429,7 @@ Files that hardcode these (update on any full-Scala-version bump):
 
 **sbt-ossuminc Version Policy**:
 - sbt-ossuminc 3.0.x defaults to Scala **3.8.4**; riddl 2.0 overrides to
-  **3.9.0-RC4** via `V.scala` + `With.Scala3.configure(version = Some(V.scala))`
+  **3.9.0-RC6** via `V.scala` + `With.Scala3.configure(version = Some(V.scala))`
   per module (the `CrossModule(...)` axis arg alone does NOT change the
   effective scalaVersion — With.typical overrides it).
 - A Scala version bump changes the `scala-<fullVersion>` path segment

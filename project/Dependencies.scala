@@ -15,7 +15,7 @@ object V {
   val jgit = "6.5.0"
   val lang3 = "3.17.0"
   val previous = "1.0.0"
-  val scala = "3.9.0-RC4"
+  val scala = "3.9.0-RC6"
   val scala_native = "0.5.11"
   val scala_java_time = "2.6.0"
   val scalacheck = "1.18.1"
