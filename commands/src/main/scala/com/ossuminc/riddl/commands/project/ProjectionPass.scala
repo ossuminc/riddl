@@ -173,9 +173,21 @@ case class ProjectionPass(
     * of the handled message or entity state, or a function input" — and then throws the answer away.
     *
     * The classification here is by WHERE the resolved definition lives, which is a structural fact
-    * this pass can see. `let`-locals and `foreach` elements are deliberately reported as
-    * `unresolved` rather than guessed at: they are not Definitions, so no lookup can find them, and
-    * claiming a kind we cannot determine would be worse than saying we do not know.
+    * this pass can see.
+    *
+    * **`let`-locals and `foreach` elements are found LEXICALLY, not through the refMap.** They are
+    * not Definitions, so no lookup can find them -- which is why they read as `unresolved` until
+    * 2026-08-26 -- but the binding that introduces them is right there in the enclosing clause, and
+    * that is as structural as anything else here. The limit worth knowing: the search is by NAME
+    * over the clause's whole statement tree, so it does not model statement ORDER or block scoping
+    * the way `checkStatementScopes` does. In practice a name that reaches here has already been
+    * validated as resolving to something, so a false match would need a shadowing collision that
+    * validation accepted.
+    *
+    * **A LITERAL is not among these, and that is a ruling rather than an omission** (Reid,
+    * 2026-08-26): *"While literal is a value, it is not a value-reference."* A literal has no
+    * referent, so it is not emitted as a `value-reference` node at all. The same goes for a
+    * `prompt(...)` hole. Do not add `literal` or `prompt` to this vocabulary.
     */
   private def valueReferenceNodes(s: Statement, parents: Parents): Seq[ProjectedNode] =
     if !resolve then Seq.empty
@@ -194,10 +206,41 @@ case class ProjectionPass(
             obj("resolvedKind") = ujson.Str(classifyOperand(d, parents))
           case None =>
             obj("resolvedTo") = ujson.Null
-            obj("resolvedKind") = ujson.Str("unresolved")
+            obj("resolvedKind") = ujson.Str(lexicalBinding(vr, parents).getOrElse("unresolved"))
         spanOf(vr.loc).foreach(sp => obj("span") = sp)
         ProjectedNode(vr, parents, obj)
       }
+
+  /** A binding introduced by the enclosing clause rather than by a definition.
+    *
+    * `let x = …` and `foreach e in …` bind names the symbol table never sees, so a refMap lookup
+    * cannot classify them and they fell through to `unresolved`. Both are visible in the clause's
+    * own statement tree.
+    */
+  private def lexicalBinding(vr: ValueRef, parents: Parents): Option[String] =
+    val head = vr.path.value.headOption.getOrElse("")
+    if head.isEmpty then None
+    else
+      def walk(stmts: Seq[Statements]): Option[String] =
+        stmts.foldLeft(Option.empty[String]) { (found, st) =>
+          found.orElse {
+            st match
+              case ls: LetStatement if ls.identifier.value == head    => Some("let-local")
+              case fs: ForeachStatement if fs.element.value == head   => Some("foreach-element")
+              case fs: ForeachStatement
+                  if fs.valueElement.exists(_.value == head)          => Some("foreach-element")
+              case fs: ForeachStatement                               => walk(fs.doStatements.toSeq)
+              case ws: WhenStatement                                  =>
+                walk(ws.thenStatements.toSeq).orElse(walk(ws.elseStatements.toSeq))
+              case ms: MatchStatement                                 =>
+                walk(ms.cases.toSeq.flatMap(_.statements.toSeq))
+              case _                                                  => None
+          }
+        }
+      parents.headOption.collect { case b: Branch[?] => b }.flatMap { b =>
+        walk(b.contents.toSeq.collect { case st: Statements => st })
+      }
+  end lexicalBinding
 
   /** Where the operand's definition lives: the fact a consumer actually wants. */
   private def classifyOperand(d: Definition, parents: Parents): String = {

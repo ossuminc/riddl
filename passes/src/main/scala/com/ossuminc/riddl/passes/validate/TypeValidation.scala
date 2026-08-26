@@ -326,14 +326,49 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
       .collectFirst { case p: Processor[?] => p }
   end uniqueIdReferent
 
+  /** [1.10]: a prefix that IS written on an aliased type must be true. It is never DEMANDED.
+    *
+    * Ruled by Reid, 2026-08-26, and the two halves are separate decisions:
+    *
+    *   - **Not demanded.** `TypeRef`'s rule holds a BARE reference to the standard, because the
+    *     positions it covers (a portlet's type, a function's `requires`/`returns`) admit several
+    *     KINDS and the prefix is what disambiguates them. A field's type admits only a type, so a
+    *     prefix there removes no ambiguity -- it is decoration, and demanding it would cost 542
+    *     sites in reactive-bbq alone for no reader benefit.
+    *   - **Checked when written.** A prefix that lies is worse than one that is absent, because a
+    *     reader believes it. That is the same reasoning behind `UniqueId.kindKeyword`.
+    *
+    * **Only a NON-DEFAULT keyword can be checked, and that is a hard limit rather than a choice.**
+    * `TypeParser` builds `AliasedTypeExpression(loc, "type", pid)` when no keyword is written, so
+    * the AST cannot tell `Ctx.Rec` from `type Ctx.Rec`. Reporting on `"type"` would therefore fire
+    * on every bare field type in the corpus -- exactly the demand this ruling declined.
+    */
+  private def checkAliasKeyword(ate: AliasedTypeExpression, target: Type): Unit =
+    val written = ate.keyword.toLowerCase
+    if written.nonEmpty && written != "type" then
+      val declared: String = target.typEx match
+        case auc: AggregateUseCaseTypeExpression => auc.usecase.useCase.toLowerCase
+        case _                                   => "type"
+      if written != declared then
+        val name = ate.pathId.format
+        messages.addError(
+          ate.loc,
+          s"'$name' is declared ${article(declared)}, but this reference names it as " +
+            s"${article(written)}",
+          suggestion = s"Write '$declared $name', or drop the prefix -- it is optional here, but " +
+            "a prefix that is written must name what the target was declared as.",
+          ruleId = Some(RuleId.WrongKeyword)
+        )
+  end checkAliasKeyword
+
   def checkTypeExpression(
     typ: TypeExpression,
     defn: Definition,
     parents: Parents
   ): this.type = {
     typ match {
-      case AliasedTypeExpression(_, _, id: PathIdentifier) =>
-        checkPathRef[Type](id, parents)
+      case ate @ AliasedTypeExpression(_, _, id: PathIdentifier) =>
+        checkPathRef[Type](id, parents).foreach(checkAliasKeyword(ate, _))
       case mt: AggregateUseCaseTypeExpression =>
         checkAggregateUseCase(mt, defn, parents)
       case agg: Aggregation            => checkAggregation(agg)

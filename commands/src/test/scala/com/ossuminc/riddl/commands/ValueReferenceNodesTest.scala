@@ -50,6 +50,45 @@ class ValueReferenceNodesTest extends AbstractValidatingTest {
       |}
       |""".stripMargin
 
+  /** Kinds produced by a clause body, for the lexical-binding cases. Its own model, because those
+    * need `let`/`foreach`, which the shared `src` above does not contain.
+    */
+  private def kindsFor(body: String)(using td: TestData): Set[String] =
+    val model =
+      s"""domain D is {
+         |  context C is {
+         |    record Line is { sku: String(1,9), qty: Integer }
+         |    command Take is { note: String(1,9), lines: Line* }
+         |    entity E is {
+         |      record F is { total: Integer }
+         |      initial state S of record C.E.F
+         |      handler H is {
+         |        on command C.Take {
+         |$body
+         |        }
+         |      }
+         |    }
+         |  } with { briefly "c" described as "c" }
+         |} with { briefly "d" described as "d" }
+         |""".stripMargin
+    var out = Set.empty[String]
+    pc.withOptions(CommonOptions(showWarnings = false)) { _ =>
+      Riddl.parseAndValidate(RiddlParserInput(model, td), shouldFailOnError = false) match
+        case Left(msgs) => fail(msgs.map(_.message).mkString("\n"))
+        case Right(result) =>
+          out = Pass
+            .runPass[ProjectionOutput](
+              PassInput(result.root),
+              PassesOutput(),
+              ProjectionPass(PassInput(result.root), result.outputs)
+            )
+            .nodes
+            .filter(_.record.value.get("kind").contains(ujson.Str("value-reference")))
+            .map(kindOf)
+            .toSet
+    }
+    out
+
   private def nodes(td: TestData): Seq[ProjectedNode] =
     var out: Seq[ProjectedNode] = Nil
     pc.withOptions(CommonOptions(showWarnings = false)) { _ =>
@@ -136,6 +175,38 @@ class ValueReferenceNodesTest extends AbstractValidatingTest {
     "select by source text when a kind is not what you want" in { (td: TestData) =>
       matched("""-type morph-statement -source-regex LiveData""", td) mustBe 1
       matched("""-type morph-statement -source-regex zzzz""", td) mustBe 0
+    }
+  }
+
+  "a lexical binding" should {
+
+    "classify a `let`-local" in { (td: TestData) =>
+      given TestData = td
+      // A `let` is not a Definition, so no refMap lookup can find it -- these read as `unresolved`
+      // until 2026-08-26. The binding is right there in the enclosing clause, which is as
+      // structural as anything else this pass reports.
+      val kinds = kindsFor("""|          let n = 5
+                              |          set field S.total to n""".stripMargin)
+      kinds must contain("let-local")
+    }
+
+    "classify a `foreach` element" in { (td: TestData) =>
+      given TestData = td
+      val kinds = kindsFor("""|          foreach line in field Take.lines {
+                              |            set field S.total to line.qty
+                              |          }""".stripMargin)
+      kinds must contain("foreach-element")
+    }
+  }
+
+  "a literal" should {
+    "not be a value-reference at all" in { (td: TestData) =>
+      given TestData = td
+      // Reid, 2026-08-26: "While literal is a value, it is not a value-reference." A literal has no
+      // referent, so it gets no node -- rather than a node with a `literal` resolvedKind. Pins the
+      // ruling so `literal`/`prompt` are not added to the vocabulary later by analogy.
+      val kinds = kindsFor("""          set field S.total to 42""")
+      kinds mustNot contain("literal")
     }
   }
 }

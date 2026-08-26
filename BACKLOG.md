@@ -900,7 +900,14 @@ each want an approved plan before implementation, per the standing rule.
   replay at all. The cache-restore path is real and is now closed, but the timing observation
   was not the proof it was presented as.
 
-- **[1.10]** **Does prefix truthfulness extend to a field's type and a type alias?**
+- ~~**[1.10]** **Does prefix truthfulness extend to a field's type and a type alias?**~~ —
+  **RULED 2026-08-26: check a prefix that is WRITTEN, never demand one.** A field's type admits
+  only a type, so a prefix there removes no ambiguity — unlike a portlet's type or a function's
+  `requires`, where several kinds are legal. Only a NON-DEFAULT keyword can be checked: an
+  omitted one is parsed as `"type"`, so the AST cannot tell `Ctx.Rec` from `type Ctx.Rec`.
+  Zero corpus cost. Original entry follows.
+
+  **[1.10 — as filed]**
   — a DECISION, not effort. The check shipped 2026-08-24 (`cb05e3748`) covering
   `TypeRef`: portlet types, invariant `requires`, a function's `requires`/`returns`.
   A field's type (`two: Ctx.Cmd`) and a type alias (`type A is Ctx.Rec`) are

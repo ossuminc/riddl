@@ -143,12 +143,35 @@ class ReferencePrefixAndRepositoryPortsTest extends AbstractValidatingTest {
       * test starts failing because the scope was widened, that is the intended direction — update
       * it rather than narrowing the check back.
       */
-    "NOT yet cover a field's type, which is a different AST node" in { (td: TestData) =>
-      val msgs = messagesFor(
-        model("""    record Holder is { two: Ctx.Persist }"""),
-        td
-      )
+    "leave a BARE field type alone -- a prefix is never demanded there" in { (td: TestData) =>
+      // [1.10], ruled 2026-08-26: check a prefix that is WRITTEN; never demand one. A field's type
+      // admits only a type, so a prefix there removes no ambiguity -- unlike a portlet's type or a
+      // function's `requires`, where several kinds are legal and the prefix disambiguates.
+      // Demanding it would have cost 542 sites in reactive-bbq alone for no reader benefit.
+      val msgs = messagesFor(model("""    record Holder is { two: Ctx.Persist }"""), td)
       withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, PrefixErr) mustBe empty }
+    }
+
+    "flag a field type whose WRITTEN prefix lies" in { (td: TestData) =>
+      // The other half of the ruling. A prefix that lies is worse than one that is absent, because
+      // a reader believes it.
+      val msgs = messagesFor(model("""    record Holder is { two: record Ctx.Persist }"""), td)
+      withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, PrefixErr) must not be empty }
+    }
+
+    "accept a field type whose written prefix is true" in { (td: TestData) =>
+      val msgs = messagesFor(model("""    record Holder is { two: command Ctx.Persist }"""), td)
+      withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, PrefixErr) mustBe empty }
+    }
+
+    "never report on the `type` keyword, which an omitted prefix is indistinguishable from" in {
+      (td: TestData) =>
+        // A hard limit, not a choice: `TypeParser` builds AliasedTypeExpression(loc, "type", pid)
+        // when nothing is written, so the AST cannot tell `Ctx.Persist` from `type Ctx.Persist`.
+        // Reporting on "type" would fire on every bare field type in the corpus -- precisely the
+        // demand this ruling declined.
+        val msgs = messagesFor(model("""    record Holder is { two: type Ctx.Persist }"""), td)
+        withClue(msgs.map(_.message).mkString("\n")) { errs(msgs, PrefixErr) mustBe empty }
     }
   }
 
