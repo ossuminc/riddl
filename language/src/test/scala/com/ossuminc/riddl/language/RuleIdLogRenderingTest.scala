@@ -10,12 +10,15 @@ import com.ossuminc.riddl.utils.{AbstractTestingBasis, CallBackLogger, pc}
 
 /** The rule id is rendered by the LOGGER, beside the kind prefix it already supplies.
   *
-  * **This suite is `scala-jvm-native` because `withLogger` cannot capture on Scala.js.**
-  * `DOMPlatformContext` overrides `def log` to return a fresh `SysLogger()` on every call
-  * (`DOMPlatformContext.scala:88`), so the logger `withLogger` swaps into the `logger` field is
-  * never consulted and a capture reads the empty string. The rendering itself is fine on JS -- CI
-  * printed `[error] [field-duplicate-name] ...` in the very run where this assertion failed, which
-  * is the tell that the INSTRUMENT was broken and not the feature. Filed as BACKLOG [1.18].
+  * **This suite is SHARED again as of [1.18].** It lived in `scala-jvm-native` for a day because
+  * `withLogger` could not capture on Scala.js: `DOMPlatformContext` overrode `def log` to return a
+  * FRESH `SysLogger()` on every call, so the logger `withLogger` swapped into the `logger` field
+  * was never consulted. The override also silently zeroed every per-instance message counter, and
+  * it returned exactly what the base field is already initialised to -- so deleting it restored
+  * `withLogger` and the counters while changing nothing about default behaviour.
+  *
+  * Running here on all three rows is the point: the defect was a PLATFORM difference, and a suite
+  * that skips the platform it differs on cannot see it come back.
   *
   * The platform-independent half -- that the id stays OUT of `Message.format`, where
   * `CheckMessagesTest` compares its goldens -- is asserted in the shared `RuleIdTest`.

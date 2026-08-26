@@ -129,6 +129,40 @@ class ValidateFixTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "a COMPUTED fix" should {
+
+    "rewrite the span using the text it matched" in {
+      // [1.16]: `mechanicalFix` was `Option[String]` -- a CONSTANT -- so a fix whose replacement
+      // depends on what it matched could not be expressed at all. `quoted-constant-literal` is a
+      // pure span replacement (`"5"` -> `5`) and was excluded purely for want of a way to say so.
+      val model =
+        """domain D is {
+          |  context C is {
+          |    constant Threshold: Integer = "5"
+          |    constant Ratio: Real = "1.50"
+          |  } with { briefly "c" described as "c" }
+          |} with { briefly "d" described as "d" }
+          |""".stripMargin
+      withModel(model) { (run, read) =>
+        run(ValidateCommand.Options(fix = true))
+        val after = read()
+        after must include("constant Threshold: Integer = 5")
+        // `1.50`, not `1.5`: the replacement is the matched text minus its quotes, so precision
+        // written by the author survives. A parsed-and-reprinted number would not.
+        after must include("constant Ratio: Real = 1.50")
+        after mustNot include("\"5\"")
+      }
+    }
+
+    "not appear in the constant-replacement map, which cannot carry it" in {
+      // The published Map[String, String] is handed to consumers that apply replacements blindly.
+      // A computed fix has no constant text, so omitting it is the honest answer rather than
+      // inventing one.
+      RuleId.mechanicalReplacements.keySet mustNot contain(RuleId.QuotedConstantLiteral.code)
+      RuleId.fixable.keySet must contain(RuleId.QuotedConstantLiteral.code)
+    }
+  }
+
   "the fixable set" should {
     "contain only rules whose fix is a pure span replacement" in {
       // shape-keyword rewrites `flow X is` to `processor X as flow is` -- an insertion elsewhere

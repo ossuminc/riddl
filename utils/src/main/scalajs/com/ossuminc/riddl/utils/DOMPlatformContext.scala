@@ -85,8 +85,6 @@ case class DOMPlatformContext() extends PlatformContext {
 
   override def stderrln(message: String): Unit = dom.console.error(message + newline)
 
-  override def log: Logger = SysLogger()
-
   override def newline: String = "\n"
 
   override def ec: ExecutionContext = scala.concurrent.ExecutionContext.global

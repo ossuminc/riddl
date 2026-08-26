@@ -971,8 +971,13 @@ object RiddlLib extends RiddlLib:
         // carries its own mechanical replacement cannot fall out of step with one.
         val edits = msgs.justDeprecations.toSeq.flatMap { m =>
           m.ruleId.flatMap(rule => rule.mechanicalFix.map(rule.code -> _)).map {
-            case (code, replacement) =>
-              SourceEdit(m.loc.offset, m.loc.endOffset, replacement, code, origin)
+            case (code, fix) =>
+              // A COMPUTED fix needs the text it matched, and this function has the source -- so it
+              // slices the span rather than dropping the fix. `quoted-constant-literal` (`"5"` ->
+              // `5`) is only expressible this way, which is why [1.16] made `Fix` a sum type
+              // instead of widening the published `Map[String, String]` that cannot carry it.
+              val matched = source.slice(m.loc.offset, m.loc.endOffset)
+              SourceEdit(m.loc.offset, m.loc.endOffset, fix(matched), code, origin)
           }
         }
         // Descending, so applying them in order never shifts an offset still to be used.

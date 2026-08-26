@@ -42,16 +42,52 @@ package com.ossuminc.riddl.language
   * @param code
   *   The stable, published identifier. Kebab-case, subject-prefixed.
   * @param mechanicalFix
-  *   Replacement text when this rule's fix is a pure SPAN REPLACEMENT -- the message's `loc` covers
-  *   exactly the offending source and swapping in this text resolves it, touching nothing else.
-  *   `None` when the fix needs a judgement call or a rewrite somewhere other than the span.
+  *   How to rewrite the span when this rule's fix is a pure SPAN REPLACEMENT -- the message's `loc`
+  *   covers exactly the offending source and swapping in the result resolves it, touching nothing
+  *   else. `None` when the fix needs a judgement call or a rewrite somewhere other than the span.
   * @param deprecates
   *   True when the rule reports a deprecated construct. Kept ON THE RULE so the set of deprecations
   *   is derived rather than listed; see the note on `DeprecationCode.all` above.
   */
+/** How a rule's fix produces its replacement text.
+  *
+  * A sum type rather than a second field beside `Option[String]`: two fields describing one fix can
+  * disagree, and this repo keeps recording that shape as a defect.
+  *
+  * The distinction is real, not bookkeeping. A CONSTANT fix is expressible in the published
+  * `Map[String, String]` that `RiddlLib.deprecationEdits` and `DeprecationCode.mechanicalReplacement`
+  * hand to consumers; a COMPUTED one is not, because it needs the matched text. Keeping them
+  * separate is what lets that map stay honest about what it can carry instead of silently omitting
+  * or mis-stating the computed ones.
+  */
+enum Fix:
+
+  /** The span is replaced by this exact text, whatever it matched. */
+  case Constant(text: String)
+
+  /** The span is replaced by `f(matched)` -- the fix depends on what it matched.
+    *
+    * `quoted-constant-literal` is the reason this exists: `constant N: Integer = "5"` becomes `5`,
+    * and the replacement is the matched text minus its quotes. That is a pure span replacement --
+    * it just is not a constant one, and it was excluded from `--fix` purely for want of a way to
+    * say so.
+    */
+  case Computed(f: String => String)
+
+  /** The replacement for a given matched span. */
+  def apply(matched: String): String = this match
+    case Constant(text) => text
+    case Computed(f)    => f(matched)
+
+  /** The constant text, when there is one. What the published `Map[String, String]` can carry. */
+  def constantText: Option[String] = this match
+    case Constant(text) => Some(text)
+    case _: Computed    => None
+end Fix
+
 enum RuleId(
   val code: String,
-  val mechanicalFix: Option[String] = None,
+  val mechanicalFix: Option[Fix] = None,
   val deprecates: Boolean = false
 ):
 
@@ -154,17 +190,25 @@ enum RuleId(
   // was renamed to DoStatement in 2026-08-25 while its code deliberately was not. Renaming a rule
   // is a source change; renaming its code is an API break.
   case StateIsRecord extends RuleId("state-is-record", deprecates = true)
-  case DoStatement extends RuleId("prompt-statement", mechanicalFix = Some("do"), deprecates = true)
+  case DoStatement extends RuleId("prompt-statement", mechanicalFix = Some(Fix.Constant("do")), deprecates = true)
   case SendToInlet extends RuleId("send-to-inlet", deprecates = true)
   case BareStringCondition extends RuleId("bare-string-condition", deprecates = true)
   case AnonymousNebula extends RuleId("anonymous-nebula", deprecates = true)
   case ShapeKeyword extends RuleId("shape-keyword", deprecates = true)
-  case AbstractType extends RuleId("abstract-type", mechanicalFix = Some("Anything"), deprecates = true)
+  case AbstractType extends RuleId("abstract-type", mechanicalFix = Some(Fix.Constant("Anything")), deprecates = true)
   case SingleAlternation extends RuleId("single-alternation", deprecates = true)
   case EntityOptionToIntention extends RuleId("entity-option-to-intention", deprecates = true)
   case TypeFirstAggregate extends RuleId("type-first-aggregate", deprecates = true)
   case ConnectorOptionToIntention extends RuleId("connector-option-to-intention", deprecates = true)
-  case QuotedConstantLiteral extends RuleId("quoted-constant-literal", deprecates = true)
+  // The fix is the matched text minus its surrounding quotes -- `"5"` becomes `5`. A pure span
+  // replacement that simply is not a CONSTANT one, which is the only reason it was excluded from
+  // `--fix` until [1.16].
+  case QuotedConstantLiteral
+      extends RuleId(
+        "quoted-constant-literal",
+        mechanicalFix = Some(Fix.Computed(m => m.stripPrefix("\"").stripSuffix("\""))),
+        deprecates = true
+      )
 
   // ---- handler: handlers and their on-clauses ----------------------------------------------
   case HandlerNoExecutableStatements extends RuleId("handler-no-executable-statements")
@@ -583,7 +627,18 @@ object RuleId:
   lazy val deprecations: Seq[RuleId] = values.filter(_.deprecates).toSeq
 
   /** Every rule whose fix is a pure span replacement, as code -> replacement text. */
+  /** Rules whose fix is a CONSTANT replacement, as code -> text.
+    *
+    * A computed fix cannot appear here -- its replacement depends on the matched text, which a
+    * `Map[String, String]` has no way to express. Omitting it is the honest answer: a consumer
+    * reading this map gets replacements it can apply blindly, and `validate --fix` (which has the
+    * matched span) applies the computed ones itself.
+    */
   lazy val mechanicalReplacements: Map[String, String] =
+    values.flatMap(r => r.mechanicalFix.flatMap(_.constantText).map(r.code -> _)).toMap
+
+  /** Every rule with any mechanical fix, constant or computed. What `validate --fix` acts on. */
+  lazy val fixable: Map[String, Fix] =
     values.flatMap(r => r.mechanicalFix.map(r.code -> _)).toMap
 
   /** The subject prefix -- the part before the first `-`. Lets a consumer select a whole family. */

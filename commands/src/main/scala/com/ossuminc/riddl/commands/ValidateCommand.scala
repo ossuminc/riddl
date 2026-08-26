@@ -8,7 +8,7 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.{Command, CommandOptions}
 import com.ossuminc.riddl.commands.find.FindEditor
-import com.ossuminc.riddl.language.{Messages, RuleId}
+import com.ossuminc.riddl.language.{Fix, Messages, RuleId}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
@@ -181,7 +181,7 @@ class ValidateCommand(using pc: PlatformContext)
     // Every diagnostic is classified, so the report can say what it did NOT fix and why. Their
     // design note is the reason this is not optional: "a codemod that silently leaves 40 sites is
     // worse than one that fixes none".
-    val fixable = scala.collection.mutable.ListBuffer.empty[(Messages.Message, RuleId, String)]
+    val fixable = scala.collection.mutable.ListBuffer.empty[(Messages.Message, RuleId, Fix)]
     // Grouped by REASON, listing the rules -- not one line per rule. The reason text is identical
     // for every rule lacking a fix, so a line each turned a 20-finding model into 11 lines of the
     // same sentence and buried the one that mattered.
@@ -205,10 +205,10 @@ class ValidateCommand(using pc: PlatformContext)
                     "reported span",
                   rule.code
                 )
-              case Some(replacement) =>
+              case Some(fix) =>
                 FindEditor.fileOfSource(m.loc.source) match
                   case None    => skip("not in a file this run can edit", rule.code)
-                  case Some(_) => fixable.append((m, rule, replacement))
+                  case Some(_) => fixable.append((m, rule, fix))
     }
 
     def reportSkips(label: String): Unit =
@@ -233,10 +233,15 @@ class ValidateCommand(using pc: PlatformContext)
       // `fileOfSource`, NOT `Path.of(loc.source.origin)`: origin is the SHORT name error messages
       // render, so treating it as a path works only when the cwd happens to be the model's own
       // directory. `find -replace` shipped with exactly that bug.
-      val edits = fixable.toSeq.flatMap { case (m, rule, replacement) =>
+      val edits = fixable.toSeq.flatMap { case (m, rule, fix) =>
         FindEditor
           .fileOfSource(m.loc.source)
-          .map(file => FindEditor.Edit(file, m.loc.offset, m.loc.endOffset, replacement, rule.code))
+          .map { file =>
+            // A COMPUTED fix is applied against the text it matched, which the message's own span
+            // identifies. `quoted-constant-literal` (`"5"` -> `5`) is only expressible this way.
+            val matched = m.loc.source.data.slice(m.loc.offset, m.loc.endOffset)
+            FindEditor.Edit(file, m.loc.offset, m.loc.endOffset, fix(matched), rule.code)
+          }
       }
       FindEditor.plan(edits) match
         case Left(problems) =>

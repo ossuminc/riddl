@@ -1070,7 +1070,12 @@ verification is carried here so it is not repeated.**
   Do NOT simply rename it.
 
 
-- **[1.16]** **A codemod whose replacement is COMPUTED from the matched text.**
+- ~~**[1.16]** **A codemod whose replacement is COMPUTED from the matched text.**~~ — **DONE
+  2026-08-26.** `Fix` is a sum type (`Constant` | `Computed`), so the published
+  `Map[String, String]` keeps only what it can express and `validate --fix` applies both.
+  `quoted-constant-literal` now fixes. Original entry follows.
+
+  **[1.16 — as filed]**
   `RuleId.mechanicalFix` is an `Option[String]` -- a CONSTANT replacement -- which covers
   `prompt-statement` -> `do` and `abstract-type` -> `Anything` and cannot express a fix that
   depends on what it matched.
@@ -1092,7 +1097,11 @@ verification is carried here so it is not repeated.**
   at every layer so no corpus model moves. FORMAT_REVISION 23. Riddlg was the requester.
 
 
-- **[1.18]** **`withLogger` is a silent no-op on Scala.js.**
+- ~~**[1.18]** **`withLogger` is a silent no-op on Scala.js.**~~ — **DONE 2026-08-26**: the
+  override is deleted. It also zeroed every message counter, which nobody had noticed.
+  Original entry follows.
+
+  **[1.18 — as filed]**
   **Verified**: `DOMPlatformContext.scala:88` overrides `def log: Logger = SysLogger()`, returning
   a FRESH logger on every call, so the logger `PlatformContext.withLogger` swaps into the `logger`
   field is never consulted. `pc.withLogger(CallBackLogger(...)) { ... }` therefore captures nothing
