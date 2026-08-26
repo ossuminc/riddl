@@ -6,105 +6,120 @@ GitHub release notes — don't reproduce it here.
 
 ## HANDOFF
 
-Orientation for a session with no memory of this work. **Open work is in
-`BACKLOG.md`**; durable facts are in `CLAUDE.md`; what things TAUGHT us is in this
-NOTEBOOK's body. Ask `git` for branch, tree and unpushed span — never trust a written
-answer to those. Everything that landed 2026-08-18 → 2026-08-25 was graduated verbatim
-to the dated section immediately below this one; read it for the reasoning behind a
-recent change, not to orient.
+Orientation for a session with no memory of this work. **Open work is in `BACKLOG.md`**;
+durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
+Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### In flight
+### Build state — verified 2026-08-26
 
-**A 15-task batch from riddl-models and riddl-generator: 13 landed, 2 remain.** All
-were pre-approved by Reid with their authors. The remainder is **`[1.11]`** (a stable
-rule id on every diagnostic, plus `validate --json`) and **`[1.12]`** (`validate
---fix`, blocked on it). **No code is written for either.**
+**`2.0.0-rc.26` IS CUT, PUBLISHED AND VERIFIED**, from `c64f3388f` on `release/2`.
+Certified cold (throwaway cache 0B -> 285M): **3068 / 1005 / 3026**, zero failures, zero
+`No tests to run`, 19 module legs. All five channels checked against their own registry
+rather than a log: Maven coordinates at `2.0.0-rc.26`, npm `--tag rc` with `latest` still
+1.31.0, Homebrew touching ONLY `riddlc-rc.rb`, `notify-blog` **skipped**.
 
-**Read `[1.11]` in BACKLOG.md before designing anything.** The finding a fresh session
-is most likely to miss — and then duplicate — is that `Messages.DeprecationCode`
-(`language/.../Messages.scala:190`) is ALREADY this mechanism in kebab-case, threaded
-through `Message.deprecationCode` and consumed at `RiddlLib.scala:970` to build
-`SourceEdit`s. An earlier draft proposed `REF001`-style ids; that would have been a
-second competing scheme. The rulings, the 304-site census and the scope caveats are all
-in the entry.
+**Deliberate failures are ZERO**, because both corpora migrated against a STAGED binary
+BEFORE the tag. That is now the preferred order in the `/rc` skill — a corpus needs the
+RULE, not a published RELEASE. Do not go back to tagging red without a reason.
 
-**`[1.13]`–`[1.15]` were flagged during the batch, verified against code, and left
-unowned** — type-checking `put`/`return`/`require`, `find -type <unknown>` matching
-nothing silently, and whether `StatsPass.numPromptStatements` gets renamed. Each entry
-carries its `file:line` evidence so it need not be re-derived.
+**`../bin/riddlc` is `2.0.0-rc.26`, built from Scala 3.9.0-RC4 at 15:00.** It is
+therefore STALE relative to the working tree, which is on RC6. Restage with
+`scripts/publish-and-stage.sh` (never `nativeLink` alone — ivy and binary must move
+together). **BAST `FORMAT_REVISION` is 23.**
 
-### Build state — verified 2026-08-25
+### In flight — the Scala 3.9.0-RC6 upgrade
 
-**`2.0.0-rc.25` IS CUT, PUBLISHED AND VERIFIED.** Certified from a genuinely cold cache
-(`/tmp/sbt-verify-rc25`, 140K -> 283M): **3036 / 979 / 2994**, zero failures, zero `No
-tests to run`, 7/5/7 module legs. Every row landed on the number predicted BEFORE the run.
-TatSu clean; riddl-examples 9/9 and riddl-models 190/190 through the external validator.
+**The only uncommitted work, and it is COMPLETE and GREEN, not half-done.** 32 sites
+across 8 files. Compile: 0 errors, 0 compiler warnings on all three platforms. Tests:
+**3068 / 1005 / 3026 — byte-identical to the rc.26 certification on RC4**, which is the
+expected result because no test source changed, and therefore the evidence that nothing
+was skipped rather than that nothing broke.
 
-**Every channel verified against its own registry, not the log**: 11 Maven coordinates at
-`2.0.0-rc.25` (the four retired modules correctly absent), npm published `with tag rc`,
-Homebrew touched ONLY `Formula/riddlc-rc.rb` with stable `riddlc.rb` still on 1.31.0, and
-**`notify-blog` skipped**. The released macOS binary was downloaded and run: it reports
-`2.0.0-rc.25` and carries the rule ids, the `--json` shape and multi-line `do`.
+**What is NOT done:** CI has never exercised the RC6 path edits — they only run on a
+push — and `../bin/riddlc` is still the RC4 build. `[0.6]` in BACKLOG carries the full
+site list and the grep that finds them, for the eventual 3.9.0-final bump.
 
-**Deliberate failures are ZERO, and the ORDER is why.** Both corpora migrated against a
-STAGED binary before the tag rather than after it, so rc.25 shipped green instead of red.
-That reverses the previous practice and is now recorded in the `/rc` skill as preferred: a
-corpus needs the RULE, not a published RELEASE. Do not go back to tagging red without a
-reason.
+### Traps a fresh session would hit
 
-**`../bin/riddlc` is `2.0.0-rc.25-1-76cb9eab`** -- one commit past the tag, and that commit
-touches only `.claude/skills/rc/SKILL.md`, so the binary is rc.25 in everything that
-compiles. ivy and the binary are from the same build. Anyone wanting the exact tag takes
-`brew upgrade ossuminc/tap/riddlc-rc`.
-
-**BAST `FORMAT_REVISION` is 23**, and riddl-models has regenerated all 190 `.bast`.
-
-### `task/` — 2 open, everything else closed
-
-**Ten of the twelve 2026-08-25 tasks are in `task/done/` with Results appended**, plus
-riddl-examples' null-rule report that arrived mid-session. Two remain OPEN, and neither
-is open by oversight:
-
-- **`a-saga-with-no-timeout`** — its third criterion is a LANGUAGE REFERENCE change, so
-  it is ossum.tech's; a task is filed there. Not moved to `done/`, because filing it
-  done while a criterion the sender wrote is unmet would be a false report.
-- **`value-references-as-nodes-in-dump-json`** — `resolvedKind` lacks four of the seven
-  kinds asked for (`let-local`, `foreach-element`, `literal`, `prompt`), and two of those
-  are a modelling question rather than a gap: a literal has no target, so emitting it as
-  a `value-reference` needs a decision about what that node kind means. Awaiting a ruling.
+- **A Scala bump is 32 sites, not one.** The full version is a path segment
+  (`target/out/<platform>/scala-<fullVersion>/`), hardcoded in `scala.yml`,
+  `release.yml`, `coverage.yml`, `.sonarcloud.properties` and `Dockerfile`. A grep that
+  omits `.github/` misses 11 of them. See `[0.6]`.
+- **A red CI run on the tagged commit may be STALE rather than a regression.** rc.26's
+  was: riddl-models fixed two corpus type errors 13 minutes AFTER CI started. Check
+  `git -C ../riddl-models log` for commits timestamped inside the run window — one
+  command, decisive — and confirm by RUNNING the model, not by re-reading the log.
+- **Re-run the EXTERNAL grammar validators even when CI's grammar job is green.** CI
+  reads the corpus as it stood at run time; riddl-models adopted `system.now` in 68
+  fields afterwards. The EBNF covered it, but that green job could not have told you so.
+- **A test-count prediction is only evidence if the instrument is checked.** Twice this
+  session a count was wrong and the tell was arithmetic, never an error message: a file
+  RENAMED across source trees (`scala-jvm-native` -> `scala`) adds no cases but changes
+  which rows see it, and `git diff --name-only` collapses renames so it scores as new on
+  every row. **One row hitting its number exactly while another misses by a constant is
+  a prediction bug — a real skipping bug does not spare a row.**
 
 ### Certainty
 
-Verified by running the command this session: the staged binary's version, the
-`FORMAT_REVISION` literal, the `task/` listings, and the `file:line` citations in
-`[1.13]`–`[1.15]`. Taken on trust from earlier in the branch: the test floors and the
-deliberate-failure count, both of which are stale-prone by nature.
+Verified by running, this session: the rc.26 channel checks, the RC6 compile and test
+totals, the staged binary's version and behaviour, TatSu 190/190 and 9/9, and that the
+CM/To-Do work is committed and pushed in the `ossuminc` repo (`3dae364`, `5cda6fc` —
+Reid committed it himself). Assumed, not verified: that RC6 is the newest Scala RC.
 
-**Traps — every one bit someone here.**
+### `task/` — empty
 
-- **A "missing data" defect is often a WRONG ANSWER instead.** Revert the fix and
-  read what the test says: `"C" was not equal to "Source"` is a wrong answer;
-  `None was not equal to Some(…)` is a missing one.
-- **A green suite after a fix is not evidence the fix did anything.** [2.6]'s first
-  attempt patched an unreachable arm and everything stayed green; only printing the
-  actual messages showed the error was still there.
-- **An entry's stated obstacle may have dissolved.** [1.2] and [2.6] were both
-  filed as "needs a plan" on obstacles later work had quietly removed. Re-read the
-  premise before believing the size estimate.
-- **A fixture is a detector, and the best ones exercise a COMBINATION.** A38's
-  refusal-step-WITH-metadata fixture found that all thirteen interaction kinds lost
-  their metadata through JSON. Neither half was untested; the intersection was.
-- **`Keywords.keyword` ends in `./`, a CUT** — wrap an optional keyword-led clause
-  in `NoCut` or the enclosing alternative cannot backtrack.
-- **`AST.Set` shadows `scala.Set`** — three separate compile errors in one day.
-- **A WARM SBT SERVER does not see an env var set on a later invocation.** An opt-in
-  test gated on `RIDDL_NETWORK_TESTS` cancelled and read as "disabled" when the real
-  cause was a server started before the variable existed. `sbt -batch shutdown` first.
-- **Never `sbt … | tail -N` for a multi-module run** — it discards the module
-  summaries that tell you what actually ran.
+No pending files; 143 in `task/done/`. Nothing awaits triage, which is a fact about
+right now and not a reason to skip the check.
 
-**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
-call, not the handoff's.
+**Run `/ossuminc-skills:check-tasks` in the new session.**
+
+## 2026-08-26 — rc.26, Scala RC6, and two documents reconciled — DONE
+
+**`2.0.0-rc.26` shipped green**, the second RC to use the stage-first order. Nothing
+below is about the release mechanics, which the `/rc` skill now carries; these are the
+three things that generalize.
+
+**A red CI run on the commit you are about to tag may be about the CORPUS, not the code.**
+rc.26's JVM and Native legs failed on one case — reactive-bbq — while nine other jobs were
+green. The cause was rc.25-11's new `put`/`return` type-checking exposing two genuine
+corpus type errors, which riddl-models then fixed at 15:11 UTC, thirteen minutes AFTER CI
+started at 14:58. **The corpus is a live sibling checkout and is not in any cache key**, so
+a long run is not a snapshot of it. The decisive check is one command —
+`git -C ../riddl-models log` for commits timestamped inside the run window — and the
+confirmation is RUNNING the model (`riddlc from reactive-bbq.conf validate` → 0 errors),
+never re-reading the log.
+
+**A prediction is only evidence if the instrument is checked, and the tell is arithmetic.**
+The rc.26 delta script scored `RuleIdLogRenderingTest` as a new file worth +3 on every row.
+It was a RENAME, from `language/src/test/scala-jvm-native/` into `.../scala/` — **zero new
+cases, but the tree changed, so JS gains 3 and JVM and Native gain nothing.**
+`git diff --name-only` collapses a rename onto the new path, so `git show <tag>:<new path>`
+finds nothing and the file reads as brand new. Use `--name-status` and look for `R###`.
+The giveaway was that **JS landed on its number EXACTLY while JVM missed by a constant** —
+a real skipping bug does not spare a row. A second instrument error the same day (a leg
+parser whose non-greedy stop matched a `=== Throughput Benchmark ===` fixture line) failed
+the same way and was caught the same way.
+
+**Reconciling a document against the branch finds errors that predate the last
+reconciliation.** Part A of the To-Do List needed 17 corrections and **four were already
+wrong when the previous pass ran** — nothing in that window touched them, so a
+commits-since-last-date diff structurally cannot see them. The sharpest: A27 asserts the
+validator "warns about portability on every use" of `code`, and that warning **has never
+existed** (now `[1.21]`). Two more had drifted in the direction nobody watches — recording
+work as *outstanding* that had since been DECIDED (A42's scaffolding dropped, A46's
+compound-output warning declined). **A declined half is a disposal, not a debt.**
+
+**The Computational Model's failure mode is worse than the To-Do List's, and for a
+structural reason.** The To-Do List records DECISIONS, so a stale entry is a wrong fact;
+the CM records what a generator MUST DO, so a stale entry is a wrong BUILD. Five places
+still said `reply` was deprecated in favour of `yield` — reversed for 2.0, where `yield`
+answers a command and `reply` answers a query as distinct nodes. A generator author
+following the CM would have emitted one keyword where the language has two.
+
+**Scala 3.9.0-RC4 → RC6 was clean** — 0 errors, 0 compiler warnings, and test totals
+byte-identical on all three platforms. The cost is not the compiler, it is that the full
+version is a PATH SEGMENT: 32 sites across 8 files, 11 of them in `.github/`. `[0.6]`
+carries the list for the 3.9.0-final bump.
 
 ## Landed on release/2, 2026-08-18 → 2026-08-25 — what each change taught
 

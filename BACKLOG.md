@@ -43,7 +43,7 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   the hand-fixed (compiling) form, so no state satisfied both formatter and
   compiler. **3.9.4** handles Scala 3 `end` markers correctly. Note `version =` in
   `.scalafmt.conf` is SCALAFMT's version, not Scala's — the digits coincide
-  confusingly; Scala remains 3.9.0-RC4.
+  confusingly; Scala remains 3.9.0-RC6.
   **Known artifact, do not "fix" it**: scalafmt escapes a `|` landing at the start
   of a wrapped scaladoc line, so two comments read `\|`. Removing the backslash
   makes `scalafmtCheck` red because the formatter re-adds it.
@@ -214,6 +214,25 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   and the balance should shift toward what someone actually writes. Same source
   of truth: the commits on this branch, not recollection.
   (ossum.tech is a separate repo; this is a task DROP, not work done here.)
+
+- **[0.6]** **Bump Scala 3.9.0-RC6 -> 3.9.0 when the final ships.** Deferred here
+  deliberately: riddl 2.0 rides Scala Next ahead of LTS, and the RC line is a waypoint,
+  not the destination. **The bump is NOT one line** -- the full Scala version is a path
+  segment in the build outputs (`target/out/<platform>/scala-<fullVersion>/...`), so it
+  is hardcoded in CI and packaging and every site must move together. Verified
+  2026-08-26 doing RC4 -> RC6: **32 sites across 8 files** --
+  `project/Dependencies.scala:18` (the pin, `val scala`), `.github/workflows/scala.yml`
+  (7: `RIDDLC_PATH` twice plus 5 artifact upload paths), `release.yml` (2: native cp and
+  JVM stage zip), `coverage.yml` (1), `.sonarcloud.properties` (6 scoverage paths),
+  `Dockerfile` (1 stage copy), plus `CLAUDE.md` and one live `BACKLOG.md` line.
+  **The grep that finds them all** is `grep -rn "3\.9\.0-RC6" . --exclude-dir=.git
+  --exclude-dir=target` -- and note a narrower grep restricted to `.github/` **missed
+  nothing**, but one that omitted `.github/` missed 11 of the 32. Leave dated historical
+  records (NOTEBOOK's adoption entry, `docs/superpowers/plans/`) at their original
+  version; rewriting those falsifies history.
+  **Evidence RC6 itself is clean** (2026-08-26): 0 compile errors and 0 compiler
+  warnings on all three platforms, and tests 3068/1005/3026 -- byte-identical to the
+  rc.26 certification on RC4, which is the expected result since no test source changed.
 
 ### 1. Queued, designed, not started
 
@@ -1173,6 +1192,32 @@ verification is carried here so it is not repeated.**
   likely to be looking when they get it wrong.
   **Not urgent, and not riddl code** -- but counting `resolvePath`'s missing `ClassTag`, this is
   the third time the shape has cost someone a day.
+
+- **[1.21]** **The `code` statement's portability warning has NEVER been built.**
+  Tools-To-Do-List A27 requires that "the validator warns about portability on **every**
+  use" of `code(language, body)`. Verified 2026-08-26 by repo-wide grep: **no portability
+  diagnostic exists anywhere** -- only emptiness is checked
+  (`ValidationPass.scala:2084`). This is not recent drift; the gap has been open since
+  the item was written and two reconciliations missed it, because the item reads as fully
+  delivered.
+  **Why it still matters:** the whole point of a sanctioned escape hatch is that using it
+  is VISIBLE. A hatch nobody is warned about is an untracked dependency on one target
+  language. The check is small -- one diagnostic at the `CodeStatement` arm.
+  Both A27 and Computational Model §20.4 now record that it does not exist, so the
+  documents no longer assert it; **this item is the work to make them able to.**
+
+- **[1.22]** **`Messages.isActionable` draws a LOOSER line than the generability bar.**
+  Reid ruled 2026-08-26 that a **conforming** model has no Errors while a **generable**
+  model has "no errors or warnings other than Style" -- so Missing and Usage warnings are
+  hard stops for riddlg. But `isActionable` is `severity >= CompletenessWarning.severity`
+  (`Messages.scala:47`), i.e. >= 4, and `MissingWarning` is **2** and `UsageWarning` is
+  **3** (`Messages.scala:81,92`), so both fall BELOW it.
+  **This is filed, not fixed, because the two predicates may legitimately answer different
+  questions**: "is this worth acting on" is not the same as "can code be generated from
+  this". The ruling is recorded in Computational Model §0.3 ruling 5 along with this
+  discrepancy. **Decide which question `isActionable` is for**, then either rename it, or
+  add a separate `isGenerable`, or move the threshold -- but do not move it silently,
+  since consumers key off it.
 
 ### 2. Queued, needs a plan
 
