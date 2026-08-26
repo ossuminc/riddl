@@ -33,36 +33,31 @@ unowned** — type-checking `put`/`return`/`require`, `find -type <unknown>` mat
 nothing silently, and whether `StatsPass.numPromptStatements` gets renamed. Each entry
 carries its `file:line` evidence so it need not be re-derived.
 
-### Build state — verified 2026-08-25 by running the commands
+### Build state — verified 2026-08-25
 
-**`../bin/riddlc` is `2.0.0-rc.24-33-f4076e2c`, staged 2026-08-25, and the local ivy
-artifacts are from THE SAME BUILD** (`scripts/publish-and-stage.sh` runs `publishLocal` and
-`nativeLink` in one sbt invocation, so both halves move together or neither does). It carries
-every one of the 17 completed tasks: rule ids, `validate --json/--fix/--no-msg-ids`, corpus
-mode, and multi-line `do`/`prompt`.
+**`2.0.0-rc.25` IS CUT, PUBLISHED AND VERIFIED.** Certified from a genuinely cold cache
+(`/tmp/sbt-verify-rc25`, 140K -> 283M): **3036 / 979 / 2994**, zero failures, zero `No
+tests to run`, 7/5/7 module legs. Every row landed on the number predicted BEFORE the run.
+TatSu clean; riddl-examples 9/9 and riddl-models 190/190 through the external validator.
 
-**No RC was cut for it, deliberately (Reid's call).** The corpora have not migrated to the
-rules shipped since rc.24, so cutting now would publish a knowingly-red RC and measure the
-certification floors on a red run. The order is: stage -> migrate the corpora -> cut a GREEN
-rc.25. Task files with exact, rule-id-derived censuses are dropped in
-`../riddl-models/task/` (51 errors, 38 of 190 models) and `../riddl-examples/task/`
-(30 sites, 4 models).
+**Every channel verified against its own registry, not the log**: 11 Maven coordinates at
+`2.0.0-rc.25` (the four retired modules correctly absent), npm published `with tag rc`,
+Homebrew touched ONLY `Formula/riddlc-rc.rb` with stable `riddlc.rb` still on 1.31.0, and
+**`notify-blog` skipped**. The released macOS binary was downloaded and run: it reports
+`2.0.0-rc.25` and carries the rule ids, the `--json` shape and multi-line `do`.
 
-**Latest tag is `2.0.0-rc.24`; the branch is well ahead of it.** Run
-`git log 2.0.0-rc.24..HEAD` before attributing anything to the RC.
+**Deliberate failures are ZERO, and the ORDER is why.** Both corpora migrated against a
+STAGED binary before the tag rather than after it, so rc.25 shipped green instead of red.
+That reverses the previous practice and is now recorded in the `/rc` skill as preferred: a
+corpus needs the RULE, not a published RELEASE. Do not go back to tagging red without a
+reason.
 
-**BAST `FORMAT_REVISION` is 22** (`language/.../bast/package.scala:150`). The corpus's
-190 checked-in `.bast` files are a revision behind; riddl-models knows.
+**`../bin/riddlc` is `2.0.0-rc.25-1-76cb9eab`** -- one commit past the tag, and that commit
+touches only `.claude/skills/rc/SKILL.md`, so the binary is rc.25 in everything that
+compiles. ivy and the binary are from the same build. Anyone wanting the exact tag takes
+`brew upgrade ossuminc/tap/riddlc-rc`.
 
-**Prettify's one-space-after-`is` fix has the widest byte-level reach of anything on
-this branch** — 188 of 188 corpus models had drifted. Whitespace is load-bearing
-because riddl-models diffs checked-in `.bast` against source byte for byte.
-
-**Test floors are 2903 / 917 / 2864** (JVM / JS / Native), set at rc.24, where
-deliberate failures were ONE (riddl-examples' `dokn`, 5 morph errors). **That count
-goes stale in hours** — the corpora are live sibling checkouts, and riddl-models has
-committed *during* a certification run and turned a suite red with nothing in riddl
-having changed. **Confirm any red by its MESSAGE, never by comparing counts.**
+**BAST `FORMAT_REVISION` is 23**, and riddl-models has regenerated all 190 `.bast`.
 
 ### `task/` — 2 open, everything else closed
 
