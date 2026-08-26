@@ -1082,6 +1082,24 @@ verification is carried here so it is not repeated.**
   Braced like `doc_block`; `Seq[LiteralString]` plus a derived `.text` for riddlg; additive
   at every layer so no corpus model moves. FORMAT_REVISION 23. Riddlg was the requester.
 
+
+- **[1.18]** **`withLogger` is a silent no-op on Scala.js.**
+  **Verified**: `DOMPlatformContext.scala:88` overrides `def log: Logger = SysLogger()`, returning
+  a FRESH logger on every call, so the logger `PlatformContext.withLogger` swaps into the `logger`
+  field is never consulted. `pc.withLogger(CallBackLogger(...)) { ... }` therefore captures nothing
+  on JS while working on JVM and Native.
+  **Found 2026-08-25** by `RuleIdTest`, which passed on JVM and failed on JS in CI. The tell that
+  the instrument was broken rather than the feature: the same CI run PRINTED
+  `[error] [field-duplicate-name] ...`, so the rendering was correct and only the capture was
+  blind. The two logger-dependent cases moved to `RuleIdLogRenderingTest` under
+  `scala-jvm-native`; the platform-independent half stayed shared.
+  **This is the same family as the `Console.out` trap in CLAUDE.md**: a redirect that silently does
+  not apply, whose symptom is "printed nothing" — which is exactly the defect several suites exist
+  to detect, so it arrives disguised as a true positive.
+  **What to decide**: whether the override is load-bearing (a browser build wanting console output
+  regardless) or simply predates `withLogger`. If the former, `withLogger` should FAIL LOUDLY on a
+  platform that cannot honour it rather than appearing to work.
+
 ### 2. Queued, needs a plan
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built

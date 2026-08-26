@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.utils.{AbstractTestingBasis, CallBackLogger, pc}
+import com.ossuminc.riddl.utils.AbstractTestingBasis
 
 /** A rule id is API: once published, a code means the same thing forever.
   *
@@ -16,16 +16,6 @@ import com.ossuminc.riddl.utils.{AbstractTestingBasis, CallBackLogger, pc}
 class RuleIdTest extends AbstractTestingBasis {
 
   private val codes: Seq[String] = RuleId.values.map(_.code).toSeq
-
-  /** Renders messages through the real logging path, which is where the id is applied. */
-  private def logged(msgs: List[Messages.Message], showIds: Boolean): String =
-    val sb = new StringBuilder
-    pc.withOptions(pc.options.copy(showMessageIds = showIds)) { _ =>
-      pc.withLogger(CallBackLogger((_, m) => sb.append(m).append('\n'))) { _ =>
-        Messages.logMessages(msgs)
-      }
-    }
-    sb.toString
 
   "RuleId" should {
 
@@ -84,30 +74,20 @@ class RuleIdTest extends AbstractTestingBasis {
 
   "a Message carrying a rule" should {
 
-    "render the code rustc-style in the LOG, not in format" in {
-      // The id lives in the logger, beside the kind prefix it already supplies, so the rendering
-      // reads `[error] [field-duplicate-name] ...` the way `error[E0433]:` does. It is deliberately
-      // NOT in `format`, which is what CheckMessagesTest compares its goldens against.
+    "keep the id OUT of `format`" in {
+      // The platform-independent half of the contract, and the one that matters most here:
+      // `format` is what CheckMessagesTest compares its goldens against, so the id must NOT be
+      // there. That the LOGGER adds it is asserted in RuleIdLogRenderingTest, which is
+      // jvm-native because `withLogger` cannot capture on JS -- see that suite.
       val m = Messages.Message(At.empty, "something is wrong", Messages.Error,
         ruleId = Some(RuleId.FieldDuplicateName))
       m.format mustNot include("[field-duplicate-name]")
-      logged(List(m), showIds = true) must include("[field-duplicate-name]")
       m.ruleCode mustBe Some("field-duplicate-name")
-    }
-
-    "print no id at all under --no-msg-ids" in {
-      // The flag's contract is that output is EXACTLY what it was before rule ids existed, so this
-      // asserts the absence of the code rather than merely a different arrangement of it.
-      val m = Messages.Message(At.empty, "something is wrong", Messages.Error,
-        ruleId = Some(RuleId.FieldDuplicateName))
-      val out = logged(List(m), showIds = false)
-      out mustNot include("field-duplicate-name")
-      out must include("something is wrong")
     }
 
     "leave a message with no rule unchanged either way" in {
       val m = Messages.Message(At.empty, "something is wrong", Messages.Error)
-      logged(List(m), showIds = true) mustNot include("[")
+      m.format mustNot include("[")
       m.ruleCode mustBe None
     }
 
