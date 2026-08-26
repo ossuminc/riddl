@@ -61,12 +61,24 @@ case class DefinitionStats(
   numOptions: Long = 0, // number of options declared
   numIncludes: Long = 0,
   numStatements: Long = 0,
-  // NOT renamed with PromptStatement -> DoStatement (2026-08-25): `DefinitionStats` and
-  // `KindStats` are @JSExportTopLevel, so this field name is part of the published JS/TypeScript
-  // API and renaming it is a separate decision from the AST rename. It counts `do "..."`.
-  numPromptStatements: Long = 0, // `do "..."` count (formerly spelled `prompt "..."`)
+  // Renamed with PromptStatement -> DoStatement; `numPromptStatements` survives as a deprecated
+  // accessor below. **Correcting the note that stood here**: it claimed the old name was part of
+  // the published JS/TypeScript API because the class is `@JSExportTopLevel`. That is not how
+  // Scala.js works -- exporting a CLASS does not export its members, and there is no
+  // `@JSExportAll` here, so these fields were never reachable from JavaScript at all. Nor did any
+  // reader exist anywhere in the repo. The rename was deferred on a premise that did not hold.
+  numDoStatements: Long = 0, // `do "..."` count (spelled `prompt "..."` before 2.0)
   numExecutableStatements: Long = 0 // tell/send/morph/set/become/error/code
-)
+) {
+
+  /** Retained for consumers written against the pre-2.0 spelling.
+    *
+    * A derived accessor rather than a second field, deliberately: two fields describing one count
+    * can disagree, and this repo keeps recording that shape as a defect.
+    */
+  @deprecated("Use numDoStatements instead", "2.0.0")
+  def numPromptStatements: Long = numDoStatements
+}
 
 @JSExportTopLevel("KindStats")
 class KindStats(
@@ -81,9 +93,14 @@ class KindStats(
   var numOptions: Long = 0,
   var numIncludes: Long = 0,
   var numStatements: Long = 0,
-  var numPromptStatements: Long = 0,
+  var numDoStatements: Long = 0,
   var numExecutableStatements: Long = 0
 ) {
+
+  /** Retained for consumers written against the pre-2.0 spelling. Derived, not a second field. */
+  @deprecated("Use numDoStatements instead", "2.0.0")
+  def numPromptStatements: Long = numDoStatements
+
   def completeness: Double = (numCompleted.toDouble / numSpecifications) * 100.0d
   def complexity: Double =
     ((numCompleted + numContained + numTerms + descriptionLines + numAuthors + numTerms + numOptions + numIncludes) /
@@ -226,7 +243,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             numTerms = terms,
             numIncludes = includes,
             numStatements = counts.total,
-            numPromptStatements = counts.prompts,
+            numDoStatements = counts.prompts,
             numExecutableStatements = counts.executables
           )
         )
@@ -251,7 +268,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
               numOptions = defStats.numOptions,
               numIncludes = defStats.numIncludes,
               numStatements = defStats.numStatements,
-              numPromptStatements = defStats.numPromptStatements,
+              numDoStatements = defStats.numDoStatements,
               numExecutableStatements = defStats.numExecutableStatements
             )
           ) { (ks: KindStats) =>
@@ -265,7 +282,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             ks.numOptions += defStats.numOptions
             ks.numIncludes += defStats.numIncludes
             ks.numStatements += defStats.numStatements
-            ks.numPromptStatements += defStats.numPromptStatements
+            ks.numDoStatements += defStats.numDoStatements
             ks.numExecutableStatements += defStats.numExecutableStatements
             ks
           }
@@ -284,7 +301,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
       total.numEmpty += next.numEmpty
       total.numAuthors += next.numAuthors
       total.numStatements += next.numStatements
-      total.numPromptStatements += next.numPromptStatements
+      total.numDoStatements += next.numDoStatements
       total.numExecutableStatements += next.numExecutableStatements
       total
     }

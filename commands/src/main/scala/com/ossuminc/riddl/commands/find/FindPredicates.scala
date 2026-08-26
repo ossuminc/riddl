@@ -8,6 +8,7 @@ package com.ossuminc.riddl.commands.find
 
 import com.ossuminc.riddl.commands.project.{ProjectedNode, ProjectionPass}
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.parsing.Keyword
 // The trailing `*` is required: `Contents` is opaque and its extension methods live at PACKAGE
 // level, so importing only the object leaves `contents.isEmpty` unresolvable.
 import com.ossuminc.riddl.language.{Contents, *}
@@ -25,6 +26,57 @@ object FindPredicates {
     * Structural nodes with no keyword of their own — on-clauses especially — deliberately get NO
     * `-type` name; the generalities below are what covers them.
     */
+  /** Node kinds `-type` accepts, beyond the categories and RIDDL's own keywords.
+    *
+    * **Observed, not guessed**: this is every distinct `kind` the projection emits across both
+    * corpora -- 190 riddl-models entry points and 9 riddl-examples -- which between them exercise
+    * essentially every construct in the language. `ProjectionPass.kindOf` derives a kind from
+    * `RiddlValue.kind` at runtime, so there is no static list to read it from, and a hand-guessed
+    * one would be wrong in the direction that matters: rejecting a legitimate `-type`.
+    *
+    * `FindTypeVocabularyTest` re-derives it from the corpus and fails on drift, which keeps it
+    * honest as the AST grows. Widening it is always safe; a MISSING entry turns a working query
+    * into a parameter error, so add on drift rather than debating.
+    */
+  // `Set` is qualified because `AST.Set` shadows `scala.Set` under the wildcard import above
+  // -- the gotcha recorded in CLAUDE.md.
+  private[commands] val knownKinds: scala.collection.immutable.Set[String] =
+    scala.collection.immutable.Set(
+    "adaptor", "arbitrary-interaction", "author", "become-statement", "button", "command",
+    "connector", "constant", "context", "correlation", "do-statement", "document", "domain",
+    "entity", "enumerator", "epic", "error-statement", "event", "field", "flow",
+    "focus-on-group", "foreach-statement", "form", "forward-statement", "function", "group",
+    "handler", "inlet", "input", "invariant", "item", "let-statement", "linecomment", "list",
+    "match-statement", "method", "methodargument", "module", "morph-statement", "on-event",
+    "on-init", "on-other", "on-term", "onmessageclause", "optional-interaction", "outlet",
+    "output", "parallel-interaction", "projector", "put-statement", "query", "record",
+    "reply-statement", "repository", "repositoryref", "require-statement", "requires",
+    "result", "return-statement", "returns", "router", "saga", "sagastep", "schema",
+    "send-message-interaction", "send-statement", "sequential-interaction", "set-statement",
+    "show-output-interaction", "shownby", "sink", "source", "split", "state", "table",
+    "take-input-interaction", "tell-statement", "terminate-statement", "type", "usecase",
+    "user", "vague-interaction", "value-reference", "version", "void", "when-statement",
+    "yield-statement"
+  )
+
+  /** Everything `-type` accepts: the categories below, RIDDL's keywords, and the node kinds.
+    *
+    * Deliberately a UNION rather than the kinds alone. A `-type` value is documented as "a RIDDL
+    * keyword where one exists, or a category", and `allKeywordsSet` covers spellings the corpus
+    * happens not to contain.
+    */
+  private[commands] def typeVocabulary: scala.collection.immutable.Set[String] =
+    categories.keySet ++ Keyword.allKeywordsSet ++ knownKinds
+
+  /** Names the closest legal values rather than dumping all of them. */
+  private def unknownTypeMessage(want: String): String =
+    val near = typeVocabulary.toSeq
+      .filter(v => v.startsWith(want.take(3)) || want.startsWith(v.take(3)) || v.contains(want))
+      .sorted
+      .take(6)
+    val hint = if near.isEmpty then "" else s"; did you mean ${near.mkString(", ")}?"
+    s"unknown -type '$want'$hint"
+
   private val categories: Map[String, ProjectedNode => Boolean] = Map(
     "statement" -> (_.value.isInstanceOf[Statement]),
     "processor" -> (_.value.isInstanceOf[Processor[?]]),
@@ -52,7 +104,11 @@ object FindPredicates {
       case "-type" :: rest =>
         arg("-type", rest) { v =>
           val want = v.toLowerCase
-          Right(FindExpr.Pred(s"-type $v", (n, _) => matchesType(n, want)))
+          // An unknown `-type` is a PARAMETER ERROR, not zero matches. A typo used to yield
+          // `0 matched` and exit 0 -- indistinguishable from a correct query with no hits, which
+          // is the confident-answer-over-nothing failure this command exists to end.
+          if !typeVocabulary.contains(want) then Left(unknownTypeMessage(want))
+          else Right(FindExpr.Pred(s"-type $v", (n, _) => matchesType(n, want)))
         }
       case "-name" :: rest =>
         arg("-name", rest)(v => Right(globPred(s"-name $v", v, idOf, ci = false)))
