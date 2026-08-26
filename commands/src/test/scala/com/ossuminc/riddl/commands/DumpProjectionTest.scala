@@ -125,4 +125,97 @@ class DumpProjectionTest extends AbstractValidatingTest {
       entity("shape").str mustBe "sink"
     }
   }
+
+  "a statement record" should {
+
+    "carry its VALUE operand, not just its target" in { (td: TestData) =>
+      // Reid, 2026-08-26: "the statement should carry its value operand or it is incomplete."
+      // A `set-statement` naming only `target` says a field was assigned and refuses to say what
+      // it was assigned -- half the fact, and the half a consumer asking what the model DOES needs
+      // most.
+      val recs = project(
+        """domain D is {
+          |  context C is {
+          |    command Take is { note: String(1,9) }
+          |    entity E is {
+          |      record F is { total: Integer }
+          |      initial state S of record C.E.F
+          |      handler H is {
+          |        on command C.Take { set field S.total to 42 }
+          |      }
+          |    }
+          |  } with { briefly "c" described as "c" }
+          |} with { briefly "d" described as "d" }
+          |""".stripMargin,
+        td
+      )
+      val sets = ofKind(recs, "set-statement")
+      sets must not be empty
+      val set = sets.head
+      set.value.get("target") mustBe defined
+      withClue(ujson.write(set)) {
+        // The literal is rendered as the value it IS. Consistent with the ruling that a literal is
+        // not a `value-reference`: it has no referent to resolve, so it is reported rather than
+        // linked.
+        set.value.get("value").map(ujson.write(_)).getOrElse("") must include("42")
+      }
+    }
+
+    "expose a `do` statement's prose, which is what a generator reads" in { (td: TestData) =>
+      val recs = project(
+        """domain D is {
+          |  context C is {
+          |    command Take is { note: String(1,9) }
+          |    entity E is {
+          |      record F is { total: Integer }
+          |      initial state S of record C.E.F
+          |      handler H is {
+          |        on command C.Take { do { "first line" "second line" } }
+          |      }
+          |    }
+          |  } with { briefly "c" described as "c" }
+          |} with { briefly "d" described as "d" }
+          |""".stripMargin,
+        td
+      )
+      val dos = ofKind(recs, "do-statement")
+      dos must not be empty
+      // `.text` joins a multi-line `do` with newlines; a single-line one is a Seq of one, so this
+      // is the same string it always was.
+      dos.head.value.get("prose").map(_.str).getOrElse("") mustBe "first line\nsecond line"
+    }
+
+    "leave no statement kind without an operand" in { (td: TestData) =>
+      // The dispatch is total over all 19 Statement kinds with no wildcard, because `commands`
+      // compiles with --no-warnings: a non-exhaustive match would NOT be reported, and a new
+      // statement kind would silently project with no facts. This asserts the property over
+      // OUTPUT, which is what caught the equivalent gap in the rule ids.
+      val recs = project(
+        """domain D is {
+          |  context C is {
+          |    command Take is { note: String(1,9) }
+          |    entity E is {
+          |      record F is { total: Integer }
+          |      initial state S of record C.E.F
+          |      handler H is {
+          |        on command C.Take {
+          |          let n = 5
+          |          set field S.total to n
+          |          do "something"
+          |          error "nope"
+          |        }
+          |      }
+          |    }
+          |  } with { briefly "c" described as "c" }
+          |} with { briefly "d" described as "d" }
+          |""".stripMargin,
+        td
+      )
+      val stmts = recs.filter(_.value.get("kind").exists(_.str.endsWith("statement")))
+      stmts must not be empty
+      val keys = Set("value", "prose", "message", "condition", "target", "collection")
+      val bare = stmts.filterNot(r => keys.exists(r.value.contains))
+      withClue(bare.map(ujson.write(_)).mkString("\n")) { bare mustBe empty }
+    }
+  }
 }

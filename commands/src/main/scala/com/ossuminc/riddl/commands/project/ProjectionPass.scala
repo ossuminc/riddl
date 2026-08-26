@@ -299,6 +299,31 @@ case class ProjectionPass(
       )
     case _ => Seq.empty
 
+  /** A statement's VALUE operand, rendered as data.
+    *
+    * **A statement that names its target but not its value is incomplete** (Reid, 2026-08-26). A
+    * `set-statement` record carrying only `"target": "S.total"` says a field was assigned and
+    * refuses to say what it was assigned -- which is half the fact, and the half a consumer asking
+    * "what does this model DO" needs least.
+    *
+    * A reference is rendered as a resolving `refRecord` so a consumer can follow it; anything else
+    * is rendered as its source form. A LITERAL is rendered here, and that is consistent with the
+    * ruling that a literal is not a `value-reference`: it has no referent to resolve, so it is
+    * reported as the value it is rather than as a reference to something.
+    */
+  private def valueOperand(v: Value, parents: Parents): ujson.Value = v match
+    case vr: ValueRef   => ujson.Obj("value" -> ujson.Str(vr.path.format))
+    case c: Constructor => refRecord(c.ref.pathId, parents)
+    case other          => ujson.Obj("value" -> ujson.Str(other.format))
+
+  /** **Total over every `Statement` kind, with no wildcard, deliberately.**
+    *
+    * `commands` compiles with `--no-warnings`, so a non-exhaustive match here would NOT be reported
+    * -- a new statement kind would simply project with no facts, which is the silent-fall-through
+    * this codebase keeps recording. Enumerating every kind means a new one fails loudly at the
+    * first test that reaches it instead, which is the standing rule: falling through to an error is
+    * fine, carrying on as if nothing happened is not.
+    */
   private def addStatementFacts(s: Statement, obj: ujson.Obj, parents: Parents): Unit = s match {
     case t: TellStatement =>
       obj("target") = t.target match
@@ -316,10 +341,55 @@ case class ProjectionPass(
     case m: MorphStatement =>
       obj("target") = refRecord(m.entity.pathId, parents)
       obj("state") = refRecord(m.state.pathId, parents)
-    case st: SetStatement => obj("target") = ujson.Str(st.field.pathId.format)
+      obj("value") = m.value match
+        case rr: RecordRef  => refRecord(rr.pathId, parents)
+        case c: Constructor => refRecord(c.ref.pathId, parents)
+        case vr: ValueRef   => ujson.Obj("value" -> ujson.Str(vr.path.format))
+    case b: BecomeStatement =>
+      obj("target") = refRecord(b.entity.pathId, parents)
+      obj("handler") = refRecord(b.handler.pathId, parents)
+    case st: SetStatement =>
+      obj("target") = ujson.Str(st.field.pathId.format)
+      obj("value") = valueOperand(st.value, parents)
     case y: YieldStatement => messageOperand(y.msg, parents).foreach(m => obj("message") = m)
     case r: ReplyStatement => messageOperand(r.msg, parents).foreach(m => obj("message") = m)
-    case _                 => ()
+    case l: LetStatement =>
+      obj("binds") = ujson.Str(l.identifier.value)
+      l.typeRef.foreach(tr => obj("declaredType") = refRecord(tr.pathId, parents))
+      obj("value") = valueOperand(l.expression, parents)
+    case p: PutStatement =>
+      obj("target") = refRecord(p.output.pathId, parents)
+      obj("value") = valueOperand(p.value, parents)
+    case r: ReturnStatement => obj("value") = valueOperand(r.value, parents)
+    case tm: TerminateStatement =>
+      obj("target") = valueOperand(tm.target, parents)
+    case e: ErrorStatement => obj("message") = ujson.Obj("value" -> ujson.Str(e.message.s))
+    case rq: RequireStatement =>
+      obj("condition") = rq.condition match
+        case ir: InvariantRef => refRecord(ir.pathId, parents)
+        case other            => ujson.Obj("value" -> ujson.Str(other.format))
+      rq.argument.foreach(a => obj("value") = valueOperand(a, parents))
+    case d: DoStatement =>
+      // The prose riddlg reads. `.text` joins a multi-line `do` with newlines; a single-line one is
+      // a Seq of one, so this is the same string it always was.
+      obj("prose") = ujson.Str(d.text)
+    case c: CodeStatement =>
+      obj("language") = ujson.Str(c.language.s)
+      obj("body") = ujson.Str(c.body)
+    case fe: ForeachStatement =>
+      obj("binds") = ujson.Str(fe.element.value)
+      fe.valueElement.foreach(v => obj("bindsValue") = ujson.Str(v.value))
+      obj("collection") = fe.collection match
+        case fr: FieldRef  => refRecord(fr.pathId, parents)
+        case id: Identifier => ujson.Obj("value" -> ujson.Str(id.value))
+    case w: WhenStatement =>
+      obj("condition") = ujson.Obj("value" -> ujson.Str(w.condition.format))
+    case ms: MatchStatement =>
+      // The subject IS a `match`'s value operand, so omitting it leaves the record saying a match
+      // happened without saying on what. `cases` is deliberately NOT expanded: each case's own
+      // statements are projected as their own records, so listing them here would duplicate them.
+      obj("value") = ujson.Obj("value" -> ujson.Str(ms.expression.format))
+      obj("cases") = ujson.Num(ms.cases.size)
   }
 
   // ---------------------------------------------------------------------------------------------
