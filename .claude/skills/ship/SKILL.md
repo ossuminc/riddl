@@ -94,8 +94,35 @@ not provided:
 
 9. Run the full test suite and publish all modules:
    ```
-   sbt clean test publish
+   sbt "; clean; tJVM; tJS; tNative; publish"
    ```
+   **NEVER `sbt clean test publish`.** That was prescribed here until
+   2026-08-27 and it is a gate that can skip most of the suite while
+   reporting success. In sbt 2 bare `test` resolves to **`testQuick`**,
+   which skips suites it judges unaffected — and **that judgement
+   survives `clean`, because the action cache does**. It once left the
+   JS row of a GREEN run executing 109 of 567 tests, with `languageJS`,
+   `passesJS` and `testkitJS` never running at all. `tJVM`/`tJS`/`tNative`
+   exist precisely to defeat this: they are `testOnly *`, which ignores
+   incremental state. See the alias comments in `build.sbt`.
+
+   **Count what ran.** One `Suites: completed N` line per module in each
+   alias, and zero `No tests to run`. A short count means a module was
+   skipped or the `;` chain aborted at a failure — either way, look.
+
+   **For a MAJOR release, certify from a genuinely cold cache first**
+   (Reid, 2026-08-27, shipping 2.0.0). `clean` removes `target/` but NOT
+   the shared store at `~/.cache/sbt/v2` (or `~/Library/Caches/sbt/v2`),
+   so results can still be replayed:
+   ```
+   sbt -batch shutdown                       # a warm server IGNORES the -D
+   sbt --server -Dsbt.global.localcache=/tmp/sbt-verify-<ver> -batch "; clean; tJVM; tJS; tNative"
+   ```
+   The property applies only at **server boot**, so the shutdown is not
+   optional. Afterwards the throwaway directory must EXIST and have GROWN
+   (`du -sh`) — an empty one means the run was served from the shared cache
+   and certified nothing.
+
    Because the tag is on HEAD and the tree is clean,
    BuildInfo and all published artifacts will carry the
    clean `<VERSION>`. Verify in the sbt output.
