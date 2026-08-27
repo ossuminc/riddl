@@ -2163,6 +2163,34 @@ case class ValidationPass(
             checkNonEmptyValue(ls, "expression", onClause, loc, MissingWarning, required = true, ruleId = Some(RuleId.EmptyContent))
           case _ => ()
       case CodeStatement(loc, language, body) =>
+        // A27: `code` is a SANCTIONED escape hatch, and the deal attached to sanctioning it is
+        // that using it stays VISIBLE -- "the validator warns about portability on EVERY use".
+        // Without a hatch, authors hand-edit generated output and lose the ability to regenerate;
+        // with an unannounced one, a model acquires an untracked dependency on a single target
+        // language. The warning is the pressure valve's gauge.
+        //
+        // **StyleWarning, deliberately, and the severity is load-bearing.** As of Reid's
+        // 2026-08-27 generability ruling, ANY message above a StyleWarning makes a model
+        // non-generable (`Messages.isGenerable`). Emitting this at Warning or Completeness would
+        // therefore make every use of the hatch block the very generation the hatch exists to
+        // serve -- a check whose demand no legal spelling satisfies, which is the trap the
+        // discard-sink exemption and the adaptor advisory were each built to escape. A Style
+        // warning is also the honest classification on its own terms: embedding target code does
+        // not change what the MODEL means, it constrains where the model can be realized.
+        //
+        // Fires on every occurrence rather than once per language, per A27's "every use": the
+        // point is that each site is greppable, and a per-language summary would hide how many
+        // there are.
+        messages.addStyle(
+          loc,
+          s"'code' embeds ${language.s} source directly, so this model can only be fully " +
+            s"generated for ${language.s}; the escape hatch is deliberate but it is not portable",
+          suggestion =
+            s"Prefer 'do \"...\"' and let the generator produce ${language.s}, and keep 'code' " +
+              "for what genuinely cannot be expressed otherwise. If it must stay, expect to " +
+              "supply an equivalent body for every other target language you generate for.",
+          ruleId = Some(RuleId.CodeNotPortable)
+        )
         checkNonEmptyValue(language, "language", onClause, loc, MissingWarning, required = true, ruleId = Some(RuleId.EmptyContent))
         check(
           body.nonEmpty,

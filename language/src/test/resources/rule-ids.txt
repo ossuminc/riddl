@@ -239,6 +239,7 @@ state-set-not-allowed
 state-set-not-current
 stmt-become-single-handler
 stmt-code-body-empty
+stmt-code-not-portable
 stmt-effect-not-allowed
 stmt-foreach-element-empty
 stmt-foreach-field-not-collection
