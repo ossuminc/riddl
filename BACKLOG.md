@@ -1722,14 +1722,40 @@ that needs a ruling before either can be fixed.
   from A23's `isEffectStatement` — `set` is an effect but cannot fail — and value-level
   failure points are deliberately counted separately rather than folded into the predicate.
 
-- **[2.9]** TypeScript AST declarations for the JS side. **NO LONGER LOW PRIORITY**
-  (Reid, 2026-08-27) — the "low priority, file it, do not schedule it" framing came from
-  NOTEBOOK's Active Work Queue and no longer holds. The full AST hierarchy (Domain, Context,
-  Entity, …) is still OPAQUE to TypeScript; only the public `RiddlAPI` methods are declared,
-  so a JS consumer wanting the AST itself gets a branded `RootAST` and no structure. The old
-  justification was that consumers are *expected* to use the facade — which is an argument
-  about what we intended, not about what consumers need, and it is the same shape as
-  [1.20]: a surface we did not wire is not the same fact as a surface nobody wants.
+- ~~**[2.9]** TypeScript AST declarations for the JS side.~~ — **DECLINED 2026-08-27**, on
+  the merits, after being raised off "low priority" the same day so it could be *considered*
+  rather than deferred again. Considered, and the answer is no.
+  **The opaque `*AST` handles are a BOUNDARY DOING ITS JOB, not a gap.** `index.d.ts` is 1,169
+  hand-written lines and already rich for everything the facade returns — `RiddlResult`,
+  `Token`, `ValidationResult`, `OutlineEntry`, `TreeNode`, `MessageFlowEdge`, the whole
+  `RiddlAPI`. Only the 19 branded node handles (`RootAST`, `EntityAST`, …) are structureless.
+  **There is no consumer for the missing part.** riddl-vscode — the TypeScript consumer —
+  calls `parseToTokens` (14×), `parseString` (11×), `getTree`, `validateString`, `inspectRoot`,
+  `getMessageFlow`, `getHandlerCompleteness`, and touches a raw AST handle **zero times**. An
+  editor extension wants highlighting, diagnostics and an outline; the facade serves all three.
+  The consumer that genuinely walks the AST is **Synapify, which is Scala.js and has the real
+  thing, methods included** (Reid: *"most users are going to use it from Scala.js where we have
+  mechanisms in place"*).
+  **The proposed implementation — generate the `.d.ts` from `JsonModel` — was measured and is
+  WORSE than it sounds, which is what settled it.** JSON serializes STATE; the AST's value is
+  substantially BEHAVIOUR. `AST.scala` carries **540 `def`/`lazy val` members**, none of which
+  serialize: 182 `format`, 67 `kind`, the **34 `WithX` accessor traits**, and derived answers
+  like `effectiveShape`, `Connector.isPersistent` (which accepts both spellings),
+  `Statement.canFail`, `NumericLiteral.asLong`, `DoStatement.text`, `Function.input`/`output`.
+  `JsonModel` also contains **zero** references to `refMap`, `symTab` or `usedBy`, so no
+  resolution output crosses at all.
+  **The disqualifying detail**: JSON preserves `Include`/`BASTImport` as CONTENT ENTRIES, so a
+  TypeScript consumer walking `contents` sees the WRAPPER rather than through it. That is
+  exactly the defect that had riddl-generator emit 582 files for reactive-bbq with no entity
+  class among them, at exit 0. A JSON-derived TS AST would not be "the AST minus methods" — it
+  would be an AST that INVITES every consumer to reimplement include-transparency and
+  alias-resolution, the two things two separate consumers have already got wrong (see
+  [1.20]'s two incidents).
+  **It would also add a FIFTH reflective surface** to keep in lockstep with parse, prettify,
+  BAST and JSON, for a consumer population of zero — and nothing would fail when it drifted.
+  **If this ever comes back, the trigger is DEMAND, not opacity**: a TS consumer hits a wall the
+  facade cannot answer, and the facade gains one accessor, inside the conversion layer. Do not
+  export the AST.
 
 - ~~**[2.10]** Repo housekeeping — three items.~~ — **ALL THREE DONE 2026-08-27**, on
   Reid's explicit go-ahead, which was the only thing the entry had been waiting on.

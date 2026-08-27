@@ -2493,6 +2493,27 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   enforces it.
 - **npm prerelease publishing** — sbt-dynver versions like
   `1.2.3-1-hash` are prerelease per npm semver; pass `--tag dev`.
+- **The opaque `*AST` handles in `index.d.ts` are DELIBERATE. Do not "fix" them by exporting
+  the AST to TypeScript** (considered and DECLINED 2026-08-27, BACKLOG [2.9]). `parseString`
+  hands JS a branded handle (`RootAST`, `EntityAST`, …) that can only be passed back in;
+  structure is served through flattened projections (`inspectRoot`, `getOutline`, `getTree`).
+  Three reasons, in order of weight:
+  1. **JSON serializes STATE; the AST's value is largely BEHAVIOUR.** `AST.scala` carries ~540
+     `def`/`lazy val` members that do not serialize — 182 `format`, 67 `kind`, the 34 `WithX`
+     accessor traits, and derived answers like `effectiveShape`, `Connector.isPersistent`,
+     `Statement.canFail`, `Function.input`/`output`. `JsonModel` has ZERO references to
+     `refMap`/`symTab`/`usedBy`, so no resolution output crosses either.
+  2. **JSON keeps `Include`/`BASTImport` as content entries**, so a consumer walking `contents`
+     sees the WRAPPER rather than through it — the exact defect that had riddl-generator emit
+     582 files with no entity class, at exit 0. A JSON-derived TS AST would invite every
+     consumer to reimplement include-transparency and alias-resolution.
+  3. **It would be a FIFTH reflective surface** to keep in lockstep with parse/prettify/BAST/
+     JSON, and nothing would fail when it drifted.
+  **The real consumers agree**: riddl-vscode touches a raw AST handle zero times (all facade —
+  `parseToTokens`, `parseString`, `getTree`, `validateString`, …), and the consumer that truly
+  walks the AST is Synapify, which is **Scala.js and has the real objects, methods included**.
+  If this returns, the trigger is a TS consumer hitting a wall the facade cannot answer — add
+  one accessor inside the conversion layer, never the AST.
 - **NEVER `@JSExport` an overridden `toString`.** Interpolation compiles to JS
   `+`, so `s"…$loc…"` throws `TypeError: Cannot convert object to primitive
   value` and takes down the whole validation run on JS while the JVM passes.
