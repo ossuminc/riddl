@@ -77,6 +77,22 @@ Nothing awaits triage, which is a fact about right now and not a reason to skip 
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+### The corpus gate is RED, for a known reason
+
+**`RiddlModelsRoundTripTest` fails on `reactive-bbq` — Step 1, validate original — with the
+6 `msg-target-crosses-boundary` errors the new rule correctly reports.** `commands` is
+342 tests, 1 failure, and that one. CI will show the same. This is NOT a mystery to
+investigate and NOT a rule to soften: the migration is filed at
+`riddl-models/task/2026-08-27-address-the-context-not-its-contents.md`, the staged
+`../bin/riddlc` already enforces the rule so they can migrate against it, and the gate
+returns to green when they do. It is the same shape every time a rule with corpus cost
+ships.
+
+**The sequencing was mine and is worth not repeating.** The preferred order (see the `/rc`
+skill) is: stage the binary, let the corpora migrate, THEN push. I staged and filed, but
+pushed first, so CI is red in the window between. A corpus needs the RULE, not a release —
+which is exactly why staging early works.
+
 ### Unpushed
 
 `release/2` carries the boundary work (`msg-target-crosses-boundary`) unpushed, and the
