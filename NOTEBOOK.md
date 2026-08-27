@@ -35,12 +35,12 @@ byte-identical to the rc.26 certification on RC4**, which is the expected result
 because no test source changed, and is therefore evidence that nothing was SKIPPED
 rather than that nothing broke.
 
-**`../bin/riddlc` is `2.0.0-rc.26-5-ab3ada49`, built on Scala 3.9.0-RC6** and restaged
+**`../bin/riddlc` is `2.0.0-rc.26-14-173b034d`, built on Scala 3.9.0 final** and restaged
 2026-08-27 via `scripts/publish-and-stage.sh`, so the ivy artifacts and the binary came
 from one invocation and agree. It is a real Mach-O arm64 file, not a symlink and not the
 JVM launcher. **Verified by BEHAVIOUR, not by the version string**: the boundary-violating
-repro errors and the two legal forms stay clean, which is the inversion of how the same
-three models behaved on rc.26. `[0.6]` in BACKLOG carries the site list for the eventual
+repro errors, the two legal forms stay clean, and reactive-bbq validates at 0 errors /
+0 warnings across 3,905 definitions. `[0.6]` in BACKLOG carries the site list for the eventual
 3.9.0-final bump.
 
 ### Traps a fresh session would hit
