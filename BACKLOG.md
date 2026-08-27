@@ -1691,70 +1691,65 @@ that needs a ruling before either can be fixed.
   this branch, and the second where the stale claim was a promissory note about
   work that had since landed.
 
-- **[2.7]** `put`/`get` UI-boundary statements. **Graduated out of NOTEBOOK
-  2026-08-26, where it had sat as a "Deferred — do NOT start yet" section since
-  before 2.0; filing it here so it is tracked rather than remembered.** Design as
-  discussed: `put <value> to output <outputRef>` pushes to a UI Output from an
-  on-clause; `get` is `let <id> = get from input <inputRef>` — its OWN statement
-  kind, not an extension of `LetStatement`. Both keywords existed long ago as
-  storage statements and were removed when `repository` sufficed. This completes
-  the boundary-statement census: send/tell = streaming, call = function, put/get
-  = UI. **Both CAN FAIL** (put when the UI is absent/headless, get when the input
-  is unset), so model it as `def canFail: Boolean` on `Statement` — one source of
-  truth shared with [2.8]. Witnessing is greenfield: a `ShowOutputInteraction` is
-  witnessed by a `put` to that output, a `TakeInputInteraction` by a handler on
-  the input's message type OR a `get` naming it; an unwitnessed step draws a
-  CompletenessWarning. **Prerequisite: the UI / application
-  (output-input-triplet) model must land first** — that is why it was deferred,
-  and the prerequisite has not moved. Open question for when it unblocks: which
-  handler statement-sets may contain put/get. Note `get from input` is ALREADY
-  partly present (`GetValue.source` is `InputRef | StateRef`) — check what exists
-  before designing, per the standing "a plan cannot notice the work happening"
-  rule.
+- ~~**[2.7]** `put`/`get` UI-boundary statements.~~ — **ALREADY BUILT; struck 2026-08-27,
+  the day after it was filed.** A45 landed: `PutStatement` is at `AST.scala:4250` and
+  `putStatement` at `StatementParser.scala:906` (`put <value> to output <ref>`, scope-gated to
+  application-context handlers), while `get from input` has existed all along —
+  `GetValue.source` is `InputRef | StateRef` (`AST.scala:3360`).
+  **This was filed in error, and the error is instructive.** It was graduated VERBATIM out of
+  NOTEBOOK's "Deferred — blocked on prerequisites (do NOT start yet)" section during the
+  2026-08-27 prune, on the strength of what that section SAID, without checking whether its
+  prerequisites had landed. They had. This repo already has a name for that failure — *a plan
+  cannot notice the work happening* ([2.x] history; the 2026-08-06 "plan for work that was
+  already done") — and the cheap test it prescribes would have caught it: take the entry's most
+  specific factual claim and check that one first. "Revive the `put`/`get` keywords" was
+  falsifiable by a single grep.
+  **Rule for pruning, learned here:** a deferred item is exactly the kind that goes stale
+  invisibly, because nobody re-reads a section headed "do NOT start yet". Verify before
+  graduating one, not after.
 
-- **[2.8]** Single failure point per saga do-block. **Graduated out of NOTEBOOK
-  2026-08-26 with [2.7]; same provenance.** A saga step's do-block is
-  all-or-nothing (undo assumes all-or-none happened), so warn when it contains
-  more than one potential failure point. **Blocked on the complete can-fail
-  census**, via the shared `Statement.canFail` in [2.7]. The census as filed:
-  send, tell, call, yield, put, get CAN fail; let, set, when, match, foreach
-  CANNOT. **Deferred rather than shipped-partial deliberately** — with only
-  send/tell counted it would give false "single failure point" passes that flip
-  to warnings later, which is worse than waiting. **The census itself needs
-  re-deriving before use**: it predates `forward`, `initiate`, `terminate` and
-  `error`-is-terminal, and this repo's standing lesson is that a predicate
-  borrowed or inherited wholesale stops answering its own question (see
-  CLAUDE.md on A23 vs A26).
+- ~~**[2.8]** Single failure point per saga do-block.~~ — **ALREADY BUILT; struck 2026-08-27
+  with [2.7], same provenance and same mistake.** The blocker was the can-fail census, and
+  `Statement.canFail` exists (`AST.scala:3704`, defaulting to `false`, overridden `true` on
+  `SendStatement` at `:3818` and its peers) with its own suite,
+  *"Statement.canFail (A12/A36)"* in `SagaValidatorTest`. The A12 check itself is built at
+  `ValidationPass.scala:5554`, and it is MORE complete than the filed design: it counts
+  statement-level failure points via `canFail` **plus** every embedded `Call`/`GetValue` in
+  value expressions, recursing through `when`/`match`/`foreach` bodies, and skips the count
+  when the step contains an `ask` (an `ask` is itself a failure point, and a saga may not
+  `ask` at all — Reid, 2026-08-10).
+  **The scaladoc on `canFail` records a distinction worth keeping**: it is a DIFFERENT axis
+  from A23's `isEffectStatement` — `set` is an effect but cannot fail — and value-level
+  failure points are deliberately counted separately rather than folded into the predicate.
 
-- **[2.9]** TypeScript AST declarations for the JS side. Low priority. The full
-  AST hierarchy (Domain, Context, Entity, …) is still OPAQUE to TypeScript; only
-  the public `RiddlAPI` methods are declared. JS consumers are expected to use
-  the facade rather than the raw AST, which is why this has never blocked
-  anyone — file it, do not schedule it. Graduated out of NOTEBOOK's "Active Work
-  Queue" 2026-08-26.
+- **[2.9]** TypeScript AST declarations for the JS side. **NO LONGER LOW PRIORITY**
+  (Reid, 2026-08-27) — the "low priority, file it, do not schedule it" framing came from
+  NOTEBOOK's Active Work Queue and no longer holds. The full AST hierarchy (Domain, Context,
+  Entity, …) is still OPAQUE to TypeScript; only the public `RiddlAPI` methods are declared,
+  so a JS consumer wanting the AST itself gets a branded `RootAST` and no structure. The old
+  justification was that consumers are *expected* to use the facade — which is an argument
+  about what we intended, not about what consumers need, and it is the same shape as
+  [1.20]: a surface we did not wire is not the same fact as a surface nobody wants.
 
-- **[2.10]** Repo housekeeping — three items, all VERIFIED still outstanding
-  2026-08-26, all independent and each a few minutes:
-  1. **Delete the `development` and `old-development` branches** (local +
-     remote). `development` is fully contained in `main` — 0 commits ahead as of
-     1.31.0 — so nothing is lost. `git branch -a` confirms `development` and
-     `origin/development` still exist. Deferred pending an explicit go-ahead,
-     which is the only thing missing.
-  2. **Fix `.claude/skills/ship/SKILL.md`** — it still prescribes the GitFlow
-     pre-flight (fast-forward `main` from `development`, `SKILL.md:21-30`) and
-     the post-release merge-back. Both contradict current policy (CLAUDE.md
-     § Branch Strategy: `main` IS the working and release branch) and were
-     skipped for 1.30.0 and 1.31.0. A skill that documents a process nobody
-     follows is a trap for the next session that trusts it.
-  3. **Delete the stray `help` git tag** (`git tag --list help` confirms it).
-     Almost certainly a typo'd `git tag help`. Harmless, except that it sorts to
-     the top of `git tag --sort=-v:refname` and so LEADS the tag list when
-     working out the latest release.
+- ~~**[2.10]** Repo housekeeping — three items.~~ — **ALL THREE DONE 2026-08-27**, on
+  Reid's explicit go-ahead, which was the only thing the entry had been waiting on.
+  1. **`development` deleted, local and remote** (was `fdf9a0ad4`). Verified 0 commits ahead
+     of `main` before deleting, so nothing was lost. `old-development` no longer existed.
+  2. **`.claude/skills/ship/SKILL.md` de-GitFlowed.** Its pre-flight had told every release
+     to `git merge --ff-only development` into `main`, and step 14 to check out
+     `development` and merge the tag forward. Both were no-ops or contrary to policy from
+     1.30.0 on and were skipped by hand each time — a skill documenting a process nobody
+     follows is a trap for the next session that trusts it. It now says: ship a FINAL
+     release from `main`; when the work lives on a release branch, merge that branch INTO
+     `main` and tag `main`, never the branch; delete the branch afterwards. The RC exception
+     is named and pointed at the `/rc` skill.
+  3. **The stray `help` tag deleted, local and remote** (`fd1fbf5c7`, "Make a test case pass
+     if its environment is not found (#137)" — an obvious typo'd `git tag help`). It sorted
+     to the top of `git tag --sort=-v:refname`, so it LED the tag list every time anyone
+     worked out the latest release; that list now starts at `2.0.0-rc.26`.
 
-  Dropped from this list as already resolved: *"verify the `unset GITHUB_TOKEN`
-  guidance for `gh`"* — settled 2026-07-29 and recorded in `../CLAUDE.md`
-  § GitHub CLI Integration (both credentials work; prefer plain `gh`, and never
-  unset the token in a shell that also runs sbt).
+  `CLAUDE.md` § Branch Strategy carried all three as outstanding and now records them as
+  done, so the file no longer contradicts the tree.
 
 ### 3. Owed to other repos
 

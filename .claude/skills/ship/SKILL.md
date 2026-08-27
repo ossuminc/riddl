@@ -17,26 +17,32 @@ not provided:
 
 ## Pre-Flight Checks
 
-1. **Always ship from `main`; bring it up to date with
-   `development` first.** **We NEVER publish from
-   `development` or feature branches.** The release commits
-   normally live on `development`, so the standard process is
-   to fast-forward `main` up to `development` before tagging.
-   This is part of every release — do NOT ask the user whether
-   to do it:
+1. **Always ship a FINAL release from `main`.** Ordinary work commits
+   directly to `main`, so in the usual case there is nothing to bring
+   forward and you are already where you need to be:
    ```
    git checkout main
    git pull origin main
-   git merge --ff-only development
+   git branch --show-current
    ```
-   - If `--ff-only` fails because `main` has commits not on
-     `development` (genuine divergence), STOP and ask the user
-     how to reconcile before proceeding. A clean fast-forward
-     is the expected case.
-   - Confirm you ended up on `main`:
-     ```
-     git branch --show-current
-     ```
+   **There is no `development` branch.** It was deleted (local and
+   remote) on 2026-08-27, having been 0 commits ahead of `main`; the
+   GitFlow pre-flight this step used to prescribe — fast-forwarding
+   `main` up to `development` — was a no-op or contrary to policy for
+   every release from 1.30.0 onward, and was skipped by hand each time.
+   See `CLAUDE.md` § Branch Strategy.
+
+   **When the release IS on a branch**, which is the case for a large
+   change such as `release/2`, merge that branch into `main` and tag
+   `main`. Do not tag the branch:
+   ```
+   git checkout main && git pull origin main
+   git merge --no-ff release/2
+   ```
+   Release CANDIDATES are the documented exception and may be tagged on
+   the release branch — an RC is a prerelease on GitHub, an `@rc` formula
+   in the tap and an `rc` dist-tag on npm, so nothing resolves to it
+   unless asked for by name. See the `/rc` skill.
 
 2. Assert working tree is clean:
    ```
@@ -164,13 +170,16 @@ not provided:
     - Commit them: `git add -u && git commit -m "Fix copyright headers"`
     - Push: `git push origin main`
     These changes are harmless formatting fixes and should be
-    committed before merging back to `development`.
+    committed straight to `main`.
 
-14. Switch back to `development` and merge the tag forward:
+14. **Delete the release branch, if the release came from one.**
+    There is no merge-back step: `main` IS the working branch, so
+    there is nowhere to merge the tag forward TO. This step used to
+    say `git checkout development && git merge main`, which since
+    1.30.0 has been either a no-op or contrary to policy.
     ```
-    git checkout development
-    git merge main
-    git push
+    git branch -d <release-branch>
+    git push origin --delete <release-branch>
     ```
 
 15. Report a summary: tag, commit SHA, release URL, and any

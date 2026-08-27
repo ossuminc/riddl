@@ -629,14 +629,23 @@ Co-Authored-By: Claude <model-name> <noreply@anthropic.com>
 - Reach for a short-lived branch only when you want isolation (a
   throwaway experiment, or work you'd like to review as a diff),
   then merge and delete it.
-- The `development` and `old-development` branches linger from the
-  GitFlow era. As of 1.31.0 `development` is fully contained in
-  `main` (0 commits ahead) and is a deletion candidate.
-- **Note:** `.claude/skills/ship/SKILL.md` still prescribes
-  GitFlow steps — fast-forwarding `main` from `development`
-  pre-release, and merging back to `development` post-release.
-  Both are no-ops or contrary to current policy. Skip them and
-  fix the skill when convenient.
+- **The `development` branch is GONE** — deleted local and remote on
+  2026-08-27, having been 0 commits ahead of `main`. `old-development`
+  was already gone. Do not recreate either; if you find a reference to
+  one, it is stale text, not a branch you failed to fetch.
+- **`.claude/skills/ship/SKILL.md` no longer prescribes GitFlow**
+  (fixed 2026-08-27). It had told every release to fast-forward `main`
+  from `development` and to merge back afterwards; both were no-ops or
+  contrary to policy from 1.30.0 on, and were skipped by hand each
+  time. It now says: ship a FINAL release from `main`; when the work
+  lives on a release branch, merge that branch into `main` and tag
+  `main`, never the branch; delete the branch afterwards. Release
+  CANDIDATES remain the documented exception and may be tagged on the
+  branch — see the `/rc` skill.
+- **A stray `help` git tag** (a typo'd `git tag help`, pointing at a
+  2019 commit) was deleted local and remote the same day. It had sorted
+  to the top of `git tag --sort=-v:refname`, so it LED the tag list
+  whenever anyone worked out the latest release.
 
 ## Quick Reference Commands
 
