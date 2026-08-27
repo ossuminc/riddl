@@ -67,20 +67,19 @@ totals, the staged binary's version and behaviour, TatSu 190/190 and 9/9, and th
 CM/To-Do work is committed and pushed in the `ossuminc` repo (`3dae364`, `5cda6fc` —
 Reid committed it himself). Assumed, not verified: that RC6 is the newest Scala RC.
 
-### `task/` — ONE pending file
+### `task/` — empty
 
-`2026-08-26-saga-tell-must-not-reach-into-a-context.md`, from riddl-models. It asks
-that a `tell`/`send` whose enclosing scope is OUTSIDE context `C` naming a target
-INSIDE `C` become an Error — the cross-context connector boundary rule (an Error
-since rc.16-18) extended to messaging, on Reid's 2026-08-26 ruling that a saga
-reaching past a context into its entities is *"absolute poppycock"*. They measured
-both forms on rc.26 and got **byte-identical output, 0 errors**: riddlc accepts the
-violation and the correct design with equal silence. They predict zero corpus impact.
-Note `msg-tell-target-unreachable` is about CONNECTORS and is explicitly not a
-substitute for this check.
+The saga/tell boundary request was worked and closed today; 144 files in `task/done/`.
+Nothing awaits triage, which is a fact about right now and not a reason to skip the check.
 
-**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
-call, and this file's claims have not been independently reproduced here yet.
+**Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+### Unpushed
+
+`release/2` carries the boundary work (`msg-target-crosses-boundary`) unpushed, and the
+Computational Model amendment is committed separately in the `ossuminc` repo (`dcaca50`),
+also unpushed. Certified tri-platform locally, zero failures on all six rows; CI has not
+seen it.
 
 ## 2026-08-27 — a boundary rule that already half-existed (`msg-target-crosses-boundary`)
 
