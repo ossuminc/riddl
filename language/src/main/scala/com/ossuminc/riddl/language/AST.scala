@@ -369,6 +369,10 @@ object AST:
     override def format: String = path
   end URLDescription
 
+  /** A named blob of out-of-band material hung off a definition's metadata — a diagram, a
+    * spreadsheet, a design document. Two forms share the keyword and are told apart by their
+    * BODIES, not by trying alternatives: see [[ULIDAttachment]] for why that factoring matters.
+    */
   sealed trait Attachment extends Meta with WithIdentifier
 
   /** */
@@ -391,6 +395,20 @@ object AST:
     def format: String = identify
   end StringAttachment
 
+  /** The `attachment ULID is "..."` form: a ULID naming external material, rather than an inline
+    * mime-typed blob.
+    *
+    * **This could not be parsed AT ALL until 2026-08.** `Keywords.keyword` ends in a CUT, so once
+    * `attachment` matched, the enclosing alternation could not backtrack and whichever attachment
+    * rule came first won outright — the general one did, so this form failed where a mime type was
+    * expected, having never been tried. Reordering would only have broken the other branch the
+    * same way; the shared prefix had to be FACTORED so the keyword matches once, ahead of the
+    * choice. It had no fixture and no test anywhere, which is how documented syntax stayed
+    * unreachable unnoticed.
+    *
+    * Note the asymmetry with the general form, which a tidy-looking uniform emitter breaks: the
+    * mime type is emitted BARE and this form's argument stays QUOTED.
+    */
   case class ULIDAttachment(
     loc: At,
     ulid: ULID
@@ -506,6 +524,14 @@ object AST:
     def identifyWithLoc: String = s"$identify at ${loc.format}"
   end WithIdentifier
 
+  /** Mixed into every value that may carry a `with { ... }` block — descriptions, briefs, terms,
+    * options, authorship, attachments.
+    *
+    * Metadata is ORDERED content, not a bag of buckets: the entries travel in `metadata` in source
+    * order so a round trip can put them back where the author wrote them. That is why the JSON
+    * surface carries `metadata.items` rather than only the per-kind fields it still reads for
+    * older documents.
+    */
   sealed trait WithMetaData extends RiddlValue:
     def metadata: Contents[MetaData]
 
@@ -954,6 +980,7 @@ object AST:
   /** Type of definitions that occur in an [[Output]] */
   type OccursInOutput = Output | TypeRef
 
+  /** The three UI definitions that make up an application's presentation triplet. */
   type GroupRelated = Group | Input | Output
 
   /** Type of definitions that occur in an [[Entity]] without [[Include]]. [[Version]] and
@@ -989,6 +1016,10 @@ object AST:
   /** Type of definitions that occur in a [[Streamlet]] without [[Include]] */
   // Inlet/Outlet/Connector are all members of OccursInProcessor now (ports are
   // available on every processor kind), so OccursInStreamlet adds nothing extra.
+  /** Retained alias: since the unified processor model a streamlet's contents are exactly a
+    * processor's, because every processor bears ports. Kept so the shape-keyword definitions read
+    * in their own vocabulary.
+    */
   private type OccursInStreamlet = OccursInProcessor
 
   /** Type of definitions that occur in a [[Streamlet]] with [[Include]] */
@@ -1040,11 +1071,22 @@ object AST:
   /** Type of definitions that occur in a [[Type]] */
   type TypeContents = Field | Method | Enumerator
 
+  /** What may appear inside an aggregate: fields, methods, and comments.
+    *
+    * **Methods and comments are easy to drop.** An emitter that takes a `Seq[Field]` and is handed
+    * `.fields` silently loses the other two — which is exactly how `method` went un-emitted while
+    * `emitMethod` sat in the codebase with zero callers, one prettify run away from deleting every
+    * method in the corpus at exit 0.
+    */
   type AggregateContents = Field | Method | Comment
 
   /** Type of definitions that occur in a block of [[Statement]] */
   type Statements = Statement | Comment
 
+  /** The widest content union in the language: everything that may float at the top level without
+    * a containing domain. A [[Module]]'s contents are exactly this, which is why the predefined
+    * `Riddl` module can hold streamlets and types directly with no domain/context wrapping.
+    */
   type NebulaContents = Adaptor | Author | Connector | Constant | Context | Domain | Entity | Epic |
     Function | Invariant | Module | Projector | Relationship | Repository | Saga | Streamlet |
     Type | User | Version | Copyright
@@ -1099,6 +1141,14 @@ object AST:
         case _ => false
   end Definition
 
+  /** Companion for [[Definition]].
+    *
+    * Worth knowing about the trait itself: it overrides BOTH `hashCode` and `equals`. `hashCode`
+    * is cheap (id + loc + class) and `equals` is structural via `productEquals`, SKIPPING
+    * `Contents` fields — which prevents O(subtree) hashing in any `HashMap[Definition, X]`, and
+    * means moving a field INTO contents removes it from equality. A `mustBe` on a whole container
+    * stops seeing such a field the moment it moves.
+    */
   object Definition:
     /** The canonical value for "empty" Definition which can usually be interpeted as "Not Found" */
     lazy val empty: Definition = new Definition {
@@ -1116,6 +1166,9 @@ object AST:
     // Comment-tolerant, in step with `isEmpty`: a body holding only comments has no
     // definitions in it.
     override def hasDefinitions: Boolean = !isEmpty
+    /** The element type of this container's [[contents]], narrowed to the container's own content
+      * union. Opaque so callers cannot widen it back to `RiddlValue` by accident.
+      */
     opaque type ContentType <: RiddlValue = CV
 
     /** May `content` be a DIRECT child of this container?
@@ -1158,8 +1211,10 @@ object AST:
     */
   sealed trait Leaf extends Definition
 
+  /** A sequence of definitions. */
   type Definitions = Seq[Definition] // TODO: Make this opaque some day
 
+  /** Companion for [[Definitions]]. */
   object Definitions:
     def empty: Definitions = Seq.empty[Definition]
   end Definitions
@@ -1169,6 +1224,11 @@ object AST:
     */
   type Parents = Seq[Branch[?]]
 
+  /** Companion for [[Parents]], the ancestor chain of a definition, nearest FIRST.
+    *
+    * Order matters at every call site: `parents.head` is the immediate container, and code that
+    * wants the enclosing context or domain must SEARCH the chain rather than index into it.
+    */
   object Parents:
     def empty[CV <: RiddlValue]: Parents = Seq.empty[Branch[?]]
     def apply(contents: Branch[?]*) = Seq(contents: _*)
@@ -1225,6 +1285,9 @@ object AST:
       new ParentStack(mutable.Stack(items*))
   end ParentStack
 
+  /** A mutable stack of definitions used while traversing. See `ParentStack`, which is a class
+    * rather than an alias and caches its `toParents` result.
+    */
   type DefinitionStack = mutable.Stack[Definition] // TODO: Make this opaque some day
 
   extension (ds: DefinitionStack)
@@ -1234,6 +1297,7 @@ object AST:
       ds.filter(_.isParent).map(_.asInstanceOf[Branch[CV]]).toSeq
   end extension
 
+  /** Companion for [[DefinitionStack]]. */
   object DefinitionStack:
     def empty: DefinitionStack = mutable.Stack.empty[Definition]
     def apply(items: Definition*): DefinitionStack = mutable.Stack(items: _*)
@@ -1399,6 +1463,7 @@ object AST:
     origin: URL = URL.empty,
     contents: Contents[CT]
   ) extends Container[CT]:
+    /** The element type of this container's contents. */
     type ContentType = CT
 
     override def isRootContainer: Boolean = true
@@ -1439,6 +1504,7 @@ object AST:
     alias: Option[Identifier] = None,
     contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
   ) extends Container[NebulaContents]:
+    /** A Nebula's contents are the widest union in the language — see [[NebulaContents]]. */
     type ContentType = NebulaContents
 
     override def kind: String = kindOpt.getOrElse(super.kind)
@@ -1506,6 +1572,11 @@ object AST:
     def format: String = "Root"
   end Root
 
+  /** Companion for [[Root]], the top of a parsed model.
+    *
+    * `Root.empty` is the starting point for a pass chain over nothing parsed — a pass run on it
+    * produces no messages rather than failing.
+    */
   object Root:
 
     /** The value to use for an empty [[Root]] instance */
@@ -1571,6 +1642,10 @@ object AST:
     def format: String = s"${Keyword.module} ${id.format}"
   end Module
 
+  /** Companion for [[Module]]. Note the predefined `Riddl` standard module is a cached singleton
+    * parsed once from readable RIDDL source, so `eq` comparisons against it are meaningful — every
+    * exemption in validation tests REFERENCE IDENTITY, never a name.
+    */
   object Module:
 
     /** The identifier given to a [[Module]] that stands in for an anonymous, id-less source.
@@ -1815,6 +1890,7 @@ object AST:
     override def format: String = s"${Keyword.version} ${id.format}"
   end Version
 
+  /** Companion for [[Version]] (A53). */
   object Version:
 
     /** Build the numeric form, keeping `id.value` in step with `number`. */
@@ -1883,6 +1959,11 @@ object AST:
 
   //////////////////////////////////////////////////////////////////////////////////// RELATIONSHIP
 
+  /** The cardinality of a `relationship`: one-to-one, one-to-many, many-to-one, many-to-many.
+    *
+    * `proportion` is the written form (`1:1`, `1:N`, …), stored rather than derived so prettify is
+    * byte-exact without a mapping table.
+    */
   enum RelationshipCardinality(val proportion: String):
     case OneToOne extends RelationshipCardinality("1:1")
     case OneToMany extends RelationshipCardinality("1:N")
@@ -1959,9 +2040,43 @@ object AST:
   /** Base of all the Real Numeric types */
   sealed trait RealTypeExpression extends NumericType
 
-  /** A TypeExpression that references another type by PathIdentifier
+  /** A TypeExpression that references another type by [[PathIdentifier]].
+    *
+    * ==RESOLVE BEFORE YOU MATCH==
+    *
+    * **If you are reading the AST and asking "what type is this?", matching on the node you were
+    * handed is the wrong instinct and it is also the natural one.** A field written
+    * `orderId: OrderId`, where `type OrderId is Id(entity Order)`, is an `AliasedTypeExpression`
+    * here — NOT a `UniqueId`. Any check shaped like `field.typeEx match { case uid: UniqueId => …
+    * }` silently answers "no" for it.
+    *
+    * That matters more than it sounds, because **the alias IS the documented house style**. A
+    * model written idiomatically is exactly the one that breaks a consumer matching on shape, so
+    * the defect hides until someone runs it against real models rather than fixtures.
+    *
+    * This has now cost two codebases independently:
+    *   - riddlc's instance-addressing check compared a field's WRITTEN type expression rather than
+    *     its resolved one, recognising only the rare inline `Id(E)` spelling. Fixing it turned 16
+    *     of 189 corpus models red — 49 real defects the broken check had been CERTIFYING.
+    *   - riddlg then carried the identical bug in its own copy of the same logic for another
+    *     twelve days, and reported 80 sites as "not derivable" that were all its own defect.
+    *
+    * **Resolve first.** `ReferenceMap.definitionOf` (which takes a `ClassTag` and therefore checks
+    * the kind) is the way; the resolution pass has already done the work. Follow ALIAS CHAINS —
+    * `type A is B is C` — with a visited list keyed on REFERENCE identity, not a `Set`, because
+    * `Definition.equals` is structural and a set would fuse two distinct identical declarations
+    * and truncate a legitimate chain. A cyclic alias (`type A is B` / `type B is A`) really does
+    * kill the stack; it reached one author as `[severe] Exception Thrown` with no line number.
+    *
+    * Renaming is followed; CONTAINMENT is not. A record whose nested field carries the id is not
+    * the same thing as an alias for it — descending into aggregates is an unbounded search with no
+    * principled stopping point.
+    *
     * @param loc
     *   The location of the AliasedTypeExpression
+    * @param keyword
+    *   The keyword written before the path, if any — `type` is the default, so the AST cannot tell
+    *   an omitted keyword from a written one
     * @param pathId
     *   The path identifier to the aliased type
     */
@@ -2384,6 +2499,13 @@ object AST:
   end PredefinedType
 
   @JSExportTopLevel("PredefinedType")
+  /** Companion for [[PredefinedType]], the built-in vocabulary of information shapes.
+    *
+    * Three integer types have DEFINED ranges as of 2026-08-14 and had none before that anywhere —
+    * not in code, grammar, language reference or Computational Model: **`Integer` is signed,
+    * `Whole` is `>= 0`, `Natural` is `>= 1`**. A check cannot enforce a rule the language never
+    * states, which is why the conformance check postdates the definition.
+    */
   object PredefinedType:
     final def unapply(preType: PredefinedType): Option[String] =
       Option(preType.kind)
@@ -2547,6 +2669,9 @@ object AST:
   val Abstract: Anything.type = Anything
 
   @JSExportTopLevel("UserId")
+  /** The identity of a human or robotic user. Distinct from [[UniqueId]], which names a PROCESSOR
+    * INSTANCE.
+    */
   case class UserId(loc: At) extends PredefinedType {
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || {
@@ -2669,6 +2794,7 @@ object AST:
   case class Luminosity(loc: At) extends PredefinedType with RealTypeExpression
 
   @JSExportTopLevel("Mass")
+  /** An SI mass quantity. */
   case class Mass(loc: At) extends PredefinedType with RealTypeExpression
 
   /** A predefined type expression for the SI Base Unit for Mole (mole)
@@ -2685,6 +2811,9 @@ object AST:
   @JSExportTopLevel("Temperature")
   case class Temperature(loc: At) extends PredefinedType with RealTypeExpression
 
+  /** Base of the temporal predefined types — dates, times, timestamps, durations and their
+    * zoned variants.
+    */
   sealed trait TimeType extends PredefinedType
 
   /** A predefined type expression for a calendar date.
@@ -2735,6 +2864,9 @@ object AST:
   }
 
   @JSExportTopLevel("ZonedDate")
+  /** A date carrying a time zone. The zone is optional at the type level; when absent the
+    * generator chooses, which is a representation decision RIDDL deliberately does not make.
+    */
   case class ZonedDate(loc: At, zone: Option[LiteralString] = None) extends TimeType {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -2747,6 +2879,7 @@ object AST:
   }
 
   @JSExportTopLevel("ZonedDateTime")
+  /** A date and time carrying a time zone. See [[ZonedDate]] on the optional zone. */
   case class ZonedDateTime(loc: At, zone: Option[LiteralString] = None) extends TimeType {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -2813,10 +2946,14 @@ object AST:
   @JSExportTopLevel("Location")
   case class Location(loc: At) extends PredefinedType
 
+  /** The media family a [[Blob]] carries — image, audio, video, document and so on. */
   enum BlobKind:
     case Text, XML, JSON, Image, Audio, Video, CSV, FileSystem
 
   @JSExportTopLevel("Blob")
+  /** Opaque binary content of a stated [[BlobKind]]. RIDDL models THAT a value is binary and what
+    * family it belongs to, never its encoding — that is the generator's choice.
+    */
   case class Blob(loc: At, blobKind: BlobKind) extends PredefinedType {
     override def format: String = s"$kind($blobKind)"
   }
@@ -2847,6 +2984,17 @@ object AST:
   sealed trait MessageRef extends AggregateRef
 
   @JSExportTopLevel("MessageRef")
+  /** Companion for [[MessageRef]].
+    *
+    * A `MessageRef` names one of the FOUR real messages — command, event, query, result (A9b) — and
+    * that narrowness is load-bearing: because a handler clause takes a `messageRef`, a projector
+    * correlation could not have `yields` a bare record and still be handled, which is why `yields`
+    * names a COMMAND.
+    *
+    * **`Reference.id` is a reference's optional LOCAL NAME** — what `from di: context C` sets — and
+    * NO `MessageRef` ever carries one. A guard written `msg.id.nonEmpty` is therefore unreachable;
+    * the intended test is `msg.nonEmpty`, on the pathId.
+    */
   object MessageRef {
     // A9b: a concrete CommandRef (not an anonymous MessageRef) so that sealed
     // matches over the four MessageRef subclasses stay exhaustive.
@@ -2989,9 +3137,17 @@ object AST:
   ) extends Reference[Type] {
     override def format: String = s"$keyword ${pathId.format}"
   }
+  /** Companion for [[TypeRef]].
+    *
+    * `TypeRef.keyword` defaults to `"type"`, so **the AST cannot tell an omitted prefix from a
+    * written one**. That is why prefix truthfulness is keyed off what the target was DECLARED as
+    * rather than off what the reference carries, and why a BARE reference is held to the same
+    * standard as a spelled one.
+    */
   object TypeRef { def empty: TypeRef = TypeRef() }
 
   @JSExportTopLevel("FieldRef")
+  /** A reference to a [[Field]] by path. */
   case class FieldRef(
     loc: At = At.empty,
     pathId: PathIdentifier = PathIdentifier.empty
@@ -3000,6 +3156,9 @@ object AST:
   }
 
   @JSExportTopLevel("InvariantRef")
+  /** A reference to an [[Invariant]] by path, as written by `require invariant X` or by the
+    * `invariant X` boolean atom.
+    */
   case class InvariantRef(
     loc: At = At.empty,
     pathId: PathIdentifier = PathIdentifier.empty
@@ -3053,6 +3212,9 @@ object AST:
   }
 
   @JSExportTopLevel("ConstantRef")
+  /** A reference to a [[Constant]] by path. Also a [[Comparand]], so `count > MaxCount` names one
+    * here.
+    */
   case class ConstantRef(
     loc: At = At.empty,
     pathId: PathIdentifier = PathIdentifier.empty
@@ -3087,6 +3249,13 @@ object AST:
   // requires any defaulted parameter to be trailing, and `value`/`name` have no empty default. So
   // `loc` stays required, matching every other exported statement/node with required trailing fields.
   @JSExportTopLevel("ConstructorArg")
+  /** One argument to a [[Constructor]]: a value, optionally named (`id = value`).
+    *
+    * Arguments are TYPE-CHECKED as of 2026-08-25; before that only arity, duplication, ordering,
+    * name validity and `empty` cardinality were checked. It was never a missing policy —
+    * `isAssignmentCompatible` already answered correctly — nothing at this position had ever asked
+    * it, and a generator found the gap by emitting Java that would not compile.
+    */
   case class ConstructorArg(
     loc: At,
     name: Option[Identifier],
@@ -3110,6 +3279,12 @@ object AST:
   // `loc` required (not defaulted): see the ConstructorArg note — @JSExportTopLevel forbids a
   // non-trailing default and `ref`/`args` have no empty default.
   @JSExportTopLevel("Constructor")
+  /** Builds a message or record VALUE from named arguments — `command C(x = 1, y = 2)`.
+    *
+    * The distinction that matters when reading a `send`/`tell`/`yield`: a bare [[MessageRef]] names
+    * a TYPE, and nothing says where its fields come from, while a Constructor names a VALUE. Every
+    * field must be supplied.
+    */
   case class Constructor(
     loc: At,
     ref: MessageRef | RecordRef,
@@ -3138,6 +3313,10 @@ object AST:
   // `loc` required (not defaulted): see the ConstructorArg note — @JSExportTopLevel forbids a
   // non-trailing default and `function`/`args` have no empty default.
   @JSExportTopLevel("Call")
+  /** Invokes a [[Function]] and yields its result. **A VALUE, not a statement**, even though it is
+    * written where a statement can appear — which is why the saga can-fail census could never
+    * truly be "a statement-kind count" and counts embedded Calls separately.
+    */
   case class Call(
     loc: At,
     function: FunctionRef,
@@ -3248,6 +3427,12 @@ object AST:
     def format: String = s"system${field.map("." + _.format).getOrElse("")}"
   end SystemValue
 
+  /** Companion for [[SystemValue]] — `system.now` and its peers: values the RUNTIME supplies
+    * rather than the model.
+    *
+    * Admission is RUNTIME-ONLY: anything a generator can know statically it should inline instead.
+    * The member set is CLOSED; adding one is a language change.
+    */
   object SystemValue:
     /** The CLOSED set of members, and the type each yields.
       *
@@ -3279,6 +3464,17 @@ object AST:
     val fieldNames: Seq[String] = members.keys.toSeq.sorted
   end SystemValue
 
+  /** Companion for [[SelfValue]] — `self`, the instance a handler is executing as.
+    *
+    * **`self`'s type is a synthesized `Aggregation`, and that is load-bearing.** Because the type
+    * is an ordinary record, `let me = self` followed by `me.id` resolves through the SAME path walk
+    * every other value uses, so no resolution rule anywhere has to know `self` exists — a bespoke
+    * node would have needed special-casing at each of those sites. The price is that the type is
+    * not user-nameable (`self.id` is `Id(Order)` in an Order handler and `Id(Shipping)` in a
+    * Shipping one), so `let me: T = self` has no `T` to write; pass `self.id`.
+    *
+    * `fieldNames` is a CLOSED set (`id`, `version`).
+    */
   object SelfValue:
     /** The CLOSED set of fields. Adding one is a language change, not a detail.
       *
@@ -3355,6 +3551,14 @@ object AST:
   // `loc` required (not defaulted): see the ConstructorArg note — @JSExportTopLevel forbids a
   // non-trailing default and `source` has no empty default.
   @JSExportTopLevel("GetValue")
+  /** Reads a value: `get from state <ref>` or `get from input <ref>`. **A VALUE, not a
+    * statement**, and a potential failure point counted separately from `Statement.canFail`.
+    *
+    * `get from state` is legal only inside the entity that OWNS the state — outside any entity
+    * there is nothing to read, and inside a DIFFERENT entity it crosses encapsulation. That second
+    * half is why the rule lives in validation rather than the parser: it needs the resolved State
+    * and its owner.
+    */
   case class GetValue(
     loc: At,
     source: InputRef | StateRef
@@ -3438,6 +3642,24 @@ object AST:
     def format: String = typeEx.map(t => s"empty ${t.format}").getOrElse("empty")
   end EmptyValue
 
+  /** An AI-computed value: `prompt("...")`, optionally ASCRIBED a type with `as <type>` (A20).
+    *
+    * This is the seam between RIDDL's deterministic tier and its AI tier — the type is known and
+    * checkable at compile time, the computation is prose an AI fills in at generation time.
+    *
+    * **The ascription RESTATES the position's already-known type; it never OVERRIDES it.**
+    * `let x: Real = prompt("...") as String` is an Error, not a coercion. The comparison is
+    * deliberately SYNTACTIC rather than by resolved type: `constant G: Real = prompt("g") as Score`
+    * is still an Error where `type Score is Real`, because RIDDL treats a declared alias as a
+    * distinct name, and a resolved comparison would swallow exactly the contradiction the rule
+    * exists to catch.
+    *
+    * A `constant` with a prompt value needs NO ascription — the constant already declares the
+    * type. The ascription does real work only where nothing else states one.
+    *
+    * `typeEx` may be defaulted here ONLY because it is trailing; `@JSExportTopLevel` forbids a
+    * non-trailing default, which is why A55's and A57's fields had to go undefaulted.
+    */
   case class PromptValue(
     loc: At,
     prompt: Seq[LiteralString],
@@ -3453,6 +3675,15 @@ object AST:
       s"prompt(${LiteralString.blockFormat(prompt)})$ascription"
   end PromptValue
 
+  /** Companion for [[PromptValue]], holding `ascriptionFormat`.
+    *
+    * **`ascriptionFormat` is a SECOND, narrower copy of the emitter's type-expression dispatch**,
+    * and it is no longer reachable from prettify: `RiddlFileEmitter.emitValue` routes every nested
+    * `PromptValue` through the total `emitTypeExpression` instead. It remains for `.format`-based
+    * error-message rendering, which the emitter cannot reach. `AST` is in `language` and the
+    * emitter in `passes`, so the copy cannot call the original and the two must be kept in step by
+    * hand — which is precisely why this class of bug keeps recurring here.
+    */
   object PromptValue:
     // The `as <type>` ascription is a bare type NAME, as the author writes it -- `as OrderId`,
     // never `as type OrderId`. `AliasedTypeExpression.format` always includes its `keyword` field
@@ -3517,6 +3748,20 @@ object AST:
   // `loc` required (not defaulted): @JSExportTopLevel forbids a non-trailing default and `text`
   // has no empty default — matching PromptValue and the other sibling value nodes.
   @JSExportTopLevel("NumericLiteral")
+  /** A written number: `[+-]? digits [. digits] [(e|E) [+-] digits]`. No digit separators, no
+    * radix prefixes.
+    *
+    * **The text is stored AS WRITTEN and that is the whole design.** `1.50`, `007`, `+3` and `2E+8`
+    * are not recoverable from a parsed `Long`/`BigDecimal`, so a parsed payload would make prettify
+    * diverge from source on first use. It also keeps `BigDecimal` off the Native and JS paths. The
+    * JSON surface stores it as a STRING for the same reason — `ujson.Num` is a Double and would
+    * silently turn `1.50` into `1.5`, which a fixed-point test cannot catch because a consistently
+    * mangled value is still a perfect fixed point.
+    *
+    * **Never call `asLong` in a match guard**: it is `text.toLong` and the parser accepts unbounded
+    * digit runs, so a 20-digit literal throws inside the guard and surfaces as `[severe] Exception
+    * Thrown` with no line number. Use `asBigDecimal`, or test the text.
+    */
   case class NumericLiteral(loc: At, text: String) extends RiddlValue:
     override def kind: String = "Numeric Literal"
     def format: String = text
@@ -3560,6 +3805,17 @@ object AST:
     */
   // `system.now` must work in a comparison (`when partial.startedAt < system.now`), which is an
   // acceptance criterion of the design, so SystemValue joins this union too.
+  /** What may stand on either side of a comparison.
+    *
+    * It was REF-ONLY by design until 2026-08-14, so that magic-constant comparisons could not be
+    * constructed at all. Reid reversed that on evidence: the whole 189-model corpus contained
+    * exactly ONE `constant`, so the rule had no uptake to protect — plausibly because naming a
+    * number meant quoting it. The intent survives as a StyleWarning whose population started at
+    * zero. `count > true` is still a parse error: booleans are atoms, not comparands.
+    *
+    * **Widening this union is its own family of work**, separate from widening `Value`:
+    * `resolveComparand`, `serializeComparand`, `buildComparand`, and the BAST writer/reader pair.
+    */
   type Comparand = ValueRef | GetValue | ConstantRef | NumericLiteral | LookupValue | SystemValue
 
   /** A28: the boolean-expression sub-language. An arm of the [[Value]] union so `let`/`set`/`put`/
@@ -3606,6 +3862,9 @@ object AST:
   // `loc` required (not defaulted): @JSExportTopLevel forbids a non-trailing default and `value` has
   // no empty default — matching the sibling value nodes (Constructor/GetValue/PromptValue).
   @JSExportTopLevel("BooleanLiteral")
+  /** A literal `true` or `false`. An ATOM rather than a [[Comparand]] — booleans are not compared
+    * with relational operators.
+    */
   case class BooleanLiteral(loc: At, value: Boolean) extends BooleanExpression:
     override def kind: String = "Boolean Literal"
     def format: String = if value then "true" else "false"
@@ -4219,6 +4478,20 @@ object AST:
   // requires defaulted parameters to be TRAILING, the same rule that shaped A55's `binding` and
   // A57's `envelopeType`.
   @JSExportTopLevel("ForeachStatement")
+  /** A25: the safe, bounded loop — `foreach <name> in <collection>`, or `foreach k, v in <mapping>`
+    * for the destructuring form.
+    *
+    * **Iterability is decided by CARDINALITY, not by where the collection lives.** An earlier
+    * allow-list restricted the operand to a field of the entity state, the handled message or a
+    * function input; that list was never a design decision, it was the contents of a data
+    * structure, and the message enumerating it read like a rule because error messages are written
+    * in the voice of rules. Resolve the path, look at the type, iterate iff it has cardinality.
+    *
+    * A [[Mapping]] binds TWO names because RIDDL has no generics — a named entry type in the
+    * standard module could not be typed against an arbitrary mapping's `from`/`to`. Arity is strict
+    * both ways, and the one-name-over-a-mapping case is the load-bearing half: allowing it would
+    * leave the element typed `Anything`, which is the hole the work closed.
+    */
   case class ForeachStatement(
     loc: At,
     element: Identifier,
@@ -4385,6 +4658,12 @@ object AST:
   end Adaptor
 
   @JSExportTopLevel("AdaptorRef")
+  /** A reference to an [[Adaptor]] by path.
+    *
+    * An adaptor is the boundary TRANSLATION seam, but **being the translator does not make it the
+    * boundary**: it is content of its context like anything else and sits BEHIND the context's own
+    * portlet. A cross-context connector or send may not terminate on it.
+    */
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
     override def format: String = Keyword.adaptor + " " + pathId.format
   }
@@ -4897,6 +5176,17 @@ object AST:
       case EventSourced | Persistent | Transient => "persistence"
   end EntityIntention
 
+  /** Companion for [[EntityIntention]]: canonical ordering and keyword matching.
+    *
+    * **`canonicalOrder` is load-bearing, not cosmetic.** `Definition.equals` compares the
+    * intentions field, so the parser stores them in this order to guarantee that WRITE ORDER can
+    * never make two otherwise-identical entities compare unequal. Prettify emits the same order.
+    * This is the exact OPPOSITE of the choice made for correlation keys, which are stored AS
+    * WRITTEN precisely because sorting them would equate two different declarations.
+    *
+    * Keywords are listed longest-first so a prefix parser never matches a shorter word that is
+    * the start of a longer one.
+    */
   object EntityIntention:
 
     /** The canonical order intentions are emitted in: role, then consistency, then persistence. Any
@@ -5051,6 +5341,9 @@ object AST:
 
   ////////////////////////////////////////////////////////////////////////////////////// REPOSITORY
 
+  /** The storage family a repository's `schema` describes — relational, document, graph,
+    * `time-series` (hyphenated), and so on. It states the SHAPE of the store, never the product.
+    */
   enum RepositorySchemaKind:
     case Other, Flat, Relational, TimeSeries, Graphical, Hierarchical, Star, Document, Columnar,
       Vector
@@ -5204,6 +5497,14 @@ object AST:
   end Correlation
 
   @JSExportTopLevel("Projector")
+  /** A read-model builder: folds events into a record a [[Repository]] stores.
+    *
+    * Folds must be PURE — that is what makes a re-run safe — so `initiate`, `terminate` and other
+    * effects are banned in one. A projector may also declare [[Correlation]]s, which accumulate
+    * several keyed events into one command; when it does, two older checks (needs its own record
+    * type, exactly one handler) are SKIPPED, because both assumed folds live in a single top-level
+    * handler. A projector without correlations validates exactly as before.
+    */
   case class Projector(
     loc: At,
     id: Identifier,
@@ -5260,6 +5561,14 @@ object AST:
       case Service     => "service"
   end Intention
 
+  /** Companion for a Context's [[Intention]] — Application, External, Gateway or Service.
+    *
+    * **`external context Foo` is an INTENTION, not `option external`, and a check must ask for
+    * both.** Models write the keyword form almost exclusively; `hasOption("external")` sees only
+    * the other one. Asking only the option cost 1120 false warnings across the corpus in a single
+    * run — every event declared in an `external context`, i.e. exactly the systems a model
+    * deliberately does not implement, reported as emitted by nothing.
+    */
   object Intention:
     /** Parse an intention keyword; None if it is not one of the four. */
     def fromKeyword(kw: String): Option[Intention] = kw match
@@ -5271,6 +5580,18 @@ object AST:
   end Intention
 
   @JSExportTopLevel("Context")
+  /** A bounded context: **the** runtime isolation boundary, and the unit whose message set is the
+    * only public surface.
+    *
+    * Since the unified processor model a Context is port-bearing like every other [[Processor]],
+    * and it may carry an optional [[Intention]] (application, external, gateway, service).
+    *
+    * **At the boundary, and only there, the CONTEXT is the port.** Crossing in it is the sink,
+    * crossing out it is the source. A connector, `tell`, `send` or `forward` from outside must
+    * address the context itself and never an Entity, Repository, Projector, Streamlet or Adaptor it
+    * CONTAINS — reaching past binds a peer to internals the context is entitled to change. Inside
+    * one context, nothing needs that ceremony: any contained definition may address any other.
+    */
   case class Context(
     loc: At,
     id: Identifier,
@@ -5307,6 +5628,7 @@ object AST:
     def isService: Boolean = intention.contains(Intention.Service)
   }
 
+  /** Companion for [[Context]]. */
   @JSExportTopLevel("Context$")
   object Context {
     lazy val empty: Context = Context(At.empty, Identifier.empty)
@@ -5412,6 +5734,17 @@ object AST:
       case AtLeastOnce | AtMostOnce | ExactlyOnce => "delivery"
   end ConnectorIntention
 
+  /** Companion for [[ConnectorIntention]]: canonical ordering and keyword matching.
+    *
+    * Same equality reasoning as [[EntityIntention]]'s companion — order is normalized so two
+    * identical connectors cannot differ by how their keywords were typed.
+    *
+    * **Absence of a delivery intention MEANS `at-least-once`**, so an absent keyword draws no
+    * warning; `at-most-once` exists to make a downgrade a KNOWING one rather than a silent one.
+    * Ordering is deliberately NOT an intention: `unordered` is permission rather than mandate,
+    * which makes it advisory, and the admission test for this enum is whether a generator may
+    * decline to honour the keyword.
+    */
   object ConnectorIntention:
 
     /** The canonical order intentions are emitted in: durability, then delivery. Any order is
@@ -5475,10 +5808,51 @@ object AST:
       intentions.contains(ConnectorIntention.Persistent) || hasOption("persistent")
   }
 
+  /** The SHAPE of a port-bearing processor: how many inlets and outlets it has, named.
+    *
+    * Since the unified processor model, EVERY [[Processor]] bears ports — not only the
+    * shape-keyword streamlets — so a shape is either ASCRIBED (`context C as sink is {…}`) or
+    * DERIVED from the port counts. `Processor.effectiveShape` prefers the ascription; a portless
+    * processor derives as [[Void]] only when it is UNASCRIBED.
+    *
+    * The arity table is TOTAL over non-negative counts, and two of the rows surprise people:
+    *
+    * {{{
+    *   shape    outlets   inlets
+    *   void       0         0
+    *   sink       0        >=1     <- ANY number of inlets, not exactly one
+    *   source    >=1        0      <- ANY number of outlets, not exactly one
+    *   flow       1         1
+    *   merge      1        >=2
+    *   split     >=2        1
+    *   router    >=2       >=2
+    * }}}
+    *
+    * `sink` and `source` were pinned to exactly ONE port until 2026-08-12, which left `(0, >=2)`
+    * and `(>=2, 0)` — an ordinary fan-in drain and fan-out origin — matching no arm and falling to
+    * a catch-all that returned `Void`. A gap in the vocabulary became a confident wrong answer
+    * that validation then reported as fact (*"repository R as sink … its arity is void"*, on a
+    * correct model). The final arm now THROWS rather than returning a plausible shape.
+    *
+    * **The rule is encoded in TWO places and they must move together**: `Processor.shapeForArity`
+    * and the per-shape min/max port counts in `StreamingParser`. Their prior agreement was not
+    * corroboration — it was one assumption written twice, which is why nothing looked inconsistent
+    * while both were wrong.
+    *
+    * **Direction, since it is the thing people invert:** an OUTLET is an exit and an INLET is an
+    * entrance. A `sink` has inlets and no outlets — it only consumes — and everything else follows
+    * from that. Mind the consequence for derivation: an extra INLET raises the inlet count, so a
+    * 1-in/1-out `flow` that also hosts an error-sink inlet derives as a [[Merge]], never a
+    * [[Split]].
+    */
   sealed trait StreamletShape extends RiddlValue {
     def keyword: String
   }
 
+  /** The shape of a processor with NO ports: 0 outlets, 0 inlets. Derived for an unascribed
+    * portless processor — but note `effectiveShape` honours an ascription over arity, so a context
+    * ascribed `as sink` that declares no ports is a Sink, not a Void.
+    */
   @JSExportTopLevel("Void")
   case class Void(loc: At) extends StreamletShape {
     def format: String = "void"
@@ -5486,6 +5860,11 @@ object AST:
     def keyword: String = "void"
   }
 
+  /** A pure ORIGIN: one or more outlets, no inlets. Produces without consuming.
+    *
+    * Any number of outlets, not exactly one — a fan-out origin is still a source. Crossing OUT of
+    * a context, the CONTEXT is the source.
+    */
   @JSExportTopLevel("Source")
   case class Source(loc: At) extends StreamletShape {
     def format: String = "source"
@@ -5493,6 +5872,11 @@ object AST:
     def keyword: String = "source"
   }
 
+  /** A pure DRAIN: one or more inlets, no outlets. Consumes without producing.
+    *
+    * Any number of inlets, not exactly one — an ordinary fan-in drain is still a sink. Crossing
+    * INTO a context, the CONTEXT is the sink. `Riddl.BottomlessPit` is the predefined one.
+    */
   @JSExportTopLevel("Sink")
   case class Sink(loc: At) extends StreamletShape {
     def format: String = "sink"
@@ -5500,6 +5884,7 @@ object AST:
     def keyword: String = "sink"
   }
 
+  /** One in, one out: exactly 1 inlet and 1 outlet. A transformation stage. */
   @JSExportTopLevel("Flow")
   case class Flow(loc: At) extends StreamletShape {
     def format: String = "flow"
@@ -5507,6 +5892,11 @@ object AST:
     def keyword: String = "flow"
   }
 
+  /** Fan-IN: 2 or more inlets, exactly 1 outlet. Combines several arrival streams into one.
+    *
+    * Note a 1-in/1-out processor that also declares an error-sink inlet derives as a Merge — the
+    * extra inlet raises the inlet count, and it is a common surprise.
+    */
   @JSExportTopLevel("Merge")
   case class Merge(loc: At) extends StreamletShape {
     def format: String = "merge"
@@ -5514,6 +5904,11 @@ object AST:
     def keyword: String = "merge"
   }
 
+  /** Fan-OUT: exactly 1 inlet, 2 or more outlets. Distributes one arrival stream over several.
+    *
+    * `split` is about OUTLETS. A processor with several inlets is never a split, whatever it does
+    * with them.
+    */
   @JSExportTopLevel("Split")
   case class Split(loc: At) extends StreamletShape {
     def format: String = "split"
@@ -5521,6 +5916,7 @@ object AST:
     def keyword: String = "split"
   }
 
+  /** Many to many: 2 or more inlets AND 2 or more outlets. Routes among several of each. */
   @JSExportTopLevel("Router")
   case class Router(loc: At) extends StreamletShape {
     def format: String = "router"
@@ -5528,6 +5924,13 @@ object AST:
     def keyword: String = "router"
   }
 
+  /** Companion for [[StreamletShape]], holding the keyword canonicalization.
+    *
+    * The deprecated shape SYNONYMS live here rather than in the parser, so every surface agrees on
+    * what an author's word means: `cascade` -> [[Flow]], `fanin` -> [[Merge]], and both
+    * `broadcast` and `fanout` -> [[Split]]. Canonicalizing at the AST boundary is what keeps two
+    * spellings of one shape from ever comparing unequal.
+    */
   object StreamletShape {
 
     /** Canonicalize a shape keyword (including synonyms) into a [[StreamletShape]].
@@ -5613,6 +6016,7 @@ object AST:
     override def format: String = s"inlet ${pathId.format}"
   }
   @JSExportTopLevel("InletRef$")
+  /** Companion for [[InletRef]]. An INLET is an ENTRANCE — the arrival point of a connector. */
   object InletRef { def empty: InletRef = InletRef(At.empty, PathIdentifier.empty) }
 
   /** A reference to an [[Outlet]]
@@ -5627,6 +6031,9 @@ object AST:
     override def format: String = s"outlet ${pathId.format}"
   }
   @JSExportTopLevel("OutletRef$")
+  /** Companion for [[OutletRef]]. An OUTLET is an EXIT — a processor places a message on its own
+    * outlet and the connector carries it to a receiver's inlet.
+    */
   object OutletRef { def empty: OutletRef = OutletRef(At.empty, PathIdentifier.empty) }
 
   ///////////////////////////////////////////////////////////////////////////////////////////// SAGA
@@ -5694,6 +6101,7 @@ object AST:
   }
 
   @JSExportTopLevel("SagaRef")
+  /** A reference to a [[Saga]] by path. */
   case class SagaRef(loc: At, pathId: PathIdentifier) extends Reference[Saga] {
     def format: String = s"saga ${pathId.format}"
   }
@@ -5712,8 +6120,14 @@ object AST:
     def format: String = s"user ${pathId.format}"
   }
 
+  /** One step of a use case: a directed exchange between two participants, or a container of
+    * further steps. Steps are ORDERED, and their order is the sequence being described.
+    */
   sealed trait Interaction extends RiddlValue with WithMetaData
 
+  /** An interaction step that names a `from` and a `to` participant, as opposed to an
+    * [[InteractionContainer]] which groups other steps.
+    */
   sealed trait GenericInteraction extends Interaction {
     def relationship: LiteralString
   }
@@ -5727,6 +6141,17 @@ object AST:
     def to: Reference[Definition]
   }
 
+  /** A grouping step — `sequence`, `parallel` or `optional` — holding further interactions.
+    *
+    * **It is a `Container` but NOT a `Branch`**: it has no `id`, so it cannot be a `Definition`,
+    * so the generic traversal cannot push it and does not descend into it. Every pass that must
+    * reach its contents has to say so explicitly. Two defects came from exactly that: resolution
+    * dismissed all three kinds with a `// no references` comment (the container carries none — its
+    * CONTENTS do), so a step inside one was never resolved and never validated; and the BAST writer
+    * fell through to a generic arm that wrote a contents COUNT without writing the items,
+    * desynchronizing the stream. The tell for the second was a node count going DOWN when a block
+    * was ADDED.
+    */
   sealed trait InteractionContainer
       extends Interaction
       with Container[InteractionContainerContents]
@@ -6363,6 +6788,16 @@ object AST:
   }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////// TOKENS
+  /** A lexical token, produced by `TopLevelParser.parseToTokens` for editors and highlighters.
+    *
+    * This is a SEPARATE surface from the AST — tokenizing does not build definitions — and it is
+    * an enum, not a hierarchy of case classes, so there is no `kind` member: get the name with
+    * `token.getClass.getSimpleName`. Text is recovered from the source by slicing `loc`.
+    *
+    * Note a path is tokenized PER SEGMENT (Identifier, Punctuation, Identifier, …) and each `//`
+    * line is its own Comment token — which is why token-count goldens move in ways that look
+    * surprising until the arithmetic is done.
+    */
   enum Token(at: At):
     val loc: At = at
     case Punctuation(at: At) extends Token(at)

@@ -35,6 +35,12 @@ type PassCreators = Seq[PassCreator]
 /** Base trait for options classes that are needed by passes */
 trait PassOptions
 
+/** Companion for [[PassOptions]], providing the do-nothing instance.
+  *
+  * Most passes need no options at all, so `empty` is the usual argument rather than a fallback for
+  * a missing one — passing it is a statement that the pass is not configurable, not that its
+  * configuration was omitted.
+  */
 object PassOptions {
   val empty: PassOptions = new PassOptions {}
 }
@@ -72,6 +78,12 @@ trait PassOutput {
   def messages: Messages.Messages
 }
 
+/** Companion for [[PassOutput]], providing an output carrying an empty [[Root]] and no messages.
+  *
+  * Note `empty` is a `def`, not a `val`: it builds a fresh instance per call. Nothing depends on
+  * distinct identity today, but a shared mutable-looking singleton for a type that carries a whole
+  * AST is a poor default.
+  */
 object PassOutput {
   def empty: PassOutput = new PassOutput {
     val root: PassRoot = Root.empty
@@ -90,6 +102,12 @@ case class PassInput(
   parseMessages: Messages.Messages = Messages.empty
 )
 
+/** Companion for [[PassInput]], providing an input over an empty [[Root]].
+  *
+  * Useful as the starting point for a pass chain that has parsed nothing — a pass run over it
+  * produces no messages rather than failing, which is what lets the "no input" case travel the
+  * same code path as every other.
+  */
 object PassInput {
   val empty: PassInput = PassInput(Root.empty)
 }
@@ -172,6 +190,13 @@ case class PassesResult(
   def usage: Usages = resolution.usage
 }
 
+/** Companion for [[PassesResult]], providing the result of having run no passes at all.
+  *
+  * Distinct from a result whose passes ran and produced nothing: both are message-free, and only
+  * the caller knows which it asked for. Do not use `empty` to stand in for a FAILED run — a
+  * failure carries its messages, and discarding them here is how a failure becomes a silent
+  * success.
+  */
 object PassesResult {
   val empty: PassesResult = PassesResult()
 }
@@ -390,6 +415,33 @@ abstract class Pass(
   }
 }
 
+/** A [[Pass]] that visits every node CHILDREN-FIRST.
+  *
+  * The contrast with the base [[Pass]] is the ORDER, not the coverage: a node's `process` runs
+  * after its whole subtree has been processed, so a pass that must know what a container holds
+  * before deciding anything about the container itself wants this one.
+  *
+  * **Do NOT use this to MUTATE contents during the walk.** `Container.flatten()` learned that the
+  * hard way: removing `Include`/`BASTImport` wrappers while a depth-first traversal is iterating
+  * corrupts the underlying `ArrayBuffer`, so it uses the base [[Pass]] instead. Depth-first is for
+  * reading a tree bottom-up, not for rewriting one.
+  *
+  * Two traversal subtleties inherited from [[Pass]] and easy to trip over:
+  *   - an [[Include]] is NOT pushed onto the parent stack, because its children belong to the
+  *     ENCLOSING container — a pass that needs an include to be a scope must override `traverse`
+  *     (`JsonifierPass` does exactly this);
+  *   - the generic `Branch` arm walks `contents` ONLY, so a node holding children in a FIELD —
+  *     `Correlation.timeoutStatements`, `SagaStep`'s do/undo blocks — needs its own case BEFORE
+  *     that arm or those children are never visited, and the model validates clean while naming
+  *     definitions that need not exist.
+  *
+  * @param input
+  *   The input to the pass, providing the data over which it is executed
+  * @param outputs
+  *   The outputs of prior passes, which this pass may depend on
+  * @param withIncludes
+  *   Whether to descend into [[Include]] wrappers during traversal
+  */
 abstract class DepthFirstPass(
   input: PassInput,
   outputs: PassesOutput,
