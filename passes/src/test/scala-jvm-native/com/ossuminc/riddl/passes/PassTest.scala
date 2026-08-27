@@ -164,11 +164,23 @@ class PassTest extends AbstractTestingBasisWithTestData {
             Pass.runPass[PassOutput](input, outputs, hp)
             val (opens, closes, leaves, values) = hp.processForTest(result.root, ParentStack.empty)
             opens.must(be(closes))
-            opens.must(be(58))
-            // 26 before `requires`/`returns` became contents; everything_full.riddl declares two
-            // of each, so the traversal reaches four more values.
-            values.must(be(30))
-            leaves.must(be(17))
+            // 2026-08-27: +2. `everything_APlant.riddl` gained a context-level `inlet Commands`, a
+            // relay `handler Intake` with one bound `on` clause, and `dokn.riddl`'s
+            // `entity Location` gained `type LocationEvent` and `outlet LocationEvents_out`
+            // -- all so senders address a context instead of reaching onto a portlet of
+            // something it contains (`msg-target-crosses-boundary`).
+            opens.must(be(60))
+            // 2026-08-27: 30 -> 41. The `msg-target-crosses-boundary` migration gave
+            // `everything_APlant.riddl` a context-level `inlet Commands` and a relay
+            // `handler Intake` whose bound `on d: command DoAThing` clause sends `d` onward.
+            // The +11 is references, identifiers and metadata reached through those, and it is
+            // attributed rather than assumed: PassTest's TestHierarchyPass and VisitingPassTest's
+            // visitor are separate traversals and BOTH moved by exactly 11, which is evidence
+            // about the tree rather than about either counter.
+            values.must(be(41))
+            // 2026-08-27: +1, the context-level `inlet Commands` added to
+            // `everything_APlant.riddl`. Same delta VisitingPassTest's `leaves` sees.
+            leaves.must(be(18))
       }
       Await.result(future, 10.seconds)
     }

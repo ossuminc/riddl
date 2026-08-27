@@ -1883,6 +1883,63 @@ case class ValidationPass(
   private def tellTargetProcessor(ts: TellStatement, parents: Parents): Option[Processor[?]] =
     TellTarget.processorOf(ts.target, parents, resolution.refMap, symbols)
 
+  /** A message-send from OUTSIDE context `C` must address `C` itself, never something `C`
+    * contains. This is `StreamingValidation.checkBoundaryEncapsulation`'s connector rule applied
+    * to the three statements that transmit — `tell`, `send` and `forward`.
+    *
+    * Reid's ruling, 2026-08-26, on a domain-scope saga: sending to various contexts to get work
+    * done "is typical and usual", but reaching past a context into its entities or streamlets or
+    * repositories is an encapsulation violation — it claims the sender may "comprehend the
+    * possibly-changing design of a context" and so work around the very API whose sole purpose is
+    * to define a boundary. An Error rather than a warning for the same reason the connector rule
+    * is: binding a peer to a contained definition's existence and to its current message set
+    * CONTRADICTS the bounded context rather than under-stating it.
+    *
+    * **`symbols.contextOf` returns the context ITSELF for a Context**, which is exactly what makes
+    * the legal form distinguishable from the violation without a second lookup: `target eq ctx` is
+    * the published surface, `target` merely contained by `ctx` is the internals.
+    *
+    * **No adaptor exemption**, matching the connector rule and against
+    * [[BasicValidation.checkCrossContextReference]], which does exempt them. Reid, 2026-08-26:
+    * adaptors are intended to cross contexts, but not to descend into their internals. Being the
+    * translator does not make you the boundary.
+    *
+    * Silent when the target resolves to nothing, and silent when it is not inside any context —
+    * a domain-level target has no boundary to cross.
+    */
+  private def checkTargetBoundary(
+    path: PathIdentifier,
+    target: Definition,
+    loc: At,
+    keyword: String,
+    parents: Parents
+  ): Unit = {
+    // The question -- "does this reach past a context onto something it CONTAINS?" -- is asked in
+    // exactly one place, `BasicValidation.reachesPastContextBoundary`, which the ordinary
+    // cross-context reference Warning also consults. Two copies of one dispatch is the defect this
+    // repo keeps paying for; the copy that runs is never the copy you read.
+    val sender: Definition = parents.headOption.getOrElse(target)
+    for targetCtx <- reachesPastContextBoundary(target, sender) do
+      // Name the context the way the AUTHOR already spelled it: the written path minus its last
+      // segment IS the container's path when the reference is qualified, which is the common case
+      // and reads back as something they can paste. An unqualified path (a value target resolved
+      // through `pathOf`, or a bare name) falls back to the context's own id.
+      val ctxName =
+        if path.value.sizeIs > 1 then path.value.dropRight(1).mkString(".")
+        else targetCtx.id.value
+      messages.addError(
+        loc,
+        s"'$keyword' addresses ${target.identify} inside ${targetCtx.identify} from outside that " +
+          s"context, which binds this sender to the context's internal design",
+        suggestion =
+          s"Address the context itself -- '$keyword ... to context $ctxName' -- and let " +
+            s"${targetCtx.identify} route the message through its own handler. Only a context's " +
+            s"message set is public; its contents are not.",
+        ruleId = Some(RuleId.TargetCrossesBoundary)
+      )
+    end for
+  }
+
   private def validateStatement(
     statement: Statement,
     parents: Parents
@@ -1954,7 +2011,14 @@ case class ValidationPass(
           case ref: MessageRef => checkRef[Type](ref, parents)
           case _: Constructor  => ()
           case _: ValueRef     => ()
-        checkRef[Portlet](portlet, parents)
+        // A `send` names a PORTLET, so the subject of the boundary test is the portlet's OWNER --
+        // the same indirection `StreamingValidation.checkBoundaryEncapsulation` makes for a
+        // connector end, and for the same reason: a context's own portlet IS its public surface.
+        checkRef[Portlet](portlet, parents).foreach { p =>
+          symbols.parentOf(p).foreach(owner =>
+            checkTargetBoundary(portlet.pathId, owner, statement.loc, "send", parents)
+          )
+        }
       case ForwardStatement(_, msg, target) =>
         // Same operand split as send/tell: a bare MessageRef is checked here, while a Constructor
         // and a bare ValueRef need the threaded `let`/element scope only `checkStatementScopes`
@@ -1964,9 +2028,21 @@ case class ValidationPass(
           case ref: MessageRef => checkRef[Type](ref, parents)
           case _: Constructor  => ()
           case _: ValueRef     => ()
+        // `forward` was NOT in the filed ask and is included on Reid's 2026-08-26 ruling. It takes
+        // the same portlet-or-processor target as send/tell, so leaving it out would make the one
+        // statement that DELEGATES the one statement free to ignore the boundary -- the same
+        // "ask what ELSE has this property" lesson `terminate` taught after `error` shipped alone.
         target match
-          case portlet: PortletRef[?]     => checkRef[Portlet](portlet, parents)
-          case processor: ProcessorRef[?] => checkRef[Processor[?]](processor, parents)
+          case portlet: PortletRef[?] =>
+            checkRef[Portlet](portlet, parents).foreach { p =>
+              symbols.parentOf(p).foreach(owner =>
+                checkTargetBoundary(portlet.pathId, owner, statement.loc, "forward", parents)
+              )
+            }
+          case processor: ProcessorRef[?] =>
+            checkRef[Processor[?]](processor, parents).foreach { proc =>
+              checkTargetBoundary(processor.pathId, proc, statement.loc, "forward", parents)
+            }
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
         checkRef[State](state, parents)
@@ -1997,7 +2073,12 @@ case class ValidationPass(
           // own path stands in -- the alternative, skipping, would silently exempt instance-
           // addressed tells from context isolation.
           val path = tellTargetPath(ts).getOrElse(pathOf(entity))
-          checkCrossContextReference(path, entity, onClause, parents)
+          // `checkTargetBoundary` REPLACES `checkCrossContextReference` for the TARGET (the
+          // message operand below still gets it). The two ask overlapping questions and the ref
+          // check's advice -- "use an Adaptor, or a Streamlet pipeline" -- is wrong under the
+          // 2026-08-26 ruling, which blesses addressing the context directly. Running both would
+          // double-report a cross-context tell as one warning and one error.
+          checkTargetBoundary(path, entity, statement.loc, "tell", parents)
           collectedTells.addOne((ts, entity))
         }
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in

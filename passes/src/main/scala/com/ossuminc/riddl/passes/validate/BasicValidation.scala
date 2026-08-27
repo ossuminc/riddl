@@ -443,6 +443,36 @@ trait BasicValidation(using pc: PlatformContext) {
     )
   }
 
+  /** Does this reference reach past a context boundary onto something the context CONTAINS?
+    *
+    * `Some(ctx)` when it does — `ctx` being the context whose privacy is broken. `None` when there
+    * is nothing wrong: the target is not in a context, the target IS the context (a context's own
+    * portlets and the context itself are its public surface), or the referrer is inside the same
+    * context (intra-context reference is unrestricted).
+    *
+    * **`symbols.contextOf` returns the context ITSELF for a Context**, which is what makes the
+    * legal form distinguishable from the violation without a second lookup.
+    *
+    * This is the ONE implementation of the boundary rule. `checkCrossContextReference` reports it
+    * as a Warning for ordinary references and `ValidationPass.checkTargetBoundary` reports it as an
+    * Error for the three transmission statements; before 2026-08-27 the same question was answered
+    * in two places, and the copy that ran was not the copy that was complete.
+    *
+    * **No adaptor exemption here, deliberately.** Reid, 2026-08-26: adaptors are intended to cross
+    * contexts, but not to descend into their internals — being the translator does not make you the
+    * boundary. The blanket exemption below applies only to the general cross-context WARNING, where
+    * it is right: translating between contexts is an adaptor's whole job.
+    */
+  def reachesPastContextBoundary(
+    definition: Definition,
+    container: Definition
+  ): Option[Context] =
+    for
+      definitionContext <- symbols.contextOf(definition)
+      if !(definition eq definitionContext)
+      if !symbols.contextOf(container).exists(_ eq definitionContext)
+    yield definitionContext
+
   def checkCrossContextReference(
     ref: PathIdentifier,
     definition: Definition,
@@ -474,7 +504,36 @@ trait BasicValidation(using pc: PlatformContext) {
                 )
               )
             else ()
-          case None => ()
+          case None =>
+            // The referrer is OUTSIDE every context — a domain-scope saga, a top-level function,
+            // a domain-scope connector. This arm did NOTHING until 2026-08-27, and that silence is
+            // the mechanical reason a domain-scope saga could reach into a context's entity without
+            // a word while the identical reference from a SIBLING context warned above.
+            //
+            // It is deliberately NARROWER than the arm above: a context's MESSAGE SET is public, so
+            // naming one of its message types from outside is the intended way to talk to it and
+            // must stay silent. Only reaching for something the boundary exists to keep private is
+            // wrong, which is exactly what `reachesPastContextBoundary` asks.
+            if reachesPastContextBoundary(definition, container).isDefined then
+              definition match
+                case _: Processor[?] =>
+                  val formatted = ref.format
+                  messages.add(
+                    warning(
+                      s"Path Identifier $formatted at ${ref.loc.format} references " +
+                        s"${definition.identify} inside ${definitionContext.identify}, but " +
+                        s"${container.identify} is outside every context. Reaching past a context " +
+                        "boundary into its contents binds this reference to internals the context " +
+                        "is entitled to change",
+                      ref.loc.extend(formatted.length),
+                      suggestion =
+                        s"Reference ${definitionContext.identify} itself, or one of the message " +
+                          "types it publishes, rather than a definition it contains.",
+                      ruleId = Some(RuleId.CrossContextReference)
+                    )
+                  )
+                case _ => ()
+            end if
         }
       case None => ()
     }

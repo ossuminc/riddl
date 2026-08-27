@@ -25,6 +25,13 @@ import org.scalatest.{Assertion, TestData}
   * reference or the message. So no entry was ever added and MessageFlowPass's lookup correctly
   * found nothing.
   */
+/** The subject here is RESOLUTION of a `tell` nested inside a `when` inside an adaptor handler —
+  * not addressing. The target was `entity D.Bar.DrinkOrder` until 2026-08-27, when reaching past a
+  * context onto something it contains became an Error (`msg-target-crosses-boundary`); an adaptor
+  * gets no exemption, because being the translator does not make you the boundary. Addressing
+  * `context D.Bar` keeps the nesting — which is what this suite exists to exercise — while stating
+  * the model correctly.
+  */
 class NestedTellResolutionTest extends AbstractValidatingTest {
 
   private val src =
@@ -43,7 +50,7 @@ class NestedTellResolutionTest extends AbstractValidatingTest {
       |      handler AH is {
       |        on event D.FrontOfHouse.OrderSubmitted is {
       |          when "the order has drink items" then
-      |            tell command D.Bar.ReceiveDrinkOrder(id = "the id") to entity D.Bar.DrinkOrder
+      |            tell command D.Bar.ReceiveDrinkOrder(id = "the id") to context D.Bar
       |          end
       |        }
       |        on other is { ??? }

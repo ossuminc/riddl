@@ -153,6 +153,18 @@ domain dokn is {
 
     context Locations is {
         entity Location is {
+            // A processor publishes ONLY through its OWN outlet. These four events used to be
+            // placed directly on `Companies.events.CompanyEvents_out` -- a portlet of a flow inside
+            // a DIFFERENT context -- which reached past the Companies boundary onto something it
+            // contains. That became an Error on 2026-08-27
+            // (`msg-target-crosses-boundary`). Crossing OUT of Locations, the entity's own outlet
+            // is the first hop; wiring it onward to a portlet Companies itself declares is a
+            // separate modelling step this fixture does not need in order to be correct here.
+            type LocationEvent is one of {
+              event DeliveryLocationAdded or event LocationNameChanged or
+              event TicketReportedAtLocation or event NotesForLocationModified
+            }
+            outlet LocationEvents_out is type LocationEvent
 
             command AddDeliveryLocation yields event DeliveryLocationAdded is  {
               geohash: Location, label: String
@@ -189,19 +201,19 @@ domain dokn is {
             handler Base is {
               on command Location.AddDeliveryLocation {
                 yield event Location.DeliveryLocationAdded
-                send event Location.DeliveryLocationAdded to outlet CompanyEvents_out
+                send event Location.DeliveryLocationAdded to outlet Location.LocationEvents_out
               }
               on command ChangeLocationName {
                 yield event Location.LocationNameChanged(newName = "the new name")
-                send event Location.LocationNameChanged(newName = "the new name") to outlet CompanyEvents_out
+                send event Location.LocationNameChanged(newName = "the new name") to outlet Location.LocationEvents_out
               }
               on command ReportTicketReceived {
                 yield event Location.TicketReportedAtLocation
-                send event Location.TicketReportedAtLocation to outlet CompanyEvents_out
+                send event Location.TicketReportedAtLocation to outlet Location.LocationEvents_out
               }
               on command ModifyNotesAtLocation {
                 yield event Location.NotesForLocationModified(note = "the note")
-                send event Location.NotesForLocationModified(note = "the note") to outlet CompanyEvents_out
+                send event Location.NotesForLocationModified(note = "the note") to outlet Location.LocationEvents_out
               }
               on event Location.DeliveryLocationAdded { ??? }
               on event Location.LocationNameChanged { ??? }

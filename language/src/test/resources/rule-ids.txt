@@ -155,6 +155,7 @@ msg-no-instance-address
 msg-ref-empty
 msg-ref-not-a-message
 msg-ref-wrong-message-kind
+msg-target-crosses-boundary
 msg-tell-not-deliverable
 msg-tell-target-unreachable
 msg-wrong-response-kind

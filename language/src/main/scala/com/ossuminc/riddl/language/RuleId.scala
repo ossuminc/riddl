@@ -420,6 +420,7 @@ enum RuleId(
   case AskNoReplies extends RuleId("msg-ask-no-replies")
   case AskNotAQuery extends RuleId("msg-ask-not-a-query")
   case AddressAmbiguous extends RuleId("msg-address-ambiguous")
+  case TargetCrossesBoundary extends RuleId("msg-target-crosses-boundary")
   case NoAddressField extends RuleId("msg-no-address-field")
   case ClauseNoParameters extends RuleId("handler-clause-no-parameters")
   case ClauseWrongArity extends RuleId("handler-clause-wrong-arity")

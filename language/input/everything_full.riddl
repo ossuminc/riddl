@@ -61,7 +61,7 @@ context full is {
   adaptor fromAPlant to context APlant is {
     handler adaptCommands is {
       on command ACommand {
-        send command DoAThing(thingField = 42) to outlet APlant.Source.OutCommands
+        send command DoAThing(thingField = 42) to inlet APlant.Commands
       }
       on other { error "unexpected message" }
     }
@@ -87,10 +87,13 @@ context full is {
       // Handle the ACommand
       on command ACommand {
         when "Something arrives" then
-          // APlant.Source.OutCommands is declared `type DoAThing`, so only a DoAThing may be
-          // placed on it. This used to send `event Inebriated`, which nothing rejected until the
-          // send/portlet conformance check landed (2026-08-19).
-          send command DoAThing(thingField = 43) to outlet APlant.Source.OutCommands
+          // APlant.Commands is declared `command DoAThing`, so only a DoAThing may be placed on
+          // it. This used to send `event Inebriated`, which nothing rejected until the
+          // send/portlet conformance check landed (2026-08-19). It addressed
+          // `APlant.Source.OutCommands` until 2026-08-27, when reaching past a context onto a
+          // portlet of something it CONTAINS became an Error -- a sender outside APlant must
+          // address APlant itself.
+          send command DoAThing(thingField = 43) to inlet APlant.Commands
         end
       }
     }

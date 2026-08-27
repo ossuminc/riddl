@@ -82,6 +82,67 @@ substitute for this check.
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's
 call, and this file's claims have not been independently reproduced here yet.
 
+## 2026-08-27 — a boundary rule that already half-existed (`msg-target-crosses-boundary`)
+
+riddl-models filed it as *"missing validation — an encapsulation violation currently passes
+silently"*. The claim was right and the diagnosis was wrong, and the difference is the entry.
+
+**A check already existed and was already being called on the tell target.**
+`BasicValidation.checkCrossContextReference` is a NESTED match — `contextOf(definition)` on the
+outside, `contextOf(container)` on the inside — and its inner `case None`, meaning *the sender is
+outside every context*, was `()`. That is precisely the reported case: a domain-scope saga. Move
+the same saga into a sibling context and it warns today. **The bug was an unwritten arm, not an
+unwritten check**, which made the fix smaller and told us where it went. "No check exists" is a
+conclusion from OUTPUT; the code said something more specific.
+
+**Reading the code also found three partly-overlapping diagnostics already firing on a
+cross-context tell** — the reference warning, `stmt-tell-crosses-context` (about the message
+type's domain, not the target), and `msg-tell-target-unreachable` (connectors). The new Error
+therefore had to REPLACE the reference warning on a transmission target rather than run beside
+it, or one defect reports twice. **Adding a check to a crowded area is mostly a question about
+what is already there.**
+
+**Reid's ruling widened it and narrowed an exemption.** `forward` is in — it takes the same
+target shapes, and leaving it out would make the one statement that DELEGATES the one statement
+free to ignore the boundary (the `error`/`terminate` lesson: when a rule is about a property, ask
+what else has it). And **no adaptor exemption**, matching the connector rule: *"Adaptors are
+intended to cross contexts, but not descend into their internals."* Note the older
+`checkCrossContextReference` DOES exempt adaptors and correctly keeps doing so — translating
+between contexts is an adaptor's job; reaching inside one is not. Two rules, two exemptions, and
+they disagree on purpose.
+
+**Asked to fix the `None` arm, I first built something unreachable, and said so.** Once the
+targets routed to the new Error, that arm's only remaining callers were `become` — which does not
+parse in a saga step, so it is never outside a context — and a message TYPE, which is a context's
+published surface and must stay silent. Reid chose to UNIFY instead: one predicate,
+`reachesPastContextBoundary`, consulted by both the Error and the Warning. That is strictly better
+than either shipping dead code or documenting the silence, because it makes the arm reachable AND
+deletes the second copy of a dispatch — the defect this repo keeps paying for.
+
+**Presenting a decision badly is its own failure.** My first attempt named "the None arm" without
+saying what the function was, where it lived, what the other arms did, or what each choice would
+cost. Reid sent it back. **A choice is not a question until the reader can reach the same
+conclusion you did** — that means the file, the shape, and the consequence of each option.
+
+**Seven of our own fixture sites were true positives**, including an adaptor in
+`everything_full.riddl` sending to `outlet APlant.Source.OutCommands` — where `context APlant`
+declared NO portlets of its own, so there was nothing legal to address. It now has an inlet and a
+relay handler. Fixing fixtures rather than exempting them is the standing rule, and this one had
+to be modelled, not edited.
+
+**Two goldens moved and BOTH deltas were reconciled rather than accepted.** The token count went
+420 -> 419 — a DROP, after edits that only added text, which is the shape that deserves chasing. A
+path tokenizes PER SEGMENT, so `APlant.Source.OutCommands` (5 tokens) -> `APlant.Commands` (3) is
+-2 per site, -4 total, while the second site's explanatory comment grew from three `//` lines to
+six and each is its own Comment token, +3. Net -1, exactly. Separately, `values` moved +11 in
+PassTest AND +11 in VisitingPassTest — two independently-written traversals agreeing on the same
+delta, which is evidence about the tree rather than about either counter.
+
+**Corrected, again: corpus impact is not an argument.** Reid: *"Yet again, corpus impact does NOT
+MATTER! Stop bringing it up."* Measure it when implementing — it belongs in the commit and in the
+task drop — but it is a consequence to report, never a reason to soften, delay or stage a rule
+that is correct. Saved as a feedback memory rather than merely noted here.
+
 ## 2026-08-26 — rc.26, Scala RC6, and two documents reconciled — DONE
 
 **`2.0.0-rc.26` shipped green**, the second RC to use the stage-first order. Nothing

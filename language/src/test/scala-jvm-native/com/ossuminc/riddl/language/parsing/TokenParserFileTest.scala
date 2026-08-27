@@ -62,7 +62,14 @@ class TokenParserFileTest extends AbstractParsingTest {
           // fixture's `send event Inebriated` went to an outlet declared `type DoAThing` and the
           // send/portlet conformance check made that an Error; it now sends a DoAThing, and a
           // constructor plus its three comment lines is seven tokens more than a bare event ref.
-          tokens.length must be(420)
+          // 2026-08-27: -1, and the arithmetic reconciles exactly. Both sends were repointed from
+          // `outlet APlant.Source.OutCommands` to `inlet APlant.Commands` when reaching past a
+          // context onto a portlet of something it contains became an Error
+          // (`msg-target-crosses-boundary`). A path tokenizes PER SEGMENT -- Identifier,
+          // Punctuation, Identifier, ... -- so three segments (5 tokens) became two (3), i.e. -2
+          // per site, -4 in total; the second site's explanatory comment went from three `//`
+          // lines to six, and each is its own Comment token, so +3. -4 + 3 = -1.
+          tokens.length must be(419)
           val tasStr = tokens.toString
           tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
           tasStr must include("LiteralCode")

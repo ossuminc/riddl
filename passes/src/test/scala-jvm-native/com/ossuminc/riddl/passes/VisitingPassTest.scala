@@ -41,10 +41,20 @@ class VisitingPassTest extends ParsingTest {
           //      |closes=${visitor.closes}
           //      |""".stripMargin)
           visitor.depth must be(0)
-          visitor.leaves must be(17)
-          // 25 before `requires`/`returns` became contents. everything_full.riddl declares two of
-          // each (lines 72-73 and 97-98) and the visitor now reaches all four as values.
-          visitor.values must be(29)
+          // 2026-08-27: +1. `everything_APlant.riddl` gained a context-level `inlet Commands`, a
+          // relay `handler Intake` with one bound `on` clause, and `dokn.riddl`'s
+          // `entity Location` gained `type LocationEvent` and `outlet LocationEvents_out`
+          // -- all so senders address a context instead of reaching onto a portlet of
+          // something it contains (`msg-target-crosses-boundary`).
+          visitor.leaves must be(18)
+          // 2026-08-27: 29 -> 40. The `msg-target-crosses-boundary` migration gave
+          // `everything_APlant.riddl` a context-level `inlet Commands` and a relay
+          // `handler Intake` whose bound `on d: command DoAThing` clause sends `d` onward.
+          // The +11 is references, identifiers and metadata reached through those, and it is
+          // attributed rather than assumed: PassTest's TestHierarchyPass and VisitingPassTest's
+          // visitor are separate traversals and BOTH moved by exactly 11, which is evidence
+          // about the tree rather than about either counter.
+          visitor.values must be(40)
           visitor.opens must be(visitor.closes)
       end match
     }

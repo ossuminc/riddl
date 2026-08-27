@@ -52,7 +52,12 @@ class ReferenceMapTest extends AbstractValidatingTest {
       // resolved there; a state field or message type did not, because nothing ever put it in the
       // map. This number can only GROW from that change -- a shrink means something stopped
       // resolving and is a regression, not a golden to bump.
-      refMap.size must be(34)
+      // 2026-08-27: +4. `everything_APlant.riddl` gained a context-level `inlet Commands`, a
+      // relay `handler Intake` with one bound `on` clause, and `dokn.riddl`'s
+      // `entity Location` gained `type LocationEvent` and `outlet LocationEvents_out`
+      // -- all so senders address a context instead of reaching onto a portlet of
+      // something it contains (`msg-target-crosses-boundary`).
+      refMap.size must be(38)
     }
 
     "have definitionOf(pathId:String) work" in { _ =>
