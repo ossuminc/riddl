@@ -1193,7 +1193,7 @@ verification is carried here so it is not repeated.**
   **Not urgent, and not riddl code** -- but counting `resolvePath`'s missing `ClassTag`, this is
   the third time the shape has cost someone a day.
 
-- **[1.21]** **The `code` statement's portability warning has NEVER been built.**
+- ~~**[1.21]** **The `code` statement's portability warning has NEVER been built.**~~ — **BUILT 2026-08-27** (`391d647af`), `stmt-code-not-portable`. Fires on every OCCURRENCE per A27's own wording, not once per language — a per-language summary would hide how many sites there are, and site-by-site visibility is what the hatch was sanctioned in exchange for. **A StyleWarning, and the severity is load-bearing**: under [1.22]'s generability bar anything higher would make every use of the hatch block the generation the hatch exists to serve. A27 updated. Original entry:
   Tools-To-Do-List A27 requires that "the validator warns about portability on **every**
   use" of `code(language, body)`. Verified 2026-08-26 by repo-wide grep: **no portability
   diagnostic exists anywhere** -- only emptiness is checked
@@ -1206,7 +1206,7 @@ verification is carried here so it is not repeated.**
   Both A27 and Computational Model §20.4 now record that it does not exist, so the
   documents no longer assert it; **this item is the work to make them able to.**
 
-- **[1.22]** **`Messages.isActionable` draws a LOOSER line than the generability bar.**
+- ~~**[1.22]** **`Messages.isActionable` draws a LOOSER line than the generability bar.**~~ — **RESOLVED 2026-08-27** (`f280932fc`), and **the entry's framing was wrong**: it read as one bar drawn in the wrong place. Reid's correction is that these are TWO questions that must keep disagreeing — `isActionable` asks *is this worth attention*, generability asks *can a generator emit correct code* — so `isActionable` is UNCHANGED and `isGenerable` was added beside it (plus `blockingGeneration`). Missing and Usage are exactly where they part: unused definitions are cruft a generator would emit as dead code, and what is missing cannot be generated at all. CM §0.3 names the predicate now. Original entry:
   Reid ruled 2026-08-26 that a **conforming** model has no Errors while a **generable**
   model has "no errors or warnings other than Style" -- so Missing and Usage warnings are
   hard stops for riddlg. But `isActionable` is `severity >= CompletenessWarning.severity`
