@@ -1691,6 +1691,71 @@ that needs a ruling before either can be fixed.
   this branch, and the second where the stale claim was a promissory note about
   work that had since landed.
 
+- **[2.7]** `put`/`get` UI-boundary statements. **Graduated out of NOTEBOOK
+  2026-08-26, where it had sat as a "Deferred — do NOT start yet" section since
+  before 2.0; filing it here so it is tracked rather than remembered.** Design as
+  discussed: `put <value> to output <outputRef>` pushes to a UI Output from an
+  on-clause; `get` is `let <id> = get from input <inputRef>` — its OWN statement
+  kind, not an extension of `LetStatement`. Both keywords existed long ago as
+  storage statements and were removed when `repository` sufficed. This completes
+  the boundary-statement census: send/tell = streaming, call = function, put/get
+  = UI. **Both CAN FAIL** (put when the UI is absent/headless, get when the input
+  is unset), so model it as `def canFail: Boolean` on `Statement` — one source of
+  truth shared with [2.8]. Witnessing is greenfield: a `ShowOutputInteraction` is
+  witnessed by a `put` to that output, a `TakeInputInteraction` by a handler on
+  the input's message type OR a `get` naming it; an unwitnessed step draws a
+  CompletenessWarning. **Prerequisite: the UI / application
+  (output-input-triplet) model must land first** — that is why it was deferred,
+  and the prerequisite has not moved. Open question for when it unblocks: which
+  handler statement-sets may contain put/get. Note `get from input` is ALREADY
+  partly present (`GetValue.source` is `InputRef | StateRef`) — check what exists
+  before designing, per the standing "a plan cannot notice the work happening"
+  rule.
+
+- **[2.8]** Single failure point per saga do-block. **Graduated out of NOTEBOOK
+  2026-08-26 with [2.7]; same provenance.** A saga step's do-block is
+  all-or-nothing (undo assumes all-or-none happened), so warn when it contains
+  more than one potential failure point. **Blocked on the complete can-fail
+  census**, via the shared `Statement.canFail` in [2.7]. The census as filed:
+  send, tell, call, yield, put, get CAN fail; let, set, when, match, foreach
+  CANNOT. **Deferred rather than shipped-partial deliberately** — with only
+  send/tell counted it would give false "single failure point" passes that flip
+  to warnings later, which is worse than waiting. **The census itself needs
+  re-deriving before use**: it predates `forward`, `initiate`, `terminate` and
+  `error`-is-terminal, and this repo's standing lesson is that a predicate
+  borrowed or inherited wholesale stops answering its own question (see
+  CLAUDE.md on A23 vs A26).
+
+- **[2.9]** TypeScript AST declarations for the JS side. Low priority. The full
+  AST hierarchy (Domain, Context, Entity, …) is still OPAQUE to TypeScript; only
+  the public `RiddlAPI` methods are declared. JS consumers are expected to use
+  the facade rather than the raw AST, which is why this has never blocked
+  anyone — file it, do not schedule it. Graduated out of NOTEBOOK's "Active Work
+  Queue" 2026-08-26.
+
+- **[2.10]** Repo housekeeping — three items, all VERIFIED still outstanding
+  2026-08-26, all independent and each a few minutes:
+  1. **Delete the `development` and `old-development` branches** (local +
+     remote). `development` is fully contained in `main` — 0 commits ahead as of
+     1.31.0 — so nothing is lost. `git branch -a` confirms `development` and
+     `origin/development` still exist. Deferred pending an explicit go-ahead,
+     which is the only thing missing.
+  2. **Fix `.claude/skills/ship/SKILL.md`** — it still prescribes the GitFlow
+     pre-flight (fast-forward `main` from `development`, `SKILL.md:21-30`) and
+     the post-release merge-back. Both contradict current policy (CLAUDE.md
+     § Branch Strategy: `main` IS the working and release branch) and were
+     skipped for 1.30.0 and 1.31.0. A skill that documents a process nobody
+     follows is a trap for the next session that trusts it.
+  3. **Delete the stray `help` git tag** (`git tag --list help` confirms it).
+     Almost certainly a typo'd `git tag help`. Harmless, except that it sorts to
+     the top of `git tag --sort=-v:refname` and so LEADS the tag list when
+     working out the latest release.
+
+  Dropped from this list as already resolved: *"verify the `unset GITHUB_TOKEN`
+  guidance for `gh`"* — settled 2026-07-29 and recorded in `../CLAUDE.md`
+  § GitHub CLI Integration (both credentials work; prefer plain `gh`, and never
+  unset the token in a shell that also runs sbt).
+
 ### 3. Owed to other repos
 
 - ~~**[3.1]** riddl-generator's `Finder` incompleteness.~~ — **CLOSED by THEM

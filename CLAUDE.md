@@ -421,11 +421,23 @@ Verified real paths:
 - scoverage: `target/out/jvm/scala-3.9.0-RC6/<artifact>/scoverage-report/scoverage.xml`
 
 Files that hardcode these (update on any full-Scala-version bump):
-**scala.yml** (`RIDDLC_PATH`, cache `target/out`, artifact upload paths),
-**coverage.yml** + **.sonarcloud.properties** (scoverage), **release.yml**
-(native cp + JVM stage zip), **Dockerfile** (stage copy).
+**scala.yml** (`RIDDLC_PATH`, artifact upload paths), **coverage.yml** +
+**.sonarcloud.properties** (scoverage), **release.yml** (native cp + JVM stage
+zip), **Dockerfile** (stage copy).
 
 **Quick search:** `grep -rn "target/out/.*scala-3\." .github/ Dockerfile .sonarcloud.properties`
+
+**`target/out` must NOT be cached, and an earlier version of this list wrongly
+said scala.yml caches it.** Restoring sbt 2 build outputs into a fresh checkout
+leaves sbt believing the meta-build is already built, so `project/Dependencies
+.scala` never contributes its symbols and `build.sbt` collapses with dozens of
+`Not found: V` / `Not found: Dep` plus an `Append` ambiguity on a line nobody
+edited — a cascade pointing everywhere except the cause. **A cache written by a
+GREEN run is exactly as poisonous as a stale one**: the rule that held was not
+"stale cache" but "every cold build passed, every cache-restoring build failed",
+including on markdown-only commits. Dropping `restore-keys` does NOT fix it —
+that only makes one run cold by accident. `scala.yml:165` carries the ban and
+its reason; Coursier/ivy2 dependency caches are separate and fine.
 
 **sbt-ossuminc Version Policy**:
 - sbt-ossuminc 3.0.x defaults to Scala **3.8.4**; riddl 2.0 overrides to
@@ -457,6 +469,40 @@ When modifying the fastparse parser:
 4. CI will fail if the EBNF parser cannot parse test files that fastparse accepts
 
 This ensures the documented grammar stays in sync with the actual implementation.
+
+**There is NO GBNF any more.** The bundled 258-rule `riddl-grammar.gbnf`, its
+generator (`ebnf_to_gbnf.py`), its validator and its overrides were **deleted
+2026-08-20** on Reid's ruling (*"We could do without the reflectivity tax, it's
+high enough without it"*), and `Grammar.loadGbnfGrammar*` went with them —
+legitimate only because 2.0.0 had not shipped, so 2.0 IS the major that may
+remove public API. **A grammar change now touches TWO artifacts, not three**;
+any instruction to "regenerate the GBNF" is stale. The evidence was a
+measurement riddl-generator had already made and written down: llama.cpp's
+grammar engine could not run the full RIDDL grammar at a usable speed — **an
+8-token constrained generation did not finish in seven minutes** against seconds
+unconstrained — so it was dropped for PERFORMANCE, not quality, and nothing
+consumed the bundled file. Constrained decoding survives via JSON-schema-derived
+grammars llama.cpp builds itself, needing no file from this repo. Coverage did
+not change: the EBNF stays authoritative and TatSu still gates it.
+
+**TatSu's `nameguard` refuses a bare letter token that touches a digit.** An
+exponent marker written `("e" | "E")` reads fine as prose and fails under the
+generated parser for `1e3` specifically — nameguard bounds any word-like quoted
+literal to a word boundary, so `e` followed immediately by a digit looks like the
+start of a longer identifier. `e+3`/`e-3` work, which is what makes it look like
+a sign bug. Write the marker as an inline regex (`/[eE]/`), the idiom
+`mime_type` and `markdown_line` already use.
+
+**Adding a `.riddl` fixture is a GRAMMAR-SURFACE change, not just a test
+change.** A fixture that is an include fragment or intentionally invalid must be
+added to `INCLUDE_FRAGMENTS` in `ebnf_tatsu_validator.py`, or the CI
+`ebnf-grammar-validation` job exits 1 — on a commit whose Scala suites are green
+on all three platforms, because `tJVM`/`tJS`/`tNative` do not run the Python
+validators at all. **Run them yourself** (`.venv/bin/python
+ebnf_tatsu_validator.py`) before calling grammar work verified; a green test run
+is a claim about the tests you ran, and the gates outside the test runner are
+exactly the ones it cannot speak for. Conversely, **a fixture in a SKIPPED file
+is not coverage** — check the validator's own output for a `✓` on the file.
 
 ### Reflection / Round-Trip Requirement
 
@@ -756,6 +802,37 @@ to the right group rather than appending to a list.
   reordered fields, new node tags. Constant lives in
   `language/shared/.../bast/package.scala`.
 - **Location comparisons use offsets**, not `line`/`col`.
+- **`writeContents` writes a COUNT and trusts an unrelated caller elsewhere to
+  write the ITEMS — a contract that has now failed four times.** The reader's
+  `readContentsDeferred` then consumes N nodes that were never written and the
+  stream desynchronizes. It bites any node holding children the generic
+  traversal cannot reach: `BASTImport` and `InteractionContainer` (`sequence` /
+  `parallel` / `optional`) are `Container` but **not `Branch`** — no `id`, so
+  they cannot be `Definition`s, so `BASTWriterPass.traverse` fell through to the
+  `wm: WithMetaData` arm, which calls `process()` (header + count) and never
+  descends. `InvariantBlock` is worse: its statements sit in a FIELD of a node
+  that is not even a `Container`, and `writeInvariant` emits the predicate
+  INLINE, so the deferred items must land after `requires` rather than after
+  their own count. **The tell is a node count going DOWN when a construct is
+  ADDED.** Every fix so far has taught the specific missing traversal path
+  rather than making the mismatch structurally impossible; if a fifth instance
+  turns up, that is the signal to change the contract itself (a writer that
+  returns "how many items I still owe", and a chokepoint refusing to finalize a
+  node until it is satisfied). Adjacent, same sweep: `writeRelationship` wrote
+  **no discriminator byte at all** while the shared-tag reader unconditionally
+  reads one, so every relationship misread its own location as its dispatch byte
+  — latent since `relationship` first became serializable.
+- **BAST carries real positions; `positionsKnown` is how a consumer detects when
+  it cannot.** `writeLocation` delta-encodes the REAL offset and `At` has always
+  derived line/col lazily from `source.lineOf(offset)` — so the format was never
+  the problem. The defect was the READER attaching a `BASTParserInput` whose line
+  index is SYNTHETIC (line L starts at L×10000) and then feeding it real offsets,
+  putting everything under offset 10000 on line 1 at col = offset. Pass real
+  sources via `BASTReader.read`'s optional `sources` map. When they are absent,
+  `At.line` returns **0** (`At.scala:43`) — unrepresentable as a 1-based
+  position, and deliberately so: **a confident wrong answer is worse than an
+  absent one**, because the old plausible line 1 was good enough for a Problems
+  pane to point at and impossible to detect.
 - **BASTImport in HierarchyPass** — `openBASTImport` /
   `closeBASTImport` hooks plus `traverseBASTImportContents(bi)`.
   All `PassVisitor` implementors must define these (even as
@@ -793,9 +870,25 @@ to the right group rather than appending to a list.
   Opt-in by design: RIDDL specifies meaning, not representation, so how the
   attributes ride (CloudEvents JSON, Kafka headers, gRPC metadata, or nothing
   for an in-process call) stays the generator's choice.
+  It also holds **`GeneratorError`** (`origin`, `kind`, `detail`, `occurredAt`) —
+  the shape every generator sends to the inlet marked `option error-sink`, for a
+  saga whose undo retries were exhausted, an adaptor's dead-lettered message, a
+  projector's poison event. **The name states the SOURCE** (it was `HardError`
+  until 2026-08-01, and `Operations` was withdrawn from the module at the same
+  time): the standard library owes a generator the SHAPE of a notification and a
+  way to NAME its destination, nothing more, so there is deliberately **no
+  predefined receiver**. An error-sink inlet must accept it — directly, or via an
+  alternation including it so a model can route its own error messages to the same
+  inlet — else it is an Error, because a generator has nothing it can send there.
+  **A missing error-sink is a `Missing` warning, NOT a CompletenessWarning**:
+  `isIgnorable` is `severity < CompletenessWarning`, so Completeness asserts
+  STRUCTURAL incompleteness (unfed inlets, unreachable sinks) while "has not said
+  where hard errors go" is the "has no author" family. Emitting it as Completeness
+  turned **thirteen unrelated suites red** on models that were otherwise fine.
   Both records are legitimately **unused inside the module** — that is the
   design, not a defect — so `PredefinedTerminatorsTest` asserts exactly which
-  ones are unused; widen that list when adding another, never loosen it.
+  ones are unused (`GeneratorError` and `Envelope`, by name); widen that list when
+  adding another, never loosen it.
   All exemptions (A31 cardinality, unattached/isolated/reachability,
   handler completeness) test REFERENCE IDENTITY via
   `PredefinedModule.isPredefined`, never a name. A port typed `Anything`
@@ -1641,6 +1734,23 @@ to the right group rather than appending to a list.
   TRAVERSING and every internal test took that path; the consumer path
   had no gate at all. `ConsumerReadsIncludedDefinitionsTest` is now that
   gate — **add to it whenever you add an accessor.**
+- **A case class that transitively reaches a DOCUMENT has an O(document)
+  hashCode, and only Scala.js notices.** `StringParserInput`'s first field is
+  `data: String`, the entire text of a source file; `At` holds a
+  `RiddlParserInput`, `Identifier` and `Definition` hold an `At`, and
+  `ReferenceMap.Key` holds a `Definition` — so every refMap add and lookup hashed
+  a whole source file, twice per `Definition.hashCode`. The JVM and Native
+  memoise `String.hashCode` into the string object and never noticed; a JS string
+  cannot carry that field. Measured on a 139KB source: 14ns (JVM), 1ns (Native),
+  **181,187ns (Scala.js)**. Fixed by memoising on the parser input
+  (`RiddlParserInput.cachedHashCode`) — one field per FILE, nothing per node —
+  taking Scala.js `Definition.hashCode` from 384,016ns to **217ns**, at parity
+  with the JVM. **The tell was the RATIOS, not the totals**: parse cost 3.2x on
+  Scala.js while Resolution cost 97x, and ordinary overhead is uniform — when one
+  number is 30x the others on the same runtime, the runtime is doing something
+  different, not the algorithm. Get the cross-platform ratio BEFORE profiling.
+  (Both the report and our first hypothesis blamed complexity; the favourite
+  suspect, ClassTag dispatch, measured **5x faster** on Scala.js than the JVM.)
 - **Definition hashCode/equals override** — `Definition` trait
   overrides both: `hashCode` cheap (id + loc + class); `equals`
   structural via `productEquals`, skipping `Contents` fields.
@@ -1736,6 +1846,37 @@ narrow second copy of a block dispatch `InvariantBlock` was already caught being
 revision-22 file's string is read as a COUNT and everything after it derails. The JSON reader
 accepts a string OR an array, so nothing already written stops loading.
 
+### Parsing (fastparse)
+
+- **`Keywords.keyword` ends in a CUT — `P(key ~~ &(isNotKeywordChar))./` — so
+  once the keyword matches, the enclosing `|` CANNOT backtrack.** Whichever
+  alternative comes first wins outright and the others are unreachable. That is
+  how `attachment ULID is "…"` could not be parsed AT ALL: the general
+  attachment rule was first, so `ulidAttachment` was never tried and the ULID
+  form failed where a mime type was expected. **Reordering only breaks the other
+  branch the same way — the shared prefix must be FACTORED**, matching the
+  keyword once, ahead of the choice, and alternating the BODIES
+  (`ulidAttachmentBody | namedAttachmentBody`). `bastImport` was already written
+  this way, with a comment describing the identical hazard. The same cut
+  collision is why an optional leading marker needs a non-cutting variant
+  (`Keywords.maybeInitial`), and why `on event`/`on <msg>` must be ONE parser
+  branching on the parsed ref via `flatMap` rather than two `on …` alternatives.
+  **Symptom to recognise:** a documented piece of syntax that has never worked,
+  with an error naming what the OTHER branch expected.
+- **Test the alternation; do not read it.** fastparse aggregates its failure set
+  at the FURTHEST position reached, which is not the same thing as "what is
+  allowed here". `tell p` reported `Expected one of ("become" | "command" |
+  "event" | "morph" | …)` — mixing statement keywords with message-kind keywords
+  — which reads like `tell` is banned in that clause. It was not; the OPERAND
+  was the problem. A three-line experiment settled in seconds what two people
+  read in opposite directions.
+- **A `rep(2)` that looks like a semantic guard usually is not.** `sagaDefinitions`
+  read as "a saga needs two steps"; the real rule is in `ValidationPass`, with a
+  proper Error and a suggestion. Relaxing the parser lost no rule and UPGRADED
+  the diagnostic — a parse failure at the wrong token became a message that says
+  what is wrong. Check for this shape before assuming a parser cardinality is
+  load-bearing.
+
 ### Total Dispatch — no silent fall-through
 
 **Reid's standing rule (2026-08-09): "There must be no non-sealed matches — it
@@ -1813,6 +1954,24 @@ a model that validates clean and means something else.
   killed the stack — it was simply latent until a caller reached a cyclic alias
   (2026-08-14). Same lesson the flaky-benchmark round recorded a day earlier:
   when fixing a defect of this class, grep for the shape.
+
+**A field-drop defect has no natural blast radius, and `Finder` is where it
+lives.** `Finder.recursiveFindByType` walked `contents` only, so **27 field-held
+sites were unreachable** — `MatchStatement`'s cases and guards,
+`Correlation.timeoutStatements`, `SagaStep`'s do/undo blocks,
+`RequireStatement.argument`, `InvariantBlock`, `PromptValue.typeEx`, the
+`Constructor`/`Call`/`Initiate` argument lists, the `LogicalExpression`/
+`NotExpression` operands. Anything reading the AST through `Finder` rather than
+a `Pass` silently returned SHORTER LISTS; nothing errored. The consumers most
+exposed are the ones that ENUMERATE rather than traverse, i.e. riddl-generator.
+Consolidated into `Finder.fieldChildren` (`Finder.scala:86`) — one extension
+point instead of four scattered special cases — **which still ends in `case _ =>
+Seq.empty`, so arm 12 of `Value` will be invisible on the day it is added.**
+The lesson is about detection, not the fix: it surfaced because ONE BAST test
+looked for a `ComparisonExpression` inside a `when` condition and got nothing
+back. **The instance you notice is the one your test happened to walk, not the
+extent of the problem** — which is what separates this family from a dispatch
+defect, where the compiler at least knows the arms exist.
 
 Known-total today: `Pass.processValue`, `classifyHandlers` (all 17 `Statement`
 kinds), `countValueFailPoints`, BASTWriter/BASTReader statement dispatch. The
@@ -1957,6 +2116,20 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   state of that type.
 
 ### Validation Specifics
+
+- **`validateType` skips its type-expression walk for a TOP-LEVEL aggregate, so
+  a whole family of checks fires only on nested inline ones.** The guard is
+  `if !t.typEx.isInstanceOf[AggregateTypeExpression]` (`ValidationPass.scala`
+  :2752), which means `checkAggregation` and `checkAggregateUseCase` run for
+  `f: command { … }` and NEVER for `command X is { … }` — that is, never for any
+  aggregate a model actually writes. This is why a duplicate field name
+  (`command C is { x is String, x is Integer }`) validated clean AND survived an
+  idempotent prettify round trip until 2026-08-19: putting the new check with its
+  obvious neighbours made it fire on NOTHING, and the tests stayed red in a way
+  that looked like the check was broken. Their neighbours (field naming,
+  identifier length, metadata) share the blind spot and **nobody has audited what
+  else that guard silently excludes.** When a new aggregate check appears to do
+  nothing, suspect the guard before the check.
 
 - **The three integer types (`Integer`/`Whole`/`Natural`) have defined ranges,
   and a LITERAL is checked more strictly than a REFERENCE** (numeric-literals
@@ -2306,6 +2479,26 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   enforces it.
 - **npm prerelease publishing** — sbt-dynver versions like
   `1.2.3-1-hash` are prerelease per npm semver; pass `--tag dev`.
+- **NEVER `@JSExport` an overridden `toString`.** Interpolation compiles to JS
+  `+`, so `s"…$loc…"` throws `TypeError: Cannot convert object to primitive
+  value` and takes down the whole validation run on JS while the JVM passes.
+  `At` and `URL` both carried it. JS callers get `toString` from the prototype
+  anyway, so the export buys nothing. `ToPrimitiveCoercionTest` guards it and is
+  **JS-only by necessity** — on the JVM every assertion in it passes regardless
+  of the annotation, which is precisely why the bug survived. Grep before adding
+  `@JSExport` anywhere near a `toString`.
+- **Three JSON-surface traps, all the same shape — a second code path that
+  quietly disagrees with the first:** (a) **upickle TAGS sealed hierarchies** —
+  making the DTOs extend a `sealed trait` silently added `$type` to every object,
+  and the round trip still agreed with ITSELF so the fixtures suite stayed green;
+  `ContentDto` is a Scala 3 UNION for exactly this reason. (b) **Hand-written
+  codecs drop new fields** — `writeTypeExpr` and `refJs` are hand-written, not
+  derived, so `RecordDto.comments` and `RefDto.keyword` were added to the case
+  class and went on being dropped. Anything in `JsonModel`'s manual codec section
+  needs the field added in TWO places. (c) **The tag key is `$kind`, not
+  `kind`** — `OnClauseDto` and `SchemaDto` carry a `kind` FIELD of their own and
+  `ujson.Obj.from` keeps the last of a duplicate pair, so the tag silently
+  overwrote the data.
 - **GitHub Packages npm auth** — `gh auth refresh -s write:packages`
   is required.
 
@@ -2520,6 +2713,26 @@ DELIBERATELY ambiguous fixture, so its duplicate-name errors are the fixture wor
   path > download > PATH. Use `--no-ansi-messages` and strip
   ANSI for version parsing. Pin `riddlcVersion` to a real
   release tag in scripted tests, not the dynver snapshot.
+- **`ThirdPartyNotices.scala` is a hand-maintained CONSTANT and goes stale in
+  SILENCE.** It is not generated and not read from a file, because only the JVM
+  build has a filesystem — the Native binary has no resources at all and the same
+  text must render under Scala.js. `ThirdPartyNoticesTest` pins the SHAPE (80
+  columns, every license group, both links) but **cannot know a dependency was
+  added**, so regenerate it whenever deps change: JVM truth is the staged
+  `riddlc/universal/stage/lib` (what actually ships), JS/Native from
+  `<mod>/Runtime/fullClasspath`, licenses from each artifact's POM in the
+  Coursier cache (walk to the parent POM when the child declares none). **Do NOT
+  take the copyright holder from `<developer>`** — that is the first committer,
+  not the holder; for Apache projects read `META-INF/NOTICE` from the jar, which
+  Apache-2.0 §4(d) requires be reproduced anyway. **riddl carries NO copyleft
+  dependency** (all Apache-2.0/MIT/BSD-3-Clause) and the test asserts that
+  ABSENCE — `must not include "logback" / "LGPL" / "ScalaTest"` — so a regression
+  fails the build instead of quietly re-adding an obligation. The URL it prints
+  is compiled into riddlc and cannot be silently redirected.
+- **Run sbt as `sbt --server …` when you need to read its output.** The sbt 2
+  CLI is the `sbtn` native thin client talking to a DETACHED server, so piped
+  stdout comes back **empty** and the build looks hung. `--server` runs in the
+  foreground with attached stdout. Do not trust its exit code — grep the log.
 - **sbt plugin visibility** — use `private[plugin] def` (not
   `private def`) so the compiler doesn't warn "private method
   never used" when sbt macros generate the usage. (The sbt-riddl
