@@ -1,0 +1,210 @@
+// Comprehensive test file covering most AST node types
+domain ComprehensiveTest is {
+
+  // Authors and users
+  author Reid is {
+    name: "Reid Spencer"
+    email: "reid@ossuminc.com"
+    organization: "Ossum Inc"
+  } with { briefly "Project author" }
+
+  user PrimaryUser is "The main user of the system"
+
+  // Context with entities, types, and handlers
+  context TestContext is {
+
+    // Type definitions
+    type UserIdent is Id(TestContext.User)
+    type Email is Pattern("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
+    type UserName is String(1, 100)
+    type Age is Integer
+    type IsActive is Boolean
+    type CreatedAt is TimeStamp
+
+    // Aggregation type
+    type UserProfile is {
+      userId: UserIdent,
+      name: UserName,
+      email: Email,
+      age: Age?,
+      isActive: IsActive,
+      createdAt: CreatedAt
+    } with { briefly "User profile aggregation" }
+
+    // Enumeration type
+    type UserRole is any of { Admin, User, Guest }
+
+    // Alternation type
+    type UserStatus is one of { UserRole or IsActive }
+
+    // Mapping type
+    type UserPreferences is mapping from String to String
+
+    // Range type
+    type Score is range(0, 100)
+
+    // Collection types
+    type UserList is many UserIdent
+    type OptionalEmail is optional Email
+    type OneOrMoreRoles is UserRole+
+
+    // Messages
+    command CreateUserCommand is { profile: UserProfile }
+    command UpdateProfileCommand is { profile: UserProfile }
+    event UserCreated is { userId: UserIdent }
+    event ProfileUpdated is { userId: UserIdent }
+
+    // Entity with states and handlers
+    entity User is {
+
+      record UserData is {
+        userId: UserIdent,
+        profile: UserProfile,
+        role: UserRole,
+        status: UserStatus,
+        preferences: UserPreferences
+      }
+
+      state UserState of record TestContext.User.UserData is {
+        invariant EmailMustBeUnique is "Each user must have a unique email address"
+
+        handler CreateUser is {
+          on command TestContext.CreateUserCommand {
+            tell event TestContext.UserCreated to projector TestContext.UserViewProjector
+          }
+        } with { briefly "Handles user creation" }
+
+        handler UpdateProfile is {
+          on command TestContext.UpdateProfileCommand {
+            set field User.UserState.profile to "???"
+            tell event TestContext.ProfileUpdated to repository TestContext.UserRepository
+          }
+        }
+      }
+
+      function validateEmail is {
+        requires { email: Email }
+        returns { isValid: Boolean }
+        ???
+      }
+
+    } with {
+      option aggregate
+      option transient
+      described as {
+        | The User entity represents a person using the system.
+        | It maintains user profile, role, and preferences.
+      }
+    }
+
+    // Adaptors
+    adaptor UserDatabaseAdaptor from context ComprehensiveTest.UserExternalContext is {
+      handler adapt is { ??? }
+    } with { briefly "Adapts to external user database" }
+
+    adaptor NotificationService to context ComprehensiveTest.NotificationContext is {
+      handler notify is { ??? }
+    } with { briefly "Sends notifications to external service" }
+
+    // Processor with inlet/outlet
+    processor UserProcessor as flow is {
+      inlet UserInput is type TestContext.CreateUserCommand
+      outlet UserOutput is type TestContext.UserCreated
+    } with { briefly "Processes user commands" }
+
+    // Projector
+    projector UserViewProjector is {
+      record View is { userId: UserIdent }
+      handler 'projector' is { ??? }
+    } with { briefly "Projects user view" }
+
+    // Repository
+    repository UserRepository is {
+      schema Users is relational
+        of profiles as type TestContext.UserProfile
+        index on field UserProfile.userId
+      handler store is { ??? }
+    } with { briefly "Stores user data" }
+
+  } with { briefly "Test context with comprehensive node coverage" }
+
+  // Referenced by the adaptors above
+  external context UserExternalContext is { ??? }
+  external context NotificationContext is { ??? }
+
+  // Streamlet definitions
+  context StreamingContext is {
+
+    type DataPoint is { value: Number }
+
+    processor DataSource as source is {
+      outlet SourceOutput is type StreamingContext.DataPoint
+    } with { briefly "Source streamlet" }
+
+    processor DataSink as sink is {
+      inlet SinkInput is type StreamingContext.DataPoint
+    } with { briefly "Sink streamlet" }
+
+    connector DataConnector is {
+      from outlet StreamingContext.DataSource.SourceOutput
+      to inlet StreamingContext.DataSink.SinkInput
+    }
+
+  }
+
+  // Saga with steps
+  saga UserLifecycle is {
+    step RegisterUser is {
+      do "register the new user"
+    } reverted by {
+      do "remove the new user"
+    } with { briefly "Register new user" }
+
+    step VerifyEmail is {
+      do "verify the user's email"
+    } reverted by {
+      do "invalidate the user's email"
+    } with { briefly "Verify user email" }
+
+    step ActivateAccount is {
+      do "activate the user account"
+    } reverted by {
+      do "deactivate the user account"
+    } with { briefly "Activate user account" }
+
+  } with { described as "User lifecycle saga" }
+
+  // Epic with a use case
+  epic UserManagement is {
+    user ComprehensiveTest.PrimaryUser wants "to create and manage user accounts"
+      so that "the system has accurate user records"
+
+    case primary is {
+      user ComprehensiveTest.PrimaryUser wants "to register"
+        so that "an account exists"
+      step send command TestContext.CreateUserCommand
+        from user ComprehensiveTest.PrimaryUser
+        to context ComprehensiveTest.UserApp
+    }
+  } with { described as "Epic for user management flows" }
+
+  // Application with a group and outputs
+  application context UserApp is {
+    record UserService is { name: String }
+    group BackendServices is {
+      document ServiceList shows record UserApp.UserService
+      form ServiceEntry takes record UserApp.UserService
+    }
+    handler AppHandler is { ??? }
+  } with { briefly "User management application" }
+
+} with {
+  by author Reid
+  term DDD is "Domain Driven Design"
+  term BAST is "Binary Abstract Syntax Tree"
+  described as {
+    | A comprehensive test for BAST serialization.
+    | This domain contains examples of most RIDDL node types
+    | to ensure comprehensive test coverage for BAST serialization.
+  }
+}

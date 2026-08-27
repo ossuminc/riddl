@@ -100,15 +100,17 @@ object RiddlSbtPlugin extends AutoPlugin {
         riddlcConfExclusions := confExclusions,
         riddlcOptions := options
       )
+      // sbt 2 caches task results; a task returning CompileAnalysis (which
+      // isn't JSON-serializable) must opt out via Def.uncached.
       val hook =
         if (validateOnCompile)
           Seq(
-            Compile / compile := Def.taskDyn {
+            Compile / compile := Def.uncached(Def.taskDyn {
               Def.task {
                 riddlcValidate.value
                 (Compile / compile).value
               }
-            }.value
+            }.value)
           )
         else Seq.empty
       project.settings(base ++ hook)
@@ -119,8 +121,8 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   // --- Input file extraction ---
   // Note: Methods are private[plugin] rather than private so
-  // that the Scala 2.12 compiler can see usage through sbt
-  // macro-generated task bodies.
+  // that the compiler can see usage through sbt macro-generated
+  // task bodies.
 
   private[plugin] val InputFilePattern: Regex =
     """input-file\s*=\s*"([^"]+)"""".r
@@ -313,7 +315,7 @@ object RiddlSbtPlugin extends AutoPlugin {
       // Also exclude standard build directories
       finder = finder --- (srcDir / "target" ** "*.conf")
       finder = finder --- (srcDir / "project" ** "*.conf")
-      finder.get.sorted
+      finder.get().sorted
     }
   }
 
@@ -485,7 +487,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   private val userHome: File =
     file(System.getProperty("user.home"))
 
-  override def projectSettings: Seq[Setting[_]] = Seq(
+  override def projectSettings: Seq[Setting[?]] = Seq(
     // Setting defaults
     riddlcPath := None,
     riddlcVersion := SbtRiddlPluginBuildInfo.version,
@@ -501,13 +503,15 @@ object RiddlSbtPlugin extends AutoPlugin {
 
     // --- Task implementations ---
 
-    riddlcDownload := {
+    // File-returning tasks opt out of sbt 2 result caching (a File is not a
+    // valid cached value — see Def.uncached in the sbt 2 caching docs).
+    riddlcDownload := Def.uncached {
       val log = streams.value.log
       val ver = riddlcVersion.value
       val cache = riddlcCacheDir.value
       downloadRiddlc(cache, ver, log)
     },
-    riddlcBinary := {
+    riddlcBinary := Def.uncached {
       val log = streams.value.log
       val binary = riddlcPath.value match {
         case Some(path) =>
@@ -529,7 +533,20 @@ object RiddlSbtPlugin extends AutoPlugin {
       checkVersion(binary, riddlcMinVersion.value)
       binary
     },
-    riddlcInfo := {
+    // These six shell out to riddlc and discover their real inputs INSIDE the body
+    // (`resolveConfs` globs .conf/.riddl at run time), so sbt sees only settings as
+    // inputs. They return Unit, which IS serializable, so sbt 2 happily caches the
+    // result and every run after the first becomes a no-op that still reports
+    // success -- `sbt riddlcValidate` printing nothing but `[success]` while the
+    // corpus underneath it is broken. Editing sources, `clean`, and deleting
+    // target/ all fail to invalidate it, because none of them is a declared input.
+    //
+    // Def.uncached is the right lever rather than declaring the model files as
+    // inputs: the discovery is dynamic, and the binary's behaviour depends on file
+    // contents the build does not track, so an accurate input set is hard to state
+    // and easy to get subtly wrong. Validating 187 models costs about 2 seconds, so
+    // caching buys nothing worth a green run that checked nothing.
+    riddlcInfo := Def.uncached {
       val binary = riddlcBinary.value
       val log = streams.value.log
       runRiddlcProcess(
@@ -541,7 +558,7 @@ object RiddlSbtPlugin extends AutoPlugin {
       )
       ()
     },
-    riddlcShowVersion := {
+    riddlcShowVersion := Def.uncached {
       val binary = riddlcBinary.value
       val log = streams.value.log
       runRiddlcProcess(
@@ -553,7 +570,7 @@ object RiddlSbtPlugin extends AutoPlugin {
       )
       ()
     },
-    riddlcValidate := {
+    riddlcValidate := Def.uncached {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
       val exclusions = riddlcConfExclusions.value
@@ -590,7 +607,7 @@ object RiddlSbtPlugin extends AutoPlugin {
         }
       }
     },
-    riddlcParse := {
+    riddlcParse := Def.uncached {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
       val exclusions = riddlcConfExclusions.value
@@ -627,7 +644,7 @@ object RiddlSbtPlugin extends AutoPlugin {
         }
       }
     },
-    riddlcBastify := {
+    riddlcBastify := Def.uncached {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
       val exclusions = riddlcConfExclusions.value
@@ -664,7 +681,7 @@ object RiddlSbtPlugin extends AutoPlugin {
         }
       }
     },
-    riddlcPrettify := {
+    riddlcPrettify := Def.uncached {
       val binary = riddlcBinary.value
       val srcDir = riddlcSourceDir.value
       val exclusions = riddlcConfExclusions.value

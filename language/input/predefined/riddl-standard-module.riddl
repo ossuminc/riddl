@@ -1,0 +1,121 @@
+module Riddl is {
+  type Drain is Anything with {
+    briefly "The universal stream type; it absorbs any message"
+  }
+  processor BottomlessPit as sink is {
+    inlet hole is type Drain with {
+      briefly "The inlet that swallows everything sent to it"
+    }
+    handler Swallow is {
+      on other {
+        do "discard the message"
+      } with {
+        briefly "Everything received is discarded"
+      }
+    } with {
+      briefly "Accepts every message and discards it"
+    }
+  } with {
+    briefly "A sink that consumes everything delivered to it and emits nothing"
+    described as {
+      | /dev/null for a stream. Every port is the endpoint of exactly one connector, so
+      | an outlet that legitimately has no consumer must still terminate somewhere.
+      | Terminate it here to say "deliberately discarded" rather than inventing a
+      | placeholder consumer that models something untrue. Any number of connectors may
+      | drain into its single inlet.
+    }
+  }
+  record GeneratorError is {
+    origin: String,
+    kind: String,
+    detail: String,
+    occurredAt: TimeStamp
+  } with {
+    briefly "What a generator sends to the error-sink inlet"
+    described as {
+      | The shape every generator uses to report something unrecoverable: a saga whose
+      | undo retries were exhausted, an adaptor's dead-lettered message, a projector's
+      | poison event. `origin` names the definition that failed, `kind` classifies it,
+      | `detail` carries the saga's `failure-message` or the generator's own text.
+      |
+      | GeneratorError is for GENERATORS to send; the name states the source. The
+      | inlet marked `option error-sink` must
+      | accept it -- either typed by GeneratorError directly, or by an alternation
+      | including it, so a model may route its own error messages to the same inlet.
+      |
+      | Encoded here rather than documented as a convention so that it is ONE definition
+      | the symbol table resolves: a misspelled field name becomes an error instead of
+      | silently matching nothing and losing the detail it was meant to carry.
+      |
+      | There is deliberately NO predefined receiver. Where hard errors go is the model's
+      | to say, via `option error-sink`; an `Operations` context belongs in the model
+      | that wants one, not in this module.
+    }
+  }
+  record Envelope is {
+    messageId: String,
+    source: URL,
+    specversion: String,
+    type: String,
+    subject: String?,
+    time: TimeStamp?,
+    datacontenttype: String?,
+    dataschema: URL?
+  } with {
+    briefly "The metadata carried alongside a message; the CloudEvents context attributes"
+    described as {
+      | The envelope a message travels in, selected by `option message_envelope`. Field
+      | names are the CloudEvents v1.0 CONTEXT ATTRIBUTES, so a generator emitting
+      | CloudEvents maps them one-for-one instead of guessing. The four
+      | CloudEvents-REQUIRED attributes are non-optional here; the four optional ones carry
+      | `?`.
+      |
+      | ONE deviation, and it is forced: CloudEvents `id` is spelled `messageId`, because
+      | RIDDL requires identifiers of at least three characters and `id` draws a style
+      | warning. A generator must map `messageId` -> `id` on the wire. Every other
+      | attribute is verbatim, including `type` and `source`, which are RIDDL keywords
+      | elsewhere but are accepted as field names.
+      |
+      | There is deliberately no `data` field. CloudEvents puts the payload in `data`, but
+      | in RIDDL the payload IS the message -- it is already modelled, named and typed.
+      | Duplicating it here would create a second, weaker description of something the
+      | model already states precisely. This record is the metadata AROUND a message, not
+      | a wrapper containing one.
+      |
+      | Declaring the envelope does not impose a wire format. RIDDL specifies meaning, not
+      | representation: `option message_envelope` says these attributes accompany the
+      | messages in its scope, and how they are carried -- CloudEvents JSON, Kafka headers,
+      | a gRPC metadata map, or nothing at all for an in-process call -- stays the
+      | generator's choice.
+    }
+  }
+  processor ForeverEmpty as source is {
+    outlet void is type Drain with {
+      briefly "The outlet that never emits anything"
+    }
+    handler Silence is {
+      on other {
+        do "produce nothing"
+      } with {
+        briefly "Nothing is ever yielded"
+      }
+    } with {
+      briefly "Never produces a message"
+    }
+  } with {
+    briefly "A source that never produces anything on its outlet"
+    described as {
+      | The dual of BottomlessPit. Every inlet must be fed by exactly one connector, so
+      | an inlet whose producer has not been modelled yet must still be fed. Draw from
+      | here to say "deliberately never supplied". Any number of connectors may draw
+      | from its single outlet.
+    }
+  }
+} with {
+  briefly "The RIDDL standard module; always in scope, no import required"
+  described as {
+    | The RIDDL standard module. Its definitions are available to every model with no
+    | import and no author declaration. It is never part of a model's own AST: a model
+    | that does not reference it is completely unaffected by it.
+  }
+}

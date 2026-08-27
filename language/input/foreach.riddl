@@ -1,0 +1,28 @@
+// A25: the `foreach` statement — bounded iteration over a collection.
+// Exercises both collection forms: a `field <path>` FieldRef (here the handled
+// message's collection field) and a bare identifier naming a `let`-bound local.
+// The two-name form destructures a mapping into its key and its value; it is
+// here so the TatSu grammar job actually covers that production, which a Scala
+// suite would never tell us about.
+domain Foreach is {
+  context Orders is {
+    record Order is { id: Integer }
+    type OrderList is many Order
+    type OrdersById is mapping from Integer to Order
+    command PlaceBatch is { orders: OrderList, byId: OrdersById }
+    handler Batching is {
+      on command PlaceBatch {
+        let localBatch: OrderList = "the orders to process"
+        foreach anOrder in field PlaceBatch.orders {
+          do "process the order taken from the message field"
+        }
+        foreach anOrder in localBatch {
+          do "process the order taken from the local"
+        }
+        foreach orderId, anOrder in field PlaceBatch.byId {
+          do "process the entry, whose key is orderId and value anOrder"
+        }
+      }
+    }
+  }
+}

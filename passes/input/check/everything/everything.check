@@ -4,17 +4,23 @@ passes/input/check/everything/everything.riddl(1:1->18):
 passes/input/check/everything/everything.riddl(1:1->18):
  Domain 'Everything' should have a description:
  domain Everything is {
+passes/input/check/everything/everything.riddl(7:5->18):
+ Source 'Source' should have a handler:
+     source Source is { outlet Commands is command DoAThing } with { described by "Data Source" }
+passes/input/check/everything/everything.riddl(8:5->14):
+ Sink 'Sink' should have a handler:
+     sink Sink is { inlet Commands is command DoAThing } with { explained as "Data Sink" }
 passes/input/check/everything/everything.riddl(16:3->15):
  Metadata in Context 'full' should not be empty:
    context full is {
 passes/input/check/everything/everything.riddl(16:3->15):
  Context 'full' should have a description:
    context full is {
+passes/input/check/everything/everything.riddl(16:3->15):
+ Context 'full' has entities but no repository to persist them; entities are stateful and should be persisted:
+   context full is {
 passes/input/check/everything/everything.riddl(18:10->13):
  Type 'str' should start with a capital letter:
-     type str is String             // Define str as a String
-passes/input/check/everything/everything.riddl(18:5->13):
- Type 'str' is unused:
      type str is String             // Define str as a String
 passes/input/check/everything/everything.riddl(19:10->13):
  Type 'num' should start with a capital letter:
@@ -22,23 +28,14 @@ passes/input/check/everything/everything.riddl(19:10->13):
 passes/input/check/everything/everything.riddl(20:10->13):
  Type 'boo' should start with a capital letter:
      type boo is Boolean            // Define boo as a Boolean
-passes/input/check/everything/everything.riddl(20:5->13):
- Type 'boo' is unused:
-     type boo is Boolean            // Define boo as a Boolean
 passes/input/check/everything/everything.riddl(21:10->15):
  Type 'ident' should start with a capital letter:
      type ident is UUID             // Define ident as an Id
 passes/input/check/everything/everything.riddl(22:10->13):
  Type 'dat' should start with a capital letter:
      type dat is Date               // Define dat as a Date
-passes/input/check/everything/everything.riddl(22:5->13):
- Type 'dat' is unused:
-     type dat is Date               // Define dat as a Date
 passes/input/check/everything/everything.riddl(23:10->13):
  Type 'tim' should start with a capital letter:
-     type tim is Time               // Define tim as a Time
-passes/input/check/everything/everything.riddl(23:5->13):
- Type 'tim' is unused:
      type tim is Time               // Define tim as a Time
 passes/input/check/everything/everything.riddl(24:10->15):
  Type 'stamp' should start with a capital letter:
@@ -52,17 +49,11 @@ passes/input/check/everything/everything.riddl(25:10->13):
 passes/input/check/everything/everything.riddl(27:25->26):
  Field identifier 'a' is too short. The minimum length is 3:
      type PeachType is { a: Integer }
-passes/input/check/everything/everything.riddl(27:5->19):
- Type 'PeachType' is unused:
-     type PeachType is { a: Integer }
 passes/input/check/everything/everything.riddl(28:10->14):
  Type 'enum' should start with a capital letter:
      type enum is any of { Apple Pear Peach(21) Persimmon(42) }
 passes/input/check/everything/everything.riddl(30:10->13):
  Type 'alt' should start with a capital letter:
-     type alt is one of { enum or stamp or url }
-passes/input/check/everything/everything.riddl(30:5->13):
- Type 'alt' is unused:
      type alt is one of { enum or stamp or url }
 passes/input/check/everything/everything.riddl(32:10->13):
  Type 'agg' should start with a capital letter:
@@ -73,47 +64,44 @@ passes/input/check/everything/everything.riddl(34:7->9):
 passes/input/check/everything/everything.riddl(38:10->19):
  Type 'oneOrMore' should start with a capital letter:
      type oneOrMore is many agg
-passes/input/check/everything/everything.riddl(38:5->19):
- Type 'oneOrMore' is unused:
-     type oneOrMore is many agg
 passes/input/check/everything/everything.riddl(39:10->20):
  Type 'zeroOrMore' should start with a capital letter:
-     type zeroOrMore is agg*
-passes/input/check/everything/everything.riddl(39:5->20):
- Type 'zeroOrMore' is unused:
      type zeroOrMore is agg*
 passes/input/check/everything/everything.riddl(40:10->18):
  Type 'optional' should start with a capital letter:
      type optional is agg?
-passes/input/check/everything/everything.riddl(40:5->18):
- Type 'optional' is unused:
-     type optional is agg?
-passes/input/check/everything/everything.riddl(42:5->21):
- Entity 'Something' is unused:
-     entity Something is {
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' should have a description:
+     entity Something is {
+passes/input/check/everything/everything.riddl(48:7->22):
+ State 'someState' in Entity 'Something' has no 'on init' clause to initialize its state:
+       state someState of record Everything.StateType
+passes/input/check/everything/everything.riddl(42:5->21):
+ Entity 'Something' has no 'on query' clause; information cannot be extracted from it:
+     entity Something is {
+passes/input/check/everything/everything.riddl(42:5->21):
+ Entity 'Something' handles messages but declares no inlet to receive them on:
+     entity Something is {
+passes/input/check/everything/everything.riddl(42:5->21):
+ Entity 'Something' sends or publishes messages but declares no outlet to transmit them on:
+     entity Something is {
+passes/input/check/everything/everything.riddl(42:5->21):
+ Entity 'Something' does not define an Id type for its identity:
      entity Something is {
 passes/input/check/everything/everything.riddl(44:12->25):
  Type 'somethingDate' should start with a capital letter:
        type somethingDate is Date
-passes/input/check/everything/everything.riddl(44:7->25):
- Type 'somethingDate' is unused:
-       type somethingDate is Date
 passes/input/check/everything/everything.riddl(48:7->22):
  Metadata in State 'someState' should not be empty:
-       state someState of type Everything.StateType
+       state someState of record Everything.StateType
 passes/input/check/everything/everything.riddl(48:7->22):
  State 'someState' should have a description:
-       state someState of type Everything.StateType
+       state someState of record Everything.StateType
 passes/input/check/everything/everything.riddl(50:7->37):
  Metadata in Function 'whenUnderTheInfluence' should not be empty:
        function whenUnderTheInfluence is {
 passes/input/check/everything/everything.riddl(50:7->37):
  Function 'whenUnderTheInfluence' should have a description:
-       function whenUnderTheInfluence is {
-passes/input/check/everything/everything.riddl(50:7->37):
- Function 'whenUnderTheInfluence' is unused:
        function whenUnderTheInfluence is {
 passes/input/check/everything/everything.riddl(51:20->21):
  Field identifier 'n' is too short. The minimum length is 3:
@@ -124,6 +112,10 @@ passes/input/check/everything/everything.riddl(51:20->21):
 passes/input/check/everything/everything.riddl(51:20->21):
  Field 'n' should have a description:
          requires { n: Nothing }
+passes/input/check/everything/everything.riddl(51:18->52:9):
+ Inline aggregation on 'requires'/'returns' of Function 'whenUnderTheInfluence' is deprecated:
+         requires { n: Nothing }
+         returns { b: Boolean }
 passes/input/check/everything/everything.riddl(52:19->20):
  Field identifier 'b' is too short. The minimum length is 3:
          returns { b: Boolean }
@@ -133,78 +125,134 @@ passes/input/check/everything/everything.riddl(52:19->20):
 passes/input/check/everything/everything.riddl(52:19->20):
  Field 'b' should have a description:
          returns { b: Boolean }
-passes/input/check/everything/everything.riddl(63:24->64:5):
- Option 'transient' in Entity 'Something' is not a recognized RIDDL option:
-       option aggregate option transient
-     }
+passes/input/check/everything/everything.riddl(52:17->53:9):
+ Inline aggregation on 'requires'/'returns' of Function 'whenUnderTheInfluence' is deprecated:
+         returns { b: Boolean }
+         do "some pseudo-code"
 passes/input/check/everything/everything.riddl(66:5->26):
  Metadata in Entity 'SomeOtherThing' should not be empty:
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' should have a description:
      entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(67:7->20):
- Metadata in Sink 'trashBin' should not be empty:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-passes/input/check/everything/everything.riddl(67:7->20):
- Sink 'trashBin' should have a description:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-passes/input/check/everything/everything.riddl(67:7->20):
- Sink 'trashBin' should have a handler:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-passes/input/check/everything/everything.riddl(67:7->20):
- Sink 'trashBin' has no connections to any connector:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-passes/input/check/everything/everything.riddl(67:26->38):
- Inlet 'SOT_In' is not connected:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(69:7->28):
- Metadata in State 'otherThingState' should not be empty:
-       state otherThingState of type Everything.StateType
-passes/input/check/everything/everything.riddl(69:7->28):
- State 'otherThingState' should have a description:
-       state otherThingState of type Everything.StateType
-passes/input/check/everything/everything.riddl(70:7->18):
- Handler 'fee' in Entity 'SomeOtherThing' handles no commands or queries; entity handlers typically handle commands and queries:
-       handler fee is {
-passes/input/check/everything/everything.riddl(7:5->18):
- Source 'Source' should have a handler:
-     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
-passes/input/check/everything/everything.riddl(7:24->39):
- Outlet 'Commands' is overloaded with 2 kinds:
-   Outlet 'Commands' at passes/input/check/everything/everything.riddl(7:24->52),
-   Inlet 'Commands' at passes/input/check/everything/everything.riddl(8:20->47):
-     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
-passes/input/check/everything/everything.riddl(8:5->14):
- Sink 'Sink' should have a handler:
-     sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
-passes/input/check/everything/everything.riddl(16:3->15):
- Context 'full' has entities but no Sink streamlet to receive and dispatch incoming messages:
-   context full is {
-passes/input/check/everything/everything.riddl(42:5->21):
- Entity 'Something' in Context 'full' has no outlet streamlet to publish events on:
-     entity Something is {
-passes/input/check/everything/everything.riddl(48:7->22):
- State 'someState' in Entity 'Something' has no 'on init' clause to initialize its state:
-       state someState of type Everything.StateType
-passes/input/check/everything/everything.riddl(42:5->21):
- Entity 'Something' has no 'on query' clause; information cannot be extracted from it:
-     entity Something is {
+ State 'otherThingState' in Entity 'SomeOtherThing' has no 'on init' clause to initialize its state:
+       state otherThingState of record Everything.StateType
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' has no 'on query' clause; information cannot be extracted from it:
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(66:5->26):
- Entity 'SomeOtherThing' in Context 'full' has no outlet streamlet to publish events on:
+ Entity 'SomeOtherThing' handles messages but declares no inlet to receive them on:
      entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(69:7->28):
- State 'otherThingState' in Entity 'SomeOtherThing' has no 'on init' clause to initialize its state:
-       state otherThingState of type Everything.StateType
-passes/input/check/everything/everything.riddl(42:5->21):
- Entity 'Something' does not define an Id type for its identity:
-     entity Something is {
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' does not define an Id type for its identity:
      entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(16:3->15):
- Context 'full' has entities but no repository to persist them; entities are stateful and should be persisted:
-   context full is {
+passes/input/check/everything/everything.riddl(67:7->20):
+ Metadata in Sink 'trashBin' should not be empty:
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
+passes/input/check/everything/everything.riddl(67:7->20):
+ Sink 'trashBin' should have a description:
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
+passes/input/check/everything/everything.riddl(67:7->20):
+ Sink 'trashBin' should have a handler:
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
+passes/input/check/everything/everything.riddl(69:7->28):
+ Metadata in State 'otherThingState' should not be empty:
+       state otherThingState of record Everything.StateType
+passes/input/check/everything/everything.riddl(69:7->28):
+ State 'otherThingState' should have a description:
+       state otherThingState of record Everything.StateType
+passes/input/check/everything/everything.riddl(70:7->18):
+ Handler 'fee' in Entity 'SomeOtherThing' handles no commands or queries; entity handlers typically handle commands and queries:
+       handler fee is {
+passes/input/check/everything/everything.riddl(7:24->39):
+ Outlet 'Commands' is overloaded with 2 kinds:
+   Outlet 'Commands' at passes/input/check/everything/everything.riddl(7:24->60),
+   Inlet 'Commands' at passes/input/check/everything/everything.riddl(8:20->55):
+     source Source is { outlet Commands is command DoAThing } with { described by "Data Source" }
+passes/input/check/everything/everything.riddl(67:7->20):
+ Sink 'trashBin' has no connections to any connector:
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
+passes/input/check/everything/everything.riddl(67:26->38):
+ Inlet 'SOT_In' is not connected:
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
+passes/input/check/everything/everything.riddl(42:5->21):
+ Entity 'Something' is unused:
+     entity Something is {
+passes/input/check/everything/everything.riddl(18:5->13):
+ Type 'str' is unused:
+     type str is String             // Define str as a String
+passes/input/check/everything/everything.riddl(20:5->13):
+ Type 'boo' is unused:
+     type boo is Boolean            // Define boo as a Boolean
+passes/input/check/everything/everything.riddl(22:5->13):
+ Type 'dat' is unused:
+     type dat is Date               // Define dat as a Date
+passes/input/check/everything/everything.riddl(23:5->13):
+ Type 'tim' is unused:
+     type tim is Time               // Define tim as a Time
+passes/input/check/everything/everything.riddl(27:5->19):
+ Type 'PeachType' is unused:
+     type PeachType is { a: Integer }
+passes/input/check/everything/everything.riddl(30:5->13):
+ Type 'alt' is unused:
+     type alt is one of { enum or stamp or url }
+passes/input/check/everything/everything.riddl(38:5->19):
+ Type 'oneOrMore' is unused:
+     type oneOrMore is many agg
+passes/input/check/everything/everything.riddl(39:5->20):
+ Type 'zeroOrMore' is unused:
+     type zeroOrMore is agg*
+passes/input/check/everything/everything.riddl(40:5->18):
+ Type 'optional' is unused:
+     type optional is agg?
+passes/input/check/everything/everything.riddl(44:7->25):
+ Type 'somethingDate' is unused:
+       type somethingDate is Date
+passes/input/check/everything/everything.riddl(50:7->37):
+ Function 'whenUnderTheInfluence' is unused:
+       function whenUnderTheInfluence is {
+passes/input/check/everything/everything.riddl(67:7->11):
+ The `sink` keyword is deprecated; use `processor trashBin as sink` instead:
+       sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
+passes/input/check/everything/everything.riddl(7:5->11):
+ The `source` keyword is deprecated; use `processor Source as source` instead:
+     source Source is { outlet Commands is command DoAThing } with { described by "Data Source" }
+passes/input/check/everything/everything.riddl(8:5->9):
+ The `sink` keyword is deprecated; use `processor Sink as sink` instead:
+     sink Sink is { inlet Commands is command DoAThing } with { explained as "Data Sink" }
+passes/input/check/everything/everything.riddl(58:16->52):
+ 'event full.SomeOtherThing.ItHappened' in this 'send' names a message type, not a value, so nothing says where its 1 field(s) come from:
+           send event full.SomeOtherThing.ItHappened to
+passes/input/check/everything/everything.riddl(59:13->49):
+ send to an inlet is deprecated and will be removed in 3.0; send to your outlet and connect it with a connector, or use `tell` to deliver directly to a processor:
+             inlet SomeOtherThing.trashBin.SOT_In
+passes/input/check/everything/everything.riddl(1:1->18):
+ Domain 'Everything' has no author:
+ domain Everything is {
+passes/input/check/everything/everything.riddl(1:1->18):
+ Domain 'Everything' declares no 'error-sink' inlet, so hard errors have no destination:
+ domain Everything is {
+passes/input/check/everything/everything.riddl(63:24->64:5):
+ 'option transient' is deprecated; write 'transient' before 'entity' instead:
+       option aggregate option transient
+     }
+passes/input/check/everything/everything.riddl(63:7->24):
+ 'option aggregate' is deprecated; write 'aggregate' before 'entity' instead:
+       option aggregate option transient
+passes/input/check/everything/everything.riddl(42:5->21):
+ Metadata in Entity 'Something' should not be empty:
+     entity Something is {
+passes/input/check/everything/everything.riddl(57:9->61:7):
+ Command 'ACommand' is handled by Entity 'Something' but carries no field typed 'Id(Something)', so nothing in it can say WHICH Something it is for:
+         on command ACommand {
+           send event full.SomeOtherThing.ItHappened to
+             inlet SomeOtherThing.trashBin.SOT_In
+         }
+       }
+passes/input/check/everything/everything.riddl(71:9->74:7):
+ Event 'ItHappened' is handled by Entity 'SomeOtherThing' but carries no field typed 'Id(SomeOtherThing)', so nothing in it can say WHICH SomeOtherThing it is for:
+         on event ItHappened {
+           set field SomeOtherThing.otherThingState.someField1 to "field ItHappened.when"
+         }
+       }

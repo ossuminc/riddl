@@ -17,26 +17,32 @@ not provided:
 
 ## Pre-Flight Checks
 
-1. **Always ship from `main`; bring it up to date with
-   `development` first.** **We NEVER publish from
-   `development` or feature branches.** The release commits
-   normally live on `development`, so the standard process is
-   to fast-forward `main` up to `development` before tagging.
-   This is part of every release — do NOT ask the user whether
-   to do it:
+1. **Always ship a FINAL release from `main`.** Ordinary work commits
+   directly to `main`, so in the usual case there is nothing to bring
+   forward and you are already where you need to be:
    ```
    git checkout main
    git pull origin main
-   git merge --ff-only development
+   git branch --show-current
    ```
-   - If `--ff-only` fails because `main` has commits not on
-     `development` (genuine divergence), STOP and ask the user
-     how to reconcile before proceeding. A clean fast-forward
-     is the expected case.
-   - Confirm you ended up on `main`:
-     ```
-     git branch --show-current
-     ```
+   **There is no `development` branch.** It was deleted (local and
+   remote) on 2026-08-27, having been 0 commits ahead of `main`; the
+   GitFlow pre-flight this step used to prescribe — fast-forwarding
+   `main` up to `development` — was a no-op or contrary to policy for
+   every release from 1.30.0 onward, and was skipped by hand each time.
+   See `CLAUDE.md` § Branch Strategy.
+
+   **When the release IS on a branch**, which is the case for a large
+   change such as `release/2`, merge that branch into `main` and tag
+   `main`. Do not tag the branch:
+   ```
+   git checkout main && git pull origin main
+   git merge --no-ff release/2
+   ```
+   Release CANDIDATES are the documented exception and may be tagged on
+   the release branch — an RC is a prerelease on GitHub, an `@rc` formula
+   in the tap and an `rc` dist-tag on npm, so nothing resolves to it
+   unless asked for by name. See the `/rc` skill.
 
 2. Assert working tree is clean:
    ```
@@ -88,8 +94,35 @@ not provided:
 
 9. Run the full test suite and publish all modules:
    ```
-   sbt clean test publish
+   sbt "; clean; tJVM; tJS; tNative; publish"
    ```
+   **NEVER `sbt clean test publish`.** That was prescribed here until
+   2026-08-27 and it is a gate that can skip most of the suite while
+   reporting success. In sbt 2 bare `test` resolves to **`testQuick`**,
+   which skips suites it judges unaffected — and **that judgement
+   survives `clean`, because the action cache does**. It once left the
+   JS row of a GREEN run executing 109 of 567 tests, with `languageJS`,
+   `passesJS` and `testkitJS` never running at all. `tJVM`/`tJS`/`tNative`
+   exist precisely to defeat this: they are `testOnly *`, which ignores
+   incremental state. See the alias comments in `build.sbt`.
+
+   **Count what ran.** One `Suites: completed N` line per module in each
+   alias, and zero `No tests to run`. A short count means a module was
+   skipped or the `;` chain aborted at a failure — either way, look.
+
+   **For a MAJOR release, certify from a genuinely cold cache first**
+   (Reid, 2026-08-27, shipping 2.0.0). `clean` removes `target/` but NOT
+   the shared store at `~/.cache/sbt/v2` (or `~/Library/Caches/sbt/v2`),
+   so results can still be replayed:
+   ```
+   sbt -batch shutdown                       # a warm server IGNORES the -D
+   sbt --server -Dsbt.global.localcache=/tmp/sbt-verify-<ver> -batch "; clean; tJVM; tJS; tNative"
+   ```
+   The property applies only at **server boot**, so the shutdown is not
+   optional. Afterwards the throwaway directory must EXIST and have GROWN
+   (`du -sh`) — an empty one means the run was served from the shared cache
+   and certified nothing.
+
    Because the tag is on HEAD and the tree is clean,
    BuildInfo and all published artifacts will carry the
    clean `<VERSION>`. Verify in the sbt output.
@@ -164,17 +197,32 @@ not provided:
     - Commit them: `git add -u && git commit -m "Fix copyright headers"`
     - Push: `git push origin main`
     These changes are harmless formatting fixes and should be
-    committed before merging back to `development`.
+    committed straight to `main`.
 
-14. Switch back to `development` and merge the tag forward:
+14. **Delete the release branch, if the release came from one.**
+    There is no merge-back step: `main` IS the working branch, so
+    there is nowhere to merge the tag forward TO. This step used to
+    say `git checkout development && git merge main`, which since
+    1.30.0 has been either a no-op or contrary to policy.
     ```
-    git checkout development
-    git merge main
-    git push
+    git branch -d <release-branch>
+    git push origin --delete <release-branch>
     ```
 
 15. Report a summary: tag, commit SHA, release URL, and any
     CI workflows triggered.
+
+16. **Drop upgrade tasks in dependent projects.** Invoke
+    `/ossuminc-skills:bump-consumers` with library `riddl` and the
+    version just released. That skill owns the consumer list
+    (`skills/bump-consumers/consumers.md`) and the task-file format —
+    do **not** maintain a repo list here. riddl has more consumers
+    than any other library (Scala via `project/Dependencies.scala`;
+    npm via `@ossuminc/riddl-lib` in `package.json`), so let the skill
+    apply its usual restraint: it asks before writing and proposes
+    skipping patch releases rather than filing a task in every
+    consumer for a bugfix. Requires the `ossuminc-skills` plugin
+    installed (`claude plugin list | grep ossuminc-skills`).
 
 ## If Something Fails
 

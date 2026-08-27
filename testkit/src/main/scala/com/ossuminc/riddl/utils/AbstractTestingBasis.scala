@@ -1,0 +1,1 @@
+../../../../../../../../utils/src/test/scala/com/ossuminc/riddl/utils/AbstractTestingBasis.scala

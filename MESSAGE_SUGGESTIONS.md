@@ -119,6 +119,8 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${sink} is a sink but has no upstream path from any source` (Completeness) | Add connectors routing a source's output into this sink so it receives data. |
 | `The persistence option on ${connector} is not needed …` (Warning) | `Remove the 'persistent' option from ${connector}; both ends are in the same context.` |
 | `The persistence option on ${connector} should be specified …` (Warning) | `Add the 'persistent' option to ${connector} since it spans a context boundary.` |
+| `${connector} crosses a context boundary but arrives at an inlet of ${owner}, which is inside ${ctx}; a context is the SINK for everything entering it` (Error) | `Declare an inlet on ${ctx} itself and connect to that; let its handlers dispatch or translate inward. Reaching past the boundary binds the sender to ${ctx}'s internals, which it is entitled to change.` |
+| `${connector} crosses a context boundary but leaves from an outlet of ${owner}, which is inside ${ctx}; a context is the SOURCE for everything leaving it` (Error) | `Declare an outlet on ${ctx} itself and connect it from there; route the inner definition's outlet to it within ${ctx}.` |
 | `${portlet} is not connected` (Completeness) | `Connect ${portlet} with a connector, or remove it if it is unused.` |
 
 ---
@@ -135,6 +137,7 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${context} defines results but no query types` (Completeness) | `Add a query type to ${context}, e.g. 'type XQuery = query { ??? }'.` |
 | `${inv} is defined but not referenced by any 'require invariant' statement` (Usage) | `Reference ${inv} from a handler with 'require invariant ${inv.id}', or remove it if unused.` |
 | `Empty 'on other' clause will silently discard unhandled messages` (Completeness) | Add statements to the 'on other' clause (e.g. log or error), or remove it if discarding is intentional. |
+| `Inline aggregation on 'requires'/'returns' of ${definition} is deprecated` (Deprecation) | Define a named type (e.g. 'record Args is { ... }') and reference it instead. |
 | `${onClause} should have statements` (Missing) | `Add one or more statements to ${onClause} (use '???' as a placeholder if needed).` |
 | `Command processing in ${entity} should result in sending an event` (Completeness) | Send or tell an event from this command handler, e.g. 'send event SomethingHappened to outlet …'. |
 | `Query processing in ${entity} should result in a reply or sending a result` (Completeness) | Reply with a result or send a result type from this query handler, e.g. 'reply result QueryResult'. |
@@ -178,11 +181,17 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${state} … has an 'on init' clause but no 'set' statement …` (Completeness) | Add 'set' statements in the 'on init' clause to initialize the state's fields. |
 | `${entity} has no handlers to process messages` (Completeness) | Add a handler (on the entity or its state) to process incoming messages. |
 | `${entity} has no 'on query' clause; …` (Completeness) | Add an 'on query' clause so the entity's state can be read. |
-| `${entity} in ${context} has no outlet streamlet to publish events on` (Completeness) | `Add a Source or Flow streamlet with an outlet to ${context} so ${entity} can publish its events.` |
+| `${entity} handles messages but declares no inlet to receive them on` (Completeness) | `Declare an inlet on ${entity} typed with the messages it handles. A processor receives only through its OWN inlet -- a port on its context or on a sibling does not deliver to it.` |
+| `${entity} sends or publishes messages but declares no outlet to transmit them on` (Completeness) | `Declare an outlet on ${entity} for the messages it emits. Publishing goes out the entity's OWN outlet; its context's outlet is reached only by connecting the entity's outlet onward within the context.` |
 | `${entity} does not define an Id type for its identity` (Completeness) | `Define an Id type for ${entity} in its context, e.g. 'type Id = Id(${id})'.` |
 | `${idType} is defined inside ${entity}; move it to the containing context …` (Completeness) | `Move ${idType} from ${entity} up to the containing context so other entities can reference it.` |
 | `${idType} for ${entity} is defined outside the containing context; …` (Completeness) | `Move ${idType} into ${entity}'s context, and use adaptors for any inter-context references to it.` |
-| `${entity} is event-sourced but this command handler does not emit an event` (Completeness) | Send or tell an event from this command handler so the event-sourced entity records its state change. |
+| `${type} declares 'yields ${msg}' but ${clause} never yields it` (Error, A19) | `Add a 'yield ${msg}' statement to this handler. A clause that refuses the message (with 'error' or 'require') is exempt.` |
+| `yielded '${msg}' does not match declared 'yields ${declared}' of ${type}` (Error, A19) | `Yield the declared response: 'yield ${declared}'.` |
+| `${entity} declares ${kw1} and ${kw2}, but ${group} intentions are mutually exclusive` (Error) | `Keep exactly one ${group} keyword before 'entity'.` — plus `'event-sourced' already implies 'persistent'.` when those two collide. |
+| `${entity} is event-sourced but ${command} declares no 'yields' clause, so there is no event to record` (Error, R1) | `Declare the event it produces, e.g. 'command ${command} yields event SomethingHappened is { ??? }'.` |
+| `${entity} is event-sourced and ${command} yields '${event}', but no 'on event' clause applies it on replay` (Error, R2) | `Add 'on ${event} { ??? }' to a handler of ${entity} so the event can be replayed.` |
+| `${entity} is event-sourced, so '${kw}' may only appear while handling one of its own events; ${clause} handles ${why}` (Error, R3/R4) | For an `on event` clause: `Yield one of ${entity}'s own events here and '${kw}' in that event's clause.` Otherwise: `Move the '${kw}' into the 'on event' clause for the event this yields, so replay reproduces it.` |
 | `${projector} lacks a required ${record} definition.` | `Add a record type to ${projector}, e.g. 'type ${id}Record = record { ??? }'.` |
 | `${projector} must have exactly one Handler but has N` | Define exactly one handler for the projector. |
 | `${projector} does not reference any repository to persist its projection` (Completeness) | `Reference a repository from ${projector}, e.g. 'updates repository SomeRepository'.` |
@@ -219,7 +228,6 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `A saga step with do statements must also have revert statements, and vice versa` | Provide both 'do' and 'revert' statements for the saga step so its action can be compensated on failure. |
 | `${step} do-step targets ${uncompensated} but the undo-step does not …` (Style) | `Add compensating revert statements targeting ${uncompensated} in the saga step's undo block.` |
 | `${step} do-statements contain no 'tell command' to effect state changes` (Completeness) | Add a 'tell command' statement to the saga step's do-statements to effect a state change. |
-| `${c} has entities but no Sink streamlet …` (Completeness) | `Add a Sink streamlet with an inlet to ${c} to receive and dispatch incoming messages.` |
 | `${handler} in ${streamlet} handles messages but does not dispatch to any entity via 'tell'` (Completeness) | Add 'tell' statements so the streamlet handler dispatches incoming messages to an entity. |
 | `${epic} is missing a user story` (Missing) | `Add a user story to ${epic}, e.g. 'by user SomeUser I want to … so that …'.` |
 | `${user} is missing its role kind ('is a')` (Missing) | `Specify the user's role, e.g. '${id} is a "customer"'.` |
@@ -231,6 +239,7 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${output} showing ${typRef} … is invalid because … can only send Events and Results` | Show an Event or Result here; vital definitions can only emit events and results. |
 | `${input} sending ${putIn} … is invalid because … can only receive Commands and Queries` | Send a Command or Query here; vital definitions can only receive commands and queries. |
 | `${c} has entities but no repository to persist them; entities are stateful and should be persisted` (Completeness) | `Add a repository to ${c}, e.g. 'repository ${c.id}Repository is { ??? }'.` |
+| `${repository} answers queries but its schema declares no index, so every query reads the whole collection` (Completeness) | `Add 'index on field <Record>.<field>' to the schema of ${repository} for the fields its queries filter on. A generator emits the access method from the field's type and the target dialect; the model states only that the field is queried.` |
 
 The last row (context-with-entities-but-no-repository) is an **always-on**
 completeness check (gated only by `showCompletenessWarnings`): a context that

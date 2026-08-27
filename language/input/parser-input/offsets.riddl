@@ -1,0 +1,7 @@
+domain Offsets is {
+
+  author Stable is {
+    name: "Offset Fixture"
+    email: "nobody@ossum.biz"
+  }
+}

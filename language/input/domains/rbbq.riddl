@@ -17,7 +17,7 @@ domain ReactiveBBQ is {
 
   context Customer is {
     entity Customer is {
-      state main of ReactiveBBQ.Empty
+      state main of record ReactiveBBQ.Empty
       handler input is { ??? }
     }
   }
@@ -29,7 +29,7 @@ domain ReactiveBBQ is {
     } // Should we support IP4Address?
     entity OrderViewer is {
      record fields is { field: type Kitchen.OrderViewType }
-     state OrderState of OrderViewer.fields
+     state OrderState of record OrderViewer.fields
      handler input is { ??? }
     } with {
       option is kind("device")
@@ -80,7 +80,7 @@ domain ReactiveBBQ is {
         points is Number,
         rewardEvents is Loyalty.RewardEvent*
       }
-      state RewardState of RewardsAccount.fields
+      state RewardState of record RewardsAccount.fields
       handler Inputs is { ??? }
     }
 
@@ -95,7 +95,7 @@ domain ReactiveBBQ is {
         orderId is ReactiveBBQ.OrderId,
         customerId is ReactiveBBQ.CustomerId
       }
-      state OrderState of Order.fields
+      state OrderState of record Order.fields
       handler foo  is {}
     } with { option is aggregate }
   }
@@ -107,7 +107,7 @@ domain ReactiveBBQ is {
         amount is Number,
         cardToken is String
       }
-      state PaymentState of Payment.fields
+      state PaymentState of record Payment.fields
       handler foo is { ??? }
     } with { option is aggregate }
   }
@@ -115,13 +115,13 @@ domain ReactiveBBQ is {
   context Menu is {
     entity MenuItem is {
       record fields is { something: String }
-      state MenuState of Menu.MenuItem.fields
+      state MenuState of record Menu.MenuItem.fields
       handler foo is {}
     }
     type MenuItemRef is reference to entity Menu.MenuItem
     entity MenuEntity is {
       record fields is { items: many Menu.MenuItemRef }
-      state typical of MenuEntity.fields
+      state typical of record MenuEntity.fields
       handler foo is { ??? }
     } with { option is aggregate }
   }
@@ -136,13 +136,13 @@ domain ReactiveBBQ is {
     }
     entity Location is {
       record fields is { name: String }
-      state typical of Location.fields
+      state typical of record Location.fields
       handler foo is {}
     } with { explained as "This is a retail store Location" }
 
     entity Reservation is {
      record fields is { value: ReservationValue }
-     state reservation of Reservation.fields
+     state reservation of record Reservation.fields
      handler ofInputs is {}
     } with { option aggregate }
   } // end of context

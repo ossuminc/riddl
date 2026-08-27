@@ -4,13 +4,13 @@ context FooContext is {
   entity Foo is {
       record InitialFooData is { fi: Integer }
       record FinalFooStateData is {fs: String }
-      state InitialFooState of Foo.InitialFooData
+      state InitialFooState of record Foo.InitialFooData
       handler InitializeFoo is {
          on command FooStateChange {
            become entity FooContext.Foo to handler Foo.FinalizeFoo
          }
       }
-      state FinalFooState of Foo.FinalFooStateData
+      state FinalFooState of record Foo.FinalFooStateData
       handler FinalizeFoo is {
          on command FooStateChange {
            become entity FooContext.Foo to handler Foo.InitializeFoo

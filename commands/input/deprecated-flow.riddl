@@ -1,0 +1,9 @@
+domain D is {
+  context C is {
+    type Cmd = command { x: Integer }
+    flow F is {
+      inlet i is command Cmd
+      outlet o is command Cmd
+    }
+  }
+}

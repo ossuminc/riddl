@@ -1,0 +1,25 @@
+// Corpus fixture for A19 (the `yields <messageRef>` clause on a command/query type) and A22 (the
+// `yield` statement that produces it). A command `yields` an event; a query `replies` with a
+// a result. Exercised by both the fastparse parser and the EBNF/TatSu grammar so the two accept the
+// same input.
+domain d is {
+  context c is {
+    event OrderPlaced is { id: Integer }
+    result OrderFound is { id: Integer }
+    command PlaceOrder yields event OrderPlaced is { id: Integer }
+    query FindOrder replies result OrderFound is { id: Integer }
+    // A plain command with no yields still parses.
+    command CancelOrder is { id: Integer }
+
+    entity Order is {
+      record Fields is { id: Integer }
+      state Current of record Order.Fields
+      handler H is {
+        on init { set field Order.Fields.id to "0" }
+        // A22: the `yield` statement produces the command's declared `yields` event.
+        on command PlaceOrder { yield event OrderPlaced }
+        on query FindOrder { reply result OrderFound }
+      }
+    }
+  }
+}

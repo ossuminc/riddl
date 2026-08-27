@@ -25,15 +25,15 @@ passes/input/check/schema-kinds/schema-kinds.riddl(21:7->25):
 passes/input/check/schema-kinds/schema-kinds.riddl(26:7->26):
  Handler 'RepoHandler' in Repository 'SchemaRepo' should have content:
        handler RepoHandler is { ??? }
-passes/input/check/schema-kinds/schema-kinds.riddl(3:5->18):
- Type 'Customer' is unused:
-     type Customer is { name: String, email: String, age: Number }
-passes/input/check/schema-kinds/schema-kinds.riddl(4:5->19):
- Type 'OrderInfo' is unused:
-     type OrderInfo is { orderId: UUID, amount: Number, date: Date }
 passes/input/check/schema-kinds/schema-kinds.riddl(26:7->26):
  Handler 'RepoHandler' in Repository 'SchemaRepo' has no executable statements:
        handler RepoHandler is { ??? }
 passes/input/check/schema-kinds/schema-kinds.riddl(6:5->26):
  Repository 'SchemaRepo' is unused:
      repository SchemaRepo is {
+passes/input/check/schema-kinds/schema-kinds.riddl(1:1->19):
+ Domain 'SchemaKinds' has no author:
+ domain SchemaKinds is {
+passes/input/check/schema-kinds/schema-kinds.riddl(1:1->19):
+ Domain 'SchemaKinds' declares no 'error-sink' inlet, so hard errors have no destination:
+ domain SchemaKinds is {

@@ -1,0 +1,28 @@
+// Test (A18): invariant declared inside a state body. A state-scoped invariant
+// constrains that state's record data; it parses and validates like a
+// processor-level invariant but lives inside the state.
+domain StateInvariantTest is {
+  context TestContext is {
+    entity Account is {
+      record Balance(amount: Integer)
+      command Withdraw(sum: Integer)
+
+      state Open of record Account.Balance is {
+        invariant nonNegative is "amount must be >= 0" with {
+          briefly "the balance may never go negative while open"
+        }
+        handler onOpen is {
+          on command Withdraw {
+            do "debit the balance"
+          }
+        }
+      }
+
+      handler default is {
+        on command Withdraw { ??? }
+      }
+    }
+  }
+} with {
+  briefly "Test domain for state-scoped invariants (A18)"
+}

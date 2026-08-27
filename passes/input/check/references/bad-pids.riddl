@@ -8,7 +8,7 @@ domain foo {
       record FooExampleState is {
         foo: Foo
       }
-      state FooExample of FooExampleState
+      state FooExample of record FooExampleState
       handler HandleFoo is {
         on command DooFoo {
           set field FooExamplexxxx.garbage to "record Foo"

@@ -37,7 +37,7 @@ context full is {
 
     handler Putter is {
       on command ACommand {
-        prompt "store something in agg"
+        do "store something in agg"
       }
     }
   } with {
@@ -49,7 +49,7 @@ context full is {
   projector ProjectIt is {
     updates repository StoreIt
     record Record is { ??? }
-    handler projector is {
+    handler 'projector' is {
       on init {
         tell command ACommand to repository StoreIt
       }
@@ -61,8 +61,9 @@ context full is {
   adaptor fromAPlant to context APlant is {
     handler adaptCommands is {
       on command ACommand {
-        send command DoAThing to outlet APlant.Source.OutCommands
+        send command DoAThing(thingField = 42) to inlet APlant.Commands
       }
+      on other { error "unexpected message" }
     }
   }
 
@@ -80,14 +81,19 @@ context full is {
     event Inebriated is { ??? }
 
     record someData(field:  SomeType)
-    state someState of Something.someData
+    state someState of record Something.someData
 
     handler foo is {
       // Handle the ACommand
       on command ACommand {
         when "Something arrives" then
-          // we want to send an event
-          send event Inebriated to outlet APlant.Source.Commands
+          // APlant.Commands is declared `command DoAThing`, so only a DoAThing may be placed on
+          // it. This used to send `event Inebriated`, which nothing rejected until the
+          // send/portlet conformance check landed (2026-08-19). It addressed
+          // `APlant.Source.OutCommands` until 2026-08-27, when reaching past a context onto a
+          // portlet of something it CONTAINS became an Error -- a sender outside APlant must
+          // address APlant itself.
+          send command DoAThing(thingField = 43) to inlet APlant.Commands
         end
       }
     }
@@ -95,7 +101,7 @@ context full is {
     function whenUnderTheInfluence is {
       requires { n: Nothing }
       returns  { b: Boolean }
-      prompt "aribtrary statement"
+      do "aribtrary statement"
       ```scala
         // Simulate a creative state
         val randomFactor = Math.random() // A random value between 0 and 1
@@ -110,9 +116,9 @@ context full is {
   }
 
   entity SomeOtherThing is {
-    type ItHappened is event { aField: String }
+    event ItHappened is { aField: String }
     record otherThingData is { aField: String }
-    state otherThingState of SomeOtherThing.otherThingData
+    state otherThingState of record SomeOtherThing.otherThingData
     handler fee is {
       on event ItHappened {
         set field SomeOtherThing.otherThingState.aField to "arbitrary string value"

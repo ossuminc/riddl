@@ -1,0 +1,43 @@
+// Corpus fixture for A9: `requires`/`returns` reference a named Type (preferred over an inline
+// aggregation). Exercised by both the fastparse parser (RequiresReturnsRefFileTest) and the
+// EBNF/TatSu grammar so the two accept the same input. Covers a bare type-alias reference, a
+// keyworded record reference, and (for the deprecation path) the legacy inline aggregation.
+domain d is {
+  context c is {
+    type Age is Integer
+    record Args is { a: Integer, b: String }
+    record Result is { ok: Boolean }
+    function Unary is {
+      requires Age
+      returns record Result
+      ???
+    }
+    function WithRecord is {
+      requires record Args
+      returns record Result
+      ???
+    }
+    function LegacyInline is {
+      requires { a: Integer }
+      returns { ok: Boolean }
+      ???
+    }
+    // `requires`/`returns` are ordinary CONTENT, not a fixed body prefix, so a comment may sit
+    // above, between or below them. It used to be a parse error to explain a `requires` on the
+    // line above it, which is where a reader most wants the explanation.
+    function Commented is {
+      // what it needs
+      requires record Args
+      // and what it gives back
+      returns record Result
+      // that's the whole signature
+    }
+    saga CommentedSaga is {
+      // what the saga needs
+      requires record Args
+      returns record Result
+      step One is { do "the thing" } reverted by { do "undo the thing" }
+      step Two is { do "the other" } reverted by { do "undo the other" }
+    }
+  }
+}

@@ -1,0 +1,75 @@
+// S61-1: a Module is a FLAT collection of ANY top-level definition. No hierarchy is
+// enforced at the module's top level; the internal rules of each contained definition
+// still apply. This fixture exercises the widened `module_content` EBNF rule.
+module MixedBag is {
+
+  author Reid is { name is "Reid Spencer" email is "reid@ossuminc.com" }
+
+  type Amount is Number
+
+  constant Limit is Number = 100
+
+  user Shopper is "a person who buys things"
+
+  invariant AlwaysTrue is "the limit is positive"
+
+  function Compute is {
+    requires { amount: Number }
+    returns { total: Number }
+    ???
+  }
+
+  context Ordering is {
+    event Placed is { when: TimeStamp }
+    entity Order is {
+      handler Orders is { ??? }
+    }
+  }
+
+  entity LooseEntity is {
+    handler Anything is { ??? }
+  }
+
+  adaptor FromOrdering from context Ordering is { ??? }
+
+  projector Totals is {
+    record Snapshot is { total: Number }
+    handler Updates is { ??? }
+  }
+
+  repository Ledger is { ??? }
+
+  saga Checkout is {
+    // a saga body admits comments and types, as every vital definition does
+    type Money is String
+    step ReserveStock is {
+      do "reserve the stock"
+    } reverted by {
+      do "release the stock"
+    }
+    // compensation runs completed steps' `reverted by` blocks in reverse order
+    step ChargeCard is {
+      do "charge the card"
+    } reverted by {
+      do "refund the card"
+    }
+  }
+
+  epic Buying is {
+    user Shopper wants to "buy something" so that "they own it"
+    type Cart is String
+  } with {
+    by author Reid
+  }
+
+  domain Retail is {
+    context Store is { ??? }
+  }
+
+  module Nested is {
+    type Inner is String
+  }
+
+} with {
+  briefly "A module holding one of nearly every kind of top-level definition"
+}

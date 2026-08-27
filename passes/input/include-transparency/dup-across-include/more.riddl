@@ -1,0 +1,1 @@
+entity Thing is { handler H is { on other is { do "x" } } }

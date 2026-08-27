@@ -1,0 +1,46 @@
+// A55: corpus fixture for the OPTIONAL local name bound to an on-clause's message. The `:` is
+// ordinary type ascription — the same rule as `let x: T = ...` and a field declaration `p1: String`
+// — so `on foo: command Foo` reads "foo has type command Foo". Both the fastparse parser and the
+// The EBNF/TatSu grammar must accept every shape below:
+//   - a binding on an `on command` clause and on an `on event` clause
+//   - a binding used bare (the whole message) and dotted (a field of the message)
+//   - a binding together with a `from [<name>:] <origin>` clause
+//   - no binding at all (the pre-A55 form, unchanged)
+domain Binding is {
+  context Ordering is {
+    command Foo is { a: Integer, b: Integer, conditionRed: Boolean }
+    event Bar is { a: Integer, b: Integer, red: Boolean }
+    outlet emitted is event Bar
+
+    entity Cart is {
+      record CartData is { count: Integer }
+      state Open of record CartData
+
+      handler Ops is {
+        // The worked example: bind `foo`, alias it with a `let`, test one of its fields, and
+        // build an outbound event from the bound message's fields.
+        on foo: command Foo {
+          let bar = foo
+          when foo.conditionRed then
+            error "red"
+          end
+          send event Bar(bar.a, bar.b, bar.conditionRed) to outlet Ordering.emitted
+        }
+        // A binding on an event clause.
+        on ev: event Bar {
+          set field Cart.Open.count to ev.a
+        }
+      }
+    }
+
+    // A binding and a `from` clause together, plus the plain unbound form.
+    handler Watch is {
+      on foo: command Foo from src: context Ordering {
+        do "handle the bound message from a named origin"
+      }
+      on event Bar {
+        do "no binding at all — the pre-A55 form"
+      }
+    }
+  }
+}

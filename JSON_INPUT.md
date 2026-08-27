@@ -161,6 +161,7 @@ defaulted by the builder (see the table below).
 ```jsonc
 { "kind": "String", "min": 0, "max": 255 }   // both optional
 { "kind": "Id", "entity": "Order" }          // entity path REQUIRED
+{ "kind": "Id", "entity": "Order", "keyword": "entity" }  // optional processor-kind keyword, as written
 { "kind": "UUID" }
 { "kind": "Boolean" }
 { "kind": "Date" }
@@ -190,6 +191,7 @@ defaulted by the builder (see the table below).
 | `Range` no args | `range(0, 100)` |
 | `Currency` no `country` | `Currency(USD)` |
 | `Id` no `entity` | **error** (a path can't be defaulted) |
+| `Id` no `keyword` | bare `Id(<path>)` (legal; the keyword is optional) |
 | `Enum`/`Pattern` empty | **error** (need ≥ 1) |
 | no `brief` | omitted (legal) |
 
@@ -198,7 +200,8 @@ defaulted by the builder (see the table below).
 More type expressions:
 
 ```jsonc
-{ "kind": "UserId" } | { "kind": "Abstract" } | { "kind": "Location" } | { "kind": "Nothing" }
+{ "kind": "UserId" } | { "kind": "Anything" } | { "kind": "Location" } | { "kind": "Nothing" }
+// "Abstract" is the deprecated input spelling of "Anything"; output is always "Anything"
 { "kind": "Time" } | { "kind": "DateTime" } | { "kind": "Duration" }
 { "kind": "ZonedDate", "zone": "UTC" } | { "kind": "ZonedDateTime", "zone": "UTC" }   // zone optional
 { "kind": "Current" } | { "kind": "Length" } | { "kind": "Luminosity" }               // SI base units
@@ -242,13 +245,18 @@ Statements appear in handler on-clauses and function bodies.
 { "kind": "let", "name": "x", "type": "<typePath>", "expression": "..." }   // type optional
 { "kind": "code", "language": "scala", "body": "..." }
 { "kind": "require", "condition": "..." }                     // or "invariant": "<name>"
+{ "kind": "require", "invariant": "UnderLimit", "argument": <value> }  // for `requires <type>` invariants
 { "kind": "set", "field": "<path>", "value": "..." }          // or "state": "<path>"
 { "kind": "send", "message": {"ref":"M","kind":"command"}, "to": "<path>", "portlet": "inlet" }  // inlet|outlet
 { "kind": "tell", "message": {"ref":"M","kind":"command"}, "to": "<path>", "processor": "entity" } // entity|context|projector|repository|adaptor
 { "kind": "morph", "entity": "<path>", "state": "<path>", "value": {"ref":"E","kind":"event"} }
 { "kind": "become", "entity": "<path>", "handler": "<path>" }
-{ "kind": "reply", "message": {"ref":"R","kind":"result"} }
-{ "kind": "when", "condition": "...", "negated": false, "then": [<stmt>], "else": [<stmt>] }   // or "conditionIdentifier"
+{ "kind": "yield", "message": {"ref":"R","kind":"result"} }              // also reads legacy "kind":"reply"
+{ "kind": "when", "condition": "...", "then": [<stmt>], "else": [<stmt>] }   // opaque pseudo-code string
+{ "kind": "when", "conditionIdentifier": "flag", "then": [<stmt>], "else": [<stmt>] }   // bare identifier
+{ "kind": "when", "expression": <value>, "then": [<stmt>], "else": [<stmt>] }   // structured BooleanExpression (A28)
+// negation is NOT a separate flag -- it's a `not`-wrapped value, same as everywhere else a value can be negated:
+{ "kind": "when", "expression": { "value": "not", "expr": { "value": "valueRef", "path": "isValid" } }, "then": [<stmt>], "else": [<stmt>] }
 { "kind": "match", "expression": "...", "cases": [ { "pattern": "...", "statements": [<stmt>] } ], "default": [<stmt>] }
 ```
 
@@ -267,6 +275,24 @@ Functions live in context/entity `functions`; `input`/`output` are field lists
 }
 ```
 
+`input`/`output` are the DEPRECATED bucketed form of a function's or saga's
+`requires`/`returns`. Both clauses are ordinary contents in RIDDL, so a comment
+may sit above, between or below them — and a field, having no position, cannot
+say where. The canonical form is a `requires`/`returns` entry in the ordered
+`contents` array, whose `arg` is a type-ref string (preferred) or a bare field
+array (the deprecated inline aggregation):
+
+```jsonc
+{ "$kind": "function", "name": "calc", "contents": [
+    { "$kind": "comment",  "text": "// what it needs" },
+    { "$kind": "requires", "arg": "type Args" },
+    { "$kind": "returns",  "arg": [ { "name": "r", "type": { "kind": "Integer" } } ] } ] }
+```
+
+`root2Json` writes both forms; a document that has ordered `contents` is read
+from those alone, so the fields never double the clauses. A function or saga may
+carry at most one of each — the RIDDL parser enforces it.
+
 Records may carry `methods` alongside `fields`:
 
 ```jsonc
@@ -275,6 +301,101 @@ Records may carry `methods` alongside `fields`:
   "methods": [ { "name": "scaled", "type": { "kind": "Integer" },
                  "args": [ { "name": "by", "type": { "kind": "Integer" } } ] } ] }
 ```
+
+## Ordered `contents` — the canonical shape
+
+A container's children travel in ONE ordered array, each entry tagged with
+`$kind`, in source order:
+
+```jsonc
+{ "contents": [
+    { "$kind": "comment", "text": "// a header comment" },
+    { "$kind": "domain",  "name": "Ordering", "contents": [ … ] } ] }
+```
+
+The tag key is `$kind`, not `kind`, because some entries carry a `kind` field of
+their own (an on-clause, a schema). Tags are RIDDL keywords: `domain`, `context`,
+`entity`, `type`, `command`, `event`, `query`, `result`, `record`, `state`,
+`handler`, `onClause`, `function`, `adaptor`, `streamlet`, `projector`,
+`repository`, `schema`, `connector`, `relationship`, `saga`, `step`, `epic`,
+`case`, `interaction`, `group`, `containedGroup`, `input`, `output`, `author`,
+`user`, `invariant`, `constant`, `comment`, `version`, `copyright`, `inlet`,
+`outlet`, `field`, `method`, `term`, `requires`, `returns`.
+
+A `with { … }` block works the same way, through `metadata.items`:
+
+```jsonc
+{ "metadata": { "items": [
+    { "kind": "option", "name": "kind", "args": ["device"] },
+    { "kind": "briefly", "value": "An order viewer" } ] } }
+```
+
+**Why an array and not per-kind fields.** RIDDL is fully reflective: a model
+written to JSON and read back must recover the EXACT AST, and that includes the
+ORDER of definitions within their parent. Per-kind arrays (`domains`, `types`,
+`handlers`, …) cannot express order — reassembling them concatenates the groups
+in a fixed sequence, so a comment written at the top of a file comes back at the
+bottom.
+
+An `include` and a BAST `import` are entries like any other, carrying their
+already-loaded contents NESTED inside them — which is what keeps the builder
+free of I/O and so usable on Native:
+
+```jsonc
+{ "$kind": "include", "origin": "file:///…/entities.riddl",
+  "contents": [ { "$kind": "entity", "name": "Order", … } ] }
+```
+
+### Source locations
+
+Every `contents` entry may carry `$at: [offset, endOffset]`, and the document says
+once how to read those offsets:
+
+```jsonc
+{ "locations": { "origin": "orders.riddl", "basis": "origin" },
+  "contents": [ { "$kind": "domain", "$at": [0, 412], "name": "Ordering", … } ] }
+```
+
+- **`basis: "origin"`** — the offsets index the file named by `origin`. This is
+  what `root2Json` writes, because the model came from RIDDL and those are its
+  real coordinates. Reading gives exact offsets and origin; line and column are
+  not recoverable without that file, and resolving them is the caller's job.
+- **`basis: "document"`** — the offsets index THIS JSON document. Use this when
+  authoring JSON directly: the reader has the document, so line and column are
+  exact and a diagnostic can quote the line you wrote.
+- **absent** — no locations. Every node gets an empty location, which is what
+  documents written before this do; they keep working unchanged.
+
+Carrying locations matters for more than tidy messages. `Definition.equals`
+includes the location, so with every location empty two same-named definitions
+under different parents compare EQUAL — and collapse into one key in any map
+keyed by a definition.
+
+**The per-kind arrays still load**, so documents written against the older schema
+keep working; they are DEPRECATED and will be removed in a later major.
+`parseJson` accepts them silently; `parseJsonWithMessages` returns a
+`Deprecation` naming the containers that used them. `root2Json` only ever writes
+the ordered form.
+
+### The aggregate flavour
+
+RIDDL writes an aggregate body several ways, and they are not the same type
+expression: `type X is { … }` is a bare aggregation, while `record X is { … }`,
+`graph X is { … }` and `table X is { … }` are aggregates tagged with a use case.
+The optional `aggregate` key on a `Record` says which one is meant:
+
+```jsonc
+{ "kind": "Record", "aggregate": "aggregation", "fields": [ … ] }  // type X is { … }
+{ "kind": "Record", "aggregate": "record",      "fields": [ … ] }  // record X is { … }
+{ "kind": "Record", "aggregate": "graph",       "fields": [ … ] }  // graph X is { … }
+```
+
+Accepted values are `aggregation` (a bare `{…}`, no keyword) and the RIDDL type
+keywords `record`, `type`, `graph`, `table`, `command`, `event`, `query` and
+`result`. **Omitting it means `record`**, which is what hand-authored JSON
+usually wants — a `record` is what a `state … of record X` reference resolves
+against. `root2Json` always writes the key explicitly, so a document it produced
+round-trips to the flavour it started with.
 
 ## Phase 4 additions — streaming & integration
 
@@ -393,6 +514,41 @@ entity, type) accept a `metadata` object:
 `attachments` with `inFile: true` become file attachments (value is a path);
 otherwise string attachments. Coverage of the definition / type-expression /
 statement / interaction surface is enforced by `JsonCoverageGuardTest`.
+
+## 2.0 additions — full fidelity
+
+The schema now tracks the AST's contents unions rather than the constructs
+that happened to have fixtures, because tracking the latter is how it fell
+behind in the first place.
+
+**Children that were being dropped.** `RootDto` gained `authors`; `DomainDto`
+gained `commands`/`events`/`queries`/`results`, `repositories` and
+`connectors`; `EntityDto` gained `streamlets`, `connectors` and
+`relationships`. Every processor DTO (adaptor, streamlet, projector,
+repository, and context/entity) now carries the whole of `OccursInProcessor` —
+`invariants`, `streamlets`, `connectors`, `relationships`, and for some also
+`constants` and `functions`. A repository gained `schemas` (plural) beside the
+back-compatible singular `schema`; `root2Json` writes only the plural, and a
+reader accepts either.
+
+**Metadata everywhere.** `metadata` used to appear on seven DTOs. Every
+definition DTO carries it now, so a `described as` on a saga, a `term` on an
+author or an `option` on a connector survives. `MetaDto` gained
+`urlDescription` for `described at <url>`. An on-clause gained `brief`, which
+it never had.
+
+**Comments.** A container DTO carries `comments: [{text, inline?}]` for the
+comments in its CONTENTS — distinct from `metadata.comments`, which are the
+ones attached to the definition. `inline` marks a `/* … */` comment; its lines
+are joined with newlines. Comments group with the container's other children,
+so their position relative to neighbouring definitions is not preserved; the
+schema groups every child by kind, so that ordering was already gone for
+definitions. `RecordDto` and `MessageDto` carry them too, since
+`AggregateContents` admits a comment between fields.
+
+Groups, inputs and outputs do NOT carry `comments`: `OccursInGroup`,
+`OccursInInput` and `OccursInOutput` admit no `Comment`. See `JSON_COVERAGE.md`
+for the one comment position that is consequently not representable.
 
 ## Inverse — `root2Json`
 

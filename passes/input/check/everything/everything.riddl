@@ -1,11 +1,11 @@
 domain Everything is {
 
   type SomeType is String
-  type DoAThing is command { thingField: Integer }
+  command DoAThing is { thingField: Integer }
 
   context APlant is {
-    source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
-    sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
+    source Source is { outlet Commands is command DoAThing } with { described by "Data Source" }
+    sink Sink is { inlet Commands is command DoAThing } with { explained as "Data Sink" }
     connector AChannel from outlet APlant.Source.Commands to inlet APlant.Sink.Commands with { explained as "A Channel"}
   } with {
     explained as "A Plant"
@@ -45,12 +45,12 @@ domain Everything is {
 
       command ACommand is { ??? }
 
-      state someState of type Everything.StateType
+      state someState of record Everything.StateType
 
       function whenUnderTheInfluence is {
         requires { n: Nothing }
         returns { b: Boolean }
-        prompt "some pseudo-code"
+        do "some pseudo-code"
       }
 
       handler foo is {
@@ -64,9 +64,9 @@ domain Everything is {
     }
 
     entity SomeOtherThing is {
-      sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-      type ItHappened is event { when: String }
-      state otherThingState of type Everything.StateType
+      sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
+      event ItHappened is { when: String }
+      state otherThingState of record Everything.StateType
       handler fee is {
         on event ItHappened {
           set field SomeOtherThing.otherThingState.someField1 to "field ItHappened.when"

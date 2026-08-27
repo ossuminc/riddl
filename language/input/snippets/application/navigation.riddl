@@ -1,7 +1,7 @@
 domain foo {
   context foo2 {
     constant ThingToDisplay is string = "A displayed thing"
-    type Foo is record { ??? }
+    record Foo is { ??? }
     page target is {
       output a displays "something moving but not a movie"
       output c displays record Foo

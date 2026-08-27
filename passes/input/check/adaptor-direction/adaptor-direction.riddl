@@ -1,7 +1,7 @@
 domain AdaptorDir is {
   context SourceCtx is {
-    type DoIt is command { data: String }
-    type ItDone is event { what: String }
+    command DoIt is { data: String }
+    event ItDone is { what: String }
   } with {
     explained as "Source context with message types"
   }
@@ -10,8 +10,9 @@ domain AdaptorDir is {
     adaptor BadInbound from context SourceCtx is {
       handler InHandler is {
         on command SourceCtx.DoIt {
-          prompt "handling command in inbound adaptor"
+          do "handling command in inbound adaptor"
         }
+        on other { error "unexpected message" }
       }
     } with {
       explained as "Inbound adaptor that incorrectly handles commands"
@@ -20,8 +21,9 @@ domain AdaptorDir is {
     adaptor BadOutbound to context SourceCtx is {
       handler OutHandler is {
         on event SourceCtx.ItDone {
-          prompt "handling event in outbound adaptor"
+          do "handling event in outbound adaptor"
         }
+        on other { error "unexpected message" }
       }
     } with {
       explained as "Outbound adaptor that incorrectly handles events"

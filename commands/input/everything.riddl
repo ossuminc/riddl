@@ -4,8 +4,8 @@ domain Everything is {
   command DoAThing is { thingField: Integer }
 
   context APlant is {
-    source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
-    sink Sink is { inlet Events is DoAThing } with { explained as "Data Sink" }
+    source Source is { outlet Commands is command DoAThing } with { described by "Data Source" }
+    sink Sink is { inlet Events is command DoAThing } with { explained as "Data Sink" }
     connector AChannel is {
       from outlet APlant.Source.Commands to inlet APlant.Sink.Events
     } with { explained as "A Channel" }
@@ -22,7 +22,7 @@ domain Everything is {
 
   context full is {
 
-    sink Sink is { inlet input is type DoAThing }
+    sink Sink is { inlet input is command DoAThing }
 
     connector con is {
        from outlet Everything.APlant.Source.Commands to inlet full.Sink.input
@@ -61,11 +61,11 @@ domain Everything is {
       event Inebriated is { ??? }
 
       record fields is { field:  SomeType }
-      state someState of Something.fields
+      state someState of record Something.fields
       handler foo is {
         on command ACommand is {
           // if and(Something arrives, misc()) then
-          send event Inebriated to inlet Everything.full.Sink.input
+          send event Inebriated to outlet Everything.APlant.Source.Commands
           // end
         }
       }
@@ -80,9 +80,9 @@ domain Everything is {
     }
 
     entity SomeOtherThing is {
-      type ItHappened is event { field: String }
+      event ItHappened is { field: String }
       record fields is { field: String }
-      state otherThingState of SomeOtherThing.fields
+      state otherThingState of record SomeOtherThing.fields
       handler fee is {
         on event ItHappened is {
           set field SomeOtherThing.otherThingState.field to "field ItHappened.field"

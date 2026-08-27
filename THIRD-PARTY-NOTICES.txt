@@ -1,0 +1,226 @@
+================================================================================
+THIRD-PARTY SOFTWARE NOTICES FOR RIDDL
+================================================================================
+
+riddl (riddlc, riddl-lib and the riddl libraries) is Copyright 2019-2026
+Ossum Inc. and is licensed under the Apache License, Version 2.0.
+
+riddl is built on the work of others. This file lists the open-source software
+distributed with riddl, together with the notices those licenses require us to
+reproduce. Our thanks to every author and maintainer named here.
+
+A one-line-per-project summary of this file is printed by `riddlc info`. The
+same information is published at https://ossum.tech/riddl/2.0/licenses/.
+
+Every license below is permissive. riddl deliberately carries no copyleft
+dependency: logback-core (EPL-1.0 / LGPL-2.1) used to arrive transitively
+through airframe-log, unused by any riddl source, and is now excluded.
+
+Coverage: this file covers the JVM, Scala.js and Scala Native distributions.
+Where a project ships separate artifacts per platform, or several artifacts
+under one name, it is listed once under the name a user would recognise.
+
+--------------------------------------------------------------------------------
+SUMMARY BY LICENSE
+--------------------------------------------------------------------------------
+
+Apache License 2.0
+  Scala standard library, scala-collection-compat, scala-xml,
+  Scala.js runtime library, Apache Commons Codec, Apache Commons IO,
+  Apache Commons Compress, Apache Commons Lang, sconfig,
+  Airframe (log, json, ULID), sttp (client, model, shared)
+
+MIT License
+  fastparse, geny, sourcecode, upickle (with ujson and upack), scala-js-dom,
+  scopt
+
+BSD 3-Clause License
+  scala-java-time, scala-java-locales, cldr-api, portable-scala-reflect,
+  Scala Native runtime
+
+================================================================================
+1. APACHE LICENSE 2.0
+================================================================================
+
+The following components are licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at:
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+--- Scala standard library -----------------------------------------------------
+    Copyright (c) 2002-2026 EPFL
+    Copyright (c) 2011-2026 Lightbend, Inc. dba Akka
+    https://github.com/scala/scala3
+
+--- scala-collection-compat ----------------------------------------------------
+    Copyright (c) 2002-2026 EPFL
+    Copyright (c) 2011-2026 Lightbend, Inc. dba Akka
+    https://github.com/scala/scala-collection-compat
+
+--- scala-xml ------------------------------------------------------------------
+    Copyright (c) 2002-2026 EPFL
+    Copyright (c) 2011-2026 Lightbend, Inc. dba Akka
+    https://github.com/scala/scala-xml
+
+--- Scala.js runtime library ---------------------------------------------------
+    Copyright (c) 2013-2026 EPFL
+    https://github.com/scala-js/scala-js
+
+--- Apache Commons Codec -------------------------------------------------------
+    Apache Commons Codec
+    Copyright 2002-2024 The Apache Software Foundation
+
+    This product includes software developed at
+    The Apache Software Foundation (https://www.apache.org/).
+
+--- Apache Commons IO ----------------------------------------------------------
+    Apache Commons IO
+    Copyright 2002-2024 The Apache Software Foundation
+
+    This product includes software developed at
+    The Apache Software Foundation (https://www.apache.org/).
+
+--- Apache Commons Compress ----------------------------------------------------
+    Apache Commons Compress
+    Copyright 2002-2024 The Apache Software Foundation
+
+    This product includes software developed at
+    The Apache Software Foundation (https://www.apache.org/).
+
+--- Apache Commons Lang --------------------------------------------------------
+    Apache Commons Lang
+    Copyright 2001-2024 The Apache Software Foundation
+
+    This product includes software developed at
+    The Apache Software Foundation (https://www.apache.org/).
+
+--- sconfig --------------------------------------------------------------------
+    Copyright (c) 2019-2026 Eric K Richardson
+    Derived from Typesafe Config, Copyright (c) 2011-2026 Lightbend, Inc.
+    https://github.com/ekrich/sconfig
+
+--- Airframe (airframe-log, airframe-json, airframe-ulid) ----------------------
+    Copyright 2018-2026 Taro L. Saito
+    https://github.com/wvlet/airframe
+
+--- sttp (client4, model, shared) ----------------------------------------------
+    Copyright 2017-2026 SoftwareMill
+    https://github.com/softwaremill/sttp
+
+================================================================================
+2. MIT LICENSE
+================================================================================
+
+The following components are licensed under the MIT License:
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
+--- fastparse ------------------------------------------------------------------
+    Copyright (c) 2014-2026 Li Haoyi (haoyi.sg@gmail.com)
+    https://github.com/com-lihaoyi/fastparse
+
+--- geny ----------------------------------------------------------------------
+    Copyright (c) 2018-2026 Li Haoyi (haoyi.sg@gmail.com)
+    https://github.com/com-lihaoyi/geny
+
+--- sourcecode -----------------------------------------------------------------
+    Copyright (c) 2014-2026 Li Haoyi (haoyi.sg@gmail.com)
+    https://github.com/com-lihaoyi/sourcecode
+
+--- upickle (with ujson and upack) ---------------------------------------------
+    Copyright (c) 2014-2026 Li Haoyi (haoyi.sg@gmail.com)
+    https://github.com/com-lihaoyi/upickle
+
+--- scala-js-dom ---------------------------------------------------------------
+    Copyright (c) 2013-2026 Li Haoyi and contributors
+    https://github.com/scala-js/scala-js-dom
+
+--- scopt ----------------------------------------------------------------------
+    Copyright (c) 2010-2026 Martin Ockajak and contributors
+    https://github.com/scopt/scopt
+
+================================================================================
+3. BSD 3-CLAUSE LICENSE
+================================================================================
+
+The following components are licensed under the BSD 3-Clause License:
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice,
+       this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+
+    3. Neither the name of the copyright holder nor the names of its
+       contributors may be used to endorse or promote products derived from
+       this software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+    LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+    SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+
+--- scala-java-time ------------------------------------------------------------
+    Copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
+    Copyright (c) 2017-2026 Carlos Quiroz
+    https://github.com/cquiroz/scala-java-time
+
+--- scala-java-locales ---------------------------------------------------------
+    Copyright (c) 2017-2026 Carlos Quiroz
+    https://github.com/cquiroz/scala-java-locales
+
+--- cldr-api -------------------------------------------------------------------
+    Copyright (c) 2017-2026 Carlos Quiroz
+    https://github.com/cquiroz/scala-java-locales
+
+--- portable-scala-reflect -----------------------------------------------------
+    Copyright (c) 2018-2026 The portable-scala contributors
+    https://github.com/portable-scala/portable-scala-reflect
+
+--- Scala Native runtime -------------------------------------------------------
+    (nativelib, clib, posixlib, windowslib, javalib, auxlib, scalalib,
+     scala3lib, test-interface, java-net-url-stubs)
+
+    Copyright (c) 2015-2026 EPFL
+    https://github.com/scala-native/scala-native
+
+    Note: the scalalib and scala3lib artifacts do not declare a license in
+    their POM files. They are Scala Native's repackaging of the Scala standard
+    library, which is Apache License 2.0 (see section 1); the Scala Native
+    project itself is BSD 3-Clause.
+
+================================================================================
+END OF THIRD-PARTY NOTICES
+================================================================================

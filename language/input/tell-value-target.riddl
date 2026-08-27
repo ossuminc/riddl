@@ -1,0 +1,30 @@
+// `tell <msg> to <value>` -- addressing an INSTANCE rather than a statically named processor.
+// Exercises both target shapes plus `self.id`, so the CI TatSu validator covers the widened
+// tell_statement rule rather than only the processor_ref half it had before.
+domain TellValueTarget is {
+  context Ctx is {
+    type SiteId is Id(entity Ctx.CampSite) with { briefly "an alias, the corpus house style" }
+    command Ping is { note: String(1,20) } with { briefly "a ping" }
+    record R is { siteId: SiteId } with { briefly "holds a reference to another instance" }
+    entity CampSite is {
+      inlet Arrivals is command Ctx.Ping with { briefly "where pings land" }
+      handler CH is {
+        on command Ctx.Ping is { do "note the ping" }
+      } with { briefly "handles pings" }
+    } with { briefly "the addressee" }
+    entity Booking is {
+      state BS of record R is {
+        handler BH is {
+          on init is {
+            // A field typed via an alias to Id(entity CampSite).
+            tell command Ctx.Ping(note = "by field") to Booking.BS.siteId
+            // The enclosing instance -- no lookup needed, it is on the parent stack.
+            tell command Ctx.Ping(note = "by self") to self.id
+            // The static form still parses, told apart by its leading keyword.
+            tell command Ctx.Ping(note = "by name") to entity Ctx.CampSite
+          }
+        } with { briefly "tells three ways" }
+      } with { briefly "booking state" }
+    } with { briefly "the teller" }
+  } with { briefly "context" }
+} with { briefly "domain" }

@@ -1,0 +1,18 @@
+domain foo {
+  application context ui {
+    type Color is any of { Red, Green, Blue }
+    type Palette is any of { Warm, Cool }
+    type Choice is one of { type Color, type Palette }
+    type Amount is Integer
+    page picker is {
+      // Selection verbs paired with choice types (enumeration / alternation)
+      picklist favColor selects type Color
+      selector aChoice chooses type Choice
+      item pick3 picks type Color
+      // Entry verbs for free-form data
+      input amount enters type Amount
+      text given provides String
+      button classic acquires String
+    }
+  }
+}

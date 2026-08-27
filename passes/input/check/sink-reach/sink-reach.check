@@ -1,7 +1,4 @@
 passes/input/check/sink-reach/sink-reach.riddl(12:5->18):
- Sink 'Consumer' is a sink but has no upstream path from any source:
-     sink Consumer is {
-passes/input/check/sink-reach/sink-reach.riddl(12:5->18):
  Sink 'Consumer' should have a handler:
      sink Consumer is {
 passes/input/check/sink-reach/sink-reach.riddl(5:5->19):
@@ -10,3 +7,15 @@ passes/input/check/sink-reach/sink-reach.riddl(5:5->19):
 passes/input/check/sink-reach/sink-reach.riddl(6:7->19):
  Inlet 'DataIn' is not connected:
        inlet DataIn is type Data
+passes/input/check/sink-reach/sink-reach.riddl(12:5->9):
+ The `sink` keyword is deprecated; use `processor Consumer as sink` instead:
+     sink Consumer is {
+passes/input/check/sink-reach/sink-reach.riddl(5:5->9):
+ The `flow` keyword is deprecated; use `processor Processor as flow` instead:
+     flow Processor is {
+passes/input/check/sink-reach/sink-reach.riddl(1:1->17):
+ Domain 'SinkReach' has no author:
+ domain SinkReach is {
+passes/input/check/sink-reach/sink-reach.riddl(1:1->17):
+ Domain 'SinkReach' declares no 'error-sink' inlet, so hard errors have no destination:
+ domain SinkReach is {

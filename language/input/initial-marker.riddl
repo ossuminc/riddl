@@ -1,0 +1,15 @@
+// Corpus fixture exercising the explicit `initial` marker on a state and a handler so that both the
+// fastparse parser (InitialMarkerFileTest) and the EBNF/TatSu grammar accept the same input.
+domain d is {
+  context c is {
+    entity e is {
+      type Data is { x: Integer }
+      state First of record d.c.e.Data is {
+        handler H is { on other is { do "a" } }
+      }
+      initial state Second of record d.c.e.Data is {
+        initial handler H2 is { on other is { do "b" } }
+      }
+    }
+  }
+}

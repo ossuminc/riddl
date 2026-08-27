@@ -1,0 +1,50 @@
+// Task 5 (A20 typed-holes plan): a corpus fixture under `**/input/**/*.riddl` so the CI
+// TatSu grammar validator actually sees the new syntax added by this plan -- without a
+// fixture here, the parser/EBNF sync is asserted (Tasks 1-4) but never checked in CI. Modeled on
+// `numeric-literals.riddl` (same plan shape, same reason for existing).
+//
+// `prompt("...") as <type>` ascribes a type to an AI-computed value (a "typed hole"): the
+// ascription RESTATES the position's already-known type, it never overrides it. Exercises both
+// forms -- ascribed and unascribed -- in each of the four positions an ascription can occupy: a
+// `let`, a `constant`, a constructor argument, and a `when` condition; plus both a PREDEFINED
+// type (`Real`, `String`, `Boolean`) and a DECLARED ALIAS (`OrderId`), since they take different
+// codec and formatting paths (AliasedTypeExpression.format includes its `type` keyword and
+// PromptValue.ascriptionFormat must strip it). NOTE: `Currency` is a predefined type that
+// requires a `country` argument, so it cannot be used bare here -- see the design doc's
+// illustrative (non-compiling) examples.
+domain TypedHoles is {
+  context C is {
+    type OrderId is String
+    record Line is { sku: String, note: String }
+    command Add is { sku: String }
+
+    // A constant with a `prompt` value needs no ascription -- the constant already declares the
+    // type -- but the ascribed form is legal too, and must AGREE with the declared type.
+    constant Plain: Real = prompt("a plausible price")
+    constant Typed: Real = prompt("a plausible price") as Real
+
+    entity E is {
+      record Data is { line: Line, qty: Integer }
+      state S of record Data
+      handler H is {
+        on command Add is {
+          // `let`: unascribed, predefined, and aliased ascriptions.
+          let plain = prompt("a description")
+          let typed = prompt("a description") as Real
+          let aliased = prompt("a description") as OrderId
+
+          // Constructor argument: ascribed and unascribed in the same call.
+          set field E.S.line to record Line(sku = prompt("a sku") as String, note = prompt("a note"))
+
+          // `when` condition: ascribed (Boolean) and unascribed.
+          when prompt("is this urgent") as Boolean then
+            do "escalate"
+          end
+          when prompt("is this urgent") then
+            do "escalate anyway"
+          end
+        }
+      }
+    }
+  }
+}

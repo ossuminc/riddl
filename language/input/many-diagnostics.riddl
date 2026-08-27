@@ -1,0 +1,23 @@
+domain D is {
+  context Owner is {
+    command Poke is { thingId: Id(Thing) }
+    event Poked is { thingId: Id(Thing) }
+    entity Thing as flow is {
+      inlet In is command D.Owner.Poke
+      outlet Out is event D.Owner.Poked
+      record Fields is { thingId: Id(Thing) }
+      initial state Only of record D.Owner.Thing.Fields
+      handler H is {
+        on command D.Owner.Poke { yield event D.Owner.Poked(thingId = prompt("the id")) }
+        on init { do "initialize" }
+      }
+    }
+  }
+  context Peer is {
+    handler Reach is {
+      on poke: command D.Owner.Poke {
+        tell poke to entity D.Owner.Thing
+      }
+    }
+  }
+}

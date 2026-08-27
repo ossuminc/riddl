@@ -1,0 +1,7 @@
+// A model that cannot PARSE.
+//
+// bastify tolerates semantic errors -- it parsed broken.riddl (unresolved path)
+// and wrote a BAST happily -- so only a syntax error makes it exit non-zero.
+domain simple is {
+  context c is {
+    type T is

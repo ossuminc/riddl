@@ -1,0 +1,63 @@
+// A38: a refusal step's reason is prose OR the invariant the request violates.
+//
+// Both spellings are first-class and neither is deprecated. RIDDL has two refusal
+// mechanisms in a handler and only one of them has an invariant to name: a handler
+// refuses either with `require invariant X` or with `error "<prose>"`. Naming the
+// invariant is what closes a use-case step to the `require` it describes, and thence
+// to the InvariantViolated a generated test asserts.
+//
+// A fixture under input/ is the only thing the CI grammar validators can see, so this
+// file exists to put both forms in front of the TatSu EBNF checker, not only fastparse.
+domain Retail is {
+
+  user Buyer is "a person placing an order"
+
+  context Ordering is {
+
+    entity Order is {
+      invariant MustBePaid is "the order carries a completed payment"
+      invariant MustHaveItems is "the order has at least one line item"
+      handler OrderHandler is {
+        on other is { ??? }
+      }
+    }
+
+  }
+
+  epic Purchasing is {
+    user Retail.Buyer wants "to buy goods" so that "they arrive"
+
+    case Refusals is {
+      user Retail.Buyer wants "to submit an order" so that "it is fulfilled"
+
+      // Prose: the honest spelling when the handler refuses with `error "..."` and there
+      // is no invariant to point at.
+      step entity Retail.Ordering.Order refuses user Retail.Buyer
+        "the payment processor was unreachable"
+
+      // Invariant reference: the handler refuses with `require invariant ...`, so the
+      // step can name exactly what was violated.
+      step entity Retail.Ordering.Order refuses user Retail.Buyer
+        invariant Retail.Ordering.Order.MustBePaid
+
+      // A second reference, to prove the form is not a one-off and that a step after one
+      // parses normally.
+      step entity Retail.Ordering.Order refuses user Retail.Buyer
+        invariant Retail.Ordering.Order.MustHaveItems
+
+      // A refusal carrying metadata, in the invariant form.
+      step entity Retail.Ordering.Order refuses user Retail.Buyer
+        invariant Retail.Ordering.Order.MustBePaid
+        with { briefly "refused for want of payment" }
+
+      // [1.5]: the same, NESTED inside a composite. Metadata on a nested step travels a different
+      // path through the JSON surface than on a top-level one, and was DROPPED until 2026-08-17.
+      // This is the fixture that measured it (BriefDescription 2 -> 1) and now pins the fix.
+      sequence {
+        step entity Retail.Ordering.Order refuses user Retail.Buyer
+          invariant Retail.Ordering.Order.MustHaveItems
+          with { briefly "refused for want of items" }
+      }
+    }
+  }
+}

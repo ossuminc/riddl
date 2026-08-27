@@ -11,7 +11,7 @@ domain PersonalBanking is {
   }
 
   domain PersonalBankingApp is {
-    context Test is {
+    application context Test is {
         result Title is { value: String }
         command Name is { value: String }
         group HomePage is {

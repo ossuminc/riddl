@@ -1,0 +1,57 @@
+// Corpus fixture exercising the RIDDL 2.0 handler-kind clauses so that BOTH
+// the fastparse parser (via HandlerKindsFileTest) and the EBNF/TatSu grammar
+// (via ebnf_tatsu_validator.py over **/input/**) accept the same input:
+//   - entity `on activate` / `on passivate` lifecycle clauses
+//   - `on event` clauses (distinct OnEventClause)
+//   - `on other` completeness clauses on adaptors
+domain HandlerKinds is {
+  context Shopping is {
+    command AddItem is { sku: String }
+    event ItemAdded is { sku: String }
+    result CartView is { count: Integer }
+
+    entity Cart is {
+      record Fields is { count: Integer }
+      state Contents of record Cart.Fields
+      handler CartHandler is {
+        on command AddItem {
+          send event ItemAdded to outlet Shopping.emit.out
+        }
+        on event ItemAdded {
+          set field Cart.Contents.count to "count + 1"
+        }
+        on activate {
+          do "rehydrate cart from storage"
+        }
+        on passivate {
+          do "persist cart to storage"
+        }
+        on other {
+          error "unexpected message for Cart"
+        }
+      }
+    }
+
+    source emit is { outlet out is event ItemAdded }
+
+    projector CartProjection is {
+      record Fields is { count: Integer }
+      handler ProjHandler is {
+        on event ItemAdded {
+          do "update the read model"
+        }
+      }
+    }
+
+    adaptor FromInventory from context Shopping is {
+      handler InvHandler is {
+        on event ItemAdded {
+          do "translate inventory event"
+        }
+        on other {
+          error "unexpected message from inventory"
+        }
+      }
+    }
+  }
+}

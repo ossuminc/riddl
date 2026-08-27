@@ -1,0 +1,183 @@
+// A54/A45/A45b/A57: value expressions (constructor, get-value, value-ref) exercised through the
+// `put` (application/context handler) and `return` (function body) statements. Accepted by both the
+// fastparse parser and the EBNF/TatSu grammar, which must stay in lockstep.
+domain Values is {
+  context Calc is {
+    record Args is { a: Integer, b: Integer }
+    record Sum is { total: Integer }
+    function Add is {
+      requires record Args
+      returns record Sum
+      // A57: return a record constructor built with a named argument.
+      return record Sum(total = "the computed total")
+    }
+    // A24: a no-input pure function, called with empty args below.
+    function Zero is {
+      returns record Sum
+      return record Sum(total = "0")
+    }
+    // A24: call a pure function to get a result — named args, in `return` position.
+    function Compute is {
+      requires record Args
+      returns record Sum
+      return call function Add(a = "1", b = "2")
+    }
+    // A24: an empty-arg call to a no-input function.
+    function ComputeZero is {
+      returns record Sum
+      return call function Zero()
+    }
+  }
+  application context UI is {
+    record Greeting is { text: String }
+    command Refresh is { ??? }
+    group Main is {
+      form Entry acquires record Greeting
+      output Panel presents record Greeting
+    }
+    handler Screen is {
+      on command Refresh {
+        // A45/A45b: publish a value read from a UI input to a UI output.
+        put get from input Entry to output Panel
+      }
+    }
+  }
+  // A54: operand widening — send/morph/set/let/yield accept constructors, prompts and value refs.
+  context Ordering is {
+    type Qty is Integer
+    record Line is { sku: String, qty: Qty }
+    command AddLine is { sku: String }
+    event LineAdded is { sku: String }
+    result Ack is { ok: String }
+    outlet added is event LineAdded
+    entity Cart is {
+      record CartData is { line: Line }
+      state Open of record CartData
+      // A second state so the `morph` below has somewhere to go: a transition in a single-state
+      // entity cannot take effect in any lowering and is now an Error.
+      state Closed of record CartData
+      handler Ops is {
+        on command AddLine {
+          // A54: `let` bound to an AI-computed prompt value.
+          let note = prompt("summarize the addition")
+          // A54: `set` a record field via a constructor value.
+          set field Cart.Open.line to record Line(sku = "abc", qty = "1")
+          // A54: `send` an event built by a constructor to an outlet.
+          send event LineAdded(sku = "abc") to outlet Ordering.added
+          // A54: `morph` the entity state with a record constructor.
+          morph entity Cart to state Cart.Open with record CartData(line = record Line(sku = "x", qty = "2"))
+        }
+      }
+    }
+  }
+  // A28: the boolean-expression sub-language exercised through `let`/`set`. Comparisons, logical
+  // and/or/not, precedence, parenthesization, and boolean literals all parse and validate here.
+  context Flags is {
+    command Check is { threshold: Integer }
+    // A28 s3: a numeric constant used as a type-safe comparison operand. A bare numeric literal is
+    // also a legal comparand (Reid reversed A28's ref-only rule 2026-08-14) and draws only a
+    // StyleWarning nudging toward a named constant like this one — it is preferred style, not a
+    // parser restriction.
+    constant MaxCount is Integer = 100
+    entity Gate is {
+      record GateData is { count: Integer, active: Boolean, open: Boolean }
+      state Status of record GateData
+      handler Ops is {
+        on command Check {
+          // A28: comparison + logical `and` + `not` over message/state fields (a > b and not c).
+          let ok = count > threshold and not active
+          // A28 s3: compare a field against a numeric `constant` — bare path and `constant` keyword.
+          let underMax = count > MaxCount
+          let underMax2 = count > constant MaxCount
+          // A28: a bare boolean literal.
+          let always = true
+          // A28: parenthesization overrides precedence ((a or b) grouped, then `and`).
+          let either = (active or open) and ok
+          // A28: `set` a boolean field to a comparison (set f to a == b).
+          set field Gate.Status.open to count == threshold
+        }
+      }
+    }
+  }
+  // A28 slice 2: structured boolean expressions as when/require/invariant CONDITIONS (not just
+  // let/set values). Exercises the widened condition parsers so the EBNF/TatSu grammar covers them.
+  context Conditions is {
+    command Act is { count: Integer }
+    entity Guard is {
+      record GuardData is { count: Integer, total: Integer, active: Boolean }
+      state GState of record GuardData
+      // A28: an invariant condition as a structured comparison (was: opaque literal string only).
+      invariant balanced is count == total
+      handler Rules is {
+        on command Act {
+          // A28: a `require` condition as a comparison (was: literal string / invariant ref only).
+          require count == total
+          // A28: a `when` condition as a structured boolean expression (was: literal / identifier).
+          when count > total and not active then
+            error "over"
+          end
+          // A17: a bare boolean value reference as a first-class `when` condition (single name).
+          when active then
+            error "inactive"
+          end
+          // A17: a bare boolean value reference via a dotted path (resolved on its last component).
+          when GState.active then
+            error "inactive"
+          end
+        }
+      }
+    }
+  }
+  // A29: structured `match` — type-cases over a closed enumeration (exhaustive, no default needed),
+  // value-comparison patterns with an explicit operator, a `when` guard, and the legacy pseudo-code
+  // string form. All parse via fastparse and the EBNF/TatSu grammar, and validate cleanly.
+  context Matching is {
+    type OrderStatus is any of { Pending, Shipped, Delivered }
+    command Track is { status: OrderStatus, count: Integer }
+    constant MaxRetries is Integer = 3
+    entity Tracker is {
+      record TrackData is { status: OrderStatus, count: Integer, active: Boolean }
+      state TState of record TrackData
+      handler Ops is {
+        on command Track {
+          // Type-cases covering every enumerator of a closed subject -> exhaustive (no `default`).
+          match status {
+            case Pending { error "pending" }
+            case Shipped { error "shipped" }
+            case Delivered { error "delivered" }
+          }
+          // Value-comparison patterns (subject is the implicit left operand) + a `when` guard; the
+          // `default` branch covers the rest so there is no exhaustiveness warning.
+          match count {
+            case == MaxRetries { error "at max" }
+            case > MaxRetries when active { error "over max" }
+            default { error "under" }
+          }
+          // Legacy pseudo-code string match still parses unchanged.
+          match "orderStatus" {
+            case "pending" { error "pending" }
+            default { error "unknown" }
+          }
+        }
+      }
+    }
+  }
+  // `self` -- the running processor instance -- and `self.<field>` on its synthesized record.
+  // `self` MUST precede value_ref in the grammar (it is not a definition keyword), so this
+  // exercises that ordering as well as the field access and the indirect `let x = self; x.id` form.
+  context Identity is {
+    command Go is { why: String }
+    record R is { total: Integer }
+    entity Order is {
+      state S of record R
+      handler H is {
+        on command Go {
+          let mine = self.id
+          let v = self.version
+          let me = self
+          let mineToo = me.id
+        }
+      }
+    }
+  }
+}

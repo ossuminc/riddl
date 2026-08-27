@@ -48,3 +48,9 @@ passes/input/check/ambiguity/ambiguity.riddl(9:19->26):
 passes/input/check/ambiguity/ambiguity.riddl(9:3->13):
  Type 'Alias' is unused:
    type Alias = Id(Product)
+passes/input/check/ambiguity/ambiguity.riddl(1:1->17):
+ Domain 'Inventory' has no author:
+ domain Inventory is {
+passes/input/check/ambiguity/ambiguity.riddl(1:1->17):
+ Domain 'Inventory' declares no 'error-sink' inlet, so hard errors have no destination:
+ domain Inventory is {

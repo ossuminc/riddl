@@ -1,0 +1,41 @@
+domain Retail is {
+  context Sales is {
+    // An event declared OUTSIDE the entity: foreign to it.
+    event PaymentTaken is { amount: Integer } with { briefly "paid" }
+
+    // Every intention keyword, one per entity, so the grammar validators cover each.
+    aggregate consistent event-sourced entity Order is {
+      record Fields is { total: Integer } with { briefly "the order total" }
+      command Place yields event Placed is { total: Integer } with { briefly "place it" }
+      event Placed is { total: Integer } with { briefly "it was placed" }
+      state Main of record Order.Fields is {
+        handler Behavior is {
+          on command Order.Place { yield event Order.Placed } with { briefly "record it" }
+          on event Order.Placed { set field Main.total to "1" } with { briefly "apply it" }
+          // A foreign event may not set state; it turns into one of our own events first.
+          on event Sales.PaymentTaken { yield event Order.Placed } with { briefly "adopt it" }
+        } with { briefly "the behaviour" }
+      } with { briefly "the live state" }
+    } with { briefly "an event-sourced order" }
+
+    available transient entity Session is {
+      record Fields is { token: String } with { briefly "the token" }
+      command Refresh is { token: String } with { briefly "refresh it" }
+      state Main of record Session.Fields is {
+        handler Behavior is {
+          on command Session.Refresh { set field Main.token to "new" } with { briefly "refresh" }
+        } with { briefly "the behaviour" }
+      } with { briefly "the state" }
+    } with { briefly "a transient session" }
+
+    persistent entity Customer is {
+      record Fields is { name: String } with { briefly "the name" }
+      command Rename is { name: String } with { briefly "rename it" }
+      state Main of record Customer.Fields is {
+        handler Behavior is {
+          on command Customer.Rename { set field Main.name to "new" } with { briefly "rename" }
+        } with { briefly "the behaviour" }
+      } with { briefly "the state" }
+    } with { briefly "a persistent customer" }
+  } with { briefly "sales" }
+} with { briefly "Entity intentions, one of each" }

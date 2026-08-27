@@ -66,11 +66,11 @@ domain Everything is {
       event Inebriated is { ??? }
 
       record fields is { field:  SomeType }
-      state someState of Something.fields
+      state someState of record Something.fields
       handler foo is {
         on command ACommand {
           when "and(Something arrives, misc())" then
-            send event Inebriated to inlet Everything.full.input
+            send event Inebriated to outlet Everything.APlant.Source.Commands
           end
         }
       }
@@ -90,9 +90,9 @@ domain Everything is {
     }
 
     entity SomeOtherThing is {
-      type ItHappened is event { field: String }
+      event ItHappened is { field: String }
       record fields is { field: String }
-      state otherThingState of SomeOtherThing.fields
+      state otherThingState of record SomeOtherThing.fields
       handler fee is {
         on event ItHappened {
            set field SomeOtherThing.otherThingState.field to "field ItHappened.field"

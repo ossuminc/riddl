@@ -1,0 +1,84 @@
+// Test (A47): `copyright` as a NAMED leaf definition, and A53's `version` widened
+// to all six processors. Both are scope-inherited leaves, but they inherit
+// DIFFERENTLY: a version COMPOSES a coordinate out of every versioned ancestor,
+// while a copyright is NEAREST-WINS -- the applicable notice is the one from the
+// closest ancestor that declares one, and nothing accumulates.
+copyright House is "© 2026 Ossum Inc."
+version Jellyfish
+
+domain CopyrightTest is {
+  copyright Product is "© 2026 Ossum Inc. All rights reserved."
+  version Garibaldi
+
+  // A plain context inherits `Product` from the domain and contributes `4` to the
+  // composed version, so its contents compose to `Jellyfish.Garibaldi.4`.
+  context Banking is {
+    version 4
+
+    entity Account is {
+      // The entity refines BOTH: its own notice wins over the domain's, and its
+      // component extends the coordinate to `Jellyfish.Garibaldi.4.3`.
+      copyright Account is "© 2026 Ossum Inc. (Account subsystem)"
+      version 3
+
+      record Balance(amount: Integer)
+      command Withdraw(sum: Integer)
+
+      state Open of record Account.Balance is {
+        handler onOpen is {
+          on command Withdraw {
+            do "debit the balance"
+          }
+        }
+      }
+    }
+
+    // A repository is a Processor, so A47 admits both leaves here too.
+    repository Ledger is {
+      copyright Vendor is "© 2026 Third Party Ltd."
+      version 2
+
+      record Rec(id: Integer)
+
+      schema Store is relational
+        of Rec as record Banking.Ledger.Rec
+    }
+
+    // So is a projector ...
+    projector Balances is {
+      version 1
+      record Row(amount: Integer)
+      handler Updates is { on other is { do "refresh" } }
+    }
+
+    // ... and a streamlet ...
+    command Ping(at: TimeStamp)
+
+    processor Feed as source is {
+      copyright Feed is "© 2026 Ossum Inc. (feed)"
+      version 5
+      outlet Out is command Banking.Ping
+    }
+
+    // ... and an adaptor.
+    adaptor FromLegacy to context CopyrightTest.Legacy is {
+      copyright Legacy is "© 1998 Legacy Systems Inc."
+      version 7
+    }
+  }
+
+  // An `external` context bearing a FOREIGN holder's notice: nearest-wins means
+  // this copyright -- not the domain's -- applies to everything inside it.
+  external context Legacy is {
+    copyright Foreign is "© 1998 Legacy Systems Inc. All rights reserved."
+
+    command Migrate(id: Integer)
+  }
+} with {
+  briefly "Test domain for copyright as a scoped definition (A47)"
+}
+
+module CopyrightedModule is {
+  copyright Module is "© 2026 Ossum Inc. (module)"
+  version 12
+}

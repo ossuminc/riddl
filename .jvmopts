@@ -1,4 +1,18 @@
--Xms5120M
--Xmx8192M
--Xss6M
+# Heap sized for the COVERAGE-INSTRUMENTED compile, which is the worst case this build has and
+# is what CI runs too. Measured 2026-07-28 by bisecting a full `clean; coverage;
+# <every module>/Test/compile`:
+#
+#   8g  -> OutOfMemoryError in dotty.tools.dotc.transform.InstrumentCoverage
+#   9g  -> passes  (the floor; 10g chosen for headroom, since the cliff is 1g wide and CI
+#          runners differ from a dev Mac)
+#   11g, 14g, 20g -> pass
+#
+# Xms is 1g, chosen by hand. It is NOT measured: GC logging could not be got into the JVM that
+# does the compiling (sbt reuses a server process whose options are fixed at startup, so -Xlog
+# via .jvmopts, SBT_OPTS and -J were all ignored alike). To put it on evidence, observe a
+# genuinely cold compile with -Xlog:gc and size Xms from the post-GC live set; a low Xms trades
+# committed memory for heap growth during the build.
+-Xmx10g
+-Xms1g
+-Xss8M
 -Dfile.encoding=UTF-8

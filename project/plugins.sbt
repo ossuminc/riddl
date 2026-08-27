@@ -1,13 +1,17 @@
 // GitHub Packages resolver for sbt-ossuminc
+
 resolvers += "GitHub Packages" at "https://maven.pkg.github.com/ossuminc/sbt-ossuminc"
 
-addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "1.4.0")
+// Credentials MUST live in the meta-build (here), not only in the global
+// ~/.sbt/2/github.sbt: under sbt 2 the global credentials file is not applied to
+// meta-build (plugin) resolution, so plugin fetches from GitHub Packages get a
+// 401 despite a valid GITHUB_TOKEN. Reads GITHUB_TOKEN from the environment
+// (the CI Actions token, or a local PAT exported as GITHUB_TOKEN).
+credentials += Credentials(
+  "GitHub Package Registry",
+  "maven.pkg.github.com",
+  "x-access-token",
+  sys.env.getOrElse("GITHUB_TOKEN", "")
+)
 
-// This enables sbt-bloop to create bloop config files for Metals editors
-// Uncomment locally if you use metals, otherwise don't slow down other
-// people's builds by leaving it commented in the repo.
-// addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "1.4.6")
-
-ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % "always"
-
-libraryDependencies += "org.scala-js" %% "scalajs-env-jsdom-nodejs" % "1.0.0"
+addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "3.1.0")

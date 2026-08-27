@@ -4,33 +4,35 @@ context other  is {
   by author Reid
   attachment foo is text/plain as "nada"
 }
-context context is {
-  adaptor adaptor from context other is { ??? }
-  function function is { ??? }
+context 'context' is {
+  adaptor 'adaptor' from context other is { ??? }
+  function 'function' is { ??? }
   event event is { at: TimeStamp }
-  handler handler is {
+  handler 'handler' is {
     on event event {
-      when "there is an error" then
-        error "This is an error"
+      when "there is a condition" then
+        do "handle the event"
       end
     }
   }
-  repository repository is { ??? }
+  repository 'repository' is { ??? }
   source source is { ??? }
   sink sink is { ??? }
   flow flow is { ??? }
   merge merge is { ??? }
   split split is { ??? }
-  saga saga is {
+  saga 'saga' is {
+   // a saga body admits comments and types, like every other vital definition
    step a is {
-     prompt "a.1"
+     do "a.1"
    } reverted by {
-     prompt "a_r.1"
+     do "a_r.1"
    }
+   // compensation runs the completed steps' `reverted by` blocks in reverse order
    step b is {
-     prompt "b.1"
+     do "b.1"
    } reverted by {
-     prompt "b_r.1"
+     do "b_r.1"
    }
  }
 } with {

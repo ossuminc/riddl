@@ -1,0 +1,38 @@
+// Exercises the `forward` statement in BOTH transmission shapes, so the CI grammar validators
+// cover it rather than asserting the EBNF against itself.
+//
+// `forward` passes the handled message on and discharges the response obligation: whatever handles
+// it downstream produces the declared `yields`/`replies`. It is legal only where there is something
+// to delegate -- a command declaring `yields`, or a query declaring `replies`.
+domain Delegation is {
+  context Boundary is {
+    event Happened is { note: String } with { briefly "what happened" }
+    result Answer is { note: String } with { briefly "the answer" }
+
+    command DoIt yields event Boundary.Happened is { note: String } with { briefly "a command" }
+    query AskIt replies result Boundary.Answer is { note: String } with { briefly "a query" }
+
+    entity Worker is {
+      inlet Work is command Boundary.DoIt
+      handler w is {
+        on command Boundary.DoIt is { yield event Boundary.Happened }
+        on query Boundary.AskIt is { reply result Boundary.Answer }
+      } with { briefly "does the work" }
+    } with { briefly "downstream worker" }
+
+    entity Front is {
+      outlet Onward is command Boundary.DoIt
+
+      handler h is {
+        // Portlet shape: forward to an outlet, exactly where `send` would go.
+        on doIt: command Boundary.DoIt is {
+          forward doIt to outlet Boundary.Front.Onward
+        }
+        // Processor shape: forward to a processor, exactly where `tell` would go.
+        on askIt: query Boundary.AskIt is {
+          forward askIt to entity Boundary.Worker
+        }
+      } with { briefly "the boundary handler" }
+    } with { briefly "boundary entity" }
+  } with { briefly "a context showing delegation" }
+} with { briefly "forward statement coverage" }

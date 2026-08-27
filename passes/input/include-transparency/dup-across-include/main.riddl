@@ -1,0 +1,6 @@
+domain d is {
+  context Ctx is {
+    type Thing is Integer
+    include "more"
+  }
+}

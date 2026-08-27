@@ -3,30 +3,112 @@ name: Scala Build
 on:
   workflow_dispatch:
   push:
-    branches: [ main, development ]
+    # `release/*` included so a release branch gets CI before it is tagged. The
+    # 2.0 branch ran for months on local runs alone, because it matched nothing
+    # here and every CI run on it had to be dispatched by hand.
+    branches: [ main, development, 'release/*' ]
   pull_request:
-    branches: [ main, development ]
+    branches: [ main, development, 'release/*' ]
     paths-ignore:
       - 'doc/src/main/hugo/**'
       - '.github/workflows/gh-pages.yml'
 
 jobs:
   scala-build:
+    # Without this, GitHub labels each job with EVERY matrix field, so a row reads
+    # `scala-build (Native, Native-commands, ; clean; cNative; commandsNative/testOnly *, no)`.
+    # `matrix.row` is the whole point of that field existing.
+    name: ${{ matrix.row }}
     timeout-minutes: 60
     permissions:
       contents: read
       packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RIDDLC_PATH: riddlc/native/target/scala-3.8.3/riddlc
+      RIDDLC_PATH: target/out/native0.5/scala-3.9.0/riddlc/riddlc
+      # The corpus conforming to this branch lives on riddl-models `release/2`;
+      # its `main` still holds the 1.x models. Without this the round-trip test
+      # downloads `main` and fails against the 2.0 grammar — while local runs
+      # pass, because they use the developer's own checkout. REMOVE this line
+      # when riddl-models merges to `main` at 2.0.0 final.
+      RIDDL_MODELS_BRANCH: release/2
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Native is SPLIT PER MODULE, the others are not. Until 2026-08-19 Native was one row
+      # running `cNative; tNative` for all seven modules, and after `1c318b844` put
+      # RiddlModelsRoundTripTest's 189 corpus cases onto Native that row went 18 min -> 36 -> 55
+      # and then died 18 runs in a row. It did NOT hit `timeout-minutes`: it died at 55-56 of 60
+      # with the step still `in_progress` and NO log blob at all -- a lost runner, not a timeout.
+      # (A real timeout looks different, and we have one to compare against: an earlier attempt
+      # ran to 60:23 and GitHub marked the step `cancelled`, with its logs intact.)
+      #
+      # Per-module rows buy three things: each row is a fresh runner with its own memory, they run
+      # in parallel so wall-clock drops rather than rises, and a failure names the MODULE instead
+      # of vanishing with the agent. The cost is recompiling Native once per row.
       matrix:
-        platform: [JVM, Native, JS]
+        include:
+          - platform: JVM
+            row: JVM
+            test-cmd: "; clean; cJVM; tJVM"
+            artifacts: 'yes'
+          - platform: JS
+            row: JS
+            test-cmd: "; clean; cJS; tJS"
+            artifacts: 'yes'
+          - platform: Native
+            row: Native-utils
+            test-cmd: "; clean; cNative; utilsNative/testOnly *"
+            artifacts: 'no'
+          - platform: Native
+            row: Native-language
+            test-cmd: "; clean; cNative; languageNative/testOnly *"
+            artifacts: 'no'
+          - platform: Native
+            row: Native-passes
+            test-cmd: "; clean; cNative; passesNative/testOnly *"
+            artifacts: 'no'
+          - platform: Native
+            row: Native-testkit
+            test-cmd: "; clean; cNative; testkitNative/testOnly *"
+            artifacts: 'no'
+          # The heaviest row by far: 189 corpus round trips, each running riddlc four times.
+          - platform: Native
+            row: Native-commands
+            test-cmd: "; clean; cNative; commandsNative/testOnly *"
+            artifacts: 'no'
+          - platform: Native
+            row: Native-riddlLib
+            test-cmd: "; clean; cNative; riddlLibNative/testOnly *"
+            artifacts: 'no'
+          # Carries the Native release artifacts, so exactly one Native row uploads them.
+          - platform: Native
+            row: Native-riddlc
+            test-cmd: "; clean; cNative; riddlcNative/testOnly *"
+            artifacts: 'yes'
     steps:
     - name: Checkout Code
       uses: actions/checkout@v6
+      with:
+        fetch-depth: 0      # full history + tags so sbt-dynver can `git describe`
+        fetch-tags: true
+
+    # [1.3]: the corpus suites read SIBLING checkouts (`../riddl-models`, `../riddl-examples`)
+    # and SKIP when they are absent. They used to download a zip per run, which is what kept them
+    # off Scala Native — `java.net.URL.openStream` is a stub there — and cost a fetch per job.
+    #
+    # `git clone`, not actions/checkout: the path has to be a SIBLING of the workspace, and
+    # actions/checkout refuses to write outside it. Shallow, since only the working tree is read.
+    #
+    # If these steps ever fail, the suites SKIP rather than fail — so check the log for
+    # "skipping rather than failing" before concluding the corpus passed.
+    - name: Checkout sibling corpora for the test suites
+      run: |
+        git clone --depth 1 --branch "$RIDDL_MODELS_BRANCH" \
+          https://github.com/ossuminc/riddl-models.git ../riddl-models
+        git clone --depth 1 \
+          https://github.com/ossuminc/riddl-examples.git ../riddl-examples
+        ls -d ../riddl-models ../riddl-examples
 
     - name: Set Up JDK 25
       uses: actions/setup-java@v5
@@ -41,10 +123,37 @@ jobs:
     - name: Coursier Caching
       uses: coursier/cache-action@v7
 
+    # [1.9]: DISCARD the sbt 2 ACTION CACHE, keep everything else.
+    #
+    # `sbt/setup-sbt` restores `$HOME/.cache/sbt` under a key of the form
+    # `Linux-X64-sbt-runner-<sbtVersion>-<actionVersion>` -- keyed on VERSIONS, not on content.
+    # `v2/ac` inside it is sbt 2's action cache: a map from task-input hashes to task RESULTS,
+    # test results included. It therefore survives across runs.
+    #
+    # That is fine for tasks whose inputs sbt can see, and WRONG for the corpus suites. They read
+    # `../riddl-models` and `../riddl-examples`, which are cloned by the step above and are not
+    # build inputs at all, so their CONTENT is in no cache key. A result computed before a rule
+    # landed -- or before the corpus migrated -- stays valid-looking indefinitely, and a green
+    # corpus suite becomes evidence about the CACHE rather than about the corpus.
+    #
+    # Deleting `ac` alone costs only incremental task-result reuse. The expensive parts are
+    # untouched: dependency downloads stay in the Coursier and ivy2 caches, the sbt launcher and
+    # JDK stay in their own, and `v2/cas` (the content-addressed blob store) is left in place.
+    #
+    # This is the CI half of [1.9]. The other half is in the suites themselves, which now assert
+    # a MINIMUM MODEL COUNT -- because a replayed result and a truncated corpus look identical
+    # from the outside, and neither is caught by an assertion that only compares one count to
+    # another.
+    - name: Discard sbt action cache so corpus suites cannot replay
+      shell: bash
+      run: |
+        rm -rf "$HOME/.cache/sbt/v2/ac" || true
+        echo "sbt action cache removed; task results will be recomputed"
+
     - name: Configure sbt GitHub Packages credentials
       run: |
-        mkdir -p ~/.sbt/1.0
-        cat > ~/.sbt/1.0/github.sbt << 'EOF'
+        mkdir -p ~/.sbt/2
+        cat > ~/.sbt/2/github.sbt << 'EOF'
         credentials += Credentials(
           "GitHub Package Registry",
           "maven.pkg.github.com",
@@ -53,17 +162,18 @@ jobs:
         )
         EOF
 
-    - name: Cache SBT Build Outputs
-      uses: actions/cache@v5
-      with:
-        path: |
-          **/target/scala-3.8.3
-          !**/target/scala-3.8.3/src_managed
-          !**/target/scala-3.8.3/resource_managed
-        key: ${{ runner.os }}-sbt-build-${{ matrix.platform }}-${{ hashFiles('**/*.sbt', 'project/**') }}
-        restore-keys: |
-          ${{ runner.os }}-sbt-build-${{ matrix.platform }}-
-          ${{ runner.os }}-sbt-build-
+    # NO target/out CACHE. sbt 2's build outputs are NOT safely portable between runs:
+    # restoring them left sbt believing the meta-build was already built, so
+    # project/Dependencies.scala never contributed its symbols and build.sbt collapsed with
+    # dozens of "Not found: V" / "Not found: Dep" plus an Append ambiguity on a line nobody
+    # had touched. The evidence was unambiguous once the runs were lined up: EVERY cold build
+    # passed and EVERY build that restored this cache failed, including #2192 and #2193, which
+    # restored the cache saved by the SUCCESSFUL #2191 and failed anyway. Dropping restore-keys
+    # first did not fix it -- that only made one run cold by accident.
+    #
+    # Dependency downloads, which are the expensive part, are still cached by the Coursier and
+    # ivy2 steps. What is given up is incremental recompilation between CI runs, which was
+    # never trustworthy here anyway.
 
     - name: Install LLVM and Clang (Native only)
       if: matrix.platform == 'Native'
@@ -80,9 +190,34 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libcurl4-openssl-dev libidn2-dev
 
-    - name: Build And Test ${{ matrix.platform }} Versions
+    # Resource diagnostics bracket the build because the Native failure mode is a LOST RUNNER
+    # with no logs, and a lost runner cannot tell you why it died. Memory is the leading
+    # suspicion: Scala Native is built with `gc = "none"` (sbt-ossuminc's default, never
+    # overridden here), which never reclaims, so a long-running test binary grows monotonically.
+    # `Maximum resident set size` from /usr/bin/time is the number that settles it.
+    - name: Resources before ${{ matrix.row }}
       run: |
-        sbt clean c${{ matrix.platform }} t${{ matrix.platform }} 
+        echo "cpus: $(nproc)"
+        free -m
+        df -h .
+
+    - name: Build And Test ${{ matrix.row }}
+      run: |
+        if command -v /usr/bin/time >/dev/null 2>&1; then
+          /usr/bin/time -v sbt "${{ matrix.test-cmd }}"
+        else
+          echo "note: /usr/bin/time absent; running without RSS measurement"
+          sbt "${{ matrix.test-cmd }}"
+        fi
+
+    - name: Resources after ${{ matrix.row }}
+      if: always()
+      run: |
+        free -m
+        df -h .
+        echo "--- kernel OOM evidence (empty means the kernel did not kill anything) ---"
+        sudo dmesg 2>/dev/null | grep -iE "out of memory|oom-kill|killed process" | tail -20 \
+          || echo "none found"
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@12fa20e14d449d310778f2d0af1e3b2f57dde2a7 # v2
@@ -95,26 +230,19 @@ jobs:
     - name: Publish JVM RIDDL Libs & Test sbt-riddl plugin
       if: matrix.platform == 'JVM'
       env:
-        RIDDLC_PATH: riddlc/jvm/target/universal/stage/bin/riddlc
+        RIDDLC_PATH: target/out/jvm/scala-3.9.0/riddlc/universal/stage/bin/riddlc
       run: |
-        sbt \
-          utils/publishLocal \
-          language/publishLocal \
-          passes/publishLocal \
-          commands/publishLocal \
-          riddlLib/publishLocal \
-          riddlc/stage \
-          sbt-riddl/scripted
+        sbt "; utils/publishLocal; language/publishLocal; passes/publishLocal; commands/publishLocal; riddlLib/publishLocal; riddlc/stage; sbt-riddl/scripted"
 
     - name: Package JVM Release Artifacts
       if: matrix.platform == 'JVM'
       run: |
-        sbt "set every Compile/doc/sources := Seq.empty" "riddlc/Universal/packageBin" "riddlLib/Universal/packageBin"
+        sbt "; riddlc/Universal/packageBin; riddlLib/Universal/packageBin"
 
     - name: Package Native Release Artifacts
-      if: matrix.platform == 'Native'
+      if: matrix.platform == 'Native' && matrix.artifacts == 'yes'
       run: |
-        sbt riddlcNative/nativeLink riddlLibNative/nativeLink
+        sbt "; riddlcNative/nativeLink; riddlLibNative/nativeLink"
 
     - name: Package JS Release Artifacts
       if: matrix.platform == 'JS'
@@ -128,18 +256,18 @@ jobs:
         name: collect-release-artifacts-jvm
         retention-days: 30
         path: |
-          riddlc/jvm/target/universal/riddlc.zip
-          riddlLib/jvm/target/universal/riddlLib.zip
+          target/out/jvm/scala-3.9.0/riddlc/universal/*.zip
+          target/out/jvm/scala-3.9.0/riddl-lib/universal/*.zip
 
     - name: Collect Release Artifacts (Native)
-      if: matrix.platform == 'Native'
+      if: matrix.platform == 'Native' && matrix.artifacts == 'yes'
       uses: actions/upload-artifact@v6
       with:
         name: collect-release-artifacts-native
         retention-days: 30
         path: |
-          riddlc/native/target/scala-3.8.3/riddlc
-          riddlLib/native/target/scala-3.8.3/libriddl-lib.a
+          target/out/native0.5/scala-3.9.0/riddlc/riddlc
+          target/out/native0.5/scala-3.9.0/riddl-lib/libriddl-lib.a
 
     - name: Collect Release Artifacts (JS)
       if: matrix.platform == 'JS'
@@ -148,7 +276,7 @@ jobs:
         name: collect-release-artifacts-js
         retention-days: 30
         path: |
-          riddlLib/js/target/scala-3.8.3/riddl-lib-opt/main.js
+          target/out/sjs1/scala-3.9.0/riddl-lib/riddl-lib-opt/main.js
           riddlLib/js/types/index.d.ts
 
     - name: Cleanup Before Caching
@@ -175,11 +303,11 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        pip install -r language/jvm/src/test/python/requirements.txt
+        pip install -r language/src/test/scalajvm/python/requirements.txt
 
     - name: Validate EBNF Grammar with TatSu (internal test files)
       run: |
-        cd language/jvm/src/test/python
+        cd language/src/test/scalajvm/python
         python ebnf_tatsu_validator.py --verbose
 
     - name: Checkout riddl-examples
@@ -190,18 +318,28 @@ jobs:
 
     - name: Validate EBNF Grammar against riddl-examples
       run: |
-        cd language/jvm/src/test/python
+        cd language/src/test/scalajvm/python
         python validate_external_riddl.py --repo ${{ github.workspace }}/riddl-examples
 
-    - name: Verify GBNF is up-to-date
-      run: |
-        cd language/jvm/src/test/python
-        python ebnf_to_gbnf.py --check
+    # riddl-models is the LARGER corpus and was validated only by hand until now. It is a
+    # different check from RiddlModelsRoundTripTest: that exercises the fastparse parser and
+    # BAST round-trip, while this checks the DOCUMENTED EBNF grammar accepts the same inputs.
+    # If the two ever diverge the round-trip test stays green while the published grammar is
+    # wrong, which is the whole point of the parser/EBNF synchronisation rule.
+    #
+    # Pinned to release/2 for the same reason RIDDL_MODELS_BRANCH is: riddl-models `main`
+    # still holds the 1.x corpus. Drop the ref when it merges at 2.0.0 final.
+    - name: Checkout riddl-models
+      uses: actions/checkout@v6
+      with:
+        repository: ossuminc/riddl-models
+        ref: release/2
+        path: riddl-models
 
-    - name: Validate GBNF Grammar
+    - name: Validate EBNF Grammar against riddl-models
       run: |
-        cd language/jvm/src/test/python
-        python gbnf_validator.py --skip-freshness
+        cd language/src/test/scalajvm/python
+        python validate_external_riddl.py --repo ${{ github.workspace }}/riddl-models
 
   dependency-check:
     timeout-minutes: 15

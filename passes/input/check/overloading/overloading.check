@@ -9,3 +9,6 @@ passes/input/check/overloading/overloading.riddl(3:3->16):
 passes/input/check/overloading/overloading.riddl(4:3->14):
  Type 'Device' is unused:
    type Device is any of { Keyboard, Mouse, Monitor}
+passes/input/check/overloading/overloading.riddl(1:1->14):
+ Domain 'ignore' has no author:
+ domain ignore = {

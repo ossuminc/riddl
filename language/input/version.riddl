@@ -1,0 +1,73 @@
+// Test (A53): `version` as a leaf definition with scope composition.
+// A version component is EITHER a name OR a natural number, never both, and a
+// scope may declare at most one. Composing the versioned ancestors root-to-leaf
+// and joining with "." gives a definition's precise version -- here the entity
+// `Account` and everything inside it compose to `Garibaldi.4.3`.
+version Jellyfish
+
+domain VersionTest is {
+  version Garibaldi
+
+  context Banking is {
+    version 4
+
+    entity Account is {
+      version 3
+
+      record Balance(amount: Integer)
+      command Withdraw(sum: Integer)
+
+      state Open of record Account.Balance is {
+        handler onOpen is {
+          on command Withdraw {
+            do "debit the balance"
+          }
+        }
+      }
+    }
+
+    // Missing-level rule: this entity bears no version of its own, so it
+    // composes to `Garibaldi.4` -- one component shorter than Account's.
+    entity Ledger is {
+      record Entry(amount: Integer)
+      command Post(sum: Integer)
+
+      state Recording of record Ledger.Entry is {
+        handler onPost is {
+          on command Post {
+            do "append the entry"
+          }
+        }
+      }
+    }
+  }
+
+  // An unversioned context between versioned scopes contributes nothing, so the
+  // entity below composes to `Garibaldi.7`.
+  context Reporting is {
+    entity Report is {
+      version 7
+
+      record Row(label: String)
+      command Render(label: String)
+
+      state Draft of record Report.Row is {
+        handler onRender is {
+          on command Render {
+            do "render the row"
+          }
+        }
+      }
+    }
+  }
+} with {
+  briefly "Test domain for versions as scoped definitions (A53)"
+}
+
+module VersionedModule is {
+  version 'Jammy Jellyfish'
+
+  domain Inner is {
+    version 12
+  }
+}

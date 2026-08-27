@@ -31,12 +31,14 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+        fetch-depth: 0
+        fetch-tags: true
 
     - name: Set Up JDK 25
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '25'
         distribution: temurin
@@ -46,12 +48,12 @@ jobs:
       uses: sbt/setup-sbt@7e33f738678e47369c83dcb4b1d9c65d66eb3cdd # v1
 
     - name: Coursier Caching
-      uses: coursier/cache-action@2addd381bd2c931f42d4b734b9d0c9b73aac16fb # v6
+      uses: coursier/cache-action@v7
 
     - name: Configure sbt GitHub Packages credentials
       run: |
-        mkdir -p ~/.sbt/1.0
-        cat > ~/.sbt/1.0/github.sbt << 'CREDSEOF'
+        mkdir -p ~/.sbt/2
+        cat > ~/.sbt/2/github.sbt << 'CREDSEOF'
         credentials += Credentials(
           "GitHub Package Registry",
           "maven.pkg.github.com",
@@ -77,7 +79,7 @@ jobs:
     - name: Package Native Binary
       run: |
         mkdir -p staging/bin
-        cp riddlc/native/target/scala-3.8.3/riddlc staging/bin/riddlc
+        cp target/out/native0.5/scala-3.9.0/riddlc/riddlc staging/bin/riddlc
         cd staging && zip -r ../${{ matrix.artifact }}.zip bin/
 
     - name: Upload to Release
@@ -88,7 +90,7 @@ jobs:
         gh release upload "$TAG" "${{ matrix.artifact }}.zip" --clobber
 
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ matrix.artifact }}
         retention-days: 30
@@ -105,12 +107,14 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+        fetch-depth: 0
+        fetch-tags: true
 
     - name: Set Up JDK 25
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '25'
         distribution: temurin
@@ -120,12 +124,12 @@ jobs:
       uses: sbt/setup-sbt@7e33f738678e47369c83dcb4b1d9c65d66eb3cdd # v1
 
     - name: Coursier Caching
-      uses: coursier/cache-action@2addd381bd2c931f42d4b734b9d0c9b73aac16fb # v6
+      uses: coursier/cache-action@v7
 
     - name: Configure sbt GitHub Packages credentials
       run: |
-        mkdir -p ~/.sbt/1.0
-        cat > ~/.sbt/1.0/github.sbt << 'CREDSEOF'
+        mkdir -p ~/.sbt/2
+        cat > ~/.sbt/2/github.sbt << 'CREDSEOF'
         credentials += Credentials(
           "GitHub Package Registry",
           "maven.pkg.github.com",
@@ -137,7 +141,7 @@ jobs:
     - name: Build and Stage JVM Version
       run: |
         sbt riddlc/stage
-        cd riddlc/jvm/target/universal/stage && zip -r ../../../../../riddlc.zip bin/ lib/
+        cd target/out/jvm/scala-3.9.0/riddlc/universal/stage && zip -r "$GITHUB_WORKSPACE/riddlc.zip" bin/ lib/
 
     - name: Upload to Release
       env:
@@ -147,7 +151,7 @@ jobs:
         gh release upload "$TAG" riddlc.zip --clobber
 
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: riddlc-jvm
         retention-days: 30
@@ -160,7 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         path: artifacts
 
@@ -171,21 +175,44 @@ jobs:
         echo "linux_x86=$(shasum -a 256 artifacts/riddlc-linux-x86_64/riddlc-linux-x86_64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
         echo "jvm=$(shasum -a 256 artifacts/riddlc-jvm/riddlc.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
+    # A release candidate updates a SEPARATE formula. `gh release create --prerelease`
+    # still fires this same `release: [created]` workflow, so without routing on
+    # `prerelease` an RC would overwrite the stable formula and `brew install riddlc`
+    # would serve a release candidate. Homebrew has no prerelease flag and its `devel`
+    # block is deprecated; a versioned formula the user opts into by NAME is the
+    # supported pattern, and the name is the "experimental" marking.
     - name: Dispatch formula update to homebrew-tap
       env:
         GH_TOKEN: ${{ secrets.HOMEBREW_TAP_SECRET }}
       run: |
         TAG="${{ github.event.release.tag_name || github.event.inputs.tag }}"
+        if [ "${{ github.event.release.prerelease }}" = "true" ]; then
+          FORMULA="riddlc-rc"
+        else
+          FORMULA="riddlc"
+        fi
+        echo "Dispatching formula update for ${FORMULA} at ${TAG}"
         gh api repos/ossuminc/homebrew-tap/dispatches \
           --method POST \
           -f event_type=update-formula \
+          -f "client_payload[formula]=${FORMULA}" \
           -f "client_payload[version]=${TAG}" \
           -f "client_payload[sha_macos_arm64]=${{ steps.hashes.outputs.macos_arm64 }}" \
           -f "client_payload[sha_linux_x86]=${{ steps.hashes.outputs.linux_x86 }}" \
           -f "client_payload[sha_jvm]=${{ steps.hashes.outputs.jvm }}"
 
-  # Notify ossum.ai to create a blog post from release notes
+  # Notify ossum.ai to create a blog post from release notes.
+  #
+  # FULL RELEASES ONLY. Every other channel makes a release candidate opt-in by
+  # name -- a prerelease on GitHub, an `rc` npm dist-tag, a separate `riddlc-rc`
+  # formula -- but a blog post announces itself to everyone. 2.0.0-rc.1 shipped a
+  # live post on ossum.ai because this job, unlike `update-homebrew` below, had no
+  # prerelease guard.
+  #
+  # `workflow_dispatch` leaves `release.prerelease` empty, so a manual run still
+  # posts; that is deliberate, since dispatching by hand is an explicit act.
   notify-blog:
+    if: github.event.release.prerelease != true
     needs: [native-build, jvm-build]
     timeout-minutes: 10
     runs-on: ubuntu-latest

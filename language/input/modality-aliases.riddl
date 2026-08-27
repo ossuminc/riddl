@@ -1,0 +1,45 @@
+// A43/A46: every modality alias and presentation verb accepted, in one model, so the CI
+// grammar validator (TatSu over ebnf-grammar.ebnf) actually covers
+// them. Without a fixture the EBNF rules are only asserted against themselves.
+domain Modalities is {
+  application context Multimodal is {
+    record Utterance is { text: String }
+    record Reading is { value: Number }
+
+    // Group aliases: the three spatial/3D additions.
+    scene MainStage is {
+      voice SpeakToIt acquires record Multimodal.Utterance
+      sound Chime plays "a short confirmation tone"
+      speech Narration speaks "the current step, read aloud"
+    }
+    space Workroom is {
+      gesture Wave acquires record Multimodal.Utterance
+      haptic Buzz vibrates "a short pulse on the wrist"
+      output Pulsed pulses "two quick taps"
+    }
+    zone Perimeter is {
+      gaze LookAt acquires record Multimodal.Reading
+      output Nudged nudges "a gentle shoulder tap"
+      output Scented diffuses "a faint citrus note"
+    }
+
+    // Taste, whose verbs are imperative in the accepted census.
+    group Tasting is {
+      output Portion serve "a tasting portion"
+      output Sample offer "a sample to try"
+      output Flavour taste "the finished dish"
+    }
+
+    // The original five, so the fixture proves the additions did not displace them.
+    group Classic is {
+      output Doc presents "the document"
+      output Lst shows "the list"
+      output Tbl displays "the table"
+      output Log writes "the log line"
+      output Sig emits "the signal"
+      output Ann announces "the announcement"
+    }
+
+    handler Ignore is { ??? }
+  }
+}

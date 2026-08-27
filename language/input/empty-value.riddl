@@ -1,0 +1,29 @@
+// `empty` / `none` -- the minimum-cardinality inhabitant of a type.
+// `none` is a SYNONYM: both spellings produce the identical AST and prettify converges to `empty`.
+// Legal exactly where the minimum cardinality is zero, and the ascribed form carries its own type
+// so it can be written where the position supplies none.
+domain EmptyValues is {
+  context Ctx is {
+    type Notes is String(1,30)? with { briefly "an optional" }
+    type Items is String(1,30)* with { briefly "a collection" }
+    event Cleared is { why: String(1,30) } with { briefly "a trigger" }
+    record Data is {
+      note: Notes with { briefly "optional note" }
+      items: Items with { briefly "the items" }
+    } with { briefly "state record" }
+    entity Ent is {
+      state S of record Ctx.Data is {
+        handler H is {
+          on event Ctx.Cleared is {
+            set field Data.note to none
+            set field Data.items to empty
+            set field Data.note to empty String(1,30)?
+            set field Data.items to empty String(1,30)*
+            let e = empty String(1,30)*
+            do "released"
+          }
+        } with { briefly "clears both" }
+      } with { briefly "state" }
+    } with { briefly "entity" }
+  } with { briefly "context" }
+} with { briefly "domain" }

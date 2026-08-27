@@ -5,3 +5,6 @@ passes/input/check/t0001/main.riddl(4:3->5:1):
  For Domain 'foo', description at passes/input/check/t0001/main.riddl(4:3->5:1) is declared but empty:
    described as ""
  }
+passes/input/check/t0001/main.riddl(1:1->11):
+ Domain 'foo' has no author:
+ domain foo is {

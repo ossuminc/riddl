@@ -30,6 +30,12 @@ language/input/everything.bast
 .claude/*
 !.claude/skills/
 !.claude/skills/**
-language/jvm/src/test/python/.venv/
+language/src/test/scalajvm/python/.venv/
 __pycache__/
 /task/
+
+# Metals (regenerated locally)
+/project/metals.sbt
+
+# Subagent-driven-development scratch (briefs, reports, ledger)
+.superpowers/

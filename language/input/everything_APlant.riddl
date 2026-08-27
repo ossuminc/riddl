@@ -1,6 +1,24 @@
 context APlant is {
-  source Source is { outlet OutCommands is type DoAThing } with { described as "Data Source" }
-  sink Sink is { inlet InCommands is type DoAThing } with { described as "Data Sink" }
+  // The context's OWN inlet: the single public arrival point for anything crossing INTO APlant.
+  // Added 2026-08-27 with the `msg-target-crosses-boundary` rule. Before it, `full`'s adaptor and
+  // `Something`'s handler both did `send ... to outlet APlant.Source.OutCommands` -- reaching past
+  // this boundary onto a portlet of a streamlet APlant contains, which binds those senders to
+  // APlant's internal arrangement. At the boundary, and only there, the CONTEXT is the port.
+  inlet Commands is command DoAThing
+
+  source Source is { outlet OutCommands is command DoAThing } with { described as "Data Source" }
+  sink Sink is { inlet InCommands is command DoAThing } with { described as "Data Sink" }
+
+  // Receives on the context's own inlet and routes inward. This relay is the whole point of the
+  // rule: it is what lets APlant rearrange Source, Sink and AChannel without breaking a stranger.
+  handler Intake is {
+    // `on d: command DoAThing` BINDS the handled message (A55) so the relay forwards the very
+    // message that arrived. A bare `send command DoAThing` names a TYPE, not a value, and nothing
+    // would say where its field comes from.
+    on d: command DoAThing {
+      send d to inlet Sink.InCommands
+    }
+  } with { described as "Routes messages arriving at the context boundary inward" }
 
   connector AChannel is {
     from outlet Source.OutCommands

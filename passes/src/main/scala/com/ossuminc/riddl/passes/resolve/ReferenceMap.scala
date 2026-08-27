@@ -1,0 +1,121 @@
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl.passes.resolve
+
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.RuleId
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.utils.{PlatformContext, StringHelpers}
+
+import scala.collection.mutable
+import scala.reflect.{ClassTag, classTag}
+
+/** The primary output of the [[ResolutionPass]]. It provides a mapping from a reference to the
+  * referenced definition. This is useful for fast resolution during validation and other Passes
+  * because the resolution logic doesn't need to be exercised again.
+  * @param messages
+  *   A message accumulator for collecting messages when member functions are invoked
+  */
+case class ReferenceMap(messages: Messages.Accumulator) {
+
+  private case class Key(path: String, parent: Definition) {
+    override def toString: String = s"(k=$path,v=${parent.identify})"
+  }
+
+  private val map: mutable.HashMap[Key, Definition] = mutable.HashMap.empty
+
+  override def toString: String =
+    map.keys.toSeq
+      .sortBy(_.path)
+      .map(k => s"${k.path} = ${map(k).identify}")
+      .mkString("ReferenceMap{\n", ",\n", "}\n")
+
+  def size: Int = map.size
+
+  def add[T <: Definition: ClassTag](ref: Reference[T], parent: Branch[?], definition: T): Unit = {
+    add(ref.pathId.format, parent, definition)
+  }
+
+  def add[T <: Definition: ClassTag](
+    pathId: PathIdentifier,
+    parent: Branch[?],
+    definition: T
+  ): Unit = {
+    add(pathId.format, parent, definition)
+  }
+
+  private def add[T <: Definition: ClassTag](
+    pathId: String,
+    parent: Branch[?],
+    definition: T
+  ): Unit = {
+    val key = Key(pathId, parent)
+    val expected = classTag[T].runtimeClass
+    val actual = definition.getClass
+    require(
+      expected.isAssignableFrom(actual),
+      s"referenced ${actual.getSimpleName} is not assignable to expected ${expected.getSimpleName}"
+    )
+    map.update(key, definition)
+  }
+
+  /** A55: the definition a path resolved to, WITHOUT constraining its kind. Every other accessor
+    * makes the caller name the expected kind, but a `ValueRef` legitimately resolves to a [[Field]]
+    * (a field of the handled message or entity state), a [[Type]] (the whole message, via an
+    * on-clause binding) or a [[Constant]] — so it has to ask "whatever this resolved to". Returns
+    * `None` (never a message) when nothing resolved; the caller decides whether that is an error.
+    */
+  def anyDefinitionOf(pathId: PathIdentifier, parent: Definition): Option[Definition] =
+    map.get(Key(pathId.format, parent))
+
+  def definitionOf[T <: Definition: ClassTag](
+    pathId: PathIdentifier
+  )(using PlatformContext): Option[T] = {
+    definitionOf[T](pathId.format)
+  }
+
+  def definitionOf[T <: Definition: ClassTag](pathId: String): Option[T] = {
+    val potentials = map.find(key => key._1.path == pathId)
+    potentials match
+      case None => Option.empty[T]
+      case Some((_, definition)) =>
+        val klass = classTag[T].runtimeClass
+        if definition.getClass == klass then Some(definition.asInstanceOf[T]) else Option.empty[T]
+  }
+
+  def definitionOf[T <: Definition: ClassTag](pid: PathIdentifier, parent: Definition)(using
+    PlatformContext
+  ): Option[T] = {
+    val key = Key(pid.format, parent)
+    val value = map.get(key)
+    value match
+      case None =>
+        None
+      case Some(x: T) =>
+        Some(x)
+      case Some(x) =>
+        val className = classTag[T].runtimeClass.getSimpleName
+        messages.addError(
+          pid.loc,
+          s"Path Id '${pid.value.mkString(".")} found ${x.identify} but a $className was expected",
+          suggestion =
+            s"Point '${pid.value.mkString(".")}' at a $className, or rename the reference to match the intended $className.",
+          ruleId = Some(RuleId.WrongKind)
+        )
+        None
+  }
+
+  def definitionOf[T <: Definition: ClassTag](ref: Reference[T], parent: Branch[?])(using
+    PlatformContext
+  ): Option[T] = {
+    definitionOf[T](ref.pathId, parent)
+  }
+}
+
+object ReferenceMap {
+  def empty: ReferenceMap = ReferenceMap(Messages.Accumulator.empty)
+}

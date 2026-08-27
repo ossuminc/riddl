@@ -1,0 +1,2 @@
+// This file contributes its definitions through a further include, not directly.
+include "inner"

@@ -1,0 +1,33 @@
+// Corpus fixture exercising `on init`/`on term` PARAMETER LISTS (Task 3, processor-instance
+// identity): `on init` takes ordinary parameters -- there is no instance yet, and the identity
+// is minted by initiating. `on term`'s FIRST parameter must be Id(<the enclosing processor>)
+// because it is invoked from outside and the caller must say which instance to terminate.
+// `on init` may also be written without any parameter list at all. Exercised by both fastparse
+// (LifecycleParametersFileTest) and the EBNF/TatSu grammar (ebnf_tatsu_validator.py, which
+// scans every input-directory riddl file).
+//
+// The parameter names DELIBERATELY do not collide with any state field. This file's earlier
+// revision declared `on init(total: Integer)` alongside `record Fields is { total: Integer }`, so
+// the body's reference to `total` resolved as the STATE FIELD -- which made the fixture pass while
+// parameters were, in fact, unreadable from the clause body (fixed in the final review of this
+// branch). A colliding name hides that regression; a distinct one is what proves the parameter
+// scope exists.
+domain LifecycleParams is {
+  context Orders is {
+    record Fields is { total: Integer, tier: Integer } with { briefly "order totals" }
+    record Customer is { name: String, tier: Integer } with { briefly "a customer" }
+    entity Order is {
+      state S of record Fields is {
+        handler H is {
+          on init(seed: Integer, buyer: Customer) {
+            set field S.total to seed
+            set field S.tier to buyer.tier
+          }
+          on term(oid: Id(entity Order), reason: String) {
+            do "release resources"
+          }
+        } with { briefly "h" }
+      } with { briefly "s" }
+    } with { briefly "e" }
+  } with { briefly "c" }
+} with { briefly "d" }

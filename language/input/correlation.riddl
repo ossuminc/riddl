@@ -1,0 +1,50 @@
+// A70: correlations in projectors. A fixture for the EBNF grammar validator, which walks
+// every **/input/**/*.riddl file, so the new syntax is actually covered by the Python CI job
+// rather than only by the fastparse tests.
+//
+// It exercises the whole shape deliberately: a COMPOUND key (a single key would still parse if
+// the key list were written as one identifier rather than a counted sequence), both ways a fold
+// reaches an event field (bare name and an A55 binding), and a timeout block with an effect --
+// legal there, and an Error inside a fold.
+domain Fulfillment is {
+  context Sales is {
+    // A correlation yields a COMMAND, never a bare record: a projector's only output is a change
+    // to a repository, and a repository is changed by handling a command.
+    command RecordJoined is {
+      customerId: String,
+      orderId: String,
+      orderedAt: String,
+      paidAmount: Number,
+      shippedAt: String?
+    }
+    event OrderPlaced is { customerId: String, orderId: String, occurredAt: String }
+    event PaymentTaken is { customerId: String, orderId: String, amount: Number }
+    command ReportStalled is { why: String }
+
+    entity Monitor is {
+      handler Watch is {
+        on command ReportStalled is { do "record the stalled join" }
+      }
+    }
+
+    repository Store is { ??? }
+
+    projector JoinView is {
+      updates repository Store
+
+      correlation OrderPayment by customerId, orderId yields command RecordJoined is {
+        handler Collect is {
+          // A bare field name: resolved against the handled event's fields.
+          on event OrderPlaced is { set field orderedAt to occurredAt }
+          // An A55 binding: the same field reached through a name bound at the clause.
+          on p: event PaymentTaken is { set field paidAmount to p.amount }
+        }
+      } times out after "30 days" {
+        // Effects are legal HERE -- the block exists to have one -- and an Error inside a fold.
+        tell command ReportStalled to entity Monitor
+      } with {
+        briefly "joins an order with its payment"
+      }
+    }
+  }
+}

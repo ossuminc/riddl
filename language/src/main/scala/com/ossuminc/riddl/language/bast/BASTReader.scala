@@ -1,0 +1,3075 @@
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl.language.bast
+
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
+import com.ossuminc.riddl.language.{At, Messages}
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.{PlatformContext, URL}
+import wvlet.airframe.ulid.ULID
+
+import scala.collection.mutable.ArrayBuffer
+
+/** BAST deserialization entry point
+  *
+  * Provides static methods for reading BAST binary format back into AST.
+  */
+object BASTReader {
+
+  /** Read a BAST file from bytes
+    *
+    * @param bytes
+    *   The BAST file bytes
+    * @param pc
+    *   Platform context for error reporting
+    * @return
+    *   Either errors or the deserialized Module root
+    */
+  def read(bytes: Array[Byte])(using pc: PlatformContext): Either[Messages.Messages, Module] =
+    read(bytes, Map.empty)
+
+  /** Deserialize, resolving positions against sources the caller already holds.
+    *
+    * BAST stores real source OFFSETS but no source text, so line and column cannot be derived from
+    * the bytes alone -- `At.line`/`col` report 0 for anything read without a source. Pass the
+    * originals here, keyed by `loc.source.origin`, and locations resolve exactly as they did when
+    * parsed. Anything not in the map keeps the unknown-position source.
+    *
+    * The map is the caller's business deliberately: a host that just parsed the model already has
+    * the text, and deserialisation stays free of filesystem access, which matters because BAST is
+    * read on JS and Native too.
+    *
+    * @param bytes
+    *   The BAST file bytes to deserialize
+    * @param sources
+    *   Origin -> source text, for the files whose positions should be recoverable
+    */
+  def read(
+    bytes: Array[Byte],
+    sources: Map[String, RiddlParserInput]
+  )(using pc: PlatformContext): Either[Messages.Messages, Module] = {
+    val reader = new BASTReader(bytes, sources)
+    reader.read()
+  }
+}
+
+/** BAST binary format deserializer
+  *
+  * Reads a BAST file and reconstructs the AST. Mirrors the structure of BASTWriter to ensure
+  * correct round-trip serialization.
+  *
+  * @param bytes
+  *   The BAST file bytes to deserialize
+  * @param pc
+  *   Platform context for error reporting
+  */
+class BASTReader(
+  bytes: Array[Byte],
+  suppliedSources: Map[String, RiddlParserInput] = Map.empty
+)(using pc: PlatformContext) {
+
+  private val reader = new ByteBufferReader(bytes)
+  private var stringTable: StringTable = _
+  private var pathTable: PathTable = _ // Phase 8: Path table for path interning
+  private var lastLocation: At = At.empty
+  private var firstLocationRead: Boolean = false
+  private var currentSourcePath: String = ""
+  private var currentSource: RiddlParserInput = RiddlParserInput.empty
+  private val messages = ArrayBuffer[Messages.Message]()
+
+  /** Phase 7 optimization: Track whether current node has metadata
+    *
+    * Set by readNode() before dispatching to specific node reader. Node readers check this to know
+    * if they should read metadata.
+    */
+  private var currentNodeHasMetadata: Boolean = false
+
+  // AST context stack for better error messages
+  // Tracks what we're currently deserializing (e.g., "Domain(MyDomain) -> Context(MyContext) -> Entity")
+  private val contextStack = ArrayBuffer[String]()
+
+  /** Push a context entry when entering a node */
+  private def pushContext(nodeType: String, name: String = ""): Unit = {
+    val entry = if name.nonEmpty then s"$nodeType($name)" else nodeType
+    contextStack += entry
+  }
+
+  /** Pop context when leaving a node */
+  private def popContext(): Unit = {
+    if contextStack.nonEmpty then contextStack.remove(contextStack.length - 1)
+  }
+
+  /** Get current context path as string */
+  private def contextPath: String = {
+    if contextStack.isEmpty then "<root>"
+    else contextStack.mkString(" -> ")
+  }
+
+  /** Generate a detailed deserialization error message */
+  private def deserializationError(
+    message: String,
+    expectedValue: Option[String] = None,
+    actualValue: Option[String] = None
+  ): String = {
+    val sb = new StringBuilder()
+    sb.append(s"BAST deserialization error: $message\n")
+    sb.append(s"  Byte position: ${reader.position}\n")
+    sb.append(s"  AST context: $contextPath\n")
+    expectedValue.foreach(v => sb.append(s"  Expected: $v\n"))
+    actualValue.foreach(v => sb.append(s"  Actual: $v\n"))
+    sb.append(
+      s"  String table size: ${if stringTable != null then stringTable.size else "not loaded"}\n"
+    )
+    // Show surrounding bytes for debugging
+    val pos = reader.position
+    val start = math.max(0, pos - 8)
+    val end = math.min(bytes.length, pos + 8)
+    val hexBytes = bytes.slice(start, end).map(b => f"${b & 0xff}%02X").mkString(" ")
+    sb.append(s"  Bytes around position [$start-$end]: $hexBytes")
+    sb.toString()
+  }
+
+  /** Read and deserialize the BAST file
+    *
+    * @return
+    *   Either errors or the deserialized Module root
+    */
+  def read(): Either[Messages.Messages, Module] = {
+    try {
+      // Read and validate header
+      val header = readHeader()
+      if !header.isValid then
+        return Left(List(Messages.error(s"Invalid BAST file: ${header.invalidReason}", At.empty)))
+      end if
+
+      // Validate checksum
+      val dataStart = HEADER_SIZE
+      val dataLength = bytes.length - HEADER_SIZE
+      val calculatedChecksum = BinaryFormat.calculateChecksum(bytes, dataStart, dataLength)
+      if calculatedChecksum != header.checksum then
+        return Left(
+          List(
+            Messages.error(
+              s"BAST checksum mismatch: expected ${header.checksum}, got $calculatedChecksum",
+              At.empty
+            )
+          )
+        )
+      end if
+
+      // Load string table
+      reader.seek(header.stringTableOffset)
+      stringTable = StringTable.readFrom(reader)
+
+      // Phase 8: Load path table (immediately follows string table)
+      pathTable = PathTable.readFrom(reader, stringTable)
+
+      // Save string table offset for bounds checking
+      val stringTableBoundary = header.stringTableOffset
+
+      // Read root Module from root offset
+      reader.seek(header.rootOffset)
+      val module = readRootNode(stringTableBoundary)
+
+      if messages.nonEmpty then Left(messages.toList)
+      else Right(module)
+
+    } catch {
+      case e: Exception =>
+        Left(List(Messages.error(s"BAST deserialization failed: ${e.getMessage}", At.empty)))
+    }
+  }
+
+  // ========== Header Reading ==========
+
+  private def readHeader(): BinaryFormat.Header = {
+    val magic = reader.readRawBytes(4)
+    val version = reader.readInt()
+    val flags = reader.readShort()
+    val formatRevision = reader.readShort()
+    val stringTableOffset = reader.readInt()
+    val rootOffset = reader.readInt()
+    val fileSize = reader.readInt()
+    val checksum = reader.readInt()
+    val reserved = reader.readRawBytes(4)
+
+    BinaryFormat.Header(
+      magic = magic,
+      version = version,
+      flags = flags,
+      formatRevision = formatRevision,
+      stringTableOffset = stringTableOffset,
+      rootOffset = rootOffset,
+      fileSize = fileSize,
+      checksum = checksum,
+      reserved = reserved
+    )
+  }
+
+  // ========== Root Node Reading ==========
+
+  // Boundary for node data - beyond this is string table
+  private var nodeDataBoundary: Int = Int.MaxValue
+  private var lastNodeRead: String = "none"
+  private var lastNodePosition: Int = 0
+
+  private def checkBoundary(context: String): Unit = {
+    if reader.position > nodeDataBoundary then
+      throw new IllegalStateException(
+        s"Reader exceeded node boundary at position ${reader.position} (boundary=$nodeDataBoundary) while reading $context. Last successful node: $lastNodeRead at position $lastNodePosition"
+      )
+    end if
+  }
+
+  private def recordNodeRead(nodeName: String, position: Int): Unit = {
+    lastNodeRead = nodeName
+    lastNodePosition = position
+  }
+
+  // Debug flag - set to true to enable verbose position tracking
+  private var debugPositionTracking: Boolean = false
+
+  /** Enable debug position tracking for this reader */
+  def enableDebugTracking(): Unit = debugPositionTracking = true
+
+  private def debugLog(msg: String): Unit = {
+    if debugPositionTracking then println(msg)
+  }
+
+  /** Read the root node. Since version 2 the BAST root is a [[Module]] node — written by
+    * `BASTWriter.writeModule` for a real Module, or by `BASTWriter.writeRoot` (synthetic id) for a
+    * [[Root]]. Byte layout is exactly `readModuleNode`'s, so writer and reader stay symmetric.
+    */
+  private def readRootNode(boundary: Int): Module = {
+    nodeDataBoundary = boundary
+    var tagByte = reader.readU8()
+
+    // Handle FILE_CHANGE_MARKER at the start
+    if tagByte == FILE_CHANGE_MARKER then
+      val newPath = readString()
+      currentSourcePath = newPath
+      val url =
+        if newPath.isEmpty then URL.empty
+        else if newPath.startsWith("/") then URL.fromFullPath(newPath)
+        else URL.fromCwdPath(newPath)
+      val originStr = if newPath.isEmpty then "empty" else newPath
+      currentSource = suppliedSources.getOrElse(originStr, BASTParserInput(url, originStr))
+      // Reset location tracking for new source - first location will be absolute
+      lastLocation = At.empty
+      firstLocationRead = false
+      tagByte = reader.readU8()
+    end if
+
+    currentNodeHasMetadata = (tagByte & HAS_METADATA_FLAG) != 0
+    val nodeType = (tagByte & 0x7f).toByte
+    if nodeType != NODE_MODULE then
+      throw new IllegalArgumentException(s"Expected Module root node, got node type $nodeType")
+    end if
+
+    readModuleNode()
+  }
+
+  // ========== Node Deserialization ==========
+
+  /** Convert node type tag to human-readable name */
+  private def nodeTypeName(nodeType: Int): String = nodeType match {
+    case NODE_NEBULA            => "Nebula"
+    case NODE_DOMAIN            => "Domain"
+    case NODE_CONTEXT           => "Context"
+    case NODE_ENTITY            => "Entity"
+    case NODE_MODULE            => "Module"
+    case NODE_INCLUDE           => "Include"
+    case NODE_BAST_IMPORT       => "BASTImport"
+    case NODE_TYPE              => "Type"
+    case NODE_FIELD             => "Field"
+    case NODE_CONSTANT          => "Constant"
+    case NODE_METHOD            => "Method"
+    case NODE_ENUMERATOR        => "Enumerator"
+    case NODE_ADAPTOR           => "Adaptor"
+    case NODE_FUNCTION          => "Function"
+    case NODE_PROJECTOR         => "Projector"
+    case NODE_REPOSITORY        => "Repository"
+    case NODE_SCHEMA            => "Schema"
+    case NODE_STREAMLET         => "Streamlet"
+    case NODE_SAGA              => "Saga"
+    case NODE_HANDLER           => "Handler"
+    case NODE_SAGA_STEP         => "SagaStep"
+    case NODE_STATE             => "State"
+    case NODE_CORRELATION       => "Correlation"
+    case NODE_INVARIANT         => "Invariant"
+    case NODE_VERSION           => "Version"
+    case NODE_COPYRIGHT         => "Copyright"
+    case NODE_ON_CLAUSE         => "OnClause"
+    case NODE_INLET             => "Inlet"
+    case NODE_OUTLET            => "Outlet"
+    case NODE_CONNECTOR         => "Connector"
+    case NODE_EPIC              => "Epic"
+    case NODE_USER              => "User"
+    case NODE_PIPE              => "Pipe"
+    case NODE_GROUP             => "Group"
+    case NODE_INPUT             => "Input"
+    case NODE_OUTPUT            => "Output"
+    case NODE_DESCRIPTION       => "Description"
+    case NODE_BLOCK_DESCRIPTION => "BlockDescription"
+    case NODE_COMMENT           => "Comment"
+    case NODE_REQUIRES          => "Requires"
+    case NODE_RETURNS           => "Returns"
+    case NODE_BLOCK_COMMENT     => "BlockComment"
+    case NODE_IDENTIFIER        => "Identifier"
+    case NODE_PATH_IDENTIFIER   => "PathIdentifier"
+    case NODE_LITERAL_STRING    => "LiteralString"
+    case NODE_STATEMENT         => "Statement"
+    case NODE_AUTHOR            => "Author"
+    case NODE_TERM              => "Term"
+    case NODE_FIGMA_REF         => "FigmaRef"
+    case NODE_COMMAND_REF       => "CommandRef"
+    case NODE_EVENT_REF         => "EventRef"
+    case NODE_QUERY_REF         => "QueryRef"
+    case NODE_RESULT_REF        => "ResultRef"
+    case NODE_RECORD_REF        => "RecordRef"
+    case STREAMLET_VOID         => "Void"
+    case STREAMLET_SOURCE       => "Source"
+    case STREAMLET_SINK         => "Sink"
+    case STREAMLET_FLOW         => "Flow"
+    case STREAMLET_MERGE        => "Merge"
+    case STREAMLET_SPLIT        => "Split"
+    case STREAMLET_ROUTER       => "Router"
+    case ADAPTOR_INBOUND        => "InboundAdaptor"
+    case ADAPTOR_OUTBOUND       => "OutboundAdaptor"
+    // Entity Reference tags (Phase 9)
+    case NODE_AUTHOR_REF     => "AuthorRef"
+    case NODE_TYPE_REF       => "TypeRef"
+    case NODE_FIELD_REF      => "FieldRef"
+    case NODE_CONSTANT_REF   => "ConstantRef"
+    case NODE_ADAPTOR_REF    => "AdaptorRef"
+    case NODE_FUNCTION_REF   => "FunctionRef"
+    case NODE_HANDLER_REF    => "HandlerRef"
+    case NODE_STATE_REF      => "StateRef"
+    case NODE_ENTITY_REF     => "EntityRef"
+    case NODE_REPOSITORY_REF => "RepositoryRef"
+    case NODE_PROJECTOR_REF  => "ProjectorRef"
+    case NODE_CONTEXT_REF    => "ContextRef"
+    case NODE_STREAMLET_REF  => "StreamletRef"
+    case NODE_INLET_REF      => "InletRef"
+    case NODE_OUTLET_REF     => "OutletRef"
+    case NODE_SAGA_REF       => "SagaRef"
+    case NODE_USER_REF       => "UserRef"
+    case NODE_EPIC_REF       => "EpicRef"
+    case NODE_GROUP_REF      => "GroupRef"
+    case NODE_INPUT_REF      => "InputRef"
+    case NODE_OUTPUT_REF     => "OutputRef"
+    case NODE_DOMAIN_REF     => "DomainRef"
+    case _                   => s"Unknown($nodeType)"
+  }
+
+  /** Read a RiddlValue node based on its type tag */
+  private def readNode(): RiddlValue = {
+    val posBeforeNode = reader.position
+    checkBoundary(s"readNode at position $posBeforeNode")
+    val savedMetadataFlag = currentNodeHasMetadata
+    var tagByte = reader.readU8()
+    debugLog(
+      f"[DEBUG] readNode at pos $posBeforeNode: tagByte=${tagByte & 0xff}%d (0x${tagByte & 0xff}%02X)"
+    )
+
+    // Check for FILE_CHANGE_MARKER - indicates source file transition
+    if tagByte == FILE_CHANGE_MARKER then
+      val newPath = readString()
+      debugLog(f"[DEBUG] FILE_CHANGE_MARKER: path='$newPath', pos after path=${reader.position}")
+      currentSourcePath = newPath
+      // Reconstruct URL and create BASTParserInput
+      // Empty path means synthetic/test locations - still need a BASTParserInput
+      val url =
+        if newPath.isEmpty then URL.empty
+        else if newPath.startsWith("/") then URL.fromFullPath(newPath)
+        else URL.fromCwdPath(newPath)
+      val originStr = if newPath.isEmpty then "empty" else newPath
+      currentSource = suppliedSources.getOrElse(originStr, BASTParserInput(url, originStr))
+      // Reset location tracking for new source - first location will be absolute
+      lastLocation = At.empty
+      firstLocationRead = false
+      // Now read the actual node tag
+      tagByte = reader.readU8()
+      debugLog(
+        f"[DEBUG] after FILE_CHANGE_MARKER: actual tagByte=${tagByte & 0xff}%d (0x${tagByte & 0xff}%02X)"
+      )
+    end if
+
+    // Phase 7 optimization: Extract metadata flag from high bit
+    currentNodeHasMetadata = (tagByte & HAS_METADATA_FLAG) != 0
+    val nodeType = (tagByte & 0x7f).toByte
+
+    val nodeName = nodeTypeName(nodeType)
+    pushContext(nodeName)
+
+    try {
+      val result: RiddlValue = nodeType match {
+        // Root containers
+        case NODE_NEBULA      => readNebulaNode()
+        case NODE_DOMAIN      => readDomainNode()
+        case NODE_CONTEXT     => readContextNode()
+        case NODE_ENTITY      => readEntityNode()
+        case NODE_MODULE      => readModuleNode()
+        case NODE_INCLUDE     => readIncludeNode()
+        case NODE_BAST_IMPORT => readBASTImportNode()
+
+        // Types
+        case NODE_TYPE       => readTypeNode()
+        case NODE_FIELD      => readFieldOrMethodArgument()
+        case NODE_CONSTANT   => readConstantNode()
+        case NODE_METHOD     => readMethodNode()
+        case NODE_ENUMERATOR => readEnumeratorNode()
+
+        // Processors
+        case NODE_ADAPTOR    => readAdaptorNode()
+        case NODE_FUNCTION   => readFunctionNode()
+        case NODE_PROJECTOR  => readProjectorNode()
+        case NODE_REPOSITORY => readRepositoryNode()
+        case NODE_SCHEMA     => readSchemaNode()
+        case NODE_STREAMLET  => readStreamletNode()
+        case NODE_SAGA       => readSagaNode()
+
+        // Handler components
+        case NODE_HANDLER     => readHandlerNode()
+        case NODE_STATEMENT   => readStatementNode()
+        case NODE_SAGA_STEP   => readSagaStepNode()
+        case NODE_STATE       => readStateNode()
+        case NODE_CORRELATION => readCorrelationNode()
+        case NODE_INVARIANT   => readInvariantNode()
+        case NODE_VERSION     => readVersionNode()
+        case NODE_COPYRIGHT   => readCopyrightNode()
+        case NODE_ON_CLAUSE   => readOnClauseNode()
+
+        // Streamlet components
+        case NODE_INLET     => readInletNode()
+        case NODE_OUTLET    => readOutletOrShownByNode()
+        case NODE_CONNECTOR => readConnectorNode()
+
+        // Epic components
+        case NODE_EPIC => readEpicOrUseCaseNode()
+        case NODE_USER => readUserOrUserStoryNode()
+
+        // Interactions
+        case NODE_PIPE => readPipeOrRelationshipOrInteraction()
+
+        // UI Components
+        case NODE_GROUP  => readGroupOrContainedGroupNode()
+        case NODE_INPUT  => readInputNode()
+        case NODE_OUTPUT => readOutputNode()
+
+        // Metadata
+        case NODE_DESCRIPTION       => readDescriptionOrOptionOrAttachment()
+        case NODE_BLOCK_DESCRIPTION => readBlockDescriptionNode()
+        case NODE_COMMENT           => readLineCommentNode()
+        case NODE_REQUIRES          => readRequiresNode()
+        case NODE_RETURNS           => readReturnsNode()
+        case NODE_BLOCK_COMMENT     => readInlineCommentNode()
+
+        // Simple values
+        case NODE_IDENTIFIER      => readIdentifierNode()
+        case NODE_PATH_IDENTIFIER => readPathIdentifierNode()
+        case NODE_LITERAL_STRING  => readLiteralStringNode()
+
+        // Authors
+        case NODE_AUTHOR => readAuthorOrAuthorRefNode()
+        case NODE_TERM   => readTermNode()
+
+        // A42: Figma design references
+        case NODE_FIGMA_REF => readFigmaRefNode()
+
+        // Message References (dedicated tags)
+        case NODE_COMMAND_REF => readCommandRefNode()
+        case NODE_EVENT_REF   => readEventRefNode()
+        case NODE_QUERY_REF   => readQueryRefNode()
+        case NODE_RESULT_REF  => readResultRefNode()
+        case NODE_RECORD_REF  => readRecordRefNode()
+
+        // Entity References (dedicated tags - Phase 9 fix)
+        case NODE_AUTHOR_REF     => readAuthorRefNode()
+        case NODE_TYPE_REF       => readTypeRefNode()
+        case NODE_FIELD_REF      => readFieldRefNode()
+        case NODE_CONSTANT_REF   => readConstantRefNode()
+        case NODE_ADAPTOR_REF    => readAdaptorRefNode()
+        case NODE_FUNCTION_REF   => readFunctionRefNode()
+        case NODE_HANDLER_REF    => readHandlerRefNode()
+        case NODE_STATE_REF      => readStateRefNode()
+        case NODE_ENTITY_REF     => readEntityRefNode()
+        case NODE_REPOSITORY_REF => readRepositoryRefNode()
+        case NODE_PROJECTOR_REF  => readProjectorRefNode()
+        case NODE_CONTEXT_REF    => readContextRefNode()
+        case NODE_STREAMLET_REF  => readStreamletRefNode()
+        case NODE_INLET_REF      => readInletRefNode()
+        case NODE_OUTLET_REF     => readOutletRefNode()
+        case NODE_SAGA_REF       => readSagaRefNode()
+        case NODE_USER_REF       => readUserRefNode()
+        case NODE_EPIC_REF       => readEpicRefNode()
+        case NODE_GROUP_REF      => readGroupRefNode()
+        case NODE_INPUT_REF      => readInputRefNode()
+        case NODE_OUTPUT_REF     => readOutputRefNode()
+        case NODE_DOMAIN_REF     => readDomainRefNode()
+
+        // Streamlet shapes
+        case STREAMLET_VOID   => readVoidNode()
+        case STREAMLET_SOURCE => readSourceNode()
+        case STREAMLET_SINK   => readSinkNode()
+        case STREAMLET_FLOW   => readFlowNode()
+        case STREAMLET_MERGE  => readMergeNode()
+        case STREAMLET_SPLIT  => readSplitNode()
+        case STREAMLET_ROUTER => readRouterNode()
+
+        // Adaptor directions
+        case ADAPTOR_INBOUND  => readInboundAdaptorNode()
+        case ADAPTOR_OUTBOUND => readOutboundAdaptorNode()
+
+        case _ =>
+          addError(
+            deserializationError(
+              s"Unknown node type tag",
+              expectedValue = Some("valid node type (1-255)"),
+              actualValue = Some(s"$nodeType at byte $posBeforeNode")
+            )
+          , RuleId.BastUnknownNodeTag)
+          // Return a placeholder with lastLocation for best-effort location on error
+          LiteralString(lastLocation, s"<unknown node type $nodeType>")
+      }
+      popContext()
+      currentNodeHasMetadata = savedMetadataFlag
+      val posAfterNode = reader.position
+      recordNodeRead(nodeName, posBeforeNode)
+      debugLog(
+        f"[DEBUG] finished $nodeName at pos $posAfterNode (read ${posAfterNode - posBeforeNode} bytes)"
+      )
+      result
+    } catch {
+      case e: Exception =>
+        popContext()
+        currentNodeHasMetadata = savedMetadataFlag
+        throw e // Re-throw with context already in error message
+    }
+  }
+
+  // ========== Container Nodes ==========
+
+  /** The legacy anonymous-container node (`NODE_NEBULA`). No longer written for roots; retained
+    * because `writeSimpleContainer` still uses the tag. Yields a synthetic [[Module]].
+    */
+  private def readNebulaNode(): Module = {
+    val loc = readLocation()
+    val _id = readIdentifier()
+    val contents = readContentsDeferred[ModuleContents]()
+    Module.anonymous(loc, contents)
+  }
+
+  private def readDomainNode(): Domain = {
+    debugLog(
+      f"[DEBUG] readDomainNode: hasMetadata=$currentNodeHasMetadata at pos ${reader.position}"
+    )
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    debugLog(f"[DEBUG] readDomainNode: domain '${id.value}' at pos ${reader.position}")
+    val contents = readContentsDeferred[OccursInDomain]().asInstanceOf[Contents[DomainContents]]
+    debugLog(
+      f"[DEBUG] readDomainNode: reading metadata (hasMetadata=$currentNodeHasMetadata) at pos ${reader.position}"
+    )
+    val metadata = readMetadataDeferred()
+    debugLog(f"[DEBUG] readDomainNode: finished, metadata count=${metadata.length}")
+    Domain(loc, id, contents, metadata)
+  }
+
+  /** Mirror of BASTWriter.writeAscribedShape: presence byte then, when present, the shape tag. */
+  // The ascribed shape's location is normalized to At.empty so it matches the
+  // `as <shape>` parser path. `ascribedShape` participates in Definition.equals,
+  // so the shape loc must be surface-independent (parser/BAST/JSON all use At.empty).
+  private def readAscribedShape(): Option[StreamletShape] = reader.readU8() match {
+    case 0 => None
+    case 1 =>
+      reader.readU8() match {
+        case STREAMLET_VOID   => Some(Void(At.empty))
+        case STREAMLET_SOURCE => Some(Source(At.empty))
+        case STREAMLET_SINK   => Some(Sink(At.empty))
+        case STREAMLET_FLOW   => Some(Flow(At.empty))
+        case STREAMLET_MERGE  => Some(Merge(At.empty))
+        case STREAMLET_SPLIT  => Some(Split(At.empty))
+        case STREAMLET_ROUTER => Some(Router(At.empty))
+        case other =>
+          addError(
+            deserializationError(
+              "Unknown ascribed-shape tag",
+              expectedValue = Some("a valid STREAMLET_* shape tag"),
+              actualValue = Some(s"$other")
+            )
+          , RuleId.BastUnknownShapeTag)
+          None
+      }
+    case other =>
+      addError(
+        deserializationError(
+          "Invalid ascribed-shape presence byte",
+          expectedValue = Some("0 (absent) or 1 (present)"),
+          actualValue = Some(s"$other")
+        )
+      , RuleId.BastInvalidShapePresence)
+      None
+  }
+
+  /** Mirror of BASTWriter.writeIntention: 0 = None, else 1..4. */
+  private def readIntention(): Option[Intention] = reader.readU8() match {
+    case 1 => Some(Intention.Application)
+    case 2 => Some(Intention.External)
+    case 3 => Some(Intention.Gateway)
+    case 4 => Some(Intention.Service)
+    case _ => None
+  }
+
+  private def readContextNode(): Context = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val intention = readIntention()
+    val ascribedShape = readAscribedShape()
+    val contents = readContentsDeferred[OccursInContext]().asInstanceOf[Contents[ContextContents]]
+    val metadata = readMetadataDeferred()
+    Context(loc, id, contents, ascribedShape, intention, metadata)
+  }
+
+  /** Mirror of BASTWriter.writeEntityIntentions: a count, then one byte each. */
+  private def readEntityIntentions(): Seq[EntityIntention] = {
+    val count = reader.readU8()
+    (0 until count).toSeq.flatMap { _ =>
+      reader.readU8() match {
+        case 1 => Some(EntityIntention.Aggregate)
+        case 2 => Some(EntityIntention.Consistent)
+        case 3 => Some(EntityIntention.Available)
+        case 4 => Some(EntityIntention.EventSourced)
+        case 5 => Some(EntityIntention.Persistent)
+        case 6 => Some(EntityIntention.Transient)
+        case _ => None
+      }
+    }
+  }
+
+  private def readEntityNode(): Entity = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val intentions = readEntityIntentions()
+    val ascribedShape = readAscribedShape()
+    val contents =
+      readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
+    val metadata = readMetadataDeferred()
+    Entity(loc, id, contents, ascribedShape, intentions, metadata)
+  }
+
+  private def readModuleNode(): Module = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val contents = readContentsDeferred[ModuleContents]()
+    val metadata = readMetadataDeferred()
+    Module(loc, id, contents, metadata)
+  }
+
+  private def readIncludeNode(): Include[RiddlValue] = {
+    val loc = readLocation()
+    val origin = readURL()
+    val contents = readContentsDeferred[RiddlValue]()
+    Include[RiddlValue](loc, origin, contents)
+  }
+
+  private def readBASTImportNode(): BASTImport = {
+    val loc = readLocation()
+    val path = readLiteralString()
+    // Read selective import fields
+    val kind = readOption(readString())
+    val selector = readOption(readIdentifierInline())
+    val alias = readOption(readIdentifierInline())
+    // Contents are not stored in BAST - they're loaded dynamically
+    // by BASTLoader when this import is encountered
+    BASTImport(loc, path, kind, selector, alias)
+  }
+
+  // ========== Type Definitions ==========
+
+  private def readTypeNode(): Type = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val typEx = readTypeExpression()
+    val metadata = readMetadataDeferred()
+    Type(loc, id, typEx, metadata)
+  }
+
+  /** [[NODE_FIELD]] means a Field or a MethodArgument, and NOTHING else since revision 14.
+    *
+    * It used to also mean Constant and Method, which this method could not tell apart -- it read a
+    * Field and left their extra bytes in the stream. They now carry [[NODE_CONSTANT]] and
+    * [[NODE_METHOD]].
+    *
+    * The remaining two-way split is UNAMBIGUOUS and stays: `writeField` writes a TAGGED identifier
+    * and `writeMethodArgument` writes a bare string, so the next byte decides. That is the standard
+    * a shared tag has to meet.
+    */
+  private def readFieldOrMethodArgument(): RiddlValue = {
+    val loc = readLocation()
+
+    if reader.peekU8() == NODE_IDENTIFIER then
+      val id = readIdentifier()
+      val typEx = readTypeExpression()
+      val metadata = readMetadataDeferred()
+      Field(loc, id, typEx, metadata)
+    else
+      // MethodArgument: has name as string
+      val name = readString()
+      val typEx = readTypeExpression()
+      MethodArgument(loc, name, typEx)
+    end if
+  }
+
+  /** A Constant is a Field PLUS its literal value.
+    *
+    * Until 2026-08-13 it was written with [[NODE_FIELD]] and read as a Field, so the value was
+    * written and never consumed -- misaligning every byte after it. The read ORDER is the contract:
+    * loc, id, type, value, then deferred metadata.
+    */
+  private def readConstantNode(): Constant = {
+    val loc = readLocation()
+    // INLINE, matching `writeIdentifierInline` -- a tagged read here consumes one byte too many.
+    val id = readIdentifierInline()
+    val typEx = readTypeExpression()
+    // `Constant.value: ConstantValue` as of the numeric-literals plan (Task 4); the writer now
+    // emits a full tagged VALUE (FORMAT_REVISION 18), so read one back and narrow it. A wrong arm
+    // here is corruption, not a rough edge -- throw rather than substitute a plausible value, the
+    // same lesson the ShownBy and Constant/Method bugs taught.
+    val value = readValue() match
+      case cv: (LiteralString | NumericLiteral | BooleanLiteral | PromptValue) => cv
+      case other =>
+        throw new RuntimeException(
+          s"Constant value decoded as ${other.getClass.getSimpleName}, which is not a ConstantValue"
+        )
+    val metadata = readMetadataDeferred()
+    Constant(loc, id, typEx, value, metadata)
+  }
+
+  /** Inverse of `BASTWriter.writeMethodArgument`, which writes a RAW `NODE_FIELD` byte (not
+    * `writeNodeTag`, so there is no metadata flag) followed by loc, the name as a STRING, and the
+    * type. The string-vs-identifier difference is what lets a MethodArgument still share NODE_FIELD
+    * with Field without ambiguity.
+    */
+  private def readMethodArgument(): MethodArgument = {
+    reader.readU8() // NODE_FIELD, written raw
+    val loc = readLocation()
+    val name = readString()
+    val typEx = readTypeExpression()
+    MethodArgument(loc, name, typEx)
+  }
+
+  /** A Method is a Field PLUS its argument list; same history as [[readConstantNode]]. */
+  private def readMethodNode(): Method = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // INLINE; see readConstantNode
+    val typEx = readTypeExpression()
+    val args = readSeq(() => readMethodArgument())
+    val metadata = readMetadataDeferred()
+    Method(loc, id, typEx, args, metadata)
+  }
+
+  private def readEnumeratorNode(): Enumerator = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val enumVal = readOption(reader.readVarLong())
+    val metadata = readMetadataDeferred()
+    Enumerator(loc, id, enumVal, metadata)
+  }
+
+  // ========== Processor Definitions ==========
+
+  private def readAdaptorNode(): Adaptor = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val directionTag = reader.readU8()
+    val direction: AdaptorDirection = directionTag match {
+      case ADAPTOR_INBOUND  => InboundAdaptor(loc)
+      case ADAPTOR_OUTBOUND => OutboundAdaptor(loc)
+      // [2.3] catch-all audit: this defaulted to `InboundAdaptor`, which is the worst available
+      // answer -- direction decides which side of the bridge PRODUCES and which CONSUMES
+      // (`MessageFlowPass.processAdaptor`), so a byte the writer never emits was silently read back
+      // as an adaptor pointing the other way. A misaligned stream is the likely cause, and this is
+      // where it must stop, not where it should be smoothed over. Same policy as the rest of this
+      // reader, which throws rather than fabricate a node.
+      case other =>
+        throw new RuntimeException(s"Invalid adaptor direction tag: $other")
+    }
+    val referent = readContextRef()
+    val ascribedShape = readAscribedShape()
+    val contents = readContentsDeferred[OccursInProcessor]().asInstanceOf[Contents[AdaptorContents]]
+    val metadata = readMetadataDeferred()
+    Adaptor(loc, id, direction, referent, contents, ascribedShape, metadata)
+  }
+
+  // A9: `requires`/`returns` hold a TypeRef (preferred) or a deprecated inline Aggregation.
+  // A discriminator byte (0=ref, 1=aggregation) written by BASTWriter.writeRequiresReturns
+  // selects which payload follows.
+  private def readRequiresReturns(): TypeRef | Aggregation = {
+    reader.readU8() match {
+      case 0 => readTypeRefInline()
+      case 1 =>
+        readTypeExpression() match {
+          case agg: Aggregation => agg
+          case other =>
+            throw new RuntimeException(
+              s"requires/returns expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
+            )
+        }
+      case tag =>
+        throw new RuntimeException(
+          s"Invalid requires/returns discriminator $tag at byte pos ${reader.position}"
+        )
+    }
+  }
+
+  /** A9 / revision 4: the `requires` clause, read as an ordinary contents node. */
+  private def readRequiresNode(): Requires = {
+    val loc = readLocation()
+    Requires(loc, readRequiresReturns())
+  }
+
+  /** A9 / revision 4: the `returns` clause, read as an ordinary contents node. */
+  private def readReturnsNode(): Returns = {
+    val loc = readLocation()
+    Returns(loc, readRequiresReturns())
+  }
+
+  private def readFunctionNode(): Function = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    // Revision 4: `requires`/`returns` arrive inside contents as Requires/Returns nodes.
+    val contents = readContentsDeferred[FunctionContents]()
+      .asInstanceOf[Contents[FunctionContents]]
+    val metadata = readMetadataDeferred()
+    Function(loc, id, contents, metadata)
+  }
+
+  private def readSagaNode(): Saga = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    // Revision 4: `requires`/`returns` arrive inside contents as Requires/Returns nodes.
+    val contents = readContentsDeferred[SagaContents]()
+      .asInstanceOf[Contents[SagaContents]]
+    val metadata = readMetadataDeferred()
+    Saga(loc, id, contents, metadata)
+  }
+
+  private def readProjectorNode(): Projector = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val ascribedShape = readAscribedShape()
+    val contents = readContentsDeferred[OccursInProcessor | RepositoryRef]()
+      .asInstanceOf[Contents[ProjectorContents]]
+    val metadata = readMetadataDeferred()
+    Projector(loc, id, contents, ascribedShape, metadata)
+  }
+
+  private def readRepositoryNode(): Repository = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val ascribedShape = readAscribedShape()
+    val contents =
+      readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
+    val metadata = readMetadataDeferred()
+    Repository(loc, id, contents, ascribedShape, metadata)
+  }
+
+  private def readSchemaNode(): Schema = {
+    // Read schemaKind subtype: 0=Relational, 1=Document, 2=Graphical
+    val subtype = reader.readU8()
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+
+    val schemaKind = RepositorySchemaKind.fromOrdinal(subtype)
+
+    // Read data map - keys use writeIdentifier (with tag)
+    val dataCount = reader.readVarInt()
+    val data = (0 until dataCount).map { _ =>
+      val dataId = readIdentifier()
+      val tref = readTypeRef()
+      (dataId, tref)
+    }.toMap
+
+    // Read links map - keys use writeIdentifier (with tag)
+    val linksCount = reader.readVarInt()
+    val links = (0 until linksCount).map { _ =>
+      val linkId = readIdentifier()
+      val fr1 = readFieldRef()
+      val fr2 = readFieldRef()
+      (linkId, (fr1, fr2))
+    }.toMap
+
+    // Read indices
+    val indices = readSeq(() => readFieldRef())
+    val metadata = readMetadataDeferred()
+
+    Schema(loc, id, schemaKind, data, links, indices, metadata)
+  }
+
+  private def readStreamletNode(): Streamlet = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val ascribedShape = readAscribedShape()
+    val contents = readContentsDeferred[OccursInProcessor | Inlet | Outlet | Connector]()
+      .asInstanceOf[Contents[StreamletContents]]
+    val metadata = readMetadataDeferred()
+    Streamlet(loc, id, ascribedShape, contents, metadata)
+  }
+
+  // ========== Epic Definitions ==========
+
+  private def readEpicOrUseCaseNode(): RiddlValue = {
+    val subtype = reader.readU8() // 0 = Epic, 1 = UseCase
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+
+    if subtype == 0 then
+      val userStory = readUserStoryNode()
+      val contents = readContentsDeferred[OccursInVitalDefinition | ShownBy | UseCase]()
+        .asInstanceOf[Contents[EpicContents]]
+      val metadata = readMetadataDeferred()
+      Epic(loc, id, userStory, contents, metadata)
+    else
+      // UseCase (subtype == 1)
+      val userStory = readUserStoryNode()
+      val contents = readContentsDeferred[UseCaseContents]()
+      val metadata = readMetadataDeferred()
+      UseCase(loc, id, userStory, contents, metadata)
+    end if
+  }
+
+  // ========== Handler Components ==========
+
+  /** Read a Handler node (Phase 7: handlers have dedicated NODE_HANDLER tag) */
+  private def readHandlerNode(): Handler = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val isInitial = reader.readU8() != 0
+    val contents = readContentsDeferred[HandlerContents]()
+    val metadata = readMetadataDeferred()
+    Handler(loc, id, contents, metadata, isInitial)
+  }
+
+  /** Read a Statement node (Phase 7: statements have dedicated NODE_STATEMENT tag) */
+  private def readStatementNode(): Statement = {
+    val stmtType = reader.readU8()
+    val loc = readLocation()
+    readStatement(loc, stmtType)
+  }
+
+  /** A70. Mirrors [[BASTWriter.writeCorrelation]] plus the two deferred lists the Pass interleaves.
+    *
+    * The read ORDER is the contract: keys, yields, timeout, then contents, then timeoutStatements,
+    * then metadata. Reading any two of those out of order misaligns every byte that follows, which
+    * surfaces far away as "Invalid string table index" rather than as a decode error here.
+    */
+  private def readCorrelationNode(): Correlation = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val keys = readSeq(() => readIdentifierInline())
+    val yields = readCommandRefInline() // inline - position known
+    val timeout = readLiteralString()
+    val contents = readContentsDeferred[CorrelationContents]()
+    val timeoutStatements = readContentsDeferred[Statements]()
+    val metadata = readMetadataDeferred()
+    Correlation(loc, id, keys, yields, timeout, contents, timeoutStatements, metadata)
+  }
+
+  private def readSagaStepNode(): SagaStep = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val doStatements = readContentsDeferred[Statements]()
+    val undoStatements = readContentsDeferred[Statements]()
+    val metadata = readMetadataDeferred()
+    SagaStep(loc, id, doStatements, undoStatements, metadata)
+  }
+
+  private def readStatement(loc: At, stmtType: Int): Statement = {
+    stmtType match {
+      case 0 => // Do (spelled `prompt` before 2.0)
+        // FORMAT_REVISION 23: a SEQUENCE. A revision-22 file wrote a bare string here, so an older
+        // file misaligns rather than failing cleanly -- which is exactly what the revision gate is
+        // for.
+        val what = readSeq(() => readLiteralString())
+        DoStatement(loc, what)
+
+      case 1 => // Error
+        val message = readLiteralString()
+        ErrorStatement(loc, message)
+
+      case 3 => // Set (field ref or state ref)
+        val field: FieldRef | StateRef = reader.peekU8() match
+          case tag if tag == NODE_FIELD_REF => readFieldRef()
+          case tag if tag == NODE_STATE_REF => readStateRef()
+        val value = readValue() // A54: value expression
+        SetStatement(loc, field, value)
+
+      case 5 => // Send
+        val msg = readMessageOperand() // A54: bare ref or constructor
+        val portlet = readPortletRef()
+        SendStatement(loc, msg, portlet)
+
+      case 7 => // Morph
+        val entity = readEntityRef()
+        val state = readStateRef()
+        val value = readRecordOperand() // A9b/A54: RecordRef or Constructor
+        MorphStatement(loc, entity, state, value)
+
+      case 8 => // Become
+        val entity = readEntityRef()
+        val handler = readHandlerRef()
+        BecomeStatement(loc, entity, handler)
+
+      case 9 => // Tell
+        val msg = readMessageOperand() // A54: bare ref or constructor
+        // Target shape discriminator, FORMAT_REVISION 20 -- see writeTellStatement.
+        val shape = reader.readU8()
+        val target: ProcessorRef[Processor[?]] | Value = shape match
+          case 0 => readProcessorRef()
+          case 1 => readValue()
+          case other =>
+            throw new IllegalStateException(
+              s"BAST tell target shape $other is neither processor (0) nor value (1) at " +
+                s"${loc.format}; the file may be from a newer build or corrupt"
+            )
+        val by = readOption(readIdentifierInline()) // the optional 'by' disambiguator
+        TellStatement(loc, msg, target, by)
+
+      case 10 => // When
+        val conditionType = reader.readU8()
+        val condition: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue =
+          conditionType match {
+            case 0 => readLiteralString()
+            case 1 => readIdentifierInline()
+            case 2 => // A28: structured boolean-expression condition
+              readValue() match
+                case be: BooleanExpression => be
+                case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
+            case 3 => // A17: bare boolean value reference
+              readValue() match
+                case vr: ValueRef => vr
+                case other        => throw new RuntimeException(s"Expected ValueRef, got: $other")
+            case 4 => // an AI-evaluated condition, `when prompt("...")`
+              readValue() match
+                case pv: PromptValue => pv
+                case other => throw new RuntimeException(s"Expected PromptValue, got: $other")
+            case _ => throw new RuntimeException(s"Invalid when condition type: $conditionType")
+          }
+        // The legacy negated-flag byte (task 2's placeholder) is GONE, not merely ignored:
+        // negation now always arrives as a real `NotExpression` inside `condition` (discriminator
+        // `2` above), so there is nothing left on the wire to read here. See FORMAT_REVISION 18's
+        // comment for what an 18-reader that still expects this byte would misread.
+        val thenStatements = readContentsDeferred[Statements]()
+        val elseStatements = readContentsDeferred[Statements]()
+        WhenStatement(loc, condition, thenStatements, elseStatements)
+
+      case 11 => // Match
+        // A29: subject is a MatchSubject (ValueRef | GetValue | LiteralString), written via the
+        // value codec — narrow it back.
+        val expression: MatchSubject = readValue() match
+          case vr: ValueRef      => vr
+          case gv: GetValue      => gv
+          case ls: LiteralString => ls
+          case other =>
+            throw new RuntimeException(s"Invalid match subject: $other")
+        // Writer writes all case headers (loc + pattern + optional guard + count) first,
+        // then all case items sequentially, then default items.
+        val numCases = reader.readVarInt()
+        // Phase 1: Read all case headers (loc, pattern, guard, count)
+        val caseHeaders = (0 until numCases).map { _ =>
+          val caseLoc = readLocation()
+          val pattern = readMatchPattern() // A29: structured pattern
+          val guard: Option[BooleanExpression | ValueRef] = // A29: optional `when` guard
+            if reader.readU8() != 0 then
+              readValue() match
+                case be: BooleanExpression => Some(be)
+                case vr: ValueRef          => Some(vr) // A29: bare boolean value-ref guard
+                case other => throw new RuntimeException(s"Invalid match guard: $other")
+            else None
+          val count = reader.readVarInt()
+          (caseLoc, pattern, guard, count)
+        }.toSeq
+        // Read default count
+        val defaultCount = reader.readVarInt()
+        // Phase 2: Read case items in order
+        val cases = caseHeaders.map { case (caseLoc, pattern, guard, count) =>
+          val buffer = scala.collection.mutable.ArrayBuffer[Statements]()
+          var i = 0
+          while i < count do
+            buffer += readNode().asInstanceOf[Statements]
+            i += 1
+          end while
+          MatchCase(caseLoc, pattern, guard, Contents(buffer.toSeq*))
+        }
+        // Phase 3: Read default items
+        val defaultBuffer = scala.collection.mutable.ArrayBuffer[Statements]()
+        var di = 0
+        while di < defaultCount do
+          defaultBuffer += readNode().asInstanceOf[Statements]
+          di += 1
+        end while
+        MatchStatement(loc, expression, cases, Contents(defaultBuffer.toSeq*))
+
+      case 12 => // Let
+        val identifier = readIdentifier()
+        val hasTypeRef = reader.readU8() != 0
+        val optTypeRef = if hasTypeRef then
+          reader.readU8() // consume NODE_PATH_IDENTIFIER tag
+          val pid = readPathIdentifierNode()
+          Some(TypeRef(loc, "type", pid))
+        else None
+        val expression = readValue() // A54: value expression
+        LetStatement(loc, identifier, optTypeRef, expression)
+
+      case 13 => // Code
+        val language = readLiteralString()
+        val body = readString()
+        CodeStatement(loc, language, body)
+
+      case 14 => // Require
+        val conditionKind = reader.readU8()
+        val condition: LiteralString | InvariantRef | BooleanExpression = conditionKind match {
+          case 0 => readLiteralString() // literal string
+          case 1 => InvariantRef(loc, readPathIdentifierInline()) // invariant ref
+          case 2 => // A28: structured boolean-expression condition
+            readValue() match
+              case be: BooleanExpression => be
+              case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
+          case _ => readLiteralString()
+        }
+        // The `with <expr>` argument. Read AFTER the condition, matching the writer — the two
+        // orders must stay in step or the byte stream misaligns downstream.
+        val argument: Option[Value] = readOption(readValue())
+        RequireStatement(loc, condition, argument)
+
+      case 15 => // Yield (formerly Reply — wire format unchanged)
+        // Task 2 of the message-value design: `yield` now accepts the SAME widened operand as
+        // `tell`/`send`, so the codec's three arms are all legal here and the operand passes
+        // straight through. This arm used to THROW on a ValueRef, on the reasoning that `yield`'s
+        // parser could never produce one -- true then, false now, and revision 17 is what
+        // distinguishes a stream written by each.
+        YieldStatement(loc, readMessageOperand())
+
+      case 19 => // Reply -- answers a query with its declared result (2.0)
+        // Same widening as `yield` above.
+        ReplyStatement(loc, readMessageOperand())
+
+      case 16 => // Foreach
+        val element = readIdentifierInline()
+        val valueElement = readOption(readIdentifierInline())
+        val collectionType = reader.readU8()
+        val collection: FieldRef | Identifier = collectionType match {
+          case 0 =>
+            val frLoc = readLocation()
+            val pid = readPathIdentifierInline()
+            FieldRef(frLoc, pid)
+          case 1 => readIdentifierInline()
+          case _ => throw new RuntimeException(s"Invalid foreach collection type: $collectionType")
+        }
+        val doStatements = readContentsDeferred[Statements]()
+        ForeachStatement(loc, element, valueElement, collection, doStatements)
+
+      case 17 => // Put (A45)
+        val v = readValue()
+        val output = readOutputRef()
+        PutStatement(loc, v, output)
+
+      case 18 => // Return (A57)
+        val v = readValue()
+        ReturnStatement(loc, v)
+
+      case 20 => // Terminate (A70/instance-identity)
+        // Target is a VALUE since 2026-08-15 (was a ProcessorRef). Mirrors the writer exactly;
+        // reading the old shape here would misalign every byte after it, which is the failure
+        // mode the BAST section of CLAUDE.md warns names the DERAIL point, never the cause.
+        val target = readValue()
+        val args = readSeq(() => readConstructorArg())
+        TerminateStatement(loc, target, args)
+
+      case 21 => // Forward (delegation; discharges the yields/replies obligation)
+        val msg = readMessageOperand()
+        val shape = reader.readU8()
+        val target: PortletRef[Portlet] | ProcessorRef[Processor[?]] = shape match
+          case 0 => readPortletRef()
+          case 1 => readProcessorRef()
+          case other =>
+            throw new IllegalStateException(
+              s"BAST forward target shape $other is neither portlet (0) nor processor (1) at " +
+                s"${loc.format}; the file may be from a newer build or corrupt"
+            )
+        ForwardStatement(loc, msg, target)
+
+      case _ =>
+        // THROW, do not fabricate. This arm used to return a DoStatement carrying
+        // "<unknown statement N>", so an unreadable tag decoded into a PLAUSIBLE model that
+        // validated and prettified like any other -- the corruption survived as content. A tag
+        // with no reader arm means the stream was written by a newer build or is damaged; either
+        // way the honest answer is to fail, not to invent a statement the author never wrote.
+        throw new IllegalStateException(
+          s"BAST statement tag $stmtType has no reader arm at ${loc.format}; the file may be " +
+            "from a newer build or corrupt"
+        )
+    }
+  }
+
+  private def readStateNode(): State = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val typ = readRecordRefInline() // A9b: state type is a RecordRef; inline - position known
+    val isInitial = reader.readU8() != 0
+    val contents = readContentsDeferred[StateContents]()
+    val metadata = readMetadataDeferred()
+    State(loc, id, typ, contents, metadata, isInitial)
+  }
+
+  private def readInvariantNode(): Invariant = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    // A28 + 2026-08-04: a sub-flag byte (0=literal, 1=boolean-expression, 2=block) selects the arm.
+    // 2026-08-14: the block arm's statement COUNT is read here (matching `writeContents`'s
+    // count-only contract), but the ITEMS are NOT -- `BASTWriterPass.traverseInvariant` writes
+    // them immediately after the whole Invariant node (i.e. after `requires`, not right after the
+    // predicate), the same "count now, items once the node that owns them has finished" shape every
+    // multi-content node in this file uses (Correlation, SagaStep, ...). `blockStatementCount`
+    // records how many to read once `requires` has been consumed below; -1 means "no block".
+    var blockStatementCount: Int = -1
+    val condition: Option[LiteralString | BooleanExpression | InvariantBlock] = readOption {
+      reader.readU8() match
+        case 0 => readLiteralString()
+        case 1 =>
+          readValue() match
+            case be: BooleanExpression => be
+            case other => throw new RuntimeException(s"Expected BooleanExpression, got: $other")
+        case 2 =>
+          val blkLoc = readLocation()
+          blockStatementCount = reader.readVarInt()
+          readValue() match
+            case be: BooleanExpression =>
+              InvariantBlock(blkLoc, Contents.empty[Statements](), be) // statements filled in below
+            case other =>
+              throw new RuntimeException(s"Expected block predicate BooleanExpression, got: $other")
+        case k => throw new RuntimeException(s"Invalid invariant condition kind: $k")
+    }
+    // `requires` decides where the invariant applies; sub-flag 0=state ref, 1=type ref.
+    val requires: Option[StateRef | TypeRef] = readOption {
+      reader.readU8() match
+        case 0 => readStateRef()
+        case 1 => readTypeRef()
+        case k => throw new RuntimeException(s"Invalid invariant requires kind: $k")
+    }
+    // The block's statement items, if any, immediately follow `requires` on the wire.
+    val finalCondition = condition match
+      case Some(blk: InvariantBlock) if blockStatementCount >= 0 =>
+        val buffer = ArrayBuffer[Statements]()
+        var i = 0
+        while i < blockStatementCount do
+          buffer += readNode().asInstanceOf[Statements]
+          i += 1
+        end while
+        Some(blk.copy(statements = Contents(buffer.toSeq: _*)))
+      case other => other
+    val metadata = readMetadataDeferred()
+    Invariant(loc, id, finalCondition, requires, metadata)
+  }
+
+  /** A53: a Version leaf — mirror of BASTWriter.writeVersion. The numeric flag re-derives the
+    * `number` field from the id text, which is where the component always lives.
+    */
+  private def readVersionNode(): Version = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val number = if reader.readU8() != 0 then Some(id.value.toLong) else None
+    val metadata = readMetadataDeferred()
+    Version(loc, id, number, metadata)
+  }
+
+  /** A47: a Copyright leaf — mirror of BASTWriter.writeCopyright. */
+  private def readCopyrightNode(): Copyright = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val text = readLiteralString()
+    val metadata = readMetadataDeferred()
+    Copyright(loc, id, text, metadata)
+  }
+
+  private def readOnClauseNode(): OnClause = {
+    val clauseType = reader.readU8()
+    val loc = readLocation()
+
+    clauseType match {
+      case 0 => // Init
+        // Task 3: parameters are written BEFORE contents (mirrors readMethodNode's args), and
+        // are read eagerly here -- unlike contents/metadata they are not deferred, since nothing
+        // else in the stream needs to interleave with them.
+        val parameters = readSeq(() => readMethodArgument())
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnInitializationClause(loc, parameters, contents, metadata)
+
+      case 1 => // Term
+        val parameters = readSeq(() => readMethodArgument())
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnTerminationClause(loc, parameters, contents, metadata)
+
+      case 2 => // Message
+        val msg = readMessageRef()
+        val from = readOption {
+          val optId = readOption(readIdentifier())
+          val ref = readReference()
+          (optId, ref)
+        }
+        // A55 (rev 23): the optional local message binding
+        val binding = readOption(readIdentifier())
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnMessageClause(loc, msg, from, binding, contents, metadata)
+
+      case 3 => // Other
+        // A57 (rev 8): the optional envelope binding and its optional explicit type. Mirrors
+        // `writeOnOtherClause` exactly -- tagged `readTypeRef` against tagged `writeTypeRef`.
+        val binding = readOption(readIdentifier())
+        val envelopeType = readOption(readTypeRef())
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnOtherClause(loc, binding, envelopeType, contents, metadata)
+
+      case 4 => // Event — like Message but its own node
+        val msg = readMessageRef()
+        val from = readOption {
+          val optId = readOption(readIdentifier())
+          val ref = readReference()
+          (optId, ref)
+        }
+        // A55 (rev 23): the optional local message binding
+        val binding = readOption(readIdentifier())
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnEventClause(loc, msg, from, binding, contents, metadata)
+
+      case 5 => // Activation — entity lifecycle, no message ref
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnActivationClause(loc, contents, metadata)
+
+      case 6 => // Passivation — entity lifecycle, no message ref
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnPassivationClause(loc, contents, metadata)
+
+      case _ =>
+        OnOtherClause(loc, None, None, Contents.empty[Statements](), Contents.empty[MetaData]())
+    }
+  }
+
+  // ========== Streamlet Components ==========
+
+  private def readInletNode(): Inlet = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val type_ = readTypeRefInline() // Inline - position known
+    val metadata = readMetadataDeferred()
+    Inlet(loc, id, type_, metadata)
+  }
+
+  private def readOutletOrShownByNode(): RiddlValue = {
+    val loc = readLocation()
+
+    // Check if this is ShownBy (has seq of URLs) or Outlet (has id)
+    val saved = reader.position
+    val nextTag = reader.readU8()
+    reader.seek(saved)
+
+    if nextTag == NODE_IDENTIFIER then
+      val id = readIdentifier()
+      val type_ = readTypeRefInline() // Inline - position known
+      val metadata = readMetadataDeferred()
+      Outlet(loc, id, type_, metadata)
+    else
+      // ShownBy
+      val urls = readSeq(() => readURL())
+      ShownBy(loc, urls)
+    end if
+  }
+
+  /** Inverse of `BASTWriter.writeConnectorIntentions`.
+    *
+    * THROWS on an unknown code rather than dropping it. The revision guard means a file that
+    * reaches here was written by a compatible writer, so an unrecognised byte is corruption or a
+    * writer/reader mismatch -- and silently returning a shorter list would produce a Connector that
+    * differs from the one written while validating perfectly well. (The Entity reader above still
+    * drops unknown codes; that predates the no-silent-fallthrough rule and is filed, not copied.)
+    */
+  private def readConnectorIntentions(): Seq[ConnectorIntention] = {
+    val count = reader.readU8()
+    (0 until count).toSeq.map { _ =>
+      reader.readU8() match {
+        case 1 => ConnectorIntention.Persistent
+        case 2 => ConnectorIntention.AtLeastOnce
+        case 3 => ConnectorIntention.AtMostOnce
+        case other =>
+          throw new IllegalStateException(
+            s"BAST: unknown connector intention code $other; the file is corrupt or was written " +
+              "by an incompatible revision"
+          )
+      }
+    }
+  }
+
+  private def readConnectorNode(): Connector = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val from = readOutletRef()
+    val to = readInletRef()
+    // Read ORDER is the contract; intentions were appended after `to` by the writer.
+    val intentions = readConnectorIntentions()
+    val metadata = readMetadataDeferred()
+    Connector(loc, id, from, to, intentions, metadata)
+  }
+
+  // ========== Interactions ==========
+
+  private def readPipeOrRelationshipOrInteraction(): RiddlValue = {
+    val interactionType = reader.readU8()
+    val loc = readLocation()
+
+    interactionType match {
+      case 0 => // Parallel
+        val contents =
+          readContentsDeferred[Interaction]().asInstanceOf[Contents[InteractionContainerContents]]
+        val metadata = readMetadataDeferred()
+        ParallelInteractions(loc, contents, metadata)
+
+      case 1 => // Sequential
+        val contents =
+          readContentsDeferred[Interaction]().asInstanceOf[Contents[InteractionContainerContents]]
+        val metadata = readMetadataDeferred()
+        SequentialInteractions(loc, contents, metadata)
+
+      case 2 => // Optional
+        val contents =
+          readContentsDeferred[Interaction]().asInstanceOf[Contents[InteractionContainerContents]]
+        val metadata = readMetadataDeferred()
+        OptionalInteractions(loc, contents, metadata)
+
+      case 10 => // Vague
+        val from = readLiteralString()
+        val relationship = readLiteralString()
+        val to = readLiteralString()
+        val metadata = readMetadataDeferred()
+        VagueInteraction(loc, from, relationship, to, metadata)
+
+      case 11 => // SendMessage
+        val from = readReference()
+        val message = readMessageRef()
+        val to = readProcessorRef()
+        val metadata = readMetadataDeferred()
+        SendMessageInteraction(loc, from, message, to, metadata)
+
+      case 12 => // Arbitrary
+        val from = readReference()
+        val relationship = readLiteralString()
+        val to = readReference()
+        val metadata = readMetadataDeferred()
+        ArbitraryInteraction(loc, from, relationship, to, metadata)
+
+      case 13 => // Self
+        val from = readReference()
+        val relationship = readLiteralString()
+        val metadata = readMetadataDeferred()
+        SelfInteraction(loc, from, relationship, metadata)
+
+      case 14 => // FocusOnGroup
+        val from = readUserRef()
+        val to = readGroupRef()
+        val metadata = readMetadataDeferred()
+        FocusOnGroupInteraction(loc, from, to, metadata)
+
+      case 15 => // DirectUserToURL
+        val from = readUserRef()
+        val url = readURL()
+        val metadata = readMetadataDeferred()
+        DirectUserToURLInteraction(loc, from, url, metadata)
+
+      case 16 => // ShowOutput
+        val from = readOutputRef()
+        val relationship = readLiteralString()
+        val to = readUserRef()
+        val metadata = readMetadataDeferred()
+        ShowOutputInteraction(loc, from, relationship, to, metadata)
+
+      case 17 => // SelectInput
+        val from = readUserRef()
+        val to = readInputRef()
+        val metadata = readMetadataDeferred()
+        SelectInputInteraction(loc, from, to, metadata)
+
+      case 18 => // TakeInput
+        val from = readUserRef()
+        val to = readInputRef()
+        val metadata = readMetadataDeferred()
+        TakeInputInteraction(loc, from, to, metadata)
+
+      case 19 => // Refusal (A38)
+        val from = readReference()
+        val to = readUserRef()
+        // A38 (revision 18): discriminated, mirroring `require`'s condition immediately in kind —
+        // inline path identifier, NOT the tagged form, or every byte after the path shifts by one.
+        val reason: LiteralString | InvariantRef = reader.readU8() match
+          case 0 => readLiteralString()
+          case 1 => InvariantRef(loc, readPathIdentifierInline())
+          case other =>
+            throw new RuntimeException(s"Invalid refusal reason discriminator: $other")
+        val metadata = readMetadataDeferred()
+        RefusalInteraction(loc, from, to, reason, metadata)
+
+      case 20 => // Relationship -- mirrors BASTWriter.writeRelationship
+        val id = readIdentifierInline() // Inline - no tag
+        val withProcessor = readProcessorRef()
+        val cardinality = RelationshipCardinality.fromOrdinal(reader.readU8())
+        val label = readOption(readLiteralString())
+        val metadata = readMetadataDeferred()
+        Relationship(loc, id, withProcessor, cardinality, label, metadata)
+
+      case k =>
+        throw new RuntimeException(s"Invalid NODE_PIPE discriminator: $k")
+    }
+  }
+
+  // ========== UI Components ==========
+
+  private def readGroupOrContainedGroupNode(): RiddlValue = {
+    val loc = readLocation()
+
+    // Check if this is Group (has alias) or ContainedGroup (has GroupRef)
+    val saved = reader.position
+    val aliasOrId = readString()
+    val id = readIdentifier()
+    val nextTag = reader.peekU8()
+    reader.seek(saved)
+
+    if nextTag == NODE_GROUP then
+      // ContainedGroup
+      val id = readIdentifier()
+      val group = readGroupRef()
+      val metadata = readMetadataDeferred()
+      ContainedGroup(loc, id, group, metadata)
+    else
+      // Group
+      val alias = readString()
+      val id = readIdentifier()
+      val contents = readContentsDeferred[OccursInGroup]()
+      val metadata = readMetadataDeferred()
+      Group(loc, alias, id, contents, metadata)
+    end if
+  }
+
+  private def readInputNode(): Input = {
+    val loc = readLocation()
+    val nounAlias = readString()
+    val id = readIdentifierInline() // Inline - no tag
+    val verbAlias = readString()
+    val takeIn = readTypeRefInline() // Inline - position known
+    val contents = readContentsDeferred[OccursInInput]()
+    val metadata = readMetadataDeferred()
+    Input(loc, nounAlias, id, verbAlias, takeIn, contents, metadata)
+  }
+
+  private def readOutputNode(): Output = {
+    val loc = readLocation()
+    val nounAlias = readString()
+    val id = readIdentifierInline() // Inline - no tag
+    val verbAlias = readString()
+
+    // Read union type
+    val putOutType = reader.readU8()
+    val putOut: TypeRef | ConstantRef | LiteralString = putOutType match {
+      case 0 => readTypeRefInline() // Inline - discriminator identifies type
+      case 1 => readConstantRef()
+      case 2 => readLiteralString()
+      case _ => readTypeRefInline() // Inline - discriminator identifies type
+    }
+
+    val contents = readContentsDeferred[OccursInOutput]()
+    val metadata = readMetadataDeferred()
+    Output(loc, nounAlias, id, verbAlias, putOut, contents, metadata)
+  }
+
+  // ========== Users and Authors ==========
+
+  private def readAuthorOrAuthorRefNode(): RiddlValue = {
+    val loc = readLocation()
+
+    // Check if this is AuthorRef (has PathIdentifier) or Author (has name, email)
+    val saved = reader.position
+    val nextTag = reader.readU8()
+    reader.seek(saved)
+
+    if nextTag == NODE_PATH_IDENTIFIER then
+      // AuthorRef
+      val pathId = readPathIdentifierInline()
+      AuthorRef(loc, pathId)
+    else
+      // Author
+      val id = readIdentifierInline() // Inline - no tag
+      val name = readLiteralString()
+      val email = readLiteralString()
+      val organization = readOption(readLiteralString())
+      val title = readOption(readLiteralString())
+      val url = readOption(readURL())
+      val metadata = readMetadataDeferred()
+      Author(loc, id, name, email, organization, title, url, metadata)
+    end if
+  }
+
+  private def readUserOrUserStoryNode(): RiddlValue = {
+    val loc = readLocation()
+
+    // Check if this is UserRef (has PathIdentifier) or User (has id, is_a) or UserStory
+    val saved = reader.position
+    val nextTag = reader.readU8()
+    reader.seek(saved)
+
+    if nextTag == NODE_PATH_IDENTIFIER then
+      // UserRef
+      val pathId = readPathIdentifierInline()
+      UserRef(loc, pathId)
+    else if nextTag == NODE_IDENTIFIER then
+      // User
+      val id = readIdentifier()
+      val is_a = readLiteralString()
+      val metadata = readMetadataDeferred()
+      User(loc, id, is_a, metadata)
+    else
+      // UserStory
+      val user = readUserRef()
+      val capability = readLiteralString()
+      val benefit = readLiteralString()
+      UserStory(loc, user, capability, benefit)
+    end if
+  }
+
+  private def readUserStoryNode(): UserStory = {
+    val nodeType = reader.readU8() // Should be NODE_USER
+    val loc = readLocation()
+    val user = readUserRef()
+    val capability = readLiteralString()
+    val benefit = readLiteralString()
+    UserStory(loc, user, capability, benefit)
+  }
+
+  private def readTermNode(): Term = {
+    val loc = readLocation()
+    val id = readIdentifierInline() // Inline - no tag
+    val definition = readSeq(() => readLiteralString())
+    Term(loc, id, definition)
+  }
+
+  /** A42: mirror of [[BASTWriter.writeFigmaRef]] — location then two literal strings. */
+  private def readFigmaRefNode(): FigmaRef = {
+    val loc = readLocation()
+    val fileKey = readLiteralString()
+    val nodeId = readLiteralString()
+    FigmaRef(loc, fileKey, nodeId)
+  }
+
+  // ========== Metadata ==========
+
+  private def readDescriptionOrOptionOrAttachment(): RiddlValue = {
+    val descType = reader.readU8()
+    val loc = readLocation()
+
+    descType match {
+      case 0 => // Brief
+        val brief = readLiteralString()
+        BriefDescription(loc, brief)
+
+      case 2 => // URL description -- the AUTHORED path
+        URLDescription(loc, readString())
+
+      case 10 => // Option
+        val name = readString()
+        val args = readSeq(() => readLiteralString())
+        OptionValue(loc, name, args)
+
+      case 20 => // FileAttachment
+        val id = readIdentifier()
+        val mimeType = readString()
+        val inFile = readLiteralString()
+        FileAttachment(loc, id, mimeType, inFile)
+
+      case 21 => // StringAttachment
+        val id = readIdentifier()
+        val mimeType = readString()
+        val value = readLiteralString()
+        StringAttachment(loc, id, mimeType, value)
+
+      case 22 => // ULIDAttachment
+        val ulidBytes = reader.readRawBytes(16)
+        val ulid = ULID.fromBytes(ulidBytes)
+        ULIDAttachment(loc, ulid)
+
+      case _ =>
+        BriefDescription(loc, LiteralString(loc, s"<unknown description type $descType>"))
+    }
+  }
+
+  private def readBlockDescriptionNode(): BlockDescription = {
+    val loc = readLocation()
+    val lines = readSeq(() => readLiteralString())
+    BlockDescription(loc, lines)
+  }
+
+  private def readLineCommentNode(): LineComment = {
+    val loc = readLocation()
+    val text = readString()
+    LineComment(loc, text)
+  }
+
+  private def readInlineCommentNode(): InlineComment = {
+    val loc = readLocation()
+    val lines = readSeq(() => readString())
+    InlineComment(loc, lines)
+  }
+
+  // ========== Simple Values ==========
+
+  private def readIdentifierNode(): Identifier = {
+    val loc = readLocation()
+    val value = readString()
+    Identifier(loc, value)
+  }
+
+  private def readPathIdentifierNode(): PathIdentifier = {
+    val loc = readLocation()
+    val value = readSeq(() => readString())
+    PathIdentifier(loc, value)
+  }
+
+  private def readLiteralStringNode(): LiteralString = {
+    val loc = readLocation()
+    val s = readString()
+    LiteralString(loc, s)
+  }
+
+  // ========== Streamlet Shapes ==========
+
+  private def readVoidNode(): Void = {
+    val loc = readLocation()
+    Void(loc)
+  }
+
+  private def readSourceNode(): Source = {
+    val loc = readLocation()
+    Source(loc)
+  }
+
+  private def readSinkNode(): Sink = {
+    val loc = readLocation()
+    Sink(loc)
+  }
+
+  private def readFlowNode(): Flow = {
+    val loc = readLocation()
+    Flow(loc)
+  }
+
+  private def readMergeNode(): Merge = {
+    val loc = readLocation()
+    Merge(loc)
+  }
+
+  private def readSplitNode(): Split = {
+    val loc = readLocation()
+    Split(loc)
+  }
+
+  private def readRouterNode(): Router = {
+    val loc = readLocation()
+    Router(loc)
+  }
+
+  // ========== Adaptor Directions ==========
+
+  private def readInboundAdaptorNode(): InboundAdaptor = {
+    val loc = readLocation()
+    InboundAdaptor(loc)
+  }
+
+  private def readOutboundAdaptorNode(): OutboundAdaptor = {
+    val loc = readLocation()
+    OutboundAdaptor(loc)
+  }
+
+  // ========== Type Expressions ==========
+
+  private def readTypeExpression(): TypeExpression = {
+    val typeTag = reader.readU8()
+
+    typeTag match {
+      // Aggregations
+      case TYPE_AGGREGATION =>
+        // Always read subtype byte - all TYPE_AGGREGATION variants have one
+        val subtype = reader.readU8()
+        val loc = readLocation()
+
+        subtype match {
+          case 20 => // Sequence
+            val of = readTypeExpression()
+            Sequence(loc, of)
+
+          case 21 => // Set
+            val of = readTypeExpression()
+            Set(loc, of)
+
+          case 22 => // Graph
+            val of = readTypeExpression()
+            Graph(loc, of)
+
+          case 23 => // Table
+            val of = readTypeExpression()
+            val dimensions = readSeq(() => reader.readVarLong())
+            Table(loc, of, dimensions)
+
+          case 24 => // Replica
+            val of = readTypeExpression()
+            Replica(loc, of)
+
+          case 255 => // Plain Aggregation (subtype marker)
+            val contents = readContentsDeferred[AggregateContents]()
+            Aggregation(loc, contents)
+
+          case _ => // AggregateUseCaseTypeExpression (usecase ordinals 0-12)
+            val usecase = AggregateUseCase.fromOrdinal(subtype)
+            // A19: optional `yields` message ref — presence flag (1/0) then the ref if present
+            val yields = if reader.readU8() == 1 then Some(readMessageRef()) else None
+            val contents = readContentsDeferred[AggregateContents]()
+            AggregateUseCaseTypeExpression(loc, usecase, contents, yields)
+        }
+
+      case TYPE_ALTERNATION =>
+        val loc = readLocation()
+        // Alternation items are AliasedTypeExpression which are written as TYPE_REF
+        // We must use readTypeExpression() not readNode() since TYPE_REF is a type tag, not a node tag
+        val of = readTypeExpressionContents()
+        Alternation(loc, of)
+
+      case TYPE_ENUMERATION =>
+        val loc = readLocation()
+        val enumerators = readContentsDeferred[Enumerator]()
+        Enumeration(loc, enumerators)
+
+      case TYPE_MAPPING =>
+        val loc = readLocation()
+        val from = readTypeExpression()
+        val to = readTypeExpression()
+        Mapping(loc, from, to)
+
+      // Cardinality
+      case TYPE_OPTIONAL =>
+        val loc = readLocation()
+        val typeExp = readTypeExpression()
+        Optional(loc, typeExp)
+
+      case TYPE_ZERO_OR_MORE =>
+        val loc = readLocation()
+        val typeExp = readTypeExpression()
+        ZeroOrMore(loc, typeExp)
+
+      case TYPE_ONE_OR_MORE =>
+        val loc = readLocation()
+        val typeExp = readTypeExpression()
+        OneOrMore(loc, typeExp)
+
+      case TYPE_RANGE =>
+        val loc = readLocation()
+        val saved = reader.position
+        val nextTag = reader.peekU8()
+        reader.seek(saved)
+
+        if nextTag == TYPE_NUMBER || nextTag == TYPE_STRING then
+          // SpecificRange
+          val typeExp = readTypeExpression()
+          val min = reader.readVarLong()
+          val max = reader.readVarLong()
+          SpecificRange(loc, typeExp, min, max)
+        else
+          // RangeType
+          val min = reader.readVarLong()
+          val max = reader.readVarLong()
+          RangeType(loc, min, max)
+        end if
+
+      // References - all variants have subtype byte
+      case TYPE_REF =>
+        val subtype = reader.readU8()
+        val loc = readLocation()
+
+        subtype match {
+          case 0 => // AliasedTypeExpression
+            val keyword = readString()
+            val pathId = readPathIdentifierInline()
+            AliasedTypeExpression(loc, keyword, pathId)
+
+          case 10 => // EntityReference
+            val entity = readPathIdentifierInline()
+            EntityReferenceTypeExpression(loc, entity)
+
+          case 99 => // Anything (formerly spelled `Abstract`; tag unchanged)
+            Anything(loc)
+
+          case 100 => // Nothing
+            Nothing(loc)
+
+          case _ =>
+            addError(s"Unknown TYPE_REF subtype: $subtype", RuleId.BastUnknownTypeRefSubtype)
+            Anything(loc)
+        }
+
+      // Strings - all variants have subtype byte
+      case TYPE_STRING =>
+        val subtype = reader.readU8()
+        val loc = readLocation()
+
+        subtype match {
+          case 0 => // String_
+            val min = readOption(reader.readVarLong())
+            val max = readOption(reader.readVarLong())
+            String_(loc, min, max)
+
+          case 1 => // URI
+            val scheme = readOption(readLiteralString())
+            URI(loc, scheme)
+
+          case 2 => // Blob
+            val blobKind = BlobKind.fromOrdinal(reader.readU8())
+            Blob(loc, blobKind)
+
+          case _ =>
+            addError(s"Unknown TYPE_STRING subtype: $subtype", RuleId.BastUnknownTypeStringSubtype)
+            String_(loc, None, None)
+        }
+
+      case TYPE_PATTERN =>
+        val loc = readLocation()
+        val pattern = readSeq(() => readLiteralString())
+        Pattern(loc, pattern)
+
+      case TYPE_UNIQUE_ID =>
+        val subtype = reader.readU8()
+        val loc = readLocation()
+
+        subtype match {
+          case 0 => // UniqueId
+            val entityPath = readPathIdentifierInline()
+            // Revision 15: the kind keyword as written (`Id(entity Order)` -> Some("entity")).
+            val kindKeyword = readOption(readString())
+            UniqueId(loc, entityPath, kindKeyword)
+
+          case 1 => // UUID
+            UUID(loc)
+
+          case 2 => // UserId
+            UserId(loc)
+
+          case _ =>
+            addError(s"Unknown TYPE_UNIQUE_ID subtype: $subtype", RuleId.BastUnknownUniqueIdSubtype)
+            UUID(loc)
+        }
+
+      // Boolean
+      case TYPE_BOOL =>
+        val loc = readLocation()
+        Bool(loc)
+
+      // Numbers
+      case TYPE_NUMBER =>
+        val saved = reader.position
+        val nextByte = reader.peekU8()
+        reader.seek(saved)
+
+        if nextByte < 100 then
+          // Has subtype
+          val subtype = reader.readU8()
+          val loc = readLocation()
+
+          subtype match {
+            case 0 => Number(loc)
+            case 1 => Integer(loc)
+            case 2 => Whole(loc)
+            case 3 => Natural(loc)
+
+            case 10 => // Decimal
+              val whole = reader.readVarLong()
+              val fractional = reader.readVarLong()
+              Decimal(loc, whole, fractional)
+
+            case 11 => Real(loc)
+
+            // SI units
+            case 20 => Current(loc)
+            case 21 => Length(loc)
+            case 22 => Luminosity(loc)
+            case 23 => Mass(loc)
+            case 24 => Mole(loc)
+            case 25 => Temperature(loc)
+
+            // Time types
+            case 30 => Date(loc)
+            case 31 => Time(loc)
+            case 32 => DateTime(loc)
+
+            case 33 => // ZonedDate
+              val zone = readOption(readLiteralString())
+              ZonedDate(loc, zone)
+
+            case 34 => // ZonedDateTime
+              val zone = readOption(readLiteralString())
+              ZonedDateTime(loc, zone)
+
+            case 35 => TimeStamp(loc)
+            case 36 => Duration(loc)
+
+            case 40 => Location(loc)
+
+            case 50 => // Currency
+              val country = readString()
+              Currency(loc, country)
+
+            case _ => Number(loc)
+          }
+        else
+          // Plain Number
+          val loc = readLocation()
+          Number(loc)
+
+      // Phase 7 optimization: Predefined type tags
+      case TYPE_INTEGER =>
+        val loc = readLocation()
+        Integer(loc)
+
+      case TYPE_NATURAL =>
+        val loc = readLocation()
+        Natural(loc)
+
+      case TYPE_WHOLE =>
+        val loc = readLocation()
+        Whole(loc)
+
+      case TYPE_REAL =>
+        val loc = readLocation()
+        Real(loc)
+
+      case TYPE_STRING_DEFAULT =>
+        val loc = readLocation()
+        String_(loc, None, None)
+
+      case TYPE_UUID =>
+        val loc = readLocation()
+        UUID(loc)
+
+      case TYPE_DATE =>
+        val loc = readLocation()
+        Date(loc)
+
+      case TYPE_TIME =>
+        val loc = readLocation()
+        Time(loc)
+
+      case TYPE_DATETIME =>
+        val loc = readLocation()
+        DateTime(loc)
+
+      case TYPE_TIMESTAMP =>
+        val loc = readLocation()
+        TimeStamp(loc)
+
+      case TYPE_DURATION =>
+        val loc = readLocation()
+        Duration(loc)
+
+      case _ =>
+        addError(s"Unknown type expression tag: $typeTag at position ${reader.position}", RuleId.BastUnknownTypeTag)
+        // Use lastLocation for best-effort location on error
+        Anything(lastLocation)
+    }
+  }
+
+  // ========== References ==========
+
+  /** Consume the tag `peekU8` just reported, then read the node it introduces.
+    *
+    * Roughly twenty-five arms below spelled this out by hand as `reader.readU8() // consume tag`
+    * followed by the read. Saying it once means an arm cannot forget the consume.
+    */
+  private def consumingTag[T](read: => T): T = { reader.readU8(); read }
+
+  /** The dedicated MESSAGE reference tags, enumerated exactly once.
+    *
+    * [[readReference]] and [[readMessageRef]] both used to list them, so a new message kind could
+    * be added to one and forgotten in the other. A9b: a record is NOT a message, so NODE_RECORD_REF
+    * is deliberately absent — [[readReference]] handles it among the ordinary references and
+    * [[readMessageRef]] must reject it.
+    *
+    * Consumes nothing and returns None when the tag is not a message tag, so a caller can try this
+    * first and fall through.
+    */
+  private def messageRefByTag(refTag: Int): Option[MessageRef] = refTag match {
+    case NODE_COMMAND_REF => Some(consumingTag(readCommandRefNode()))
+    case NODE_EVENT_REF   => Some(consumingTag(readEventRefNode()))
+    case NODE_QUERY_REF   => Some(consumingTag(readQueryRefNode()))
+    case NODE_RESULT_REF  => Some(consumingTag(readResultRefNode()))
+    case _                => None
+  }
+
+  private def readReference(): Reference[Definition] = {
+    // Peek at tag to determine type - each reader consumes its own tag
+    val refTag = reader.peekU8()
+
+    // Message tags are served from messageRefByTag, the one place they are enumerated; every
+    // other tag falls through to the match below.
+    messageRefByTag(refTag).getOrElse {
+      refTag match {
+        // Legacy definition tags used as refs (for backward compatibility)
+        case NODE_AUTHOR     => readAuthorRef()
+        case NODE_TYPE       => readTypeRef()
+        case NODE_FIELD      => readFieldRefOrConstantRef()
+        case NODE_ADAPTOR    => readAdaptorRef()
+        case NODE_FUNCTION   => readFunctionRef()
+        case NODE_HANDLER    => readHandlerRef()
+        case NODE_STATE      => readStateRef()
+        case NODE_ENTITY     => readEntityRef()
+        case NODE_REPOSITORY => readRepositoryRef()
+        case NODE_PROJECTOR  => readProjectorRef()
+        case NODE_CONTEXT    => readContextRef()
+        case NODE_STREAMLET  => readStreamletRef()
+        case NODE_INLET      => readInletRef()
+        case NODE_OUTLET     => readOutletRef()
+        case NODE_SAGA       => readSagaRef()
+        case NODE_USER       => readUserRef()
+        case NODE_EPIC       => readEpicRef()
+        case NODE_GROUP      => readGroupRef()
+        case NODE_INPUT      => readInputRef()
+        case NODE_OUTPUT     => readOutputRef()
+        case NODE_DOMAIN     => readDomainRef()
+        // Message References (dedicated tags)
+        case NODE_RECORD_REF =>
+          consumingTag(readRecordRefNode())
+        // Entity References (dedicated tags - Phase 9)
+        case NODE_AUTHOR_REF =>
+          consumingTag(readAuthorRefNode())
+        case NODE_TYPE_REF =>
+          consumingTag(readTypeRefNode())
+        case NODE_FIELD_REF =>
+          consumingTag(readFieldRefNode())
+        case NODE_CONSTANT_REF =>
+          consumingTag(readConstantRefNode())
+        case NODE_ADAPTOR_REF =>
+          consumingTag(readAdaptorRefNode())
+        case NODE_FUNCTION_REF =>
+          consumingTag(readFunctionRefNode())
+        case NODE_HANDLER_REF =>
+          consumingTag(readHandlerRefNode())
+        case NODE_STATE_REF =>
+          consumingTag(readStateRefNode())
+        case NODE_ENTITY_REF =>
+          consumingTag(readEntityRefNode())
+        case NODE_REPOSITORY_REF =>
+          consumingTag(readRepositoryRefNode())
+        case NODE_PROJECTOR_REF =>
+          consumingTag(readProjectorRefNode())
+        case NODE_CONTEXT_REF =>
+          consumingTag(readContextRefNode())
+        case NODE_STREAMLET_REF =>
+          consumingTag(readStreamletRefNode())
+        case NODE_INLET_REF =>
+          consumingTag(readInletRefNode())
+        case NODE_OUTLET_REF =>
+          consumingTag(readOutletRefNode())
+        case NODE_SAGA_REF =>
+          consumingTag(readSagaRefNode())
+        case NODE_USER_REF =>
+          consumingTag(readUserRefNode())
+        case NODE_EPIC_REF =>
+          consumingTag(readEpicRefNode())
+        case NODE_GROUP_REF =>
+          consumingTag(readGroupRefNode())
+        case NODE_INPUT_REF =>
+          consumingTag(readInputRefNode())
+        case NODE_OUTPUT_REF =>
+          consumingTag(readOutputRefNode())
+        case NODE_DOMAIN_REF =>
+          consumingTag(readDomainRefNode())
+        case _ =>
+          reader.readU8() // consume the unknown tag
+          addError(s"Unknown reference tag: $refTag", RuleId.BastUnknownReferenceTag)
+          // Use lastLocation for best-effort location on error
+          TypeRef(lastLocation, "", PathIdentifier(lastLocation, Seq.empty))
+      }
+    }
+  }
+
+  private def readAuthorRef(): AuthorRef = {
+    val tag = reader.readU8() // Read NODE_AUTHOR tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    AuthorRef(loc, pathId)
+  }
+
+  private def readTypeRef(): TypeRef = {
+    val tag = reader.readU8() // Read NODE_TYPE tag
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    TypeRef(loc, keyword, pathId)
+  }
+
+  /** Read TypeRef without tag - used when type is known from position */
+  private def readTypeRefInline(): TypeRef = {
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    TypeRef(loc, keyword, pathId)
+  }
+
+  // A9b: inverse of writeRecordRefInline (state.typ, morph.value) — loc + pathId, no keyword.
+  private def readRecordRefInline(): RecordRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    RecordRef(loc, pathId)
+  }
+
+  // A70: inverse of writeCommandRefInline (correlation.yields) — loc + pathId, no keyword.
+  private def readCommandRefInline(): CommandRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    CommandRef(loc, pathId)
+  }
+
+  private def readFieldRefOrConstantRef(): FieldRef | ConstantRef = {
+    val tag = reader.readU8() // Read NODE_FIELD tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    // For now, default to FieldRef
+    FieldRef(loc, pathId)
+  }
+
+  private def readFieldRef(): FieldRef = {
+    val tag = reader.readU8() // Read NODE_FIELD tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    FieldRef(loc, pathId)
+  }
+
+  private def readConstantRef(): ConstantRef = {
+    val tag = reader.readU8() // Read NODE_FIELD tag (constants use same tag as fields)
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    ConstantRef(loc, pathId)
+  }
+
+  // Message Ref Node readers - called from readNode() dispatch where tag is already consumed
+  // They do NOT consume the tag - just read location and pathId
+  private def readCommandRefNode(): CommandRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    CommandRef(loc, pathId)
+  }
+
+  private def readEventRefNode(): EventRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    EventRef(loc, pathId)
+  }
+
+  private def readQueryRefNode(): QueryRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    QueryRef(loc, pathId)
+  }
+
+  private def readResultRefNode(): ResultRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    ResultRef(loc, pathId)
+  }
+
+  private def readRecordRefNode(): RecordRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    RecordRef(loc, pathId)
+  }
+
+  private def readAdaptorRef(): AdaptorRef = {
+    val tag = reader.readU8() // Read NODE_ADAPTOR tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    AdaptorRef(loc, pathId)
+  }
+
+  private def readFunctionRef(): FunctionRef = {
+    val tag = reader.readU8() // Read NODE_FUNCTION tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    FunctionRef(loc, pathId)
+  }
+
+  private def readHandlerRef(): HandlerRef = {
+    val tag = reader.readU8() // Read NODE_HANDLER tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    HandlerRef(loc, pathId)
+  }
+
+  private def readStateRef(): StateRef = {
+    val tag = reader.readU8() // Read NODE_STATE tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    StateRef(loc, pathId)
+  }
+
+  private def readEntityRef(): EntityRef = {
+    val tag = reader.readU8() // Read NODE_ENTITY tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    EntityRef(loc, pathId)
+  }
+
+  private def readRepositoryRef(): RepositoryRef = {
+    val tag = reader.readU8() // Read NODE_REPOSITORY tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    RepositoryRef(loc, pathId)
+  }
+
+  private def readProjectorRef(): ProjectorRef = {
+    val tag = reader.readU8() // Read NODE_PROJECTOR tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    ProjectorRef(loc, pathId)
+  }
+
+  private def readContextRef(): ContextRef = {
+    val tag = reader.readU8() // Read NODE_CONTEXT tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    ContextRef(loc, pathId)
+  }
+
+  private def readStreamletRef(): StreamletRef = {
+    val tag = reader.readU8() // Read NODE_STREAMLET tag
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    StreamletRef(loc, keyword, pathId)
+  }
+
+  private def readInletRef(): InletRef = {
+    val tag = reader.readU8() // Read NODE_INLET tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    InletRef(loc, pathId)
+  }
+
+  private def readOutletRef(): OutletRef = {
+    val tag = reader.readU8() // Read NODE_OUTLET tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    OutletRef(loc, pathId)
+  }
+
+  private def readSagaRef(): SagaRef = {
+    val tag = reader.readU8() // Read NODE_SAGA tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    SagaRef(loc, pathId)
+  }
+
+  private def readUserRef(): UserRef = {
+    val nodeType = reader.readU8() // Should be NODE_USER
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    UserRef(loc, pathId)
+  }
+
+  private def readEpicRef(): EpicRef = {
+    val tag = reader.readU8() // Read NODE_EPIC tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    EpicRef(loc, pathId)
+  }
+
+  private def readGroupRef(): GroupRef = {
+    val tag = reader.readU8() // Read NODE_GROUP tag
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    GroupRef(loc, keyword, pathId)
+  }
+
+  private def readInputRef(): InputRef = {
+    val tag = reader.readU8() // Read NODE_INPUT tag
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    InputRef(loc, keyword, pathId)
+  }
+
+  private def readOutputRef(): OutputRef = {
+    val tag = reader.readU8() // Read NODE_OUTPUT tag
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    OutputRef(loc, keyword, pathId)
+  }
+
+  private def readDomainRef(): DomainRef = {
+    val tag = reader.readU8() // Read NODE_DOMAIN tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    DomainRef(loc, pathId)
+  }
+
+  // ========== Entity Reference Node Readers (Phase 9 fix) ==========
+  // These are called from readNode() dispatch where tag is already consumed.
+  // They do NOT consume the tag - just read location and pathId.
+
+  private def readAuthorRefNode(): AuthorRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    AuthorRef(loc, pathId)
+  }
+
+  private def readTypeRefNode(): TypeRef = {
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    TypeRef(loc, keyword, pathId)
+  }
+
+  private def readFieldRefNode(): FieldRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    FieldRef(loc, pathId)
+  }
+
+  private def readConstantRefNode(): ConstantRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    ConstantRef(loc, pathId)
+  }
+
+  private def readAdaptorRefNode(): AdaptorRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    AdaptorRef(loc, pathId)
+  }
+
+  private def readFunctionRefNode(): FunctionRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    FunctionRef(loc, pathId)
+  }
+
+  private def readHandlerRefNode(): HandlerRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    HandlerRef(loc, pathId)
+  }
+
+  private def readStateRefNode(): StateRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    StateRef(loc, pathId)
+  }
+
+  private def readEntityRefNode(): EntityRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    EntityRef(loc, pathId)
+  }
+
+  private def readRepositoryRefNode(): RepositoryRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    RepositoryRef(loc, pathId)
+  }
+
+  private def readProjectorRefNode(): ProjectorRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    ProjectorRef(loc, pathId)
+  }
+
+  private def readContextRefNode(): ContextRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    ContextRef(loc, pathId)
+  }
+
+  private def readStreamletRefNode(): StreamletRef = {
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    StreamletRef(loc, keyword, pathId)
+  }
+
+  private def readInletRefNode(): InletRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    InletRef(loc, pathId)
+  }
+
+  private def readOutletRefNode(): OutletRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    OutletRef(loc, pathId)
+  }
+
+  private def readSagaRefNode(): SagaRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    SagaRef(loc, pathId)
+  }
+
+  private def readUserRefNode(): UserRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    UserRef(loc, pathId)
+  }
+
+  private def readEpicRefNode(): EpicRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    EpicRef(loc, pathId)
+  }
+
+  private def readGroupRefNode(): GroupRef = {
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    GroupRef(loc, keyword, pathId)
+  }
+
+  private def readInputRefNode(): InputRef = {
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    InputRef(loc, keyword, pathId)
+  }
+
+  private def readOutputRefNode(): OutputRef = {
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
+    OutputRef(loc, keyword, pathId)
+  }
+
+  private def readDomainRefNode(): DomainRef = {
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    DomainRef(loc, pathId)
+  }
+
+  /** A54: mirror of [[BASTWriter.writeValue]]. */
+  private def readValue(): Value = {
+    val disc = reader.readU8()
+    disc match
+      case 0 => // LiteralString
+        val loc = readLocation()
+        val s = readString()
+        LiteralString(loc, s)
+      case 4 => // PromptValue
+        val loc = readLocation()
+        // FORMAT_REVISION 23: a SEQUENCE, as for DoStatement.
+        val what = readSeq(() => readLiteralString())
+        val typeEx = readOption(readTypeExpression()) // A20: optional `as <type>` ascription
+        PromptValue(loc, what, typeEx)
+      case 12 => // EmptyValue -- `empty` / `empty <type>` (FORMAT_REVISION 21)
+        val loc = readLocation()
+        val typeEx = readOption(readTypeExpression())
+        EmptyValue(loc, typeEx)
+      case 11 => // LookupValue -- `<collection> at <index>[, <index>…]`
+        val loc = readLocation()
+        val collLoc = readLocation()
+        val collPath = readPathIdentifierInline()
+        val count = reader.readVarInt()
+        val indices = (0 until count).map(_ => readValue()).toSeq
+        LookupValue(loc, ValueRef(collLoc, collPath), indices)
+      case 1 => // Constructor
+        readConstructor()
+      case 6 => // A24: Call
+        readCall()
+      case 7 => // Ask -- a query correlated with the processor asked
+        val askLoc = readLocation()
+        val q = readMessageRef() match
+          case qr: QueryRef => qr
+          case other =>
+            throw new RuntimeException(
+              s"Ask names a ${other.getClass.getSimpleName}, but `ask` takes a query"
+            )
+        Ask(askLoc, q, readProcessorRef())
+      case 2 => // ValueRef
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ValueRef(loc, pid)
+      case 3 => // GetValue
+        val loc = readLocation()
+        val srcType = reader.readU8()
+        val source: InputRef | StateRef = srcType match
+          case 0 =>
+            val irLoc = readLocation()
+            val keyword = readString()
+            val pid = readPathIdentifierInline()
+            InputRef(irLoc, keyword, pid)
+          case 1 =>
+            val srLoc = readLocation()
+            val pid = readPathIdentifierInline()
+            StateRef(srLoc, pid)
+          case _ => throw new RuntimeException(s"Invalid get-value source type: $srcType")
+        GetValue(loc, source)
+      case 5 => // A28: BooleanExpression, with a sub-tag selecting the node
+        reader.readU8() match
+          case 0 => // BooleanLiteral
+            val loc = readLocation()
+            BooleanLiteral(loc, reader.readU8() != 0)
+          case 1 => // ComparisonExpression
+            val loc = readLocation()
+            val op = ComparisonOperator.fromOrdinal(reader.readU8())
+            val left = readComparand()
+            val right = readComparand()
+            ComparisonExpression(loc, op, left, right)
+          case 2 => // LogicalExpression
+            val loc = readLocation()
+            val op = LogicalOperator.fromOrdinal(reader.readU8())
+            val left = readValue()
+            val right = readValue()
+            LogicalExpression(loc, op, left, right)
+          case 3 => // NotExpression
+            val loc = readLocation()
+            NotExpression(loc, readValue())
+          case 4 => // InvariantCondition -- `invariant X [with <expr>]` in a condition
+            val loc = readLocation()
+            val pid = readPathIdentifierInline()
+            InvariantCondition(loc, InvariantRef(loc, pid), readOption(readValue()))
+          case sub => throw new RuntimeException(s"Invalid boolean-expression sub-tag: $sub")
+      case 8 => // A70/instance-identity: Initiate -- `initiate <processor>[(args)]`
+        val loc = readLocation()
+        val processor = readProcessorRef()
+        val args = readSeq(() => readConstructorArg())
+        Initiate(loc, processor, args)
+      case 9 => // SelfValue -- `self` / `self.<field>`
+        val loc = readLocation()
+        val field = readOption(readIdentifierInline())
+        SelfValue(loc, field)
+      case 13 => // SystemValue -- `system` / `system.<member>` (revision 22)
+        val loc = readLocation()
+        val field = readOption(readIdentifierInline())
+        SystemValue(loc, field)
+      case 10 => // NumericLiteral -- text as written
+        val loc = readLocation()
+        NumericLiteral(loc, readString())
+      case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
+  }
+
+  /** A70/instance-identity: mirror of [[BASTWriter.writeConstructorArg]] -- a single
+    * [[ConstructorArg]], reused by [[readValue]]'s `Initiate` arm (via [[readSeq]]).
+    */
+  private def readConstructorArg(): ConstructorArg = {
+    val argLoc = readLocation()
+    val hasName = reader.readU8() != 0
+    val name = if hasName then Some(readIdentifierInline()) else None
+    val v = readValue()
+    ConstructorArg(argLoc, name, v)
+  }
+
+  /** A28: mirror of [[BASTWriter.writeComparand]] — a comparison operand (ValueRef | GetValue |
+    * ConstantRef | NumericLiteral). Comparison operands were ref-only until Reid reversed A28's
+    * rule 2026-08-14 to also admit a bare numeric literal.
+    */
+  private def readComparand(): Comparand = {
+    reader.readU8() match
+      case 4 => // LookupValue -- mirrors value tag 11
+        val loc = readLocation()
+        val collLoc = readLocation()
+        val collPath = readPathIdentifierInline()
+        val count = reader.readVarInt()
+        val indices = (0 until count).map(_ => readValue()).toSeq
+        LookupValue(loc, ValueRef(collLoc, collPath), indices)
+      case 0 => // ValueRef
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ValueRef(loc, pid)
+      case 5 => // SystemValue -- `system.<member>` as a comparison operand (revision 22)
+        val loc = readLocation()
+        val field = readOption(readIdentifierInline())
+        SystemValue(loc, field)
+      case 1 => // GetValue
+        val loc = readLocation()
+        val srcType = reader.readU8()
+        val source: InputRef | StateRef = srcType match
+          case 0 =>
+            val irLoc = readLocation()
+            val keyword = readString()
+            val pid = readPathIdentifierInline()
+            InputRef(irLoc, keyword, pid)
+          case 1 =>
+            val srLoc = readLocation()
+            val pid = readPathIdentifierInline()
+            StateRef(srLoc, pid)
+          case _ => throw new RuntimeException(s"Invalid get-value source type: $srcType")
+        GetValue(loc, source)
+      case 2 => // ConstantRef
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ConstantRef(loc, pid)
+      case 3 => // NumericLiteral
+        val loc = readLocation()
+        NumericLiteral(loc, readString())
+      case other => throw new RuntimeException(s"Invalid comparand discriminator: $other")
+  }
+
+  /** A29: mirror of [[BASTWriter.writeMatchPattern]] — a match-case pattern (TypePattern |
+    * ComparisonPattern | LiteralPattern).
+    */
+  private def readMatchPattern(): MatchPattern =
+    reader.readU8() match
+      case 0 => // TypePattern
+        val loc = readLocation()
+        TypePattern(loc, readTypeRefInline())
+      case 1 => // ComparisonPattern
+        val loc = readLocation()
+        val op = ComparisonOperator.fromOrdinal(reader.readU8())
+        ComparisonPattern(loc, op, readComparand())
+      case 2 => // LiteralPattern
+        val loc = readLocation()
+        LiteralPattern(loc, readLiteralString())
+      case other => throw new RuntimeException(s"Invalid match pattern discriminator: $other")
+
+  /** A54: mirror of [[BASTWriter.writeMessageOperand]]. */
+  private def readMessageOperand(): MessageRef | Constructor | ValueRef =
+    reader.readU8() match
+      case 0 => readMessageRef()
+      case 1 => readConstructor()
+      case 2 => // A56: a bound name — `tell p to entity F`
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ValueRef(loc, pid)
+      case other => throw new RuntimeException(s"Invalid message operand discriminator: $other")
+
+  /** A54: mirror of [[BASTWriter.writeRecordOperand]]. */
+  private def readRecordOperand(): RecordRef | Constructor | ValueRef =
+    reader.readU8() match
+      case 0 => readRecordRefInline()
+      case 1 => readConstructor()
+      case 2 => // Task 2: `morph … with <value>` names a value already in hand
+        val loc = readLocation()
+        val pid = readPathIdentifierInline()
+        ValueRef(loc, pid)
+      case other => throw new RuntimeException(s"Invalid record operand discriminator: $other")
+
+  /** A54: mirror of [[BASTWriter.writeConstructor]]. */
+  private def readConstructor(): Constructor = {
+    val loc = readLocation()
+    val kind = reader.readU8()
+    val rLoc = readLocation()
+    val pid = readPathIdentifierInline()
+    val ref: MessageRef | RecordRef = kind match
+      case 0 => CommandRef(rLoc, pid)
+      case 1 => EventRef(rLoc, pid)
+      case 2 => QueryRef(rLoc, pid)
+      case 3 => ResultRef(rLoc, pid)
+      case 4 => RecordRef(rLoc, pid)
+      case _ => throw new RuntimeException(s"Invalid constructor ref kind: $kind")
+    val count = reader.readVarInt()
+    val args = (0 until count).map { _ =>
+      val argLoc = readLocation()
+      val hasName = reader.readU8() != 0
+      val name = if hasName then Some(readIdentifierInline()) else None
+      val v = readValue()
+      ConstructorArg(argLoc, name, v)
+    }.toSeq
+    Constructor(loc, ref, args)
+  }
+
+  /** A24: mirror of [[BASTWriter.writeCall]]. */
+  private def readCall(): Call = {
+    val loc = readLocation()
+    val function = readFunctionRef()
+    val count = reader.readVarInt()
+    val args = (0 until count).map { _ =>
+      val argLoc = readLocation()
+      val hasName = reader.readU8() != 0
+      val name = if hasName then Some(readIdentifierInline()) else None
+      val v = readValue()
+      ConstructorArg(argLoc, name, v)
+    }.toSeq
+    Call(loc, function, args)
+  }
+
+  private def readMessageRef(): MessageRef = {
+    val refTag = reader.peekU8()
+    messageRefByTag(refTag).getOrElse {
+      // A9b: a record is not a message; only the 4 message tags are valid here.
+      addError(s"Unknown message ref tag: $refTag", RuleId.BastUnknownMessageRefTag)
+      // Use lastLocation for best-effort location on error
+      CommandRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
+    }
+  }
+
+  private def readProcessorRef(): ProcessorRef[Processor[?]] = {
+    val refTag = reader.peekU8()
+    refTag match {
+      // Legacy definition tags used as refs
+      case NODE_ADAPTOR    => readAdaptorRef()
+      case NODE_ENTITY     => readEntityRef()
+      case NODE_REPOSITORY => readRepositoryRef()
+      case NODE_PROJECTOR  => readProjectorRef()
+      case NODE_CONTEXT    => readContextRef()
+      case NODE_STREAMLET  => readStreamletRef()
+      // New dedicated REF tags (Phase 9)
+      case NODE_ADAPTOR_REF =>
+        consumingTag(readAdaptorRefNode())
+      case NODE_ENTITY_REF =>
+        consumingTag(readEntityRefNode())
+      case NODE_REPOSITORY_REF =>
+        consumingTag(readRepositoryRefNode())
+      case NODE_PROJECTOR_REF =>
+        consumingTag(readProjectorRefNode())
+      case NODE_CONTEXT_REF =>
+        consumingTag(readContextRefNode())
+      case NODE_STREAMLET_REF =>
+        consumingTag(readStreamletRefNode())
+      case _ =>
+        // Fallback - use lastLocation for best-effort location on error
+        EntityRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
+    }
+  }
+
+  private def readPortletRef(): PortletRef[Portlet] = {
+    val refTag = reader.peekU8()
+    refTag match {
+      // Legacy definition tags used as refs
+      case NODE_INLET  => readInletRef()
+      case NODE_OUTLET => readOutletRef()
+      // New dedicated REF tags (Phase 9)
+      case NODE_INLET_REF =>
+        consumingTag(readInletRefNode())
+      case NODE_OUTLET_REF =>
+        consumingTag(readOutletRefNode())
+      case _ =>
+        // Fallback - use lastLocation for best-effort location on error
+        InletRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
+    }
+  }
+
+  // ========== Helper Methods ==========
+
+  /** Build an At against whatever source is currently attached.
+    *
+    * Any RiddlParserInput will do: an At is (source, offset, endOffset) and BAST stores real
+    * offsets, so when the caller supplied the true source the positions resolve exactly, and when
+    * they did not the placeholder reports them unknown. Replaces a cast to BASTParserInput, which
+    * assumed the placeholder was the only possibility and made supplying a real source a
+    * ClassCastException. A method, not a local def -- readLocation runs once per node.
+    */
+  private def atFrom(offset: Int, endOffset: Int): At =
+    At(currentSource, offset, if endOffset < offset then offset else endOffset)
+
+  private def readLocation(): At = {
+    // Optimized location format (Phase 7):
+    // - Source file changes are handled by FILE_CHANGE_MARKER before node tags
+    // - Locations just store offset deltas (no flag byte)
+    // - Uses zigzag encoding for signed deltas
+
+    if !firstLocationRead then
+      // First location: read absolute offsets
+      val offset = reader.readVarInt()
+      val endOffset = reader.readVarInt()
+
+      // Create At directly from offsets
+      val loc = atFrom(offset, endOffset)
+      lastLocation = loc
+      firstLocationRead = true
+      loc
+    else
+      // Subsequent locations: read deltas with zigzag decoding
+      val offsetDelta = reader.readZigzagInt()
+      val endOffsetDelta = reader.readZigzagInt()
+
+      val offset = lastLocation.offset + offsetDelta
+      val endOffset = lastLocation.endOffset + endOffsetDelta
+
+      val loc = atFrom(offset, endOffset)
+      lastLocation = loc
+      loc
+  }
+
+  private def readIdentifier(): Identifier = {
+    val nodeType = reader.readU8() // Should be NODE_IDENTIFIER
+    val loc = readLocation()
+    val value = readString()
+    Identifier(loc, value)
+  }
+
+  /** Read identifier without tag - used when identifier position is known */
+  private def readIdentifierInline(): Identifier = {
+    val loc = readLocation()
+    val value = readString()
+    Identifier(loc, value)
+  }
+
+  /** Read PathIdentifier without tag - position is always known within references
+    *
+    * Phase 8 optimization: Uses path table interning for repeated paths. Encoding:
+    *   - If count > 0: inline path (read count string indices)
+    *   - If count == 0: next varint is path table index
+    */
+  private def readPathIdentifierInline(): PathIdentifier = {
+    val loc = readLocation()
+    val count = reader.readVarInt()
+
+    val value =
+      if count == 0 then
+        // Path table lookup
+        val pathIndex = reader.readVarInt()
+        pathTable.lookup(pathIndex)
+      else
+        // Inline path - read count string indices
+        (0 until count).map(_ => readString())
+      end if
+
+    PathIdentifier(loc, value)
+  }
+
+  private def readLiteralString(): LiteralString = {
+    val nodeType = reader.readU8() // Should be NODE_LITERAL_STRING
+    val loc = readLocation()
+    val s = readString()
+    LiteralString(loc, s)
+  }
+
+  private def readString(): String = {
+    val posBeforeRead = reader.position
+    val index = reader.readVarInt()
+    if index >= stringTable.size then
+      throw new IllegalArgumentException(
+        deserializationError(
+          s"Invalid string table index",
+          expectedValue = Some(s"index < ${stringTable.size}"),
+          actualValue = Some(s"index = $index (read at byte $posBeforeRead)")
+        )
+      )
+    end if
+    stringTable.lookup(index)
+  }
+
+  private def readURL(): URL = {
+    // Read all four fields separately (format revision 18+; revisions 4-17 wrote only
+    // basis+path and this reader rebuilt scheme/authority as `file`/empty, silently
+    // discarding `https://ossum.tech` and any other non-file URL).
+    val scheme = readString()
+    val authority = readString()
+    val basis = readString()
+    val path = readString()
+    if scheme.isEmpty && authority.isEmpty && basis.isEmpty && path.isEmpty then URL.empty
+    else URL(scheme, authority, basis, path)
+  }
+
+  private def readOption[T](readValue: => T): Option[T] = {
+    val hasValue = reader.readBoolean()
+    if hasValue then Some(readValue) else None
+  }
+
+  private def readSeq[T](readElement: () => T): Seq[T] = {
+    val count = reader.readVarInt()
+    (0 until count).map(_ => readElement())
+  }
+
+  /** Read type expressions as contents
+    *
+    * Used for Alternation which contains AliasedTypeExpression items. These are written with
+    * TYPE_REF tags which readTypeExpression() handles, but readNode() does not handle type
+    * expression tags.
+    */
+  private def readTypeExpressionContents(): Contents[AliasedTypeExpression] = {
+    val count = reader.readVarInt()
+    val buffer = ArrayBuffer[AliasedTypeExpression]()
+
+    var i = 0
+    while i < count do
+      val typeExp = readTypeExpression()
+      // Alternation items are always AliasedTypeExpression
+      typeExp match {
+        case ate: AliasedTypeExpression =>
+          buffer += ate
+        case other =>
+          // If we get something else, wrap it in an error and continue
+          addError(
+            s"Expected AliasedTypeExpression in Alternation, got ${other.getClass.getSimpleName}"
+          , RuleId.BastUnexpectedAlternationMember)
+          buffer += AliasedTypeExpression(other.loc, "", PathIdentifier.empty)
+      }
+      i += 1
+    end while
+
+    Contents(buffer.toSeq: _*)
+  }
+
+  /** Read contents count but defer reading elements
+    *
+    * Elements are read by the main traversal loop
+    */
+  private def readContentsDeferred[T <: RiddlValue](): Contents[T] = {
+    val countPos = reader.position
+    val count = reader.readVarInt()
+    debugLog(f"[DEBUG] readContentsDeferred at pos $countPos: count=$count")
+    pushContext(s"contents[$count]")
+    val buffer = ArrayBuffer[T]()
+
+    // Read the actual nodes
+    var i = 0
+    while i < count do
+      debugLog(f"[DEBUG]   reading item ${i + 1} of $count at pos ${reader.position}")
+      val node = readNode().asInstanceOf[T]
+      debugLog(f"[DEBUG]   item ${i + 1}: ${node.getClass.getSimpleName}")
+      buffer += node
+      i += 1
+    end while
+
+    debugLog(f"[DEBUG] readContentsDeferred finished at pos ${reader.position} (read $count items)")
+    popContext()
+    Contents(buffer.toSeq: _*)
+  }
+
+  private def readMetadataDeferred(): Contents[MetaData] = {
+    // Phase 7 optimization: Only read metadata if flag was set
+    if !currentNodeHasMetadata then return Contents.empty[MetaData]()
+    end if
+
+    val countPos = reader.position
+    val count = reader.readVarInt()
+    pushContext(s"metadata[$count]")
+    val buffer = ArrayBuffer[MetaData]()
+
+    var i = 0
+    while i < count do
+      val node = readNode().asInstanceOf[MetaData]
+      buffer += node
+      i += 1
+    end while
+
+    popContext()
+    Contents(buffer.toSeq: _*)
+  }
+
+  private def addError(message: String, rule: RuleId): Unit = {
+    messages += Messages.error(message, At.empty, ruleId = Some(rule))
+  }
+}

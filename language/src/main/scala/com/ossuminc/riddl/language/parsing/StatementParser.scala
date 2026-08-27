@@ -1,0 +1,1072 @@
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl.language.parsing
+
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{Contents, *}
+import com.ossuminc.riddl.language.At
+import fastparse.*
+import fastparse.MultiLineWhitespace.*
+
+/** StatementParser
+  *
+  * Parse the declarative statements per riddlsim specification: send, tell, morph, become, when,
+  * match, error, let, set, prompt, code
+  */
+private[parsing] trait StatementParser {
+  // `& TypeParser`: A20's `promptValue` reuses `typeExpression` for the `as <type>` ascription
+  // rather than duplicating the type-expression grammar. This mirrors TypeParser's own self-type
+  // (`this: CommonParser & StatementParser`), which already depends back on StatementParser (for
+  // `numericLiteral`/`booleanLiteral`/`promptValue` reuse in `constant`) — mutual self-type
+  // requirements are legal in Scala (unlike inheritance, they carry no linearization order), and
+  // both are always mixed together at the concrete-parser leaves (HandlerParser,
+  // VitalDefinitionParser).
+  this: ReferenceParser & CommonParser & TypeParser =>
+
+  // `do "…"` is the canonical AI-action statement (A54). It builds a DoStatement.
+  private def doStatement[u: P]: P[DoStatement] = {
+    P(Index ~ Keywords.do_ ~ literalStringBlock ~/ Index)./ map { case (start, str, end) =>
+      DoStatement(at(start, end), str)
+    }
+  }
+
+  // `prompt "…"` is the DEPRECATED synonym for `do "…"`; it still builds a DoStatement but emits a
+  // deprecation at the keyword (pattern mirrors replyStatement's `reply` -> `yield`). Note: the
+  // parenthesized `prompt("…")` value form is handled by `promptValue`, not here.
+  private def promptStatement[u: P]: P[DoStatement] = {
+    P(Index ~ Keywords.prompt ~ literalStringBlock ~/ Index)./ map { case (start, str, end) =>
+      val kwLoc = at(start, start + Keyword.prompt.length)
+      deprecation(
+        kwLoc,
+        "The `prompt` statement is deprecated; use `do` instead",
+        code = Option(RuleId.DoStatement),
+        autoFixable = true
+      )
+      DoStatement(at(start, end), str)
+    }
+  }
+
+  private def errorStatement[u: P]: P[ErrorStatement] = {
+    P(
+      Index ~ Keywords.error ~ literalString ~/ Index
+    )./.map { case (start, str, end) => ErrorStatement(at(start, end), str) }
+  }
+
+  // A28: `require` accepts a pseudo-code LiteralString, an `invariant <pathId>` reference, or a
+  // structured BooleanExpression. `booleanExprOnly` is tried LAST: `require invariant X` is caught by
+  // the `invariant`-keyword arm first, and a bare-ref pseudo-condition (never valid in `require`) is
+  // rejected by the filter (so `require count == 0` becomes a BooleanExpression while the legacy
+  // forms are unchanged).
+  private def requireStatement[u: P]: P[RequireStatement] = {
+    P(
+      Index ~ Keywords.require ~/ (
+        literalString |
+          (Keywords.invariant ~ pathIdentifier).map { case pid => pid } |
+          booleanExprOnly
+      ) ~ (Keywords.`with` ~ value).? ~/ Index
+    )./.map {
+      case (start, str: LiteralString, arg, end) => RequireStatement(at(start, end), str, arg)
+      case (start, pid: PathIdentifier, arg, end) =>
+        RequireStatement(at(start, end), InvariantRef(at(start, end), pid), arg)
+      case (start, be: BooleanExpression, arg, end) => RequireStatement(at(start, end), be, arg)
+    }
+  }
+
+  // A28: an invariant's condition is either an opaque pseudo-code LiteralString or a structured
+  // BooleanExpression (or absent via `undefined`/`???`). Lives here (rather than in CommonParser)
+  // so it can reach `booleanExprOnly`; every caller (ProcessorParser/EntityParser/NebulaParser/
+  // ExtensibleTopLevelParser) mixes in StatementParser transitively. ORDER: `literalString` MUST
+  // precede `booleanExprOnly` — `literalString` cuts after the opening quote, so a quoted string fed
+  // to `booleanExprOnly` first would fail the filter behind that cut (no backtrack). A quoted string
+  // and an unquoted expression never share a first token, so trying `literalString` first is safe:
+  // `invariant X is "…"` stays a LiteralString, `invariant X is a > b` becomes a BooleanExpression.
+  /** The optional `requires` clause: a STATE ref or a TYPE ref, never an inline aggregation.
+    *
+    * `requires state S` narrows an entity-level invariant to one state and stays IMPLICIT.
+    * `requires <type>` makes it explicit-only, since nothing in ambient scope can supply the value.
+    * `stateRef` is tried first because `state` is a keyword `typeRef` would not claim.
+    */
+  private def invariantRequires[u: P]: P[StateRef | TypeRef] =
+    P(Keywords.requires ~/ (stateRef | typeRef)).asInstanceOf[P[StateRef | TypeRef]]
+
+  /** The block condition: pure statements then the boolean that IS the predicate.
+    *
+    * Reuses `StatementsSet.FunctionStatements` rather than defining a new set — A26 already makes
+    * that set pure (send/tell/set banned in `base`; morph/become/yield/reply rejected with a
+    * message), which is exactly the purity an invariant needs.
+    */
+  private def invariantBlock[u: P]: P[InvariantBlock] = {
+    P(
+      Index ~ open ~ statement(StatementsSet.FunctionStatements).rep(0) ~ booleanExprOnly ~ close ~
+        Index
+    ).map { case (start, stmts, predicate, end) =>
+      InvariantBlock(at(start, end), stmts.toContents, predicate)
+    }
+  }
+
+  def invariant[u: P]: P[Invariant] = {
+    type Cond = Option[LiteralString | BooleanExpression | InvariantBlock]
+    P(
+      Index ~ Keywords.invariant ~ identifier ~/ invariantRequires.? ~ is ~ (
+        undefined(Option.empty[LiteralString | BooleanExpression | InvariantBlock]) |
+          // ORDER: the block form leads because it is the only arm starting with `{`, and
+          // `booleanExprOnly` would otherwise try (and fail behind a cut) on the brace.
+          invariantBlock.map(b => Some(b): Cond) |
+          literalString.map(ls => Some(ls): Cond) |
+          booleanExprOnly.map(be => Some(be): Cond)
+      ) ~ withMetaData ~/ Index
+    ).map { case (off1, id, requires, condition, metas, off2) =>
+      Invariant(at(off1, off2), id, condition, requires, metas.toContents)
+    }
+  }
+
+  /** A56: a bare path naming a binding introduced by the enclosing on-clause — `on p: command Ping
+    * is { tell p to entity F }`.
+    *
+    * Tried only AFTER [[messageRef]], which is keyword-led (`command`/`event`/`query`/`result`) and
+    * carries no cut at the keyword, so this alternative can never shadow `tell command Foo` — the
+    * same backtracking bargain [[HandlerParser.maybeName]] relies on.
+    *
+    * The `!to` guard matters because `anyIdentifier` does NOT exclude keywords: without it, a
+    * missing operand (`tell to entity F`) would consume `to` AS the operand and then report the
+    * failure a token late, against the definition rather than the omission.
+    */
+  private def boundMessageValue[u: P]: P[ValueRef] = {
+    P(Index ~ !to ~ pathIdentifier ~~ Index).map { case (start, pid, end) =>
+      ValueRef(at(start, end), pid)
+    }
+  }
+
+  // A54: a message operand — a bare message ref `E` or a constructor `E(args)`. The ref is parsed
+  // ONCE, then an OPTIONAL parenthesized arg list decides ref-vs-constructor. (Trying `constructor`
+  // first would commit the ref parse via its internal cut and prevent the bare-ref fallback.)
+  private def messageValue[u: P]: P[MessageRef | Constructor] = {
+    P(
+      Index ~ messageRef ~
+        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~ Index
+    ).map {
+      case (_, ref, None, _)             => ref: MessageRef | Constructor
+      case (start, ref, Some(args), end) => Constructor(at(start, end), ref, args.toSeq)
+    }
+  }
+
+  /** A56: the operand accepted by `tell`, `send`, `yield` and `reply` — [[messageValue]] widened
+    * with a bound name.
+    *
+    * `yield`/`reply` were held back from A56 on the reasoning that `yield p` "would interact with
+    * yield conformance (A19), which compares the yielded operand against the clause's DECLARED
+    * `yields`". **Task 2 of the message-value design overturns that.** The comparison is by
+    * RESOLVED TYPE, and a `ValueRef` supplies one exactly as a `MessageRef` does — so conformance
+    * is not an obstacle to widening, it is a check that has to keep working across it, which
+    * `YieldReplyMorphValueOperandTest` pins from both directions.
+    *
+    * The ordering matters: `messageValue` is keyword-led, so it must be tried FIRST; a bare path is
+    * only reached when no message kind keyword is present.
+    */
+  private def deliverableMessageValue[u: P]: P[MessageRef | Constructor | ValueRef] = {
+    P(messageValue | boundMessageValue)
+  }
+
+  // A54: a record operand for `morph … with` — a bare record ref `R` or a constructor `R(args)`.
+  // Task 2 widens it with a bare path naming a value already in hand, the record-side counterpart
+  // of `deliverableMessageValue`. Same ordering rule: `recordRef` is keyword-led and goes first.
+  private def recordValue[u: P]: P[RecordRef | Constructor | ValueRef] = {
+    P(
+      Index ~ recordRef ~
+        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~ Index
+    ).map {
+      case (_, ref, None, _)             => ref: RecordRef | Constructor | ValueRef
+      case (start, ref, Some(args), end) => Constructor(at(start, end), ref, args.toSeq)
+    } | boundMessageValue
+  }
+
+  private def yieldStatement[u: P]: P[YieldStatement] = {
+    P(
+      Index ~ Keywords.`yield` ~/ deliverableMessageValue ~/ Index
+    )./.map { case (start, msg, end) => YieldStatement(at(start, end), msg) }
+  }
+
+  // `reply` was a DEPRECATED synonym for `yield` until 2.0, parsing to the same YieldStatement.
+  // It is now un-deprecated and builds its own node: `reply` answers a QUERY with its declared
+  // result, where `yield` emits an EVENT from a command. Two pairings, two spellings -- see
+  // AST.ReplyStatement. The pairing itself (`reply result` / `yield event`) is enforced in
+  // ValidationPass, which can name both the keyword and the message kind; a parse failure here
+  // could only point at the keyword.
+  private def replyStatement[u: P]: P[ReplyStatement] = {
+    P(
+      Index ~ Keywords.reply ~/ deliverableMessageValue ~/ Index
+    )./.map { case (start, msg, end) => ReplyStatement(at(start, end), msg) }
+  }
+
+  private def theSetStatement[u: P]: P[SetStatement] = {
+    P(
+      Index ~ Keywords.set ~/ (fieldRef | stateRef) ~ to ~/ value ~/ Index
+    )./.map {
+      case (start, ref: FieldRef, v, end) => SetStatement(at(start, end), ref, v)
+      case (start, ref: StateRef, v, end) => SetStatement(at(start, end), ref, v)
+    }
+  }
+
+  // `send` canonically targets an OUTLET: a processor emits on its own outlet and a Connector
+  // routes the message to a downstream inlet. Sending directly to an INLET bypasses that model
+  // (that is `tell`'s job), so the inlet form is DEPRECATED (soft, removed in 3.0). Both forms
+  // still parse; the inlet branch emits a deprecation at the ref (mirrors reply -> yield, prompt).
+  private def sendStatement[u: P]: P[SendStatement] = {
+    P(
+      Index ~ Keywords.send ~/ deliverableMessageValue ~/ to ~ (outletRef | inletRef) ~/ Index
+    )./.map { case (start, msg, portlet, end) =>
+      portlet match
+        case ref: InletRef =>
+          deprecation(
+            ref.loc,
+            "send to an inlet is deprecated and will be removed in 3.0; send to your outlet and " +
+              "connect it with a connector, or use `tell` to deliver directly to a processor",
+            code = Option(RuleId.SendToInlet),
+            autoFixable = false
+          )
+        case _ => ()
+      SendStatement(at(start, end), msg, portlet)
+    }
+  }
+
+  /** `forward <operand> to <portlet|processor>` -- pass the handled message on and discharge the
+    * response obligation.
+    *
+    * BOTH transmission shapes, and they are told apart by the KEYWORD that leads the reference:
+    * `outlet`/`inlet` give a portlet, an entity/context/projector/... keyword gives a processor.
+    * No ambiguity to resolve, so no cut is needed between them.
+    *
+    * Everything else about `forward` is a VALIDATION question, not a parse one -- which clauses may
+    * contain it, whether the operand's type matches the handled message, and what may follow it.
+    * Those need the resolved message type, and a parse-time `error()` would preempt the whole pass
+    * chain (CLAUDE.md: put a check in the parser only when validation cannot make it).
+    */
+  private def forwardStatement[u: P]: P[ForwardStatement] = {
+    // Each branch is ASCRIBED to the union. Written as a bare `(a | b) | c` the alternation
+    // collapses to the least upper bound -- `Reference[Outlet | Inlet | Processor[?]]` -- which is
+    // not the union the AST field declares, and the mismatch is a compile error rather than a
+    // silent widening.
+    type Target = PortletRef[Portlet] | ProcessorRef[Processor[?]]
+    P(
+      Index ~ Keywords.forward ~/ deliverableMessageValue ~/ to ~
+        ((outletRef | inletRef).map(p => p: Target) | processorRef.map(p => p: Target)) ~/ Index
+    )./.map { case (start, msg, target, end) => ForwardStatement(at(start, end), msg, target) }
+  }
+
+  private def tellStatement[u: P]: P[TellStatement] = {
+    // Told apart by the KEYWORD leading the reference, exactly as `forwardStatement` does: every
+    // `processorRef` alternative is keyword-led, so a bare path can only be a value. `processorRef`
+    // must be tried FIRST -- `value` would otherwise swallow `entity Order` as a path.
+    type Target = ProcessorRef[Processor[?]] | Value
+    P(
+      Index ~ Keywords.tell ~/ deliverableMessageValue ~/ to ~
+        (processorRef.map(p => p: Target) | value.map(v => v: Target)) ~
+        (by ~/ identifier).? ~/ Index
+    )./.map { (start, msg, target, byId, end) => TellStatement(at(start, end), msg, target, byId) }
+  }
+
+  /** The processor context a statement occurs in — drives which extra statements are added (Entity
+    * adds morph/become/reply; Context/Repository add reply).
+    */
+  enum ProcessorKind:
+    case Any, Adaptor, Context, Entity, Function, Projector, Repository, Saga, Stream
+  end ProcessorKind
+
+  /** A per-clause restriction that composes with the processor context by *subtracting* statements.
+    * Threads through nested blocks (when/match) via the same [[StatementsSet]].
+    */
+  enum ClauseRestriction:
+    case Unrestricted
+    case EventClause // events must always be accepted -> no require/error
+    case ActivationClause // activate/passivate must be side-effect-free -> no send/tell/reply/morph/become
+  end ClauseRestriction
+
+  /** What statements are legal in a clause body: the processor context combined with an optional
+    * per-clause restriction. Convenience vals on the companion preserve the old `StatementsSet.X`
+    * call sites (now `Unrestricted`); `.forEvent`/`.forActivation` layer a restriction on.
+    */
+  case class StatementsSet(
+    processor: ProcessorKind,
+    clause: ClauseRestriction = ClauseRestriction.Unrestricted
+  ):
+    def forEvent: StatementsSet = copy(clause = ClauseRestriction.EventClause)
+    def forActivation: StatementsSet = copy(clause = ClauseRestriction.ActivationClause)
+  end StatementsSet
+
+  object StatementsSet:
+    val AllStatements: StatementsSet = StatementsSet(ProcessorKind.Any)
+    val AdaptorStatements: StatementsSet = StatementsSet(ProcessorKind.Adaptor)
+    val ContextStatements: StatementsSet = StatementsSet(ProcessorKind.Context)
+    val EntityStatements: StatementsSet = StatementsSet(ProcessorKind.Entity)
+    val FunctionStatements: StatementsSet = StatementsSet(ProcessorKind.Function)
+    val ProjectorStatements: StatementsSet = StatementsSet(ProcessorKind.Projector)
+    val RepositoryStatements: StatementsSet = StatementsSet(ProcessorKind.Repository)
+    val SagaStatements: StatementsSet = StatementsSet(ProcessorKind.Saga)
+    val StreamStatements: StatementsSet = StatementsSet(ProcessorKind.Stream)
+  end StatementsSet
+
+  private def morphStatement[u: P]: P[MorphStatement] = {
+    P(
+      Index ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ recordValue ~/ Index
+    )./.map { case (start, eRef, sRef, mRef, end) =>
+      MorphStatement(at(start, end), eRef, sRef, mRef)
+    }
+  }
+
+  private def becomeStatement[u: P]: P[BecomeStatement] = {
+    P(
+      Index ~ Keywords.become ~/ entityRef ~ to ~ handlerRef ~/ Index
+    )./.map { case (start, eRef, hRef, end) => BecomeStatement(at(start, end), eRef, hRef) }
+  }
+
+  // A28/A17: `when` accepts a structured BooleanExpression, a bare boolean value reference (a single
+  // name OR a dotted path -> ValueRef, A17), a pseudo-code LiteralString, or the legacy bare
+  // `let`-binding Identifier. ORDER matters:
+  //   - `booleanExprOnly` is tried first: for `when a > b` / `when x and y` / `when true` /
+  //     `when not flag` / `when !flag` it yields a real BooleanExpression; for a BARE atom
+  //     (`when flag`, `when order.isPaid`) the filter rejects the bare-atom result and the parse
+  //     backtracks (no cut before an operator) to `valueRef`, which builds a first-class ValueRef
+  //     (A17) covering both a single name and a dotted path.
+  //   - `not`/`!` are NOT special-cased here (2026-08-14 ruling: the two spellings are synonymous
+  //     everywhere): `booleanExprOnly` routes both through `not_expression`
+  //     (see `notExpr`/`notOperator` below), producing one `NotExpression` node either way. There is
+  //     deliberately no separate `"!" identifier` alternative -- that was the source of the old
+  //     two-AST divergence (a `negated: Boolean` flag vs. a real `NotExpression` node) and leaving it
+  //     beside the general rule would have kept the special case alive instead of retiring it.
+  //   - `literalString` then handles the opaque pseudo-code form (`when "user is authenticated"`);
+  //     `valueRef` above never consumes a quote, so the order is safe.
+  //   - the bare `identifier` arm is the legacy fallback (now effectively unreached, since a bare
+  //     name is routed to `valueRef`); kept for AST/API back-compat.
+  private def whenCondition[u: P]
+    : P[LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue] = {
+    P(
+      booleanExprOnly.map(be =>
+        be: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue
+      ) |
+        promptValue.map(pv =>
+          pv: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue
+        ) |
+        valueRef.map(vr =>
+          vr: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue
+        ) |
+        deprecatedStringCondition
+          .map(ls => ls: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue) |
+        identifier.map(id =>
+          id: LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue
+        )
+    )
+  }
+
+  /** A bare string condition — `when "the order has drink items"`.
+    *
+    * A54 settled that a bare `"x"` is a LITERAL while `prompt("x")` marks a value an AI decides. A
+    * natural-language condition is plainly the latter, so spelling it as a bare string contradicts
+    * the convention the rest of the language follows. `prompt(...)` is now accepted here and this
+    * form is deprecated; it still parses, so no model breaks today.
+    */
+  private def deprecatedStringCondition[u: P]: P[LiteralString] = {
+    P(Index ~ literalString)./.map { case (start, ls) =>
+      deprecation(
+        at(start, start),
+        "A bare string `when` condition is deprecated; use `when prompt(\"...\")` for a condition " +
+          "an AI evaluates, or a boolean expression for one the model decides",
+        code = Option(RuleId.BareStringCondition),
+        autoFixable = false
+      )
+      ls
+    }
+  }
+
+  private def whenStatement[u: P](set: StatementsSet): P[WhenStatement] = {
+    P(
+      Index ~ Keywords.when ~/ whenCondition ~ Keywords.`then` ~/
+        pseudoCodeBlock(set) ~/
+        (Keywords.else_ ~/ pseudoCodeBlock(set)).? ~/
+        Keywords.end_ ~/ Index
+    )./.map { case (start, cond, thenStmts, elseStmtsOpt, end) =>
+      val elseStmts = elseStmtsOpt.getOrElse(Seq.empty[Statements])
+      // The `!`-as-flag encoding is retired (2026-08-14 ruling) in favor of a real `NotExpression`
+      // inside `cond` when the author wrote `not`/`!`. `WhenStatement.negated` itself is deleted
+      // (2026-08-15, not/! synonymy task 2), so there is no flag left to set here.
+      WhenStatement(at(start, end), cond, thenStmts.toContents, elseStmts.toContents)
+    }
+  }
+
+  // A29: the subject of a `match` — a `get from input/state` read (keyword-led, tried first), a
+  // legacy pseudo-code string, or a bare value reference (`order.status`). NOT a constant (matching
+  // a constant subject is pointless). fastparse `|` unifies to RiddlValue, so each branch is widened.
+  private def matchSubject[u: P]: P[MatchSubject] = {
+    P(
+      getValue.map(gv => gv: MatchSubject) |
+        literalString.map(ls => ls: MatchSubject) |
+        valueRef.map(vr => vr: MatchSubject)
+    )
+  }
+
+  // A29: a case pattern. ORDER: the comparison arm (an explicit operator + comparand) is tried first
+  // so `case == Approved`/`case > MaxCount` become a ComparisonPattern; a quoted string is the legacy
+  // LiteralPattern; a bare path is a TypePattern (type-case). The explicit operator on the comparison
+  // arm is what disambiguates it from a bare type-case (`case Approved` is a TYPE-case).
+  private def matchPattern[u: P]: P[MatchPattern] = {
+    P(
+      (Index ~ comparisonOperator ~/ comparand ~ Index).map { case (s, op, c, e) =>
+        ComparisonPattern(at(s, e), op, c): MatchPattern
+      } |
+        literalString.map(ls => LiteralPattern(ls.loc, ls): MatchPattern) |
+        typeRef.map(tr => TypePattern(tr.loc, tr): MatchPattern)
+    )
+  }
+
+  // A29: the optional `when` guard of a case. Mirrors A17's `when` condition: a structured
+  // BooleanExpression, or a bare boolean-typed value reference (`when active`, `when order.isPaid`).
+  // ORDER: `booleanExprOnly` first so `a > b`/`x and y` become a real BooleanExpression; a BARE atom
+  // (`active`) fails that filter and backtracks (no cut before an operator) to `valueRef`.
+  private def matchGuard[u: P]: P[BooleanExpression | ValueRef] = {
+    P(
+      booleanExprOnly.map(be => be: BooleanExpression | ValueRef) |
+        valueRef.map(vr => vr: BooleanExpression | ValueRef)
+    )
+  }
+
+  // A29: `case <pattern> [when <guard>] { <statements> }`.
+  private def matchCase[u: P](set: StatementsSet): P[MatchCase] = {
+    P(
+      Index ~ Keywords.case_ ~/ matchPattern ~ (Keywords.when ~/ matchGuard).? ~
+        open ~/ setOfStatements(set) ~ close ~/ Index
+    )./.map { case (start, pattern, guard, statements, end) =>
+      MatchCase(at(start, end), pattern, guard, statements.toContents)
+    }
+  }
+
+  private def matchStatement[u: P](set: StatementsSet): P[MatchStatement] = {
+    P(
+      Index ~ Keywords.`match` ~/ matchSubject ~ open ~/
+        matchCase(set).rep(1) ~
+        (Keywords.default ~ open ~/ setOfStatements(set) ~ close).? ~/
+        close ~/ Index
+    )./.map { case (start, subject, cases, maybeDefault, end) =>
+      val default = maybeDefault.getOrElse(Seq.empty[Statements])
+      MatchStatement(at(start, end), subject, cases.toSeq, default.toContents)
+    }
+  }
+
+  // A25: `foreach <element> in <collection> { <statements> }`. The `field` keyword disambiguates
+  // the collection at parse time: `field X.Y` parses as a FieldRef (a collection-typed field);
+  // a bare name parses as an Identifier (a `let`-bound local). Body statements are threaded with
+  // the same `StatementsSet` so per-context restrictions apply inside the loop (mirror whenStatement).
+  private def foreachCollection[u: P]: P[FieldRef | Identifier] = {
+    // fastparse `|` unifies to the least upper bound (RiddlValue), so widen each branch to the
+    // target union explicitly to keep the collection typed as `FieldRef | Identifier`.
+    P(
+      fieldRef.map(fr => fr: FieldRef | Identifier) |
+        identifier.map(id => id: FieldRef | Identifier)
+    )
+  }
+
+  private def foreachStatement[u: P](set: StatementsSet): P[ForeachStatement] = {
+    // `foreach k, v in m` destructures a mapping into key and value. The comma cannot collide:
+    // RIDDL separates statements by whitespace, never by punctuation, so nothing else could be
+    // starting here. ARITY IS NOT CHECKED HERE -- a parser `error()` preempts the whole pass chain,
+    // so the "one name for a mapping" / "two for anything else" diagnostics live in ValidationPass,
+    // which is also the only place that knows the collection's type.
+    P(
+      Index ~ Keywords.foreach ~/ identifier ~ (Punctuation.comma ~ identifier).? ~ in ~
+        foreachCollection ~ open ~/ setOfStatements(set) ~ close ~/ Index
+    )./.map { case (start, element, valueElement, collection, statements, end) =>
+      ForeachStatement(at(start, end), element, valueElement, collection, statements.toContents)
+    }
+  }
+
+  private def letStatement[u: P]: P[LetStatement] = {
+    P(
+      Index ~ Keywords.let ~/ identifier ~ (Punctuation.colon ~ typeRef).? ~
+        Punctuation.equalsSign ~/ value ~/ Index
+    )./.map { case (start, id, optTypeRef, expr, end) =>
+      LetStatement(at(start, end), id, optTypeRef, expr)
+    }
+  }
+
+  // A54: `prompt("…")` — an AI-computed value. The parens distinguish it from the deprecated `prompt`
+  // STATEMENT (`prompt "…"`, no parens). Tried before the bare-path `valueRef` in `value`.
+  // `private[parsing]`, not `private`: TypeParser's `constant` rule reuses this directly rather than
+  // duplicating it, so a `constant` value can be a prompt hole too.
+  //
+  // A20: the optional `as <type>` ascription declares the type of the AI-computed value, e.g.
+  // `prompt("compute the discount") as Currency(USD)` (`Currency` is a predefined type requiring a
+  // `country` argument -- bare `as Currency` does not parse). `Keywords.keyword("as")`, not
+  // `Readability.readable("as")` -- this `as` is a real keyword introducing a type, not an
+  // omittable readability word. No parse ambiguity: every `as` elsewhere in the grammar follows an
+  // identifier, a keyword, or an import string, never a value expression (surveyed sites:
+  // `selective_bast_import`, `on_other_clause`, `as_shape`, `byAs`), and here it follows the
+  // closing `)` of the prompt's parenthesized literal string, which is the same shape.
+  /** `empty` / `none`, optionally ascribed: `empty T*`.
+    *
+    * `none` is a SYNONYM producing the identical node -- no flag records which was written, the
+    * same choice `not`/`!` made, because a spelling flag lets two ASTs meaning the same thing
+    * compare unequal. Prettify converges to `empty`.
+    *
+    * `Keywords.keyword` supplies the word boundary, so a field named `emptyThing` is untouched. It
+    * also CUTS, which is correct here: in value position these two words are the literal, and that
+    * shadowing was measured as free -- neither appears as an identifier anywhere in either corpus.
+    */
+  private[parsing] def emptyValue[u: P]: P[EmptyValue] = {
+    P(
+      Index ~ (Keywords.keyword("empty") | Keywords.keyword("none")) ~/
+        (!statementStart ~ typeExpression).? ~~ Index
+    )./.map { case (start, typeEx, end) => EmptyValue(at(start, end), typeEx) }
+  }
+
+  /** Guards the OPTIONAL ascription after `empty` from swallowing the NEXT statement.
+    *
+    * An aliased type expression is a bare path, and RIDDL statements are whitespace-separated with
+    * no terminator, so `set x to empty` followed on the next line by `set y to …` parsed the second
+    * `set` as the first's ascription. Every statement begins with a reserved keyword, so refusing
+    * those here is a COMPLETE fix rather than a heuristic -- a type can never be named one.
+    */
+  private def statementStart[u: P]: P[Unit] = {
+    P(
+      StringIn(
+        "set", "tell", "send", "forward", "yield", "reply", "morph", "become", "do", "prompt",
+        "let", "call", "foreach", "when", "match", "error", "require", "put", "return", "terminate",
+        "code", "focus", "stop", "read", "write", "ask", "initiate", "if", "else"
+      ) ~~ &(Keywords.isNotKeywordChar)
+    )
+  }
+
+  private[parsing] def promptValue[u: P]: P[PromptValue] = {
+    P(
+      Index ~ Keywords.prompt ~ Punctuation.roundOpen ~/ literalStringBlock ~
+        Punctuation.roundClose ~ (Keywords.keyword("as") ~/ typeExpression).? ~/ Index
+    )./.map { case (start, str, typeEx, end) => PromptValue(at(start, end), str, typeEx) }
+  }
+
+  /** A numeric literal — `[+-]? digits [ . digits ] [ (e|E) [+-] digits ]`.
+    *
+    * Captured as raw text, not converted: the AST stores what the author wrote. No digit separators
+    * and no radix prefixes — declined deliberately (Reid, 2026-08-14); both are pure additions
+    * later if wanted.
+    *
+    * There is no lexical ambiguity with identifiers or paths: an identifier must begin with a
+    * letter (`simpleIdentifier`), so nothing beginning with a digit or a sign can be one.
+    *
+    * **Every digit run uses `CharsWhileIn`, never `CharIn(...).rep(1)`.** Under
+    * `MultiLineWhitespace`, `.rep` skips whitespace BETWEEN repetitions regardless of `~~` at the
+    * rule's own boundaries — confirmed empirically against fastparse 3.1.1, 2026-08-15. With
+    * `CharIn("0-9").rep(1)` this parsed `1 2` as ONE literal of text `"1 2"` (`isInteger` then
+    * reporting `true`, and `asLong` throwing `NumberFormatException` instead of the author getting
+    * an "expected `,` or `)`" parse error). `CharsWhileIn` is a run primitive with no such gap.
+    */
+  // `private[parsing]`, not `private`: TypeParser's `constant` rule reuses this directly rather than
+  // duplicating it, so a `constant` value can be a bare numeric literal too.
+  private[parsing] def numericLiteral[u: P]: P[NumericLiteral] = {
+    P(
+      Index ~~ (CharIn("+\\-").? ~~ CharsWhileIn("0-9") ~~
+        ("." ~~ CharsWhileIn("0-9")).? ~~
+        (CharIn("eE") ~~ CharIn("+\\-").? ~~ CharsWhileIn("0-9")).?).! ~~ Index
+    ).map { case (start, text, end) => NumericLiteral(at(start, end), text) }
+  }
+
+  // A54/A28: a value expression. Keyword-led forms (`prompt(…)`, constructor, `get from`) are tried
+  // first; everything else flows through the boolean-expression sub-language (`booleanExpr`), which
+  // returns the bare atom unchanged when no comparison/logical operator is present — so a plain
+  // `let x = y` still yields exactly a `ValueRef`, not a wrapper. fastparse `|` unifies to the least
+  // upper bound (RiddlValue), so each branch is widened to `Value` explicitly (mirror foreachCollection).
+  def value[u: P]: P[Value] = {
+    P(
+      literalString.map(ls => ls: Value) |
+        promptValue.map(pv => pv: Value) |
+        callValue.map(c => c: Value) | // A24: `call function F(args)` (keyword-led)
+        askValue.map(a => a: Value) | // `ask query Q of <processor>` (keyword-led)
+        initiateValue.map(i => i: Value) | // `initiate <processor>[(args)]` (keyword-led)
+        constructor.map(c => c: Value) |
+        getValue.map(gv => gv: Value) |
+        // BEFORE `booleanExpr`: its atom accepts a bare path, which would swallow `empty` as a
+        // ValueRef and leave any ascription dangling.
+        emptyValue.map(ev => ev: Value) |
+        booleanExpr |
+        // LAST, and deliberately: `booleanExpr` must get first refusal. This ordering is now
+        // LOAD-BEARING (it was inert when written -- `comparand` accepted only
+        // `GetValue | ConstantRef | ValueRef` -- until `comparand` was widened to accept
+        // `NumericLiteral`). Trying `booleanExpr` first is what keeps `5 > 3` parsing as a
+        // comparison rather than `numericLiteral` matching the bare `5`, returning it as the whole
+        // value, and leaving `> 3` dangling: `comparison` cuts only AFTER its operator, so a bare
+        // `5` backtracks cleanly out of `booleanExpr` and lands here.
+        numericLiteral.map(nl => nl: Value)
+    )
+  }
+
+  // A28: the boolean-expression sub-language — a layered left-fold, loosest to tightest:
+  //   or < and < not < comparison < atom.
+  // CONTEXT-SENSITIVE OPERATORS: `and`/`or`/`not`/`true`/`false` are matched ONLY here (each with a
+  // keyword word-boundary via `Keywords.keyword`, so `andrew`/`notify`/`truthy` stay identifiers).
+  // They are NOT added to any global reserved-word filter, so they remain legal identifiers elsewhere.
+  // Every level returns the bare `Value` atom when no operator is present, so plain values are
+  // never wrapped.
+
+  // `or` level (loosest). Left-associative fold of `and`-expressions.
+  private def booleanExpr[u: P]: P[Value] = {
+    P(Index ~ andExpr ~ (Keywords.keyword("or") ~/ andExpr).rep ~ Index).map {
+      case (start, first, rest, end) =>
+        rest.foldLeft(first)((l, r) => LogicalExpression(at(start, end), LogicalOperator.Or, l, r))
+    }
+  }
+
+  // A28: a boolean expression that MUST contain a real operator/literal (i.e. produce an actual
+  // `BooleanExpression` node, not a bare atom). `booleanExpr` returns the bare `Value` atom when no
+  // operator is present; filtering to `BooleanExpression` makes that bare-atom case FAIL so the
+  // enclosing alternation backtracks to the legacy arm. This is the disambiguation that keeps
+  // `when someBoolField` an `Identifier` and `require invariant X` an `InvariantRef`, while
+  // `when a > b`, `when x and y`, `require count == 0` become structured BooleanExpressions.
+  private def booleanExprOnly[u: P]: P[BooleanExpression] = {
+    P(booleanExpr).filter(_.isInstanceOf[BooleanExpression]).map(_.asInstanceOf[BooleanExpression])
+  }
+
+  // `and` level. Left-associative fold of `not`-expressions.
+  private def andExpr[u: P]: P[Value] = {
+    P(Index ~ notExpr ~ (Keywords.keyword("and") ~/ notExpr).rep ~ Index).map {
+      case (start, first, rest, end) =>
+        rest.foldLeft(first)((l, r) => LogicalExpression(at(start, end), LogicalOperator.And, l, r))
+    }
+  }
+
+  // `not` and `!` are synonymous everywhere, as the inverse of a boolean expression (Reid,
+  // 2026-08-14; overrides the 2026-08-13 ruling that confined `!` to `when !<bare-identifier>`).
+  // `!` must NOT match the `!` of the `!=` comparison operator: fastparse's `!` prefix combinator is
+  // negative lookahead, so `~~ !"="` (no-whitespace sequencing, then "not followed by =") is the
+  // guard. Regex lookahead is unavailable on Scala Native, so that route is not an option here.
+  // `not` keeps its `Keywords.keyword` word boundary so `notify` stays an ordinary identifier.
+  // This guard is defence-in-depth, not the reason `a != b` parses correctly: `notExpr` is only
+  // ever ENTERED where an operand begins (e.g. at `a` in `a != b`), never at the `!` inside `!=`,
+  // so `notOperator` is never even attempted against it -- `comparison` consumes the whole
+  // expression regardless of this lookahead. The guard's only reach is malformed input that puts
+  // `!` where an operand is expected (`when != b`), which is a parse error either way.
+  private def notOperator[u: P]: P[Unit] = P(Keywords.keyword("not") | ("!" ~~ !"="))
+
+  // `not` level (prefix). Recurses so `not not a` / `!!a` work; falls through to `comparison`.
+  private def notExpr[u: P]: P[Value] = {
+    P(
+      (Index ~ notOperator ~/ notExpr ~ Index).map { case (start, inner, end) =>
+        NotExpression(at(start, end), inner): Value
+      } | comparison
+    )
+  }
+
+  // comparison level (non-associative). A comparison's two operands are `comparand` — a TYPED ref
+  // OR a bare numeric literal (A28, widened 2026-08-14); a quoted string, a constructor and a
+  // boolean literal are still not comparands. So `count > "5"` / `count > true` / `count > R(1)`
+  // FAIL to parse (the `~/` cut after the operator commits, and the right operand must match
+  // `comparand`), while `count > 5` now parses -- and draws a StyleWarning in validation rather
+  // than a parse error. When there is NO operator the bare boolean ATOM is returned unchanged (NOT
+  // wrapped) — a comparand parsed as the left operand with no operator following backtracks (no cut
+  // before the operator) and re-parses via `booleanAtom`, so `true`, `(a and b)`, and a bare
+  // boolean-typed ref remain valid standalone atoms.
+  private def comparison[u: P]: P[Value] = {
+    P(
+      (Index ~ comparand ~ comparisonOperator ~/ comparand ~ Index).map {
+        case (start, left, op, right, end) =>
+          ComparisonExpression(at(start, end), op, left, right): Value
+      } | booleanAtom
+    )
+  }
+
+  // A28, widened 2026-08-14: a comparison operand — a TYPED reference, OR a bare numeric literal.
+  // `get from …` and `constant <path>` are keyword-led (tried first); `numericLiteral` goes next so
+  // `count > 5` parses the digits as a literal rather than falling through to `valueRef`, which
+  // would try (and fail) to resolve "5" as a path; a bare path is a `ValueRef` (which may itself
+  // resolve to a `Constant` at validation, so `count > MaxCount` still works) and stays LAST — it is
+  // the permissive fallback. Originally this rule banned literals outright ("magic-constant
+  // comparisons cannot be constructed at all"); Reid reversed that 2026-08-14 (see the doc on
+  // `AST.Comparand`) because the corpus held exactly ONE named constant across 189 models, so the
+  // ban had no uptake to protect. The intent survives as a StyleWarning in validation, not a parse
+  // error. `!booleanLiteral` still rejects `true`/`false` as operands (they are boolean ATOMS, not
+  // comparands) so `count > true` remains a parse error, while a field named `trueValue`
+  // (word-boundary) is still a legal ref.
+  private def comparand[u: P]: P[Comparand] = {
+    P(
+      getValue.map(gv => gv: Comparand) |
+        constantRef.map(cr => cr: Comparand) |
+        numericLiteral.map(nl => nl: Comparand) |
+        // `when partial.startedAt < system.now` is an acceptance criterion of the design, so this
+        // union accepts it too -- and it must precede refOrLookup for the keyword reason above.
+        systemValue.map(sv => sv: Comparand) |
+        refOrLookup.map(v => v.asInstanceOf[Comparand])
+    )
+  }
+
+  private def lookupIndex[u: P]: P[Value] = {
+    P(
+      literalString.map(ls => ls: Value) |
+        numericLiteral.map(nl => nl: Value) |
+        getValue.map(gv => gv: Value) |
+        (!booleanLiteral ~ valueRef).map(vr => vr: Value)
+    )
+  }
+
+  /** A reference, OPTIONALLY extended with `at <index>[, <index>…]`.
+    *
+    * **`NoCut` is load-bearing and is the whole reason this works.** `Keywords.keyword` ends in
+    * `./` — a CUT (`Keywords.scala:39`). Without `NoCut`, matching the word `at` commits the
+    * parser, so when `comparison`'s first alternative then fails to find a comparison operator it
+    * cannot fall back to `booleanAtom`, and the failure escapes all the way to the statement
+    * alternation. The symptom is a bare `let n = inv at "sku"` reporting *"Expected one of ("!=" |
+    * "," | "<" | … | "yield")"* at the end of a perfectly good subscript, while
+    * `when inv at "sku" > 0` — where that alternative SUCCEEDS and never backtracks — works fine.
+    *
+    * One rule rather than two alternatives for the same reason a cut hurts here: the lookup is
+    * reachable from both `comparand` and `booleanAtom`, and any arrangement that makes the parser
+    * CHOOSE between "ref" and "ref at index" has to backtrack across that keyword.
+    */
+  private[parsing] def refOrLookup[u: P]: P[Value] = {
+    P(
+      Index ~ (!booleanLiteral ~ valueRef) ~
+        NoCut(Keywords.keyword("at") ~ lookupIndex.rep(min = 1, Punctuation.comma)).? ~ Index
+    ).map {
+      case (_, vr, None, _)            => vr: Value
+      case (start, vr, Some(idx), end) => LookupValue(at(start, end), vr, idx): Value
+    }
+  }
+
+  // Relational operators. `StringIn` is longest-match, so `<=`/`>=` win over `<`/`>` and `!=`/`==`
+  // are matched as whole tokens.
+  private def comparisonOperator[u: P]: P[ComparisonOperator] = {
+    P(StringIn("==", "!=", "<=", ">=", "<", ">").!).map {
+      case "==" => ComparisonOperator.EQ
+      case "!=" => ComparisonOperator.NE
+      case "<=" => ComparisonOperator.LE
+      case ">=" => ComparisonOperator.GE
+      case "<"  => ComparisonOperator.LT
+      case _    => ComparisonOperator.GT
+    }
+  }
+
+  // A28: a boolean literal (`true`/`false`), matched with a keyword word-boundary so `truthy` is not
+  // read as `true` + `thy`.
+  // `private[parsing]`, not `private`: TypeParser's `constant` rule reuses this directly rather than
+  // duplicating it, so a `constant` value can be a bare boolean literal too.
+  private[parsing] def booleanLiteral[u: P]: P[BooleanLiteral] = {
+    P(
+      Index ~ (Keywords.keyword("true").map(_ => true) | Keywords
+        .keyword("false")
+        .map(_ => false)) ~ Index
+    ).map { case (start, b, end) => BooleanLiteral(at(start, end), b) }
+  }
+
+  // A28: an atom of the boolean-expression sub-language: a boolean literal (`true`/`false`), a
+  // parenthesized boolean expression (for grouping / precedence override), or a bare boolean-typed
+  // reference (`get from …` or a bare path). Comparison operands are NOT parsed here — they are
+  // `comparand` (refs plus a bare `NumericLiteral`, since Reid reversed A28's ref-only rule
+  // 2026-08-14); a boolean atom is the operand of `and`/`or`/`not` or a standalone boolean.
+  // `booleanLiteral` precedes `valueRef` so `true`/`false` are literals here; `valueRef` stays last
+  // (permissive bare path). Non-boolean value atoms (literal strings, constructors, prompt values)
+  // are handled by `value` directly, before the boolean sub-language, so they never reach here.
+  /** `invariant X` / `invariant X with <expr>` as a boolean atom.
+    *
+    * MUST precede `valueRef` below: `valueRef` would happily take `invariant` as an ordinary
+    * identifier, which is exactly the mis-parse this fixes — the author got "expected a comparison
+    * operator" pointing at the END of the keyword.
+    */
+  private def invariantCondition[u: P]: P[InvariantCondition] = {
+    P(
+      Index ~ Keywords.invariant ~/ pathIdentifier ~ (Keywords.`with` ~ value).? ~ Index
+    ).map { case (start, pid, arg, end) =>
+      val loc = at(start, end)
+      InvariantCondition(loc, InvariantRef(loc, pid), arg)
+    }
+  }
+
+  private def booleanAtom[u: P]: P[Value] = {
+    P(
+      booleanLiteral.map(bl => bl: Value) |
+        (Punctuation.roundOpen ~ booleanExpr ~ Punctuation.roundClose) |
+        getValue.map(gv => gv: Value) |
+        invariantCondition.map(ic => ic: Value) |
+        selfValue.map(sv => sv: Value) | // before valueRef: `self` is a keyword, not a path
+        systemValue.map(sv => sv: Value) | // same reason as `self`
+        refOrLookup
+    )
+  }
+
+  // A54: `(command|event|query|result|record <path>)(<args>)`. Positional args (a bare `value`) or
+  // named args (`id = value`); ordering (positional before named) is enforced at validation time.
+  private def constructorArg[u: P]: P[ConstructorArg] = {
+    P(
+      Index ~ (
+        (identifier ~ Punctuation.equalsSign ~/ value).map { case (id, v) =>
+          (Some(id): Option[Identifier], v)
+        } |
+          value.map(v => (None: Option[Identifier], v))
+      ) ~ Index
+    ).map { case (start, (name, v), end) => ConstructorArg(at(start, end), name, v) }
+  }
+
+  private def constructor[u: P]: P[Constructor] = {
+    P(
+      Index ~ (messageRef.map(mr => mr: MessageRef | RecordRef) |
+        recordRef.map(rr => rr: MessageRef | RecordRef)) ~
+        Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+        Punctuation.roundClose ~/ Index
+    )./.map { case (start, ref, args, end) =>
+      Constructor(at(start, end), ref, args.toSeq)
+    }
+  }
+
+  // A24: `call function <path>(<args>)` — call a pure function to get its result value. `functionRef`
+  // consumes the leading `function` keyword; args reuse `constructorArg` (positional then named).
+  // "Functions only" is enforced by the `functionRef` target; empty `()` is allowed (no-input function).
+  private def callValue[u: P]: P[Call] = {
+    P(
+      Index ~ Keywords.call ~/ functionRef ~
+        Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+        Punctuation.roundClose ~/ Index
+    )./.map { case (start, fnRef, args, end) =>
+      Call(at(start, end), fnRef, args.toSeq)
+    }
+  }
+
+  /** `ask query Foo of entity Bar` -- a request whose answer is a value.
+    *
+    * The operand is a `queryRef` SPECIFICALLY, not a general messageRef, so "ask takes a query" is
+    * structural: asking a command cannot be built, only mis-parsed, and the resulting message names
+    * the shape the author actually wrote. Validation still reports an unresolved query and a query
+    * that declares no `replies`, since neither is decidable here.
+    */
+  private def askValue[u: P]: P[Ask] = {
+    P(
+      Index ~ Keywords.ask ~/ queryRef ~ of ~/ processorRef ~/ Index
+    )./.map { case (start, qRef, pRef, end) => Ask(at(start, end), qRef, pRef) }
+  }
+
+  /** `initiate <processor>[(args)]` -- bring an instance into being and yield its identity.
+    *
+    * Parens are OPTIONAL and present exactly when there are arguments (Reid, 2026-08-13: one
+    * keyword, not two). ARITY IS NOT CHECKED HERE -- a parser error() preempts the whole pass
+    * chain, so the argument diagnostics live in ValidationPass, which is also the only place that
+    * has resolved `on init`.
+    */
+  private def initiateValue[u: P]: P[Initiate] = {
+    P(
+      Index ~ Keywords.initiate ~/ processorRef ~
+        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~/ Index
+    )./.map { case (start, pRef, args, end) =>
+      Initiate(at(start, end), pRef, args.map(_.toSeq).getOrElse(Seq.empty))
+    }
+  }
+
+  // A45/A45b: `get from (input <ref> | state <ref>)`. The ref parsers already consume their leading
+  // keyword (`input`/aliases, `state`).
+  private def getValue[u: P]: P[GetValue] = {
+    P(
+      Index ~ Keywords.get ~/ from ~/ (inputRef.map(ir => ir: InputRef | StateRef) |
+        stateRef.map(sr => sr: InputRef | StateRef)) ~/ Index
+    )./.map { case (start, source, end) => GetValue(at(start, end), source) }
+  }
+
+  // `self` -- the running processor instance. `self.id` is parsed as ONE value rather than as a
+  // path walk, because the anchor is a keyword and not a name in scope; the FIELD then types
+  // through the synthesized aggregation, which is what lets `let me = self; me.id` work.
+  // MUST precede `valueRef` in `booleanAtom`: `self` is not a `definitionKeywords` entry, so
+  // `valueRef`'s permissive bare-path parser would otherwise happily consume it as an ordinary
+  // identifier.
+  private def selfValue[u: P]: P[SelfValue] = {
+    P(
+      Index ~ Keywords.self ~ (Punctuation.dot ~ identifier).? ~ Index
+    )./.map { case (start, field, end) => SelfValue(at(start, end), field) }
+  }
+
+  // `system` -- values supplied by the running system. The exact parallel of `selfValue`, and it
+  // carries the SAME ordering constraint: `system` is not a `definitionKeywords` entry, so it must
+  // precede `valueRef` or the permissive bare-path parser consumes it as an ordinary identifier.
+  private def systemValue[u: P]: P[SystemValue] = {
+    // NO CUT, unlike `selfValue`, and the difference is load-bearing: `systemValue` is also an arm
+    // of `comparand`, and `comparison` tries `comparand ~ operator` -- so a cut here commits to the
+    // comparison and turns `set x to system.now` into "Expected one of (!= | < | <= | == | > | >=)"
+    // at the end of the statement. `self` never faced this because SelfValue is not a Comparand.
+    // Error quality is unaffected: `system.bogus` still parses and `checkSystemMember` reports it.
+    P(
+      Index ~ Keywords.system ~ (Punctuation.dot ~ identifier).? ~ Index
+    ).map { case (start, field, end) => SystemValue(at(start, end), field) }
+  }
+
+  // A54: a bare path identifier naming a value in scope. Resolved to a let-local, message field,
+  // state field, or (in a return) a function input at validation time.
+  private def valueRef[u: P]: P[ValueRef] = {
+    P(Index ~ pathIdentifier ~ Index).map { case (start, pid, end) =>
+      ValueRef(at(start, end), pid)
+    }
+  }
+
+  // A45: `put <value> to output <ref>`. Scope-gated to Context (application) handlers by putStatements.
+  private def putStatement[u: P]: P[PutStatement] = {
+    P(
+      Index ~ Keywords.put ~/ value ~ to ~/ outputRef ~/ Index
+    )./.map { case (start, v, out, end) => PutStatement(at(start, end), v, out) }
+  }
+
+  // A57: `return <value>`. Scope-gated to Function bodies by returnStatements.
+  private def returnStatement[u: P]: P[ReturnStatement] = {
+    P(
+      Index ~ Keywords.`return` ~/ value ~/ Index
+    )./.map { case (start, v, end) => ReturnStatement(at(start, end), v) }
+  }
+
+  /** `terminate <target> [with (args)]` -- end the instance denoted by `target`.
+    *
+    * `target` is a VALUE (Reid, 2026-08-15), not a `processorRef`: it must be typed `Id(entity E)`
+    * and the entity terminated is derived from that type. See [[AST.TerminateStatement]] for why,
+    * and for why a singleton's `Id` -- which is legal, and exists so messages can be SENT to it --
+    * is nonetheless not a legal `terminate` target.
+    *
+    * Arguments sit behind a `with` separator rather than bare parentheses, because
+    * `terminate order.id("x")` reads as a call on `id`. `with ()` parses: an empty list is accepted
+    * rather than made an error, since the grammar is not the place to encode arity.
+    *
+    * NEITHER the target's TYPE nor the argument ARITY is checked here -- a parser error() preempts
+    * the whole pass chain, so both diagnostics live in ValidationPass, which is also the only place
+    * that has the target's resolved type and the target entity's `on term`.
+    */
+  private def terminateStatement[u: P]: P[TerminateStatement] = {
+    P(
+      Index ~ Keywords.terminate ~/ value ~
+        (Keywords.`with` ~/ Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~ Index
+    )./.map { case (start, target, args, end) =>
+      TerminateStatement(at(start, end), target, args.map(_.toSeq).getOrElse(Seq.empty))
+    }
+  }
+
+  private def backTickEllipsis[u: P]: P[Unit] = { P("```") }
+
+  private def codeStatement[u: P]: P[CodeStatement] = {
+    P(
+      Index ~ backTickEllipsis ~ Index ~ StringIn("scala", "java", "python", "mojo").! ~ Index ~
+        until3('`', '`', '`') ~ Index
+    ).map { case (at1, at2, lang, at3, contents, at4) =>
+      CodeStatement(at(at1, at4), LiteralString(at(at2, at3), lang), contents)
+    }
+  }
+
+  // Per-clause subtractions compose with the processor context (added in `statement`). These MUST
+  // be `def`s (not vals) — a fastparse `P[T]` is a parsing run, not a reusable parser, so a val
+  // would execute at its definition position and corrupt the alternation. A banned statement is
+  // rejected by matching its keyword and cutting, so the error is reported at the offending keyword
+  // with a clear message rather than as a downstream "expected }".
+  private def messagingStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.clause == ClauseRestriction.ActivationClause then
+      // Ban ALL outbound/identity messaging uniformly so each gives the same clear message
+      // (send/tell live here; reply/morph/become are otherwise added by `statement` for entities).
+      (P(
+        Keywords.send | Keywords.tell | Keywords.`yield` | Keywords.reply | Keywords.morph |
+          Keywords.become
+      ) ~/ Fail.opaque(
+        "'send'/'tell'/'yield'/'reply'/'morph'/'become' are not allowed in an " +
+          "'on activate'/'on passivate' clause; activation and passivation must be side-effect-free"
+      )).asInstanceOf[P[Statements]]
+    else if set.processor == ProcessorKind.Function then
+      // A26: a Function is pure — no outbound messaging. (reply/morph/become are already not offered
+      // to a function by `statement`; set is banned in `setStatements`.)
+      (P(Keywords.send | Keywords.tell | Keywords.forward) ~/ Fail.opaque(
+        "'send'/'tell'/'forward' are not allowed in a function body; a function is pure — messaging " +
+          "happens in the calling on-clause based on the function's result"
+      )).asInstanceOf[P[Statements]]
+    else (sendStatement | tellStatement | forwardStatement).asInstanceOf[P[Statements]]
+
+  // A26: a Function is pure — it may not write entity state, so `set` is rejected in a function body.
+  private def setStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.processor == ProcessorKind.Function then
+      (P(Keywords.set) ~/ Fail.opaque(
+        "'set' is not allowed in a function body; a function is pure — the on-clause effects state " +
+          "based on the function's returned result"
+      )).asInstanceOf[P[Statements]]
+    else theSetStatement.asInstanceOf[P[Statements]]
+
+  private def guardStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.clause == ClauseRestriction.EventClause then
+      (P(Keywords.error | Keywords.require) ~/ Fail.opaque(
+        "'require'/'error' are not allowed in an 'on event' clause; events must always be accepted"
+      )).asInstanceOf[P[Statements]]
+    else (errorStatement | requireStatement).asInstanceOf[P[Statements]]
+
+  // A45: `put ... to output ...` is allowed only in a Context (application) handler; banned
+  // elsewhere at the keyword with a clear message (inverse of A26's function bans).
+  private def putStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.processor == ProcessorKind.Context then putStatement.asInstanceOf[P[Statements]]
+    else
+      (P(Keywords.put) ~/ Fail.opaque(
+        "'put' is only allowed in an application (context) handler; it publishes a value to a UI " +
+          "output which only exists in an application context"
+      )).asInstanceOf[P[Statements]]
+
+  // A57: `return ...` is allowed only in a Function body; banned elsewhere at the keyword.
+  private def returnStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.processor == ProcessorKind.Function then returnStatement.asInstanceOf[P[Statements]]
+    else
+      (P(Keywords.`return`) ~/ Fail.opaque(
+        "'return' is only allowed in a function body; it returns the function's result value"
+      )).asInstanceOf[P[Statements]]
+
+  private def anyDefStatements[u: P](set: StatementsSet): P[Statements] = {
+    P(
+      // GROUP 1: Control flow statements
+      whenStatement(set) | matchStatement(set) | foreachStatement(set) |
+        // GROUP 2: Common message operations (suppressed under ActivationClause)
+        messagingStatements(set) |
+        // GROUP 3: Variable operations (set is banned in a pure Function body — see setStatements)
+        setStatements(set) | letStatement |
+        // GROUP 3b: Boundary value operations, scope-gated (A45 put -> Context; A57 return -> Function)
+        putStatements(set) | returnStatements(set) | terminateStatement |
+        // GROUP 4: General statements (`do` is canonical; `prompt` is a deprecated synonym)
+        doStatement | promptStatement | codeStatement |
+        // GROUP 5: Error handling and preconditions (suppressed under EventClause)
+        guardStatements(set) | comment
+    ).asInstanceOf[P[Statements]]
+  }
+
+  def statement[u: P](set: StatementsSet): P[Statements] = {
+    val base = anyDefStatements(set)
+    // Under an ActivationClause the outbound/identity statements (reply/morph/become) are
+    // suppressed too (send/tell are already suppressed in anyDefStatements) — activation and
+    // passivation must be side-effect-free. Otherwise add the processor's extras as before.
+    if set.clause == ClauseRestriction.ActivationClause then base
+    else
+      set.processor match {
+        case ProcessorKind.Entity =>
+          base | morphStatement | becomeStatement | yieldStatement | replyStatement
+        // A26: a Function is pure. send/tell/set are banned inside `base`; morph/become/yield/reply
+        // are caught here (appended after `base`, so valid statements match first) with a clear
+        // message.
+        case ProcessorKind.Function =>
+          base | (P(
+            Keywords.morph | Keywords.become | Keywords.`yield` | Keywords.reply
+          ) ~/ Fail.opaque(
+            "'morph'/'become'/'yield'/'reply' are not allowed in a function body; a function is " +
+              "pure and may not change entity state or yield"
+          )).asInstanceOf[P[Statements]]
+        case ProcessorKind.Context    => base | yieldStatement | replyStatement
+        case ProcessorKind.Repository => base | yieldStatement | replyStatement
+        case _                        => base
+      }
+  }
+
+  private def setOfStatements[u: P](set: StatementsSet): P[Seq[Statements]] = {
+    P(statement(set).rep(0))./
+  }
+
+  def pseudoCodeBlock[u: P](set: StatementsSet): P[Seq[Statements]] = {
+    P(
+      undefined(Seq.empty[Statements]) |
+        // Allow { ??? }, { // comment ??? }, { ??? // comment }, { // c1 ??? // c2 }
+        (open ~ comment.rep(0) ~ undefined(Seq.empty[Statements]) ~ comment.rep(0) ~ close).map {
+          case (before, _, after) => before ++ after
+        } |
+        (statement(set) | comment)./.rep(1) |
+        (open ~ (statement(set) | comment)./.rep(1) ~ close)
+    )
+  }
+}
