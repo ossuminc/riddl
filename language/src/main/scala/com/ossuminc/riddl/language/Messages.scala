@@ -46,6 +46,29 @@ object Messages {
     def isIgnorable: Boolean = severity < CompletenessWarning.severity
     def isActionable: Boolean = severity >= CompletenessWarning.severity
 
+    /** Whether a message of this kind still permits CODE GENERATION from the model.
+      *
+      * **This is a DIFFERENT question from [[isActionable]] and the two deliberately disagree.**
+      * `isActionable` asks *is this worth someone's attention*, and draws its line at
+      * [[CompletenessWarning]]. Generability asks *can a generator emit correct code from this
+      * model*, and the answer is stricter: **anything above a [[StyleWarning]] blocks it**
+      * (Reid, 2026-08-27).
+      *
+      * The reasoning is per-kind, not a severity convenience:
+      *   - a [[StyleWarning]] does not change the MEANING of the model, so a generator can
+      *     proceed and produce correct output;
+      *   - a [[UsageWarning]] means unused definitions — cruft the generator would emit as dead
+      *     code;
+      *   - a [[MissingWarning]] means something is absent, and **what is missing cannot be
+      *     generated**;
+      *   - [[CompletenessWarning]], [[Warning]], [[Error]] and [[SevereError]] are worse still.
+      *
+      * So a conforming model is merely error-free, while a GENERABLE model is a higher bar than
+      * that — which is why `isActionable` could not simply be re-pointed at it. Consumers key
+      * off `isActionable`; this is additive.
+      */
+    def isGenerable: Boolean = severity <= StyleWarning.severity
+
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
 
@@ -389,6 +412,22 @@ object Messages {
     @JSExport def isOnlyIgnorable: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind >= CompletenessWarning)
     }
+
+    /** Return true iff code can be GENERATED from the model these messages describe: every
+      * message is a [[StyleWarning]] or lower.
+      *
+      * A stricter bar than [[isOnlyIgnorable]], and not the same question — see
+      * [[KindOfMessage.isGenerable]]. An empty message list is generable.
+      */
+    @JSExport def isGenerable: Boolean = {
+      msgs.isEmpty || msgs.forall(_.kind.isGenerable)
+    }
+
+    /** The messages that stand between this model and code generation — everything above a
+      * [[StyleWarning]]. Empty exactly when [[isGenerable]] is true, so a tool can both ASK the
+      * question and SHOW the answer without re-deriving the bar.
+      */
+    @JSExport def blockingGeneration: Messages = msgs.filterNot(_.kind.isGenerable)
 
     /** Return true iff at least one of the messages is an [[Error]] */
     @JSExport def hasErrors: Boolean = {

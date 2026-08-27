@@ -326,4 +326,40 @@ class MessagesTest extends AbstractTestingBasis {
       }
     }
   }
+
+  /** Reid's 2026-08-27 ruling: a CONFORMING model is error-free, but a GENERABLE one has "no
+    * warnings except Style warnings". The two bars are different questions and the predicates
+    * deliberately disagree — `isActionable` draws its line at CompletenessWarning, which lets
+    * Missing and Usage through, and those are precisely the two the ruling says must NOT pass:
+    * unused items put cruft in the model, and missing things cannot be generated at all.
+    *
+    * Every kind is asserted, not a sample, so adding a KindOfMessage without deciding which side
+    * of the bar it falls on reddens here rather than defaulting silently.
+    */
+  "isGenerable" should {
+    "admit Style and everything below it" in {
+      Tip.isGenerable mustBe true
+      Info.isGenerable mustBe true
+      StyleWarning.isGenerable mustBe true
+    }
+    "reject Missing and Usage — the two the ruling turns on" in {
+      MissingWarning.isGenerable mustBe false
+      UsageWarning.isGenerable mustBe false
+    }
+    "reject everything above them" in {
+      Deprecation.isGenerable mustBe false
+      CompletenessWarning.isGenerable mustBe false
+      Warning.isGenerable mustBe false
+      Error.isGenerable mustBe false
+      SevereError.isGenerable mustBe false
+    }
+    "disagree with isActionable exactly where the ruling says it should" in {
+      // Missing and Usage are NOT actionable but ARE generation blockers. If these two ever
+      // agree, one of the predicates has been quietly re-pointed at the other's question.
+      MissingWarning.isActionable mustBe false
+      MissingWarning.isGenerable mustBe false
+      UsageWarning.isActionable mustBe false
+      UsageWarning.isGenerable mustBe false
+    }
+  }
 }
