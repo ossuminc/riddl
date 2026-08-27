@@ -35,9 +35,12 @@ byte-identical to the rc.26 certification on RC4**, which is the expected result
 because no test source changed, and is therefore evidence that nothing was SKIPPED
 rather than that nothing broke.
 
-**`../bin/riddlc` is still the RC4 build** and is deliberately stale; restage with
-`scripts/publish-and-stage.sh` when a consumer needs RC6 behaviour. `[0.6]` in
-BACKLOG carries the full site list and the grep that finds them, for the eventual
+**`../bin/riddlc` is `2.0.0-rc.26-5-ab3ada49`, built on Scala 3.9.0-RC6** and restaged
+2026-08-27 via `scripts/publish-and-stage.sh`, so the ivy artifacts and the binary came
+from one invocation and agree. It is a real Mach-O arm64 file, not a symlink and not the
+JVM launcher. **Verified by BEHAVIOUR, not by the version string**: the boundary-violating
+repro errors and the two legal forms stay clean, which is the inversion of how the same
+three models behaved on rc.26. `[0.6]` in BACKLOG carries the site list for the eventual
 3.9.0-final bump.
 
 ### Traps a fresh session would hit
@@ -79,7 +82,8 @@ Nothing awaits triage, which is a fact about right now and not a reason to skip 
 `release/2` carries the boundary work (`msg-target-crosses-boundary`) unpushed, and the
 Computational Model amendment is committed separately in the `ossuminc` repo (`dcaca50`),
 also unpushed. Certified tri-platform locally, zero failures on all six rows; CI has not
-seen it.
+seen it. Corpus cost measured on the staged binary: **6 findings in 1 of 190 models**
+(reactive-bbq), all true positives, migration filed in `riddl-models/task/`.
 
 ## 2026-08-27 — a boundary rule that already half-existed (`msg-target-crosses-boundary`)
 
