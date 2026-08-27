@@ -27,7 +27,7 @@ therefore STALE relative to the working tree, which is on RC6. Restage with
 `scripts/publish-and-stage.sh` (never `nativeLink` alone — ivy and binary must move
 together). **BAST `FORMAT_REVISION` is 23.**
 
-### The Scala 3.9.0-RC6 upgrade — COMMITTED
+### Scala 3.9.0 — the RC line is done
 
 **Complete and green, 32 sites across 8 files** (`2c7d36af2`). Compile: 0 errors, 0
 compiler warnings on all three platforms. Tests: **3068 / 1005 / 3026 —
@@ -626,7 +626,7 @@ here without re-checking it — this section has been stale before.
 
 - **Latest RC: `2.0.0-rc.26`**, published and verified on all five channels.
   Floors **3068 / 1005 / 3026**. BAST `FORMAT_REVISION` **23**.
-- **Scala 3.9.0-RC6** is committed on the branch (`2c7d36af2`); rc.26 itself was
+- **Scala 3.9.0 final** adopted 2026-08-27, after RC1 -> RC4 -> RC6; rc.26 itself was
   built on RC4. `[0.6]` carries the 32-site list for the 3.9.0-final bump.
 - **Open work is `BACKLOG.md`**, not this file. 2.0 ships when the Computational
   Model is met, not when the backlog empties (CLAUDE.md § Definition of Done),

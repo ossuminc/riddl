@@ -25,7 +25,7 @@ jobs:
       packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RIDDLC_PATH: target/out/native0.5/scala-3.9.0-RC6/riddlc/riddlc
+      RIDDLC_PATH: target/out/native0.5/scala-3.9.0/riddlc/riddlc
       # The corpus conforming to this branch lives on riddl-models `release/2`;
       # its `main` still holds the 1.x models. Without this the round-trip test
       # downloads `main` and fails against the 2.0 grammar — while local runs
@@ -230,7 +230,7 @@ jobs:
     - name: Publish JVM RIDDL Libs & Test sbt-riddl plugin
       if: matrix.platform == 'JVM'
       env:
-        RIDDLC_PATH: target/out/jvm/scala-3.9.0-RC6/riddlc/universal/stage/bin/riddlc
+        RIDDLC_PATH: target/out/jvm/scala-3.9.0/riddlc/universal/stage/bin/riddlc
       run: |
         sbt "; utils/publishLocal; language/publishLocal; passes/publishLocal; commands/publishLocal; riddlLib/publishLocal; riddlc/stage; sbt-riddl/scripted"
 
@@ -256,8 +256,8 @@ jobs:
         name: collect-release-artifacts-jvm
         retention-days: 30
         path: |
-          target/out/jvm/scala-3.9.0-RC6/riddlc/universal/*.zip
-          target/out/jvm/scala-3.9.0-RC6/riddl-lib/universal/*.zip
+          target/out/jvm/scala-3.9.0/riddlc/universal/*.zip
+          target/out/jvm/scala-3.9.0/riddl-lib/universal/*.zip
 
     - name: Collect Release Artifacts (Native)
       if: matrix.platform == 'Native' && matrix.artifacts == 'yes'
@@ -266,8 +266,8 @@ jobs:
         name: collect-release-artifacts-native
         retention-days: 30
         path: |
-          target/out/native0.5/scala-3.9.0-RC6/riddlc/riddlc
-          target/out/native0.5/scala-3.9.0-RC6/riddl-lib/libriddl-lib.a
+          target/out/native0.5/scala-3.9.0/riddlc/riddlc
+          target/out/native0.5/scala-3.9.0/riddl-lib/libriddl-lib.a
 
     - name: Collect Release Artifacts (JS)
       if: matrix.platform == 'JS'
@@ -276,7 +276,7 @@ jobs:
         name: collect-release-artifacts-js
         retention-days: 30
         path: |
-          target/out/sjs1/scala-3.9.0-RC6/riddl-lib/riddl-lib-opt/main.js
+          target/out/sjs1/scala-3.9.0/riddl-lib/riddl-lib-opt/main.js
           riddlLib/js/types/index.d.ts
 
     - name: Cleanup Before Caching

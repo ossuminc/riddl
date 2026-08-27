@@ -215,7 +215,7 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   of truth: the commits on this branch, not recollection.
   (ossum.tech is a separate repo; this is a task DROP, not work done here.)
 
-- **[0.6]** **Bump Scala 3.9.0-RC6 -> 3.9.0 when the final ships.** Deferred here
+- ~~**[0.6]** **Bump Scala 3.9.0-RC6 -> 3.9.0 when the final ships.**~~ — **DONE 2026-08-27.** 3.9.0 verified on Maven Central for all THREE toolchains before touching anything — the JVM compiler/library, `scala3-library_sjs1_3` under `org.scala-lang`, and Scala Native's `scala3lib_native0.5_3` at the COMPOUND version `3.9.0+0.5.12`. **Include a control when probing Maven Central**: my first JS/Native probes 404'd, and so did the RC6 controls, which proved the coordinates were wrong rather than the artifacts missing. **36 occurrences across 9 files**, of which 17 are build-output path segments in `scala.yml`, `release.yml`, `coverage.yml`, `.sonarcloud.properties` and `Dockerfile`. Compiles clean on all three platforms with **zero source changes** — RC4 had needed one (a `Seq`/`List` implicit), 3.9.0 final needed none. Original entry:
   deliberately: riddl 2.0 rides Scala Next ahead of LTS, and the RC line is a waypoint,
   not the destination. **The bump is NOT one line** -- the full Scala version is a path
   segment in the build outputs (`target/out/<platform>/scala-<fullVersion>/...`), so it

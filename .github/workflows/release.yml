@@ -79,7 +79,7 @@ jobs:
     - name: Package Native Binary
       run: |
         mkdir -p staging/bin
-        cp target/out/native0.5/scala-3.9.0-RC6/riddlc/riddlc staging/bin/riddlc
+        cp target/out/native0.5/scala-3.9.0/riddlc/riddlc staging/bin/riddlc
         cd staging && zip -r ../${{ matrix.artifact }}.zip bin/
 
     - name: Upload to Release
@@ -141,7 +141,7 @@ jobs:
     - name: Build and Stage JVM Version
       run: |
         sbt riddlc/stage
-        cd target/out/jvm/scala-3.9.0-RC6/riddlc/universal/stage && zip -r "$GITHUB_WORKSPACE/riddlc.zip" bin/ lib/
+        cd target/out/jvm/scala-3.9.0/riddlc/universal/stage && zip -r "$GITHUB_WORKSPACE/riddlc.zip" bin/ lib/
 
     - name: Upload to Release
       env:
