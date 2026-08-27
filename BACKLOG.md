@@ -1173,7 +1173,7 @@ verification is carried here so it is not repeated.**
   `addError(` does not find `check(`, and neither finds `messages.add(warning(...))`.
 
 
-- **[1.20]** **Publish "resolve before you match" as guidance for AST consumers.**
+- ~~**[1.20]** **Publish "resolve before you match" as guidance for AST consumers.**~~ — **DONE 2026-08-27** (`8134f3017`), and WIDENED by Reid from "publish the guidance" to "make sure the AST definitions and the Pass classes carry sufficient scaladoc". The entry offered two candidate homes, ossum.tech or a scaladoc note; the scaladoc won because it is where a consumer is STANDING when they get this wrong, and it carries both incidents as evidence. Coverage audited first rather than guessed: AST.scala 301/370 and Pass.scala 16/21 documented, so 74 declarations had none — all 74 now do, and `language/doc` builds clean. **Sufficiency is NOT claimed**: 98 of 370 (26%) carry a single-line scaladoc, nearly all pre-existing. Right for `case class Mass`, thin for a node with real semantics; a second pass if wanted. Original entry:
   **The same defect has now been written independently in two codebases.** riddl-models
   reported it against riddlc on 2026-08-14 (`task/done/2026-08-14-instance-addressing-check-
   does-not-resolve-id-aliases.md`): the instance-addressing check compared a field's *written*

@@ -101,6 +101,49 @@ also unpushed. Certified tri-platform locally, zero failures on all six rows; CI
 seen it. Corpus cost measured on the staged binary: **6 findings in 1 of 190 models**
 (reactive-bbq), all true positives, migration filed in `riddl-models/task/`.
 
+## 2026-08-27 (later) — four backlog items, and two that were already done
+
+**The most useful thing this round produced was a correction to the backlog, not code.**
+Asked what `[2.8]` was about and why "the UI model" blocked it, I checked instead of
+explaining — and `[2.7]` and `[2.8]` were both **already built**. `PutStatement` exists
+(A45), `GetValue` takes `InputRef | StateRef`, `Call` exists, `Statement.canFail` exists
+with its own suite, and the A12 single-failure-point check is live in `ValidationPass` and
+is MORE complete than the filed design (it counts embedded `Call`/`GetValue` in value
+expressions, recurses through nested bodies, and skips the count when a step contains an
+`ask`).
+
+**I filed both the day before, graduating them VERBATIM out of NOTEBOOK's "Deferred —
+blocked on prerequisites (do NOT start yet)" section during the prune.** That is this
+repo's own documented failure — *a plan cannot notice the work happening* — and the cheap
+test it prescribes would have caught it: take the entry's most specific factual claim and
+check THAT first. "Revive the `put`/`get` keywords" was falsifiable by one grep.
+**The rule that generalizes: a DEFERRED item is exactly the kind that goes stale
+invisibly, because nobody re-reads a section headed do-not-start.** Verify before
+graduating one, not after.
+
+**`[1.22]`'s entry was wrong about its own subject, and the ruling is the interesting
+part.** It read as one bar drawn in the wrong place — `isActionable` at CompletenessWarning
+letting Missing and Usage through. Reid: these are TWO questions that must keep
+disagreeing. `isActionable` asks *is this worth attention*; generability asks *can a
+generator emit correct code*. Missing and Usage are precisely where they part, and the
+reasoning is per-kind rather than a severity convenience: **unused definitions are cruft a
+generator would emit as dead code, and what is MISSING cannot be generated at all.** So
+`isActionable` is untouched — consumers key off it — and `isGenerable` was added beside it.
+
+**That ruling then decided an unrelated severity, which is worth noticing.** A27's
+portability warning (`[1.21]`, required since the item was written and never built) is a
+**StyleWarning**, because under the new bar anything higher would make every use of the
+`code` hatch non-generable — the hatch would block the generation it exists to serve. Same
+unsatisfiable-demand trap as the discard-sink exemption and the adaptor advisory, reached
+from a completely different direction. `CodePortabilityTest` pins it with a
+*stays generable* case, which is exactly what a well-meaning severity bump would break.
+
+**Coverage is presence, not sufficiency, and the report has to say which.** The scaladoc
+work took AST.scala 81% -> 100% and Pass.scala 76% -> 100%; 98 of 370 declarations (26%)
+still carry a single-line doc. Reporting "100%" without that second number would be true
+and misleading. Note also that `language/doc` is the gate an invalid `[[link]]` trips — a
+comment-only change compiling is not evidence the docs build.
+
 ## 2026-08-27 — a boundary rule that already half-existed (`msg-target-crosses-boundary`)
 
 riddl-models filed it as *"missing validation — an encapsulation violation currently passes
