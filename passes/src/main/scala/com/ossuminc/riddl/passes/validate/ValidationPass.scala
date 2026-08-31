@@ -615,9 +615,23 @@ case class ValidationPass(
         handler.clauses.foreach { clause =>
           walkStatements(clause.contents) {
             case RequireStatement(_, ir: InvariantRef, _) =>
-              resolution.refMap
-                .definitionOf[Invariant](ir.pathId, handler)
-                .foreach(applied.add)
+              // Key on the CLAUSE, not the handler. `Pass` pushes the on-clause as the parent for
+              // the statements it contains, so that is the refMap key the resolver wrote under;
+              // looking up with the handler misses every time and the invariant is then reported
+              // as never applied while `dump --json` plainly shows the same reference RESOLVED.
+              // Proven by instrumenting rather than reading: for the filed repro the handler-keyed
+              // lookup returned None while a parent-agnostic one returned the invariant.
+              //
+              // The fallback is not belt-and-braces. `walkStatements` descends into `when`/`match`/
+              // `foreach` bodies, and a statement nested in one of those was keyed under a parent
+              // that is neither this clause nor the handler, so a clause-only lookup would still
+              // miss it -- the same false positive, one level down and rarer, which is the worse
+              // version of this bug.
+              val byClause = resolution.refMap.definitionOf[Invariant](ir.pathId, clause)
+              val resolved = byClause
+                .orElse(resolution.refMap.definitionOf[Invariant](ir.pathId, handler))
+                .orElse(resolution.refMap.definitionOf[Invariant](ir.pathId.format))
+              resolved.foreach(applied.add)
             case _ => ()
           }
         }
