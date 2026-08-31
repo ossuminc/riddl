@@ -70,12 +70,82 @@ object FindPredicates {
 
   /** Names the closest legal values rather than dumping all of them. */
   private def unknownTypeMessage(want: String): String =
-    val near = typeVocabulary.toSeq
+    unknownValueMessage("-type", want, typeVocabulary)
+
+  /** The general form of [[unknownTypeMessage]], for every selector with a closed vocabulary.
+    *
+    * **An unknown selector value is a PARAMETER ERROR, never zero matches.** `-type` learned this
+    * at rc.26 and the reason generalizes exactly: `0 matched` for a typo is indistinguishable
+    * from `0 matched` for a correct query with no hits, so the command answers confidently over
+    * nothing — the failure `find` exists to end. riddl-generator hit it on `-shape alternation`,
+    * which returned `0 matched` against a model holding 47 alternations, and reached a wrong
+    * conclusion within minutes.
+    *
+    * Generalized 2026-08-31 rather than patching `-shape` alone: `-shape`, `-intention`,
+    * `-cardinality` and `-option` ALL had the hole, and fixing the reported one would have left
+    * three selectors failing the same way — the instance-fix reflex this repo keeps paying for.
+    */
+  private[commands] def unknownValueMessage(
+    selector: String,
+    want: String,
+    vocabulary: scala.collection.immutable.Set[String]
+  ): String =
+    val near = vocabulary.toSeq
       .filter(v => v.startsWith(want.take(3)) || want.startsWith(v.take(3)) || v.contains(want))
       .sorted
       .take(6)
     val hint = if near.isEmpty then "" else s"; did you mean ${near.mkString(", ")}?"
-    s"unknown -type '$want'$hint"
+    s"unknown $selector '$want'$hint"
+
+  /** Every shape keyword `as <shape>` accepts, INCLUDING the deprecated synonyms.
+    *
+    * The synonyms are in deliberately: they still parse, so a model may contain them and a query
+    * for one must not be rejected. Kept in step with `StreamletShape.fromKeyword` by hand — the
+    * two cannot share a definition across the module boundary.
+    */
+  private[commands] val shapeVocabulary: scala.collection.immutable.Set[String] =
+    // `Set` here is AST.Set unless qualified -- it shadows scala.Set in this file's scope.
+    scala.collection.immutable.Set("void", "sink", "source", "flow", "merge", "split", "router",
+      "cascade", "fanin", "broadcast", "fanout")
+
+  /** Normalizes an intention for comparison by dropping hyphens.
+    *
+    * **The projection emits the enum NAME, not the keyword** — `ProjectionPass` writes
+    * `i.toString`, so an event-sourced entity carries `EventSourced`, while the spelling in every
+    * model is `event-sourced`. Comparing raw would mean `-intention event-sourced` validated and
+    * then matched NOTHING: the same false zero this whole change exists to remove, one selector
+    * over. Found 2026-08-31 when adding vocabulary checking broke an existing test that queried
+    * `-intention EventSourced`; the test was right and the first vocabulary was wrong.
+    *
+    * Hyphens are the only difference between the two spellings across all three intention
+    * families (`event-sourced`/`EventSourced`, `at-least-once`/`AtLeastOnce`), so dropping them
+    * makes both work without a mapping table to keep in step.
+    */
+  private[commands] def normalizeIntention(s: String): String =
+    s.toLowerCase.replace("-", "")
+
+  /** Entity, context and connector intentions together — `-intention` does not distinguish them.
+    *
+    * Holds BOTH spellings: the keyword a modeller writes and the enum name the projection emits.
+    * Membership is tested on the normalized form, so either is accepted and either matches.
+    */
+  private[commands] def intentionVocabulary: scala.collection.immutable.Set[String] =
+    (AST.EntityIntention.keywords ++ AST.ConnectorIntention.keywords ++
+      Seq("application", "external", "gateway", "service") ++
+      AST.EntityIntention.values.toSeq.map(_.toString) ++
+      AST.ConnectorIntention.values.toSeq.map(_.toString) ++
+      AST.Intention.values.toSeq.map(_.toString)).map(_.toLowerCase).toSet
+
+  /** What `ProjectionPass.cardinalityOf` can emit. `range(min,max)` is open-ended, so it is
+    * matched by PREFIX below rather than listed.
+    */
+  private[commands] val cardinalityVocabulary: scala.collection.immutable.Set[String] =
+    scala.collection.immutable
+      .Set("optional", "zero-or-more", "one-or-more", "exactly-one", "range")
+
+  /** Every option name the validator recognizes. */
+  private[commands] def optionVocabulary: scala.collection.immutable.Set[String] =
+    RecognizedOptions.registry.keySet
 
   private val categories: Map[String, ProjectedNode => Boolean] = Map(
     "statement" -> (_.value.isInstanceOf[Statement]),
@@ -175,27 +245,36 @@ object FindPredicates {
 
       case "-option" :: rest =>
         arg("-option", rest) { v =>
-          Right(FindExpr.Pred(s"-option $v", (n, _) => strings(n, "options").contains(v)))
+          if !optionVocabulary.contains(v) then
+            Left(unknownValueMessage("-option", v, optionVocabulary))
+          else Right(FindExpr.Pred(s"-option $v", (n, _) => strings(n, "options").contains(v)))
         }
       case "-intention" :: rest =>
         arg("-intention", rest) { v =>
           val want = v.toLowerCase
+          if !intentionVocabulary.map(normalizeIntention).contains(normalizeIntention(want)) then
+            Left(unknownValueMessage("-intention", want, intentionVocabulary))
+          else
           Right(
             FindExpr.Pred(
               s"-intention $v",
               (n, _) =>
                 (strings(n, "intentions") :+ str(n, "intention").getOrElse(""))
-                  .map(_.toLowerCase)
-                  .contains(want)
+                  .map(normalizeIntention)
+                  .contains(normalizeIntention(want))
             )
           )
         }
       case "-shape" :: rest =>
         arg("-shape", rest) { v =>
           val want = v.toLowerCase
-          Right(
-            FindExpr.Pred(s"-shape $v", (n, _) => str(n, "shape").map(_.toLowerCase).contains(want))
-          )
+          if !shapeVocabulary.contains(want) then
+            Left(unknownValueMessage("-shape", want, shapeVocabulary))
+          else
+            Right(
+              FindExpr
+                .Pred(s"-shape $v", (n, _) => str(n, "shape").map(_.toLowerCase).contains(want))
+            )
         }
       case "-carries" :: rest =>
         arg("-carries", rest) { v =>
@@ -205,7 +284,12 @@ object FindPredicates {
       case "-cardinality" :: rest =>
         arg("-cardinality", rest) { v =>
           val want = v.toLowerCase
-          Right(
+          // The predicate is a PREFIX match, so a legal argument is any prefix of a legal value
+          // ("one-" is meaningful). Validate on that basis rather than exact membership, or the
+          // check would reject queries the predicate handles correctly.
+          if !cardinalityVocabulary.exists(_.startsWith(want)) then
+            Left(unknownValueMessage("-cardinality", want, cardinalityVocabulary))
+          else Right(
             FindExpr.Pred(
               s"-cardinality $v",
               (n, _) => str(n, "cardinality").map(_.toLowerCase).exists(_.startsWith(want))
