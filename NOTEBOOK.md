@@ -10,96 +10,131 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-08-26
+### Build state — verified 2026-08-31
 
-**`2.0.0-rc.26` IS CUT, PUBLISHED AND VERIFIED**, from `c64f3388f` on `release/2`.
-Certified cold (throwaway cache 0B -> 285M): **3068 / 1005 / 3026**, zero failures, zero
-`No tests to run`, 19 module legs. All five channels checked against their own registry
-rather than a log: Maven coordinates at `2.0.0-rc.26`, npm `--tag rc` with `latest` still
-1.31.0, Homebrew touching ONLY `riddlc-rc.rb`, `notify-blog` **skipped**.
+**`2.0.0` IS RELEASED**, tagged on `main` at `7ce95016a` (the `release/2` merge), on
+**Scala 3.9.0 final**. `release/2` is deleted. Work since then commits straight to `main`.
 
-**Deliberate failures are ZERO**, because both corpora migrated against a STAGED binary
-BEFORE the tag. That is now the preferred order in the `/rc` skill — a corpus needs the
-RULE, not a published RELEASE. Do not go back to tagging red without a reason.
+**`../bin/riddlc` is `2.0.0-rc.26-14-173b034d` and is deliberately STALE** — it predates
+2.0.0 and everything on `main` since. Restage with `scripts/publish-and-stage.sh` (never
+`nativeLink` alone — ivy and binary must move together) when you need to exercise a
+current rule against the corpus. **BAST `FORMAT_REVISION` is 23.**
 
-**`../bin/riddlc` is `2.0.0-rc.26`, built from Scala 3.9.0-RC4 at 15:00.** It is
-therefore STALE relative to the working tree, which is on RC6. Restage with
-`scripts/publish-and-stage.sh` (never `nativeLink` alone — ivy and binary must move
-together). **BAST `FORMAT_REVISION` is 23.**
+**The corpus gate is GREEN.** riddl-models migrated the 6 `msg-target-crosses-boundary`
+sites (`20a5bed6`), so the red window described in earlier entries is closed. Note
+riddl-models is still on its own `release/2` branch — it was asked to merge and drop it.
 
-### Scala 3.9.0 — the RC line is done
+### From 3.0 on, deprecation is FOREVER
 
-**Complete and green, 32 sites across 8 files** (`2c7d36af2`). Compile: 0 errors, 0
-compiler warnings on all three platforms. Tests: **3068 / 1005 / 3026 —
-byte-identical to the rc.26 certification on RC4**, which is the expected result
-because no test source changed, and is therefore evidence that nothing was SKIPPED
-rather than that nothing broke.
-
-**`../bin/riddlc` is `2.0.0-rc.26-14-173b034d`, built on Scala 3.9.0 final** and restaged
-2026-08-27 via `scripts/publish-and-stage.sh`, so the ivy artifacts and the binary came
-from one invocation and agree. It is a real Mach-O arm64 file, not a symlink and not the
-JVM launcher. **Verified by BEHAVIOUR, not by the version string**: the boundary-violating
-repro errors, the two legal forms stay clean, and reactive-bbq validates at 0 errors /
-0 warnings across 3,905 definitions. `[0.6]` in BACKLOG carries the site list for the eventual
-3.9.0-final bump.
+**Reid, 2026-08-31: rename freely, deprecate freely, but never delete the old name.** This
+now constrains every language change — a spelling that ever parsed goes on parsing. It is
+recorded in `CLAUDE.md` § Backward Compatibility as rule 3, and it is why
+`entity_reference_type` keeps its EBNF rule and why `EntityReferenceTypeExpression` was
+retained rather than removed.
 
 ### Traps a fresh session would hit
 
 - **A Scala bump is 32 sites, not one.** The full version is a path segment
   (`target/out/<platform>/scala-<fullVersion>/`), hardcoded in `scala.yml`,
   `release.yml`, `coverage.yml`, `.sonarcloud.properties` and `Dockerfile`. A grep that
-  omits `.github/` misses 11 of them. See `[0.6]`.
-- **A red CI run on the tagged commit may be STALE rather than a regression.** rc.26's
-  was: riddl-models fixed two corpus type errors 13 minutes AFTER CI started. Check
-  `git -C ../riddl-models log` for commits timestamped inside the run window — one
-  command, decisive — and confirm by RUNNING the model, not by re-reading the log.
-- **Re-run the EXTERNAL grammar validators even when CI's grammar job is green.** CI
-  reads the corpus as it stood at run time; riddl-models adopted `system.now` in 68
-  fields afterwards. The EBNF covered it, but that green job could not have told you so.
-- **A test-count prediction is only evidence if the instrument is checked.** Twice this
-  session a count was wrong and the tell was arithmetic, never an error message: a file
-  RENAMED across source trees (`scala-jvm-native` -> `scala`) adds no cases but changes
-  which rows see it, and `git diff --name-only` collapses renames so it scores as new on
-  every row. **One row hitting its number exactly while another misses by a constant is
-  a prediction bug — a real skipping bug does not spare a row.**
+  omits `.github/` misses 11 of them.
+- **A red CI run on a tagged commit may be STALE rather than a regression.** rc.26's was:
+  riddl-models fixed two corpus type errors 13 minutes AFTER CI started. Check
+  `git -C ../riddl-models log` for commits inside the run window — one command, decisive.
+- **A local green corpus is not evidence CI will be green.** riddl-models was 35 commits
+  ahead of its own origin once and `git log` happily showed the fix. `git branch -r
+  --contains` is the decisive check, not `git log`.
+- **Re-run the EXTERNAL grammar validators even when CI's grammar job is green.** CI reads
+  the corpus as it stood at run time. The venv is at
+  `language/src/test/scalajvm/python/.venv/bin/python` — never Homebrew python3.
+- **A test-count prediction is only evidence if the instrument is checked.** One row
+  hitting its number exactly while another misses by a constant is a prediction bug — a
+  real skipping bug does not spare a row.
 
 ### Certainty
 
-Verified by running, this session: the rc.26 channel checks, the RC6 compile and test
-totals, the staged binary's version and behaviour, TatSu 190/190 and 9/9, and that the
-CM/To-Do work is committed and pushed in the `ossuminc` repo (`3dae364`, `5cda6fc` —
-Reid committed it himself). Assumed, not verified: that RC6 is the newest Scala RC.
+Verified by running, this session: language 757 / passes 1668 / commands 355 / riddlLib
+156, zero failures; TatSu 117/140 with 18 skipped fragments and 5 expected failures, all
+accounted for. Assumed, not verified: that the 2.0.0 consumer bumps filed in step 16 have
+been acted on by their own sessions.
 
 ### `task/` — empty
 
-The saga/tell boundary request was worked and closed today; 144 files in `task/done/`.
-Nothing awaits triage, which is a fact about right now and not a reason to skip the check.
+153 files in `task/done/`. Nothing awaits triage, which is a fact about right now and not
+a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
-### The corpus gate is RED, for a known reason
+## 2026-08-31 — five post-2.0.0 tasks, and a rule that now binds all of them
 
-**`RiddlModelsRoundTripTest` fails on `reactive-bbq` — Step 1, validate original — with the
-6 `msg-target-crosses-boundary` errors the new rule correctly reports.** `commands` is
-342 tests, 1 failure, and that one. CI will show the same. This is NOT a mystery to
-investigate and NOT a rule to soften: the migration is filed at
-`riddl-models/task/2026-08-27-address-the-context-not-its-contents.md`, the staged
-`../bin/riddlc` already enforces the rule so they can migrate against it, and the gate
-returns to green when they do. It is the same shape every time a rule with corpus cost
-ships.
+`/ossuminc-skills:check-tasks` triaged five requests from riddlg and synapify. Four were
+small; the fifth reshaped how entity instances are referenced. Before any of them, Reid
+set the constraint they all had to satisfy: **from 3.0 onward a deprecated name is never
+deleted** — rename freely, deprecate freely, but the old spelling keeps working forever.
+That is now `CLAUDE.md` § Backward Compatibility rule 3, and `[5.1]` (deprecate
+`processor` in favour of `streamlet`) is the first item filed under it.
 
-**The sequencing was mine and is worth not repeating.** The preferred order (see the `/rc`
-skill) is: stage the binary, let the corpora migrate, THEN push. I staged and filed, but
-pushed first, so CI is red in the window between. A corpus needs the RULE, not a release —
-which is exactly why staging early works.
+**Every one of the five was BIGGER than the report said it was.** That is the reusable
+observation: a reporter names the instance that bit them, and the instance is a sample.
 
-### Unpushed
+- `find -shape` rejected nothing — but neither did `-intention`, `-cardinality` or
+  `-option`. Four selectors, one missing validation helper. The intention spelling was
+  also wrong in a second place, so `normalizeIntention` had to be applied to the
+  validator AND the predicate, not one of them.
+- Four keywords were reported missing from the tokenizer tables. **Seventeen were.** The
+  wanted fix — `StringIn(Keyword.allKeywords*)` — does not compile, because `StringIn` is
+  a fastparse macro requiring literal constants. A behavioural drift guard
+  (`KeywordTableDriftTest`) is the available substitute for a derived table.
+- `noANSIMessages` was reported ignored. It was **honoured, in the wrong scope window**:
+  the option was set outside the block that rendered. A parameter that "does not work"
+  and a parameter read at the wrong moment look identical from outside.
+- The invariant applier looked itself up under the wrong refMap key. `Pass` pushes the
+  ON-CLAUSE as parent of its statements, so a handler-keyed lookup missed. Fixed with an
+  ordered fallback rather than by guessing which parent is canonical.
 
-`release/2` carries the boundary work (`msg-target-crosses-boundary`) unpushed, and the
-Computational Model amendment is committed separately in the `ossuminc` repo (`dcaca50`),
-also unpushed. Certified tri-platform locally, zero failures on all six rows; CI has not
-seen it. Corpus cost measured on the staged binary: **6 findings in 1 of 190 models**
-(reactive-bbq), all true positives, migration filed in `riddl-models/task/`.
+### The fifth: one concept, five spellings, two AST nodes that disagreed
+
+`Id(X)`, `Id(entity X)`, `reference X`, `reference to X`, `reference to entity X` all mean
+*a pointer to an instance of entity X*, and they produced TWO nodes that had made
+OPPOSITE decisions about the same question — `UniqueId` kept the disambiguating keyword,
+`EntityReferenceTypeExpression` discarded it.
+
+The cost was not aesthetic. Every addressing question riddlc asks is keyed on `UniqueId`,
+so a field typed `reference to entity E` was **not usable as a `tell` address** despite
+denoting exactly that. Canarying the fix reproduced riddlg's complaint verbatim on a field
+literally typed that way.
+
+Parsing `reference` INTO `UniqueId` fixes all six sites at once, where a common supertype
+would have meant widening six matches and hoping none was missed. **`Id` is not
+deprecated and neither is `UniqueId`** — Reid had to correct me on that wording: `Id` is
+the permanent canonical SYNTAX, `UniqueId` the permanent AST node, and only the
+`reference` spelling is deprecated. **Deprecating a syntax and deprecating an AST node are
+different acts** and it is worth keeping the sentence unambiguous about which one is meant.
+
+**Two collateral defects, both of a shape this repo keeps meeting:**
+
+1. `DiagramsPass.getTypeReferences` had an arm for `EntityReferenceTypeExpression` and
+   **none for `UniqueId`**. Switching the node would have dropped those usage edges with
+   no error — a thinner graph and nothing to notice. It also turns edges ON for ~315
+   pre-existing bare `Id(X)` fields that had never produced one; ruled a deliberate
+   widening.
+2. `EntityReferenceTypeExpression.format` returned `entity X`, which does not re-parse as
+   a reference type — **and a golden test pinned it.** The emitter keeps its own correct
+   copy and prettify routes through that, so the wrong one was never exercised. Third
+   instance here of a dispatch written twice where only the correct copy runs. A golden
+   test proves a string is STABLE, never that it is RIGHT.
+
+**I also had to correct my own count.** I reported 13 corpus uses of `reference to`; there
+are **zero** — all 13 grep hits are prose (`briefly "Opaque reference to a Document"`).
+Grepping a syntax keyword that is also an ordinary English word needs the shape around it,
+not the word.
+
+**A withdrawn request worth recording.** Reid asked for the keyword to be a non-optional
+enum rather than a string. Two tensions surfaced: it reverses a documented decision (the
+keyword is stored AS WRITTEN so prettify is byte-exact), and under the day-old
+never-delete rule a signature change is exactly what is now forbidden. Withdrawn on those
+grounds. **Flagging the tension was the whole value — the request was reasonable and the
+reasons it fails were not visible from where it was made.**
 
 ## 2026-08-27 (later) — four backlog items, and two that were already done
 
