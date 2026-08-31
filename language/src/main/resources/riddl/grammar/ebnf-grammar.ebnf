@@ -164,6 +164,14 @@ alternation = "one" ["of"] "{" alternation_contents "}" ;
    At least one bar is required, so a lone type reference is not an alternation. *)
 infix_alternation = aliased_type_expression {"|" aliased_type_expression}+ ;
 alternation_contents = undefined | [aliased_type_expression {("|" | "or" | ",") aliased_type_expression}] ;
+(* DEPRECATED in 2.0, and it keeps parsing forever -- from 3.0 onward a deprecated
+   spelling is never deleted. This is the same concept as `unique_id_type` above: a
+   pointer to an INSTANCE of an entity. Both now build the identical AST node
+   (UniqueId), with the keyword recorded as "entity", so a field spelled this way is
+   usable as a `tell` address exactly as `Id(entity X)` is. The prettifier emits
+   `Id(entity <path>)`, so this form converges on the canonical one. Write
+   `Id(entity X)` instead; the rule stays here because the syntax must go on being
+   accepted, not because it is a second way to say something. *)
 entity_reference_type = "reference" ["to"] ["entity"] path_identifier ;
 aggregation = "{" aggregate_definitions "}" ;
 aggregate_definitions = undefined | {aggregate_content [","]} ;
