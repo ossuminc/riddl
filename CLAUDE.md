@@ -83,14 +83,33 @@ following this process:
 2. **No breaking signature changes** — Do not change parameter types,
    return types, or add required parameters to existing public methods.
    New parameters must have defaults.
-3. **Deprecation warnings until next major release** — Deprecated APIs
-   must remain functional through the current major version (1.x). They
-   may only be removed in the next major release (2.0.0).
+3. **Deprecation is FOREVER from 3.0 onward — nothing is ever deleted**
+   (Reid, 2026-08-31). Through 1.x this rule read "deprecated APIs may be
+   removed in the next major release", and 2.0.0 exercised that: it
+   removed `Grammar.loadGbnfGrammar*` outright, on the reasoning that an
+   unshipped major IS the removal window (*"that's the deal with RCs,
+   things could disappear"*). **That window is now CLOSED.** From this
+   point forward a deprecated name must keep working: rename freely,
+   deprecate freely, but the OLD SPELLING STAYS. A 3.0 that breaks a
+   consumer's model or build is not a 3.0 we ship.
+   This is stricter than semver allows, deliberately — RIDDL models are
+   authored artifacts that outlive the tool, and a modeller who wrote
+   valid RIDDL should never have to rewrite it to move forward.
 4. **Additive changes only** — New methods, extension methods, classes,
    and traits are always safe. Prefer adding new APIs alongside old ones
    rather than modifying existing ones.
 
 When in doubt, **add, don't change**.
+
+**What "deprecate, never delete" means in practice for the LANGUAGE**, since
+most of this section reads as an API rule: a retired keyword or spelling must
+still PARSE, still produce the same AST, and emit a `Deprecation` message
+naming its replacement. The machinery already exists and there are worked
+examples — `Abstract` -> `Anything`, `option persistent` -> the connector
+intention, the shape keywords -> `as <shape>`, `state X is <record>` -> `of`,
+`prompt` -> `do`. Several are CONSUMED by the parser into the new form, which
+is what makes prettify converge and `autoFixable` honest. Follow those, not the
+GBNF removal.
 
 ## Definition of Done, and what bounds 2.0
 

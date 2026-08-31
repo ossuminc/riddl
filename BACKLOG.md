@@ -28,6 +28,49 @@ lookup-value item was 2.5 in one message and read as 2.6 in the next, in a
 conversation where both of us were naming items by number. **A handle that changes
 is worse than no handle**, because it fails exactly when it is being relied on.
 
+### 5. Post-2.0 — the 3.x line
+
+**2.0.0 shipped 2026-08-27**, so this section exists: per CLAUDE.md there was no
+"defer to 2.1" pile while 2.0 was in flight, and post-2.0 items get filed only
+once it ships. Section 5 is where they go; sections 0-4 are 2.0 history and stay
+struck.
+
+**The compatibility rule changed with this line and it constrains every item
+here.** From 3.0 onward, **deprecate and rename freely, but never DELETE the old
+name** (Reid, 2026-08-31). 2.0 was allowed to remove things — it took out
+`Grammar.loadGbnfGrammar*` on the reasoning that an unshipped major is the
+removal window. That window is closed. See CLAUDE.md § Backward Compatibility
+Policy.
+
+- **[5.1]** **Deprecate the `processor` keyword in favour of `streamlet`.**
+  Reid, 2026-08-31.
+  **Why:** every other kind of processor already has its own name — `entity`,
+  `repository`, `projector`, `adaptor`, `context` — so the generic keyword
+  `processor` names the ABSTRACTION rather than a thing a modeller declares, and
+  reads oddly beside its siblings. Meanwhile the AST node is already called
+  `Streamlet`, and the shape keywords (`source`/`sink`/`flow`/`merge`/`split`/
+  `router`) are the concrete spellings of it. **The keyword should match the AST
+  name it produces.**
+  **What to do:** accept `streamlet <id> [as <shape>] is {…}` as the canonical
+  spelling, keep `processor` parsing to the identical AST node, emit a
+  `Deprecation` naming `streamlet`, and have prettify converge `processor` to
+  `streamlet`. Consume the old spelling in the parser rather than merely
+  tolerating it — that is what makes the round trip converge and `autoFixable`
+  honest, exactly as `ConnectorOptionToIntention` and the quoted-numeric
+  deprecation do.
+  **NOT a removal.** Under the 3.0 rule `processor` keeps working
+  indefinitely. A `RuleId` is needed for the deprecation (the code registry is
+  the consumed-deprecation mechanism), plus the EBNF, a corpus fixture so the
+  TatSu validator covers the new spelling, and a prettify round-trip test.
+  **Check before building:** `Streamlet` is a concrete case class and NOT the
+  port-bearing supertype — that is `Processor`, and confusing the two has cost
+  this repo real time (see the 2026-08-10 "contradiction that was an unfinished
+  migration"). Renaming the KEYWORD does not rename either type; do not let the
+  rename creep into the AST hierarchy without a separate decision.
+  **Corpus cost is not an argument** for or against, but measure it for the
+  migration task drop: `grep -c "processor "` across riddl-models and
+  riddl-examples.
+
 ### 0. Just before 2.0.0 is released
 
 Things deliberately deferred to the release itself, not to be done piecemeal.
@@ -48,7 +91,7 @@ Things deliberately deferred to the release itself, not to be done piecemeal.
   of a wrapped scaladoc line, so two comments read `\|`. Removing the backslash
   makes `scalafmtCheck` red because the formatter re-adds it.
 
-- **[0.2]** **Upgrade riddl-vscode.** Reid, 2026-08-06 — deferred here deliberately, not
+- ~~**[0.2]** **Upgrade riddl-vscode.**~~ — **DONE by riddl-vscode 2026-08-28**, verified 2026-08-31: its `package.json` declares `@ossuminc/riddl-lib` `2.0.0` and its `upgrade-riddl-2.0.0` task is in its own `task/done/`. The block was never a scheduling choice — it consumes npm, which carries only PUBLISHED releases, so it could not move until 2.0.0 existed. It moved the day after. It also filed a defect back (`task/vscode-keyword-tokenizer-gaps.md`), which is the protocol working. Original entry:
   overlooked. It consumes `@ossuminc/riddl-lib` via npm, which carries only
   PUBLISHED releases, so it cannot take a staged build at all and chasing it
   between RCs means cutting an RC for its benefit. It is on `2.0.0-rc.9`
