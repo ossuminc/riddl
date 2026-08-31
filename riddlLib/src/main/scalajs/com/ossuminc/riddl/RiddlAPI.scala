@@ -176,10 +176,26 @@ object RiddlAPI {
     )
   end nebulaToJsObject
 
-  /** Format messages as an array of error objects */
+  /** Format messages as an array of error objects.
+    *
+    * **The formatting happens HERE, and that is why `noANSIMessages` used to be inert.**
+    * `RiddlLib.validateString` scopes the option around the parse and pass run, then returns
+    * `Message` OBJECTS — nothing is rendered yet. `Message.format` calls
+    * `RiddlParserInput.annotateErrorLine`, which reads `pc.options.noANSIMessages` at CALL time,
+    * and by then the scope has closed and the ambient default (`false`) applies. So passing
+    * `true` and passing `false` produced byte-identical output, both carrying escapes — reported
+    * by ossum.ai 2026-08-27 against 2.0.0.
+    *
+    * Rendering inside the options scope is the fix. The default is `true` because a JS consumer
+    * has no terminal to colour: every riddl-lib entry point already declares
+    * `noANSIMessages: Boolean = true`, and this makes that declaration true in fact.
+    */
   private def formatMessagesAsArray(
-    messages: Messages
+    messages: Messages,
+    noANSI: Boolean = true
   ): js.Array[js.Dynamic] =
+    val ctx = summon[PlatformContext]
+    ctx.withOptions(ctx.options.copy(noANSIMessages = noANSI)) { _ =>
     messages.map { msg =>
       js.Dynamic.literal(
         kind = msg.kind.toString,
@@ -192,6 +208,7 @@ object RiddlAPI {
         )
       )
     }.toJSArray
+    }
   end formatMessagesAsArray
 
   /** Convert an OutlineEntry to JS */
@@ -378,12 +395,12 @@ object RiddlAPI {
     )
     js.Dynamic.literal(
       succeeded = vr.succeeded,
-      parseErrors = formatMessagesAsArray(vr.parseErrors),
+      parseErrors = formatMessagesAsArray(vr.parseErrors, noANSIMessages),
       validationMessages = js.Dynamic.literal(
-        errors = formatMessagesAsArray(vr.errors),
-        warnings = formatMessagesAsArray(vr.warnings),
-        info = formatMessagesAsArray(vr.info),
-        all = formatMessagesAsArray(vr.all)
+        errors = formatMessagesAsArray(vr.errors, noANSIMessages),
+        warnings = formatMessagesAsArray(vr.warnings, noANSIMessages),
+        info = formatMessagesAsArray(vr.info, noANSIMessages),
+        all = formatMessagesAsArray(vr.all, noANSIMessages)
       )
     )
   end validateString
@@ -406,12 +423,12 @@ object RiddlAPI {
     )
     js.Dynamic.literal(
       succeeded = vr.succeeded,
-      parseErrors = formatMessagesAsArray(vr.parseErrors),
+      parseErrors = formatMessagesAsArray(vr.parseErrors, noANSIMessages),
       validationMessages = js.Dynamic.literal(
-        errors = formatMessagesAsArray(vr.errors),
-        warnings = formatMessagesAsArray(vr.warnings),
-        info = formatMessagesAsArray(vr.info),
-        all = formatMessagesAsArray(vr.all)
+        errors = formatMessagesAsArray(vr.errors, noANSIMessages),
+        warnings = formatMessagesAsArray(vr.warnings, noANSIMessages),
+        info = formatMessagesAsArray(vr.info, noANSIMessages),
+        all = formatMessagesAsArray(vr.all, noANSIMessages)
       )
     )
   end validateStringQuick
@@ -442,6 +459,7 @@ object RiddlAPI {
     )
     js.Dynamic.literal(
       succeeded = vr.succeeded,
+      // No `noANSIMessages` parameter on this entry point, so the default (clean) applies.
       parseErrors = formatMessagesAsArray(vr.parseErrors),
       validationMessages = js.Dynamic.literal(
         errors = formatMessagesAsArray(vr.errors),
