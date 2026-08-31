@@ -29,7 +29,13 @@ class KeywordsTest extends AbstractTestingBasis {
       // 164 as of 2026-08-19: `forward` joined for the delegation statement. It IS registered in
       // allKeywords, unlike the group/output/input ALIASES, because it leads a statement and must
       // not be usable as a bare identifier there.
-      Keyword.allKeywords.size must be(164)
+      // 167 as of 2026-08-31: `initiate`, `system` and `terminate` were declared as Keyword
+      // constants and omitted from allKeywords -- the SAME under-count as `get`/`put`/`refuses`/
+      // `require_` above, recurring because this list is hand-maintained. riddl-vscode found two
+      // of the three while deriving its editor vocabulary from it.
+      // `KeywordTableDriftTest` now guards this direction and the tokenizer's separate copy, so
+      // the next omission reddens by NAME instead of arriving as a count nobody can attribute.
+      Keyword.allKeywords.size must be(167)
     }
   }
 

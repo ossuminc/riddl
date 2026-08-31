@@ -420,6 +420,22 @@ object Keywords {
 
   def `yield`[u: P]: P[Unit] = keyword(Keyword.yield_)
 
+  /** Every keyword, for the TOKENIZER (`Token.Keyword`).
+    *
+    * **This duplicates [[Keyword.allKeywords]] and CANNOT be derived from it**: fastparse's
+    * `StringIn` is a macro that requires literal constants, so `StringIn(Keyword.allKeywords*)`
+    * does not compile ("Function can only accept constant singleton type"). Tried 2026-08-31.
+    *
+    * So the two lists must be kept in step BY HAND, and they had not been: 17 of 167 keywords
+    * were absent here, so `let`, `or`, `prompt`, `match`, `brief`, `description`, `self`,
+    * `forward`, `initiate` and `terminate` all tokenized as `Identifier`. riddl-vscode found four
+    * of them while deriving its TextMate grammar from these tables; the other thirteen were
+    * invisible because nothing compared the lists.
+    *
+    * **`KeywordTableDriftTest` is the guard.** It asserts BEHAVIOURALLY — every string in
+    * `allKeywords` actually parses as a keyword — so adding a keyword without adding it here
+    * reddens instead of silently degrading an editor. Do not delete it to make a build pass.
+    */
   def anyKeyword[u: P]: P[Unit] = {
     P(
       keywords(
@@ -573,7 +589,24 @@ object Keywords {
           Keyword.where,
           Keyword.with_,
           Keyword.yields,
-          Keyword.yield_
+          Keyword.yield_,
+          Keyword.brief,
+          Keyword.default_,
+          Keyword.description,
+          Keyword.explanation,
+          Keyword.figma,
+          Keyword.form,
+          Keyword.forward,
+          Keyword.fully,
+          Keyword.initiate,
+          Keyword.let,
+          Keyword.match_,
+          Keyword.node,
+          Keyword.or,
+          Keyword.prompt,
+          Keyword.self,
+          Keyword.system,
+          Keyword.terminate
         )
       )
     )
@@ -913,7 +946,10 @@ object Keyword {
     where,
     with_,
     yields,
-    yield_
+    yield_,
+    initiate,
+    system,
+    terminate
   )
 
   lazy val allKeywordsSet: Set[String] = allKeywords.toSet
