@@ -821,10 +821,19 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         parseDefinition[Type](rpi) match {
           case Left(errors) => fail(errors.map(_.format).mkString("\n"))
           case Right((typ, _)) =>
+            // Produces `UniqueId` as of 2026-08-31 -- all five spellings of an entity-instance
+            // reference now build the one node, which is what makes `reference to` usable for
+            // instance addressing. The SUBJECT of this case is unchanged: `reference totalOrders`
+            // must not have its first two letters swallowed by the `re` of some other rule, and
+            // the path must come through whole.
             typ.typEx match {
-              case ert: EntityReferenceTypeExpression =>
-                ert.entity.value mustBe Seq("totalOrders")
-              case other => fail(s"Expected EntityReferenceTypeExpression, got $other")
+              case uid: UniqueId =>
+                uid.entityPath.value mustBe Seq("totalOrders")
+                // `reference` has always meant an ENTITY reference, so the keyword is recorded
+                // even though the author omitted it -- storing None would widen a deprecated
+                // spelling to every processor kind.
+                uid.kindKeyword mustBe Some("entity")
+              case other => fail(s"Expected UniqueId, got $other")
             }
         }
     }

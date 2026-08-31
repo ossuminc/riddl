@@ -360,6 +360,17 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private def getTypeReferences(typEx: TypeExpression): Seq[Reference[Definition]] = {
     typEx match {
       case EntityReferenceTypeExpression(loc, pid)     => Seq(EntityRef(loc, pid))
+      // A `UniqueId` is a reference to an INSTANCE, so a field typed `Id(entity Order)` uses
+      // Order exactly as `reference to entity Order` does. Added 2026-08-31 when `reference to`
+      // began producing `UniqueId`: without this arm those edges would have vanished silently --
+      // no error, just a thinner graph, which is the "collector that stopped one level short"
+      // shape this pass has been caught by before.
+      //
+      // It also turns edges ON for the ~315 pre-existing bare `Id(X)` fields, which had never
+      // produced one. That is a deliberate widening, not a side effect: an `Id(entity Order)`
+      // field genuinely does reference Order, and its absence from the graph was an oversight of
+      // the same family as the report that prompted this.
+      case UniqueId(loc, pid, _)                       => Seq(EntityRef(loc, pid))
       case AliasedTypeExpression(loc, keyword, pathId) => Seq(TypeRef(loc, keyword, pathId))
       case aucte: AggregateUseCaseTypeExpression =>
         aucte.fields.foldLeft(Seq.empty) { case (s, f) => s ++ getTypeReferences(f.typeEx) }

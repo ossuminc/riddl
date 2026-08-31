@@ -2484,8 +2484,26 @@ object AST:
     *   The type of entity referenced by this type expression.
     */
   @JSExportTopLevel("EntityReferenceTypeExpression")
+  /** `reference [to] [entity] X` — **DEPRECATED and no longer produced by the parser.**
+    *
+    * As of 2026-08-31 all five spellings of an entity-instance reference parse to [[UniqueId]],
+    * which is what makes them usable for instance addressing. This node is RETAINED, not deleted:
+    * it is public API under the 3.0 compatibility rule, and BAST and JSON readers must keep
+    * accepting it so artifacts written before the change still load.
+    *
+    * **`format` used to return `entity X`, which does not re-parse as a reference type.** The
+    * emitter kept its own, correct copy (`reference to entity X`) and prettify routes through
+    * that, so nothing ever exercised this one — the third instance in this codebase of a dispatch
+    * written twice where only the correct copy runs. It still matters after the parser change,
+    * because `format` is what renders a node read back from BAST or JSON into an error message.
+    */
+  // NOT annotated `@deprecated`, deliberately. The deprecation that concerns a USER is the
+  // language one, emitted at parse time as `type-reference-to-is-id`. Annotating the NODE would
+  // only fire `-Werror` on riddlc's own read paths -- ResolutionPass, TypeValidation, DiagramsPass
+  // and the emitter all still handle it on purpose, for artifacts written before the change --
+  // forcing four `@nowarn`s that tell a reader nothing this scaladoc does not.
   case class EntityReferenceTypeExpression(loc: At, entity: PathIdentifier) extends TypeExpression:
-    override def format: String = s"entity ${entity.format}"
+    override def format: String = s"reference to entity ${entity.format}"
   end EntityReferenceTypeExpression
 
   /** Base class of all pre-defined type expressions

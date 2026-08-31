@@ -351,7 +351,13 @@ class TypeExpressionTest extends AbstractTestingBasis {
       // The last component is a keyword, so the path cannot be emitted bare — `entity` in
       // declaration position introduces a definition. RIDDL's whole-path quoted form is the
       // established rendering (see PathIdentifier.format) and re-parses to the same components.
-      reference.format mustBe "entity 'a.b.c.d.entity'"
+      //
+      // CORRECTED 2026-08-31: this asserted `entity 'a.b.c.d.entity'`, which does NOT re-parse as
+      // a reference type — and being a golden, it PINNED the defect rather than catching it. The
+      // emitter kept its own correct copy (`reference to entity …`) and prettify routes through
+      // that, so the wrong one was never exercised. Third instance in this codebase of a dispatch
+      // written twice where only the correct copy runs.
+      reference.format mustBe "reference to entity 'a.b.c.d.entity'"
       reference.isEmpty mustBe true
       reference.isContainer mustBe false
     }

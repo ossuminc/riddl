@@ -173,7 +173,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
     }
 
     "survive a prettify round trip through a nested LogicalExpression, preserving the " +
-      "parenthesized grouping, with an ascription to an EntityReferenceTypeExpression" in {
+      "parenthesized grouping, with an ascription to a UniqueId written `reference to`" in {
         (_: TestData) =>
           val original = parse(model, "orig")
           val ws1 = Finder(original)
@@ -196,16 +196,23 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
                 case other => fail(s"expected And on the left of Or, got $other")
             case other => fail(s"expected Or at the root, got $other")
 
-          refPromptOf(ws1.condition).typeEx.get mustBe an[EntityReferenceTypeExpression]
+          // `reference to entity Target` produces a UniqueId as of 2026-08-31 -- all five
+          // spellings of an entity-instance reference build the one node. The SUBJECT of this
+          // case is unchanged: a PromptValue ascription nested inside a LogicalExpression must
+          // survive the round trip with its parenthesization intact.
+          refPromptOf(ws1.condition).typeEx.get mustBe an[UniqueId]
 
           val emitted = prettify(original)
           withClue(s"emitted source was:\n$emitted\n") {
             // The nested `and` must stay parenthesized under the outer `or` -- the same rule
             // `LogicalExpression.format`'s `paren` helper enforces, now mirrored by
             // `emitLogicalOperand`.
+            // Prettify CONVERGES the deprecated `reference to` spelling to `Id(entity …)`, so
+            // the emitted text differs from the source here by design -- the same precedent as
+            // `!` converging to `not` and `A | B` to `one of { A or B }`.
             emitted must include(
-              """when (invariant HasFunds with prompt("target ref") as reference to entity""" +
-                """ Target and flag) or otherFlag then"""
+              """when (invariant HasFunds with prompt("target ref") as Id(entity""" +
+                """ Target) and flag) or otherFlag then"""
             )
           }
 
@@ -216,8 +223,10 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
             .getOrElse(fail("no LogicalExpression when-condition found after re-parse"))
           val pv2 = refPromptOf(ws2.condition)
           pv2.typeEx.get match
-            case er: EntityReferenceTypeExpression => er.entity.value.last mustBe "Target"
-            case other => fail(s"expected an EntityReferenceTypeExpression, got $other")
+            case uid: UniqueId =>
+              uid.entityPath.value.last mustBe "Target"
+              uid.kindKeyword mustBe Some("entity")
+            case other => fail(s"expected a UniqueId, got $other")
       }
 
     "survive a prettify round trip through a `not`, with an ascription to a Table" in {

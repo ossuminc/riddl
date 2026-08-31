@@ -21,11 +21,46 @@ private[parsing] trait TypeParser {
   // StatementParser rather than duplicating them (see the `private[parsing]` notes on those rules).
   this: CommonParser & StatementParser =>
 
-  private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
+  /** `reference [to] [entity] X` — DEPRECATED, and produces a [[UniqueId]] like `Id(entity X)`.
+    *
+    * Reid's ruling, 2026-08-31: *"`reference to entity X` and `Id(entity X)` (or `Id(X)`) are all
+    * types that are essentially references (pointers) to some instance of an entity of type X."*
+    * One concept had five spellings across TWO unrelated AST nodes, which made opposite decisions
+    * about the same question — `UniqueId` kept the disambiguating keyword, this one discarded it —
+    * and left a generator with no single way to ask "is this a reference to an instance of entity
+    * E, and if so, which E?". riddl-generator reported it after it cost them a green build that
+    * blamed the model for a generator bug.
+    *
+    * **Producing `UniqueId` is what fixes it, not a common supertype.** Every question riddlc asks
+    * about instance addressing — `isAddressFieldFor`, `isIdForEntity`, `checkTerminate` — is keyed
+    * on `UniqueId`, so a field typed `reference to entity E` was NOT usable as a `tell` address
+    * despite denoting exactly that. Unifying the node makes all of them work at once instead of
+    * widening six sites and hoping none was missed.
+    *
+    * **The keyword is recorded as `entity` even when the author omitted it.** `reference` has
+    * always resolved as entity-only; storing `None` would silently widen a DEPRECATED spelling to
+    * every processor kind, so `reference to SomeContext` would begin validating where it used to
+    * fail. Consequence: these converge to `Id(entity X)` rather than to the bare `Id(X)`.
+    *
+    * `Id` itself is NOT deprecated — it is the permanent, canonical form — and neither is the
+    * `UniqueId` AST node. Only this spelling is, and under the 3.0 compatibility rule it keeps
+    * parsing indefinitely.
+    */
+  private def entityReferenceType[u: P]: P[UniqueId] = {
     P(
       Index ~ Keywords.reference ~ to.? ~/
         maybe(Keyword.entity) ~/ pathIdentifier ~/ Index
-    ).map { case (start, pid, end) => EntityReferenceTypeExpression(at(start, end), pid) }
+    ).map { case (start, pid, end) =>
+      val loc = at(start, end)
+      deprecation(
+        loc,
+        "'reference to' is deprecated; use 'Id(entity <path>)', which means the same thing and " +
+          "is the form riddlc uses for instance addressing",
+        code = Option(RuleId.ReferenceToIsId),
+        autoFixable = true
+      )
+      UniqueId(loc, pid, Option(Keyword.entity))
+    }
   }
 
   private def stringType[u: P]: P[String_] = {

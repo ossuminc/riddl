@@ -117,11 +117,14 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
       }
     }
 
-    "survive a prettify round trip when ascribed to an EntityReferenceTypeExpression" in {
+    // `reference to entity Target` produces a UniqueId as of 2026-08-31 (all five spellings of an
+    // entity-instance reference build the one node), and prettify CONVERGES the deprecated
+    // spelling to `Id(entity …)`. The subject is unchanged: the ascription must survive the trip.
+    "survive a prettify round trip when ascribed to a UniqueId written `reference to`" in {
       (_: TestData) =>
         val original = parse(model, "orig")
         letExpression(original, "refAsc") match
-          case pv: PromptValue => pv.typeEx.get mustBe an[EntityReferenceTypeExpression]
+          case pv: PromptValue => pv.typeEx.get mustBe an[UniqueId]
           case other           => fail(s"expected a PromptValue, got $other")
 
         val emitted = prettify(original)
@@ -130,8 +133,9 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
           letExpression(regen, "refAsc") match
             case pv: PromptValue =>
               pv.typeEx.get match
-                case er: EntityReferenceTypeExpression =>
-                  er.entity.value.last mustBe "Target"
+                case uid: UniqueId =>
+                  uid.entityPath.value.last mustBe "Target"
+                  uid.kindKeyword mustBe Some("entity")
                 case other => fail(s"expected an EntityReferenceTypeExpression, got $other")
             case other => fail(s"expected a PromptValue, got $other")
         }

@@ -235,6 +235,25 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     addIndent("attachment " + a.id.format).add(s" is \"${a.ulid.toString}\"").nl
   end emitULIDAttachment
 
+  /** Drop a single trailing space, for the positions where `emitTypeExpression` leaves one.
+    *
+    * `emitTypeExpression`'s arms are INCONSISTENT about trailing whitespace — `UniqueId`,
+    * `RangeType` and `Decimal` append a space while most others do not. That is invisible where a
+    * type ends a line, and visible where something follows it on the same line: a `prompt(…) as
+    * Id(entity X)` ascription inside a `when` rendered `Id(entity Target)  and flag`, with two
+    * spaces. Found 2026-08-31 when `reference to` began producing `UniqueId`, since the arm it
+    * used to take added no trailing space.
+    *
+    * Trimming at the ascription sites is deliberately narrower than normalizing every arm:
+    * whitespace is load-bearing here (the 2026-08-25 one-space-after-`is` incident re-prettified
+    * all 188 corpus models), so a sweep of `emitTypeExpression` is its own change with its own
+    * corpus A/B, not a rider on this one.
+    */
+  def trimTrailingSpace(): this.type =
+    if sb.length > 0 && sb.charAt(sb.length - 1) == ' ' then sb.setLength(sb.length - 1)
+    this
+  end trimTrailingSpace
+
   def trimTrailingNewline(): this.type =
     if sb.length >= new_line.length &&
       sb.substring(sb.length - new_line.length) == new_line
@@ -312,13 +331,13 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case ev: EmptyValue =>
         add("empty")
         ev.typeEx.foreach { te =>
-          add(" "); emitTypeExpression(te)
+          add(" "); emitTypeExpression(te); trimTrailingSpace()
         }
         this
       case pv: PromptValue =>
         add(s"prompt(${LiteralString.blockFormat(pv.prompt)})")
         pv.typeEx.foreach { te =>
-          add(" as "); emitTypeExpression(te)
+          add(" as "); emitTypeExpression(te); trimTrailingSpace()
         }
         this
       case Constructor(_, ref, args) =>

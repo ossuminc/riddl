@@ -422,6 +422,7 @@ enum RuleId(
   case AddressAmbiguous extends RuleId("msg-address-ambiguous")
   case TargetCrossesBoundary extends RuleId("msg-target-crosses-boundary")
   case CodeNotPortable extends RuleId("stmt-code-not-portable")
+  case ReferenceToIsId extends RuleId("type-reference-to-is-id")
   case NoAddressField extends RuleId("msg-no-address-field")
   case ClauseNoParameters extends RuleId("handler-clause-no-parameters")
   case ClauseWrongArity extends RuleId("handler-clause-wrong-arity")

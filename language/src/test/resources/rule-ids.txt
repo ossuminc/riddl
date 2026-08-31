@@ -337,6 +337,7 @@ type-overloaded
 type-pattern-not-a-member
 type-redefines-builtin
 type-redundant-case-variant
+type-reference-to-is-id
 type-replica-has-cardinality
 type-replica-not-replicable
 type-should-be-capitalized
