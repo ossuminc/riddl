@@ -65,6 +65,44 @@ a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-08-31 (later) — [5.1]: `processor` becomes `streamlet`
+
+The first item filed under the never-delete rule, and a good demonstration of it: two
+spellings, one parser, one AST node, and the old one keeps working indefinitely.
+
+**What made it more than a keyword swap:**
+
+- **The alternation had to be FACTORED.** `Keywords.keyword` ends in a cut, so
+  `Keywords.streamlet | Keywords.processor` as two separate parser branches would let
+  whichever matched first win outright and make the other unreachable — the hazard
+  `bastImport` and `ulidAttachment` already document. One `.!` capture across both, then
+  branch on the captured text.
+- **The shape-keyword deprecation had to move too.** It said *use `processor X as flow`*
+  — pointing an author from one deprecated keyword at another. Nine `.check` goldens
+  carried that string.
+- **The dual dispatch bit again, and was caught by design this time.**
+  `AST.Streamlet.format` and `RiddlFileEmitter.openDef` are the same decision written
+  twice; the round-trip suite canaries BOTH, and reverting either reddens it. That is the
+  same pattern that, twenty-four hours earlier, had a golden test pinning
+  `EntityReferenceTypeExpression.format`'s WRONG copy.
+- **`RuleIdTest` rejected my first code, correctly.** `processor-keyword` has no known
+  subject; `processor` is not in the closed vocabulary. `stream` already was, so
+  `stream-processor-keyword` needed no new subject. The guard did exactly what it exists
+  for: a rule that fits no subject needs a subject added, never an exemption. The old
+  spelling was never published, so it left the append-only ledger rather than being
+  retired.
+
+**A corpus count inflated by prose — the second time in two days.** A loose grep scores
+455 uses in riddl-models, but only 242 are declarations — the rest sit inside string
+literals, 195 of them the one shape `error "Unexpected message for processor X"`. Real declarations: **242 in riddl-models, 28 in riddl-examples, 14 here.**
+Yesterday the same mistake ran the other way, reporting 13 uses of `reference to` that
+were all prose. **Grep the declaration SHAPE, never the bare word** — a keyword that is
+also an ordinary English word will always be quoted somewhere in a corpus.
+
+Migration task files dropped in both corpora. Nothing breaks: it is a deprecation, and
+the rule carries a constant fix, so `validate --fix --fix-rule stream-processor-keyword`
+does the whole thing.
+
 ## 2026-08-31 — five post-2.0.0 tasks, and a rule that now binds all of them
 
 `/ossuminc-skills:check-tasks` triaged five requests from riddlg and synapify. Four were

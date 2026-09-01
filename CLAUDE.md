@@ -1321,12 +1321,38 @@ to the right group rather than appending to a list.
   `Processor` base. Each carries `ascribedShape: Option[StreamletShape]`
   (None ⇒ derived from arity via `Processor.arityShape`/`effectiveShape`).
   Surface: `[<intention>] context <id> [as <shape>] is {…}` and
-  `processor <id> [as <shape>] is {…}`. The old streamlet shape keywords
+  `streamlet <id> [as <shape>] is {…}`. The old streamlet shape keywords
   are deprecated aliases; `StreamletShape.fromKeyword` canonicalizes
   synonyms (cascade→Flow, fanin→Merge, broadcast/fanout→Split). `Context`
   has `intention: Option[Intention]` (Application/External/Gateway/
   Service). Shape/intention now participate in `Definition.equals`, so
   keep their `loc` at `At.empty` on every surface (parser/BAST/JSON).
+- **`streamlet` is the generic keyword; `processor` is its deprecated original
+  (2026-08-31, [5.1]).** Every other kind of processor already names a THING —
+  `entity`, `repository`, `projector`, `adaptor`, `context` — so `processor`
+  named the ABSTRACTION, and did not match the AST node it has always built.
+  Both spellings run through ONE parser, build the identical `Streamlet`, emit
+  `stream-processor-keyword` for the old one, and prettify to `streamlet`.
+  **The alternation is FACTORED — one `.!` capture across both keywords, not two
+  branches.** `Keywords.keyword` ends in a cut, so whichever branch matched first
+  would win outright and make the other unreachable. Same hazard `bastImport` and
+  `ulidAttachment` document.
+  **`AST.Streamlet.format` and `RiddlFileEmitter.openDef` are the same decision
+  written twice** and had to move together — the dual-dispatch shape this file
+  keeps recording. Canary BOTH when changing either.
+  **The AST hierarchy is untouched**: `Streamlet` is the concrete case class,
+  `Processor` the port-bearing supertype. Renaming the keyword renames neither,
+  and the two have been confused here before at real cost.
+  **The shape-keyword deprecation's message moved with it** — it now says
+  `streamlet X as flow`, not `processor X as flow`. Pointing an author from one
+  deprecated keyword at another is worse than saying nothing.
+  Corpus: **242 declarations in riddl-models, 28 in riddl-examples**, all
+  mechanically fixable (`validate --fix --fix-rule stream-processor-keyword`).
+  A LOOSE grep scores 455 in riddl-models; the 213 extras are prose inside string
+  literals — 195 of them `error "Unexpected message for processor X"` — and must
+  not be edited. Second time in two
+  days a keyword-that-is-also-an-English-word inflated a corpus count; **grep the
+  declaration SHAPE (`^\s*processor <Id>`), never the bare word.**
 - **Numeric literals (2026-08-15, `release/2`)** — `NumericLiteral(loc, text)`
   in the `Value` and `Comparand` unions, accepting
   `[+-]? digits [. digits] [(e|E) [+-] digits]`. No digit separators, no radix

@@ -213,13 +213,13 @@ passes/input/check/everything/everything.riddl(50:7->37):
  Function 'whenUnderTheInfluence' is unused:
        function whenUnderTheInfluence is {
 passes/input/check/everything/everything.riddl(67:7->11):
- The `sink` keyword is deprecated; use `processor trashBin as sink` instead:
+ The `sink` keyword is deprecated; use `streamlet trashBin as sink` instead:
        sink trashBin is { inlet SOT_In is event SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(7:5->11):
- The `source` keyword is deprecated; use `processor Source as source` instead:
+ The `source` keyword is deprecated; use `streamlet Source as source` instead:
      source Source is { outlet Commands is command DoAThing } with { described by "Data Source" }
 passes/input/check/everything/everything.riddl(8:5->9):
- The `sink` keyword is deprecated; use `processor Sink as sink` instead:
+ The `sink` keyword is deprecated; use `streamlet Sink as sink` instead:
      sink Sink is { inlet Commands is command DoAThing } with { explained as "Data Sink" }
 passes/input/check/everything/everything.riddl(58:16->52):
  'event full.SomeOtherThing.ItHappened' in this 'send' names a message type, not a value, so nothing says where its 1 field(s) come from:

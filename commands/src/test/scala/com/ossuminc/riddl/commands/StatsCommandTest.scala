@@ -36,7 +36,7 @@ class StatsCommandTest extends CommandTestBase("commands/input") {
           val deprecations = result.messages.justDeprecations
           info(deprecations.format)
           deprecations.exists { m =>
-            m.message.contains("flow") && m.message.contains("processor")
+            m.message.contains("flow") && m.message.contains("streamlet")
           } must be(true)
       end match
     }

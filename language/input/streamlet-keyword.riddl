@@ -1,0 +1,29 @@
+// Corpus fixture for the `streamlet` keyword ([5.1]). `streamlet` is CANONICAL from 2.0;
+// `processor` is the deprecated original and keeps parsing forever under the 3.0
+// never-delete rule. Both spellings build the identical AST node, which has always been
+// called Streamlet. Both the fastparse parser and the EBNF/TatSu grammar must accept
+// this input, and the prettifier must converge the second form onto the first.
+domain StreamletKeyword is {
+  type Pkg is { id: String }
+
+  context Assembly is {
+
+    // Canonical: bare, and with an ascribed shape.
+    streamlet Relay is {
+      inlet feed is type StreamletKeyword.Pkg
+      outlet done is type StreamletKeyword.Pkg
+    }
+
+    streamlet Splitter as split is {
+      inlet in is type StreamletKeyword.Pkg
+      outlet left is type StreamletKeyword.Pkg
+      outlet right is type StreamletKeyword.Pkg
+    }
+
+    // Deprecated, still accepted, and prettified as `streamlet`.
+    processor Legacy is {
+      inlet arriving is type StreamletKeyword.Pkg
+      outlet leaving is type StreamletKeyword.Pkg
+    }
+  }
+}

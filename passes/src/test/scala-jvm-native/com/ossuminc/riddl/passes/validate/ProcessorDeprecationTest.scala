@@ -60,7 +60,10 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
           val deprecations = result.messages.justDeprecations
           info(deprecations.format)
           val found = deprecations.exists { (m: Messages.Message) =>
-            m.message.contains("flow") && m.message.contains("processor")
+            // `streamlet`, not `processor`: the shape keywords now point at the canonical
+            // generic spelling. Pointing an author at one deprecated keyword from another
+            // would be worse than saying nothing.
+            m.message.contains("flow") && m.message.contains("streamlet")
           }
           found must be(true)
       }
@@ -172,8 +175,8 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
       }
     }
 
-    "not emit a Deprecation for the `processor F as flow` form" in { (td: TestData) =>
-      val rpi = RiddlParserInput(flowModel("processor F as flow"), td)
+    "not emit a Deprecation for the `streamlet F as flow` form" in { (td: TestData) =>
+      val rpi = RiddlParserInput(flowModel("streamlet F as flow"), td)
       Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
         case Left(errors) => fail(errors.format)
         case Right(result) =>
@@ -182,6 +185,24 @@ class ProcessorDeprecationTest extends AbstractValidatingTest {
           }
           info(result.messages.format)
           deprecations mustBe empty
+      }
+    }
+
+    // This case USED to assert the opposite -- that `processor F as flow` was the clean
+    // destination the shape keywords pointed at. It was, until [5.1] made `streamlet` canonical.
+    // Kept pointing the other way, for the same reason the `reply` case above is: an
+    // un-deprecation and a re-deprecation should both be visible, not silently absorbed.
+    "emit a Deprecation for the now-deprecated `processor F as flow` form" in { (td: TestData) =>
+      val rpi = RiddlParserInput(flowModel("processor F as flow"), td)
+      Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
+        case Left(errors) => fail(errors.format)
+        case Right(result) =>
+          val deprecations = result.messages.justDeprecations.filter { (m: Messages.Message) =>
+            m.message.contains("`processor` keyword is deprecated")
+          }
+          deprecations must not be empty
+          // The ascribed shape is untouched -- only the keyword before the identifier moves.
+          deprecations.head.message must include("streamlet")
       }
     }
 

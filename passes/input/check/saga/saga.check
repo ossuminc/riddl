@@ -120,7 +120,7 @@ passes/input/check/saga/saga.riddl(12:5->30):
  Function 'UndoAnotherThing' is unused:
      function UndoAnotherThing {
 passes/input/check/saga/saga.riddl(17:7->11):
- The `sink` keyword is deprecated; use `processor trashCan as sink` instead:
+ The `sink` keyword is deprecated; use `streamlet trashCan as sink` instead:
        sink trashCan is { inlet in is type SomethingOrUndo }
 passes/input/check/saga/saga.riddl(23:35->57):
  send to an inlet is deprecated and will be removed in 3.0; send to your outlet and connect it with a connector, or use `tell` to deliver directly to a processor:

@@ -17,7 +17,8 @@ import org.scalatest.*
 
 /** RIDDL is reflective: the unified processor model (context intention, an optional ascribed shape,
   * and ports declared in any processor body) must not only parse but also prettify and re-parse to
-  * the same shape. Prettify NORMALIZES the deprecated shape keywords to the `processor` keyword.
+  * the same shape. Prettify NORMALIZES the deprecated shape keywords -- AND the deprecated
+  * `processor` keyword, which the input below deliberately still uses -- to `streamlet`.
   */
 class ProcessorModelRoundTripTest extends AbstractValidatingTest {
 
@@ -66,10 +67,11 @@ class ProcessorModelRoundTripTest extends AbstractValidatingTest {
         context1.ascribedShape.map(_.keyword) mustBe Some("flow")
 
         val pretty = prettify(root1)
-        // Streamlet keyword normalized to `processor`; deprecated `split`/`flow` never lead.
+        // Streamlet keyword normalized to `streamlet`; the deprecated `processor` spelling the
+        // input was written with, and the deprecated `split`/`flow` keywords, never lead.
         pretty must include("application context Orders as flow is")
-        pretty must include("processor P as split is")
-        pretty must include("processor Q is")
+        pretty must include("streamlet P as split is")
+        pretty must include("streamlet Q is")
         pretty must not include ("split P")
         pretty must not include ("flow Orders")
 

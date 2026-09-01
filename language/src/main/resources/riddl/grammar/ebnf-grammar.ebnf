@@ -103,7 +103,7 @@ state_content = handler | invariant | comment ;
 entity_include = "include" literal_string ;
 
 (* Processor Definition Contents *)
-processor_definition_contents = vital_definition_contents | constant | invariant | function | handler | streamlet | processor | connector | relationship | inlet | outlet | version | copyright ;
+processor_definition_contents = vital_definition_contents | constant | invariant | function | handler | streamlet | generic_streamlet | connector | relationship | inlet | outlet | version | copyright ;
 vital_definition_contents = type_def | comment ;
 
 (* Type Definition *)
@@ -524,12 +524,18 @@ relationship_cardinality = "1:1" | "1:N" | "N:1" | "N:N" ;
 
 (* Streamlet-related *)
 as_shape = "as" ( "void" | "source" | "sink" | "flow" | "cascade" | "merge" | "fanin" | "split" | "broadcast" | "fanout" | "router" ) ;
-processor = "processor" identifier [as_shape] is "{" ( {processor_definition_contents}+ | undefined ) "}" [with_metadata] ;
-(* `streamlet` mirrors StreamingParser.streamlet exactly: the deprecated shape keywords PLUS the *)
-(* generic `processor <id> [as <shape>]` form. Without `processor` here, a processor written     *)
-(* directly in a module (where `module_content` reaches streamlets only through this rule) would *)
-(* parse with fastparse but not with this grammar.                                              *)
-streamlet = source | sink | flow | merge | split | router | void | processor ;
+(* `streamlet` is the CANONICAL spelling from 2.0 on; `processor` is the deprecated original *)
+(* and keeps parsing forever, per the 3.0 never-delete rule. Both build the identical AST     *)
+(* node -- which has always been called Streamlet -- and the prettifier emits `streamlet`, so *)
+(* the old spelling converges on the new one. The rule keeps its NAME because `streamlet` is  *)
+(* already taken below by the alternation over all the streamlet forms; a rule name is not a  *)
+(* spelling anyone writes.                                                                    *)
+generic_streamlet = ( "streamlet" | "processor" ) identifier [as_shape] is "{" ( {processor_definition_contents}+ | undefined ) "}" [with_metadata] ;
+(* `streamlet` mirrors StreamingParser.streamlet exactly: the deprecated shape keywords PLUS  *)
+(* the generic `streamlet <id> [as <shape>]` form. Without generic_streamlet here, one written *)
+(* directly in a module (where `module_content` reaches streamlets only through this rule)     *)
+(* would parse with fastparse but not with this grammar.                                       *)
+streamlet = source | sink | flow | merge | split | router | void | generic_streamlet ;
 source = "source" identifier is "{" streamlet_body "}" [with_metadata] ;
 sink = "sink" identifier is "{" streamlet_body "}" [with_metadata] ;
 flow = "flow" identifier is "{" streamlet_body "}" [with_metadata] ;

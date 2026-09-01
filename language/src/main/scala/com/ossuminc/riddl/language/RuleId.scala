@@ -195,6 +195,12 @@ enum RuleId(
   case BareStringCondition extends RuleId("bare-string-condition", deprecates = true)
   case AnonymousNebula extends RuleId("anonymous-nebula", deprecates = true)
   case ShapeKeyword extends RuleId("shape-keyword", deprecates = true)
+  // The generic streaming processor is spelled `streamlet` from 2.0 on -- matching the AST node
+  // it has always produced, and its siblings (entity, repository, projector, adaptor), each of
+  // which names a thing rather than the abstraction. A pure span replacement, so `--fix` handles
+  // it; under the 3.0 rule `processor` goes on parsing indefinitely.
+  case ProcessorKeyword
+      extends RuleId("stream-processor-keyword", mechanicalFix = Some(Fix.Constant("streamlet")), deprecates = true)
   case AbstractType extends RuleId("abstract-type", mechanicalFix = Some(Fix.Constant("Anything")), deprecates = true)
   case SingleAlternation extends RuleId("single-alternation", deprecates = true)
   case EntityOptionToIntention extends RuleId("entity-option-to-intention", deprecates = true)

@@ -5995,11 +5995,14 @@ object AST:
   ) extends Processor[StreamletContents] {
     // WithInlets/WithOutlets are now inherited from Processor.
     final override def kind: String = effectiveShape.getClass.getSimpleName
-    // The canonical `processor` keyword, matching the prettifier. `effectiveShape.keyword`
-    // emitted source/sink/flow -- the spellings 2.0 deprecated -- and showed a shape that may
-    // have been DERIVED from arity rather than declared.
+    // The canonical `streamlet` keyword, matching the prettifier -- and it MUST keep matching it,
+    // since this and `RiddlFileEmitter.openDef` are the dual dispatch this repo keeps being bitten
+    // by. `effectiveShape.keyword` emitted source/sink/flow -- the spellings 2.0 deprecated -- and
+    // showed a shape that may have been DERIVED from arity rather than declared. `processor`, the
+    // previous canonical spelling, is itself deprecated as of 2.0; it goes on parsing forever but
+    // is never EMITTED.
     def format: String =
-      Keyword.processor + " " + id.format + Declaration.ascription(this)
+      Keyword.streamlet + " " + id.format + Declaration.ascription(this)
   }
 
   /** A reference to an referent's projector definition

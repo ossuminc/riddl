@@ -8,10 +8,10 @@ passes/input/check/sink-reach/sink-reach.riddl(6:7->19):
  Inlet 'DataIn' is not connected:
        inlet DataIn is type Data
 passes/input/check/sink-reach/sink-reach.riddl(12:5->9):
- The `sink` keyword is deprecated; use `processor Consumer as sink` instead:
+ The `sink` keyword is deprecated; use `streamlet Consumer as sink` instead:
      sink Consumer is {
 passes/input/check/sink-reach/sink-reach.riddl(5:5->9):
- The `flow` keyword is deprecated; use `processor Processor as flow` instead:
+ The `flow` keyword is deprecated; use `streamlet Processor as flow` instead:
      flow Processor is {
 passes/input/check/sink-reach/sink-reach.riddl(1:1->17):
  Domain 'SinkReach' has no author:

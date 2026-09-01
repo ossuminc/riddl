@@ -21,7 +21,8 @@ import org.scalatest.TestData
   * Reported by riddl-generator, which had begun re-deriving the composition locally.
   *
   * The rendering matches `RiddlFileEmitter.openDef` exactly, because they share one implementation.
-  * Notably that means a Streamlet renders the canonical `processor` keyword and shows a shape only
+  * Notably that means a Streamlet renders the canonical `streamlet` keyword -- `processor`, the
+  * previous canonical spelling, was itself deprecated by [5.1] -- and shows a shape only
   * when the author ASCRIBED one -- never the shape keywords 2.0 deprecated.
   */
 class DeclarationFormatTest extends AbstractValidatingTest {
@@ -101,7 +102,7 @@ class DeclarationFormatTest extends AbstractValidatingTest {
       (td: TestData) =>
         parseAndValidateInput(RiddlParserInput(model, td), shouldFailOnErrors = false) {
           (root, _, _) =>
-            formatOf[Streamlet](root, "Ascribed") mustBe "processor Ascribed as source"
+            formatOf[Streamlet](root, "Ascribed") mustBe "streamlet Ascribed as source"
         }
     }
 
@@ -110,7 +111,7 @@ class DeclarationFormatTest extends AbstractValidatingTest {
       // not either. The alternative -- showing effectiveShape -- would disagree with the
       // prettifier about the same definition, which is the defect being fixed.
       parseAndValidateInput(RiddlParserInput(model, td), shouldFailOnErrors = false) {
-        (root, _, _) => formatOf[Streamlet](root, "Derived") mustBe "processor Derived"
+        (root, _, _) => formatOf[Streamlet](root, "Derived") mustBe "streamlet Derived"
       }
     }
   }

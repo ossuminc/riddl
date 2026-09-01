@@ -1,8 +1,11 @@
 // Corpus fixture exercising the unified processor model (Task 17): context intention
 // prefixes (`application`, `gateway`), shape ascription (`as <shape>`) on processor
-// headers, the generic `processor` keyword, and inlet/outlet ports declared in
+// headers, the generic streaming-processor keyword, and inlet/outlet ports declared in
 // non-streamlet processor bodies (a generic processor, a plain processor, an entity).
 // Both the fastparse parser and the EBNF/TatSu grammar must accept this input.
+// It deliberately keeps the DEPRECATED `processor` spelling ([5.1] made `streamlet`
+// canonical) so the old form goes on being exercised -- under the 3.0 never-delete
+// rule it must parse forever. `streamlet-keyword.riddl` covers the canonical form.
 domain ProcessorModel is {
   type Pkg is { id: String }
 

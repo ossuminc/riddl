@@ -42,34 +42,49 @@ name** (Reid, 2026-08-31). 2.0 was allowed to remove things — it took out
 removal window. That window is closed. See CLAUDE.md § Backward Compatibility
 Policy.
 
-- **[5.1]** **Deprecate the `processor` keyword in favour of `streamlet`.**
-  Reid, 2026-08-31.
-  **Why:** every other kind of processor already has its own name — `entity`,
-  `repository`, `projector`, `adaptor`, `context` — so the generic keyword
-  `processor` names the ABSTRACTION rather than a thing a modeller declares, and
-  reads oddly beside its siblings. Meanwhile the AST node is already called
-  `Streamlet`, and the shape keywords (`source`/`sink`/`flow`/`merge`/`split`/
-  `router`) are the concrete spellings of it. **The keyword should match the AST
-  name it produces.**
-  **What to do:** accept `streamlet <id> [as <shape>] is {…}` as the canonical
-  spelling, keep `processor` parsing to the identical AST node, emit a
-  `Deprecation` naming `streamlet`, and have prettify converge `processor` to
-  `streamlet`. Consume the old spelling in the parser rather than merely
-  tolerating it — that is what makes the round trip converge and `autoFixable`
-  honest, exactly as `ConnectorOptionToIntention` and the quoted-numeric
-  deprecation do.
-  **NOT a removal.** Under the 3.0 rule `processor` keeps working
-  indefinitely. A `RuleId` is needed for the deprecation (the code registry is
-  the consumed-deprecation mechanism), plus the EBNF, a corpus fixture so the
-  TatSu validator covers the new spelling, and a prettify round-trip test.
-  **Check before building:** `Streamlet` is a concrete case class and NOT the
-  port-bearing supertype — that is `Processor`, and confusing the two has cost
-  this repo real time (see the 2026-08-10 "contradiction that was an unfinished
-  migration"). Renaming the KEYWORD does not rename either type; do not let the
-  rename creep into the AST hierarchy without a separate decision.
-  **Corpus cost is not an argument** for or against, but measure it for the
-  migration task drop: `grep -c "processor "` across riddl-models and
-  riddl-examples.
+- ~~**[5.1]** **Deprecate the `processor` keyword in favour of `streamlet`.**~~ —
+  **DONE 2026-08-31.** Both spellings run through ONE parser and build the identical
+  `Streamlet`; `processor` is CONSUMED, emits `stream-processor-keyword`
+  (`Fix.Constant("streamlet")`, so `validate --fix` applies it), and prettify converges
+  on `streamlet`. `AST.Streamlet.format` and `RiddlFileEmitter.openDef` — the dual
+  dispatch — moved together, and the round-trip suite canaries BOTH halves.
+  **The alternation had to be FACTORED**, one `.!` capture across both keywords rather
+  than two branches: `Keywords.keyword` ends in a cut, so whichever branch matched first
+  would have won outright and made the other unreachable. Same hazard `bastImport`
+  documents.
+  **The rule id is `stream-processor-keyword`, not `processor-keyword`.** `RuleIdTest`
+  rejected the first spelling because `processor` is not a subject in the closed
+  vocabulary — which is the guard working exactly as designed: a new rule that fits no
+  subject needs a SUBJECT added, and here `stream` already was one.
+  **The AST hierarchy is untouched**, per the original note: `Streamlet` is the concrete
+  case class, `Processor` the port-bearing supertype, and renaming the keyword renames
+  neither.
+  **Corpus cost, measured on DECLARATIONS not prose** (a loose grep scores 455 in
+  riddl-models, but the extras are `error "Unexpected message for processor X"` strings):
+  **242 in riddl-models, 28 in riddl-examples, 14 in riddl's own fixtures.** All are
+  deprecations, never errors, and all are mechanically fixable. Migration task files
+  dropped in both corpora.
+
+- **[5.2]** **A streamlet cannot be REFERENCED by the keyword it is DECLARED with.**
+  Found while building [5.1], 2026-08-31; **pre-existing, not caused by it.**
+  `Keywords.streamlets` — the keyword set `streamletRef` accepts — is `source | sink |
+  merge | split | void`. So a streamlet declared `streamlet X is {…}` (or, before
+  [5.1], `processor X is {…}`) has **no keyword spelling that will parse as a
+  reference to it**: `tell M to streamlet X` and `tell M to processor X` both fail,
+  and the author must name a SHAPE that may have been derived rather than declared.
+  **`flow` and `router` are missing from that set too**, so even a `flow F is {…}`
+  cannot be referenced as `flow F`. Verified at `ReferenceParser.scala:131` and
+  `Keywords.scala:55`; the EBNF's `streamlet_ref` (:232) carries the same five.
+  **`Id(streamlet X)` already works** — `processor_kind` includes `streamlet` and
+  `TypeValidation.scala:289` maps a `Streamlet` to `Keyword.streamlet` — so the two
+  reference surfaces disagree about what a streamlet may be called.
+  **Fix is additive**: add `streamlet` (and `flow`, `router`) to `Keywords.streamlets`,
+  the EBNF rule, and a fixture. Nothing is deprecated and nothing breaks; the shape
+  keywords keep working as reference spellings even though they are deprecated as
+  DECLARATION spellings.
+  **Deliberately NOT done as part of [5.1]** — it is a second question (how a streamlet
+  is REFERENCED, not how it is DECLARED) and widening a reference keyword set changes
+  what parses, which wants its own corpus check.
 
 ### 0. Just before 2.0.0 is released
 

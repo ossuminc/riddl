@@ -305,6 +305,7 @@ stream-persistence-not-needed
 stream-portlet-type-mismatch
 stream-portlet-unconnected
 stream-ports-without-shape
+stream-processor-keyword
 stream-processor-unconnected
 stream-router-too-few-inlets
 stream-router-too-few-outlets

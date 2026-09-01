@@ -11,13 +11,13 @@ passes/input/check/streaming/streaming.riddl(17:3->23):
  Sink 'AttenuateSensor' should have a handler:
    sink AttenuateSensor is {
 passes/input/check/streaming/streaming.riddl(10:3->7):
- The `flow` keyword is deprecated; use `processor GetCurrentTemperature as flow` instead:
+ The `flow` keyword is deprecated; use `streamlet GetCurrentTemperature as flow` instead:
    flow GetCurrentTemperature is {
 passes/input/check/streaming/streaming.riddl(17:3->7):
- The `sink` keyword is deprecated; use `processor AttenuateSensor as sink` instead:
+ The `sink` keyword is deprecated; use `streamlet AttenuateSensor as sink` instead:
    sink AttenuateSensor is {
 passes/input/check/streaming/streaming.riddl(4:3->9):
- The `source` keyword is deprecated; use `processor GetWeatherForecast as source` instead:
+ The `source` keyword is deprecated; use `streamlet GetWeatherForecast as source` instead:
    source GetWeatherForecast is {
 passes/input/check/streaming/streaming.riddl(1:1->17):
  Domain 'AnyDomain' has no author:

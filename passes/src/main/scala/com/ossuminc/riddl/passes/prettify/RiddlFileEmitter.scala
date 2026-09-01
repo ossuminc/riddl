@@ -56,10 +56,12 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     // intention, an entity's intentions in canonical order. Shared with `AST.Definition.format`
     // so the two surfaces cannot drift; they had, and `format` was the one losing information.
     val prefix = Declaration.prefix(definition)
-    // The generic streaming processor emits the canonical `processor` keyword; the deprecated
-    // shape keywords (source/sink/flow/…) are normalized away so prettified text re-parses cleanly.
+    // The generic streaming processor emits the canonical `streamlet` keyword; the deprecated
+    // shape keywords (source/sink/flow/…) AND the deprecated `processor` spelling are normalized
+    // away so prettified text re-parses cleanly. Keep in step with `AST.Streamlet.format`, which
+    // is the second copy of this decision.
     val kw = definition match
-      case _: Streamlet => Keyword.processor
+      case _: Streamlet => Keyword.streamlet
       case _            => keyword(definition)
     // What sits between the identifier and `is`: a processor's ascribed shape, a message type's
     // `yields`, an on-clause's `from`. Shared with `format`, same reason as the prefix above.

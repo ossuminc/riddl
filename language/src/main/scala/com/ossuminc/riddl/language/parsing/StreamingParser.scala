@@ -198,7 +198,7 @@ private[parsing] trait StreamingParser {
         val kwLoc = at(start, start + keyword.length)
         deprecation(
           kwLoc,
-          s"The `$keyword` keyword is deprecated; use `processor ${id.value} as $keyword` instead",
+          s"The `$keyword` keyword is deprecated; use `streamlet ${id.value} as $keyword` instead",
           code = Option(RuleId.ShapeKeyword),
           autoFixable = true
         )
@@ -262,13 +262,32 @@ private[parsing] trait StreamingParser {
 
   def void[u: P]: P[Streamlet] = { streamletTemplate(Keyword.void) }
 
-  /** A generic processor with no fixed arity; the author may ascribe a shape via `as <shape>`. */
+  /** A generic streamlet with no fixed arity; the author may ascribe a shape via `as <shape>`.
+    *
+    * Two spellings, ONE parser. `streamlet` is canonical from 2.0; `processor` is the deprecated
+    * original and is CONSUMED here rather than merely tolerated -- the AST node is identical, so
+    * prettify converges on `streamlet` and `autoFixable` is honest. Under the 3.0 rule the old
+    * spelling never stops parsing.
+    *
+    * The alternation is FACTORED -- one `.!` capture across both keywords, not two `processor`-like
+    * branches -- because `Keywords.keyword` ends in a cut, so whichever branch matched first would
+    * win outright and make the other unreachable. Same hazard `bastImport` and `ulidAttachment`
+    * document; see CLAUDE.md § Parsing.
+    */
   def processor[u: P]: P[Streamlet] = {
     P(
-      Index ~ Keywords.processor ~/ identifier ~ asShape ~ is ~ open ~
+      Index ~ (Keywords.streamlet | Keywords.processor).! ~/ identifier ~ asShape ~ is ~ open ~
         streamletBody(0, MaxStreamlets, 0, MaxStreamlets) ~
         close ~ withMetaData ~ Index
-    )./.map { case (start, id, ascribed, contents, descriptives, end) =>
+    )./.map { case (start, kw, id, ascribed, contents, descriptives, end) =>
+      if kw.trim == Keyword.processor then
+        deprecation(
+          at(start, start + Keyword.processor.length),
+          s"The `processor` keyword is deprecated; use `streamlet ${id.value}` instead",
+          code = Option(RuleId.ProcessorKeyword),
+          autoFixable = true
+        )
+      end if
       checkForDuplicateIncludes(contents)
       Streamlet(at(start, end), id, ascribed, contents.toContents, descriptives.toContents)
     }
