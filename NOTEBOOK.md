@@ -10,19 +10,24 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-08-31
+### Build state — verified 2026-09-01
 
 **`2.0.0` IS RELEASED**, tagged on `main` at `7ce95016a` (the `release/2` merge), on
 **Scala 3.9.0 final**. `release/2` is deleted. Work since then commits straight to `main`.
 
-**`../bin/riddlc` is `2.0.0-rc.26-14-173b034d` and is deliberately STALE** — it predates
-2.0.0 and everything on `main` since. Restage with `scripts/publish-and-stage.sh` (never
-`nativeLink` alone — ivy and binary must move together) when you need to exercise a
-current rule against the corpus. **BAST `FORMAT_REVISION` is 23.**
+**`../bin/riddlc` is `2.0.0-9-e895537f`**, restaged 2026-08-31 via
+`scripts/publish-and-stage.sh`, so the ivy artifacts and the binary came from one
+invocation and agree. Always use that script — never `nativeLink` alone.
+**BAST `FORMAT_REVISION` is 23.**
 
-**The corpus gate is GREEN.** riddl-models migrated the 6 `msg-target-crosses-boundary`
-sites (`20a5bed6`), so the red window described in earlier entries is closed. Note
-riddl-models is still on its own `release/2` branch — it was asked to merge and drop it.
+**No published tag carries `streamlet`.** `2.0.0` predates [5.1] by 9 commits, so anyone
+validating a migrated corpus with a RELEASED riddlc sees 242 `stream-processor-keyword`
+deprecations. riddl's own CI is unaffected — it builds riddlc from the branch under test —
+but riddl-models has asked to be told when such a tag exists.
+
+**The corpus gate is GREEN and riddl-models is on `main`** (`866b59b9`); its `release/2` is
+merged and deleted, and `scala.yml` no longer pins any branch. 191 entry points, floors
+189/190.
 
 ### From 3.0 on, deprecation is FOREVER
 
@@ -64,6 +69,43 @@ been acted on by their own sessions.
 a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-01 — a workaround that expired when someone else acted
+
+riddl-models dropped a task saying their `release/2` had merged and been deleted, so we
+could remove `scala.yml`'s `RIDDL_MODELS_BRANCH: release/2`. Priority "Low — CI is green
+either way."
+
+**By the time we read it, CI was not green either way — it was broken.** Deleting the
+branch is what broke it: `git clone --branch release/2` now fails outright, and the step
+has no `continue-on-error`. The last green run predated their deletion by hours.
+
+**The durable shape: a workaround whose expiry condition is ANOTHER REPO'S ACTION turns
+into a failure at the moment they act, and we are not the ones who trigger it.** That is
+precisely the case that has to be tracked on our side — and it was not. The 2026-08-27
+task file we sent *told them* it was "filed in riddl's backlog as scheduled work". It
+never was. It lived in two workflow comments saying *"REMOVE this line when riddl-models
+merges to `main`"* — a note to whoever happens to open that file. **A promise made to
+another repo is not tracking.** Filed and closed as [3.7] so the lesson has a home.
+
+**There were three pins, not the one the task named.** The env var (`:34`), its use in the
+clone (`:107`), and an INDEPENDENT `ref: release/2` in the `ebnf-grammar-validation` job's
+`actions/checkout` (`:330`) — a different mechanism, added later, for the same reason.
+Doing what the task literally asked would have left CI red and looked like the fix had
+failed. `grep -rn "release/2" .github/` is what settles it, not the name in the request.
+
+Verified rather than asserted: a fresh default-branch clone plus the EBNF validator gives
+**191/191**, which is exactly what that job runs. Corpus floors (189/190) hold at 191.
+
+**Their numbers needed two corrections**, both small: they predicted 240
+`stream-processor-keyword` deprecations (it is **242**, matching what we measured before
+shipping [5.1] and the 242 `streamlet` declarations now in their corpus), and named `main`
+as `022705ea` (now `866b59b9`, two doc-only commits later).
+
+**Genuinely still open, and ours:** no published tag carries `streamlet` — `2.0.0` predates
+[5.1] by 9 commits — so anyone validating that corpus with a *released* riddlc sees 242
+deprecations. Our own CI is unaffected (it builds riddlc from the branch under test). They
+asked for a nudge when such a tag exists; that is a release decision, not backlog work.
 
 ## 2026-08-31 (later) — [5.1]: `processor` becomes `streamlet`
 

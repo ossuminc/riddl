@@ -1837,6 +1837,27 @@ that needs a ruling before either can be fixed.
 
 ### 3. Owed to other repos
 
+- ~~**[3.7]** **`scala.yml` pinned riddl-models to `release/2`.**~~ — **DONE
+  2026-09-01**, on riddl-models' task drop telling us their branch had landed.
+  **This item did not exist until it was closed, and that is the finding.** The
+  2026-08-27 task file told riddl-models it was *"filed in riddl's backlog as
+  scheduled work"*. It was not — a grep for `RIDDL_MODELS_BRANCH` in BACKLOG.md
+  returned nothing. It lived only in two workflow comments, each ending
+  *"REMOVE this line when riddl-models merges to `main`"*, which is a note to
+  whoever happens to read that file, not a tracked item. **A promise made to
+  another repo is not tracking; if it is not in BACKLOG.md it is not tracked.**
+  **There were THREE sites, not the one the task named**: the `RIDDL_MODELS_BRANCH`
+  env var (`:34`), its use in the sibling clone (`:107`), and an INDEPENDENT
+  `ref: release/2` in the `ebnf-grammar-validation` job's `actions/checkout`
+  (`:330`). Deleting only the env var would have left CI red.
+  **By the time it was read it was a BREAKAGE, not a cleanup.** riddl-models
+  deleted the branch, so `git clone --branch release/2` now fails outright
+  (verified by running it: *"fatal: Remote branch release/2 not found in upstream
+  origin"*), and the step carries no `continue-on-error`. The last green run
+  predated the deletion. A workaround whose expiry depends on ANOTHER repo's
+  action becomes a failure the moment they act — so it needed to be tracked here
+  precisely because we would not be the ones to trigger it.
+
 - ~~**[3.1]** riddl-generator's `Finder` incompleteness.~~ — **CLOSED by THEM
   2026-08-16**, verified 2026-08-18 in their `task/done/`: all four criteria met.
   They re-pinned to `rc.14-121`, diffed against baselines (**longer, never

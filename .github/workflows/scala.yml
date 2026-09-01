@@ -26,12 +26,6 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RIDDLC_PATH: target/out/native0.5/scala-3.9.0/riddlc/riddlc
-      # The corpus conforming to this branch lives on riddl-models `release/2`;
-      # its `main` still holds the 1.x models. Without this the round-trip test
-      # downloads `main` and fails against the 2.0 grammar — while local runs
-      # pass, because they use the developer's own checkout. REMOVE this line
-      # when riddl-models merges to `main` at 2.0.0 final.
-      RIDDL_MODELS_BRANCH: release/2
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -104,7 +98,7 @@ jobs:
     # "skipping rather than failing" before concluding the corpus passed.
     - name: Checkout sibling corpora for the test suites
       run: |
-        git clone --depth 1 --branch "$RIDDL_MODELS_BRANCH" \
+        git clone --depth 1 \
           https://github.com/ossuminc/riddl-models.git ../riddl-models
         git clone --depth 1 \
           https://github.com/ossuminc/riddl-examples.git ../riddl-examples
@@ -326,14 +320,10 @@ jobs:
     # BAST round-trip, while this checks the DOCUMENTED EBNF grammar accepts the same inputs.
     # If the two ever diverge the round-trip test stays green while the published grammar is
     # wrong, which is the whole point of the parser/EBNF synchronisation rule.
-    #
-    # Pinned to release/2 for the same reason RIDDL_MODELS_BRANCH is: riddl-models `main`
-    # still holds the 1.x corpus. Drop the ref when it merges at 2.0.0 final.
     - name: Checkout riddl-models
       uses: actions/checkout@v6
       with:
         repository: ossuminc/riddl-models
-        ref: release/2
         path: riddl-models
 
     - name: Validate EBNF Grammar against riddl-models
