@@ -57,7 +57,11 @@ class ReferenceMapTest extends AbstractValidatingTest {
       // `entity Location` gained `type LocationEvent` and `outlet LocationEvents_out`
       // -- all so senders address a context instead of reaching onto a portlet of
       // something it contains (`msg-target-crosses-boundary`).
-      refMap.size must be(38)
+      // 2026-09-02: +4. `everything_full.riddl` gained `ProjectIt.Outgoing`,
+      // `StoreIt.Incoming` and the `ProjectToStore` connector (whose two endpoint refs both
+      // land in the map) so its projector's `tell` has a modelled channel -- A6 reachability
+      // became an Error.
+      refMap.size must be(42)
     }
 
     "have definitionOf(pathId:String) work" in { _ =>

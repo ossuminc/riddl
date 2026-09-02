@@ -69,7 +69,13 @@ class TokenParserFileTest extends AbstractParsingTest {
           // Punctuation, Identifier, ... -- so three segments (5 tokens) became two (3), i.e. -2
           // per site, -4 in total; the second site's explanatory comment went from three `//`
           // lines to six, and each is its own Comment token, so +3. -4 + 3 = -1.
-          tokens.length must be(419)
+          // 2026-09-02: +34, from wiring `everything_full.riddl`'s projector-to-repository
+          // `tell` with a real channel (A6 reachability became an Error). Attributed, not
+          // guessed, because a token count that is merely bumped to whatever the run printed
+          // records nothing: 3 Comment tokens on the explanatory lines, 5 for `inlet Incoming
+          // is command ACommand`, 5 for `outlet Outgoing is command ACommand`, and 21 for the
+          // `connector ProjectToStore` block -- its two paths tokenizing per segment. 3+5+5+21.
+          tokens.length must be(453)
           val tasStr = tokens.toString
           tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
           tasStr must include("LiteralCode")

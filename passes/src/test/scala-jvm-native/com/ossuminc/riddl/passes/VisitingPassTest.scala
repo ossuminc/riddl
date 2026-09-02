@@ -46,7 +46,9 @@ class VisitingPassTest extends ParsingTest {
           // `entity Location` gained `type LocationEvent` and `outlet LocationEvents_out`
           // -- all so senders address a context instead of reaching onto a portlet of
           // something it contains (`msg-target-crosses-boundary`).
-          visitor.leaves must be(18)
+          // 2026-09-02: +3 for the outlet/inlet/connector wiring `everything_full.riddl`'s
+          // projector tell now requires. PassTest's independent traversal moved by the same 3.
+          visitor.leaves must be(21)
           // 2026-08-27: 29 -> 40. The `msg-target-crosses-boundary` migration gave
           // `everything_APlant.riddl` a context-level `inlet Commands` and a relay
           // `handler Intake` whose bound `on d: command DoAThing` clause sends `d` onward.
@@ -54,7 +56,8 @@ class VisitingPassTest extends ParsingTest {
           // attributed rather than assumed: PassTest's TestHierarchyPass and VisitingPassTest's
           // visitor are separate traversals and BOTH moved by exactly 11, which is evidence
           // about the tree rather than about either counter.
-          visitor.values must be(40)
+          // 2026-09-02: +3, the A6 channel wiring in `everything_full.riddl`.
+          visitor.values must be(43)
           visitor.opens must be(visitor.closes)
       end match
     }

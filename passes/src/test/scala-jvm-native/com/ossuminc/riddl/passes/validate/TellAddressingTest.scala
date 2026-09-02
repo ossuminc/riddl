@@ -35,6 +35,10 @@ class TellAddressingTest extends AbstractValidatingTest {
     }
     captured
 
+  /** The `cout`/`oin`/`Wire` triple is not decoration: since 2026-09-02 a `tell` requires a
+    * modelled channel from sender to target (A6, an Error), so a fixture without one is not a
+    * legal model and would fail for a reason this suite is not about.
+    */
   private def model(shipFields: String, tellStmt: String): String =
     s"""domain Dom is {
        |  context Ctx is {
@@ -42,15 +46,19 @@ class TellAddressingTest extends AbstractValidatingTest {
        |    command Ship is { $shipFields } with { briefly "s" }
        |    record R is { total: Integer } with { briefly "r" }
        |    entity Order is {
+       |      inlet oin is command Ctx.Ship with { briefly "oi" }
        |      state OS of record R is {
        |        handler OH is { on command Ship { do "ship" } } with { briefly "oh" }
        |      } with { briefly "os" }
        |    } with { briefly "e" }
        |    entity Caller is {
+       |      outlet cout is command Ctx.Ship with { briefly "co" }
        |      state CS of record R is {
        |        handler CH is { on command Go { $tellStmt } } with { briefly "ch" }
        |      } with { briefly "cs" }
        |    } with { briefly "ce" }
+       |    connector Wire is { from outlet Ctx.Caller.cout to inlet Ctx.Order.oin }
+       |      with { briefly "w" }
        |  } with { briefly "c" }
        |} with { briefly "d" }
        |""".stripMargin
@@ -176,17 +184,21 @@ class TellAddressingTest extends AbstractValidatingTest {
           |    command Go is { why: String } with { briefly "g" }
           |    record R is { total: Integer } with { briefly "r" }
           |    entity Order is {
+          |      inlet oin is command Ctx.Shipment with { briefly "oi" }
           |      state OS of record R is {
           |        handler OH is { on command Shipment { do "ship" } } with { briefly "oh" }
           |      } with { briefly "os" }
           |    } with { briefly "e" }
           |    entity Caller is {
+          |      outlet cout is command Ctx.Shipment with { briefly "co" }
           |      state CS of record R is {
           |        handler CH is {
           |          on command Go { tell command Ship(orderId = "the order") to entity Order }
           |        } with { briefly "ch" }
           |      } with { briefly "ce" }
           |    } with { briefly "c" }
+          |    connector Wire is { from outlet Ctx.Caller.cout to inlet Ctx.Order.oin }
+          |      with { briefly "w" }
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
@@ -250,6 +262,7 @@ class TellAddressingTest extends AbstractValidatingTest {
             |    command Noop is { why: String } with { briefly "n" }
             |    record RA is { total: Integer } with { briefly "ra" }
             |    entity Order is {
+            |      inlet oin is command CtxB.Ship with { briefly "oi" }
             |      state OS of record RA is {
             |        handler OH is { on command Noop { do "noop" } } with { briefly "oh" }
             |      } with { briefly "os" }
@@ -262,11 +275,13 @@ class TellAddressingTest extends AbstractValidatingTest {
             |    command Go is { why: String } with { briefly "g" }
             |    record RB is { total: Integer } with { briefly "rb" }
             |    entity Order is {
+            |      inlet oin is command CtxB.Ship with { briefly "oi" }
             |      state OS of record RB is {
             |        handler OH is { on command Ship { do "ship" } } with { briefly "oh" }
             |      } with { briefly "os" }
             |    } with { briefly "eb" }
             |    entity Caller is {
+            |      outlet cout is command CtxB.Ship with { briefly "co" }
             |      state CS of record RB is {
             |        handler CH is {
             |          on command Go {
@@ -277,6 +292,8 @@ class TellAddressingTest extends AbstractValidatingTest {
             |        } with { briefly "ch" }
             |      } with { briefly "ce" }
             |    } with { briefly "eb2" }
+            |    connector Wire is { from outlet CtxB.Caller.cout to inlet CtxB.Order.oin }
+            |      with { briefly "w" }
             |  } with { briefly "cb" }
             |} with { briefly "d" }
             |""".stripMargin
@@ -356,6 +373,7 @@ class TellAddressingTest extends AbstractValidatingTest {
           |    command Go is { why: String } with { briefly "g" }
           |    record R is { total: Integer } with { briefly "r" }
           |    entity Order is {
+          |      inlet oin is command Ctx.DirectCmd with { briefly "oi" }
           |      state OS of record R is {
           |        handler OH is {
           |          on command DirectCmd { do "direct" }
@@ -364,6 +382,7 @@ class TellAddressingTest extends AbstractValidatingTest {
           |      } with { briefly "os" }
           |    } with { briefly "e" }
           |    entity Caller is {
+          |      outlet cout is command Ctx.DirectCmd with { briefly "co" }
           |      state CS of record R is {
           |        handler CH is {
           |          on command Go {
@@ -373,6 +392,8 @@ class TellAddressingTest extends AbstractValidatingTest {
           |        } with { briefly "ch" }
           |      } with { briefly "cs" }
           |    } with { briefly "ce" }
+          |    connector Wire is { from outlet Ctx.Caller.cout to inlet Ctx.Order.oin }
+          |      with { briefly "w" }
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin

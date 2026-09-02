@@ -57,6 +57,10 @@ class TellValueTargetTest extends AbstractValidatingTest {
        |      handler CH is { on command Ctx.UpdateSiteStatus is { do "note it" } }
        |    }
        |    entity Booking is {
+       |      // A `tell` needs a modelled channel from its sender (A6, an Error since
+       |      // 2026-09-02). `CampSite` declares an inlet, so it is NOT exempt and the
+       |      // outlet/connector below are what make this a legal model.
+       |      outlet Departures is command Ctx.UpdateSiteStatus
        |      record Data is { siteId: $siteType }
        |      state Main of record Booking.Data is {
        |        handler BH is {
@@ -66,6 +70,7 @@ class TellValueTargetTest extends AbstractValidatingTest {
        |        }
        |      }
        |    }
+       |    connector Wire is { from outlet Ctx.Booking.Departures to inlet Ctx.CampSite.Arrivals }
        |  }
        |}
        |""".stripMargin

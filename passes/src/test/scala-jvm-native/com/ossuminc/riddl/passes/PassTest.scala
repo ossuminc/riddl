@@ -177,10 +177,16 @@ class PassTest extends AbstractTestingBasisWithTestData {
             // attributed rather than assumed: PassTest's TestHierarchyPass and VisitingPassTest's
             // visitor are separate traversals and BOTH moved by exactly 11, which is evidence
             // about the tree rather than about either counter.
-            values.must(be(41))
+            // 2026-09-02: +3, the `ProjectIt.Outgoing` outlet, `StoreIt.Incoming` inlet and
+            // `ProjectToStore` connector added to `everything_full.riddl` so its projector's
+            // `tell` has a modelled channel (A6 became an Error). VisitingPassTest's `leaves`
+            // moved by the same 3 -- two independent traversals agreeing is evidence about the
+            // tree rather than about either counter.
+            values.must(be(44))
             // 2026-08-27: +1, the context-level `inlet Commands` added to
             // `everything_APlant.riddl`. Same delta VisitingPassTest's `leaves` sees.
-            leaves.must(be(18))
+            // 2026-09-02: +3 more, the A6 channel wiring in `everything_full.riddl`.
+            leaves.must(be(21))
       }
       Await.result(future, 10.seconds)
     }

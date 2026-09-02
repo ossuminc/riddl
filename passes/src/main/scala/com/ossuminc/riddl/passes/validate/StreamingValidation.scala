@@ -202,6 +202,31 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     */
   private type Node = ByIdentity[Processor[?]]
 
+  /** processor -> processors directly downstream of it, following `from outlet` -> `to inlet`.
+    *
+    * Extracted 2026-09-02 so `ValidationPass.checkTellReachability` walks the SAME graph the
+    * streaming checks walk. Building a second adjacency map was the alternative and it is the
+    * shape this repo keeps recording as a defect: two copies of one derivation that can disagree,
+    * where only one of them is exercised by the tests that matter.
+    */
+  protected def connectorAdjacency()
+    : Map[ByIdentity[Processor[?]], scala.collection.immutable.Set[ByIdentity[Processor[?]]]] = {
+    val adj = mutable.Map.empty[ByIdentity[Processor[?]], mutable.Set[ByIdentity[Processor[?]]]]
+    connectors.filterNot(_.isEmpty).foreach { connector =>
+      val connParents = symbols.parentsOf(connector)
+      val from = resolvePath[Outlet](connector.from.pathId, connParents)
+        .flatMap(o => symbols.parentOf(o).collect { case p: Processor[?] => p })
+      val to = resolvePath[Inlet](connector.to.pathId, connParents)
+        .flatMap(i => symbols.parentOf(i).collect { case p: Processor[?] => p })
+      (from, to) match
+        case (Some(f), Some(t)) =>
+          adj.getOrElseUpdate(ByIdentity(f), mutable.Set.empty) += ByIdentity(t)
+        case _ => ()
+      end match
+    }
+    adj.map { case (k, v) => k -> v.toSet }.toMap
+  }
+
   private def checkStreamingUsage(root: PassRoot): Unit = {
     if processors.nonEmpty then {
       def node(p: Processor[?]): Node = ByIdentity(p)
@@ -565,7 +590,12 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     * available. The wrapper keeps `LinkedHashMap`'s insertion order, which is what makes the
     * emitted messages deterministic.
     */
-  private final class ByIdentity[T <: AnyRef](val value: T):
+  /** Identity-keyed wrapper. `private[validate]` rather than `private` so
+    * `ValidationPass.checkTellReachability` reuses THIS one: a second copy would be a second
+    * chance to key a graph on structural equality, which is the exact hazard the comment on
+    * [[Node]] above describes.
+    */
+  private[validate] final class ByIdentity[T <: AnyRef](val value: T):
     override def hashCode: Int = System.identityHashCode(value)
     override def equals(that: Any): Boolean = that match
       case other: ByIdentity[?] => value eq other.value

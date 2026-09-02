@@ -83,8 +83,15 @@ case class ValidationPass(
 
   /** Accumulated `tell` statements paired with their resolved target processor, for the A6
     * connector-reachability check performed after all connectors are accumulated.
+    *
+    * Carries the SENDER as well as the target (added 2026-09-02). The check used to ask only
+    * "does ANY connector reach the target", which every target with an inbound connector from
+    * anywhere satisfies -- so six unreachable tells in reactive-bbq validated clean while the
+    * check worked perfectly on a model whose target had no inbound connector at all.
+    * Reachability is a question about a PAIR; storing one half of it made it unanswerable.
     */
-  private val collectedTells: mutable.ListBuffer[(TellStatement, Processor[?])] =
+  private val collectedTells
+    : mutable.ListBuffer[(TellStatement, Processor[?], Option[Processor[?]])] =
     mutable.ListBuffer.empty
 
   /** Generate the output of this Pass. This will only be called after all the calls to process have
@@ -372,7 +379,7 @@ case class ValidationPass(
   }
 
   private def checkTellDeliverability(): Unit = {
-    collectedTells.foreach { case (ts, target) =>
+    collectedTells.foreach { case (ts, target, _) =>
       if !target.isEmpty && !isPredefined(target) then
         operandType(ts.msg).foreach { msgType =>
           if !receivesMessageType(target, msgType) then
@@ -390,26 +397,92 @@ case class ValidationPass(
     }
   }
 
+  /** A6 / CM §17: a `tell` must have a modelled channel from ITS SENDER to its target.
+    *
+    * **The question is about a PAIR, and until 2026-09-02 this asked about the target alone** --
+    * "does any connector run into any inlet of the target". Every target that anything at all
+    * feeds satisfied that, so reactive-bbq's six cross-context tells validated clean: Kitchen,
+    * Bar and Loyalty each have connectors from the app contexts, just not from the contexts
+    * telling them. The check was not missing and it was not blind to the `to context` form --
+    * both were plausible readings, and both were wrong. It answered a weaker question.
+    *
+    * **An Error, not a warning (Reid, 2026-09-02).** CM §17 states it as a hard requirement --
+    * a generator "may not treat an unmodelled delivery as a modelled one" -- and a generator
+    * handed one has nothing to emit. That is a contradiction, not an omission.
+    *
+    * Reachability is TRANSITIVE, over the same connector graph the streaming checks walk
+    * ([[connectorAdjacency]]). A direct-connector-only test would reject a legitimate pipeline
+    * that routes through an intermediate streamlet, and rejecting correct models is expensive
+    * now that this is an Error.
+    *
+    * The sender's ANCESTOR contexts count as origins. A message leaving a context does so on the
+    * context's own outlet (the 2026-08-18 boundary ruling), so an adaptor inside FrontOfHouse
+    * telling Kitchen is reachable if FrontOfHouse reaches Kitchen -- demanding a connector from
+    * the adaptor itself would contradict the rule that the context is the port at the boundary.
+    */
   private def checkTellReachability(): Unit = {
-    val liveConnectors = connectors.filterNot(_.isEmpty).toSeq
-    collectedTells.foreach { case (ts, target) =>
-      val reachable = liveConnectors.exists { conn =>
-        val connParents = symbols.parentsOf(conn)
-        resolvePath[Inlet](conn.to.pathId, connParents).exists { inlet =>
-          symbols.parentOf(inlet).exists(_ eq target)
-        }
+    if collectedTells.isEmpty then return
+    val adjacency = connectorAdjacency()
+
+    def reaches(from: Processor[?], target: Processor[?]): Boolean =
+      val goal = ByIdentity[Processor[?]](target)
+      val seen = mutable.Set.empty[ByIdentity[Processor[?]]]
+      val queue = mutable.Queue.empty[ByIdentity[Processor[?]]]
+      queue.enqueue(ByIdentity[Processor[?]](from))
+      var found = false
+      while queue.nonEmpty && !found do
+        val cur = queue.dequeue()
+        if cur == goal then found = true
+        else if seen.add(cur) then adjacency.getOrElse(cur, scala.collection.immutable.Set.empty).foreach(queue.enqueue)
+        end if
+      end while
+      found
+    end reaches
+
+    collectedTells.foreach { case (ts, target, sender) =>
+      // No resolvable sender means no pair to ask about; reporting would be reasoning from
+      // absence, the conservative rule this codebase follows for undeterminable operands.
+      sender.foreach { snd =>
+        // `???` is "known to be incomplete" and earns at most a Missing warning -- never this.
+        // A target declaring NO inlet is exempt, and this is the precedent `checkInletsAreReceived`
+        // set rather than a convenience: a processor with no inlet is ALREADY diagnosed ("handles
+        // messages but declares no inlet to receive them on"), so erroring here as well reports one
+        // omission twice, at a higher severity -- the "two checks forming a demand no legal
+        // spelling satisfies" trap. Once an inlet exists, "is there a path to it?" is a well-posed
+        // question and its absence is a contradiction.
+        // **The "already diagnosed" claim is verified, and it has a limit worth stating.** It holds
+        // for a target with a real body; a `???` target is exempt from the companion check too, so
+        // nothing is reported there at all -- which is the standing `???` ruling ("known to be
+        // incomplete, expect nothing") working, not a hole. Found by writing the pinning test with
+        // a `???` body first, where "silent" proved nothing because BOTH checks were suppressed.
+        // **It was adopted on evidence, not on the churn.** It took in-repo fixture failures from
+        // 22 to 3 AND kept all 13 reactive-bbq sites -- the reported defect is entirely preserved,
+        // which is what made it a scoping rather than a softening. Had the corpus gone quiet the
+        // exemption would have been wrong at any fixture cost.
+        val exempt = isPredefined(target) || target.isEmpty || snd.isEmpty ||
+          target.inlets.isEmpty
+        // Origins: the sender, plus every enclosing Processor. The context publishes on behalf
+        // of its contents at the boundary.
+        val origins: Seq[Processor[?]] =
+          snd +: symbols.parentsOf(snd).collect { case p: Processor[?] => p }
+        // NO intra-context exemption, deliberately. Sharing a context does NOT excuse the
+        // channel: Reid ruled 2026-08-18 that for a `tell` the connector SHOULD exist, because
+        // `tell` is sugar for a send on the outlet connected to the target's inlet (CM §25.7),
+        // so the diagnostic is telling the author to model the channel rather than imply it.
+        // Telling YOURSELF is the one case with no channel to model.
+        val self = origins.headOption.exists(_ eq target)
+        if !exempt && !self && !origins.exists(o => reaches(o, target)) then
+          messages.addError(
+            ts.loc,
+            s"'tell' target '${tellTargetLabel(ts)}' is not reachable from " +
+              s"${snd.identify} via any connector; the delivery is not modelled",
+            suggestion =
+              s"Add a connector from an outlet of ${snd.identify} (or of an enclosing context) " +
+                s"to an inlet of '${tellTargetLabel(ts)}', so the told message has a channel.",
+            ruleId = Some(RuleId.TellTargetUnreachable)
+          )
+        end if
       }
-      if !reachable then
-        messages.addWarning(
-          ts.loc,
-          s"'tell' target '${tellTargetLabel(ts)}' is not reachable via any connector; " +
-            s"a connector to one of its inlets is required for delivery",
-          suggestion =
-            s"Add a connector whose 'to' inlet belongs to '${tellTargetLabel(ts)}' so the " +
-              s"told message can be delivered.",
-          ruleId = Some(RuleId.TellTargetUnreachable)
-        )
-      end if
     }
   }
 
@@ -2093,7 +2166,7 @@ case class ValidationPass(
           // 2026-08-26 ruling, which blesses addressing the context directly. Running both would
           // double-report a cross-context tell as one warning and one error.
           checkTargetBoundary(path, entity, statement.loc, "tell", parents)
-          collectedTells.addOne((ts, entity))
+          collectedTells.addOne((ts, entity, enclosingProcessorOf(parents)))
         }
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
         // checkStatementScopes (both need the threaded `let`/element scope — A56/message-value-source).

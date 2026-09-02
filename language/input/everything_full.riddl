@@ -29,6 +29,10 @@ context full is {
   type optionality is agg?
 
   repository StoreIt is {
+    // A `tell` needs a modelled channel from its sender (A6, an Error since 2026-09-02), so the
+    // projector's `tell command ACommand to repository StoreIt` below is backed by a real
+    // outlet/inlet/connector triple rather than an implied delivery.
+    inlet Incoming is command ACommand
     schema One is relational
       of a as type agg
       link relationship as field agg.time to field agg.ident
@@ -48,6 +52,7 @@ context full is {
 
   projector ProjectIt is {
     updates repository StoreIt
+    outlet Outgoing is command ACommand
     record Record is { ??? }
     handler 'projector' is {
       on init {
@@ -57,6 +62,11 @@ context full is {
   }
 
   command ACommand()
+
+  connector ProjectToStore is {
+    from outlet ProjectIt.Outgoing
+    to inlet StoreIt.Incoming
+  } with { briefly as "carries the projector's tell to the repository" }
 
   adaptor fromAPlant to context APlant is {
     handler adaptCommands is {
