@@ -25,9 +25,15 @@ validating a migrated corpus with a RELEASED riddlc sees 242 `stream-processor-k
 deprecations. riddl's own CI is unaffected — it builds riddlc from the branch under test —
 but riddl-models has asked to be told when such a tag exists.
 
-**The corpus gate is GREEN and riddl-models is on `main`** (`866b59b9`); its `release/2` is
-merged and deleted, and `scala.yml` no longer pins any branch. 191 entry points, floors
-189/190.
+**The corpus gate is RED, for a known and filed reason.** A6 tell-reachability became an
+Error on 2026-09-02 and reactive-bbq has 13 sites (6 distinct sender/target pairs) with no
+modelled channel. `commands` is 354 + that one failure; every other model passes. Migration
+filed at `riddl-models/task/2026-09-02-tell-needs-a-modelled-channel.md`. This is NOT a
+mystery to investigate and NOT a rule to soften — it is the documented shape for a rule
+with corpus cost, and the gate returns to green when they migrate.
+
+riddl-models is on `main` (`866b59b9`); its `release/2` is merged and deleted, and
+`scala.yml` no longer pins any branch. 191 entry points, floors 189/190.
 
 ### From 3.0 on, deprecation is FOREVER
 
@@ -69,6 +75,65 @@ been acted on by their own sessions.
 a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-02 — a check that answered a weaker question, and an exemption adopted on evidence
+
+Two riddlg tasks. The CM one was documentation; the A6 one is the interesting record.
+
+### The check was not missing, and the reported hypothesis was wrong
+
+riddlg reported six unreachable `tell`s validating clean, and guessed the warning was
+unimplemented or blind to the `to context` form. Both plausible, both wrong:
+`msg-tell-target-unreachable` existed, ran, was in the binary they used, and fired
+correctly on that exact form in isolation — I calibrated on a positive case before
+trusting the zero, which is what stopped me chasing their hypothesis.
+
+**It asked whether ANY connector reached the target.** Every target that anything feeds
+satisfies that. **Reachability is a question about a PAIR and `collectedTells` stored one
+half of it** — so the check could not have answered it, whatever its predicate said. Their
+own connector analysis contained the answer (*"none joins any of the six pairs"*); it just
+drew the wrong conclusion about the cause. **When a report names a cause, check the cause
+separately from the symptom** — the symptom reproduced exactly and the cause was elsewhere.
+
+### The exemption is the durable methodological point
+
+Making it an Error cost **37 in-repo fixture failures**, and my first instinct was to warn
+Reid that the blast radius exceeded the six reported sites. Then the corpus census came
+back: **1 model of 190**. My framing had been wrong, and I said so and continued rather
+than leaving a bad number standing.
+
+Wiring the two shared fixture files cleared 9. That still left 22 minimal fixtures needing
+bespoke channels — at which point exempting *a target that declares no inlet* became worth
+testing, on the precedent `checkInletsAreReceived` already set (its no-handlers exclusion,
+where "fixture churn went from 7 to zero" was recorded as EVIDENCE the existing diagnostics
+covered those cases).
+
+**The adoption criterion was the corpus, not the churn**, and this is the part to keep: the
+exemption kept **all 13** reactive-bbq sites while taking fixtures from 22 to 3. Had the
+corpus gone quiet it would have been wrong at any fixture cost, and that sentence is now in
+the code so the next reader can check the reasoning rather than the outcome.
+
+### A pinning test that would have proved nothing
+
+The test pinning that exemption FAILED first, usefully. Its first draft used a `???` body —
+which the standing `???` ruling exempts from the *companion* check too, so both were silent
+and "silent" demonstrated nothing. A real body makes the companion diagnostic reachable.
+**An exemption test must show the other check firing, or it is indistinguishable from the
+rule not running at all.** The code comment now states the limit instead of overclaiming
+"already diagnosed".
+
+### Smaller things worth keeping
+
+- I wrote an intra-context exemption and removed it: it contradicted the 2026-08-18 ruling
+  that a `tell`'s connector should exist. Checking a ruling before shipping a plausible
+  simplification is cheaper than the alternative.
+- Three attempts at literal-block replacement failed on non-unique anchors before I switched
+  to a positional patcher. **Repeated failure of the same technique is the signal to change
+  tools, not to retry more carefully.**
+- Four node counters moved by exactly +3 and a token count by exactly +34, attributed
+  (3 comments + 5 + 5 + 21) rather than bumped to whatever the run printed. Two independent
+  traversals agreeing on a delta is evidence about the tree; a count edited to match output
+  records nothing.
 
 ## 2026-09-01 — a workaround that expired when someone else acted
 
