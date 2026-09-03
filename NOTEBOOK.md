@@ -15,15 +15,15 @@ Ask `git` for branch, tree and unpushed span — never trust a written answer to
 **`2.0.0` IS RELEASED**, tagged on `main` at `7ce95016a` (the `release/2` merge), on
 **Scala 3.9.0 final**. `release/2` is deleted. Work since then commits straight to `main`.
 
-**`../bin/riddlc` is `2.0.0-9-e895537f`**, restaged 2026-08-31 via
+**`../bin/riddlc` is `2.1.0-2-0e2efb3e`**, restaged 2026-09-03 via
 `scripts/publish-and-stage.sh`, so the ivy artifacts and the binary came from one
 invocation and agree. Always use that script — never `nativeLink` alone.
+**Verified by BEHAVIOUR, not the version string**: it reports the 13 A6 tell-reachability
+errors on reactive-bbq and stays silent on a properly-wired negative control.
 **BAST `FORMAT_REVISION` is 23.**
 
-**No published tag carries `streamlet`.** `2.0.0` predates [5.1] by 9 commits, so anyone
-validating a migrated corpus with a RELEASED riddlc sees 242 `stream-processor-keyword`
-deprecations. riddl's own CI is unaffected — it builds riddlc from the branch under test —
-but riddl-models has asked to be told when such a tag exists.
+**`2.1.0` is released and carries `streamlet`** (2026-09-01), so the deprecation-noise
+caveat that stood here is discharged — riddl-models was told.
 
 **The corpus gate is RED, for a known and filed reason.** A6 tell-reachability became an
 Error on 2026-09-02 and reactive-bbq has 13 sites (6 distinct sender/target pairs) with no
