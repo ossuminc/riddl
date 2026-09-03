@@ -15,7 +15,7 @@ Ask `git` for branch, tree and unpushed span — never trust a written answer to
 **`2.0.0` IS RELEASED**, tagged on `main` at `7ce95016a` (the `release/2` merge), on
 **Scala 3.9.0 final**. `release/2` is deleted. Work since then commits straight to `main`.
 
-**`../bin/riddlc` is `2.1.0-2-0e2efb3e`**, restaged 2026-09-03 via
+**`../bin/riddlc` is `2.1.0-4-b57376fa`**, restaged 2026-09-03 via
 `scripts/publish-and-stage.sh`, so the ivy artifacts and the binary came from one
 invocation and agree. Always use that script — never `nativeLink` alone.
 **Verified by BEHAVIOUR, not the version string**: it reports the 13 A6 tell-reachability
@@ -25,12 +25,13 @@ errors on reactive-bbq and stays silent on a properly-wired negative control.
 **`2.1.0` is released and carries `streamlet`** (2026-09-01), so the deprecation-noise
 caveat that stood here is discharged — riddl-models was told.
 
-**The corpus gate is RED, for a known and filed reason.** A6 tell-reachability became an
-Error on 2026-09-02 and reactive-bbq has 13 sites (6 distinct sender/target pairs) with no
-modelled channel. `commands` is 354 + that one failure; every other model passes. Migration
-filed at `riddl-models/task/2026-09-02-tell-needs-a-modelled-channel.md`. This is NOT a
-mystery to investigate and NOT a rule to soften — it is the documented shape for a rule
-with corpus cost, and the gate returns to green when they migrate.
+**The corpus gate is RED, for a known and filed reason — ONE site.** riddl-models fixed 12
+of A6's 13 reactive-bbq sites; the 13th needed a `Corporate -> Restaurant` connector that
+was itself an error until `b57376fa3` permitted connectors between related domains. The
+recipe is filed at
+`riddl-models/task/2026-09-03-add-the-corporate-to-restaurant-connector.md` and is VERIFIED
+on a copy: it takes the model to 0 errors, 0 warnings. `commands` is 354 + that one
+failure. The gate returns to 190/190 when they apply it.
 
 riddl-models is on `main` (`866b59b9`); its `release/2` is merged and deleted, and
 `scala.yml` no longer pins any branch. 191 entry points, floors 189/190.
@@ -75,6 +76,49 @@ been acted on by their own sessions.
 a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-03 — the contradiction my own rule created
+
+A6 becoming an Error left reactive-bbq's `Corporate -> Restaurant` tell with **no legal
+spelling**: omit the connector and A6 errors, add it and `stream-crosses-domains` errors.
+riddl-models found it, fixed 12 of the 13 sites, and filed the thirteenth back.
+
+**This is the trap CLAUDE.md names — "two checks forming a demand no legal spelling
+satisfies" — and I shipped one the day before without noticing.** Worth sitting with: the
+A6 work was careful about its own blast radius (corpus census, canaries, an exemption
+adopted on evidence) and none of that care asks *what other rule does this now collide
+with*. A correctness rule can be right in isolation and still make a legal model
+unwritable, and nothing in the test suite or the corpus sweep detects that — the corpus
+showed 13 errors, not 13 errors of which one is unfixable.
+
+**Reproduce both halves before believing a reported contradiction.** I rebuilt the
+sibling-domain probe from scratch rather than reuse theirs, and confirmed prettify emits
+zero files on a validation error. Their report was accurate in every particular, which is
+worth knowing precisely because I checked rather than assumed.
+
+**Ruled for siblings, implemented as common ancestor.** The rationale is relatedness, not
+depth: nothing separates `Corporate.Finance -> Restaurant.FrontOfHouse` from `Corporate ->
+Restaurant`. `domainOf` returned the NEAREST enclosing domain, which cannot express that
+distinction at all; `domainChain` walks the ancestry and intersects **by identity**, since
+`Definition.equals` is structural and `contains` would fake a shared ancestor between two
+distinct same-named domains.
+
+**The message had to move with the rule.** It said "crosses a domain boundary", which is
+now false — crossing is what is permitted. A diagnostic whose text outlives its rule is
+worse than one that never existed, because it teaches the wrong model.
+
+**A test that pinned the old behaviour was INVERTED, not deleted.** `StreamValidatorTest`'s
+cross-domain case used siblings under a common parent — exactly the permitted shape. Kept
+pointing the other way, as the `reply` un-deprecation was, so the record shows the rule
+once ran differently. Rejection coverage moved to a suite that can express top-level
+domains, which `parseAndValidateDomain` cannot — a constraint that is itself why the old
+fixture used siblings.
+
+**Verified the fix by BUILDING the fix on a copy**, not by reasoning that it would work:
+4006 definitions / 1 error became 4009 / 0 errors, 0 warnings. That also caught something I
+had warned about and got wrong in the reassuring direction — I said the new connector would
+draw a persistence nudge; it does not, because I wrote it `persistent`. The recipe handed
+back to riddl-models says so explicitly, since they would otherwise hit it.
 
 ## 2026-09-02 — a check that answered a weaker question, and an exemption adopted on evidence
 
