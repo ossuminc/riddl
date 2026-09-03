@@ -477,6 +477,13 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     def domainOf(d: Definition): Option[Domain] =
       symbols.parentsOf(d).collectFirst { case dom: Domain => dom }
 
+    /** Every enclosing Domain, nearest first. `domainOf` takes only the NEAREST, which cannot tell
+      * two divisions of one enterprise from two unrelated domains -- the distinction the
+      * cross-domain rule actually turns on.
+      */
+    def domainChain(d: Definition): Seq[Domain] =
+      symbols.parentsOf(d).collect { case dom: Domain => dom }
+
     connectors.filterNot(_.isEmpty).foreach { connector =>
       val connParents = symbols.parentsOf(connector)
       // No containing context => the connector sits directly in a domain (or higher).
@@ -494,19 +501,37 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       val crossContext = (outletCtx, inletCtx) match
         case (Some(a), Some(b)) => !(a eq b)
         case _                  => false
+      // Endpoints under a COMMON ANCESTOR domain are related, and a connector between them is
+      // permitted (Reid, 2026-09-03). The rule exists to catch a connector between UNRELATED
+      // domains -- "a failure of domain analysis" -- and a shared ancestor rules that out: it is
+      // movement inside one enterprise between two of its own divisions.
+      //
+      // **Ruled for SIBLINGS; implemented as common ancestor**, which subsumes it. The rationale
+      // is about relatedness, not depth, so `Corporate.Finance -> Restaurant.FrontOfHouse` is the
+      // same kind of movement as `Corporate -> Restaurant` and nothing in the reasoning separates
+      // them. Top-level domains with no parent share no ancestor, so the protection this rule was
+      // written for is untouched.
+      //
+      // Identity (`eq`), never `contains`: `Definition.equals` is structural, so two distinct
+      // same-named domains would compare equal and fake a shared ancestor.
+      val outletDomains = maybeFromOutlet.map(domainChain).getOrElse(Seq.empty)
+      val inletDomains = maybeToInlet.map(domainChain).getOrElse(Seq.empty)
+      val sharesAncestorDomain = outletDomains.exists(o => inletDomains.exists(_ eq o))
       val crossDomain = (outletDom, inletDom) match
-        case (Some(a), Some(b)) => !(a eq b)
+        case (Some(a), Some(b)) => !(a eq b) && !sharesAncestorDomain
         case _                  => false
 
       if crossDomain then
         messages.addError(
           connector.errorLoc,
-          s"${connector.identify} connects across domains (${outletDom.get.identify} and " +
-            s"${inletDom.get.identify}); a connector that crosses a domain boundary indicates a " +
-            s"failure of domain analysis and is not allowed",
+          s"${connector.identify} connects UNRELATED domains (${outletDom.get.identify} and " +
+            s"${inletDom.get.identify}) -- they share no ancestor domain; a connector between " +
+            s"unrelated domains indicates a failure of domain analysis and is not allowed",
           suggestion =
-            "Keep the connector within one domain; if two domains must communicate, model it with " +
-              "an adaptor and messaging rather than a direct stream connector.",
+            "Keep the connector within one domain, or place the two domains under a common parent " +
+              "domain if they really are divisions of one whole. If they are genuinely unrelated, " +
+              "model the communication with an adaptor and messaging rather than a direct stream " +
+              "connector.",
           ruleId = Some(RuleId.CrossesDomains)
         )
       else if connectorInDomain then

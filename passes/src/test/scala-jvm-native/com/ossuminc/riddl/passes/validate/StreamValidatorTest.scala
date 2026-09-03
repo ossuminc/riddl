@@ -327,7 +327,15 @@ class StreamValidatorTest extends AbstractValidatingTest {
         }
     }
 
-    "error on a cross-domain connector" in { (td: TestData) =>
+    // INVERTED 2026-09-03, and kept pointing the other way rather than deleted. This fixture is
+    // `d1` and `d2` SIBLINGS under `parent` -- precisely the shape Reid ruled permitted, because
+    // the rule's target is a connector between UNRELATED domains and a shared ancestor rules that
+    // out. It had to change: A6 reachability became an Error the day before, and reactive-bbq's
+    // `Corporate -> Restaurant` tell then had no legal spelling -- omit the connector and A6
+    // errors, add it and this check errored. Two rules, no model satisfying both.
+    // Rejection of genuinely unrelated domains is pinned (and canaried) in
+    // `RelatedDomainConnectorTest`, which can express top-level domains as this helper cannot.
+    "ACCEPT a connector between sibling domains under a common parent" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain parent is {
           | domain d1 is { type T = Integer context a is { source src is { outlet out is type parent.d1.T } } }
@@ -337,7 +345,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
         td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, messages) =>
-        messages.justErrors.exists(_.message.contains("crosses a domain boundary")) mustBe true
+        messages.justErrors.exists(_.message.contains("UNRELATED domains")) mustBe false
       }
     }
     "warn about useless persistence option" in { (td: TestData) =>
