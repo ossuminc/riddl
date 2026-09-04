@@ -10,44 +10,46 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-09-04 by running, not recalling
+### Build state — verified 2026-09-04 (evening) by running, not recalling
 
 **`2.1.0` is released**, on Scala 3.9.0 final. **BAST `FORMAT_REVISION` is 23.**
 
-**`../bin/riddlc` was restaged from `main` HEAD on 2026-09-04** via
-`scripts/publish-and-stage.sh`, so the local ivy artifacts and the binary are one build.
-Check it rather than trust it: `../bin/riddlc --no-ansi-messages version` must equal
-`git describe --tags --long` with `-g<hash>` reduced to `-<8 chars>`. It enforces both
-2026-09-03 rules (`adaptor-targets-context-only`, `msg-tell-target-unreachable`) — verified
-by a probe model the previous binary passed clean. riddlg and riddl-models now validate
-against them.
+**`../bin/riddlc` is `2.1.0-12-ef74c0fe`**, restaged via `scripts/publish-and-stage.sh` after
+the chain-tail/no-cycle commits landed; ivy artifacts are the same build. The ONLY commit after
+it is a NOTEBOOK-only edit (this one), so it is current in behaviour. Check rather than trust:
+`../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`. Behaviour
+verified with probes: a self-loop draws `stream-graph-cycle` (Error); a source into a router
+whose outlets lead nowhere still draws `stream-source-reaches-no-sink`; the 2026-09-03 A6 and
+adaptor-target rules still fire.
 
-**The corpus gate is RED for a filed reason: 33 of 190 models**, identically on JVM and
-Native. Every one of the 33 fails at *Step 1 (validate original)*, and the diagnostics are
-EXACTLY the two rules and nothing else: 511 `msg-tell-target-unreachable` (412 with a
-Projector as sender, 62 Adaptor, 31 Sink, 6 Flow) plus 27 `adaptor-targets-context-only`.
-Filed at `riddl-models/task/2026-09-03-senders-must-own-their-outlet.md`, still in their
-`task/` (not `done/`) as of this run. **Not a rule to soften**; the gate returns to 190/190
-when they migrate.
+**The corpus gate is GREEN: 190/190** in `RiddlModelsRoundTripTest`, and `riddlc from
+<model>.conf validate` over all 191 riddl-models entry points reports **0**
+`stream-source-reaches-no-sink`, **0** `stream-graph-cycle`, **0** errors — against riddl-models
+`15356fd` (their A6 migration, complete on errors). Both 2026-09-04 task files are in
+`task/done/`; nothing is pending from riddl-models.
 
 ### Certainty — what was actually run
 
-**Full regression from a CLEAN state, 2026-09-04 00:00, throwaway sbt cache** (`sbt -batch
-shutdown` first, then `-Dsbt.global.localcache=<empty dir>` on the booting invocation; the
-cache went 0 -> 308M, every module printed `compiling N Scala sources`, Native rows printed
-real link times). Each module ran as its OWN `testOnly *` invocation so the red `commands`
-row could not abort the rest. Results:
+**Morning, full regression from a CLEAN state** (throwaway sbt cache, every module its own
+`testOnly *`, all three platforms, scripted, TatSu, both external corpora): all green except the
+33 corpus models that riddl-models has since migrated. Details in the 2026-09-04 entry below.
 
-| leg | suites / tests | red |
-|---|---|---|
-| JVM | utils 19/148, language 76/757, passes 254/1694, testkit 3/2, commands 28/322+33, riddlLib 22/156, riddlc 4/21 | commands: the 33 corpus models only |
-| JS | utils 8/111, language 38/435, passes 40/317, testkit 1/1, riddlLib 13/143 | none |
-| Native | utils 16/134, language 72/742, passes 251/1682, testkit 1/1, commands 28/322+33, riddlLib 21/156, riddlc 3/21 | commands: the same 33 |
-| other | `riddlcNative/nativeLink`; `sbt-riddl/scripted` (+ simple); TatSu 118/141 (18 fragments skipped, 5 expected failures); riddl-examples 9/9; riddl-models 191/191 grammar | none |
+**Evening, after the chain-tail/no-cycle change** (`3658d79f1`), re-run on the SHARED cache:
 
-Canceled, and why: `LoadBytesNetworkTest` (JVM+Native) is gated on `RIDDL_NETWORK_TESTS`,
-by design. `ESMSafetyTest` canceled in this run because it globbed a pre-sbt-2 path — FIXED
-the same night and re-run green against the real bundle; see the 2026-09-04 entry below.
+| suite | result |
+|---|---|
+| JVM `language` 757, `passes` 1703 (+9), `commands` 355 (190/190 corpus), `riddlLib` 157 | green |
+| JS `passes` 317; Native `passes` 1691 (+9) | green |
+| TatSu 118/141 (dokn.riddl rewired, still accepted) | green |
+
+**NOT re-run since that change**: JVM `utils`/`testkit`/`riddlc`; JS `utils`/`language`/
+`testkit`/`riddlLib`; Native `utils`/`language`/`testkit`/`commands`/`riddlLib`/`riddlc`. The
+change is confined to `passes` validation plus one `language` fixture and a `RuleId`, and every
+suite that consumes those was re-run — but do not report tri-platform green for `ef74c0fed`
+without running them. CI will.
+
+**Unpushed**: `3658d79f1`, `ef74c0fed` and this edit. The CM entry is committed at the ossuminc
+level (`1641444`), also unpushed.
 
 ### Traps a fresh session would hit
 
@@ -71,7 +73,7 @@ the same night and re-run green against the real bundle; see the 2026-09-04 entr
 - **A Scala bump is ~32 sites**, since the full version is a path segment; a grep omitting
   `.github/` misses 11.
 
-### `task/` — empty, 158 in `done/`
+### `task/` — empty, 155 in `done/`
 
 Nothing awaits triage. That is a fact about right now, not a reason to skip the check.
 
