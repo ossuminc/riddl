@@ -25,13 +25,13 @@ errors on reactive-bbq and stays silent on a properly-wired negative control.
 **`2.1.0` is released and carries `streamlet`** (2026-09-01), so the deprecation-noise
 caveat that stood here is discharged — riddl-models was told.
 
-**The corpus gate is RED, for a known and filed reason — ONE site.** riddl-models fixed 12
-of A6's 13 reactive-bbq sites; the 13th needed a `Corporate -> Restaurant` connector that
-was itself an error until `b57376fa3` permitted connectors between related domains. The
-recipe is filed at
-`riddl-models/task/2026-09-03-add-the-corporate-to-restaurant-connector.md` and is VERIFIED
-on a copy: it takes the model to 0 errors, 0 warnings. `commands` is 354 + that one
-failure. The gate returns to 190/190 when they apply it.
+**The corpus gate is RED, for a known and filed reason — 33 of 190 models.** Two rules
+landed 2026-09-03 (`35bb8abcf`): A6 now requires the SENDER to own the connector's outlet
+(correcting my own inverted rule), and an adaptor may address only a Context. 511
+reachability findings — **412 of them with a PROJECTOR as sender, one repeated pattern
+rather than 412 defects** — plus 27 adaptor findings. Filed at
+`riddl-models/task/2026-09-03-senders-must-own-their-outlet.md`. reactive-bbq is already
+clean on both. NOT a rule to soften; the gate returns to 190/190 when they migrate.
 
 riddl-models is on `main` (`866b59b9`); its `release/2` is merged and deleted, and
 `scala.yml` no longer pins any branch. 191 entry points, floors 189/190.
@@ -76,6 +76,46 @@ been acted on by their own sessions.
 a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-03 (later) — I inverted a rule CLAUDE.md states in terms
+
+riddlg reported that A6 accepted a delivery from a sender with NO OUTLET AT ALL, over a
+connector starting at the sender's CONTEXT. They were right, and the cause was mine:
+`9d3c69aba` counted ancestor contexts as reachability origins, and I defended it in the
+commit message with *"the context is the port at the boundary"*.
+
+**`CLAUDE.md:2327` says the opposite, in terms**: *"An entity cannot publish on its
+context's outlet … the FIRST step is the entity's own outlet and no context-level port
+substitutes for it."* Same paragraph I had read while writing the A6 work — I took the
+"intra-context needs no ceremony" half and inverted the half above it.
+
+**The lesson is not "read CLAUDE.md".** It is that I wrote a JUSTIFICATION for the origins
+decision, which is exactly the moment to check whether the thing being justified is already
+ruled on. A design note that reads persuasively is the strongest signal that it is
+load-bearing and therefore worth verifying — I was confident enough to explain it, and the
+explanation was a paraphrase of a rule that says the reverse.
+
+**Two days, three rules, and each broke the one before.** A6 became an Error (2026-09-02),
+which created a contradiction with `stream-crosses-domains` (fixed 2026-09-03), and A6's own
+origins decision was wrong from the start (fixed the same day). Every one of them shipped
+green with canaries and corpus measurement. **What none of that measures is interaction
+with rules already present**, and this is now the second instance in two days.
+
+**A test caught a design error in the adaptor rule that no amount of reading would have.**
+My first version forbade an adaptor sending to its OWN outlet — which is how an adaptor
+emits at all. `SharedAdaptorTest`'s wrapper fixture went red and was right to: the rule
+forbade the very shape it exists to require. An in-repo fixture failing is evidence about
+the rule, not just about the fixture.
+
+**Corpus: 33 of 190 models, 538 findings, and the shape matters more than the number.** 412
+of the 511 reachability findings have a PROJECTOR as sender — one repeated pattern, not 412
+independent defects, and the migration task says so. Reporting "511 errors" without that
+breakdown would have made a day's mechanical work look like a crisis.
+
+**riddl-models pre-empted us**: they migrated all 35 reactive-bbq adaptor tells to
+`to context` at `b4b07053` before the rule landed, which made the report's own "29 of 35"
+stale by the time I acted on it. Checked rather than repeated — the check-tasks discipline
+earning itself twice in one day.
 
 ## 2026-09-03 — the contradiction my own rule created
 
