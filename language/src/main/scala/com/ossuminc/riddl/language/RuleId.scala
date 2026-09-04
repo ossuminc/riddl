@@ -148,6 +148,7 @@ enum RuleId(
   case ProcessorUnconnected extends RuleId("stream-processor-unconnected")
   case SourceReachesNoSink extends RuleId("stream-source-reaches-no-sink")
   case SinkReachedByNoSource extends RuleId("stream-sink-reached-by-no-source")
+  case GraphCycle extends RuleId("stream-graph-cycle")
   case BoundaryOutlet extends RuleId("stream-boundary-outlet")
   case BoundaryInlet extends RuleId("stream-boundary-inlet")
   case CrossesDomains extends RuleId("stream-crosses-domains")

@@ -23,12 +23,24 @@ domain dokn is {
     type NoteList is reference to entity dokn.Notes.Note
 
     context Companies is {
+        // A proper chain -- source -> flow -> sink -- rather than the flow's outlet wired back to
+        // its own inlet, which it was until 2026-09-04: a self-loop is a cycle of one, and a stream
+        // graph may not contain a cycle (`stream-graph-cycle`, an Error).
+        streamlet eventSource as source is {
+          outlet CompanyEvents_src is type dokn.Companies.Company.CompanyEvent
+        }
         flow events is {
           inlet CompanyEvents_in is type dokn.Companies.Company.CompanyEvent
           outlet CompanyEvents_out is type dokn.Companies.Company.CompanyEvent
         }
+        streamlet eventLog as sink is {
+          inlet CompanyEvents_log is type dokn.Companies.Company.CompanyEvent
+        }
+        connector CompanyEventsIn is {
+          from outlet CompanyEvents_src to inlet CompanyEvents_in
+        }
         connector CompanyEvents is {
-          from outlet CompanyEvents_out to inlet CompanyEvents_in
+          from outlet CompanyEvents_out to inlet CompanyEvents_log
         }
 
         entity Company is {

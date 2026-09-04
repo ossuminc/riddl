@@ -294,6 +294,7 @@ stream-duplicate-error-sink
 stream-error-sink-type
 stream-flow-no-inlets
 stream-flow-no-outlets
+stream-graph-cycle
 stream-inlet-cardinality
 stream-inlet-not-received
 stream-inlet-unresolved

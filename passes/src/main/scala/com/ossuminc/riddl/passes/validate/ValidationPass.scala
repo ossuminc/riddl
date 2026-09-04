@@ -7716,10 +7716,7 @@ case class ValidationPass(
     *     same unsatisfiable-demand trap the discard-sink exemption exists to avoid.
     */
   private def unreceivedMembers(proc: Processor[?], tpe: Type): Seq[Type] =
-    val stateHandlers = proc match
-      case e: Entity => e.states.flatMap(_.handlers)
-      case _         => Seq.empty
-    val clauses = (proc.handlers ++ stateHandlers).flatMap(_.clauses)
+    val clauses = handlerClausesOf(proc)
     if clauses.exists(_.isInstanceOf[OnOtherClause]) then Nil
     else
       // What the clauses receive, each expanded through any alternation it names.
@@ -7742,6 +7739,97 @@ case class ValidationPass(
   private def receivesMessageType(proc: Processor[?], tpe: Type): Boolean =
     unreceivedMembers(proc, tpe).isEmpty
   end receivesMessageType
+
+  /** Every on-clause a processor owns, folding an Entity's STATE handlers in — the idiom
+    * `validateAsk` and four neighbouring checks use, because an entity's clauses commonly live inside
+    * a `State`, which `entity.handlers` alone cannot see.
+    */
+  protected def handlerClausesOf(proc: Processor[?]): Seq[OnClause] =
+    val stateHandlers = proc match
+      case e: Entity => e.states.flatMap(_.handlers)
+      case _         => Seq.empty
+    (proc.handlers ++ stateHandlers).flatMap(_.clauses)
+  end handlerClausesOf
+
+  /** The members a type admits, expanded through any alternation it names; the type itself when it
+    * is not an alternation. Exposed to [[StreamingValidation]], which needs it to know what a
+    * connector CARRIES and cannot reach `alternationMembers` directly.
+    */
+  protected def typeMembers(t: Type): Seq[Type] =
+    alternationMembers(t) match
+      case Nil     => Seq(t)
+      case members => members
+  end typeMembers
+
+  /** Is `proc` the END of a stream chain? (Reid's ruling, 2026-09-04.)
+    *
+    * A tail is defined by what a processor DOES with what arrives, never by its SHAPE. Until this
+    * ruling the streaming walk asked for a Sink-shaped node — zero outlets — and A6 (a sender must
+    * own the outlet it sends on) made that unsatisfiable for any terminal processor that also
+    * records what it received: the moment an event log owns an outlet to its repository it is a
+    * flow by arity, and every source draining into it was reported as reaching nothing. 42 corpus
+    * findings, none fixable by wiring. This mirrors the 2026-08-14 chain-HEAD ruling
+    * (`75a791682`), which stopped asking for a Source SHAPE for the same reason.
+    *
+    * A tail (1) has an inlet, (2) handles every message type its inlets admit — alternation members
+    * expanded, `on other` counting for everything — and (3) has no clause handling type T that
+    * sends, tells or forwards a message of THAT type onward. "That type" is the whole point:
+    * receiving an event and sending a `Persist` COMMAND to a repository, or `put`ting to a UI
+    * output, is a write, not a continuation — the arriving message has been consumed. A
+    * `forward` always passes the handled message on, so it always disqualifies.
+    *
+    * Two benefit-of-the-doubt cases, both deliberate: a processor with NO handlers at all is
+    * opaque, so it is a tail exactly when it has no outlets (a ports-only sink consumes; a
+    * ports-only flow is assumed to pass through — the shape `sink-reach.check` pins). And an
+    * inlet whose type does not resolve is ref-integrity's report, not this rule's, so it is not
+    * held against the processor. A `???` body needs no exemption here: it declares no inlet, so
+    * no connector can reach it.
+    */
+  protected def isStreamTail(proc: Processor[?]): Boolean =
+    if proc.inlets.isEmpty then false
+    else
+      val clauses = handlerClausesOf(proc)
+      if clauses.isEmpty then proc.outlets.isEmpty
+      else
+        val arriving: Seq[Type] = proc.inlets.flatMap { inlet =>
+          resolution.refMap.definitionOf[Type](inlet.type_.pathId).toSeq.flatMap(typeMembers)
+        }
+        arriving.isEmpty || arriving.forall { t =>
+          receivesMessageType(proc, t) && !propagatesOnward(clauses, t)
+        }
+  end isStreamTail
+
+  /** Does some clause that handles `t` send, tell or forward a message of type `t`? Sending a
+    * DIFFERENT type is not propagation — see [[isStreamTail]].
+    */
+  private def propagatesOnward(clauses: Seq[OnClause], t: Type): Boolean =
+    def admits(tpe: Type): Boolean = (tpe eq t) || typeMembers(tpe).exists(_ eq t)
+    def handles(c: OnClause): Boolean = c match
+      case _: OnOtherClause => true
+      case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+        resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(admits)
+      case _ => false
+    // An A55 binding names the handled message itself, so `send foo to outlet o` inside
+    // `on foo: event Evt` sends Evt. An `on other` binding names the ENVELOPE (A57), never the
+    // message, so it does not count.
+    def messageBinding(c: OnClause): Option[String] = c match
+      case omc: OnMessageLikeClause => omc.binding.map(_.value)
+      case _                        => None
+    def operandIsT(c: OnClause, m: MessageRef | Constructor | ValueRef): Boolean = m match
+      case vr: ValueRef if vr.path.value.size == 1 && messageBinding(c).contains(vr.path.value.head) =>
+        true
+      case other => operandType(other).exists(admits)
+    clauses.filter(handles).exists { c =>
+      var found = false
+      walkStatements(c.contents) {
+        case s: SendStatement    => if operandIsT(c, s.msg) then found = true
+        case s: TellStatement    => if operandIsT(c, s.msg) then found = true
+        case _: ForwardStatement => found = true
+        case _                   => ()
+      }
+      found
+    }
+  end propagatesOnward
 
   private def validateAsk(ask: Ask, parents: Parents): Unit =
     // 1. The target must resolve, and it must be a query. The ref TYPE makes the kind structural

@@ -29,7 +29,10 @@ class StreamValidatorTest extends AbstractValidatingTest {
         |   inlet in is type uno.Typ1
         |   outlet out is type uno.Typ2
         |  }
-        |  connector c1 is { from outlet a.foo.out to inlet a.foo.in }
+        |  streamlet bar as sink is {
+        |   inlet in is type uno.Typ1
+        |  }
+        |  connector c1 is { from outlet a.foo.out to inlet a.bar.in }
         | }
         |} """.stripMargin,
         td
@@ -57,8 +60,11 @@ class StreamValidatorTest extends AbstractValidatingTest {
           |    inlet two is type T
           |    outlet out is type T
           |  }
+          |  streamlet drain as sink is {
+          |    inlet in is type T
+          |  }
           |  connector c1 {
-          |    from outlet a.confluence.out to inlet a.confluence.two
+          |    from outlet a.confluence.out to inlet a.drain.in
           |  }
           | }
           |} """.stripMargin,
@@ -317,8 +323,11 @@ class StreamValidatorTest extends AbstractValidatingTest {
         val input = RiddlParserInput(
           """domain uno is {
             | type T = Integer
-            | context a is { flow f is { inlet in is type uno.T outlet out is type uno.T } }
-            | connector c1 is { from outlet uno.a.f.out to inlet uno.a.f.in }
+            | context a is {
+            |   flow f is { inlet in is type uno.T outlet out is type uno.T }
+            |   streamlet g as sink is { inlet in is type uno.T }
+            | }
+            | connector c1 is { from outlet uno.a.f.out to inlet uno.a.g.in }
             |}""".stripMargin,
           td
         )
@@ -358,8 +367,11 @@ class StreamValidatorTest extends AbstractValidatingTest {
             |    inlet in is type T
             |    outlet out is type T
             |  }
+            |  streamlet drain as sink is {
+            |    inlet in is type T
+            |  }
             |  connector c1 {
-            |    from outlet a.through.out to inlet uno.a.through.in
+            |    from outlet a.through.out to inlet uno.a.drain.in
             |  } with {
             |   option persistent
             |  }
