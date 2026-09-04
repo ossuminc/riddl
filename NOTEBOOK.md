@@ -12,7 +12,8 @@ Ask `git` for branch, tree and unpushed span — never trust a written answer to
 
 ### Build state — verified 2026-09-04 (evening) by running, not recalling
 
-**`2.1.0` is released**, on Scala 3.9.0 final. **BAST `FORMAT_REVISION` is 23.**
+**`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
+`FORMAT_REVISION` is 23.**
 
 **`../bin/riddlc` is `2.1.0-12-ef74c0fe`**, restaged via `scripts/publish-and-stage.sh` after
 the chain-tail/no-cycle commits landed; ivy artifacts are the same build. The ONLY commit after
