@@ -10,29 +10,44 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-09-03 by running, not recalling
+### Build state — verified 2026-09-04 by running, not recalling
 
 **`2.1.0` is released**, on Scala 3.9.0 final. **BAST `FORMAT_REVISION` is 23.**
 
-**`../bin/riddlc` is `2.1.0-4-b57376fa` and is TWO COMMITS STALE.** It predates
-`35bb8abcf`, so it does NOT enforce A6 sender-owns-outlet or `adaptor-targets-context-only`
-— confirmed by running it on a model that should now produce both and getting **0**
-findings. Held deliberately while the corpus migrates; see `[3.9]`. Restage with
-`scripts/publish-and-stage.sh` (never `nativeLink` alone), and verify by BEHAVIOUR.
+**`../bin/riddlc` was restaged from `main` HEAD on 2026-09-04** via
+`scripts/publish-and-stage.sh`, so the local ivy artifacts and the binary are one build.
+Check it rather than trust it: `../bin/riddlc --no-ansi-messages version` must equal
+`git describe --tags --long` with `-g<hash>` reduced to `-<8 chars>`. It enforces both
+2026-09-03 rules (`adaptor-targets-context-only`, `msg-tell-target-unreachable`) — verified
+by a probe model the previous binary passed clean. riddlg and riddl-models now validate
+against them.
 
-**The corpus gate is RED for a filed reason: 33 of 190 models.** 511
-`msg-tell-target-unreachable` — **412 with a PROJECTOR as sender, one repeated pattern
-rather than 412 defects** — plus 27 `adaptor-targets-context-only`. Filed at
-`riddl-models/task/2026-09-03-senders-must-own-their-outlet.md`. reactive-bbq is already
-clean on both. **Not a rule to soften**; the gate returns to 190/190 when they migrate.
+**The corpus gate is RED for a filed reason: 33 of 190 models**, identically on JVM and
+Native. Every one of the 33 fails at *Step 1 (validate original)*, and the diagnostics are
+EXACTLY the two rules and nothing else: 511 `msg-tell-target-unreachable` (412 with a
+Projector as sender, 62 Adaptor, 31 Sink, 6 Flow) plus 27 `adaptor-targets-context-only`.
+Filed at `riddl-models/task/2026-09-03-senders-must-own-their-outlet.md`, still in their
+`task/` (not `done/`) as of this run. **Not a rule to soften**; the gate returns to 190/190
+when they migrate.
 
 ### Certainty — what was actually run
 
-- **Verified**: `language` 757 and `passes` 1694 green on JVM at `35bb8abcf`; the staged
-  binary's version AND behaviour; the corpus counts above.
-- **NOT verified since `35bb8abcf`**: `riddlLib` (the `;` chain aborted at `commands`'
-  corpus failures and never reached it), **JS, and Native**. Native has not completed since
-  `9d3c69aba` — a run was killed at 9 of ~11 rows. Do not report tri-platform green.
+**Full regression from a CLEAN state, 2026-09-04 00:00, throwaway sbt cache** (`sbt -batch
+shutdown` first, then `-Dsbt.global.localcache=<empty dir>` on the booting invocation; the
+cache went 0 -> 308M, every module printed `compiling N Scala sources`, Native rows printed
+real link times). Each module ran as its OWN `testOnly *` invocation so the red `commands`
+row could not abort the rest. Results:
+
+| leg | suites / tests | red |
+|---|---|---|
+| JVM | utils 19/148, language 76/757, passes 254/1694, testkit 3/2, commands 28/322+33, riddlLib 22/156, riddlc 4/21 | commands: the 33 corpus models only |
+| JS | utils 8/111, language 38/435, passes 40/317, testkit 1/1, riddlLib 13/143 | none |
+| Native | utils 16/134, language 72/742, passes 251/1682, testkit 1/1, commands 28/322+33, riddlLib 21/156, riddlc 3/21 | commands: the same 33 |
+| other | `riddlcNative/nativeLink`; `sbt-riddl/scripted` (+ simple); TatSu 118/141 (18 fragments skipped, 5 expected failures); riddl-examples 9/9; riddl-models 191/191 grammar | none |
+
+Canceled, and why: `LoadBytesNetworkTest` (JVM+Native) is gated on `RIDDL_NETWORK_TESTS`,
+by design. `ESMSafetyTest` canceled in this run because it globbed a pre-sbt-2 path — FIXED
+the same night and re-run green against the real bundle; see the 2026-09-04 entry below.
 
 ### Traps a fresh session would hit
 
@@ -61,6 +76,38 @@ clean on both. **Not a rule to soften**; the gate returns to 190/190 when they m
 Nothing awaits triage. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-04 — a full clean-cache regression, and a guard that had scanned nothing since sbt 2
+
+Reid asked for the complete suite from a clean state overnight. Procedure and numbers are in
+HANDOFF § Certainty. Two things worth keeping.
+
+**`ESMSafetyTest` had been CANCELED on every run since the sbt 2 upgrade, locally and in CI.**
+It globbed `riddlLib/js/target/scala-*/riddl-lib-opt/main.js`, the sbt 1 per-module layout;
+sbt 2 writes `target/out/sjs1/scala-<ver>/riddl-lib/riddl-lib-opt/main.js`. The suite's
+`assume(bundle.isDefined)` turned "bundle not found" into a cancel rather than a failure —
+correct when the bundle has genuinely not been built, and indistinguishable from "looking in
+the wrong place". So the one test that keeps `import 'x'` patterns out of the shipped npm
+bundle (the ESM-shim rewrite hazard in CLAUDE.md § JS) had not read a bundle in weeks, while
+`Tests: succeeded 156, failed 0, canceled 1` read as green. **A `canceled 1` in a summary
+line is a question, not a footnote** — same family as `Suites: completed N` being short.
+Fixed to glob the sbt 2 tree, taking the NEWEST `main.js` because stale `scala-3.9.0-RC4`
+and `-RC6` directories still sit beside `scala-3.9.0` and a directory-listing order would
+have picked one of them silently. Re-run: it scanned the 11.7 MB bundle and passed.
+**And wired into CI**: the JVM row never builds a bundle, so even the fixed test would
+cancel there; the JS row already runs `riddlLibJS/fullLinkJS` for release artifacts, and now
+runs the scan right after it, against the exact bundle that ships.
+
+**The 33-model corpus red is precisely the filed set.** Classified every diagnostic across
+the 33 failures rather than trusting the count: 511 unreachable + 27 adaptor-target, zero
+other messages, identical failure sets on JVM and Native. That is the whole of the red;
+nothing in riddl needs fixing for it, and the migration is riddl-models' (their task file
+is still open). Not softened, per the standing rule.
+
+Also seen and filed rather than fixed: `scripts/pack-npm-modules.sh` has the same stale
+path and cannot have worked since the upgrade — BACKLOG [5.5]. The scripted test's
+`[error] … 'Missing' was not found` lines are its OWN broken-model fixture asserted with
+`->`; the test passed.
 
 ## 2026-09-03 (later) — I inverted a rule CLAUDE.md states in terms
 

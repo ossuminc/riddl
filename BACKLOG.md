@@ -52,6 +52,19 @@ is worse than no handle**, because it fails exactly when it is being relied on.
   a separate problem from the validation error that caused it. Worth deciding whether
   prettify should emit on an errored model, or say plainly why it will not.
 
+- **[5.5]** **`scripts/pack-npm-modules.sh` is dead code from the sbt 1 layout, and four
+  documents still point at it.** Found 2026-09-04 while fixing `ESMSafetyTest`'s identical
+  stale path. The script runs `"project riddlLibJS" fullOptJS` (the pre-1.x task name), then
+  `find riddlLib/js/target -name "*-opt"` (`:69`) and reads `riddlLib/js/package.json.template`
+  — none of which exist under sbt 2's `target/out/sjs1/…` tree, so it cannot have worked since
+  the upgrade. The supported path is sbt-ossuminc's `riddlLibJS/npmPrepare` / `npmPack` /
+  `npmPublish*`, which `npm-publish.yml` already uses. Referenced by `NPM_PACKAGING.md`
+  (`:27`, `:32`, `:275`, `:373`, `:380` — and `:322` hardcodes `riddlLib/js/target/scala-3.4.3`),
+  `CLAUDE.md:684` ("Build npm package"), and `examples/npm-usage/README.md:10`. Either delete
+  the script and repoint those four documents at the sbt tasks, or repair it — deletion is the
+  recommendation, since the sbt tasks are what CI publishes with. Not touched during the
+  regression fix because it is a distribution-path decision, not a test defect.
+
 **2.0.0 shipped 2026-08-27**, so this section exists: per CLAUDE.md there was no
 "defer to 2.1" pile while 2.0 was in flight, and post-2.0 items get filed only
 once it ships. Section 5 is where they go; sections 0-4 are 2.0 history and stay
@@ -1876,15 +1889,16 @@ that needs a ruling before either can be fixed.
   not contradict that — the question is what the connector's OTHER end may be, not whether
   the adaptor may have an outlet.
 
-- **[3.9]** **Restage `../bin/riddlc`; it predates the A6/adaptor rules.** Verified
-  2026-09-03: the staged binary is `2.1.0-4-b57376fa` and reports **0** findings on a model
-  that `35bb8abcf` makes produce both `msg-tell-target-unreachable` and
-  `adaptor-targets-context-only`. So riddlg and riddl-models are currently validating
-  against rules two commits stale.
-  **Held deliberately, not forgotten:** the corpus is mid-migration (33 models), and giving
-  riddlg a binary whose rules are still settling has been the wrong move twice this week.
-  Restage with `scripts/publish-and-stage.sh` (never `nativeLink` alone) once the corpus
-  migration is under way, and verify by BEHAVIOUR rather than the version string.
+- ~~**[3.9]** **Restage `../bin/riddlc`; it predates the A6/adaptor rules.**~~ — **DONE
+  2026-09-03** on Reid's instruction, via `scripts/publish-and-stage.sh` (publishLocal +
+  nativeLink as one invocation). Installed binary is `2.1.0-8-238144af`. **Verified by
+  BEHAVIOUR**: a probe model (adaptor telling an entity; an outlet-less adaptor telling a
+  context whose parent owns a connected outlet) drew **0** of either rule from the stale
+  `2.1.0-4-b57376fa` binary and exactly one `adaptor-targets-context-only` plus one
+  `msg-tell-target-unreachable` from the new one. Original entry: the staged binary was two
+  commits stale and reported 0 findings on a model that `35bb8abcf` makes produce both rules,
+  so riddlg and riddl-models were validating against stale rules. Held while the corpus
+  migration (33 models) got under way.
 
 - ~~**[3.7]** **`scala.yml` pinned riddl-models to `release/2`.**~~ — **DONE
   2026-09-01**, on riddl-models' task drop telling us their branch had landed.
