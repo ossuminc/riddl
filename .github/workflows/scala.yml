@@ -243,6 +243,16 @@ jobs:
       run: |
         sbt riddlLibJS/fullLinkJS
 
+    # ESMSafetyTest is a JVM suite that READS the fullLinkJS bundle, so it can only run after
+    # the bundle exists. On the JVM row nothing builds one, and the suite reports CANCELED --
+    # which is a green-looking result that scanned nothing (it also globbed a pre-sbt-2 path
+    # until 2026-09-04, so it had scanned nothing anywhere since the upgrade). Run it here,
+    # against the exact bundle the step above just built and the release will ship.
+    - name: Scan the JS bundle for ESM-shim hazards
+      if: matrix.platform == 'JS'
+      run: |
+        sbt "riddlLib/testOnly *ESMSafetyTest"
+
     - name: Collect Release Artifacts (JVM)
       if: matrix.platform == 'JVM'
       uses: actions/upload-artifact@v6

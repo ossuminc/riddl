@@ -37,11 +37,20 @@ class ESMSafetyTest extends AnyWordSpec with Matchers {
     ("""import\s*\(""", """import(…  (dynamic import call)""")
   )
 
-  /** Locate the fullLinkJS output. The directory name encodes the Scala version so we glob for it
-    * rather than hard-coding.
+  /** Locate the fullLinkJS output.
+    *
+    * Since the sbt 2 upgrade, build outputs live under the central virtual-FS tree
+    * `target/out/sjs1/scala-<fullVersion>/riddl-lib/…` (see CLAUDE.md "Target-path layout"), NOT
+    * under `riddlLib/js/target`. This method globbed the OLD path until 2026-09-04, so the bundle
+    * was never found and the suite reported CANCELED on every run — locally and in CI — which is a
+    * false green: the ESM-shim guard had not scanned a bundle since the upgrade.
+    *
+    * The Scala version is a path segment and stale `scala-<old-version>` directories survive a
+    * version bump, so of every candidate found the MOST RECENTLY MODIFIED one is scanned rather
+    * than whichever directory listing order happens to yield first.
     */
   private def findJsBundle: Option[Path] = {
-    val base = Paths.get("riddlLib/js/target")
+    val base = Paths.get("target/out/sjs1")
     if !Files.isDirectory(base) then return None
     val scalaDirs = Files
       .list(base)
@@ -49,11 +58,15 @@ class ESMSafetyTest extends AnyWordSpec with Matchers {
       .toArray
       .toSeq
       .map(_.asInstanceOf[Path])
-    scalaDirs.flatMap { sd =>
-      val opt = sd.resolve("riddl-lib-opt/main.js")
-      val fast = sd.resolve("riddl-lib-fastopt/main.js")
-      Seq(opt, fast).find(Files.isRegularFile(_))
-    }.headOption
+    scalaDirs
+      .flatMap { sd =>
+        val lib = sd.resolve("riddl-lib")
+        val opt = lib.resolve("riddl-lib-opt/main.js")
+        val fast = lib.resolve("riddl-lib-fastopt/main.js")
+        Seq(opt, fast).filter(Files.isRegularFile(_))
+      }
+      .sortBy(p => -Files.getLastModifiedTime(p).toMillis)
+      .headOption
   }
 
   "Scala.js bundle" should {
