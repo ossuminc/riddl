@@ -353,6 +353,10 @@ enum RuleId(
 
   // ---- adaptor -------------------------------------------------------------------------------
   case AdaptorTargetsOwnContext extends RuleId("adaptor-targets-own-context")
+  // Reid, 2026-09-03: an adaptor translates between CONTEXTS and may address only a context.
+  // Distinct from `adaptor-targets-own-context`, which is about WHICH context an adaptor declares
+  // itself `to`; this is about what its statements may address.
+  case AdaptorTargetsContextOnly extends RuleId("adaptor-targets-context-only")
   case AdaptorNoHandler extends RuleId("adaptor-no-handler")
   case AdaptorEmptyHandlers extends RuleId("adaptor-empty-handlers")
   case AdaptorNoOnOther extends RuleId("adaptor-no-on-other")

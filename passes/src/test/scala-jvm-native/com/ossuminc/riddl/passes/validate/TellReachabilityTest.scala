@@ -129,11 +129,17 @@ class TellReachabilityTest extends AbstractValidatingTest {
       }
     }
 
-    // The sender's enclosing CONTEXT is a legitimate origin: a message leaving a context does so
-    // on the context's own outlet (2026-08-18), so demanding a connector from the adaptor itself
-    // would contradict the rule that the context is the port at the boundary. This is the exact
-    // shape of reactive-bbq's six sites -- a tell inside an adaptor, crossing a boundary.
-    "accept a tell from inside an adaptor when its CONTEXT reaches the target" in {
+    // INVERTED 2026-09-03, and this case was WRONG when written. It asserted that the sender's
+    // enclosing context counts as an origin, on the reasoning that "the context is the port at
+    // the boundary". CLAUDE.md says the opposite in terms -- *"An entity cannot publish on its
+    // context's outlet ... no context-level port substitutes for it"* -- which is §17's "a
+    // processor publishes ONLY through its own outlet".
+    //
+    // The cost of that error: a sender with NO OUTLET AT ALL was judged able to deliver. riddlg
+    // found `adaptor FromOnlineOrdering` reaching an entity over a connector starting at the
+    // CONTEXT's outlet, reported clean. Kept pointing the other way rather than deleted, so the
+    // record shows the check once made a claim about the sender it was not testing.
+    "REQUIRE the sender to own the outlet -- an enclosing context does NOT count" in {
       (td: TestData) =>
         val src =
           """domain d is {
@@ -153,7 +159,7 @@ class TellReachabilityTest extends AbstractValidatingTest {
             |""".stripMargin
         parseAndValidate(src, td.name, shouldFailOnErrors = false) {
           case (_, _, msgs: Messages) =>
-            msgs.filter(m => m.message.contains("is not reachable from")) mustBe empty
+            assertValidationMessage(msgs, Error, "is not reachable from")
         }
     }
 

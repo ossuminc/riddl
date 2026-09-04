@@ -12,6 +12,7 @@ adaptor-no-handler
 adaptor-no-on-other
 adaptor-not-in-context
 adaptor-outbound-wrong-message
+adaptor-targets-context-only
 adaptor-targets-own-context
 anonymous-nebula
 app-group-unreachable

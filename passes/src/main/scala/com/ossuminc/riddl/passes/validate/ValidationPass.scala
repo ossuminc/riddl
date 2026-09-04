@@ -415,10 +415,21 @@ case class ValidationPass(
     * that routes through an intermediate streamlet, and rejecting correct models is expensive
     * now that this is an Error.
     *
-    * The sender's ANCESTOR contexts count as origins. A message leaving a context does so on the
-    * context's own outlet (the 2026-08-18 boundary ruling), so an adaptor inside FrontOfHouse
-    * telling Kitchen is reachable if FrontOfHouse reaches Kitchen -- demanding a connector from
-    * the adaptor itself would contradict the rule that the context is the port at the boundary.
+    * **The SENDER must own the connector's outlet.** Ancestor contexts were origins until
+    * 2026-09-03 and that was WRONG -- my own error, on the reasoning that "the context is the port
+    * at the boundary". CLAUDE.md states the opposite in terms: *"An entity cannot publish on its
+    * context's outlet ... the FIRST step is the entity's own outlet and no context-level port
+    * substitutes for it"*, which is §17's "a processor publishes ONLY through its own outlet".
+    *
+    * The consequence was that a sender with NO OUTLET AT ALL was judged able to deliver, over a
+    * channel it cannot put a message on: riddl-generator found `adaptor FromOnlineOrdering`
+    * telling an entity, with zero outlets declared, reaching it via a connector starting at the
+    * CONTEXT's outlet -- reported clean. The diagnostic said "not reachable FROM Adaptor 'X'",
+    * which reads as a claim about the sender that the check was not making.
+    *
+    * Removing ancestors re-breaks the adaptor tells that motivated adding them. That is the
+    * point, not a regression: those adaptors need their own outlets, which is what the
+    * adaptor-addresses-a-context rule forces them to say.
     */
   private def checkTellReachability(): Unit = {
     if collectedTells.isEmpty then return
@@ -461,10 +472,9 @@ case class ValidationPass(
         // exemption would have been wrong at any fixture cost.
         val exempt = isPredefined(target) || target.isEmpty || snd.isEmpty ||
           target.inlets.isEmpty
-        // Origins: the sender, plus every enclosing Processor. The context publishes on behalf
-        // of its contents at the boundary.
-        val origins: Seq[Processor[?]] =
-          snd +: symbols.parentsOf(snd).collect { case p: Processor[?] => p }
+        // The sender ALONE. Not its enclosing contexts -- see the note above; a context-level
+        // outlet is the context's to publish on, never its contents'.
+        val origins: Seq[Processor[?]] = Seq(snd)
         // NO intra-context exemption, deliberately. Sharing a context does NOT excuse the
         // channel: Reid ruled 2026-08-18 that for a `tell` the connector SHOULD exist, because
         // `tell` is sugar for a send on the outlet connected to the target's inlet (CM §25.7),
@@ -1927,6 +1937,64 @@ case class ValidationPass(
     *     `OccursInContext`), so without this case a saga step's `self` would silently resolve to
     *     the enclosing Context's identity instead of being rejected.
     */
+  /** An adaptor may address a CONTEXT and nothing else (Reid, 2026-09-03).
+    *
+    * *"ADAPTORS TRANSLATE MESSAGES BETWEEN CONTEXTS. PERIOD! ... CONTEXT TO CONTEXT ONLY! That's
+    * where the boundary is, that's where the translation is needed. Within a context, no
+    * translation is needed, everyone speaks the context's processors' messages."*
+    *
+    * **This is NARROWER than the boundary rule and does not follow from it.** `checkTargetBoundary`
+    * asks what CROSSES a context and explicitly leaves intra-context sends unrestricted, so an
+    * adaptor telling an entity of its own context satisfies it -- which is why 29 of the 35 adaptor
+    * tells in reactive-bbq validated clean. An adaptor is different because the boundary IS its
+    * whole job: reaching inward to a particular entity or repository makes it a participant in the
+    * context's business rather than its translator, and binds a foreign context's message shape to
+    * one processor inside this one.
+    *
+    * A Context's own PORTLET is a legal target: that portlet is the context's public surface, which
+    * is the same indirection `send` already makes.
+    */
+  private def checkAdaptorTargetsContext(
+    kind: String,
+    target: Definition,
+    loc: At,
+    parents: Parents
+  ): Unit =
+    // Only when the statement's enclosing processor IS an adaptor. `enclosingProcessorOf` stops at
+    // Function and Saga, which is right here too -- a saga step inside an adaptor is not the
+    // adaptor speaking.
+    enclosingProcessorOf(parents).foreach {
+      case adaptor: Adaptor =>
+        // The subject is the portlet's OWNER when a portlet was named, so `send ... to inlet
+        // OtherContext.In` is judged on `OtherContext`.
+        val subject: Definition = target match
+          case p: Portlet => symbols.parentOf(p).getOrElse(target)
+          case other      => other
+        // Publishing on a portlet the adaptor OWNS is not addressing another processor -- it is
+        // how the adaptor emits at all (§17: "a processor publishes ONLY through its own outlet").
+        // Found by `SharedAdaptorTest`'s wrapper-adaptation fixture, which sends to an outlet of a
+        // `source` nested inside the adaptor; without this, an adaptor could not emit and the rule
+        // would forbid the very shape it exists to require.
+        val ownPortlet = (subject eq adaptor) || symbols.parentsOf(subject).exists(_ eq adaptor)
+        subject match
+          case _ if ownPortlet => ()
+          case _: Context      => ()
+          case other =>
+            messages.addError(
+              loc,
+              s"'$kind' in ${adaptor.identify} addresses ${other.identify}, but an adaptor " +
+                s"translates between CONTEXTS and may address only a context",
+              suggestion =
+                s"Address the enclosing context instead and let its handlers route inward. " +
+                  s"Reaching into ${other.identify} makes ${adaptor.identify} a participant in " +
+                  s"that context's business rather than its translator.",
+              ruleId = Some(RuleId.AdaptorTargetsContextOnly)
+            )
+        end match
+      case _ => ()
+    }
+  end checkAdaptorTargetsContext
+
   private def enclosingProcessorOf(parents: Parents): Option[Processor[?]] =
     parents.collectFirst {
       case p: Processor[?] => Some(p)
@@ -2102,9 +2170,10 @@ case class ValidationPass(
         // the same indirection `StreamingValidation.checkBoundaryEncapsulation` makes for a
         // connector end, and for the same reason: a context's own portlet IS its public surface.
         checkRef[Portlet](portlet, parents).foreach { p =>
-          symbols.parentOf(p).foreach(owner =>
+          symbols.parentOf(p).foreach { owner =>
             checkTargetBoundary(portlet.pathId, owner, statement.loc, "send", parents)
-          )
+            checkAdaptorTargetsContext("send", owner, statement.loc, parents)
+          }
         }
       case ForwardStatement(_, msg, target) =>
         // Same operand split as send/tell: a bare MessageRef is checked here, while a Constructor
@@ -2122,13 +2191,15 @@ case class ValidationPass(
         target match
           case portlet: PortletRef[?] =>
             checkRef[Portlet](portlet, parents).foreach { p =>
-              symbols.parentOf(p).foreach(owner =>
+              symbols.parentOf(p).foreach { owner =>
                 checkTargetBoundary(portlet.pathId, owner, statement.loc, "forward", parents)
-              )
+                checkAdaptorTargetsContext("forward", owner, statement.loc, parents)
+              }
             }
           case processor: ProcessorRef[?] =>
             checkRef[Processor[?]](processor, parents).foreach { proc =>
               checkTargetBoundary(processor.pathId, proc, statement.loc, "forward", parents)
+              checkAdaptorTargetsContext("forward", proc, statement.loc, parents)
             }
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
@@ -2166,6 +2237,7 @@ case class ValidationPass(
           // 2026-08-26 ruling, which blesses addressing the context directly. Running both would
           // double-report a cross-context tell as one warning and one error.
           checkTargetBoundary(path, entity, statement.loc, "tell", parents)
+          checkAdaptorTargetsContext("tell", entity, statement.loc, parents)
           collectedTells.addOne((ts, entity, enclosingProcessorOf(parents)))
         }
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
