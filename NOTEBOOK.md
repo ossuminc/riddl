@@ -10,70 +10,55 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-09-01
+### Build state — verified 2026-09-03 by running, not recalling
 
-**`2.0.0` IS RELEASED**, tagged on `main` at `7ce95016a` (the `release/2` merge), on
-**Scala 3.9.0 final**. `release/2` is deleted. Work since then commits straight to `main`.
+**`2.1.0` is released**, on Scala 3.9.0 final. **BAST `FORMAT_REVISION` is 23.**
 
-**`../bin/riddlc` is `2.1.0-4-b57376fa`**, restaged 2026-09-03 via
-`scripts/publish-and-stage.sh`, so the ivy artifacts and the binary came from one
-invocation and agree. Always use that script — never `nativeLink` alone.
-**Verified by BEHAVIOUR, not the version string**: it reports the 13 A6 tell-reachability
-errors on reactive-bbq and stays silent on a properly-wired negative control.
-**BAST `FORMAT_REVISION` is 23.**
+**`../bin/riddlc` is `2.1.0-4-b57376fa` and is TWO COMMITS STALE.** It predates
+`35bb8abcf`, so it does NOT enforce A6 sender-owns-outlet or `adaptor-targets-context-only`
+— confirmed by running it on a model that should now produce both and getting **0**
+findings. Held deliberately while the corpus migrates; see `[3.9]`. Restage with
+`scripts/publish-and-stage.sh` (never `nativeLink` alone), and verify by BEHAVIOUR.
 
-**`2.1.0` is released and carries `streamlet`** (2026-09-01), so the deprecation-noise
-caveat that stood here is discharged — riddl-models was told.
-
-**The corpus gate is RED, for a known and filed reason — 33 of 190 models.** Two rules
-landed 2026-09-03 (`35bb8abcf`): A6 now requires the SENDER to own the connector's outlet
-(correcting my own inverted rule), and an adaptor may address only a Context. 511
-reachability findings — **412 of them with a PROJECTOR as sender, one repeated pattern
-rather than 412 defects** — plus 27 adaptor findings. Filed at
+**The corpus gate is RED for a filed reason: 33 of 190 models.** 511
+`msg-tell-target-unreachable` — **412 with a PROJECTOR as sender, one repeated pattern
+rather than 412 defects** — plus 27 `adaptor-targets-context-only`. Filed at
 `riddl-models/task/2026-09-03-senders-must-own-their-outlet.md`. reactive-bbq is already
-clean on both. NOT a rule to soften; the gate returns to 190/190 when they migrate.
+clean on both. **Not a rule to soften**; the gate returns to 190/190 when they migrate.
 
-riddl-models is on `main` (`866b59b9`); its `release/2` is merged and deleted, and
-`scala.yml` no longer pins any branch. 191 entry points, floors 189/190.
+### Certainty — what was actually run
 
-### From 3.0 on, deprecation is FOREVER
-
-**Reid, 2026-08-31: rename freely, deprecate freely, but never delete the old name.** This
-now constrains every language change — a spelling that ever parsed goes on parsing. It is
-recorded in `CLAUDE.md` § Backward Compatibility as rule 3, and it is why
-`entity_reference_type` keeps its EBNF rule and why `EntityReferenceTypeExpression` was
-retained rather than removed.
+- **Verified**: `language` 757 and `passes` 1694 green on JVM at `35bb8abcf`; the staged
+  binary's version AND behaviour; the corpus counts above.
+- **NOT verified since `35bb8abcf`**: `riddlLib` (the `;` chain aborted at `commands`'
+  corpus failures and never reached it), **JS, and Native**. Native has not completed since
+  `9d3c69aba` — a run was killed at 9 of ~11 rows. Do not report tri-platform green.
 
 ### Traps a fresh session would hit
 
-- **A Scala bump is 32 sites, not one.** The full version is a path segment
-  (`target/out/<platform>/scala-<fullVersion>/`), hardcoded in `scala.yml`,
-  `release.yml`, `coverage.yml`, `.sonarcloud.properties` and `Dockerfile`. A grep that
-  omits `.github/` misses 11 of them.
-- **A red CI run on a tagged commit may be STALE rather than a regression.** rc.26's was:
-  riddl-models fixed two corpus type errors 13 minutes AFTER CI started. Check
-  `git -C ../riddl-models log` for commits inside the run window — one command, decisive.
-- **A local green corpus is not evidence CI will be green.** riddl-models was 35 commits
-  ahead of its own origin once and `git log` happily showed the fix. `git branch -r
-  --contains` is the decisive check, not `git log`.
-- **Re-run the EXTERNAL grammar validators even when CI's grammar job is green.** CI reads
-  the corpus as it stood at run time. The venv is at
-  `language/src/test/scalajvm/python/.venv/bin/python` — never Homebrew python3.
-- **A test-count prediction is only evidence if the instrument is checked.** One row
-  hitting its number exactly while another misses by a constant is a prediction bug — a
-  real skipping bug does not spare a row.
+- **A rule can be right alone and still make a legal model unwritable.** Three rules landed
+  in two days and each broke the one before: A6-as-Error contradicted
+  `stream-crosses-domains`, and A6's own origins were wrong from the start. Every one
+  shipped green with canaries and corpus measurement. **None of that measures interaction
+  with rules already present** — check what a new rule collides with, not just its blast
+  radius.
+- **Check CLAUDE.md before justifying a design decision.** `9d3c69aba` counted a sender's
+  ancestor contexts as reachability origins and defended it in the commit message;
+  `CLAUDE.md:2327` says the reverse in terms. Writing a persuasive justification is the
+  signal to go verify, not evidence you are right.
+- **Calibrate a measurement on a known-positive case before trusting a zero.** riddlg
+  reported A6 as "not implemented"; it was implemented and fired correctly in isolation —
+  it was answering a weaker question. Also: strip ANSI before grepping riddlc output, and
+  remember riddl-models `.conf` files set `show-style-warnings = false`.
+- **A test failing on a fixture can be evidence about the RULE.** `SharedAdaptorTest` went
+  red because the first adaptor rule forbade an adaptor sending to its own outlet — how an
+  adaptor emits at all.
+- **A Scala bump is ~32 sites**, since the full version is a path segment; a grep omitting
+  `.github/` misses 11.
 
-### Certainty
+### `task/` — empty, 158 in `done/`
 
-Verified by running, this session: language 757 / passes 1668 / commands 355 / riddlLib
-156, zero failures; TatSu 117/140 with 18 skipped fragments and 5 expected failures, all
-accounted for. Assumed, not verified: that the 2.0.0 consumer bumps filed in step 16 have
-been acted on by their own sessions.
-
-### `task/` — empty
-
-153 files in `task/done/`. Nothing awaits triage, which is a fact about right now and not
-a reason to skip the check.
+Nothing awaits triage. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 

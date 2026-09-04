@@ -30,6 +30,28 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
+- **[5.3]** **`put`/`get` ORDERING is unruled, and the CM says so.** Needs Reid.
+  `../RIDDL-Computational-Model.md` §32.4 records three rulings (a `put` fails only by
+  failing to deliver; a `get` is asynchronous at the event/interrupt level; an `output` is a
+  unicast placement) and states the fourth question as **explicitly open**: what guarantee
+  holds between successive `put`s to the same output, and between a `get` and a later `put`.
+  Generators are told to preserve program order meanwhile and are **not yet licensed** to
+  depart from it.
+  **Why it is not obvious:** §20.8 makes statement order a must-preserve generally, but a
+  `get` is asynchronous by the ruling above, so program order does not follow at this
+  boundary. riddlg asked because it has no authority to cite.
+
+- **[5.4]** **A model that fails validation cannot be PRETTIFIED, and the two failures look
+  unrelated.** Raised by riddl-models 2026-09-03; **verified** — `riddlc prettify` on
+  reactive-bbq while it carried one error emitted **0 files** into `-o <dir>`.
+  The coupling: one unfixable error means `riddlcPrettify`/`sbt r` fails, `prettifyCheck`/
+  `sbt pc` fails, so `riddlcValidate` and `checkAll` fail, and the model cannot be brought
+  to canonical form — which in turn breaks `verify-bast-roundtrip.sh`, whose compare is only
+  meaningful while the source is exactly what prettify emits. `riddlcBastify` is unaffected.
+  **The sharp edge is not the refusal, it is the diagnosis**: the formatting failure reads as
+  a separate problem from the validation error that caused it. Worth deciding whether
+  prettify should emit on an errored model, or say plainly why it will not.
+
 **2.0.0 shipped 2026-08-27**, so this section exists: per CLAUDE.md there was no
 "defer to 2.1" pile while 2.0 was in flight, and post-2.0 items get filed only
 once it ships. Section 5 is where they go; sections 0-4 are 2.0 history and stay
@@ -1836,6 +1858,33 @@ that needs a ruling before either can be fixed.
   done, so the file no longer contradicts the tree.
 
 ### 3. Owed to other repos
+
+- **[3.8]** **Should an adaptor's CONNECTORS also be context-to-context?** Open, and
+  deliberately not folded into `35bb8abcf`.
+  Reid, 2026-09-03, quoted in riddlg's report: *"RIDDL validated an adaptor using a
+  context-to-entity connector but adaptors need to use only context-to-context
+  connectors."* What shipped was the STATEMENT rule — a `tell`/`send`/`forward` from an
+  adaptor must address a Context (`adaptor-targets-context-only`). A rule about
+  **connectors** touching an adaptor's portlet is a different check with its own corpus
+  cost and was left out rather than inferred.
+  **Evidence it is live, not hypothetical:** `SharedAdaptorTest`'s "allow wrapper
+  adaptations" fixture (`passes/src/test/scala/.../SharedAdaptorTest.scala:70`) has exactly
+  that shape — `connector only is { from outlet Foo.PaymentAdapter.foo.forMyEntity to inlet
+  Foo.MyEntity.phum.commands }` — and it PASSES today.
+  **Check before building:** the statement rule already exempts a portlet the adaptor OWNS,
+  because publishing on your own outlet is how an adaptor emits (§17). A connector rule must
+  not contradict that — the question is what the connector's OTHER end may be, not whether
+  the adaptor may have an outlet.
+
+- **[3.9]** **Restage `../bin/riddlc`; it predates the A6/adaptor rules.** Verified
+  2026-09-03: the staged binary is `2.1.0-4-b57376fa` and reports **0** findings on a model
+  that `35bb8abcf` makes produce both `msg-tell-target-unreachable` and
+  `adaptor-targets-context-only`. So riddlg and riddl-models are currently validating
+  against rules two commits stale.
+  **Held deliberately, not forgotten:** the corpus is mid-migration (33 models), and giving
+  riddlg a binary whose rules are still settling has been the wrong move twice this week.
+  Restage with `scripts/publish-and-stage.sh` (never `nativeLink` alone) once the corpus
+  migration is under way, and verify by BEHAVIOUR rather than the version string.
 
 - ~~**[3.7]** **`scala.yml` pinned riddl-models to `release/2`.**~~ — **DONE
   2026-09-01**, on riddl-models' task drop telling us their branch had landed.
