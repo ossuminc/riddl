@@ -48,8 +48,11 @@ change is confined to `passes` validation plus one `language` fixture and a `Rul
 suite that consumes those was re-run — but do not report tri-platform green for `ef74c0fed`
 without running them. CI will.
 
-**Unpushed**: `3658d79f1`, `ef74c0fed` and this edit. The CM entry is committed at the ossuminc
-level (`1641444`), also unpushed.
+**CI on `94337e800` (run 33893864025)**: every row green except the two `commands` rows, which
+failed on reactive-bbq and `patterns/entity/event-sourced` ONLY, with A6 unreachable-target
+diagnostics — the corpus rows cloned riddl-models at 12:13 EDT, two minutes before Reid's push
+of `bb17dd6ec` completed their migration. Not a regression; the next riddl push validates against
+the migrated corpus. The CM entry is committed at the ossuminc level (`1641444`).
 
 ### Traps a fresh session would hit
 
