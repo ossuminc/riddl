@@ -2382,6 +2382,36 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   corpus's tell-target entities declare no inlets at all; the interaction surfaces
   only as models comply.
 
+- **A stream chain ENDS where its message is CONSUMED, never at a `sink` SHAPE — and a chain may
+  not loop** (Reid, 2026-09-04; CM §8.1). `StreamingValidation`'s Check 2 used to ask whether a
+  Source reaches a node whose `effectiveShape` is `Sink` (zero outlets). A6 made that unsatisfiable:
+  a terminal event log that records to its repository must OWN the outlet it writes on, so by arity
+  it is a `flow`, and every source above it drew `stream-source-reaches-no-sink` — 42 corpus
+  findings no wiring could remove. **This is the mirror of the 2026-08-14 chain-HEAD ruling**
+  (`75a791682`: a head bears an outlet with nothing feeding it; a Source SHAPE is not required),
+  and it was found the same way — a correctly modelled corpus reporting a rule, not a model, wrong.
+  `ValidationPass.isStreamTail`: an inlet, every admitted type handled (`unreceivedMembers`, so
+  alternations expand and `on other` counts), and no clause handling T that `send`s/`tell`s/
+  `forward`s a message of THAT type (`propagatesOnward`). **Same-type is the whole point** (Reid
+  chose it over "any send"): receiving an event and sending a `Persist` COMMAND, or `put`ting to an
+  output, is a write, not a continuation. `forward` always disqualifies. A handler-less processor is
+  opaque — a tail iff it has no outlets — which is what keeps `sink-reach.check`'s ports-only sink a
+  tail and a ports-only flow a pass-through. A `???` body needs no exemption: it declares no inlet.
+  **The predicate lives in `ValidationPass` and is an abstract hook on `StreamingValidation`**,
+  because the helpers it needs (`handlerClausesOf`, `alternationMembers`, `operandType`,
+  `walkStatements`) are private there; do not grow a second copy in the trait.
+  **`stream-graph-cycle` is an Error and is PER MESSAGE TYPE** (`checkStreamCycles`): edges are
+  grouped by what the outlet CARRIES (members expanded), and a cycle must close within one type. A
+  command one way and an event back is two chains, not a loop — a processor-level cycle check would
+  have condemned every request/response pair in the corpus. Reported once per cycle, at its first
+  member, members listed in order; a self-loop is a cycle of one.
+  **The riddl-models report that prompted this claimed a SECOND cause — "the walk stops dead at a
+  context inlet because the handler-to-outlet hop is invisible" — and it was false.** The graph is
+  per PROCESSOR: a connector into a context's inlet makes the Context a node, and the walk continues
+  through every connector leaving any of its outlets, ports never consulted. Proven with a probe
+  before designing anything; the 26 "adaptor" findings were cause (a) with more hops. **When a
+  sender describes the mechanism of a bug in your code, verify the mechanism before the count.**
+
 - **A queried repository with no index draws a CompletenessWarning — and the check
   deliberately does NOT name a field** (Reid, 2026-08-18, on riddlg's request).
   `checkQueriedWithoutIndex`. Fires when a repository has a schema, answers at least

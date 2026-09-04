@@ -77,6 +77,53 @@ Nothing awaits triage. That is a fact about right now, not a reason to skip the 
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-09-04 (later) — a chain ends where its message is consumed; and no cycles
+
+riddl-models' task: A6 turned every terminal sink in the corpus into a flow (a log that records
+to its repository must own the outlet it writes on), so `stream-source-reaches-no-sink` fired 42
+times on definitions nobody touched, and no wiring could clear it. Reid ruled; landed the same
+day. Durable statement in `CLAUDE.md` § Validation Specifics and CM §8.1; this is what it taught.
+
+**The rule was the same defect as 2026-08-14, at the other end of the same walk.** That day
+`75a791682` stopped asking for a Source SHAPE at a chain's head because reactive-bbq entered its
+graph through an application context fed by users. The tail side kept asking for a Sink SHAPE
+for three more weeks, and it took A6 to make the asymmetry bite. When a rule is fixed at one end
+of a symmetric structure, look at the other end the same day.
+
+**"Same type" was the design decision, and Reid made it, not me.** I proposed "any send/tell/
+forward disqualifies" as the strict, safer reading. Reid chose: a processor that receives an
+event and sends a `Persist` COMMAND has consumed the event. The consequence is that a transform
+(E in, F out) ends E's chain and starts F's, and F's fate is then guarded by the unconnected-
+outlet check alone. Weaker than the strict reading, deliberately, and recorded so nobody
+"tightens" it back.
+
+**The sender's diagnosis of MY code was wrong, and verifying it first saved the wrong fix.** The
+task file's second cause — "the walk stops dead at a context inlet" — read plausibly and would
+have led to teaching the BFS to traverse contexts. The graph is per processor; it already does.
+A ten-line probe settled it before any design. Same lesson as A6's "not implemented" report on
+2026-09-02: a sender describes what they observed, in the mechanism they imagine.
+
+**The cycle check had to be per TYPE or it condemned every request/response pair.** The first
+sketch was a processor-level DFS. FrontOfHouse sends Kitchen a command; Kitchen sends FrontOfHouse
+an event: a loop of processors, no loop of messages. Grouping edges by what the outlet carries
+(alternation members expanded) makes the rule say what Reid meant — a message must not be able
+to return to a processor it passed through — and it fires on **zero** corpus models.
+
+**Four of our own fixtures were self-loops**, an outlet wired to its own inlet as a lazy way to
+get a connector into a test: `dokn.riddl` and three in `StreamValidatorTest`. The suite surfaced
+three; a sweep found the fourth. **BSD `grep -E` silently ignores backreferences** — my first
+sweep "found nothing" for exactly that reason and I nearly reported it clean. Use perl.
+
+**A `???` body needs no exemption from the tail rule**, which I had planned to add: `???`
+replaces the whole body, so no inlet is declared and no connector can reach it.
+
+**And `cd` in a Bash call persists into the next one.** A TatSu run left the shell in the Python
+directory; the next `sbt -batch` booted a brand-new sbt project THERE (`project/build.properties`,
+`target/`, its own server) and reported four modules "exit 1" that never ran. Absolute paths.
+
+Numbers: corpus round trip 157 -> 190 of 190; `passes` 1703 (+9, canaried), `language` 757,
+`riddlLib` 157, TatSu 118/141.
+
 ## 2026-09-04 — a full clean-cache regression, and a guard that had scanned nothing since sbt 2
 
 Reid asked for the complete suite from a clean state overnight. Procedure and numbers are in
