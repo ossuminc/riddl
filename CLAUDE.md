@@ -2414,6 +2414,21 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   operand you previously ignored can expose a rule you already shipped** — check what the newly
   visible cases collide with before landing the resolution.
 
+- **`adaptor-direction-advisory` counts a far-context reference ANYWHERE in the adaptor
+  (2026-09-07), and resolves the referent parent-independently.** It used to read only the
+  `on`-clauses' handled types, so under A103 it fired on every correctly migrated OUTBOUND adaptor
+  (own event handled, far command produced through a `let` and a `send`) and stayed silent on the
+  unmigrated placeholders — it rewarded the wrong shape. Handled types, transmitted operands
+  (`clauseOperandType`), `let` ascriptions and declared portlet types all count now.
+  **The referent lookup was the same trap `hasAdaptorFor` records**: `resolvePath(referent,
+  parents)` keys the refMap on the adaptor's PARENT, but `ResolutionPass` records an adaptor's
+  `referent` under the adaptor itself, so a QUALIFIED `to context D.Far` never resolved and the
+  advisory was silently skipped for it; only a bare `to context Far` ever ran it. Any check that
+  resolves `adaptor.referent` must use `resolution.refMap.definitionOf[Context](pathId, adaptor)`.
+  **A test that passes because the check never ran is the vacuous kind**: the qualified-referent
+  positives were green before the fix for exactly that reason, which is why the suite carries a
+  bare-referent positive as well.
+
 - **A cross-context connector must land on the CONTEXT'S OWN portlet — an Error**
   (Reid, 2026-08-18, choosing Error over CompletenessWarning).
   `StreamingValidation.checkBoundaryEncapsulation`. Reaching past the boundary onto

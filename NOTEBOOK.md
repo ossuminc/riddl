@@ -21,24 +21,22 @@ publishLocal'd from the same build — riddl-models and riddl-generator catch up
 Reid. Check `../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`; a
 docs-only commit may sit between them and changes no behaviour.
 
-**The corpus gate is RED on ONE model for a filed reason: 189/190.** AR9 (`fab94f996`,
-2026-09-07) reports reactive-bbq's `MenuReleaseEvent Distribution` connector
-(`reactive-bbq.riddl:53`): a declared alternation outlet of MenuRelease events feeding the inbound
-adaptor `FromMenuManagementItems`, which handles MenuItem events — a true positive, filed in
-`task/done/2026-09-07-type-check-implied-to-implied-connectors.md` Results. riddl-models
-`2ad2654a3` is still local and unpushed as of this writing, so CI is red on more than that until
-it goes up. **Not a rule to soften.**
+**The corpus gate is GREEN: 190/190**, verified 2026-09-07 evening against the local riddl-models
+checkout (which had also fixed the `MenuReleaseEvent Distribution` wire AR9 reported). Whether
+that state is PUSHED is git's to answer, not this file's; CI reads origin. **Nothing is pending in
+`task/`.**
 
 ### Certainty — what was actually run
 
-**2026-09-07 07:46, full regression from a CLEAN state at `21a212339`** (before AR9): 24
-invocations, zero failures, zero skipped modules, all three platforms plus scripted, TatSu and
-both corpora — recorded in the entry of that date; cite it for the ship.
+**2026-09-07 07:46, full regression from a CLEAN state at `21a212339`** (before AR9 and the
+advisory fix): 24 invocations, zero failures, zero skipped modules, all three platforms plus
+scripted, TatSu and both corpora — see that entry; cite it for the ship, and re-run it if the
+ship wants a cold certification of the later commits.
 
-**After AR9 (`fab94f996`), shared cache, each module its own `testOnly *`**: JVM `passes` 1747,
-`language` 757, `riddlLib` 157, `commands` 354 + the one corpus model above; JS `passes` 317;
-Native `passes` 1735. Not re-run since AR9: JVM `utils`/`testkit`/`riddlc`, the other JS and
-Native rows. AR9 touches `ValidationPass` and a `RuleId` only.
+**After the advisory fix, shared cache, each module its own `testOnly *`**: JVM `passes` 1753,
+`commands` 355 (corpus 190/190); JS `passes` 317; Native `passes` (see the run log for the
+count). Not re-run since: `language`, `riddlLib`, `utils`, `testkit`, `riddlc` on any platform —
+the two later commits touch `ValidationPass` and test sources only.
 
 ### Traps a fresh session would hit
 
@@ -62,11 +60,42 @@ Native rows. AR9 touches `ValidationPass` and a `RuleId` only.
 - **A Scala bump is ~32 sites**, since the full version is a path segment; a grep omitting
   `.github/` misses 11.
 
-### `task/` — empty, 158 in `done/`
+### `task/` — empty, 159 in `done/`
 
 Nothing awaits triage. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-07 (later) — the direction advisory rewarded the unmigrated shape
+
+riddl-models: `adaptor-direction-advisory` fires on every A103 outbound adaptor — own event
+handled, far command produced through a `let` and a `send` — and stays quiet on the unmigrated
+`on command Far.X { do "..." }` placeholders. Four findings, heading for ~674. Verified on the
+current binary against the corpus (6 findings in 6 models, all the migrated shape) and against a
+one-file reproduction. The advisory read only the `on`-clauses' handled types; it now counts a
+reference to the target context anywhere in the adaptor — handled types, transmitted operands via
+`clauseOperandType`, `let` ascriptions, declared portlet types.
+
+**The reproduction did not reproduce, and that was the second bug.** My first probe used a
+qualified referent, `to context D.NotificationService`, and the advisory stayed silent; the same
+model with a bare `to context NotificationService` warned. The advisory resolved the referent with
+`resolvePath(referent, adaptor's parents)`, but `ResolutionPass` records an adaptor's `referent`
+under the ADAPTOR — the trap `hasAdaptorFor` already documents — so a qualified referent never
+resolved and the advisory (and the direction-kind Errors sharing its block) silently skipped.
+**When a check does not fire on a case you built to trip it, the first suspect is that the check
+did not run.**
+
+**A test that is green because the check never ran is vacuous, and I wrote three of them.** The
+qualified-referent "should not fire" cases passed before the fix for exactly that reason. The
+bare-referent variant is the one that was red, and it stays in the suite so the positives mean
+something.
+
+**Fixing the lookup woke a dormant rule.** `adaptor-inbound-wrong-message` (an inbound adaptor
+handles the far context's events and results, not its commands) had been skipped for every
+qualified referent too. It ran on one A103 fixture of mine whose inbound adaptor handled the far
+context's COMMAND, and on nothing in the corpus (190/190). The fixture was wrong, not the rule; it
+now handles the far context's event. Same lesson as AR5: resolving something you previously
+missed exposes rules that were only ever half-running.
 
 ## 2026-09-07 — AR9: an implied port has a type, and AR5 was fighting AR6
 
