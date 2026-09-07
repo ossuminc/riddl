@@ -21,11 +21,11 @@ publishLocal'd from the same build — riddl-models and riddl-generator catch up
 Reid. Check `../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`; a
 docs-only commit may sit between them and changes no behaviour.
 
-**The corpus gate is RED for a filed reason: 9 of 190 models**, all on A103's adamant rules
-(`stmt-outlet-not-owned` 206, `as source` on adaptors 32, `stream-connector-bypasses-adaptor`
-14 + 11, `adaptor-target-no-admitting-inlet` 1) against riddl-models `bb17dd6ec`. riddl-models'
-migration task is `riddl-models/task/2026-09-06-adaptors-lose-their-plumbing.md`. Both A103
-task files are in `task/done/` with Results. **Not a rule to soften.**
+**The corpus gate is GREEN: 190/190** in `RiddlModelsRoundTripTest` against riddl-models
+`2ad2654a3` ("Adapt the corpus to A103"), verified 2026-09-07 with the restaged binary. That
+commit was LOCAL and two ahead of origin when verified, so CI stays red on the nine A103 models
+until riddl-models pushes; the red is theirs to clear, not a rule to soften. Both A103 task files
+are in `task/done/` with Results and the pre-migration census.
 
 ### Certainty — what was actually run
 
@@ -34,7 +34,7 @@ After `1a434ced5`, on the shared cache, each module its own `testOnly *`:
 | suite | result |
 |---|---|
 | JVM `language` 757, `passes` 1735 (+32), `riddlLib` 157 | green |
-| JVM `commands` 346 + 9 corpus | the 9 above, nothing else |
+| JVM `commands` 346 + corpus 190/190 (re-run 2026-09-07 on riddl-models `2ad2654a3`) | green |
 | JS `passes` 317; Native `passes` 1723 (+32) | green |
 | TatSu 118/141 (dokn.riddl rewired twice, still accepted) | green |
 
