@@ -13,7 +13,7 @@ Ask `git` for branch, tree and unpushed span — never trust a written answer to
 ### Build state — verified 2026-09-06 by running, not recalling
 
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
-`FORMAT_REVISION` is 23.**
+`FORMAT_REVISION` is 24** (bumped 2026-09-07 for `on quiescence` and `send … at`, both in one bump).
 
 **`../bin/riddlc` is restaged from `main` HEAD after the A103 commits** (`a819670d7` permissive,
 `1a434ced5` adamant) via `scripts/publish-and-stage.sh`, and the JVM/JS/Native libraries are
@@ -27,6 +27,13 @@ that state is PUSHED is git's to answer, not this file's; CI reads origin. **Not
 `task/`.**
 
 ### Certainty — what was actually run
+
+**2026-09-07 evening, after the two temporal-semantics commits (`68118db0f`, `e0bf248b3`), shared
+cache, each module its own `testOnly *`**: JVM `language` 760, `passes` 1780, `commands` 355
+(corpus 190/190), `riddlLib` 163 (JSON identity 191/191); JS `language` 438, `passes` 317,
+`riddlLib` 149; Native `language` 745, `passes` 1768, `riddlLib` 162. TatSu 119/142. Not re-run:
+`utils`, `testkit`, `riddlc`, `commands` on JS/Native — the commits touch none of them except
+through `language`/`passes`, which were.
 
 **2026-09-07 07:46, full regression from a CLEAN state at `21a212339`** (before AR9 and the
 advisory fix): 24 invocations, zero failures, zero skipped modules, all three platforms plus
@@ -65,6 +72,50 @@ the two later commits touch `ValidationPass` and test sources only.
 Nothing awaits triage. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-07 (evening) — temporal semantics: `on quiescence` and `send … at`
+
+riddl-models measured that RIDDL could name a deadline but not act on one: 13 reminder
+commands wired to nothing, 5 carrying a countdown field only a timer-holding sender could
+compute, 18 of 18 time-caused events raised by a command nothing could send. Reid ruled both
+requested features in (`68118db0f` the clause, `e0bf248b3` the scheduled send; CM §18.1, §4.5,
+§20.7). Arithmetic stays rejected. The rulings are in CLAUDE.md; what the build taught:
+
+**The plan's "deliberately unchanged" list contained a claim that was false, and only the test
+caught it.** I wrote that a scheduled `send` of the yielded event "still discharges `yields`".
+It does not — nothing a `send` does has settled a declared response since rc.19, and CLAUDE.md
+says so in bold. The `SendAtTest` case asserting discharge went red for the right reason, and the
+fix was to the TEST and to the comment I had already put in `ValidationPass` restating the wrong
+rule. **An "unchanged" list is a list of claims about the current language; check each against
+the rule, not against memory of it.** A wrong sentence in a code comment beside a correct check
+would have taught the next reader the retired rule.
+
+**The header value resolves under the CLAUSE.** `on quiescence Grace` with a non-Duration
+constant was not rejected because `valueTypeExpr(vr, parents, …)` looked the ValueRef up under
+the handler, while ResolutionPass had recorded it under the clause it was processing. Same fix
+as the correlation's timeout block (`c +: parentsAsSeq`), same discovery route — a negative test
+that stayed green.
+
+**Search for the existing helper before writing the sibling.** `isDurationTypeExpr` shipped in
+the morning following aliases with no cycle guard; `underlyingTypeExpr` sat 7,500 lines below
+with exactly the `eq` visited list CLAUDE.md prescribes. Both alias walks now share
+`aliasFreeTypeExpr` (aliases only, never cardinality — `TimeStamp?` is not an instant).
+
+**Three fixture facts that cost a run each:** `let when = …` does not parse, because `when` is a
+keyword; `send` does not parse in a function body, so a test that hides an `initiate` inside the
+instant to prove the value walks see it has to live in a correlation fold instead; and
+`ZonedDateTime` is spelled `ZonedDateTime(UTC)` — a quoted zone and a bare `ZonedDateTime` both
+fail to parse.
+
+**The committed `NotImplemented.bast` must be regenerated FROM ITS OWN DIRECTORY.** Run from the
+repo root, `bastify` produced 115 bytes with 48 differences (the origin path is interned); from
+`language/input/import/`, 93 bytes with exactly one byte changed — the revision. The stage
+launcher (`target/out/jvm/scala-3.9.0/riddlc/universal/stage/bin/riddlc`) is the tool; `set
+riddlc/Compile/run/baseDirectory` fails with "URI is not absolute".
+
+**Corpus movement: zero, as an additive feature should have.** 190/190 round trip, 191/191
+JSON identity, TatSu 119/142 (+1 for `send-at.riddl`). That is the expected shape — a construct
+no model uses cannot move the corpus — and it is evidence about the corpus, not about the rules.
 
 ## 2026-09-07 (later) — the direction advisory rewarded the unmigrated shape
 

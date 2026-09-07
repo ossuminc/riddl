@@ -1581,11 +1581,66 @@ to the right group rather than appending to a list.
   say which instance; a value target says it outright, so demanding the field would ask for
   something the statement made unnecessary.
   **NOT entity-only** (unlike `terminate`): only an entity can be *ended*, but any processor can be
-  *addressed*. **`send` is untouched** — it takes a PORTLET, so `Id(entity E)` cannot apply there.
+  *addressed*. **`send` takes no value TARGET** — it takes a PORTLET, so `Id(entity E)` cannot apply
+  there. (Its optional `at <instant>`, two entries below, is a different thing: WHEN, not WHERE.)
   **Diagnostics must use the bare PATH, not `ProcessorRef.format`**, which prepends the keyword and
   silently rewrites every existing message from `target 'E'` to `target 'entity E'`.
   BAST gains a target-shape discriminator at **`FORMAT_REVISION` 20**; JSON adds `targetValue`
   beside the `to`/`processor` pair (register new keys in `knownKeys` or the vocabulary guard reddens).
+
+- **`on quiescence <window>` — the clause that fires when NOTHING arrived (2026-09-07, Reid's
+  rulings on riddl-models' temporal-semantics task).** `OnQuiescenceClause(loc, window:
+  LiteralString | ValueRef, contents, metadata) extends OnClause`. ONE clause kind, instance-scoped:
+  the clock restarts on every handled message, and inside a `State`'s handler it is armed only while
+  that state is active. Legal on ANY handler-bearing processor; an Error inside a Correlation
+  (`handler-quiescence-in-correlation`), which bounds itself with `times out after`; at most one per
+  handler (`handler-quiescence-duplicate`).
+  **The window is a literal duration string OR a bare path to a Duration-typed value** — constant,
+  state field, message field. The literal goes through the SAME `checkPreciseDuration` the
+  correlation timeout uses (vague and non-positive are Errors). A `let` cannot be named from a clause
+  header because lets are clause-local statements; that is a stated limit, not a gap.
+  **Look the value window up with `oqc +: parents`.** ResolutionPass prepends the node being
+  processed before resolving, so the header reference is recorded under the CLAUSE, and a lookup
+  keyed on the handler alone misses it silently — the same `c +: parentsAsSeq` the correlation's
+  timeout block needs. Found by a failing test, not by reading.
+  **It is an EFFECT block**: `yield`/`tell`/`send`/`terminate`/`morph`/`initiate` are legal, unlike
+  `on activate`/`on passivate`. Event-sourcing's R3/R4 are UNCHANGED, so in an event-sourced entity
+  the clause changes state only through a yielded event — which is also what keeps replay from
+  re-firing the timer: the timed-out fact is in the journal. Rehydration re-arms from the last
+  handled message's timestamp; the mechanism (durable timer, scheduler, poll) is the generator's.
+  `Keyword.quiescence` is in `anyKeyword`/`allKeywords` but NOT `definitionKeywords`, so
+  `quiescence` stays a legal identifier. **`Declaration.ascription` renders the window** — the `on
+  other as x` lesson: rendering only in `format` makes prettify DROP it. BAST: `NODE_ON_CLAUSE`
+  discriminator byte **7**, window as a tagged value before the contents count, reader's fabricating
+  fallback replaced by a throw, **`FORMAT_REVISION` 24**. JSON: `OnClauseDto.kind = "quiescence"` +
+  `window` (in `knownKeys`). `Finder.fieldChildren` yields the window.
+
+- **`send <msg> to <portlet> at <instant>` — a delivery scheduled for a time (2026-09-07).**
+  `SendStatement.at: Option[Value] = None`, TRAILING and defaulted (`@JSExportTopLevel`). `at` states
+  an INSTANT, never a mechanism — timer, scheduler, delay queue or poll stays the generator's, exactly
+  as CM §3.8 already says. **`send` ONLY**: `tell`'s target may itself be a value, so `tell m to x at
+  t` already parses as a lookup. **The instant must type as TimeStamp, DateTime or ZonedDateTime**,
+  through aliases (`stmt-send-at-not-instant`); a `Date` has no time of day and a `Duration` is a
+  span. Undeterminable is silent. **A past instant is delivered immediately. There is NO cancellation
+  construct** — the idiom is schedule to YOURSELF and decide at fire time, so a receiver of a
+  scheduled message must tolerate it being stale.
+  **Deliberately UNCHANGED, do not "fix" any of them**: A23's effect set (a scheduled send is still a
+  transmission), the discharge rules (**a `send` has not settled `yields` since rc.19, scheduled or
+  not** — the plan for this feature claimed the opposite and the test caught it), A6 reachability
+  (the channel must exist now; only the delivery is later), outlet ownership, portlet typing.
+  Parser: the Readability `at` — optional, non-cutting — then `value`; a bare path reaches `value`
+  through `booleanExpr`'s atom, and `system.now` through `systemValue`. `Finder.fieldChildren` AND
+  `statementValues` yield the instant, so the four value walks see into it; pinned by a
+  correlation-fold test whose only visible offender is an `initiate` hidden in the instant (a
+  function body will not do: `send` does not parse there). Emitter routes it through `emitValue`,
+  so `prompt("…") as TimeStamp` round-trips. BAST: `writeOption(at)(writeValue)` appended to sub-kind
+  5, riding revision 24. JSON: optional `"at"` key (in `knownKeys`); a plain send serializes
+  byte-identically to before.
+  **`aliasFreeTypeExpr` follows ALIASES only, never cardinality** — `TimeStamp?` is not an instant and
+  `Duration?` is not a window — and carries the `eq` visited list; `isDurationTypeExpr` had shipped
+  for a day without one (`type A is B` / `type B is A` is a real crash this repo has had).
+  Fixture trap: `ZonedDateTime` takes a bare zone in parens — `ZonedDateTime(UTC)`; the quoted form
+  `ZonedDateTime("UTC")` and the bare `ZonedDateTime` both fail to parse.
 
 - **A message delivered where nothing can receive it — two CompletenessWarnings (rc.21+).**
   `checkTellDeliverability` is the SENDING end (a `tell` whose target declares no clause receiving
