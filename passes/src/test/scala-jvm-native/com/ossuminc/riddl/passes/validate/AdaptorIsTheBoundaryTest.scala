@@ -164,14 +164,15 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
               |    } with { briefly "h" }
               |    adaptor FromFul from context Shop.Ful is {
               |      handler H is {
-              |        on r: command Shop.Ful.Receive is { tell command Ship(sku = r.sku) to context Shop.Sales }
+              |        on s: event Shop.Ful.Shipped is { tell command Ship(sku = s.sku) to context Shop.Sales }
               |        on other is { error "unexpected" }
               |      } with { briefly "h" }
               |    } with { briefly "a" }
               |    connector Inward is from outlet Shop.Sales.FromFul to inlet Shop.Sales.In with { briefly "c2" }""".stripMargin,
-            """    outlet Out is command Receive with { briefly "o" }
+            """    event Shipped is { sku: String } with { briefly "e" }
+              |    outlet Out is event Shipped with { briefly "o" }
               |    handler FulHandler is {
-              |      on r: command Receive is { send r to outlet Out }
+              |      on r: command Receive is { send event Shipped(sku = r.sku) to outlet Out }
               |    } with { briefly "h" }""".stripMargin,
             """  connector Cross is from outlet Shop.Ful.Out to inlet Shop.Sales.FromFul with { briefly "c" }""".stripMargin
           ),

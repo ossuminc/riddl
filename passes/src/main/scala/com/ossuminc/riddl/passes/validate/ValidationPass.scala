@@ -5197,47 +5197,78 @@ case class ValidationPass(
               ruleId = Some(RuleId.AdaptorNoOnOther)
             )
         }
-        // Check if adaptor handlers reference message types from the adapted context
-        resolvePath[Context](adaptor.referent.pathId, parents).foreach { targetContext =>
-          val targetMessageTypes = targetContext.types.filter { t =>
-            t.typEx match {
-              case auc: AggregateUseCaseTypeExpression =>
-                auc.usecase == AggregateUseCase.CommandCase ||
-                auc.usecase == AggregateUseCase.EventCase ||
-                auc.usecase == AggregateUseCase.QueryCase ||
-                auc.usecase == AggregateUseCase.ResultCase
-              case _ => false
+        // Does the adaptor reference the context it is declared toward AT ALL?
+        //
+        // Rewritten 2026-09-07 (riddl-models' task): this asked whether the ON-CLAUSES name a type
+        // of the target context. Under A103 an OUTBOUND adaptor handles its OWN context's event and
+        // PRODUCES the far context's command -- the far type appears in a `let` ascription and a
+        // `send`/`tell`, never in an `on` clause -- so the advisory fired on every correctly migrated
+        // outbound adaptor and stayed silent on the unmigrated placeholders. It rewarded the wrong
+        // shape. A reference ANYWHERE in the adaptor now counts: handled types, transmitted operand
+        // types (through the clause binding and `let`s, via `clauseOperandType`), `let`
+        // ascriptions, and declared portlet types.
+        //
+        // The referent is resolved PARENT-INDEPENDENTLY, keyed on the adaptor: `ResolutionPass`
+        // records an adaptor's `referent` under the adaptor itself, so `resolvePath` with the
+        // adaptor's parents missed every QUALIFIED referent (`to context D.Far`) and the advisory
+        // was silently skipped for those -- the same trap `hasAdaptorFor` documents.
+        resolution.refMap
+          .definitionOf[Context](adaptor.referent.pathId, adaptor)
+          .orElse(resolvePath[Context](adaptor.referent.pathId, parents))
+          .foreach { targetContext =>
+            val targetMessageTypes = targetContext.types.filter { t =>
+              t.typEx match {
+                case auc: AggregateUseCaseTypeExpression =>
+                  auc.usecase == AggregateUseCase.CommandCase ||
+                  auc.usecase == AggregateUseCase.EventCase ||
+                  auc.usecase == AggregateUseCase.QueryCase ||
+                  auc.usecase == AggregateUseCase.ResultCase
+                case _ => false
+              }
             }
-          }
-          if targetMessageTypes.nonEmpty && adaptor.handlers.nonEmpty then {
-            val allClauses = adaptor.handlers.flatMap(_.clauses).collect {
-              case omc: OnMessageLikeClause => omc
-            }
-            if allClauses.nonEmpty then {
-              // Use parent-independent lookup since the resolution
-              // pass keyed refs under the on-clause's parent,
-              // not the Adaptor's parent
-              def resolveClauseType(omc: OnMessageLikeClause): Option[Type] =
-                resolution.refMap.definitionOf[Type](omc.msg.pathId)
-
-              val referencesTargetType = allClauses.exists { omc =>
-                resolveClauseType(omc).exists { resolvedType =>
-                  symbols.parentsOf(resolvedType).exists(_ == targetContext)
+            val clauses = handlerClausesOf(adaptor)
+            if targetMessageTypes.nonEmpty && clauses.nonEmpty then {
+              val referenced = scala.collection.mutable.ArrayBuffer.empty[Type]
+              clauses.foreach { clause =>
+                clause match
+                  case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+                    resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach(referenced += _)
+                  case _ => ()
+                walkStatements(clause.contents) {
+                  case SendStatement(_, msg, _)       => clauseOperandType(msg, clause).foreach(referenced += _)
+                  case TellStatement(_, msg, _, _)    => clauseOperandType(msg, clause).foreach(referenced += _)
+                  case ForwardStatement(_, msg, _)    => clauseOperandType(msg, clause).foreach(referenced += _)
+                  case LetStatement(_, _, Some(tr), _) =>
+                    resolution.refMap.definitionOf[Type](tr.pathId).foreach(referenced += _)
+                  case _ => ()
                 }
+              }
+              adaptor.ports.foreach {
+                case i: Inlet  => resolution.refMap.definitionOf[Type](i.type_.pathId).foreach(referenced += _)
+                case o: Outlet => resolution.refMap.definitionOf[Type](o.type_.pathId).foreach(referenced += _)
+              }
+              val referencesTargetType = referenced.exists { t =>
+                symbols.parentsOf(t).exists(_ eq targetContext)
               }
               if !referencesTargetType then {
                 messages.addWarning(
                   adaptor.errorLoc,
-                  s"${adaptor.identify} is ${adaptor.direction.format} ${targetContext.identify} but its handlers do not reference any message types defined in ${targetContext.identify}",
+                  s"${adaptor.identify} is ${adaptor.direction.format} ${targetContext.identify} but " +
+                    s"nothing in it references a message type defined in ${targetContext.identify}",
                   suggestion =
-                    s"Reference message types from ${targetContext.identify} in the adaptor's on-clauses.",
+                    s"An inbound adaptor handles ${targetContext.identify}'s messages in its on-clauses; " +
+                      s"an outbound one handles its own context's and produces ${targetContext.identify}'s " +
+                      s"in its tells or sends. Reference at least one.",
                   ruleId = Some(RuleId.AdaptorDirectionAdvisory)
                 )
               }
               // Check direction-specific message kind compatibility
+              val allClauses = clauses.collect { case omc: OnMessageLikeClause => omc }
+              def resolveClauseType(omc: OnMessageLikeClause): Option[Type] =
+                resolution.refMap.definitionOf[Type](omc.msg.pathId)
               allClauses.foreach { omc =>
                 resolveClauseType(omc).foreach { resolvedType =>
-                  if symbols.parentsOf(resolvedType).exists(_ == targetContext) then
+                  if symbols.parentsOf(resolvedType).exists(_ eq targetContext) then
                     adaptor.direction match {
                       case _: InboundAdaptor =>
                         omc.msg.messageKind match {
@@ -5268,7 +5299,6 @@ case class ValidationPass(
               }
             }
           }
-        }
         // A4: Isolation-seam check. An adaptor bridges exactly two contexts — its parent context
         // `c` and its `referent` context. Every message it traffics in must belong to one of those
         // two contexts (or be a context-less root/shared type). A message owned by any THIRD context
