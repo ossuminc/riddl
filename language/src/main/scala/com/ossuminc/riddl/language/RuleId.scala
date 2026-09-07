@@ -361,6 +361,7 @@ enum RuleId(
   // itself `to`; this is about what its statements may address.
   case AdaptorTargetsContextOnly extends RuleId("adaptor-targets-context-only")
   case AdaptorTargetNoAdmittingInlet extends RuleId("adaptor-target-no-admitting-inlet")
+  case AdaptorImpliedOutletAmbiguous extends RuleId("adaptor-implied-outlet-ambiguous")
   case AdaptorNoHandler extends RuleId("adaptor-no-handler")
   case AdaptorEmptyHandlers extends RuleId("adaptor-empty-handlers")
   case AdaptorNoOnOther extends RuleId("adaptor-no-on-other")

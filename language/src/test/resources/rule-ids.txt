@@ -6,6 +6,7 @@ abstract-type
 adaptor-direction-advisory
 adaptor-duplicate
 adaptor-empty-handlers
+adaptor-implied-outlet-ambiguous
 adaptor-inbound-wrong-message
 adaptor-message-not-in-context
 adaptor-no-handler

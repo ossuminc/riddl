@@ -2022,24 +2022,117 @@ case class ValidationPass(
     for
       adaptor <- enclosingProcessorOf(parents).collect { case a: Adaptor => a }
       ctx <- Some(target).collect { case c: Context => c }
-      msgType <- operandType(msg)
+      clause <- parents.headOption.collect { case oc: OnClause => oc }
+      msgType <- clauseOperandType(msg, clause)
     do
-      val admitted = ctx.inlets.exists { inlet =>
+      // The far context's OWN inlets ...
+      val ownInletAdmits = ctx.inlets.exists { inlet =>
         resolution.refMap.definitionOf[Type](inlet.type_.pathId).exists(t => typeAdmits(t, msgType))
       }
-      if !admitted then
+      // ... OR the implied inlet of its INBOUND adaptor from the sender's context (AR9's repair of
+      // AR5, 2026-09-07). AR6 requires the crossing to LAND on that adaptor, so its implied inlet
+      // -- what the adaptor HANDLES -- is the admitting port on the exclusive shape. Without this
+      // arm AR5 and AR6 contradicted each other on precisely the arrangement exclusivity demands,
+      // hidden in the corpus only because its adaptor tells were `let`-bound and unresolved.
+      val senderCtx = symbols.contextOf(adaptor)
+      val inboundAdaptorAdmits = ctx.adaptors.exists { a =>
+        a.direction.isInstanceOf[InboundAdaptor] &&
+        senderCtx.exists(sc => resolution.refMap.definitionOf[Context](a.referent.pathId, a).exists(_ eq sc)) &&
+        adaptorAccepts(a, msgType)
+      }
+      if !ownInletAdmits && !inboundAdaptorAdmits then
         messages.addError(
           loc,
           s"no inlet on ${ctx.identify} admits ${msgType.identify} to receive message " +
             s"'${msg.format}' from '$kind' in ${adaptor.identify}",
           suggestion =
             s"Declare an inlet on ${ctx.identify} typed ${msgType.identify}, or an alternation " +
-              s"that includes it; riddlc validates the far end against what is declared and " +
-              s"synthesises nothing.",
+              s"that includes it, or handle it in ${ctx.identify}'s inbound adaptor from " +
+              s"${senderCtx.map(_.identify).getOrElse("the sender's context")}; riddlc validates " +
+              s"the far end against what is declared and synthesises nothing.",
           ruleId = Some(RuleId.AdaptorTargetNoAdmittingInlet)
         )
     end for
   end checkAdaptorTargetAdmitsMessage
+
+  /** The type of a `tell`/`forward`/`send` operand as written INSIDE an on-clause, resolved
+    * through what the clause can see: a bare name that is the clause's A55 binding is the handled
+    * message; a bare name bound by a `let` in the clause is the `let`'s declared type, else the type
+    * its constructor builds; anything else is [[operandType]]. `None` when undeterminable -- a
+    * prompt-valued `let` with no ascription, a field path -- and every caller stays silent on
+    * `None`, the standing rule for an undeterminable operand.
+    *
+    * Written for AR9 because `operandType` alone left every `let`-bound tell invisible: the whole
+    * corpus writes `let x: type T = prompt(...)` then `tell x to context C`, so AR5 could not see a
+    * single far-end type it was meant to check.
+    */
+  private def clauseOperandType(
+    msg: MessageRef | Constructor | ValueRef,
+    clause: OnClause
+  ): Option[Type] =
+    msg match
+      case vr: ValueRef if vr.path.value.sizeIs == 1 =>
+        val name = vr.path.value.head
+        val bound: Option[Type] = clause match
+          case omc: OnMessageLikeClause if omc.binding.exists(_.value == name) =>
+            resolution.refMap.definitionOf[Type](omc.msg.pathId)
+          case _ => None
+        bound.orElse {
+          var found: Option[Type] = None
+          walkStatements(clause.contents) {
+            case ls: LetStatement if ls.identifier.value == name && found.isEmpty =>
+              found = ls.typeRef
+                .flatMap(tr => resolution.refMap.definitionOf[Type](tr.pathId))
+                .orElse(ls.expression match
+                  case c: Constructor => operandType(c)
+                  case _              => None)
+            case _ => ()
+          }
+          found
+        }
+      case other => operandType(other)
+  end clauseOperandType
+
+  /** Does an adaptor ACCEPT a message of type `t` on its implied inlet (AR9)? A specific clause
+    * whose handled type admits `t`, or an `on other` that does something with what arrives. An `on
+    * other` whose body is nothing but `error` is a REFUSAL, not acceptance -- it is the corpus's
+    * idiom for "anything else is unexpected" -- so it must not make every wire type-correct.
+    * Deliberately stricter than [[receivesMessageType]], which serves delivery questions where a
+    * refusing clause still counts as "something receives it".
+    */
+  private def adaptorAccepts(adaptor: Adaptor, t: Type): Boolean =
+    handlerClausesOf(adaptor).exists {
+      case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+        resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(mt => typeAdmits(mt, t))
+      case ooc: OnOtherClause =>
+        ooc.contents.toSeq.exists {
+          case _: ErrorStatement => false
+          case _: Statement      => true
+          case _                 => false
+        }
+      case _ => false
+    }
+  end adaptorAccepts
+
+  /** What an adaptor puts on its IMPLIED outlet (AR9, riddl-generator's derivation, 2026-09-07):
+    * the DISTINCT types it `tell`s or `forward`s to a context, resolved by [[clauseOperandType]].
+    * Both directions count -- an outbound adaptor tells the far context, an inbound one tells its
+    * own -- because either way that is the implied outlet. Identity-distinct (`eq`), since
+    * `Definition.equals` is structural. More than one distinct type is an AMBIGUITY, reported by
+    * [[validateAdaptor]] and never resolved by taking the first: an implied port carries one type,
+    * and an adaptor that genuinely emits several declares its outlet with an alternation.
+    */
+  private def impliedOutletTypes(adaptor: Adaptor): Seq[Type] =
+    val told = scala.collection.mutable.ArrayBuffer.empty[Type]
+    handlerClausesOf(adaptor).foreach { clause =>
+      walkStatements(clause.contents) {
+        case TellStatement(_, msg, _: ContextRef, _) => clauseOperandType(msg, clause).foreach(told += _)
+        case ForwardStatement(_, msg, _: ContextRef)  => clauseOperandType(msg, clause).foreach(told += _)
+        case _                                        => ()
+      }
+    }
+    told.foldLeft(Seq.empty[Type])((acc, t) => if acc.exists(_ eq t) then acc else acc :+ t)
+  end impliedOutletTypes
 
   /** AR8 (Reid, 2026-09-06; CM §8.1 "The ownership rule binds `send` as well as `tell`"): a
     * processor publishes only through its OWN outlet, and that is a claim about publication, not
@@ -3012,8 +3105,63 @@ case class ValidationPass(
       // implied port has no type of its own (nothing is synthesised, CM §8.1), so when either end
       // is an adaptor the far end's typing is validated by `checkAdaptorTargetAdmitsMessage`
       // against what the adaptor actually tells, not here.
-      val maybeOutlet = connectorFrom(connector, parents).flatMap(_.portlet).collect { case o: Outlet => o }
-      val maybeInlet = connectorTo(connector, parents).flatMap(_.portlet).collect { case i: Inlet => i }
+      val fromEnd = connectorFrom(connector, parents)
+      val toEnd = connectorTo(connector, parents)
+      val maybeOutlet = fromEnd.flatMap(_.portlet).collect { case o: Outlet => o }
+      val maybeInlet = toEnd.flatMap(_.portlet).collect { case i: Inlet => i }
+
+      // AR9 (2026-09-07): when EITHER end is implied, the check runs on the implied port's type
+      // instead of being skipped. The SOURCE decides what the wire carries: a declared outlet's
+      // type (every alternation member), or what the adaptor tells through its implied outlet
+      // (`impliedOutletTypes`; several distinct types is the adaptor's own ambiguity Error, and
+      // this stays silent on it rather than double-reporting). The destination must ADMIT each
+      // carried member: a declared inlet by its type (`typeAdmits`, the permissive test -- an
+      // implied port may face an alternation-typed inlet), an implied inlet by what its adaptor
+      // HANDLES (`receivesMessageType`, `on other` handling everything). The declared/declared
+      // case below keeps its strict `areSameType`; that asymmetry is deliberate and is the AR5
+      // note the task carried.
+      (fromEnd, toEnd) match
+        case (Some(f), Some(t)) if f.portlet.isEmpty || t.portlet.isEmpty =>
+          def isUniversal(tp: Type): Boolean = tp.typEx.isInstanceOf[Anything]
+          val carried: Seq[Type] = f match
+            case DeclaredEnd(o: Outlet, _) =>
+              resolution.refMap.definitionOf[Type](o.type_.pathId).toSeq.flatMap(typeMembers)
+            case ImpliedEnd(a) =>
+              val told = impliedOutletTypes(a)
+              if told.sizeIs == 1 then told else Seq.empty
+            case _ => Seq.empty
+          val source: String = f match
+            case ImpliedEnd(a) => s"the implied outlet of ${a.identify}"
+            case other         => other.definition.identify
+          val verdict: (Seq[Type], String) = t match
+            case DeclaredEnd(i: Inlet, _) =>
+              resolution.refMap.definitionOf[Type](i.type_.pathId) match
+                case Some(it) if isUniversal(it) => (Seq.empty, "")
+                case Some(it) => (carried.filterNot(c => typeAdmits(it, c)), s"requires ${it.identify}")
+                case None     => (Seq.empty, "")
+            case ImpliedEnd(a) =>
+              val handled = handlerClausesOf(a).collect {
+                case omc: OnMessageLikeClause if omc.msg.nonEmpty => omc.msg.pathId.value.last
+              }.distinct
+              (
+                carried.filterNot(c => adaptorAccepts(a, c)),
+                s"the implied inlet of ${a.identify} handles ${handled.map(n => s"'$n'").mkString(", ")}"
+              )
+            case _ => (Seq.empty, "")
+          val (rejected, expects) = verdict
+          if rejected.nonEmpty then
+            messages.addError(
+              connector.errorLoc,
+              s"${connector.identify} carries ${rejected.map(_.identify).mkString(", ")} from " +
+                s"$source, but $expects; a connector carries one type",
+              suggestion =
+                "Make the source's told type and the destination's handled type agree, or declare " +
+                  "the port with an alternation that admits every type the wire carries.",
+              ruleId = Some(RuleId.ConnectorTypeMismatch)
+            )
+          end if
+        case _ => ()
+      end match
 
       (maybeOutlet, maybeInlet) match
         case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
@@ -4970,6 +5118,22 @@ case class ValidationPass(
     adaptor: Adaptor,
     parents: Parents
   ): Unit = {
+    // AR9: an implied outlet carries ONE type. An adaptor with no declared outlet that tells
+    // several distinct types to a context is ambiguous, and saying so beats guessing -- a
+    // generator lowering the implied port has nothing single-valued to type it with.
+    if adaptor.outlets.isEmpty then
+      val told = impliedOutletTypes(adaptor)
+      if told.sizeIs > 1 then
+        messages.addError(
+          adaptor.errorLoc,
+          s"${adaptor.identify} tells ${told.size} distinct types through its implied outlet " +
+            s"(${told.map(_.identify).mkString(", ")}); an implied port carries one type",
+          suggestion =
+            s"Declare an outlet on ${adaptor.identify} typed with an alternation of those types, " +
+              s"or split the translation across adaptors, one type each.",
+          ruleId = Some(RuleId.AdaptorImpliedOutletAmbiguous)
+        )
+    end if
     parents.headOption match {
       case Some(c: Context) =>
         checkContainer(parents, adaptor)
