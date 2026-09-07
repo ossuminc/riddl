@@ -5085,6 +5085,36 @@ object AST:
     override def format: String = ""
   }
 
+  /** `on quiescence <window>` (Reid's ruling, 2026-09-07; CM §18): the clause that fires when
+    * NOTHING arrived at this processor instance within the window. The clock restarts on every
+    * handled message; inside a State's handler it is armed only while that state is active. Legal
+    * on any handler-bearing processor (not inside a Correlation, which has `times out after`).
+    *
+    * `window` is a [[LiteralString]] duration (validated like the correlation timeout) or a
+    * [[ValueRef]] to a Duration-typed constant or field. It is a FIELD, declared undefaulted and
+    * BEFORE `contents` (the `@JSExportTopLevel` trailing-default rule, as `OnOtherClause.binding`),
+    * and it is rendered by `Declaration.ascription` -- the one place both prettify and `format`
+    * read -- so it cannot be silently dropped on a round trip.
+    *
+    * An EFFECT block: it exists to expire, escalate or terminate, so `yield`/`tell`/`send`/
+    * `terminate`/`morph` are legal. Event-sourcing's R3/R4 are unchanged: in an event-sourced
+    * entity state changes only through a yielded event, which is also what keeps replay from
+    * re-firing the timer -- the timed-out fact is in the journal.
+    */
+  @JSExportTopLevel("OnQuiescenceClause")
+  case class OnQuiescenceClause(
+    loc: At,
+    window: LiteralString | ValueRef,
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends OnClause {
+    def id: Identifier = Identifier(loc, s"quiescence")
+
+    override def kind: String = "On Quiescence"
+
+    override def format: String = s"on quiescence ${window.format}"
+  }
+
   ///////////////////////////////////////////////////////////////////////////////////////// HANDLER
 
   /** A named handler of messages (commands, events, queries) that bundles together a set of
@@ -5313,6 +5343,10 @@ object AST:
       case otc: OnTerminationClause =>
         if otc.parameters.isEmpty then ""
         else s"(${otc.parameters.map(_.format).mkString(", ")})"
+      // 2026-09-07: `on quiescence <window>`. The window is the clause's whole declaration and
+      // lives here for the same reason `on other`'s binding does -- one implementation for both
+      // surfaces, so the prettifier cannot silently drop it.
+      case oqc: OnQuiescenceClause => s" ${oqc.window.format}"
       case _ => ""
     end ascription
 

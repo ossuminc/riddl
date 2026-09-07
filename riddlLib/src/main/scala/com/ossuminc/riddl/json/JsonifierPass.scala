@@ -856,6 +856,19 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 brief = briefOf(oc.metadata)
               )
             )
+          case oqc: OnQuiescenceClause =>
+            // 2026-09-07: the window is a FIELD, serialized directly -- the generic child machinery
+            // never reaches it.
+            Some(
+              OnClauseDto(
+                "quiescence",
+                None,
+                statements,
+                metadata = metaOf(oqc.metadata),
+                brief = briefOf(oqc.metadata),
+                window = Some(serializeValue(oqc.window))
+              )
+            )
           case ooc: OnOtherClause =>
             // A57: `on other as x [: <envelope>]`. Explicit arm rather than the wildcard below,
             // so the binding is carried instead of silently dropped on the way to JSON.

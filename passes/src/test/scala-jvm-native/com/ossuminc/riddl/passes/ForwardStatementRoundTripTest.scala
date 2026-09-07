@@ -123,7 +123,7 @@ class ForwardStatementRoundTripTest extends AbstractValidatingTest {
     }
 
     "be 23 -- multi-line `do`/`prompt` bumped it; 22 has shipped" in { (td: TestData) =>
-      FORMAT_REVISION mustBe 23.toShort
+      FORMAT_REVISION mustBe 24.toShort
     }
   }
 }

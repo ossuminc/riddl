@@ -35,7 +35,9 @@ class KeywordsTest extends AbstractTestingBasis {
       // of the three while deriving its editor vocabulary from it.
       // `KeywordTableDriftTest` now guards this direction and the tokenizer's separate copy, so
       // the next omission reddens by NAME instead of arriving as a count nobody can attribute.
-      Keyword.allKeywords.size must be(167)
+      // 168 as of 2026-09-07: `quiescence`, for the `on quiescence <window>` clause. Registered in
+      // allKeywords for tokenization but NOT in definitionKeywords, so it remains a legal identifier.
+      Keyword.allKeywords.size must be(168)
     }
   }
 

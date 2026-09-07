@@ -14,7 +14,8 @@ import com.ossuminc.riddl.language.AST.{
   OnEventClause,
   OnMessageClause,
   OnPassivationClause,
-  RequireStatement
+  RequireStatement,
+  OnQuiescenceClause
 }
 import com.ossuminc.riddl.language.Finder
 import com.ossuminc.riddl.language.parsing.AbstractParsingTest
@@ -303,6 +304,52 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           finder.recursiveFindByType[OnActivationClause].size must be(1)
           finder.recursiveFindByType[OnPassivationClause].size must be(1)
           succeed
+      }
+    }
+
+    "parse 'on quiescence' with a literal window and with a value window, on any processor" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """context c is {
+            |  constant Grace: Duration = "30 minutes"
+            |  entity e is {
+            |    command Cmd is { g: Integer }
+            |    handler h is {
+            |      on command Cmd { do "handle" }
+            |      on quiescence "30 minutes" { do "expire" }
+            |    }
+            |  }
+            |  repository r is {
+            |    handler rh is {
+            |      on quiescence Grace { do "compact" }
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
+          td
+        )
+        parseDefinition[Context](input) match {
+          case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+          case Right((context, _)) =>
+            val clauses = Finder(context).recursiveFindByType[OnQuiescenceClause]
+            clauses.size must be(2)
+            clauses.map(_.window.format).sorted must be(Seq("\"30 minutes\"", "Grace"))
+            succeed
+        }
+    }
+
+    "keep `quiescence` usable as an identifier" in { (td: TestData) =>
+      // A keyword for tokenization but NOT in `definitionKeywords`, like `times`/`out`/`after`.
+      val input = RiddlParserInput(
+        """context c is {
+          |  record Timings is { quiescence: Duration, active: Duration }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Context](input) match {
+        case Left(errors) => fail(errors.map(_.format).mkString("\n"))
+        case Right(_)     => succeed
       }
     }
 

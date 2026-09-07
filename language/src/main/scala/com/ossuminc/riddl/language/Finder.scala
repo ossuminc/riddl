@@ -101,6 +101,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case fe: ForeachStatement => fe.doStatements.toSeq
     case ss: SagaStep         => ss.doStatements.toSeq ++ ss.undoStatements.toSeq
     case cr: Correlation => cr.timeoutStatements.toSeq // `.contents` already walked as a Container
+    case oq: OnQuiescenceClause => Seq(oq.window) // the window is a field; `.contents` is walked
     case iv: Invariant   => iv.condition.toSeq
     case ib: InvariantBlock => ib.statements.toSeq :+ ib.predicate
 

@@ -896,7 +896,7 @@ private[parsing] trait StatementParser {
 
   // A54: a bare path identifier naming a value in scope. Resolved to a let-local, message field,
   // state field, or (in a return) a function input at validation time.
-  private def valueRef[u: P]: P[ValueRef] = {
+  protected def valueRef[u: P]: P[ValueRef] = {
     P(Index ~ pathIdentifier ~ Index).map { case (start, pid, end) =>
       ValueRef(at(start, end), pid)
     }

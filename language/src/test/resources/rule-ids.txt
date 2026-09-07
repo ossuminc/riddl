@@ -123,6 +123,9 @@ handler-on-other-no-envelope
 handler-on-other-unbound
 handler-only-do-statements
 handler-query-no-reply
+handler-quiescence-duplicate
+handler-quiescence-in-correlation
+handler-quiescence-window-not-duration
 handler-repository-handles-events
 handler-streamlet-foreign-message
 invariant-no-state-to-read

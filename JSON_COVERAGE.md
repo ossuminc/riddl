@@ -58,6 +58,7 @@ is covered in that construct's phase. The builder emits references as
 | OnActivationClause | ✅ 2.0 | `kind: "activate"` |
 | OnPassivationClause | ✅ 2.0 | `kind: "passivate"` |
 | OnOtherClause | ✅ Phase 1 / A57 | `kind: "other"`; A57 binding + `envelope` (the optional explicit envelope type) |
+| OnQuiescenceClause | ✅ 2026-09-07 | `kind: "quiescence"`; `window` is a `ValueDto` (literal duration or reference) — a FIELD, serialized directly; fixed point in `QuiescenceJsonRoundTripTest` |
 | OnTerminationClause | ✅ Phase 1 / Task 3 | `kind: "term"`; `parameters` (first must be `Id(...)` of the enclosing processor — validation, not JSON) |
 | Invariant | ✅ Phase 1 / A28 s2 / 2026-08-04 | string `condition`, structured `expression`, or a `block` (statements + predicate) — exactly one. Plus `requires` + `requiresKind` (`state`/`type`), which decide WHERE the invariant applies, so dropping them describes a different model. |
 | Author | ✅ Phase 1 | at domain level |

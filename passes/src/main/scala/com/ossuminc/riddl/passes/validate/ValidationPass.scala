@@ -857,6 +857,23 @@ case class ValidationPass(
         checkDefinition(parentsAsSeq, oac)
       case opc: OnPassivationClause =>
         checkDefinition(parentsAsSeq, opc)
+      case oqc: OnQuiescenceClause =>
+        checkDefinition(parentsAsSeq, oqc)
+        // Unlike the other lifecycle clauses this one gets the full on-clause treatment (empty
+        // body, refusals first, block-terminal): it is an effect block, not a side-effect-free hook.
+        validateOnClause(oqc)
+        checkQuiescenceWindow(oqc, parentsAsSeq)
+        // A correlation bounds its accumulation with its own mandatory `times out after`; an idle
+        // clock inside one would be a second, contradictory bound on the same partials.
+        if parentsAsSeq.exists(_.isInstanceOf[Correlation]) then
+          messages.addError(
+            oqc.loc,
+            s"${oqc.identify} is inside a correlation, which bounds itself with 'times out after'",
+            suggestion =
+              "Remove the clause; put what should happen when the join never completes in the " +
+                "correlation's 'times out after' block.",
+            ruleId = Some(RuleId.QuiescenceInCorrelation)
+          )
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
         checkOnOtherBinding(ooc, parentsAsSeq) // A57
@@ -941,6 +958,45 @@ case class ValidationPass(
       // NOTE: Never put a catch-all here, every Definition type must be handled
     }
   }
+  /** The `on quiescence` window (2026-09-07): a literal duration validated exactly as the correlation
+    * timeout is (`checkPreciseDuration`), or a value that must type as `Duration` -- directly or
+    * through an alias. Undeterminable stays silent, the standing rule; an unresolved path is
+    * ResolutionPass's report.
+    */
+  private def checkQuiescenceWindow(oqc: OnQuiescenceClause, parents: Parents): Unit =
+    oqc.window match
+      case ls: LiteralString =>
+        checkPreciseDuration(
+          ls,
+          s"The window of ${oqc.identify}",
+          "Give the clause a window greater than zero; a clause that fires at once would never let " +
+            "a message arrive."
+        )
+      case vr: ValueRef =>
+        // ResolutionPass prepends the node being processed to `parents` before resolving, so the
+        // header reference is recorded under the CLAUSE; prepend it here too or the lookup misses
+        // (the same `c +: parentsAsSeq` the correlation's timeout block needs).
+        valueTypeExpr(vr, oqc +: parents, Seq.empty, Map.empty).foreach { te =>
+          if !isDurationTypeExpr(te) then
+            messages.addError(
+              vr.loc,
+              s"${oqc.identify} names '${vr.path.format}' as its window, but it is typed " +
+                s"${te.format}, not Duration",
+              suggestion =
+                "Name a constant or field declared as Duration (or an alias of it), or write the " +
+                  "window as a literal such as \"30 minutes\".",
+              ruleId = Some(RuleId.QuiescenceWindowNotDuration)
+            )
+        }
+  end checkQuiescenceWindow
+
+  private def isDurationTypeExpr(te: TypeExpression): Boolean = te match
+    case _: Duration => true
+    case ate: AliasedTypeExpression =>
+      resolution.refMap.definitionOf[Type](ate.pathId).exists(t => isDurationTypeExpr(t.typEx))
+    case _ => false
+  end isDurationTypeExpr
+
   private def validateOnClause(onClause: OnClause): Unit =
     if onClause.statements.isEmpty then
       messages.add(
@@ -3463,6 +3519,21 @@ case class ValidationPass(
               ruleId = Some(RuleId.ClauseShadowed)
             )
           }
+      }
+    // 2026-09-07: one idle clock per handler. A second `on quiescence` would be a second window on
+    // the same instance with no rule for which fires; the shadowing check above sees only message
+    // clauses, so this is its own check.
+    val quiescence = h.clauses.collect { case q: OnQuiescenceClause => q }
+    if quiescence.sizeIs > 1 then
+      quiescence.tail.foreach { later =>
+        messages.addError(
+          later.loc,
+          s"${h.identify} declares more than one 'on quiescence' clause; a processor instance has " +
+            "one idle clock",
+          suggestion = "Keep one 'on quiescence' per handler and branch inside it if several " +
+            "outcomes are needed.",
+          ruleId = Some(RuleId.QuiescenceDuplicate)
+        )
       }
     parents.headOption match {
       case Some(entity: Entity) =>
@@ -10383,7 +10454,7 @@ case class ValidationPass(
       // parameter list (a message clause's local name is A55's `binding`, taken from the handled
       // message), and enumerating is what makes a seventh clause kind a compile error here.
       case _: OnMessageLikeClause | _: OnActivationClause | _: OnPassivationClause |
-          _: OnOtherClause =>
+          _: OnOtherClause | _: OnQuiescenceClause =>
         Seq.empty[MethodArgument]
     parameters.map(a => a.name -> a.typeEx).toMap
   end clauseParameterScope

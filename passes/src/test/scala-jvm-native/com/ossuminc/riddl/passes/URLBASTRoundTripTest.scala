@@ -168,7 +168,7 @@ class URLBASTRoundTripTest extends AbstractValidatingTest {
     // it is what makes an accidental bump visible -- but it now tracks the shipped revision.
     "be 23 -- multi-line `do`/`prompt` bumped it; 22 has shipped and cannot be ridden again" in {
       (td: TestData) =>
-        FORMAT_REVISION mustBe 23.toShort
+        FORMAT_REVISION mustBe 24.toShort
     }
   }
 }

@@ -139,7 +139,7 @@ class TypedHoleBASTRoundTripTest extends AbstractValidatingTest {
     // 2.0.0-rc.15, so `forward` bumped to 19.
     "be 23 -- multi-line `do`/`prompt` bumped it; 22 has shipped and cannot be ridden again" in {
       (td: TestData) =>
-        FORMAT_REVISION mustBe 23.toShort
+        FORMAT_REVISION mustBe 24.toShort
     }
   }
 }

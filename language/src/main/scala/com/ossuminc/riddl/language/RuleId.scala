@@ -344,6 +344,9 @@ enum RuleId(
 
   // ---- more handler / stmt / module / func ---------------------------------------------------
   case ClauseShadowed extends RuleId("handler-clause-shadowed")
+  case QuiescenceWindowNotDuration extends RuleId("handler-quiescence-window-not-duration")
+  case QuiescenceDuplicate extends RuleId("handler-quiescence-duplicate")
+  case QuiescenceInCorrelation extends RuleId("handler-quiescence-in-correlation")
   case EntityNoCommandsOrQueries extends RuleId("handler-entity-no-commands-or-queries")
   case RepositoryHandlesEvents extends RuleId("handler-repository-handles-events")
   case ImportNotAllowedHere extends RuleId("module-import-not-allowed-here")

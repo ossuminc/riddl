@@ -246,7 +246,7 @@ any_interaction_ref = processor_ref | saga_ref | input_ref | output_ref | group_
 handler = ["initial"] "handler" identifier is "{" handler_body "}" [with_metadata] ;
 handler_body = {undefined | handler_contents} ;
 handler_contents = {on_clause | comment} ;
-on_clause = on_init_clause | on_other_clause | on_term_clause | on_activate_clause | on_passivate_clause | on_event_clause | on_message_clause ;
+on_clause = on_init_clause | on_other_clause | on_term_clause | on_activate_clause | on_passivate_clause | on_quiescence_clause | on_event_clause | on_message_clause ;
 (* Task 3: parameters, so `on init`/`on term` become invocable (a later change). The parameter
    list is OPTIONAL syntax for both clauses -- whether `on term` was given a correctly-typed
    leading Id(...) parameter is a VALIDATION question, not a grammar one, since the grammar alone
@@ -260,6 +260,13 @@ on_other_clause = "on" "other" [ "as" identifier [ ":" path_identifier ] ] is ps
 on_term_clause = "on" "term" [ "(" [arguments] ")" ] is pseudo_code_block [with_metadata] ;
 on_activate_clause = "on" "activate" is pseudo_code_block [with_metadata] ;
 on_passivate_clause = "on" "passivate" is pseudo_code_block [with_metadata] ;
+(* Temporal semantics (2026-09-07): fires when NOTHING arrived at this processor instance within
+   the window; the clock restarts on every handled message. Legal on any handler-bearing processor
+   (not inside a correlation, which has `times out after`). The window is a literal duration string,
+   validated like the correlation timeout, or a Duration-typed value: a constant or a field, named
+   by a bare path. A `let` cannot be named here -- lets are clause-local statements. *)
+on_quiescence_clause = "on" "quiescence" quiescence_window is pseudo_code_block [with_metadata] ;
+quiescence_window = literal_string | path_identifier ;
 (* A55: an optional local name may be bound to the handled message with type ascription:
    `on foo: command Foo { ... }`. Within the body the name denotes the whole message. *)
 on_event_clause = "on" [identifier ":"] event_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;

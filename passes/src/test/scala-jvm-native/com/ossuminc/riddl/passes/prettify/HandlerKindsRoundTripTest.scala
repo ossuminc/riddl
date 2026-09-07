@@ -40,6 +40,7 @@ class HandlerKindsRoundTripTest extends AbstractValidatingTest {
   private val src =
     """domain d is {
       |  context c is {
+      |    constant Grace: Duration = "30 minutes"
       |    entity e is {
       |      command Cmd is { g: Integer }
       |      event Evt is { h: Integer }
@@ -48,6 +49,12 @@ class HandlerKindsRoundTripTest extends AbstractValidatingTest {
       |        on event Evt { do "note" }
       |        on activate { do "rehydrate" }
       |        on passivate { do "evict" }
+      |        on quiescence "30 minutes" { do "nobody touched it" }
+      |      }
+      |    }
+      |    repository r is {
+      |      handler rh is {
+      |        on quiescence Grace { do "compact" }
       |      }
       |    }
       |  }
@@ -63,13 +70,18 @@ class HandlerKindsRoundTripTest extends AbstractValidatingTest {
       f1.recursiveFindByType[OnActivationClause].size mustBe 1
       f1.recursiveFindByType[OnPassivationClause].size mustBe 1
       f1.recursiveFindByType[OnMessageClause].size mustBe 1 // the `on command Cmd`
+      f1.recursiveFindByType[OnQuiescenceClause].size mustBe 2
 
-      // Emitted: each clause keyword must appear, in its round-trippable source form.
+      // Emitted: each clause keyword must appear, in its round-trippable source form. The
+      // quiescence WINDOW rides `Declaration.ascription`, so a `format`-only implementation would
+      // emit `on quiescence is` and drop it -- the `on other as x` regression, pinned here.
       val pretty = prettify(root1)
       pretty must include("on command Cmd is")
       pretty must include("on event Evt is")
       pretty must include("on activate is")
       pretty must include("on passivate is")
+      pretty must include("on quiescence \"30 minutes\" is")
+      pretty must include("on quiescence Grace is")
 
       // Re-parsed: every clause survives as the SAME node kind (not dropped, not
       // collapsed into a plain OnMessageClause / OnOtherClause).
@@ -79,6 +91,9 @@ class HandlerKindsRoundTripTest extends AbstractValidatingTest {
       f2.recursiveFindByType[OnActivationClause].size mustBe 1
       f2.recursiveFindByType[OnPassivationClause].size mustBe 1
       f2.recursiveFindByType[OnMessageClause].size mustBe 1
+      val quiet = f2.recursiveFindByType[OnQuiescenceClause]
+      quiet.size mustBe 2
+      quiet.map(_.window.format).sorted mustBe Seq("\"30 minutes\"", "Grace")
     }
   }
 }

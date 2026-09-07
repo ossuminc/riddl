@@ -593,7 +593,10 @@ object JsonModel:
     brief: Option[String] = None,
     // Task 3: `on init`/`on term` parameter lists (`kind: "init"|"term"` only). Reuses the same
     // shape `MethodDto.args` already uses for a record method's arguments.
-    parameters: Seq[MethodArgDto] = Nil
+    parameters: Seq[MethodArgDto] = Nil,
+    // 2026-09-07: the `on quiescence` window (`kind: "quiescence"` only) -- a literal duration
+    // string or a reference to a Duration-typed constant or field, as a ValueDto.
+    window: Option[ValueDto] = None
   )
 
   case class MessageRefDto(ref: String, kind: String)
@@ -2729,6 +2732,7 @@ object JsonModel:
     * object existed was wrong.
     */
   val knownKeys: Set[String] = Set(
+    "window",
     "$at",
     "$kind",
     "adaptors",

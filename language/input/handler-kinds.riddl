@@ -4,6 +4,7 @@
 //   - entity `on activate` / `on passivate` lifecycle clauses
 //   - `on event` clauses (distinct OnEventClause)
 //   - `on other` completeness clauses on adaptors
+//   - `on quiescence <window>` clauses (2026-09-07), literal and value windows
 domain HandlerKinds is {
   context Shopping is {
     command AddItem is { sku: String }
@@ -26,6 +27,9 @@ domain HandlerKinds is {
         on passivate {
           do "persist cart to storage"
         }
+        on quiescence "30 minutes" {
+          do "nobody touched the cart; expire it"
+        }
         on other {
           error "unexpected message for Cart"
         }
@@ -33,6 +37,15 @@ domain HandlerKinds is {
     }
 
     source emit is { outlet out is event ItemAdded }
+
+    constant IdleWindow: Duration = "1 hour"
+    repository CartStore is {
+      handler StoreHandler is {
+        on quiescence IdleWindow {
+          do "compact the store when nothing has arrived for a while"
+        }
+      }
+    }
 
     projector CartProjection is {
       record Fields is { count: Integer }

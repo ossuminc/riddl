@@ -1363,8 +1363,22 @@ class BASTReader(
         val metadata = readMetadataDeferred()
         OnPassivationClause(loc, contents, metadata)
 
-      case _ =>
-        OnOtherClause(loc, None, None, Contents.empty[Statements](), Contents.empty[MetaData]())
+      case 7 => // Quiescence (rev 24) — tagged window value, then contents
+        val window: LiteralString | ValueRef = readValue() match
+          case ls: LiteralString => ls
+          case vr: ValueRef      => vr
+          case other =>
+            throw new IllegalStateException(
+              s"OnQuiescenceClause window must be a LiteralString or ValueRef, read ${other.kind}"
+            )
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnQuiescenceClause(loc, window, contents, metadata)
+
+      case other =>
+        // Never fabricate a clause: a byte this reader does not know means a newer FORMAT_REVISION
+        // or a corrupt stream, and an invented `on other` would derail everything after it.
+        throw new IllegalStateException(s"Unknown on-clause discriminator byte: $other")
     }
   }
 

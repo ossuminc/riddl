@@ -217,6 +217,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case oc: OnEventClause          => writeOnEventClause(oc)
       case oc: OnActivationClause     => writeOnActivationClause(oc)
       case oc: OnPassivationClause    => writeOnPassivationClause(oc)
+      case oc: OnQuiescenceClause     => writeOnQuiescenceClause(oc)
       case oc: OnOtherClause          => writeOnOtherClause(oc)
 
       // Streamlet components
@@ -853,6 +854,17 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(6) // Passivation clause type — entity lifecycle, no message ref
     writeLocation(oc.loc)
+    writeContents(oc.contents)
+  }
+
+  def writeOnQuiescenceClause(oc: OnQuiescenceClause): Unit = {
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
+    writer.writeU8(7) // Quiescence clause type (rev 24) — window value, then contents
+    writeLocation(oc.loc)
+    // The window is a FIELD, written before the contents count exactly as OnInit's parameters and
+    // OnOther's binding are. `writeValue` tags the shape itself (LiteralString or ValueRef), so the
+    // reader needs no separate discriminator.
+    writeValue(oc.window)
     writeContents(oc.contents)
   }
 

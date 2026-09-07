@@ -150,7 +150,12 @@ package object bast {
     // 23 makes `do` and `prompt(...)` hold a SEQUENCE of literal strings rather than one, so a
     // revision-22 file's bare string is read as a COUNT and everything after it derails. Not a
     // clean failure -- which is the whole reason this gate exists.
-    23 // multi-line `do` / `prompt`
+    // 24 (2026-09-07) adds on-clause discriminator byte 7 (`on quiescence`, a tagged window value
+    // before the contents count) and an optional trailing `at` value on the send statement
+    // (sub-kind 5): a revision-23 reader would read the send's boolean as the next node's tag and
+    // misalign, which is the failure the gate exists to make clean.
+    24 // `on quiescence` (byte 7) and `send ... at <value>`
+    // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.
     // 21 // `empty` value: tag 12 in readValue/writeValue. A revision-20 reader hitting tag 12 throws

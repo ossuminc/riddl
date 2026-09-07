@@ -105,6 +105,31 @@ private[parsing] trait HandlerParser
     }
   }
 
+  /** `on quiescence <window> is { … }` (2026-09-07): fires when NOTHING arrived at this processor
+    * instance within the window. Legal on ANY handler-bearing processor, so it sits in both branches
+    * of [[onClause]]; the two-word keyword fails cleanly before `Keywords.on`'s cut, like
+    * `on activate`. The window is a literal duration string OR a bare path to a Duration-typed
+    * constant or field -- whether it IS a Duration is validation's question. The body takes the
+    * processor's ordinary statement set: the clause is an effect block (it exists to expire, escalate
+    * or terminate), not a side-effect-free lifecycle hook.
+    */
+  private def quiescenceWindow[u: P]: P[LiteralString | ValueRef] = {
+    // Typed explicitly: a bare `literalString | valueRef` widens to their common supertype.
+    P(
+      literalString.map(ls => ls: LiteralString | ValueRef) |
+        valueRef.map(vr => vr: LiteralString | ValueRef)
+    )
+  }
+
+  private def onQuiescenceClause[u: P](set: StatementsSet): P[OnQuiescenceClause] = {
+    P(
+      Index ~ Keywords.onQuiescence ~/ quiescenceWindow ~ is ~/ pseudoCodeBlock(set) ~
+        withMetaData ~/ Index
+    ).map { case (start, window, statements, descriptives, end) =>
+      OnQuiescenceClause(at(start, end), window, statements.toContents, descriptives.toContents)
+    }
+  }
+
   private def maybeName[u: P]: P[Option[Identifier]] = {
     P((identifier ~ Punctuation.colon).?)
   }
@@ -193,12 +218,12 @@ private[parsing] trait HandlerParser
     if set.processor == ProcessorKind.Entity then
       P(
         onInitClause(set) | onTermClause(set) |
-          onActivationClause(set) | onPassivationClause(set) |
+          onActivationClause(set) | onPassivationClause(set) | onQuiescenceClause(set) |
           onOtherClause(set) | onMessageOrEventClause(set)
       )
     else
       P(
-        onInitClause(set) | onTermClause(set) | onOtherClause(set) |
+        onInitClause(set) | onTermClause(set) | onQuiescenceClause(set) | onOtherClause(set) |
           rejectActivatePassivate | onMessageOrEventClause(set)
       )
   }

@@ -267,6 +267,8 @@ object Keywords {
 
   def onPassivate[u: P]: P[Unit] = keyword("on passivate")
 
+  def onQuiescence[u: P]: P[Unit] = keyword("on quiescence")
+
   def onTerm[u: P]: P[Unit] = keyword("on term")
 
   def one[u: P]: P[Unit] = keyword(Keyword.one)
@@ -534,6 +536,7 @@ object Keywords {
           Keyword.processor,
           Keyword.projector,
           Keyword.put,
+          Keyword.quiescence,
           Keyword.query,
           Keyword.range,
           Keyword.reference,
@@ -722,6 +725,7 @@ object Keyword {
   final val projector = "projector"
   final val prompt = "prompt"
   final val put = "put"
+  final val quiescence = "quiescence"
   final val query = "query"
   final val range = "range"
   final val reference = "reference"
@@ -786,6 +790,7 @@ object Keyword {
     acquires,
     get,
     put,
+    quiescence,
     refuses,
     require_,
     activate,

@@ -1050,9 +1050,22 @@ object JsonAstBuilder:
         OnTerminationClause(curAt, parameters, statements, md)
       case "activate"  => OnActivationClause(curAt, statements, md)
       case "passivate" => OnPassivationClause(curAt, statements, md)
+      case "quiescence" =>
+        // 2026-09-07: the window is a literal duration or a reference; anything else is a
+        // malformed document, reported rather than guessed.
+        val window: LiteralString | ValueRef = oc.window.map(buildValue) match
+          case Some(ls: LiteralString) => ls
+          case Some(vr: ValueRef)      => vr
+          case Some(other) =>
+            ctx.err(s"on-clause of kind 'quiescence' has a window of kind ${other.kind}; expected a literal duration or a reference")
+            LiteralString(curAt, "")
+          case None =>
+            ctx.err("on-clause of kind 'quiescence' requires a 'window'")
+            LiteralString(curAt, "")
+        OnQuiescenceClause(curAt, window, statements, md)
       case other =>
         ctx.err(
-          s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate)"
+          s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate|quiescence)"
         )
         OnOtherClause(curAt, None, None, statements, md)
     end match

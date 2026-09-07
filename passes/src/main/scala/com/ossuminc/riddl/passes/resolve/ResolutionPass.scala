@@ -129,6 +129,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: OnActivationClause     => ()
       case _: OnPassivationClause    => ()
       case _: OnOtherClause          => ()
+      // 2026-09-07: the quiescence window may name a Duration-typed constant or field. It is a
+      // header value, not a statement, so no `let` scope exists; the ordinary ValueRef anchors
+      // (state, handled message, `findAnchor`) apply and validation owns the type diagnostic.
+      case oqc: OnQuiescenceClause =>
+        oqc.window match
+          case vr: ValueRef => resolveValue(vr, parents)
+          case _            => ()
       case e: Entity =>
         addEntity(e, parents)
       case s: State =>
