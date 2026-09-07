@@ -15,10 +15,10 @@ Ask `git` for branch, tree and unpushed span — never trust a written answer to
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
 `FORMAT_REVISION` is 24** (bumped 2026-09-07 for `on quiescence` and `send … at`, both in one bump).
 
-**`../bin/riddlc` is restaged from `main` HEAD after the A103 commits** (`a819670d7` permissive,
-`1a434ced5` adamant) via `scripts/publish-and-stage.sh`, and the JVM/JS/Native libraries are
+**`../bin/riddlc` is restaged from `49c96efd8` (`2.1.1-13-49c96efd`, after the two temporal-
+semantics commits) via `scripts/publish-and-stage.sh`, and the JVM/JS/Native libraries are
 publishLocal'd from the same build — riddl-models and riddl-generator catch up from these, per
-Reid. Check `../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`; a
+Reid. Corpus census with it: 189 entry points, 0 errors. Check `../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`; a
 docs-only commit may sit between them and changes no behaviour.
 
 **The corpus gate is GREEN: 190/190**, verified 2026-09-07 evening against the local riddl-models
@@ -67,7 +67,7 @@ the two later commits touch `ValidationPass` and test sources only.
 - **A Scala bump is ~32 sites**, since the full version is a path segment; a grep omitting
   `.github/` misses 11.
 
-### `task/` — empty, 159 in `done/`
+### `task/` — empty, 160 in `done/`
 
 Nothing awaits triage. That is a fact about right now, not a reason to skip the check.
 
@@ -112,6 +112,15 @@ repo root, `bastify` produced 115 bytes with 48 differences (the origin path is 
 `language/input/import/`, 93 bytes with exactly one byte changed — the revision. The stage
 launcher (`target/out/jvm/scala-3.9.0/riddlc/universal/stage/bin/riddlc`) is the tool; `set
 riddlc/Compile/run/baseDirectory` fails with "URI is not absolute".
+
+**The restaged binary found what the suites could not: the ruled idiom trips a ruled Error.**
+"Schedule to yourself" needs a connector from your outlet to your own inlet; `stream-graph-cycle`
+reports a self-loop as a cycle of one. Neither rule is wrong on its own, no test covered the
+pair, and the corpus has no population to show it — it surfaced only because I validated the
+fixture I had just written with the binary I had just staged. Filed as BACKLOG [5.6] for Reid;
+the fixture schedules to a downstream sink meanwhile. Third instance of the HANDOFF trap above
+in one week: **a new rule's tests measure the rule, never its interaction with rules already
+present.**
 
 **Corpus movement: zero, as an additive feature should have.** 190/190 round trip, 191/191
 JSON identity, TatSu 119/142 (+1 for `send-at.riddl`). That is the expected shape — a construct

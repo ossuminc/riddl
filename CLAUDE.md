@@ -1623,7 +1623,9 @@ to the right group rather than appending to a list.
   through aliases (`stmt-send-at-not-instant`); a `Date` has no time of day and a `Duration` is a
   span. Undeterminable is silent. **A past instant is delivered immediately. There is NO cancellation
   construct** — the idiom is schedule to YOURSELF and decide at fire time, so a receiver of a
-  scheduled message must tolerate it being stale.
+  scheduled message must tolerate it being stale. **That idiom's loop connector currently draws
+  `stream-graph-cycle`** (a self-loop is "a cycle of one") — an unresolved collision between two
+  rulings, BACKLOG [5.6]; do not exempt it without Reid.
   **Deliberately UNCHANGED, do not "fix" any of them**: A23's effect set (a scheduled send is still a
   transmission), the discharge rules (**a `send` has not settled `yields` since rc.19, scheduled or
   not** — the plan for this feature claimed the opposite and the test caught it), A6 reachability
