@@ -277,6 +277,7 @@ stmt-refusal-after-effect
 stmt-reply-after-forward
 stmt-return-type-mismatch
 stmt-self-not-a-message
+stmt-send-at-not-instant
 stmt-set-after-morph
 stmt-tell-crosses-context
 stmt-tell-crosses-domain

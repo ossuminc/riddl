@@ -340,7 +340,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
       // A56: a bound operand (`tell p to …`) contributes no Reference of its own — `p` is a local
       // name, not a reference to a definition. The message it denotes is already reachable through
       // the on-clause that declared it, so the diagram loses nothing by taking only the target.
-      case SendStatement(_, msg, portlet)      => operandRefOpt(msg).toSeq :+ portlet
+      case SendStatement(_, msg, portlet, _)   => operandRefOpt(msg).toSeq :+ portlet
       // A value target names an instance, and a Value is not a Reference, so it contributes none.
       // The diagram loses nothing: the edge it would draw is to the target's KIND, which the
       // enclosing on-clause and the message already place. Enumerated rather than wildcarded.

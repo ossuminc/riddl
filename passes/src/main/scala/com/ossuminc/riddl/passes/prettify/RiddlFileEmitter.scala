@@ -706,13 +706,19 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           addIndent("do {").nl.incr
           what.foreach(ls => addIndent(ls.format).nl)
           decr.addIndent("}").nl
-      case SendStatement(_, msg, portlet) =>
+      case SendStatement(_, msg, portlet, instant) =>
         // A20: `msg` is `MessageRef | Constructor | ValueRef`; a `Constructor` argument can carry a
         // `PromptValue` ascription, so this routes through `emitConstructorOperand` (-> `emitValue`)
         // rather than `.format`.
         addIndent("send ")
         emitConstructorOperand(msg)
         add(s" to ${portlet.format}")
+        // `at <instant>` through `emitValue`, the total dispatch, never `.format` -- a PromptValue
+        // instant with an ascription must round-trip.
+        instant.foreach { v =>
+          add(" at ")
+          emitValue(v)
+        }
         nl
       case TellStatement(_, msg, target, by) =>
         addIndent("tell ")

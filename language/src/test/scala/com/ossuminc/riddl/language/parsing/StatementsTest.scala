@@ -107,6 +107,15 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       s.format must be(s"send command foo to inlet foo")
       checkStatement(s)
     }
+    "check scheduled Send Statement (`at <instant>`)" in { td =>
+      val pathId = PathIdentifier(At.empty, Seq("foo"))
+      val msgRef = CommandRef(At.empty, pathId)
+      val portletRef = OutletRef(At.empty, pathId)
+      val instant = ValueRef(At.empty, PathIdentifier(At.empty, Seq("b", "dueAt")))
+      val s = SendStatement(At.empty, msgRef, portletRef, Some(instant))
+      s.format must be(s"send command foo to outlet foo at b.dueAt")
+      checkStatement(s)
+    }
     "check Morph Statement" in { td =>
       val pathId = PathIdentifier(At.empty, Seq("foo"))
       val entityRef = EntityRef(At.empty, pathId)

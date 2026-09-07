@@ -1013,7 +1013,8 @@ class BASTReader(
       case 5 => // Send
         val msg = readMessageOperand() // A54: bare ref or constructor
         val portlet = readPortletRef()
-        SendStatement(loc, msg, portlet)
+        val instant = readOption(readValue()) // `send ... at <instant>`, FORMAT_REVISION 24
+        SendStatement(loc, msg, portlet, instant)
 
       case 7 => // Morph
         val entity = readEntityRef()

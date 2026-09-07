@@ -1400,8 +1400,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       field match
         case fr: FieldRef => SetStmtDto(Some(path(fr.pathId)), None, serializeValue(value))
         case sr: StateRef => SetStmtDto(None, Some(path(sr.pathId)), serializeValue(value))
-    case SendStatement(_, msg, portlet) =>
-      val (pp, pk) = portletRef(portlet); SendStmtDto(serializeDeliverableOperand(msg), pp, pk)
+    case SendStatement(_, msg, portlet, instant) =>
+      val (pp, pk) = portletRef(portlet)
+      SendStmtDto(serializeDeliverableOperand(msg), pp, pk, instant.map(serializeValue))
     case ForwardStatement(_, msg, target) =>
       // Both shapes collapse to one (path, kind) pair -- the kind string distinguishes them.
       val (fp, fk) = target match

@@ -1198,6 +1198,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeMessageOperand(s.msg) // A54: bare ref or constructor
     writePortletRef(s.portlet)
+    writeOption(s.at)(writeValue) // `send ... at <instant>`, FORMAT_REVISION 24
   }
 
   def writeForwardStatement(s: ForwardStatement): Unit = {

@@ -1,0 +1,32 @@
+// Corpus fixture for the scheduled send (2026-09-07): `send <msg> to <portlet> at <instant>`.
+// Checked by BOTH the fastparse parser and the EBNF/TatSu grammar validator over **/input/**.
+// The instant is any value typed TimeStamp, DateTime or ZonedDateTime -- a message field, a
+// constant, or `system.now`. A past instant is delivered immediately; nothing cancels a
+// scheduled send, so the idiom is to schedule to yourself and decide at fire time.
+domain Scheduling is {
+  context Bookings is {
+    command Book is { id: String, startsAt: TimeStamp }
+    event ReminderDue is { id: String }
+    constant Opening: TimeStamp = "2026-01-01T09:00:00Z"
+    inlet BookIn is command Book
+    inlet RemindIn is event ReminderDue
+    outlet ToSelf is event ReminderDue
+    outlet Notify is event ReminderDue
+    handler BookingHandler is {
+      on b: command Book {
+        // schedule to yourself: the reminder comes back as a message, and the receiving clause
+        // decides then whether the booking is still live
+        send event ReminderDue(id = b.id) to outlet ToSelf at b.startsAt
+      }
+      on r: event ReminderDue {
+        send event ReminderDue(id = r.id) to outlet Notify at system.now
+      }
+    }
+    streamlet Reminders as sink is {
+      inlet In is event ReminderDue
+      handler RH is { on event ReminderDue { do "remind the customer" } }
+    }
+    connector Loop is from outlet Bookings.ToSelf to inlet Bookings.RemindIn
+    connector Out is from outlet Bookings.Notify to inlet Bookings.Reminders.In
+  }
+}

@@ -111,7 +111,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case lt: LetStatement     => Seq(lt.expression)
     case pt: PutStatement     => Seq(pt.value)
     case rt: ReturnStatement  => Seq(rt.value)
-    case sn: SendStatement    => Seq(sn.msg)
+    case sn: SendStatement    => Seq(sn.msg) ++ sn.at.toSeq // the `at` instant is a full Value
     case tl: TellStatement    => Seq(tl.msg)
     case yl: YieldStatement   => Seq(yl.msg)
     case rp: ReplyStatement   => Seq(rp.msg)

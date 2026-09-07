@@ -319,7 +319,10 @@ deliverable_message_value = message_value | path_identifier ;
 (* A30: `outlet` is the canonical `send` target (emit on your own outlet; a connector routes it
    to a downstream inlet). The `inlet_ref` form is DEPRECATED (soft, removed in 3.0) but still
    parses; use `tell` for direct delivery to a processor. *)
-send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref) ;
+(* `at <value>` schedules the delivery for an instant (TimeStamp, DateTime or ZonedDateTime); a
+   past instant is delivered immediately. `send` only: `tell`'s target may itself be a value, so
+   `tell m to x at t` already parses as a lookup. *)
+send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref) [ "at" value ] ;
 (* The addressee is EITHER a keyword-led processor_ref naming a processor statically, OR a value
    typed `Id(entity E)` naming WHICH INSTANCE to tell (`to self.id`, `to order.siteId`). They are
    told apart by the keyword leading the reference -- every processor_ref alternative is

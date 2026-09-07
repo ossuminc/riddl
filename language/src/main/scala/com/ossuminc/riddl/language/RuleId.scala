@@ -456,6 +456,7 @@ enum RuleId(
   case YieldAfterForward extends RuleId("stmt-yield-after-forward")
   case ReplyAfterForward extends RuleId("stmt-reply-after-forward")
   case ForwardNotLast extends RuleId("stmt-forward-not-last")
+  case SendAtNotInstant extends RuleId("stmt-send-at-not-instant")
   case StateRecordOutOfScope extends RuleId("state-record-out-of-scope")
   case UnknownTypeCase extends RuleId("type-unknown-type-case")
   case PatternNotAMember extends RuleId("type-pattern-not-a-member")

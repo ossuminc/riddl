@@ -990,12 +990,53 @@ case class ValidationPass(
         }
   end checkQuiescenceWindow
 
-  private def isDurationTypeExpr(te: TypeExpression): Boolean = te match
-    case _: Duration => true
-    case ate: AliasedTypeExpression =>
-      resolution.refMap.definitionOf[Type](ate.pathId).exists(t => isDurationTypeExpr(t.typEx))
-    case _ => false
-  end isDurationTypeExpr
+  private def isDurationTypeExpr(te: TypeExpression): Boolean =
+    aliasFreeTypeExpr(te) match
+      case _: Duration => true
+      case _           => false
+
+  /** Follow ALIASES only -- never cardinality wrappers, so `Duration?` is not a Duration and
+    * `TimeStamp*` is not an instant. Carries the same `eq` visited list `underlyingTypeExpr` does,
+    * because `type A is B` / `type B is A` is a real crash this repo has already had once.
+    */
+  private def aliasFreeTypeExpr(te: TypeExpression, visited: Seq[Type] = Nil): TypeExpression =
+    te match
+      case ate: AliasedTypeExpression =>
+        resolveTypeAlias(ate) match
+          case Some(t) if !visited.exists(_ eq t) => aliasFreeTypeExpr(t.typEx, visited :+ t)
+          case _                                  => te
+      case other => other
+  end aliasFreeTypeExpr
+
+  /** `send ... at <instant>` -- the instant must denote a point in time: TimeStamp, DateTime or
+    * ZonedDateTime (Reid, 2026-09-07). A `Date` has no time of day and a `Duration` is a span, so
+    * neither says WHEN; both are Errors. Silent when the type cannot be determined (an unascribed
+    * `prompt(...)`, a `let` of unknown type) -- reporting there would be reasoning from absence,
+    * the same conservative rule A20's unascribed-hole warning follows.
+    */
+  private def checkSendAtInstant(
+    s: SendStatement,
+    instant: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    valueTypeExpr(instant, parents, lets, elements).foreach { te =>
+      aliasFreeTypeExpr(te) match
+        case _: TimeStamp | _: DateTime | _: ZonedDateTime => ()
+        case _ =>
+          messages.addError(
+            instant.loc,
+            s"The 'at' instant of 'send ${s.msg.format}' is typed ${te.format}, not TimeStamp, " +
+              "DateTime or ZonedDateTime",
+            suggestion =
+              "Schedule with a value that names a point in time: a TimeStamp/DateTime/ZonedDateTime " +
+                "field or constant, or system.now. A Date has no time of day; a Duration is a span, " +
+                "not an instant.",
+            ruleId = Some(RuleId.SendAtNotInstant)
+          )
+    }
+  end checkSendAtInstant
 
   private def validateOnClause(onClause: OnClause): Unit =
     if onClause.statements.isEmpty then
@@ -2397,7 +2438,7 @@ case class ValidationPass(
               target <- resolvePath[Field](fr.pathId, parents)
             do checkAssignable(target.typeEx, actual, None, parents, sv.loc, s"Field '${target.id.value}'")
           case _ => ()
-      case SendStatement(_, msg, portlet) =>
+      case SendStatement(_, msg, portlet, _) =>
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
         // checkStatementScopes (both need the threaded `let`/element scope — A56/message-value-source).
         msg match
@@ -5306,7 +5347,7 @@ case class ValidationPass(
                     resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach(referenced += _)
                   case _ => ()
                 walkStatements(clause.contents) {
-                  case SendStatement(_, msg, _)       => clauseOperandType(msg, clause).foreach(referenced += _)
+                  case SendStatement(_, msg, _, _)    => clauseOperandType(msg, clause).foreach(referenced += _)
                   case TellStatement(_, msg, _, _)    => clauseOperandType(msg, clause).foreach(referenced += _)
                   case ForwardStatement(_, msg, _)    => clauseOperandType(msg, clause).foreach(referenced += _)
                   case LetStatement(_, _, Some(tr), _) =>
@@ -5405,8 +5446,8 @@ case class ValidationPass(
           adaptor.handlers.foreach { handler =>
             handler.clauses.foreach { clause =>
               walkStatements(clause.contents) {
-                case SendStatement(_, mr: MessageRef, _) => sendTellRefs.append(mr)
-                case SendStatement(_, ctor: Constructor, _) =>
+                case SendStatement(_, mr: MessageRef, _, _) => sendTellRefs.append(mr)
+                case SendStatement(_, ctor: Constructor, _, _) =>
                   ctor.ref match
                     case mr: MessageRef => sendTellRefs.append(mr)
                     case _              => ()
@@ -7148,7 +7189,7 @@ case class ValidationPass(
       case let: LetStatement    => Seq(let.expression)
       case put: PutStatement    => Seq(put.value)
       case ret: ReturnStatement => Seq(ret.value)
-      case snd: SendStatement   => Seq(snd.msg)
+      case snd: SendStatement   => Seq(snd.msg) ++ snd.at.toSeq // `at <instant>` is a full Value
       case tel: TellStatement   => Seq(tel.msg)
       case yld: YieldStatement  => Seq(yld.msg)
       case rpl: ReplyStatement  => Seq(rpl.msg)
@@ -10620,6 +10661,15 @@ case class ValidationPass(
             case mr: MessageRef => checkBareMessageOperand(mr, "send") // Task 4
           recordDeliverableType(s, s.msg, parents, lets, elements)
           checkTransmittedPortletType(s.loc, s.msg, s.portlet, parents, lets, elements)
+          // `send ... at <instant>` (2026-09-07). Deliberately UNCHANGED by the instant: A23's effect
+          // set (a scheduled send is still a transmission, not a local state change), the discharge
+          // rules (a `send` has not settled `yields` since rc.19, scheduled or not), A6 reachability
+          // (the channel must exist now; only the delivery is later), outlet ownership and portlet
+          // typing above.
+          s.at.foreach { instant =>
+            validateValue(instant, parents, lets, elements)
+            checkSendAtInstant(s, instant, parents, lets, elements)
+          }
         case s: ForwardStatement =>
           s.msg match
             case c: Constructor => validateValue(c, parents, lets, elements)

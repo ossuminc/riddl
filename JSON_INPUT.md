@@ -247,7 +247,7 @@ Statements appear in handler on-clauses and function bodies.
 { "kind": "require", "condition": "..." }                     // or "invariant": "<name>"
 { "kind": "require", "invariant": "UnderLimit", "argument": <value> }  // for `requires <type>` invariants
 { "kind": "set", "field": "<path>", "value": "..." }          // or "state": "<path>"
-{ "kind": "send", "message": {"ref":"M","kind":"command"}, "to": "<path>", "portlet": "inlet" }  // inlet|outlet
+{ "kind": "send", "message": {"ref":"M","kind":"command"}, "to": "<path>", "portlet": "inlet" }  // inlet|outlet; optional "at": <value> schedules delivery for an instant
 { "kind": "tell", "message": {"ref":"M","kind":"command"}, "to": "<path>", "processor": "entity" } // entity|context|projector|repository|adaptor
 { "kind": "morph", "entity": "<path>", "state": "<path>", "value": {"ref":"E","kind":"event"} }
 { "kind": "become", "entity": "<path>", "handler": "<path>" }

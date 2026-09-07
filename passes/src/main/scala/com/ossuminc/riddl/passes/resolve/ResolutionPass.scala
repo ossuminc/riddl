@@ -385,9 +385,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case BecomeStatement(_, entity, handler) =>
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[Handler](parents.head, resolveARef[Handler](handler, parents))
-      case SendStatement(_, msg, portlet) =>
+      case SendStatement(_, msg, portlet, instant) =>
         resolveMessageOperand(msg, parents)
         associateUsage[Portlet](parents.head, resolveARef[Portlet](portlet, parents))
+        instant.foreach(v => resolveValue(v, parents)) // `send ... at <instant>`
       case MorphStatement(_, entity, state, message) =>
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[State](parents.head, resolveARef[State](state, parents))
@@ -838,6 +839,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         quietly {
           resolveMessageOperand(s.msg, parents)
           associateUsage[Portlet](parents.head, resolveARef[Portlet](s.portlet, parents))
+          s.at.foreach(v => resolveValue(v, parents)) // `send ... at <instant>`
         }
       case s: TellStatement =>
         quietly {

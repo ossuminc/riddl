@@ -4089,11 +4089,18 @@ object AST:
     // A54: the message operand is a bare ref or a constructor that builds the message value.
     // A56: it may also be a [[ValueRef]] naming an on-clause binding. See [[TellStatement]].
     msg: MessageRef | Constructor | ValueRef,
-    portlet: PortletRef[Portlet]
+    portlet: PortletRef[Portlet],
+    // `send ... at <instant>` (2026-09-07): schedule the delivery for an instant typed TimeStamp,
+    // DateTime or ZonedDateTime (CM §20). A past instant is delivered immediately; nothing cancels
+    // a scheduled send, so the idiom is to schedule to yourself and decide at fire time. TRAILING and
+    // defaulted, because `@JSExportTopLevel` requires defaulted parameters to come last. Absent ⇒ the
+    // send is exactly what it was before this field existed.
+    at: Option[Value] = None
   ) extends Statement {
     override def kind: String = "Send Statement"
     override def canFail: Boolean = true // A12: sending to a portlet may fail
-    def format: String = s"send ${msg.format} to ${portlet.format}"
+    def format: String =
+      s"send ${msg.format} to ${portlet.format}" + at.map(v => s" at ${v.format}").getOrElse("")
   }
 
   /** Pass the handled message onward and DISCHARGE the response obligation, because whatever

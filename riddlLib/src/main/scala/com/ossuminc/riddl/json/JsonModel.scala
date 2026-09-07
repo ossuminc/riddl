@@ -755,7 +755,13 @@ object JsonModel:
   /** `{ "kind": "send", "message": <msgRef|constructor>, "to": "<path>", "portlet":
     * "inlet"|"outlet" }`
     */
-  case class SendStmtDto(message: MsgOperandDto, to: String, portlet: String) extends StatementDto
+  case class SendStmtDto(
+    message: MsgOperandDto,
+    to: String,
+    portlet: String,
+    // `send ... at <instant>` -- optional `"at": <value>`; absent means an unscheduled send.
+    at: Option[ValueDto] = None
+  ) extends StatementDto
 
   /** `{ "kind": "forward", "message": <msgRef|constructor>, "to": "<path>", "target":
     * "inlet"|"outlet"|"entity"|"context"|"projector"|"repository"|"adaptor" }`
@@ -2001,7 +2007,13 @@ object JsonModel:
             )
           case "set" =>
             SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), readValue(m("value")))
-          case "send" => SendStmtDto(readMsgOperand(m("message")), m("to").str, m("portlet").str)
+          case "send" =>
+            SendStmtDto(
+              readMsgOperand(m("message")),
+              m("to").str,
+              m("portlet").str,
+              m.get("at").map(readValue)
+            )
           case "forward" =>
             ForwardStmtDto(readMsgOperand(m("message")), m("to").str, m("target").str)
           case "morph" =>
@@ -2127,12 +2139,14 @@ object JsonModel:
             ++ state.map(x => "state" -> (ujson.Str(x): ujson.Value))
             ++ Seq("value" -> (writeValue(value): ujson.Value))
         )
-      case SendStmtDto(message, to, portlet) =>
-        ujson.Obj(
-          "kind" -> ujson.Str("send"),
-          "message" -> writeMsgOperand(message),
-          "to" -> ujson.Str(to),
-          "portlet" -> ujson.Str(portlet)
+      case SendStmtDto(message, to, portlet, at) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("send"),
+            "message" -> writeMsgOperand(message),
+            "to" -> ujson.Str(to),
+            "portlet" -> ujson.Str(portlet)
+          ) ++ at.map(v => "at" -> (writeValue(v): ujson.Value))
         )
       case ForwardStmtDto(message, to, target) =>
         ujson.Obj(
@@ -2732,6 +2746,7 @@ object JsonModel:
     * object existed was wrong.
     */
   val knownKeys: Set[String] = Set(
+    "at", // SendStmtDto: `send ... at <instant>`
     "window",
     "$at",
     "$kind",

@@ -219,8 +219,11 @@ private[parsing] trait StatementParser {
   // still parse; the inlet branch emits a deprecation at the ref (mirrors reply -> yield, prompt).
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
-      Index ~ Keywords.send ~/ deliverableMessageValue ~/ to ~ (outletRef | inletRef) ~/ Index
-    )./.map { case (start, msg, portlet, end) =>
+      // `at <value>` (2026-09-07) schedules delivery for an instant. `at` is a Readability token, so
+      // it is optional and non-cutting; `value` follows, and a bare path there is a ValueRef.
+      Index ~ Keywords.send ~/ deliverableMessageValue ~/ to ~ (outletRef | inletRef) ~
+        (at ~ value).? ~/ Index
+    )./.map { case (start, msg, portlet, instant, end) =>
       portlet match
         case ref: InletRef =>
           deprecation(
@@ -231,7 +234,7 @@ private[parsing] trait StatementParser {
             autoFixable = false
           )
         case _ => ()
-      SendStatement(at(start, end), msg, portlet)
+      SendStatement(at(start, end), msg, portlet, instant)
     }
   }
 

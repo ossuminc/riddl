@@ -1456,8 +1456,8 @@ object JsonAstBuilder:
             ctx.err("set statement needs a 'field' or a 'state' target")
             FieldRef(curAt, PathIdentifier.empty)
         SetStatement(curAt, target, buildValue(value))
-      case SendStmtDto(message, to, portlet) =>
-        SendStatement(curAt, buildDeliverableOperand(message), portletRef(to, portlet))
+      case SendStmtDto(message, to, portlet, at) =>
+        SendStatement(curAt, buildDeliverableOperand(message), portletRef(to, portlet), at.map(buildValue))
       case ForwardStmtDto(message, to, target) =>
         // The kind string says which shape it is: portlet kinds are exactly inlet/outlet, and a
         // processor kind is never either, so the discrimination is total without a fallback that
