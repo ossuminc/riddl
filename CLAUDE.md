@@ -2347,6 +2347,52 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   (Adding the fold moved NOTHING in the corpus — it is correct-by-idiom, not
   evidenced by movement.)
 
+- **THE ADAPTOR IS THE BOUNDARY for the pair it names (A103, Reid 2026-09-05/06; CM §§7.2, 7.7,
+  8.1). This REVERSES the "no adaptor exemption" ruling recorded in the next two entries** — read
+  them as history, not as the rule. An Adaptor declared in context A `to context B` or `from
+  context B` is boundary surface of A for that ordered pair and direction. The old rule compelled
+  the foreign message type onto the context's own portlet and into its own handler, contradicting
+  §7.6's isolation seam ("the ONLY sanctioned place another context's types are named"); one of the
+  two had to go. Landed 2026-09-06 in two commits, permissive then adamant, on Reid's instruction.
+  - **Ports are IMPLIED**: `Adaptor.arityShape` counts each side as at least one, so a port-less
+    adaptor is a `flow`; declaring a port overrides that side. `validateProcessorShape` checks an
+    adaptor even when port-less, so `as source`/`as merge` on one is an Error (the corpus's 31
+    one-outlet `as source` adaptors included). **No AST change**: `AdaptorContents` already admits
+    ports.
+  - **No grammar change for the endpoint (Reid's choice)**: `from outlet Sales.ToBilling` already
+    parsed; `ResolutionPass.resolveConnectorEnd` accepts an Adaptor where a portlet was expected
+    and records it. **Every streaming check resolves endpoints through ONE abstraction**,
+    `StreamingValidation.ConnectorEnd` (`DeclaredEnd` | `ImpliedEnd`) via `connectorFrom`/
+    `connectorTo` — seven sites used to call `resolvePath[Outlet]`/`[Inlet]` each. Do not add an
+    eighth. Consequences: type agreement is skipped when an end is implied (nothing is
+    synthesised); an implied port has cardinality one and is never reported unconnected; a cycle
+    through an implied port is undetected (the edge carries no declared type); the unattached-port
+    check collects each side independently — the old PAIR collection would have reported a declared
+    far inlet as unconnected whenever the near end was implied. Check 1 ("no connections") excludes
+    processors with no DECLARED ports, or ~1000 corpus adaptors would have warned.
+  - **The boundary exemption is DIRECTIONAL, in both checks.** `checkBoundaryEncapsulation`: an
+    OUTBOUND adaptor toward B may be the `from` end of a connector into B; an INBOUND adaptor from
+    B may be the `to` end of one leaving B; the referent must be the far context of THIS
+    connector. `reachesPastContextBoundary` (the ONE boundary test for statements) exempts a
+    target that is an inbound adaptor whose referent is the SENDER's context. Wrong way round, or
+    toward a third context, still errors.
+  - **Typing is VALIDATED, never SYNTHESISED** (`adaptor-target-no-admitting-inlet`): a
+    `tell`/`forward ... to context X` from inside an adaptor is an Error unless X declares an inlet
+    whose type IS the message type or whose alternation CONTAINS it — `typeAdmits`, the one
+    permissive type test, shared with the chain-tail rule; `areSameType` stays strict for
+    connectors. By-name form only; a portlet-named `send` is already checked against the portlet.
+    Inbound adaptors address their OWN context, and the same rule applies to it — which is how
+    shopping-cart's adaptor telling an event to a context whose inlets are all commands was found.
+  - **EXCLUSIVITY** (`stream-connector-bypasses-adaptor`): where A declares an outbound adaptor
+    toward B, a connector from A's OWN outlet into B is an Error naming the adaptor (AR2); where A
+    declares an inbound adaptor from B, a connector from B onto A's own inlet is an Error (AR6). An
+    un-adaptored direction crosses context-to-context as before. **This is what made the old
+    two-hop shape illegal**, and why the permissive half had to land first.
+  - **`send` obeys ownership** (`stmt-outlet-not-owned`): a `send`/`forward` may name only an outlet
+    whose parent chain contains the sending processor. A6 bound `tell` this way since 2026-09-02;
+    `send` had no check, so an adaptor in OnlineOrdering published on FrontOfHouse's outlet with
+    zero errors. `send ... to inlet X` is a delivery, judged by the boundary rules, not here.
+
 - **A cross-context connector must land on the CONTEXT'S OWN portlet — an Error**
   (Reid, 2026-08-18, choosing Error over CompletenessWarning).
   `StreamingValidation.checkBoundaryEncapsulation`. Reaching past the boundary onto

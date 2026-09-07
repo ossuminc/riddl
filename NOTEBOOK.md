@@ -10,50 +10,37 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-09-04 (evening) by running, not recalling
+### Build state — verified 2026-09-06 by running, not recalling
 
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
 `FORMAT_REVISION` is 23.**
 
-**`../bin/riddlc` is `2.1.0-12-ef74c0fe`**, restaged via `scripts/publish-and-stage.sh` after
-the chain-tail/no-cycle commits landed; ivy artifacts are the same build. The ONLY commit after
-it is a NOTEBOOK-only edit (this one), so it is current in behaviour. Check rather than trust:
-`../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`. Behaviour
-verified with probes: a self-loop draws `stream-graph-cycle` (Error); a source into a router
-whose outlets lead nowhere still draws `stream-source-reaches-no-sink`; the 2026-09-03 A6 and
-adaptor-target rules still fire.
+**`../bin/riddlc` is restaged from `main` HEAD after the A103 commits** (`a819670d7` permissive,
+`1a434ced5` adamant) via `scripts/publish-and-stage.sh`, and the JVM/JS/Native libraries are
+publishLocal'd from the same build — riddl-models and riddl-generator catch up from these, per
+Reid. Check `../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`; a
+docs-only commit may sit between them and changes no behaviour.
 
-**The corpus gate is GREEN: 190/190** in `RiddlModelsRoundTripTest`, and `riddlc from
-<model>.conf validate` over all 191 riddl-models entry points reports **0**
-`stream-source-reaches-no-sink`, **0** `stream-graph-cycle`, **0** errors — against riddl-models
-`15356fd` (their A6 migration, complete on errors). Both 2026-09-04 task files are in
-`task/done/`; nothing is pending from riddl-models.
+**The corpus gate is RED for a filed reason: 9 of 190 models**, all on A103's adamant rules
+(`stmt-outlet-not-owned` 206, `as source` on adaptors 32, `stream-connector-bypasses-adaptor`
+14 + 11, `adaptor-target-no-admitting-inlet` 1) against riddl-models `bb17dd6ec`. riddl-models'
+migration task is `riddl-models/task/2026-09-06-adaptors-lose-their-plumbing.md`. Both A103
+task files are in `task/done/` with Results. **Not a rule to soften.**
 
 ### Certainty — what was actually run
 
-**Morning, full regression from a CLEAN state** (throwaway sbt cache, every module its own
-`testOnly *`, all three platforms, scripted, TatSu, both external corpora): all green except the
-33 corpus models that riddl-models has since migrated. Details in the 2026-09-04 entry below.
-
-**Evening, after the chain-tail/no-cycle change** (`3658d79f1`), re-run on the SHARED cache:
+After `1a434ced5`, on the shared cache, each module its own `testOnly *`:
 
 | suite | result |
 |---|---|
-| JVM `language` 757, `passes` 1703 (+9), `commands` 355 (190/190 corpus), `riddlLib` 157 | green |
-| JS `passes` 317; Native `passes` 1691 (+9) | green |
-| TatSu 118/141 (dokn.riddl rewired, still accepted) | green |
+| JVM `language` 757, `passes` 1735 (+32), `riddlLib` 157 | green |
+| JVM `commands` 346 + 9 corpus | the 9 above, nothing else |
+| JS `passes` 317; Native `passes` 1723 (+32) | green |
+| TatSu 118/141 (dokn.riddl rewired twice, still accepted) | green |
 
-**NOT re-run since that change**: JVM `utils`/`testkit`/`riddlc`; JS `utils`/`language`/
-`testkit`/`riddlLib`; Native `utils`/`language`/`testkit`/`commands`/`riddlLib`/`riddlc`. The
-change is confined to `passes` validation plus one `language` fixture and a `RuleId`, and every
-suite that consumes those was re-run — but do not report tri-platform green for `ef74c0fed`
-without running them. CI will.
-
-**CI on `94337e800` (run 33893864025)**: every row green except the two `commands` rows, which
-failed on reactive-bbq and `patterns/entity/event-sourced` ONLY, with A6 unreachable-target
-diagnostics — the corpus rows cloned riddl-models at 12:13 EDT, two minutes before Reid's push
-of `bb17dd6ec` completed their migration. Not a regression; the next riddl push validates against
-the migrated corpus. The CM entry is committed at the ossuminc level (`1641444`).
+**NOT re-run since `1a434ced5`**: JVM `utils`/`testkit`/`riddlc`; JS `utils`/`language`/
+`testkit`/`riddlLib`; Native everything but `passes`. The change is confined to `passes`
+validation, `ResolutionPass`, one `AST` override and fixtures; CI will cover the rest.
 
 ### Traps a fresh session would hit
 
@@ -77,11 +64,58 @@ the migrated corpus. The CM entry is committed at the ossuminc level (`1641444`)
 - **A Scala bump is ~32 sites**, since the full version is a path segment; a grep omitting
   `.github/` misses 11.
 
-### `task/` — empty, 155 in `done/`
+### `task/` — empty, 157 in `done/`
 
 Nothing awaits triage. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-06 — A103: the adaptor IS the boundary, both halves in one day
+
+riddl-generator filed two task files: the PERMISSIVE half (AR1/AR3/AR4/AR5, permissions only)
+and the ADAMANT half (AR2/AR6/AR8 and the ascription Error), sequenced so the corpus could
+migrate between them. Reid ruled: do both now; riddl-models and riddl-generator catch up from
+the restaged binary. Landed as `a819670d7` then `1a434ced5`. Durable statement in `CLAUDE.md`
+§ Validation Specifics; CM §§7.2, 7.7, 8.1 were patched by riddl-generator's session first.
+
+**One abstraction, seven sites.** Seven checks each called `resolvePath[Outlet]`/`[Inlet]` on a
+connector end. Making an adaptor a legal endpoint through all seven independently would have
+been the "one derivation written seven times" defect this notebook keeps recording. So
+`ConnectorEnd` (`DeclaredEnd` | `ImpliedEnd`) with `connectorFrom`/`connectorTo`, and every site
+asks it. The one place I had to think per-site was what an implied port MEANS to each check:
+no type (skip agreement; carry nothing on the cycle graph), one port (cardinality one), not
+declared (never "unconnected"). Writing those four answers down was the design; the code
+followed.
+
+**The unattached-port check had a latent pairing bug the new shape exposed.** It collected
+(outlet, inlet) PAIRS, so a connector whose one end failed to resolve dropped its OTHER end from
+the in-use set and reported a perfectly connected port as unconnected. Harmless while both ends
+always resolved or neither did; with implied ends, a false warning on exactly the shape being
+introduced. Each side is collected independently now.
+
+**The CM example did not parse.** riddl-generator's patch spelled the endpoint `to adaptor
+ToBillingSystem`, but the same task recorded Reid's choice of NO grammar change, so the
+accepted spelling is `to inlet Billing.ToBillingSystem` with the path resolving to the adaptor.
+Corrected the CM rather than adding syntax the ruling declined. A spec author writing the
+example they WISH parsed is a shape to watch for.
+
+**A permissive half that stays green needs the count of what it will later break.** All 31
+`as source` adaptors in the corpus declare exactly one outlet; with implied ports they derive
+`flow`, so the EXISTING ascription check would have reddened all 31 on the permissive commit.
+The count came from `grep -A6` on the declarations, before any code. The fix was a
+declared-only reading accepted for adaptors only, removed again by the adamant commit two hours
+later — short-lived scaffolding that let the two commits be bisected separately.
+
+**AR8 found eleven of our own fixtures doing the thing.** Entities and repositories publishing
+on their context's outlet, or on a sibling `source`'s, because that was the shortest way to
+get a `send` into a test. Same edit riddl-models will make ~200 times: give the sender its own
+outlet. And a bare outlet name that collides with another processor's outlet of the same name
+resolves ambiguously — `CompletenessTest`'s `out` versus the source's `out` cost one extra
+round; name the new port distinctly.
+
+**Corpus at `bb17dd6ec` after both halves: 9 of 190 red, all on these rules.** 206
+`stmt-outlet-not-owned`, 32 `as source`, 14 + 11 bypasses, 1 far end without an admitting
+inlet. Not a rule to soften; filed in both task files' Results.
 
 ## 2026-09-04 (later) — a chain ends where its message is consumed; and no cycles
 
