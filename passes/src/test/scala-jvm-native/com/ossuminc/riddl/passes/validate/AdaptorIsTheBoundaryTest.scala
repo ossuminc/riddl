@@ -25,9 +25,10 @@ import org.scalatest.TestData
   * against X's DECLARED portlets and nothing is synthesised (AR5). And A6 accepts the implied outlet
   * as owned, so the one-hop shape needs no context-level plumbing.
   *
-  * Permissive means both the old two-hop shape and the new one-hop shape validate. The Errors that
-  * make the adaptor EXCLUSIVE (AR2, AR6, AR8) and that reject a mismatched shape ascription belong to
-  * the adamant half and are not asserted here.
+  * The permissive half landed first so both the old two-hop shape and the new one-hop shape
+  * validated during the changeover; the ADAMANT half (`AdaptorIsExclusiveTest`) then made the
+  * adaptor exclusive (AR2, AR6, AR8) and the mismatched ascription an Error (AR3). The two cases at
+  * the bottom of this file record the flip: what was tolerated is now rejected, and for a reason.
   *
   * Every positive case has a negative control in the same family, so a rule cannot pass by firing on
   * nothing.
@@ -237,9 +238,10 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
       adaptor.effectiveShape mustBe a[Flow]
     }
 
-    "keep validating an adaptor with one declared outlet ascribed `as source` (permissive)" in {
+    "REJECT an adaptor with one declared outlet ascribed `as source` (adamant half)" in {
       (td: TestData) =>
-        // The corpus carries 31 of these. The ascription Error belongs to the adamant half.
+        // The corpus carried 31 of these. Tolerated by the permissive half; an Error since the
+        // adamant half, because the inlet is implied and the adaptor is a flow.
         val msgs = diagnostics(
           model(
             """    inlet In is command Ship with { briefly "i" }
@@ -251,9 +253,9 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
             fulHandler,
             """  connector Inward is from outlet Shop.Sales.FromFul.Out to inlet Shop.Sales.In with { briefly "c" }"""
           ),
-          "ar3-as-source-permissive"
+          "ar3-as-source-rejected"
         )
-        msgs.justErrors.filter(_.message.contains("is ascribed")) mustBe empty
+        msgs.justErrors.filter(_.message.contains("is ascribed 'as source'")) must not be empty
     }
   }
 
@@ -366,8 +368,11 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
 
   "the old two-hop shape" should {
 
-    "still validate: adaptor outlet -> context inlet -> context outlet -> far context inlet" in {
+    "be REJECTED once the adaptor is exclusive: the context's own outlet bypasses it (adamant)" in {
       (td: TestData) =>
+        // Validated under the permissive half; under AR2 the connector from Sales' own outlet into
+        // Ful bypasses the adaptor Sales declares toward Ful, and that is exactly what exclusivity
+        // forbids. The adaptor's outlet -> context inlet hop is still legal; the second hop is not.
         val msgs = diagnostics(
           model(
             """    inlet SIn is command Shop.Ful.Receive with { briefly "i" }
@@ -387,9 +392,9 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
             "    inlet In is command Receive with { briefly \"i\" }\n" + fulHandler,
             """  connector Hop2 is from outlet Shop.Sales.SOut to inlet Shop.Ful.In with { briefly "c" }""".stripMargin
           ),
-          "two-hop-still-legal"
+          "two-hop-now-rejected"
         )
-        msgs.justErrors.map(_.format) mustBe empty
+        errorsOf(msgs, RuleId.ConnectorBypassesAdaptor) must not be empty
     }
   }
 }

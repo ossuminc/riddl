@@ -24,8 +24,8 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
        |  context c is {
        |    command Foo is { a: Integer, b: Integer, conditionRed: Boolean }
        |    event Bar is { a: Integer, b: Integer, red: Boolean }
-       |    outlet emitted is event Bar
        |    entity e is {
+       |      outlet emitted is event Bar
        |      record CartData is { count: Integer }
        |      state Open of record CartData
        |      handler Ops is {
@@ -48,7 +48,7 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
           |          when foo.conditionRed then
           |            error "red"
           |          end
-          |          send event Bar(bar.a, bar.b, bar.conditionRed) to outlet c.emitted
+          |          send event Bar(bar.a, bar.b, bar.conditionRed) to outlet emitted
           |        }""".stripMargin
       )
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
@@ -62,7 +62,7 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
           |          when conditionRed then
           |            error "red"
           |          end
-          |          send event Bar(a, b, conditionRed) to outlet c.emitted
+          |          send event Bar(a, b, conditionRed) to outlet emitted
           |        }""".stripMargin
       )
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
@@ -77,13 +77,13 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
             |  context c is {
             |    command Foo is { foo: Integer }
             |    event Bar is { n: Integer }
-            |    outlet emitted is event Bar
             |    entity e is {
+            |      outlet emitted is event Bar
             |      record CartData is { count: Integer }
             |      state Open of record CartData
             |      handler Ops is {
             |        on foo: command Foo {
-            |          send event Bar(foo.foo) to outlet c.emitted
+            |          send event Bar(foo.foo) to outlet emitted
             |        }
             |      }
             |    }
@@ -109,7 +109,7 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
           |          when foo.a then
           |            error "not boolean"
           |          end
-          |          send event Bar(a, b, conditionRed) to outlet c.emitted
+          |          send event Bar(a, b, conditionRed) to outlet emitted
           |        }""".stripMargin
         )
         parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
@@ -120,7 +120,7 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
     "reject a path whose head resolves to nothing" in { (td: TestData) =>
       val src = model(
         """on foo: command Foo {
-          |          send event Bar(nosuchthing.a, b, conditionRed) to outlet c.emitted
+          |          send event Bar(nosuchthing.a, b, conditionRed) to outlet emitted
           |        }""".stripMargin
       )
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
@@ -133,7 +133,7 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
     "reject a multi-component path that used to pass on last-component luck" in { (td: TestData) =>
       val src = model(
         """on command Foo {
-          |          send event Bar(garbage.nonsense.conditionRed, b, conditionRed) to outlet c.emitted
+          |          send event Bar(garbage.nonsense.conditionRed, b, conditionRed) to outlet emitted
           |        }""".stripMargin
       )
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
@@ -144,7 +144,7 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
     "reject a field that does not exist on the bound message" in { (td: TestData) =>
       val src = model(
         """on foo: command Foo {
-          |          send event Bar(foo.nosuchfield, b, conditionRed) to outlet c.emitted
+          |          send event Bar(foo.nosuchfield, b, conditionRed) to outlet emitted
           |        }""".stripMargin
       )
       parseAndValidate(src, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
@@ -156,7 +156,7 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
       val src = model(
         """on Foo2: command Foo {
           |          let Bar2 = Foo2
-          |          send event Bar(a, b, conditionRed) to outlet c.emitted
+          |          send event Bar(a, b, conditionRed) to outlet emitted
           |        }""".stripMargin
       )
       // Pin the options: these are StyleWarnings, and ambient options vary across a full run.
@@ -177,7 +177,7 @@ class OnClauseBindingValidationTest extends AbstractValidatingTest {
       val src = model(
         """on command Foo {
           |          let Bar = a
-          |          send event Bar(a, b, conditionRed) to outlet c.emitted
+          |          send event Bar(a, b, conditionRed) to outlet emitted
           |        }""".stripMargin
       )
       pc.withOptions(CommonOptions.default) { _ =>

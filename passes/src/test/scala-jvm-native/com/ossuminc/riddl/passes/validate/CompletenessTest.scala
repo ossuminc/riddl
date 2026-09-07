@@ -176,11 +176,12 @@ class CompletenessTest extends AbstractValidatingTest {
           |    command Cmd is { data: String }
           |    event Evt is { data: String }
           |    entity E is {
+          |      outlet emit is event Evt
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
           |        on command D.C.Cmd {
-          |          send event D.C.Evt to outlet D.C.Events.out
+          |          send event D.C.Evt to outlet emit
           |        }
           |        on query D.C.GetData {
           |          do "return data"
@@ -208,6 +209,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    command Cmd is { data: String }
           |    event Evt is { data: String }
           |    entity E is {
+          |      outlet emit is event Evt
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
@@ -215,7 +217,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |          do "should set state here"
           |        }
           |        on command D.C.Cmd {
-          |          send event D.C.Evt to outlet D.C.Events.out
+          |          send event D.C.Evt to outlet emit
           |        }
           |        on query D.C.GetData {
           |          do "return data"
@@ -243,6 +245,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |    command Cmd is { data: String }
           |    event Evt is { data: String }
           |    entity E is {
+          |      outlet emit is event Evt
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
@@ -250,7 +253,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |          set field E.Fields.data to "default"
           |        }
           |        on command D.C.Cmd {
-          |          send event D.C.Evt to outlet D.C.Events.out
+          |          send event D.C.Evt to outlet emit
           |        }
           |        on query D.C.GetData {
           |          do "return data"
@@ -506,12 +509,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |    command Cmd is { data: String }
           |    event Evt is { data: String }
           |    entity E is {
+          |      outlet emit is event Evt
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
-          |          send event D.C.Evt to outlet D.C.Events.out
+          |          send event D.C.Evt to outlet emit
           |        }
           |      }
           |    }
@@ -843,15 +847,16 @@ class CompletenessTest extends AbstractValidatingTest {
           |    query GetData is { id: String }
           |    result DataResult is { data: String }
           |    entity E is {
+          |      outlet emit is event Evt
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
-          |          send event D.C.Evt to outlet D.C.Events.out
+          |          send event D.C.Evt to outlet emit
           |        }
           |        on query D.C.GetData {
-          |          send result D.C.DataResult to outlet D.C.Events.out
+          |          send result D.C.DataResult to outlet emit
           |        }
           |      }
           |    }
@@ -1139,15 +1144,16 @@ class CompletenessTest extends AbstractValidatingTest {
           |    query GetData is { id: String }
           |    result DataResult is { data: String }
           |    entity E is {
+          |      outlet emit is event Evt
           |      record Fields is { data: String }
           |      state Main of record E.Fields
           |      handler H is {
           |        on init { set field E.Fields.data to "x" }
           |        on command D.C.Cmd {
-          |          send event D.C.Evt to outlet D.C.Events.out
+          |          send event D.C.Evt to outlet emit
           |        }
           |        on query D.C.GetData {
-          |          send result D.C.DataResult to outlet D.C.Events.out
+          |          send result D.C.DataResult to outlet emit
           |        }
           |      }
           |    }
@@ -1314,11 +1320,12 @@ class CompletenessTest extends AbstractValidatingTest {
           |      record Fields is { balance: Number }
           |      invariant BalanceNonNegative is "balance >= 0"
           |      state Main of record E.Fields
+          |      outlet emit is event Evt
           |      handler H is {
           |        on init { set field E.Fields.balance to 0 }
           |        on command D.C.Cmd {
           |          require invariant BalanceNonNegative
-          |          send event D.C.Evt(amount = 100) to outlet D.C.Events.out
+          |          send event D.C.Evt(amount = 100) to outlet emit
           |        }
           |      }
           |    }

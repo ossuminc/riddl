@@ -149,6 +149,7 @@ enum RuleId(
   case SourceReachesNoSink extends RuleId("stream-source-reaches-no-sink")
   case SinkReachedByNoSource extends RuleId("stream-sink-reached-by-no-source")
   case GraphCycle extends RuleId("stream-graph-cycle")
+  case ConnectorBypassesAdaptor extends RuleId("stream-connector-bypasses-adaptor")
   case BoundaryOutlet extends RuleId("stream-boundary-outlet")
   case BoundaryInlet extends RuleId("stream-boundary-inlet")
   case CrossesDomains extends RuleId("stream-crosses-domains")
@@ -230,6 +231,7 @@ enum RuleId(
 
   // ---- stmt: statements and their operands -------------------------------------------------
   case ForwardWrongClause extends RuleId("stmt-forward-wrong-clause")
+  case OutletNotOwned extends RuleId("stmt-outlet-not-owned")
   case ForwardWrongMessage extends RuleId("stmt-forward-wrong-message")
   case SelfNotAMessage extends RuleId("stmt-self-not-a-message")
   case OperandWrongType extends RuleId("stmt-operand-wrong-type")

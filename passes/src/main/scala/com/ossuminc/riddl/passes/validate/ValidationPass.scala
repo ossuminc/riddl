@@ -2041,6 +2041,49 @@ case class ValidationPass(
     end for
   end checkAdaptorTargetAdmitsMessage
 
+  /** AR8 (Reid, 2026-09-06; CM §8.1 "The ownership rule binds `send` as well as `tell`"): a
+    * processor publishes only through its OWN outlet, and that is a claim about publication, not
+    * about which keyword performed it. A6 has checked `tell` since 2026-09-02; `send` -- and
+    * `forward` to a portlet -- named ANY outlet in scope with no check at all, so an adaptor could
+    * publish on its CONTEXT's outlet (reactive-bbq's `ToKitchen`), and one in `OnlineOrdering`
+    * published on `FrontOfHouse`'s -- a different context entirely -- with zero errors. A hole
+    * straight through the encapsulation that `stream-boundary-outlet`, `msg-target-crosses-boundary`
+    * and A6 all exist to defend.
+    *
+    * "Own" means the outlet's parent chain contains the sending processor: the outlet is the
+    * sender's, or belongs to something nested inside it (a `source` wrapped in an adaptor, the shape
+    * `SharedAdaptorTest` pins). A Context's own handler publishing on the Context's outlet is the
+    * Context publishing, and passes. Only OUTLETS: a `send ... to inlet X` is a delivery, judged by
+    * the boundary rules, not a publication. Silent with no enclosing processor (a saga step, a
+    * function), the conservative rule for an undeterminable sender.
+    */
+  private def checkOutletOwnership(
+    kind: String,
+    portlet: Portlet,
+    loc: At,
+    parents: Parents
+  ): Unit =
+    portlet match
+      case outlet: Outlet =>
+        enclosingProcessorOf(parents).foreach { sender =>
+          val owned = symbols.parentsOf(outlet).exists(_ eq sender)
+          if !owned then
+            val owner = symbols.parentOf(outlet).map(_.identify).getOrElse("another definition")
+            messages.addError(
+              loc,
+              s"'$kind' in ${sender.identify} publishes on ${outlet.identify}, which belongs to " +
+                s"$owner; a processor publishes only through its OWN outlet",
+              suggestion =
+                s"Declare an outlet on ${sender.identify} and $kind on that, wiring it onward with " +
+                  s"a connector. An adaptor's outlet is implied by its direction and needs no " +
+                  s"declaration: 'tell ... to context X' publishes on it.",
+              ruleId = Some(RuleId.OutletNotOwned)
+            )
+        }
+      case _ => ()
+    end match
+  end checkOutletOwnership
+
   private def enclosingProcessorOf(parents: Parents): Option[Processor[?]] =
     parents.collectFirst {
       case p: Processor[?] => Some(p)
@@ -2220,6 +2263,7 @@ case class ValidationPass(
             checkTargetBoundary(portlet.pathId, owner, statement.loc, "send", parents)
             checkAdaptorTargetsContext("send", owner, statement.loc, parents)
           }
+          checkOutletOwnership("send", p, statement.loc, parents)
         }
       case ForwardStatement(_, msg, target) =>
         // Same operand split as send/tell: a bare MessageRef is checked here, while a Constructor
@@ -2241,6 +2285,7 @@ case class ValidationPass(
                 checkTargetBoundary(portlet.pathId, owner, statement.loc, "forward", parents)
                 checkAdaptorTargetsContext("forward", owner, statement.loc, parents)
               }
+              checkOutletOwnership("forward", p, statement.loc, parents)
             }
           case processor: ProcessorRef[?] =>
             checkRef[Processor[?]](processor, parents).foreach { proc =>
@@ -5160,7 +5205,10 @@ case class ValidationPass(
       // A portless processor (0 inlets, 0 outlets) is an incomplete placeholder, not a
       // contradiction: it is flagged elsewhere as "should have content". Only compare the
       // ascription against the arity once at least one port is declared.
-      case Some(ascribed) if numOutlets + numInlets >= 1 =>
+      // An ADAPTOR is checked even when port-less (A103, adamant half): its ports are implied by
+      // its direction, so it always has an arity to compare against, and `as source`/`as merge` on
+      // a port-less adaptor used to be silently ignored text (riddl-generator's probe B).
+      case Some(ascribed) if numOutlets + numInlets >= 1 || processor.isInstanceOf[Adaptor] =>
         // ONE reading, not two (Reid, 2026-08-16): an `error-sink` inlet is infrastructure, never
         // dataflow, so `arityShape` already excludes it. The dual acceptance that used to live
         // here is gone -- accepting either reading let an infrastructure inlet justify whatever
@@ -5174,24 +5222,26 @@ case class ValidationPass(
         // cannot excuse a flow ascribed as a merge, which is the case the ruling exists to catch.
         val isPureErrorReceiver =
           processor.dataflowInlets.isEmpty && numOutlets == 0 && numInlets >= 1
-        // A103 PERMISSIVE HALF: an Adaptor's `arityShape` now counts its IMPLIED ports, so an
-        // adaptor declaring one outlet derives `flow` where it used to derive `source` -- and the
-        // corpus carries 31 such adaptors ascribed `as source`. Until riddl-models migrates, the
-        // DECLARED-ONLY reading is accepted alongside the implied one; the adamant half removes
-        // this arm and the ascription becomes an Error. Adaptors only -- no other processor has
-        // implied ports.
-        val declaredOnly: Seq[String] = processor match
-          case a: Adaptor => Seq(a.shapeForArity(numOutlets, a.dataflowInlets.size).keyword)
-          case _          => Seq.empty
+        // An Adaptor's `arityShape` counts its IMPLIED ports (A103), so an adaptor declaring one
+        // outlet derives `flow` where it used to derive `source`. The permissive half accepted the
+        // declared-only reading too while the corpus migrated; the adamant half removed that arm,
+        // so the corpus's 31 `as source` adaptors are reported until riddl-models drops the
+        // ascription. An adaptor IS a flow; saying otherwise is a contradiction.
         val acceptable: Seq[String] =
-          (if isPureErrorReceiver then Seq(derived.keyword, Sink(At.empty).keyword)
-           else Seq(derived.keyword)) ++ declaredOnly
+          if isPureErrorReceiver then Seq(derived.keyword, Sink(At.empty).keyword)
+          else Seq(derived.keyword)
         if !acceptable.contains(ascribed.keyword) then
+          val why = processor match
+            case _: Adaptor =>
+              s"an adaptor's ports are implied by its direction (one inlet and one outlet, plus " +
+                s"any it declares), so its shape is ${derived.keyword}"
+            case _ =>
+              s"its DATAFLOW arity ($numOutlets outlets, ${processor.dataflowInlets.size} inlets, " +
+                s"excluding ${numInlets - processor.dataflowInlets.size} error-sink) is " +
+                s"${derived.keyword}"
           messages.addError(
             processor.errorLoc,
-            s"${processor.identify} is ascribed 'as ${ascribed.keyword}' but its DATAFLOW arity " +
-              s"($numOutlets outlets, ${processor.dataflowInlets.size} inlets, excluding " +
-              s"${numInlets - processor.dataflowInlets.size} error-sink) is ${derived.keyword}",
+            s"${processor.identify} is ascribed 'as ${ascribed.keyword}' but $why",
             suggestion =
               s"Change the ascription to 'as ${derived.keyword}', or adjust the inlets/outlets so the " +
                 s"arity matches 'as ${ascribed.keyword}'.",

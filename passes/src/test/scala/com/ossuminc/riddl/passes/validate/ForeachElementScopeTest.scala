@@ -38,8 +38,8 @@ class ForeachElementScopeTest extends AbstractValidatingTest {
        |    record St is { lines is many Line, byId is mapping from Integer to Entry, note is String }
        |    command Cmd is { order is Order, note is String }
        |    event Shipped is { sku is String }
-       |    outlet Out is event Shipped
        |    entity E is {
+       |      outlet Out is event Shipped
        |      state S of record St is {
        |        handler H is {
        |          on command Cmd { $body }

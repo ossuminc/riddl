@@ -649,6 +649,71 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     end for
   }
 
+  /** AR2 and AR6's consequence -- the adaptor is EXCLUSIVE (Reid, 2026-09-06; CM §8.1): *"being
+    * adamant about the processing between two contexts being done by the declared adaptor."*
+    *
+    * If context A declares an adaptor toward context B in a direction, EVERY crossing between A and
+    * B in that direction goes through it. So, for a connector crossing from `oc` to `ic`:
+    *   - AR2: leaving from `oc`'s OWN outlet while `oc` declares an OUTBOUND adaptor toward `ic` is
+    *     an Error -- the crossing must leave from that adaptor;
+    *   - AR6: arriving at `ic`'s OWN inlet while `ic` declares an INBOUND adaptor from `oc` is an
+    *     Error -- the foreign message reaches the adaptor FIRST and is translated before anything
+    *     native observes it (the referent's journal is never the source).
+    * Without this the adaptor is advisory -- a translator a modeller may quietly route around -- and
+    * the anti-corruption layer stops being a layer. A direction the context has NOT adaptored is
+    * unaffected and crosses context-to-context exactly as before, which is the negative control.
+    *
+    * The message names the adaptor being bypassed; without that the modeller cannot act on it.
+    * `ctx.adaptors` sees through includes, so an adaptor declared in an included file counts.
+    */
+  private def checkAdaptorExclusivity(
+    connector: Connector,
+    maybeFromEnd: Option[ConnectorEnd],
+    maybeToEnd: Option[ConnectorEnd],
+    outletCtx: Option[Context],
+    inletCtx: Option[Context]
+  ): Unit = {
+    def declaredAdaptor(ctx: Context, toward: Context, outbound: Boolean): Option[Adaptor] =
+      ctx.adaptors.find { a =>
+        adaptorReferent(a).exists(_ eq toward) && (a.direction match
+          case _: OutboundAdaptor => outbound
+          case _: InboundAdaptor  => !outbound)
+      }
+
+    for oc <- outletCtx; ic <- inletCtx do
+      if maybeFromEnd.flatMap(_.owner).exists(_ eq oc) then
+        declaredAdaptor(oc, ic, outbound = true).foreach { adaptor =>
+          messages.addError(
+            connector.errorLoc,
+            s"${connector.identify} crosses from ${oc.identify} to ${ic.identify}, but " +
+              s"${oc.identify} declares ${adaptor.identify} toward ${ic.identify}; the crossing " +
+              s"must leave from that adaptor",
+            suggestion =
+              s"Connect from ${adaptor.identify} instead -- 'from outlet " +
+                s"${oc.id.value}.${adaptor.id.value}' names its implied outlet -- and let it " +
+                s"translate; an adaptor that can be routed around is not a boundary.",
+            ruleId = Some(RuleId.ConnectorBypassesAdaptor)
+          )
+        }
+      end if
+      if maybeToEnd.flatMap(_.owner).exists(_ eq ic) then
+        declaredAdaptor(ic, oc, outbound = false).foreach { adaptor =>
+          messages.addError(
+            connector.errorLoc,
+            s"${connector.identify} crosses from ${oc.identify} to ${ic.identify}, but " +
+              s"${ic.identify} declares ${adaptor.identify} from ${oc.identify}; the crossing " +
+              s"must arrive at that adaptor",
+            suggestion =
+              s"Connect to ${adaptor.identify} instead -- 'to inlet " +
+                s"${ic.id.value}.${adaptor.id.value}' names its implied inlet -- so the foreign " +
+                s"message is translated before anything in ${ic.identify} observes it.",
+            ruleId = Some(RuleId.ConnectorBypassesAdaptor)
+          )
+        }
+      end if
+    end for
+  }
+
   private def checkConnectorPlacement(): Unit = {
     def domainOf(d: Definition): Option[Domain] =
       symbols.parentsOf(d).collectFirst { case dom: Domain => dom }
@@ -725,6 +790,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
           )
         else if crossContext then
           checkBoundaryEncapsulation(connector, maybeFromEnd, maybeToEnd, outletCtx, inletCtx)
+          checkAdaptorExclusivity(connector, maybeFromEnd, maybeToEnd, outletCtx, inletCtx)
           if !connector.isPersistent then
             // CompletenessWarning (not a plain Warning) so AI/tooling can adapt: durability across a
             // context boundary can be required for model correctness, not merely a deployment concern.

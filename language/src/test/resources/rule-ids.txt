@@ -266,6 +266,7 @@ stmt-not-instantiable
 stmt-operand-is-type-not-value
 stmt-operand-not-a-message
 stmt-operand-wrong-type
+stmt-outlet-not-owned
 stmt-overridden-set
 stmt-put-type-mismatch
 stmt-refusal-after-effect
@@ -285,6 +286,7 @@ stream-boundary-inlet
 stream-boundary-not-persistent
 stream-boundary-outlet
 stream-conflicting-intentions
+stream-connector-bypasses-adaptor
 stream-connector-touches-external
 stream-connector-type-mismatch
 stream-consider-adaptor
