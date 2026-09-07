@@ -147,8 +147,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         val resolution = resolveATypeRef(o.type_, parents)
         associateUsage(o, resolution)
       case c: Connector =>
-        associateUsage(c, resolveARef[Outlet](c.from, parents))
-        associateUsage(c, resolveARef[Inlet](c.to, parents))
+        associateUsage(c, resolveConnectorEnd[Outlet](c.from, parents))
+        associateUsage(c, resolveConnectorEnd[Inlet](c.to, parents))
       case c: Constant =>
         associateUsage(c, resolveTypeExpression(c, c.typeEx, parents))
       case a: Adaptor =>
@@ -929,6 +929,28 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   ): Resolution[T] = {
     resolveAPathId[T](ref.pathId, parents)
   }
+
+  /** A103 (Reid, 2026-09-06; CM §8.1): a connector endpoint path may name a PORTLET of the expected
+    * kind, or an ADAPTOR -- in which case it names the adaptor's IMPLIED port on that side, and the
+    * refMap records the adaptor. `from outlet Sales.ToBilling` already parsed before this (the
+    * `outlet` keyword is grammar, the path is free), so the ONLY thing that changes is that the kind
+    * check no longer reports `ref-wrong-kind` for an adaptor; every other kind still does, naming
+    * the portlet that was expected. Reid chose this over widening `Connector.from`/`to` to a
+    * `PortletRef | ProcessorRef` union, which would have rippled through BAST, JSON, prettify and
+    * the JS export surface for no modelling gain.
+    */
+  private def resolveConnectorEnd[P <: Portlet: ClassTag](
+    ref: Reference[P],
+    parents: Parents
+  ): Resolution[Definition] =
+    resolveAPathId[Definition](ref.pathId, parents) match
+      case Some((d, pars)) if isSameKind[P](d) || d.isInstanceOf[Adaptor] => Some(d -> pars)
+      case Some((d, _)) =>
+        wrongType[P](ref.pathId, parents.head, d)
+        None
+      case None => None
+    end match
+  end resolveConnectorEnd
 
   private def isSameKind[DEF <: WithIdentifier: ClassTag](d: WithIdentifier): Boolean = {
     val clazz = classTag[DEF].runtimeClass

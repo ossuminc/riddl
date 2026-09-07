@@ -27,10 +27,14 @@ import org.scalatest.{Assertion, TestData}
   */
 /** The subject here is RESOLUTION of a `tell` nested inside a `when` inside an adaptor handler —
   * not addressing. The target was `entity D.Bar.DrinkOrder` until 2026-08-27, when reaching past a
-  * context onto something it contains became an Error (`msg-target-crosses-boundary`); an adaptor
-  * gets no exemption, because being the translator does not make you the boundary. Addressing
+  * context onto something it contains became an Error (`msg-target-crosses-boundary`). Addressing
   * `context D.Bar` keeps the nesting — which is what this suite exists to exercise — while stating
   * the model correctly.
+  *
+  * Amended again for A103 (2026-09-06): the far end is now VALIDATED against what it declares, so
+  * `Bar` declares the inlet that admits `ReceiveDrinkOrder`, and the adaptor's implied outlet is
+  * wired to it — the one-hop shape. (The doc used to say an adaptor "gets no exemption, because
+  * being the translator does not make you the boundary"; that ruling was reversed, see CM §8.1.)
   */
 class NestedTellResolutionTest extends AbstractValidatingTest {
 
@@ -38,6 +42,7 @@ class NestedTellResolutionTest extends AbstractValidatingTest {
     """domain D is {
       |  context Bar is {
       |    command ReceiveDrinkOrder is { id: String }
+      |    inlet In is command ReceiveDrinkOrder
       |    entity DrinkOrder is {
       |      handler DH is {
       |        on command D.Bar.ReceiveDrinkOrder is { ??? }
@@ -57,6 +62,7 @@ class NestedTellResolutionTest extends AbstractValidatingTest {
       |      }
       |    }
       |  }
+      |  connector ToBarIn is from outlet D.FrontOfHouse.ToBar to inlet D.Bar.In
       |}
       |""".stripMargin
 

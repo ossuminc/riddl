@@ -458,10 +458,15 @@ trait BasicValidation(using pc: PlatformContext) {
     * Error for the three transmission statements; before 2026-08-27 the same question was answered
     * in two places, and the copy that ran was not the copy that was complete.
     *
-    * **No adaptor exemption here, deliberately.** Reid, 2026-08-26: adaptors are intended to cross
-    * contexts, but not to descend into their internals — being the translator does not make you the
-    * boundary. The blanket exemption below applies only to the general cross-context WARNING, where
-    * it is right: translating between contexts is an adaptor's whole job.
+    * **ONE adaptor exemption, and it is directional (A103, Reid 2026-09-06; CM §8.1).** An Adaptor
+    * declared in context A `from context B` IS A's boundary toward B, so a sender in B addressing
+    * that adaptor is delivering to A's arrival point, not reaching past it. This REVERSES the
+    * 2026-08-26 reading ("being the translator does not make you the boundary") that this doc used
+    * to record; the CM deleted that ruling because it compelled the foreign message type onto the
+    * context's own portlet, breaking §7.6's isolation seam. The exemption is exactly as wide as the
+    * ruling: the adaptor must be INBOUND and its referent must be the SENDER'S context. A's outbound
+    * adaptor toward B, or an adaptor for some third context, stays interior to A and is still a
+    * violation to address from B.
     */
   def reachesPastContextBoundary(
     definition: Definition,
@@ -471,7 +476,23 @@ trait BasicValidation(using pc: PlatformContext) {
       definitionContext <- symbols.contextOf(definition)
       if !(definition eq definitionContext)
       if !symbols.contextOf(container).exists(_ eq definitionContext)
+      if !isBoundaryAdaptorToward(definition, container)
     yield definitionContext
+
+  /** Is `definition` an INBOUND adaptor whose referent is `container`'s own context -- i.e. the
+    * boundary that context presents toward the sender? See [[reachesPastContextBoundary]].
+    *
+    * The referent is resolved with the parent-independent `definitionOf`, keyed on the adaptor
+    * itself, because that is the parent `ResolutionPass` records for an adaptor's `referent` -- the
+    * same trap `StreamingValidation.hasAdaptorFor` documents.
+    */
+  private def isBoundaryAdaptorToward(definition: Definition, container: Definition): Boolean =
+    definition match
+      case a: Adaptor if a.direction.isInstanceOf[InboundAdaptor] =>
+        symbols.contextOf(container).exists { senderCtx =>
+          resolution.refMap.definitionOf[Context](a.referent.pathId, a).exists(_ eq senderCtx)
+        }
+      case _ => false
 
   def checkCrossContextReference(
     ref: PathIdentifier,

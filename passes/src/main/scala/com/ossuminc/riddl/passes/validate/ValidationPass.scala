@@ -1995,6 +1995,52 @@ case class ValidationPass(
     }
   end checkAdaptorTargetsContext
 
+  /** A103 / AR5 (Reid, 2026-09-06; CM §8.1 "Typing is VALIDATED, never SYNTHESISED"): a
+    * `tell`/`forward ... to context X` from inside an adaptor is resolved against X's DECLARED
+    * inlets. X must declare an inlet whose type IS the message type or whose alternation CONTAINS
+    * it; when none does, an Error naming both. No union type and no port is invented to make the
+    * model valid -- *"riddlc should not be synthesizing types in order to declare a model valid."*
+    *
+    * Both directions address a context (CM §7.2): outbound, X is the far context; inbound, X is
+    * the adaptor's OWN context, whose declared inlet then dispatches inward. The same rule serves
+    * both. Only the by-NAME form is checked here: a `send`/`forward` that names a PORTLET is
+    * already type-checked against that portlet by `checkTransmittedPortletType`, and running this
+    * too would report one mismatch twice.
+    *
+    * Deliberately narrow on the operand: a `MessageRef` or `Constructor` names its type
+    * syntactically; a `ValueRef` operand (an on-clause binding, a `let`) is left to the widened
+    * machinery elsewhere and is silent here, per the standing "never reason from an undeterminable
+    * operand" rule.
+    */
+  private def checkAdaptorTargetAdmitsMessage(
+    kind: String,
+    target: Definition,
+    msg: MessageRef | Constructor | ValueRef,
+    loc: At,
+    parents: Parents
+  ): Unit =
+    for
+      adaptor <- enclosingProcessorOf(parents).collect { case a: Adaptor => a }
+      ctx <- Some(target).collect { case c: Context => c }
+      msgType <- operandType(msg)
+    do
+      val admitted = ctx.inlets.exists { inlet =>
+        resolution.refMap.definitionOf[Type](inlet.type_.pathId).exists(t => typeAdmits(t, msgType))
+      }
+      if !admitted then
+        messages.addError(
+          loc,
+          s"no inlet on ${ctx.identify} admits ${msgType.identify} to receive message " +
+            s"'${msg.format}' from '$kind' in ${adaptor.identify}",
+          suggestion =
+            s"Declare an inlet on ${ctx.identify} typed ${msgType.identify}, or an alternation " +
+              s"that includes it; riddlc validates the far end against what is declared and " +
+              s"synthesises nothing.",
+          ruleId = Some(RuleId.AdaptorTargetNoAdmittingInlet)
+        )
+    end for
+  end checkAdaptorTargetAdmitsMessage
+
   private def enclosingProcessorOf(parents: Parents): Option[Processor[?]] =
     parents.collectFirst {
       case p: Processor[?] => Some(p)
@@ -2200,6 +2246,7 @@ case class ValidationPass(
             checkRef[Processor[?]](processor, parents).foreach { proc =>
               checkTargetBoundary(processor.pathId, proc, statement.loc, "forward", parents)
               checkAdaptorTargetsContext("forward", proc, statement.loc, parents)
+              checkAdaptorTargetAdmitsMessage("forward", proc, msg, statement.loc, parents)
             }
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
@@ -2238,6 +2285,7 @@ case class ValidationPass(
           // double-report a cross-context tell as one warning and one error.
           checkTargetBoundary(path, entity, statement.loc, "tell", parents)
           checkAdaptorTargetsContext("tell", entity, statement.loc, parents)
+          checkAdaptorTargetAdmitsMessage("tell", entity, msg, statement.loc, parents)
           collectedTells.addOne((ts, entity, enclosingProcessorOf(parents)))
         }
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
@@ -2913,8 +2961,14 @@ case class ValidationPass(
     if connector.nonEmpty then
       addConnector(connector)
       checkConnectorIntentions(connector)
-      val maybeOutlet = checkRef[Outlet](connector.from, parents)
-      val maybeInlet = checkRef[Inlet](connector.to, parents)
+      // A103: an endpoint path may name a PORTLET or an ADAPTOR (its implied port). The shared
+      // `connectorFrom`/`connectorTo` resolve both; `ResolutionPass` has already reported a path
+      // that resolves to neither. Type agreement is a question about two DECLARED ports -- an
+      // implied port has no type of its own (nothing is synthesised, CM §8.1), so when either end
+      // is an adaptor the far end's typing is validated by `checkAdaptorTargetAdmitsMessage`
+      // against what the adaptor actually tells, not here.
+      val maybeOutlet = connectorFrom(connector, parents).flatMap(_.portlet).collect { case o: Outlet => o }
+      val maybeInlet = connectorTo(connector, parents).flatMap(_.portlet).collect { case i: Inlet => i }
 
       (maybeOutlet, maybeInlet) match
         case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
@@ -5120,9 +5174,18 @@ case class ValidationPass(
         // cannot excuse a flow ascribed as a merge, which is the case the ruling exists to catch.
         val isPureErrorReceiver =
           processor.dataflowInlets.isEmpty && numOutlets == 0 && numInlets >= 1
+        // A103 PERMISSIVE HALF: an Adaptor's `arityShape` now counts its IMPLIED ports, so an
+        // adaptor declaring one outlet derives `flow` where it used to derive `source` -- and the
+        // corpus carries 31 such adaptors ascribed `as source`. Until riddl-models migrates, the
+        // DECLARED-ONLY reading is accepted alongside the implied one; the adamant half removes
+        // this arm and the ascription becomes an Error. Adaptors only -- no other processor has
+        // implied ports.
+        val declaredOnly: Seq[String] = processor match
+          case a: Adaptor => Seq(a.shapeForArity(numOutlets, a.dataflowInlets.size).keyword)
+          case _          => Seq.empty
         val acceptable: Seq[String] =
-          if isPureErrorReceiver then Seq(derived.keyword, Sink(At.empty).keyword)
-          else Seq(derived.keyword)
+          (if isPureErrorReceiver then Seq(derived.keyword, Sink(At.empty).keyword)
+           else Seq(derived.keyword)) ++ declaredOnly
         if !acceptable.contains(ascribed.keyword) then
           messages.addError(
             processor.errorLoc,
@@ -7799,11 +7862,19 @@ case class ValidationPass(
         }
   end isStreamTail
 
+  /** Does `tpe` ADMIT a message of type `member` -- is it that type, or an alternation (through any
+    * aliases) that contains it? The one permissive type-agreement test, shared by the chain-tail
+    * rule and by A103's far-end check; connector type agreement (`areSameType`) is deliberately the
+    * strict one and is not this.
+    */
+  protected def typeAdmits(tpe: Type, member: Type): Boolean =
+    (tpe eq member) || typeMembers(tpe).exists(_ eq member)
+
   /** Does some clause that handles `t` send, tell or forward a message of type `t`? Sending a
     * DIFFERENT type is not propagation — see [[isStreamTail]].
     */
   private def propagatesOnward(clauses: Seq[OnClause], t: Type): Boolean =
-    def admits(tpe: Type): Boolean = (tpe eq t) || typeMembers(tpe).exists(_ eq t)
+    def admits(tpe: Type): Boolean = typeAdmits(tpe, t)
     def handles(c: OnClause): Boolean = c match
       case _: OnOtherClause => true
       case omc: OnMessageLikeClause if omc.msg.nonEmpty =>

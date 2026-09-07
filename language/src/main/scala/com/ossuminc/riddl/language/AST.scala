@@ -4673,14 +4673,31 @@ object AST:
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[AdaptorContents]:
     def format: String = Keyword.adaptor + " " + id.format
+
+    /** A103 (Reid, 2026-09-06; CM §7.2): an adaptor's two ports are IMPLIED by its direction.
+      *
+      * Directionality gives an adaptor exactly one inlet and one outlet, so it is always a `flow`
+      * and need write neither; declaring a port overrides the implication for THAT side only. It is
+      * the one processor whose ports may be left unstated, because its direction already determines
+      * them -- every other processor's arity is a modelling choice and must be declared.
+      *
+      * So each side counts as at least one: a port-less adaptor derives `(1, 1)` = flow, and one
+      * that declares a single outlet (the corpus's 31 `as source` adaptors) also derives flow, the
+      * inlet being implied. `validateProcessorShape` accepts the declared-only reading too while the
+      * corpus migrates (the permissive half of A103); the adamant half makes the mismatch an Error.
+      */
+    override def arityShape: StreamletShape =
+      shapeForArity(math.max(outlets.size, 1), math.max(dataflowInlets.size, 1))
   end Adaptor
 
   @JSExportTopLevel("AdaptorRef")
   /** A reference to an [[Adaptor]] by path.
     *
-    * An adaptor is the boundary TRANSLATION seam, but **being the translator does not make it the
-    * boundary**: it is content of its context like anything else and sits BEHIND the context's own
-    * portlet. A cross-context connector or send may not terminate on it.
+    * An adaptor IS its context's boundary toward the context it names, for that ordered pair and
+    * direction (A103, Reid 2026-09-06, CM §8.1 -- reversing the 2026-08-18 ruling that said the
+    * opposite). A cross-context connector between the two contexts may therefore terminate on it,
+    * and a `tell`/`send`/`forward` crossing that boundary leaves from, or arrives at, the adaptor.
+    * Everything else a context contains still sits behind the context's own portlet.
     */
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
     override def format: String = Keyword.adaptor + " " + pathId.format
