@@ -21,29 +21,24 @@ publishLocal'd from the same build — riddl-models and riddl-generator catch up
 Reid. Check `../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`; a
 docs-only commit may sit between them and changes no behaviour.
 
-**The corpus gate is GREEN: 190/190** in `RiddlModelsRoundTripTest` against riddl-models
-`2ad2654a3` ("Adapt the corpus to A103"), verified 2026-09-07 with the restaged binary. That
-commit was LOCAL and two ahead of origin when verified, so CI stays red on the nine A103 models
-until riddl-models pushes; the red is theirs to clear, not a rule to soften. Both A103 task files
-are in `task/done/` with Results and the pre-migration census.
+**The corpus gate is RED on ONE model for a filed reason: 189/190.** AR9 (`fab94f996`,
+2026-09-07) reports reactive-bbq's `MenuReleaseEvent Distribution` connector
+(`reactive-bbq.riddl:53`): a declared alternation outlet of MenuRelease events feeding the inbound
+adaptor `FromMenuManagementItems`, which handles MenuItem events — a true positive, filed in
+`task/done/2026-09-07-type-check-implied-to-implied-connectors.md` Results. riddl-models
+`2ad2654a3` is still local and unpushed as of this writing, so CI is red on more than that until
+it goes up. **Not a rule to soften.**
 
 ### Certainty — what was actually run
 
-**2026-09-07 07:46, full regression from a CLEAN state at `21a212339`**: `sbt -batch shutdown`,
-then `-Dsbt.global.localcache=<empty dir>` on the booting invocation (cache 0 -> 309M; 32/22/32
-`compiling N Scala sources` lines on JVM/JS/Native), `clean`, every module its own `testOnly *`,
-`riddlcNative/nativeLink`, `sbt-riddl/scripted`, TatSu, both external corpora. **All 24
-invocations exit 0, zero failures, zero skipped modules**, riddl-models at `2ad2654a3`.
+**2026-09-07 07:46, full regression from a CLEAN state at `21a212339`** (before AR9): 24
+invocations, zero failures, zero skipped modules, all three platforms plus scripted, TatSu and
+both corpora — recorded in the entry of that date; cite it for the ship.
 
-| leg | suites / tests |
-|---|---|
-| JVM | utils 19/148, language 76/757, passes 257/1735, testkit 3/2, commands 28/355, riddlLib 22/157, riddlc 4/21 |
-| JS | utils 8/111, language 38/435, passes 40/317, testkit 1/1, riddlLib 13/143 |
-| Native | utils 16/134, language 72/742, passes 254/1723, testkit 1/1, commands 28/355, riddlLib 21/156, riddlc 3/21 |
-| other | nativeLink; scripted `+ simple`; TatSu 118/141 (18 fragments, 5 expected); riddl-examples 9/9; riddl-models 191/191 |
-
-Canceled: only `LoadBytesNetworkTest` (JVM + Native), gated on `RIDDL_NETWORK_TESTS`. Corpus
-census with the restaged binary: 191 entry points, 0 errors.
+**After AR9 (`fab94f996`), shared cache, each module its own `testOnly *`**: JVM `passes` 1747,
+`language` 757, `riddlLib` 157, `commands` 354 + the one corpus model above; JS `passes` 317;
+Native `passes` 1735. Not re-run since AR9: JVM `utils`/`testkit`/`riddlc`, the other JS and
+Native rows. AR9 touches `ValidationPass` and a `RuleId` only.
 
 ### Traps a fresh session would hit
 
@@ -67,11 +62,53 @@ census with the restaged binary: 191 entry points, 0 errors.
 - **A Scala bump is ~32 sites**, since the full version is a path segment; a grep omitting
   `.github/` misses 11.
 
-### `task/` — empty, 157 in `done/`
+### `task/` — empty, 158 in `done/`
 
 Nothing awaits triage. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-07 — AR9: an implied port has a type, and AR5 was fighting AR6
+
+riddl-generator, lowering A103, found that a connector between two implied adaptor ports was
+never type-checked: `validateConnector` compared two DECLARED portlet types and I had
+deliberately skipped the implied case in the permissive half. Landed as `fab94f996`.
+
+**Verifying the task exposed a contradiction in what I shipped the day before.** I probed the
+exact shape AR6 demands — outbound adaptor telling `to context Ful` over a connector into Ful's
+inbound adaptor — with the tell written as a constructor, and AR5 rejected it: "no inlet on
+Context 'Ful' admits Command 'Receive'". AR5 looked only at the far context's OWN inlets; AR6
+had just made the far ADAPTOR the required landing point. Two rules, one legal shape, no
+spelling satisfying both. It was invisible in the corpus for one reason: every adaptor tell
+there is `let ship: type T = prompt(...)` then `tell ship to context C`, and AR5 never resolved
+a `let`. The operand resolution AR9 needed would have reddened every correct pair at once.
+**Resolving an operand you previously ignored can expose a rule you already shipped.**
+
+**`on other { error "..." }` is a refusal, not acceptance.** First implementation used
+`receivesMessageType` for "does the far adaptor accept this type", and two AR9 tests stayed
+green with the implementation absent — because every fixture's adaptor ends with `on other {
+error "unexpected" }`, which that helper counts as handling everything. Right for a delivery
+question ("does something receive it"), wrong for a type question. `adaptorAccepts` is the
+stricter sibling: a specific clause admitting the type, or an `on other` that does something
+other than `error`. The corpus writes the refusal idiom in every adaptor; without the
+distinction AR9 would have proven nothing corpus-wide.
+
+**The SOURCE decides what a wire carries.** riddlg had worked this out to reach 0 `NOT
+DELIVERED`: preferring the receiver's handled type typed an outlet as `OrderSubmitted` for an
+adaptor that demonstrably sends `ReceiveTicket`. Adopted as written, including "several
+distinct told types is an ambiguity, never the first taken" — `adaptor-implied-outlet-
+ambiguous`, reported once by `validateAdaptor`.
+
+**The task's own corpus prediction was already stale.** It named three or four mirrored adaptor
+pairs in reactive-bbq; riddl-models' A103 migration had since deleted the outbound halves and
+wired context-owned outlets straight into the inbound adaptors, which carry what those adaptors
+handle. What remains is ONE true positive: `MenuReleaseEvent Distribution`
+(`reactive-bbq.riddl:53`) carries the three MenuRelease events from a declared alternation
+outlet into `FrontOfHouse.FromMenuManagementItems`, which handles the MenuItem events. Two
+adaptor families, one wire crossed. Corpus 189/190; filed for riddl-models.
+
+Numbers: `passes` 1747 (+12, 7 red before), Native 1735, JS 317; `language` 757; `riddlLib`
+157; corpus 189/190.
 
 ## 2026-09-06 — A103: the adaptor IS the boundary, both halves in one day
 

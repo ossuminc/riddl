@@ -2393,6 +2393,27 @@ validation — resolution and type-checking — in `checkStatementScopes`.
     `send` had no check, so an adaptor in OnlineOrdering published on FrontOfHouse's outlet with
     zero errors. `send ... to inlet X` is a delivery, judged by the boundary rules, not here.
 
+- **An implied port HAS a type, and a connector with an implied end is type-checked (AR9,
+  2026-09-07).** riddlg's derivation, adopted: an implied OUTLET carries the distinct types its
+  adaptor `tell`s/`forward`s to a context, resolved by `clauseOperandType` through the clause
+  binding, a `let` in the clause, the constructor or the message ref; an implied INLET accepts
+  what its adaptor HANDLES. **The SOURCE decides what a wire carries** — a destination's
+  expectation is not evidence about what arrives (reactive-bbq's mirrored pairs proved it). Several
+  distinct told types is `adaptor-implied-outlet-ambiguous`, reported once by `validateAdaptor`;
+  never the first taken. `validateConnector` compares with the permissive `typeAdmits` against a
+  declared inlet and `adaptorAccepts` against an implied one; declared/declared keeps strict
+  `areSameType`, deliberately.
+  **`adaptorAccepts` is NOT `receivesMessageType`.** An `on other` whose body is only `error` is a
+  refusal, and the corpus writes `on other { error "Unexpected message for adaptor X" }` in every
+  adaptor — counting it as acceptance made every wire type-correct and both AR9 tests green for
+  nothing. Delivery questions keep the looser helper.
+  **AR5 accepts the far context's INBOUND adaptor as the admitting port.** As shipped on
+  2026-09-06 it looked only at the far context's own inlets, while AR6 requires the crossing to
+  land on that adaptor: the two rules contradicted each other on the exclusive shape, hidden
+  because every corpus adaptor tell is `let`-bound and AR5 did not resolve `let`s. **Resolving an
+  operand you previously ignored can expose a rule you already shipped** — check what the newly
+  visible cases collide with before landing the resolution.
+
 - **A cross-context connector must land on the CONTEXT'S OWN portlet — an Error**
   (Reid, 2026-08-18, choosing Error over CompletenessWarning).
   `StreamingValidation.checkBoundaryEncapsulation`. Reaching past the boundary onto
