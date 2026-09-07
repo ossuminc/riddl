@@ -29,18 +29,21 @@ are in `task/done/` with Results and the pre-migration census.
 
 ### Certainty — what was actually run
 
-After `1a434ced5`, on the shared cache, each module its own `testOnly *`:
+**2026-09-07 07:46, full regression from a CLEAN state at `21a212339`**: `sbt -batch shutdown`,
+then `-Dsbt.global.localcache=<empty dir>` on the booting invocation (cache 0 -> 309M; 32/22/32
+`compiling N Scala sources` lines on JVM/JS/Native), `clean`, every module its own `testOnly *`,
+`riddlcNative/nativeLink`, `sbt-riddl/scripted`, TatSu, both external corpora. **All 24
+invocations exit 0, zero failures, zero skipped modules**, riddl-models at `2ad2654a3`.
 
-| suite | result |
+| leg | suites / tests |
 |---|---|
-| JVM `language` 757, `passes` 1735 (+32), `riddlLib` 157 | green |
-| JVM `commands` 346 + corpus 190/190 (re-run 2026-09-07 on riddl-models `2ad2654a3`) | green |
-| JS `passes` 317; Native `passes` 1723 (+32) | green |
-| TatSu 118/141 (dokn.riddl rewired twice, still accepted) | green |
+| JVM | utils 19/148, language 76/757, passes 257/1735, testkit 3/2, commands 28/355, riddlLib 22/157, riddlc 4/21 |
+| JS | utils 8/111, language 38/435, passes 40/317, testkit 1/1, riddlLib 13/143 |
+| Native | utils 16/134, language 72/742, passes 254/1723, testkit 1/1, commands 28/355, riddlLib 21/156, riddlc 3/21 |
+| other | nativeLink; scripted `+ simple`; TatSu 118/141 (18 fragments, 5 expected); riddl-examples 9/9; riddl-models 191/191 |
 
-**NOT re-run since `1a434ced5`**: JVM `utils`/`testkit`/`riddlc`; JS `utils`/`language`/
-`testkit`/`riddlLib`; Native everything but `passes`. The change is confined to `passes`
-validation, `ResolutionPass`, one `AST` override and fixtures; CI will cover the rest.
+Canceled: only `LoadBytesNetworkTest` (JVM + Native), gated on `RIDDL_NETWORK_TESTS`. Corpus
+census with the restaged binary: 191 entry points, 0 errors.
 
 ### Traps a fresh session would hit
 
