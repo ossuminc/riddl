@@ -15,9 +15,11 @@ Ask `git` for branch, tree and unpushed span — never trust a written answer to
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
 `FORMAT_REVISION` is 24** (one bump for `on quiescence` and `send … at`).
 
-**`../bin/riddlc` and the local ivy artifacts are `2.1.1-22-a62e5c48`** (commit `a62e5c488` =
-HEAD), published and staged together by `scripts/publish-and-stage.sh` on 2026-09-08 at Reid's
-request, so riddl-models can work from it. Check `../bin/riddlc --no-ansi-messages version`
+**`../bin/riddlc` and the local ivy artifacts are `2.1.1-22-a62e5c48`** (commit `a62e5c488`,
+the last commit that changes BEHAVIOUR), published and staged together by
+`scripts/publish-and-stage.sh` on 2026-09-08 at Reid's request, so riddl-models can work from
+it. HEAD sits a documentation commit or two past it — including the one recording this — which
+is normal and changes nothing the binary does; compare the SHAs before assuming otherwise. Check `../bin/riddlc --no-ansi-messages version`
 against `git describe --tags --long` before trusting any of this (dynver drops the `g` and uses
 8 hash chars, so the two render differently and still agree).
 
