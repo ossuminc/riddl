@@ -15,23 +15,30 @@ Ask `git` for branch, tree and unpushed span — never trust a written answer to
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
 `FORMAT_REVISION` is 24** (one bump for `on quiescence` and `send … at`).
 
-**`../bin/riddlc` and the local ivy artifacts are `2.1.1-16-9ef209d1`** (commit `9ef209d18`),
-produced together by `scripts/publish-and-stage.sh`. Check `../bin/riddlc --no-ansi-messages
-version` against `git describe --tags --long` before trusting any of this.
+**`../bin/riddlc` and the local ivy artifacts are `2.1.1-22-a62e5c48`** (commit `a62e5c488` =
+HEAD), published and staged together by `scripts/publish-and-stage.sh` on 2026-09-08 at Reid's
+request, so riddl-models can work from it. Check `../bin/riddlc --no-ansi-messages version`
+against `git describe --tags --long` before trusting any of this (dynver drops the `g` and uses
+8 hash chars, so the two render differently and still agree).
 
-**The binary is now STALE IN BEHAVIOUR, not merely in docs.** It carries three language changes
-since the release — `on quiescence <window>`, `send … at <instant>`, and `stream-graph-cycle`
-re-ruled as an infinite-MESSAGE loop (an `on X` clause whose X can travel back to it), which is
-what makes the scheduled send's schedule-to-yourself idiom legal — and riddl-models and
-riddl-generator were told to catch up from it, per Reid. It does **NOT** carry 2026-09-08's
-`msg-tell-crosses-unrelated-domains`, so it still emits the old, unfollowable "add a connector"
-message for an unrelated cross-domain `tell`. riddl-generator has been told so in its task drop.
-**A restage was not done because staging is Reid's call** — ask before rebuilding.
+**It carries FOUR language changes since 2.1.1**, all verified with the binary itself rather
+than inferred from the build succeeding:
 
-Behaviour verified with the binary: `language/input/send-at.riddl` (the idiom) validates with 0
-errors; a genuine `on X` re-emitting X loop draws the Error; a String instant draws
-`stmt-send-at-not-instant`. The 2026-09-08 rule was verified through `sbt riddlc/run` instead,
-which needs no staging.
+- `on quiescence <window>` and `send … at <instant>` — `language/input/send-at.riddl` (the
+  schedule-to-yourself idiom) validates with 0 errors; a String instant draws
+  `stmt-send-at-not-instant`;
+- `stream-graph-cycle` re-ruled as an infinite-MESSAGE loop (an `on X` clause whose X can travel
+  back to it) — a genuine `on X` re-emitting X loop draws the Error, and the scheduled-send
+  idiom above does not;
+- `msg-tell-crosses-unrelated-domains` — the probe errors with it and names both domains, and
+  the same probe with the remedy applied validates at **0 errors**.
+
+**Corpus census re-run with THIS binary: 189 entry points, 0 errors** — the pre-change baseline,
+unmoved. The counting pipeline was calibrated on a known-positive first (it reports 1 for the
+probe), because a census that greps for errors is exactly the measurement CLAUDE.md warns can
+return a false zero. Write the loop as `while read`, never `for c in $list`: **zsh does not
+word-split unquoted expansions**, so the `for` form silently hands the whole list to one command
+and "measures" a single model — it did, on the first attempt here.
 
 **The corpus gate is GREEN: 190/190** (`RiddlModelsRoundTripTest`) and the census with the binary
 is 189 entry points, 0 errors, both on the local riddl-models checkout on 2026-09-07 night. CI
