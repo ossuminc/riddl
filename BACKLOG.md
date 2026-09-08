@@ -30,23 +30,6 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
-- **[5.6]** **The ruled "schedule to yourself" idiom for `send … at` collides with
-  `stream-graph-cycle`.** Needs Reid. Ruled 2026-09-07: there is no cancellation construct
-  for a scheduled send; the idiom is to send the due message to your OWN outlet, looped by a
-  connector to your own inlet, and decide at fire time (CM §20.7). But that connector is a
-  same-type edge from a processor to itself, and `checkStreamCycles` (Reid, 2026-09-04)
-  reports a self-loop as "a cycle of one" — an Error. Found by validating the
-  `send-at.riddl` fixture with the restaged binary: `Connectors carrying Event 'ReminderDue'
-  form a cycle: Context 'Bookings' -> Context 'Bookings'`; removing the loop connector took
-  it to zero errors. **Two rulings, one legal shape, no spelling satisfying both** — the same
-  shape as AR5 vs AR6. Candidates: (a) exempt a self-loop whose only writers are scheduled
-  sends (the message cannot return to a processor it "already passed through", because it is
-  the same processor deciding later); (b) exempt every self-loop of one, since the rule's
-  target was a message circulating between processors; (c) keep the rule and spell the idiom
-  through a dedicated inner streamlet (still a cycle of two, so (c) does not actually work).
-  The fixture schedules to a downstream sink meanwhile, and the CM records the idiom as ruled.
-  Corpus population: zero (no model uses `at` yet).
-
 - **[5.3]** **`put`/`get` ORDERING is unruled, and the CM says so.** Needs Reid.
   `../RIDDL-Computational-Model.md` §32.4 records three rulings (a `put` fails only by
   failing to deliver; a `get` is asynchronous at the event/interrupt level; an `output` is a

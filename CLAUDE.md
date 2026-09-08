@@ -1623,9 +1623,10 @@ to the right group rather than appending to a list.
   through aliases (`stmt-send-at-not-instant`); a `Date` has no time of day and a `Duration` is a
   span. Undeterminable is silent. **A past instant is delivered immediately. There is NO cancellation
   construct** — the idiom is schedule to YOURSELF and decide at fire time, so a receiver of a
-  scheduled message must tolerate it being stale. **That idiom's loop connector currently draws
-  `stream-graph-cycle`** (a self-loop is "a cycle of one") — an unresolved collision between two
-  rulings, BACKLOG [5.6]; do not exempt it without Reid.
+  scheduled message must tolerate it being stale. **That idiom's loop connector is legal**: it drew
+  `stream-graph-cycle` for a few hours on 2026-09-07, until Reid re-ruled that rule to forbid only
+  an `on X` clause whose X can travel back to it (see the chain-tail entry below) — `on command
+  Book` cannot be re-entered by the event it schedules.
   **Deliberately UNCHANGED, do not "fix" any of them**: A23's effect set (a scheduled send is still a
   transmission), the discharge rules (**a `send` has not settled `yields` since rc.19, scheduled or
   not** — the plan for this feature claimed the opposite and the test caught it), A6 reachability
@@ -2539,11 +2540,25 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   **The predicate lives in `ValidationPass` and is an abstract hook on `StreamingValidation`**,
   because the helpers it needs (`handlerClausesOf`, `alternationMembers`, `operandType`,
   `walkStatements`) are private there; do not grow a second copy in the trait.
-  **`stream-graph-cycle` is an Error and is PER MESSAGE TYPE** (`checkStreamCycles`): edges are
-  grouped by what the outlet CARRIES (members expanded), and a cycle must close within one type. A
-  command one way and an event back is two chains, not a loop — a processor-level cycle check would
-  have condemned every request/response pair in the corpus. Reported once per cycle, at its first
-  member, members listed in order; a self-loop is a cycle of one.
+  **`stream-graph-cycle` forbids an INFINITE MESSAGE LOOP, not a connector ring** (Reid, re-ruled
+  2026-09-07; `ValidationPass.checkMessageLoops`, an abstract hook on `StreamingValidation` like
+  `isStreamTail`). An `on X` clause transmits X (send/tell/forward), the message travels the
+  portlet/connector network to an inlet admitting X on a processor whose own `on X` clause transmits
+  X again, and so on back to the start — any length, one node or many. **The 2026-09-04 version
+  reported any per-type ring of connectors, self-loops included, and was too general**: it condemned
+  the `send … at` schedule-to-yourself idiom (an outlet looped to the sender's own inlet), whose
+  emitting clause is `on command Book` and can never be re-entered by the event it sends. Folded-in
+  rulings: X may be a UNION member (`typeAdmits`/`typeMembers` at every hop — Y-typed ports carry X,
+  an `on Y` clause handles X, an `on Z` clause emitting X loops nothing); a HANDLER-LESS processor
+  passes nothing through (it does not validate) — deliberately NOT `isStreamTail`'s benefit of the
+  doubt; `tell`/`forward` ride the same channel as `send` and arrive at Q exactly when Q declares an
+  inlet admitting X (an adaptor: `adaptorAccepts`); `on other`/`on init`/`on term` do not handle X.
+  Reported once per loop at the first member's transmitting clause, processors listed in order.
+  **Fixture trap that cost two red runs**: a bare `outlet o` is AMBIGUOUS once two processors
+  declare an `o` — single-segment paths search the WHOLE symbol table — so the resolver records
+  nothing, the walk has no edge, and the loop is silently missed. Qualify the path (`outlet
+  C.Loop.o`). And an on-clause names a message KIND: an alternation of events is `on event Y`,
+  never `on type Y`.
   **The riddl-models report that prompted this claimed a SECOND cause — "the walk stops dead at a
   context inlet because the handler-to-outlet hop is invisible" — and it was false.** The graph is
   per PROCESSOR: a connector into a context's inlet makes the Context a node, and the walk continues

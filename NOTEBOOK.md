@@ -73,6 +73,36 @@ Nothing awaits triage. That is a fact about right now, not a reason to skip the 
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-09-07 (night) — the loop rule was too general, not the idiom wrong
+
+BACKLOG [5.6] lived for a few hours. Reid's reading: `stream-graph-cycle` had been stated as "no
+per-type ring of connectors", but the thing to prevent is an INFINITE MESSAGE LOOP — an `on X`
+clause that transmits X, whose message can travel the network back to an `on X` clause that
+transmits it again. The unity of type across outlet, inlet AND on-clause is the test; a ring whose
+emitting clause is `on quiescence` or `on command Book` cannot be re-entered by what it sends, so
+the schedule-to-yourself connector was never a loop. No exemption needed — a correct rule already
+excludes it. Landed as `checkMessageLoops`, replacing `checkStreamCycles`.
+
+**Three rulings I had asked for went the other way, and each is recorded in the code.** I proposed
+that a handler-less pass-through processor continues the walk (it does not: it does not validate
+and passes nothing through — `isStreamTail`'s benefit of the doubt is a completeness posture, and a
+loop is an Error); that `tell`/`forward` are direct edges (they are not: semantically identical to
+`send` at the model level, only riddlg's lowering may make them direct); and I had not accounted
+for union-typed portlets at all, which Reid added — Y-typed ports carry X, an `on Y` clause
+handles X, an `on Z` clause emitting X loops nothing.
+
+**Two red runs were the fixtures, not the check, and both are traps worth naming.** A bare
+`outlet o` is AMBIGUOUS the moment two processors declare an `o`: single-segment paths search the
+whole symbol table, the resolver records nothing, and the walk simply has no edge — the check
+"passed" every positive case by finding nothing. The old connector-only rule never noticed because
+it read connector paths, which are qualified. Found by instrumenting the resolver's `send` arm,
+not by reading: three rounds of reasoning about refMap keys were all wrong. And an on-clause names a
+message KIND — `on type Y` does not parse; an alternation of events is handled as `on event Y`.
+
+**Canary and cost.** Disabling the check reddens exactly the seven positive cases. Corpus: the
+old rule found nothing at 190/190 and the new one is strictly narrower, so zero movement is
+expected — measured after restage, below.
+
 ## 2026-09-07 (evening) — temporal semantics: `on quiescence` and `send … at`
 
 riddl-models measured that RIDDL could name a deadline but not act on one: 13 reminder
