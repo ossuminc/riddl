@@ -43,9 +43,7 @@ reads origin; whether the corpus state is pushed is git's to answer.
   unrelated-domain `tell` ruling all landed whole; their task files are in `task/done/`.
 - **Awaiting Reid**: the riddl 2.1.1 bump-consumers dispatch (plan presented, nothing written) —
   BACKLOG [3.9]; whether `isStreamTail`'s handler-less pass-through should follow the loop
-  rule's "handler-less processors pass nothing through" — BACKLOG [5.7]; and whether `tell` is
-  meant to be CONTEXT-LOCAL with `send` carrying every boundary crossing — BACKLOG [5.8], his own
-  2026-09-08 aside, deliberately NOT acted on because it contradicts the ruling it came with.
+  rule's "handler-less processors pass nothing through" — BACKLOG [5.7].
 - **Dropped, unanswered**: `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md`.
 
 ### Certainty — what was actually run
@@ -133,11 +131,21 @@ corpus is provably unmoved (355 / 190/190, the pre-change baseline) rather than 
 hoped. The residual is stated rather than hidden: a target with no inlet still reports the
 inlet first.
 
-**Reid's own remark went to BACKLOG, not into the code.** *"A `tell` is only relevant within a
-context... but it could be a `send`"* — taken literally that retires the cross-context tell
-seam and contradicts the remedy in the very ruling it accompanied. [5.8]. **An aside inside a
-ruling is not part of the ruling**; implementing it would have broken `RelatedDomainConnectorTest`
-and 7,556 corpus tells on an inference.
+**I filed a language question that CLAUDE.md had already answered twice, and Reid retired it
+the same day.** His remark — *"a `tell` is only relevant within a context (same process
+boundary)... but it could be a `send`"* — read to me as a possible language change, so I filed
+it as [5.8] rather than acting on it. Right instinct, wrong diagnosis. His clarification: **a
+`tell` is semantically IDENTICAL to a `send`; the remark was about ability to LOWER, not
+ability to MODEL.** [5.8] is deleted, its number retired.
+Both halves of that were already written down, in this repo, in words: CLAUDE.md's 2026-08-18
+entry says *"`tell` is no exception: it is the same operation as `send` unless a generator can
+lower it more efficiently while keeping RIDDL's semantics"*, and the 2026-09-07 loop-rule entry
+directly above records the same correction — *"semantically identical to `send` at the model
+level, only riddlg's lowering may make them direct"*. **I had read that entry the same session.**
+The trap already named in this HANDOFF is *check CLAUDE.md before justifying a design decision*;
+the sharper form is that it applies to filing a question too. **A remark that seems to open a
+language question is first a prompt to look up what the language already says** — an unnecessary
+backlog item is not free, it presents settled semantics to the next session as unsettled.
 
 **Vocabulary, on Reid's correction mid-task:** never "channel" for a **Connector**. Use the
 RIDDL definition name for structural elements in every user-facing string. Fixed in the new

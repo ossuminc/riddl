@@ -30,25 +30,6 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
-- **[5.8]** **Is `tell` meant to be CONTEXT-LOCAL, with `send` carrying everything that
-  crosses a boundary? Needs Reid.** Raised by Reid himself on 2026-09-08 while ruling the
-  unrelated-domain `tell`: *"A `tell` is only relevant within a context (same process
-  boundary) and definitely not allowed across domains. But, it could be a send."*
-  **NOT acted on, deliberately — it contradicts shipped, pinned behaviour**, and the same
-  message's own remedy assumes the opposite. Reid's prescribed fix for the unrelated case is
-  "put both domains into a common parent domain and add a Connector between them", which
-  presupposes that a RELATED cross-domain `tell` remains legal. It does today:
-  `RelatedDomainConnectorTest` exists precisely because reactive-bbq's `Corporate → Restaurant`
-  tell had no legal spelling until the 2026-09-03 relatedness ruling, and CM §17's tell
-  isolation seam is written around cross-CONTEXT tells being legal with an adaptor
-  (*"a cross-context `tell` is ALWAYS a durable channel"*). A6's whole reachability apparatus
-  exists to make cross-context tells modellable.
-  So the question is real but LARGE: making `tell` context-local would retire the seam, the
-  relatedness ruling, `checkTellReachability`'s cross-context arm, and force a corpus-wide
-  `tell` → `send` migration (7,556 tells). **Verified scope, not estimated:** `grep -c` on the
-  corpus is where the 7,556 figure comes from (CLAUDE.md, structural-addressing entry).
-  If it is wanted, it wants a plan of its own and a corpus A/B, not a patch.
-
 - **[5.7]** **`isStreamTail` gives a handler-less processor the benefit of the doubt as a
   PASS-THROUGH; the loop rule, on Reid's word, gives it none. Needs Reid to say whether the
   tail rule should follow.** Ruling of 2026-09-07 on the loop rule: *"handler-less processors
