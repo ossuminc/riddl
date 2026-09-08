@@ -2522,6 +2522,38 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   corpus's tell-target entities declare no inlets at all; the interaction surfaces
   only as models comply.
 
+- **A `tell` into an UNRELATED domain is a modelling Error, and the diagnostic must say
+  RESTRUCTURE rather than "add a connector"** (Reid, 2026-09-08;
+  `msg-tell-crosses-unrelated-domains`). Relatedness is a SHARED ANCESTOR domain — the
+  same test `stream-crosses-domains` applies to a connector, deliberately, so the two
+  rules cannot disagree about which pairs may be joined.
+  **It resolved a THREE-sided vise, which is why two-sided reasoning kept missing it.**
+  riddl-generator found an adaptor in `Shop` telling a processor in `Corp` (top-level
+  siblings) with no legal spelling at all: declare the far inlet and A6 demanded a
+  connector; add the connector and `stream-crosses-domains` refused it; drop the inlet
+  and AR5 refused that. Root scope admits no connector, so there was no fourth
+  placement. **A diagnostic whose remedy is impossible is worse than none** — the author
+  reads "you forgot a connector" and cannot act on it.
+  **The two rules had been prescribing each other's refusal.** `stream-crosses-domains`'
+  suggestion said *"model the communication with an adaptor and messaging rather than a
+  direct stream connector"* — precisely the shape A6 then rejected. Both halves moved
+  together on 2026-09-08; changing only one would have left the contradiction intact
+  facing the other way. **When two rules can each refuse the other's remedy, fixing one
+  is not a fix.**
+  **Deliberately the SAME trigger, not a wider one**: the unrelated-domain message is
+  emitted only where `msg-tell-target-unreachable` already fired, so this is a
+  re-diagnosis with ZERO new error surface — every model that errored still errors, none
+  that passed now fails, and the corpus was verified unmoved (190/190). Testing
+  relatedness only when the target is genuinely unreachable also avoids a false positive
+  on any hypothetical legal path.
+  Residual, accepted: a target with NO inlet stays exempt (already diagnosed), so such a
+  model reports the inlet first and the domain problem only after one is added — two
+  rounds, but every message followable.
+  **The related case is untouched** and `UnrelatedDomainTellTest` pins it with the
+  remedy actually applied (both domains under a parent, plus the connector) validating
+  at 0 errors — a negative control that proves the advice works, not merely that the
+  error stops.
+
 - **A stream chain ENDS where its message is CONSUMED, never at a `sink` SHAPE — and a chain may
   not loop** (Reid, 2026-09-04; CM §8.1). `StreamingValidation`'s Check 2 used to ask whether a
   Source reaches a node whose `effectiveShape` is `Sink` (zero outlets). A6 made that unsatisfiable:

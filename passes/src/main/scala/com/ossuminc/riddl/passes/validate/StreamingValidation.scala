@@ -690,11 +690,17 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
           s"${connector.identify} connects UNRELATED domains (${outletDom.get.identify} and " +
             s"${inletDom.get.identify}) -- they share no ancestor domain; a connector between " +
             s"unrelated domains indicates a failure of domain analysis and is not allowed",
+          // **The last sentence used to prescribe "an adaptor and messaging", and that was
+          // WRONG (Reid, 2026-09-08).** It sent an author to the one shape riddlc refused: an
+          // Adaptor telling a processor in an unrelated Domain draws
+          // `msg-tell-crosses-unrelated-domains`, so this suggestion and that rule contradicted
+          // each other and left the model unspellable. Unrelated Domains do not communicate
+          // directly by ANY route; the remedy is to restructure.
           suggestion =
-            "Keep the connector within one domain, or place the two domains under a common parent " +
-              "domain if they really are divisions of one whole. If they are genuinely unrelated, " +
-              "model the communication with an adaptor and messaging rather than a direct stream " +
-              "connector.",
+            "Keep the Connector within one Domain, or place the two Domains under a common parent " +
+              "Domain if they really are divisions of one whole. If they are genuinely unrelated " +
+              "they should not communicate directly at all -- neither by a Connector nor by a " +
+              "'tell' through an Adaptor.",
           ruleId = Some(RuleId.CrossesDomains)
         )
       else if connectorInDomain then

@@ -265,6 +265,7 @@ enum RuleId(
   // ---- more msg -----------------------------------------------------------------------------
   case TellNotDeliverable extends RuleId("msg-tell-not-deliverable")
   case TellTargetUnreachable extends RuleId("msg-tell-target-unreachable")
+  case TellCrossesUnrelatedDomains extends RuleId("msg-tell-crosses-unrelated-domains")
   case CommandNoFields extends RuleId("msg-command-no-fields")
   case EventNeverEmitted extends RuleId("msg-event-never-emitted")
   case YieldUndeclared extends RuleId("msg-yield-undeclared")

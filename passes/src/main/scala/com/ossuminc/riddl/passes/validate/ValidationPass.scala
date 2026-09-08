@@ -435,6 +435,27 @@ case class ValidationPass(
     if collectedTells.isEmpty then return
     val adjacency = connectorAdjacency()
 
+    /** Every enclosing Domain, nearest first -- the chain [[checkConnectorPlacement]] walks for the
+      * same purpose. The NEAREST domain alone cannot tell two divisions of one enterprise from two
+      * unrelated domains, which is the distinction this turns on.
+      */
+    def domainChain(d: Definition): Seq[Domain] =
+      symbols.parentsOf(d).collect { case dom: Domain => dom }
+
+    /** Identity (`eq`), never `contains`: `Definition.equals` is structural, so two distinct
+      * same-named domains would compare equal and fake a shared ancestor.
+      */
+    def unrelatedDomains(snd: Processor[?], target: Processor[?]): Option[(Domain, Domain)] =
+      val senderDomains = domainChain(snd)
+      val targetDomains = domainChain(target)
+      (senderDomains.headOption, targetDomains.headOption) match
+        case (Some(s), Some(t))
+            if !(s eq t) && !senderDomains.exists(sd => targetDomains.exists(_ eq sd)) =>
+          Some(s -> t)
+        case _ => None
+      end match
+    end unrelatedDomains
+
     def reaches(from: Processor[?], target: Processor[?]): Boolean =
       val goal = ByIdentity[Processor[?]](target)
       val seen = mutable.Set.empty[ByIdentity[Processor[?]]]
@@ -482,15 +503,54 @@ case class ValidationPass(
         // Telling YOURSELF is the one case with no channel to model.
         val self = origins.headOption.exists(_ eq target)
         if !exempt && !self && !origins.exists(o => reaches(o, target)) then
-          messages.addError(
-            ts.loc,
-            s"'tell' target '${tellTargetLabel(ts)}' is not reachable from " +
-              s"${snd.identify} via any connector; the delivery is not modelled",
-            suggestion =
-              s"Add a connector from an outlet of ${snd.identify} (or of an enclosing context) " +
-                s"to an inlet of '${tellTargetLabel(ts)}', so the told message has a channel.",
-            ruleId = Some(RuleId.TellTargetUnreachable)
-          )
+          // **The SAME trigger, told apart by WHY no Connector can carry it (Reid, 2026-09-08).** When the
+          // two domains are unrelated, "add a connector" is not merely unhelpful, it is
+          // IMPOSSIBLE: `stream-crosses-domains` rejects a connector between domains sharing no
+          // ancestor, and root scope admits no connector at all. riddl-generator found the vise --
+          // declare the far inlet and this errored; add the connector and the connector errored;
+          // drop the inlet and AR5 errored. Worse, `stream-crosses-domains`' own suggestion
+          // prescribed the adaptor-and-messaging shape that this rule then refused.
+          //
+          // Reid ruled the STATEMENT wrong and this DIAGNOSTIC wrong about why: unrelated domains
+          // cannot be connected, so the remedy is to restructure -- "put both domains into a
+          // common parent domain and add a connector between them". Naming it as its own rule
+          // keeps the two facts addressable and lets a generator tell them apart.
+          //
+          // **Deliberately the same trigger, not a wider one**, so this is a re-diagnosis rather
+          // than new error surface: every model that errored here still errors, none that passed
+          // now fails. It is also why the unrelated case is tested only when the target is
+          // genuinely unreachable -- a hypothetical legal path between unrelated domains would be
+          // a false positive, and the reachability walk already rules it out.
+          //
+          // Residual, accepted: a target with NO inlet is exempt above (already diagnosed), so an
+          // unrelated-domain tell at such a target reports the inlet first and the domain problem
+          // only after the author adds one. Two rounds, but each message is followable -- unlike
+          // "add a connector", which was not.
+          unrelatedDomains(snd, target) match
+            case Some((senderDomain, targetDomain)) =>
+              messages.addError(
+                ts.loc,
+                s"'tell' target '${tellTargetLabel(ts)}' is in ${targetDomain.identify}, which is " +
+                  s"UNRELATED to the sender's ${senderDomain.identify} -- they share no ancestor " +
+                  s"domain, so no Connector between them is allowed and the message has no way " +
+                  s"to reach it",
+                suggestion =
+                  s"Put ${senderDomain.identify} and ${targetDomain.identify} into a common parent " +
+                    s"domain and add a Connector between them. If they are genuinely unrelated, " +
+                    s"they should not communicate directly -- that is a failure of domain analysis.",
+                ruleId = Some(RuleId.TellCrossesUnrelatedDomains)
+              )
+            case None =>
+              messages.addError(
+                ts.loc,
+                s"'tell' target '${tellTargetLabel(ts)}' is not reachable from " +
+                  s"${snd.identify} via any connector; the delivery is not modelled",
+                suggestion =
+                  s"Add a connector from an outlet of ${snd.identify} (or of an enclosing context) " +
+                    s"to an inlet of '${tellTargetLabel(ts)}', so the told message has a Connector to travel on.",
+                ruleId = Some(RuleId.TellTargetUnreachable)
+              )
+          end match
         end if
       }
     }
