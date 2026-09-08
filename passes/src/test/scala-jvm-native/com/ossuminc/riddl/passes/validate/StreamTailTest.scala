@@ -29,9 +29,10 @@ import org.scalatest.TestData
   * consumed. A processor with no handlers at all is opaque and gets the benefit of the doubt: a
   * tail if it has no outlets, pass-through otherwise.
   *
-  * And a stream graph may not contain a cycle: connectors carrying one message type that form a
-  * loop let a message circulate forever, which is an Error. A request/response pair — a command
-  * one way, an event back — is two chains, not a loop.
+  * And a message may not LOOP (re-ruled 2026-09-07, see `MessageLoopTest`): an `on X` clause that
+  * re-emits X, whose message can travel the connector network back to a processor whose `on X`
+  * clause re-emits it again, is an infinite message loop and an Error. A request/response pair — a
+  * command one way, an event back — is two chains, not a loop.
   */
 class StreamTailTest extends AbstractValidatingTest {
 
@@ -209,7 +210,7 @@ class StreamTailTest extends AbstractValidatingTest {
         s"""    streamlet $name as flow is {
            |      inlet i is event D.Evt with { briefly "i" }
            |      outlet o is event D.Evt with { briefly "o" }
-           |      handler h is { on event D.Evt { send event D.Evt to outlet o } } with { briefly "h" }
+           |      handler h is { on event D.Evt { send event D.Evt to outlet C.$name.o } } with { briefly "h" }
            |    } with { briefly "$name" }""".stripMargin
       val msgs = diagnostics(
         model(
@@ -223,7 +224,7 @@ class StreamTailTest extends AbstractValidatingTest {
       val found = cycles(msgs)
       found must not be empty
       found.head.kind mustBe Messages.Error
-      found.head.message must include("cycle")
+      found.head.message must include("infinite message loop")
       found.head.message must include("'A'")
       found.head.message must include("'B'")
     }
@@ -234,7 +235,7 @@ class StreamTailTest extends AbstractValidatingTest {
           """    streamlet Loop as flow is {
             |      inlet i is event D.Evt with { briefly "i" }
             |      outlet o is event D.Evt with { briefly "o" }
-            |      handler h is { on event D.Evt { send event D.Evt to outlet o } } with { briefly "h" }
+            |      handler h is { on event D.Evt { send event D.Evt to outlet C.Loop.o } } with { briefly "h" }
             |    } with { briefly "loop" }""".stripMargin,
           """    connector c1 is { from outlet C.Src.o to inlet C.Loop.i } with { briefly "c" }
             |    connector c2 is { from outlet C.Loop.o to inlet C.Loop.i } with { briefly "c" }""".stripMargin

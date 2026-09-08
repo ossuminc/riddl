@@ -8258,6 +8258,182 @@ case class ValidationPass(
     }
   end propagatesOnward
 
+  /** `stream-graph-cycle` -- an INFINITE MESSAGE LOOP (Reid's ruling, 2026-09-07, replacing the
+    * 2026-09-04 "connectors of one type form a cycle" rule, which was too general).
+    *
+    * The loop to forbid: an `on X` clause in processor P transmits X (`send`, `tell` or `forward`,
+    * operand typed X); the message travels the portlet/connector network and arrives at an inlet
+    * admitting X on a processor whose own `on X` clause transmits X again; and so on until it
+    * arrives back at P. Length is irrelevant -- one node or many. Everything else is NOT a loop,
+    * and the difference is what let the `send ... at` schedule-to-yourself idiom (an outlet looped
+    * to the sender's own inlet) validate: the emitting clause there is `on command Book` or `on
+    * quiescence`, which the event it sends can never re-enter. The old rule reported that self-loop
+    * as "a cycle of one"; this one asks whether the message can come back to the clause that sent
+    * it, and it cannot.
+    *
+    * Three rulings folded in:
+    *   - **X may be a union member.** Portlets are typically typed with the alternation (`Y is one
+    *     of { W or X or Z }`), so a chain of Y-typed ports carries X, an `on Y` clause handles X,
+    *     and an `on Z` clause emitting X loops nothing. `typeAdmits`/`typeMembers` do the
+    *     expansion at every hop: handled type, operand type, inlet type.
+    *   - **A processor with no handlers does not validate and passes nothing through**, so the walk
+    *     ends there. (This is deliberately NOT `isStreamTail`'s benefit of the doubt for a
+    *     ports-only flow; a loop is an Error and gets no such benefit.)
+    *   - **`tell` and `forward` are semantically identical to `send` at the model level** and ride
+    *     the same channel: a `tell`/`forward` to processor Q arrives at Q exactly when Q declares
+    *     an inlet admitting X (or, for an adaptor, accepts X on its implied inlet). Only riddlg's
+    *     lowering may make them direct or edgeless.
+    *   - `on other`, `on init`, `on term`, `on quiescence` do not count as handling X.
+    *
+    * Reported once per loop, at the first member's transmitting clause, naming the processors in
+    * order. Keyed by reference identity (`ByIdentity`) for the reason `connectorAdjacency` records.
+    */
+  protected def checkMessageLoops(): Unit =
+    type Gate = Type => Boolean // does this arrival admit a message of the given type?
+    type Arrival = (Processor[?], Gate)
+
+    def inletGate(inlet: Inlet): Gate =
+      resolution.refMap.definitionOf[Type](inlet.type_.pathId) match
+        case Some(t) => x => typeAdmits(t, x)
+        case None    => _ => false // unresolved inlet type is ref-integrity's report, not this rule's
+
+    def processorGate(q: Processor[?]): Gate = q match
+      case a: Adaptor => x => adaptorAccepts(a, x) || a.inlets.exists(i => inletGate(i)(x))
+      case other      => x => other.inlets.exists(i => inletGate(i)(x))
+
+    // Where each declared outlet leads: the inlet (or implied adaptor inlet) at the far end of every
+    // connector leaving it.
+    val leadsTo = mutable.Map.empty[ByIdentity[Outlet], mutable.ListBuffer[Arrival]]
+    connectors.filterNot(_.isEmpty).foreach { connector =>
+      val connParents = symbols.parentsOf(connector)
+      for
+        fromEnd <- connectorFrom(connector, connParents)
+        outlet <- fromEnd.portlet.collect { case o: Outlet => o }
+        toEnd <- connectorTo(connector, connParents)
+        owner <- toEnd.owner
+      do
+        val gate: Gate = toEnd match
+          case DeclaredEnd(i: Inlet, _) => inletGate(i)
+          case ImpliedEnd(adaptor)      => x => adaptorAccepts(adaptor, x)
+          case _                        => _ => false
+        leadsTo.getOrElseUpdate(ByIdentity(outlet), mutable.ListBuffer.empty) += ((owner, gate))
+      end for
+    }
+
+    // The message travels to whatever a portlet reference leads to: an outlet's connectors, or --
+    // the deprecated `send ... to inlet` -- the inlet's owner directly.
+    def arrivalsViaPortlet(ref: PortletRef[?], clause: OnClause): Seq[Arrival] =
+      resolution.refMap
+        .definitionOf[Portlet](ref.pathId, clause)
+        .orElse(resolution.refMap.definitionOf[Portlet](ref.pathId))
+        .toSeq
+        .flatMap {
+          case o: Outlet => leadsTo.getOrElse(ByIdentity(o), Nil).toSeq
+          case i: Inlet =>
+            symbols.parentsOf(i).collectFirst { case p: Processor[?] => (p, inletGate(i)) }.toSeq
+        }
+
+    def arrivalsViaProcessor(q: Option[Processor[?]]): Seq[Arrival] =
+      q.toSeq.map(p => (p, processorGate(p)))
+
+    // x -> P -> (Q, the clause in P whose transmission of x reaches Q)
+    val edges = mutable.Map
+      .empty[ByIdentity[Type], mutable.Map[ByIdentity[Processor[?]], mutable.ListBuffer[(Processor[?], OnClause)]]]
+    val typeOf = mutable.Map.empty[ByIdentity[Type], Type]
+
+    processors.foreach { p =>
+      handlerClausesOf(p).foreach {
+        case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+          resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach { handled =>
+            val clauseParents: Parents = omc +: symbols.parentsOf(omc)
+            // The loop types a transmission can carry back: every member of the operand's type that
+            // the clause itself handles. `on Y { send x }` with `Y = W|X|Z` carries X; `on Z { send
+            // event X }` carries nothing back.
+            def loopTypes(operand: Option[Type]): Seq[Type] =
+              operand.toSeq.flatMap(typeMembers).filter(x => typeAdmits(handled, x))
+            def record(operand: Option[Type], arrivals: Seq[Arrival]): Unit =
+              for
+                x <- loopTypes(operand)
+                (q, gate) <- arrivals
+                if gate(x)
+              do
+                val key = ByIdentity(x)
+                typeOf(key) = x
+                edges
+                  .getOrElseUpdate(key, mutable.Map.empty)
+                  .getOrElseUpdate(ByIdentity[Processor[?]](p), mutable.ListBuffer.empty) += ((q, omc))
+              end for
+            walkStatements(omc.contents) {
+              case s: SendStatement =>
+                record(clauseOperandType(s.msg, omc), arrivalsViaPortlet(s.portlet, omc))
+              case s: ForwardStatement =>
+                // A forward passes the HANDLED message on, whatever the operand's spelling.
+                val arrivals = s.target match
+                  case pr: PortletRef[?]   => arrivalsViaPortlet(pr, omc)
+                  case pr: ProcessorRef[?] =>
+                    arrivalsViaProcessor(TellTarget.processorOf(pr, clauseParents, resolution.refMap, symbols))
+                record(clauseOperandType(s.msg, omc).orElse(Some(handled)), arrivals)
+              case s: TellStatement =>
+                val target = TellTarget.processorOf(s.target, clauseParents, resolution.refMap, symbols)
+                record(clauseOperandType(s.msg, omc), arrivalsViaProcessor(target))
+              case _ => ()
+            }
+          }
+        case _ => () // on other / init / term / activate / passivate / quiescence: not re-enterable by X
+      }
+    }
+
+    def byPosition(n: ByIdentity[Processor[?]]): Int = n.value.loc.offset
+
+    edges.toSeq.sortBy { case (k, _) => typeOf(k).loc.offset }.foreach { case (key, adj) =>
+      val x = typeOf(key)
+      val state = mutable.Map.empty[ByIdentity[Processor[?]], Int] // 0 unvisited, 1 on path, 2 done
+      val path = mutable.ArrayBuffer.empty[ByIdentity[Processor[?]]]
+      val reported = mutable.Set.empty[scala.collection.immutable.Set[ByIdentity[Processor[?]]]]
+
+      def clauseLeaving(n: ByIdentity[Processor[?]], to: ByIdentity[Processor[?]]): Option[OnClause] =
+        adj.getOrElse(n, mutable.ListBuffer.empty).collectFirst { case (q, c) if q eq to.value => c }
+
+      def report(cycle: Seq[ByIdentity[Processor[?]]]): Unit =
+        val first = cycle.head
+        val next = if cycle.sizeIs > 1 then cycle(1) else first
+        val clause = clauseLeaving(first, next)
+        val members = (cycle :+ first).map(_.value.identify).mkString(" -> ")
+        messages.addError(
+          clause.map(_.loc).getOrElse(first.value.errorLoc),
+          s"${clause.map(_.identify).getOrElse("A clause")} of ${first.value.identify} transmits " +
+            s"${x.identify}, which can travel back to ${first.value.identify} and be handled by that " +
+            s"same clause: $members; that is an infinite message loop",
+          suggestion =
+            "Emit a different message type from the clause, or break the connector chain so the " +
+              "message cannot return to a processor whose handler re-emits it.",
+          ruleId = Some(RuleId.GraphCycle)
+        )
+      end report
+
+      def visit(n: ByIdentity[Processor[?]]): Unit =
+        state(n) = 1
+        path += n
+        adj.getOrElse(n, mutable.ListBuffer.empty).map(e => ByIdentity[Processor[?]](e._1)).distinct
+          .sortBy(byPosition).foreach { m =>
+            state.getOrElse(m, 0) match
+              case 0 => visit(m)
+              case 1 =>
+                val cycle = path.drop(path.indexOf(m)).toSeq
+                if reported.add(cycle.toSet) then report(cycle)
+              case _ => ()
+            end match
+          }
+        path.remove(path.length - 1)
+        state(n) = 2
+      end visit
+
+      adj.keys.toSeq.sortBy(byPosition).foreach { n =>
+        if state.getOrElse(n, 0) == 0 then visit(n)
+      }
+    }
+  end checkMessageLoops
+
   private def validateAsk(ask: Ask, parents: Parents): Unit =
     // 1. The target must resolve, and it must be a query. The ref TYPE makes the kind structural
     //    -- a QueryRef cannot name a command -- so this catches an unresolved or mis-kinded path.

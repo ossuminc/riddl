@@ -56,6 +56,12 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     */
   protected def isStreamTail(proc: Processor[?]): Boolean
 
+  /** The infinite-message-loop check (`stream-graph-cycle`, re-ruled 2026-09-07). Lives in
+    * `ValidationPass` for the same reason `isStreamTail` does: it needs the private operand-typing
+    * and clause-walking helpers there. Called from [[checkStreaming]].
+    */
+  protected def checkMessageLoops(): Unit
+
   /** The members a type admits, expanded through any alternation; the type itself otherwise. */
   protected def typeMembers(t: Type): Seq[Type]
 
@@ -119,7 +125,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
   def checkStreaming(root: PassRoot): Unit = {
     checkStreamingUsage(root)
-    checkStreamCycles()
+    checkMessageLoops()
     checkConnectorPlacement()
     checkPortletCardinality()
     checkUnattachedOutlets()
@@ -464,92 +470,6 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               ruleId = Some(RuleId.SinkReachedByNoSource)
             )
         }
-      }
-    }
-  }
-
-  /** A stream graph may not contain a cycle (Reid's ruling, 2026-09-04): *"They can be long and
-    * convoluted, but they must have a start and a finish."* Connectors carrying one message type
-    * that form a loop let a message circulate forever, and that is an Error, not a completeness
-    * question.
-    *
-    * PER TYPE, deliberately. Two contexts that exchange a command one way and an event back form a
-    * loop of processors and no loop of messages — a request/response pair is two chains, each with
-    * a start and a finish. So edges are grouped by the type the OUTLET carries (alternation members
-    * expanded, so a connector typed `one of { A or B }` and one typed `A` join the same graph), and
-    * a cycle must close within one type. This is the same "same type" test `isStreamTail` applies
-    * at a chain's end, and for the same reason.
-    *
-    * Each cycle is reported once, at its first member, naming every member in order. A self-loop
-    * (an outlet wired to an inlet of the same processor) is a cycle of one.
-    */
-  private def checkStreamCycles(): Unit = {
-    val edgesByType = mutable.Map.empty[ByIdentity[Type], mutable.Map[Node, mutable.Set[Node]]]
-    val typeOf = mutable.Map.empty[ByIdentity[Type], Type]
-    connectors.filterNot(_.isEmpty).foreach { connector =>
-      val connParents = symbols.parentsOf(connector)
-      val fromEnd = connectorFrom(connector, connParents)
-      val from = fromEnd.flatMap(_.owner)
-      val to = connectorTo(connector, connParents).flatMap(_.owner)
-      // What the connector CARRIES is the declared outlet's type. An IMPLIED outlet (an adaptor's,
-      // A103) has no declared type and nothing is synthesised for it, so such an edge joins no
-      // per-type graph and a cycle running through an implied port is not detected here. Known and
-      // accepted: deriving the carried types from the adaptor's tells is a possible refinement.
-      val carried: Seq[Type] = fromEnd.toSeq
-        .flatMap(_.portlet)
-        .collect { case o: Outlet => o }
-        .flatMap(o => resolution.refMap.definitionOf[Type](o.type_.pathId))
-        .flatMap(typeMembers)
-      for
-        f <- from
-        t <- to
-        ty <- carried
-      do
-        val key = ByIdentity(ty)
-        typeOf(key) = ty
-        edgesByType
-          .getOrElseUpdate(key, mutable.Map.empty)
-          .getOrElseUpdate(ByIdentity(f), mutable.Set.empty) += ByIdentity(t)
-      end for
-    }
-
-    def byPosition(n: Node): Int = n.value.loc.offset
-
-    edgesByType.toSeq.sortBy { case (k, _) => typeOf(k).loc.offset }.foreach { case (key, adj) =>
-      val ty = typeOf(key)
-      val state = mutable.Map.empty[Node, Int] // 0 unvisited, 1 on the current path, 2 done
-      val path = mutable.ArrayBuffer.empty[Node]
-      val reported = mutable.Set.empty[scala.collection.immutable.Set[Node]]
-
-      def report(cycle: Seq[Node]): Unit =
-        val members = (cycle :+ cycle.head).map(_.value.identify).mkString(" -> ")
-        messages.addError(
-          cycle.head.value.errorLoc,
-          s"Connectors carrying ${ty.identify} form a cycle: $members; a stream must have a " +
-            "start and a finish, so a message must never be able to return to a processor it " +
-            "already passed through",
-          suggestion = "Remove or retarget one connector in the loop so the message cannot circulate.",
-          ruleId = Some(RuleId.GraphCycle)
-        )
-
-      def visit(n: Node): Unit =
-        state(n) = 1
-        path += n
-        adj.getOrElse(n, mutable.Set.empty).toSeq.sortBy(byPosition).foreach { m =>
-          state.getOrElse(m, 0) match
-            case 0 => visit(m)
-            case 1 =>
-              val cycle = path.drop(path.indexOf(m)).toSeq
-              if reported.add(cycle.toSet) then report(cycle)
-            case _ => ()
-          end match
-        }
-        path.remove(path.length - 1)
-        state(n) = 2
-      end visit
-
-      adj.keys.toSeq.sortBy(byPosition).foreach { n =>
-        if state.getOrElse(n, 0) == 0 then visit(n)
       }
     }
   }
