@@ -15,7 +15,7 @@ Ask `git` for branch, tree and unpushed span — never trust a written answer to
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
 `FORMAT_REVISION` is 24** (one bump for `on quiescence` and `send … at`).
 
-**`../bin/riddlc` and the local ivy artifacts are `2.1.1-22-a62e5c48`** (commit `a62e5c488`,
+**`../bin/riddlc` and the local ivy artifacts are `2.1.1-26-4d17b1ef`** (commit `4d17b1ef6`,
 the last commit that changes BEHAVIOUR), published and staged together by
 `scripts/publish-and-stage.sh` on 2026-09-08 at Reid's request, so riddl-models can work from
 it. HEAD sits a documentation commit or two past it — including the one recording this — which
@@ -23,7 +23,7 @@ is normal and changes nothing the binary does; compare the SHAs before assuming 
 against `git describe --tags --long` before trusting any of this (dynver drops the `g` and uses
 8 hash chars, so the two render differently and still agree).
 
-**It carries FOUR language changes since 2.1.1**, all verified with the binary itself rather
+**It carries FIVE language changes since 2.1.1**, all verified with the binary itself rather
 than inferred from the build succeeding:
 
 - `on quiescence <window>` and `send … at <instant>` — `language/input/send-at.riddl` (the
@@ -33,16 +33,15 @@ than inferred from the build succeeding:
   back to it) — a genuine `on X` re-emitting X loop draws the Error, and the scheduled-send
   idiom above does not;
 - `msg-tell-crosses-unrelated-domains` — the probe errors with it and names both domains, and
-  the same probe with the remedy applied validates at **0 errors**.
-
-**The binary does NOT carry [5.7]** (a handler-less processor is now a stream tail whatever its
-shape), which landed after it was staged. Nothing in the corpus moves for it — the rule's corpus
-population is zero — so riddl-models is unaffected either way; restage when convenient.
+  the same probe with the remedy applied validates at **0 errors**;
+- [5.7], a handler-less processor is a stream TAIL whatever its shape — a source into a
+  ports-only flow draws no `stream-source-reaches-no-sink`, while both "should have a handler"
+  warnings still appear, which is the point of the change.
 
 **Corpus census re-run with THIS binary: 189 entry points, 0 errors** — the pre-change baseline,
-unmoved. The counting pipeline was calibrated on a known-positive first (it reports 1 for the
-probe), because a census that greps for errors is exactly the measurement CLAUDE.md warns can
-return a false zero. Write the loop as `while read`, never `for c in $list`: **zsh does not
+unmoved, and `stream-source-reaches-no-sink` is at **0** occurrences before and after [5.7]. The
+counting pipeline was calibrated on a known-positive first (it reports 1 for the probe), because a
+census that greps for errors is exactly the measurement CLAUDE.md warns can return a false zero. Write the loop as `while read`, never `for c in $list`: **zsh does not
 word-split unquoted expansions**, so the `for` form silently hands the whole list to one command
 and "measures" a single model — it did, on the first attempt here.
 
