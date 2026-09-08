@@ -10,21 +10,28 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-09-07 night by running, not recalling
+### Build state — verified 2026-09-08 by running, not recalling
 
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
 `FORMAT_REVISION` is 24** (one bump for `on quiescence` and `send … at`).
 
 **`../bin/riddlc` and the local ivy artifacts are `2.1.1-16-9ef209d1`** (commit `9ef209d18`),
-produced together by `scripts/publish-and-stage.sh`; HEAD is one docs-only commit past it, which
-changes no behaviour. riddl-models and riddl-generator catch up from THIS build, per Reid — it
-carries three language changes since the release: `on quiescence <window>`, `send … at
-<instant>`, and `stream-graph-cycle` re-ruled as an infinite-MESSAGE loop (an `on X` clause whose X
-can travel back to it), which is what makes the scheduled send's schedule-to-yourself loop legal.
+produced together by `scripts/publish-and-stage.sh`. Check `../bin/riddlc --no-ansi-messages
+version` against `git describe --tags --long` before trusting any of this.
+
+**The binary is now STALE IN BEHAVIOUR, not merely in docs.** It carries three language changes
+since the release — `on quiescence <window>`, `send … at <instant>`, and `stream-graph-cycle`
+re-ruled as an infinite-MESSAGE loop (an `on X` clause whose X can travel back to it), which is
+what makes the scheduled send's schedule-to-yourself idiom legal — and riddl-models and
+riddl-generator were told to catch up from it, per Reid. It does **NOT** carry 2026-09-08's
+`msg-tell-crosses-unrelated-domains`, so it still emits the old, unfollowable "add a connector"
+message for an unrelated cross-domain `tell`. riddl-generator has been told so in its task drop.
+**A restage was not done because staging is Reid's call** — ask before rebuilding.
+
 Behaviour verified with the binary: `language/input/send-at.riddl` (the idiom) validates with 0
 errors; a genuine `on X` re-emitting X loop draws the Error; a String instant draws
-`stmt-send-at-not-instant`. Check `../bin/riddlc --no-ansi-messages version` against `git describe
---tags --long` before trusting any of this.
+`stmt-send-at-not-instant`. The 2026-09-08 rule was verified through `sbt riddlc/run` instead,
+which needs no staging.
 
 **The corpus gate is GREEN: 190/190** (`RiddlModelsRoundTripTest`) and the census with the binary
 is 189 entry points, 0 errors, both on the local riddl-models checkout on 2026-09-07 night. CI
@@ -32,14 +39,22 @@ reads origin; whether the corpus state is pushed is git's to answer.
 
 ### In flight
 
-- **Nothing half-done in the code.** The temporal-semantics task and the loop re-ruling both landed
-  whole; their task file is in `task/done/`.
+- **Nothing half-done in the code.** The temporal-semantics task, the loop re-ruling and the
+  unrelated-domain `tell` ruling all landed whole; their task files are in `task/done/`.
 - **Awaiting Reid**: the riddl 2.1.1 bump-consumers dispatch (plan presented, nothing written) —
-  BACKLOG [3.9]; and whether `isStreamTail`'s handler-less pass-through should follow the loop
-  rule's "handler-less processors pass nothing through" — BACKLOG [5.7].
+  BACKLOG [3.9]; whether `isStreamTail`'s handler-less pass-through should follow the loop
+  rule's "handler-less processors pass nothing through" — BACKLOG [5.7]; and whether `tell` is
+  meant to be CONTEXT-LOCAL with `send` carrying every boundary crossing — BACKLOG [5.8], his own
+  2026-09-08 aside, deliberately NOT acted on because it contradicts the ruling it came with.
 - **Dropped, unanswered**: `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md`.
 
 ### Certainty — what was actually run
+
+After the unrelated-domain `tell` ruling (2026-09-08), shared cache, each module its own
+`testOnly *`: `language` 760 JVM / 438 JS / 745 Native; `passes` 1796 JVM / 317 JS / 1784
+Native; `commands` 355 JVM (corpus 190/190, the pre-change baseline — unmoved); `riddlLib` 163
+JVM. Canary: the three positive cases of `UnrelatedDomainTellTest` were red before the check
+and green after. NOT re-run: `utils`, `testkit`, `riddlc`, and `commands` on JS/Native.
 
 After the loop re-ruling (`793001ec4`), shared cache, each module its own `testOnly *`: JVM
 `passes` 1791, `commands` 355 (corpus 190/190), `riddlLib` 163; JS `passes` 317; Native `passes`
@@ -52,8 +67,12 @@ pass again; the 2026-09-04 entry below records how it was driven.
 
 ### Traps a fresh session would hit
 
-- **A new rule's tests measure the rule, never its interaction with rules already present.** Four
-  instances in one week, the latest being the loop rule condemning a same-day ruling's idiom.
+- **A new rule's tests measure the rule, never its interaction with rules already present.** FIVE
+  instances in two weeks — the latest being `stream-crosses-domains` suggesting the exact shape
+  A6 refused, so the two rules sent an author in a circle. When a rule's SUGGESTION names another
+  construct, go read the rule governing that construct.
+- **Pin the REMEDY, not just the message.** A test asserting the error appears cannot tell a good
+  diagnostic from a better-worded dead end; assert that applying the suggested fix validates.
   Validate the new fixture with the freshly staged binary; that is what found it.
 - **A bare single-segment path searches the WHOLE symbol table.** `outlet o` is ambiguous the
   moment two processors declare an `o`; the resolver then records nothing and any refMap-driven
@@ -69,12 +88,67 @@ pass again; the 2026-09-04 entry below records how it was driven.
 - **A Scala bump is ~32 sites**, since the full version is a path segment; a grep omitting
   `.github/` misses 11.
 
-### `task/` — empty, 160 in `done/`
+### `task/` — empty, 161 in `done/`
 
-Nothing awaits triage. `task/probe-2026-09-06-adaptor/` holds probe fixtures from an earlier
+Nothing awaits triage. (The 2026-09-07 HANDOFF said the same and was WRONG by the time it was
+read — a file had arrived. Run the check, do not read this line.) `task/probe-2026-09-06-adaptor/` holds probe fixtures from an earlier
 session, deliberately left. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-08 — two rules were prescribing each other's refusal
+
+riddl-generator reported an adaptor in `Shop` telling a processor in `Corp` — top-level
+siblings — with no legal spelling. Reid ruled it a modelling error whose DIAGNOSTIC was the
+defect: *"the error shouldn't say 'add a connector', it should say put both domains into a
+common parent domain and add a connector between them."* Landed as
+`msg-tell-crosses-unrelated-domains`.
+
+**The report described a two-sided vise; it was three-sided, and the third side is what made
+it riddlc's bug rather than a bad model.** Declare the far inlet and A6 demanded a connector;
+add the connector and `stream-crosses-domains` refused it; **drop the inlet and AR5 refused
+that**. Only with the third arm is it true that NO edit works — with two arms it still reads
+as "pick the other spelling". I found it by testing the third arm rather than accepting the
+report's framing, and it also handed over the mechanism: AR5 forced the far inlet to exist,
+which removed A6's `target.inlets.isEmpty` exemption. **When a report says "both arms fail",
+ask what the third arm is before believing the shape of the problem.**
+
+**The two rules had been prescribing each other's refusal, and only reading BOTH revealed
+it.** `stream-crosses-domains`' suggestion said *"model the communication with an adaptor and
+messaging rather than a direct stream connector"* — exactly the shape A6 rejected. Fixing A6
+alone would have left the contradiction intact facing the other way, with an author sent
+round the same loop by a different sentence. **A contradiction between two rules has two
+sites; a fix that touches one is half a fix.**
+
+**The negative control that mattered was the REMEDY, not the absence of the error.** Asserting
+that the new message appears proves the rule fires; it says nothing about whether the advice
+leads anywhere — and "advice leading nowhere" was the entire complaint. So the test applies
+the remedy (both domains under a parent, plus the connector) and asserts **0 errors**, and I
+ran the same thing through the binary. Had I only pinned the message, I could have shipped a
+better-worded dead end and called it fixed.
+
+**Scoped to a re-diagnosis on purpose.** The new rule fires only where the old one already
+did, so error surface is unchanged by construction — no model that passed now fails, and the
+corpus is provably unmoved (355 / 190/190, the pre-change baseline) rather than measured-and-
+hoped. The residual is stated rather than hidden: a target with no inlet still reports the
+inlet first.
+
+**Reid's own remark went to BACKLOG, not into the code.** *"A `tell` is only relevant within a
+context... but it could be a `send`"* — taken literally that retires the cross-context tell
+seam and contradicts the remedy in the very ruling it accompanied. [5.8]. **An aside inside a
+ruling is not part of the ruling**; implementing it would have broken `RelatedDomainConnectorTest`
+and 7,556 corpus tells on an inference.
+
+**Vocabulary, on Reid's correction mid-task:** never "channel" for a **Connector**. Use the
+RIDDL definition name for structural elements in every user-facing string. Fixed in the new
+messages and in the surviving unreachable suggestion, which had said *"so the told message has
+a channel"* since it was written.
+
+**A red test found while certifying was NOT mine, and I proved that before saying so.**
+`FindTypeVocabularyTest` had been failing on `main` since yesterday's `on quiescence` landed —
+the kind was never added to `FindPredicates.knownKinds`, so `find -type on-quiescence` rejected
+a correct query. Confirmed by stashing my work and re-running, then fixed in its own commit.
+**`git stash` is the cheap way to turn "probably pre-existing" into a fact.**
 
 ## 2026-09-07 (night) — the loop rule was too general, not the idiom wrong
 
