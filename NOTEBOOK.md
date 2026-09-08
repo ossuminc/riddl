@@ -35,6 +35,10 @@ than inferred from the build succeeding:
 - `msg-tell-crosses-unrelated-domains` — the probe errors with it and names both domains, and
   the same probe with the remedy applied validates at **0 errors**.
 
+**The binary does NOT carry [5.7]** (a handler-less processor is now a stream tail whatever its
+shape), which landed after it was staged. Nothing in the corpus moves for it — the rule's corpus
+population is zero — so riddl-models is unaffected either way; restage when convenient.
+
 **Corpus census re-run with THIS binary: 189 entry points, 0 errors** — the pre-change baseline,
 unmoved. The counting pipeline was calibrated on a known-positive first (it reports 1 for the
 probe), because a census that greps for errors is exactly the measurement CLAUDE.md warns can
@@ -50,12 +54,20 @@ reads origin; whether the corpus state is pushed is git's to answer.
 
 - **Nothing half-done in the code.** The temporal-semantics task, the loop re-ruling and the
   unrelated-domain `tell` ruling all landed whole; their task files are in `task/done/`.
-- **Awaiting Reid**: the riddl 2.1.1 bump-consumers dispatch (plan presented, nothing written) —
-  BACKLOG [3.9]; whether `isStreamTail`'s handler-less pass-through should follow the loop
-  rule's "handler-less processors pass nothing through" — BACKLOG [5.7].
-- **Dropped, unanswered**: `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md`.
+- **Awaiting Reid**: nothing. [3.9] (bump-consumers) was DROPPED as moot on 2026-09-08 — the
+  three repos coordinate through the locally staged binary while riddlg's road to 1.0.0 keeps
+  discovering language riddl still owes — and [5.7] was ruled and implemented the same day.
+- **Dropped, unanswered**: `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md`
+  — now BACKLOG [3.10], and short by TWO constructs: it covers neither the `stream-graph-cycle`
+  re-ruling nor `msg-tell-crosses-unrelated-domains`.
 
 ### Certainty — what was actually run
+
+After [5.7] (2026-09-08, latest), shared cache, each module its own `testOnly *`: `language` 760
+JVM / 438 JS / 745 Native; `passes` 1796 JVM / 317 JS / 1784 Native; `commands` 355 JVM (corpus
+190/190); `riddlLib` 163 JVM. Canary: the inverted `StreamTailTest` case was red before the
+one-line change and green after. NOT re-run: `utils`, `testkit`, `riddlc`, `commands` on
+JS/Native.
 
 After the unrelated-domain `tell` ruling (2026-09-08), shared cache, each module its own
 `testOnly *`: `language` 760 JVM / 438 JS / 745 Native; `passes` 1796 JVM / 317 JS / 1784
@@ -102,6 +114,36 @@ read — a file had arrived. Run the check, do not read this line.) `task/probe-
 session, deliberately left. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-08 (later) — [5.7]: two rules disagreeing about the same node
+
+Reid ruled the tail rule follows the loop rule: a handler-less processor is a TAIL whatever its
+shape, where it had been a tail only with no outlets. One line of code; the value was in finding
+the principle that makes the two rules one rule.
+
+**The reconciliation the backlog item guessed at was wrong, and the right one is simpler.** [5.7]
+framed it as *"consistent only if a completeness question may extend benefit of the doubt that an
+Error may not"* — a rule about SEVERITY. It is not: **an opaque processor lets NO rule assert what
+it does with a message.** The loop rule may not claim the message comes back; the tail rule may not
+claim it goes on. Severity never entered it, and the arity the processor happens to bear is
+evidence for neither. Once stated that way there is nothing left to reconcile.
+
+**Both of the item's factual predictions were wrong**, and I checked instead of repeating them.
+It said `sink-reach.check`'s fixture would move — it does not, because that fixture declares no
+Source, so Check 2 never runs on it; its golden is byte-identical. It said corpus population was
+unmeasured — it is **zero**, across all 189 entry points. **A backlog item's predictions are the
+author's notes at filing time, not findings**; the closing entry should say which survived contact.
+
+**Calibrating the zero mattered and I nearly skipped it.** I had just been burned by an
+uncalibrated zero in the same session, so I built a known-positive (a source into a ports-only
+flow), ran it through BOTH the plain `validate` path and a corpus-style `.conf`, and confirmed the
+rule id appears in each. Only then was "0 across 189 models" evidence rather than a null result
+from a grep that could never have matched.
+
+**The staged binary was the "before" instrument.** It predates this change, so counting the rule's
+corpus population with `../bin/riddlc` measured the OLD behaviour without stashing or rebuilding
+anything — the A/B was free. Worth remembering: after a restage the staged binary stops being
+available for that, so take the before-count while it still is.
 
 ## 2026-09-08 — two rules were prescribing each other's refusal
 

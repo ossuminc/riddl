@@ -8257,18 +8257,30 @@ case class ValidationPass(
     * output, is a write, not a continuation — the arriving message has been consumed. A
     * `forward` always passes the handled message on, so it always disqualifies.
     *
-    * Two benefit-of-the-doubt cases, both deliberate: a processor with NO handlers at all is
-    * opaque, so it is a tail exactly when it has no outlets (a ports-only sink consumes; a
-    * ports-only flow is assumed to pass through — the shape `sink-reach.check` pins). And an
-    * inlet whose type does not resolve is ref-integrity's report, not this rule's, so it is not
-    * held against the processor. A `???` body needs no exemption here: it declares no inlet, so
-    * no connector can reach it.
+    * **A processor with NO handlers at all is a TAIL, whatever its shape (BACKLOG [5.7], ruled
+    * 2026-09-08).** It used to be a tail exactly when it had no outlets — a ports-only sink
+    * consumes, a ports-only flow was "assumed to pass through" — which put this rule in direct
+    * disagreement with [[checkMessageLoops]], where Reid had ruled the opposite for the same
+    * node: *"handler-less processors don't validate and they don't pass through anything."*
+    * The unifying principle is that **a handler-less processor is opaque, so NO rule may assert
+    * what it does with a message**: the loop rule may not claim the message comes back, and this
+    * rule may not claim it goes on. The walk ends there for both, and the arity it happens to
+    * have is not evidence either way.
+    *
+    * It is also the codebase's standing anti-double-reporting rule. *"Flow 'X' should have a
+    * handler"* already states the whole omission; making the SOURCE above it report as well is a
+    * second message for one fault, at a node the author did not write wrongly — the same
+    * reasoning that exempts an inlet-less `tell` target.
+    *
+    * One further benefit of the doubt: an inlet whose type does not resolve is ref-integrity's
+    * report, not this rule's, so it is not held against the processor. A `???` body needs no
+    * exemption here: it declares no inlet, so no connector can reach it.
     */
   protected def isStreamTail(proc: Processor[?]): Boolean =
     if proc.inlets.isEmpty then false
     else
       val clauses = handlerClausesOf(proc)
-      if clauses.isEmpty then proc.outlets.isEmpty
+      if clauses.isEmpty then true // opaque: nothing to say it passes anything on -- [5.7]
       else
         val arriving: Seq[Type] = proc.inlets.flatMap { inlet =>
           resolution.refMap.definitionOf[Type](inlet.type_.pathId).toSeq.flatMap(typeMembers)
@@ -8337,8 +8349,9 @@ case class ValidationPass(
     *     and an `on Z` clause emitting X loops nothing. `typeAdmits`/`typeMembers` do the
     *     expansion at every hop: handled type, operand type, inlet type.
     *   - **A processor with no handlers does not validate and passes nothing through**, so the walk
-    *     ends there. (This is deliberately NOT `isStreamTail`'s benefit of the doubt for a
-    *     ports-only flow; a loop is an Error and gets no such benefit.)
+    *     ends there. ([[isStreamTail]] diverged from this until [5.7] was ruled on 2026-09-08;
+    *     the two now agree, on the principle that an opaque processor lets NO rule assert what it
+    *     does with a message — neither that the message returns nor that it continues.)
     *   - **`tell` and `forward` are semantically identical to `send` at the model level** and ride
     *     the same channel: a `tell`/`forward` to processor Q arrives at Q exactly when Q declares
     *     an inlet admitting X (or, for an adaptor, accepts X on its implied inlet). Only riddlg's

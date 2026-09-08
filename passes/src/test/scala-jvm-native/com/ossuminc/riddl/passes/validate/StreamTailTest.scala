@@ -26,8 +26,10 @@ import org.scalatest.TestData
   * inlets admit (alternation members expanded, `on other` counting), and no clause handling type T
   * sends, tells or forwards a message of THAT type onward. Sending a different type — a `Persist`
   * command to a repository, say — is a write, not a continuation: the arriving message has been
-  * consumed. A processor with no handlers at all is opaque and gets the benefit of the doubt: a
-  * tail if it has no outlets, pass-through otherwise.
+  * consumed. A processor with no handlers at all is opaque and is a TAIL whatever its shape
+  * (BACKLOG [5.7], ruled 2026-09-08): no rule may assert what an opaque processor does with a
+  * message, so this one may not claim it passes anything on, exactly as `checkMessageLoops` may
+  * not claim a message comes back through it.
   *
   * And a message may not LOOP (re-ruled 2026-09-07, see `MessageLoopTest`): an `on X` clause that
   * re-emits X, whose message can travel the connector network back to a processor whose `on X`
@@ -173,33 +175,39 @@ class StreamTailTest extends AbstractValidatingTest {
       noPath(both) mustBe empty
     }
 
-    "give a handler-less processor the benefit of the doubt: a tail only if it has no outlets" in {
-      (td: TestData) =>
-        // Ports-only sink: nothing says it passes anything on, and it cannot. A tail.
-        val bareSink = diagnostics(
-          model(
-            """    streamlet Bare as sink is {
-              |      inlet i is event D.Evt with { briefly "i" }
-              |    } with { briefly "bare" }""".stripMargin,
-            """    connector c1 is { from outlet C.Src.o to inlet C.Bare.i } with { briefly "c" }""".stripMargin
-          ),
-          "bare-sink"
-        )
-        noPath(bareSink) mustBe empty
-        // Ports-only flow: opaque, assumed to pass through; its outlet leads nowhere, so no tail.
-        val bareFlow = diagnostics(
-          model(
-            """    streamlet Pass as flow is {
-              |      inlet i is event D.Evt with { briefly "i" }
-              |      outlet o is event D.Evt with { briefly "o" }
-              |    } with { briefly "pass" }""".stripMargin,
-            """    connector c1 is { from outlet C.Src.o to inlet C.Pass.i } with { briefly "c" }""".stripMargin
-          ),
-          "bare-flow"
-        )
-        noPath(bareFlow).map(_.message) must contain(
-          "Source 'Src' is a source but has no downstream path to any sink"
-        )
+    // [5.7], ruled 2026-09-08: the tail rule FOLLOWS the loop rule here. A processor with no
+    // handlers "does not validate and passes nothing through" (Reid, 2026-09-07), so no rule may
+    // claim it continues a chain any more than one may claim a message returns through it. The
+    // walk ends there for both, and the shape it happens to have is not evidence either way.
+    "treat a handler-less processor as a tail, whatever its shape" in { (td: TestData) =>
+      // Ports-only sink: nothing says it passes anything on, and it cannot. A tail, as before.
+      val bareSink = diagnostics(
+        model(
+          """    streamlet Bare as sink is {
+            |      inlet i is event D.Evt with { briefly "i" }
+            |    } with { briefly "bare" }""".stripMargin,
+          """    connector c1 is { from outlet C.Src.o to inlet C.Bare.i } with { briefly "c" }""".stripMargin
+        ),
+        "bare-sink"
+      )
+      noPath(bareSink) mustBe empty
+      // Ports-only FLOW: it was "assumed to pass through", so its outlet leading nowhere made the
+      // source above it report. That assumption is exactly what the loop rule refuses to make.
+      // It is also a SECOND message for one omission -- "Flow 'Pass' should have a handler"
+      // already says the whole of what is wrong here.
+      val bareFlow = diagnostics(
+        model(
+          """    streamlet Pass as flow is {
+            |      inlet i is event D.Evt with { briefly "i" }
+            |      outlet o is event D.Evt with { briefly "o" }
+            |    } with { briefly "pass" }""".stripMargin,
+          """    connector c1 is { from outlet C.Src.o to inlet C.Pass.i } with { briefly "c" }""".stripMargin
+        ),
+        "bare-flow"
+      )
+      noPath(bareFlow) mustBe empty
+      // The omission IS still reported -- by the check that owns it.
+      bareFlow.map(_.message) must contain("Flow 'Pass' should have a handler")
     }
   }
 

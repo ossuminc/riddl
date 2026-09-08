@@ -30,17 +30,25 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
-- **[5.7]** **`isStreamTail` gives a handler-less processor the benefit of the doubt as a
-  PASS-THROUGH; the loop rule, on Reid's word, gives it none. Needs Reid to say whether the
-  tail rule should follow.** Ruling of 2026-09-07 on the loop rule: *"handler-less processors
-  don't validate and they don't pass through anything, so your premise is invalid."*
-  `checkMessageLoops` obeys it (`ValidationPass`, doc comment names the divergence). But
-  `isStreamTail` still says a ports-only flow is "assumed pass-through" and a ports-only sink
-  is a tail — the 2026-09-04 posture, pinned by `sink-reach.check`. The two are consistent
-  only if "a completeness question may extend benefit of the doubt that an Error may not" is
-  the intended distinction; that has not been ruled. If the tail rule should follow, a
-  handler-less processor with an inlet becomes a tail regardless of outlets, and
-  `sink-reach.check`'s ports-only flow fixture moves. Corpus population: unmeasured.
+- ~~**[5.7]** `isStreamTail` vs the loop rule on a handler-less processor.~~ — **DONE
+  2026-09-08.** Reid: *"You should implement 5.7"* — the tail rule follows. A handler-less
+  processor is now a TAIL whatever its shape (`ValidationPass.isStreamTail`), where it used
+  to be a tail only with no outlets.
+  **The unifying principle, which is the durable part:** an opaque processor lets NO rule
+  assert what it does with a message — the loop rule may not claim the message comes back,
+  the tail rule may not claim it goes on. Not "a completeness question may extend benefit of
+  the doubt that an Error may not", which is the reconciliation this item guessed at; the two
+  rules simply agree now. It is also the standing anti-double-reporting rule: *"Flow 'X'
+  should have a handler"* already states the whole omission, so reporting the source above it
+  was a second message for one fault at a node written correctly.
+  **Both of this item's predictions were WRONG, and checking beat reasoning again.**
+  *"`sink-reach.check`'s ports-only flow fixture moves"* — it does not: that fixture declares
+  no Source, so Check 2 never runs on it, and its golden is byte-identical. *"Corpus
+  population: unmeasured"* — measured now and it is **ZERO** across all 189 entry points,
+  calibrated on a known-positive first, so nothing in riddl-models moves either.
+  Certified `language` 760/438/745, `passes` 1796/317/1784, `commands` 355 (corpus 190/190),
+  `riddlLib` 163. CM § "a chain ends where its message is consumed" records it, including a
+  narrowing of that section's must-preserve.
 
 - **[5.3]** **`put`/`get` ORDERING is unruled, and the CM says so.** Needs Reid.
   `../RIDDL-Computational-Model.md` §32.4 records three rulings (a `put` fails only by
@@ -1885,7 +1893,7 @@ that needs a ruling before either can be fixed.
 ### 3. Owed to other repos
 
 - **[3.10]** **ossum.tech has not answered the temporal-semantics language-reference
-  task, and it is now short by two constructs.** Dropped 2026-09-07 as
+  task, and it is now short by one construct.** Dropped 2026-09-07 as
   `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md` (`on
   quiescence`, `send … at`, three grammar rules, four rule ids). It does **not** mention
   the `stream-graph-cycle` re-ruling, which the language reference also describes, nor

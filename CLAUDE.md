@@ -2566,9 +2566,19 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   alternations expand and `on other` counts), and no clause handling T that `send`s/`tell`s/
   `forward`s a message of THAT type (`propagatesOnward`). **Same-type is the whole point** (Reid
   chose it over "any send"): receiving an event and sending a `Persist` COMMAND, or `put`ting to an
-  output, is a write, not a continuation. `forward` always disqualifies. A handler-less processor is
-  opaque — a tail iff it has no outlets — which is what keeps `sink-reach.check`'s ports-only sink a
-  tail and a ports-only flow a pass-through. A `???` body needs no exemption: it declares no inlet.
+  output, is a write, not a continuation. `forward` always disqualifies.
+  **A handler-less processor is opaque and is a TAIL whatever its shape** ([5.7], ruled 2026-09-08).
+  It was a tail only when it had no outlets, a ports-only flow being "assumed to pass through" —
+  which put this rule in direct disagreement with `checkMessageLoops`, where the same node passes
+  nothing through. **The unifying principle: an opaque processor lets NO rule assert what it does
+  with a message** — the loop rule may not claim the message comes back, this rule may not claim it
+  goes on, and the arity it happens to have is evidence for neither. It is also the standing
+  anti-double-reporting rule: *"Flow 'X' should have a handler"* states the whole omission, so
+  reporting the SOURCE above it too is a second message for one fault, at a node written correctly.
+  **Corpus population was ZERO** — measured across all 189 entry points, calibrated on a
+  known-positive first — so nothing moved in riddl-models. **`sink-reach.check` did NOT move
+  either**, though [5.7] predicted it would: that fixture declares no Source, so Check 2 never runs
+  on it. A `???` body needs no exemption: it declares no inlet.
   **The predicate lives in `ValidationPass` and is an abstract hook on `StreamingValidation`**,
   because the helpers it needs (`handlerClausesOf`, `alternationMembers`, `operandType`,
   `walkStatements`) are private there; do not grow a second copy in the trait.
@@ -2582,8 +2592,8 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   emitting clause is `on command Book` and can never be re-entered by the event it sends. Folded-in
   rulings: X may be a UNION member (`typeAdmits`/`typeMembers` at every hop — Y-typed ports carry X,
   an `on Y` clause handles X, an `on Z` clause emitting X loops nothing); a HANDLER-LESS processor
-  passes nothing through (it does not validate) — deliberately NOT `isStreamTail`'s benefit of the
-  doubt; `tell`/`forward` ride the same channel as `send` and arrive at Q exactly when Q declares an
+  passes nothing through (it does not validate) — `isStreamTail` DIVERGED from this until [5.7] was
+  ruled on 2026-09-08 and now agrees; `tell`/`forward` ride the same channel as `send` and arrive at Q exactly when Q declares an
   inlet admitting X (an adaptor: `adaptorAccepts`); `on other`/`on init`/`on term` do not handle X.
   Reported once per loop at the first member's transmitting clause, processors listed in order.
   **Fixture trap that cost two red runs**: a bare `outlet o` is AMBIGUOUS once two processors

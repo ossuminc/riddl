@@ -360,7 +360,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       val sinks = modelProcessors.filter(_.effectiveShape.isInstanceOf[Sink])
       val sourceNodes = sources.map(node).toSet
       // A chain TAIL is defined by what the processor DOES with what arrives — it handles every
-      // type its inlets admit and passes none of them on — never by a Sink SHAPE (Reid, 2026-09-04,
+      // type its inlets admit and passes none of them on, or has no handlers at all and so does
+      // nothing with it ([5.7]) — never by a Sink SHAPE (Reid, 2026-09-04,
       // mirroring the chain-head ruling below). Until then this asked `sinkNodes.contains(n)`, and
       // A6 made that unsatisfiable: a terminal log that records to its repository must own the
       // outlet it writes on, so by arity it is a flow, and every source above it was reported as
