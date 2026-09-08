@@ -15,10 +15,12 @@ Ask `git` for branch, tree and unpushed span — never trust a written answer to
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
 `FORMAT_REVISION` is 24** (bumped 2026-09-07 for `on quiescence` and `send … at`, both in one bump).
 
-**`../bin/riddlc` is restaged from `49c96efd8` (`2.1.1-13-49c96efd`, after the two temporal-
-semantics commits) via `scripts/publish-and-stage.sh`, and the JVM/JS/Native libraries are
-publishLocal'd from the same build — riddl-models and riddl-generator catch up from these, per
-Reid. Corpus census with it: 189 entry points, 0 errors. Check `../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`; a
+**`../bin/riddlc` is restaged from `9ef209d18` (`2.1.1-16-9ef209d1`: the two temporal-semantics
+commits plus the `stream-graph-cycle` re-ruling) via `scripts/publish-and-stage.sh`, and the
+JVM/JS/Native libraries are publishLocal'd from the same build — riddl-models and riddl-generator
+catch up from these, per Reid. Corpus census with it: 189 entry points, 0 errors. With it, the
+schedule-to-yourself fixture `send-at.riddl` validates clean and a genuine `on X` re-emitting X
+loop draws the Error. Check `../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`; a
 docs-only commit may sit between them and changes no behaviour.
 
 **The corpus gate is GREEN: 190/190**, verified 2026-09-07 evening against the local riddl-models
@@ -27,6 +29,11 @@ that state is PUSHED is git's to answer, not this file's; CI reads origin. **Not
 `task/`.**
 
 ### Certainty — what was actually run
+
+**2026-09-07 night, after the loop re-ruling (`793001ec4`), shared cache**: JVM `passes` 1791,
+`commands` 355 (corpus 190/190), `riddlLib` 163; JS `passes` 317; Native `passes` 1779. Canary:
+disabling `checkMessageLoops` reddens exactly the seven positive cases. `language` untouched by
+that commit except two fixtures, both re-validated with the binary.
 
 **2026-09-07 evening, after the two temporal-semantics commits (`68118db0f`, `e0bf248b3`), shared
 cache, each module its own `testOnly *`**: JVM `language` 760, `passes` 1780, `commands` 355
