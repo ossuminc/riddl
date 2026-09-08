@@ -1884,18 +1884,14 @@ that needs a ruling before either can be fixed.
 
 ### 3. Owed to other repos
 
-- **[3.9]** **riddl 2.1.1's bump-consumers dispatch is still awaiting Reid's go**, and the
-  language-reference task for the two temporal constructs is dropped but unanswered.
-  `/ossuminc-skills:bump-consumers riddl 2.1.1` presented its plan on 2026-09-04 — task files
-  in `riddl-generator` and `riddl-models` only (a patch release; the rest proposed skipped) —
-  and nothing was written because the skill writes nothing until the driver approves. Both
-  consumers are meanwhile building against the LOCALLY staged `2.1.1-16-9ef209d1`, which is
-  ahead of the release, so the dispatch matters less than it did; decide whether to send it
-  or fold it into the next release's. The docs task is
+- **[3.10]** **ossum.tech has not answered the temporal-semantics language-reference
+  task, and it is now short by two constructs.** Dropped 2026-09-07 as
   `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md` (`on
-  quiescence`, `send … at`, three grammar rules, four rule ids); it does not yet mention the
-  `stream-graph-cycle` re-ruling, which the language reference also describes — add that when
-  the ossum.tech session picks it up, or drop a second line there.
+  quiescence`, `send … at`, three grammar rules, four rule ids). It does **not** mention
+  the `stream-graph-cycle` re-ruling, which the language reference also describes, nor
+  2026-09-08's `msg-tell-crosses-unrelated-domains`. Add both when the ossum.tech session
+  picks it up, or drop a second task file there.
+  (Split out of the old [3.9], whose other half Reid closed — see below.)
 
 - **[3.8]** **Should an adaptor's CONNECTORS also be context-to-context?** Open, and
   deliberately not folded into `35bb8abcf`.
@@ -1913,6 +1909,22 @@ that needs a ruling before either can be fixed.
   because publishing on your own outlet is how an adaptor emits (§17). A connector rule must
   not contradict that — the question is what the connector's OTHER end may be, not whether
   the adaptor may have an outlet.
+
+- ~~**[3.9]** riddl 2.1.1's bump-consumers dispatch.~~ — **DROPPED 2026-09-08 by Reid as
+  MOOT**, not deferred. *"It is moot when using staged and locally published versions to
+  coordinate changes across 3 repositories. The other consumers need to wait until this
+  entire line of work is finished as we don't know what will yet be added to riddl to get
+  to 1.0.0 code generation in riddlg."* The evidence he cites is this week's: *"the temporal
+  stuff we just added was not in anyone's plan but it turned out to be needed to express
+  models correctly."*
+  **The durable rule, which outlives this item:** riddl, riddl-generator and riddl-models
+  coordinate through the LOCALLY staged binary plus `publishLocal`, not through released
+  version bumps, for as long as riddlg's road to 1.0.0 code generation keeps discovering
+  language riddl still owes. Dispatching a bump to the wider consumer set mid-discovery
+  pins them to a version already known to be incomplete. Resume `bump-consumers` when that
+  line of work finishes.
+  **This number was REUSED and should not have been** — the restage item below already held
+  [3.9] and had closed. Both are retired now; do not issue [3.9] a third time.
 
 - ~~**[3.9]** **Restage `../bin/riddlc`; it predates the A6/adaptor rules.**~~ — **DONE
   2026-09-03** on Reid's instruction, via `scripts/publish-and-stage.sh` (publishLocal +
