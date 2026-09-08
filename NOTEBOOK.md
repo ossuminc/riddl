@@ -10,73 +10,69 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-09-06 by running, not recalling
+### Build state — verified 2026-09-07 night by running, not recalling
 
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
-`FORMAT_REVISION` is 24** (bumped 2026-09-07 for `on quiescence` and `send … at`, both in one bump).
+`FORMAT_REVISION` is 24** (one bump for `on quiescence` and `send … at`).
 
-**`../bin/riddlc` is restaged from `9ef209d18` (`2.1.1-16-9ef209d1`: the two temporal-semantics
-commits plus the `stream-graph-cycle` re-ruling) via `scripts/publish-and-stage.sh`, and the
-JVM/JS/Native libraries are publishLocal'd from the same build — riddl-models and riddl-generator
-catch up from these, per Reid. Corpus census with it: 189 entry points, 0 errors. With it, the
-schedule-to-yourself fixture `send-at.riddl` validates clean and a genuine `on X` re-emitting X
-loop draws the Error. Check `../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`; a
-docs-only commit may sit between them and changes no behaviour.
+**`../bin/riddlc` and the local ivy artifacts are `2.1.1-16-9ef209d1`** (commit `9ef209d18`),
+produced together by `scripts/publish-and-stage.sh`; HEAD is one docs-only commit past it, which
+changes no behaviour. riddl-models and riddl-generator catch up from THIS build, per Reid — it
+carries three language changes since the release: `on quiescence <window>`, `send … at
+<instant>`, and `stream-graph-cycle` re-ruled as an infinite-MESSAGE loop (an `on X` clause whose X
+can travel back to it), which is what makes the scheduled send's schedule-to-yourself loop legal.
+Behaviour verified with the binary: `language/input/send-at.riddl` (the idiom) validates with 0
+errors; a genuine `on X` re-emitting X loop draws the Error; a String instant draws
+`stmt-send-at-not-instant`. Check `../bin/riddlc --no-ansi-messages version` against `git describe
+--tags --long` before trusting any of this.
 
-**The corpus gate is GREEN: 190/190**, verified 2026-09-07 evening against the local riddl-models
-checkout (which had also fixed the `MenuReleaseEvent Distribution` wire AR9 reported). Whether
-that state is PUSHED is git's to answer, not this file's; CI reads origin. **Nothing is pending in
-`task/`.**
+**The corpus gate is GREEN: 190/190** (`RiddlModelsRoundTripTest`) and the census with the binary
+is 189 entry points, 0 errors, both on the local riddl-models checkout on 2026-09-07 night. CI
+reads origin; whether the corpus state is pushed is git's to answer.
+
+### In flight
+
+- **Nothing half-done in the code.** The temporal-semantics task and the loop re-ruling both landed
+  whole; their task file is in `task/done/`.
+- **Awaiting Reid**: the riddl 2.1.1 bump-consumers dispatch (plan presented, nothing written) —
+  BACKLOG [3.9]; and whether `isStreamTail`'s handler-less pass-through should follow the loop
+  rule's "handler-less processors pass nothing through" — BACKLOG [5.7].
+- **Dropped, unanswered**: `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md`.
 
 ### Certainty — what was actually run
 
-**2026-09-07 night, after the loop re-ruling (`793001ec4`), shared cache**: JVM `passes` 1791,
-`commands` 355 (corpus 190/190), `riddlLib` 163; JS `passes` 317; Native `passes` 1779. Canary:
-disabling `checkMessageLoops` reddens exactly the seven positive cases. `language` untouched by
-that commit except two fixtures, both re-validated with the binary.
-
-**2026-09-07 evening, after the two temporal-semantics commits (`68118db0f`, `e0bf248b3`), shared
-cache, each module its own `testOnly *`**: JVM `language` 760, `passes` 1780, `commands` 355
-(corpus 190/190), `riddlLib` 163 (JSON identity 191/191); JS `language` 438, `passes` 317,
-`riddlLib` 149; Native `language` 745, `passes` 1768, `riddlLib` 162. TatSu 119/142. Not re-run:
-`utils`, `testkit`, `riddlc`, `commands` on JS/Native — the commits touch none of them except
-through `language`/`passes`, which were.
-
-**2026-09-07 07:46, full regression from a CLEAN state at `21a212339`** (before AR9 and the
-advisory fix): 24 invocations, zero failures, zero skipped modules, all three platforms plus
-scripted, TatSu and both corpora — see that entry; cite it for the ship, and re-run it if the
-ship wants a cold certification of the later commits.
-
-**After the advisory fix, shared cache, each module its own `testOnly *`**: JVM `passes` 1753,
-`commands` 355 (corpus 190/190); JS `passes` 317; Native `passes` (see the run log for the
-count). Not re-run since: `language`, `riddlLib`, `utils`, `testkit`, `riddlc` on any platform —
-the two later commits touch `ValidationPass` and test sources only.
+After the loop re-ruling (`793001ec4`), shared cache, each module its own `testOnly *`: JVM
+`passes` 1791, `commands` 355 (corpus 190/190), `riddlLib` 163; JS `passes` 317; Native `passes`
+1779; canary: disabling `checkMessageLoops` reddens exactly the seven positive cases. After the two
+temporal commits (`68118db0f`, `e0bf248b3`): every one of `language`/`passes`/`riddlLib` on all three
+platforms plus `commands` JVM, TatSu 119/142. NOT re-run since `21a212339` (the last clean-cache
+certification, 2026-09-07 07:46): `utils`, `testkit`, `riddlc`, and `commands` on JS/Native — the
+later commits touch none of them except through `language`/`passes`. A ship wants the clean-cache
+pass again; the 2026-09-04 entry below records how it was driven.
 
 ### Traps a fresh session would hit
 
-- **A rule can be right alone and still make a legal model unwritable.** Three rules landed
-  in two days and each broke the one before: A6-as-Error contradicted
-  `stream-crosses-domains`, and A6's own origins were wrong from the start. Every one
-  shipped green with canaries and corpus measurement. **None of that measures interaction
-  with rules already present** — check what a new rule collides with, not just its blast
-  radius.
-- **Check CLAUDE.md before justifying a design decision.** `9d3c69aba` counted a sender's
-  ancestor contexts as reachability origins and defended it in the commit message;
-  `CLAUDE.md:2327` says the reverse in terms. Writing a persuasive justification is the
-  signal to go verify, not evidence you are right.
-- **Calibrate a measurement on a known-positive case before trusting a zero.** riddlg
-  reported A6 as "not implemented"; it was implemented and fired correctly in isolation —
-  it was answering a weaker question. Also: strip ANSI before grepping riddlc output, and
-  remember riddl-models `.conf` files set `show-style-warnings = false`.
-- **A test failing on a fixture can be evidence about the RULE.** `SharedAdaptorTest` went
-  red because the first adaptor rule forbade an adaptor sending to its own outlet — how an
-  adaptor emits at all.
+- **A new rule's tests measure the rule, never its interaction with rules already present.** Four
+  instances in one week, the latest being the loop rule condemning a same-day ruling's idiom.
+  Validate the new fixture with the freshly staged binary; that is what found it.
+- **A bare single-segment path searches the WHOLE symbol table.** `outlet o` is ambiguous the
+  moment two processors declare an `o`; the resolver then records nothing and any refMap-driven
+  walk silently has no edge — a check "passes" every positive case by finding nothing. Qualify
+  paths in fixtures. Found by instrumenting the resolver, after three rounds of reasoning were wrong.
+- **Check CLAUDE.md before justifying a design decision**, and check the actual rule before writing
+  an "unchanged" list: the temporal plan asserted a scheduled `send` discharges `yields`; it never
+  has since rc.19, and only the test caught it.
+- **Calibrate a measurement on a known-positive case before trusting a zero.** Strip ANSI before
+  grepping riddlc output; riddl-models `.conf` files set `show-style-warnings = false`.
+- **`ZonedDateTime(UTC)`** — a quoted zone and a bare `ZonedDateTime` both fail to parse; `let when`
+  fails because `when` is a keyword; `send` does not parse in a function body.
 - **A Scala bump is ~32 sites**, since the full version is a path segment; a grep omitting
   `.github/` misses 11.
 
 ### `task/` — empty, 160 in `done/`
 
-Nothing awaits triage. That is a fact about right now, not a reason to skip the check.
+Nothing awaits triage. `task/probe-2026-09-06-adaptor/` holds probe fixtures from an earlier
+session, deliberately left. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 

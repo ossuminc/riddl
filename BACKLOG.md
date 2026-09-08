@@ -30,6 +30,18 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
+- **[5.7]** **`isStreamTail` gives a handler-less processor the benefit of the doubt as a
+  PASS-THROUGH; the loop rule, on Reid's word, gives it none. Needs Reid to say whether the
+  tail rule should follow.** Ruling of 2026-09-07 on the loop rule: *"handler-less processors
+  don't validate and they don't pass through anything, so your premise is invalid."*
+  `checkMessageLoops` obeys it (`ValidationPass`, doc comment names the divergence). But
+  `isStreamTail` still says a ports-only flow is "assumed pass-through" and a ports-only sink
+  is a tail — the 2026-09-04 posture, pinned by `sink-reach.check`. The two are consistent
+  only if "a completeness question may extend benefit of the doubt that an Error may not" is
+  the intended distinction; that has not been ruled. If the tail rule should follow, a
+  handler-less processor with an inlet becomes a tail regardless of outlets, and
+  `sink-reach.check`'s ports-only flow fixture moves. Corpus population: unmeasured.
+
 - **[5.3]** **`put`/`get` ORDERING is unruled, and the CM says so.** Needs Reid.
   `../RIDDL-Computational-Model.md` §32.4 records three rulings (a `put` fails only by
   failing to deliver; a `get` is asynchronous at the event/interrupt level; an `output` is a
@@ -1871,6 +1883,19 @@ that needs a ruling before either can be fixed.
   done, so the file no longer contradicts the tree.
 
 ### 3. Owed to other repos
+
+- **[3.9]** **riddl 2.1.1's bump-consumers dispatch is still awaiting Reid's go**, and the
+  language-reference task for the two temporal constructs is dropped but unanswered.
+  `/ossuminc-skills:bump-consumers riddl 2.1.1` presented its plan on 2026-09-04 — task files
+  in `riddl-generator` and `riddl-models` only (a patch release; the rest proposed skipped) —
+  and nothing was written because the skill writes nothing until the driver approves. Both
+  consumers are meanwhile building against the LOCALLY staged `2.1.1-16-9ef209d1`, which is
+  ahead of the release, so the dispatch matters less than it did; decide whether to send it
+  or fold it into the next release's. The docs task is
+  `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md` (`on
+  quiescence`, `send … at`, three grammar rules, four rule ids); it does not yet mention the
+  `stream-graph-cycle` re-ruling, which the language reference also describes — add that when
+  the ossum.tech session picks it up, or drop a second line there.
 
 - **[3.8]** **Should an adaptor's CONNECTORS also be context-to-context?** Open, and
   deliberately not folded into `35bb8abcf`.
