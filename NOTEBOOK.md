@@ -62,7 +62,11 @@ reads origin; whether the corpus state is pushed is git's to answer.
 
 ### Certainty — what was actually run
 
-After [5.7] (2026-09-08, latest), shared cache, each module its own `testOnly *`: `language` 760
+After [3.8]'s closure (2026-09-09, latest — a TEST and docs change only, no main source, so the
+staged binary is unaffected): `passes` 1798 JVM / 1786 Native, both green, +2 each for the new
+pinning pair.
+
+After [5.7] (2026-09-08), shared cache, each module its own `testOnly *`: `language` 760
 JVM / 438 JS / 745 Native; `passes` 1796 JVM / 317 JS / 1784 Native; `commands` 355 JVM (corpus
 190/190); `riddlLib` 163 JVM. Canary: the inverted `StreamTailTest` case was red before the
 one-line change and green after. NOT re-run: `utils`, `testkit`, `riddlc`, `commands` on
@@ -113,6 +117,36 @@ read — a file had arrived. Run the check, do not read this line.) `task/probe-
 session, deliberately left. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-09 — [3.8] had mostly evaporated before anyone worked it
+
+Reid closed it: inside one context a connector may run from an adaptor's outlet to a contained
+entity's inlet, because *"the adaptor is part of the context (its boundary) and therefore enjoys
+the same privilege as other processors in that context."* No code changed — behaviour already
+matched.
+
+**Two thirds of the item had been answered by a change that landed three days AFTER it was
+filed.** [3.8] was raised 2026-09-03 asking whether an adaptor's connectors must be
+context-to-context; A103 landed 2026-09-06 and made the cross-context half an Error on its own,
+leaving only the intra-context case — which ran head-on into the standing 2026-08-18 ruling that
+intra-context wiring needs no ceremony. I found that by RUNNING the cross-context shape against
+the staged binary (two Errors, one per end) rather than reasoning from the item's text. **A
+backlog item filed before a large change is a snapshot; re-measure it against the branch before
+working it**, exactly as `check-tasks` says to do for an incoming task file. The same discipline,
+one repo inward.
+
+**The item cited a green test as evidence, and that evidence was empty.** It pointed at
+`SharedAdaptorTest`'s "allow wrapper adaptations", which carries the exact shape — but its
+assertions are `domain.isEmpty must be(false)` and that the adaptor's id is `PaymentAdapter`. It
+never asserts the absence of a boundary error, so a rule that started rejecting the shape would
+have left it green and the "it PASSES today" note would have gone on reading as protection.
+**Citing a passing test is not citing an assertion** — read what it asserts before treating it as
+a pin. The privilege now has a real one, with the cross-context shape as its negative control.
+
+**Where the ruling had to land is worth noting**: the CM's A103 paragraph said the adaptor is
+"boundary surface, not content" of its context, which invites exactly the wrong inference here.
+It now says explicitly that this is a claim about what CROSSES the boundary and nothing more —
+being the boundary does not make an adaptor a stranger to its own context.
 
 ## 2026-09-08 (later) — [5.7]: two rules disagreeing about the same node
 

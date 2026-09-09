@@ -2391,6 +2391,20 @@ validation — resolution and type-checking — in `checkStatementScopes`.
     may drive a contained entity's own inlet directly. No dedicated `sink`/`source`
     definition is required to carry a message between two definitions of one
     context.
+    **An ADAPTOR enjoys this too** (Reid, 2026-09-09, closing BACKLOG [3.8]): inside one
+    context a connector may run from an adaptor's outlet to a contained entity's inlet.
+    *"The adaptor is part of the context (its boundary) and therefore enjoys the same
+    privilege as other processors in that context."* **Being the boundary does not make an
+    adaptor a stranger to its own context** — A103 makes it special about what CROSSES the
+    boundary and changes nothing about wiring inside one. The open question had been whether
+    the 2026-09-03 statement rule (`adaptor-targets-context-only`) implied a matching
+    CONNECTOR rule; A103 had already settled the cross-context half — that shape draws
+    `stream-boundary-outlet` AND `stream-boundary-inlet`, verified — so only the
+    intra-context case was ever live, and it is legal. No code changed.
+    Pinned by `AdaptorIsTheBoundaryTest` § "the intra-context privilege [3.8]", **because
+    nothing pinned it**: `SharedAdaptorTest`'s "allow wrapper adaptations" carries this exact
+    shape but asserts only that the adaptor parses with the right id, so a boundary rule that
+    started erroring on it would have left that test green.
   - **At the boundary, and only there, the CONTEXT is the port.** Crossing IN it is
     the sink; crossing OUT it is the source.
   **This corrected two completeness checks that had encoded the opposite.** 4h asked

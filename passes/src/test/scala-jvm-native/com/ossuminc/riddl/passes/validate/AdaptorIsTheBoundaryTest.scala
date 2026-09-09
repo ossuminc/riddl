@@ -79,6 +79,86 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
   private def errorsOf(msgs: Messages, rule: RuleId): Seq[Message] =
     msgs.filter(m => m.kind == Messages.Error && m.ruleId.contains(rule))
 
+  /** The INTRA-context privilege (Reid, 2026-09-09, closing BACKLOG [3.8]).
+    *
+    * The open question was whether an adaptor's connectors must ALSO be context-to-context, from
+    * his 2026-09-03 remark that *"adaptors need to use only context-to-context connectors"*. What
+    * shipped from that was the STATEMENT rule (`adaptor-targets-context-only`); the connector half
+    * was left unbuilt rather than inferred. A103 then answered the CROSS-context part of it — a
+    * connector reaching from an adaptor's portlet into another context's contained entity draws
+    * `stream-boundary-outlet` and `stream-boundary-inlet` — leaving only the intra-context case,
+    * which Reid ruled legal:
+    *
+    * > inside one context, a connector may run from an adaptor's outlet to a contained entity's
+    * > inlet, per the intra-context ruling. The adaptor is part of the context (its boundary) and
+    * > therefore enjoys the same privilege as other processors in that context.
+    *
+    * **Being the boundary does not make an adaptor a stranger to its own context.** A103 makes it
+    * special about what CROSSES the boundary; it changes nothing about wiring inside one.
+    *
+    * Pinned here because nothing pinned it. `SharedAdaptorTest`'s "allow wrapper adaptations"
+    * carries this exact shape but asserts only that the adaptor parses with the right id — a
+    * boundary rule that started erroring on it would leave that test green.
+    */
+  "the intra-context privilege [3.8]" should {
+
+    "let a connector run from an adaptor's outlet to a contained entity's inlet" in {
+      (td: TestData) =>
+        val src = model(
+          """    entity MyEntity is {
+            |      inlet commands is command Sales.Ship with { briefly "i" }
+            |      handler x is {
+            |        on command Sales.Ship is { do "handle" }
+            |        on other is { error "unexpected" }
+            |      } with { briefly "h" }
+            |    } with { briefly "e" }
+            |    adaptor ToFul to context Shop.Ful is {
+            |      outlet forMyEntity is command Sales.Ship with { briefly "o" }
+            |      handler H is {
+            |        on command Sales.Ship is { send command Sales.Ship(sku = "x") to outlet forMyEntity }
+            |        on other is { error "unexpected" }
+            |      } with { briefly "h" }
+            |    } with { briefly "a" }
+            |    connector only is { from outlet Sales.ToFul.forMyEntity to inlet Sales.MyEntity.commands }
+            |      with { briefly "c" }""".stripMargin,
+          fulHandler,
+          ""
+        )
+        val msgs = diagnostics(src, td.name)
+        errorsOf(msgs, RuleId.BoundaryOutlet) mustBe empty
+        errorsOf(msgs, RuleId.BoundaryInlet) mustBe empty
+        msgs.justErrors.map(_.format) mustBe empty
+    }
+
+    // The negative control, and the half A103 already enforces: the SAME shape reaching across a
+    // context boundary is two Errors, one per end. Without this, deleting the boundary rule would
+    // look identical to scoping it to cross-context only.
+    "still REJECT the same shape when it reaches into ANOTHER context's entity" in {
+      (td: TestData) =>
+        val src = model(
+          """    adaptor ToFul to context Shop.Ful is {
+            |      outlet forMyEntity is command Sales.Ship with { briefly "o" }
+            |      handler H is {
+            |        on command Sales.Ship is { send command Sales.Ship(sku = "x") to outlet forMyEntity }
+            |        on other is { error "unexpected" }
+            |      } with { briefly "h" }
+            |    } with { briefly "a" }""".stripMargin,
+          """    entity FarEntity is {
+            |      inlet commands is command Sales.Ship with { briefly "i" }
+            |      handler x is {
+            |        on command Sales.Ship is { do "handle" }
+            |        on other is { error "unexpected" }
+            |      } with { briefly "h" }
+            |    } with { briefly "e" }
+            |""".stripMargin + fulHandler,
+          """  connector cross is { from outlet Sales.ToFul.forMyEntity to inlet Ful.FarEntity.commands }
+            |    with { briefly "c" }""".stripMargin
+        )
+        val msgs = diagnostics(src, td.name)
+        (errorsOf(msgs, RuleId.BoundaryOutlet) ++ errorsOf(msgs, RuleId.BoundaryInlet)) must not be empty
+    }
+  }
+
   "AR1: a cross-context connector" should {
 
     "be allowed to LEAVE from a declared outlet of an OUTBOUND adaptor toward its referent" in {

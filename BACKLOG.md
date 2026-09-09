@@ -1916,22 +1916,27 @@ that needs a ruling before either can be fixed.
   17-keyword tokenizer gap (`d38f51314`) — their list is independently maintained and has
   its own holes.
 
-- **[3.8]** **Should an adaptor's CONNECTORS also be context-to-context?** Open, and
-  deliberately not folded into `35bb8abcf`.
-  Reid, 2026-09-03, quoted in riddlg's report: *"RIDDL validated an adaptor using a
-  context-to-entity connector but adaptors need to use only context-to-context
-  connectors."* What shipped was the STATEMENT rule — a `tell`/`send`/`forward` from an
-  adaptor must address a Context (`adaptor-targets-context-only`). A rule about
-  **connectors** touching an adaptor's portlet is a different check with its own corpus
-  cost and was left out rather than inferred.
-  **Evidence it is live, not hypothetical:** `SharedAdaptorTest`'s "allow wrapper
-  adaptations" fixture (`passes/src/test/scala/.../SharedAdaptorTest.scala:70`) has exactly
-  that shape — `connector only is { from outlet Foo.PaymentAdapter.foo.forMyEntity to inlet
-  Foo.MyEntity.phum.commands }` — and it PASSES today.
-  **Check before building:** the statement rule already exempts a portlet the adaptor OWNS,
-  because publishing on your own outlet is how an adaptor emits (§17). A connector rule must
-  not contradict that — the question is what the connector's OTHER end may be, not whether
-  the adaptor may have an outlet.
+- ~~**[3.8]** Should an adaptor's CONNECTORS also be context-to-context?~~ — **CLOSED
+  2026-09-09 by Reid: NO, not inside one context.** *"Inside one context, a connector may
+  run from an adaptor's outlet to a contained entity's inlet, per the intra-context ruling.
+  The adaptor is part of the context (its boundary) and therefore enjoys the same privilege
+  as other processors in that context."* **No code changed** — current behaviour already
+  matched (verified: the shape validates with 0 errors).
+  **Most of the question had been answered three days after it was filed, by A103.** It was
+  raised 2026-09-03 from *"adaptors need to use only context-to-context connectors"*, of
+  which the STATEMENT half shipped as `adaptor-targets-context-only`. A103 (2026-09-06) then
+  made the CROSS-context half an Error on its own: that shape draws BOTH
+  `stream-boundary-outlet` and `stream-boundary-inlet` — measured, not reasoned. So only the
+  intra-context case was ever still live, and it ran head-on into the 2026-08-18 ruling that
+  intra-context wiring needs no ceremony. **A backlog item filed before a large change should
+  be re-measured against the branch before it is worked**; two thirds of this one had
+  evaporated.
+  **The privilege was NOT pinned, and now is** (`AdaptorIsTheBoundaryTest` § "the
+  intra-context privilege [3.8]", with the cross-context shape as its negative control).
+  This item cited `SharedAdaptorTest`'s "allow wrapper adaptations" as evidence it passes —
+  but that test asserts only that the adaptor parses with the right id, so a boundary rule
+  that started erroring on the shape would have left it green. **Citing a green test is not
+  the same as citing an assertion.**
 
 - ~~**[3.9]** riddl 2.1.1's bump-consumers dispatch.~~ — **DROPPED 2026-09-08 by Reid as
   MOOT**, not deferred. *"It is moot when using staged and locally published versions to
