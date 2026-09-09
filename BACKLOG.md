@@ -1892,14 +1892,29 @@ that needs a ruling before either can be fixed.
 
 ### 3. Owed to other repos
 
-- **[3.10]** **ossum.tech has not answered the temporal-semantics language-reference
-  task, and it is now short by one construct.** Dropped 2026-09-07 as
-  `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md` (`on
-  quiescence`, `send … at`, three grammar rules, four rule ids). It does **not** mention
-  the `stream-graph-cycle` re-ruling, which the language reference also describes, nor
-  2026-09-08's `msg-tell-crosses-unrelated-domains`. Add both when the ossum.tech session
-  picks it up, or drop a second task file there.
-  (Split out of the old [3.9], whose other half Reid closed — see below.)
+- **[3.10]** **ossum.tech is SIX WEEKS behind on language documentation, not two
+  constructs behind.** Dispatched 2026-09-08 as
+  `../ossum.tech/task/2026-09-08-riddl-language-changes-since-2.0.0.md`, superseding the
+  2026-09-07 temporal-only task, which is still open in their `task/` and covers two of
+  the four new spellings and none of the rules.
+  **The scope was measured, not assumed.** Their last CONTENT sync is `deff3fe`
+  (2026-08-31, "document what 2.0.0 added"); riddl has **18 language/validation commits**
+  since, adding **four author-visible spellings** (`streamlet` for `processor`, `on
+  quiescence`, `send … at`, `Id()` unification) and **twelve rule ids**. Most change what
+  VALIDATES rather than what parses, so a reader whose model starts erroring finds nothing
+  in the reference explaining it. A103 is the sharp one: it REVERSES previously documented
+  behaviour.
+  **A first read of their history was WRONG and is worth not repeating**: `git log -- docs/`
+  showed nothing after 2026-07-30, which looked like a six-week stall. `docs/` no longer
+  exists — they restructured into `sites/<product>/docs/` on 2026-07-30, so the path filter
+  silently matched nothing. Their real cadence is fine. **A path filter that returns nothing
+  after a known restructuring is measuring the restructuring.**
+  **Also carried upstream to them, found while writing it:** their Pygments lexer
+  (`riddl_lexer/lexer.py`) is missing `prompt`, `self`, `forward`, `initiate`, `terminate`
+  and `quiescence`, so every code sample on the site renders those six as identifiers.
+  Verified directly with `let`/`streamlet` as present-controls. Unrelated to riddl's own
+  17-keyword tokenizer gap (`d38f51314`) — their list is independently maintained and has
+  its own holes.
 
 - **[3.8]** **Should an adaptor's CONNECTORS also be context-to-context?** Open, and
   deliberately not folded into `35bb8abcf`.
