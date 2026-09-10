@@ -246,8 +246,15 @@ class SagaValidatorTest extends AbstractValidatingTest {
            |      }
            |    }
            |    saga sag is {
-           |      step StepOne is { $stepOne } reverted by { $revertOne }
-           |      step StepTwo is { do "do it" } reverted by { do "undo it" }
+           |      // Every saga step must tell something ELSE to do something (Reid, 2026-09-09);
+           |      // without it the step effects nothing and `saga-step-no-tell` is an Error. The
+           |      // tell is scaffolding here -- the subject of these cases is the initiate/terminate
+           |      // in the stepOne parameter. `Order` declares no inlet, so A6 exempts the tell.
+           |      // It leads the block because `terminate` is TERMINAL: anything after it is
+           |      // unreachable and an Error.
+           |      step StepOne is { tell command d.c.Go(xfield = 1) to entity d.c.Order
+           |        $stepOne } reverted by { $revertOne }
+           |      step StepTwo is { tell command d.c.Go(xfield = 1) to entity d.c.Order } reverted by { do "undo it" }
            |    }
            |  }
            |}

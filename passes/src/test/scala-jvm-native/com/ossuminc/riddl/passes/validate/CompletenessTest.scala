@@ -1026,7 +1026,7 @@ class CompletenessTest extends AbstractValidatingTest {
     // while handling one's own event -- subsume it, as Errors rather than warnings, and live in
     // EventSourcedEntityTest.
 
-    "warn when saga step has no tell command" in { (td: TestData) =>
+    "ERROR when a saga step has no tell command" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
@@ -1051,8 +1051,13 @@ class CompletenessTest extends AbstractValidatingTest {
         td
       )
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        val cw = completenessWarnings(msgs)
-        cw.exists(_.message.contains("no 'tell command'")) mustBe true
+        // An ERROR since 2026-09-09, not a completeness warning (Reid): "every saga step must tell
+        // something ELSE to do something or there is, by definition, no action, which makes the
+        // step moot and pointless." A step that effects nothing is self-contradictory -- it claims
+        // to be a step of a transaction while doing none of it -- and self-contradiction errors
+        // where under-specification warns.
+        msgs.filter(m => m.isError && m.message.contains("no 'tell command'")) must not be empty
+        completenessWarnings(msgs).exists(_.message.contains("no 'tell command'")) mustBe false
       }
     }
 

@@ -217,7 +217,7 @@ class InvariantConditionValueWalkTest extends AbstractValidatingTest {
           |      step One is {
           |        when invariant NonNegative then { tell command Go(id = "the id") to entity Worker } end
           |      } reverted by { do "undo it" }
-          |      step Two is { do "something" } reverted by { do "undo it" }
+          |      step Two is { tell command Go(id = "two") to entity Worker } reverted by { do "undo it" }
           |    }
           |  }
           |}
@@ -250,7 +250,7 @@ class InvariantConditionValueWalkTest extends AbstractValidatingTest {
           |          tell command Go(id = "the id") to entity Worker
           |        } end
           |      } reverted by { do "undo it" }
-          |      step Two is { do "something" } reverted by { do "undo it" }
+          |      step Two is { tell command Go(id = "two") to entity Worker } reverted by { do "undo it" }
           |    }
           |  }
           |}

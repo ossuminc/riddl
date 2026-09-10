@@ -6130,7 +6130,7 @@ case class ValidationPass(
     *     decides WHEN COMPENSATION FIRES -- the docstring below says so;
     *   - every riddl-models `.conf` sets `show-style-warnings = false`, so demoting it would have
     *     hidden it from the entire corpus. The task's own acceptance criterion is that it STILL
-    *     WARNS. (Found by this rule's own test, whose helper sets exactly that flag.)
+    *     WARNS.
     *
     * The blocking behaviour was the defect: `isGenerable` is `severity <= StyleWarning.severity`,
     * so a CompletenessWarning refused every such model at riddlg's product boundary, which made
@@ -6227,7 +6227,26 @@ case class ValidationPass(
         case _ => false
       }
       if !hasTellCommand then {
-        messages.addCompleteness(
+        // **An ERROR, not a completeness warning (Reid, 2026-09-09).** *"Every saga step must tell
+        // something ELSE to do something or there is, by definition, no action, which makes the
+        // step moot and pointless."*
+        //
+        // It is self-contradiction rather than under-specification, which is what puts it on the
+        // Error side of this repo's standing line: the step CLAIMS to be one step of a distributed
+        // transaction while effecting none of it, and its `reverted by` block then promises to
+        // compensate an action that never happened.
+        //
+        // **Do NOT add this to `RuleId.nonBlocking`** -- the question of how riddlg generates code
+        // for such a step does not arise, because riddlg's first gate is a model with nothing above
+        // a StyleWarning. That is the reasoning that corrected an earlier reading of this rule as
+        // the twin of `saga-no-timeout`: an absent timeout has a defensible default (one hour), an
+        // absent action has none, and an `AI FILL` hole is a marker that code is MISSING rather
+        // than a substituted value.
+        //
+        // Corpus cost measured before landing: **zero**. All 6 sagas in riddl-models already tell a
+        // command from every do-block (189 entry points, calibrated on a known-positive probe that
+        // reports 2).
+        messages.addError(
           s.errorLoc,
           s"${s.identify} do-statements contain no 'tell command' to effect state changes",
           suggestion =

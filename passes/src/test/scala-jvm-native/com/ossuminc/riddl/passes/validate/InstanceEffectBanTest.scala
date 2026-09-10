@@ -141,6 +141,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     s"""domain SDom is {
        |  context SCtx is {
        |    record SR is { total: String } with { briefly "r" }
+       |    command Nudge is { why: String } with { briefly "n" }
        |    entity Worker is {
        |      state WS of record SR is {
        |        handler WH is {
@@ -152,13 +153,17 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
        |    saga Flow is {
        |      requires { why: String }
        |      returns { out: String }
+       |      // A saga step must tell something ELSE to do something (Reid, 2026-09-09) or
+       |      // `saga-step-no-tell` is an Error. Scaffolding: the subject here is the statement
+       |      // under test. It LEADS the block because `terminate` is terminal.
        |      step One is {
+       |        tell command Nudge(why = "go") to entity Worker
        |        $stmt
        |      } reverted by {
        |        do "undo"
        |      } with { briefly "step" }
        |      step Two is {
-       |        do "carry on"
+       |        tell command Nudge(why = "on") to entity Worker
        |      } reverted by {
        |        do "undo"
        |      } with { briefly "step" }

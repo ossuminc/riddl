@@ -294,13 +294,21 @@ class JsonInputTest extends AnyWordSpec with Matchers {
 
     "a saga with input/output and do/undo steps" in {
       assertRoundTrips(
+        // Every saga step must tell something ELSE to do something (Reid, 2026-09-09), so the
+        // do-blocks carry a `tell command` rather than prose -- `saga-step-no-tell` is an Error
+        // and `assertRoundTrips` validates. The undo blocks keep their prose: the rule reads
+        // do-statements only.
         """{ "domains": [ { "name": "P5", "contexts": [ { "name": "C",
+          |  "commands": [ { "name": "Nudge" } ],
+          |  "entities": [ { "name": "Worker", "handlers": [ { "name": "WH", "onClauses": [
+          |    { "kind": "message", "message": { "ref": "Nudge", "kind": "command" },
+          |      "statements": [ { "kind": "do", "text": "work" } ] } ] } ] } ],
           |  "sagas": [ { "name": "Booking", "brief": "book a trip",
           |    "input": [ { "name": "tripId", "type": { "kind": "UUID" } } ],
           |    "output": [ { "name": "confirmed", "type": { "kind": "Boolean" } } ],
           |    "steps": [
-          |      { "name": "Reserve", "do": [ "reserve the seat" ], "undo": [ "release the seat" ] },
-          |      { "name": "Pay", "do": [ "charge the card" ], "undo": [ "refund the card" ] } ] } ] } ] } ] }""".stripMargin
+          |      { "name": "Reserve", "do": [ { "kind": "tell", "message": { "ref": "Nudge", "kind": "command" }, "to": "Worker", "processor": "entity" } ], "undo": [ "release the seat" ] },
+          |      { "name": "Pay", "do": [ { "kind": "tell", "message": { "ref": "Nudge", "kind": "command" }, "to": "Worker", "processor": "entity" } ], "undo": [ "refund the card" ] } ] } ] } ] } ] }""".stripMargin
       )
     }
   }

@@ -245,8 +245,10 @@ class MessageOperandSourceConsumerFixTest extends AbstractValidatingTest {
           |  } with { briefly "ctx" }
           |} with { briefly "dom" }
           |""".stripMargin
-      val cw = diagnostics(src, td.name).filter(_.isCompleteness)
-      cw.exists(_.message.contains("do-statements contain no 'tell command'")) mustBe true
+      // An ERROR since 2026-09-09 (Reid): a saga step that tells nothing effects nothing, so the
+      // step is moot -- self-contradiction, not under-specification.
+      val errs = diagnostics(src, td.name).filter(_.isError)
+      errs.exists(_.message.contains("do-statements contain no 'tell command'")) mustBe true
     }
   }
 }

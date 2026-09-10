@@ -28,6 +28,7 @@ class ModuleRoundTripTest extends AbstractValidatingTest {
     """module M is {
       |  author Reid is { name is "Reid Spencer" email is "reid@ossuminc.com" }
       |  type Amount is Number
+      |  command Nudge is { why: String }
       |  constant Limit is Number = "100"
       |  user Shopper is "a person who buys things"
       |  invariant Positive is "the limit is positive"
@@ -44,12 +45,12 @@ class ModuleRoundTripTest extends AbstractValidatingTest {
       |  repository Ledger is { ??? }
       |  saga Checkout is {
       |    step ReserveStock is {
-      |      do "reserve"
+      |      tell command Nudge(why = "reserve") to entity Loose
       |    } reverted by {
       |      do "release"
       |    }
       |    step ChargeCard is {
-      |      do "charge"
+      |      tell command Nudge(why = "charge") to entity Loose
       |    } reverted by {
       |      do "refund"
       |    }
