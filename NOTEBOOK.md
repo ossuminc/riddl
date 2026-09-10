@@ -56,15 +56,25 @@ reads origin; whether the corpus state is pushed is git's to answer.
 - **Awaiting Reid**: nothing. [3.9] (bump-consumers) was DROPPED as moot on 2026-09-08 — the
   three repos coordinate through the locally staged binary while riddlg's road to 1.0.0 keeps
   discovering language riddl still owes — and [5.7] was ruled and implemented the same day.
-- **Dropped, unanswered**: `../ossum.tech/task/2026-09-07-temporal-semantics-on-quiescence-and-send-at.md`
-  — now BACKLOG [3.10], and short by TWO constructs: it covers neither the `stream-graph-cycle`
-  re-ruling nor `msg-tell-crosses-unrelated-domains`.
+- **Dropped, awaiting them**: `../ossum.tech/task/2026-09-08-riddl-language-changes-since-2.0.0.md`
+  (BACKLOG [3.10], supersedes the 2026-09-07 temporal-only file);
+  `../riddl-generator/task/2026-09-09-saga-rules-ruled-both-ways.md`, which tells riddlg its saga
+  fixture is now invalid RIDDL.
+- **IN FLIGHT: task B, `ask` is not checked for a channel** (`task/2026-09-09-ask-is-not-checked-
+  for-a-channel.md`). Reid has ruled BOTH legs: *"the reply path must be wired in the model just
+  like the query path. Regardless of how the generator chooses to lower it, the communication must
+  be POSSIBLE in the model."* Nothing built yet. Note the distinction that settles it — the
+  MECHANISM (reply actor, correlation id, future) is the generator's; the PATH is the model's.
 
 ### Certainty — what was actually run
 
-After [3.8]'s closure (2026-09-09, latest — a TEST and docs change only, no main source, so the
-staged binary is unaffected): `passes` 1798 JVM / 1786 Native, both green, +2 each for the new
-pinning pair.
+After the saga rulings (2026-09-09, latest): `language` 760 JVM / 438 JS / 745 Native; `passes`
+1798 JVM / 317 JS / 1786 Native; `commands` 355 JVM (corpus 190/190); `riddlLib` 163 JVM. **The
+staged binary predates these** — `saga-step-no-tell` is an Error on `main` and a completeness
+warning in `../bin/riddlc`.
+
+After [3.8]'s closure (2026-09-09 — a TEST and docs change only): `passes` 1798 JVM / 1786 Native,
++2 each for the new pinning pair.
 
 After [5.7] (2026-09-08), shared cache, each module its own `testOnly *`: `language` 760
 JVM / 438 JS / 745 Native; `passes` 1796 JVM / 317 JS / 1784 Native; `commands` 355 JVM (corpus
@@ -117,6 +127,55 @@ read — a file had arrived. Run the check, do not read this line.) `task/probe-
 session, deliberately left. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-09 — I asked which way to relax a rule that wanted tightening
+
+riddl-generator reported that `saga-no-timeout` blocks code generation and asked for it not to.
+Reid ruled that; the same task asked, without assuming, about `saga-step-no-tell`, which sits in
+an identical position. I framed that as "should it also stop blocking?" and offered two options,
+both of which relaxed it. Reid's answer went the other way:
+
+> that's illegal … why are you wondering about how it generates code when it wouldn't? … if that
+> situation does not raise an error in riddlc, it should. Every saga step must tell something ELSE
+> to do something or there is, by definition, no action, which makes the step moot and pointless.
+
+**The framing error is the lesson, not the outcome.** I reasoned from SYMMETRY — same fixture,
+same severity, same consumer — and never asked the prior question of whether the rule was
+correctly severe in the first place. The generation question I was weighing does not even arise:
+riddlg's first gate is a model with nothing above a StyleWarning, so an illegal model never
+reaches the generator. **When two rules look like twins, check that BOTH are right before asking
+which way to make them agree.**
+
+What actually separates them, and is now written in both: an absent timeout has a defensible
+default (one hour, which riddlg records as an invention); an absent ACTION has none, and an
+`AI FILL` hole marks code as MISSING rather than substituting a value. That is the bar written
+into `RuleId.nonBlocking`.
+
+**The simplest fix for the first half was wrong, and its own test said so.** riddlg proposed
+demoting `saga-no-timeout` to a StyleWarning. That would have asserted the message "does not
+change the MEANING of the model" — while the rule exists because the absent bound decides when
+compensation fires — and, concretely, **every riddl-models `.conf` sets
+`show-style-warnings = false`, so the whole corpus would have stopped seeing it**, against the
+task's own acceptance criterion. I found that by making the change and watching the test go red:
+its helper sets exactly that flag. So the exception went in `RuleId.nonBlocking` with
+`Message.isGenerable` consulting it, and the per-kind ladder stayed honest. **"Most simply" in a
+task file is the sender's proposal, not the ruling.**
+
+**Seven fixtures moved and none of them justified weakening the rule.** All were sagas used as
+scaffolding for tests about something else (initiate/terminate legality, a module round trip, an
+invariant value walk, a JSON round trip). Repairing them means giving the step a real `tell`.
+Two traps, one general and one specific:
+
+- **`terminate` is TERMINAL, so an appended tell is unreachable** — the tell has to LEAD the
+  block. The first repair failed for exactly this and the error named the right cause.
+- **A `$stepOne` I wrote inside a `//` comment in an INTERPOLATED Scala fixture interpolated**,
+  injecting multi-line statements into the comment and producing a parse error whose message
+  ("expected sagaContent") pointed nowhere near it. **Prose inside an s-interpolated fixture
+  string is code.**
+
+Corpus cost of the Error: **zero**, all 6 riddl-models sagas already tell — measured with an
+instrument calibrated on a known-positive first, since the first corpus model I tried for
+calibration was fully clean and therefore calibrated nothing.
 
 ## 2026-09-09 — [3.8] had mostly evaporated before anyone worked it
 
