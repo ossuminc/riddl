@@ -10,44 +10,36 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-09-08 by running, not recalling
+### Build state — verified 2026-09-10 by running, not recalling
 
 **`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
 `FORMAT_REVISION` is 24** (one bump for `on quiescence` and `send … at`).
 
-**`../bin/riddlc` and the local ivy artifacts are `2.1.1-26-4d17b1ef`** (commit `4d17b1ef6`,
+**`../bin/riddlc` and the local ivy artifacts are `2.1.1-33-dd3c2d80`** (commit `dd3c2d807`,
 the last commit that changes BEHAVIOUR), published and staged together by
-`scripts/publish-and-stage.sh` on 2026-09-08 at Reid's request, so riddl-models can work from
-it. HEAD sits a documentation commit or two past it — including the one recording this — which
-is normal and changes nothing the binary does; compare the SHAs before assuming otherwise. Check `../bin/riddlc --no-ansi-messages version`
-against `git describe --tags --long` before trusting any of this (dynver drops the `g` and uses
-8 hash chars, so the two render differently and still agree).
+`scripts/publish-and-stage.sh` on 2026-09-10 at Reid's request. Check `../bin/riddlc
+--no-ansi-messages version` against `git describe --tags --long` (dynver drops the `g` and uses
+8 hash chars, so the two render differently and still agree). HEAD may sit a documentation commit
+or two past it, which is normal.
 
-**It carries FIVE language changes since 2.1.1**, all verified with the binary itself rather
-than inferred from the build succeeding:
+**It carries EIGHT language changes since 2.1.1**: `on quiescence <window>`; `send … at
+<instant>`; `stream-graph-cycle` re-ruled as an infinite MESSAGE loop;
+`msg-tell-crosses-unrelated-domains`; [5.7] a handler-less processor is a stream TAIL whatever
+its shape; `saga-no-timeout` no longer blocks generation (via `RuleId.nonBlocking`);
+`saga-step-no-tell` is now an **Error**; and `ask` requires a modelled path BOTH WAYS
+(`msg-ask-target-unreachable`, `msg-ask-reply-unreachable`).
 
-- `on quiescence <window>` and `send … at <instant>` — `language/input/send-at.riddl` (the
-  schedule-to-yourself idiom) validates with 0 errors; a String instant draws
-  `stmt-send-at-not-instant`;
-- `stream-graph-cycle` re-ruled as an infinite-MESSAGE loop (an `on X` clause whose X can travel
-  back to it) — a genuine `on X` re-emitting X loop draws the Error, and the scheduled-send
-  idiom above does not;
-- `msg-tell-crosses-unrelated-domains` — the probe errors with it and names both domains, and
-  the same probe with the remedy applied validates at **0 errors**;
-- [5.7], a handler-less processor is a stream TAIL whatever its shape — a source into a
-  ports-only flow draws no `stream-source-reaches-no-sink`, while both "should have a handler"
-  warnings still appear, which is the point of the change.
+**Corpus census with THIS binary: 189 entry points, 26 models with errors, 59 errors — ALL of
+them the two new `ask` rules** (40 question-leg, 19 reply-leg; zero of every other rule). That is not a regression:
+riddl-models authored 75 `ask query` sites across 42 models on 2026-09-09/10, and they asked us
+to land these checks. They have the full breakdown in their `task/`. `saga-step-no-tell` cost
+zero, as measured before landing.
 
-**Corpus census re-run with THIS binary: 189 entry points, 0 errors** — the pre-change baseline,
-unmoved, and `stream-source-reaches-no-sink` is at **0** occurrences before and after [5.7]. The
-counting pipeline was calibrated on a known-positive first (it reports 1 for the probe), because a
-census that greps for errors is exactly the measurement CLAUDE.md warns can return a false zero. Write the loop as `while read`, never `for c in $list`: **zsh does not
-word-split unquoted expansions**, so the `for` form silently hands the whole list to one command
-and "measures" a single model — it did, on the first attempt here.
-
-**The corpus gate is GREEN: 190/190** (`RiddlModelsRoundTripTest`) and the census with the binary
-is 189 entry points, 0 errors, both on the local riddl-models checkout on 2026-09-07 night. CI
-reads origin; whether the corpus state is pushed is git's to answer.
+**`RiddlModelsRoundTripTest` is still 190/190** — it is a parse/prettify round trip and says
+nothing about validation errors, which is exactly why the census above is run separately. **Do
+not read the round-trip green as "the corpus validates"**; until 2026-09-10 both were clean and
+the distinction did not show. CI reads origin; whether the corpus state is pushed is git's to
+answer.
 
 ### In flight
 
@@ -60,11 +52,7 @@ reads origin; whether the corpus state is pushed is git's to answer.
   (BACKLOG [3.10], supersedes the 2026-09-07 temporal-only file);
   `../riddl-generator/task/2026-09-09-saga-rules-ruled-both-ways.md`, which tells riddlg its saga
   fixture is now invalid RIDDL.
-- **IN FLIGHT: task B, `ask` is not checked for a channel** (`task/2026-09-09-ask-is-not-checked-
-  for-a-channel.md`). Reid has ruled BOTH legs: *"the reply path must be wired in the model just
-  like the query path. Regardless of how the generator chooses to lower it, the communication must
-  be POSSIBLE in the model."* Nothing built yet. Note the distinction that settles it — the
-  MECHANISM (reply actor, correlation id, future) is the generator's; the PATH is the model's.
+- **Nothing in flight.** Both incoming tasks landed whole and are in `task/done/`.
 
 ### Certainty — what was actually run
 
@@ -127,6 +115,42 @@ read — a file had arrived. Run the check, do not read this line.) `task/probe-
 session, deliberately left. That is a fact about right now, not a reason to skip the check.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-10 — silence taught a false rule, and the corpus paid for it in a day
+
+riddl-models found `ask` validated for the far end's BEHAVIOUR and not at all for a CHANNEL: in
+an adaptor touched by no connector, `tell` drew two Errors and `ask` drew nothing. **The damage
+was not the missed mistake, it was the rule the silence taught.** They read "0 errors", concluded
+*"wiring is simply irrelevant to it"*, wrote it down, and were about to apply it to 363 sites.
+**"It validates" is the evidence modellers use** — a validator silent where the language has a
+rule is not neutral, it is actively wrong.
+
+Reid ruled both legs. The reply leg is the one I framed badly: I quoted his own earlier *"setting
+up a reply actor … is the generator's concern"* back at him as evidence the reply path might be
+the generator's too. His answer draws the line that makes it obvious — **the MECHANISM is the
+generator's, the PATH is the model's.** A reply actor, a future, a correlation id are lowering
+choices; whether an answer can physically get back is not one. **When a ruling says a mechanism
+is free, that is not a statement about whether the thing it carries must exist.**
+
+**The implementation was small because the question was already answered elsewhere.**
+`checkAskReachability` is `checkTellReachability` asked twice over the same
+`connectorAdjacency` graph, same exemptions, ~40 lines. I deliberately did NOT add the
+"admitting portlet" check the task also asked for: `checkInletsAreReceived` and
+`checkTellDeliverability` already ask it, and a third would report one fault twice. Recorded as
+`[~]` in the task's criteria with an invitation to send a probe, rather than silently dropped.
+
+**Timing decided the value, and it nearly slipped.** When I triaged this the corpus had ZERO
+`ask query` sites and I argued the checks should land before the 363 were authored. By the time
+I finished — one day — riddl-models had authored **75 across 42 models**, and the census found
+**59 errors in 26 models** where a day earlier it would have found none. **Re-measure a corpus
+claim at the END of the work, not just at triage**: mine went from "zero, greenfield" to "59
+findings" while I was building the thing that measures it.
+
+**They had built their own guard, and it disagrees with ours.** `sbt ac` in riddl-models exists
+because riddlc had no check — and yet the question leg failed 40 times against 19 for the reply
+leg. If their guard covered the outbound leg, those two facts do not sit together. I put that in
+the task drop as a question rather than assuming the 40 are simply unmigrated: **a rule that
+disagrees with a careful modeller's own guard deserves a second look from our side too.**
 
 ## 2026-09-09 — I asked which way to relax a rule that wanted tightening
 
