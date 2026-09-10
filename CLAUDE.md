@@ -1,1533 +1,654 @@
-### Adding a New Command
-
-**Corrected 2026-08-24** — this section previously named a `def name: String`
-and a `context: PlatformContext` parameter, neither of which exists. It was
-copied from an API that predates `Command`'s current shape.
-
-1. **Options** live in the command's companion, with the name as a constant:
-   ```scala
-   object MyCommand {
-     final val cmdName = "mine"
-     case class Options(inputFile: Option[Path] = None) extends CommandOptions {
-       def command: String = cmdName
-     }
-   }
-   ```
-2. **The class takes `using PlatformContext` and passes the name to the base**:
-   `class MyCommand(using pc: PlatformContext) extends Command[MyCommand.Options](MyCommand.cmdName)`
-3. **Implement**:
-   - `override def getOptionsParser: (OParser[Unit, Options], Options)` — a
-     scopt `cmd(...)` plus the default `Options()`
-   - `override def run(options: Options, outputDirOverride: Option[Path]): Either[Messages, PassesResult]`
-   - `override def interpretConfig(config: Config): Options` — required for
-     `riddlc from <conf> <cmd>`; read the block named by `commandName`
-   - `override def loadOptionsFrom(...)` calling `resolveInputFileToConfigFile`,
-     and `override protected def replaceInputFile(...)`, so a `.conf`'s
-     `input-file` resolves relative to the `.conf` rather than the cwd
-   - `override def run(args: Array[String], ...)` ONLY when the command needs
-     arguments scopt cannot model — `find` does, because its expression is full
-     of bare `(`, `)` and `;` tokens.
-4. **Register it in THREE places**, or it is missing on one platform:
-   - `commands/src/main/scalajvm/.../CommandLoader.scala` — `loadCommandNamed`
-     **and** the `optionParsers` Seq that `riddlc help` renders from
-   - `commands/src/main/scalanative/.../CommandLoader.scala` — the same two
-   - `commands/src/main/scala/.../Commands.scala` — `loadCommandNamed`, a third
-     copy
-5. **Add a block to `commands/input/cmdoptions.conf`** so `from` works and the
-   standard options-reading test covers it.
-
-**Diagnostics go to STDERR** (`pc.log`, since 2026-08-23); anything a script is
-meant to parse goes to stdout with `println`. A command that prints its result
-through `pc.log` produces a stream whose lines are prefixed `[info]`, which is
-invisible to the eye and fatal to a pipe.
-
-**The global `--dry-run` cannot be implemented on top of.**
-`Commands.handleCommandRun` short-circuits on it and logs "Would have
-executed…" *without ever invoking the command*. A command needing a real dry run
-declares its own flag, as `find -dry-run` does.
-
 # RIDDL Project Guide for Claude Code
 
-This file provides specific guidance for working with the RIDDL project. For general ossuminc organization patterns, see `../CLAUDE.md` (parent directory).
+Specific guidance for the RIDDL project; for org-wide patterns see
+`../CLAUDE.md` (parent directory). RIDDL (Reactive Interface to Domain
+Definition Language) is a specification language for distributed, reactive,
+cloud-native systems using DDD principles — a **monorepo** of cross-platform
+Scala modules.
 
-## Documentation
-
-**RIDDL documentation has moved to [ossum.tech/riddl](https://ossum.tech/riddl/)**
-
-The Hugo-based documentation site at riddl.tech has been consolidated into the
-ossum.tech MkDocs site. Key documentation:
-
-- **Language Reference**: https://ossum.tech/riddl/references/language-reference/
-- **EBNF Grammar**: https://ossum.tech/riddl/references/ebnf-grammar/
-- **Tutorials**: https://ossum.tech/riddl/tutorials/
-- **Tools (riddlc)**: https://ossum.tech/riddl/tools/riddlc/
-
-The `doc/` directory in this repository contains legacy Hugo content that
-redirects to ossum.tech. Do not add new documentation here.
-
-## Project Overview
-
-RIDDL (Reactive Interface to Domain Definition Language) is a specification language for designing distributed, reactive, cloud-native systems using DDD principles. It's a **monorepo** containing multiple cross-platform Scala modules.
+**Documentation lives at [ossum.tech/riddl](https://ossum.tech/riddl/)** —
+language reference, EBNF grammar, tutorials, riddlc tooling. The `doc/`
+directory here is legacy Hugo content that redirects there; do not add new
+documentation to this repo.
 
 ## Backward Compatibility Policy
 
-RIDDL is a heavily used library both by Ossum Inc. and external
-consumers. **Never make incompatible changes** to public APIs without
-following this process:
+RIDDL is heavily used by Ossum Inc. and external consumers. **Never make
+incompatible changes** to public APIs:
 
-1. **No removal of public API** — Do not remove public methods, classes,
-   traits, or extension methods. If functionality must be retired, add
-   `@deprecated` annotations with a migration message and the target
-   major version for removal (e.g., `@deprecated("Use flatten() instead",
-   "2.0.0")`).
-2. **No breaking signature changes** — Do not change parameter types,
-   return types, or add required parameters to existing public methods.
-   New parameters must have defaults.
+1. **No removal of public API.** Retire with `@deprecated(msg, "version")`.
+2. **No breaking signature changes** — no changed parameter or return types, no
+   new required parameters. New parameters must have defaults.
 3. **Deprecation is FOREVER from 3.0 onward — nothing is ever deleted**
-   (Reid, 2026-08-31). Through 1.x this rule read "deprecated APIs may be
-   removed in the next major release", and 2.0.0 exercised that: it
-   removed `Grammar.loadGbnfGrammar*` outright, on the reasoning that an
-   unshipped major IS the removal window (*"that's the deal with RCs,
-   things could disappear"*). **That window is now CLOSED.** From this
-   point forward a deprecated name must keep working: rename freely,
-   deprecate freely, but the OLD SPELLING STAYS. A 3.0 that breaks a
-   consumer's model or build is not a 3.0 we ship.
-   This is stricter than semver allows, deliberately — RIDDL models are
-   authored artifacts that outlive the tool, and a modeller who wrote
-   valid RIDDL should never have to rewrite it to move forward.
-4. **Additive changes only** — New methods, extension methods, classes,
-   and traits are always safe. Prefer adding new APIs alongside old ones
-   rather than modifying existing ones.
+   (Reid, 2026-08-31). Through 1.x the rule allowed removal in the next major,
+   and 2.0.0 exercised it (`Grammar.loadGbnfGrammar*`) on the reasoning that an
+   unshipped major IS the removal window (*"that's the deal with RCs, things
+   could disappear"*). **That window is now CLOSED**: rename freely, deprecate
+   freely, but the OLD SPELLING STAYS. Stricter than semver allows,
+   deliberately — RIDDL models are authored artifacts that outlive the tool, and
+   a modeller who wrote valid RIDDL should never have to rewrite it to move
+   forward. A 3.0 that breaks a consumer's model or build is not one we ship.
+4. **Additive changes only.** When in doubt, **add, don't change**.
 
-When in doubt, **add, don't change**.
-
-**What "deprecate, never delete" means in practice for the LANGUAGE**, since
-most of this section reads as an API rule: a retired keyword or spelling must
-still PARSE, still produce the same AST, and emit a `Deprecation` message
-naming its replacement. The machinery already exists and there are worked
-examples — `Abstract` -> `Anything`, `option persistent` -> the connector
-intention, the shape keywords -> `as <shape>`, `state X is <record>` -> `of`,
-`prompt` -> `do`. Several are CONSUMED by the parser into the new form, which
-is what makes prettify converge and `autoFixable` honest. Follow those, not the
-GBNF removal.
+**What this means for the LANGUAGE**, since the above reads as an API rule: a
+retired keyword or spelling must still PARSE, still produce the same AST, and
+emit a `Deprecation` message naming its replacement. Worked examples:
+`Abstract`→`Anything`, `option persistent`→the connector intention, the shape
+keywords→`as <shape>`, `state X is <record>`→`of`, `prompt`→`do`. Several are
+CONSUMED by the parser into the new form, which is what makes prettify converge
+and `autoFixable` honest. Follow those, not the GBNF removal.
 
 ## Definition of Done, and what bounds 2.0
 
 **2.0 ships when the Computational Model is met** — not when the backlog hits
-zero by attrition. That is the completion criterion, and it is what keeps the
-process bounded (Reid, 2026-08-15). Practically it means: no over-engineering,
-no rampant featurism, and "does the CM require this?" as the test for whether
-something belongs in 2.0 at all.
+zero by attrition (Reid, 2026-08-15). "Does the CM require this?" is the test
+for whether something belongs in 2.0 at all: no over-engineering, no featurism.
 
-Distinguish two kinds of completeness, because only one of them is featurism:
+Distinguish two kinds of completeness, because only one is featurism:
 
 - **Correctness completeness** — making a dispatch total so a construct the
-  language ALREADY admits stops emitting broken output. Not a feature. Leaving
-  it half-done is a defect that every generator inherits.
-- **Feature completeness** — adding constructs or diagnostics because they would
-  be nice. This is the thing to resist.
+  language ALREADY admits stops emitting broken output. Not a feature; leaving
+  it half-done is a defect every generator inherits.
+- **Feature completeness** — adding constructs or diagnostics because they
+  would be nice. This is the thing to resist.
 
-### A backlog item is not done until the CM records its effect
-
-Code landing, tests green and the entry deleted is **not** completion. If the
-change alters what a conforming generator must preserve, the item is done only
-once `../RIDDL-Computational-Model.md` says so. "Tests pass, committed" is an
+**A backlog item is not done until the CM records its effect.** Code landed,
+tests green and the entry deleted is not completion: if the change alters what a
+conforming generator must preserve, it is done only once
+`../RIDDL-Computational-Model.md` says so. "Tests pass, committed" is an
 incomplete report for any language change.
 
-### The CM reconciles with the BRANCH, never with the backlog
+**The CM reconciles with the BRANCH, never with the backlog.** The CM records
+**events** — what actually landed. Backlog items are commands and aspirations;
+they have not happened, so they have nothing to say to the CM until they do.
+Reconciliation runs CM against the branch (`git log`) and may *produce* backlog
+entries as output. Writing an aspiration in early makes the document describe a
+language that does not exist.
 
-The Computational Model records **events** — what has actually landed. Backlog
-items are **commands and aspirations**; they have not happened, so they have
-nothing to say to the CM until they do. Reconciliation therefore runs CM against
-the branch (`git log`), and may *produce* new backlog entries as output. A
-backlog aspiration may well change the CM one day, but **not yet**, and writing
-it in early makes the document describe a language that does not exist.
+**There is no "defer to 2.1" pile.** Everything on BACKLOG.md is 2.0 work;
+post-2.0 items get filed after 2.0 ships. Creating a 2.1 bucket to shorten the
+list is the same dishonest zero as deleting an entry carrying real work.
 
-### There is no "defer to 2.1" pile
-
-Everything on BACKLOG.md is 2.0 work. Post-2.0 items get filed **after 2.0
-ships**. Do not create a 2.1 bucket to shorten the current list — that is the
-same dishonest zero as deleting an entry that was carrying real work.
-
-### Where backlog items come from
-
-Many originate in **riddlg** (`../riddl-generator`), which keeps discovering
-things RIDDL must disambiguate before code generation is well-defined. Those are
-CM-relevant almost by construction — that is the CM's whole purpose — so treat a
-riddlg-sourced item as in-scope for 2.0 unless there is a specific reason not to.
+**Where items come from:** many originate in **riddlg** (`../riddl-generator`),
+which keeps discovering things RIDDL must disambiguate before code generation is
+well-defined. Those are CM-relevant almost by construction — that is the CM's
+whole purpose — so treat a riddlg-sourced item as in-scope for 2.0 unless there
+is a specific reason not to.
 
 ## Critical Build Information
 
 ### Scala Version & Syntax
-- **Scala 3.9.0** (not Scala 2!) — **the RC line is done: 3.9.0 final was
-  adopted 2026-08-27**, having ridden 3.9.0-RC1 → RC4 → RC6 through the 2.0
-  branch. Pinned via `V.scala` + `With.Scala3.configure(version =
-  Some(V.scala))` on every CrossModule (sbt-ossuminc's `With.typical`
-  otherwise pins its default 3.8.4, applied after `scalaVersion :=`, so
-  the plain setting is a no-op — the `With.Scala3.configure` override is
-  the real lever).
+
+- **Scala 3.9.0** (not Scala 2!) — final since 2026-08-27, after riding
+  3.9.0-RC1→RC6 through the 2.0 branch. Pinned via `V.scala` +
+  `With.Scala3.configure(version = Some(V.scala))` on every CrossModule:
+  sbt-ossuminc's `With.typical` otherwise pins its default 3.8.4 and is applied
+  AFTER `scalaVersion :=`, so the plain setting is a no-op and the
+  `With.Scala3.configure` override is the real lever.
   **A Scala bump is ~36 sites, not one**, because the full version is a
-  build-output PATH SEGMENT: `project/Dependencies.scala` plus every
-  hardcoded `scala-<version>` in `scala.yml`, `release.yml`,
-  `coverage.yml`, `.sonarcloud.properties` and `Dockerfile`. A grep that
-  omits `.github/` misses ten of them.
-- **Build files are Scala 3 too** — since the sbt 2 upgrade,
-  `build.sbt` and `project/*.scala` compile with Scala 3 (no more
-  Scala 2.12 build-def rule).
-- **ALWAYS use Scala 3 syntax**:
-  - `while i < end do ... end while` (NOT `while (i < end) { ... }`)
-  - No `null` checks — use `Option(x)` instead
-  - New control flow syntax with `do`/`then`/`end`
+  build-output PATH SEGMENT: `project/Dependencies.scala` plus every hardcoded
+  `scala-<version>` in `scala.yml`, `release.yml`, `coverage.yml`,
+  `.sonarcloud.properties` and `Dockerfile`. A grep omitting `.github/` misses
+  ten of them.
+- **Build files are Scala 3 too** since the sbt 2 upgrade — `build.sbt` and
+  `project/*.scala`; the old Scala 2.12 build-def rule is gone.
+- **ALWAYS Scala 3 syntax**: `while i < end do … end while`; no `null` checks
+  (use `Option(x)`); `do`/`then`/`end` control flow.
 
-### sbt-ossuminc Plugin
+### sbt-ossuminc 3.0.3 (sbt 2.0.2+, projectMatrix)
 
-**Current version: 3.0.3** (sbt 2.0.2, projectMatrix-based
-CrossModule). Requires sbt **2.0.2+** — pinned in
-`project/build.properties`. sbt 2 credentials live in `~/.sbt/2/`.
+sbt is pinned in `project/build.properties`; sbt 2 credentials live in
+`~/.sbt/2/`.
 
-#### CrossModule / projectMatrix layout:
-- `CrossModule(dir, mod, V.scala)(JVM, JS, Native)` takes the Scala
-  version and wraps sbt 2's built-in `projectMatrix`. Extract rows
-  with `.jvm`/`.js`/`.native`; wire deps per-row (no cp-level
-  `.dependsOn`).
+- `CrossModule(dir, mod, V.scala)(JVM, JS, Native)` takes the Scala version and
+  wraps sbt 2's built-in `projectMatrix`. Extract rows with
+  `.jvm`/`.js`/`.native`; wire deps per-row (no cp-level `.dependsOn`).
 - **Flat source tree** (no more `shared/jvm/js/native`):
-  `<mod>/src/{main,test}/scala` (shared), `.../scalajvm`,
-  `.../scalajs`, `.../scalanative`, and `.../scala-jvm-native`
-  (JVM+Native shared, wired via `unmanagedSourceDirectories`).
-- **Build outputs** live under a central virtual-FS tree
-  (`sbt.io.virtual=true`, the default): `target/out/<platform>/
-  scala-<fullVersion>/<artifactName>/…` — e.g.
-  `target/out/jvm/scala-3.9.0/riddl-utils/`,
-  `target/out/sjs1/scala-3.9.0/riddl-lib/`,
-  `target/out/native0.5/scala-3.9.0/riddlc/`. NOT per-module
-  `<mod>/target/…`. Platform dirs are `jvm`/`sjs1`/`native0.5`;
-  the path carries the **full** Scala version, not a `-3` binary tag.
-- 3.0.3's CrossModule auto-adds `scalajs-stubs % provided` to the
-  JVM/Native rows of any module that also targets JS (so shared
-  `@JSExport*` code compiles) — no consumer dep needed.
+  `<mod>/src/{main,test}/scala` (shared), plus `.../scalajvm`, `.../scalajs`,
+  `.../scalanative`, and `.../scala-jvm-native` (JVM+Native shared, wired via
+  `unmanagedSourceDirectories`).
+- 3.0.3 auto-adds `scalajs-stubs % provided` to the JVM/Native rows of any
+  module that also targets JS, so shared `@JSExport*` code compiles — no
+  consumer dep needed.
 - Cross-platform deps use plain `%%` (the `%%%` operator is gone).
 
-#### Common Configurations:
 ```scala
-// Scala 3.9.0 — override sbt-ossuminc's 3.8.4 default per module:
-.configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
-// (plain `scalaVersion := V.scala` is a no-op — With.typical wins over it)
-
-// Scala.js configuration
-.jsConfigure(With.ScalaJS(
-  header = "RIDDL: module-name",
-  hasMain = false,
-  forProd = true,
-  withCommonJSModule = true
-))
-
-// Scala Native configuration
-.nativeConfigure(With.Native(
-  mode = "fast",              // "debug", "fast", "full", "size", "release"
-  buildTarget = "static",     // or "application"
-  gc = "none",
-  lto = "none"
-))
-
-// BuildInfo with custom keys
-.jvmConfigure(With.BuildInfo.withKeys(
-  "key1" -> value1,
-  "key2" -> value2
-))
+.configure(With.typical, With.GithubPublishing,
+  With.Scala3.configure(version = Some(V.scala)))   // plain scalaVersion := is a no-op
+.jsConfigure(With.ScalaJS(header = "RIDDL: mod", hasMain = false,
+  forProd = true, withCommonJSModule = true))
+.nativeConfigure(With.Native(mode = "fast",   // debug|fast|full|size|release
+  buildTarget = "static", gc = "none", lto = "none"))
+.jvmConfigure(With.BuildInfo.withKeys("key" -> value))
 ```
-
-## Module Structure & Dependencies
-
-### Dependency Pipeline
-```
-utils → language → passes → commands → riddlc
-                     ↓
-                  testkit
-```
-
-**Note**: The `diagrams` and `hugo` modules have been moved to the `riddl-gen` repository.
-
-### BAST Module (Binary AST)
-**Purpose**: Binary AST serialization for fast module imports.
-**Status**: Complete; ~6-10x faster than reparsing source; output
-~63-67% of source size on non-trivial inputs.
-
-- **Package**: `com.ossuminc.riddl.language.bast` in
-  `language/src/main/scala/com/ossuminc/riddl/language/bast/`
-- **Cross-platform**: JVM, JS, Native
-- **Pass**: `passes/shared/.../BASTWriterPass.scala`
-- **CLI**: `riddlc bastify <file.riddl>` (write);
-  `riddlc unbastify` (read — **implemented**; `UnbastifyCommand`, and
-  `RiddlModelsRoundTripTest` exercises it over the whole corpus. This line
-  said "pending" until 2026-08-11.)
-- **Format docs**: live at ossum.tech/riddl, not in this repo
-
-**Key files** in the bast package:
-- `package.scala` — constants and node type tags (NODE_*, TYPE_*,
-  STREAMLET_*, …)
-- `BASTWriter.scala` — serialization (extends HierarchyPass)
-- `BASTReader.scala` — deserialization
-- `BASTLoader.scala` — import-loading utility
-- `BASTUtils.scala` — shared utilities
-- `StringTable.scala`, `PathTable.scala` — interning tables
-
-**HAZARD — disjoint tag sets**: `readNode()` only handles `NODE_*`
-tags; `readTypeExpression()` only handles `TYPE_*` tags. Crossing
-them causes byte misalignment that surfaces as "Invalid string
-table index" errors during deserialization.
-
-**HAZARD — one tag per WIRE SHAPE, not per family.** `Constant` and
-`Method` were both written with `NODE_FIELD` because all three are
-"a name and a type". But a Constant appends its literal value and a
-Method appends its argument list, so the reader — which read a Field
-— left those bytes in the stream and every byte after such a node
-was misread. Fixed 2026-08-13 with `NODE_CONSTANT` (109) /
-`NODE_METHOD` (110) and `FORMAT_REVISION` 14.
-
-The reader had ADMITTED it in a comment (*"This is ambiguous … For
-now, assume Field. Writer should disambiguate better"*), which is
-the part worth learning from: a known-ambiguous decode is a latent
-corruption, not a rough edge. **The rule is that two node kinds may
-share a tag only if they write byte-identical payloads.**
-
-**A BAST error names where the reader DERAILED, never what derailed
-it.** The same single constant surfaced as `Invalid string table
-index` in a 13-node model and as `Invalid invariant condition kind:
-67` in a 9618-node one, sending both riddl-models and this repo to
-bisect an innocent invariant. When diagnosing, bisect toward the
-node BEFORE the reported position, and distrust the construct named.
-
-## NPM Packaging (JavaScript/TypeScript API)
-
-### RiddlAPI Facade
-The `riddlLib` module exports a TypeScript-friendly API via `RiddlAPI` object.
-
-**Key features**:
-- All method names preserved (not minified) via `@JSExport`
-- JavaScript-friendly return types: `{ succeeded: boolean, value?: object, errors?: Array<object> }`
-- All Scala types converted to plain JS:
-  - `List` → `Array`
-  - Case classes → Plain objects
-  - `Either` → `{ succeeded, value, errors }`
-
-**Building npm packages** (via sbt-ossuminc 2.0.1 helpers):
-```bash
-sbt riddlLibJS/npmPrepare        # Assemble package (pure sbt)
-sbt riddlLibJS/npmPack           # Create .tgz tarball
-sbt riddlLibJS/npmPublishGithub  # Publish to GH Packages
-sbt riddlLibJS/npmPublishNpmjs   # Publish to npmjs.com
-```
-
-**CI Workflow**: `.github/workflows/npm-publish.yml` triggers on
-release or manual dispatch, uses sbt tasks directly.
-
-**Module format**: ESModule (`"type": "module"` in package.json).
-Consumers use `import { RiddlAPI } from '@ossuminc/riddl-lib'`.
-
-**Documentation**:
-- `NPM_PACKAGING.md` - npm build and installation guide
-- `TYPESCRIPT_API.md` - Complete TypeScript API reference
-
-**Published**: `@ossuminc/riddl-lib` on GitHub Packages npm registry
-
-## Import vs Include
-
-**CRITICAL DISTINCTION**:
-
-### Include (Context-Aware)
-- Can appear anywhere in hierarchy
-- Parser rules determined by enclosing container
-- `include "entities.riddl"` in a Context → must contain Context-valid content
-- **Already implemented**
-
-### Import (BAST Files) - COMPLETE ✅
-- Loads BAST-serialized content into RIDDL models
-- **Full import**: `import "file.bast"` — loads all Nebula contents
-- **Selective import**: `import domain X from "file.bast"`
-- **Aliased import**: `import type T from "file.bast" as MyT`
-- **Allowed locations**: Root level, inside domains, inside contexts
-- 14 definition kinds supported (domain, context, entity, type, etc.)
-- **Key files**:
-  - `CommonParser.scala` — `bastImport()`, `selectiveBastImport()`
-  - `TopLevelParser.scala` — `loadBASTImports()` post-parse loading
-  - `BASTLoader.scala` — BAST file reading and content population
-  - `AST.scala` — `BASTImport` case class
-- **Tests**: 4 passing in `BASTLoaderTest.scala`
-- **Validation**: Integrated into `ValidationPass`
-
-## AST Architecture Details
-
-### Contents[CV] - Opaque Type
-- Wraps `ArrayBuffer[CV]` for efficient modification
-- **Extension methods**: `.toSeq`, `.isEmpty`, `.nonEmpty`
-- **Do NOT use**: `.toList`, `.iterator` directly (not available)
-- Pattern: `contents.toSeq.map { ... }.toJSArray` for JS conversion
-
-### Token Representation
-- Scala 3 **enum**, not case classes
-- Get type name: `token.getClass.getSimpleName.replace("$", "")`
-- Extract text: `token.loc.source.data.substring(token.loc.offset, token.loc.endOffset)`
-
-### Location (At)
-- Fields: `line`, `col`, `offset`, `endOffset`, `source`
-- Always 1-based (not 0-based)
-- Delta encoding for BAST: compress by storing differences
-
-## Pass Framework
-
-### Writing a Pass
-Prefer `HierarchyPass` for maintaining parent context:
-
-```scala
-class MyPass extends HierarchyPass {
-  override def process(value: RiddlValue, parents: ParentStack): Unit = {
-    value match {
-      case d: Domain => processDomain(d, parents)
-      case c: Context => processContext(c, parents)
-      // ... pattern match all node types
-    }
-  }
-
-  override def result: MyPassOutput = MyPassOutput(...)
-}
-```
-
-**BAST Writer Pattern**:
-- `BASTWriterPass` (in passes module) extends `HierarchyPass`
-- Uses `BASTWriter` utilities (in language module) for byte writing
-- Sacrifice write speed for read speed
-- String interning for deduplication
-
-## GitHub Workflows
-
-**Updated**: Jan 2026 for improved reliability and performance
-
-### scala.yml
-- Triggers: `main`, `development` branches
-- **Parallelized**: JVM/Native/JS builds using matrix strategy
-- Timeout: 60 minutes
-- Dependency scanning with SARIF upload
-
-### coverage.yml
-- Auto-triggers on PRs and pushes (not manual-only)
-- Timeout: 45 minutes
-- Fixed artifact paths (was broken in earlier versions)
-
-### hugo.yml
-- Triggers only on Hugo/doc changes (NOT all .scala files)
-- ScalaDoc caching for faster builds
-- Timeouts: 30min build, 10min deploy
-
-**All workflows use JDK 25** (standardized)
 
 ### CRITICAL: Target-path layout (sbt 2 virtual FS)
 
-Since the sbt 2 upgrade, build outputs live under a **central**
-virtual-FS tree at the repo root (verified empirically — sbt runs with
-`sbt.io.virtual=true`):
+Build outputs live under a **central** virtual-FS tree at the repo root (sbt
+runs with `sbt.io.virtual=true`), NOT per-module `<mod>/target/…`:
 
 ```
 target/out/<platform>/scala-<fullVersion>/<artifactName>/…
 ```
 
 - `<platform>` ∈ `jvm`, `sjs1`, `native0.5` (NOT `js`/`native`).
-- `<fullVersion>` is the **full** Scala version (`scala-3.9.0`), NOT a
-  `-3` binary tag — so a Scala patch bump (3.8.4 → 3.8.5 / 3.9.x) DOES
-  move every hardcoded path.
-- `<artifactName>` is the `moduleName` (`riddl-utils`, `riddl-lib`,
-  `riddlc`, …).
+- `<fullVersion>` is the **full** Scala version (`scala-3.9.0`), NOT a `-3`
+  binary tag — so a Scala patch bump DOES move every hardcoded path.
+- `<artifactName>` is the `moduleName` (`riddl-utils`, `riddl-lib`, `riddlc`, …).
 
-Verified real paths:
-- native riddlc: `target/out/native0.5/scala-3.9.0/riddlc/riddlc`
-- native lib: `target/out/native0.5/scala-3.9.0/riddl-lib/libriddl-lib.a`
-- JS opt: `target/out/sjs1/scala-3.9.0/riddl-lib/riddl-lib-opt/main.js`
-- JVM stage: `target/out/jvm/scala-3.9.0/riddlc/universal/stage/bin/riddlc`
-- scoverage: `target/out/jvm/scala-3.9.0/<artifact>/scoverage-report/scoverage.xml`
+Verified real paths: native riddlc `…/native0.5/scala-3.9.0/riddlc/riddlc`;
+native lib `…/native0.5/scala-3.9.0/riddl-lib/libriddl-lib.a`; JS opt
+`…/sjs1/scala-3.9.0/riddl-lib/riddl-lib-opt/main.js`; JVM stage
+`…/jvm/scala-3.9.0/riddlc/universal/stage/bin/riddlc`; scoverage
+`…/jvm/scala-3.9.0/<artifact>/scoverage-report/scoverage.xml`.
 
-Files that hardcode these (update on any full-Scala-version bump):
-**scala.yml** (`RIDDLC_PATH`, artifact upload paths), **coverage.yml** +
-**.sonarcloud.properties** (scoverage), **release.yml** (native cp + JVM stage
-zip), **Dockerfile** (stage copy).
-
-**Quick search:** `grep -rn "target/out/.*scala-3\." .github/ Dockerfile .sonarcloud.properties`
+These are hardcoded in **scala.yml** (`RIDDLC_PATH`, artifact upload paths),
+**coverage.yml** + **.sonarcloud.properties** (scoverage), **release.yml**
+(native cp + JVM stage zip) and **Dockerfile** — update them on any
+full-Scala-version bump. Search:
+`grep -rn "target/out/.*scala-3\." .github/ Dockerfile .sonarcloud.properties`
 
 **`target/out` must NOT be cached, and an earlier version of this list wrongly
 said scala.yml caches it.** Restoring sbt 2 build outputs into a fresh checkout
-leaves sbt believing the meta-build is already built, so `project/Dependencies
-.scala` never contributes its symbols and `build.sbt` collapses with dozens of
-`Not found: V` / `Not found: Dep` plus an `Append` ambiguity on a line nobody
-edited — a cascade pointing everywhere except the cause. **A cache written by a
-GREEN run is exactly as poisonous as a stale one**: the rule that held was not
-"stale cache" but "every cold build passed, every cache-restoring build failed",
-including on markdown-only commits. Dropping `restore-keys` does NOT fix it —
-that only makes one run cold by accident. `scala.yml:165` carries the ban and
-its reason; Coursier/ivy2 dependency caches are separate and fine.
+leaves sbt believing the meta-build is already built, so
+`project/Dependencies.scala` never contributes its symbols and `build.sbt`
+collapses with dozens of `Not found: V` / `Not found: Dep` plus an `Append`
+ambiguity on a line nobody edited — a cascade pointing everywhere except the
+cause. **A cache written by a GREEN run is exactly as poisonous as a stale
+one**: the rule that held was not "stale cache" but "every cold build passed,
+every cache-restoring build failed", including on markdown-only commits.
+Dropping `restore-keys` does NOT fix it — that only makes one run cold by
+accident. `scala.yml:165` carries the ban and its reason; Coursier/ivy2
+dependency caches are separate and fine.
 
-**sbt-ossuminc Version Policy**:
-- sbt-ossuminc 3.0.x defaults to Scala **3.8.4**; riddl 2.0 overrides to
-  **3.9.0** via `V.scala` + `With.Scala3.configure(version = Some(V.scala))`
-  per module (the `CrossModule(...)` axis arg alone does NOT change the
-  effective scalaVersion — With.typical overrides it).
-- A Scala version bump changes the `scala-<fullVersion>` path segment
-  everywhere above — grep and update.
+## Module Structure
+
+```
+utils → language → passes → commands → riddlc
+                     ↓
+                  testkit
+```
+
+The `diagrams` and `hugo` modules moved to the `riddl-gen` repository.
+
+**Adding a module**: create `<mod>/src/{main,test}/scala/…`, add a `CrossModule`
+to `build.sbt`, add all three rows to root aggregation, wire deps per-row.
+Platform dirs as listed under sbt-ossuminc above; **avoid platform-specific APIs
+in shared code** — abstract over them with `PlatformContext`.
+
+```scala
+lazy val mymodule_cp = CrossModule("mymodule", "riddl-mymodule", V.scala)(JVM, JS, Native)
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp))
+  .configure(With.typical, With.GithubPublishing)
+  .jvmConfigure(With.coverage(50))
+  .jsConfigure(With.ScalaJS("RIDDL: mymodule", withCommonJSModule = true))
+  .nativeConfigure(With.Native(mode = "fast"))
+lazy val mymodule = mymodule_cp.jvm   // .js, .native
+```
+
+### BAST Module (Binary AST)
+
+Binary AST serialization for fast module imports — complete, ~6-10x faster than
+reparsing source, output ~63-67% of source size on non-trivial inputs. Package
+`com.ossuminc.riddl.language.bast` (`language/src/main/scala/…/bast/`),
+cross-platform, written by `passes/…/BASTWriterPass.scala`. CLI: `riddlc bastify
+<file.riddl>` and `riddlc unbastify` (both implemented; `UnbastifyCommand`, and
+`RiddlModelsRoundTripTest` exercises it over the whole corpus). Format docs live
+at ossum.tech/riddl, not in this repo. Key files: `package.scala` (constants and
+`NODE_*`/`TYPE_*`/`STREAMLET_*` tags), `BASTWriter`, `BASTReader`, `BASTLoader`,
+`BASTUtils`, `StringTable`, `PathTable`.
+
+**HAZARD — disjoint tag sets**: `readNode()` handles only `NODE_*` tags;
+`readTypeExpression()` only `TYPE_*`. Crossing them misaligns bytes and surfaces
+as "Invalid string table index" during deserialization.
+
+**HAZARD — one tag per WIRE SHAPE, not per family.** `Constant` and `Method`
+were both written with `NODE_FIELD` because all three are "a name and a type" —
+but a Constant appends its literal value and a Method its argument list, so the
+reader (which read a Field) left those bytes in the stream and every byte after
+such a node was misread. Fixed 2026-08-13 with `NODE_CONSTANT` (109) /
+`NODE_METHOD` (110) and `FORMAT_REVISION` 14. The reader had ADMITTED it in a
+comment (*"This is ambiguous … For now, assume Field"*), which is the part worth
+learning from: **a known-ambiguous decode is a latent corruption, not a rough
+edge. Two node kinds may share a tag only if they write byte-identical
+payloads.**
+
+**A BAST error names where the reader DERAILED, never what derailed it.** The
+same single constant surfaced as `Invalid string table index` in a 13-node model
+and as `Invalid invariant condition kind: 67` in a 9618-node one, sending both
+riddl-models and this repo to bisect an innocent invariant. Bisect toward the
+node BEFORE the reported position, and distrust the construct named.
 
 ## Testing Patterns
 
 ### Parser/EBNF Synchronization Requirement
 
-**Any change to the fastparse parser MUST have a corresponding change to the EBNF grammar.**
-
-The EBNF grammar at `language/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
-is the canonical specification of RIDDL syntax. It is validated by a TatSu-based parser
-that runs in CI on all `**/input/**/*.riddl` test files.
-
-When modifying the fastparse parser:
-1. Update the corresponding rule(s) in `ebnf-grammar.ebnf`
-2. Run the EBNF validator locally:
-   ```bash
-   cd language/src/test/scalajvm/python
-   pip install -r requirements.txt  # first time only
-   python ebnf_tatsu_validator.py
-   ```
-3. Ensure both parsers accept the same inputs
-4. CI will fail if the EBNF parser cannot parse test files that fastparse accepts
-
-This ensures the documented grammar stays in sync with the actual implementation.
+**Any change to the fastparse parser MUST have a corresponding change to the
+EBNF grammar** at `language/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`,
+which is the canonical specification of RIDDL syntax and is validated in CI by a
+TatSu-based parser over all `**/input/**/*.riddl` files. Update the rule, run the
+validator locally (`language/src/test/scalajvm/python`, `.venv/bin/python
+ebnf_tatsu_validator.py`), and ensure both parsers accept the same inputs.
 
 **There is NO GBNF any more.** The bundled 258-rule `riddl-grammar.gbnf`, its
-generator (`ebnf_to_gbnf.py`), its validator and its overrides were **deleted
-2026-08-20** on Reid's ruling (*"We could do without the reflectivity tax, it's
+generator (`ebnf_to_gbnf.py`), its validator and its overrides were deleted
+2026-08-20 on Reid's ruling (*"We could do without the reflectivity tax, it's
 high enough without it"*), and `Grammar.loadGbnfGrammar*` went with them —
-legitimate only because 2.0.0 had not shipped, so 2.0 IS the major that may
-remove public API. **A grammar change now touches TWO artifacts, not three**;
-any instruction to "regenerate the GBNF" is stale. The evidence was a
-measurement riddl-generator had already made and written down: llama.cpp's
-grammar engine could not run the full RIDDL grammar at a usable speed — **an
-8-token constrained generation did not finish in seven minutes** against seconds
-unconstrained — so it was dropped for PERFORMANCE, not quality, and nothing
-consumed the bundled file. Constrained decoding survives via JSON-schema-derived
-grammars llama.cpp builds itself, needing no file from this repo. Coverage did
-not change: the EBNF stays authoritative and TatSu still gates it.
+legitimate only because 2.0.0 had not shipped. **A grammar change now touches
+TWO artifacts, not three**; any instruction to "regenerate the GBNF" is stale.
+The evidence was a measurement riddl-generator had already written down:
+llama.cpp's grammar engine could not run the full RIDDL grammar at a usable
+speed — **an 8-token constrained generation did not finish in seven minutes**
+against seconds unconstrained — so it was dropped for PERFORMANCE, not quality,
+and nothing consumed the bundled file. Constrained decoding survives via
+JSON-schema-derived grammars llama.cpp builds itself, needing no file from this
+repo. Coverage did not change: the EBNF stays authoritative and TatSu gates it.
 
 **TatSu's `nameguard` refuses a bare letter token that touches a digit.** An
 exponent marker written `("e" | "E")` reads fine as prose and fails under the
 generated parser for `1e3` specifically — nameguard bounds any word-like quoted
 literal to a word boundary, so `e` followed immediately by a digit looks like the
 start of a longer identifier. `e+3`/`e-3` work, which is what makes it look like
-a sign bug. Write the marker as an inline regex (`/[eE]/`), the idiom
-`mime_type` and `markdown_line` already use.
+a sign bug. Write the marker as an inline regex (`/[eE]/`), the idiom `mime_type`
+and `markdown_line` already use.
 
 **Adding a `.riddl` fixture is a GRAMMAR-SURFACE change, not just a test
 change.** A fixture that is an include fragment or intentionally invalid must be
 added to `INCLUDE_FRAGMENTS` in `ebnf_tatsu_validator.py`, or the CI
 `ebnf-grammar-validation` job exits 1 — on a commit whose Scala suites are green
 on all three platforms, because `tJVM`/`tJS`/`tNative` do not run the Python
-validators at all. **Run them yourself** (`.venv/bin/python
-ebnf_tatsu_validator.py`) before calling grammar work verified; a green test run
-is a claim about the tests you ran, and the gates outside the test runner are
-exactly the ones it cannot speak for. Conversely, **a fixture in a SKIPPED file
-is not coverage** — check the validator's own output for a `✓` on the file.
+validators at all. **Run them yourself** before calling grammar work verified; a
+green test run is a claim about the tests you ran, and the gates outside the test
+runner are exactly the ones it cannot speak for. Conversely, **a fixture in a
+SKIPPED file is not coverage** — check the validator's own output for a `✓` on
+the file.
 
 ### Reflection / Round-Trip Requirement
 
-**RIDDL is fully reflective by design and necessity: anything that can be
-parsed MUST also be emitted.** So a change to the AST or parser is only
-half done until PrettifyPass emits the new/changed construct AND a
-parse → prettify → re-parse round-trip preserves it. "Parses and
-validates" is half the contract; **emit + round-trip is the other half.**
-
-When you add or move a construct (e.g. allowing a definition under a new
-container):
+**RIDDL is fully reflective by design and necessity: anything that can be parsed
+MUST also be emitted.** A change to the AST or parser is only half done until
+PrettifyPass emits the new/changed construct AND a parse → prettify → re-parse
+round-trip preserves it. "Parses and validates" is half the contract; **emit +
+round-trip is the other half.** When you add or move a construct:
 
 1. Confirm `PrettifyVisitor` / `RiddlFileEmitter` emit it. Traversal
-   (`HierarchyPass`) and dispatch (`VisitingPass`, `Pass.scala`) are
-   generic and type-based, so it often "just works" — but **prove it,
-   don't assume it.**
-2. **Add a round-trip test** — parse → `PrettifyPass(flatten=true)` →
-   re-parse — asserting the construct survives at the SAME place (not
-   dropped, not relocated). Template:
-   `passes/.../prettify/RepositoryDomainScopeRoundTripTest.scala` (and
-   `IdentifierQuotingRoundTripTest.scala`).
-3. **Run the FULL suite on all platforms** (`tJVM tJS tNative`), not just
-   the module you touched. A green partial suite proves nothing when no
-   existing test exercises the new shape.
+   (`HierarchyPass`) and dispatch (`VisitingPass`, `Pass.scala`) are generic and
+   type-based, so it often "just works" — but **prove it, don't assume it.**
+2. **Add a round-trip test** — parse → `PrettifyPass(flatten=true)` → re-parse —
+   asserting the construct survives at the SAME place (not dropped, not
+   relocated). Templates:
+   `passes/…/prettify/RepositoryDomainScopeRoundTripTest.scala`,
+   `IdentifierQuotingRoundTripTest.scala`.
+3. **Run the FULL suite on all platforms** (`tJVM tJS tNative`), not just the
+   module you touched. A green partial suite proves nothing when no existing
+   test exercises the new shape.
 
-Also remember BAST (binary AST) is a second serialization surface: a new
-AST node generally needs BASTWriter/BASTReader support and a
-`FORMAT_REVISION` bump (see the BAST section).
+BAST is a second serialization surface and JSON a third: a new AST node
+generally needs BASTWriter/BASTReader support and a `FORMAT_REVISION` bump.
 
-### Compilation After Every Change
-When implementing new code:
-1. Write the code
-2. **ALWAYS** run `sbt "project <module>" compile`
-3. Fix Scala 3 syntax errors immediately
-4. Then proceed to next step
+### Working rhythm
 
-### Test Files Location
-- Input test files: `language/input/<category>/<file>.riddl`
-- Examples: `language/input/import/import.riddl`
+Compile after every change (`sbt "project <module>" compile`) and fix Scala 3
+syntax errors immediately, before moving on. Test inputs live in
+`language/input/<category>/<file>.riddl`.
 
 ## Common Errors & Solutions
 
-### Error: "This construct is not allowed under -new-syntax"
-**Cause**: Using Scala 2 syntax
-**Fix**: Use Scala 3 syntax with `do`/`end`
+| Error | Cause → Fix |
+|---|---|
+| "This construct is not allowed under -new-syntax" | Scala 2 syntax → use `do`/`then`/`end` |
+| "value kind is not a member of Token" | Token is an enum → `getClass.getSimpleName` |
+| "value toList is not a member of Contents" | Opaque type → use `.toSeq` |
+| "value Javascript is not a member of With" | sbt-ossuminc API change → `With.ScalaJS` |
 
-### Error: "value kind is not a member of Token"
-**Cause**: Token is an enum
-**Fix**: Use `token.getClass.getSimpleName`
+**"No given instance of PlatformContext for default parameter"** — a Scala 3.8.x
+limitation: a default value in a case class's FIRST parameter list cannot resolve
+a `given` from a subsequent `using` clause in the generated companion `apply`.
+Fix by removing the default: `case class Foo(x: Bar)(using PlatformContext)`,
+never `x: Bar = Bar()`.
 
-### Error: "value toList is not a member of Contents"
-**Cause**: Contents is opaque type with limited extensions
-**Fix**: Use `.toSeq` extension method
+**"parameters with defaults must be at the end" (Scala.js)** —
+`@JSExportTopLevel` on a case class with `(using PlatformContext)` in a second
+parameter list sees the context as a non-default parameter after defaulted ones.
+Fix by removing `@JSExportTopLevel` from internal data structures JS never
+constructs. **Corollary used repeatedly below: a new field with a default must
+be TRAILING**, which is why several AST fields are declared without defaults.
 
-### Error: "value Javascript is not a member of With"
-**Cause**: sbt-ossuminc 1.0.0 API change
-**Fix**: Use `With.ScalaJS` instead
-
-### Error: "No given instance of PlatformContext for default parameter"
-**Cause**: Scala 3.8.x limitation — default parameter values in a case
-class's first parameter list cannot resolve `given` instances from a
-subsequent `using` clause in the generated companion `apply` method.
-**Fix**: Remove the default value. May be fixed in 3.9.x LTS.
-**Example**:
-```scala
-// This fails in 3.8.x:
-case class Foo(x: Bar = Bar())(using PlatformContext)
-// Fix: remove default (or provide explicit given)
-case class Foo(x: Bar)(using PlatformContext)
-```
-
-### Error: "parameters with defaults must be at the end" (Scala.js)
-**Cause**: `@JSExportTopLevel` on a case class with `(using
-PlatformContext)` in a second parameter list. The JS export sees the
-context parameter as a non-default parameter after defaulted params.
-**Fix**: Remove `@JSExportTopLevel` from internal data structures that
-don't need to be constructed from JS code.
-
-### System.lineSeparator() returns null in Scala.js
-**Cause**: `System.lineSeparator()` returns `\0` in Scala.js
-**Fix**: Use `PlatformContext.newline` instead. Never use
-`System.lineSeparator()` in shared code. The `FileBuilder` trait
-and its entire hierarchy use `(using PlatformContext)` for this.
-
-## File Organization
-
-### Creating New Modules
-1. Create directory: `<moduleName>/src/{main,test}/scala/...`
-2. Add to `build.sbt` using `CrossModule` (pass `V.scala`)
-3. Add variants to root aggregation; wire deps per-row with `pDep()`
-4. Add platform-specific dirs as needed (see below)
-
-### Cross-Platform Considerations (projectMatrix layout)
-- **Shared code**: `<module>/src/{main,test}/scala`
-- **Platform-specific**: `<module>/src/{main,test}/scala{jvm,js,native}`
-- **JVM+Native shared**: `<module>/src/{main,test}/scala-jvm-native`
-  (custom dir; wire with `jvmNativeSrc(...)` in build.sbt)
-- **Avoid** platform-specific APIs in shared code
-- Use `PlatformContext` for platform abstraction
+**`System.lineSeparator()` returns `\0` in Scala.js** — use
+`PlatformContext.newline` instead, and never `System.lineSeparator()` in shared
+code. The `FileBuilder` trait and its whole hierarchy take `(using
+PlatformContext)` for exactly this.
 
 ## Git Workflow
 
-### Version Management
-- **sbt-dynver** generates versions from git tags
-- Format: `MAJOR.MINOR.PATCH-commits-hash-YYYYMMDD-HHMM`
-- Clean tag: `git tag -a 1.0.0 -m "Release 1.0.0"` (no `v` prefix - it interferes with sbt-dynver)
-- **Always run `sbt publishLocal` after tagging** to make the new version available locally
+- **sbt-dynver** derives versions from git tags
+  (`MAJOR.MINOR.PATCH-commits-hash-YYYYMMDD-HHMM`); tag without a `v` prefix,
+  which breaks it. **Always `sbt publishLocal` after tagging** so the new
+  version is available locally.
+- **`main` is both the working and the release branch** — commit directly to it
+  and cut releases by tagging it; CI builds from the tag. There is no GitFlow
+  and no permanent `development` branch (see `../CLAUDE.md`). Reach for a
+  short-lived branch only when you want isolation, then merge and delete it.
+- **The `development` branch is GONE** — deleted local and remote 2026-08-27,
+  0 commits ahead of `main`; `old-development` was already gone. So was a stray
+  `help` tag (a typo'd `git tag help` pointing at a 2019 commit) which had
+  sorted to the top of `git tag --sort=-v:refname` and so LED the tag list
+  whenever anyone worked out the latest release. Do not recreate any of them —
+  a reference to one is stale text, not a branch you failed to fetch.
+- **`.claude/skills/ship/SKILL.md` no longer prescribes GitFlow** (fixed
+  2026-08-27; it had told every release to fast-forward `main` from
+  `development` and merge back, both no-ops or contrary to policy from 1.30.0
+  on). It now says: ship a FINAL release from `main`; when the work lives on a
+  release branch, merge that branch into `main` and tag `main`, never the
+  branch, then delete the branch. Release CANDIDATES remain the documented
+  exception and may be tagged on the branch — see the `/rc` skill.
+- PR merge with branch protection: `gh pr merge --admin --merge
+  --delete-branch=false`.
 
-### Commit Message Format
-```
-Short description (imperative mood)
-
-Detailed explanation of what changed and why.
-Focus on "why" rather than "what".
-
-Co-Authored-By: Claude <model-name> <noreply@anthropic.com>
-```
-
-### Branch Strategy
-- **main** is both the working branch and the release branch —
-  commit directly to it. There is **no GitFlow** and no permanent
-  `development` branch (see `../CLAUDE.md` "Git Workflow").
-- Cut releases by tagging `main`; CI builds from the tag.
-- Reach for a short-lived branch only when you want isolation (a
-  throwaway experiment, or work you'd like to review as a diff),
-  then merge and delete it.
-- **The `development` branch is GONE** — deleted local and remote on
-  2026-08-27, having been 0 commits ahead of `main`. `old-development`
-  was already gone. Do not recreate either; if you find a reference to
-  one, it is stale text, not a branch you failed to fetch.
-- **`.claude/skills/ship/SKILL.md` no longer prescribes GitFlow**
-  (fixed 2026-08-27). It had told every release to fast-forward `main`
-  from `development` and to merge back afterwards; both were no-ops or
-  contrary to policy from 1.30.0 on, and were skipped by hand each
-  time. It now says: ship a FINAL release from `main`; when the work
-  lives on a release branch, merge that branch into `main` and tag
-  `main`, never the branch; delete the branch afterwards. Release
-  CANDIDATES remain the documented exception and may be tagged on the
-  branch — see the `/rc` skill.
-- **A stray `help` git tag** (a typo'd `git tag help`, pointing at a
-  2019 commit) was deleted local and remote the same day. It had sorted
-  to the top of `git tag --sort=-v:refname`, so it LED the tag list
-  whenever anyone worked out the latest release.
-
-## Quick Reference Commands
+## Quick Reference
 
 ```bash
-# Compile specific module
-sbt "project bast" compile
-
-# Run tests for module
-sbt "project language" test
-
-# Build npm package
-./scripts/pack-npm-modules.sh riddlLib
-
-# Format code
+sbt "project language" compile     # or test; "project bast", etc.
+sbt cJVM cJS cNative               # all platforms compile
+sbt tJVM tJS tNative               # all tests
+sbt riddlc/stage                   # → target/out/jvm/scala-3.9.0/riddlc/universal/stage/bin/riddlc
 sbt scalafmt
-
-# Check all platforms compile
-sbt cJVM cJS cNative
-
-# Run all tests
-sbt tJVM tJS tNative
-
-# Package riddlc executable
-sbt riddlc/stage
-# Result: riddlc/jvm/target/universal/stage/bin/riddlc
+./scripts/pack-npm-modules.sh riddlLib
 ```
 
-## RiddlLib & RiddlAPI Patterns
+`riddlc help | version | info | parse <file> | validate <file>`; every command
+can load its options from a HOCON config file (`riddlc from <conf> <cmd>`).
 
-### Architecture
 
-Core parsing/validation logic lives in `RiddlLib` (shared trait +
-companion object) at `riddlLib/shared/.../RiddlLib.scala`. This is
-usable on JVM, JS, and Native. The JS-only `RiddlAPI.scala` is a
-thin facade that delegates to `RiddlLib` and converts results to
-plain JavaScript objects.
+## Reference split out of this file
 
-- **Cross-platform code**: Use `RiddlLib.parseString(...)` etc.
-  with a `given PlatformContext` in scope (provided by each
-  platform's `com.ossuminc.riddl.utils.pc`)
-- **JS facade**: `RiddlAPI` adds `@JSExport` methods, `getDomains`,
-  `inspectRoot`, and JS-only helpers like `formatErrorArray`
+Two companion files under `docs/claude/` hold detail that is consulted during a
+named task rather than needed unprompted. **Read the relevant one when you touch
+its subject; nothing in them is less authoritative for having moved.**
 
-### Origin Parameter Pattern
+- **`docs/claude/language-constructs.md`** — per-construct language reference:
+  syntax, AST shape, BAST tags and `FORMAT_REVISION` numbers, JSON keys and
+  design rationale for the standard module, handler clauses (A55/A57/
+  quiescence), correlations (A70), processor instance identity, typed holes
+  (A20), entity intentions and stream shapes, values and literals, and the
+  messaging statements. The traps for each stayed under **AST / Language
+  Internals** below.
+- **`docs/claude/build-and-api.md`** — adding a new riddlc command, NPM
+  packaging, import vs include, the `Contents`/Token/`At` basics, writing a
+  Pass, the RiddlLib/RiddlAPI split, and the GitHub workflows.
 
-**CRITICAL**: All methods that accept an `origin` parameter use
-`RiddlLib.originToURL()` to convert strings to URLs.
-
-```scala
-def originToURL(origin: String): URL =
-  if origin.startsWith("/") then
-    URL.fromFullPath(origin)
-  else
-    URL(URL.fileScheme, "", "", origin)
-  end if
-```
-
-### Scala 3 Lambda Syntax
-
-**Wrong** (Scala 2 style):
-```scala
-lines.foreach(pc.log.info)  // Error: type mismatch
-```
-
-**Correct** (Scala 3):
-```scala
-lines.foreach(line => pc.log.info(line))
-```
-
-**Reason**: Scala 3 doesn't automatically convert by-name parameters (`=> String`) to function parameters (`String => Unit`).
-
-### Shared Utilities Pattern
-
-When code needs to be shared between JVM (riddlc commands) and JS (RiddlAPI), put it in `utils/shared/`:
-
-**Example**: `InfoFormatter` is used by both:
-- `commands/InfoCommand.scala` (JVM)
-- `riddlLib/RiddlAPI.scala` (JS via `@JSExport`)
-
-```scala
-// utils/src/main/scala/com/ossuminc/riddl/utils/InfoFormatter.scala
-object InfoFormatter {
-  def formatInfo: String = {
-    // Build info formatting logic
-  }
-}
-```
-
-## Working with riddlc CLI
-
-After staging (`sbt riddlc/stage`), the `riddlc` executable provides:
-
-```bash
-riddlc help              # Show all available commands
-riddlc version           # Version information
-riddlc info              # Build information
-riddlc parse <file>      # Parse RIDDL file
-riddlc validate <file>   # Validate RIDDL file
-```
-
-Commands can load options from HOCON config files.
-
-**Executable location**: `riddlc/jvm/target/universal/stage/bin/riddlc`
-
----
-
-## Development Patterns
-
-### Adding a New Module
-
-```scala
-lazy val mymodule_cp = CrossModule("mymodule", "riddl-mymodule")(JVM, JS, Native)
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp))
-  .configure(With.typical, With.GithubPublishing)
-  .settings(
-    description := "Description here"
-  )
-  .jvmConfigure(With.coverage(50))
-  .jsConfigure(With.ScalaJS("RIDDL: mymodule", withCommonJSModule = true))
-  .nativeConfigure(With.Native(mode = "fast"))
-
-lazy val mymodule = mymodule_cp.jvm
-lazy val mymoduleJS = mymodule_cp.js
-lazy val mymoduleNative = mymodule_cp.native
-```
-
-Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNative)`
-
-**Note**: Use `With.ScalaJS(...)` for sbt-ossuminc 1.0.0+, not `With.Javascript(...)`
-
-### Adding a New Pass
-
-1. Extend `Pass`, `DepthFirstPass`, or `HierarchyPass`
-2. Implement `process()` method for each AST node type
-3. Declare dependencies via `def requires(): Seq[Pass] = Seq(...)`
-4. Override `result()` to return your `PassOutput` subclass
-5. Add to standard passes or invoke explicitly
-
-### Adding a New Command
-
-1. Define options: `case class MyOptions(...) extends CommandOptions`
-2. Define command: `class MyCommand extends Command[MyOptions]`
-3. Implement:
-   - `def name: String`
-   - `def getOptionsParser: OptionParser[MyOptions]`
-   - `def run(options: MyOptions, context: PlatformContext): Either[Messages, PassesResult]`
-4. Register with `CommandLoader` if using plugin system
-
----
+If you ever need a fact from either file that you had no reason to look for, it
+belongs back in this one.
 
 ## Subtle Patterns and Gotchas
 
-Each subsection is a topic, not a serial number — add new entries
-to the right group rather than appending to a list.
+Each subsection is a topic, not a serial number — add new entries to the right
+group rather than appending to a list.
 
 ### BAST
 
-- **VERSION is a single integer** (`VERSION: Int = 1`) and stays
-  at 1 until the schema is finalized for external users.
-- **FORMAT_REVISION** must be incremented whenever a BASTWriter
-  change produces output that an older BASTReader can't read
-  correctly: new statement subtypes, wire-format changes,
-  reordered fields, new node tags. Constant lives in
-  `language/shared/.../bast/package.scala`.
+- **VERSION is a single integer** (`VERSION: Int = 1`) and stays at 1 until the
+  schema is finalized for external users.
+- **FORMAT_REVISION** (`language/shared/.../bast/package.scala`) must be
+  incremented whenever a BASTWriter change produces output an older BASTReader
+  cannot read correctly: new statement subtypes, wire-format changes, reordered
+  fields, new node tags.
 - **Location comparisons use offsets**, not `line`/`col`.
 - **`writeContents` writes a COUNT and trusts an unrelated caller elsewhere to
-  write the ITEMS — a contract that has now failed four times.** The reader's
+  write the ITEMS — a contract that has now failed four times.**
   `readContentsDeferred` then consumes N nodes that were never written and the
   stream desynchronizes. It bites any node holding children the generic
-  traversal cannot reach: `BASTImport` and `InteractionContainer` (`sequence` /
-  `parallel` / `optional`) are `Container` but **not `Branch`** — no `id`, so
-  they cannot be `Definition`s, so `BASTWriterPass.traverse` fell through to the
-  `wm: WithMetaData` arm, which calls `process()` (header + count) and never
-  descends. `InvariantBlock` is worse: its statements sit in a FIELD of a node
-  that is not even a `Container`, and `writeInvariant` emits the predicate
-  INLINE, so the deferred items must land after `requires` rather than after
-  their own count. **The tell is a node count going DOWN when a construct is
-  ADDED.** Every fix so far has taught the specific missing traversal path
-  rather than making the mismatch structurally impossible; if a fifth instance
-  turns up, that is the signal to change the contract itself (a writer that
-  returns "how many items I still owe", and a chokepoint refusing to finalize a
-  node until it is satisfied). Adjacent, same sweep: `writeRelationship` wrote
-  **no discriminator byte at all** while the shared-tag reader unconditionally
-  reads one, so every relationship misread its own location as its dispatch byte
-  — latent since `relationship` first became serializable.
+  traversal cannot reach: `BASTImport` and `InteractionContainer`
+  (`sequence`/`parallel`/`optional`) are `Container` but **not `Branch`** — no
+  `id`, so they cannot be `Definition`s, so `BASTWriterPass.traverse` fell
+  through to the `wm: WithMetaData` arm, which calls `process()` (header +
+  count) and never descends. `InvariantBlock` is worse: its statements sit in a
+  FIELD of a node that is not even a `Container`, and `writeInvariant` emits the
+  predicate INLINE, so the deferred items must land after `requires` rather than
+  after their own count. **The tell is a node count going DOWN when a construct
+  is ADDED.** Every fix so far taught the specific missing traversal path rather
+  than making the mismatch structurally impossible; a fifth instance is the
+  signal to change the contract itself (a writer returning "how many items I
+  still owe", and a chokepoint refusing to finalize a node until it is
+  satisfied). Adjacent, same sweep: `writeRelationship` wrote **no discriminator
+  byte at all** while the shared-tag reader unconditionally reads one, so every
+  relationship misread its own location as its dispatch byte — latent since
+  `relationship` first became serializable.
 - **BAST carries real positions; `positionsKnown` is how a consumer detects when
   it cannot.** `writeLocation` delta-encodes the REAL offset and `At` has always
-  derived line/col lazily from `source.lineOf(offset)` — so the format was never
+  derived line/col lazily from `source.lineOf(offset)`, so the format was never
   the problem. The defect was the READER attaching a `BASTParserInput` whose line
   index is SYNTHETIC (line L starts at L×10000) and then feeding it real offsets,
   putting everything under offset 10000 on line 1 at col = offset. Pass real
-  sources via `BASTReader.read`'s optional `sources` map. When they are absent,
-  `At.line` returns **0** (`At.scala:43`) — unrepresentable as a 1-based
-  position, and deliberately so: **a confident wrong answer is worse than an
-  absent one**, because the old plausible line 1 was good enough for a Problems
-  pane to point at and impossible to detect.
-- **BASTImport in HierarchyPass** — `openBASTImport` /
-  `closeBASTImport` hooks plus `traverseBASTImportContents(bi)`.
-  All `PassVisitor` implementors must define these (even as
-  no-ops); `BASTImport` extends `Container` but not `Branch`, so
-  without the hooks it falls through and its contents are never
-  visited.
+  sources via `BASTReader.read`'s optional `sources` map. When absent, `At.line`
+  returns **0** (`At.scala:43`) — unrepresentable as a 1-based position, and
+  deliberately so: **a confident wrong answer is worse than an absent one**,
+  because the old plausible line 1 was good enough for a Problems pane to point
+  at and impossible to detect.
+- **BASTImport in HierarchyPass** — `openBASTImport`/`closeBASTImport` hooks plus
+  `traverseBASTImportContents(bi)`. All `PassVisitor` implementors must define
+  these (even as no-ops); `BASTImport` extends `Container` but not `Branch`, so
+  without the hooks it falls through and its contents are never visited.
 
 ### AST / Language Internals
 
-- **The predefined `Riddl` standard module** (`language/.../
-  PredefinedModule.scala`) is readable RIDDL held in a string constant,
-  parsed ONCE and cached as a singleton. It holds `type Drain is
-  Anything` plus the two terminators `BottomlessPit` (sink, inlet
-  `hole`) and `ForeverEmpty` (source, outlet `void`), directly in the
-  module (no domain/context — `ModuleContents` is `NebulaContents`).
-  **NEVER inject it into a user's `Root.contents`.** The ONLY seam is
-  `SymbolsPass.postProcess`, which seeds `predefinedSymTab` /
-  `predefinedParentage` — separate maps on `SymbolsOutput` that lookups
-  fall back to. Keeping them separate is load-bearing: several public
-  APIs (`AnalysisResult.domains/streamlets/…`, `UseCaseWitnessPass`,
-  `foreachOverloadedSymbol`) ENUMERATE `parentage`/`symTab`, and seeding
-  the shared maps leaks the standard library into "all X in the model".
-  A user definition with a colliding name wins structurally (the user's
-  table is consulted first) — no ambiguity, no message.
-  It also holds **`Envelope`** (2.0.0-rc.10+), the record carrying a message's
-  metadata, selected by `option message_envelope("Riddl.Envelope")`. Fields are
-  the **CloudEvents v1.0 context attributes**, with ONE forced deviation:
-  CloudEvents `id` is spelled **`messageId`**, because RIDDL requires
-  identifiers of >= 3 chars and `id` draws a StyleWarning — and the standard
-  module must validate clean. There is deliberately **no `data` field**: in
-  RIDDL the payload IS the message, already modelled and typed, so Envelope is
-  the metadata AROUND a message rather than a wrapper containing one. The
-  option is **scope-inherited** (`Seq.empty` validParents — resolved by walking
-  UP the parent chain), so declaring it on a context covers every entity in it.
-  Opt-in by design: RIDDL specifies meaning, not representation, so how the
-  attributes ride (CloudEvents JSON, Kafka headers, gRPC metadata, or nothing
-  for an in-process call) stays the generator's choice.
-  It also holds **`GeneratorError`** (`origin`, `kind`, `detail`, `occurredAt`) —
-  the shape every generator sends to the inlet marked `option error-sink`, for a
-  saga whose undo retries were exhausted, an adaptor's dead-lettered message, a
-  projector's poison event. **The name states the SOURCE** (it was `HardError`
-  until 2026-08-01, and `Operations` was withdrawn from the module at the same
-  time): the standard library owes a generator the SHAPE of a notification and a
-  way to NAME its destination, nothing more, so there is deliberately **no
-  predefined receiver**. An error-sink inlet must accept it — directly, or via an
-  alternation including it so a model can route its own error messages to the same
-  inlet — else it is an Error, because a generator has nothing it can send there.
-  **A missing error-sink is a `Missing` warning, NOT a CompletenessWarning**:
-  `isIgnorable` is `severity < CompletenessWarning`, so Completeness asserts
-  STRUCTURAL incompleteness (unfed inlets, unreachable sinks) while "has not said
-  where hard errors go" is the "has no author" family. Emitting it as Completeness
-  turned **thirteen unrelated suites red** on models that were otherwise fine.
-  Both records are legitimately **unused inside the module** — that is the
-  design, not a defect — so `PredefinedTerminatorsTest` asserts exactly which
-  ones are unused (`GeneratorError` and `Envelope`, by name); widen that list when
-  adding another, never loosen it.
-  All exemptions (A31 cardinality, unattached/isolated/reachability,
-  handler completeness) test REFERENCE IDENTITY via
-  `PredefinedModule.isPredefined`, never a name. A port typed `Anything`
-  is connector-compatible with every type (`validateConnector`).
-  `language/input/predefined/riddl-standard-module.riddl` is a verbatim
-  copy so the CI grammar validators cover it; `PredefinedModuleSourceTest`
-  fails if the copy drifts from the constant.
+**Per-construct detail — syntax, AST shape, BAST tags, `FORMAT_REVISION`
+numbers, JSON keys and design rationale — lives in
+`docs/claude/language-constructs.md`. Read it when you touch one of these
+constructs.** What stays here is the half that has to fire unprompted: the rule
+you could get wrong, the "do not restore this", the anti-pattern. If you need a
+fact from that file that you had no reason to look for, it belongs back here.
 
-- **`on other as x [: <envelope>]` (A57)** — binds the residual message's
-  ENVELOPE, not a message: the clause names none. `OnOtherClause` gains
-  `binding: Option[Identifier]` and `envelopeType: Option[TypeRef]`, both
-  declared BEFORE `contents` and WITHOUT defaults (`@JSExportTopLevel` needs
-  defaulted params trailing — same rule as A55). `x`'s type is the ascription
-  when written, else whatever `option message_envelope` names in scope
-  (`ResolutionPass.envelopePathFor`), so `x` and `x.source` both resolve.
-  **The ascription RESTATES the option, it never overrides it.** Three Errors in
-  `checkOnOtherBinding`: a binding with no envelope in scope, an ascription with
-  no envelope in scope, and an ascription that contradicts the option. A
-  per-clause override would mean reading one clause tells you nothing about its
-  siblings — exactly what scope inheritance prevents.
-  **The type is BARE after the colon** — no keyword. `message` would be untrue
-  and `type` is correct only because it is vacuous; the colon already says a
-  type follows. Both spellings parse elsewhere in RIDDL, so this is a choice
-  about meaning, not consistency.
-  **`OnOtherClause` must NOT join `OnMessageLikeClause`** — that is what keeps
-  it out of `UseCaseWitnessPass`'s index (see its comment); a clause matching
+- **The predefined `Riddl` standard module** — **NEVER inject it into a user's
+  `Root.contents`.** The ONLY seam is `SymbolsPass.postProcess`, seeding
+  `predefinedSymTab`/`predefinedParentage` — separate maps lookups fall back to.
+  Separateness is load-bearing: several public APIs
+  (`AnalysisResult.domains/streamlets/…`, `UseCaseWitnessPass`,
+  `foreachOverloadedSymbol`) ENUMERATE `parentage`/`symTab`, and seeding the
+  shared maps leaks the standard library into "all X in the model". All
+  exemptions test REFERENCE IDENTITY via `PredefinedModule.isPredefined`, never a
+  name. **A missing error-sink is a `Missing` warning, NOT a
+  CompletenessWarning** — Completeness asserts STRUCTURAL incompleteness (unfed
+  inlets, unreachable sinks) while "has not said where hard errors go" is the
+  "has no author" family; emitting it as Completeness turned **thirteen unrelated
+  suites red**. `GeneratorError` and `Envelope` are legitimately UNUSED inside
+  the module — the design, not a defect — and `PredefinedTerminatorsTest` asserts
+  exactly which, by name: widen that list when adding another, never loosen it.
+  `language/input/predefined/riddl-standard-module.riddl` is a verbatim copy;
+  `PredefinedModuleSourceTest` fails on drift.
+
+- **`on other as x [: <envelope>]` (A57)** — **the ascription RESTATES the
+  `option message_envelope` in scope; it never OVERRIDES it.** A per-clause
+  override would mean reading one clause tells you nothing about its siblings —
+  exactly what scope inheritance prevents. **Rendering lives in
+  `Declaration.ascription`, NOT the clause's `format`**: `format` alone makes
+  prettify silently DROP the binding on every round trip (shipped as a bug for
+  exactly one commit). **`OnOtherClause` must NOT join `OnMessageLikeClause`** —
+  that is what keeps it out of `UseCaseWitnessPass`'s index; a clause matching
   every type would witness every step.
-  **Rendering lives in `Declaration.ascription`, NOT in the clause's `format`.**
-  The prettifier reads the former via `openDef`; putting it on `format` alone
-  makes prettify silently DROP the binding on every round trip. That shipped as
-  a bug for exactly one commit and is what `OnOtherEnvelopeRoundTripTest` pins.
-- **Correlations in projectors (A70, release/2)** — `correlation <id> by <k>[,
-  <k>…] yields command <C> is { <handler> } times out after "<duration>" {
-  <statements> } [with { … }]`. A keyed accumulation of several events into one
-  command the Repository handles. **Semantics live in
-  `../RIDDL-Computational-Model.md` §6.2 and §6.5–§6.8 and are NOT restated in
-  the code** — that document is the authority for any lowering decision.
-  **`yields` names a COMMAND** (Reid, 2026-08-12; it was `yields record <T>`
-  for one day). A projector's only output is a change to a repository, and a
-  repository is changed by handling a command. The record form could never
-  work: a handler clause takes a `messageRef`, which is the four real messages
-  only (A9b), so **no `on` clause could name what the correlation produced** —
-  which is why the first design had to INFER acceptance from a command that
-  *held* the record. Naming the command deletes the inference. Enforced in two
-  places on purpose: the wrong KEYWORD dies in the grammar (`commandRef` in
-  `ProjectorParser`, so `yields record R` does not parse), while `yields
-  command Foo` naming a non-command is an Error from `ValidationPass` — the
-  only place with the resolved referent, and a parse-time `error()` there would
-  preempt the whole pass chain.
-  **The timeout clause is MANDATORY and is grammar, not metadata.** It was
-  designed as an optional `else` block plus `option timeout(…)`, which left one
-  question unanswerable — what an unbounded correlation means — and needed three
-  warnings to paper over it. Reid's ruling made it mandatory, which deletes all
-  three states instead of diagnosing them. The reasoning is entity intentions
-  again: §4.2 calls options *advisory*, and a bound that MUST fire a block is
-  not. Consequences: **no timeout inheritance from the Projector** (nothing is
-  left to default, so `RecognizedOptions` is untouched by this feature), the
-  duration is a `LiteralString` still duration-VALIDATED via
-  `DefinitionValidation.checkPreciseDuration` (shared with the `timeout` option,
-  so `times out after "banana"` is an Error), and an empty block is a parse
-  error — `do "nothing"` is the discard idiom.
-  **Keys are stored AS WRITTEN and never canonicalized**: `Definition.equals` is
-  structural and §6.5 makes identity the full tuple, so sorting them would
-  silently equate two different declarations. This is the exact OPPOSITE of
-  `EntityIntention.canonical`, which sorts so that write order cannot make two
-  identical entities compare unequal. Prettify, BAST and JSON all preserve order
-  and each has a test asserting it.
-  **The effect ban binds FOLDS only.** Fold purity is what makes re-runs safe
-  (§6.5); the timeout block exists to have an effect (§6.7), so banning effects
-  there would leave it useless. `CorrelationTest` pins both sides — without the
-  "legal in the timeout block" case, a ban wrongly applied to the whole
-  correlation would still look green.
-  Two pre-existing projector checks (needs its own record type; exactly one
-  handler) assumed folds live in one top-level handler and are SKIPPED when
-  correlations are present; a projector without them validates as before.
-  **The repository-accepts-it rule is a COMPLETENESS warning, not an Error**
-  (Reid, 2026-08-12, overriding A70 as written): a repository lacking the
-  `on command` clause is under-specified, not self-contradictory. A `???`
-  repository is exempt, per the standing `???` ruling. Because `yields` names a
-  command, the test is plain identity on the resolved `Type` (`eq`, not by
-  name — two contexts may each declare a `RecordFulfillment`).
-  **The unemitted-event warning does NOT use `MessageFlowPass`** — depending on
-  it would reorder the standard passes. `checkCorrelationEventSources` sweeps
-  the root once in `postProcess`, GATED on a correlation existing. An `Outlet`
-  typed with the event counts as emitting it, so a `???` source that declares
-  the port is not reported; adaptor translations deliberately do not count.
 
-- **Processor instance identity (2.0, release/2)** — `Id(P)`, `self`,
-  `initiate`, `terminate`, and structural `tell` addressing. Five constructs,
-  one gap: **RIDDL could describe processors but not INSTANCES of them.**
-  - **`Id(P)` names any Processor**, not just an Entity (Adaptor, Context,
-    Entity, Projector, Repository, Streamlet). The keyword form
-    `Id(entity Order)` is CANONICAL and the bare `Id(Order)` is the shorthand —
-    `UniqueId.kindKeyword` stores the keyword *as written* (a `String`, not an
-    enum, so prettify is byte-exact without a mapping table), and
-    `TypeValidation` makes it **tell the truth**: a keyword contradicting the
-    resolved referent's kind is an Error, because a wrong keyword is worse than
-    no keyword — a reader believes it. Keyword-name disambiguation is a
-    RIDDL-wide idiom and a bare `Order` could be a context, a message or an
-    entity, which is why the keyword was kept rather than deprecated.
-  - **`Id(P)` is RUNTIME instance identity and is NOT the definition ULID** of
-    CM line 2523, which is model-time identity of a *definition*. Two instances
-    of `Order` share one definition ULID and never share an `Id(Order)`.
-    `isAssignmentCompatible` is deliberately UNCHANGED (still compatible with
-    `String_`/`Pattern`): the value is opaque and system-generated, so a
-    BUSINESS key belongs in `on init`'s parameters and lives in state.
-  - **`self`'s type is a synthesized `Aggregation`, and that is load-bearing.**
-    Because the type is an ordinary record, `let me = self` followed by `me.id`
-    resolves through the SAME `ValueRef` path walk every other value uses — so
-    no resolution rule anywhere has to know `self` exists. A bespoke node would
-    have needed special-casing at each of those sites. The consequence is that
-    the type is not user-nameable (`self.id` is `Id(Order)` in an Order handler
-    and `Id(Shipping)` in a Shipping one), so `let me: T = self` has no `T` to
-    write and `self` is not assignable into a message field — pass `self.id`.
-    `SelfValue.fieldNames` is a CLOSED set (`id`, `version`); adding one is a
-    language change. The admission test is **runtime-only**: anything a
-    generator can know statically it should inline, which is why `version` is
-    in and `isClustered` is not (filed separately).
-    `enclosingProcessorOf` terminates at `Function` AND `Saga` — a Saga sits
-    inside a Context routinely, so without the second terminator `self` in a
-    saga step silently typed as the enclosing Context's identity.
-  - **`initiate` supplies the invocation `on init` always lacked** — it does
-    NOT add a second way for an instance to exist. Construction still completes
-    only when `on init` finishes; CM line 999's "activate on first message" is
-    rehydration, not creation. Without it no `Id(P)` value could ever come into
-    being and the whole addressing story would have been inert.
-    **`initiate` is a VALUE (it yields the new `Id(P)`) and `terminate` is a
-    STATEMENT (termination produces nothing).** That asymmetry is why their
-    bans live in validation and not the parser: `value` carries no
-    `StatementsSet` to gate on, so parser-gating one and validating the other
-    would split one rule across two layers. `on init`/`on term` gained
-    parameter lists; arity and argument types are checked in `ValidationPass`
-    (`checkInitiate`/`checkTerminate`), never the parser, because a parse-time
-    `error()` preempts the whole pass chain. Both fold an Entity's STATE
-    handlers in when looking for the clause, exactly as `validateAsk` does —
-    `on init` commonly lives inside a `State`.
-    **An `initiate` whose id is never subsequently referenced draws a plain
-    Warning — NOT an Error, and NOT gated behind `showCompletenessWarnings`.**
-    Three reasons, recorded so this is not re-litigated: a self-terminating
-    worker legitimately has an unused id and an Error would make that pattern
-    unwritable; RIDDL specifies MEANING, so an unstated fate is
-    under-specification (which warns) rather than self-contradiction (which
-    errors); and it is ungated because, unlike a missing tell address, this is
-    locally decidable from the clause body alone. **The work is the escape-route
-    analysis, not the message**: an id escapes by being `set` into state, passed
-    as a `tell` argument, passed to `terminate`, yielded in an event, or `put` to
-    a repository, and the sweep must be conservative enough that no legal model
-    is rejected. `UnusedInitiateIdTest` pins all five routes plus the
-    nested-`when` case.
-    **`terminate <target> [with (args)]` names an INSTANCE, and `target` is a
-    VALUE typed `Id(entity E)`** (Reid, 2026-08-15). `TerminateStatement.target:
-    Value` REPLACED `processor: ProcessorRef` — the old form said which KIND of
-    thing ended, never which one, so `terminate` was the one rc.14 construct
-    riddlg could not lower at all (it emitted an `AI FILL` marker rather than
-    guess, correctly: `terminate` DESTROYS). The entity is DERIVED from the
-    target's type, so ref and id can never contradict and no truth-check is
-    needed — contrast `UniqueId.kindKeyword`, which needs exactly one.
-    Arguments sit behind **`with (…)`**, not bare parens: `terminate
-    order.id("x")` reads as a call on `id`, and `with` is the established idiom
-    (`morph … with`, `require … with`). Empty list ⇒ no `with` clause at all;
-    `terminate t with ()` parses and prettifies away.
-    **`on term`'s parameters are pure PAYLOAD.** A leading `Id(...)` parameter
-    was an addressing convention detectable only BY POSITION — riddlg asked
-    whether address and payload were distinguishable in the AST and the honest
-    answer was no. They are now separate fields. `self` is live for the whole
-    clause body, so a clause that needs the instance it is ending reads
-    `self.id`; nothing was lost.
-    **The asymmetry with `initiate` is the design, not an inconsistency**:
-    `initiate` names a TYPE (the instance does not exist yet) and yields an id;
-    `terminate` consumes an id and yields nothing.
-    **Both are ENTITY-ONLY, and that is an EXPLICIT check, never a consequence
-    of the type system.** `Id(P)` KEEPS its 2026-08-13 widening to all six
-    processor kinds, because **a singleton's `Id` is how you SEND IT MESSAGES**
-    (Reid, 2026-08-15) — it denotes the singular DEPLOYMENT, and addressing it
-    means "select the right shard/partition and forward", the singleton being
-    treated as a whole despite a clustered arrangement. So `Id(context C)` is a
-    perfectly good value that is simply not a legal thing to end, and only
-    `reportNotInstantiable` says so. **Do not "simplify" this by narrowing
-    `Id`.**
-    Two Errors in `checkTerminate`: the target's type is not a `UniqueId`, and
-    the target is an `Id` of a non-Entity. It stays SILENT when the type is
-    undeterminable (a bare `let n = 5`, an unascribed `prompt(…)`) — reporting
-    there would be reasoning from absence, the same conservative rule A20's
-    unascribed-hole warning follows. Note `valueTypeExpr` does NOT surface a
-    `let`'s declared PREDEFINED type (`let n: Integer = 5` yields `None`), which
-    is pre-existing and why the "not an Id" test uses bare `self`.
-    **`resolveIdTarget` needs TWO lookups and the second is not optional.** The
-    refMap holds only paths that were WRITTEN, but `valueTypeExpr` SYNTHESIZES a
-    `UniqueId` for `initiate` and for `self.id` carrying a fully-qualified
-    `pathOf(p)` that has no refMap entry — so a refMap-only lookup made every
-    `terminate` whose target came from `initiate` or `self` resolve to `None`
-    and skip its checks in silence. Falls back to `symbols.lookup`. Found by
-    instrumenting, not by reading.
-    The resolved-identity lesson the deleted `on term` check carried is NOT
-    lost: it lives on in `isAddressFieldFor`.
-  - **Addressing is STRUCTURAL: the address is the message's field typed
-    `Id(target)`**, found without annotation; `by <field>` only DISAMBIGUATES
-    when more than one field qualifies. Candidates match by **resolved
-    identity** (`eq` through the refMap), never by the path's last segment —
-    two entities named `Order` in different contexts must not collide, and the
-    name-matching version turned a legal model into a false ambiguity Error.
-    The field's `UniqueId` must be looked up with its OWNING `Type` as the
-    refMap key's parent (`Pass` pushes a `Type` — a `Branch` — for its own
-    children), which is why `fieldsWithOwner` carries the owner along.
-    Zero candidates is a **CompletenessWarning and only for an Entity target**:
-    an entity is the only multiply-instantiated processor, and the corpus holds
-    7,556 `tell`s against **7** `Id(...)`-typed fields, so an Error would have
-    condemned essentially every model that exists. Ambiguity IS an Error —
-    it is a contradiction, not an omission.
-    **The candidate test follows ALIAS CHAINS but never NESTING** (Reid,
-    2026-08-14). A field typed `OrderId`, where `type OrderId is Id(Order)`, IS
-    an address — that alias is riddl-models' documented house style, and until
-    `ccd278c00` `isAddressFieldFor` matched `UniqueId` alone, so it recognised
-    only the rare inline spelling and misfired on the common one (72 of 86
-    distinct findings in reactive-bbq were false; it aborted their `checkAll`).
-    But `result R is { thing: ThingBase }`, where the NESTED record carries the
-    id, stays flagged: descending into an aggregate's fields is an unbounded
-    search — a record holding a record holding a record — with no principled
-    stopping point, so **the id must be a field of the record actually named.**
-    Renaming is followed; containment is not.
-    **Both alias walks carry a visited list, and the reason is a real crash:**
-    `type A is B` / `type B is A` sent `fieldsWithOwner` into infinite recursion
-    in rc.14 (`java.lang.StackOverflowError`, reproduced against the released
-    binary), surfacing as `[severe] Exception Thrown` with no line number.
-    Reference identity (`eq`), NOT a `Set`/`contains` guard — `Definition`
-    overrides `equals` structurally, so a set would fuse two distinct identical
-    alias declarations and truncate a legitimate chain.
-    **Fixing the alias case cost the corpus 49 Errors it had been hiding**, in
-    16 of 189 models — the fourth reminder that a green corpus is evidence about
-    the corpus. All 49 were corpus defects in three classes: genuine two-id
-    ambiguity needing `by`, actor fields legitimately of the same entity
-    (`identityId` + `suspendedBy`) also needing `by`, and **wrong-entity
-    aliases** (`type TaskId is Id(NurseShift)`, `type MemberId is
-    Id(Enrollment)`) that no `tell` had ever exposed.
-  - **`initiate`/`terminate` are effects** — banned in a function body (pure,
-    A26) and in `on activate`/`on passivate` (must be side-effect-free), and in
-    a correlation fold (purity is what makes re-runs safe, A70/§6.5). The fold
-    ban lives in exactly ONE place (`validateCorrelation`), not duplicated into
-    `checkInstanceEffectScope`, so a fold offender is never double-reported.
-    Every ban is wired into `checkStatementScopes`, **not** `validateStatement`
-    — the latter never sees statements held in a FIELD
-    (`when`/`match`/`foreach`), the trap two tasks of this plan fell into.
-  - **BAST**: value tags 8 = `Initiate`, 9 = `SelfValue`; statement sub-kind
-    20 = `terminate`. Landed at `FORMAT_REVISION` **15**; sub-kind 20's PAYLOAD
-    then changed at revision **18** (2026-08-15) — it now begins with a
-    `writeValue` where it began with a `writeProcessorRef`. The two are not
-    interchangeable, so an older reader handed these bytes MISALIGNS rather than
-    failing cleanly, which is the whole reason the revision gate exists.
-  - **JSON**: `TerminateStmtDto`'s `processor`/`processorKind` pair became a
-    single `target` value at the same time. `JsonModel`'s readers reject no
-    unknown keys (BACKLOG § 1), so a producer still emitting the old pair has
-    them SILENTLY DROPPED and gets a null `target` — recorded on the DTO,
-    because a stale example in a machine-facing document is a data-loss bug.
+- **On-clause message binding (A55)** — `binding` is declared WITHOUT a default
+  on `OnMessageLikeClause` and both concrete nodes, because `@JSExportTopLevel`
+  requires defaulted params to be TRAILING and `contents`/`metadata` are
+  defaulted. Same rule forced A57's two fields.
+
+- **Correlations in projectors (A70)** — **`yields` names a COMMAND**, never a
+  record: a handler clause takes a `messageRef` (the four real messages only,
+  A9b), so no `on` clause could name what a record form produced. **The timeout
+  clause is MANDATORY and is grammar, not metadata** — §4.2 calls options
+  *advisory*, and a bound that MUST fire a block is not; there is consequently
+  **no timeout inheritance** from the Projector. **Keys are stored AS WRITTEN and
+  never canonicalized** (§6.5 makes identity the full tuple, so sorting would
+  silently equate two different declarations) — the exact OPPOSITE of
+  `EntityIntention.canonical`. **The effect ban binds FOLDS only**; the timeout
+  block exists to have an effect. The repository-accepts-it rule is a
+  COMPLETENESS warning, not an Error. **`checkCorrelationEventSources` must NOT
+  use `MessageFlowPass`** — depending on it would reorder the standard passes.
+
+- **Processor instance identity — `Id(P)`, `self`, `initiate`, `terminate`.**
+  - **`Id(P)` is RUNTIME instance identity, NOT the definition ULID** (CM:2523,
+    model-time identity of a *definition*).
+  - **`Id(P)` covers all six processor kinds and must NOT be narrowed** —
+    a singleton's `Id` is how you SEND IT MESSAGES. `initiate`/`terminate` being
+    ENTITY-ONLY is an EXPLICIT check (`reportNotInstantiable`), never a
+    consequence of the type system.
+  - **`self`'s type is a synthesized `Aggregation`, and that is load-bearing** —
+    because it is an ordinary record, no resolution rule anywhere has to know
+    `self` exists. `SelfValue.fieldNames` is a CLOSED set; the admission test is
+    runtime-only. `enclosingProcessorOf` terminates at `Function` AND `Saga`, or
+    `self` in a saga step silently types as the enclosing Context.
+  - **Every effect ban is wired into `checkStatementScopes`, NOT
+    `validateStatement`** — the latter never sees statements held in a FIELD
+    (`when`/`match`/`foreach`), the trap two tasks of that plan fell into.
+  - **Addressing matches by RESOLVED IDENTITY (`eq` through the refMap), never
+    the path's last segment** — name matching turned a legal model into a false
+    ambiguity Error. It **follows ALIAS CHAINS but never NESTING**: `type OrderId
+    is Id(Order)` IS an address (the corpus house style; matching `UniqueId`
+    alone made 72 of 86 reactive-bbq findings false), while an id inside a NESTED
+    record stays flagged, because descending an aggregate is an unbounded search
+    with no principled stopping point. **Both alias walks need an `eq` visited
+    list** — `type A is B` / `type B is A` is a real `StackOverflowError`,
+    surfacing as `[severe] Exception Thrown` with no line number; NOT a
+    `Set`/`contains` guard, since structural `equals` would fuse two distinct
+    identical declarations and truncate a legitimate chain. Fixing the alias case
+    exposed **49 Errors the corpus had been hiding** in 16 of 189 models — the
+    fourth reminder that a green corpus is evidence about the corpus.
+  - **`resolveIdTarget` needs TWO lookups and the second is not optional** —
+    `valueTypeExpr` SYNTHESIZES a `UniqueId` for `initiate` and `self.id` with no
+    refMap entry, so a refMap-only lookup made every such `terminate` resolve to
+    `None` and skip its checks in silence. Falls back to `symbols.lookup`. Found
+    by instrumenting, not reading.
+  - **An `initiate` whose id is never referenced is a plain Warning** — not an
+    Error (a self-terminating worker legitimately has an unused id) and not gated
+    behind `showCompletenessWarnings` (it is locally decidable). The work is the
+    five-route escape analysis, not the message.
 
 - **A new `Branch` node breaks three things silently** — all found building A70,
   none caught by the compiler:
-  1. **`Containment.of`** (`AST.scala`) is an exhaustive match over `Branch`
-     with no fallback arm → runtime `MatchError`, not a compile error.
+  1. **`Containment.of`** (`AST.scala`) is an exhaustive match over `Branch` with
+     no fallback arm → runtime `MatchError`, not a compile error.
   2. **`Pass.traverse`'s generic `case branch: Branch[?]` walks `contents`
-     ONLY.** Statements held in a FIELD (as `Correlation.timeoutStatements` and
-     `SagaStep.do/undoStatements` are) need their own case BEFORE that arm, or
-     they are never resolved and never validated — the model validates clean
-     while naming definitions that need not exist. `HierarchyPass` deliberately
-     does NOT do this: its visitors emit field-held statements themselves, in
-     the position the syntax requires.
+     ONLY.** Statements held in a FIELD (`Correlation.timeoutStatements`,
+     `SagaStep.do/undoStatements`) need their own case BEFORE that arm, or they
+     are never resolved and never validated — the model validates clean while
+     naming definitions that need not exist. `HierarchyPass` deliberately does
+     NOT do this: its visitors emit field-held statements themselves, in the
+     position the syntax requires.
   3. **`VisitingPass.openContainer`/`closeContainer` end in `case _: Definition
      => ()`**, so a new node falls through in silence.
-  Also remember `PrettifyVisitor.keyword`, whose fallback is the string
-  `"unknown"`.
+  Also remember `PrettifyVisitor.keyword`, whose fallback is `"unknown"`.
 
-- **Typed holes (A20, release/2)** — `prompt("...") as <type>` ascribes a
-  type to an AI-computed value: the type is known and checkable at compile
-  time, the computation is prose an AI fills in at generation time. It is the
-  seam between RIDDL's deterministic tier and its AI tier. `PromptValue`
-  (already the node `prompt("...")` produced) gains `typeEx:
-  Option[TypeExpression]`; unascribed `prompt(...)` is unchanged and still
-  valid. Legal in every position an ordinary `Value` can occupy — `let`,
-  `constant`, a constructor argument, `set`, and a `when` condition (which
-  must resolve to `Boolean`) — with either a predefined type or a declared
-  alias.
-  **The ascription's type reference RESOLVES, like any other TypeExpression**
-  (2026-08-15 whole-branch review) — `ResolutionPass.resolveValue`'s
-  `PromptValue` arm used to say "no references" and do nothing, so `prompt(
-  "x") as Nonexistent` validated clean while naming a type that need not
-  exist. It now calls the same `resolveTypeExpression` every other
-  TypeExpression position uses, which recurses `Cardinality` wrappers for
-  free and records the resolved Type in `usedBy`, so a Type named ONLY by an
-  ascription is not wrongly flagged unused.
-  **The ascription RESTATES the position's already-known type; it never
-  OVERRIDES it.** `let x: Real = prompt("...") as String` is a validation
-  Error (contradiction), not a coercion — checked by the same
-  `checkValueType` a `set` already used. **The comparison is deliberately
-  SYNTACTIC, not resolved-type**, mirroring A57: `constant G: Real =
-  prompt("...") as Score` (`type Score is Real`) is still an Error even
-  though the alias's underlying type is `Real`, because RIDDL treats a
-  declared alias as a distinct name, not a transparent synonym — a resolved
-  comparison would swallow exactly the contradiction this rule exists to
-  catch. `typeAscriptionName` (`ValidationPass`) does the comparison; it
-  RECURSES through the four `Cardinality` wrappers (discarding them rather
-  than folding them into the name) and compares only the LAST path segment
-  on both sides — both fixed 2026-08-15 after review found false positives
-  on `let x: OrderId = prompt(…) as OrderId?` and on a qualified restatement
-  (`let x: Common.OrderId = prompt(…) as Common.OrderId`), and a false
-  negative where two differently-aliased `Optional`s compared equal by
-  `kind` alone. Comparing only the last segment is a KNOWN, accepted
-  limitation shared with `checkOnOtherBinding`: two differently-scoped types
-  sharing a simple name compare equal here, because the check stays
-  syntactic rather than resolving through the symbol table.
-  **A `constant` with a `prompt` value needs no ascription at all, because
-  the constant's own type declaration already supplies it** — `constant G:
-  Real = prompt("...")` is the complete, idiomatic form; adding `as Real` is
-  legal but redundant. Where nothing else states a type (a bare `let x =
-  prompt(...)`, a bare constructor argument, a `when` condition with no
-  other source of truth) the ascription is the ONLY source of the type —
-  there it is doing real work, but it is still describing what is already
-  true about the hole, never coercing it. The seam warning for an
-  UNASCRIBED hole is deliberately CONSERVATIVE: it fires only at call sites
-  that already carry an expected type to compare against (`let`, `constant`
-  via `checkValueType`), not at constructor arguments, since nothing wires
-  an expected type there today. **Nor at `put`, `return`, `require … with`,
-  or a call/constructor argument** — filed to BACKLOG § 1 as a decision to
-  revisit, not a ruling; those positions can legally carry an ascribed
-  `prompt(...)` and nothing checks it today.
-  **`PromptValue.format`'s `ascriptionFormat` and `RiddlFileEmitter` were
-  the SAME "dispatch written twice" risk documented under Total Dispatch
-  below, and 2026-08-15's review fix makes `RiddlFileEmitter.emitValue` the
-  ONE emitter-level dispatch** — it routes a `PromptValue` ascription
-  through `emitTypeExpression`, the total dispatch every other
-  TypeExpression position already uses, for the four positions
-  `checkPromptAscription` validates (`constant`/`let`/`set`/`when`).
-  `ascriptionFormat` remains, narrower, for contexts the emitter cannot
-  reach — `.format`-based error messages, and a `PromptValue` nested inside
-  a `Constructor`/`Call`/`Initiate`/`TerminateStatement` argument (also
-  filed to BACKLOG § 1). Before the fix, `ascriptionFormat`'s `case other
-  => other.format` fallback mis-rendered several TypeExpression shapes as
-  unparseable source: an enumeration, a table, an entity reference, and a
-  parameterized predefined type all round-tripped to text riddlc rejects.
-  **Historical correction (2026-08-15)**: an earlier version of this entry
-  claimed the spurious `type` keyword bug (`as OrderId` rendering as `as
-  type OrderId`) meant the string "does not mean the same thing on
-  re-parse" — false. `aliasedTypeExpression` defaults an omitted keyword to
-  `"type"` too, so both spellings parse to an AST-IDENTICAL node; the
-  defect was cosmetic (an un-authored keyword in emitted source), never
-  semantic. `ascriptionFormat` still strips it and RECURSES through
-  `Optional`/`ZeroOrMore`/`OneOrMore`/`SpecificRange` wrappers rather than
-  falling back to `.format`, or the same cosmetic bug resurfaces one level
-  down (`as OrderId?` → `as type OrderId?`). **`Currency` cannot appear bare
-  in an example** — it is a predefined type requiring a `country` argument
-  (`Currency(USD)`), so `prompt("...") as Currency` does not compile, and it
-  does NOT resolve to `Real` or anything else underneath — it is its own
-  distinct `PredefinedType`. Use `Real`, `String`, `Boolean`, `Score`, or a
-  declared alias in examples instead.
-  **BAST/JSON**: rides `FORMAT_REVISION` 18 (the bump numeric literals
-  already spent), not a new bump — see the FORMAT_REVISION note in
-  BACKLOG § 2 for who claims 18 next.
-- **On-clause message binding (A55, release/2)** — `on foo: command
-  Foo { … }` optionally binds a local name to the handled message.
-  The `:` is ordinary TYPE ASCRIPTION (same rule as `let x: T = …`
-  and `p1: String`), so the parser reuses `HandlerParser.maybeName`.
-  `binding: Option[Identifier]` sits on `OnMessageLikeClause` and
-  BOTH concrete nodes, declared immediately after `from` and
-  **without a default** — `@JSExportTopLevel` requires defaulted
-  params to be TRAILING and `contents`/`metadata` are defaulted.
-  `id`/`format` stay derived from `msg`. Bare `foo` denotes the whole
-  message; `foo.field` is an ordinary path walk. See "Validation
-  Specifics" for how it resolves.
-- **Entity intentions (2.0.0-rc.10)** — six keywords written BEFORE `entity`, in
-  three INDEPENDENT groups, mutually exclusive within a group: role
-  (`aggregate`), consistency (`consistent` | `available`), persistence
-  (`event-sourced` | `persistent` | `transient`). `Entity.intentions:
-  Seq[EntityIntention]`; enum + companion at `AST.scala:4144`.
-  **They are grammar, not options, on purpose.** They were `with { option
-  event-sourced }` until 2.0, but the Computational Model §4.2 calls options
-  advisory ("honored if possible"), and a hard Error keyed off advisory metadata
-  is a category error — see `checkEventSourcing`. The old `option` spellings
-  still parse, deprecated. `persistent` replaces the uninformative `value`.
-  Two from one group is an **Error, not a parse failure**, so the message can
-  name both. `event-sourced` sits in the persistence group because it IMPLIES
-  persistent. Any order parses; the parser stores them via
-  `EntityIntention.canonical` because **`Definition.equals` compares this
-  field** — write order must never make two identical entities compare unequal.
-  Prettify emits `canonicalOrder`.
-  **Four event-sourcing rules are Errors** (`ValidationPass.scala:1865`), because
-  replay must reproduce the same state changes: R1 every handled command declares
-  `yields`; R2 every yielded event has an `on event` clause; R3/R4 no `set`/
-  `morph` outside handling one of the entity's OWN events. R1/R2 read the
-  `yields` DECLARATION on the command's type, never `yield` statements in a body.
-  Two traps when migrating a model: `yields` exists ONLY on the kind-first form
-  (`command X yields event Y is {…}`), so type-first commands must be reshaped;
-  and R3 forbids `set` in `on init` while an empty body is a parse error, so the
-  idiom is `on init is { yield event Created }` plus an `on event Created` clause
-  that does the mutation.
-- **Unified processor model (2026-07-26, release/2)** — every
-  `Processor` (Context/Entity/Projector/Repository/Adaptor + the
-  generic `processor` keyword) is port-bearing: `Inlet`/`Outlet` are in
-  `OccursInProcessor`, and `WithInlets`/`WithOutlets` are mixed into the
-  `Processor` base. Each carries `ascribedShape: Option[StreamletShape]`
-  (None ⇒ derived from arity via `Processor.arityShape`/`effectiveShape`).
-  Surface: `[<intention>] context <id> [as <shape>] is {…}` and
-  `streamlet <id> [as <shape>] is {…}`. The old streamlet shape keywords
-  are deprecated aliases; `StreamletShape.fromKeyword` canonicalizes
-  synonyms (cascade→Flow, fanin→Merge, broadcast/fanout→Split). `Context`
-  has `intention: Option[Intention]` (Application/External/Gateway/
-  Service). Shape/intention now participate in `Definition.equals`, so
-  keep their `loc` at `At.empty` on every surface (parser/BAST/JSON).
-- **`streamlet` is the generic keyword; `processor` is its deprecated original
-  (2026-08-31, [5.1]).** Every other kind of processor already names a THING —
-  `entity`, `repository`, `projector`, `adaptor`, `context` — so `processor`
-  named the ABSTRACTION, and did not match the AST node it has always built.
-  Both spellings run through ONE parser, build the identical `Streamlet`, emit
-  `stream-processor-keyword` for the old one, and prettify to `streamlet`.
-  **The alternation is FACTORED — one `.!` capture across both keywords, not two
-  branches.** `Keywords.keyword` ends in a cut, so whichever branch matched first
-  would win outright and make the other unreachable. Same hazard `bastImport` and
-  `ulidAttachment` document.
-  **`AST.Streamlet.format` and `RiddlFileEmitter.openDef` are the same decision
-  written twice** and had to move together — the dual-dispatch shape this file
-  keeps recording. Canary BOTH when changing either.
+- **Typed holes (A20) — `prompt("…") as T`.** **The ascription RESTATES the
+  position's already-known type; it never OVERRIDES it** — a contradiction is an
+  Error, not a coercion. **The comparison is deliberately SYNTACTIC, not
+  resolved-type**: `constant G: Real = prompt(…) as Score` (`type Score is Real`)
+  is still an Error, because a resolved comparison would swallow exactly the
+  contradiction the rule exists to catch. It compares only the LAST path segment
+  — a KNOWN, accepted limitation shared with `checkOnOtherBinding`. **The
+  ascription's type reference RESOLVES like any other TypeExpression**; the arm
+  used to say "no references" and do nothing, so `prompt("x") as Nonexistent`
+  validated clean. **The untyped-seam warning is deliberately CONSERVATIVE** —
+  only an unascribed `let x = prompt(…)` with no declared type, nowhere else:
+  **"we did not wire this position" is not the same fact as "the language cannot
+  type this position", and only the second deserves a diagnostic.** `Currency`
+  cannot appear bare in an example — it needs a `country` argument and does not
+  resolve to `Real` underneath.
+
+- **Entity intentions** — **grammar, not options, on purpose**: CM §4.2 calls
+  options advisory, and a hard Error keyed off advisory metadata is a category
+  error. The parser stores them via `EntityIntention.canonical` because
+  **`Definition.equals` compares this field** — write order must never make two
+  identical entities compare unequal. **Four event-sourcing rules are Errors**
+  because replay must reproduce the same state changes, and **R1/R2 read the
+  `yields` DECLARATION on the command's type, never `yield` statements in a
+  body**. Two migration traps: `yields` exists ONLY on the kind-first form, so
+  type-first commands must be reshaped; and R3 forbids `set` in `on init` while
+  an empty body is a parse error, so the idiom is `on init is { yield event
+  Created }` plus an `on event Created` clause doing the mutation.
+
+- **Unified processor model / `streamlet` keyword** — **shape and intention
+  participate in `Definition.equals`, so keep their `loc` at `At.empty` on every
+  surface** (parser/BAST/JSON). **The `streamlet`/`processor` alternation must be
+  FACTORED** — one `.!` capture across both keywords, not two branches, because
+  `Keywords.keyword` ends in a cut and whichever branch matched first would make
+  the other unreachable. **`AST.Streamlet.format` and `RiddlFileEmitter.openDef`
+  are the same decision written twice** and must move together — canary BOTH.
   **The AST hierarchy is untouched**: `Streamlet` is the concrete case class,
-  `Processor` the port-bearing supertype. Renaming the keyword renames neither,
-  and the two have been confused here before at real cost.
-  **The shape-keyword deprecation's message moved with it** — it now says
-  `streamlet X as flow`, not `processor X as flow`. Pointing an author from one
-  deprecated keyword at another is worse than saying nothing.
-  Corpus: **242 declarations in riddl-models, 28 in riddl-examples**, all
-  mechanically fixable (`validate --fix --fix-rule stream-processor-keyword`).
-  A LOOSE grep scores 455 in riddl-models; the 213 extras are prose inside string
-  literals — 195 of them `error "Unexpected message for processor X"` — and must
-  not be edited. Second time in two
-  days a keyword-that-is-also-an-English-word inflated a corpus count; **grep the
-  declaration SHAPE (`^\s*processor <Id>`), never the bare word.**
-- **Numeric literals (2026-08-15, `release/2`)** — `NumericLiteral(loc, text)`
-  in the `Value` and `Comparand` unions, accepting
-  `[+-]? digits [. digits] [(e|E) [+-] digits]`. No digit separators, no radix
-  prefixes.
-  **The text is stored AS WRITTEN and that is the whole design.** `1.50`, `007`,
-  `+3` and `2E+8` are not recoverable from a parsed `Long`/`BigDecimal`, so a
-  parsed payload would make prettify diverge from source on first use. Same
-  reasoning as `UniqueId.kindKeyword` and correlation keys. It also keeps
-  `BigDecimal` off the Native and JS paths, and needs one BAST tag (value **10**,
-  comparand **3**) rather than two. **JSON stores it as a `ujson.Str`, never a
-  `ujson.Num`** — `ujson.Num` is a Double and would silently turn `1.50` into
-  `1.5`. A JSON-identity fixed-point test cannot catch that, because a
-  consistently-mangled value is still a perfect fixed point; assert the text.
-  **`count > 5` now parses, REVERSING A28's deliberate narrowing.** `Comparand`
-  was ref-only on purpose, "so magic-constant comparisons cannot be constructed
-  at all" — Reid reversed it 2026-08-14 on the evidence that the whole 189-model
-  corpus contained exactly ONE constant, so the rule had no uptake to protect
-  (plausibly because naming a number meant quoting it). The intent survives as a
-  StyleWarning whose population started at zero. `count > true` is still a parse
-  error: booleans are atoms, not comparands.
-  **`Integer` is signed, `Whole` is `>= 0`, `Natural` is `>= 1`** (Reid,
-  2026-08-14). Until then the three had NO definition anywhere — no scaladoc, no
-  language reference, no Computational Model entry — so the check had nothing to
-  enforce. They are documented at `AST.scala:2518-2530`; a check cannot enforce a
-  rule the language never states.
-  **Literals are held STRICTER than references, deliberately.**
-  `NumericType.isAssignmentCompatible` (`:1912`) lets ANY numeric accept any
-  other and STAYS that way — `let x: Nat = someRealField` is unchanged. Only a
-  literal, whose value the compiler can see, is range-checked
-  (`checkNumericLiteralConformance`). `NumericLiteralConformanceTest` pins the
-  loose side so a later "tidy-up" of `isAssignmentCompatible` reddens instead of
-  silently changing behaviour far beyond literals.
-  **`Bool extends IntegerTypeExpression extends NumericType`**, so any check
-  matching `IntegerTypeExpression` also catches Boolean-typed values — put an
-  explicit `Bool` arm first, or a Boolean constant is told it "requires a whole
-  number".
-  **Never call `asLong` in a match guard.** It is `text.toLong` and the parser
-  accepts unbounded digit runs, so a 20-digit literal throws
-  `NumberFormatException` *inside the guard* and surfaces as `[severe] Exception
-  Thrown` with no line number. Use `asBigDecimal` or test the text.
+  `Processor` the port-bearing supertype; the two have been confused here before
+  at real cost. Corpus counting trap: a LOOSE grep scores 455 `processor` uses in
+  riddl-models against 242 real declarations — 195 of the extras are `error
+  "Unexpected message for processor X"` prose. **Grep the declaration SHAPE
+  (`^\s*processor <Id>`), never the bare word.**
 
-- **`Constant` holds four kinds, and prettify emits `:`** (2026-08-15).
-  `ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue`
-  — a narrowing of `Value`, defined the way `Comparand` is. Deliberately NOT the
-  full union, which would admit `Call`, `Ask` and `Initiate` in a constant. The
-  `PromptValue` arm is a **typed hole**: the constant declares the type and the
-  computation is prose, so it needs no `as T` — see the full A20 typed-holes
-  entry above (AST / Language Internals) for the ascribed form and its
-  restate-never-override rule, built on this precedent.
-  **There was never any parser work for the separator.** `CommonParser.is` (`:38`)
-  is `StringIn("is","are",":","=").?` and has always accepted the colon, and
-  omission. All spellings are legal, none warns, and prettify emits `: `.
-  **The quoted numeric/boolean form is CONSUMED by the parser**, not merely
-  deprecated — that is what makes its `autoFixable = true` honest and the round
-  trip converge, exactly as `ConnectorOptionToIntention` does. A deprecation
-  claiming `autoFixable` while prettify re-emits the old spelling is a lie a
-  migration tool will act on.
+- **Numeric literals** — **the text is stored AS WRITTEN**: `1.50`, `007`, `+3`
+  and `2E+8` are not recoverable from a parsed `Long`/`BigDecimal`, so a parsed
+  payload would make prettify diverge from source on first use (same reasoning as
+  `UniqueId.kindKeyword` and correlation keys). **JSON stores it as a
+  `ujson.Str`, never a `ujson.Num`** — `ujson.Num` is a Double and would silently
+  turn `1.50` into `1.5`, which a JSON-identity fixed-point test CANNOT catch,
+  because a consistently-mangled value is still a perfect fixed point; assert the
+  text. **`Integer` is signed, `Whole` is `>= 0`, `Natural` is `>= 1`** (Reid,
+  2026-08-14) — until then the three had NO definition anywhere, and **a check
+  cannot enforce a rule the language never states.** **Literals are held STRICTER
+  than references, deliberately**: `NumericType.isAssignmentCompatible` stays
+  loose and `NumericLiteralConformanceTest` pins that, so a later "tidy-up"
+  reddens instead of silently changing behaviour far beyond literals. **`Bool
+  extends IntegerTypeExpression`**, so put an explicit `Bool` arm first or a
+  Boolean constant is told it "requires a whole number". **Never call `asLong` in
+  a match guard** — the parser accepts unbounded digit runs, so a 20-digit
+  literal throws `NumberFormatException` *inside the guard* and surfaces as
+  `[severe] Exception Thrown` with no line number.
 
-- **A20 typed holes — `prompt("…") as T`** (2026-08-15). `PromptValue` gains
-  `typeEx: Option[TypeExpression] = None`; one node, not two, because the forms
-  differ by an `Option` and not by wire shape. The default is legal ONLY because
-  it is trailing (`@JSExportTopLevel` forbids a non-trailing default, which is
-  why A55/A57's fields had to go undefaulted — `PromptValue` has no
-  `contents`/`metadata` after it).
-  **The ascription RESTATES the position's type and NEVER overrides it**, per
-  A57. Agreement is silent — writing the type out lets the hole read standalone —
-  and a contradiction is an Error.
-  **The comparison is SYNTACTIC on purpose, not by resolved type.**
-  `constant G: Real = prompt("g") as Currency` must Error even though `type
-  Currency is Real` resolves to the same underlying type; a resolved comparison
-  would swallow exactly the contradiction the rule exists to catch. Mirrors
-  `checkOnOtherBinding`.
-  **The untyped-seam warning is deliberately CONSERVATIVE** (Reid, 2026-08-15):
-  it fires on an unascribed `let x = prompt("…")` with no declared type, and
-  **nowhere else**. `when` is wired to `Boolean`; constructor arguments, `set`
-  and every unwired position stay SILENT. The evidence was a count — all 288
-  `prompt(` uses in riddl-models already carry a type (273 authors wrote the
-  ascription unprompted; the other 15 are `when` conditions) — so the warning's
-  whole value is for future code and its whole risk is firing on correct code.
-  **"We did not wire this position" is not the same fact as "the language cannot
-  type this position", and only the second deserves a diagnostic.**
-  **`Currency` is a predefined type requiring a `country` argument**, so it
-  cannot be written bare. Several early A20 examples used `as Currency` and do
-  not compile.
+- **`Constant`** — `ConstantValue` is a NARROWING of `Value` (`LiteralString |
+  NumericLiteral | BooleanLiteral | PromptValue`), deliberately not the full
+  union, which would admit `Call`, `Ask` and `Initiate` in a constant. **The
+  quoted numeric/boolean form is CONSUMED by the parser**, not merely deprecated
+  — that is what makes its `autoFixable = true` honest and the round trip
+  converge. A deprecation claiming `autoFixable` while prettify re-emits the old
+  spelling is a lie a migration tool will act on.
 
-- **`PromptValue.ascriptionFormat` is a SECOND, narrower copy of `emitTypeExpression`
-  — CLOSED 2026-08-15, prettify never reaches it for a `Value` anymore.** Until this
-  fix, only the four validated positions (`constant`, `let`, `set`, `when`) routed
-  through `RiddlFileEmitter.emitValue`, and `emitValue`'s fallback for every OTHER
-  `Value` shape was `add(other.format)` — so a `PromptValue` nested one level
-  deeper (a `Constructor`/`Call`/`Initiate` argument, an `InvariantCondition`'s
-  `with` argument, a `LogicalExpression`/`NotExpression` operand) fell straight
-  back into `.format` and reached `ascriptionFormat`'s narrower dispatch, which
-  could emit non-parsing output (`as any of {…}`, `as Currency(USD)`,
-  `as table of T of [3,3]`, `as reference to entity E`).
-  **`emitValue` is now TOTAL over every `Value` shape that can contain a nested
-  `PromptValue`**: `Constructor`/`Call`/`Initiate` route their arguments through
-  new `emitConstructorArg(s)` helpers (which recurse through `emitValue`, so a
-  named `id = value` argument's value gets the same treatment); `InvariantCondition`
-  routes its `with` argument; `LogicalExpression`/`NotExpression` route their
-  operands through a new `emitLogicalOperand` helper that preserves the same
-  parenthesizing rule as `LogicalExpression.format`'s private `paren` helper
-  (kept in step by hand, since that helper is private to `AST.scala` and this
-  emitter cannot call it). Every `emitStatement` site whose operand can reach a
-  `PromptValue` — `send`/`tell`/`yield`/`reply`/`morph … with` (via a
-  `Constructor`/`RecordRef` operand, through a new `emitConstructorOperand`
-  helper), `put`, `return` (previously unhandled at all — both fell to the
-  generic `case statement: Statement => addLine(statement.format)` arm and are
-  now explicit cases), `require … with`, a `when` condition's `BooleanExpression`
-  arm, and a `match`/`case` guard — now routes through `emitValue` too.
-  `PrettifyVisitor.doInvariant`'s condition rendering (`invariant X is <condition>`)
-  had the same defect and is fixed the same way, INCLUDING the `InvariantBlock`
-  form (`invariant X is { <stmts> <predicate> }`) — **fully closed as of
-  Reid's 2026-08-15 ruling**, both halves:
-  - `predicate: BooleanExpression` routes through `emitValue` (never calls
-    `nl`/`addIndent`, so no capture/squash machinery needed for it).
-  - `statements: Contents[Statements]` route through `emitStatement` — the
-    SAME total dispatch every other statement position uses. This was found
-    to need a genuine LAYOUT change (single-line -> multi-line, one statement
-    per line, matching `emitCodeBlock`/on-clause bodies/`when`/`match` arms)
-    and was correctly escalated rather than silently squashed; Reid ruled
-    it in, on the grounds that RIDDL statements are whitespace-separated
-    EVERYWHERE (`pseudo_code_block` has no `;`/`,` separator — disambiguation
-    is the formatter's job, not the grammar's) and every other statement
-    block already puts one per line, so the single-line `InvariantBlock`
-    rendering was never a deliberate choice — it was the narrow, un-synced
-    SECOND copy of the block dispatch (`AST.InvariantBlock.format` vs. the
-    emitter) behaving differently from the other five. Verified against the
-    staged `riddlc` (plus a negative control) that the grammar was untouched:
-    `invariant Inv is { let a = 1 a > 0 }` parses clean before and after.
-  **Correction (2026-08-15, earlier same-day review): an intermediate version
-  of this entry first claimed `InvariantBlock` was untouched (wrong — its
-  predicate was fixed immediately), then that its `statements` were a
-  genuinely open, layout-entangled residual needing an owner ruling (correct
-  AS FAR AS IT WENT — that analysis is what got the question to Reid, and is
-  why the ruling above exists). Both intermediate states are superseded: the
-  whole construct is closed now.**
-  `ascriptionFormat` remains in `AST.scala`, unchanged, for the one place this
-  emitter genuinely cannot reach: `.format`-based error-message rendering. It
-  is no longer reachable from prettify output, anywhere, full stop.
-  Proven by `TypedHoleContainerAscriptionRoundTripTest` (`passes/.../prettify/`):
-  a named `Constructor` argument (`any of {…}`), a named `Call` argument
-  (`Currency(USD)`), a nested `LogicalExpression` with the parenthesizing
-  intact (`reference to entity E`), a `not` (`table of T of […]`), an
-  `InvariantBlock`'s own predicate (`Currency(USD)`), and an `InvariantBlock`
-  leading `statement` (`any of {…}`) — all six previously mis-emitted, all six
-  verified to fail before their respective fix via `git stash`.
-  **In-repo fixtures checked for drift, none needed edits**: the ONLY `.riddl`
-  fixture anywhere in the repo containing an `invariant … is { … }` block is
-  `language/input/invariant-scope.riddl` (repo-wide grep), and its block was
-  ALREADY hand-formatted in exactly the multi-line style `emitInvariantBlock`
-  now produces — byte-identical, verified by prettifying it and diffing. A
-  repo-wide grep for a hardcoded single-line `invariant … is { … }` golden
-  string in any Scala test source found none outside this session's own test
-  file (already updated). Full `language`+`passes` suites stay green (70+208
-  suites, 707+1357 tests) and the `RiddlModelsRoundTripTest` corpus baseline
-  is unchanged (59/189, same pre-existing failures) — evidence nothing outside
-  invariant blocks moved.
-  `AST.scala` is in `language` and `RiddlFileEmitter` in `passes`, so the copy
-  still cannot call the original — the two must be kept in step by hand,
-  which is precisely why this pattern keeps recurring here.
-  **What is NOT fixed by this**: `checkPromptAscription` (validation) is still
-  wired at only the same four positions, so an ascription that CONTRADICTS its
-  position's actual expected type is silently accepted at `put`, `return`,
-  `require … with`, and a `Call`/`Constructor`/`Initiate`/`TerminateStatement`
-  argument. That is a different defect (a missing check, not broken output) at
-  an overlapping set of positions — see BACKLOG § 1.
-
+- **`PromptValue.ascriptionFormat` was a SECOND, narrower copy of
+  `emitTypeExpression` — the canonical instance of "a dispatch written twice".**
+  Until 2026-08-15 only the four validated positions (`constant`, `let`, `set`,
+  `when`) routed through `RiddlFileEmitter.emitValue`, whose fallback for every
+  OTHER `Value` shape was `add(other.format)` — so a `PromptValue` nested one
+  level deeper (a `Constructor`/`Call`/`Initiate` argument, an
+  `InvariantCondition`'s `with` argument, a `LogicalExpression`/`NotExpression`
+  operand) fell back into `.format`, reached the narrower dispatch, and emitted
+  source riddlc cannot parse (`as any of {…}`, `as Currency(USD)`, `as table of T
+  of [3,3]`, `as reference to entity E`). **`emitValue` is now TOTAL** over every
+  `Value` shape that can contain a nested `PromptValue`, via
+  `emitConstructorArg(s)`, `emitConstructorOperand` and `emitLogicalOperand` —
+  the last of which **duplicates the parenthesizing rule of
+  `LogicalExpression.format`'s private `paren` helper and must be kept in step BY
+  HAND**, since that helper is private to `AST.scala`. `put` and `return` had no
+  case at all and fell to the generic `addLine(statement.format)` arm.
+  `PrettifyVisitor.doInvariant` had the same defect in both forms;
+  `emitInvariantBlock` now puts one statement per line, the layout every other
+  statement block uses (Reid ruled it in: RIDDL statements are
+  whitespace-separated EVERYWHERE — `pseudo_code_block` has no separator — so the
+  single-line rendering was never a
+  deliberate choice — it was the narrow, un-synced second copy of the block
+  dispatch, `AST.InvariantBlock.format` vs. the emitter, behaving differently
+  from the other five).
+  **`AST.scala` is in `language` and `RiddlFileEmitter` in `passes`, so the copy
+  cannot call the original — the two must be kept in step by hand, which is
+  precisely why this pattern keeps recurring here.** `ascriptionFormat` remains,
+  unchanged, for the one place the emitter cannot reach: `.format`-based
+  error-message rendering. Pinned by `TypedHoleContainerAscriptionRoundTripTest`,
+  whose six cases were each verified to fail before their fix via `git stash`.
+  **What is NOT fixed**: `checkPromptAscription` (validation) is still wired at
+  only those four positions, so an ascription CONTRADICTING its position's actual
+  expected type is silently accepted at `put`, `return`, `require … with`, and a
+  `Call`/`Constructor`/`Initiate`/`TerminateStatement` argument — a missing
+  check, not broken output. See BACKLOG § 1.
 - **Inlet/outlet direction — the one people invert, Reid included (2026-08-16).**
   **An OUTLET is an exit and an INLET is an entrance.** A processor PLACES a
   message on its outlet; the connector carries it; the message ARRIVES at the
-  receiver's inlet. Source-of-truth: `Connector(from: OutletRef, to: InletRef)`
-  (`AST.scala:5232`) — from an outlet, to an inlet — plus the CM's "validated on
-  arrival … per-inlet ordering preserved" for Inlet and "name WHICH outlet they
-  place the message on" for Outlet.
+  receiver's inlet. Source of truth: `Connector(from: OutletRef, to: InletRef)`
+  (`AST.scala:5232`), plus the CM's "validated on arrival … per-inlet ordering
+  preserved" for Inlet and "name WHICH outlet they place the message on" for
+  Outlet.
   **The reliable mnemonic is the arity table, not the words**: a `sink` has
   inlets and NO outlets. A sink only consumes, so an inlet must be an entrance;
   everything else follows. The inverted rule — "inlets push into a connector" —
@@ -1538,319 +659,254 @@ to the right group rather than appending to a list.
   1-in/1-out `flow` that also hosts an `error-sink` inlet derives as a `merge`
   (≥2 inlets, 1 outlet) — never a `split`, which is ≥2 OUTLETS.
 
-- **`empty` — the minimum-cardinality inhabitant of a type (rc.23+).** `EmptyValue(loc,
-  typeEx: Option[TypeExpression])`. **`none` is a SYNONYM producing the identical node** — no flag
-  records the spelling, the same choice `not`/`!` made, and prettify converges `none` to `empty`.
-  **The rule is minimum cardinality ZERO**: legal for `T?`, `T*`, `T{0,n}`; an Error for `T+`,
-  `T{1,n}` and a bare `T`. That one rule is why ONE literal covers both the absent optional and the
-  empty collection — same inhabitant, different upper bounds — and it makes `admitsEmpty` total over
-  the four `Cardinality` wrappers instead of special-casing two.
-  **The ascribed form is load-bearing, not sugar.** A bare `empty` takes its type from the position,
-  and only `let`/`constant`/`set` wire an expected type — NOT a constructor argument, which is the
-  position this was requested from. **And the expected-type machinery resolves only NAMED types**,
-  so a field typed INLINE (`note: String(1,20)+`) cannot be checked at all against a bare `empty`.
-  Pre-existing, shared with A20.
-  **Two traps this hit, both worth re-reading before adding a `Value` arm:**
-  1. **The four throw-terminated walks are INVISIBLE to `-Werror`** (`countValueFailPoints`,
-     `stateReadsIn`, `initiatesIn`, `asksIn`) — the terminal `throw` that enforces totality is
-     itself what makes the match exhaustive, exactly as the Total Dispatch section warns. `-Werror`
-     found three sites; the fourth family threw at RUN time and aborted `checkStatementScopes`
-     before the new checks could run. **Grep for `has no arm for` and add an arm to each.**
-  2. **An optional trailing TypeExpression SWALLOWS THE NEXT STATEMENT.** An aliased type is a bare
-     path and RIDDL statements are whitespace-separated with no terminator, so `set x to empty`
-     followed by `set y to …` parsed the second statement as the first's ascription. Guarded by
-     refusing statement-leading keywords (`statementStart`), which is COMPLETE rather than
-     heuristic because a type can never be named a reserved word. The EBNF carries the same guard —
-     without it the two parsers disagree and TatSu reddens.
-  BAST tag **12** at `FORMAT_REVISION` **21**; JSON `{"value":"empty"}` with an optional `type`.
 
-- **`tell` addresses an INSTANCE as well as a named processor (rc.21+).** `TellStatement.target`
-  is `ProcessorRef | Value`: keyword-led means a static processor, a bare path or `self.id` means
-  a value typed `Id(...)` naming WHICH INSTANCE. Told apart by the leading keyword, exactly as
-  `forward` is; `Value` excludes `ProcessorRef`, so the union is disjoint.
-  **The instance is NEVER resolved and nothing needs it** (Reid, 2026-08-22: *"You CANNOT know the
-  specific instance at validation time, but fortunately you don't need to."*). Every question asked
-  of a tell target is answered by the processor KIND the `Id` names. `TellTarget.processorOf` is the
-  one place that answers it: `self` by a LEXICAL parent walk with no lookup, a reference by the one
-  refMap lookup the static case already makes.
-  **This is why an earlier "it needs a new resolution-output map" analysis was WRONG** — it assumed
-  resolving a value target required `ValidationPass`'s general value-typing machinery. Reuse of a
-  general helper is not the same fact as a capability being unavailable; check which one you have.
-  **`checkTellAddressing` is SKIPPED for a value target, and that is the feature.** It exists to
-  recover the address structurally from a message field typed `Id(target)` when the tell does not
-  say which instance; a value target says it outright, so demanding the field would ask for
-  something the statement made unnecessary.
-  **NOT entity-only** (unlike `terminate`): only an entity can be *ended*, but any processor can be
-  *addressed*. **`send` takes no value TARGET** — it takes a PORTLET, so `Id(entity E)` cannot apply
-  there. (Its optional `at <instant>`, two entries below, is a different thing: WHEN, not WHERE.)
-  **Diagnostics must use the bare PATH, not `ProcessorRef.format`**, which prepends the keyword and
-  silently rewrites every existing message from `target 'E'` to `target 'entity E'`.
-  BAST gains a target-shape discriminator at **`FORMAT_REVISION` 20**; JSON adds `targetValue`
-  beside the `to`/`processor` pair (register new keys in `knownKeys` or the vocabulary guard reddens).
+- **`empty` / `none`** — the rule is **minimum cardinality ZERO**: legal for
+  `T?`, `T*`, `T{0,n}`; an Error for `T+`, `T{1,n}` and a bare `T`. That one rule
+  is why ONE literal covers both the absent optional and the empty collection.
+  Two traps worth re-reading before adding any `Value` arm:
+  1. **The four throw-terminated walks are INVISIBLE to `-Werror`**
+     (`countValueFailPoints`, `stateReadsIn`, `initiatesIn`, `asksIn`) — the
+     terminal `throw` that enforces totality is itself what makes the match
+     exhaustive. `-Werror` found three sites; the fourth threw at RUN time and
+     aborted `checkStatementScopes` before the new checks could run. **Grep for
+     `has no arm for` and add an arm to each.**
+  2. **An optional trailing TypeExpression SWALLOWS THE NEXT STATEMENT.** An
+     aliased type is a bare path and RIDDL statements are whitespace-separated
+     with no terminator, so `set x to empty` followed by `set y to …` parsed the
+     second as the first's ascription. Guarded by refusing statement-leading
+     keywords (`statementStart`) — COMPLETE rather than heuristic, because a type
+     can never be named a reserved word. The EBNF carries the same guard, or the
+     two parsers disagree and TatSu reddens.
 
-- **`on quiescence <window>` — the clause that fires when NOTHING arrived (2026-09-07, Reid's
-  rulings on riddl-models' temporal-semantics task).** `OnQuiescenceClause(loc, window:
-  LiteralString | ValueRef, contents, metadata) extends OnClause`. ONE clause kind, instance-scoped:
-  the clock restarts on every handled message, and inside a `State`'s handler it is armed only while
-  that state is active. Legal on ANY handler-bearing processor; an Error inside a Correlation
-  (`handler-quiescence-in-correlation`), which bounds itself with `times out after`; at most one per
-  handler (`handler-quiescence-duplicate`).
-  **The window is a literal duration string OR a bare path to a Duration-typed value** — constant,
-  state field, message field. The literal goes through the SAME `checkPreciseDuration` the
-  correlation timeout uses (vague and non-positive are Errors). A `let` cannot be named from a clause
-  header because lets are clause-local statements; that is a stated limit, not a gap.
-  **Look the value window up with `oqc +: parents`.** ResolutionPass prepends the node being
-  processed before resolving, so the header reference is recorded under the CLAUSE, and a lookup
-  keyed on the handler alone misses it silently — the same `c +: parentsAsSeq` the correlation's
-  timeout block needs. Found by a failing test, not by reading.
-  **It is an EFFECT block**: `yield`/`tell`/`send`/`terminate`/`morph`/`initiate` are legal, unlike
-  `on activate`/`on passivate`. Event-sourcing's R3/R4 are UNCHANGED, so in an event-sourced entity
-  the clause changes state only through a yielded event — which is also what keeps replay from
-  re-firing the timer: the timed-out fact is in the journal. Rehydration re-arms from the last
-  handled message's timestamp; the mechanism (durable timer, scheduler, poll) is the generator's.
-  `Keyword.quiescence` is in `anyKeyword`/`allKeywords` but NOT `definitionKeywords`, so
-  `quiescence` stays a legal identifier. **`Declaration.ascription` renders the window** — the `on
-  other as x` lesson: rendering only in `format` makes prettify DROP it. BAST: `NODE_ON_CLAUSE`
-  discriminator byte **7**, window as a tagged value before the contents count, reader's fabricating
-  fallback replaced by a throw, **`FORMAT_REVISION` 24**. JSON: `OnClauseDto.kind = "quiescence"` +
-  `window` (in `knownKeys`). `Finder.fieldChildren` yields the window.
+- **`tell` addressing an INSTANCE** — **the instance is NEVER resolved and
+  nothing needs it** (Reid, 2026-08-22: *"You CANNOT know the specific instance
+  at validation time, but fortunately you don't need to."*). Every question asked
+  of a tell target is answered by the processor KIND the `Id` names. **An earlier
+  "it needs a new resolution-output map" analysis was WRONG** — it assumed
+  resolving a value target required the general value-typing machinery; reuse of
+  a general helper is not the same fact as a capability being unavailable, so
+  check which one you have. **`checkTellAddressing` is SKIPPED for a value
+  target, and that is the feature**: it exists to recover the address
+  structurally when the tell does not say which instance. **NOT entity-only**
+  (unlike `terminate`): only an entity can be *ended*, but any processor can be
+  *addressed*. **`send` takes no value TARGET** — it takes a portlet.
+  **Diagnostics must use the bare PATH, not `ProcessorRef.format`**, which
+  prepends the keyword and silently rewrites every existing message from `target
+  'E'` to `target 'entity E'`.
 
-- **`send <msg> to <portlet> at <instant>` — a delivery scheduled for a time (2026-09-07).**
-  `SendStatement.at: Option[Value] = None`, TRAILING and defaulted (`@JSExportTopLevel`). `at` states
-  an INSTANT, never a mechanism — timer, scheduler, delay queue or poll stays the generator's, exactly
-  as CM §3.8 already says. **`send` ONLY**: `tell`'s target may itself be a value, so `tell m to x at
-  t` already parses as a lookup. **The instant must type as TimeStamp, DateTime or ZonedDateTime**,
-  through aliases (`stmt-send-at-not-instant`); a `Date` has no time of day and a `Duration` is a
-  span. Undeterminable is silent. **A past instant is delivered immediately. There is NO cancellation
-  construct** — the idiom is schedule to YOURSELF and decide at fire time, so a receiver of a
-  scheduled message must tolerate it being stale. **That idiom's loop connector is legal**: it drew
-  `stream-graph-cycle` for a few hours on 2026-09-07, until Reid re-ruled that rule to forbid only
-  an `on X` clause whose X can travel back to it (see the chain-tail entry below) — `on command
-  Book` cannot be re-entered by the event it schedules.
-  **Deliberately UNCHANGED, do not "fix" any of them**: A23's effect set (a scheduled send is still a
-  transmission), the discharge rules (**a `send` has not settled `yields` since rc.19, scheduled or
-  not** — the plan for this feature claimed the opposite and the test caught it), A6 reachability
-  (the channel must exist now; only the delivery is later), outlet ownership, portlet typing.
-  Parser: the Readability `at` — optional, non-cutting — then `value`; a bare path reaches `value`
-  through `booleanExpr`'s atom, and `system.now` through `systemValue`. `Finder.fieldChildren` AND
-  `statementValues` yield the instant, so the four value walks see into it; pinned by a
-  correlation-fold test whose only visible offender is an `initiate` hidden in the instant (a
-  function body will not do: `send` does not parse there). Emitter routes it through `emitValue`,
-  so `prompt("…") as TimeStamp` round-trips. BAST: `writeOption(at)(writeValue)` appended to sub-kind
-  5, riding revision 24. JSON: optional `"at"` key (in `knownKeys`); a plain send serializes
-  byte-identically to before.
-  **`aliasFreeTypeExpr` follows ALIASES only, never cardinality** — `TimeStamp?` is not an instant and
-  `Duration?` is not a window — and carries the `eq` visited list; `isDurationTypeExpr` had shipped
-  for a day without one (`type A is B` / `type B is A` is a real crash this repo has had).
-  Fixture trap: `ZonedDateTime` takes a bare zone in parens — `ZonedDateTime(UTC)`; the quoted form
-  `ZonedDateTime("UTC")` and the bare `ZonedDateTime` both fail to parse.
+- **`on quiescence <window>`** — **look the value window up with `oqc +:
+  parents`**: ResolutionPass prepends the node being processed, so a header
+  reference is recorded under the CLAUSE, and a lookup keyed on the handler alone
+  misses it silently (the same `c +: parentsAsSeq` the correlation timeout block
+  needs). Found by a failing test, not by reading. **`Declaration.ascription`
+  renders the window** — the `on other as x` lesson again: rendering only in
+  `format` makes prettify DROP it. It is an EFFECT block, unlike `on activate`/
+  `on passivate`; event-sourcing's R3/R4 are UNCHANGED, so in an event-sourced
+  entity it changes state only through a yielded event — which is also what keeps
+  replay from re-firing the timer.
 
-- **A message delivered where nothing can receive it — two CompletenessWarnings (rc.21+).**
-  `checkTellDeliverability` is the SENDING end (a `tell` whose target declares no clause receiving
-  that type); `checkInletsAreReceived` is the RECEIVING end (a processor declares `inlet I is type
-  T` and handles `T` nowhere). Not redundant — one needs a delivery to exist, the other fires on the
+- **`send … at <instant>`** — **`send` ONLY**: `tell`'s target may itself be a
+  value, so `tell m to x at t` already parses as a lookup. **Deliberately
+  UNCHANGED, do not "fix" any of them**: A23's effect set (a scheduled send is
+  still a transmission), the discharge rules (**a `send` has not settled `yields`
+  since rc.19, scheduled or not** — this feature's plan claimed the opposite and
+  the test caught it), A6 reachability (the channel must exist now; only the
+  delivery is later), outlet ownership, portlet typing. **There is NO cancellation
+  construct** — the idiom is schedule to YOURSELF and decide at fire time, so a
+  receiver must tolerate a stale scheduled message, and **that idiom's loop
+  connector is legal** (it drew `stream-graph-cycle` for a few hours until the
+  rule was re-ruled). **`aliasFreeTypeExpr` follows ALIASES only, never
+  cardinality** — `TimeStamp?` is not an instant, `Duration?` is not a window —
+  and carries the `eq` visited list, which `isDurationTypeExpr` shipped for a day
+  without.
+
+- **A message delivered where nothing can receive it — two CompletenessWarnings**
+  (rc.21+). `checkTellDeliverability` is the SENDING end (a `tell` whose target
+  declares no clause receiving that type); `checkInletsAreReceived` is the
+  RECEIVING end (a processor declares `inlet I is type T` and handles `T`
+  nowhere). Not redundant — one needs a delivery to exist, the other fires on the
   declaration alone.
-  **The receiving-end question had to be RESTATED before it could be built**, and the restatement is
-  the durable part: "an inlet no handler consumes" relates two things that are never directly
-  related. Handlers do not consume, they CONTAIN `on` clauses, and an `on` clause names a MESSAGE
-  TYPE, never an inlet. Nothing in the AST links the two; the relation is INDIRECT, through the type.
-  **`on other` satisfies both** — it states a policy for anything unmatched, and is the idiom
-  `Riddl.BottomlessPit` is built from. Both reuse ONE helper (`receivesMessageType`) rather than a
-  second copy of `validateAsk`'s identical logic; `validateAsk` now calls it too.
-  **Two interactions found by RUNNING it, not reading it:** a deliberate-discard sink is now exempt
-  from *"contains only 'do' statements"* (otherwise the two checks form a demand no legal spelling
-  satisfies — same trap as the adaptor advisory in `c075f1af0`); and `checkInletsAreReceived` is
-  silent when a processor declares NO handlers at all, because *"should have a handler"* already
-  reports that — adding the exclusion took fixture churn from 7 edits to zero, which is evidence the
-  existing diagnostics covered those cases.
-  **Corpus cost 6,379 + 906 across 190 models — 84% of all tells — and they are TRUE POSITIVES.**
-  Verified by hand before reporting: the corpus idiom is *tell the event to the entity, handle it
-  somewhere else*. Migration filed in riddl-models. Reid: *"Correct is correct."*
+  **The receiving-end question had to be RESTATED before it could be built**, and
+  the restatement is the durable part: "an inlet no handler consumes" relates two
+  things that are never directly related. Handlers do not consume, they CONTAIN
+  `on` clauses, and an `on` clause names a MESSAGE TYPE, never an inlet. Nothing
+  in the AST links the two; the relation is INDIRECT, through the type.
+  **`on other` satisfies both** — it states a policy for anything unmatched, and
+  is the idiom `Riddl.BottomlessPit` is built from. Both reuse ONE helper
+  (`receivesMessageType`) rather than a second copy of `validateAsk`'s identical
+  logic; `validateAsk` now calls it too.
+  **Two interactions found by RUNNING it, not reading it:** a deliberate-discard
+  sink is now exempt from *"contains only 'do' statements"* (otherwise the two
+  checks form a demand no legal spelling satisfies — same trap as the adaptor
+  advisory in `c075f1af0`); and `checkInletsAreReceived` is silent when a
+  processor declares NO handlers at all, because *"should have a handler"*
+  already reports that — adding the exclusion took fixture churn from 7 edits to
+  zero, which is evidence the existing diagnostics covered those cases.
+  **Corpus cost 6,379 + 906 across 190 models — 84% of all tells — and they are
+  TRUE POSITIVES.** Verified by hand before reporting: the corpus idiom is *tell
+  the event to the entity, handle it somewhere else*. Migration filed in
+  riddl-models. Reid: *"Correct is correct."*
 
-- **`resolvePath` had NO `ClassTag` and cast unchecked, for the whole life of the function.**
-  `T` erases, so `pathIdToDefinition(...).map(_.asInstanceOf[T])` always "succeeded" and returned a
-  definition of the WRONG kind typed as `T`. Nothing failed there; the `ClassCastException` fired at
-  whichever caller first touched a `T`-specific member — and only for callers that touch one, so the
-  same mistyped value crashed one model and passed silently through another. **A crash whose
-  occurrence depends on which check ran first is this shape.** `ReferenceMap.definitionOf` does the
-  same job correctly with a `ClassTag`; the two resolution paths disagreed about whether to check.
-  Returning `None` loses no diagnostic — `ResolutionPass` reports a wrong-kind path first.
+- **`resolvePath` had NO `ClassTag` and cast unchecked, for the whole life of the
+  function.** `T` erases, so `pathIdToDefinition(...).map(_.asInstanceOf[T])`
+  always "succeeded" and returned a definition of the WRONG kind typed as `T`.
+  Nothing failed there; the `ClassCastException` fired at whichever caller first
+  touched a `T`-specific member — and only for callers that touch one, so the
+  same mistyped value crashed one model and passed silently through another. **A
+  crash whose occurrence depends on which check ran first is this shape.**
+  `ReferenceMap.definitionOf` does the same job correctly with a `ClassTag`; the
+  two resolution paths disagreed about whether to check. Returning `None` loses
+  no diagnostic — `ResolutionPass` reports a wrong-kind path first.
 
-- **`forward` — delegation, and the ONLY statement that discharges by passing on (rc.19+).**
-  `forward <operand> to <portlet|processor>` says the declared `yields`/`replies` is produced
-  by whatever handles the message downstream. Legal ONLY in a clause handling a command that
-  declares `yields` or a query that declares `replies` — **you cannot delegate an event or a
-  result** (author's ruling): those record what happened and owe no answer. The operand's TYPE
-  must match the handled message; its VALUES need not, so a handler may adjust a field and
-  still be forwarding the same message. NOT terminal: a `yield`/`reply` after it is an Error
-  (the response was delegated), a `send`/`tell` after it a style warning. Both transmission
-  shapes, told apart by the keyword leading the reference. BAST sub-kind 21 with ONE
-  discriminator byte before the ref; **`FORMAT_REVISION` 19**.
+- **`forward` is the ONLY statement that discharges by passing on.** Legal ONLY
+  in a clause handling a command that declares `yields` or a query that declares
+  `replies` — **you cannot delegate an event or a result** (author's ruling):
+  those record what happened and owe no answer. The operand's TYPE must match the
+  handled message; its VALUES need not. NOT terminal: a `yield`/`reply` after it
+  is an Error, a `send`/`tell` after it a style warning.
+- **What DISCHARGES a `yields`/`replies` obligation NARROWED at rc.19, and this
+  is the part that breaks models.** Only `yield`/`reply`, `error`/`require`, and
+  `forward` settle a path. A `send`/`tell` no longer does — **neither of the
+  handled message nor of a different one** — retiring the previous "emitting ANY
+  message settles a path" allowance and the event-sourcing example defending it.
+  Two corpus shapes need DIFFERENT fixes and a bulk edit must not conflate them:
+  a handler that passes the message on becomes `forward` (mechanical), while one
+  that declines by emitting a `*Rejected` event cannot forward anything and needs
+  an explicit `error`/`require` — a semantic change.
 
-- **What DISCHARGES a `yields`/`replies` obligation NARROWED at rc.19, and this is the part
-  that breaks models.** Only `yield`/`reply`, `error`/`require`, and `forward` settle a path.
-  A `send`/`tell` no longer does — **neither of the handled message nor of a different one**.
-  That retired the previous "emitting ANY message settles a path" allowance and the
-  event-sourcing example defending it. Two corpus shapes need DIFFERENT fixes and a bulk edit
-  must not conflate them: a handler that passes the message on becomes `forward`
-  (mechanical), while one that declines by emitting a `*Rejected` event cannot forward
-  anything and needs an explicit `error`/`require` — a semantic change.
-
-- **`error` AND `terminate` are TERMINAL in their block; `require` is not.** A statement after
-  either is unreachable and an Error. `error` REFUSES, `terminate` DESTROYS the instance — same
-  rule, different reasons, and **the message must state the one that applies**. `require X` refuses
-  only when X fails, so statements after it are ordinary. Per statement LIST, recursing into
-  `when`/`match`/`foreach` bodies as their own lists. **`on term` needs no exemption**: it is a
-  different list, and it runs BECAUSE of the termination rather than after it.
-  **The `terminate` half was missing for a full release, and that is the lesson.** rc.19 shipped
-  the `error` half and reordered 268 corpus statements for exactly this reason, while a `set state`
-  sitting after a `terminate` in reactive-bbq survived that pass and every validation since —
-  because the check matched `ErrorStatement` alone. riddl-models found it BY EYE. **When a rule is
-  about unreachability, ask what ELSE ends a block**; enumerating one terminator is how the next
-  one stays invisible.
-  **Do not "simplify" this by matching the two terminators together.** That was the reported
-  suggestion and it is the smaller change; it also yields a TRUE diagnostic with a FALSE
-  explanation, telling an author their `terminate` "refuses" and offering `require` as the
-  conditional alternative, which is not a conditional `terminate` at all. `BlockEnder` carries each
-  terminator's own reason and advice. Same trap as A23 borrowing A26's effect set: **a check
+- **`error` AND `terminate` are TERMINAL in their block; `require` is not.** A
+  statement after either is unreachable and an Error. `error` REFUSES,
+  `terminate` DESTROYS the instance — same rule, different reasons, and **the
+  message must state the one that applies**. `require X` refuses only when X
+  fails, so statements after it are ordinary. Per statement LIST, recursing into
+  `when`/`match`/`foreach` bodies as their own lists. **`on term` needs no
+  exemption**: it is a different list, and it runs BECAUSE of the termination
+  rather than after it.
+  **The `terminate` half was missing for a full release, and that is the
+  lesson.** rc.19 shipped the `error` half and reordered 268 corpus statements
+  for it, while a `set state` sitting after a `terminate` in reactive-bbq
+  survived that pass and every validation since — because the check matched
+  `ErrorStatement` alone. riddl-models found it BY EYE. **When a rule is about
+  unreachability, ask what ELSE ends a block**; enumerating one terminator is how
+  the next one stays invisible.
+  **Do not "simplify" this by matching the two terminators together.** That was
+  the reported suggestion and it is the smaller change; it also yields a TRUE
+  diagnostic with a FALSE explanation, telling an author their `terminate`
+  "refuses" and offering `require` as the conditional alternative, which is not a
+  conditional `terminate` at all. `BlockEnder` carries each terminator's own
+  reason and advice. Same trap as A23 borrowing A26's effect set: **a check
   inherited wholesale stops answering its own question.**
-- **A23 ("refusals first") asks a DIFFERENT question from A26, and its effect set was
-  borrowed from A26 for months.** A26 asks *is this pure?*; A23 asks *would refusing now
-  leave a partial change?* Narrowed 2026-08-19 to LOCAL state transformation: **`set`,
-  `morph`, `terminate` are effects; `send`, `tell`, `yield`, `put` and `become` are not.**
-  Transmissions leave nothing partial HERE — any state they cause is elsewhere and later, a
-  remote "maybe" that is acceptable for a locally immutable statement — and `become` is a
-  BEHAVIOR transition, not a state one. **The narrowing is load-bearing**: without it, making
-  `error` terminal left the corpus's "refuse AND publish a rejection event" idiom illegal in
-  BOTH orders, i.e. inexpressible. When a check is borrowed wholesale from another, re-derive
-  it from its own question.
 
-- **`option snapshots` (Entity, event-sourced only) — and reconstructability is a CM
-  MUST-PRESERVE.** The option says WHETHER journal-derived snapshots are taken, never how; no
-  policy enum and no interval, because whether snapshotting pays turns on update rate,
-  read/write mix and physical layout, none of which is in the model. **Its ABSENCE is the
-  default and is meaningful: take NO snapshots, replay the whole log** — right more often than
-  it looks, since many entities see under a hundred events in their lifespan. An Error on a
-  non-event-sourced entity. The CM gained a must-preserve with it: **state as of any past
-  point must be reconstructible**, so a current-state row kept as an optimization is fine but
-  a current-state row that is the ONLY reconstruction mechanism is not.
+- **A23 ("refusals first") asks a DIFFERENT question from A26, and its effect set
+  was borrowed from A26 for months.** A26 asks *is this pure?*; A23 asks *would
+  refusing now leave a partial change?* Narrowed 2026-08-19 to LOCAL state
+  transformation: **`set`, `morph`, `terminate` are effects; `send`, `tell`,
+  `yield`, `put` and `become` are not.** Transmissions leave nothing partial
+  HERE — any state they cause is elsewhere and later, a remote "maybe" that is
+  acceptable for a locally immutable statement — and `become` is a BEHAVIOR
+  transition, not a state one. **The narrowing is load-bearing**: without it,
+  making `error` terminal left the corpus's "refuse AND publish a rejection
+  event" idiom illegal in BOTH orders, i.e. inexpressible. When a check is
+  borrowed wholesale from another, re-derive it from its own question.
 
-- **A clause that answers should handle a message that DECLARES what it answers with** —
-  StyleWarning, not an Error (author: it *"doesn't rise to the level of an error"*). The
-  converse is already an Error in all four combinations (declare and produce nothing; declare
-  and produce the wrong type; command and query alike), so do not add a check for it.
 
-- **AST.Set shadows scala.Set** — use selective imports or
-  qualify as `scala.collection.immutable.Set`.
-- **Schema match ordering** — Schema extends `Leaf` (Definition)
-  but is also in the `NonDefinitionValues` union. Its case must
-  appear BEFORE `case _: NonDefinitionValues`. Same trap for
-  `Relationship` vs `case _: Definition`.
-- **State is a Branch**, not a Leaf, of `Branch[StateContents]`
-  where `StateContents = Handler | Comment`. `PassVisitor` uses
-  `openState` / `closeState` (not `doState`). ResolutionPass
-  prepends State to parents (as with all Branches), so refMap
-  keys for State's type ref use State as parent, not Entity.
-- **`do "..."` is an alias for `prompt "..."`** — both produce
-  `PromptStatement`.
-- **`not` and `!` are SYNONYMOUS everywhere, as the inverse of a
-  boolean expression** (ruling 2026-08-14, implemented and shipped
-  2026-08-15 — `2026-08-15-not-bang-synonymy` plan, all 5 tasks
-  complete). `!` is legal in every position `not` is, and both build
-  the IDENTICAL `NotExpression` AST node — there is no spelling flag
-  anywhere, so two ASTs meaning the same thing can never compare
-  unequal. `not` is prefix and recurses (`not not a` / `!!a`), and
-  both work wherever a boolean expression does: `when`, `require`,
-  `let`, parenthesised, and applied before a comparison.
-  **This OVERRIDES the 2026-08-13 ruling**, which said `not` was the
-  only general-purpose negation, that `!` was a legacy spelling
-  accepted ONLY as `when !<bare-identifier>`, and that it "will not be
-  extended to" anything more. That reasoning is retired, not merely
-  superseded — do not restore it.
-  **The `!` grammar rule is `("not" | "!") not_expression`**, replacing
-  the old `when_condition`-only special case entirely (EBNF
-  `not_expression` — `language/.../ebnf-grammar.ebnf`); the parser
-  guards the `!=` case with `"!" ~~ !"="` (fastparse negative
-  lookahead, no regex — unavailable on Scala Native).
-  **Prettify converges `!` to `not`** — the same precedent as `A | B`
-  prettifying to `one of { A or B }` — pinned by
-  `BangNotRoundTripTest`; a `!=` comparison is untouched, since it is
-  a comparison operator, not a negation. BAST and JSON both carry the
-  change at `FORMAT_REVISION` 18 (`WhenStatement.negated` deleted
-  entirely — there was never a second node kind to reconcile).
-  Corpus fixture: `language/input/bang-not-synonymy.riddl` exercises
-  every position plus the `!=` guard, and is what moved the TatSu
-  baseline from 108/131 to 109/132. Corpus A/B against the four
-  known-red suites (`RiddlModelsRoundTripTest`, `Root2JsonCorpusTest`
-  59/190, riddlc local-corpus, `ReportedIssuesTest` "should 406")
-  showed **zero movement** — the corpus (riddl-models + riddl-examples)
-  has no `!` uses, 597 `not` uses, and no `!=` uses either.
-  Language-reference documentation is a task drop in
-  `../ossum.tech/task/2026-08-15-not-bang-synonymy.md`, not an edit
-  here (one Claude instance per project).
-- **walkStatements helper** — private in ValidationPass; walks
-  into `WhenStatement` / `MatchStatement` nesting.
-- **Accessors see through the provenance wrappers; `Finder` sees
-  through everything.** The 35 `contents` accessors (`context.entities`,
-  `domain.contexts`, `handler.clauses`, …) use
-  `Contents.filterThroughWrappers`, which descends **`Include` AND
-  `BASTImport`** — the same two `flatten()` removes. HOW a definition
-  reached a container is riddl's bookkeeping; a client asking what is in
-  a context wants the whole list and has no stake in whether a member
-  was written inline, included, or imported. Three rules follow:
-  1. **`Contents.filter` stays literal** ("my direct children"), and
-     `includes` must keep using it, since the wrapper is matched BEFORE
-     the type test. `vitals`/`processors` also stay literal — their
-     callers (DiagramsPass, StatsPass) already reach included
-     definitions another way and would double count. Reasons are
-     recorded at each in `Contents.scala`.
+- **`option snapshots` (Entity, event-sourced only)** — the option says WHETHER
+  journal-derived snapshots are taken, never how; no policy enum and no interval,
+  because whether snapshotting pays turns on update rate, read/write mix and
+  physical layout, none of which is in the model. **Its ABSENCE is the default
+  and is meaningful: take NO snapshots, replay the whole log** — right more often
+  than it looks, since many entities see under a hundred events in their
+  lifespan. An Error on a non-event-sourced entity. **The CM gained a
+  must-preserve with it: state as of any past point must be reconstructible**, so
+  a current-state row kept as an optimization is fine but one that is the ONLY
+  reconstruction mechanism is not.
+- **A clause that answers should handle a message that DECLARES what it answers
+  with** — StyleWarning, not an Error (author: it *"doesn't rise to the level of
+  an error"*). The converse is already an Error in all four combinations (declare
+  and produce nothing; declare and produce the wrong type; command and query
+  alike), so do not add a check for it.
+
+- **AST.Set shadows scala.Set** — use selective imports or qualify as
+  `scala.collection.immutable.Set`.
+- **Schema match ordering** — Schema extends `Leaf` (Definition) but is also in
+  the `NonDefinitionValues` union, so its case must appear BEFORE `case _:
+  NonDefinitionValues`. Same trap for `Relationship` vs `case _: Definition`.
+- **State is a Branch**, not a Leaf, of `Branch[StateContents]` where
+  `StateContents = Handler | Comment`. `PassVisitor` uses
+  `openState`/`closeState` (not `doState`). ResolutionPass prepends State to
+  parents (as with all Branches), so refMap keys for State's type ref use State
+  as parent, not Entity.
+- **`do "..."` is an alias for `prompt "..."`** — both produce `PromptStatement`.
+
+
+- **`not` and `!` are SYNONYMOUS everywhere**, as the inverse of a boolean
+  expression (ruled 2026-08-14, shipped 2026-08-15). Both build the IDENTICAL
+  `NotExpression` — there is no spelling flag anywhere, so two ASTs meaning the
+  same thing can never compare unequal — and both work wherever a boolean
+  expression does. **This OVERRODE a 2026-08-13 ruling** that `!` was a legacy
+  spelling accepted ONLY as `when !<bare-identifier>` and "will not be extended";
+  that reasoning is retired, not merely superseded — **do not restore it.** The
+  parser guards the `!=` case with `"!" ~~ !"="` (fastparse negative lookahead,
+  no regex — unavailable on Scala Native). **Prettify converges `!` to `not`** —
+  same precedent as `A | B` → `one of { A or B }` — while a `!=` comparison is
+  untouched, being a comparison operator rather than a negation.
+- **walkStatements helper** — private in ValidationPass; walks into
+  `WhenStatement`/`MatchStatement` nesting.
+
+- **Accessors see through the provenance wrappers; `Finder` sees through
+  everything.** The 35 `contents` accessors (`context.entities`,
+  `domain.contexts`, `handler.clauses`, …) use `Contents.filterThroughWrappers`,
+  which descends **`Include` AND `BASTImport`** — the same two `flatten()`
+  removes. HOW a definition reached a container is riddl's bookkeeping; a client
+  asking what is in a context wants the whole list. Three rules follow:
+  1. **`Contents.filter` stays literal** ("my direct children"), and `includes`
+     must keep using it, since the wrapper is matched BEFORE the type test.
+     `vitals`/`processors` also stay literal — their callers (DiagramsPass,
+     StatsPass) already reach included definitions another way and would double
+     count. Reasons are recorded at each in `Contents.scala`.
      **`definitions` was the third of those and is transparent as of
-     2026-08-06** (synapify's task), with `directDefinitions` added as
-     the literal form. That change disproved the rule the old comment
-     stated — "make it transparent AND delete the caller's manual
-     walk". ResolutionPass's walk descends `Include` and deliberately
-     NOT `BASTImport`, and `filterThroughWrappers` cannot express
-     "includes but not imports", so **ResolutionPass keeps its walk and
-     reads `directDefinitions`** (7 sites). Making it transparent would
-     have made imports resolve, breaking rule 2 below.
-     Three validation checks read `definitions` and moved with it:
-     `checkContents` and `checkIncludeHygiene` stopped emitting two
-     FALSE warnings (a container whose content all arrived by include
-     was told it "should have content"), and `checkUniqueContent`
-     STARTED reporting duplicate sibling names across an include
-     boundary — a real ambiguity, approved as a deliberate tightening
+     2026-08-06** (synapify's task), with `directDefinitions` added as the
+     literal form. That change disproved the rule the old comment stated — "make
+     it transparent AND delete the caller's manual walk". ResolutionPass's walk
+     descends `Include` and deliberately NOT `BASTImport`, and
+     `filterThroughWrappers` cannot express "includes but not imports", so
+     **ResolutionPass keeps its walk and reads `directDefinitions`** (7 sites);
+     making it transparent would have made imports resolve, breaking rule 2.
+     Three validation checks moved with it: `checkContents` and
+     `checkIncludeHygiene` stopped emitting two FALSE warnings (a container whose
+     content all arrived by include was told it "should have content"), and
+     `checkUniqueContent` STARTED reporting duplicate sibling names across an
+     include boundary — a real ambiguity, approved as a deliberate tightening
      (Reid, 2026-08-06). It cost the corpus nothing: 189/189 riddl-models
-     validate with zero errors. Pinned by
-     `IncludeTransparentValidationTest`.
-  2. **READING and RESOLVING answer differently for imports, on
-     purpose.** `domain.types` reports a `.bast`-imported type, but a
-     reference to it does NOT resolve until an explicit `flatten` — the
-     symbol table is built by traversal, not by these accessors, and
-     S61-2's contract that loading only fills wrappers is unchanged.
-     Structure is likewise untouched: `contents.filter` still shows
-     nothing spliced in, and `BASTLoader.getImports` still finds the
-     wrapper. Pinned in `BASTImportLoadingTest` and
+     validate with zero errors. Pinned by `IncludeTransparentValidationTest`.
+  2. **READING and RESOLVING answer differently for imports, on purpose.**
+     `domain.types` reports a `.bast`-imported type, but a reference to it does
+     NOT resolve until an explicit `flatten` — the symbol table is built by
+     traversal, not by these accessors, and S61-2's contract that loading only
+     fills wrappers is unchanged. Structure is likewise untouched:
+     `contents.filter` still shows nothing spliced in, and `BASTLoader.getImports`
+     still finds the wrapper. Pinned in `BASTImportLoadingTest` and
      `IncludeAndImportTest`.
   3. **`Finder.recursiveFindByType` and the accessors answer DIFFERENT
-     QUESTIONS** — it walks EVERY `Container`, the accessor walks only
-     the provenance wrappers. Where they diverge: under a **Domain**
-     (domains DO nest, `domain_content`, ebnf-grammar.ebnf:77), and for
-     `Type` under a Context, since a recursive find also picks up types
-     declared inside entities — riddl-generator relies on exactly that
-     to emit state records. Where they do NOT diverge: `Entity` under a
-     `Context`, because contexts cannot nest (`context_definition` :85
-     omits `context`, `entity_content` :96 omits `entity`, and
-     `processor_definition_contents` has no `entity`). Pick by the
-     question, not by reflex — an earlier version of this note warned
-     that recursive find "returns nested contexts' entities", which the
-     grammar forbids; riddl-generator caught it.
-  Before 2026-08-03, `context.entities` was empty whenever the entity
-  lived in an include — silently. That is how riddl-generator produced
-  582 files for reactive-bbq with no entity class among them while the
-  model validated clean. It survived because riddl validates by
-  TRAVERSING and every internal test took that path; the consumer path
-  had no gate at all. `ConsumerReadsIncludedDefinitionsTest` is now that
-  gate — **add to it whenever you add an accessor.**
+     QUESTIONS** — it walks EVERY `Container`, the accessor walks only the
+     provenance wrappers. They diverge under a **Domain** (domains DO nest,
+     `domain_content`, ebnf-grammar.ebnf:77) and for `Type` under a Context,
+     since a recursive find also picks up types declared inside entities —
+     riddl-generator relies on exactly that to emit state records. They do NOT
+     diverge for `Entity` under a `Context`, because contexts cannot nest
+     (`context_definition` :85 omits `context`, `entity_content` :96 omits
+     `entity`, and `processor_definition_contents` has no `entity`). Pick by the
+     question, not by reflex — an earlier version of this note warned that
+     recursive find "returns nested contexts' entities", which the grammar
+     forbids; riddl-generator caught it.
+  Before 2026-08-03, `context.entities` was empty whenever the entity lived in an
+  include — silently. That is how riddl-generator produced 582 files for
+  reactive-bbq with no entity class among them while the model validated clean.
+  It survived because riddl validates by TRAVERSING and every internal test took
+  that path; the consumer path had no gate at all.
+  `ConsumerReadsIncludedDefinitionsTest` is now that gate — **add to it whenever
+  you add an accessor.**
+
 - **A case class that transitively reaches a DOCUMENT has an O(document)
   hashCode, and only Scala.js notices.** `StringParserInput`'s first field is
   `data: String`, the entire text of a source file; `At` holds a
@@ -1868,99 +924,110 @@ to the right group rather than appending to a list.
   different, not the algorithm. Get the cross-platform ratio BEFORE profiling.
   (Both the report and our first hypothesis blamed complexity; the favourite
   suspect, ClassTag dispatch, measured **5x faster** on Scala.js than the JVM.)
-- **Definition hashCode/equals override** — `Definition` trait
-  overrides both: `hashCode` cheap (id + loc + class); `equals`
-  structural via `productEquals`, skipping `Contents` fields.
-  Prevents O(subtree) hashing in any `HashMap[Definition, X]`.
-  Opaque type `Contents[?]` erases to `ArrayBuffer` at runtime,
-  so `case (_: Contents[?], …)` matches correctly.
+
+- **Definition hashCode/equals override** — `Definition` overrides both:
+  `hashCode` cheap (id + loc + class); `equals` structural via `productEquals`,
+  skipping `Contents` fields. Prevents O(subtree) hashing in any
+  `HashMap[Definition, X]`. The opaque type `Contents[?]` erases to `ArrayBuffer`
+  at runtime, so `case (_: Contents[?], …)` matches correctly.
 
 ### Diagnostic rule ids — every message names the RULE that produced it
 
-**`RuleId`** (`language/.../RuleId.scala`) is a kebab-case, subject-prefixed enum: 303 rules
-covering all 307 diagnostic sites. `Message.ruleId: Option[RuleId]`, and `ruleId` is a
-**REQUIRED** parameter on the eight `Accumulator.add*` helpers — a new diagnostic does not
-compile until it names its rule. The six calls in `MessagesTest` pass `None` explicitly.
+**`RuleId`** (`language/.../RuleId.scala`) is a kebab-case, subject-prefixed
+enum: 303 rules covering all 307 diagnostic sites. `Message.ruleId:
+Option[RuleId]`, and `ruleId` is a **REQUIRED** parameter on the eight
+`Accumulator.add*` helpers — a new diagnostic does not compile until it names its
+rule. The six calls in `MessagesTest` pass `None` explicitly.
 
-**It GENERALIZES `Messages.DeprecationCode`; it does not sit beside it.** That object was
-already a threaded kebab-case id registry for deprecations, consumed at `RiddlLib.scala:970`
-to build `SourceEdit`s. Its 12 codes are reproduced EXACTLY — including `prompt-statement`,
-whose rule was renamed `DoStatement` while its code deliberately was not, because renaming a
-rule is a source change and renaming its code is an API break. **Do not introduce a second
-scheme** (an early draft proposed `REF001`-style ids; it was dropped for exactly this).
+**It GENERALIZES `Messages.DeprecationCode`; it does not sit beside it.** That
+object was already a threaded kebab-case id registry for deprecations, consumed
+at `RiddlLib.scala:970` to build `SourceEdit`s. Its 12 codes are reproduced
+EXACTLY — including `prompt-statement`, whose rule was renamed `DoStatement`
+while its code deliberately was not, because renaming a rule is a source change
+and renaming its code is an API break. **Do not introduce a second scheme** (an
+early draft proposed `REF001`-style ids; dropped for exactly this).
 
-**An id names a RULE, not a site.** Four rules are emitted from more than one place on
-purpose — `ref-wrong-kind` from BOTH `ReferenceMap.definitionOf` and
-`ResolutionPass.wrongType`, which is apt given those two paths once disagreed about whether
-to check the kind at all.
+**An id names a RULE, not a site.** Four rules are emitted from more than one
+place on purpose — `ref-wrong-kind` from BOTH `ReferenceMap.definitionOf` and
+`ResolutionPass.wrongType`, apt given those two paths once disagreed about
+whether to check the kind at all.
 
-**Non-reuse is enforced by CODE, in three parts** (all canary-tested by breaking them):
-`values` is generated so codes are checked unique; `RuleId.retired` names withdrawn codes and
-no live code may appear there; and a committed **append-only ledger**
-(`language/src/test/resources/rule-ids.txt`) catches what the in-memory checks cannot see — a
-rule DELETED without retiring its code, which is the one at risk of being reused later.
-**`RuleId.grandfathered` is CLOSED**: the 12 legacy codes predate the subject scheme and are
-exempt from it. A new rule that fits no subject needs a SUBJECT added, never an exemption.
+**Non-reuse is enforced by CODE, in three parts** (all canary-tested by breaking
+them): `values` is generated so codes are checked unique; `RuleId.retired` names
+withdrawn codes and no live code may appear there; and a committed **append-only
+ledger** (`language/src/test/resources/rule-ids.txt`) catches what the in-memory
+checks cannot see — a rule DELETED without retiring its code, the one at risk of
+being reused later. **`RuleId.grandfathered` is CLOSED**: the 12 legacy codes
+predate the subject scheme and are exempt from it. A new rule that fits no
+subject needs a SUBJECT added, never an exemption.
 
-**Why the enum at all**: `DeprecationCode.all` was a hand-maintained `Seq` beside the
-definitions, and TWICE a code was defined but never added to it — `entity-option-to-intention`
-for months — so "exhaustive" migration reports silently omitted a whole family. `all` and the
-mechanical-replacement map are DERIVED now; there is no second list to forget.
+**Why the enum at all**: `DeprecationCode.all` was a hand-maintained `Seq` beside
+the definitions, and TWICE a code was defined but never added to it —
+`entity-option-to-intention` for months — so "exhaustive" migration reports
+silently omitted a whole family. `all` and the mechanical-replacement map are
+DERIVED now; there is no second list to forget.
 
-**The id renders in the LOGGER, not in `Message.format`.** The logger already supplies the
-kind prefix, so output reads `[error] [use-unused-definition] file(...)`, rustc's shape.
-`format` is what `CheckMessagesTest` compares its 13 goldens against, so putting it there
-churned every one of them for a fact those files do not exist to pin. **`--no-msg-ids`**
-(`CommonOptions.showMessageIds`, default TRUE) restores the previous output exactly.
+**The id renders in the LOGGER, not in `Message.format`.** The logger already
+supplies the kind prefix, so output reads `[error] [use-unused-definition]
+file(...)`, rustc's shape. `format` is what `CheckMessagesTest` compares its 13
+goldens against, so putting it there churned every one of them for a fact those
+files do not exist to pin. **`--no-msg-ids`** (`CommonOptions.showMessageIds`,
+default TRUE) restores the previous output exactly.
 
-**`validate --json`** emits one object per diagnostic on stdout (rule, severity, message,
-file, line, col, and context/suggestion when present); `[]` when clean, never empty output.
-**`validate --fix` / `--fix-rule <id>`** applies the codemod a rule carries
-(`RuleId.mechanicalFix`), through the SAME gate as `find -replace` —
-`FindEditor.applyVerified`, lifted so there is one copy rather than two. Only PURE SPAN
-replacements qualify: `type-first-aggregate` is a reordering and `shape-keyword` inserts
-outside the reported span, so both are excluded rather than approximated. See BACKLOG [1.16]
-for `quoted-constant-literal`, which is genuinely mechanical but needs a COMPUTED replacement
-an `Option[String]` cannot express.
+**`validate --json`** emits one object per diagnostic on stdout (rule, severity,
+message, file, line, col, and context/suggestion when present); `[]` when clean,
+never empty output. **`validate --fix` / `--fix-rule <id>`** applies the codemod
+a rule carries (`RuleId.mechanicalFix`), through the SAME gate as `find
+-replace` — `FindEditor.applyVerified`, lifted so there is one copy rather than
+two. Only PURE SPAN replacements qualify: `type-first-aggregate` is a reordering
+and `shape-keyword` inserts outside the reported span, so both are excluded
+rather than approximated. See BACKLOG [1.16] for `quoted-constant-literal`,
+genuinely mechanical but needing a COMPUTED replacement an `Option[String]`
+cannot express.
 
-**`FindEditor.fileOfSource`, never `Path.of(loc.source.origin)`.** `origin` is the SHORT name
-error messages render, so treating it as a path works only when the cwd happens to be the
-model's own directory — how `find -replace` originally shipped, and a bug `validate --fix`
-nearly reintroduced the same day.
+**`FindEditor.fileOfSource`, never `Path.of(loc.source.origin)`.** `origin` is
+the SHORT name error messages render, so treating it as a path works only when
+the cwd happens to be the model's own directory — how `find -replace` originally
+shipped, and a bug `validate --fix` nearly reintroduced the same day.
 
 ### A bare `println` is invisible to a test that redirects stdout
 
-**`println` is `Console.println`, and `Console.out` is a THREAD-LOCAL initialised at class
-load.** `System.setOut` therefore does not redirect it, and code printing from inside a
-`Future` — on an executor thread — writes to the real stdout regardless. In production the two
-name the same object and nothing is wrong with the output; **under capture the test reads an
-empty string, which presents as exactly the "command printed nothing" defect** the whole
-`ValidateSummaryTest`/`ProductGoesToStdoutTest` family exists to detect. A false positive from
-the instrument, not the code.
+**`println` is `Console.println`, and `Console.out` is a THREAD-LOCAL initialised
+at class load.** `System.setOut` therefore does not redirect it, and code
+printing from inside a `Future` — on an executor thread — writes to the real
+stdout regardless. In production the two name the same object and nothing is
+wrong with the output; **under capture the test reads an empty string, which
+presents as exactly the "command printed nothing" defect** the
+`ValidateSummaryTest`/`ProductGoesToStdoutTest` family exists to detect. A false
+positive from the instrument, not the code.
 
-**Emit a command's product with `System.out.println`.** `ValidateCommand.emitJson` and
-`DumpCommand.emit` both do. `StdStreamCapture` also wraps `Console.withOut`, which closes the
-same-thread half but CANNOT help across threads — the `System.out` form is what does.
+**Emit a command's product with `System.out.println`.** `ValidateCommand.emitJson`
+and `DumpCommand.emit` both do. `StdStreamCapture` also wraps `Console.withOut`,
+which closes the same-thread half but CANNOT help across threads — the
+`System.out` form is what does.
 
 ### Multi-line `do` and `prompt` (rc.25+)
 
-`do { "a" "b" "c" }` and `prompt({ "a" "b" })`, with the bare single-string form unchanged.
-The braced shape is **`doc_block`'s**, already RIDDL's spelling for prose, so no new syntax
-idiom was invented. **The bare form takes EXACTLY ONE string**: `do "a" "b"` by juxtaposition
-parses unambiguously (nothing else begins with a quote) but leaves nothing except the next
-keyword to mark where the statement ends.
+`do { "a" "b" "c" }` and `prompt({ "a" "b" })`, with the bare single-string form
+unchanged. The braced shape is **`doc_block`'s**, already RIDDL's spelling for
+prose, so no new syntax idiom was invented. **The bare form takes EXACTLY ONE
+string**: `do "a" "b"` by juxtaposition parses unambiguously (nothing else begins
+with a quote) but leaves nothing except the next keyword to mark where the
+statement ends.
 
-`DoStatement.what` and `PromptValue.prompt` are `Seq[LiteralString]`; **`.text`** derives the
-`\n`-separated prose riddlg reads. Derived, not stored, so there is no second field to
-disagree — and a single-line `do` is a Seq of one rather than a special case.
+`DoStatement.what` and `PromptValue.prompt` are `Seq[LiteralString]`; **`.text`**
+derives the `\n`-separated prose riddlg reads. Derived, not stored, so there is
+no second field to disagree — and a single-line `do` is a Seq of one rather than
+a special case.
 
 **Additive at every layer, and that is load-bearing.** A one-line `do` prettifies
-byte-identically to before and serializes as a bare JSON string rather than an array, so none
-of the corpus's 190 models move for a feature they do not use. Several lines get ONE PER LINE
-inside braces — the layout every other block uses; squashing them onto one line would be the
-narrow second copy of a block dispatch `InvariantBlock` was already caught being.
-**BAST `FORMAT_REVISION` 23**: both now write a SEQUENCE where they wrote a bare string, so a
-revision-22 file's string is read as a COUNT and everything after it derails. The JSON reader
+byte-identically to before and serializes as a bare JSON string rather than an
+array, so none of the corpus's 190 models move for a feature they do not use.
+Several lines get ONE PER LINE inside braces — the layout every other block uses;
+squashing them onto one line would be the narrow second copy of a block dispatch
+`InvariantBlock` was already caught being. **BAST `FORMAT_REVISION` 23**: both
+now write a SEQUENCE where they wrote a bare string, so a revision-22 file's
+string is read as a COUNT and everything after it derails. The JSON reader
 accepts a string OR an array, so nothing already written stops loading.
 
 ### Parsing (fastparse)
@@ -1968,11 +1035,11 @@ accepts a string OR an array, so nothing already written stops loading.
 - **`Keywords.keyword` ends in a CUT — `P(key ~~ &(isNotKeywordChar))./` — so
   once the keyword matches, the enclosing `|` CANNOT backtrack.** Whichever
   alternative comes first wins outright and the others are unreachable. That is
-  how `attachment ULID is "…"` could not be parsed AT ALL: the general
-  attachment rule was first, so `ulidAttachment` was never tried and the ULID
-  form failed where a mime type was expected. **Reordering only breaks the other
-  branch the same way — the shared prefix must be FACTORED**, matching the
-  keyword once, ahead of the choice, and alternating the BODIES
+  how `attachment ULID is "…"` could not be parsed AT ALL: the general attachment
+  rule was first, so `ulidAttachment` was never tried and the ULID form failed
+  where a mime type was expected. **Reordering only breaks the other branch the
+  same way — the shared prefix must be FACTORED**, matching the keyword once,
+  ahead of the choice, and alternating the BODIES
   (`ulidAttachmentBody | namedAttachmentBody`). `bastImport` was already written
   this way, with a comment describing the identical hazard. The same cut
   collision is why an optional leading marker needs a non-cutting variant
@@ -1984,110 +1051,105 @@ accepts a string OR an array, so nothing already written stops loading.
   at the FURTHEST position reached, which is not the same thing as "what is
   allowed here". `tell p` reported `Expected one of ("become" | "command" |
   "event" | "morph" | …)` — mixing statement keywords with message-kind keywords
-  — which reads like `tell` is banned in that clause. It was not; the OPERAND
-  was the problem. A three-line experiment settled in seconds what two people
-  read in opposite directions.
-- **A `rep(2)` that looks like a semantic guard usually is not.** `sagaDefinitions`
-  read as "a saga needs two steps"; the real rule is in `ValidationPass`, with a
-  proper Error and a suggestion. Relaxing the parser lost no rule and UPGRADED
-  the diagnostic — a parse failure at the wrong token became a message that says
-  what is wrong. Check for this shape before assuming a parser cardinality is
-  load-bearing.
+  — which reads like `tell` is banned in that clause. It was not; the OPERAND was
+  the problem. A three-line experiment settled in seconds what two people read in
+  opposite directions.
+- **A `rep(2)` that looks like a semantic guard usually is not.**
+  `sagaDefinitions` read as "a saga needs two steps"; the real rule is in
+  `ValidationPass`, with a proper Error and a suggestion. Relaxing the parser lost
+  no rule and UPGRADED the diagnostic — a parse failure at the wrong token became
+  a message that says what is wrong. Check for this shape before assuming a
+  parser cardinality is load-bearing.
 
 ### Total Dispatch — no silent fall-through
 
-**Reid's standing rule (2026-08-09): "There must be no non-sealed matches — it
-is okay to fall through to generate an error or exception but not okay to not
-select anything and then carry on as if nothing happened."**
+**Reid's standing rule (2026-08-09): "There must be no non-sealed matches — it is
+okay to fall through to generate an error or exception but not okay to not select
+anything and then carry on as if nothing happened."**
 
-A `case _ => ()` on a SEALED hierarchy is the failure mode: it compiles, and
-when a new node type is added the code quietly does nothing for it. Every
-symptom then appears far from the cause — an empty output, a dropped statement,
-a model that validates clean and means something else.
+A `case _ => ()` on a SEALED hierarchy is the failure mode: it compiles, and when
+a new node type is added the code quietly does nothing for it. Every symptom then
+appears far from the cause — an empty output, a dropped statement, a model that
+validates clean and means something else.
 
-- **Enumerate the cases — and do it by READING, because nothing checks it for
-  you. `-Werror` is NOT a safety net here.** This file said it was until
-  2026-08-13; the claim is false as this repo is configured, and believing it
-  is how the processor-instance-identity branch shipped seven missed dispatch
-  or dispatch-input sites (five across its tasks 2/4/5, two more found by task
-  7's review) — every one caught by a human reading code or a code review,
-  **none** by the compiler. Two independent reasons, and the second is the
+- **Enumerate the cases by READING, because nothing checks it for you. `-Werror`
+  is NOT a safety net here.** This file claimed it was until 2026-08-13; the
+  claim is false as this repo is configured, and believing it is how the
+  processor-instance-identity branch shipped seven missed dispatch or
+  dispatch-input sites — every one caught by a human reading code or a code
+  review, **none** by the compiler. Two independent reasons, the second being the
   important one:
-  1. `language` and `commands` compile with `--no-warnings` alongside
-     `-Werror` (`build.sbt:229`, `:417`), so in those two modules there is no
-     warning left for `-Werror` to escalate. (An earlier note here named
-     `passes` and `riddlLib` as well — wrong; check `build.sbt` before
-     repeating it. `-Werror` really is live in those two.)
-  2. Where `-Werror` IS live it still cannot help, because **a wildcard arm
-     makes a match exhaustive** — so the terminal `throw` this section
-     prescribes is itself what silences the compiler. Follow the rule and you
-     are guaranteed never to be told the hierarchy grew. Most of the seven
-     were in `passes`, where warnings are on.
+  1. `language` and `commands` compile with `--no-warnings` alongside `-Werror`
+     (`build.sbt:229`, `:417`), so in those two modules there is no warning left
+     to escalate. (An earlier note named `passes` and `riddlLib` as well —
+     wrong; check `build.sbt` before repeating it. `-Werror` really is live in
+     those two.)
+  2. Where `-Werror` IS live it still cannot help, because **a wildcard arm makes
+     a match exhaustive** — so the terminal `throw` this section prescribes is
+     itself what silences the compiler. Follow the rule and you are guaranteed
+     never to be told the hierarchy grew. Most of the seven were in `passes`,
+     where warnings are on.
   The real net is that `throw`, and it fires at RUN time on the first test that
   exercises the missing arm — so it protects you exactly as far as your tests
-  reach, and not one node further. When you add a node type, grep the
-  dispatches and read them; do not wait to be told.
-- **When a branch genuinely cannot be reached, `throw`** rather than return
-  unit. `Pass.processValue` does this; so do `BASTWriter`/`BASTReader`, which
-  previously used a `println`-and-drop and a placeholder `PromptStatement`
-  respectively — both of which produced corrupt output instead of a failure.
+  reach, and not one node further. When you add a node type, grep the dispatches
+  and read them; do not wait to be told.
+- **When a branch genuinely cannot be reached, `throw`** rather than return unit.
+  `Pass.processValue` does this; so do `BASTWriter`/`BASTReader`, which previously
+  used a `println`-and-drop and a placeholder `PromptStatement` respectively —
+  both of which produced corrupt output instead of a failure.
 - **`case _ => ()` remains correct for "not interested in this node"** — a
-  visitor that handles three of forty types. The test is whether the arm means
+  visitor handling three of forty types. The test is whether the arm means
   *"nothing to do here"* or *"I do not know what this is"*. Only the second is
   the bug.
 - **Enumerate the domain of the FUNCTION, not of the nearest-looking type.**
   `stateReadsIn`/`asksIn`/`countValueFailPoints` walk what `statementValues`
   yields, which is WIDER than `Value`: `WhenStatement.condition` alone is
-  `LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue`,
-  and `Identifier` appears in no other member. Auditing `Value` exhaustively
-  therefore still misses it — which is exactly how `when !isValid`, a form
-  that validated on rc.11, threw on rc.13 (fixed 2026-08-13). The throw did
-  its job; the enumeration was against the wrong hierarchy.
+  `LiteralString | Identifier | ValueRef | BooleanExpression | PromptValue`, and
+  `Identifier` appears in no other member. Auditing `Value` exhaustively
+  therefore still misses it — which is exactly how `when !isValid`, a form that
+  validated on rc.11, threw on rc.13. The throw did its job; the enumeration was
+  against the wrong hierarchy.
 - **A total walk is still defeated if its INPUT drops a field.** Auditing the
   match arms proves nothing about the fields each arm forgot to RETURN.
   `statementValues` was total over the statement kinds and nonetheless never
   yielded `RequireStatement.argument` (the `with <expr>` operand) or
-  `MatchCase.guard` — both full `Value`s — so an `initiate` parked in
-  `require X with initiate entity Order` was invisible to every walk built on
-  it at once: state-reads, asks, the A12 fail-point census, and the
-  instance-effect ban that was itself written correctly (found 2026-08-13 by
-  task 7's review of the instance-identity plan). Check the arms AND their
-  payloads.
+  `MatchCase.guard` — both full `Value`s — so an `initiate` parked in `require X
+  with initiate entity Order` was invisible to every walk built on it at once:
+  state-reads, asks, the A12 fail-point census, and the instance-effect ban that
+  was itself written correctly. Check the arms AND their payloads.
 - **A dispatch written TWICE hides the incomplete copy behind the complete one.**
   `AST.WhenStatement.format` had four arms over a five-member `condition` union
   (no `PromptValue`), so `when prompt("…")` threw a `MatchError` — and it
   survived because `PrettifyVisitor` does NOT route through it:
-  `RiddlFileEmitter.emitStatement` keeps its OWN copy of that same dispatch, and
-  that copy has the arm. So the reflectivity round trip, which is what normally
-  proves a `format` total, could never reach the hole; prettifying the construct
-  produced correct output on the released binary. Fixed 2026-08-14 (Task 5 of the
-  message-value plan made it reachable by rendering a clause body).
-  **When you find two implementations of one dispatch, the tested one tells you
-  nothing about the other — read both.** `Statement.format` and
-  `RiddlFileEmitter.emitStatement` are that pair; keep them in step.
+  `RiddlFileEmitter.emitStatement` keeps its OWN copy of that dispatch, and that
+  copy has the arm. So the reflectivity round trip, which is what normally proves
+  a `format` total, could never reach the hole; prettifying the construct
+  produced correct output on the released binary. **When you find two
+  implementations of one dispatch, the tested one tells you nothing about the
+  other — read both.** `Statement.format` and `RiddlFileEmitter.emitStatement`
+  are that pair; keep them in step.
 - **Fix the SHAPE of a dispatch/recursion defect, not the instance.** The
   alias-chain cycle guard was added to `fieldsWithOwner` in rc.14 and its sibling
   `aggregateFieldsOf` was left unguarded, so `type A is B` / `type B is A` still
-  killed the stack — it was simply latent until a caller reached a cyclic alias
-  (2026-08-14). Same lesson the flaky-benchmark round recorded a day earlier:
-  when fixing a defect of this class, grep for the shape.
+  killed the stack — latent until a caller reached a cyclic alias. When fixing a
+  defect of this class, grep for the shape.
 
 **A field-drop defect has no natural blast radius, and `Finder` is where it
 lives.** `Finder.recursiveFindByType` walked `contents` only, so **27 field-held
 sites were unreachable** — `MatchStatement`'s cases and guards,
 `Correlation.timeoutStatements`, `SagaStep`'s do/undo blocks,
 `RequireStatement.argument`, `InvariantBlock`, `PromptValue.typeEx`, the
-`Constructor`/`Call`/`Initiate` argument lists, the `LogicalExpression`/
-`NotExpression` operands. Anything reading the AST through `Finder` rather than
-a `Pass` silently returned SHORTER LISTS; nothing errored. The consumers most
-exposed are the ones that ENUMERATE rather than traverse, i.e. riddl-generator.
-Consolidated into `Finder.fieldChildren` (`Finder.scala:86`) — one extension
-point instead of four scattered special cases — **which still ends in `case _ =>
-Seq.empty`, so arm 12 of `Value` will be invisible on the day it is added.**
-The lesson is about detection, not the fix: it surfaced because ONE BAST test
-looked for a `ComparisonExpression` inside a `when` condition and got nothing
-back. **The instance you notice is the one your test happened to walk, not the
-extent of the problem** — which is what separates this family from a dispatch
+`Constructor`/`Call`/`Initiate` argument lists, the
+`LogicalExpression`/`NotExpression` operands. Anything reading the AST through
+`Finder` rather than a `Pass` silently returned SHORTER LISTS; nothing errored.
+The consumers most exposed are the ones that ENUMERATE rather than traverse, i.e.
+riddl-generator. Consolidated into `Finder.fieldChildren` (`Finder.scala:86`) —
+one extension point instead of four scattered special cases — **which still ends
+in `case _ => Seq.empty`, so arm 12 of `Value` will be invisible on the day it is
+added.** The lesson is about detection, not the fix: it surfaced because ONE BAST
+test looked for a `ComparisonExpression` inside a `when` condition and got
+nothing back. **The instance you notice is the one your test happened to walk,
+not the extent of the problem** — which separates this family from a dispatch
 defect, where the compiler at least knows the arms exist.
 
 Known-total today: `Pass.processValue`, `classifyHandlers` (all 17 `Statement`
@@ -2097,18 +1159,18 @@ remaining ~140 catch-alls are unaudited — see BACKLOG § 2.
 **A new `Value` arm touches EIGHT sites, not five** (counted 2026-08-15 adding
 `NumericLiteral`; the plan said five and `-Werror` found three more). Beyond
 `ValidationPass`'s four walks (`countValueFailPoints`, `stateReadsIn`,
-`initiatesIn`, `asksIn`) and `validateValue`, there are: **`AST.NonDefinitionValues`**
-— a parallel union to `Value` that is easy to miss entirely — **`ValidationPass.valueType`**,
-and **`JsonifierPass`** in `riddlLib`. Widening **`Comparand`** is a SEPARATE
-family of its own: `resolveComparand`, `serializeComparand`, `buildComparand`,
-plus the BAST writer/reader pair. Grep and read; do not trust a five-item list.
+`initiatesIn`, `asksIn`) and `validateValue`, there are:
+**`AST.NonDefinitionValues`** — a parallel union to `Value` that is easy to miss
+entirely — **`ValidationPass.valueType`**, and **`JsonifierPass`** in `riddlLib`.
+Widening **`Comparand`** is a SEPARATE family: `resolveComparand`,
+`serializeComparand`, `buildComparand`, plus the BAST writer/reader pair. Grep
+and read; do not trust a five-item list.
 
-**A catch-all that "just works" is how a literal disappears.** Before Task 3
-added its arm, `JsonAstBuilder.buildComparand`'s pre-existing
-`case other => ValueRef(curAt, PathIdentifier.empty)` silently degraded a numeric
-comparand into an empty reference — no error, no warning, a valid-looking wrong
-answer. That is a live instance of the unaudited catch-alls above, not a
-hypothetical.
+**A catch-all that "just works" is how a literal disappears.** Before its arm was
+added, `JsonAstBuilder.buildComparand`'s pre-existing `case other =>
+ValueRef(curAt, PathIdentifier.empty)` silently degraded a numeric comparand into
+an empty reference — no error, no warning, a valid-looking wrong answer. A live
+instance of the unaudited catch-alls above, not a hypothetical.
 
 ### Emptiness — `isEmpty` means NO CONTENTS, never "absent"
 
@@ -2137,158 +1199,114 @@ asks `value.nonEmpty`, so it is meaningful ONLY for a `LiteralString`. Eight of
 its ten call sites in `ValidationPass` honour that — they pass a `LiteralString`
 field (`PromptStatement.what`, `ErrorStatement.message`, `CodeStatement.language`,
 `LiteralPattern.literal`, `PromptValue.prompt`) or guard with `case ls:
-LiteralString =>` and explicitly skip `ValueRef`/`BooleanExpression`. Two sites
-passed an arbitrary `Value` unguarded and therefore fired on correct code:
-`let`'s expression and `set`'s value, so `let q = call function F(…)` and `set
-field S.flag to true` were both reported "must not be empty". Fixed 2026-08-10 by
-guarding both on `LiteralString`; pinned by `ValueEmptinessCheckTest`.
+LiteralString =>`. Two sites passed an arbitrary `Value` unguarded and therefore
+fired on correct code: `let`'s expression and `set`'s value, so `let q = call
+function F(…)` and `set field S.flag to true` were both reported "must not be
+empty". Fixed 2026-08-10 by guarding both on `LiteralString`; pinned by
+`ValueEmptinessCheckTest`.
 
-**The trap to avoid.** The tempting "fix" is to override `isEmpty` on `Call`/
-`Constructor`/`ValueRef`/`BooleanLiteral` so they report non-empty. That
-REDEFINES emptiness from *contentless* to *present*, which is a different
-question and the one the whole traversal/flatten layer depends on. **When an
-emptiness check misfires, the bug is almost always in the CALLER asking the wrong
-question, not in the node's `isEmpty`.** Non-literal values get their real
-validation — resolution and type-checking — in `checkStatementScopes`.
+**The trap to avoid.** The tempting "fix" is to override `isEmpty` on
+`Call`/`Constructor`/`ValueRef`/`BooleanLiteral` so they report non-empty. That
+REDEFINES emptiness from *contentless* to *present*, a different question and the
+one the whole traversal/flatten layer depends on. **When an emptiness check
+misfires, the bug is almost always in the CALLER asking the wrong question, not
+in the node's `isEmpty`.** Non-literal values get their real validation —
+resolution and type-checking — in `checkStatementScopes`.
 
 ### Pass Framework & Standard Passes
 
-- **OutlinePass / TreePass** — lightweight `HierarchyPass`
-  subclasses in `passes/shared/.../passes/`. OutlinePass →
-  flat `Seq[OutlineEntry]`. TreePass → recursive `Seq[TreeNode]`,
-  exposed via `RiddlAPI.getOutline()` / `getTree()`. TreePass
-  uses a `mutable.Stack[ListBuffer[TreeNode]]` for pure O(n)
-  building (not a `HashMap[Definition, ListBuffer]`).
+- **OutlinePass / TreePass** — lightweight `HierarchyPass` subclasses in
+  `passes/shared/.../passes/`. OutlinePass → flat `Seq[OutlineEntry]`; TreePass →
+  recursive `Seq[TreeNode]`, exposed via `RiddlAPI.getOutline()`/`getTree()`.
+  TreePass uses a `mutable.Stack[ListBuffer[TreeNode]]` for pure O(n) building
+  (not a `HashMap[Definition, ListBuffer]`).
 - **Analysis passes** — MessageFlowPass, EntityLifecyclePass,
-  DependencyAnalysisPass (1.22.0). All in
-  `passes/shared/.../analysis/`; each extends `CollectingPass`
-  and requires ResolutionPass. (AIHelperPass was removed in
+  DependencyAnalysisPass (1.22.0), in `passes/shared/.../analysis/`; each extends
+  `CollectingPass` and requires ResolutionPass. (AIHelperPass was removed in
   1.24.0 — see "Message suggestions" under Validation Specifics.)
-- **MessageFlowPass** — `MessageFlowEdge.messageType` is
-  `Option[Type]` (adaptor declarations produce `None`; typed
-  handler edges produce `Some`). Direction-aware:
-  `InboundAdaptor`("from") → producer=referent, consumer=source;
-  `OutboundAdaptor`("to") → producer=source, consumer=referent.
-  `MessageFlowOutput.edgesForDomain()` / `edgesForContext()` take
-  a `SymbolsOutput` parameter for parent-chain walking.
-- **UsageResolution** uses `mutable.Set[Definition]` for
-  `uses` / `usedBy` (was `Seq`). API boundary methods (`getUsers`,
-  `getUses`) return `.toSeq`.
-- **ParentStack is a class**, not a type alias. Use
-  `ParentStack.empty` (not `mutable.Stack.empty`). Same API
-  (push, pop, toParents). It caches `toParents` (toSeq).
-- **ValidationMode enum** — `Full` or `Quick`. Quick skips
-  `checkStreaming` and `classifyHandlers` in postProcess.
-- **IncrementalValidator** — caches messages per-Context using
-  FNV-1a fingerprints. `validator.reset()` forces a full recheck.
-- **RecognizedOptions registry** — validates option names,
-  argument counts, parent types. Unrecognized → StyleWarning.
-  **This registry is the ONLY thing validation consults.** The
-  `KnownOptions.*` lists in `language/.../KnownOptions.scala`
-  (`adaptor`, `context`, `domain`, …) have **no consumers
-  anywhere in the codebase** — they are advisory/reference data
-  exported to JS via `@JSExportTopLevel`. Adding a name there
-  does NOT clear a warning; adding it to
-  `RecognizedOptions.registry` does. Keep both in sync anyway,
-  since `KnownOptions` is public API.
-- **Generator-metadata options** (1.30.0, 1.31.0) — riddl-gen
-  and friends drive output from RIDDL metadata, with option
-  names prefixed for their target so they are self-describing:
-  `protocol` (AsyncAPI), `event_catalog_version` (EventCatalog),
-  `sql_dialect` / `sql_table` (SQL DDL), `backstage_owner` /
-  `backstage_lifecycle` / `backstage_type` (Backstage catalog),
-  `confluence_space` / `confluence_parent` (Confluence). These
-  parse fine without registration but draw a spurious "not a
-  recognized RIDDL option" StyleWarning until registered.
-  **Choosing `validParents`:** use `Seq.empty` when the
-  generator resolves the value by walking up the parent chain
-  (so it is legitimately settable at any level) — this is the
-  common case. Use a specific list (e.g. `Seq("Domain")` for the
-  `confluence_*` pair) when the generator reads it from exactly
-  one kind of definition, so a misplaced option gets a "not
-  typically used on X (expected: Y)" nudge instead of passing
-  silently. Registering a new one is ~3 edits: `KnownOption`
-  constant, `KnownOptions.*` list membership, registry entry,
-  plus a `CompletenessTest` case.
-- **RiddlLib analysis API** — `getHandlerCompleteness()`,
-  `getMessageFlow()`, `getEntityLifecycles()` on the shared
-  RiddlLib trait and JS facade. JS facade returns `""` for the
-  untyped (None) MessageFlow edges.
+- **MessageFlowPass** — `MessageFlowEdge.messageType` is `Option[Type]` (adaptor
+  declarations produce `None`; typed handler edges produce `Some`).
+  Direction-aware: `InboundAdaptor`("from") → producer=referent,
+  consumer=source; `OutboundAdaptor`("to") → producer=source, consumer=referent.
+  `MessageFlowOutput.edgesForDomain()`/`edgesForContext()` take a `SymbolsOutput`
+  for parent-chain walking.
+- **UsageResolution** uses `mutable.Set[Definition]` for `uses`/`usedBy` (was
+  `Seq`). API boundary methods (`getUsers`, `getUses`) return `.toSeq`.
+- **ParentStack is a class**, not a type alias — use `ParentStack.empty`. Same
+  API (push, pop, toParents); it caches `toParents`.
+- **ValidationMode enum** — `Full` or `Quick`. Quick skips `checkStreaming` and
+  `classifyHandlers` in postProcess.
+- **IncrementalValidator** caches messages per-Context using FNV-1a fingerprints;
+  `validator.reset()` forces a full recheck.
+- **RecognizedOptions registry** validates option names, argument counts and
+  parent types; unrecognized → StyleWarning. **This registry is the ONLY thing
+  validation consults.** The `KnownOptions.*` lists
+  (`language/.../KnownOptions.scala`) have **no consumers anywhere** — they are
+  advisory/reference data exported to JS via `@JSExportTopLevel`. Adding a name
+  there does NOT clear a warning; adding it to `RecognizedOptions.registry` does.
+  Keep both in sync anyway, since `KnownOptions` is public API.
+- **Generator-metadata options** (1.30.0, 1.31.0) — riddl-gen and friends drive
+  output from RIDDL metadata, with names prefixed for their target so they are
+  self-describing: `protocol` (AsyncAPI), `event_catalog_version`,
+  `sql_dialect`/`sql_table`, `backstage_owner`/`backstage_lifecycle`/
+  `backstage_type`, `confluence_space`/`confluence_parent`. These parse fine
+  unregistered but draw a spurious "not a recognized RIDDL option" StyleWarning.
+  **Choosing `validParents`:** `Seq.empty` when the generator resolves the value
+  by walking UP the parent chain, so it is legitimately settable at any level
+  (the common case); a specific list (e.g. `Seq("Domain")` for `confluence_*`)
+  when the generator reads it from exactly one kind of definition, so a misplaced
+  option gets a "not typically used on X" nudge instead of passing silently.
+  Registering one is ~3 edits: `KnownOption` constant, `KnownOptions.*` list
+  membership, registry entry, plus a `CompletenessTest` case.
+- **RiddlLib analysis API** — `getHandlerCompleteness()`, `getMessageFlow()`,
+  `getEntityLifecycles()` on the shared trait and JS facade. The JS facade
+  returns `""` for the untyped (None) MessageFlow edges.
 - **Path-identifier usages tracked separately** (1.23.1).
-  `ResolutionPass.resolvePathFromAnchor` calls
-  `associatePathUsage(parents.head, intermediate)` for each
-  anchor + non-terminal component, into the new
-  `usesInPath` / `usedInPathBy` maps on `UsageBase`. Existing
-  `uses` / `usedBy` semantics are intentionally unchanged so
-  `Usages.getUsers` and `AnalysisResult.getUsers` don't shift
-  underneath callers. Filtered against `user eq use` and
-  `parents.exists(_ eq anchor)` so internal self-references
-  don't leak in. Public accessors: `Usages.isUsedInPath(d)` /
-  `getPathUsers(d)`.
-- **Path-only usage triggers a CompletenessWarning** (Types
-  only). When a Type's `usedBy` is empty but `usedInPathBy`
-  is non-empty, `UsageResolution.checkUnused` emits "only
-  referenced in path identifiers" — the type is addressable
-  but can't carry data because nothing declares a field /
-  state of that type.
+  `ResolutionPass.resolvePathFromAnchor` calls `associatePathUsage(parents.head,
+  intermediate)` for each anchor + non-terminal component, into the
+  `usesInPath`/`usedInPathBy` maps on `UsageBase`. Existing `uses`/`usedBy`
+  semantics are intentionally unchanged so `Usages.getUsers` and
+  `AnalysisResult.getUsers` don't shift underneath callers. Filtered against
+  `user eq use` and `parents.exists(_ eq anchor)` so internal self-references
+  don't leak in. Public accessors: `Usages.isUsedInPath(d)`/`getPathUsers(d)`.
+- **Path-only usage triggers a CompletenessWarning** (Types only). When a Type's
+  `usedBy` is empty but `usedInPathBy` is non-empty, `UsageResolution.checkUnused`
+  emits "only referenced in path identifiers" — the type is addressable but
+  cannot carry data, because nothing declares a field or state of that type.
 
 ### Validation Specifics
 
-- **`validateType` skips its type-expression walk for a TOP-LEVEL aggregate, so
-  a whole family of checks fires only on nested inline ones.** The guard is
-  `if !t.typEx.isInstanceOf[AggregateTypeExpression]` (`ValidationPass.scala`
-  :2752), which means `checkAggregation` and `checkAggregateUseCase` run for
-  `f: command { … }` and NEVER for `command X is { … }` — that is, never for any
-  aggregate a model actually writes. This is why a duplicate field name
-  (`command C is { x is String, x is Integer }`) validated clean AND survived an
-  idempotent prettify round trip until 2026-08-19: putting the new check with its
-  obvious neighbours made it fire on NOTHING, and the tests stayed red in a way
-  that looked like the check was broken. Their neighbours (field naming,
-  identifier length, metadata) share the blind spot and **nobody has audited what
-  else that guard silently excludes.** When a new aggregate check appears to do
-  nothing, suspect the guard before the check.
+- **`validateType` skips its type-expression walk for a TOP-LEVEL aggregate, so a
+  whole family of checks fires only on nested inline ones.** The guard is `if
+  !t.typEx.isInstanceOf[AggregateTypeExpression]` (`ValidationPass.scala:2752`),
+  so `checkAggregation` and `checkAggregateUseCase` run for `f: command { … }`
+  and NEVER for `command X is { … }` — that is, never for any aggregate a model
+  actually writes. This is why a duplicate field name validated clean AND
+  survived an idempotent prettify round trip until 2026-08-19: putting the new
+  check with its obvious neighbours made it fire on NOTHING, and the tests stayed
+  red in a way that looked like the check was broken. Their neighbours (field
+  naming, identifier length, metadata) share the blind spot and **nobody has
+  audited what else that guard silently excludes.** When a new aggregate check
+  appears to do nothing, suspect the guard before the check.
 
-- **The three integer types (`Integer`/`Whole`/`Natural`) have defined ranges,
-  and a LITERAL is checked more strictly than a REFERENCE** (numeric-literals
-  plan, 2026-08-14/15). Ruled by Reid: `Integer` is signed (any whole
-  number), `Whole` is non-negative (`>= 0`, the counting type), `Natural` is
-  positive (`>= 1`, the ordinal type, excludes zero). These were undefined
-  everywhere — code, grammar, language reference, Computational Model — until
-  this work, so nothing could enforce a distinction between them.
-  `ValidationPass.checkNumericLiteralConformance` enforces it now, but ONLY
-  against a `NumericLiteral` value on a `Constant` — a `ValueRef` is
-  untouched, and `NumericType.isAssignmentCompatible` deliberately still lets
-  ANY numeric type flow into any other by reference (`let x: Natural =
-  someRealField` stays legal). The asymmetry is intentional: a literal's
-  value is statically known where a reference's is not, so only the literal
-  can be held to the stricter standard. The fractional-value check
-  (`IntegerTypeExpression` rejecting a decimal) is reported BEFORE the
-  `Natural`/`Whole` range checks — both are integer-type violations, and a
-  range message for `1.5` would be true but useless next to "has a
-  fractional part". `Bool` is excluded even though it extends
-  `IntegerTypeExpression`: a Boolean-typed constant is a different kind of
-  thing, not "a whole number with a fractional part."
 - **Connector intentions (`persistent`, `at-least-once` | `at-most-once`)** —
   keywords written BEFORE `connector`, two independent groups, mutually exclusive
   within a group (an Error, not a parse failure, so both keywords can be named).
-  **Absence of a delivery keyword means `at-least-once`** — Computational Model
-  §25.7 already said so, so nothing was invented and an absent keyword draws NO
-  warning; `at-most-once` exists to make that section's "knowing downgrade, never
-  a silent one" enforceable. `at-least-once` is writable and redundant.
-  **ORDERING is deliberately NOT an intention**: §25.7 makes `unordered`
-  "permission, not mandate" with a best-effort obligation, which is the
-  definition of advisory. The admission test for the enum is whether a generator
-  may decline to honour the keyword.
+  **Absence of a delivery keyword means `at-least-once`** — CM §25.7 already said
+  so, so nothing was invented and an absent keyword draws NO warning;
+  `at-most-once` exists to make that section's "knowing downgrade, never a silent
+  one" enforceable. **ORDERING is deliberately NOT an intention**: §25.7 makes
+  `unordered` "permission, not mandate" with a best-effort obligation, which is
+  the definition of advisory. The admission test for the enum is whether a
+  generator may decline to honour the keyword.
   `option persistent` is deprecated and **CONSUMED** into the intention by the
-  parser, which is what makes the round trip converge and migrated 430 corpus
-  uses for free. **Ask `Connector.isPersistent`, never `hasOption("persistent")`**
-  — it accepts both spellings, and three validation gates go through it.
-  Two traps this hit, both documented elsewhere in this file and both worth
-  re-reading before touching AST: inserting the enum between
-  `@JSExportTopLevel("Connector")` and its case class silently reattached the
-  annotation (invisible to `cJVM`), and `StreamingValidation` had an
-  `options.find(…).get` that was safe only while persistence could come from
-  nowhere else.
+  parser, which makes the round trip converge and migrated 430 corpus uses for
+  free. **Ask `Connector.isPersistent`, never `hasOption("persistent")`** — it
+  accepts both spellings, and three validation gates go through it.
+  Two traps this hit: inserting the enum between `@JSExportTopLevel("Connector")`
+  and its case class silently reattached the annotation (invisible to `cJVM`),
+  and `StreamingValidation` had an `options.find(…).get` that was safe only while
+  persistence could come from nowhere else.
 
 - **The stream-shape arity table is TOTAL, and `sink`/`source` take ANY port
   count** (Reid, 2026-08-12). `Processor.shapeForArity` maps every non-negative
@@ -2304,531 +1322,519 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   | `split` | ≥2 | 1 |
   | `router` | ≥2 | ≥2 |
 
-  `sink` and `source` were pinned to exactly one port until 2026-08-12, which
-  left `(0, ≥2)` and `(≥2, 0)` unnamed; they fell to a catch-all returning
-  `Void`, so `repository R as sink` with two inlets was rejected as "its arity is
-  void". **The final arm now THROWS** — it is reachable only for a negative
-  count — because returning a plausible shape is how the gap became a confident
-  wrong diagnosis that `validateProcessorShape` reported as fact.
-  **Two places encode this and both must move together:** the table above, and
-  the parser's per-shape `minInlets`/`maxInlets`/`minOutlets`/`maxOutlets` in
+  `sink`/`source` were pinned to exactly one port until 2026-08-12, leaving
+  `(0, ≥2)` and `(≥2, 0)` unnamed; they fell to a catch-all returning `Void`, so
+  `repository R as sink` with two inlets was rejected as "its arity is void".
+  **The final arm now THROWS** — reachable only for a negative count — because
+  returning a plausible shape is how the gap became a confident wrong diagnosis
+  reported as fact.
+  **Two places encode this and both must move together:** the table, and the
+  parser's per-shape `minInlets`/`maxInlets`/`minOutlets`/`maxOutlets` in
   `StreamingParser` (`sink R` and `repository R as sink` must agree about what a
   sink is). Their prior agreement was not corroboration — it was one assumption
   written twice.
 
 - **`external context Foo` is an INTENTION, not `option external` — test both.**
   `Context.intention: Option[Intention]` (Application/External/Gateway/Service)
-  is set by the keyword form `external context Foo is {…}`, which is what
-  riddl-models uses almost exclusively. `hasOption("external")` is the OTHER
-  spelling (`with { option external }`) and does NOT see it. A check that
-  exempts external contexts must ask for both:
-  `c.intention.contains(Intention.External) || c.hasOption("external")`.
-  Testing only the option cost 1120 false warnings across the corpus in one run
-  — every event declared in an `external context` block, i.e. exactly the
-  systems a model deliberately does not implement, reported as emitted by
-  nothing.
+  is set by the keyword form, which is what riddl-models uses almost exclusively;
+  `hasOption("external")` is the OTHER spelling and does NOT see it. A check
+  exempting external contexts must ask for both:
+  `c.intention.contains(Intention.External) || c.hasOption("external")`. Testing
+  only the option cost 1120 false warnings in one run — every event declared in
+  an `external context`, i.e. exactly the systems a model deliberately does not
+  implement, reported as emitted by nothing.
   **The correct idiom was already in the codebase** at
-  `StreamingValidation.scala:66`, which has always asked for both; it just was
-  not copied. Two sites still ask for the option ONLY —
-  `ValidationPass.scala:248` (`checkCompletenessPostProcess`) and `:581`
-  (`validateOnMessageClause`) — so an `external context` is NOT exempt from
-  those two. Filed in BACKLOG; each needs its own corpus A/B, since widening an
-  exemption changes which models escape a different check.
+  `StreamingValidation.scala:66`; it just was not copied. Two sites still ask for
+  the option ONLY — `ValidationPass.scala:248` (`checkCompletenessPostProcess`) and `:581`
+  (`validateOnMessageClause`) — so an `external
+  context` is NOT exempt from those two. Filed in BACKLOG; each needs its own
+  corpus A/B, since widening an exemption changes which models escape a different
+  check.
 
 - **Statement scope: `set` and `get from state` need something that OWNS state**
-  (Reid, 2026-08-12). `set` is legal only in an **Entity** (which owns its
-  `State`) or a **Projector** (which owns the read-model record its folds build —
-  A70 REQUIRES it). It is an Error in a Context (§3.5: state lives in contained
+  (Reid, 2026-08-12). `set` is legal only in an **Entity** (owns its `State`) or
+  a **Projector** (owns the read-model record its folds build — A70 REQUIRES it).
+  An Error in a Context (§3.5: state lives in contained
   entities/repositories/projectors, "never in the Context itself"), a Saga (§9.5:
-  a saga's state is housekeeping with "no domain-specific value"), a Repository,
-  an Adaptor and the streamlets. A **Function** is deliberately not reported here
-  — A26 already rejects `set` at the keyword, and a second message would
-  double-report.
+  housekeeping with "no domain-specific value"), a Repository, an Adaptor and the
+  streamlets. A **Function** is deliberately not reported here — A26 already
+  rejects `set` at the keyword, and a second message would double-report.
   **A Repository is banned despite the corpus appearing to disagree.** 97 `set`s
   across reactive-bbq and two pattern templates were added to silence *"contains
   only prompt statements"* — evidence about that warning, not about what a
   repository does. The warning now **exempts repositories** (most of their
   on-clauses legitimately hold one `do` standing in for SQL) and says **`do`**,
   not `prompt` (`do` is canonical; `prompt` is the deprecated synonym, and
-  `prompt(…)` with parens is a VALUE). Do not re-admit `set` in a repository
-  without re-reading that ruling — the two halves must move together.
+  `prompt(…)` with parens is a VALUE). The two halves must move together.
   `get from state` is legal only inside the entity that OWNS the state: outside
   any entity there is nothing to read (and in a saga step this is the rule the
-  `ask` ban already states, which reading state directly would otherwise bypass),
-  and inside a *different* entity it crosses §4.6's encapsulation rule. That
-  second half is why the whole rule lives in **validation, not the parser** — it
-  needs the resolved `State` and its owner. **`get from input` is untouched**:
+  `ask` ban already states, which reading state directly would bypass), and
+  inside a *different* entity it crosses §4.6's encapsulation rule. That second
+  half is why the rule lives in **validation, not the parser** — it needs the
+  resolved `State` and its owner. **`get from input` is untouched**:
   `GetValue.source` is `InputRef | StateRef`, and inputs are confined to
-  application contexts indirectly, because A41 pins UI groups there, so an
-  `input` reference outside one has nothing to resolve against. Giving it a
-  dedicated message was considered and REJECTED (2026-08-12) — but know the
-  tradeoff that accepts: what the author actually sees is the GENERIC
-  *"Path 'Screen.NameField' was not resolved"* (verified, not assumed), **not**
-  A41's message, which fires on a misplaced group declaration rather than on this.
-  It is correct and it is unhelpful. Revisit if it confuses anyone in practice;
-  the reason to leave it is that `get from input` outside an application context
-  is nearly always a symptom of a missing group, which A41 does report well.
+  application contexts indirectly, because A41 pins UI groups there. A dedicated
+  message was considered and REJECTED (2026-08-12) — but know the tradeoff: what
+  the author sees is the GENERIC *"Path 'Screen.NameField' was not resolved"*
+  (verified, not assumed), **not** A41's message. It is correct and unhelpful;
+  revisit if it confuses anyone, the reason to leave it being that `get from
+  input` outside an application context is nearly always a missing group, which
+  A41 does report well.
   Hooked in `validateStatement`, which every statement reaches WITH its parents —
   including saga-step statements, whose `parents.head` is the **Saga** (a SagaStep
-  is a Leaf and is never pushed; see `Pass.traverse`). Note `checkStatementScopes`
-  is NOT that hook: it is wired only to on-clauses and function bodies.
+  is a Leaf and is never pushed). Note `checkStatementScopes` is NOT that hook:
+  it is wired only to on-clauses and function bodies.
 
-- **A processor receives ONLY through its OWN inlet, and publishes ONLY through its
-  OWN outlet** (Reid, 2026-08-18). *"Inlets are needed to receive, outlets to
-  transmit/publish."* A message reaches a processor through THAT processor's inlet
-  — not a sibling's, and not its container's. **`tell` is no exception**: it is the
-  same operation as `send` unless a generator can lower it more efficiently while
-  keeping RIDDL's semantics, so a `tell` target must have an inlet. An "inbox" is a
-  LOWERING detail with no presence at the RIDDL design level — do not reason about
-  one in validation.
+- **A processor receives ONLY through its OWN inlet, and publishes ONLY through
+  its OWN outlet** (Reid, 2026-08-18). *"Inlets are needed to receive, outlets to
+  transmit/publish."* A message reaches a processor through THAT processor's
+  inlet — not a sibling's, and not its container's. **`tell` is no exception**:
+  it is the same operation as `send` unless a generator can lower it more
+  efficiently while keeping RIDDL's semantics, so a `tell` target must have an
+  inlet. An "inbox" is a LOWERING detail with no presence at the RIDDL design
+  level — do not reason about one in validation.
   Consequences that are easy to get backwards:
-  - **An entity cannot publish on its context's outlet.** Getting a message out of
-    a context is entity outlet → connector → context inlet → handler → context
-    outlet, so the FIRST step is the entity's own outlet and no context-level port
-    substitutes for it.
+  - **An entity cannot publish on its context's outlet.** Getting a message out
+    of a context is entity outlet → connector → context inlet → handler → context
+    outlet, so the FIRST step is the entity's own outlet.
   - **Intra-context, nothing needs ceremony.** Inside one context any
     processor/streamlet/connector may communicate with any other, and a connector
-    may drive a contained entity's own inlet directly. No dedicated `sink`/`source`
-    definition is required to carry a message between two definitions of one
-    context.
-    **An ADAPTOR enjoys this too** (Reid, 2026-09-09, closing BACKLOG [3.8]): inside one
-    context a connector may run from an adaptor's outlet to a contained entity's inlet.
-    *"The adaptor is part of the context (its boundary) and therefore enjoys the same
-    privilege as other processors in that context."* **Being the boundary does not make an
-    adaptor a stranger to its own context** — A103 makes it special about what CROSSES the
-    boundary and changes nothing about wiring inside one. The open question had been whether
-    the 2026-09-03 statement rule (`adaptor-targets-context-only`) implied a matching
-    CONNECTOR rule; A103 had already settled the cross-context half — that shape draws
-    `stream-boundary-outlet` AND `stream-boundary-inlet`, verified — so only the
-    intra-context case was ever live, and it is legal. No code changed.
-    Pinned by `AdaptorIsTheBoundaryTest` § "the intra-context privilege [3.8]", **because
-    nothing pinned it**: `SharedAdaptorTest`'s "allow wrapper adaptations" carries this exact
-    shape but asserts only that the adaptor parses with the right id, so a boundary rule that
-    started erroring on it would have left that test green.
-  - **At the boundary, and only there, the CONTEXT is the port.** Crossing IN it is
-    the sink; crossing OUT it is the source.
-  **This corrected two completeness checks that had encoded the opposite.** 4h asked
-  whether the parent CONTEXT had an outlet (never asking about the entity at all)
-  and 4i whether anything in the context had an inlet; both are now per-entity, and
-  4i's context-level form is DELETED. Each is gated on the entity actually doing the
-  thing — handles no message ⇒ needs no inlet, emits nothing ⇒ needs no outlet — and
-  `???` is exempt.
-  **Fold STATE handlers in**: `entity.handlers ++ entity.states.flatMap(_.handlers)`,
-  the idiom `validateAsk` and four neighbouring checks already use. An entity's
-  clauses commonly live inside a `State`, which `entity.handlers` alone cannot see.
-  (Adding the fold moved NOTHING in the corpus — it is correct-by-idiom, not
+    may drive a contained entity's own inlet directly.
+    **An ADAPTOR enjoys this too** (Reid, 2026-09-09, closing BACKLOG [3.8]):
+    *"The adaptor is part of the context (its boundary) and therefore enjoys the
+    same privilege as other processors in that context."* **Being the boundary
+    does not make an adaptor a stranger to its own context** — A103 makes it
+    special about what CROSSES the boundary and changes nothing about wiring
+    inside one, so the 2026-09-03 statement rule
+    (`adaptor-targets-context-only`) implies no matching CONNECTOR rule. The
+    cross-context half was already settled by A103 (that shape
+    draws `stream-boundary-outlet` AND `stream-boundary-inlet`, verified), so
+    only the intra-context case was ever live, and it is legal. No code changed.
+    Pinned by `AdaptorIsTheBoundaryTest`, **because nothing pinned it**:
+    `SharedAdaptorTest`'s "allow wrapper adaptations" carries this exact shape but
+    asserts only that the adaptor parses with the right id, so a boundary rule
+    that started erroring on it would have left that test green.
+  - **At the boundary, and only there, the CONTEXT is the port.** Crossing IN it
+    is the sink; crossing OUT it is the source.
+  **This corrected two completeness checks that had encoded the opposite.** 4h
+  asked whether the parent CONTEXT had an outlet (never asking about the entity)
+  and 4i whether anything in the context had an inlet; both are per-entity now,
+  and 4i's context-level form is DELETED. Each is gated on the entity actually
+  doing the thing — handles no message ⇒ needs no inlet, emits nothing ⇒ needs no
+  outlet — and `???` is exempt.
+  **Fold STATE handlers in**: `entity.handlers ++
+  entity.states.flatMap(_.handlers)`, the idiom `validateAsk` and four
+  neighbouring checks already use; an entity's clauses commonly live inside a
+  `State`. (Adding the fold moved NOTHING in the corpus — correct-by-idiom, not
   evidenced by movement.)
 
-- **THE ADAPTOR IS THE BOUNDARY for the pair it names (A103, Reid 2026-09-05/06; CM §§7.2, 7.7,
-  8.1). This REVERSES the "no adaptor exemption" ruling recorded in the next two entries** — read
-  them as history, not as the rule. An Adaptor declared in context A `to context B` or `from
-  context B` is boundary surface of A for that ordered pair and direction. The old rule compelled
-  the foreign message type onto the context's own portlet and into its own handler, contradicting
-  §7.6's isolation seam ("the ONLY sanctioned place another context's types are named"); one of the
-  two had to go. Landed 2026-09-06 in two commits, permissive then adamant, on Reid's instruction.
-  - **Ports are IMPLIED**: `Adaptor.arityShape` counts each side as at least one, so a port-less
-    adaptor is a `flow`; declaring a port overrides that side. `validateProcessorShape` checks an
-    adaptor even when port-less, so `as source`/`as merge` on one is an Error (the corpus's 31
-    one-outlet `as source` adaptors included). **No AST change**: `AdaptorContents` already admits
-    ports.
-  - **No grammar change for the endpoint (Reid's choice)**: `from outlet Sales.ToBilling` already
-    parsed; `ResolutionPass.resolveConnectorEnd` accepts an Adaptor where a portlet was expected
-    and records it. **Every streaming check resolves endpoints through ONE abstraction**,
-    `StreamingValidation.ConnectorEnd` (`DeclaredEnd` | `ImpliedEnd`) via `connectorFrom`/
-    `connectorTo` — seven sites used to call `resolvePath[Outlet]`/`[Inlet]` each. Do not add an
-    eighth. Consequences: type agreement is skipped when an end is implied (nothing is
-    synthesised); an implied port has cardinality one and is never reported unconnected; a cycle
-    through an implied port is undetected (the edge carries no declared type); the unattached-port
-    check collects each side independently — the old PAIR collection would have reported a declared
-    far inlet as unconnected whenever the near end was implied. Check 1 ("no connections") excludes
-    processors with no DECLARED ports, or ~1000 corpus adaptors would have warned.
-  - **The boundary exemption is DIRECTIONAL, in both checks.** `checkBoundaryEncapsulation`: an
-    OUTBOUND adaptor toward B may be the `from` end of a connector into B; an INBOUND adaptor from
-    B may be the `to` end of one leaving B; the referent must be the far context of THIS
-    connector. `reachesPastContextBoundary` (the ONE boundary test for statements) exempts a
-    target that is an inbound adaptor whose referent is the SENDER's context. Wrong way round, or
-    toward a third context, still errors.
-  - **Typing is VALIDATED, never SYNTHESISED** (`adaptor-target-no-admitting-inlet`): a
-    `tell`/`forward ... to context X` from inside an adaptor is an Error unless X declares an inlet
-    whose type IS the message type or whose alternation CONTAINS it — `typeAdmits`, the one
-    permissive type test, shared with the chain-tail rule; `areSameType` stays strict for
-    connectors. By-name form only; a portlet-named `send` is already checked against the portlet.
-    Inbound adaptors address their OWN context, and the same rule applies to it — which is how
-    shopping-cart's adaptor telling an event to a context whose inlets are all commands was found.
-  - **EXCLUSIVITY** (`stream-connector-bypasses-adaptor`): where A declares an outbound adaptor
-    toward B, a connector from A's OWN outlet into B is an Error naming the adaptor (AR2); where A
-    declares an inbound adaptor from B, a connector from B onto A's own inlet is an Error (AR6). An
-    un-adaptored direction crosses context-to-context as before. **This is what made the old
-    two-hop shape illegal**, and why the permissive half had to land first.
-  - **`send` obeys ownership** (`stmt-outlet-not-owned`): a `send`/`forward` may name only an outlet
-    whose parent chain contains the sending processor. A6 bound `tell` this way since 2026-09-02;
-    `send` had no check, so an adaptor in OnlineOrdering published on FrontOfHouse's outlet with
-    zero errors. `send ... to inlet X` is a delivery, judged by the boundary rules, not here.
+- **THE ADAPTOR IS THE BOUNDARY for the pair it names (A103, Reid 2026-09-05/06;
+  CM §§7.2, 7.7, 8.1).** An Adaptor declared in context A `to context B` or
+  `from context B` is boundary surface of A for that ordered pair and direction.
+  **This REVERSED the earlier "no adaptor exemption" ruling** (below, as history):
+  the old rule compelled the foreign message type onto the context's own portlet
+  and into its own handler, contradicting §7.6's isolation seam ("the ONLY
+  sanctioned place another context's types are named"); one of the two had to go.
+  Landed in two commits, permissive then adamant, on Reid's instruction.
+  - **Ports are IMPLIED**: `Adaptor.arityShape` counts each side as at least one,
+    so a port-less adaptor is a `flow`; declaring a port overrides that side.
+    `validateProcessorShape` checks an adaptor even when port-less, so `as
+    source`/`as merge` on one is an Error (the corpus's 31 one-outlet `as source`
+    adaptors included). **No AST change**: `AdaptorContents` already admits ports.
+  - **No grammar change for the endpoint** (Reid's choice): `from outlet
+    Sales.ToBilling` already parsed; `ResolutionPass.resolveConnectorEnd` accepts
+    an Adaptor where a portlet was expected. **Every streaming check resolves
+    endpoints through ONE abstraction**, `StreamingValidation.ConnectorEnd`
+    (`DeclaredEnd` | `ImpliedEnd`) via `connectorFrom`/`connectorTo` — seven
+    sites used to call `resolvePath[Outlet]`/`[Inlet]` each. Do not add an
+    eighth. Consequences: type agreement is skipped when an end is implied
+    (nothing is synthesised); an implied port has cardinality one and is never
+    reported unconnected; a cycle through an implied port is undetected (the edge
+    carries no declared type); the unattached-port check collects each side
+    independently — the old PAIR collection would have reported a declared far
+    inlet as unconnected whenever the near end was implied. Check 1 ("no
+    connections") excludes processors with no DECLARED ports, or ~1000 corpus
+    adaptors would have warned.
+  - **The boundary exemption is DIRECTIONAL, in both checks.**
+    `checkBoundaryEncapsulation`: an OUTBOUND adaptor toward B may be the `from`
+    end of a connector into B; an INBOUND adaptor from B may be the `to` end of
+    one leaving B; the referent must be the far context of THIS connector.
+    `reachesPastContextBoundary` (the ONE boundary test for statements) exempts a
+    target that is an inbound adaptor whose referent is the SENDER's context.
+    Wrong way round, or toward a third context, still errors.
+  - **Typing is VALIDATED, never SYNTHESISED**
+    (`adaptor-target-no-admitting-inlet`): a `tell`/`forward ... to context X`
+    from inside an adaptor is an Error unless X declares an inlet whose type IS
+    the message type or whose alternation CONTAINS it — `typeAdmits`, the one
+    permissive type test, shared with the chain-tail rule; `areSameType` stays
+    strict for connectors. By-name form only. Inbound adaptors address their OWN
+    context and the same rule applies — which is how shopping-cart's adaptor
+    telling an event to a context whose inlets are all commands was found.
+  - **EXCLUSIVITY** (`stream-connector-bypasses-adaptor`): where A declares an
+    outbound adaptor toward B, a connector from A's OWN outlet into B is an Error
+    naming the adaptor (AR2); where A declares an inbound adaptor from B, a
+    connector from B onto A's own inlet is an Error (AR6). An un-adaptored
+    direction crosses as before. **This is what made the old two-hop shape
+    illegal**, and why the permissive half had to land first.
+  - **`send` obeys ownership** (`stmt-outlet-not-owned`): a `send`/`forward` may
+    name only an outlet whose parent chain contains the sending processor. A6
+    bound `tell` this way since 2026-09-02; `send` had no check, so an adaptor in
+    OnlineOrdering published on FrontOfHouse's outlet with zero errors. `send ...
+    to inlet X` is a delivery, judged by the boundary rules, not here.
 
-- **An implied port HAS a type, and a connector with an implied end is type-checked (AR9,
-  2026-09-07).** riddlg's derivation, adopted: an implied OUTLET carries the distinct types its
-  adaptor `tell`s/`forward`s to a context, resolved by `clauseOperandType` through the clause
-  binding, a `let` in the clause, the constructor or the message ref; an implied INLET accepts
-  what its adaptor HANDLES. **The SOURCE decides what a wire carries** — a destination's
-  expectation is not evidence about what arrives (reactive-bbq's mirrored pairs proved it). Several
-  distinct told types is `adaptor-implied-outlet-ambiguous`, reported once by `validateAdaptor`;
-  never the first taken. `validateConnector` compares with the permissive `typeAdmits` against a
-  declared inlet and `adaptorAccepts` against an implied one; declared/declared keeps strict
+- **An implied port HAS a type, and a connector with an implied end is
+  type-checked (AR9, 2026-09-07).** riddlg's derivation, adopted: an implied
+  OUTLET carries the distinct types its adaptor `tell`s/`forward`s to a context,
+  resolved by `clauseOperandType` through the clause binding, a `let` in the
+  clause, the constructor or the message ref; an implied INLET accepts what its
+  adaptor HANDLES. **The SOURCE decides what a wire carries** — a destination's
+  expectation is not evidence about what arrives (reactive-bbq's mirrored pairs
+  proved it). Several distinct told types is `adaptor-implied-outlet-ambiguous`,
+  reported once by `validateAdaptor`; never the first taken. `validateConnector`
+  compares with permissive `typeAdmits` against a declared inlet and
+  `adaptorAccepts` against an implied one; declared/declared keeps strict
   `areSameType`, deliberately.
-  **`adaptorAccepts` is NOT `receivesMessageType`.** An `on other` whose body is only `error` is a
-  refusal, and the corpus writes `on other { error "Unexpected message for adaptor X" }` in every
-  adaptor — counting it as acceptance made every wire type-correct and both AR9 tests green for
-  nothing. Delivery questions keep the looser helper.
-  **AR5 accepts the far context's INBOUND adaptor as the admitting port.** As shipped on
-  2026-09-06 it looked only at the far context's own inlets, while AR6 requires the crossing to
-  land on that adaptor: the two rules contradicted each other on the exclusive shape, hidden
-  because every corpus adaptor tell is `let`-bound and AR5 did not resolve `let`s. **Resolving an
-  operand you previously ignored can expose a rule you already shipped** — check what the newly
-  visible cases collide with before landing the resolution.
+  **`adaptorAccepts` is NOT `receivesMessageType`.** An `on other` whose body is
+  only `error` is a refusal, and the corpus writes `on other { error "Unexpected
+  message for adaptor X" }` in every adaptor — counting it as acceptance made
+  every wire type-correct and both AR9 tests green for nothing. Delivery
+  questions keep the looser helper.
+  **AR5 accepts the far context's INBOUND adaptor as the admitting port.** As
+  shipped it looked only at the far context's own inlets, while AR6 requires the
+  crossing to land on that adaptor: the two rules contradicted each other on the
+  exclusive shape, hidden because every corpus adaptor tell is `let`-bound and
+  AR5 did not resolve `let`s. **Resolving an operand you previously ignored can
+  expose a rule you already shipped** — check what the newly visible cases
+  collide with before landing the resolution.
 
-- **`adaptor-direction-advisory` counts a far-context reference ANYWHERE in the adaptor
-  (2026-09-07), and resolves the referent parent-independently.** It used to read only the
-  `on`-clauses' handled types, so under A103 it fired on every correctly migrated OUTBOUND adaptor
-  (own event handled, far command produced through a `let` and a `send`) and stayed silent on the
-  unmigrated placeholders — it rewarded the wrong shape. Handled types, transmitted operands
-  (`clauseOperandType`), `let` ascriptions and declared portlet types all count now.
-  **The referent lookup was the same trap `hasAdaptorFor` records**: `resolvePath(referent,
-  parents)` keys the refMap on the adaptor's PARENT, but `ResolutionPass` records an adaptor's
-  `referent` under the adaptor itself, so a QUALIFIED `to context D.Far` never resolved and the
-  advisory was silently skipped for it; only a bare `to context Far` ever ran it. Any check that
-  resolves `adaptor.referent` must use `resolution.refMap.definitionOf[Context](pathId, adaptor)`.
-  **A test that passes because the check never ran is the vacuous kind**: the qualified-referent
-  positives were green before the fix for exactly that reason, which is why the suite carries a
-  bare-referent positive as well.
+- **`adaptor-direction-advisory` counts a far-context reference ANYWHERE in the
+  adaptor, and resolves the referent parent-independently.** It used to read only
+  the `on`-clauses' handled types, so under A103 it fired on every correctly
+  migrated OUTBOUND adaptor (own event handled, far command produced through a
+  `let` and a `send`) and stayed silent on the unmigrated placeholders — it
+  rewarded the wrong shape. Handled types, transmitted operands
+  (`clauseOperandType`), `let` ascriptions and declared portlet types all count
+  now.
+  **The referent lookup was the same trap `hasAdaptorFor` records**:
+  `resolvePath(referent, parents)` keys the refMap on the adaptor's PARENT, but
+  `ResolutionPass` records an adaptor's `referent` under the adaptor itself, so a
+  QUALIFIED `to context D.Far` never resolved and the advisory was silently
+  skipped; only a bare `to context Far` ever ran it. Any check resolving
+  `adaptor.referent` must use
+  `resolution.refMap.definitionOf[Context](pathId, adaptor)`.
+  **A test that passes because the check never ran is the vacuous kind**: the
+  qualified-referent positives were green before the fix for exactly that reason,
+  which is why the suite carries a bare-referent positive as well.
 
 - **A cross-context connector must land on the CONTEXT'S OWN portlet — an Error**
   (Reid, 2026-08-18, choosing Error over CompletenessWarning).
-  `StreamingValidation.checkBoundaryEncapsulation`. Reaching past the boundary onto
-  a contained definition's portlet **contradicts** the bounded context rather than
-  under-stating it: a context publishes its message set and keeps its
-  representations private, so binding a peer to a contained entity's existence and
-  to its current command/query set means that entity can no longer change without
-  breaking a stranger. That is why it is not a warning.
-  The rule engages ONLY across contexts; intra-context it does not apply at all.
-  **Cost, ruled acceptable:** 250 inbound + 241 outbound violations across 184 of
-  198 corpus entry points.
-  **NO ADAPTOR EXEMPTION** (Reid, 2026-08-18, asked and answered). An **Adaptor** is
-  the CM's boundary translation seam and reads like the canonical anti-corruption
-  layer, so the obvious question is whether a cross-context connector may terminate on
-  its port. It may not: **being the translator does not make it the boundary.** An
-  adaptor is content of the context like anything else and sits BEHIND the context's
-  own portlet; the context receives and routes inward to it. One rule, no exceptions,
-  so the context's message set stays the single public surface. Only 12 of the corpus's
-  491 violations involved an adaptor anyway, despite 1,475 adaptors declared — this was
-  never a cost question. **Do not add an exemption to
-  `checkBoundaryEncapsulation`.**
+  `StreamingValidation.checkBoundaryEncapsulation`. Reaching past the boundary
+  onto a contained definition's portlet **contradicts** the bounded context
+  rather than under-stating it: a context publishes its message set and keeps its
+  representations private, so binding a peer to a contained entity's existence
+  and current command/query set means that entity can no longer change without
+  breaking a stranger. The rule engages ONLY across contexts. **Cost, ruled
+  acceptable:** 250 inbound + 241 outbound violations across 184 of 198 corpus
+  entry points.
+  *History, do not restore:* this entry originally carried a **NO ADAPTOR
+  EXEMPTION** ruling — "being the translator does not make it the boundary", an
+  adaptor sitting BEHIND the context's own portlet — decided 2026-08-18 so that
+  one rule with no exceptions kept the context's message set the single public
+  surface. **A103 REVERSED it on 2026-09-06**; the adaptor exemption above is the
+  live rule.
 
 - **A `tell` target needs BOTH a declared inlet AND a connector into it** (Reid,
   2026-08-18). The two rules genuinely compound, and that is intended. A `tell`
-  requires the target to have an inlet (above); `checkUnattachedOutlets` separately
-  reports a declared inlet that no `connector` references as *"is not connected"*.
-  So declaring the inlet to satisfy the first rule then trips the second — asked
-  explicitly, and ruled that the CONNECTOR SHOULD EXIST: `tell` is sugar for a send
-  on the outlet connected to the target's inlet (CM § 25.7 / A6), so the warning is
-  correctly telling the author to model the channel rather than leave it implied.
-  **Do not "fix" this by teaching `checkUnattachedOutlets` to count tells.**
-  There is no corpus population today (ZERO "is not connected" messages) because the
-  corpus's tell-target entities declare no inlets at all; the interaction surfaces
-  only as models comply.
+  requires the target to have an inlet (above); `checkUnattachedOutlets`
+  separately reports a declared inlet that no `connector` references as *"is not
+  connected"*. So declaring the inlet to satisfy the first trips the second —
+  asked explicitly, and ruled that the CONNECTOR SHOULD EXIST: `tell` is sugar
+  for a send on the outlet connected to the target's inlet (CM §25.7 / A6), so
+  the warning is correctly telling the author to model the channel rather than
+  leave it implied. **Do not "fix" this by teaching `checkUnattachedOutlets` to
+  count tells.** There is no corpus population today (ZERO "is not connected")
+  because the corpus's tell-target entities declare no inlets at all; the
+  interaction surfaces only as models comply.
 
 - **An `ask` needs a modelled path BOTH WAYS** (Reid, 2026-09-09/10;
-  `msg-ask-target-unreachable`, `msg-ask-reply-unreachable`). `ask` is `send` plus a
-  declared correlation — *"there are no magic ways for processors to communicate …
-  there's no way to communicate without wiring, even in the same process boundaries"* —
-  and the answer is held to the same standard: *"the reply path must be wired in the
-  model just like the query path."*
-  **The distinction that settles the reply leg: the MECHANISM is the generator's, the
-  PATH is the model's.** A reply actor, a future, a correlation id are lowering choices
-  with no model-level representation; whether an answer can physically get back is not
-  one. Reading Reid's earlier *"setting up a reply actor … is the generator's concern"*
-  as covering the path is the natural mistake, and it is wrong.
-  `checkAskReachability` is `checkTellReachability`'s question asked TWICE over the same
-  `connectorAdjacency` graph, with the same exemptions (`???`, predefined, asking
-  yourself, a side with no inlets). **Deliberately not a type check** — whether the far
-  inlet admits the query is `checkInletsAreReceived`'s question, asked in its own terms.
+  `msg-ask-target-unreachable`, `msg-ask-reply-unreachable`). `ask` is `send`
+  plus a declared correlation — *"there are no magic ways for processors to
+  communicate … there's no way to communicate without wiring, even in the same
+  process boundaries"* — and the answer is held to the same standard: *"the reply
+  path must be wired in the model just like the query path."*
+  **The distinction that settles the reply leg: the MECHANISM is the generator's,
+  the PATH is the model's.** A reply actor, a future, a correlation id are
+  lowering choices with no model-level representation; whether an answer can
+  physically get back is not one. Reading Reid's earlier *"setting up a reply
+  actor … is the generator's concern"* as covering the path is the natural
+  mistake, and it is wrong.
+  `checkAskReachability` is `checkTellReachability`'s question asked TWICE over
+  the same `connectorAdjacency` graph, with the same exemptions (`???`,
+  predefined, asking yourself, a side with no inlets). **Deliberately not a type
+  check** — whether the far inlet admits the query is `checkInletsAreReceived`'s
+  question.
   **Its ABSENCE had taught a false rule, which is why this is an Error and not a
-  warning.** `ask` was validated only for the far end's BEHAVIOUR (handles the query,
-  declares `replies`), so an `ask` in a completely unwired adaptor reported NOTHING while
-  a `tell` in that same adaptor drew two Errors. riddl-models read the silence, wrote down
-  *"wiring is simply irrelevant to it"*, and was about to apply that to 363 sites across
-  118 models. **A validator silent where the language has a rule teaches the wrong rule** —
-  "it validates" is the evidence modellers use.
-  Corpus population at landing: **zero** — riddl-models has no `ask query` sites yet, which
-  is exactly why the checks went in BEFORE the 363 are authored rather than after.
+  warning.** `ask` was validated only for the far end's BEHAVIOUR, so an `ask` in
+  a completely unwired adaptor reported NOTHING while a `tell` in that same
+  adaptor drew two Errors. riddl-models read the silence, wrote down *"wiring is
+  simply irrelevant to it"*, and was about to apply that to 363 sites across 118
+  models. **A validator silent where the language has a rule teaches the wrong
+  rule** — "it validates" is the evidence modellers use. Corpus population at
+  landing: **zero**, which is exactly why the checks went in BEFORE the 363 are
+  authored rather than after.
 
-- **A `tell` into an UNRELATED domain is a modelling Error, and the diagnostic must say
-  RESTRUCTURE rather than "add a connector"** (Reid, 2026-09-08;
-  `msg-tell-crosses-unrelated-domains`). Relatedness is a SHARED ANCESTOR domain — the
-  same test `stream-crosses-domains` applies to a connector, deliberately, so the two
-  rules cannot disagree about which pairs may be joined.
-  **It resolved a THREE-sided vise, which is why two-sided reasoning kept missing it.**
-  riddl-generator found an adaptor in `Shop` telling a processor in `Corp` (top-level
-  siblings) with no legal spelling at all: declare the far inlet and A6 demanded a
-  connector; add the connector and `stream-crosses-domains` refused it; drop the inlet
-  and AR5 refused that. Root scope admits no connector, so there was no fourth
-  placement. **A diagnostic whose remedy is impossible is worse than none** — the author
-  reads "you forgot a connector" and cannot act on it.
-  **The two rules had been prescribing each other's refusal.** `stream-crosses-domains`'
-  suggestion said *"model the communication with an adaptor and messaging rather than a
-  direct stream connector"* — precisely the shape A6 then rejected. Both halves moved
-  together on 2026-09-08; changing only one would have left the contradiction intact
-  facing the other way. **When two rules can each refuse the other's remedy, fixing one
-  is not a fix.**
-  **Deliberately the SAME trigger, not a wider one**: the unrelated-domain message is
-  emitted only where `msg-tell-target-unreachable` already fired, so this is a
-  re-diagnosis with ZERO new error surface — every model that errored still errors, none
-  that passed now fails, and the corpus was verified unmoved (190/190). Testing
-  relatedness only when the target is genuinely unreachable also avoids a false positive
-  on any hypothetical legal path.
-  Residual, accepted: a target with NO inlet stays exempt (already diagnosed), so such a
-  model reports the inlet first and the domain problem only after one is added — two
-  rounds, but every message followable.
-  **The related case is untouched** and `UnrelatedDomainTellTest` pins it with the
-  remedy actually applied (both domains under a parent, plus the connector) validating
-  at 0 errors — a negative control that proves the advice works, not merely that the
-  error stops.
+- **A `tell` into an UNRELATED domain is a modelling Error, and the diagnostic
+  must say RESTRUCTURE rather than "add a connector"** (Reid, 2026-09-08;
+  `msg-tell-crosses-unrelated-domains`). Relatedness is a SHARED ANCESTOR domain
+  — the same test `stream-crosses-domains` applies to a connector, deliberately,
+  so the two rules cannot disagree about which pairs may be joined.
+  **It resolved a THREE-sided vise, which is why two-sided reasoning kept missing
+  it.** riddl-generator found an adaptor in `Shop` telling a processor in `Corp`
+  (top-level siblings) with no legal spelling at all: declare the far inlet and
+  A6 demanded a connector; add the connector and `stream-crosses-domains` refused
+  it; drop the inlet and AR5 refused that. Root scope admits no connector, so
+  there was no fourth placement. **A diagnostic whose remedy is impossible is
+  worse than none.**
+  **The two rules had been prescribing each other's refusal.**
+  `stream-crosses-domains`' suggestion said *"model the communication with an
+  adaptor and messaging rather than a direct stream connector"* — precisely the
+  shape A6 then rejected. Both halves moved together; changing only one would
+  have left the contradiction intact facing the other way. **When two rules can
+  each refuse the other's remedy, fixing one is not a fix.**
+  **Deliberately the SAME trigger, not a wider one**: emitted only where
+  `msg-tell-target-unreachable` already fired, so this is a re-diagnosis with
+  ZERO new error surface (corpus verified unmoved, 190/190). Residual, accepted:
+  a target with NO inlet stays exempt, so such a model reports the inlet first
+  and the domain problem only after one is added — two rounds, but every message
+  followable. `UnrelatedDomainTellTest` pins the related case with the remedy
+  actually applied, validating at 0 errors — a negative control proving the
+  advice works, not merely that the error stops.
 
-- **A stream chain ENDS where its message is CONSUMED, never at a `sink` SHAPE — and a chain may
-  not loop** (Reid, 2026-09-04; CM §8.1). `StreamingValidation`'s Check 2 used to ask whether a
-  Source reaches a node whose `effectiveShape` is `Sink` (zero outlets). A6 made that unsatisfiable:
-  a terminal event log that records to its repository must OWN the outlet it writes on, so by arity
-  it is a `flow`, and every source above it drew `stream-source-reaches-no-sink` — 42 corpus
-  findings no wiring could remove. **This is the mirror of the 2026-08-14 chain-HEAD ruling**
-  (`75a791682`: a head bears an outlet with nothing feeding it; a Source SHAPE is not required),
-  and it was found the same way — a correctly modelled corpus reporting a rule, not a model, wrong.
-  `ValidationPass.isStreamTail`: an inlet, every admitted type handled (`unreceivedMembers`, so
-  alternations expand and `on other` counts), and no clause handling T that `send`s/`tell`s/
-  `forward`s a message of THAT type (`propagatesOnward`). **Same-type is the whole point** (Reid
-  chose it over "any send"): receiving an event and sending a `Persist` COMMAND, or `put`ting to an
+- **A stream chain ENDS where its message is CONSUMED, never at a `sink` SHAPE —
+  and a chain may not loop** (Reid, 2026-09-04; CM §8.1). Check 2 used to ask
+  whether a Source reaches a node whose `effectiveShape` is `Sink` (zero
+  outlets). A6 made that unsatisfiable: a terminal event log that records to its
+  repository must OWN the outlet it writes on, so by arity it is a `flow`, and
+  every source above it drew `stream-source-reaches-no-sink` — 42 corpus findings
+  no wiring could remove. **The mirror of the 2026-08-14 chain-HEAD ruling**
+  (`75a791682`: a head bears an outlet with nothing feeding it; a Source SHAPE is
+  not required), found the same way — a correctly modelled corpus reporting a
+  rule, not a model, wrong.
+  `ValidationPass.isStreamTail`: an inlet, every admitted type handled
+  (`unreceivedMembers`, so alternations expand and `on other` counts), and no
+  clause handling T that `send`s/`tell`s/`forward`s a message of THAT type
+  (`propagatesOnward`). **Same-type is the whole point** (Reid chose it over "any
+  send"): receiving an event and sending a `Persist` COMMAND, or `put`ting to an
   output, is a write, not a continuation. `forward` always disqualifies.
-  **A handler-less processor is opaque and is a TAIL whatever its shape** ([5.7], ruled 2026-09-08).
-  It was a tail only when it had no outlets, a ports-only flow being "assumed to pass through" —
-  which put this rule in direct disagreement with `checkMessageLoops`, where the same node passes
-  nothing through. **The unifying principle: an opaque processor lets NO rule assert what it does
-  with a message** — the loop rule may not claim the message comes back, this rule may not claim it
-  goes on, and the arity it happens to have is evidence for neither. It is also the standing
-  anti-double-reporting rule: *"Flow 'X' should have a handler"* states the whole omission, so
-  reporting the SOURCE above it too is a second message for one fault, at a node written correctly.
-  **Corpus population was ZERO** — measured across all 189 entry points, calibrated on a
-  known-positive first — so nothing moved in riddl-models. **`sink-reach.check` did NOT move
-  either**, though [5.7] predicted it would: that fixture declares no Source, so Check 2 never runs
-  on it. A `???` body needs no exemption: it declares no inlet.
-  **The predicate lives in `ValidationPass` and is an abstract hook on `StreamingValidation`**,
-  because the helpers it needs (`handlerClausesOf`, `alternationMembers`, `operandType`,
-  `walkStatements`) are private there; do not grow a second copy in the trait.
-  **`stream-graph-cycle` forbids an INFINITE MESSAGE LOOP, not a connector ring** (Reid, re-ruled
-  2026-09-07; `ValidationPass.checkMessageLoops`, an abstract hook on `StreamingValidation` like
-  `isStreamTail`). An `on X` clause transmits X (send/tell/forward), the message travels the
-  portlet/connector network to an inlet admitting X on a processor whose own `on X` clause transmits
-  X again, and so on back to the start — any length, one node or many. **The 2026-09-04 version
-  reported any per-type ring of connectors, self-loops included, and was too general**: it condemned
-  the `send … at` schedule-to-yourself idiom (an outlet looped to the sender's own inlet), whose
-  emitting clause is `on command Book` and can never be re-entered by the event it sends. Folded-in
-  rulings: X may be a UNION member (`typeAdmits`/`typeMembers` at every hop — Y-typed ports carry X,
-  an `on Y` clause handles X, an `on Z` clause emitting X loops nothing); a HANDLER-LESS processor
-  passes nothing through (it does not validate) — `isStreamTail` DIVERGED from this until [5.7] was
-  ruled on 2026-09-08 and now agrees; `tell`/`forward` ride the same channel as `send` and arrive at Q exactly when Q declares an
-  inlet admitting X (an adaptor: `adaptorAccepts`); `on other`/`on init`/`on term` do not handle X.
-  Reported once per loop at the first member's transmitting clause, processors listed in order.
-  **Fixture trap that cost two red runs**: a bare `outlet o` is AMBIGUOUS once two processors
-  declare an `o` — single-segment paths search the WHOLE symbol table — so the resolver records
-  nothing, the walk has no edge, and the loop is silently missed. Qualify the path (`outlet
-  C.Loop.o`). And an on-clause names a message KIND: an alternation of events is `on event Y`,
-  never `on type Y`.
-  **The riddl-models report that prompted this claimed a SECOND cause — "the walk stops dead at a
-  context inlet because the handler-to-outlet hop is invisible" — and it was false.** The graph is
-  per PROCESSOR: a connector into a context's inlet makes the Context a node, and the walk continues
-  through every connector leaving any of its outlets, ports never consulted. Proven with a probe
-  before designing anything; the 26 "adaptor" findings were cause (a) with more hops. **When a
-  sender describes the mechanism of a bug in your code, verify the mechanism before the count.**
+  **A handler-less processor is opaque and is a TAIL whatever its shape** ([5.7],
+  2026-09-08). It was a tail only when it had no outlets, a ports-only flow being
+  "assumed to pass through" — which put this rule in direct disagreement with
+  `checkMessageLoops`, where the same node passes nothing through. **The unifying
+  principle: an opaque processor lets NO rule assert what it does with a
+  message** — the loop rule may not claim the message comes back, this rule may
+  not claim it goes on, and the arity it happens to have is evidence for neither.
+  It is also the anti-double-reporting rule: *"Flow 'X' should have a handler"*
+  states the whole omission.
+  **Corpus population was ZERO** — measured across all 189 entry points,
+  calibrated on a known-positive first. **`sink-reach.check` did NOT move
+  either**, though [5.7] predicted it would: that fixture declares no Source, so
+  Check 2 never runs on it. A `???` body needs no exemption: it declares no
+  inlet.
+  **The predicate lives in `ValidationPass` as an abstract hook on
+  `StreamingValidation`**, because the helpers it needs (`handlerClausesOf`,
+  `alternationMembers`, `operandType`, `walkStatements`) are private there; do
+  not grow a second copy in the trait.
+  **`stream-graph-cycle` forbids an INFINITE MESSAGE LOOP, not a connector ring**
+  (Reid, re-ruled 2026-09-07; `checkMessageLoops`, an abstract hook like
+  `isStreamTail`). An `on X` clause transmits X, the message travels the
+  portlet/connector network to an inlet admitting X on a processor whose own `on
+  X` clause transmits X again, and so on back to the start — any length, one node
+  or many. **The 2026-09-04 version reported any per-type ring of connectors,
+  self-loops included, and was too general**: it condemned the `send … at`
+  schedule-to-yourself idiom, whose emitting clause is `on command Book` and can
+  never be re-entered by the event it sends. Folded-in rulings: X may be a UNION
+  member (`typeAdmits`/`typeMembers` at every hop); a HANDLER-LESS processor
+  passes nothing through; `tell`/`forward` ride the same channel as `send` and
+  arrive at Q exactly when Q declares an inlet admitting X (an adaptor:
+  `adaptorAccepts`); `on other`/`on init`/`on term` do not handle X. Reported
+  once per loop at the first member's transmitting clause.
+  **Fixture trap that cost two red runs**: a bare `outlet o` is AMBIGUOUS once
+  two processors declare an `o` — single-segment paths search the WHOLE symbol
+  table — so the resolver records nothing, the walk has no edge, and the loop is
+  silently missed. Qualify the path (`outlet C.Loop.o`). And an on-clause names a
+  message KIND: an alternation of events is `on event Y`, never `on type Y`.
+  **The riddl-models report that prompted this claimed a SECOND cause — "the walk
+  stops dead at a context inlet because the handler-to-outlet hop is invisible" —
+  and it was false.** The graph is per PROCESSOR: a connector into a context's
+  inlet makes the Context a node, and the walk continues through every connector
+  leaving any of its outlets, ports never consulted. Proven with a probe before
+  designing anything. **When a sender describes the mechanism of a bug in your
+  code, verify the mechanism before the count.**
 
-- **A queried repository with no index draws a CompletenessWarning — and the check
-  deliberately does NOT name a field** (Reid, 2026-08-18, on riddlg's request).
-  `checkQueriedWithoutIndex`. Fires when a repository has a schema, answers at least
-  one query, and declares no `index on` at all. 26 corpus sites.
+- **A queried repository with no index draws a CompletenessWarning — and the
+  check deliberately does NOT name a field** (Reid, 2026-08-18, on riddlg's
+  request). `checkQueriedWithoutIndex` fires when a repository has a schema,
+  answers at least one query, and declares no `index on` at all. 26 corpus sites.
   **The ruling that produced it: an index belongs to the REPOSITORY, not to a
   field.** riddlg asked for an `indexed` option on `Field`; declined, because a
-  database index is a persistence concern and putting it on an entity's field leaks
-  a generator's lowering choice into the model. `Schema.indices` is the mechanism —
-  517 uses across 228 corpus schemas.
-  **Do not try to make it name the field. Both routes were MEASURED and neither is
-  derivable:** all **406** repository `on query` bodies in the corpus are
-  `prompt(...)`/`do "..."` with **zero** comparisons (by design — a repository
-  on-clause may be a single `do` standing in for SQL); and taking the query TYPE's
-  fields as the comparison operands — the better idea, since a query's parameters
-  ARE its operands — maps to a stored record field **1 time by name and 19 by type
-  out of 284 (6%)**. The correspondence between a query's parameters and the
-  storage it filters has never been required of authors, so it is not in the
-  models. Making it derivable needs a language change; **prose on the query type
-  would move the ambiguity, not remove it.**
+  database index is a persistence concern and putting it on an entity's field
+  leaks a generator's lowering choice into the model. `Schema.indices` is the
+  mechanism — 517 uses across 228 corpus schemas.
+  **Do not try to make it name the field. Both routes were MEASURED and neither
+  is derivable:** all **406** repository `on query` bodies in the corpus are
+  `prompt(...)`/`do "..."` with **zero** comparisons (by design); and taking the
+  query TYPE's fields as the operands — the better idea, since a query's
+  parameters ARE its operands — maps to a stored record field **1 time by name
+  and 19 by type out of 284 (6%)**. The correspondence has never been required of
+  authors, so it is not in the models. Making it derivable needs a language
+  change; **prose on the query type would move the ambiguity, not remove it.**
   **The no-repository case is already diagnosed**: an entity with no repository
-  draws *"has entities but no repository to persist them"*, so it is an
-  under-specified model rather than a shape needing new syntax.
+  draws *"has entities but no repository to persist them"*.
 
 - **`???` is a body that says "known to be incomplete" — validation must EXEMPT
-  it** (Reid's ruling, 2026-08-11). Any definition whose body is `???` earns at
-  most a **Missing** warning saying the body should be provided. Every other
-  check — structural requirements, completeness, wiring, cross-references — is
-  skipped for it, because the author has already said *don't expect much*.
-  This is why a check must not reason from what a `???` body does NOT contain:
-  `repository R is { ??? }` is not missing its handlers, it is unwritten, and a
-  rule that fires on it will fire on nearly every stub in the corpus. When
-  adding a check, guard it on `nonEmpty` (see the streamlet shape check, which
-  already does exactly this) rather than reporting the stub.
+  it** (Reid, 2026-08-11). Any definition whose body is `???` earns at most a
+  **Missing** warning saying the body should be provided. Every other check —
+  structural, completeness, wiring, cross-reference — is skipped, because the
+  author has already said *don't expect much*. So a check must not reason from
+  what a `???` body does NOT contain: `repository R is { ??? }` is not missing
+  its handlers, it is unwritten, and a rule that fires on it will fire on nearly
+  every stub in the corpus. Guard a new check on `nonEmpty` (as the streamlet
+  shape check does) rather than reporting the stub.
 
-- **A parse-time `error()` PREEMPTS validation — the pass chain never runs.**
-  So whatever the parser says is the ONLY thing the author sees, and any
-  more specific diagnostic ValidationPass would have produced for that input
-  is silently lost. Learned 2026-08-08 adding the `yields`/`replies` pairing:
-  checking it in the parser looked equivalent to checking it in validation and
-  is not — it killed three existing A19 messages ("should be one of these
-  message types", "Only command and query types may declare") because those
-  inputs stopped reaching the pass that emits them.
-  **Rule: put a check in the parser ONLY when validation cannot make it**, and
-  the test is whether the evidence survives into the AST. The keyword/use-case
+- **A parse-time `error()` PREEMPTS validation — the pass chain never runs.** So
+  whatever the parser says is the ONLY thing the author sees, and any more
+  specific diagnostic ValidationPass would have produced is silently lost.
+  Learned 2026-08-08 adding the `yields`/`replies` pairing: checking it in the
+  parser looked equivalent to checking it in validation and is not — it killed
+  three existing A19 messages because those inputs stopped reaching the pass that
+  emits them.
+  **Rule: put a check in the parser ONLY when validation cannot make it**, the
+  test being whether the evidence survives into the AST. The keyword/use-case
   pairing qualifies: `usecase` is in the AST but which KEYWORD was written is
-  not, so by validation time the evidence is gone. Everything else belongs in
-  ValidationPass.
-  Two corollaries:
+  not. Everything else belongs in ValidationPass. Two corollaries:
   - A parser `error()` is otherwise NON-FATAL and accumulating (see
-    `defOfTypeKindType`'s type-alias check), so it looks harmless in isolation.
-    The damage is to the passes that never run, not to parsing.
-  - Parse-time messages travel a DIFFERENT channel:
-    `parseInputWithMessages` → `PassInput.parseMessages` →
-    `PassesResult.additionalMessages`. They reach users under every `riddlc`
-    command, but `parseAndValidate` in tests DISCARDS them — assert them with
-    `TopLevelParser.parseInputWithMessages` (pattern:
+    `defOfTypeKindType`), so it looks harmless in isolation. The damage is to the
+    passes that never run, not to parsing.
+  - Parse-time messages travel a DIFFERENT channel: `parseInputWithMessages` →
+    `PassInput.parseMessages` → `PassesResult.additionalMessages`. They reach
+    users under every `riddlc` command, but `parseAndValidate` in tests DISCARDS
+    them — assert them with `TopLevelParser.parseInputWithMessages` (pattern:
     `RecognizedOptionSetTest:98`).
+
 - **`ValueRef` resolves in the RESOLVER (A55), not in validation.**
-  `ResolutionPass` queues every `ValueRef` and resolves it in
-  `postProcess` (its anchors are reached through other references,
-  and the pass visits definitions in source order). Only the ANCHOR
-  differs from an ordinary reference: the on-clause `binding`, else
-  a field of the handled message / entity state / function
-  `requires` input (`valueScopeField`), else the ordinary
-  `findAnchor` route. The rest is `resolvePathFromAnchor`'s walk.
-  Validation reads `refMap.anyDefinitionOf(path, parents.head)`.
-  **Do NOT reintroduce last-component name matching** — that was
-  A54's `valueAllowedFields`/`constantOf`, and it let
-  `garbage.nonsense.realField` validate.
-  - **`let`-locals stay LEXICAL** — a `let` is not a Definition and
-    is statement-ORDERED (visible only after its declaration,
-    shadowed by inner blocks), which the symbol table cannot model.
-    They are threaded by `checkStatementScopes`; a `let`'s type is
-    DECLARED (`let x: T = …`) or INFERRED from its expression
-    (`letType`). Because the resolver cannot see them, the ValueRef
+  `ResolutionPass` queues every `ValueRef` and resolves it in `postProcess` (its
+  anchors are reached through other references, and the pass visits definitions
+  in source order). Only the ANCHOR differs from an ordinary reference: the
+  on-clause `binding`, else a field of the handled message / entity state /
+  function `requires` input (`valueScopeField`), else the ordinary `findAnchor`
+  route. The rest is `resolvePathFromAnchor`'s walk. Validation reads
+  `refMap.anyDefinitionOf(path, parents.head)`. **Do NOT reintroduce
+  last-component name matching** — that was A54's
+  `valueAllowedFields`/`constantOf`, and it let `garbage.nonsense.realField`
+  validate.
+  - **`let`-locals stay LEXICAL** — a `let` is not a Definition and is
+    statement-ORDERED (visible only after its declaration, shadowed by inner
+    blocks), which the symbol table cannot model. They are threaded by
+    `checkStatementScopes`; a `let`'s type is DECLARED or INFERRED from its
+    expression (`letType`). Because the resolver cannot see them, the ValueRef
     walk runs under `ResolutionPass.quietly` (suppresses
     `notResolved`/`wrongType`/`ambiguous`) and **validation owns the
     diagnostic**.
-  - **`Reference.id` is a reference's optional LOCAL NAME**, the one
-    `from di: context C` sets — NOT the referenced definition's id.
-    No `MessageRef` ever carries one, which is why
-    `findMatchingCandidate`'s on-clause arm was dead until A55
-    changed its guard to `omc.msg.nonEmpty`.
-- **Message suggestions / `provideTips` (1.24.0)** — every
-  `Messages.Message` carries a `suggestion: String`; any pass
-  attaches one at the message-creation site (via the `addX`/
-  `check` helpers' trailing `suggestion` param). The single
-  chokepoint `Messages.Accumulator.add` STRIPS the suggestion
-  unless `CommonOptions.provideTips` is set, and `Message.format`
-  appends a `Suggestion:` line only when present — so default
-  output is unchanged (no `.check` churn). `riddlc advise` ==
-  `validate` with `provideTips=true`; `--provide-tips` /
-  HOCON `provide-tips` toggle it. This replaced `AIHelperPass`:
-  the pass and its tests are deleted; the `Tip` message kind is
-  retained but has no producer; `RiddlLib.analyzeForTips`/
-  `analyzeSourceForTips` + the `advise` command are kept,
-  re-implemented to run standard passes with `provideTips=true`
-  (analyze* are `@deprecated`). Human/AI catalog of every
-  message→suggestion pair: `MESSAGE_SUGGESTIONS.md` (repo root).
-  Three entity completeness checks promoted from old AIHelper
-  tips (no command types, no event types, unhandled command) are
-  ADVISORY — gated behind `provideTips` because message types are
-  often context-scoped (`summon[PlatformContext].options.provideTips`
-  in `validateEntity`). The context-with-entities-but-no-repository
-  check is ALWAYS-ON (`c.repositories.isEmpty`), gated only by
+  - **`Reference.id` is a reference's optional LOCAL NAME**, the one `from di:
+    context C` sets — NOT the referenced definition's id. No `MessageRef` ever
+    carries one, which is why `findMatchingCandidate`'s on-clause arm was dead
+    until A55 changed its guard to `omc.msg.nonEmpty`.
+
+- **Message suggestions / `provideTips` (1.24.0)** — every `Message` carries a
+  `suggestion: String`; any pass attaches one at the message-creation site (via
+  the `addX`/`check` helpers' trailing `suggestion` param). The single chokepoint
+  `Messages.Accumulator.add` STRIPS it unless `CommonOptions.provideTips` is set,
+  and `Message.format` appends a `Suggestion:` line only when present — so
+  default output is unchanged (no `.check` churn). `riddlc advise` == `validate`
+  with `provideTips=true`; `--provide-tips` / HOCON `provide-tips` toggle it.
+  This replaced `AIHelperPass`: the pass and its tests are deleted; the `Tip`
+  message kind is retained but has no producer; `RiddlLib.analyzeForTips`/
+  `analyzeSourceForTips` + the `advise` command are kept, re-implemented to run
+  standard passes with `provideTips=true` (analyze* are `@deprecated`). Catalog
+  of every message→suggestion pair: `MESSAGE_SUGGESTIONS.md` (repo root).
+  Three entity completeness checks promoted from old AIHelper tips (no command
+  types, no event types, unhandled command) are ADVISORY — gated behind
+  `provideTips` because message types are often context-scoped. The
+  context-with-entities-but-no-repository check is ALWAYS-ON, gated only by
   `showCompletenessWarnings`.
-- **Streamlet shape check** — guard on `nonEmpty` before
-  checking inlet/outlet counts (empty = placeholder).
-- **Adaptor cross-context type resolution** — use the
-  parent-independent
+
+- **Streamlet shape check** — guard on `nonEmpty` before checking inlet/outlet
+  counts (empty = placeholder).
+- **Adaptor cross-context type resolution** — use the parent-independent
   `resolution.refMap.definitionOf[Type](pathId)`.
-- **Schema parser** — `schemaKind` uses `"time-series"`
-  (hyphenated). Consecutive schemas need `with { ... }` blocks.
-- **CheckMessagesTest `.check` file format** — lines starting
-  with space are continuation lines; non-space lines begin new
-  entries. Don't insert mid-continuation.
-- **RiddlResult[T]** replaces `Either[Messages, T]` — sealed ADT
-  with `Success[T]` / `Failure`; use `result.toEither` for
-  backward compat.
+- **Schema parser** — `schemaKind` uses `"time-series"` (hyphenated).
+  Consecutive schemas need `with { ... }` blocks.
+- **CheckMessagesTest `.check` file format** — lines starting with a space are
+  continuation lines; non-space lines begin new entries. Don't insert
+  mid-continuation.
+- **RiddlResult[T]** replaces `Either[Messages, T]` — a sealed ADT with
+  `Success[T]`/`Failure`; use `result.toEither` for backward compat.
 
-### Container / Flatten / FileBuilder
+### Container / Flatten / FileBuilder / PrettifyPass
 
-- **Container.flatten()** recursively removes Include / BASTImport
-  wrappers in place. Use base `Pass`, not `DepthFirstPass` —
-  mutating contents during traversal corrupts ArrayBuffer
-  iteration.
-- **FileBuilder requires PlatformContext** — `trait FileBuilder
-  (using PlatformContext)`. All subclasses must propagate the
-  `using` clause.
-
-### PrettifyPass
-
-- **Multi-file mode** — `flatten=false` (default) preserves
-  include/import structure; `-s true` collapses to single file.
-- **`PrettifyState.toDestination()`** strips leading/trailing
-  `/` from `outDir` (URL basis can't start with `/`).
-- **Include paths** — `openInclude` uses `url.path` (relative
-  filename), not `url.toExternalForm` (absolute URL).
-- **`RiddlFileEmitter.trimTrailingNewline()`** — used in
-  `closeType` to join `}` with ` with {` on the same line.
+- **`Container.flatten()`** recursively removes Include / BASTImport wrappers in
+  place. Use base `Pass`, not `DepthFirstPass` — mutating contents during
+  traversal corrupts ArrayBuffer iteration.
+- **FileBuilder requires PlatformContext** — `trait FileBuilder (using
+  PlatformContext)`; all subclasses must propagate the `using` clause.
+- **PrettifyPass multi-file mode** — `flatten=false` (default) preserves
+  include/import structure; `-s true` collapses to a single file.
+- **`PrettifyState.toDestination()`** strips leading/trailing `/` from `outDir`
+  (a URL basis cannot start with `/`).
+- **Include paths** — `openInclude` uses `url.path` (relative filename), not
+  `url.toExternalForm` (absolute URL).
+- **`RiddlFileEmitter.trimTrailingNewline()`** — used in `closeType` to join `}`
+  with ` with {` on the same line.
 
 ### JS / npm / TypeScript
 
-- **parseString returns an opaque Root in JS** — use
-  `getDomains(root)` or `inspectRoot(root)` to access data;
-  TypeScript type is branded `RootAST`.
-- **RiddlLib.ast2bast(root)** returns `RiddlResult[Array[Byte]]`
-  on the shared side / `RiddlResult<Int8Array>` in TS.
-- **riddlLibJS tests** override `Test / scalaJSLinkerConfig` to
-  `CommonJSModule`. Production stays ESModule.
-- **ESM shim hazard** — never put `import '`, `import "`, or
-  `import(` in shared string literals; ESM shim plugins rewrite
-  these patterns. Use string concatenation. `ESMSafetyTest`
-  enforces it.
-- **npm prerelease publishing** — sbt-dynver versions like
-  `1.2.3-1-hash` are prerelease per npm semver; pass `--tag dev`.
-- **The opaque `*AST` handles in `index.d.ts` are DELIBERATE. Do not "fix" them by exporting
-  the AST to TypeScript** (considered and DECLINED 2026-08-27, BACKLOG [2.9]). `parseString`
-  hands JS a branded handle (`RootAST`, `EntityAST`, …) that can only be passed back in;
-  structure is served through flattened projections (`inspectRoot`, `getOutline`, `getTree`).
-  Three reasons, in order of weight:
-  1. **JSON serializes STATE; the AST's value is largely BEHAVIOUR.** `AST.scala` carries ~540
-     `def`/`lazy val` members that do not serialize — 182 `format`, 67 `kind`, the 34 `WithX`
-     accessor traits, and derived answers like `effectiveShape`, `Connector.isPersistent`,
-     `Statement.canFail`, `Function.input`/`output`. `JsonModel` has ZERO references to
+- **parseString returns an opaque Root in JS** — use `getDomains(root)` or
+  `inspectRoot(root)` to access data; the TypeScript type is a branded `RootAST`.
+- **`RiddlLib.ast2bast(root)`** returns `RiddlResult[Array[Byte]]` on the shared
+  side / `RiddlResult<Int8Array>` in TS.
+- **riddlLibJS tests** override `Test / scalaJSLinkerConfig` to `CommonJSModule`;
+  production stays ESModule.
+- **ESM shim hazard** — never put `import '`, `import "`, or `import(` in shared
+  string literals; ESM shim plugins rewrite these patterns. Use string
+  concatenation. `ESMSafetyTest` enforces it.
+- **npm prerelease publishing** — sbt-dynver versions like `1.2.3-1-hash` are
+  prerelease per npm semver; pass `--tag dev`. GitHub Packages npm auth needs
+  `gh auth refresh -s write:packages`.
+- **The opaque `*AST` handles in `index.d.ts` are DELIBERATE. Do not "fix" them
+  by exporting the AST to TypeScript** (considered and DECLINED 2026-08-27,
+  BACKLOG [2.9]). `parseString` hands JS a branded handle (`RootAST`,
+  `EntityAST`, …) that can only be passed back in; structure is served through
+  flattened projections (`inspectRoot`, `getOutline`, `getTree`). Three reasons,
+  in order of weight:
+  1. **JSON serializes STATE; the AST's value is largely BEHAVIOUR.** `AST.scala`
+     carries ~540 `def`/`lazy val` members that do not serialize — 182 `format`,
+     67 `kind`, the 34 `WithX` accessor traits, and derived answers like
+     `effectiveShape`, `Connector.isPersistent`, `Statement.canFail`,
+     `Function.input`/`output`. `JsonModel` has ZERO references to
      `refMap`/`symTab`/`usedBy`, so no resolution output crosses either.
-  2. **JSON keeps `Include`/`BASTImport` as content entries**, so a consumer walking `contents`
-     sees the WRAPPER rather than through it — the exact defect that had riddl-generator emit
-     582 files with no entity class, at exit 0. A JSON-derived TS AST would invite every
-     consumer to reimplement include-transparency and alias-resolution.
-  3. **It would be a FIFTH reflective surface** to keep in lockstep with parse/prettify/BAST/
-     JSON, and nothing would fail when it drifted.
-  **The real consumers agree**: riddl-vscode touches a raw AST handle zero times (all facade —
-  `parseToTokens`, `parseString`, `getTree`, `validateString`, …), and the consumer that truly
-  walks the AST is Synapify, which is **Scala.js and has the real objects, methods included**.
-  If this returns, the trigger is a TS consumer hitting a wall the facade cannot answer — add
-  one accessor inside the conversion layer, never the AST.
+  2. **JSON keeps `Include`/`BASTImport` as content entries**, so a consumer
+     walking `contents` sees the WRAPPER rather than through it — the exact
+     defect that had riddl-generator emit 582 files with no entity class, at exit
+     0. A JSON-derived TS AST would invite every consumer to reimplement
+     include-transparency and alias-resolution.
+  3. **It would be a FIFTH reflective surface** to keep in lockstep with
+     parse/prettify/BAST/JSON, and nothing would fail when it drifted.
+  **The real consumers agree**: riddl-vscode touches a raw AST handle zero times
+  (all facade — `parseToTokens`, `parseString`, `getTree`, `validateString`, …),
+  and the consumer that truly walks the AST is Synapify, which is **Scala.js and
+  has the real objects, methods included**. If this returns, the trigger is a TS
+  consumer hitting a wall the facade cannot answer — add one accessor inside the
+  conversion layer, never the AST.
 - **NEVER `@JSExport` an overridden `toString`.** Interpolation compiles to JS
   `+`, so `s"…$loc…"` throws `TypeError: Cannot convert object to primitive
-  value` and takes down the whole validation run on JS while the JVM passes.
-  `At` and `URL` both carried it. JS callers get `toString` from the prototype
-  anyway, so the export buys nothing. `ToPrimitiveCoercionTest` guards it and is
+  value` and takes down the whole validation run on JS while the JVM passes. `At`
+  and `URL` both carried it. JS callers get `toString` from the prototype anyway,
+  so the export buys nothing. `ToPrimitiveCoercionTest` guards it and is
   **JS-only by necessity** — on the JVM every assertion in it passes regardless
   of the annotation, which is precisely why the bug survived. Grep before adding
   `@JSExport` anywhere near a `toString`.
@@ -2840,224 +1846,200 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   codecs drop new fields** — `writeTypeExpr` and `refJs` are hand-written, not
   derived, so `RecordDto.comments` and `RefDto.keyword` were added to the case
   class and went on being dropped. Anything in `JsonModel`'s manual codec section
-  needs the field added in TWO places. (c) **The tag key is `$kind`, not
-  `kind`** — `OnClauseDto` and `SchemaDto` carry a `kind` FIELD of their own and
+  needs the field added in TWO places. (c) **The tag key is `$kind`, not `kind`**
+  — `OnClauseDto` and `SchemaDto` carry a `kind` FIELD of their own and
   `ujson.Obj.from` keeps the last of a duplicate pair, so the tag silently
   overwrote the data.
-- **GitHub Packages npm auth** — `gh auth refresh -s write:packages`
-  is required.
 
 ### A corpus suite must assert it covered the WHOLE corpus
 
-**A relative assertion cannot notice that its own population vanished.** Both corpus suites
-compared one count to another — `identical mustBe reparsed`, `reparsed mustBe parsed`,
-`parsed mustBe files.size` — which is equally satisfied by 190 models and by 3, and
-`RiddlModelsRoundTripTest` simply generates one case per model FOUND. A truncated corpus
-therefore produced fewer green cases and said nothing.
+**A relative assertion cannot notice that its own population vanished.** Both
+corpus suites compared one count to another — `identical mustBe reparsed`,
+`reparsed mustBe parsed`, `parsed mustBe files.size` — which is equally satisfied
+by 190 models and by 3, and `RiddlModelsRoundTripTest` simply generates one case
+per model FOUND. A truncated corpus therefore produced fewer green cases and said
+nothing. `Root2JsonCorpusTest`'s own docstring already recorded the same shape
+biting once: every read failed, every failure was skipped, and its assertions
+reduced to `0 mustBe 0` for months.
 
-`Root2JsonCorpusTest`'s own docstring already recorded the same shape biting once: every read
-failed, every failure was skipped, and its assertions reduced to `0 mustBe 0` for months.
+Both now carry an absolute floor (`MinimumModels`, 189 and 190) and **FAIL when
+the corpus is present but partial**, while an ABSENT corpus still SKIPS — Reid's
+[1.3] ruling, so a developer without the sibling checkout is not blocked. Raise a
+floor when the corpus grows; never lower one to make a run pass. **Both floors
+were canary-tested** by setting them to 9999 and confirming the right cases
+redden: a check that has only ever passed is not evidence it works.
 
-Both now carry an absolute floor (`MinimumModels`, 189 and 190) and **FAIL when the corpus is
-present but partial**, while an ABSENT corpus still SKIPS — Reid's [1.3] ruling, so a developer
-without the sibling checkout is not blocked. Raise a floor when the corpus grows; never lower
-one to make a run pass. **Both floors were canary-tested** by setting them to 9999 and
-confirming the right cases redden: a check that has only ever passed is not evidence it works.
-
-**CI could also serve a stale result for these suites, and that is closed separately.**
-`sbt/setup-sbt` restores `$HOME/.cache/sbt` under a key of the form
-`Linux-X64-sbt-runner-<sbtVersion>-<actionVersion>` — keyed on VERSIONS, not content — and
-`v2/ac` maps task-input hashes to task RESULTS. The corpora are cloned by a workflow step and
-are not build inputs, so their CONTENT is in no key. `scala.yml` now deletes `v2/ac` after
-restore; the expensive caches (Coursier, ivy2, launcher, JDK, `v2/cas`) are untouched.
-
-**Both halves were needed because they are indistinguishable from outside:** a replayed result
-and a truncated corpus both present as a fast green suite.
+**CI could also serve a stale result for these suites, and that is closed
+separately.** `sbt/setup-sbt` restores `$HOME/.cache/sbt` under a key of the form
+`Linux-X64-sbt-runner-<sbtVersion>-<actionVersion>` — keyed on VERSIONS, not
+content — and `v2/ac` maps task-input hashes to task RESULTS. The corpora are
+cloned by a workflow step and are not build inputs, so their CONTENT is in no
+key. `scala.yml` now deletes `v2/ac` after restore; the expensive caches
+(Coursier, ivy2, launcher, JDK, `v2/cas`) are untouched. **Both halves were
+needed because they are indistinguishable from outside:** a replayed result and a
+truncated corpus both present as a fast green suite.
 
 ### Measuring riddlc output — three ways to get a FALSE ZERO
 
-**All three were hit in one session (2026-08-19), each looked like a finding rather than a
-broken instrument, and each was caught only by a CONTRADICTION.** A zero from a measurement
-you have not calibrated is not evidence of absence — calibrate on a case known to be
-positive before trusting a zero.
+**All three were hit in one session (2026-08-19), each looked like a finding
+rather than a broken instrument, and each was caught only by a CONTRADICTION.** A
+zero from a measurement you have not calibrated is not evidence of absence —
+calibrate on a case known to be positive before trusting a zero.
 
-1. **`grep '^\[error\]'` matches nothing when output is ANSI-coloured.** riddlc colours by
-   default, so the line starts with an escape sequence, not `[`. This produced the report
-   "both statement orderings are accepted" when one of them was rejected — the opposite of
-   the truth. **Pipe through `sed 's/\x1b\[[0-9;]*m//g'` before counting anything.**
-2. **`--show-style-warnings=true` SUPPRESSES style warnings.** The same probe gave 2 findings
-   on default flags and 0 with the flag that names them. Default already shows them; passing
-   the flag explicitly is worse than passing nothing.
-3. **Every riddl-models `.conf` sets `show-style-warnings = false`**, so
-   `riddlc from <model>.conf validate` reports ZERO style findings across all 190 models. A
-   style-warning census must validate the `.riddl` DIRECTLY. This is why a 452-site finding
-   read as 0 corpus-wide.
+1. **`grep '^\[error\]'` matches nothing when output is ANSI-coloured.** riddlc
+   colours by default, so the line starts with an escape sequence, not `[`. This
+   produced the report "both statement orderings are accepted" when one of them
+   was rejected — the opposite of the truth. **Pipe through `sed
+   's/\x1b\[[0-9;]*m//g'` before counting anything.**
+2. **`--show-style-warnings=true` SUPPRESSES style warnings.** The same probe
+   gave 2 findings on default flags and 0 with the flag that names them. Default
+   already shows them; passing the flag explicitly is worse than passing nothing.
+3. **Every riddl-models `.conf` sets `show-style-warnings = false`**, so `riddlc
+   from <model>.conf validate` reports ZERO style findings across all 190 models.
+   A style-warning census must validate the `.riddl` DIRECTLY. This is why a
+   452-site finding read as 0 corpus-wide.
 
-Related, and the same family as the false-green traps below: **validate ENTRY POINTS, not
-include fragments.** A fragment validated alone reports errors by construction, which reads
-as corpus breakage. riddl-examples' `FooBarSameDomain` is a further trap — it is a
-DELIBERATELY ambiguous fixture, so its duplicate-name errors are the fixture working.
+Related, same family as the false-green traps below: **validate ENTRY POINTS, not
+include fragments.** A fragment validated alone reports errors by construction,
+which reads as corpus breakage. riddl-examples' `FooBarSameDomain` is a further
+trap — it is a DELIBERATELY ambiguous fixture, so its duplicate-name errors are
+the fixture working.
 
 ### Build / CI / Tooling
 
-- **Three ways a test suite passes without running** (all found in
-  #64, which had hidden 38 dead cases — including a completely
-  non-parsing `import "f.bast"` — for months). A green suite is NOT
-  proof the assertions ran; the check is to drop a `fail("canary")`
-  into a case body and confirm the suite goes red.
+- **Three ways a test suite passes without running** (all found in #64, which had
+  hidden 38 dead cases — including a completely non-parsing `import "f.bast"` —
+  for months). A green suite is NOT proof the assertions ran; the check is to
+  drop a `fail("canary")` into a case body and confirm the suite goes red.
   1. **TestData lambda on a plain spec.** `AbstractTestingBasis`
-     (`utils/src/test/.../AbstractTestingBasis.scala`) is a PLAIN
-     `AnyWordSpec with Matchers`, so its `in` takes a by-name
-     `=> Any`. Writing `in { (td: TestData) => body }` there merely
-     constructs a `Function1` and **never evaluates `body`** —
-     deterministic Scala semantics, not sbt elision. That form is
-     only meaningful on `AbstractTestingBasisWithTestData` (the
+     (`utils/src/test/.../AbstractTestingBasis.scala`) is a PLAIN `AnyWordSpec
+     with Matchers`, so its `in` takes a by-name `=> Any`. Writing `in { (td:
+     TestData) => body }` there merely constructs a `Function1` and **never
+     evaluates `body`** — deterministic Scala semantics, not sbt elision. That
+     form is only meaningful on `AbstractTestingBasisWithTestData` (the
      `FixtureAnyWordSpec` base) and everything derived from it
-     (`AbstractParsingTest` → `ParsingTest` → `AbstractValidatingTest`
-     → `AbstractRunPassTest`). **Rule: if a case body takes `(td:
-     TestData)`, the suite MUST extend a `…WithTestData` base.**
-  2. **Abstract spec with no concrete subclass.** The runner never
-     instantiates it, so its cases never appear in the log at all —
-     zero mentions, not even as skipped. Either make the class
-     concrete or declare a subclass in the platform aggregator
-     (`JVMTests.scala` / `JSTests.scala`). Beware the silent trap:
-     a class stays abstract because an inherited member is
-     unimplemented (`PrettifyPassTest` declared `checkAFile(Path,
-     File)` against a base wanting `checkAFile(Path, Path)`).
-  3. **Constructor parameters on a concrete suite.** ScalaTest cannot
-     instantiate `class FooTest(using PlatformContext)`, so it is
-     never discovered. Concrete suites take NO parameters; import
-     `com.ossuminc.riddl.utils.pc` instead.
-- **Unawaited Future in a non-async spec** is a fourth variant of the
-  same failure: `inputFuture.map { … assertions … }` followed by
-  `Await.result(inputFuture, …)` awaits the WRONG future — the
-  assertions run detached and their failures are discarded. Await the
-  MAPPED future. (**`BASTWriterSpec` does NOT have this shape** — this note
-  said it did until 2026-08-14, wrongly. All five of its cases bind
-  `assertionFuture = inputFuture.map { … }` and await THAT
-  (`BASTWriterSpec.scala:35`/`70`, `:77`/`123`, `:130`/`170`, `:177`/`225`,
-  `:232`/`254`), which is the correct form. The failure mode is still real
-  and worth watching for; it just has no instance in the repo today.)
-- **`test`/`tJVM` resolve to `testQuick`** — which incrementally
-  SKIPS test suites it judges unaffected, even after a source change
-  and even with `~/Library/Caches/sbt/v2/ac` cleared (a DIFFERENT cache
-  from testQuick's own succeeded-tests tracking). Symptom: "No tests to
-  run for language / Test / testQuick" and a false green. For a
-  guaranteed full run after edits, use `<module>/testOnly *` (e.g.
-  `language/testOnly * ; passes/testOnly *`), which ignores incremental
-  state. This is separate from — and additive to — the action-cache
+     (`AbstractParsingTest` → `ParsingTest` → `AbstractValidatingTest` →
+     `AbstractRunPassTest`). **Rule: if a case body takes `(td: TestData)`, the
+     suite MUST extend a `…WithTestData` base.**
+  2. **Abstract spec with no concrete subclass.** The runner never instantiates
+     it, so its cases never appear in the log at all — zero mentions, not even as
+     skipped. Either make the class concrete or declare a subclass in the
+     platform aggregator (`JVMTests.scala`/`JSTests.scala`). Beware the silent
+     trap: a class stays abstract because an inherited member is unimplemented
+     (`PrettifyPassTest` declared `checkAFile(Path, File)` against a base wanting
+     `checkAFile(Path, Path)`).
+  3. **Constructor parameters on a concrete suite.** ScalaTest cannot instantiate
+     `class FooTest(using PlatformContext)`, so it is never discovered. Concrete
+     suites take NO parameters; import `com.ossuminc.riddl.utils.pc` instead.
+- **Unawaited Future in a non-async spec** is a fourth variant: `inputFuture.map
+  { … assertions … }` followed by `Await.result(inputFuture, …)` awaits the WRONG
+  future — the assertions run detached and their failures are discarded. Await
+  the MAPPED future. (**`BASTWriterSpec` does NOT have this shape** — this note
+  claimed it did until 2026-08-14, wrongly; all five of its cases bind
+  `assertionFuture = inputFuture.map { … }` and await THAT. The failure mode is
+  real and worth watching for; it just has no instance in the repo today.)
+- **`test`/`tJVM` resolve to `testQuick`** — which incrementally SKIPS suites it
+  judges unaffected, even after a source change and even with
+  `~/Library/Caches/sbt/v2/ac` cleared (a DIFFERENT cache from testQuick's own
+  succeeded-tests tracking). Symptom: "No tests to run for language / Test /
+  testQuick" and a false green. For a guaranteed full run after edits, use
+  `<module>/testOnly *` (e.g. `language/testOnly * ; passes/testOnly *`), which
+  ignores incremental state. Separate from, and additive to, the action-cache
   fixture blindspot.
-- **`sbt -batch` runs only the FIRST command argument** — found
-  2026-08-03. `sbt -batch 'utils/testOnly *' 'language/testOnly *' …`
-  with seven module arguments ran `utils` ONLY, printed
-  "Suites: completed 18 / Tests: succeeded 146 / All tests passed",
-  and **exited 0**. The other six modules never ran and nothing said
-  so. This is the most deceptive member of the false-green family
-  because both the exit code and the word "passed" are honest about
-  the 14% that executed. Put every command in ONE argument separated
-  by `;` — `sbt -batch 'a/testOnly *; b/testOnly *; …'` — and then
-  **count the `Suites: completed` lines against the number of modules
-  you asked for.** (The `;` chain still aborts at the first failure,
-  so a short count means either a red or a skip; either way, look.)
-- **Corpus tests can resolve the WRONG `../riddl-models` — or none — under
-  sbt 2's `projectMatrix`, and the failure mode is a CANCELLED, green-looking
-  suite.** Found 2026-08-15 doing the corpus A/B for the `!`/`not` synonymy
-  plan (task 5). `RiddlModelsRoundTripTest` and `Root2JsonCorpusTest` locate
-  the corpus via `Path.of("../riddl-models")` resolved against the **process
-  cwd at sbt launch** — NOT `Test/baseDirectory`, which under `projectMatrix`
-  is `<root>/.sbt/matrix/<module>`, several directories deeper than the repo
-  root the relative path was written for. Depending on where sbt was
-  launched from, that relative path can land on a directory that doesn't
-  exist, or a *different* one that happens to exist — either way the test
-  finds nothing to iterate over. **A plain symlink at that path does not
-  fix it and fails the SAME silent way**: BSD `find` and Java's
-  `Files.walk` do not descend into a directory reached via a top-level
-  symlink argument without `-L`/`FOLLOW_LINKS` (confirmed both ways), so a
-  symlinked corpus also reports zero files. The symptom in both cases is
-  "No .conf files found" (or an equivalent zero-models message) followed by
-  the suite reporting as **cancelled, not failed** — which reads as green in
-  a summary scan exactly like the `testQuick`-skip and abstract-spec-with-no-
-  subclass members of this family. **To tell:** don't trust "all tests
-  passed" from a corpus-reading suite — check that it actually reports the
-  expected model COUNT (e.g. "models=190"), not zero, and use a real
+- **`sbt -batch` runs only the FIRST command argument** — found 2026-08-03. `sbt
+  -batch 'utils/testOnly *' 'language/testOnly *' …` with seven module arguments
+  ran `utils` ONLY, printed "Suites: completed 18 / Tests: succeeded 146 / All
+  tests passed", and **exited 0**. The other six never ran and nothing said so.
+  The most deceptive member of the false-green family, because both the exit code
+  and the word "passed" are honest about the 14% that executed. Put every command
+  in ONE argument separated by `;` — `sbt -batch 'a/testOnly *; b/testOnly *; …'`
+  — and then **count the `Suites: completed` lines against the number of modules
+  you asked for.** (The `;` chain still aborts at the first failure, so a short
+  count means either a red or a skip; either way, look.)
+- **Corpus tests can resolve the WRONG `../riddl-models` — or none — under sbt
+  2's `projectMatrix`, and the failure mode is a CANCELLED, green-looking
+  suite.** `RiddlModelsRoundTripTest` and `Root2JsonCorpusTest` locate the corpus
+  via `Path.of("../riddl-models")` resolved against the **process cwd at sbt
+  launch** — NOT `Test/baseDirectory`, which under `projectMatrix` is
+  `<root>/.sbt/matrix/<module>`, several directories deeper than the repo root
+  the relative path was written for. Depending on where sbt was launched from,
+  that path can land on a directory that doesn't exist, or a *different* one that
+  does — either way the test finds nothing to iterate over. **A plain symlink at
+  that path does not fix it and fails the SAME silent way**: BSD `find` and
+  Java's `Files.walk` do not descend into a directory reached via a top-level
+  symlink argument without `-L`/`FOLLOW_LINKS` (confirmed both ways). The symptom
+  in both cases is "No .conf files found" followed by the suite reporting as
+  **cancelled, not failed** — which reads as green in a summary scan exactly like
+  the `testQuick`-skip and abstract-spec members of this family. **To tell:**
+  don't trust "all tests passed" from a corpus-reading suite — check that it
+  reports the expected model COUNT (e.g. "models=190"), not zero, and use a real
   directory copy (`cp -R`, not a symlink) at the path the test computes when
   reproducing a corpus run outside CI.
-- **`@JSExport*` annotation placement** — an `@JSExportTopLevel(...)`
-  binds to the very next definition. Inserting a new
-  `enum`/`object`/class between the annotation and its case class
-  silently reattaches it (breaks `cJS`, invisible to `cJVM`). Any AST
-  edit near an exported type MUST be checked with `cJS` (and `cNative`),
-  not `cJVM` alone.
-- **Scala.js stale-incremental devirtualization** — when a class gains a
-  `WithX` accessor trait (or any mixin changing which field a trait
-  method resolves to), the JS linker can keep a *stale devirtualization*
-  of that method to the OLD owner's field, producing a runtime
-  `TypeError` while `cJS` succeeds. Neither a passing `cJS` nor deleting
-  the `*-fastopt` dir clears it — only `<module>JS/clean` does. Symptom:
-  JS-only runtime failure that no compile catches. Learned adding
-  `WithContexts` etc. to `Module` (#61).
-- **Parse-time messages now surface** — `warning()`/`deprecation()`
-  emitted during a *successful* parse used to be dropped (`parseRule`
-  returned the buffer only on fastparse failure). They now flow via
+- **`@JSExport*` annotation placement** — an `@JSExportTopLevel(...)` binds to
+  the very next definition. Inserting a new `enum`/`object`/class between the
+  annotation and its case class silently reattaches it (breaks `cJS`, invisible
+  to `cJVM`). Any AST edit near an exported type MUST be checked with `cJS` (and
+  `cNative`), not `cJVM` alone.
+- **Scala.js stale-incremental devirtualization** — when a class gains a `WithX`
+  accessor trait (or any mixin changing which field a trait method resolves to),
+  the JS linker can keep a *stale devirtualization* of that method to the OLD
+  owner's field, producing a runtime `TypeError` while `cJS` succeeds. Neither a
+  passing `cJS` nor deleting the `*-fastopt` dir clears it — only
+  `<module>JS/clean` does. Symptom: a JS-only runtime failure no compile catches.
+  Learned adding `WithContexts` etc. to `Module` (#61).
+- **Parse-time messages now surface** — `warning()`/`deprecation()` emitted
+  during a *successful* parse used to be dropped (`parseRule` returned the buffer
+  only on fastparse failure). They now flow via
   `TopLevelParser.parseInputWithMessages` → `PassInput.parseMessages` →
-  `PassesResult.additionalMessages`, so deprecations show under every
-  `riddlc` command, not just `validate`. New parse-time warnings
-  therefore appear in `.check` goldens.
-- **Scala Native builds with `gc = "none"` — a bump allocator that NEVER reclaims.** It is
-  sbt-ossuminc's `With.Native` default and `build.sbt` does not override it. Right for a
-  short-lived binary; catastrophic for a test binary that runs the whole corpus in one
-  process. **Measured 2026-08-19 by sampling the live `riddl-commands-test` process: 18.18 GB
-  peak RSS with `none`, 1.11 GB with `immix`** — 16x, identical results. A GitHub runner has
-  15,989 MB, so the Native corpus rows needed more memory than the machine had; the host
-  killed them for 18 consecutive runs, always with the build step still `in_progress` and NO
-  log blob, which is why it stayed invisible. `immix` is now scoped to `Test` on the two
-  corpus-reading rows (`nativeTestGC` in `build.sbt`); the SHIPPED riddlc still builds with
-  `none`, deliberately — changing that is a separate decision. **A CI job that dies with no
-  logs at all is a lost runner, not a timeout**: a real `timeout-minutes` kill is marked
-  `cancelled` and KEEPS its logs.
-- **release.yml** — triggered by `gh release create`. Builds
-  native riddlc (macOS ARM64, Linux x86_64) + JVM universal.
-  Sends `repository_dispatch` to homebrew-tap with SHA256s.
-  Requires the `HOMEBREW_TAP_SECRET` repo secret.
-- **sbt-dynver wants a clean working tree** — `git stash`
-  modified files before `sbt publish` on a release tag.
-- **External-repo tests** — download at construction time (not
-  in `beforeAll`) for ScalaTest `AnyWordSpec`.
-- **TatSu pin** — `TatSu>=5.12.0,<5.17.0`. 5.17.0 has a missing
-  `rich` dependency that breaks import.
-- **EBNF TatSu syntax** — `{rule}+` not `rule+` for positive
-  closure; TatSu requires curly braces around the repeated
-  element.
-- **ScalaDoc + inline + opaque types** — keep `inline` off
-  `Contents` extension methods (NPE in
-  `ScalaSignatureProvider.methodSignature`). Filed:
+  `PassesResult.additionalMessages`, so deprecations show under every `riddlc`
+  command, not just `validate`. New parse-time warnings therefore appear in
+  `.check` goldens.
+- **Scala Native builds with `gc = "none"` — a bump allocator that NEVER
+  reclaims.** It is sbt-ossuminc's `With.Native` default and `build.sbt` does not
+  override it. Right for a short-lived binary; catastrophic for a test binary
+  running the whole corpus in one process. **Measured 2026-08-19 by sampling the
+  live `riddl-commands-test` process: 18.18 GB peak RSS with `none`, 1.11 GB with
+  `immix`** — 16x, identical results. A GitHub runner has 15,989 MB, so the
+  Native corpus rows needed more memory than the machine had; the host killed
+  them for 18 consecutive runs, always with the build step still `in_progress`
+  and NO log blob, which is why it stayed invisible. `immix` is now scoped to
+  `Test` on the two corpus-reading rows (`nativeTestGC` in `build.sbt`); the
+  SHIPPED riddlc still builds with `none`, deliberately — changing that is a
+  separate decision. **A CI job that dies with no logs at all is a lost runner,
+  not a timeout**: a real `timeout-minutes` kill is marked `cancelled` and KEEPS
+  its logs.
+- **release.yml** — triggered by `gh release create`. Builds native riddlc (macOS
+  ARM64, Linux x86_64) + JVM universal, and sends `repository_dispatch` to
+  homebrew-tap with SHA256s. Requires the `HOMEBREW_TAP_SECRET` repo secret.
+- **sbt-dynver wants a clean working tree** — `git stash` modified files before
+  `sbt publish` on a release tag.
+- **External-repo tests** — download at construction time (not in `beforeAll`)
+  for ScalaTest `AnyWordSpec`.
+- **TatSu pin** — `TatSu>=5.12.0,<5.17.0`. 5.17.0 has a missing `rich`
+  dependency that breaks import. **EBNF TatSu syntax** — `{rule}+`, not `rule+`,
+  for positive closure; TatSu requires curly braces around the repeated element.
+- **ScalaDoc + inline + opaque types** — keep `inline` off `Contents` extension
+  methods (NPE in `ScalaSignatureProvider.methodSignature`). Filed:
   scala/scala3#25306.
-- **Scala 3.8.x scaladoc parallel race** — multiple `doc`
-  tasks running concurrently under `publish` crash in
-  `dotty.tools.scaladoc.renderers.Resources.allResources`.
-  Symptom: `(<module>Native / Compile / doc)
-  java.lang.reflect.InvocationTargetException` partway
-  through `sbt clean test publish`, leaving partial Maven
-  artifacts on GitHub Packages. Workaround applied to
-  `passesNative` and `riddlLibNative` in `build.sbt`:
-  `.nativeSettings(Compile / doc / sources := Seq.empty)`.
-  If a future Native module trips the same race, add the same
-  one line.
-- **`annotateErrorLine` tolerates EOF-boundary `At`** — when a
-  parser failure points one past EOF (typical "missing `}`"
-  case), the failure's `endOffset` can exceed the line range
-  computed by `lineRangeOf`. Downstream slicing in
-  `annotateErrorLine` already clamps via `Math.min`, so the
-  function does NOT assert on the boundary. Don't reintroduce
-  the `require(end >= index.endOffset, …)` check that lived
-  there before 1.23.3 — it crashes the error reporter itself
-  and surfaces the real parse error as `[severe] Exception
-  Thrown` instead of a normal `[error]`.
-- **sbt-riddl auto-downloads riddlc** — caches in
-  `~/.cache/riddlc/<version>/`; three-tier resolution: explicit
-  path > download > PATH. Use `--no-ansi-messages` and strip
-  ANSI for version parsing. Pin `riddlcVersion` to a real
-  release tag in scripted tests, not the dynver snapshot.
+- **Scala 3.8.x scaladoc parallel race** — multiple `doc` tasks running
+  concurrently under `publish` crash in
+  `dotty.tools.scaladoc.renderers.Resources.allResources`. Symptom: `(<module>Native
+  / Compile / doc) java.lang.reflect.InvocationTargetException` partway through
+  `sbt clean test publish`, leaving partial Maven artifacts on GitHub Packages.
+  Workaround applied to `passesNative` and `riddlLibNative` in `build.sbt`:
+  `.nativeSettings(Compile / doc / sources := Seq.empty)`. If a future Native
+  module trips the same race, add the same one line.
+- **`annotateErrorLine` tolerates EOF-boundary `At`** — when a parser failure
+  points one past EOF (the typical "missing `}`" case), the failure's `endOffset`
+  can exceed the line range computed by `lineRangeOf`. Downstream slicing already
+  clamps via `Math.min`, so the function does NOT assert on the boundary. Don't
+  reintroduce the `require(end >= index.endOffset, …)` check that lived there
+  before 1.23.3 — it crashes the error reporter itself and surfaces the real
+  parse error as `[severe] Exception Thrown` instead of a normal `[error]`.
+- **sbt-riddl auto-downloads riddlc** — caches in `~/.cache/riddlc/<version>/`;
+  three-tier resolution: explicit path > download > PATH. Use
+  `--no-ansi-messages` and strip ANSI for version parsing. Pin `riddlcVersion` to
+  a real release tag in scripted tests, not the dynver snapshot.
 - **`ThirdPartyNotices.scala` is a hand-maintained CONSTANT and goes stale in
   SILENCE.** It is not generated and not read from a file, because only the JVM
   build has a filesystem — the Native binary has no resources at all and the same
@@ -3074,16 +2056,11 @@ DELIBERATELY ambiguous fixture, so its duplicate-name errors are the fixture wor
   ABSENCE — `must not include "logback" / "LGPL" / "ScalaTest"` — so a regression
   fails the build instead of quietly re-adding an obligation. The URL it prints
   is compiled into riddlc and cannot be silently redirected.
-- **Run sbt as `sbt --server …` when you need to read its output.** The sbt 2
-  CLI is the `sbtn` native thin client talking to a DETACHED server, so piped
-  stdout comes back **empty** and the build looks hung. `--server` runs in the
+- **Run sbt as `sbt --server …` when you need to read its output.** The sbt 2 CLI
+  is the `sbtn` native thin client talking to a DETACHED server, so piped stdout
+  comes back **empty** and the build looks hung. `--server` runs in the
   foreground with attached stdout. Do not trust its exit code — grep the log.
-- **sbt plugin visibility** — use `private[plugin] def` (not
-  `private def`) so the compiler doesn't warn "private method
-  never used" when sbt macros generate the usage. (The sbt-riddl
-  plugin is now Scala 3 / sbt 2, but the pattern still holds.)
-
-### Git Workflow
-
-- **PR merge with branch protection** —
-  `gh pr merge --admin --merge --delete-branch=false`.
+- **sbt plugin visibility** — use `private[plugin] def` (not `private def`) so
+  the compiler doesn't warn "private method never used" when sbt macros generate
+  the usage. (The sbt-riddl plugin is now Scala 3 / sbt 2, but the pattern
+  holds.)
