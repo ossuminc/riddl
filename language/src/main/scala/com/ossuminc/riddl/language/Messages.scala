@@ -279,6 +279,19 @@ object Messages {
     /** The published code of the rule that produced this, if it has one. */
     def ruleCode: Option[String] = ruleId.map(_.code)
 
+    /** Whether THIS message still permits code generation.
+      *
+      * Almost always [[KindOfMessage.isGenerable]] on its kind, but a rule listed in
+      * [[RuleId.nonBlocking]] is generable whatever its kind: the author has ruled that a generator
+      * may proceed because it holds a sanctioned default for what the model left unsaid.
+      *
+      * **Ask this, not `kind.isGenerable`, when the question is about a MESSAGE.** The kind-level
+      * predicate answers a question about a CATEGORY and cannot see the exception; the two disagree
+      * exactly on the exception list, which is the point of it.
+      */
+    def isGenerable: Boolean =
+      kind.isGenerable || ruleId.exists(RuleId.nonBlocking.contains)
+
     /** Retained for consumers written against the deprecation-only predecessor of [[ruleId]].
       *
       * Reports a code only for an actual deprecation, which is what those consumers meant by the
@@ -420,14 +433,14 @@ object Messages {
       * [[KindOfMessage.isGenerable]]. An empty message list is generable.
       */
     @JSExport def isGenerable: Boolean = {
-      msgs.isEmpty || msgs.forall(_.kind.isGenerable)
+      msgs.isEmpty || msgs.forall(_.isGenerable)
     }
 
     /** The messages that stand between this model and code generation — everything above a
       * [[StyleWarning]]. Empty exactly when [[isGenerable]] is true, so a tool can both ASK the
       * question and SHOW the answer without re-deriving the bar.
       */
-    @JSExport def blockingGeneration: Messages = msgs.filterNot(_.kind.isGenerable)
+    @JSExport def blockingGeneration: Messages = msgs.filterNot(_.isGenerable)
 
     /** Return true iff at least one of the messages is an [[Error]] */
     @JSExport def hasErrors: Boolean = {

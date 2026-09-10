@@ -6117,7 +6117,26 @@ case class ValidationPass(
     case _                        => Seq.empty
   end valueReferencedDefs
 
-  /** A saga that states no `timeout` -- a CompletenessWarning (riddl-generator, 2026-08-25).
+  /** A saga that states no `timeout` -- a CompletenessWarning that does NOT block generation
+    * (riddl-generator, 2026-08-25; made non-blocking by Reid, 2026-09-08).
+    *
+    * **It stays a CompletenessWarning and is listed in `RuleId.nonBlocking`.** Reid's words were
+    * that it *"shouldn't block code production, which makes it an exception to the usual
+    * `isGenerable` logic"* -- an exception, not a reclassification. riddl-generator proposed the
+    * simpler fix of demoting it to a StyleWarning; that was declined for two reasons, both
+    * measured:
+    *   - a StyleWarning asserts the message "does not change the MEANING of the model"
+    *     ([[Messages.KindOfMessage.isGenerable]]), and this one's whole point is that the bound
+    *     decides WHEN COMPENSATION FIRES -- the docstring below says so;
+    *   - every riddl-models `.conf` sets `show-style-warnings = false`, so demoting it would have
+    *     hidden it from the entire corpus. The task's own acceptance criterion is that it STILL
+    *     WARNS. (Found by this rule's own test, whose helper sets exactly that flag.)
+    *
+    * The blocking behaviour was the defect: `isGenerable` is `severity <= StyleWarning.severity`,
+    * so a CompletenessWarning refused every such model at riddlg's product boundary, which made
+    * `riddlg gen code --default-timeout` -- the flag that exists precisely to bound a saga stating
+    * none -- impossible to ever fire. The fix belongs here rather than in riddlg, which delegates
+    * to this classification by Reid's 2026-08-28 ruling ("no exception and no second rule").
     *
     * A `correlation` MUST state `times out after "<duration>"`. A saga has no such requirement, so
     * riddlg bounds the run with a built-in default of one minute and records the invention in its

@@ -132,6 +132,22 @@ class TransitionAndTimeoutTest extends AbstractValidatingTest {
         // model contradicting itself. `correlation` mandates its timeout because that one carries a
         // statement block which must fire; a saga's is an option with no block.
         hit.head.isError mustBe false
+        // And it must not BLOCK GENERATION (Reid, 2026-09-08, on riddl-generator's report). This is
+        // the property that was actually ruled on, so it is the one asserted: `isError mustBe false`
+        // alone was satisfied by the CompletenessWarning this used to be, which sits ABOVE
+        // `isGenerable`'s bar and refused every such model at riddlg's product boundary -- making
+        // `riddlg gen code --default-timeout`, the flag that exists precisely to bound a saga
+        // stating none, impossible to ever fire.
+        // `isGenerable` asks "can code be generated from this model?", and for a saga with no
+        // timeout the answer is demonstrably yes: riddlg supplies a default and records the
+        // invention.
+        // Note this is the MESSAGE-level predicate, not `kind.isGenerable`: the rule keeps its
+        // CompletenessWarning kind and is listed in `RuleId.nonBlocking`, so the two deliberately
+        // disagree here. Demoting the KIND to StyleWarning was the simpler fix and would have
+        // hidden the message from the whole riddl-models corpus, every `.conf` of which sets
+        // `show-style-warnings = false` -- this very test's helper does too, which is how that
+        // was found.
+        hit.head.isGenerable mustBe true
       }
     }
 

@@ -597,6 +597,30 @@ object RuleId:
     *
     * Empty today because no rule has yet been withdrawn.
     */
+  /** Rules whose messages must NOT block code generation, whatever their kind.
+    *
+    * **An exception list, deliberately, rather than a severity change.** `KindOfMessage.isGenerable`
+    * reasons per KIND -- a StyleWarning does not change the model's meaning, a MissingWarning names
+    * something that cannot be generated, and so on -- and that ladder stays honest. A rule lands
+    * here when the author has ruled that a generator can proceed anyway, because the generator has
+    * a sanctioned default for what the model left unsaid.
+    *
+    * `saga-no-timeout` is the first (Reid, 2026-09-08): *"there should be a default for the
+    * `--default-timeout` option (say, 1 hour?) ... `saga-no-timeout` shouldn't block code
+    * production, which makes it an exception to the usual `isGenerable` logic."* Demoting it to a
+    * StyleWarning was the simpler fix and was declined -- it would assert the absent bound does not
+    * change the model's meaning, when the bound decides when compensation fires, and every
+    * riddl-models `.conf` sets `show-style-warnings = false`, so the whole corpus would have
+    * stopped seeing it.
+    *
+    * **The bar for adding one is a DEFAULT the generator can defend**, not merely a wish to
+    * proceed. Without one the generator is inventing behaviour the model never stated, which is
+    * what `isGenerable` exists to prevent.
+    */
+  val nonBlocking: Set[RuleId] = Set(
+    SagaNoTimeout
+  )
+
   val retired: Set[String] = Set(
     // Published in 2.0.0-rc.25 on `checkAssignable`'s wrong-entity arm, which now answers to
     // `stmt-id-entity-mismatch` -- the name that says what it means. Retired rather than reused:
