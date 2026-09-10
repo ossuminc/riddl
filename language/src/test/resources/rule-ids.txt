@@ -148,6 +148,8 @@ msg-answers-undeclared
 msg-ask-no-replies
 msg-ask-not-a-query
 msg-ask-not-handled
+msg-ask-reply-unreachable
+msg-ask-target-unreachable
 msg-by-names-wrong-field
 msg-command-no-fields
 msg-event-never-emitted

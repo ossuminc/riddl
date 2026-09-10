@@ -2536,6 +2536,31 @@ validation — resolution and type-checking — in `checkStatementScopes`.
   corpus's tell-target entities declare no inlets at all; the interaction surfaces
   only as models comply.
 
+- **An `ask` needs a modelled path BOTH WAYS** (Reid, 2026-09-09/10;
+  `msg-ask-target-unreachable`, `msg-ask-reply-unreachable`). `ask` is `send` plus a
+  declared correlation — *"there are no magic ways for processors to communicate …
+  there's no way to communicate without wiring, even in the same process boundaries"* —
+  and the answer is held to the same standard: *"the reply path must be wired in the
+  model just like the query path."*
+  **The distinction that settles the reply leg: the MECHANISM is the generator's, the
+  PATH is the model's.** A reply actor, a future, a correlation id are lowering choices
+  with no model-level representation; whether an answer can physically get back is not
+  one. Reading Reid's earlier *"setting up a reply actor … is the generator's concern"*
+  as covering the path is the natural mistake, and it is wrong.
+  `checkAskReachability` is `checkTellReachability`'s question asked TWICE over the same
+  `connectorAdjacency` graph, with the same exemptions (`???`, predefined, asking
+  yourself, a side with no inlets). **Deliberately not a type check** — whether the far
+  inlet admits the query is `checkInletsAreReceived`'s question, asked in its own terms.
+  **Its ABSENCE had taught a false rule, which is why this is an Error and not a
+  warning.** `ask` was validated only for the far end's BEHAVIOUR (handles the query,
+  declares `replies`), so an `ask` in a completely unwired adaptor reported NOTHING while
+  a `tell` in that same adaptor drew two Errors. riddl-models read the silence, wrote down
+  *"wiring is simply irrelevant to it"*, and was about to apply that to 363 sites across
+  118 models. **A validator silent where the language has a rule teaches the wrong rule** —
+  "it validates" is the evidence modellers use.
+  Corpus population at landing: **zero** — riddl-models has no `ask query` sites yet, which
+  is exactly why the checks went in BEFORE the 363 are authored rather than after.
+
 - **A `tell` into an UNRELATED domain is a modelling Error, and the diagnostic must say
   RESTRUCTURE rather than "add a connector"** (Reid, 2026-09-08;
   `msg-tell-crosses-unrelated-domains`). Relatedness is a SHARED ANCESTOR domain — the

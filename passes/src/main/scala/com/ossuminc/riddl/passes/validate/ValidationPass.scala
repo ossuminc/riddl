@@ -94,6 +94,16 @@ case class ValidationPass(
     : mutable.ListBuffer[(TellStatement, Processor[?], Option[Processor[?]])] =
     mutable.ListBuffer.empty
 
+  /** Every `ask` with its resolved target and its ASKER, for the two-leg reachability check.
+    *
+    * Collected for the same reason [[collectedTells]] is: reachability is a question about a PAIR,
+    * and the connector graph is not built until `postProcess`. An `ask` needs the pair TWICE --
+    * once for the question and once for the answer -- so the asker is not optional bookkeeping
+    * here, it is half the subject.
+    */
+  private val collectedAsks: mutable.ListBuffer[(Ask, Processor[?], Option[Processor[?]])] =
+    mutable.ListBuffer.empty
+
   /** Generate the output of this Pass. This will only be called after all the calls to process have
     * completed.
     *
@@ -139,6 +149,7 @@ case class ValidationPass(
     if mode == ValidationMode.Full then
       checkStreaming(root)
       checkTellReachability()
+      checkAskReachability()
       checkTellDeliverability()
       checkInletsAreReceived(root)
       // MUST precede checkCompletenessPostProcess, which asks whether each event is emitted.
@@ -551,6 +562,91 @@ case class ValidationPass(
                 ruleId = Some(RuleId.TellTargetUnreachable)
               )
           end match
+        end if
+      }
+    }
+  }
+
+  /** An `ask` needs a modelled path BOTH WAYS (Reid, 2026-09-09/10).
+    *
+    * riddl-models found `ask` silent in an adaptor touched by no connector at all, where `tell`
+    * drew two Errors -- and that silence taught them the wrong rule outright: they concluded
+    * *"wiring is simply irrelevant to it"* and were about to apply it to 363 sites. **A validator
+    * silent where the language has a rule does not merely miss a mistake, it teaches the wrong
+    * one**, because "it validates" is the evidence modellers use.
+    *
+    * Reid: *"There are no magic ways for processors to communicate ... that request MUST go over a
+    * connector and therefore it MUST be wired to it. `ask` is just like `send` except that it
+    * implies additional semantics in the generator."* And, on the answer: *"the reply path must be
+    * wired in the model just like the query path. Regardless of how the generator chooses to lower
+    * it, the communication must be POSSIBLE in the model, without the path, it is not."*
+    *
+    * **The distinction that settles the reply leg: the MECHANISM is the generator's, the PATH is
+    * the model's.** A reply actor, a correlation id, a future are lowering choices with no
+    * model-level representation; whether an answer can physically get back is not one.
+    *
+    * So this is [[checkTellReachability]]'s question asked twice over the SAME connector graph,
+    * with the same exemptions and for the same reasons -- `???` bodies, predefined processors, a
+    * processor addressing itself, and a side declaring no inlets (already diagnosed by *"handles
+    * messages but declares no inlet to receive them on"*, so erroring here as well would report
+    * one omission twice at a higher severity).
+    *
+    * **Deliberately NOT a type check.** Whether the far inlet admits the query, and whether the
+    * asker's inlet admits the reply, are questions `checkInletsAreReceived` and
+    * `checkTellDeliverability` already ask in their own terms. This one asks only whether a path
+    * exists, which is what the ruling is about.
+    */
+  private def checkAskReachability(): Unit = {
+    if collectedAsks.isEmpty then return
+    val adjacency = connectorAdjacency()
+
+    def reaches(from: Processor[?], to: Processor[?]): Boolean =
+      val goal = ByIdentity[Processor[?]](to)
+      val seen = mutable.Set.empty[ByIdentity[Processor[?]]]
+      val queue = mutable.Queue.empty[ByIdentity[Processor[?]]]
+      queue.enqueue(ByIdentity[Processor[?]](from))
+      var found = false
+      while queue.nonEmpty && !found do
+        val cur = queue.dequeue()
+        if cur == goal then found = true
+        else if seen.add(cur) then
+          adjacency.getOrElse(cur, scala.collection.immutable.Set.empty).foreach(queue.enqueue)
+        end if
+      end while
+      found
+    end reaches
+
+    collectedAsks.foreach { case (ask, target, asker) =>
+      asker.foreach { from =>
+        val eitherEmpty = isPredefined(target) || target.isEmpty || from.isEmpty
+        // Asking YOURSELF needs no channel -- there is nothing to model. The same rule `tell`
+        // applies to telling yourself.
+        val self = from eq target
+        if !eitherEmpty && !self then
+          // The QUESTION leg: asker -> target, exactly `tell`'s question.
+          if target.inlets.nonEmpty && !reaches(from, target) then
+            messages.addError(
+              ask.loc,
+              s"the query asked of ${target.identify} cannot reach it from ${from.identify}: no " +
+                "connector carries it, so the question is not modelled",
+              suggestion = s"Add a connector from an outlet of ${from.identify} to an inlet of " +
+                s"${target.identify}, so the query has a Connector to travel on.",
+              ruleId = Some(RuleId.AskTargetUnreachable)
+            )
+          end if
+          // The REPLY leg: target -> asker. The half a reader is most likely to assume the
+          // generator supplies.
+          if from.inlets.nonEmpty && !reaches(target, from) then
+            messages.addError(
+              ask.loc,
+              s"the answer from ${target.identify} cannot reach ${from.identify}: no connector " +
+                "carries it back, so the reply is not modelled",
+              suggestion = s"Add a connector from an outlet of ${target.identify} to an inlet of " +
+                s"${from.identify}. How the answer is correlated -- a reply actor, a future, a " +
+                "correlation id -- is the generator's to choose, but the path is the model's.",
+              ruleId = Some(RuleId.AskReplyUnreachable)
+            )
+          end if
         end if
       }
     }
@@ -8559,6 +8655,10 @@ case class ValidationPass(
     //    handlers count as the entity's (an Entity may hold its handlers under a State). Silent
     //    when either side is unresolved -- ref-integrity already reports that, and piling a
     //    "does not handle" error on top of a "not resolved" one helps nobody.
+    // Both legs of the channel check need the resolved pair, and the connector graph does not
+    // exist yet -- see `checkAskReachability`.
+    target.foreach(proc => collectedAsks.addOne((ask, proc, enclosingProcessorOf(parents))))
+
     for
       qt <- queryType
       proc <- target

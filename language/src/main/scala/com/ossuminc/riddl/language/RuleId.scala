@@ -438,6 +438,8 @@ enum RuleId(
   // ---- final ValidationPass batch: statements, values, calls and constructors -----------------
   case AskNoReplies extends RuleId("msg-ask-no-replies")
   case AskNotAQuery extends RuleId("msg-ask-not-a-query")
+  case AskTargetUnreachable extends RuleId("msg-ask-target-unreachable")
+  case AskReplyUnreachable extends RuleId("msg-ask-reply-unreachable")
   case AddressAmbiguous extends RuleId("msg-address-ambiguous")
   case TargetCrossesBoundary extends RuleId("msg-target-crosses-boundary")
   case CodeNotPortable extends RuleId("stmt-code-not-portable")
