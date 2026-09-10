@@ -10,109 +10,70 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-09-10 by running, not recalling
+### Build state — verified 2026-09-10 by running
 
-**`2.1.1` is released** (2026-09-04, tag on `20e72732d`), on Scala 3.9.0 final. **BAST
-`FORMAT_REVISION` is 24** (one bump for `on quiescence` and `send … at`).
+**`2.1.1` is released** (tag on `20e72732d`), Scala 3.9.0 final. **BAST `FORMAT_REVISION` 24.**
 
-**`../bin/riddlc` and the local ivy artifacts are `2.1.1-33-dd3c2d80`** (commit `dd3c2d807`,
-the last commit that changes BEHAVIOUR), published and staged together by
-`scripts/publish-and-stage.sh` on 2026-09-10 at Reid's request. Check `../bin/riddlc
---no-ansi-messages version` against `git describe --tags --long` (dynver drops the `g` and uses
-8 hash chars, so the two render differently and still agree). HEAD may sit a documentation commit
-or two past it, which is normal.
+**`../bin/riddlc` and the local ivy artifacts are `2.1.1-33-dd3c2d80`**, published and staged
+together by `scripts/publish-and-stage.sh` — verified by reading both. HEAD may sit a doc commit
+past it; that is normal. Confirm with `../bin/riddlc --no-ansi-messages version` against `git
+describe --tags --long` (dynver drops the `g` and uses 8 chars, so they render differently and
+still agree).
 
-**It carries EIGHT language changes since 2.1.1**: `on quiescence <window>`; `send … at
-<instant>`; `stream-graph-cycle` re-ruled as an infinite MESSAGE loop;
-`msg-tell-crosses-unrelated-domains`; [5.7] a handler-less processor is a stream TAIL whatever
-its shape; `saga-no-timeout` no longer blocks generation (via `RuleId.nonBlocking`);
-`saga-step-no-tell` is now an **Error**; and `ask` requires a modelled path BOTH WAYS
-(`msg-ask-target-unreachable`, `msg-ask-reply-unreachable`).
+**Eight language changes since 2.1.1**, all in that binary: `on quiescence <window>`; `send … at
+<instant>`; `stream-graph-cycle` as an infinite MESSAGE loop; `msg-tell-crosses-unrelated-domains`;
+[5.7] a handler-less processor is a stream TAIL whatever its shape; `saga-no-timeout` no longer
+blocks generation (`RuleId.nonBlocking`); `saga-step-no-tell` is now an **Error**; and `ask`
+requires a modelled path BOTH WAYS.
 
-**Corpus census with THIS binary: 189 entry points, 26 models with errors, 59 errors — ALL of
-them the two new `ask` rules** (40 question-leg, 19 reply-leg; zero of every other rule). That is not a regression:
-riddl-models authored 75 `ask query` sites across 42 models on 2026-09-09/10, and they asked us
-to land these checks. They have the full breakdown in their `task/`. `saga-step-no-tell` cost
-zero, as measured before landing.
+### Corpus — 59 errors, and that is EXPECTED
 
-**`RiddlModelsRoundTripTest` is still 190/190** — it is a parse/prettify round trip and says
-nothing about validation errors, which is exactly why the census above is run separately. **Do
-not read the round-trip green as "the corpus validates"**; until 2026-09-10 both were clean and
-the distinction did not show. CI reads origin; whether the corpus state is pushed is git's to
-answer.
+189 entry points: **26 models with errors, 59 errors, every one of them the two new `ask` rules**
+(40 question-leg, 19 reply-leg; zero of every other rule). riddl-models authored 75 `ask query`
+sites on 2026-09-09/10 and asked for these checks; they have the breakdown in their `task/`.
+
+**`RiddlModelsRoundTripTest` is still 190/190 and says NOTHING about this** — it is a
+parse/prettify round trip. Until 2026-09-10 both were clean and the distinction never showed;
+**do not read the round-trip green as "the corpus validates".**
 
 ### In flight
 
-- **Nothing half-done in the code.** The temporal-semantics task, the loop re-ruling and the
-  unrelated-domain `tell` ruling all landed whole; their task files are in `task/done/`.
-- **Awaiting Reid**: nothing. [3.9] (bump-consumers) was DROPPED as moot on 2026-09-08 — the
-  three repos coordinate through the locally staged binary while riddlg's road to 1.0.0 keeps
-  discovering language riddl still owes — and [5.7] was ruled and implemented the same day.
-- **Dropped, awaiting them**: `../ossum.tech/task/2026-09-08-riddl-language-changes-since-2.0.0.md`
-  (BACKLOG [3.10], supersedes the 2026-09-07 temporal-only file);
-  `../riddl-generator/task/2026-09-09-saga-rules-ruled-both-ways.md`, which tells riddlg its saga
-  fixture is now invalid RIDDL.
-- **Nothing in flight.** Both incoming tasks landed whole and are in `task/done/`.
+**Nothing half-done in the code.** Every ruling this week landed whole.
 
-### Certainty — what was actually run
+**Two UNTRIAGED files in `task/`, both from riddl-models, both about work just shipped:**
 
-After the saga rulings (2026-09-09, latest): `language` 760 JVM / 438 JS / 745 Native; `passes`
-1798 JVM / 317 JS / 1786 Native; `commands` 355 JVM (corpus 190/190); `riddlLib` 163 JVM. **The
-staged binary predates these** — `saga-step-no-tell` is an Error on `main` and a completeness
-warning in `../bin/riddlc`.
-
-After [3.8]'s closure (2026-09-09 — a TEST and docs change only): `passes` 1798 JVM / 1786 Native,
-+2 each for the new pinning pair.
-
-After [5.7] (2026-09-08), shared cache, each module its own `testOnly *`: `language` 760
-JVM / 438 JS / 745 Native; `passes` 1796 JVM / 317 JS / 1784 Native; `commands` 355 JVM (corpus
-190/190); `riddlLib` 163 JVM. Canary: the inverted `StreamTailTest` case was red before the
-one-line change and green after. NOT re-run: `utils`, `testkit`, `riddlc`, `commands` on
-JS/Native.
-
-After the unrelated-domain `tell` ruling (2026-09-08), shared cache, each module its own
-`testOnly *`: `language` 760 JVM / 438 JS / 745 Native; `passes` 1796 JVM / 317 JS / 1784
-Native; `commands` 355 JVM (corpus 190/190, the pre-change baseline — unmoved); `riddlLib` 163
-JVM. Canary: the three positive cases of `UnrelatedDomainTellTest` were red before the check
-and green after. NOT re-run: `utils`, `testkit`, `riddlc`, and `commands` on JS/Native.
-
-After the loop re-ruling (`793001ec4`), shared cache, each module its own `testOnly *`: JVM
-`passes` 1791, `commands` 355 (corpus 190/190), `riddlLib` 163; JS `passes` 317; Native `passes`
-1779; canary: disabling `checkMessageLoops` reddens exactly the seven positive cases. After the two
-temporal commits (`68118db0f`, `e0bf248b3`): every one of `language`/`passes`/`riddlLib` on all three
-platforms plus `commands` JVM, TatSu 119/142. NOT re-run since `21a212339` (the last clean-cache
-certification, 2026-09-07 07:46): `utils`, `testkit`, `riddlc`, and `commands` on JS/Native — the
-later commits touch none of them except through `language`/`passes`. A ship wants the clean-cache
-pass again; the 2026-09-04 entry below records how it was driven.
+1. `2026-09-09-ask-is-not-checked-for-a-channel.md` — a re-drop of a file I already completed
+   (my Results are on the copy in `task/done/`). This one is *corrected* by them and retitled
+   *"ask reachability is checked — EXCEPT from an adaptor"*, but it was measured with
+   `2.1.1-26`, which **predates the checks**. Likely partly overtaken; verify before acting.
+2. `2026-09-10-ask-reply-unreachable-should-name-the-declared-inlet.md` — a live defect report
+   against `msg-ask-reply-unreachable`, shipped yesterday. Their claim: declaring any inlet on
+   an adaptor removes the IMPLIED inlet the reply was using (A103's own rule), and the message
+   then says "add a connector" when no connector is possible. **If true this is the same defect
+   shape as `msg-tell-crosses-unrelated-domains` two days earlier — a diagnostic whose remedy
+   cannot be followed** — and that pattern is worth taking seriously rather than re-deriving.
 
 ### Traps a fresh session would hit
 
-- **A new rule's tests measure the rule, never its interaction with rules already present.** FIVE
-  instances in two weeks — the latest being `stream-crosses-domains` suggesting the exact shape
-  A6 refused, so the two rules sent an author in a circle. When a rule's SUGGESTION names another
-  construct, go read the rule governing that construct.
-- **Pin the REMEDY, not just the message.** A test asserting the error appears cannot tell a good
-  diagnostic from a better-worded dead end; assert that applying the suggested fix validates.
-  Validate the new fixture with the freshly staged binary; that is what found it.
-- **A bare single-segment path searches the WHOLE symbol table.** `outlet o` is ambiguous the
-  moment two processors declare an `o`; the resolver then records nothing and any refMap-driven
-  walk silently has no edge — a check "passes" every positive case by finding nothing. Qualify
-  paths in fixtures. Found by instrumenting the resolver, after three rounds of reasoning were wrong.
-- **Check CLAUDE.md before justifying a design decision**, and check the actual rule before writing
-  an "unchanged" list: the temporal plan asserted a scheduled `send` discharges `yields`; it never
-  has since rc.19, and only the test caught it.
-- **Calibrate a measurement on a known-positive case before trusting a zero.** Strip ANSI before
-  grepping riddlc output; riddl-models `.conf` files set `show-style-warnings = false`.
-- **`ZonedDateTime(UTC)`** — a quoted zone and a bare `ZonedDateTime` both fail to parse; `let when`
-  fails because `when` is a keyword; `send` does not parse in a function body.
-- **A Scala bump is ~32 sites**, since the full version is a path segment; a grep omitting
-  `.github/` misses 11.
+- **A backlog item filed before a large change is a snapshot.** [3.8] was two-thirds answered by
+  A103 three days after filing; re-measure against the branch before working one.
+- **Citing a passing test is not citing an assertion.** [3.8]'s "evidence" test asserted only
+  that an adaptor parsed with the right id.
+- **Calibrate a zero before trusting it**, and re-measure a corpus claim at the END of the work:
+  the `ask` corpus went from 0 sites to 75 while these checks were being built.
+- **Prose inside an s-interpolated Scala fixture is code** — a `$stepOne` in a `//` comment
+  interpolated and produced a parse error pointing nowhere near it.
+- **`terminate` is terminal**, so a repair `tell` must LEAD its block.
+- **zsh does not word-split unquoted expansions** — census loops need `while read`, not
+  `for c in $list`, or they silently measure one item.
 
-### `task/` — empty, 161 in `done/`
+### Certainty
 
-Nothing awaits triage. (The 2026-09-07 HANDOFF said the same and was WRONG by the time it was
-read — a file had arrived. Run the check, do not read this line.) `task/probe-2026-09-06-adaptor/` holds probe fixtures from an earlier
-session, deliberately left. That is a fact about right now, not a reason to skip the check.
+Verified this session by running: the staged version and its ivy match; the corpus census;
+`language` 760 JVM / 438 JS / 745 Native, `passes` 1805/317/1793, `commands` 355, `riddlLib` 163.
+Canaries run for `checkAskReachability` and for [5.7]. **NOT re-run:** `utils`, `testkit`,
+`riddlc`, and `commands` on JS/Native — untouched except through `language`/`passes`. A ship
+wants a clean-cache pass.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 

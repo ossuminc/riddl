@@ -354,6 +354,31 @@ of § 1 is now the active to-do list. The detailed entries stay in their origina
 positions below — they are cross-referenced from code comments and other repos'
 task files, so they were NOT physically reshuffled; this index carries the order.
 
+- **[1.23]** **`ask` is checked for a PATH but never for a TYPE, and riddl-models asked for
+  the type check.** Their 2026-09-09 task asked for two things; only one landed on
+  2026-09-10. `msg-ask-target-unreachable` / `msg-ask-reply-unreachable` ask whether a
+  connector path exists; **nothing asks whether the far inlet ADMITS the query type, or
+  whether the asker's inlet admits the reply.**
+  **Declined deliberately, not forgotten** — `checkInletsAreReceived` and
+  `checkTellDeliverability` already ask that question in their own terms, and a third
+  check would report one fault twice. Recorded as `[~]` in their task's criteria with an
+  invitation to send a probe, so this entry exists to make the decision revisitable
+  rather than lost.
+  **What would reopen it:** a probe where a path exists, the types disagree, and neither
+  existing check fires. Ask riddl-models for one before building anything.
+
+- **[1.24]** **riddl-models' own `ask` guard (`sbt ac`) and `msg-ask-target-unreachable`
+  disagree, and it is not yet known which is right.** The 2026-09-10 census found **40**
+  question-leg findings against **19** reply-leg, in a corpus whose authors built `sbt ac`
+  precisely to guard the OUTBOUND leg while riddlc had no check. Those two facts do not
+  sit together: if their guard covers the question leg, 40 failures means it and our rule
+  measure different things.
+  **Asked as a question in their task drop, not asserted** — the 40 may simply predate
+  their guard. **Do not treat the finding count as vindication until that is settled**;
+  a rule that disagrees with a careful modeller's own guard deserves a second look from
+  this side too. Blocked on their reply.
+
+
 | # | Item | Blocked by | Why here |
 |---|---|---|---|
 | ~~1~~ | ~~`OnInit`/`OnTerm` params~~ | — | **DONE `c530337d9`** — defaulted IN PLACE; the prescribed "move it trailing" was unnecessary and would itself have broken all five positional call sites. |
