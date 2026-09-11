@@ -378,6 +378,32 @@ task files, so they were NOT physically reshuffled; this index carries the order
   a rule that disagrees with a careful modeller's own guard deserves a second look from
   this side too. Blocked on their reply.
 
+- **[1.25]** **Implied adaptor ports (A103) — RULED "abolish", then PAUSED on a
+  feasibility measurement. Blocked on riddl-models.** A103 makes a port-less adaptor
+  count as one inlet and one outlet (`Adaptor.arityShape`, `AST.scala:4696`), and that
+  implication is invisible to `proc.inlets`, which most rules read — `isStreamTail`
+  (`ValidationPass.scala:8414`) and both `ask` legs (`:627`, `:639`) among them. One root
+  cause, two failures, both verified against the source: an `ask` from a port-less adaptor
+  is silently unchecked, and a source feeding one draws `stream-source-reaches-no-sink`.
+  **Reid ruled 2026-09-10: abolish, every port declared.** Delivered as materialise +
+  deprecate, never deletion — 2.0 shipped, so the removal window is closed.
+  **Paused because the migration cannot be automated.** `Inlet.type_` is a `TypeRef` to a
+  NAMED type, and measured over 190 models: of 411 port-less adaptors, 355 have real
+  clauses, of which only **165** handle exactly one type (190 handle 2–5, with no single
+  name to point at) and only **1** has a derivable outlet — the rest are prose stubs
+  (`do` + `error`, no `tell`). Generating ports would mean the compiler authoring
+  user-facing alternation types. **Not a cost objection; a feasibility one.**
+  Also measured: `ImpliedEnd` has only **23** endpoints corpus-wide, so the
+  "materialised ports read as unconnected" risk is small.
+  Sent back as `riddl-models/task/2026-09-11-implied-adaptor-ports-is-not-a-mechanical-migration.md`.
+  **Do not implement until they reply** — the ruling rests on their claim that this is
+  "a large mechanical migration … not a research problem", which the measurement
+  contradicts. Plan (superseded in its mechanism, sound in its diagnosis):
+  `~/.claude/plans/ticklish-puzzling-sun.md`.
+  **Fallback if implication stays:** invert the naming so `proc.inlets` means
+  declared+implied and the raw field becomes `declaredInlets` (prettify/BAST/JSON only) —
+  every rule reaching for the obvious name is then right by default. Not ruled on.
+
 
 | # | Item | Blocked by | Why here |
 |---|---|---|---|
