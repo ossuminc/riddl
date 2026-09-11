@@ -3732,6 +3732,33 @@ case class ValidationPass(
           ruleId = Some(RuleId.QuiescenceDuplicate)
         )
       }
+    // 2026-09-11 (Reid): a handler may declare AT MOST ONE of each SPECIAL clause kind. Quiescence
+    // had this rule above and the other five did not, so `on other` twice -- two catch-alls with no
+    // rule for which one runs -- validated clean. `ClauseShadowed` cannot see these: it collects
+    // `OnMessageLikeClause` only, because a special clause names no message to key on.
+    //
+    // Quiescence keeps its OWN message and rule id rather than being folded in here. The rule is
+    // the same but the REASON is not -- a second `on quiescence` is a second idle clock, a second
+    // `on init` is a second constructor -- and the same lesson `error`/`terminate` terminality
+    // records applies: a true diagnostic with the wrong explanation is worse than a generic one.
+    val specialKinds: Seq[(String, Seq[OnClause], String)] = Seq(
+      ("on other", h.clauses.collect { case c: OnOtherClause => c }, "one residual-message policy"),
+      ("on init", h.clauses.collect { case c: OnInitializationClause => c }, "one construction"),
+      ("on term", h.clauses.collect { case c: OnTerminationClause => c }, "one termination"),
+      ("on activate", h.clauses.collect { case c: OnActivationClause => c }, "one activation"),
+      ("on passivate", h.clauses.collect { case c: OnPassivationClause => c }, "one passivation")
+    )
+    for (keyword, found, why) <- specialKinds if found.sizeIs > 1 do
+      found.tail.foreach { later =>
+        messages.addError(
+          later.loc,
+          s"${h.identify} declares more than one '$keyword' clause; a handler has $why",
+          suggestion = s"Keep one '$keyword' per handler and branch inside it if several outcomes " +
+            "are needed.",
+          ruleId = Some(RuleId.DuplicateSpecialClause)
+        )
+      }
+    end for
     parents.headOption match {
       case Some(entity: Entity) =>
         if messageClauses.nonEmpty then {

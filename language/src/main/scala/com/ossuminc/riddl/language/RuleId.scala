@@ -347,6 +347,7 @@ enum RuleId(
   case ClauseShadowed extends RuleId("handler-clause-shadowed")
   case QuiescenceWindowNotDuration extends RuleId("handler-quiescence-window-not-duration")
   case QuiescenceDuplicate extends RuleId("handler-quiescence-duplicate")
+  case DuplicateSpecialClause extends RuleId("handler-duplicate-special-clause")
   case QuiescenceInCorrelation extends RuleId("handler-quiescence-in-correlation")
   case EntityNoCommandsOrQueries extends RuleId("handler-entity-no-commands-or-queries")
   case RepositoryHandlesEvents extends RuleId("handler-repository-handles-events")

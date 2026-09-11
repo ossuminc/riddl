@@ -115,6 +115,7 @@ handler-clause-no-statements
 handler-clause-shadowed
 handler-clause-wrong-arity
 handler-command-no-response
+handler-duplicate-special-clause
 handler-empty-on-other
 handler-entity-no-commands-or-queries
 handler-no-executable-statements
