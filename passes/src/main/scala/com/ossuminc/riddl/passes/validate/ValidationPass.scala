@@ -502,8 +502,13 @@ case class ValidationPass(
         // 22 to 3 AND kept all 13 reactive-bbq sites -- the reported defect is entirely preserved,
         // which is what made it a scoping rather than a softening. Had the corpus gone quiet the
         // exemption would have been wrong at any fixture cost.
+        // **And the SENDER'S side, symmetrically ([1.25], Reid 2026-09-11).** A sender that
+        // transmits but declares no outlet is ALREADY diagnosed by `checkProcessorPorts`, for every
+        // processor kind; this rule reads the sender's outlet, so it abstains until one exists. One
+        // omission, one report -- a port-less entity that tells used to draw this Error AND the
+        // no-outlet warning, the "two checks forming a demand" shape.
         val exempt = isPredefined(target) || target.isEmpty || snd.isEmpty ||
-          target.inlets.isEmpty
+          target.inlets.isEmpty || missingOutlet(snd)
         // The sender ALONE. Not its enclosing contexts -- see the note above; a context-level
         // outlet is the context's to publish on, never its contents'.
         val origins: Seq[Processor[?]] = Seq(snd)
@@ -623,8 +628,10 @@ case class ValidationPass(
         // applies to telling yourself.
         val self = from eq target
         if !eitherEmpty && !self then
-          // The QUESTION leg: asker -> target, exactly `tell`'s question.
-          if target.inlets.nonEmpty && !reaches(from, target) then
+          // The QUESTION leg: asker -> target, exactly `tell`'s question. Each leg abstains on the
+          // side it cannot read ([1.25]): the asker's missing outlet and the target's missing inlet
+          // are already reported as incomplete by `checkProcessorPorts`.
+          if target.inlets.nonEmpty && !missingOutlet(from) && !reaches(from, target) then
             messages.addError(
               ask.loc,
               s"the query asked of ${target.identify} cannot reach it from ${from.identify}: no " +
@@ -636,7 +643,7 @@ case class ValidationPass(
           end if
           // The REPLY leg: target -> asker. The half a reader is most likely to assume the
           // generator supplies.
-          if from.inlets.nonEmpty && !reaches(target, from) then
+          if from.inlets.nonEmpty && !missingOutlet(target) && !reaches(target, from) then
             messages.addError(
               ask.loc,
               s"the answer from ${target.identify} cannot reach ${from.identify}: no connector " +
@@ -904,6 +911,7 @@ case class ValidationPass(
     // having no upstream source.
     value match {
       case p: Processor[?] =>
+        checkProcessorPorts(p)
         validateProcessorShape(p)
         addProcessor(p)
       case _ => ()
@@ -2282,16 +2290,22 @@ case class ValidationPass(
       val ownInletAdmits = ctx.inlets.exists { inlet =>
         resolution.refMap.definitionOf[Type](inlet.type_.pathId).exists(t => typeAdmits(t, msgType))
       }
-      // ... OR the implied inlet of its INBOUND adaptor from the sender's context (AR9's repair of
-      // AR5, 2026-09-07). AR6 requires the crossing to LAND on that adaptor, so its implied inlet
-      // -- what the adaptor HANDLES -- is the admitting port on the exclusive shape. Without this
-      // arm AR5 and AR6 contradicted each other on precisely the arrangement exclusivity demands,
-      // hidden in the corpus only because its adaptor tells were `let`-bound and unresolved.
+      // ... OR a DECLARED inlet of its INBOUND adaptor from the sender's context (AR9's repair of
+      // AR5, 2026-09-07: AR6 requires the crossing to LAND on that adaptor, so that adaptor's inlet
+      // is the admitting port on the exclusive shape; without this arm AR5 and AR6 contradicted
+      // each other on precisely the arrangement exclusivity demands). Since [1.25] the adaptor's
+      // inlet is DECLARED, never implied from what it handles -- and when it has not declared one
+      // this rule ABSTAINS: the missing inlet is already reported as incomplete, and no rule may
+      // reason from a port that does not yet exist.
       val senderCtx = symbols.contextOf(adaptor)
-      val inboundAdaptorAdmits = ctx.adaptors.exists { a =>
+      val inboundFromSender = ctx.adaptors.filter { a =>
         a.direction.isInstanceOf[InboundAdaptor] &&
-        senderCtx.exists(sc => resolution.refMap.definitionOf[Context](a.referent.pathId, a).exists(_ eq sc)) &&
-        adaptorAccepts(a, msgType)
+        senderCtx.exists(sc => resolution.refMap.definitionOf[Context](a.referent.pathId, a).exists(_ eq sc))
+      }
+      val inboundAdaptorAdmits = inboundFromSender.exists { a =>
+        missingInlet(a) || a.dataflowInlets.exists { inlet =>
+          resolution.refMap.definitionOf[Type](inlet.type_.pathId).exists(t => typeAdmits(t, msgType))
+        }
       }
       if !ownInletAdmits && !inboundAdaptorAdmits then
         messages.addError(
@@ -2300,7 +2314,7 @@ case class ValidationPass(
             s"'${msg.format}' from '$kind' in ${adaptor.identify}",
           suggestion =
             s"Declare an inlet on ${ctx.identify} typed ${msgType.identify}, or an alternation " +
-              s"that includes it, or handle it in ${ctx.identify}'s inbound adaptor from " +
+              s"that includes it, or declare one on ${ctx.identify}'s inbound adaptor from " +
               s"${senderCtx.map(_.identify).getOrElse("the sender's context")}; riddlc validates " +
               s"the far end against what is declared and synthesises nothing.",
           ruleId = Some(RuleId.AdaptorTargetNoAdmittingInlet)
@@ -2346,46 +2360,30 @@ case class ValidationPass(
       case other => operandType(other)
   end clauseOperandType
 
-  /** Does an adaptor ACCEPT a message of type `t` on its implied inlet (AR9)? A specific clause
-    * whose handled type admits `t`, or an `on other` that does something with what arrives. An `on
-    * other` whose body is nothing but `error` is a REFUSAL, not acceptance -- it is the corpus's
-    * idiom for "anything else is unexpected" -- so it must not make every wire type-correct.
-    * Deliberately stricter than [[receivesMessageType]], which serves delivery questions where a
-    * refusing clause still counts as "something receives it".
+  /** The DISTINCT message types a processor's clauses transmit -- `send`, `tell`, `forward`, `yield`,
+    * `reply`, or an `ask`'s query -- resolved by [[clauseOperandType]]. Identity-distinct (`eq`), since `Definition.equals`
+    * is structural. Used only to NAME the types in the missing-outlet report of
+    * [[checkProcessorPorts]]; nothing is typed from it. (It began as AR9's `impliedOutletTypes`,
+    * riddl-generator's derivation for typing an adaptor's implied outlet; the implication went with
+    * [1.25] and the derivation stayed as diagnostic text.)
     */
-  private def adaptorAccepts(adaptor: Adaptor, t: Type): Boolean =
-    handlerClausesOf(adaptor).exists {
-      case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
-        resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(mt => typeAdmits(mt, t))
-      case ooc: OnOtherClause =>
-        ooc.contents.toSeq.exists {
-          case _: ErrorStatement => false
-          case _: Statement      => true
-          case _                 => false
-        }
-      case _ => false
-    }
-  end adaptorAccepts
-
-  /** What an adaptor puts on its IMPLIED outlet (AR9, riddl-generator's derivation, 2026-09-07):
-    * the DISTINCT types it `tell`s or `forward`s to a context, resolved by [[clauseOperandType]].
-    * Both directions count -- an outbound adaptor tells the far context, an inbound one tells its
-    * own -- because either way that is the implied outlet. Identity-distinct (`eq`), since
-    * `Definition.equals` is structural. More than one distinct type is an AMBIGUITY, reported by
-    * [[validateAdaptor]] and never resolved by taking the first: an implied port carries one type,
-    * and an adaptor that genuinely emits several declares its outlet with an alternation.
-    */
-  private def impliedOutletTypes(adaptor: Adaptor): Seq[Type] =
+  private def transmittedTypes(proc: Processor[?]): Seq[Type] =
     val told = scala.collection.mutable.ArrayBuffer.empty[Type]
-    handlerClausesOf(adaptor).foreach { clause =>
+    handlerClausesOf(proc).foreach { clause =>
       walkStatements(clause.contents) {
-        case TellStatement(_, msg, _: ContextRef, _) => clauseOperandType(msg, clause).foreach(told += _)
-        case ForwardStatement(_, msg, _: ContextRef)  => clauseOperandType(msg, clause).foreach(told += _)
-        case _                                        => ()
+        case t: TellStatement    => clauseOperandType(t.msg, clause).foreach(told += _)
+        case f: ForwardStatement => clauseOperandType(f.msg, clause).foreach(told += _)
+        case sn: SendStatement   => clauseOperandType(sn.msg, clause).foreach(told += _)
+        case y: YieldStatement   => clauseOperandType(y.msg, clause).foreach(told += _)
+        case r: ReplyStatement   => clauseOperandType(r.msg, clause).foreach(told += _)
+        case other =>
+          statementValues(other).flatMap(asksIn).foreach { ask =>
+            resolution.refMap.definitionOf[Type](ask.query.pathId).foreach(told += _)
+          }
       }
     }
     told.foldLeft(Seq.empty[Type])((acc, t) => if acc.exists(_ eq t) then acc else acc :+ t)
-  end impliedOutletTypes
+  end transmittedTypes
 
   /** AR8 (Reid, 2026-09-06; CM §8.1 "The ownership rule binds `send` as well as `tell`"): a
     * processor publishes only through its OWN outlet, and that is a claim about publication, not
@@ -3352,69 +3350,15 @@ case class ValidationPass(
     if connector.nonEmpty then
       addConnector(connector)
       checkConnectorIntentions(connector)
-      // A103: an endpoint path may name a PORTLET or an ADAPTOR (its implied port). The shared
-      // `connectorFrom`/`connectorTo` resolve both; `ResolutionPass` has already reported a path
-      // that resolves to neither. Type agreement is a question about two DECLARED ports -- an
-      // implied port has no type of its own (nothing is synthesised, CM §8.1), so when either end
-      // is an adaptor the far end's typing is validated by `checkAdaptorTargetAdmitsMessage`
-      // against what the adaptor actually tells, not here.
+      // Both ends are DECLARED portlets -- `ResolutionPass` has already reported a path that
+      // resolves to anything else, an adaptor included ([1.25]: nothing is implied). Type agreement
+      // is a question about two declared ports, asked strictly (`areSameType`) below. (From
+      // 2026-09-07 to 2026-09-11 a block here typed an ADAPTOR end from what it told or handled --
+      // AR9's "the source decides what a wire carries"; it left with the implied ports it typed.)
       val fromEnd = connectorFrom(connector, parents)
       val toEnd = connectorTo(connector, parents)
-      val maybeOutlet = fromEnd.flatMap(_.portlet).collect { case o: Outlet => o }
-      val maybeInlet = toEnd.flatMap(_.portlet).collect { case i: Inlet => i }
-
-      // AR9 (2026-09-07): when EITHER end is implied, the check runs on the implied port's type
-      // instead of being skipped. The SOURCE decides what the wire carries: a declared outlet's
-      // type (every alternation member), or what the adaptor tells through its implied outlet
-      // (`impliedOutletTypes`; several distinct types is the adaptor's own ambiguity Error, and
-      // this stays silent on it rather than double-reporting). The destination must ADMIT each
-      // carried member: a declared inlet by its type (`typeAdmits`, the permissive test -- an
-      // implied port may face an alternation-typed inlet), an implied inlet by what its adaptor
-      // HANDLES (`receivesMessageType`, `on other` handling everything). The declared/declared
-      // case below keeps its strict `areSameType`; that asymmetry is deliberate and is the AR5
-      // note the task carried.
-      (fromEnd, toEnd) match
-        case (Some(f), Some(t)) if f.portlet.isEmpty || t.portlet.isEmpty =>
-          def isUniversal(tp: Type): Boolean = tp.typEx.isInstanceOf[Anything]
-          val carried: Seq[Type] = f match
-            case DeclaredEnd(o: Outlet, _) =>
-              resolution.refMap.definitionOf[Type](o.type_.pathId).toSeq.flatMap(typeMembers)
-            case ImpliedEnd(a) =>
-              val told = impliedOutletTypes(a)
-              if told.sizeIs == 1 then told else Seq.empty
-            case _ => Seq.empty
-          val source: String = f match
-            case ImpliedEnd(a) => s"the implied outlet of ${a.identify}"
-            case other         => other.definition.identify
-          val verdict: (Seq[Type], String) = t match
-            case DeclaredEnd(i: Inlet, _) =>
-              resolution.refMap.definitionOf[Type](i.type_.pathId) match
-                case Some(it) if isUniversal(it) => (Seq.empty, "")
-                case Some(it) => (carried.filterNot(c => typeAdmits(it, c)), s"requires ${it.identify}")
-                case None     => (Seq.empty, "")
-            case ImpliedEnd(a) =>
-              val handled = handlerClausesOf(a).collect {
-                case omc: OnMessageLikeClause if omc.msg.nonEmpty => omc.msg.pathId.value.last
-              }.distinct
-              (
-                carried.filterNot(c => adaptorAccepts(a, c)),
-                s"the implied inlet of ${a.identify} handles ${handled.map(n => s"'$n'").mkString(", ")}"
-              )
-            case _ => (Seq.empty, "")
-          val (rejected, expects) = verdict
-          if rejected.nonEmpty then
-            messages.addError(
-              connector.errorLoc,
-              s"${connector.identify} carries ${rejected.map(_.identify).mkString(", ")} from " +
-                s"$source, but $expects; a connector carries one type",
-              suggestion =
-                "Make the source's told type and the destination's handled type agree, or declare " +
-                  "the port with an alternation that admits every type the wire carries.",
-              ruleId = Some(RuleId.ConnectorTypeMismatch)
-            )
-          end if
-        case _ => ()
-      end match
+      val maybeOutlet = fromEnd.map(_.portlet).collect { case o: Outlet => o }
+      val maybeInlet = toEnd.map(_.portlet).collect { case i: Inlet => i }
 
       (maybeOutlet, maybeInlet) match
         case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
@@ -4380,70 +4324,8 @@ case class ValidationPass(
           suggestion = "Add an 'on query' clause so the entity's state can be read.",
           ruleId = Some(RuleId.EntityNoQueryClause)
         )
-    // Completeness 4h/4i: an entity's OWN portlets, not its context's.
-    //
-    // **Reid, 2026-08-18: "inlets are needed to receive, outlets to transmit/publish."** A message
-    // reaches a processor through THAT processor's inlet -- not a sibling's, and not its
-    // container's. `tell` is no exception: it is the same operation as `send` unless a generator
-    // can lower it more efficiently while keeping RIDDL's semantics, so it too requires the target
-    // to have an inlet. (An "inbox" is a lowering detail with no presence at the RIDDL design
-    // level; do not reason about one here.)
-    //
-    // Both checks used to read the CONTEXT's ports, and 4h did not ask about the entity at all.
-    // That could never be right: a projector's inlet does not make an entity reachable, and an
-    // entity cannot publish on its context's outlet. Getting a message OUT of a context goes
-    // entity outlet -> connector -> context inlet -> handler -> context outlet, and the first step
-    // is the entity's own outlet, so no context-level port substitutes for it.
-    //
-    // Each is gated on the entity actually doing the thing: an entity that handles no message
-    // needs no inlet, and one that emits nothing needs no outlet. A `???` body is exempt via
-    // `entity.nonEmpty`, per the standing rule that a stub earns at most a Missing warning.
-    if entity.nonEmpty then {
-      // Fold STATE handlers in, exactly as `validateAsk` and the four checks above do. An entity's
-      // clauses commonly live inside a `State` rather than directly on the entity, so
-      // `entity.handlers` alone under-reports badly -- it saw 24 of the corpus's entities where the
-      // folded form sees far more.
-      val allHandlers = entity.handlers ++ entity.states.flatMap(_.handlers)
-      val receivesMessages = allHandlers.exists(_.clauses.exists {
-        case _: OnMessageClause => true
-        case _: OnEventClause   => true
-        case _                  => false
-      })
-      if receivesMessages && entity.inlets.isEmpty then
-        messages.addCompleteness(
-          entity.errorLoc,
-          s"${entity.identify} handles messages but declares no inlet to receive them on",
-          suggestion =
-            s"Declare an inlet on ${entity.identify} typed with the messages it handles. A " +
-              "processor receives only through its OWN inlet -- a port on its context or on a " +
-              "sibling does not deliver to it.",
-          ruleId = Some(RuleId.EntityNoInlet)
-        )
-      end if
-
-      var emits = false
-      allHandlers.foreach { handler =>
-        handler.clauses.foreach { clause =>
-          walkStatements(clause.contents) {
-            case _: SendStatement | _: TellStatement | _: YieldStatement | _: ReplyStatement =>
-              emits = true
-            case _ => ()
-          }
-        }
-      }
-      if emits && entity.outlets.isEmpty then
-        messages.addCompleteness(
-          entity.errorLoc,
-          s"${entity.identify} sends or publishes messages but declares no outlet to transmit " +
-            s"them on",
-          suggestion =
-            s"Declare an outlet on ${entity.identify} for the messages it emits. Publishing goes " +
-              "out the entity's OWN outlet; its context's outlet is reached only by connecting " +
-              "the entity's outlet onward within the context.",
-          ruleId = Some(RuleId.EntityNoOutlet)
-        )
-      end if
-    }
+    // The entity's OWN portlets (formerly Completeness 4h/4i, here) are checked by
+    // `checkProcessorPorts`, dispatched from `process` for EVERY processor kind since [1.25].
     // Completeness: entity Id type placement checks
     if entity.nonEmpty then {
       val parentContext = parents.collectFirst { case c: Context => c }
@@ -5413,22 +5295,8 @@ case class ValidationPass(
     adaptor: Adaptor,
     parents: Parents
   ): Unit = {
-    // AR9: an implied outlet carries ONE type. An adaptor with no declared outlet that tells
-    // several distinct types to a context is ambiguous, and saying so beats guessing -- a
-    // generator lowering the implied port has nothing single-valued to type it with.
-    if adaptor.outlets.isEmpty then
-      val told = impliedOutletTypes(adaptor)
-      if told.sizeIs > 1 then
-        messages.addError(
-          adaptor.errorLoc,
-          s"${adaptor.identify} tells ${told.size} distinct types through its implied outlet " +
-            s"(${told.map(_.identify).mkString(", ")}); an implied port carries one type",
-          suggestion =
-            s"Declare an outlet on ${adaptor.identify} typed with an alternation of those types, " +
-              s"or split the translation across adaptors, one type each.",
-          ruleId = Some(RuleId.AdaptorImpliedOutletAmbiguous)
-        )
-    end if
+    // An adaptor's ports are DECLARED or absent, like every processor's ([1.25]); a missing side its
+    // handlers need is reported by `checkProcessorPorts`, dispatched for every Processor kind.
     parents.headOption match {
       case Some(c: Context) =>
         checkContainer(parents, adaptor)
@@ -5679,6 +5547,116 @@ case class ValidationPass(
     }
   }
 
+  /** A port the processor's own handlers NEED and it does not DECLARE -- an inlet when it handles
+    * messages, an outlet when it transmits them. Reported as a **Missing** warning, `???`'s kind,
+    * because it is the same fact: the author has not written something the definition owes. Reid,
+    * 2026-09-11: *"missing is missing, that's incomplete"*.
+    *
+    * Every processor kind, one check (Reid, 2026-09-11, ruling in [1.25]). Until then only an
+    * Entity was checked (Completeness 4h/4i, 2026-08-18: *"inlets are needed to receive, outlets to
+    * transmit/publish"* -- a message reaches a processor through THAT processor's inlet, not a
+    * sibling's and not its container's), while the reachability rules exempted a port-less TARGET
+    * of ANY kind as "already diagnosed" -- true for entities, silent for everything else. And an
+    * Adaptor was the opposite case: A103 (2026-09-06) IMPLIED its ports, invisible to `inlets`/
+    * `outlets`, so one structural fact surfaced as two contradictory diagnostics in riddl-models.
+    * Abolishing the implication and generalising the check are the same move.
+    *
+    * **The companion rule: a check ABSTAINS on the side it cannot read.** [[missingInlet]] and
+    * [[missingOutlet]] are consulted by `checkTellReachability`, `checkAskReachability`,
+    * `validateProcessorShape` and `checkAdaptorTargetAdmitsMessage`, each on the side it reads --
+    * *"further analysis before the portlets have connectors attached isn't worthwhile since you
+    * can't say anything about the constructed graph."* This is `???`'s treatment generalised: the
+    * author has been told what to write, and nothing reasons from what is not there.
+    *
+    * One rule, two id spellings: an Entity keeps `entity-no-inlet`/`entity-no-outlet` (published
+    * codes a consumer keys on), every other kind reports `stream-processor-no-*`. See `RuleId`.
+    */
+  private def checkProcessorPorts(proc: Processor[?]): Unit =
+    if missingInlet(proc) then
+      val handled = handledTypes(proc)
+      val named = if handled.isEmpty then "messages" else handled.map(_.identify).mkString(", ")
+      val rule = proc match
+        case _: Entity => RuleId.EntityNoInlet
+        case _         => RuleId.StreamProcessorNoInlet
+      messages.addMissing(
+        proc.errorLoc,
+        s"${proc.identify} is incomplete: it handles $named but declares no inlet to receive " +
+          "them on",
+        suggestion =
+          s"Declare an inlet on ${proc.identify} typed with the message it handles, or with an " +
+            "alternation of them. A processor receives only through its OWN inlet -- a port on its " +
+            "context or on a sibling does not deliver to it.",
+        ruleId = Some(rule)
+      )
+    end if
+    if missingOutlet(proc) then
+      val told = transmittedTypes(proc)
+      val named = if told.isEmpty then "messages" else told.map(_.identify).mkString(", ")
+      val rule = proc match
+        case _: Entity => RuleId.EntityNoOutlet
+        case _         => RuleId.StreamProcessorNoOutlet
+      messages.addMissing(
+        proc.errorLoc,
+        s"${proc.identify} is incomplete: it transmits $named but declares no outlet to transmit " +
+          "them on",
+        suggestion =
+          s"Declare an outlet on ${proc.identify} typed with the message it transmits, or with an " +
+            "alternation of them. Publishing goes out the processor's OWN outlet; its context's " +
+            "outlet is reached only by connecting the processor's outlet onward within the context.",
+        ruleId = Some(rule)
+      )
+    end if
+  end checkProcessorPorts
+
+  /** The processor RECEIVES messages -- a clause handling a named message, or an `on other` that
+    * does something with what arrives -- and declares no DATAFLOW inlet to receive them on. An
+    * `on other` whose body is nothing but `error` is a REFUSAL, the corpus's idiom for "anything
+    * else is unexpected", and needs no inlet. An `error-sink` inlet is infrastructure, not dataflow
+    * (Reid, 2026-08-16), so it does not count. A `???` body and the predefined module are exempt.
+    */
+  private def missingInlet(proc: Processor[?]): Boolean =
+    proc.nonEmpty && !isPredefined(proc) && proc.dataflowInlets.isEmpty && receivesAnything(proc)
+
+  /** The processor TRANSMITS -- `send`, `tell`, `forward`, `yield` or `reply` in any clause, or an
+    * `ask` (a `send` with a declared correlation, CM §40.7) in any statement's values -- and declares
+    * no outlet to transmit on. Same exemptions as [[missingInlet]].
+    */
+  private def missingOutlet(proc: Processor[?]): Boolean =
+    proc.nonEmpty && !isPredefined(proc) && proc.outlets.isEmpty && transmitsAnything(proc)
+
+  private def receivesAnything(proc: Processor[?]): Boolean =
+    handlerClausesOf(proc).exists {
+      case omc: OnMessageLikeClause => omc.msg.nonEmpty
+      case ooc: OnOtherClause =>
+        ooc.contents.toSeq.exists {
+          case _: ErrorStatement => false
+          case _: Statement      => true
+          case _                 => false
+        }
+      case _ => false
+    }
+
+  private def transmitsAnything(proc: Processor[?]): Boolean =
+    var found = false
+    handlerClausesOf(proc).foreach { clause =>
+      walkStatements(clause.contents) {
+        case _: SendStatement | _: TellStatement | _: ForwardStatement | _: YieldStatement |
+            _: ReplyStatement =>
+          found = true
+        case other => if statementValues(other).exists(v => asksIn(v).nonEmpty) then found = true
+      }
+    }
+    found
+
+  /** The DISTINCT message types the processor's clauses handle, by identity, for naming in the
+    * missing-inlet report.
+    */
+  private def handledTypes(proc: Processor[?]): Seq[Type] =
+    handlerClausesOf(proc)
+      .collect { case omc: OnMessageLikeClause if omc.msg.nonEmpty => omc.msg }
+      .flatMap(ref => resolution.refMap.definitionOf[Type](ref.pathId).toSeq)
+      .foldLeft(Seq.empty[Type])((acc, t) => if acc.exists(_ eq t) then acc else acc :+ t)
+
   /** Task 10 (A32): validate a processor's ascribed stream shape against its arity, and nudge when
     * a ported processor omits an ascription. Runs for every processor kind via `process`.
     *   - `ascribedShape` present but its canonical shape disagrees with the arity-derived shape ->
@@ -5694,10 +5672,14 @@ case class ValidationPass(
       // A portless processor (0 inlets, 0 outlets) is an incomplete placeholder, not a
       // contradiction: it is flagged elsewhere as "should have content". Only compare the
       // ascription against the arity once at least one port is declared.
-      // An ADAPTOR is checked even when port-less (A103, adamant half): its ports are implied by
-      // its direction, so it always has an arity to compare against, and `as source`/`as merge` on
-      // a port-less adaptor used to be silently ignored text (riddl-generator's probe B).
-      case Some(ascribed) if numOutlets + numInlets >= 1 || processor.isInstanceOf[Adaptor] =>
+      // And ABSTAIN while a port the handlers NEED is still missing ([1.25], Reid 2026-09-11): the
+      // arity is not yet knowable, and `checkProcessorPorts` has already said what to declare.
+      // (From 2026-09-06 to 2026-09-11 an adaptor was checked even when port-less, against the
+      // ports A103 implied for it; that implication is gone, so an adaptor is judged exactly as
+      // every other processor is -- "a rule is a rule, and adaptors really aren't all that
+      // special".)
+      case Some(_) if missingInlet(processor) || missingOutlet(processor) => ()
+      case Some(ascribed) if numOutlets + numInlets >= 1 =>
         // ONE reading, not two (Reid, 2026-08-16): an `error-sink` inlet is infrastructure, never
         // dataflow, so `arityShape` already excludes it. The dual acceptance that used to live
         // here is gone -- accepting either reading let an infrastructure inlet justify whatever
@@ -5711,23 +5693,14 @@ case class ValidationPass(
         // cannot excuse a flow ascribed as a merge, which is the case the ruling exists to catch.
         val isPureErrorReceiver =
           processor.dataflowInlets.isEmpty && numOutlets == 0 && numInlets >= 1
-        // An Adaptor's `arityShape` counts its IMPLIED ports (A103), so an adaptor declaring one
-        // outlet derives `flow` where it used to derive `source`. The permissive half accepted the
-        // declared-only reading too while the corpus migrated; the adamant half removed that arm,
-        // so the corpus's 31 `as source` adaptors are reported until riddl-models drops the
-        // ascription. An adaptor IS a flow; saying otherwise is a contradiction.
         val acceptable: Seq[String] =
           if isPureErrorReceiver then Seq(derived.keyword, Sink(At.empty).keyword)
           else Seq(derived.keyword)
         if !acceptable.contains(ascribed.keyword) then
-          val why = processor match
-            case _: Adaptor =>
-              s"an adaptor's ports are implied by its direction (one inlet and one outlet, plus " +
-                s"any it declares), so its shape is ${derived.keyword}"
-            case _ =>
-              s"its DATAFLOW arity ($numOutlets outlets, ${processor.dataflowInlets.size} inlets, " +
-                s"excluding ${numInlets - processor.dataflowInlets.size} error-sink) is " +
-                s"${derived.keyword}"
+          val why =
+            s"its DATAFLOW arity ($numOutlets outlets, ${processor.dataflowInlets.size} inlets, " +
+              s"excluding ${numInlets - processor.dataflowInlets.size} error-sink) is " +
+              s"${derived.keyword}"
           messages.addError(
             processor.errorLoc,
             s"${processor.identify} is ascribed 'as ${ascribed.keyword}' but $why",
@@ -5737,6 +5710,14 @@ case class ValidationPass(
             ruleId = Some(RuleId.AscribedShapeMismatch)
           )
       case Some(_) => () // ascribed shape but no ports yet: incomplete, handled elsewhere
+      // The NUDGE abstains on the same terms as the Error (Reid, 2026-09-11): while a port the
+      // handlers need is still missing, the derived shape is provisional -- an inbound adaptor that
+      // will tell once its outlet is written derives `sink` today and `flow` then -- and telling
+      // the author to write `as sink` now would nudge them into the lie the rule exists to avoid.
+      // Once the ports are complete the nudge names the truth about what is written, and the
+      // migration for an adaptor whose `as flow` now contradicts its arity is to DELETE the
+      // ascription, not to replace it.
+      case None if missingInlet(processor) || missingOutlet(processor) => ()
       case None =>
         if numOutlets + numInlets >= 1 then
           messages.addStyle(
@@ -8531,26 +8512,20 @@ case class ValidationPass(
         case Some(t) => x => typeAdmits(t, x)
         case None    => _ => false // unresolved inlet type is ref-integrity's report, not this rule's
 
-    def processorGate(q: Processor[?]): Gate = q match
-      case a: Adaptor => x => adaptorAccepts(a, x) || a.inlets.exists(i => inletGate(i)(x))
-      case other      => x => other.inlets.exists(i => inletGate(i)(x))
+    def processorGate(q: Processor[?]): Gate = x => q.inlets.exists(i => inletGate(i)(x))
 
-    // Where each declared outlet leads: the inlet (or implied adaptor inlet) at the far end of every
-    // connector leaving it.
+    // Where each declared outlet leads: the inlet at the far end of every connector leaving it.
     val leadsTo = mutable.Map.empty[ByIdentity[Outlet], mutable.ListBuffer[Arrival]]
     connectors.filterNot(_.isEmpty).foreach { connector =>
       val connParents = symbols.parentsOf(connector)
       for
         fromEnd <- connectorFrom(connector, connParents)
-        outlet <- fromEnd.portlet.collect { case o: Outlet => o }
+        outlet <- Some(fromEnd.portlet).collect { case o: Outlet => o }
         toEnd <- connectorTo(connector, connParents)
         owner <- toEnd.owner
+        inlet <- Some(toEnd.portlet).collect { case i: Inlet => i }
       do
-        val gate: Gate = toEnd match
-          case DeclaredEnd(i: Inlet, _) => inletGate(i)
-          case ImpliedEnd(adaptor)      => x => adaptorAccepts(adaptor, x)
-          case _                        => _ => false
-        leadsTo.getOrElseUpdate(ByIdentity(outlet), mutable.ListBuffer.empty) += ((owner, gate))
+        leadsTo.getOrElseUpdate(ByIdentity(outlet), mutable.ListBuffer.empty) += ((owner, inletGate(inlet)))
       end for
     }
 

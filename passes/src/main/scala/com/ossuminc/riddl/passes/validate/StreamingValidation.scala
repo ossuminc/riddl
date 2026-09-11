@@ -65,57 +65,29 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
   /** The members a type admits, expanded through any alternation; the type itself otherwise. */
   protected def typeMembers(t: Type): Seq[Type]
 
-  /** One end of a connector (A103, Reid 2026-09-06; CM §§7.2, 8.1).
+  /** One end of a connector: the DECLARED portlet its path resolves to, and the processor that owns
+    * it.
     *
-    * A connector endpoint path names either a DECLARED portlet, or an ADAPTOR -- in which case it
-    * names the adaptor's IMPLIED port on that side (its outlet when it is the `from` end, its inlet
-    * when it is the `to` end). The direction of the adaptor is what says which context that port
-    * faces, and `checkBoundaryEncapsulation` is where that is judged. No grammar changed: `from
-    * outlet Sales.ToBilling` already parsed, and `ResolutionPass` now records the adaptor rather
-    * than reporting `ref-wrong-kind`.
-    *
-    * Every check that used to call `resolvePath[Outlet]`/`resolvePath[Inlet]` on a connector end
-    * goes through [[connectorFrom]]/[[connectorTo]] instead, so the seven sites cannot disagree
-    * about what an endpoint is -- the "one derivation, one place" rule this file keeps recording.
+    * From 2026-09-06 to 2026-09-11 this was a sealed pair, `DeclaredEnd | ImpliedEnd`, the second
+    * arm being an ADAPTOR named directly by the endpoint path -- A103's implied port. Reid abolished
+    * implied ports on 2026-09-10 ([1.25]); `ResolutionPass` reports such a path as `ref-wrong-kind`
+    * again, so no second arm can arise here. The seam stays: every check that resolves a connector
+    * end goes through [[connectorFrom]]/[[connectorTo]], so the seven sites cannot disagree about
+    * what an endpoint is -- the "one derivation, one place" rule this file keeps recording.
     */
-  protected sealed trait ConnectorEnd:
-    /** The definition the path resolved to: the portlet, or the adaptor. Ask `contextOf`/domain
-      * chains of THIS.
-      */
-    def definition: Definition
-    /** The processor that owns the port. For an implied port, the adaptor itself. */
-    def owner: Option[Processor[?]]
-    /** The declared portlet, if there is one. `None` for an implied port -- it has no name and,
-      * deliberately, no synthesised type.
-      */
-    def portlet: Option[Portlet]
+  protected final case class ConnectorEnd(portlet: Portlet, owner: Option[Processor[?]]):
+    /** The definition the path resolved to. Ask `contextOf`/domain chains of THIS. */
+    def definition: Definition = portlet
   end ConnectorEnd
-
-  protected final case class DeclaredEnd(p: Portlet, ownerProcessor: Option[Processor[?]])
-      extends ConnectorEnd:
-    def definition: Definition = p
-    def owner: Option[Processor[?]] = ownerProcessor
-    def portlet: Option[Portlet] = Some(p)
-  end DeclaredEnd
-
-  protected final case class ImpliedEnd(adaptor: Adaptor) extends ConnectorEnd:
-    def definition: Definition = adaptor
-    def owner: Option[Processor[?]] = Some(adaptor)
-    def portlet: Option[Portlet] = None
-  end ImpliedEnd
 
   private def ownerProcessorOf(p: Portlet): Option[Processor[?]] =
     symbols.parentOf(p).collect { case pr: Processor[?] => pr }
 
   protected def connectorFrom(connector: Connector, parents: Parents): Option[ConnectorEnd] =
-    resolvePath[Outlet](connector.from.pathId, parents)
-      .map(o => DeclaredEnd(o, ownerProcessorOf(o)))
-      .orElse(resolvePath[Adaptor](connector.from.pathId, parents).map(ImpliedEnd.apply))
+    resolvePath[Outlet](connector.from.pathId, parents).map(o => ConnectorEnd(o, ownerProcessorOf(o)))
 
   protected def connectorTo(connector: Connector, parents: Parents): Option[ConnectorEnd] =
-    resolvePath[Inlet](connector.to.pathId, parents)
-      .map(i => DeclaredEnd(i, ownerProcessorOf(i)))
-      .orElse(resolvePath[Adaptor](connector.to.pathId, parents).map(ImpliedEnd.apply))
+    resolvePath[Inlet](connector.to.pathId, parents).map(i => ConnectorEnd(i, ownerProcessorOf(i)))
 
   /** The context an adaptor is declared toward, resolved parent-independently (the recorded parent
     * of an adaptor's `referent` is the adaptor itself -- see `hasAdaptorFor`).
@@ -243,8 +215,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
       (outletCtx, inletCtx) match
         case (Some(oc), Some(ic)) if !(oc eq ic) =>
-          // An implied end IS an adaptor, so `owner` is the adaptor and the advisory is silent --
-          // which is the arrangement the advisory asks for.
+          // An end whose owner IS an adaptor leaves the advisory silent -- that is the arrangement
+          // the advisory asks for.
           if isExternalContext(oc) then
             toEnd.flatMap(_.owner).foreach { toOwner =>
               if !toOwner.isInstanceOf[Adaptor] && !hasAdaptorFor(ic, oc) then advise(oc, toOwner)
@@ -286,8 +258,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     val adj = mutable.Map.empty[ByIdentity[Processor[?]], mutable.Set[ByIdentity[Processor[?]]]]
     connectors.filterNot(_.isEmpty).foreach { connector =>
       val connParents = symbols.parentsOf(connector)
-      // An implied end's owner is the adaptor itself, so an adaptor wired through its implied
-      // port is a node exactly as a processor with a declared port is (A103).
+      // The owner of each declared portlet is the node; an adaptor is a node through its DECLARED
+      // ports like any other processor (nothing is implied for it since [1.25]).
       val from = connectorFrom(connector, connParents).flatMap(_.owner)
       val to = connectorTo(connector, connParents).flatMap(_.owner)
       (from, to) match
@@ -330,15 +302,13 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       }
 
       // Check 1: Isolated processors (non-Void, not connected to any connector). A processor with
-      // no ports has a Void shape, so every portless context/entity/repository is excluded here.
-      // A port-less ADAPTOR derives `flow` since A103 (its ports are implied), so the exclusion
-      // asks about DECLARED ports as well as shape: an adaptor that has written no port has made
-      // no claim about wiring, and reporting ~1000 corpus adaptors as unconnected would be noise
-      // (the permissive half adds no diagnostics).
+      // no ports has a Void shape, so every portless context/entity/repository/adaptor is excluded
+      // here: it has made no claim about wiring. (If its handlers NEED a port, `checkProcessorPorts`
+      // reports the missing port as incomplete; this check waits for the declaration.)
       processors.filterNot(isPredefined).foreach { processor =>
         processor.effectiveShape match {
           case _: Void => () // Void processors (no ports) are excluded
-          case _ if processor.ports.isEmpty => () // implied ports only (an adaptor): no claim made
+          case _ if processor.ports.isEmpty => () // an ascribed shape with no ports yet: incomplete
           case _ =>
             if !connectedProcessors.contains(node(processor)) then
               messages.addCompleteness(
@@ -397,8 +367,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       // A head is therefore any node with an outlet and no inbound edge. A `Source` always
       // qualifies (no inlets, so never an edge target) and is kept explicitly for the predefined
       // `ForeverEmpty`, which satisfies reachability for what it feeds without being reported on.
-      // An adaptor's outlet is implied when not declared (A103), so it can head a chain.
-      def hasOutlet(p: Processor[?]): Boolean = p.outlets.nonEmpty || p.isInstanceOf[Adaptor]
+      def hasOutlet(p: Processor[?]): Boolean = p.outlets.nonEmpty
       def isGraphHead(n: Node): Boolean =
         hasOutlet(n.value) && !reverseAdjacency.contains(n)
       def originates(n: Node): Boolean =
@@ -610,9 +579,9 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               s"${oc.identify} declares ${adaptor.identify} toward ${ic.identify}; the crossing " +
               s"must leave from that adaptor",
             suggestion =
-              s"Connect from ${adaptor.identify} instead -- 'from outlet " +
-                s"${oc.id.value}.${adaptor.id.value}' names its implied outlet -- and let it " +
-                s"translate; an adaptor that can be routed around is not a boundary.",
+              s"Connect from a declared outlet of ${adaptor.identify} instead -- 'from outlet " +
+                s"${oc.id.value}.${adaptor.id.value}.<outlet>' -- and let it translate; an " +
+                s"adaptor that can be routed around is not a boundary.",
             ruleId = Some(RuleId.ConnectorBypassesAdaptor)
           )
         }
@@ -625,9 +594,9 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
               s"${ic.identify} declares ${adaptor.identify} from ${oc.identify}; the crossing " +
               s"must arrive at that adaptor",
             suggestion =
-              s"Connect to ${adaptor.identify} instead -- 'to inlet " +
-                s"${ic.id.value}.${adaptor.id.value}' names its implied inlet -- so the foreign " +
-                s"message is translated before anything in ${ic.identify} observes it.",
+              s"Connect to a declared inlet of ${adaptor.identify} instead -- 'to inlet " +
+                s"${ic.id.value}.${adaptor.id.value}.<inlet>' -- so the foreign message is " +
+                s"translated before anything in ${ic.identify} observes it.",
             ruleId = Some(RuleId.ConnectorBypassesAdaptor)
           )
         }
@@ -799,9 +768,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
   end ByIdentity
 
   private def checkPortletCardinality(): Unit = {
-    // Keyed on the port's DEFINITION: the declared portlet, or -- for an implied port (A103) -- the
-    // adaptor itself, which has exactly one implied port per side, so the same cardinality of one
-    // applies to it.
+    // Keyed on the port's DEFINITION (the declared portlet), by identity.
     val outletCounts = mutable.LinkedHashMap.empty[ByIdentity[Definition], Int]
     val inletCounts = mutable.LinkedHashMap.empty[ByIdentity[Definition], Int]
 
@@ -821,9 +788,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       }
     }
 
-    def portName(d: Definition, side: String): String = d match
-      case a: Adaptor => s"${a.identify}'s implied $side"
-      case p          => s"${side.capitalize} '${p.id.value}'"
+    def portName(d: Definition, side: String): String = s"${side.capitalize} '${d.id.value}'"
 
     outletCounts.foreach { case (key, count) =>
       val outlet = key.value
@@ -952,14 +917,13 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
   private def checkUnattachedOutlets(): Unit = {
     // Each side on its own. Until A103 this collected (outlet, inlet) PAIRS, so a connector with
-    // one implied end (an adaptor's) would have dropped its DECLARED other end from the in-use set
-    // and reported it unconnected -- a false warning on exactly the new shape. An implied port is
-    // never reported: it is not declared, so nothing was left dangling (permissive half).
+    // one unresolved end would have dropped its RESOLVED other end from the in-use set and
+    // reported it unconnected. Per side, each declared portlet is judged on its own connectors.
     val inUseOutlets: Seq[Outlet] = connectors.toSeq.flatMap { conn =>
-      connectorFrom(conn, symbols.parentsOf(conn)).flatMap(_.portlet).collect { case o: Outlet => o }
+      connectorFrom(conn, symbols.parentsOf(conn)).map(_.portlet).collect { case o: Outlet => o }
     }
     val inUseInlets: Seq[Inlet] = connectors.toSeq.flatMap { conn =>
-      connectorTo(conn, symbols.parentsOf(conn)).flatMap(_.portlet).collect { case i: Inlet => i }
+      connectorTo(conn, symbols.parentsOf(conn)).map(_.portlet).collect { case i: Inlet => i }
     }
 
     def findUnconnected[OI <: Portlet](portlets: scala.collection.Set[OI]): Unit = {

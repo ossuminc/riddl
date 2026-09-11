@@ -24,8 +24,10 @@ import org.scalatest.TestData
   *   - AR8: the outlet-ownership rule binds `send` (and `forward` to a portlet) as it already binds
   *     `tell` (A6). A processor publishes only through its OWN outlet; naming its context's outlet,
   *     or another context's, is an Error.
-  *   - AR3's Error: an adaptor's shape is derived from its implied ports, so an ascription that
-  *     contradicts it -- `as source`, `as merge` -- is an Error, port-less or not.
+  *   - AR3's Error, REVISED by [1.25] (2026-09-11): an adaptor's shape is derived from its DECLARED
+  *     ports like any processor's -- nothing is implied any more -- so an ascription that contradicts
+  *     the declared arity is an Error, `as merge` on two inlets is legal, and while a needed port is
+  *     still MISSING the ascription is not judged at all (the missing port is the report).
   *
   * Every one of these makes an Error out of something the corpus writes today, deliberately; the
   * permissive half exists so both shapes validated during the changeover. Negative controls in each
@@ -70,6 +72,8 @@ class AdaptorIsExclusiveTest extends AbstractValidatingTest {
 
   private val outboundAdaptor: String =
     """    adaptor ToFul to context Shop.Ful is {
+      |      inlet In is command Ship with { briefly "i" }
+      |      outlet Out is command Shop.Ful.Receive with { briefly "o" }
       |      handler H is {
       |        on ship: command Ship is { tell command Shop.Ful.Receive(sku = ship.sku) to context Shop.Ful }
       |        on other is { error "unexpected" }
@@ -95,7 +99,7 @@ class AdaptorIsExclusiveTest extends AbstractValidatingTest {
           salesOwnOutlet + "\n" + outboundAdaptor,
           fulInletAndHandler,
           """  connector Bypass is from outlet Shop.Sales.SOut to inlet Shop.Ful.In with { briefly "c" }
-            |  connector Proper is from outlet Shop.Sales.ToFul to inlet Shop.Ful.In with { briefly "c" }""".stripMargin
+            |  connector Proper is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.In with { briefly "c" }""".stripMargin
         ),
         "ar2-bypass"
       )
@@ -282,35 +286,37 @@ class AdaptorIsExclusiveTest extends AbstractValidatingTest {
     }
   }
 
-  "AR3: an adaptor's shape ascription" should {
+  "AR3 (revised): an adaptor's shape ascription" should {
 
-    "be an Error when it contradicts the implied flow on a port-less adaptor (`as source`)" in {
+    "be an Error when it contradicts the DECLARED arity (`as source` on one inlet, one outlet)" in {
       (td: TestData) =>
         val msgs = diagnostics(
           model(
             outboundAdaptor.replace("to context Shop.Ful is {", "to context Shop.Ful as source is {"),
             fulInletAndHandler,
-            """  connector Cross is from outlet Shop.Sales.ToFul to inlet Shop.Ful.In with { briefly "c" }"""
+            """  connector Cross is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.In with { briefly "c" }"""
           ),
           "ar3-source"
         )
         msgs.justErrors.filter(_.message.contains("is ascribed 'as source'")) must not be empty
     }
 
-    "be an Error for `as merge` on a port-less adaptor" in { (td: TestData) =>
+    "be an Error for `as merge` on one inlet and one outlet" in { (td: TestData) =>
       val msgs = diagnostics(
         model(
           outboundAdaptor.replace("to context Shop.Ful is {", "to context Shop.Ful as merge is {"),
           fulInletAndHandler,
-          """  connector Cross is from outlet Shop.Sales.ToFul to inlet Shop.Ful.In with { briefly "c" }"""
+          """  connector Cross is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.In with { briefly "c" }"""
         ),
         "ar3-merge"
       )
       msgs.justErrors.filter(_.message.contains("is ascribed 'as merge'")) must not be empty
     }
 
-    "be an Error for `as source` on an adaptor that declares ONE outlet (the corpus's 31)" in {
+    "NOT be judged while the adaptor's needed inlet is MISSING (`as source`, one outlet -- the corpus's 31)" in {
       (td: TestData) =>
+        // Under A103 the inlet was implied, the adaptor a flow, and `as source` an Error. Now the
+        // inlet is reported as incomplete and the ascription waits for it.
         val msgs = diagnostics(
           model(
             """    inlet In is command Ship with { briefly "i" }
@@ -325,16 +331,16 @@ class AdaptorIsExclusiveTest extends AbstractValidatingTest {
           ),
           "ar3-declared-outlet-source"
         )
-        msgs.justErrors.filter(_.message.contains("is ascribed 'as source'")) must not be empty
+        msgs.justErrors.filter(_.message.contains("is ascribed 'as source'")) mustBe empty
+        msgs.filter(_.ruleId.contains(RuleId.StreamProcessorNoInlet)) must not be empty
     }
 
-    "accept `as flow`, which is what every adaptor is" in { (td: TestData) =>
-      // Negative control.
+    "accept `as flow` on one inlet and one outlet (negative control)" in { (td: TestData) =>
       val msgs = diagnostics(
         model(
           outboundAdaptor.replace("to context Shop.Ful is {", "to context Shop.Ful as flow is {"),
           fulInletAndHandler,
-          """  connector Cross is from outlet Shop.Sales.ToFul to inlet Shop.Ful.In with { briefly "c" }"""
+          """  connector Cross is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.In with { briefly "c" }"""
         ),
         "ar3-flow"
       )

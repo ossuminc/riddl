@@ -939,21 +939,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     resolveAPathId[T](ref.pathId, parents)
   }
 
-  /** A103 (Reid, 2026-09-06; CM §8.1): a connector endpoint path may name a PORTLET of the expected
-    * kind, or an ADAPTOR -- in which case it names the adaptor's IMPLIED port on that side, and the
-    * refMap records the adaptor. `from outlet Sales.ToBilling` already parsed before this (the
-    * `outlet` keyword is grammar, the path is free), so the ONLY thing that changes is that the kind
-    * check no longer reports `ref-wrong-kind` for an adaptor; every other kind still does, naming
-    * the portlet that was expected. Reid chose this over widening `Connector.from`/`to` to a
-    * `PortletRef | ProcessorRef` union, which would have rippled through BAST, JSON, prettify and
-    * the JS export surface for no modelling gain.
+  /** A connector endpoint path names a PORTLET of the expected kind; anything else is
+    * `ref-wrong-kind`, naming the portlet that was expected.
+    *
+    * From 2026-09-06 to 2026-09-11 this ALSO accepted an Adaptor (A103's implied ports: the
+    * endpoint "named the definition", and the adaptor's implied port on that side was the end).
+    * Reid abolished implied ports on 2026-09-10 ([1.25]): nothing is implied for any processor,
+    * and `from outlet Sales.ToBilling` -- where `ToBilling` is the adaptor -- is a wrong-kind
+    * reference again, as it was before A103 and as the grammar always read it (the `outlet`
+    * keyword is grammar; the path must resolve to an Outlet). riddl-models had 26 such endpoints
+    * at the time, every one written in the belief that `<Context>.<Adaptor>` was a portlet, which
+    * is precisely the confusion an implied port invites. Do not restore the arm.
     */
   private def resolveConnectorEnd[P <: Portlet: ClassTag](
     ref: Reference[P],
     parents: Parents
   ): Resolution[Definition] =
     resolveAPathId[Definition](ref.pathId, parents) match
-      case Some((d, pars)) if isSameKind[P](d) || d.isInstanceOf[Adaptor] => Some(d -> pars)
+      case Some((d, pars)) if isSameKind[P](d) => Some(d -> pars)
       case Some((d, _)) =>
         wrongType[P](ref.pathId, parents.head, d)
         None

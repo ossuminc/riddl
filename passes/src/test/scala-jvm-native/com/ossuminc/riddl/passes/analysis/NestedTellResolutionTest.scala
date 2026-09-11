@@ -32,8 +32,8 @@ import org.scalatest.{Assertion, TestData}
   * the model correctly.
   *
   * Amended again for A103 (2026-09-06): the far end is now VALIDATED against what it declares, so
-  * `Bar` declares the inlet that admits `ReceiveDrinkOrder`, and the adaptor's implied outlet is
-  * wired to it — the one-hop shape. (The doc used to say an adaptor "gets no exemption, because
+  * `Bar` declares the inlet that admits `ReceiveDrinkOrder`, and the adaptor's DECLARED outlet is
+  * wired to it — the one-hop shape (its ports were implied until [1.25], 2026-09-11). (The doc used to say an adaptor "gets no exemption, because
   * being the translator does not make you the boundary"; that ruling was reversed, see CM §8.1.)
   */
 class NestedTellResolutionTest extends AbstractValidatingTest {
@@ -52,6 +52,8 @@ class NestedTellResolutionTest extends AbstractValidatingTest {
       |  context FrontOfHouse is {
       |    event OrderSubmitted is { id: String }
       |    adaptor ToBar to context D.Bar is {
+      |      inlet In is event D.FrontOfHouse.OrderSubmitted
+      |      outlet Out is command D.Bar.ReceiveDrinkOrder
       |      handler AH is {
       |        on event D.FrontOfHouse.OrderSubmitted is {
       |          when "the order has drink items" then
@@ -62,7 +64,7 @@ class NestedTellResolutionTest extends AbstractValidatingTest {
       |      }
       |    }
       |  }
-      |  connector ToBarIn is from outlet D.FrontOfHouse.ToBar to inlet D.Bar.In
+      |  connector ToBarIn is from outlet D.FrontOfHouse.ToBar.Out to inlet D.Bar.In
       |}
       |""".stripMargin
 

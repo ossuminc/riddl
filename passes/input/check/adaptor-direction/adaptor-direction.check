@@ -13,3 +13,9 @@ passes/input/check/adaptor-direction/adaptor-direction.riddl(1:1->18):
 passes/input/check/adaptor-direction/adaptor-direction.riddl(1:1->18):
  Domain 'AdaptorDir' declares no 'error-sink' inlet, so hard errors have no destination:
  domain AdaptorDir is {
+passes/input/check/adaptor-direction/adaptor-direction.riddl(10:5->23):
+ Adaptor 'BadInbound' is incomplete: it handles Command 'DoIt' but declares no inlet to receive them on:
+     adaptor BadInbound from context SourceCtx is {
+passes/input/check/adaptor-direction/adaptor-direction.riddl(21:5->24):
+ Adaptor 'BadOutbound' is incomplete: it handles Event 'ItDone' but declares no inlet to receive them on:
+     adaptor BadOutbound to context SourceCtx is {

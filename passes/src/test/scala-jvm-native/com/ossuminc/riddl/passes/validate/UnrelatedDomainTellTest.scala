@@ -44,7 +44,8 @@ class UnrelatedDomainTellTest extends AbstractValidatingTest {
 
   /** Two top-level domains -- no shared ancestor. The far context declares the admitting inlet AR5
     * requires, which is exactly what removed A6's `target.inlets.isEmpty` exemption and made this
-    * shape unspellable.
+    * shape unspellable. The adaptor declares its ports: since [1.25] a port-less sender is
+    * INCOMPLETE and A6 abstains on it, so the vise only closes on a fully declared adaptor.
     */
   private val unrelated: String =
     """domain Shop is {
@@ -56,6 +57,8 @@ class UnrelatedDomainTellTest extends AbstractValidatingTest {
       |      on other is { error "unexpected" }
       |    } with { briefly "h" }
       |    adaptor ToBilling to context Corp.Billing is {
+      |      inlet In is event OrderPlaced with { briefly "i" }
+      |      outlet Out is command Corp.Billing.RaiseInvoice with { briefly "o" }
       |      handler billing is {
       |        on placed: event OrderPlaced is {
       |          let raiseInvoice: type Corp.Billing.RaiseInvoice =
@@ -93,6 +96,8 @@ class UnrelatedDomainTellTest extends AbstractValidatingTest {
       |        on other is { error "unexpected" }
       |      } with { briefly "h" }
       |      adaptor ToBilling to context Enterprise.Corp.Billing is {
+      |        inlet In is event OrderPlaced with { briefly "i" }
+      |        outlet Out is command Enterprise.Corp.Billing.RaiseInvoice with { briefly "o" }
       |        handler billing is {
       |          on placed: event OrderPlaced is {
       |            let raiseInvoice: type Enterprise.Corp.Billing.RaiseInvoice =
@@ -114,7 +119,7 @@ class UnrelatedDomainTellTest extends AbstractValidatingTest {
       |      } with { briefly "h" }
       |    } with { briefly "c" }
       |  } with { briefly "d" }
-      |  connector Cross is from outlet Shop.Sales.ToBilling
+      |  connector Cross is from outlet Shop.Sales.ToBilling.Out
       |    to inlet Corp.Billing.InvoicesIn with { briefly "x" }
       |} with { briefly "e" }
       |""".stripMargin

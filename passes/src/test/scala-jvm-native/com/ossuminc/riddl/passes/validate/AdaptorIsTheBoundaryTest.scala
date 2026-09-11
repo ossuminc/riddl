@@ -10,25 +10,25 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.RuleId
-import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
 
 import org.scalatest.TestData
 
-/** A103, the PERMISSIVE half: the adaptor IS the boundary for the pair it names (Reid, 2026-09-05/06;
-  * CM §§7.2, 7.7, 8.1).
+/** A103: the adaptor IS the boundary for the pair it names (Reid, 2026-09-05/06; CM §§7.2, 7.7,
+  * 8.1).
   *
   * An Adaptor declared in context A `to context B` or `from context B` is boundary surface of A for
-  * that ordered pair and direction, so a cross-context connector between A and B may terminate on it
-  * (AR1). Its two ports are IMPLIED by its direction, so it is always a flow and need write neither
-  * (AR3); a connector endpoint path that resolves to an Adaptor names its implied port (AR4, no
-  * grammar change -- Reid's choice). A `tell ... to context X` from inside an adaptor is validated
-  * against X's DECLARED portlets and nothing is synthesised (AR5). And A6 accepts the implied outlet
-  * as owned, so the one-hop shape needs no context-level plumbing.
+  * that ordered pair and direction, so a cross-context connector between A and B may terminate on
+  * one of its DECLARED portlets (AR1). A `tell ... to context X` from inside an adaptor is validated
+  * against X's DECLARED portlets and nothing is synthesised (AR5). The ADAMANT half
+  * (`AdaptorIsExclusiveTest`) then made the adaptor exclusive (AR2, AR6, AR8).
   *
-  * The permissive half landed first so both the old two-hop shape and the new one-hop shape
-  * validated during the changeover; the ADAMANT half (`AdaptorIsExclusiveTest`) then made the
-  * adaptor exclusive (AR2, AR6, AR8) and the mismatched ascription an Error (AR3). The two cases at
-  * the bottom of this file record the flip: what was tolerated is now rejected, and for a reason.
+  * **What A103 ALSO said and no longer does ([1.25], Reid 2026-09-10/11):** it IMPLIED an adaptor's
+  * two ports from its direction (AR3, "always a flow") and let a connector endpoint name the adaptor
+  * itself as its implied port (AR4). Both are abolished: nothing is implied for any processor, a
+  * port the handlers need and the definition lacks is INCOMPLETE (`ProcessorPortsIncompleteTest`),
+  * and an endpoint naming an adaptor is `ref-wrong-kind` again (`PortAbstentionTest`). The AR4 and
+  * AR3 groups below record the revised behaviour on the same fixtures.
   *
   * Every positive case has a negative control in the same family, so a rule cannot pass by firing on
   * nothing.
@@ -57,9 +57,13 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
       |      on other is { error "unexpected" }
       |    } with { briefly "h" }""".stripMargin
 
-  /** An OUTBOUND adaptor with no ports, telling the far context (probe A's shape). */
-  private val impliedOutbound: String =
+  /** An OUTBOUND adaptor with DECLARED ports, telling the far context (probe A's shape, with the
+    * ports A103 used to imply written out).
+    */
+  private val outboundAdaptor: String =
     """    adaptor ToFul to context Shop.Ful is {
+      |      inlet In is command Ship with { briefly "i" }
+      |      outlet Out is command Shop.Ful.Receive with { briefly "o" }
       |      handler H is {
       |        on ship: command Ship is { tell command Shop.Ful.Receive(sku = ship.sku) to context Shop.Ful }
       |        on other is { error "unexpected" }
@@ -68,9 +72,12 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
 
   private def validate(source: String, origin: String): (Root, Messages) =
     var captured: (Root, Messages) = (Root.empty, Messages.empty)
-    parseAndValidate(source, origin, shouldFailOnErrors = false) { (root, _, messages) =>
-      captured = (root, messages)
-      succeed
+    // Missing warnings are asserted below, and `pc.options` is global state other suites mutate.
+    pc.withOptions(CommonOptions.default) { _ =>
+      parseAndValidate(source, origin, shouldFailOnErrors = false) { (root, _, messages) =>
+        captured = (root, messages)
+        succeed
+      }
     }
     captured
 
@@ -216,49 +223,49 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
     }
   }
 
-  "AR4: a connector endpoint naming an adaptor" should {
+  "AR4 (revised): a connector endpoint naming an adaptor's DECLARED portlet" should {
 
-    "resolve to its implied outlet, and the one-hop model validates with no errors" in {
-      (td: TestData) =>
-        // Probe A: `ref-wrong-kind` and A6's unreachable-target Error both disappear.
-        val msgs = diagnostics(
-          model(
-            impliedOutbound,
-            "    inlet Incoming is command Receive with { briefly \"i\" }\n" + fulHandler,
-            """  connector Cross is from outlet Shop.Sales.ToFul to inlet Shop.Ful.Incoming with { briefly "c" }"""
-          ),
-          "ar4-implied-outlet"
-        )
-        msgs.justErrors.map(_.format) mustBe empty
-        errorsOf(msgs, RuleId.TellTargetUnreachable) mustBe empty
+    "make the one-hop model validate with no errors" in { (td: TestData) =>
+      // Probe A: A6's unreachable-target Error disappears once the adaptor's own outlet is wired.
+      val msgs = diagnostics(
+        model(
+          outboundAdaptor,
+          "    inlet Incoming is command Receive with { briefly \"i\" }\n" + fulHandler,
+          """  connector Cross is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.Incoming with { briefly "c" }"""
+        ),
+        "ar4-declared-outlet"
+      )
+      msgs.justErrors.map(_.format) mustBe empty
+      errorsOf(msgs, RuleId.TellTargetUnreachable) mustBe empty
     }
 
-    "resolve to the implied INLET of an inbound adaptor when it is the `to` end" in {
-      (td: TestData) =>
-        val msgs = diagnostics(
-          model(
-            """    inlet In is command Ship with { briefly "i" }
-              |    handler SalesHandler is {
-              |      on command Ship is { do "ship it" }
-              |      on other is { error "unexpected" }
-              |    } with { briefly "h" }
-              |    adaptor FromFul from context Shop.Ful is {
-              |      handler H is {
-              |        on s: event Shop.Ful.Shipped is { tell command Ship(sku = s.sku) to context Shop.Sales }
-              |        on other is { error "unexpected" }
-              |      } with { briefly "h" }
-              |    } with { briefly "a" }
-              |    connector Inward is from outlet Shop.Sales.FromFul to inlet Shop.Sales.In with { briefly "c2" }""".stripMargin,
-            """    event Shipped is { sku: String } with { briefly "e" }
-              |    outlet Out is event Shipped with { briefly "o" }
-              |    handler FulHandler is {
-              |      on r: command Receive is { send event Shipped(sku = r.sku) to outlet Out }
-              |    } with { briefly "h" }""".stripMargin,
-            """  connector Cross is from outlet Shop.Ful.Out to inlet Shop.Sales.FromFul with { briefly "c" }""".stripMargin
-          ),
-          "ar4-implied-inlet"
-        )
-        msgs.justErrors.map(_.format) mustBe empty
+    "accept the declared INLET of an inbound adaptor as the `to` end" in { (td: TestData) =>
+      val msgs = diagnostics(
+        model(
+          """    inlet In is command Ship with { briefly "i" }
+            |    handler SalesHandler is {
+            |      on command Ship is { do "ship it" }
+            |      on other is { error "unexpected" }
+            |    } with { briefly "h" }
+            |    adaptor FromFul from context Shop.Ful is {
+            |      inlet In is event Shop.Ful.Shipped with { briefly "i" }
+            |      outlet ShipOut is command Ship with { briefly "o" }
+            |      handler H is {
+            |        on s: event Shop.Ful.Shipped is { tell command Ship(sku = s.sku) to context Shop.Sales }
+            |        on other is { error "unexpected" }
+            |      } with { briefly "h" }
+            |    } with { briefly "a" }
+            |    connector Inward is from outlet Shop.Sales.FromFul.ShipOut to inlet Shop.Sales.In with { briefly "c2" }""".stripMargin,
+          """    event Shipped is { sku: String } with { briefly "e" }
+            |    outlet Out is event Shipped with { briefly "o" }
+            |    handler FulHandler is {
+            |      on r: command Receive is { send event Shipped(sku = r.sku) to outlet Out }
+            |    } with { briefly "h" }""".stripMargin,
+          """  connector Cross is from outlet Shop.Ful.Out to inlet Shop.Sales.FromFul.In with { briefly "c" }""".stripMargin
+        ),
+        "ar4-declared-inlet"
+      )
+      msgs.justErrors.map(_.format) mustBe empty
     }
 
     "still be REJECTED as the `to` end of an inbound crossing when the adaptor is OUTBOUND" in {
@@ -266,10 +273,10 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
         // Negative control for direction on the inlet side.
         val msgs = diagnostics(
           model(
-            impliedOutbound,
+            outboundAdaptor,
             """    outlet Out is command Receive with { briefly "o" }
               |    handler FulHandler is { on r: command Receive is { send r to outlet Out } } with { briefly "h" }""".stripMargin,
-            """  connector Back is from outlet Shop.Ful.Out to inlet Shop.Sales.ToFul with { briefly "c" }"""
+            """  connector Back is from outlet Shop.Ful.Out to inlet Shop.Sales.ToFul.In with { briefly "c" }"""
           ),
           "ar4-inlet-wrong-direction"
         )
@@ -279,39 +286,52 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
     "not report the far inlet it feeds as unconnected" in { (td: TestData) =>
       val msgs = diagnostics(
         model(
-          impliedOutbound,
+          outboundAdaptor,
           "    inlet Incoming is command Receive with { briefly \"i\" }\n" + fulHandler,
-          """  connector Cross is from outlet Shop.Sales.ToFul to inlet Shop.Ful.Incoming with { briefly "c" }"""
+          """  connector Cross is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.Incoming with { briefly "c" }"""
         ),
         "ar4-not-unconnected"
       )
       msgs.filter(_.message.contains("Inlet 'Incoming' is not connected")) mustBe empty
     }
 
-    "count connectors on an implied outlet against its cardinality of one" in { (td: TestData) =>
+    "count connectors on the adaptor's outlet against its cardinality of one" in { (td: TestData) =>
       val msgs = diagnostics(
         model(
-          impliedOutbound,
+          outboundAdaptor,
           """    inlet In1 is command Receive with { briefly "i" }
             |    inlet In2 is command Receive with { briefly "i" }
             |""".stripMargin + fulHandler,
-          """  connector C1 is from outlet Shop.Sales.ToFul to inlet Shop.Ful.In1 with { briefly "c" }
-            |  connector C2 is from outlet Shop.Sales.ToFul to inlet Shop.Ful.In2 with { briefly "c" }""".stripMargin
+          """  connector C1 is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.In1 with { briefly "c" }
+            |  connector C2 is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.In2 with { briefly "c" }""".stripMargin
         ),
         "ar4-cardinality"
       )
       errorsOf(msgs, RuleId.OutletCardinality) must not be empty
     }
+
+    "be `ref-wrong-kind` when the endpoint names the ADAPTOR itself (A103's implied port, abolished)" in {
+      (td: TestData) =>
+        val msgs = diagnostics(
+          model(
+            outboundAdaptor,
+            "    inlet Incoming is command Receive with { briefly \"i\" }\n" + fulHandler,
+            """  connector Cross is from outlet Shop.Sales.ToFul to inlet Shop.Ful.Incoming with { briefly "c" }"""
+          ),
+          "ar4-names-the-adaptor"
+        )
+        errorsOf(msgs, RuleId.WrongKind) must not be empty
+    }
   }
 
-  "AR3: an adaptor's shape" should {
+  "AR3 (revised): an adaptor's shape" should {
 
-    "be a flow when it declares no ports" in { (td: TestData) =>
+    "be a flow when it declares one inlet and one outlet, like any processor" in { (td: TestData) =>
       val (root, _) = validate(
         model(
-          impliedOutbound,
+          outboundAdaptor,
           "    inlet Incoming is command Receive with { briefly \"i\" }\n" + fulHandler,
-          """  connector Cross is from outlet Shop.Sales.ToFul to inlet Shop.Ful.Incoming with { briefly "c" }"""
+          """  connector Cross is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.Incoming with { briefly "c" }"""
         ),
         "ar3-flow"
       )
@@ -319,10 +339,27 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
       adaptor.effectiveShape mustBe a[Flow]
     }
 
-    "REJECT an adaptor with one declared outlet ascribed `as source` (adamant half)" in {
+    "be INCOMPLETE, not a flow, when it declares no ports and handles messages" in { (td: TestData) =>
+      // Under A103 this derived `flow` by implication. Now it is (0, 0) with a Missing warning
+      // naming the inlet it lacks, and no rule reasons past that.
+      val portless =
+        """    adaptor ToFul to context Shop.Ful is {
+          |      handler H is {
+          |        on ship: command Ship is { do "translate" }
+          |        on other is { error "unexpected" }
+          |      } with { briefly "h" }
+          |    } with { briefly "a" }""".stripMargin
+      val (root, msgs) = validate(model(portless, fulHandler, ""), "ar3-portless")
+      val adaptor = root.domains.head.contexts.head.adaptors.head
+      adaptor.effectiveShape must not be a[Flow]
+      msgs.filter(_.ruleId.contains(RuleId.StreamProcessorNoInlet)).count(_.message.contains("'ToFul'")) mustBe 1
+      errorsOf(msgs, RuleId.AscribedShapeMismatch) mustBe empty
+    }
+
+    "ABSTAIN on `as source` with one declared outlet while the inlet is missing (the corpus's 31)" in {
       (td: TestData) =>
-        // The corpus carried 31 of these. Tolerated by the permissive half; an Error since the
-        // adamant half, because the inlet is implied and the adaptor is a flow.
+        // Under A103's adamant half this was an Error (the inlet was implied, so it was a flow).
+        // Now the inlet is MISSING and reported as such; the ascription is judged once it exists.
         val msgs = diagnostics(
           model(
             """    inlet In is command Ship with { briefly "i" }
@@ -334,9 +371,10 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
             fulHandler,
             """  connector Inward is from outlet Shop.Sales.FromFul.Out to inlet Shop.Sales.In with { briefly "c" }"""
           ),
-          "ar3-as-source-rejected"
+          "ar3-as-source-abstains"
         )
-        msgs.justErrors.filter(_.message.contains("is ascribed 'as source'")) must not be empty
+        errorsOf(msgs, RuleId.AscribedShapeMismatch) mustBe empty
+        msgs.filter(_.ruleId.contains(RuleId.StreamProcessorNoInlet)).count(_.message.contains("'FromFul'")) mustBe 1
     }
   }
 
@@ -344,9 +382,9 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
 
     def salesTelling(fulPorts: String): String =
       model(
-        impliedOutbound,
+        outboundAdaptor,
         fulPorts + "\n" + fulHandler,
-        """  connector Cross is from outlet Shop.Sales.ToFul to inlet Shop.Ful.Incoming with { briefly "c" }"""
+        """  connector Cross is from outlet Shop.Sales.ToFul.Out to inlet Shop.Ful.Incoming with { briefly "c" }"""
       )
 
     "be accepted when X declares an inlet whose type IS the message type" in { (td: TestData) =>
@@ -410,11 +448,13 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
           """    inlet In is command Ship with { briefly "i" }
             |    handler SalesHandler is { on command Ship is { do "ship" } } with { briefly "h" }
             |    adaptor FromFul from context Shop.Ful is {
+            |      inlet In is command Shop.Ful.Receive with { briefly "i" }
+            |      outlet Out is command Ship with { briefly "o" }
             |      handler H is {
             |        on r: command Shop.Ful.Receive is { tell command Ship(sku = r.sku) to context Shop.Sales }
             |      } with { briefly "h" }
             |    } with { briefly "a" }
-            |    connector Inward is from outlet Shop.Sales.FromFul to inlet Shop.Sales.In with { briefly "c2" }""".stripMargin,
+            |    connector Inward is from outlet Shop.Sales.FromFul.Out to inlet Shop.Sales.In with { briefly "c2" }""".stripMargin,
           """    streamlet Sender as flow is {
             |      inlet I is command Receive with { briefly "i" }
             |      outlet O is command Receive with { briefly "o" }
@@ -422,7 +462,7 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
             |        on r: command Receive is { tell command Receive(sku = r.sku) to adaptor Shop.Sales.FromFul }
             |      } with { briefly "h" }
             |    } with { briefly "s" }""".stripMargin,
-          """  connector Cross is from outlet Shop.Ful.Sender.O to inlet Shop.Sales.FromFul with { briefly "c" }"""
+          """  connector Cross is from outlet Shop.Ful.Sender.O to inlet Shop.Sales.FromFul.In with { briefly "c" }"""
         ),
         "boundary-inbound-adaptor-ok"
       )
@@ -432,7 +472,7 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
     "still reject a sender in B addressing A's OUTBOUND adaptor toward B" in { (td: TestData) =>
       val msgs = diagnostics(
         model(
-          impliedOutbound,
+          outboundAdaptor,
           """    streamlet Sender as source is {
             |      outlet O is command Receive with { briefly "o" }
             |      handler H is {

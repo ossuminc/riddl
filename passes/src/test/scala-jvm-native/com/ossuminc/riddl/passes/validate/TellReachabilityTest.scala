@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
 
 import org.scalatest.TestData
 
@@ -78,6 +78,7 @@ class TellReachabilityTest extends AbstractValidatingTest {
         """domain d is {
           |  command Cmd is { x: Integer }
           |  context Sender is {
+          |    outlet sout is command d.Cmd
           |    handler h is { on command d.Cmd { tell command d.Cmd to context d.Target } }
           |  }
           |  context Target is {
@@ -139,6 +140,10 @@ class TellReachabilityTest extends AbstractValidatingTest {
     // found `adaptor FromOnlineOrdering` reaching an entity over a connector starting at the
     // CONTEXT's outlet, reported clean. Kept pointing the other way rather than deleted, so the
     // record shows the check once made a claim about the sender it was not testing.
+    //
+    // Since [1.25] (2026-09-11) the adaptor DECLARES its own outlet -- unwired -- so the rule has
+    // a sender-side port to read. A sender with no outlet at all is now INCOMPLETE (a Missing
+    // warning) and this rule abstains on it; that case is pinned in `PortAbstentionTest`.
     "REQUIRE the sender to own the outlet -- an enclosing context does NOT count" in {
       (td: TestData) =>
         val src =
@@ -147,6 +152,8 @@ class TellReachabilityTest extends AbstractValidatingTest {
             |  context Sender is {
             |    outlet sout is command d.Cmd
             |    adaptor A to context d.Target is {
+            |      inlet ain is command d.Cmd
+            |      outlet aout is command d.Cmd
             |      handler ah is { on command d.Cmd { tell command d.Cmd to context d.Target } }
             |    }
             |  }
@@ -181,15 +188,20 @@ class TellReachabilityTest extends AbstractValidatingTest {
             |  }
             |}
             |""".stripMargin
-        parseAndValidate(src, td.name, shouldFailOnErrors = false) {
-          case (_, _, msgs: Messages) =>
-            msgs.filter(m => m.message.contains("is not reachable from")) mustBe empty
-            // ...and the omission IS reported, by the check that owns it. Asserting the silence
-            // alone would pass equally if nothing diagnosed the model at all -- which is exactly
-            // what the first draft of this case did: it used a `???` body, the standing `???`
-            // ruling exempted the target from the companion check too, and "silent" then proved
-            // nothing. A real body is what makes the companion diagnostic reachable.
-            msgs.map(_.message).mkString("\n") must include("inlet")
+        // The companion diagnostic is a MISSING warning since [1.25], which the accumulator drops
+        // when `showMissingWarnings` is off -- and `pc.options` is global state other suites
+        // mutate. Pin the defaults so the assertion below can see it.
+        pc.withOptions(CommonOptions.default) { _ =>
+          parseAndValidate(src, td.name, shouldFailOnErrors = false) {
+            case (_, _, msgs: Messages) =>
+              msgs.filter(m => m.message.contains("is not reachable from")) mustBe empty
+              // ...and the omission IS reported, by the check that owns it. Asserting the silence
+              // alone would pass equally if nothing diagnosed the model at all -- which is exactly
+              // what the first draft of this case did: it used a `???` body, the standing `???`
+              // ruling exempted the target from the companion check too, and "silent" then proved
+              // nothing. A real body is what makes the companion diagnostic reachable.
+              msgs.map(_.message).mkString("\n") must include("inlet")
+          }
         }
     }
   }

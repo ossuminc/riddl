@@ -146,6 +146,10 @@ enum RuleId(
   case ConnectorTouchesExternal extends RuleId("stream-connector-touches-external")
   case ConsiderAdaptor extends RuleId("stream-consider-adaptor")
   case ProcessorUnconnected extends RuleId("stream-processor-unconnected")
+  // A port the processor's own handlers NEED and it does not DECLARE (Missing; the entity spelling
+  // is `entity-no-inlet`/`entity-no-outlet` -- see the note there).
+  case StreamProcessorNoInlet extends RuleId("stream-processor-no-inlet")
+  case StreamProcessorNoOutlet extends RuleId("stream-processor-no-outlet")
   case SourceReachesNoSink extends RuleId("stream-source-reaches-no-sink")
   case SinkReachedByNoSource extends RuleId("stream-sink-reached-by-no-source")
   case GraphCycle extends RuleId("stream-graph-cycle")
@@ -317,6 +321,13 @@ enum RuleId(
   case StateInitSetsNothing extends RuleId("entity-state-init-sets-nothing")
   case EntityNoHandlers extends RuleId("entity-no-handlers")
   case EntityNoQueryClause extends RuleId("entity-no-query-clause")
+  // ONE rule, TWO spellings, deliberately ([1.25], 2026-09-11). "Handles messages but declares no
+  // inlet" / "transmits but declares no outlet" applies to EVERY processor kind since implied
+  // adaptor ports were abolished, and is emitted by one check (`checkProcessorPorts`). An Entity
+  // keeps these two codes because they shipped first and a consumer keys on them (synapify's
+  // `EmitterConformanceTest`); a published code means the same thing forever. Every other kind
+  // reports `stream-processor-no-inlet` / `stream-processor-no-outlet` below. Do not "unify" by
+  // retiring these -- that is the API break the compat policy forbids.
   case EntityNoInlet extends RuleId("entity-no-inlet")
   case EntityNoOutlet extends RuleId("entity-no-outlet")
   case EntityNoIdType extends RuleId("entity-no-id-type")
@@ -366,7 +377,6 @@ enum RuleId(
   // itself `to`; this is about what its statements may address.
   case AdaptorTargetsContextOnly extends RuleId("adaptor-targets-context-only")
   case AdaptorTargetNoAdmittingInlet extends RuleId("adaptor-target-no-admitting-inlet")
-  case AdaptorImpliedOutletAmbiguous extends RuleId("adaptor-implied-outlet-ambiguous")
   case AdaptorNoHandler extends RuleId("adaptor-no-handler")
   case AdaptorEmptyHandlers extends RuleId("adaptor-empty-handlers")
   case AdaptorNoOnOther extends RuleId("adaptor-no-on-other")
@@ -629,7 +639,11 @@ object RuleId:
     // `stmt-id-entity-mismatch` -- the name that says what it means. Retired rather than reused:
     // a consumer suppressing it, or keying a migration on it, must not have it silently come back
     // attached to a different rule.
-    "stmt-id-type-mismatch"
+    "stmt-id-type-mismatch",
+    // AR9's "an implied outlet carries one type" Error (2026-09-07 to 2026-09-11). Implied adaptor
+    // ports were abolished ([1.25]); an adaptor now DECLARES its outlet, typed with an alternation
+    // when it emits several types, and there is no implied port left to be ambiguous about.
+    "adaptor-implied-outlet-ambiguous"
   )
 
   /** The closed set of subject prefixes -- the kind of thing a rule is ABOUT.

@@ -18,6 +18,13 @@ class CompletenessTest extends AbstractValidatingTest {
   private def completenessWarnings(msgs: Messages.Messages): Messages.Messages =
     msgs.filter(_.isCompleteness)
 
+  /** The entity port checks (4h/4i) are MISSING warnings since [1.25] (2026-09-11): a needed,
+    * undeclared port is the author not having written something the definition owes -- `???`'s
+    * kind -- not the written things failing to connect. Same rule ids, same messages.
+    */
+  private def missingWarnings(msgs: Messages.Messages): Messages.Messages =
+    msgs.filter(_.isMissing)
+
   /** Completeness 4b, parameterised by streamlet shape. A sink is the boundary that carries
     * messages out of the stream and into entities, so asking it to dispatch is fair. A split, merge
     * or flow exists to route between ports; a `tell` there would dispatch into an entity IN
@@ -566,10 +573,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        completenessWarnings(msgs).exists(
-          _.message.contains("declares no inlet to receive them on")
-        ) mustBe true
+      // Missing warnings are dropped by the accumulator when `showMissingWarnings` is off, and
+      // `pc.options` is global state other suites mutate -- pin the defaults.
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          missingWarnings(msgs).exists(
+            _.message.contains("declares no inlet to receive them on")
+          ) mustBe true
+        }
       }
     }
 
@@ -592,10 +603,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        completenessWarnings(msgs).exists(
-          _.message.contains("declares no inlet to receive them on")
-        ) mustBe false
+      // Missing warnings are dropped by the accumulator when `showMissingWarnings` is off, and
+      // `pc.options` is global state other suites mutate -- pin the defaults.
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          missingWarnings(msgs).exists(
+            _.message.contains("declares no inlet to receive them on")
+          ) mustBe false
+        }
       }
     }
 
@@ -620,10 +635,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        completenessWarnings(msgs).exists(
-          _.message.contains("declares no inlet to receive them on")
-        ) mustBe true
+      // Missing warnings are dropped by the accumulator when `showMissingWarnings` is off, and
+      // `pc.options` is global state other suites mutate -- pin the defaults.
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          missingWarnings(msgs).exists(
+            _.message.contains("declares no inlet to receive them on")
+          ) mustBe true
+        }
       }
     }
 
@@ -647,10 +666,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        completenessWarnings(msgs).exists(
-          _.message.contains("declares no outlet to transmit them on")
-        ) mustBe true
+      // Missing warnings are dropped by the accumulator when `showMissingWarnings` is off, and
+      // `pc.options` is global state other suites mutate -- pin the defaults.
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          missingWarnings(msgs).exists(
+            _.message.contains("declares no outlet to transmit them on")
+          ) mustBe true
+        }
       }
     }
 
@@ -675,10 +698,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        completenessWarnings(msgs).exists(
-          _.message.contains("declares no outlet to transmit them on")
-        ) mustBe false
+      // Missing warnings are dropped by the accumulator when `showMissingWarnings` is off, and
+      // `pc.options` is global state other suites mutate -- pin the defaults.
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          missingWarnings(msgs).exists(
+            _.message.contains("declares no outlet to transmit them on")
+          ) mustBe false
+        }
       }
     }
 
@@ -702,10 +729,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        completenessWarnings(msgs).exists(
-          _.message.contains("declares no outlet to transmit them on")
-        ) mustBe false
+      // Missing warnings are dropped by the accumulator when `showMissingWarnings` is off, and
+      // `pc.options` is global state other suites mutate -- pin the defaults.
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          missingWarnings(msgs).exists(
+            _.message.contains("declares no outlet to transmit them on")
+          ) mustBe false
+        }
       }
     }
 
@@ -720,10 +751,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        val cw = completenessWarnings(msgs)
-        cw.exists(_.message.contains("declares no inlet to receive them on")) mustBe false
-        cw.exists(_.message.contains("declares no outlet to transmit them on")) mustBe false
+      // Missing warnings are dropped by the accumulator when `showMissingWarnings` is off, and
+      // `pc.options` is global state other suites mutate -- pin the defaults.
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          val cw = missingWarnings(msgs)
+          cw.exists(_.message.contains("declares no inlet to receive them on")) mustBe false
+          cw.exists(_.message.contains("declares no outlet to transmit them on")) mustBe false
+        }
       }
     }
 

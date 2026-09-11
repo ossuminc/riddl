@@ -80,10 +80,10 @@ passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' has no 'on query' clause; information cannot be extracted from it:
      entity Something is {
 passes/input/check/everything/everything.riddl(42:5->21):
- Entity 'Something' handles messages but declares no inlet to receive them on:
+ Entity 'Something' is incomplete: it handles Command 'ACommand' but declares no inlet to receive them on:
      entity Something is {
 passes/input/check/everything/everything.riddl(42:5->21):
- Entity 'Something' sends or publishes messages but declares no outlet to transmit them on:
+ Entity 'Something' is incomplete: it transmits Event 'ItHappened' but declares no outlet to transmit them on:
      entity Something is {
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' does not define an Id type for its identity:
@@ -142,7 +142,7 @@ passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' has no 'on query' clause; information cannot be extracted from it:
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(66:5->26):
- Entity 'SomeOtherThing' handles messages but declares no inlet to receive them on:
+ Entity 'SomeOtherThing' is incomplete: it handles Event 'ItHappened' but declares no inlet to receive them on:
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' does not define an Id type for its identity:

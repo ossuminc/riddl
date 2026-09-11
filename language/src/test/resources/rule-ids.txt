@@ -394,3 +394,5 @@ value-type-mismatch
 value-untyped-prompt-seam
 value-vague-duration
 value-when-not-boolean
+stream-processor-no-inlet
+stream-processor-no-outlet
