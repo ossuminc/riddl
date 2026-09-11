@@ -205,9 +205,14 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
         errorsOf(msgs, RuleId.BoundaryOutlet) must not be empty
     }
 
-    "still be REJECTED when it leaves from an INBOUND adaptor toward the context it is FROM" in {
+    "be ALLOWED to leave from an INBOUND adaptor toward the context it is FROM (the reply leg)" in {
       (td: TestData) =>
-        // Direction must match the crossing: `from context Ful` faces Ful on its INLET side.
+        // Until 2026-09-11 this was REJECTED: the exemption was directional, so `from context
+        // Ful` could face Ful only on its inlet side. Reid's ruling (the ask task): the adaptor
+        // that answers a query from Ful owns the reply's outlet toward Ful, because connectors
+        // are unidirectional and the reply cannot ride the request connector. The adaptor is
+        // the boundary for its PAIR, in both directions; the keyword names its translation
+        // duty, not which way its wires run.
         val msgs = diagnostics(
           model(
             """    adaptor FromFul from context Shop.Ful is {
@@ -217,9 +222,9 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
             "    inlet In is command Receive with { briefly \"i\" }\n" + fulHandler,
             """  connector Cross is from outlet Shop.Sales.FromFul.Out to inlet Shop.Ful.In with { briefly "c" }"""
           ),
-          "ar1-wrong-direction"
+          "ar1-reply-direction"
         )
-        errorsOf(msgs, RuleId.BoundaryOutlet) must not be empty
+        errorsOf(msgs, RuleId.BoundaryOutlet) mustBe empty
     }
   }
 
@@ -268,9 +273,11 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
       msgs.justErrors.map(_.format) mustBe empty
     }
 
-    "still be REJECTED as the `to` end of an inbound crossing when the adaptor is OUTBOUND" in {
+    "be ALLOWED as the `to` end of a crossing back from Ful when the adaptor is OUTBOUND (the reply)" in {
       (td: TestData) =>
-        // Negative control for direction on the inlet side.
+        // The mirror of the reply-leg case above: an asking `to context Ful` adaptor owns the
+        // inlet its answer lands on (Reid, 2026-09-11). Was a negative control for direction
+        // until then. `AskReplyThroughAdaptorTest` keeps the third-context negative control.
         val msgs = diagnostics(
           model(
             outboundAdaptor,
@@ -278,9 +285,9 @@ class AdaptorIsTheBoundaryTest extends AbstractValidatingTest {
               |    handler FulHandler is { on r: command Receive is { send r to outlet Out } } with { briefly "h" }""".stripMargin,
             """  connector Back is from outlet Shop.Ful.Out to inlet Shop.Sales.ToFul.In with { briefly "c" }"""
           ),
-          "ar4-inlet-wrong-direction"
+          "ar4-inlet-reply-direction"
         )
-        errorsOf(msgs, RuleId.BoundaryInlet) must not be empty
+        errorsOf(msgs, RuleId.BoundaryInlet) mustBe empty
     }
 
     "not report the far inlet it feeds as unconnected" in { (td: TestData) =>

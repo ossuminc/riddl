@@ -1460,13 +1460,30 @@ resolution and type-checking — in `checkStatementScopes`.
     written as `<Context>.<Adaptor>` in the belief it named a portlet — the
     confusion an implied port invites. `AdaptorRef`'s doc and the AST note on
     `Adaptor` carry the history.
-  - **The boundary exemption is DIRECTIONAL, in both checks.**
-    `checkBoundaryEncapsulation`: an OUTBOUND adaptor toward B may be the `from`
-    end of a connector into B; an INBOUND adaptor from B may be the `to` end of
-    one leaving B; the referent must be the far context of THIS connector.
-    `reachesPastContextBoundary` (the ONE boundary test for statements) exempts a
-    target that is an inbound adaptor whose referent is the SENDER's context.
-    Wrong way round, or toward a third context, still errors.
+  - **The boundary exemption is PAIR-WISE, in BOTH directions (re-ruled
+    2026-09-11; it was DIRECTIONAL from 2026-09-06).** `checkBoundaryEncapsulation`
+    permits an adaptor's portlet at either end of a crossing between its context
+    and its referent; toward a third context, or a non-adaptor, still errors.
+    **Why it changed:** the moment [1.25] made an asking adaptor declare its ports,
+    `msg-ask-reply-unreachable` demanded a connector from X back into it and the
+    directional rule refused exactly that connector — a two-rule vise of the
+    unrelated-domains shape (riddl-models, water-utility, 298 asking adaptors
+    held port-less). Reid: *the asking adaptor owns both legs*; connectors are
+    unidirectional, so the reply needs its own path. **Exclusivity (AR2/AR6) is
+    untouched and needed no change** — it fires only when the crossing end is
+    the CONTEXT'S OWN portlet, and a reply lands on the adaptor's. Pinned by
+    `AskReplyThroughAdaptorTest`, including the AR6 negative control. Two
+    companions found by the tests, not by reading: an adaptor MUST declare
+    `on other` (`adaptor-no-on-other` is an Error), so `stream-inlet-not-received`
+    can never fire inside one; and an adaptor may not `reply` — a query it
+    receives is forwarded inward and the CONTEXT replies on its own outlet. The
+    ask's answer arrives as the ask's VALUE, never through `on result` (which an
+    outbound adaptor may not declare), so `unreceivedMembers` now counts every
+    asked query's `replies` type as received — otherwise a context-level reply
+    inlet reads as unreceived.
+    `reachesPastContextBoundary` (the ONE boundary test for statements) is
+    unchanged: it exempts a target that is an inbound adaptor whose referent is
+    the SENDER's context.
   - **Typing is VALIDATED, never SYNTHESISED**
     (`adaptor-target-no-admitting-inlet`): a `tell`/`forward ... to context X`
     from inside an adaptor is an Error unless X declares an inlet whose type IS

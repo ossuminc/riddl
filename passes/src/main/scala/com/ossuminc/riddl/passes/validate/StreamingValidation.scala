@@ -484,26 +484,32 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     // entity, projector, repository or shape-keyword streamlet -- is content the boundary exists to
     // keep private.
     //
-    // WITH ONE EXCEPTION, AND IT IS DIRECTIONAL (A103, Reid 2026-09-06; CM §8.1, reversing the
-    // 2026-08-18 "no exemption for an adaptor" ruling this function used to record). An Adaptor
-    // declared in A toward B IS A's boundary for that pair and direction: an OUTBOUND adaptor
-    // (`to context B`) may be the `from` end of a connector INTO B, and an INBOUND adaptor
-    // (`from context B`) may be the `to` end of a connector LEAVING B. The adaptor's referent must
-    // be the context on the far side of THIS connector -- an adaptor toward some third context, or
-    // one facing the wrong way, is content like anything else and still errors. The old rule had
-    // compelled the foreign message type onto the context's own portlet and into its own handler,
-    // in direct contradiction of §7.6's isolation seam; that is why it went.
-    def isBoundaryAdaptor(owner: Processor[?], far: Context, outbound: Boolean): Boolean =
+    // WITH ONE EXCEPTION (A103, Reid 2026-09-06; CM §8.1, reversing the 2026-08-18 "no exemption
+    // for an adaptor" ruling this function used to record). An Adaptor declared in A toward B IS
+    // A's boundary for that PAIR, and -- since 2026-09-11 -- in BOTH directions: its portlets may
+    // be either end of a connector between A and B. The adaptor's referent must be the context on
+    // the far side of THIS connector; an adaptor toward some third context is content like
+    // anything else and still errors. The old rule had compelled the foreign message type onto the
+    // context's own portlet and into its own handler, in direct contradiction of §7.6's isolation
+    // seam; that is why it went.
+    //
+    // Until 2026-09-11 the exemption was DIRECTIONAL: an outbound adaptor could be only the `from`
+    // end of a crossing into B, an inbound one only the `to` end of a crossing leaving B. That
+    // made an ASK from an adaptor unspellable the moment [1.25] made it declare its ports:
+    // `msg-ask-reply-unreachable` demanded a connector from B back into the asking adaptor and
+    // this rule refused exactly that connector (riddl-models, water-utility). Reid's ruling: the
+    // asking adaptor OWNS BOTH LEGS -- the request outlet and the reply inlet -- and, connectors
+    // being unidirectional, the reply needs its own path; likewise an inbound adaptor that
+    // ANSWERS a query owns the reply's outlet. The direction keyword names the adaptor's
+    // translation duty (`adaptor-direction-advisory` judges that), not which way its wires run.
+    def isBoundaryAdaptor(owner: Processor[?], far: Context): Boolean =
       owner match
-        case a: Adaptor =>
-          adaptorReferent(a).exists(_ eq far) && (a.direction match
-            case _: OutboundAdaptor => outbound
-            case _: InboundAdaptor  => !outbound)
-        case _ => false
+        case a: Adaptor => adaptorReferent(a).exists(_ eq far)
+        case _          => false
 
     for fromEnd <- maybeFromEnd; ctx <- outletCtx; far <- inletCtx do
       val owner = fromEnd.owner
-      val permitted = owner.exists(_ eq ctx) || owner.exists(isBoundaryAdaptor(_, far, outbound = true))
+      val permitted = owner.exists(_ eq ctx) || owner.exists(isBoundaryAdaptor(_, far))
       if !permitted then
         messages.addError(
           connector.errorLoc,
@@ -514,7 +520,8 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             s"Declare an outlet on ${ctx.identify} itself and connect it from there; route the " +
               s"inner definition's outlet to it within ${ctx.identify}. Or, if this crossing is " +
               s"${ctx.identify}'s integration with ${far.identify}, leave from an adaptor declared " +
-              s"'to context ${far.id.value}' -- the adaptor IS the boundary for that pair.",
+              s"toward ${far.identify} ('to' or 'from') -- the adaptor IS the boundary for that " +
+              s"pair, in both directions.",
           ruleId = Some(RuleId.BoundaryOutlet)
         )
       end if
@@ -522,7 +529,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
     for toEnd <- maybeToEnd; ctx <- inletCtx; far <- outletCtx do
       val owner = toEnd.owner
-      val permitted = owner.exists(_ eq ctx) || owner.exists(isBoundaryAdaptor(_, far, outbound = false))
+      val permitted = owner.exists(_ eq ctx) || owner.exists(isBoundaryAdaptor(_, far))
       if !permitted then
         messages.addError(
           connector.errorLoc,
@@ -531,8 +538,9 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             s"${ctx.identify}; a context is the SINK for everything entering it",
           suggestion =
             s"Declare an inlet on ${ctx.identify} itself and connect to that; let its handlers " +
-              s"dispatch or translate inward. Or arrive at an adaptor declared 'from context " +
-              s"${far.id.value}' -- the adaptor IS ${ctx.identify}'s boundary toward ${far.identify}.",
+              s"dispatch or translate inward. Or arrive at an adaptor declared toward " +
+              s"${far.identify} ('from' or, for the reply to its own ask, 'to') -- the adaptor IS " +
+              s"${ctx.identify}'s boundary toward ${far.identify}, in both directions.",
           ruleId = Some(RuleId.BoundaryInlet)
         )
       end if

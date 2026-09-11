@@ -94,6 +94,36 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-09-11 (evening) — the adaptor is the boundary for its pair in BOTH directions
+
+riddl-models hit the next vise within hours of the `2.1.1-45` stage: an asking `to context X`
+adaptor, once it declares its ports, is told by `msg-ask-reply-unreachable` to wire X back into
+it and by `stream-boundary-inlet` that nothing from X may enter at it. Same shape as the
+unrelated-domains one — two rules each refusing the other's remedy — and it held 298 asking
+adaptors port-less. Reid's ruling: *the asking adaptor owns both legs*, and connectors are
+unidirectional, so the reply gets its own path.
+
+**One predicate.** `isBoundaryAdaptor` lost its direction test; the referent-identity test stays,
+so a third-context adaptor or a contained entity still errors. AR2/AR6 needed nothing — they bind
+the context's OWN portlets — and a test pins that rather than the reading. Their water-utility
+step-2 edit, applied to a scratch copy: 1 error on `2.1.1-45`, 0 on this build.
+
+**Three things the tests found that reading did not:**
+- An adaptor MUST declare `on other` (`adaptor-no-on-other`, an Error). So
+  `stream-inlet-not-received` can never fire inside an adaptor — and my "no `on other` to
+  unmask it" fixture was itself illegal.
+- An outbound adaptor may not declare `on result` (`adaptor-outbound-wrong-message`, an
+  Error). That is fine: the ask's answer arrives as the ask's VALUE. But it means the reply
+  inlet is consumed by nothing a clause names, so `unreceivedMembers` now counts every asked
+  query's `replies` type as received; pinned on a CONTEXT asker, where the rule can be seen.
+- An adaptor cannot `reply` (statement restriction). My "mirror" case — an inbound adaptor
+  answering a query — was an extrapolation the language does not admit; a received query is
+  forwarded inward and the CONTEXT replies on its own outlet, which the boundary rule always
+  allowed. Dropped, and the CM says so.
+
+The CM's §8.1 "Symmetry" paragraph still said *"every adaptor is a `flow`, derived from its
+declared direction"* — [1.25] missed it; fixed with this.
+
 ## 2026-09-11 (later) — [1.25] landed: nothing is implied, a missing port is a STUB
 
 riddl-models answered the feasibility measurement within hours (`task/2026-09-11-implied-ports-

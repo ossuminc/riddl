@@ -8340,8 +8340,8 @@ case class ValidationPass(
     val clauses = handlerClausesOf(proc)
     if clauses.exists(_.isInstanceOf[OnOtherClause]) then Nil
     else
-      // What the clauses receive, each expanded through any alternation it names.
-      val received: Seq[Type] = clauses.flatMap {
+      // What the clauses receive, each expanded through any alternation it names ...
+      val handled: Seq[Type] = clauses.flatMap {
         case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
           resolution.refMap
             .definitionOf[Type](omc.msg.pathId)
@@ -8349,6 +8349,28 @@ case class ValidationPass(
             .flatMap(c => c +: alternationMembers(c))
         case _ => Seq.empty
       }
+      // ... plus what an `ask` CONSUMES: the `replies` result of every query it asks. The
+      // answer arrives as the ask's VALUE, not through an `on result` clause (which an outbound
+      // adaptor may not even declare -- `adaptor-outbound-wrong-message`), so the reply inlet the
+      // asker owns (Reid, 2026-09-11: "the asking adaptor owns both legs") would otherwise read
+      // as an inlet nothing receives.
+      val asked: Seq[Type] = clauses.flatMap { clause =>
+        var found = Seq.empty[Type]
+        walkStatements(clause.contents) { st =>
+          statementValues(st).flatMap(asksIn).foreach { ask =>
+            resolution.refMap.definitionOf[Type](ask.query.pathId).foreach { qt =>
+              qt.typEx match
+                case auc: AggregateUseCaseTypeExpression =>
+                  auc.yields.foreach { rr =>
+                    resolution.refMap.definitionOf[Type](rr.pathId).foreach(r => found = found :+ r)
+                  }
+                case _ => ()
+            }
+          }
+        }
+        found
+      }
+      val received: Seq[Type] = handled ++ asked
       // What must be received: EVERY member the type admits. `alternationMembers` returns the type
       // itself when it is not an alternation, so the ordinary case is a one-element list. An empty
       // result means nothing was determinable, which is reported rather than passed silently.
