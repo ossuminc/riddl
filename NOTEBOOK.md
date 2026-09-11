@@ -50,11 +50,11 @@ processor kind, rules abstain on the side they cannot read, an endpoint naming a
 
 ### Corpus — 1290 findings after [1.25], from a verified ZERO before
 
-191 entry points, riddl-models @ `6d9e7ce8`. All attributable; three rows want Reid's ruling
-(21 `source` streamlets that receive, 388 consume-only adaptors written `as flow`, 102 external
-contexts that `yield` with no outlet). Table and reasoning in the 2026-09-11 (later) entry.
-riddl-models has NOT yet been told — the Results in `task/done/` and a task drop are the
-handoff; see "In flight".
+191 entry points, riddl-models @ `6d9e7ce8`. All attributable and all RULED (2026-09-11):
+the 388 consume-only adaptors DELETE their `as flow`; the 21 receiving `source` streamlets and
+the 102 yielding external contexts are model defects for riddl-models to fix. Table in the
+2026-09-11 (later) entry; the task drop in `../riddl-models/task/` carries all four as
+acceptance criteria.
 
 ### In flight
 
@@ -145,14 +145,15 @@ written things do not CONNECT.* The rank oddity (a `???` body below an unused ty
 | `ref-wrong-kind` | 26 | the endpoints naming an adaptor (list in the task Results) |
 | 5 graph findings | 5 | in the same 4 models as the 26; their connectors no longer resolve |
 
-Three of those rows need Reid's eye, and none is a bug in the check: **the 21 Sources** are
-`streamlet X as source` with `on event …` clauses that `send` to their outlet — they RECEIVE
-with no inlet, which nothing ever checked; they are flows in disguise. **The 388** are true by
-the rule as ruled (the arity is knowable: (0,1) is a sink) but are 3/8 of the corpus's adaptors;
-the fix is `as sink` or writing the tell and its outlet, and riddl-models' own reply says
-roughly a quarter of these will get an outlet. **The 102 external contexts** yield events with
-no outlet — the shape riddl-models' campaign was already giving `outlet <Ctx>EventsOut` to; not
-exempted by default, per the plan, so Reid rules with a number.
+Three of those rows were put to Reid, and none is a bug in the check. **The 388**: Reid
+ruled the migration is to DELETE the `as flow`, never to write `as sink` (*"forcing an
+incomplete adaptor into the 'as sink' lie"*); with no ascription the style nudge names `sink`
+as the truth about what is written and flips to `flow` when the tell and outlet are authored
+— and the nudge now abstains while a needed port is missing, so it never prescribes the lie.
+**The 21 Sources** (`streamlet X as source` with `on event …` clauses that `send` — they
+RECEIVE with no inlet, which nothing ever checked) and **the 102 external contexts** that
+yield with no outlet are MODEL defects, ruled 2026-09-11: fixed in riddl-models, not exempted
+here. All four populations are acceptance criteria on their task drop.
 
 **Things that bit.** (a) Missing warnings are DROPPED by the accumulator when
 `showMissingWarnings` is off, and `pc.options` is global state other suites mutate: three suites
