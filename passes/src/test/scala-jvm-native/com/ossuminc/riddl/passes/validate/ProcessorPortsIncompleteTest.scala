@@ -151,8 +151,12 @@ class ProcessorPortsIncompleteTest extends AbstractValidatingTest {
       }
     }
 
-    "NOT fire when the only clause is `on other { error }` -- a refusal needs no inlet" in {
+    "fire when the only clause is `on other { error }` -- `on other` RECEIVES, whatever its body" in {
       (td: TestData) =>
+        // Reid, 2026-09-11, correcting the reading this shipped with: `on other` is `case _` and an
+        // error-only body is a REFUSAL of the messages that reach it -- business logic, not
+        // non-reception. "Of course it is received! How else could the error statement get
+        // generated." So the stub needs an inlet like any other receiver.
         val msgs = diagnostics(
           model(
             """    adaptor ToFar to context D.Far is {
@@ -161,11 +165,11 @@ class ProcessorPortsIncompleteTest extends AbstractValidatingTest {
           ),
           td.name
         )
-        anyOf(msgs, RuleId.StreamProcessorNoInlet) mustBe empty
+        anyOf(msgs, RuleId.StreamProcessorNoInlet).size mustBe 1
         anyOf(msgs, RuleId.StreamProcessorNoOutlet) mustBe empty
     }
 
-    "fire when `on other` DOES something, since that receives everything" in { (td: TestData) =>
+    "fire when `on other` does work, likewise" in { (td: TestData) =>
       val msgs = diagnostics(
         model(
           """    adaptor ToFar to context D.Far is {

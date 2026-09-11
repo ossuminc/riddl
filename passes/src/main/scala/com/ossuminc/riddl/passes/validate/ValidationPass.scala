@@ -342,6 +342,13 @@ case class ValidationPass(
     * Distinct from `checkUnattachedOutlets`, which asks whether anything is CONNECTED to the
     * portlet — a different question about the same declaration, and already answered.
     */
+  /** Whether a processor kind has NO "should have a handler" rule of its own, so an inlet on a
+    * handler-less one must be reported by `checkInletsAreReceived` rather than left to a companion.
+    */
+  private def lacksNoHandlerRule(proc: Processor[?]): Boolean = proc match
+    case _: Context | _: Projector => true
+    case _                         => false
+
   private def checkInletsAreReceived(root: PassRoot): Unit = {
     Finder(root.contents).recursiveFindByType[Inlet].foreach { inlet =>
       if !isPredefined(inlet) then
@@ -353,10 +360,25 @@ case class ValidationPass(
           // NOT make the same exclusion, and the asymmetry is deliberate: that check is driven by
           // an actual delivery, so naming the specific message that cannot land is actionable even
           // when the target is empty-handed.
-          case Some(proc: Processor[?]) if !proc.isEmpty && proc.handlers.nonEmpty =>
+          // ... EXCEPT where no such companion exists. Entity, Adaptor, Repository and Streamlet
+          // each have a "no handler" rule; a CONTEXT or PROJECTOR does not, so an inlet on one of
+          // those with no handler at all was reported by NOTHING (riddl-models, 2026-09-11:
+          // `PhysicianNotificationService`, three commands sent into an inlet no clause could ever
+          // dequeue, at zero findings). Those two kinds are reported here, with the sharper wording.
+          case Some(proc: Processor[?]) if !proc.isEmpty && (proc.handlers.nonEmpty || lacksNoHandlerRule(proc)) =>
             resolution.refMap.definitionOf[Type](inlet.type_.pathId).foreach { inletType =>
               val unreceived = unreceivedMembers(proc, inletType)
-              if unreceived.nonEmpty then
+              if proc.handlers.isEmpty then
+                messages.addCompleteness(
+                  inlet.errorLoc,
+                  s"${inlet.identify} admits ${inletType.identify} but ${proc.identify} declares " +
+                    "no handler at all, so nothing can ever dequeue what arrives",
+                  suggestion =
+                    s"Add a handler to ${proc.identify} with an `on` clause for each message " +
+                      s"${inlet.identify} admits, or remove ${inlet.identify}.",
+                  ruleId = Some(RuleId.InletNotReceived)
+                )
+              else if unreceived.nonEmpty then
                 // NAME the members that have no clause (Reid, 2026-08-22). A union inlet is the
                 // corpus norm -- `type XEvent is one of {...}` for streaming -- and "declares no
                 // handler clause" is both untrue and useless when the processor handles four of a
@@ -5608,11 +5630,18 @@ case class ValidationPass(
     end if
   end checkProcessorPorts
 
-  /** The processor RECEIVES messages -- a clause handling a named message, or an `on other` that
-    * does something with what arrives -- and declares no DATAFLOW inlet to receive them on. An
-    * `on other` whose body is nothing but `error` is a REFUSAL, the corpus's idiom for "anything
-    * else is unexpected", and needs no inlet. An `error-sink` inlet is infrastructure, not dataflow
-    * (Reid, 2026-08-16), so it does not count. A `???` body and the predefined module are exempt.
+  /** The processor RECEIVES messages -- a clause handling a named message, or an `on other` -- and
+    * declares no DATAFLOW inlet to receive them on. An `error-sink` inlet is infrastructure, not
+    * dataflow (Reid, 2026-08-16), so it does not count. A `???` body and the predefined module are
+    * exempt.
+    *
+    * **`on other` RECEIVES, whatever its body** (Reid, 2026-09-11, correcting the reading this
+    * shipped with that morning): it is `case _` -- it fires for exactly the message types no
+    * `on <message>` clause handles -- and a body that is only `error` is a REFUSAL OF THOSE
+    * MESSAGES, which is business logic, not non-reception: *"Of course it is received! How else
+    * could the `error` statement get generated … It gets dequeued from the inlet, passed to the
+    * handler and then released from memory when the `error` runs."* So a processor whose only
+    * clause is `on other { error }` needs an inlet like any other receiver.
     */
   private def missingInlet(proc: Processor[?]): Boolean =
     proc.nonEmpty && !isPredefined(proc) && proc.dataflowInlets.isEmpty && receivesAnything(proc)
@@ -5627,13 +5656,8 @@ case class ValidationPass(
   private def receivesAnything(proc: Processor[?]): Boolean =
     handlerClausesOf(proc).exists {
       case omc: OnMessageLikeClause => omc.msg.nonEmpty
-      case ooc: OnOtherClause =>
-        ooc.contents.toSeq.exists {
-          case _: ErrorStatement => false
-          case _: Statement      => true
-          case _                 => false
-        }
-      case _ => false
+      case _: OnOtherClause         => true
+      case _                        => false
     }
 
   private def transmitsAnything(proc: Processor[?]): Boolean =

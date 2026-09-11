@@ -1508,8 +1508,8 @@ resolution and type-checking — in `checkStatementScopes`.
   and every rule ABSTAINS on the side it cannot read (Reid, 2026-09-11; [1.25];
   CM §7.2, §8.1 "a missing port is a STUB").** `checkProcessorPorts`, dispatched
   from `process` beside `validateProcessorShape`: a processor that RECEIVES (any
-  `on <message>` clause, or an `on other` doing more than `error`) and declares no
-  DATAFLOW inlet, or that TRANSMITS (`send`/`tell`/`forward`/`yield`/`reply`, or
+  `on <message>` clause, or ANY `on other` — see the `case _` ruling below) and
+  declares no DATAFLOW inlet, or that TRANSMITS (`send`/`tell`/`forward`/`yield`/`reply`, or
   an `ask` value) and declares no outlet, is *"incomplete: it handles X, Y but
   declares no inlet"* — **Missing**, `???`'s kind, because it is the same fact:
   the author has not written something the definition owes. It absorbed the
@@ -1545,6 +1545,26 @@ resolution and type-checking — in `checkStatementScopes`.
   `showMissingWarnings` is off, and `pc.options` is global state other suites
   mutate, so every suite asserting one pins `pc.withOptions(CommonOptions.default)`
   — three suites went red in the full run and green alone before that was added.
+
+- **`on other` is `case _`, and it RECEIVES whatever its body (Reid, 2026-09-11;
+  CM §17).** It fires for exactly the message types no `on <message>` clause
+  handles; an error-only body is a REFUSAL of those messages — business logic,
+  not non-reception (*"How else could the `error` statement get generated?"*).
+  **This corrected a reading shipped the same morning**: [1.25]'s
+  `receivesAnything` had exempted an `on other { error }`-only adaptor from the
+  missing-inlet warning as "a refusal needs no inlet". Wrong — it needs an inlet
+  like any receiver; the sentence was withdrawn from the CM's STUB paragraph.
+  The old `adaptorAccepts` (AR9, deleted) carried the same misreading. Three
+  consequences, all pinned in `OnOtherIsCaseUnderscoreTest`: an inlet whose
+  unhandled members fall to `on other { error }` is NOT unreceived
+  (riddl-models' "shape 1" is not a defect — declined); a SENDER never asks how
+  the far end handles what it sends (their "warn on an actual send" option —
+  declined, *"that's business logic"*); and `checkInletsAreReceived` no longer
+  stays silent for a handler-less CONTEXT or PROJECTOR — the only two kinds with
+  no "should have a handler" rule of their own (`lacksNoHandlerRule`), so an
+  inlet nothing can ever dequeue was reported by nothing. An adaptor MUST declare
+  `on other` (`adaptor-no-on-other` is an Error), so `stream-inlet-not-received`
+  can never fire inside one.
 
 - **`adaptor-direction-advisory` counts a far-context reference ANYWHERE in the
   adaptor, and resolves the referent parent-independently.** It used to read only

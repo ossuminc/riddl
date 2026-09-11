@@ -63,9 +63,10 @@ ossuminc repo). NOT pushed at the time of writing — Reid's call, because the p
 red:** `RiddlModelsRoundTripTest` gates on corpus Errors and riddl-models has 388 `as flow`
 ascriptions to DELETE and 26 endpoints to repoint first (their task drop:
 `../riddl-models/task/2026-09-11-implied-ports-abolished-26-endpoints-388-ascriptions.md`).
-Task drops also in `../ossum.tech/task/` and `../riddl-generator/task/`. Three task files
-closed to `task/done/` with Results. **One NEW task file is untriaged:**
-`task/2026-09-11-external-context-unhandled-command.md` — arrived mid-session, not read.
+Task drops also in `../ossum.tech/task/` and `../riddl-generator/task/`. Five task files
+closed to `task/done/` with Results (the two evening ones: the ask-reply vise, and the
+`on other` ruling); `task/` is EMPTY. `../bin/riddlc` and ivy were restaged together at the
+end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
 
@@ -93,6 +94,28 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-11 (night) — `on other` is `case _`, and a correction to my own morning
+
+riddl-models' second task of the day asked for a rule when a context's inlet admits a type that
+only `on other { error }` handles. I offered Reid two readings and he rejected both: `on other`
+is `case _` — it fires for exactly the types no `on <message>` clause handles — and **whatever
+its body it RECEIVES**: *"Of course it is received! How else could the `error` statement get
+generated?"* Erroring is a refusal of those messages, which is business logic. And the sender
+never asks how the far end handles what it sends.
+
+**That corrected [1.25].** I had shipped `receivesAnything` with "an `on other` whose body is
+only `error` is a refusal and needs no inlet" — lifted from the deleted `adaptorAccepts`, which
+carried the same misreading — and written the sentence into the CM's STUB paragraph. Both
+withdrawn; the 5 corpus adaptors it exempted now draw the missing-inlet warning, correctly.
+**Lesson: I inherited a predicate's semantics along with its code.** `adaptorAccepts`' "error-only
+is refusal" was a typing heuristic for a wire (AR9), and I reused it as a statement about
+reception without re-deriving it from the question the new check asks.
+
+The other shape in the task was real and needed no ruling: `checkInletsAreReceived` skipped
+every handler-less processor as "already reported by 'should have a handler'", but Context and
+Projector have no such rule, so an inlet nothing could ever dequeue drew nothing. Now reported,
+for those two kinds only (`lacksNoHandlerRule`), with its own wording. Canaried.
 
 ## 2026-09-11 (evening) — the adaptor is the boundary for its pair in BOTH directions
 
