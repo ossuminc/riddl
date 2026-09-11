@@ -58,14 +58,14 @@ handoff; see "In flight".
 
 ### In flight
 
-**[1.25] is CODE-COMPLETE and documented; the closing is what remains.** Check the state of:
-the three `task/` files (Results written? moved to `task/done/`?), the task drops owed to
-`../riddl-models/task/` (the census + the 26 endpoints), `../ossum.tech/task/` (language
-reference still documents A103's implied ports) and `../riddl-generator/task/` (AR9's
-derivation was theirs; the CM index's line numbers shifted by two after §8.1), and whether the
-commits landed and pushed (`git status`). The full `tJVM; tNative` run was in flight at the
-time of writing — read its result in the log before trusting it; `language`/`passes` on JVM
-and all of `tJS` were green, `cJS`/`cNative` compiled.
+**[1.25] is DONE and committed (`2c2b8d5b2`, `b41886bc0`, `05f95348a`; CM `2927731` in the
+ossuminc repo). NOT pushed at the time of writing — Reid's call, because the push turns CI
+red:** `RiddlModelsRoundTripTest` gates on corpus Errors and riddl-models has 388 `as flow`
+ascriptions to DELETE and 26 endpoints to repoint first (their task drop:
+`../riddl-models/task/2026-09-11-implied-ports-abolished-26-endpoints-388-ascriptions.md`).
+Task drops also in `../ossum.tech/task/` and `../riddl-generator/task/`. Three task files
+closed to `task/done/` with Results. **One NEW task file is untriaged:**
+`task/2026-09-11-external-context-unhandled-command.md` — arrived mid-session, not read.
 
 ### Traps a fresh session would hit
 
@@ -85,10 +85,12 @@ and all of `tJS` were green, `cJS`/`cNative` compiled.
 ### Certainty
 
 Verified by running this session: BEFORE census 0/191 (calibrated); AFTER census 1290;
-`language` 76/760 and `passes` 269/1828 green on JVM; `tJS` green (111/438/317/1/149);
-`cJS`/`cNative` compiled; both new suites canaried. **NOT verified at the time of writing:**
-`tNative` and the `commands`/`riddlc` JVM suites — a full `tJVM; tNative` was running; read
-`scratchpad/full.log`'s `Suites: completed` lines or CI.
+JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (JSON corpus
+191/191 identity AND parity), `riddlc`; `tJS` green (111/438/317/1/149); Native `language`
+72/745 and `passes` 266/1818; `cNative` for all. Both new suites canaried. **Known red:**
+`commands`' `RiddlModelsRoundTripTest`, 171/191 models, all at "validate original" on the
+414 new Errors — by construction until riddl-models migrates. **Not run:** `commands`/
+`riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
