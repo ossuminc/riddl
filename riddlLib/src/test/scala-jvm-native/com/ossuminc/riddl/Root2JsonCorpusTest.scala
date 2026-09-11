@@ -71,7 +71,16 @@ class Root2JsonCorpusTest extends AnyWordSpec with Matchers {
     * across a round trip, because the round-tripped AST is one synthetic document with different
     * offsets. Without this, eleven models reported their own pre-existing errors as "new".
     */
-  private def stripLocs(m: String): String = m.replaceAll("""\(\d+->\d+\)""", "(LOC)")
+  /** Strip every spelling of a location a message can embed: the bare `(N->M)` span, and the
+    * full `file.riddl(L:N->M)` that `identifyWithLoc` renders (e.g. `ref-wrong-kind`'s "resolved to
+    * Adaptor 'X' at VendorContext.riddl(17:55->81)"). The file NAME differs too between a
+    * multi-file original and the single synthetic document of the reparse, so it goes with the
+    * span; otherwise the first corpus error of that shape read as "introduced by the round trip"
+    * -- found 2026-09-11, when [1.25] made the corpus's 26 adaptor-naming endpoints wrong-kind.
+    */
+  private def stripLocs(m: String): String =
+    // `file.riddl(L:C->C)`, `file.riddl(L:C->L:C)` (a multi-line span), or a bare `(N->M)`.
+    m.replaceAll("""(\S+\.riddl)?\((\d+:)?\d+->(\d+:)?\d+\)""", "(LOC)")
 
   private def normalize(e: String): String =
     e.replaceAll("'[^']*'", "'X'")
