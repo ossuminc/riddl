@@ -63,6 +63,16 @@ object Messages {
       *     generated**;
       *   - [[CompletenessWarning]], [[Warning]], [[Error]] and [[SevereError]] are worse still.
       *
+      * **The admission test between Missing and Completeness (Reid, 2026-09-11).** They differ in
+      * RANK -- Missing (2) is ignorable, Completeness (4) actionable, see `isActionable` -- and in
+      * what they assert: a **Missing** warning says *the author OWES something and has not written
+      * it* (a body, an author, a description, a portlet the handlers need); a **Completeness**
+      * warning says *the things that ARE written do not CONNECT* (an unfed inlet, a sink nothing
+      * reaches, entities with no repository). Pick by that test, not by which sounds graver.
+      * Merging the two was considered and declined the same day: under the compat policy it would
+      * be a rename that keeps both spellings forever, so it would deliver two names for one kind
+      * rather than one kind.
+      *
       * So a conforming model is merely error-free, while a GENERABLE model is a higher bar than
       * that — which is why `isActionable` could not simply be re-pointed at it. Consumers key
       * off `isActionable`; this is additive.

@@ -28,75 +28,143 @@ hazards, the corpus floor, FALSE ZERO, the parser CUT hazard — is still in CLA
 Line-number citations into CLAUDE.md from before this date are stale; two were repaired
 (`BACKLOG.md:83`, `NOTEBOOK.md:619`), the rest were checked and there are no others.
 
-### Build state — verified 2026-09-11 by running
+### Build state — verified 2026-09-11 (afternoon) by running
 
-**`2.1.1` is released** (tag on `20e72732d`), Scala 3.9.0 final. **BAST `FORMAT_REVISION` 24.**
+**`2.1.1` is released** (tag on `20e72732d`), Scala 3.9.0 final. **BAST `FORMAT_REVISION` 24**
+(unchanged by [1.25]: no AST-shape change).
 
-**`../bin/riddlc` is `2.1.1-33-dd3c2d80`, dated Sep 10 — now FOUR commits behind HEAD and it
-does NOT contain `handler-duplicate-special-clause`.** Any corpus probe run with it will not
-see that rule. Nothing was published or staged on 2026-09-11, deliberately. Confirm with
-`../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`.
+**`../bin/riddlc` is `2.1.1-33-dd3c2d80`, dated Sep 10 — now well behind HEAD and it contains
+NEITHER `handler-duplicate-special-clause` NOR the [1.25] port rules.** Nothing was published
+or staged outside the repo on 2026-09-11, deliberately (Reid's call). The in-repo JVM stage at
+`target/out/jvm/scala-3.9.0/riddlc/universal/stage/bin/riddlc` IS current and is what the
+corpus census used. Confirm with `../bin/riddlc --no-ansi-messages version` against
+`git describe --tags --long`.
 
-**CI is GREEN on HEAD** (`5104ea23d`): Scala Build and Scala Coverage Testing both completed
-success, verified via `gh run list` this session.
+**Ten language/validation changes since 2.1.1**, the first eight in that binary and the last
+two NOT: `on quiescence <window>`; `send … at <instant>`; `stream-graph-cycle` as an infinite
+MESSAGE loop; `msg-tell-crosses-unrelated-domains`; [5.7]; `saga-no-timeout` non-blocking;
+`saga-step-no-tell` an Error; `ask` both ways; `handler-duplicate-special-clause`; and
+**[1.25] — implied adaptor ports ABOLISHED, a missing port is a Missing warning for every
+processor kind, rules abstain on the side they cannot read, an endpoint naming an adaptor is
+`ref-wrong-kind`** (2026-09-11, see the entry below).
 
-**Nine language/validation changes since 2.1.1**, the first eight in that binary and the
-ninth NOT: `on quiescence <window>`; `send … at <instant>`; `stream-graph-cycle` as an
-infinite MESSAGE loop; `msg-tell-crosses-unrelated-domains`; [5.7] a handler-less processor
-is a stream TAIL whatever its shape; `saga-no-timeout` non-blocking; `saga-step-no-tell` an
-Error; `ask` requires a modelled path BOTH WAYS; and **`handler-duplicate-special-clause`**
-(2026-09-11) — at most one of each special on-clause per handler.
+### Corpus — 1290 findings after [1.25], from a verified ZERO before
 
-### Corpus — 59 errors, EXPECTED (as of 2026-09-10; not re-measured since)
+191 entry points, riddl-models @ `6d9e7ce8`. All attributable; three rows want Reid's ruling
+(21 `source` streamlets that receive, 388 consume-only adaptors written `as flow`, 102 external
+contexts that `yield` with no outlet). Table and reasoning in the 2026-09-11 (later) entry.
+riddl-models has NOT yet been told — the Results in `task/done/` and a task drop are the
+handoff; see "In flight".
 
-189 entry points, 26 models, all 59 the two `ask` rules riddl-models asked for. **Whether
-`handler-duplicate-special-clause` adds any is UNMEASURED** — CI's corpus round-trip passed,
-which is not the same question. `RiddlModelsRoundTripTest` is a parse/prettify round trip:
-**do not read its green as "the corpus validates".**
+### In flight
 
-### In flight — [1.25], ruled then PAUSED
-
-**Implied adaptor ports (A103).** Reid ruled 2026-09-10 to abolish them. Implementation
-stopped before any code changed, because the migration cannot be automated: `Inlet.type_` is
-a `TypeRef` to a NAMED type, and of 411 port-less adaptors only **165** handle exactly one
-type (190 handle 2–5, nothing to point at) and only **1** has a derivable outlet — the rest
-are prose stubs (`do` + `error`, no `tell`). The measurement went back to riddl-models as
-`task/2026-09-11-implied-adaptor-ports-is-not-a-mechanical-migration.md` in THEIR repo.
-**Blocked on their reply. Do not implement.** Full detail and the unruled fallback (invert
-`inlets`/`declaredInlets`) are in BACKLOG [1.25]; the plan
-(`~/.claude/plans/ticklish-puzzling-sun.md`) is sound in diagnosis, dead in mechanism.
-
-**Two files in `task/`, both AWAITING TRIAGE**, both on that paused question:
-`2026-09-09-ask-is-not-checked-for-a-channel.md` and
-`2026-09-10-abolish-implied-adaptor-ports.md`. A third was closed to `task/done/` this
-session with Results correcting its own false "riddl already acted on this" note.
+**[1.25] is CODE-COMPLETE and documented; the closing is what remains.** Check the state of:
+the three `task/` files (Results written? moved to `task/done/`?), the task drops owed to
+`../riddl-models/task/` (the census + the 26 endpoints), `../ossum.tech/task/` (language
+reference still documents A103's implied ports) and `../riddl-generator/task/` (AR9's
+derivation was theirs; the CM index's line numbers shifted by two after §8.1), and whether the
+commits landed and pushed (`git status`). The full `tJVM; tNative` run was in flight at the
+time of writing — read its result in the log before trusting it; `language`/`passes` on JVM
+and all of `tJS` were green, `cJS`/`cNative` compiled.
 
 ### Traps a fresh session would hit
 
-- **Report AFTER measuring, not before.** Three claims went out wrong on 2026-09-11 and all
-  three were mine: a predicted corpus clearance, a "zero are wired" from a probe that found
-  zero adaptor names among 1,379 endpoints, and an alarm built on conflating two sets.
-  **Only the calibration caught the middle one.**
-- **Endpoint paths name the PENULTIMATE segment.** A connector to an adaptor reads
-  `outlet <Context>.<Adaptor>.<Portlet>` — the last segment is the portlet. Splitting on the
-  last segment finds no adaptors and looks like a finding.
-- **A backlog item filed before a large change is a snapshot** — re-measure against the branch.
-- **Citing a passing test is not citing an assertion.**
-- **Prose inside an s-interpolated Scala fixture is code.**
-- **`terminate` is terminal**, so a repair `tell` must LEAD its block.
-- **zsh does not word-split unquoted expansions** — census loops need `while read`.
+- **Missing warnings are DROPPED when `showMissingWarnings` is off, and `pc.options` is global
+  test state.** A suite asserting one goes red only in the FULL run. Pin
+  `pc.withOptions(CommonOptions.default)`.
+- **Report AFTER measuring, not before.** The "23 endpoints" was a stale, unrecorded count; the
+  real number was 26 and rising. Re-measure anything older than a day against the branch.
+- **Endpoint paths name the PENULTIMATE segment** — `outlet <Context>.<Adaptor>.<Portlet>`.
+- **A corpus census must capture the MESSAGE line, not just the header** — the kind is on the
+  second line of every riddlc diagnostic.
+- **A bare single-segment portlet name in a fixture is ambiguous** the moment two processors
+  declare it; qualify the path.
 - **A backtick in ANY model-authored shell string is command substitution** — see the parent
-  `../CLAUDE.md`; it is not only a commit-message rule.
+  `../CLAUDE.md`.
 
 ### Certainty
 
-Verified by running this session: repo clean and fully pushed; `../bin/riddlc` version; CI
-green on HEAD; `language` 76 suites/760 tests and `passes` 268/1811 on JVM, with the new check
-CANARIED (broken deliberately: 4 positives red, 2 negative controls green). **NOT run
-locally:** JS/Native, `utils`, `testkit`, `commands`, `riddlc`, and any corpus validation
-census — CI covers the first group and Reid's standing instruction is not to duplicate it.
+Verified by running this session: BEFORE census 0/191 (calibrated); AFTER census 1290;
+`language` 76/760 and `passes` 269/1828 green on JVM; `tJS` green (111/438/317/1/149);
+`cJS`/`cNative` compiled; both new suites canaried. **NOT verified at the time of writing:**
+`tNative` and the `commands`/`riddlc` JVM suites — a full `tJVM; tNative` was running; read
+`scratchpad/full.log`'s `Suites: completed` lines or CI.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-11 (later) — [1.25] landed: nothing is implied, a missing port is a STUB
+
+riddl-models answered the feasibility measurement within hours (`task/2026-09-11-implied-ports-
+the-correspondence-holds-for-80-percent.md`): our grep had looked only on the adaptor's own side,
+the covering alternation is usually the FAR entity's `<Entity>Event`, 845 of 1056 port-less
+adaptors can name an existing type, and they will declare every port themselves — inlets by
+script, ~350 outlets by hand. That killed materialisation (the compiler authors nothing) and
+left the abolition. Design negotiated with Reid in one sitting, five points:
+
+1. Ports are declared or absent — for ANY processor. `Adaptor.arityShape`, `ImpliedEnd`,
+   `resolveConnectorEnd`'s adaptor arm, AR9's implied typing and its ambiguity Error are gone.
+2. A side the handlers NEED and the definition lacks is INCOMPLETE — a **Missing** warning,
+   `???`'s kind. Reid: *"missing is missing, that's incomplete"*; not a Deprecation, because an
+   omission is not a spelling. Named from the handlers: *"handles X, Y but declares no inlet"*.
+3. **A rule abstains on the side it cannot read** — inlet rules wait for the inlet, outlet rules
+   for the outlet, both-rules for both. Reid sharpened this from my "everything abstains".
+4. A connector endpoint naming an adaptor is `ref-wrong-kind` again. Reid asked *"are you sure
+   there are 23 … that isn't syntactically legal and never was"* — re-measured: **26**, the
+   session that reported 23 never recorded how, and riddl-models' own campaign was writing new
+   ones (`reactive-bbq/corporate/domain.riddl:34`, `from outlet MenuManagement.ToPrintingService`
+   — the ADAPTOR). Their reply says *"our connectors name a qualified portlet path throughout"*;
+   26 do not, and riddlc had been telling them it was fine.
+5. Adaptors are not special: no shape carve-out, `as merge` legal, ascription rule untouched.
+
+**Two scope rulings by AskUserQuestion**: the check is on EVERY processor kind (it absorbed the
+entity-only 4h/4i block), and sender-side abstention is symmetric (a port-less entity that tells
+draws one Missing warning, not that plus `msg-tell-target-unreachable`). **One departure from
+Reid's pick, flagged in the plan and approved**: he chose "retire `entity-no-inlet`/`-outlet`";
+I kept them emitted for entities because synapify's `EmitterConformanceTest.scala:160,166` keys
+on them and a published code means the same thing forever. One rule, two spellings, documented
+at the enum.
+
+**The Missing/Completeness question, asked by Reid and settled by not merging.** The only
+load-bearing difference is RANK: `isIgnorable`/`isActionable` (`Messages.scala:46-47`) split
+exactly between Missing (2) and Completeness (4). Merging would be a rename-and-keep-both under
+the compat policy — two names for one kind, not one kind. What went in instead is the admission
+test, in `Messages.scala`: *Missing = the author OWES something unwritten; Completeness = the
+written things do not CONNECT.* The rank oddity (a `???` body below an unused type) is [5.8].
+
+**Corpus A/B — 191 entry points, riddl-models @ `6d9e7ce8`, JVM stage `2.1.1-40`.** BEFORE:
+**0 diagnostics** (they closed their inbound campaign at zero the same morning; calibrated on a
+28-warning probe). AFTER, 1290 across 186 models, every one attributable:
+
+| rule | count | what it is |
+|---|---:|---|
+| `stream-processor-no-inlet` | 759 | 734 Adaptor (the migration population), **21 Source**, 3 Projector, 1 external Context |
+| `stream-ascribed-shape-mismatch` | 388 | ALL `Adaptor … as flow` deriving **sink**: inbound adaptors that only consume (`do`), written `as flow` when the outlet was implied |
+| `stream-processor-no-outlet` | 112 | **102 external Contexts that `yield`**, 6 Adaptor, 4 Repository |
+| `ref-wrong-kind` | 26 | the endpoints naming an adaptor (list in the task Results) |
+| 5 graph findings | 5 | in the same 4 models as the 26; their connectors no longer resolve |
+
+Three of those rows need Reid's eye, and none is a bug in the check: **the 21 Sources** are
+`streamlet X as source` with `on event …` clauses that `send` to their outlet — they RECEIVE
+with no inlet, which nothing ever checked; they are flows in disguise. **The 388** are true by
+the rule as ruled (the arity is knowable: (0,1) is a sink) but are 3/8 of the corpus's adaptors;
+the fix is `as sink` or writing the tell and its outlet, and riddl-models' own reply says
+roughly a quarter of these will get an outlet. **The 102 external contexts** yield events with
+no outlet — the shape riddl-models' campaign was already giving `outlet <Ctx>EventsOut` to; not
+exempted by default, per the plan, so Reid rules with a number.
+
+**Things that bit.** (a) Missing warnings are DROPPED by the accumulator when
+`showMissingWarnings` is off, and `pc.options` is global state other suites mutate: three suites
+went red in the full run and green alone until every Missing assertion pinned
+`pc.withOptions(CommonOptions.default)`. (b) The corpus census captured only the header line,
+so "by kind" was a list of file:line — the kind is on the NEXT line. (c) `transmittedTypes`
+named tells/forwards/sends and not yields, so 102 messages said "transmits messages" — caught
+by the census, not by a test; pinned now. (d) A bare `outlet Out` in a fixture resolved to the
+ADAPTOR's `Out` two processors away — CLAUDE.md's single-segment ambiguity trap, again.
+
+Both new suites canaried: predicates disabled → 14 positives red, 13 negatives/returns green;
+endpoint arm restored → the 2 wrong-kind cases red. `ImpliedPortTypeTest` deleted (it pinned
+the mechanism); its one surviving behaviour, AR5 resolving a `let`-bound tell, moved to
+`PortAbstentionTest`.
 
 ## 2026-09-11 — a ruling survived, its mechanism did not
 

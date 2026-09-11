@@ -1436,25 +1436,30 @@ resolution and type-checking — in `checkStatementScopes`.
   and into its own handler, contradicting §7.6's isolation seam ("the ONLY
   sanctioned place another context's types are named"); one of the two had to go.
   Landed in two commits, permissive then adamant, on Reid's instruction.
-  - **Ports are IMPLIED**: `Adaptor.arityShape` counts each side as at least one,
-    so a port-less adaptor is a `flow`; declaring a port overrides that side.
-    `validateProcessorShape` checks an adaptor even when port-less, so `as
-    source`/`as merge` on one is an Error (the corpus's 31 one-outlet `as source`
-    adaptors included). **No AST change**: `AdaptorContents` already admits ports.
-  - **No grammar change for the endpoint** (Reid's choice): `from outlet
-    Sales.ToBilling` already parsed; `ResolutionPass.resolveConnectorEnd` accepts
-    an Adaptor where a portlet was expected. **Every streaming check resolves
-    endpoints through ONE abstraction**, `StreamingValidation.ConnectorEnd`
-    (`DeclaredEnd` | `ImpliedEnd`) via `connectorFrom`/`connectorTo` — seven
-    sites used to call `resolvePath[Outlet]`/`[Inlet]` each. Do not add an
-    eighth. Consequences: type agreement is skipped when an end is implied
-    (nothing is synthesised); an implied port has cardinality one and is never
-    reported unconnected; a cycle through an implied port is undetected (the edge
-    carries no declared type); the unattached-port check collects each side
-    independently — the old PAIR collection would have reported a declared far
-    inlet as unconnected whenever the near end was implied. Check 1 ("no
-    connections") excludes processors with no DECLARED ports, or ~1000 corpus
-    adaptors would have warned.
+  - **Ports are DECLARED — nothing is implied, ABOLISHED 2026-09-10/11 ([1.25]).**
+    A103 gave an adaptor implied ports (`arityShape` counted each side as at least
+    one, so a port-less adaptor was a `flow`; `resolveConnectorEnd` accepted an
+    Adaptor where a portlet was expected; AR9 typed the phantom ports from what
+    the adaptor handled and told). **All of it is gone — do not restore any
+    piece.** The implication was invisible to `inlets`/`outlets`, which most rules
+    read, so one structural fact surfaced as two contradictory diagnostics in
+    riddl-models in one day and left an asymmetry no modeller could be taught (an
+    inbound adaptor MUST declare an inlet to be a chain tail; an asking one must
+    NOT). Reid: *"a rule is a rule, and I don't want to make an exception for
+    adaptors, because they really aren't all that special."* What replaced it is
+    the entry **"A missing port is INCOMPLETENESS"** below. An adaptor now takes
+    whatever shape its declared ports give it (`as merge` on two inlets is legal),
+    `validateProcessorShape` has no adaptor arm, and
+    `StreamingValidation.ConnectorEnd` is ONE case class (`portlet`, `owner`) —
+    still the single seam every streaming check resolves endpoints through; do not
+    add a second resolution path.
+  - **A connector endpoint that names an ADAPTOR is `ref-wrong-kind`**, as before
+    A103 and as the grammar always read it (`outlet`/`inlet` is the keyword; the
+    path must resolve to one). riddl-models had **26** such endpoints on
+    2026-09-11 (re-measured, not the "23" an earlier session reported), every one
+    written as `<Context>.<Adaptor>` in the belief it named a portlet — the
+    confusion an implied port invites. `AdaptorRef`'s doc and the AST note on
+    `Adaptor` carry the history.
   - **The boundary exemption is DIRECTIONAL, in both checks.**
     `checkBoundaryEncapsulation`: an OUTBOUND adaptor toward B may be the `from`
     end of a connector into B; an INBOUND adaptor from B may be the `to` end of
@@ -1482,30 +1487,47 @@ resolution and type-checking — in `checkStatementScopes`.
     OnlineOrdering published on FrontOfHouse's outlet with zero errors. `send ...
     to inlet X` is a delivery, judged by the boundary rules, not here.
 
-- **An implied port HAS a type, and a connector with an implied end is
-  type-checked (AR9, 2026-09-07).** riddlg's derivation, adopted: an implied
-  OUTLET carries the distinct types its adaptor `tell`s/`forward`s to a context,
-  resolved by `clauseOperandType` through the clause binding, a `let` in the
-  clause, the constructor or the message ref; an implied INLET accepts what its
-  adaptor HANDLES. **The SOURCE decides what a wire carries** — a destination's
-  expectation is not evidence about what arrives (reactive-bbq's mirrored pairs
-  proved it). Several distinct told types is `adaptor-implied-outlet-ambiguous`,
-  reported once by `validateAdaptor`; never the first taken. `validateConnector`
-  compares with permissive `typeAdmits` against a declared inlet and
-  `adaptorAccepts` against an implied one; declared/declared keeps strict
-  `areSameType`, deliberately.
-  **`adaptorAccepts` is NOT `receivesMessageType`.** An `on other` whose body is
-  only `error` is a refusal, and the corpus writes `on other { error "Unexpected
-  message for adaptor X" }` in every adaptor — counting it as acceptance made
-  every wire type-correct and both AR9 tests green for nothing. Delivery
-  questions keep the looser helper.
-  **AR5 accepts the far context's INBOUND adaptor as the admitting port.** As
-  shipped it looked only at the far context's own inlets, while AR6 requires the
-  crossing to land on that adaptor: the two rules contradicted each other on the
-  exclusive shape, hidden because every corpus adaptor tell is `let`-bound and
-  AR5 did not resolve `let`s. **Resolving an operand you previously ignored can
-  expose a rule you already shipped** — check what the newly visible cases
-  collide with before landing the resolution.
+- **A missing port is INCOMPLETENESS — a Missing warning for EVERY processor kind,
+  and every rule ABSTAINS on the side it cannot read (Reid, 2026-09-11; [1.25];
+  CM §7.2, §8.1 "a missing port is a STUB").** `checkProcessorPorts`, dispatched
+  from `process` beside `validateProcessorShape`: a processor that RECEIVES (any
+  `on <message>` clause, or an `on other` doing more than `error`) and declares no
+  DATAFLOW inlet, or that TRANSMITS (`send`/`tell`/`forward`/`yield`/`reply`, or
+  an `ask` value) and declares no outlet, is *"incomplete: it handles X, Y but
+  declares no inlet"* — **Missing**, `???`'s kind, because it is the same fact:
+  the author has not written something the definition owes. It absorbed the
+  entity-only 4h/4i block. **One rule, TWO id spellings, on purpose**:
+  `entity-no-inlet`/`entity-no-outlet` stay for an Entity because synapify's
+  `EmitterConformanceTest` keys on them and a published code means the same thing
+  forever; everything else reports `stream-processor-no-inlet`/`-no-outlet`. Do
+  not "unify" by retiring the entity codes — that is the API break the compat
+  policy forbids.
+  **The abstention is the half that keeps this from being a second demand.**
+  `missingInlet`/`missingOutlet` (private, `ValidationPass`) are consulted by:
+  tell/ask reachability (a port-less SENDER is exempt, symmetric with the
+  target-side `inlets.isEmpty` exemption A6 already carried — a port-less entity
+  that `tell`s used to draw the Error AND the warning for one omission); the
+  shape check (`as flow` on a port-less adaptor draws nothing but the Missing
+  warning; the corpus's 31 one-outlet `as source` adaptors likewise, until the
+  inlet exists); and AR5 (`adaptor-target-no-admitting-inlet`), where a far
+  inbound adaptor with NO declared inlet neither admits nor refuses. Rules that
+  read declared ports or the connector graph (`isStreamTail`, loops, Check 1/2,
+  `checkInletsAreReceived`, AR8's named-outlet ownership) needed no change.
+  **The Missing/Completeness admission test** (recorded in `Messages.scala`):
+  Missing = the author OWES something unwritten; Completeness = the written things
+  do not CONNECT. Merging the kinds was considered and declined — under the compat
+  policy it would keep both spellings forever and deliver two names for one kind.
+  **AR9 is history**: `impliedOutletTypes`/`adaptorAccepts`/`ImpliedEnd` typing
+  and `adaptor-implied-outlet-ambiguous` (now in `RuleId.retired`) went with the
+  implication; `clauseOperandType`'s `let`-resolution survives (AR5 still resolves
+  a `let`-bound tell), and the outlet derivation survives only as
+  `transmittedTypes`, text for the Missing message. The lesson AR9 recorded still
+  holds: **resolving an operand you previously ignored can expose a rule you
+  already shipped** — check what the newly visible cases collide with first.
+  **Test trap:** Missing warnings are DROPPED by the accumulator when
+  `showMissingWarnings` is off, and `pc.options` is global state other suites
+  mutate, so every suite asserting one pins `pc.withOptions(CommonOptions.default)`
+  — three suites went red in the full run and green alone before that was added.
 
 - **`adaptor-direction-advisory` counts a far-context reference ANYWHERE in the
   adaptor, and resolves the referent parent-independently.** It used to read only
@@ -1980,6 +2002,12 @@ the fixture working.
   annotation and its case class silently reattaches it (breaks `cJS`, invisible
   to `cJVM`). Any AST edit near an exported type MUST be checked with `cJS` (and
   `cNative`), not `cJVM` alone.
+- **Deleting a test SOURCE leaves its `.nir` behind on Native, and `<row>/Test/clean` does
+  not remove it.** `passesNative/testOnly *` then fails at `nativeLink` with "Unreachable
+  symbols … referenced from <DeletedSuite>.scala:NN" — the deleted suite's lambdas still
+  reference a symbol that no longer exists. Found 2026-09-11 deleting `ImpliedPortTypeTest`.
+  Fix: `find target/out/native0.5/scala-<v>/<artifact>/test-classes -name "<Suite>*" -delete`
+  and relink. JVM and JS were unaffected.
 - **Scala.js stale-incremental devirtualization** — when a class gains a `WithX`
   accessor trait (or any mixin changing which field a trait method resolves to),
   the JS linker can keep a *stale devirtualization* of that method to the OLD

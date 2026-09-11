@@ -30,6 +30,17 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
+- **[5.8]** **Severity RANK review: `Missing` (2) sits BELOW `Usage` (3).** The ladder
+  (`Messages.scala`: Style 1 < Missing 2 < Usage 3 < Completeness 4 …) makes a `???` body,
+  an absent author and — since [1.25] — a processor missing a needed port "ignorable"
+  (`isIgnorable` draws its line below Completeness) while an unused type is "actionable".
+  Nobody would rank those from first principles. Reid agreed on 2026-09-11 that the rank
+  and the ignorable/actionable line are the real distinction between the kinds (merging
+  Missing and Completeness was considered and DECLINED: under the compat policy it would be
+  a rename that keeps both spellings forever). A number change and no API — but
+  `noMinorWarnings`, synapify's `ModelQualityGate` ordering and riddlg's generability bar
+  all read the ladder, so it wants a ruling and a consumer sweep, not a quiet edit.
+
 - ~~**[5.7]** `isStreamTail` vs the loop rule on a handler-less processor.~~ — **DONE
   2026-09-08.** Reid: *"You should implement 5.7"* — the tail rule follows. A handler-less
   processor is now a TAIL whatever its shape (`ValidationPass.isStreamTail`), where it used
@@ -377,33 +388,21 @@ task files, so they were NOT physically reshuffled; this index carries the order
   **Asked as a question in their task drop, not asserted** — the 40 may simply predate
   their guard. **Do not treat the finding count as vindication until that is settled**;
   a rule that disagrees with a careful modeller's own guard deserves a second look from
-  this side too. Blocked on their reply.
+  this side too. Blocked on their reply. **Partly explained 2026-09-11 by [1.25]**: an `ask`
+  from a port-less ADAPTOR was silently unchecked because the reply leg read the asker's
+  (undeclared) inlet — now the asker draws a Missing warning and both legs abstain until its
+  ports exist. That accounts for the adaptor silence, not for the 40-vs-19 split.
 
-- **[1.25]** **Implied adaptor ports (A103) — RULED "abolish", then PAUSED on a
-  feasibility measurement. Blocked on riddl-models.** A103 makes a port-less adaptor
-  count as one inlet and one outlet (`Adaptor.arityShape`, `AST.scala:4696`), and that
-  implication is invisible to `proc.inlets`, which most rules read — `isStreamTail`
-  (`ValidationPass.scala:8414`) and both `ask` legs (`:627`, `:639`) among them. One root
-  cause, two failures, both verified against the source: an `ask` from a port-less adaptor
-  is silently unchecked, and a source feeding one draws `stream-source-reaches-no-sink`.
-  **Reid ruled 2026-09-10: abolish, every port declared.** Delivered as materialise +
-  deprecate, never deletion — 2.0 shipped, so the removal window is closed.
-  **Paused because the migration cannot be automated.** `Inlet.type_` is a `TypeRef` to a
-  NAMED type, and measured over 190 models: of 411 port-less adaptors, 355 have real
-  clauses, of which only **165** handle exactly one type (190 handle 2–5, with no single
-  name to point at) and only **1** has a derivable outlet — the rest are prose stubs
-  (`do` + `error`, no `tell`). Generating ports would mean the compiler authoring
-  user-facing alternation types. **Not a cost objection; a feasibility one.**
-  Also measured: `ImpliedEnd` has only **23** endpoints corpus-wide, so the
-  "materialised ports read as unconnected" risk is small.
-  Sent back as `riddl-models/task/2026-09-11-implied-adaptor-ports-is-not-a-mechanical-migration.md`.
-  **Do not implement until they reply** — the ruling rests on their claim that this is
-  "a large mechanical migration … not a research problem", which the measurement
-  contradicts. Plan (superseded in its mechanism, sound in its diagnosis):
-  `~/.claude/plans/ticklish-puzzling-sun.md`.
-  **Fallback if implication stays:** invert the naming so `proc.inlets` means
-  declared+implied and the raw field becomes `declaredInlets` (prettify/BAST/JSON only) —
-  every rule reaching for the obvious name is then right by default. Not ruled on.
+- ~~**[1.25]** Implied adaptor ports (A103) — abolish.~~ — **DONE 2026-09-11.** Nothing is
+  implied for any processor; a port the handlers need and the definition lacks is a
+  MISSING warning (`checkProcessorPorts`, every kind, `stream-processor-no-inlet`/`-outlet`,
+  entity keeps `entity-no-*`), and every rule ABSTAINS on the side it cannot read. A
+  connector endpoint naming an adaptor is `ref-wrong-kind` again — **26** corpus sites
+  (re-measured; the "23" above was a stale count). Materialisation was dropped on
+  riddl-models' reply (they declare the ports; inlets by script, ~350 outlets by hand).
+  Shape freed, `as merge` legal, ascription rule untouched. CM §7.2/§8.1 reversed,
+  "a missing port is a STUB" added. Corpus A/B in NOTEBOOK 2026-09-11 (later). The
+  fallback (`declaredInlets` inversion) is moot.
 
 
 | # | Item | Blocked by | Why here |
