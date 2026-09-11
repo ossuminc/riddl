@@ -77,6 +77,47 @@ wants a clean-cache pass.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-09-11 — a ruling survived, its mechanism did not
+
+Reid ruled: abolish implied adaptor ports. The plan was materialise-and-deprecate — put the
+implied ports into the AST after resolution so `proc.inlets` is the single answer every rule
+already reaches for, deprecate the port-less spelling, let prettify write the declarations out.
+It would have turned riddl-models' ~2570-declaration migration into a formatting run.
+
+**Then the measurement killed the mechanism.** `Inlet.type_` is a `TypeRef` — a reference to a
+NAMED type — so a generated port can only point at a type that already exists. Of 411 port-less
+adaptors, 355 have real clauses; only **165** handle exactly one type, **190** handle two to
+five, and exactly **1** has a derivable outlet. All 355 contain `do` and `error`; one contains
+`tell`. They are unimplemented stubs written in prose. **The information required to generate
+the declarations is not in the models** — AR9's derivation was built to CHECK a type, and
+generation needs a type to NAME.
+
+So the ruling stands and the implementation is paused, with the numbers sent back to
+riddl-models: their claim that this is *"a large mechanical migration … not a research problem"*
+is the premise the ruling rests on, and it is false. **Not a corpus-cost objection — cost is
+never a gate here — a feasibility one.** [1.25].
+
+**Three of my own errors on the way there, all the same family: I reported before I measured.**
+I wrote "the 31 `as source` adaptors stop erroring" (they don't — one that handles messages gets
+a materialised inlet and still contradicts). I reported "zero refuse-everything adaptors are
+wired" from a probe that found zero adaptor names among 1,379 endpoints *including* adaptors
+that certainly are wired — the endpoint syntax is `outlet <Context>.<Adaptor>.<Portlet>`, so the
+adaptor is the PENULTIMATE segment and my probe read the last. And I raised an alarm that 47% of
+adaptors had no derivable port type, having conflated "refuses everything" (551) with
+"port-less" (411); the overlap is 5. **Only the calibration caught the second one** — the habit
+this repo already mandates for exactly this shape, and the reason the third got caught before it
+reached Reid.
+
+**Also, from reading one corpus body: a handler may declare at most one of each SPECIAL
+on-clause.** Reid spotted two `on other` clauses in one handler — two catch-alls with no rule for
+which runs — validating clean. Only `on quiescence` had the rule; `on other`, `on init`,
+`on term`, `on activate`, `on passivate` were unchecked. `handler-clause-shadowed` could never
+have caught it, and the quiescence check's own comment already said why: it collects
+`OnMessageLikeClause` only, because a special clause names no message to key on. **The gap was
+recorded next to the fix for one kind and left open for five** — the same shape as `error` being
+made terminal while `terminate` was not. Quiescence keeps its own id and message: same rule,
+different reason (a second idle clock, not a second residual-message policy).
+
 ## 2026-09-10 — silence taught a false rule, and the corpus paid for it in a day
 
 riddl-models found `ask` validated for the far end's BEHAVIOUR and not at all for a CHANNEL: in
