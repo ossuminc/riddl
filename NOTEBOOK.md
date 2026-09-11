@@ -10,70 +10,91 @@ Orientation for a session with no memory of this work. **Open work is in `BACKLO
 durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
 Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
 
-### Build state — verified 2026-09-10 by running
+### READ THIS FIRST — CLAUDE.md was split on 2026-09-11
+
+It had reached 195,688 chars, past the 150k point where it stops being loaded in full.
+Now 135,724, with two companions **that are as authoritative as the parts that stayed**:
+
+- **`docs/claude/language-constructs.md`** — per-construct reference: syntax, AST shape,
+  BAST tags, `FORMAT_REVISION` numbers, JSON keys, design rationale (A70, instance
+  identity, A20, A55/A57, quiescence, `send … at`, `empty`, intentions, literals).
+- **`docs/claude/build-and-api.md`** — adding a riddlc command, NPM, import vs include,
+  writing a Pass, RiddlLib/RiddlAPI, workflows.
+
+**The split rule: reference moved, traps stayed.** Anything whose failure mode is "not
+knowing you needed to look" — Total Dispatch, the false-green family, `isEmpty`, the BAST
+hazards, the corpus floor, FALSE ZERO, the parser CUT hazard — is still in CLAUDE.md.
+**If you need a fact from a companion that you had no reason to look for, move it back.**
+Line-number citations into CLAUDE.md from before this date are stale; two were repaired
+(`BACKLOG.md:83`, `NOTEBOOK.md:619`), the rest were checked and there are no others.
+
+### Build state — verified 2026-09-11 by running
 
 **`2.1.1` is released** (tag on `20e72732d`), Scala 3.9.0 final. **BAST `FORMAT_REVISION` 24.**
 
-**`../bin/riddlc` and the local ivy artifacts are `2.1.1-33-dd3c2d80`**, published and staged
-together by `scripts/publish-and-stage.sh` — verified by reading both. HEAD may sit a doc commit
-past it; that is normal. Confirm with `../bin/riddlc --no-ansi-messages version` against `git
-describe --tags --long` (dynver drops the `g` and uses 8 chars, so they render differently and
-still agree).
+**`../bin/riddlc` is `2.1.1-33-dd3c2d80`, dated Sep 10 — now FOUR commits behind HEAD and it
+does NOT contain `handler-duplicate-special-clause`.** Any corpus probe run with it will not
+see that rule. Nothing was published or staged on 2026-09-11, deliberately. Confirm with
+`../bin/riddlc --no-ansi-messages version` against `git describe --tags --long`.
 
-**Eight language changes since 2.1.1**, all in that binary: `on quiescence <window>`; `send … at
-<instant>`; `stream-graph-cycle` as an infinite MESSAGE loop; `msg-tell-crosses-unrelated-domains`;
-[5.7] a handler-less processor is a stream TAIL whatever its shape; `saga-no-timeout` no longer
-blocks generation (`RuleId.nonBlocking`); `saga-step-no-tell` is now an **Error**; and `ask`
-requires a modelled path BOTH WAYS.
+**CI is GREEN on HEAD** (`5104ea23d`): Scala Build and Scala Coverage Testing both completed
+success, verified via `gh run list` this session.
 
-### Corpus — 59 errors, and that is EXPECTED
+**Nine language/validation changes since 2.1.1**, the first eight in that binary and the
+ninth NOT: `on quiescence <window>`; `send … at <instant>`; `stream-graph-cycle` as an
+infinite MESSAGE loop; `msg-tell-crosses-unrelated-domains`; [5.7] a handler-less processor
+is a stream TAIL whatever its shape; `saga-no-timeout` non-blocking; `saga-step-no-tell` an
+Error; `ask` requires a modelled path BOTH WAYS; and **`handler-duplicate-special-clause`**
+(2026-09-11) — at most one of each special on-clause per handler.
 
-189 entry points: **26 models with errors, 59 errors, every one of them the two new `ask` rules**
-(40 question-leg, 19 reply-leg; zero of every other rule). riddl-models authored 75 `ask query`
-sites on 2026-09-09/10 and asked for these checks; they have the breakdown in their `task/`.
+### Corpus — 59 errors, EXPECTED (as of 2026-09-10; not re-measured since)
 
-**`RiddlModelsRoundTripTest` is still 190/190 and says NOTHING about this** — it is a
-parse/prettify round trip. Until 2026-09-10 both were clean and the distinction never showed;
-**do not read the round-trip green as "the corpus validates".**
+189 entry points, 26 models, all 59 the two `ask` rules riddl-models asked for. **Whether
+`handler-duplicate-special-clause` adds any is UNMEASURED** — CI's corpus round-trip passed,
+which is not the same question. `RiddlModelsRoundTripTest` is a parse/prettify round trip:
+**do not read its green as "the corpus validates".**
 
-### In flight
+### In flight — [1.25], ruled then PAUSED
 
-**Nothing half-done in the code.** Every ruling this week landed whole.
+**Implied adaptor ports (A103).** Reid ruled 2026-09-10 to abolish them. Implementation
+stopped before any code changed, because the migration cannot be automated: `Inlet.type_` is
+a `TypeRef` to a NAMED type, and of 411 port-less adaptors only **165** handle exactly one
+type (190 handle 2–5, nothing to point at) and only **1** has a derivable outlet — the rest
+are prose stubs (`do` + `error`, no `tell`). The measurement went back to riddl-models as
+`task/2026-09-11-implied-adaptor-ports-is-not-a-mechanical-migration.md` in THEIR repo.
+**Blocked on their reply. Do not implement.** Full detail and the unruled fallback (invert
+`inlets`/`declaredInlets`) are in BACKLOG [1.25]; the plan
+(`~/.claude/plans/ticklish-puzzling-sun.md`) is sound in diagnosis, dead in mechanism.
 
-**Two UNTRIAGED files in `task/`, both from riddl-models, both about work just shipped:**
-
-1. `2026-09-09-ask-is-not-checked-for-a-channel.md` — a re-drop of a file I already completed
-   (my Results are on the copy in `task/done/`). This one is *corrected* by them and retitled
-   *"ask reachability is checked — EXCEPT from an adaptor"*, but it was measured with
-   `2.1.1-26`, which **predates the checks**. Likely partly overtaken; verify before acting.
-2. `2026-09-10-ask-reply-unreachable-should-name-the-declared-inlet.md` — a live defect report
-   against `msg-ask-reply-unreachable`, shipped yesterday. Their claim: declaring any inlet on
-   an adaptor removes the IMPLIED inlet the reply was using (A103's own rule), and the message
-   then says "add a connector" when no connector is possible. **If true this is the same defect
-   shape as `msg-tell-crosses-unrelated-domains` two days earlier — a diagnostic whose remedy
-   cannot be followed** — and that pattern is worth taking seriously rather than re-deriving.
+**Two files in `task/`, both AWAITING TRIAGE**, both on that paused question:
+`2026-09-09-ask-is-not-checked-for-a-channel.md` and
+`2026-09-10-abolish-implied-adaptor-ports.md`. A third was closed to `task/done/` this
+session with Results correcting its own false "riddl already acted on this" note.
 
 ### Traps a fresh session would hit
 
-- **A backlog item filed before a large change is a snapshot.** [3.8] was two-thirds answered by
-  A103 three days after filing; re-measure against the branch before working one.
-- **Citing a passing test is not citing an assertion.** [3.8]'s "evidence" test asserted only
-  that an adaptor parsed with the right id.
-- **Calibrate a zero before trusting it**, and re-measure a corpus claim at the END of the work:
-  the `ask` corpus went from 0 sites to 75 while these checks were being built.
-- **Prose inside an s-interpolated Scala fixture is code** — a `$stepOne` in a `//` comment
-  interpolated and produced a parse error pointing nowhere near it.
+- **Report AFTER measuring, not before.** Three claims went out wrong on 2026-09-11 and all
+  three were mine: a predicted corpus clearance, a "zero are wired" from a probe that found
+  zero adaptor names among 1,379 endpoints, and an alarm built on conflating two sets.
+  **Only the calibration caught the middle one.**
+- **Endpoint paths name the PENULTIMATE segment.** A connector to an adaptor reads
+  `outlet <Context>.<Adaptor>.<Portlet>` — the last segment is the portlet. Splitting on the
+  last segment finds no adaptors and looks like a finding.
+- **A backlog item filed before a large change is a snapshot** — re-measure against the branch.
+- **Citing a passing test is not citing an assertion.**
+- **Prose inside an s-interpolated Scala fixture is code.**
 - **`terminate` is terminal**, so a repair `tell` must LEAD its block.
-- **zsh does not word-split unquoted expansions** — census loops need `while read`, not
-  `for c in $list`, or they silently measure one item.
+- **zsh does not word-split unquoted expansions** — census loops need `while read`.
+- **A backtick in ANY model-authored shell string is command substitution** — see the parent
+  `../CLAUDE.md`; it is not only a commit-message rule.
 
 ### Certainty
 
-Verified this session by running: the staged version and its ivy match; the corpus census;
-`language` 760 JVM / 438 JS / 745 Native, `passes` 1805/317/1793, `commands` 355, `riddlLib` 163.
-Canaries run for `checkAskReachability` and for [5.7]. **NOT re-run:** `utils`, `testkit`,
-`riddlc`, and `commands` on JS/Native — untouched except through `language`/`passes`. A ship
-wants a clean-cache pass.
+Verified by running this session: repo clean and fully pushed; `../bin/riddlc` version; CI
+green on HEAD; `language` 76 suites/760 tests and `passes` 268/1811 on JVM, with the new check
+CANARIED (broken deliberately: 4 positives red, 2 negative controls green). **NOT run
+locally:** JS/Native, `utils`, `testkit`, `commands`, `riddlc`, and any corpus validation
+census — CI covers the first group and Reid's standing instruction is not to duplicate it.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
@@ -616,7 +637,7 @@ connector starting at the sender's CONTEXT. They were right, and the cause was m
 `9d3c69aba` counted ancestor contexts as reachability origins, and I defended it in the
 commit message with *"the context is the port at the boundary"*.
 
-**`CLAUDE.md:2327` says the opposite, in terms**: *"An entity cannot publish on its
+**`CLAUDE.md:1397` says the opposite, in terms**: *"An entity cannot publish on its
 context's outlet … the FIRST step is the entity's own outlet and no context-level port
 substitutes for it."* Same paragraph I had read while writing the A6 work — I took the
 "intra-context needs no ceremony" half and inverted the half above it.

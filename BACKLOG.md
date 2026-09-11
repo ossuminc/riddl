@@ -80,7 +80,8 @@ is worse than no handle**, because it fails exactly when it is being relied on.
   the upgrade. The supported path is sbt-ossuminc's `riddlLibJS/npmPrepare` / `npmPack` /
   `npmPublish*`, which `npm-publish.yml` already uses. Referenced by `NPM_PACKAGING.md`
   (`:27`, `:32`, `:275`, `:373`, `:380` — and `:322` hardcodes `riddlLib/js/target/scala-3.4.3`),
-  `CLAUDE.md:684` ("Build npm package"), and `examples/npm-usage/README.md:10`. Either delete
+  `CLAUDE.md:356` ("Quick Reference"; the NPM section itself moved to
+  `docs/claude/build-and-api.md` on 2026-09-11), and `examples/npm-usage/README.md:10`. Either delete
   the script and repoint those four documents at the sbt tasks, or repair it — deletion is the
   recommendation, since the sbt tasks are what CI publishes with. Not touched during the
   regression fix because it is a distribution-path decision, not a test defect.
