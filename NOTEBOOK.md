@@ -64,8 +64,10 @@ same evening: with `2.1.1-47` against their `516c5d5f` the census is **5 finding
 (from 1290 at 14:00), so the corpus round-trip row should be green; read `gh run list`. Their
 task drop (`../riddl-models/task/2026-09-11-implied-ports-abolished-…md`) carries the five.
 Task drops also in `../ossum.tech/task/` and `../riddl-generator/task/`. Five task files
-closed to `task/done/` with Results (the two evening ones: the ask-reply vise, and the
-`on other` ruling); `task/` is EMPTY. `../bin/riddlc` and ivy were restaged together at the
+closed to `task/done/` with Results, plus two on the 12th (URL prettify, error-sink
+exemption). **One task file open:** `task/2026-09-12-event-sourcing-rules-and-an-advisory-kind.md`
+(riddl-generator) — Reid ruled an `Advisory` kind IS wanted, "low severity about the same as
+Missing"; being filed into BACKLOG with a plan. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -94,6 +96,20 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-12 — two small ones from riddl-models, both my own recent work
+
+**`URL("https")` prettified to `URL"https"`.** `RiddlFileEmitter`'s `URI` arm was a second
+copy of `AST.URI.format` that had drifted — the `WhenStatement.format` family, again: the
+tested copy tells you nothing about the other. Dangerous for riddl-models because `sbt r`
+prettifies before every commit. One line; `UrlSchemeRoundTripTest`.
+
+**A handler-less error-sink context could not be made clean.** The no-handler arm I added on
+the 11th reported it; add a handler and the missing-inlet rule fired instead (error sinks are
+not dataflow) plus `handler-only-do-statements`. Reid ruled the handler-less shape EXEMPT — the
+sink is a generator affordance and the model says nothing about hard errors beyond "they are
+recorded" — mirroring the arity exclusion. The alternative, counting the sink for arity, was
+considered and not chosen. Corpus: 5 → 2, both remaining true.
 
 ## 2026-09-11 (night) — `on other` is `case _`, and a correction to my own morning
 

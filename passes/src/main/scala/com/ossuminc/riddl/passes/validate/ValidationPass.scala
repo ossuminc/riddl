@@ -368,7 +368,16 @@ case class ValidationPass(
           case Some(proc: Processor[?]) if !proc.isEmpty && (proc.handlers.nonEmpty || lacksNoHandlerRule(proc)) =>
             resolution.refMap.definitionOf[Type](inlet.type_.pathId).foreach { inletType =>
               val unreceived = unreceivedMembers(proc, inletType)
-              if proc.handlers.isEmpty then
+              // An `error-sink` inlet on a handler-less processor is EXEMPT (Reid, 2026-09-11,
+              // riddl-models' `error-sink-context-cannot-be-complete`): the sink is a generator
+              // affordance -- where hard errors are delivered -- and the model has nothing to say
+              // about them beyond "they are recorded". Giving it a handler drew the missing-inlet
+              // warning instead (the arity rule already excludes error sinks from dataflow), so no
+              // shape was clean; exempting it here mirrors that exclusion rather than counting the
+              // sink for arity, which was considered and not chosen.
+              val isErrorSink = inlet.metadata.filter[OptionValue].exists(_.name == "error-sink")
+              if proc.handlers.isEmpty && isErrorSink then ()
+              else if proc.handlers.isEmpty then
                 messages.addCompleteness(
                   inlet.errorLoc,
                   s"${inlet.identify} admits ${inletType.identify} but ${proc.identify} declares " +

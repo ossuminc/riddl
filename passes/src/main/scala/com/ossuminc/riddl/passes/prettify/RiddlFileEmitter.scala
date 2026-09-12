@@ -586,7 +586,11 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     typEx match {
       case string: String_                 => emitString(string)
       case AliasedTypeExpression(_, _, id) => this.add(id.format)
-      case URI(_, scheme)                  => add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
+      // `URL("https")`: the scheme is PARENTHESISED (`url_type = "URL" ["(" literal_string ")"]`).
+      // Until 2026-09-12 this arm wrote `URL"https"`, which does not parse -- a second copy of
+      // `AST.URI.format` that had drifted from it, the `WhenStatement.format` family; riddl-models'
+      // pre-commit prettify would have silently un-parsed any scheme-qualified URL.
+      case URI(_, scheme)                  => add(s"URL${scheme.fold("")(s => "(\"" + s.s + "\")")}")
       case enumeration: Enumeration        => emitEnumeration(enumeration)
       case alternation: Alternation        => emitAlternation(alternation)
       case mapping: Mapping                => emitMapping(mapping)

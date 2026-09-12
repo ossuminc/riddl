@@ -127,6 +127,23 @@ class OnOtherIsCaseUnderscoreTest extends AbstractValidatingTest {
       inletNotReceived(msgs).filter(_.message.contains("'Ledger'")).size mustBe 1
     }
 
+    "stay SILENT for a handler-less context whose only inlet is the ERROR SINK (ruled 2026-09-11)" in {
+      (td: TestData) =>
+        // The sink is a generator affordance; the model says nothing about hard errors beyond
+        // "they are recorded". With a handler the missing-inlet rule fired instead (error sinks
+        // are not dataflow), so no shape was clean -- Reid exempted the handler-less one.
+        val msgs = diagnostics(
+          """domain D is {
+            |  context Operations as sink is {
+            |    inlet ErrorSink is record Riddl.GeneratorError with { option error-sink }
+            |  } with { briefly "ops" }
+            |} with { briefly "d" }
+            |""".stripMargin,
+          td.name
+        )
+        inletNotReceived(msgs).filter(_.message.contains("'Operations'")) mustBe empty
+    }
+
     "stay SILENT for an ENTITY, whose own 'no handlers' rule already reports it" in {
       (td: TestData) =>
         val msgs = diagnostics(
