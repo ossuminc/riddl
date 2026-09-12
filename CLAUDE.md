@@ -1546,6 +1546,32 @@ resolution and type-checking — in `checkStatementScopes`.
   mutate, so every suite asserting one pins `pc.withOptions(CommonOptions.default)`
   — three suites went red in the full run and green alone before that was added.
 
+- **`Advisory` is a MESSAGE KIND, not a warning class (Reid, 2026-09-12; CM § "two
+  conformance bars").** *A structural fact consistent with the model as written and
+  inconsistent with what such a declaration usually means; never changes generability,
+  never names a fix as required — the modeller may dismiss it by design.* Severity 1
+  (tied with Style: generable, ignorable, not actionable), `isWarning = false`, its OWN
+  `showAdvisories` switch (`--show-advisories`, HOCON `show-advisories`, default on) —
+  gated by that alone, NOT by `showWarnings`, so `-w false` still shows advisories and
+  `--fail-on warning` never trips on one. `Messages.addAdvisory` (ruleId required),
+  `justAdvisories`, `[advisory]` prefix, `Lvl.Advisory` in `Logging`, its own count in
+  `validate`'s summary line ("…, 3 advisories") since it is not in `warnings`. Three
+  matches had to grow an arm (`logMessage`, `logMessagesByGroup`, the accumulator gate —
+  the memory file's warning holds) plus `Logging.count`/`highlight`. **`Accumulator.empty`
+  is a shared MUTABLE singleton** — a test that adds to it leaks into the next; use `new
+  Accumulator()`. The kind exists because `adaptor-direction-advisory` was a plain
+  `Warning` and BLOCKED `gen`; it is the first tenant, with the three event-sourcing
+  advisories (`entity-event-sourced-unread-history`,
+  `entity-crud-with-transitions-consumed`, `entity-event-sourced-snapshot-events`). The
+  fourth rule, `entity-event-sourced-prose-folds`, is COMPLETENESS and fires PER FOLD —
+  riddl-generator specified `forall folds: prose`, and measured that fires on none of the
+  six reactive-bbq entities it named (each has one real creation fold), while each prose
+  fold is a replay hole; per-fold gives 12 of 13 there. `checkEventSourcingAdvisories`
+  runs in `postProcess` (it needs the whole model for "who else reads this event"), and
+  `AST.Set` shadows `scala.Set` inside `ValidationPass` — qualify it.
+  Consumers: synapify's `ModelQualityGate` BLOCKS on an unrecognised kind and its
+  `ProblemsTab` orders by kind; riddl-vscode maps kinds by `toString` name — both told.
+
 - **`on other` is `case _`, and it RECEIVES whatever its body (Reid, 2026-09-11;
   CM §17).** It fires for exactly the message types no `on <message>` clause
   handles; an error-only body is a REFUSAL of those messages — business logic,

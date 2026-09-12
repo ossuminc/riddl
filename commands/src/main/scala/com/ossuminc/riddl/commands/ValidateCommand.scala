@@ -386,6 +386,7 @@ class ValidateCommand(using pc: PlatformContext)
     def count(p: Messages.Message => Boolean): Int = messages.count(p)
     val errors = count(m => m.isError || m.isSevere)
     val warnings = count(_.isWarning)
+    val advisories = count(_.isAdvisory) // not warnings: counted and shown apart
     val byClass = Seq(
       "style" -> count(_.isStyle),
       "missing" -> count(_.isMissing),
@@ -400,14 +401,17 @@ class ValidateCommand(using pc: PlatformContext)
       "completeness" -> o.showCompletenessWarnings
     ).collect { case (name, true) => name }
     val classes =
-      if !o.showWarnings then "warnings off"
-      else if enabled.isEmpty then "all warning classes off"
-      else enabled.mkString(", ") + " on"
+      (if !o.showWarnings then "warnings off"
+       else if enabled.isEmpty then "all warning classes off"
+       else enabled.mkString(", ") + " on") +
+        (if o.showAdvisories then ", advisories on" else ", advisories off")
     def plural(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
     val breakdown = if byClass.isEmpty then "" else byClass.mkString(" (", ", ", ")")
+    val advisoryPart =
+      if advisories == 0 then "" else if advisories == 1 then ", 1 advisory" else s", $advisories advisories"
     pc.stdoutln(
       s"${plural(definitions, "definition")} checked, ${plural(errors, "error")}, " +
-        s"${plural(warnings, "warning")}$breakdown  [$classes]"
+        s"${plural(warnings, "warning")}$breakdown$advisoryPart  [$classes]"
     )
   }
 

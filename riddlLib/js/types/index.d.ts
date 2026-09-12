@@ -29,8 +29,17 @@ export interface Location {
  * Error or message information from parsing or validation.
  */
 export interface ErrorInfo {
-  /** Message severity/type */
-  kind: 'Error' | 'SevereError' | 'Warning' | 'MissingWarning' | 'StyleWarning' | 'UsageWarning' | 'Info';
+  /**
+   * Message severity/type -- the kind's `toString` name as riddlc renders it in `[kind]`.
+   * `Advisory` (2026-09-12) is NOT a warning: a structural fact consistent with the model and
+   * inconsistent with what the declaration usually means; it never blocks generation.
+   * (The pre-2026-09-12 spellings `MissingWarning`/`StyleWarning`/`UsageWarning`/`SevereError`
+   * never matched the runtime strings; kept in the union so existing narrowing still compiles.)
+   */
+  kind:
+    | 'Severe' | 'Error' | 'Warning' | 'Deprecation' | 'Completeness' | 'Usage' | 'Missing'
+    | 'Style' | 'Advisory' | 'Tip' | 'Info'
+    | 'SevereError' | 'MissingWarning' | 'StyleWarning' | 'UsageWarning';
   /** Human-readable error message */
   message: string;
   /** Location in source where the error occurred */

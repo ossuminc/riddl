@@ -396,3 +396,7 @@ value-vague-duration
 value-when-not-boolean
 stream-processor-no-inlet
 stream-processor-no-outlet
+entity-event-sourced-unread-history
+entity-crud-with-transitions-consumed
+entity-event-sourced-snapshot-events
+entity-event-sourced-prose-folds

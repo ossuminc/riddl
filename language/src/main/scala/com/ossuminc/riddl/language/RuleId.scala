@@ -331,6 +331,14 @@ enum RuleId(
   case EntityNoInlet extends RuleId("entity-no-inlet")
   case EntityNoOutlet extends RuleId("entity-no-outlet")
   case EntityNoIdType extends RuleId("entity-no-id-type")
+  // Four counts over what an entity does with the journal it asked for (riddl-generator's
+  // proposal, Reid's rulings 2026-09-12). The first three are ADVISORY -- a structural fact that
+  // questions a design choice the modeller is entitled to make; the fourth is Completeness,
+  // because a replay stated only in prose has no defined semantics.
+  case EntityEventSourcedUnreadHistory extends RuleId("entity-event-sourced-unread-history")
+  case EntityCrudWithTransitionsConsumed extends RuleId("entity-crud-with-transitions-consumed")
+  case EntityEventSourcedSnapshotEvents extends RuleId("entity-event-sourced-snapshot-events")
+  case EntityEventSourcedProseFolds extends RuleId("entity-event-sourced-prose-folds")
   case IdDefinedInside extends RuleId("entity-id-defined-inside")
   case IdDefinedOutside extends RuleId("entity-id-defined-outside")
   case EntityNoCommandTypes extends RuleId("entity-no-command-types")

@@ -31,6 +31,8 @@ object Messages {
 
     def isStyle: Boolean = false
 
+    def isAdvisory: Boolean = false
+
     def isUsage: Boolean = false
 
     def isCompleteness: Boolean = false
@@ -107,6 +109,24 @@ object Messages {
     override def isStyle: Boolean = true
 
     override def toString: String = "Style"
+    def severity = 1
+  }
+
+  /** A structural fact that is CONSISTENT with the model as written and INCONSISTENT with what
+    * such a declaration usually means. It never changes generability and it never names a fix as
+    * required; the bar for adding one is that a modeller can dismiss it by design, not only by
+    * editing. (Reid's ruling, 2026-09-12, on riddl-generator's proposal.)
+    *
+    * NOT a warning: `isWarning` is false, so `--fail-on warning` does not trip on it and it is not
+    * gated by `showWarnings` -- only by its own `showAdvisories`. Severity 1, tied with
+    * [[StyleWarning]], so `isGenerable` holds and `isActionable` does not. The rule that made
+    * the kind necessary is `adaptor-direction-advisory`, which had been a plain [[Warning]] and
+    * therefore BLOCKED generation -- a contradiction in its own name.
+    */
+  case object Advisory extends KindOfMessage {
+    override def isAdvisory: Boolean = true
+
+    override def toString: String = "Advisory"
     def severity = 1
   }
 
@@ -280,6 +300,7 @@ object Messages {
     def isMissing: Boolean = kind.isMissing
     def isWarning: Boolean = kind.isWarning
     def isStyle: Boolean = kind.isStyle
+    def isAdvisory: Boolean = kind.isAdvisory
     def isUsage: Boolean = kind.isUsage
     def isCompleteness: Boolean = kind.isCompleteness
     def isDeprecation: Boolean = kind.isDeprecation
@@ -340,6 +361,11 @@ object Messages {
   /** Generate a style warning */
   @JSExport def style(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId] = None): Message = {
     Message(loc, message, StyleWarning, suggestion = suggestion, ruleId = ruleId)
+  }
+
+  /** Generate an advisory */
+  @JSExport def advisory(message: String, loc: At = At.empty, suggestion: String = "", ruleId: Option[RuleId] = None): Message = {
+    Message(loc, message, Advisory, suggestion = suggestion, ruleId = ruleId)
   }
 
   /** Generate a tip message */
@@ -474,6 +500,9 @@ object Messages {
     /** Return a filtered list of just the [[StyleWarning]] messages. */
     @JSExport def justStyle: Messages = msgs.filter(_.isStyle)
 
+    /** Return a filtered list of just the [[Advisory]] messages. */
+    @JSExport def justAdvisories: Messages = msgs.filter(_.isAdvisory)
+
     /** Return a filtered list of just the [[UsageWarning]] messages. */
     @JSExport def justUsage: Messages = msgs.filter(_.isUsage)
 
@@ -532,6 +561,7 @@ object Messages {
       case Tip                 => io.log.tip(text)
       case Info                => io.log.info(text)
       case StyleWarning        => io.log.style(text)
+      case Advisory            => io.log.advisory(text)
       case MissingWarning      => io.log.missing(text)
       case UsageWarning        => io.log.usage(text)
       case CompletenessWarning => io.log.completeness(text)
@@ -559,6 +589,8 @@ object Messages {
             io.log.usage(s"""$kind Message Count: ${messages.length}""")
           case StyleWarning =>
             io.log.style(s"""$kind Message Count: ${messages.length}""")
+          case Advisory =>
+            io.log.advisory(s"""$kind Message Count: ${messages.length}""")
           case MissingWarning =>
             io.log.missing(s"""$kind Message Count: ${messages.length}""")
           case CompletenessWarning =>
@@ -597,6 +629,10 @@ object Messages {
         }
         // A9: deprecations are warnings that must stay visible in grouped mode too.
         logMsgs(Deprecation, groups.get(Deprecation))
+      }
+      // Advisories are not warnings: their own switch, independent of `showWarnings`.
+      if io.options.showAdvisories then {
+        logMsgs(Advisory, groups.get(Advisory))
       }
       if io.options.showTipMessages then {
         logMsgs(Tip, groups.get(Tip))
@@ -655,6 +691,9 @@ object Messages {
         case CompletenessWarning if o.showWarnings && o.showCompletenessWarnings =>
           msgs.append(message)
         case StyleWarning if o.showWarnings && o.showStyleWarnings     => msgs.append(message)
+        // Not a warning class: gated by its own switch alone, so `-w false` (no warnings) still
+        // shows advisories and `--show-advisories false` hides only them.
+        case Advisory if o.showAdvisories                              => msgs.append(message)
         case MissingWarning if o.showWarnings && o.showMissingWarnings => msgs.append(message)
         case UsageWarning if o.showWarnings && o.showUsageWarnings     => msgs.append(message)
         case Tip if o.showTipMessages                                  => msgs.append(message)
@@ -759,6 +798,16 @@ object Messages {
       pc: PlatformContext
     ): this.type = {
       add(Message(loc, msg, StyleWarning, suggestion = suggestion, ruleId = ruleId))
+    }
+
+    /** Add an [[Advisory]] message to the accumulated [[Messages]]. `ruleId` is required, as on
+      * every other helper: an advisory that cannot be named cannot be dismissed by name.
+      */
+    @inline
+    def addAdvisory(loc: At, msg: String, suggestion: String = "", ruleId: Option[RuleId])(using
+      pc: PlatformContext
+    ): this.type = {
+      add(Message(loc, msg, Advisory, suggestion = suggestion, ruleId = ruleId))
     }
 
     /** Add a [[UsageWarning]] message to the accumulated [[Messages]]

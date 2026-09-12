@@ -58,6 +58,7 @@ object CommonOptionsHelper:
   private inline val auto_generate_bast = "auto-generate-bast"
   private inline val provide_tips = "provide-tips"
   private inline val check_figma_drift = "check-figma-drift"
+  private inline val show_advisories = "show-advisories"
 
   lazy val commonOptionsParser: OParser[Unit, CommonOptions] = {
     val builder: OParserBuilder[CommonOptions] = OParser.builder[CommonOptions]
@@ -128,6 +129,13 @@ object CommonOptionsHelper:
         .optional()
         .action((s, c) => c.copy(showCompletenessWarnings = s))
         .text("Suppress warnings about model completeness. "),
+      opt[Boolean](name = show_advisories)
+        .optional()
+        .action((s, c) => c.copy(showAdvisories = s))
+        .text(
+          "Show advisories: structural facts that question a design choice the model is " +
+            "entitled to make. Not warnings; independent of -w. Default true."
+        ),
       opt[Boolean]('i', name = show_info_messages)
         .optional()
         .action((s, c) => c.copy(showInfoMessages = s))
@@ -286,6 +294,9 @@ object CommonOptionsHelper:
     val checkFigmaDrift =
       if obj.hasPath(check_figma_drift) then obj.getBoolean(check_figma_drift)
       else default.checkFigmaDrift
+    val showAdvisories =
+      if obj.hasPath(show_advisories) then obj.getBoolean(show_advisories)
+      else default.showAdvisories
 
     CommonOptions(
       showTimes,
@@ -310,7 +321,8 @@ object CommonOptionsHelper:
       autoGenerateBAST,
       provideTips,
       showMessageIds,
-      checkFigmaDrift
+      checkFigmaDrift,
+      showAdvisories
     )
   end commonOptionsReader
 

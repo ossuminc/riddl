@@ -35,6 +35,11 @@ object Logging {
   case object Usage extends Lvl
   case object Style extends Lvl
   case object Missing extends Lvl
+  /** A structural fact consistent with the model as written and inconsistent with what such a
+    * declaration usually means. Not a warning: never blocks generation, never names a fix as
+    * required (Reid, 2026-09-12). Rendered `[advisory]`.
+    */
+  case object Advisory extends Lvl
   case object Tip extends Lvl
   case object Info extends Lvl
 
@@ -76,6 +81,9 @@ trait Logger(using pc: PlatformContext) {
   /** Syntactic sugar for write(Style, s) */
   final def style(s: => String): Unit = { write(Style, s) }
 
+  /** Syntactic sugar for write(Advisory, s) */
+  final def advisory(s: => String): Unit = { write(Advisory, s) }
+
   /** Syntactic sugar for write(Missing, s) */
   final def missing(s: => String): Unit = { write(Missing, s) }
 
@@ -89,6 +97,7 @@ trait Logger(using pc: PlatformContext) {
   private var nError = 0
   private var nMissing = 0
   private var nStyle = 0
+  private var nAdvisory = 0
   private var nUsage = 0
   private var nCompleteness = 0
   private var nWarning = 0
@@ -107,6 +116,7 @@ trait Logger(using pc: PlatformContext) {
         case Logging.Deprecation  => s"$MAGENTA"
         case Logging.Usage        => s"$GREEN"
         case Logging.Style        => s"$GREEN"
+        case Logging.Advisory     => s"$CYAN"
         case Logging.Missing      => s"$GREEN"
         case Logging.Tip          => s"$CYAN"
         case Logging.Info         => s"$BLUE"
@@ -129,6 +139,7 @@ trait Logger(using pc: PlatformContext) {
       case Warning      => nWarning += 1
       case Deprecation  => nDeprecation += 1
       case Style        => nStyle += 1
+      case Advisory     => nAdvisory += 1
       case Usage        => nUsage += 1
       case Missing      => nMissing += 1
       case Tip          => nTip += 1
@@ -145,6 +156,7 @@ trait Logger(using pc: PlatformContext) {
        |Completeness: $nCompleteness
        |        Usage: $nUsage
        |        Style: $nStyle
+       |   Advisories: $nAdvisory
        |      Missing: $nMissing
        |         Tips: $nTip
        |         Info: $nInfo

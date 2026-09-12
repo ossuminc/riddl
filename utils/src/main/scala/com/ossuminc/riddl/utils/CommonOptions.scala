@@ -35,6 +35,11 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   *   Controls whether any completeness Warnings are printed out
   * @param showTipMessages
   *   Controls whether any AI helper tip messages are printed out
+  * @param showAdvisories
+  *   Controls whether advisories are printed out. An advisory is not a warning -- it reports a
+  *   structural fact consistent with the model and inconsistent with what the declaration usually
+  *   means -- so this switch is independent of `showWarnings` (Reid, 2026-09-12). Trailing and
+  *   defaulted because the case class is positionally constructed by `CommonOptionsHelper`.
   * @param showInfoMessages
   *   Controls whether any informative messages are printed out
   * @param debug
@@ -105,7 +110,8 @@ case class CommonOptions(
   autoGenerateBAST: Boolean = false,
   provideTips: Boolean = false,
   showMessageIds: Boolean = true,
-  checkFigmaDrift: Boolean = false
+  checkFigmaDrift: Boolean = false,
+  showAdvisories: Boolean = true
 )
 
 @JSExportTopLevel("CommonOptions$")

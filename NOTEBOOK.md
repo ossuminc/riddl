@@ -40,13 +40,16 @@ or staged outside the repo on 2026-09-11, deliberately (Reid's call). The in-rep
 corpus census used. Confirm with `../bin/riddlc --no-ansi-messages version` against
 `git describe --tags --long`.
 
-**Ten language/validation changes since 2.1.1**, the first eight in that binary and the last
-two NOT: `on quiescence <window>`; `send … at <instant>`; `stream-graph-cycle` as an infinite
-MESSAGE loop; `msg-tell-crosses-unrelated-domains`; [5.7]; `saga-no-timeout` non-blocking;
-`saga-step-no-tell` an Error; `ask` both ways; `handler-duplicate-special-clause`; and
-**[1.25] — implied adaptor ports ABOLISHED, a missing port is a Missing warning for every
-processor kind, rules abstain on the side they cannot read, an endpoint naming an adaptor is
-`ref-wrong-kind`** (2026-09-11, see the entry below).
+**Fourteen language/validation changes since 2.1.1** (see the dated entries below): `on
+quiescence <window>`; `send … at <instant>`; `stream-graph-cycle` as an infinite MESSAGE loop;
+`msg-tell-crosses-unrelated-domains`; [5.7]; `saga-no-timeout` non-blocking; `saga-step-no-tell`
+an Error; `ask` both ways; `handler-duplicate-special-clause`; **[1.25] implied adaptor ports
+ABOLISHED, missing ports are Missing warnings, rules abstain per side**; **the adaptor is the
+boundary for its pair in BOTH directions**; **`on other` is `case _` and receives; a
+handler-less Context/Projector inlet is reported (error-sink exempt)**; **`URL("https")`
+prettifies with its parentheses**; **the `Advisory` message kind and four event-sourcing
+rules**. The staged `../bin/riddlc` carries all of them only if its version matches
+`git describe` — check, never assume.
 
 ### Corpus — 1290 findings after [1.25], from a verified ZERO before
 
@@ -65,9 +68,9 @@ same evening: with `2.1.1-47` against their `516c5d5f` the census is **5 finding
 task drop (`../riddl-models/task/2026-09-11-implied-ports-abolished-…md`) carries the five.
 Task drops also in `../ossum.tech/task/` and `../riddl-generator/task/`. Five task files
 closed to `task/done/` with Results, plus two on the 12th (URL prettify, error-sink
-exemption). **One task file open:** `task/2026-09-12-event-sourcing-rules-and-an-advisory-kind.md`
-(riddl-generator) — Reid ruled an `Advisory` kind IS wanted, "low severity about the same as
-Missing"; being filed into BACKLOG with a plan. `../bin/riddlc` and ivy were restaged together at the
+exemption). The `Advisory` kind and the four event-sourcing rules landed the same day (2026-09-12 entry);
+`task/` is EMPTY. Consumer drops: riddl-models (18 rulings + 21 modelling tasks), synapify and
+riddl-vscode (new kind), riddl-generator (rule 3 per fold). `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -96,6 +99,37 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-12 — `Advisory`: a kind for "you may well be right", and four counts about journals
+
+riddl-generator asked, at Reid's prompting, for rules that COUNT what an entity does with the
+journal `event-sourced` asks for, and for a kind to carry the three that question a design
+choice rather than report a defect. Reid ruled the kind in: severity 1 with Style, its own
+`show-advisories` switch on CLI and config, not a warning. My position had been "use
+`RuleId.nonBlocking`, no new kind" because synapify's gate blocks on unknown kinds; Reid:
+*"Synapify has lots of catch up to do and it can deal with a new severity as well."* Filed the
+consumer drops rather than the objection.
+
+**Adding a kind touches five matches and two option surfaces**, all found by the compiler or by
+the memory file that warned about it: `logMessage`, `logMessagesByGroup`, the accumulator gate,
+`Logging.count`, `Logging.highlight`; `CommonOptions` (trailing, defaulted — it is positionally
+constructed by the HOCON reader), the CLI, the summary line (advisories are not warnings, so
+they get their own count). `Accumulator.empty` is a shared mutable singleton — my second test
+case found the first case's message in it.
+
+**Rule 3 is per fold, not `forall`, and the corpus decided it.** riddlg specified "every fold is
+prose" and counted 6 on reactive-bbq. Under the literal spec the count is ZERO: every one of
+those six has a real creation fold (`set state S to record …(…)` from the event) beside its
+prose ones — `Shift` is 5 of 6. The Completeness fact is per fold (each prose fold is a hole
+riddlg emits), so the rule counts and reports K of N: 12 of 13 reactive-bbq entities, 21
+corpus-wide. Rule 1 = 0 of 13 exactly as predicted — the "no external reader" clause is what
+keeps it from misfiring on the six single-state entities whose events a projector reads.
+Rule 1′ = 18 (CRUD entities with 3–6 states whose events others consume: `Order`, `Cart`,
+`Ticket`, `Wallet`, `LifePolicy` …) — rulings for Reid, not edits. Rule 2 = 0.
+
+Smaller: `AST.Set` shadows `scala.Set` in `ValidationPass` (CLAUDE.md warned); a fold that
+builds the state from a constructor is *derived*, not snapshot — the snapshot test is
+field-to-same-name-field only, deliberately narrow.
 
 ## 2026-09-12 — two small ones from riddl-models, both my own recent work
 
