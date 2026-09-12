@@ -58,11 +58,11 @@ acceptance criteria.
 
 ### In flight
 
-**[1.25] is DONE and committed (`2c2b8d5b2`, `b41886bc0`, `05f95348a`; CM `2927731` in the
-ossuminc repo). NOT pushed at the time of writing — Reid's call, because the push turns CI
-red:** `RiddlModelsRoundTripTest` gates on corpus Errors and riddl-models has 388 `as flow`
-ascriptions to DELETE and 26 endpoints to repoint first (their task drop:
-`../riddl-models/task/2026-09-11-implied-ports-abolished-26-endpoints-388-ascriptions.md`).
+**[1.25], the ask-reply boundary fix and the `on other` ruling are all committed AND pushed
+(Reid, 2026-09-11 night, `5104ea23d..d63cc2c39`).** riddl-models drained the whole corpus the
+same evening: with `2.1.1-47` against their `516c5d5f` the census is **5 findings, 0 Errors**
+(from 1290 at 14:00), so the corpus round-trip row should be green; read `gh run list`. Their
+task drop (`../riddl-models/task/2026-09-11-implied-ports-abolished-…md`) carries the five.
 Task drops also in `../ossum.tech/task/` and `../riddl-generator/task/`. Five task files
 closed to `task/done/` with Results (the two evening ones: the ask-reply vise, and the
 `on other` ruling); `task/` is EMPTY. `../bin/riddlc` and ivy were restaged together at the
