@@ -154,7 +154,10 @@ package object bast {
     // before the contents count) and an optional trailing `at` value on the send statement
     // (sub-kind 5): a revision-23 reader would read the send's boolean as the next node's tag and
     // misalign, which is the failure the gate exists to make clean.
-    24 // `on quiescence` (byte 7) and `send ... at <value>`
+    // 25 (2026-09-14) adds statement sub-kinds 22 (`append`) and 23 (`remove`, with a has-key byte
+    // and an optional inline identifier). A revision-24 reader has no arm for either tag and
+    // throws at the dispatch, which is the honest failure; nothing after the statement is misread.
+    25 // `append`/`remove` collection statements (sub-kinds 22, 23)
     // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.

@@ -40,7 +40,7 @@ or staged outside the repo on 2026-09-11, deliberately (Reid's call). The in-rep
 corpus census used. Confirm with `../bin/riddlc --no-ansi-messages version` against
 `git describe --tags --long`.
 
-**Fourteen language/validation changes since 2.1.1** (see the dated entries below): `on
+**Fifteen language/validation changes since 2.1.1** (see the dated entries below): `on
 quiescence <window>`; `send … at <instant>`; `stream-graph-cycle` as an infinite MESSAGE loop;
 `msg-tell-crosses-unrelated-domains`; [5.7]; `saga-no-timeout` non-blocking; `saga-step-no-tell`
 an Error; `ask` both ways; `handler-duplicate-special-clause`; **[1.25] implied adaptor ports
@@ -48,8 +48,9 @@ ABOLISHED, missing ports are Missing warnings, rules abstain per side**; **the a
 boundary for its pair in BOTH directions**; **`on other` is `case _` and receives; a
 handler-less Context/Projector inlet is reported (error-sink exempt)**; **`URL("https")`
 prettifies with its parentheses**; **the `Advisory` message kind and four event-sourcing
-rules**. The staged `../bin/riddlc` carries all of them only if its version matches
-`git describe` — check, never assume.
+rules**; **`append`/`remove` (twenty-one statement kinds, `FORMAT_REVISION` 25) and the
+derived-fold reading of `set field F to prompt(…)`**. The staged `../bin/riddlc` carries all of
+them only if its version matches `git describe` — check, never assume.
 
 ### Corpus — 1290 findings after [1.25], from a verified ZERO before
 
@@ -68,9 +69,11 @@ same evening: with `2.1.1-47` against their `516c5d5f` the census is **5 finding
 task drop (`../riddl-models/task/2026-09-11-implied-ports-abolished-…md`) carries the five.
 Task drops also in `../ossum.tech/task/` and `../riddl-generator/task/`. Five task files
 closed to `task/done/` with Results, plus two on the 12th (URL prettify, error-sink
-exemption). The `Advisory` kind and the four event-sourcing rules landed the same day (2026-09-12 entry);
-`task/` is EMPTY. Consumer drops: riddl-models (18 rulings + 21 modelling tasks), synapify and
-riddl-vscode (new kind), riddl-generator (rule 3 per fold). `../bin/riddlc` and ivy were restaged together at the
+exemption). The `Advisory` kind and the four event-sourcing rules landed 2026-09-12; `append`/`remove` and
+the derived-fold reading landed 2026-09-14 (entries below). `task/` is EMPTY. Consumer drops:
+riddl-models (three addenda on one file), synapify and riddl-vscode (new kind), riddl-generator,
+ossum.tech (language reference: implied ports, Advisory, `forward`, `append`/`remove`).
+**`/ship` was interrupted for these tasks and is the next step** — recommendation was 2.2.0. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -99,6 +102,41 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-14 — `append` / `remove`: rule 3 asked the language a question it could not answer
+
+riddl-models drained the prose-fold rule from 111 to 14 in two days, and the 14 that were left
+could not move: appends, removes and arithmetic, which RIDDL had no spelling for. Arithmetic is
+a prompt by ruling (2026-08-23), so rule 3 was counting the language's own sanctioned form as a
+hole — a contradiction between two rulings, not a modelling defect. Reid ruled both ways at once:
+a `set` of a stated FIELD from a `prompt(…)` is *derived* (it names what it changes; only the
+operation is prose), AND the language gets `append`/`remove` — `remove` in a by-value AND a
+keyed form, because the corpus's `ItemRemoved` folds carry an id while the collection holds
+records.
+
+**A new statement kind touches the whole reflective surface, and the gates found each site I
+had not.** The plan listed them; the ones the tests caught anyway: the committed
+`NotImplemented.bast` fixture (revision 24, refused by the 25 reader — regenerate with
+`bastify`); `knownKeys` for the JSON `key`; two `JSON_COVERAGE.md` rows; and three BAST suites
+that pinned `FORMAT_REVISION` EXACTLY (`mustBe 24`) under names that already lagged ("should
+be 23") — floored to `>=`, the form the other suites use, because a suite proves ITS feature's
+bump happened, not the current number. `-Werror` caught the two total statement dispatches
+(`validateStatement`, `classifyHandlers`), as CLAUDE.md says it does only where a match is
+sealed and unguarded.
+
+**Two fixture lessons, both the language's rules and not the parser's**: a nested constructor
+needs its `record` keyword; and an event-sourced entity's events must be declared INSIDE it
+(R4), so a fixture that declares them in the context draws `mutation-scope` on every fold.
+
+**Design notes.** One sealed `CollectionStatement` trait over two case classes: every
+"is it an effect / executable / a mutation / a state write" match takes one arm, and only the
+parser, emitter, BAST, JSON and the typing check tell them apart. `checkSetScope` became
+`checkWriteScope(keyword, …)` rather than a second copy. The existing `collectionElementType`
+(the `at`-lookup helper, which already follows aliases) defines "collection" — an `Optional` is
+not one. `append`, `remove`, `where` were already reserved, so no model could break.
+
+Also this session, from synapify: they no longer key on `entity-no-inlet`/`-outlet`; the codes
+stay for the compat-policy reason alone, and the three places that cited synapify say so now.
 
 ## 2026-09-12 — `Advisory`: a kind for "you may well be right", and four counts about journals
 
@@ -225,9 +263,10 @@ left the abolition. Design negotiated with Reid in one sitting, five points:
 entity-only 4h/4i block), and sender-side abstention is symmetric (a port-less entity that tells
 draws one Missing warning, not that plus `msg-tell-target-unreachable`). **One departure from
 Reid's pick, flagged in the plan and approved**: he chose "retire `entity-no-inlet`/`-outlet`";
-I kept them emitted for entities because synapify's `EmitterConformanceTest.scala:160,166` keys
-on them and a published code means the same thing forever. One rule, two spellings, documented
-at the enum.
+I kept them emitted for entities because a published code means the same thing forever (and,
+at the time, synapify's `EmitterConformanceTest.scala:160,166` keyed on them — a reason that
+ended 2026-09-14 when their harness dropped the pins; the policy reason stands alone). One
+rule, two spellings, documented at the enum.
 
 **The Missing/Completeness question, asked by Reid and settled by not merging.** The only
 load-bearing difference is RANK: `isIgnorable`/`isActionable` (`Messages.scala:46-47`) split

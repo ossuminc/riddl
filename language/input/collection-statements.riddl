@@ -1,0 +1,38 @@
+// Exercises `append` and `remove` (2026-09-14) in all three forms, inside an event-sourced
+// entity's folds, so the CI grammar validators cover them rather than asserting the EBNF against
+// itself. They exist so a fold can SAY what it appends to and removes from a collection field
+// where before the only spelling was a `prompt(...)`.
+domain Carts is {
+  context Shopping is {
+    record Item is { itemId: String, qty: Integer } with { briefly "a line" }
+
+    command AddItem yields event Shopping.Cart.ItemAdded is { cartId: String, item: Shopping.Item } with { briefly "c" }
+    command RemoveItem yields event Shopping.Cart.ItemRemoved is { cartId: String, itemId: String } with { briefly "c" }
+    command DropTag yields event Shopping.Cart.TagDropped is { cartId: String, tag: String } with { briefly "c" }
+
+    event-sourced entity Cart is {
+      record CartData is { cartId: String, items: Shopping.Item*, tags: String* } with { briefly "state" }
+      event ItemAdded is { cartId: String, item: Shopping.Item } with { briefly "added" }
+      event ItemRemoved is { cartId: String, itemId: String } with { briefly "removed by id" }
+      event TagDropped is { cartId: String, tag: String } with { briefly "removed by value" }
+      state Live of record Cart.CartData
+      inlet In is command Shopping.AddItem with { briefly "i" }
+      outlet Out is event Cart.ItemAdded with { briefly "o" }
+      handler H is {
+        on init is { yield event Cart.ItemAdded(cartId = "x", item = record Shopping.Item(itemId = "y", qty = 1)) }
+        on a: command Shopping.AddItem is { yield event Cart.ItemAdded(cartId = a.cartId, item = a.item) }
+        on r: command Shopping.RemoveItem is { yield event Cart.ItemRemoved(cartId = r.cartId, itemId = r.itemId) }
+        on d: command Shopping.DropTag is { yield event Cart.TagDropped(cartId = d.cartId, tag = d.tag) }
+        // append: the value goes on the END of the collection
+        on added: event Cart.ItemAdded is { append added.item to field Cart.CartData.items }
+        // keyed remove: every element whose field `itemId` equals the value
+        on removed: event Cart.ItemRemoved is {
+          remove from field Cart.CartData.items where itemId == removed.itemId
+        }
+        // by-value remove: every element equal to the value
+        on dropped: event Cart.TagDropped is { remove dropped.tag from field Cart.CartData.tags }
+        on other is { error "unexpected" }
+      } with { briefly "h" }
+    } with { briefly "a cart" }
+  } with { briefly "shopping" }
+} with { briefly "carts" }

@@ -350,7 +350,7 @@ case class ValidationPass(
     * Signals, per entity E: S1 states; S2 `morph` statements; S3 the events E yields (resolved
     * through `deliverableTypes`, the `emittedMessageTypes` idiom); S4(X) the processors OTHER
     * than E that handle X (an `on` clause) or declare an outlet carrying it; S5 the shape of each
-    * `on event` FOLD -- *prose* (only `do`, or `set … to prompt(…)`, or `???`), *snapshot* (only
+    * `on event` FOLD -- *prose* (only `do`, or `set state S to prompt(…)`, or `???`), *snapshot* (only
     * `set field S.f to ev.f`, same field name), *derived* (anything else); S6(X) whether X's
     * fields cover every state record's fields.
     *
@@ -398,10 +398,17 @@ case class ValidationPass(
       val stmts = clause.contents.toSeq.collect { case st: Statement => st }
       if stmts.isEmpty then Fold.Prose
       else
+        // A `set` of a STATED FIELD from a `prompt(...)` is DERIVED, not prose (Reid, 2026-09-14,
+        // riddl-models' `prose-folds-append-and-arithmetic-have-no-other-spelling`): RIDDL does
+        // no arithmetic by design (ruled 2026-08-23), so `set field S.balance to prompt("balance +
+        // points")` is the language's own spelling of a computation -- the target and operands
+        // are stated, only the operation is prose. What the rule can honestly demand of a
+        // prompt-by-design language is that every fold NAMES WHAT IT CHANGES; `set state S to
+        // prompt(...)` names nothing and stays prose.
         val prose = stmts.forall {
-          case _: DoStatement                   => true
-          case SetStatement(_, _, _: PromptValue) => true
-          case _                                => false
+          case _: DoStatement                            => true
+          case SetStatement(_, _: StateRef, _: PromptValue) => true
+          case _                                         => false
         }
         if prose then Fold.Prose
         else
@@ -2178,29 +2185,85 @@ case class ValidationPass(
     * at the keyword, so a second message here would double-report the same mistake.
     */
   private def checkSetScope(ss: SetStatement, parents: Parents): Unit =
+    checkWriteScope("set", ss.loc, parents)
+
+  /** The scope rule above, shared by every state-WRITING statement: `set`, and since 2026-09-14
+    * `append`/`remove` (one rule, `state-set-not-allowed`, named for the statement written).
+    */
+  private def checkWriteScope(keyword: String, loc: At, parents: Parents): Unit =
     enclosingWriteScope(parents) match
       case Some(_: Entity) | Some(_: Projector) => () // owns the data being written
       case Some(_: Function)                    => () // A26 already rejected it at the keyword
       case Some(owner) =>
         messages.addError(
-          ss.loc,
-          s"'set' is not allowed in ${owner.identify}, which owns no state to write",
+          loc,
+          s"'$keyword' is not allowed in ${owner.identify}, which owns no state to write",
           suggestion = owner match
             case _: Saga =>
               "A saga coordinates by sending commands; 'tell' the command to the entity that owns " +
                 "the state, so the step's compensation can reverse it."
             case _: Context =>
               "State lives in a context's entities, repositories and projectors, never in the " +
-                "context itself; move the 'set' into the entity's handler."
+                s"context itself; move the '$keyword' into the entity's handler."
             case _: Repository =>
               "A repository's on-clause describes persistence — a 'do' statement standing in for " +
-                "the storage operation is the modelling, and needs no 'set'."
+                s"the storage operation is the modelling, and needs no '$keyword'."
             case _ =>
-              "Move the 'set' into the handler of the entity that owns the state.",
+              s"Move the '$keyword' into the handler of the entity that owns the state.",
           ruleId = Some(RuleId.SetNotAllowed)
         )
       case None => () // no enclosing processor at all; nothing meaningful to say
-  end checkSetScope
+  end checkWriteScope
+
+  /** `append`/`remove` target a COLLECTION field of the entity's state (Reid, 2026-09-14): its type
+    * must be a collection as `collectionElementType` (the `at`-lookup helper) already defines one
+    * -- a `*`, `+` or `{n,m}` cardinality, or a `sequence`/`set`/`table`/`graph`/`replica` of --
+    * and a keyed `remove` must name a field of the ELEMENT record. The value's type against the
+    * element type is `checkStatementScopes`' job, with the `let` scope in hand.
+    */
+  private def checkCollectionTarget(cs: CollectionStatement, parents: Parents): Unit =
+    val keyword = cs match
+      case _: AppendStatement => "append"
+      case _: RemoveStatement => "remove"
+    resolvePath[Field](cs.field.pathId, parents).foreach { target =>
+      collectionElementType(target.typeEx) match
+        case None =>
+          messages.addError(
+            cs.loc,
+            s"'$keyword' targets ${target.identify}, whose type '${target.typeEx.format}' is not a " +
+              "collection; only a field with a '*', '+' or '{n,m}' cardinality can be appended to " +
+              "or removed from",
+            suggestion = s"Give ${target.identify} a collection type (e.g. 'Item*'), or use 'set' to " +
+              "replace a single value.",
+            ruleId = Some(RuleId.CollectionFieldNotCollection)
+          )
+        case Some(elementTE) =>
+          cs match
+            case RemoveStatement(_, _, _, Some(key)) =>
+              val elementFields: Option[Seq[Field]] = elementTE match
+                case ate: AliasedTypeExpression =>
+                  resolution.refMap.definitionOf[Type](ate.pathId).flatMap(_.typEx match
+                    case agg: AggregateTypeExpression => Some(agg.fields)
+                    case _                            => None)
+                case agg: AggregateTypeExpression => Some(agg.fields)
+                case _                            => None
+              val named = elementFields.map(_.exists(_.id.value == key.value))
+              if !named.contains(true) then
+                messages.addError(
+                  cs.loc,
+                  s"'remove ... where ${key.value} == ...' names a field the elements of " +
+                    s"${target.identify} do not have" + (if named.isEmpty then
+                      s"; its element type '${elementTE.format}' is not a record" else ""),
+                  suggestion = if named.isEmpty then
+                    "A keyed 'remove' needs a record element type with a field to match on; for " +
+                      "a scalar collection use 'remove <value> from field F'."
+                  else s"Name one of the element record's fields as the key.",
+                  ruleId = Some(RuleId.CollectionKeyNotAField)
+                )
+            case _ => ()
+    }
+  end checkCollectionTarget
+
 
   /** A70/§4.6: `get from state` reads an entity's state directly, so it is legal ONLY inside the
     * entity that owns that state.
@@ -2787,6 +2850,13 @@ case class ValidationPass(
               target <- resolvePath[Field](fr.pathId, parents)
             do checkAssignable(target.typeEx, actual, None, parents, sv.loc, s"Field '${target.id.value}'")
           case _ => ()
+      case cs: CollectionStatement =>
+        val keyword = cs match
+          case _: AppendStatement => "append"
+          case _: RemoveStatement => "remove"
+        checkWriteScope(keyword, cs.loc, parents)
+        checkRef[Field](cs.field, parents)
+        checkCollectionTarget(cs, parents)
       case SendStatement(_, msg, portlet, _) =>
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
         // checkStatementScopes (both need the threaded `let`/element scope — A56/message-value-source).
@@ -4799,6 +4869,8 @@ case class ValidationPass(
   /** `set`, `morph` and `become` all change what replay must reproduce. */
   private def mutationKeyword(stmt: Statement): Option[String] = stmt match
     case _: SetStatement    => Some("set")
+    case _: AppendStatement => Some("append")
+    case _: RemoveStatement => Some("remove")
     case _: MorphStatement  => Some("morph")
     case _: BecomeStatement => Some("become")
     case _                  => None
@@ -6380,6 +6452,7 @@ case class ValidationPass(
           .toSeq ++
           valueReferencedDefs(put.value)
       case set: SetStatement    => valueReferencedDefs(set.value)
+      case cs: CollectionStatement => valueReferencedDefs(cs.value)
       case let: LetStatement    => valueReferencedDefs(let.expression)
       case ret: ReturnStatement => valueReferencedDefs(ret.value)
       // A70/instance-identity: the entity a `terminate` ends is exactly the kind of reference A8
@@ -7585,6 +7658,7 @@ case class ValidationPass(
   private def statementValues(s: Statement): Seq[RiddlValue] =
     s match
       case set: SetStatement    => Seq(set.value)
+      case cs: CollectionStatement => Seq(cs.value)
       case let: LetStatement    => Seq(let.expression)
       case put: PutStatement    => Seq(put.value)
       case ret: ReturnStatement => Seq(ret.value)
@@ -7806,8 +7880,8 @@ case class ValidationPass(
     * Still EXCLUDES the refusals themselves (`require`/`error`) and the opaque `CodeStatement`.
     */
   private def isEffectStatement(s: Statement): Boolean = s match
-    case _: SetStatement | _: MorphStatement | _: TerminateStatement => true
-    case _                                                           => false
+    case _: SetStatement | _: CollectionStatement | _: MorphStatement | _: TerminateStatement => true
+    case _                                                                                   => false
 
   /** What ended a block, and WHY.
     *
@@ -11260,6 +11334,33 @@ case class ValidationPass(
             ss.loc,
             s"'set ${ss.field.format}'"
           )
+        case cs: CollectionStatement =>
+          // The value is typed against the ELEMENT type (by value) or the key field's type (keyed),
+          // through the same `checkValueType` a `set` uses -- so, like `set`, a predefined element
+          // type is unchecked and a named one is.
+          validateValue(cs.value, parents, lets, elements)
+          val expected: Option[Type] =
+            resolution.refMap.definitionOf[Field](cs.field.pathId).flatMap { f =>
+              collectionElementType(f.typeEx).flatMap { elementTE =>
+                val element: Option[Type] = elementTE match
+                  case ate: AliasedTypeExpression => resolution.refMap.definitionOf[Type](ate.pathId)
+                  case _                          => None
+                cs match
+                  case RemoveStatement(_, _, _, Some(key)) =>
+                    element.flatMap(_.typEx match
+                      case agg: AggregateTypeExpression =>
+                        agg.fields.find(_.id.value == key.value).flatMap(_.typeEx match
+                          case kate: AliasedTypeExpression =>
+                            resolution.refMap.definitionOf[Type](kate.pathId)
+                          case _ => None)
+                      case _ => None)
+                  case _ => element
+              }
+            }
+          val what = cs match
+            case _: AppendStatement => s"'append ... to ${cs.field.format}'"
+            case _: RemoveStatement => s"'remove ... from ${cs.field.format}'"
+          checkValueType(expected, cs.value, parents, lets, elements, cs.loc, what)
         case s: SendStatement =>
           s.msg match
             case c: Constructor => validateValue(c, parents, lets, elements)
@@ -11441,8 +11542,9 @@ case class ValidationPass(
           // PromptOnly, a `reply`-only handler as Empty. The Empty branch's own suggestion
           // already names `reply` as a fix, so a user could follow the advice and still be warned.
           case _: TellStatement | _: SendStatement | _: ForwardStatement | _: YieldStatement |
-              _: ReplyStatement | _: MorphStatement | _: SetStatement | _: BecomeStatement |
-              _: ErrorStatement | _: CodeStatement | _: PutStatement | _: TerminateStatement =>
+              _: ReplyStatement | _: MorphStatement | _: SetStatement | _: CollectionStatement |
+              _: BecomeStatement | _: ErrorStatement | _: CodeStatement | _: PutStatement |
+              _: TerminateStatement =>
             // A45: `put` publishes to a UI output — an executable effect. A70/instance-identity:
             // `terminate` ends an instance -- as executable an effect as `tell`. (ReturnStatement
             // is not added here: it only occurs in function bodies, which are classified by

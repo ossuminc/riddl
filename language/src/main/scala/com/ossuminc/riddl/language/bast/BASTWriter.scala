@@ -262,6 +262,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: YieldStatement     => writeYieldStatement(s)
       case s: ReplyStatement     => writeReplyStatement(s)
       case s: SetStatement       => writeSetStatement(s)
+      case s: AppendStatement    => writeAppendStatement(s)
+      case s: RemoveStatement    => writeRemoveStatement(s)
       case s: SendStatement      => writeSendStatement(s)
       case s: MorphStatement     => writeMorphStatement(s)
       case s: BecomeStatement    => writeBecomeStatement(s)
@@ -1199,6 +1201,32 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeMessageOperand(s.msg) // A54: bare ref or constructor
     writePortletRef(s.portlet)
     writeOption(s.at)(writeValue) // `send ... at <instant>`, FORMAT_REVISION 24
+  }
+
+  /** `append <value> to field F` -- sub-kind 22 (FORMAT_REVISION 25). */
+  def writeAppendStatement(s: AppendStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(22) // Append statement
+    writeLocation(s.loc)
+    writeValue(s.value)
+    writeFieldRef(s.field)
+  }
+
+  /** `remove <value> from field F` / `remove from field F where k == <value>` -- sub-kind 23.
+    * One has-key byte after the value, then the key identifier INLINE when present. Its own tag
+    * rather than a flag on `append`: the wire shapes differ (one tag per wire shape).
+    */
+  def writeRemoveStatement(s: RemoveStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(23) // Remove statement
+    writeLocation(s.loc)
+    writeFieldRef(s.field)
+    writeValue(s.value)
+    s.key match
+      case Some(k) =>
+        writer.writeU8(1)
+        writeIdentifierInline(k)
+      case None => writer.writeU8(0)
   }
 
   def writeForwardStatement(s: ForwardStatement): Unit = {

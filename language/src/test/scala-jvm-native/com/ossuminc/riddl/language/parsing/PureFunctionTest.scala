@@ -28,6 +28,8 @@ class PureFunctionTest extends AbstractParsingTest {
   "Pure functions" should {
     for stmt <- Seq(
         "set field a to \"1\"",
+        "append a to field c.e.s.xs", // state writes, like `set` (2026-09-14)
+        "remove a from field c.e.s.xs",
         "send command Go to inlet c.e.t.in",
         "tell command Go to entity c.e",
         "morph entity c.e to state c.e.s with record Go",

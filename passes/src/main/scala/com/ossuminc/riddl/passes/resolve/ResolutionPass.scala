@@ -382,6 +382,14 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
         // A54: resolve the value expression (constructor refs, get sources).
         resolveValue(value, parents)
+      case cs: CollectionStatement =>
+        // `append`/`remove`: the field resolves exactly as `set`'s does; the value like any other.
+        // The keyed form's `key` is an identifier INSIDE the element record, resolved by validation
+        // against the element type -- not a path, so nothing to enter in the refMap here.
+        correlationTargetField(cs.field, parents) match
+          case Some(target) => refMap.add[Field](cs.field.pathId, parents.head, target)
+          case None => associateUsage[Field](parents.head, resolveARef[Field](cs.field, parents))
+        resolveValue(cs.value, parents)
       case BecomeStatement(_, entity, handler) =>
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[Handler](parents.head, resolveARef[Handler](handler, parents))
@@ -822,6 +830,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveValue(v, parents)
       // A54: widened operands may nest too — resolve the constructor/value they carry.
       case SetStatement(_, _, v) => resolveValue(v, parents)
+      case cs: CollectionStatement => resolveValue(cs.value, parents)
       case ls: LetStatement      => resolveValue(ls.expression, parents)
       // A nested `send`/`tell` gets the SAME treatment as a top-level one. Only the constructor
       // operand used to be resolved here, so the portlet/processor and the message were never

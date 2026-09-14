@@ -1193,6 +1193,21 @@ class BASTReader(
         val args = readSeq(() => readConstructorArg())
         TerminateStatement(loc, target, args)
 
+      case 22 => // Append (collection statement, revision 25)
+        val value = readValue()
+        val field = readFieldRef()
+        AppendStatement(loc, value, field)
+
+      case 23 => // Remove (collection statement, revision 25): field, value, has-key byte, key
+        val field = readFieldRef()
+        val value = readValue()
+        val key: Option[Identifier] = reader.readU8() match
+          case 0 => None
+          case 1 => Some(readIdentifierInline())
+          case other =>
+            throw new IllegalStateException(s"Invalid remove-statement key marker: $other")
+        RemoveStatement(loc, field, value, key)
+
       case 21 => // Forward (delegation; discharges the yields/replies obligation)
         val msg = readMessageOperand()
         val shape = reader.readU8()

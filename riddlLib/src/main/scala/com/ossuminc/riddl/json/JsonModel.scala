@@ -752,6 +752,15 @@ object JsonModel:
   case class SetStmtDto(field: Option[String], state: Option[String], value: ValueDto)
       extends StatementDto
 
+  /** `{ "kind": "append", "value": <value>, "field": "<path>" }` (2026-09-14) */
+  case class AppendStmtDto(value: ValueDto, field: String) extends StatementDto
+
+  /** `{ "kind": "remove", "field": "<path>", "value": <value>, "key": "<name>"? }` -- `key`
+    * present is the keyed form (`remove from field F where key == value`), absent the by-value one.
+    */
+  case class RemoveStmtDto(field: String, value: ValueDto, key: Option[String] = None)
+      extends StatementDto
+
   /** `{ "kind": "send", "message": <msgRef|constructor>, "to": "<path>", "portlet":
     * "inlet"|"outlet" }`
     */
@@ -2007,6 +2016,8 @@ object JsonModel:
             )
           case "set" =>
             SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), readValue(m("value")))
+          case "append" => AppendStmtDto(readValue(m("value")), m("field").str)
+          case "remove" => RemoveStmtDto(m("field").str, readValue(m("value")), m.get("key").map(_.str))
           case "send" =>
             SendStmtDto(
               readMsgOperand(m("message")),
@@ -2138,6 +2149,16 @@ object JsonModel:
             ++ field.map(x => "field" -> (ujson.Str(x): ujson.Value))
             ++ state.map(x => "state" -> (ujson.Str(x): ujson.Value))
             ++ Seq("value" -> (writeValue(value): ujson.Value))
+        )
+      case AppendStmtDto(value, field) =>
+        ujson.Obj("kind" -> ujson.Str("append"), "value" -> writeValue(value), "field" -> ujson.Str(field))
+      case RemoveStmtDto(field, value, key) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("remove"),
+            "field" -> ujson.Str(field),
+            "value" -> writeValue(value)
+          ) ++ key.map(k => "key" -> (ujson.Str(k): ujson.Value))
         )
       case SendStmtDto(message, to, portlet, at) =>
         ujson.Obj.from(
@@ -2747,6 +2768,7 @@ object JsonModel:
     */
   val knownKeys: Set[String] = Set(
     "at", // SendStmtDto: `send ... at <instant>`
+    "key", // RemoveStmtDto: the keyed form's element-field name (2026-09-14)
     "window",
     "$at",
     "$kind",

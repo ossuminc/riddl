@@ -248,6 +248,10 @@ enum RuleId(
 
   // ---- state: entity state, and who may read or write it -----------------------------------
   case SetNotAllowed extends RuleId("state-set-not-allowed")
+  // `append`/`remove` (2026-09-14): the target must be a COLLECTION field; a keyed `remove` must
+  // name a field of the element record. Scope and type mismatches reuse the `set` rules.
+  case CollectionFieldNotCollection extends RuleId("stmt-collection-field-not-collection")
+  case CollectionKeyNotAField extends RuleId("stmt-collection-key-not-a-field")
   case StateReadNotAllowed extends RuleId("state-read-not-allowed")
   case StateReadForeign extends RuleId("state-read-foreign")
   case MultipleInitialHandlers extends RuleId("state-multiple-initial-handlers")
@@ -324,10 +328,10 @@ enum RuleId(
   // ONE rule, TWO spellings, deliberately ([1.25], 2026-09-11). "Handles messages but declares no
   // inlet" / "transmits but declares no outlet" applies to EVERY processor kind since implied
   // adaptor ports were abolished, and is emitted by one check (`checkProcessorPorts`). An Entity
-  // keeps these two codes because they shipped first and a consumer keys on them (synapify's
-  // `EmitterConformanceTest`); a published code means the same thing forever. Every other kind
-  // reports `stream-processor-no-inlet` / `stream-processor-no-outlet` below. Do not "unify" by
-  // retiring these -- that is the API break the compat policy forbids.
+  // keeps these two codes because they shipped first and a published code means the same thing
+  // forever (synapify keyed on them until 2026-09-14; the policy reason stands on its own). Every
+  // other kind reports `stream-processor-no-inlet` / `stream-processor-no-outlet` below. Do not
+  // "unify" by retiring these -- that is the API break the compat policy forbids.
   case EntityNoInlet extends RuleId("entity-no-inlet")
   case EntityNoOutlet extends RuleId("entity-no-outlet")
   case EntityNoIdType extends RuleId("entity-no-id-type")

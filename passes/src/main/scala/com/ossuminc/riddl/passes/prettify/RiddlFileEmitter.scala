@@ -697,6 +697,23 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         addIndent(s"set ${field.format} to ")
         emitValue(value)
         nl
+      case AppendStatement(_, value, field) =>
+        // Same `emitValue` routing as `set`, for the same A20 reason (a nested `prompt(...) as T`).
+        addIndent("append ")
+        emitValue(value)
+        add(s" to ${field.format}")
+        nl
+      case RemoveStatement(_, field, value, key) =>
+        key match
+          case Some(k) =>
+            addIndent(s"remove from ${field.format} where ${k.format} == ")
+            emitValue(value)
+            nl
+          case None =>
+            addIndent("remove ")
+            emitValue(value)
+            add(s" from ${field.format}")
+            nl
       case DoStatement(_, what) =>
         // A54: `do` is canonical; the deprecated `prompt` statement normalizes to `do` on emit.
         //

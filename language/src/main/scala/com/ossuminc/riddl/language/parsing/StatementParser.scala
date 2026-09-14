@@ -213,6 +213,27 @@ private[parsing] trait StatementParser {
     }
   }
 
+  /** The two collection statements (Reid, 2026-09-14; CM §20). `remove` has two forms and `from`
+    * is tried FIRST: a `value` can never begin with a reserved word, so no lookahead is needed to
+    * tell `remove from field F where k == v` from `remove v from field F`.
+    */
+  private def appendStatement[u: P]: P[AppendStatement] = {
+    P(
+      Index ~ Keywords.append ~/ value ~ to ~/ fieldRef ~/ Index
+    )./.map { case (start, v, ref, end) => AppendStatement(at(start, end), v, ref) }
+  }
+
+  private def removeStatement[u: P]: P[RemoveStatement] = {
+    P(
+      Index ~ Keywords.remove ~/ (
+        (from ~/ fieldRef ~ Keywords.where ~/ identifier ~ "==" ~/ value).map {
+          case (ref, key, v) => (ref, v, Some(key))
+        } |
+          (value ~ from ~/ fieldRef).map { case (v, ref) => (ref, v, None) }
+      ) ~/ Index
+    )./.map { case (start, (ref, v, key), end) => RemoveStatement(at(start, end), ref, v, key) }
+  }
+
   // `send` canonically targets an OUTLET: a processor emits on its own outlet and a Connector
   // routes the message to a downstream inlet. Sending directly to an INLET bypasses that model
   // (that is `tell`'s job), so the inlet form is DEPRECATED (soft, removed in 3.0). Both forms
@@ -537,7 +558,7 @@ private[parsing] trait StatementParser {
       StringIn(
         "set", "tell", "send", "forward", "yield", "reply", "morph", "become", "do", "prompt",
         "let", "call", "foreach", "when", "match", "error", "require", "put", "return", "terminate",
-        "code", "focus", "stop", "read", "write", "ask", "initiate", "if", "else"
+        "code", "focus", "stop", "read", "write", "ask", "initiate", "if", "else", "append", "remove"
       ) ~~ &(Keywords.isNotKeywordChar)
     )
   }
@@ -981,13 +1002,14 @@ private[parsing] trait StatementParser {
     else (sendStatement | tellStatement | forwardStatement).asInstanceOf[P[Statements]]
 
   // A26: a Function is pure — it may not write entity state, so `set` is rejected in a function body.
+  // `append`/`remove` are state writes of the same kind and ride the same ban (2026-09-14).
   private def setStatements[u: P](set: StatementsSet): P[Statements] =
     if set.processor == ProcessorKind.Function then
-      (P(Keywords.set) ~/ Fail.opaque(
-        "'set' is not allowed in a function body; a function is pure — the on-clause effects state " +
-          "based on the function's returned result"
+      (P(Keywords.set | Keywords.append | Keywords.remove) ~/ Fail.opaque(
+        "'set'/'append'/'remove' are not allowed in a function body; a function is pure — the " +
+          "on-clause effects state based on the function's returned result"
       )).asInstanceOf[P[Statements]]
-    else theSetStatement.asInstanceOf[P[Statements]]
+    else (theSetStatement | appendStatement | removeStatement).asInstanceOf[P[Statements]]
 
   private def guardStatements[u: P](set: StatementsSet): P[Statements] =
     if set.clause == ClauseRestriction.EventClause then

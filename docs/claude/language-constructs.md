@@ -591,6 +591,55 @@ decision.
   to 109/132. Corpus A/B showed **zero movement**: riddl-models + riddl-examples
   have no `!` uses, 597 `not` uses, and no `!=` uses either.
 
+## Collection statements — `append` / `remove` (2026-09-14)
+
+**Syntax.** `append <value> to field F` · `remove <value> from field F` ·
+`remove from field F where <key> == <value>`. `append`, `remove` and `where` were already
+reserved keywords, so taking them cost no model anything. The parser tries `from` first after
+`remove` — a `value` can never begin with a reserved word — so the two forms need no lookahead.
+`statement_start` (the guard on `empty`'s optional trailing type) lists both.
+
+**Why.** Rule 3 (`entity-event-sourced-prose-folds`) drained riddl-models from 111 prose folds
+to 14; every one of the 14 was an append, a remove or arithmetic. Arithmetic stays a `prompt`
+(2026-08-23 ruling) and `set field F to prompt(…)` is *derived* for rule 3; the other two got
+syntax. Reid chose the keyed `remove` because the corpus's `ItemRemoved` folds carry an id while
+the collection holds records.
+
+**AST.** `sealed trait CollectionStatement extends Statement { field: FieldRef; value: Value }`
+with `AppendStatement(loc, value, field)` and `RemoveStatement(loc, field, value, key:
+Option[Identifier] = None)` — `key` trailing and defaulted for `@JSExportTopLevel`. The trait is
+what lets every "is it an effect / executable / a mutation" match take ONE arm
+(`isEffectStatement`, `mutationKeyword`, `classifyHandlers`, `StatsPass`, `ProjectionPass`, …);
+only the parser, emitter, BAST, JSON and `checkCollectionTarget` tell the two apart.
+
+**Semantics (CM §20).** `append` adds at the END; `remove <v>` removes EVERY equal element; the
+keyed form every element whose field `key` equals the value. Local state transformations exactly
+like `set`: A23 effects, A26-banned in a function (`setStatements` — the keyword-level ban,
+never `keywordAlt ~/ Fail | base`), R3/R4-bound in an event-sourced entity, legal only where
+`set` is (`checkWriteScope`, which `checkSetScope` now delegates to). Removing the last element
+of a `+` collection is a runtime refusal, not statically decidable.
+
+**Validation.** `checkCollectionTarget`: the field's type must be a collection as the existing
+`collectionElementType` (the `at`-lookup helper, which follows aliases) defines one — `Optional`
+is NOT one — else `stmt-collection-field-not-collection`; a keyed remove's key must be a field of
+the element record, else `stmt-collection-key-not-a-field`. The value is typed in
+`checkStatementScopes` against the element type (or the key field's type) through the same
+`checkValueType` a `set` uses, so a mismatch draws `value-type-mismatch` and a predefined element
+type is unchecked, as for `set`. Fold shape: *derived*.
+
+**Surfaces.** Prettify: two `emitStatement` arms routing the value through `emitValue` (A20).
+BAST: sub-kinds **22** (append: value, fieldRef) and **23** (remove: fieldRef, value, has-key
+byte, inline identifier) — two tags, one per wire shape; **`FORMAT_REVISION` 25**; the committed
+`language/input/import/NotImplemented.bast` had to be regenerated (`riddlc bastify`). JSON:
+`{"kind":"append","value":…,"field":…}` / `{"kind":"remove","field":…,"value":…,"key"?:…}`,
+`key` in `knownKeys`, two `JSON_COVERAGE.md` rows. `Finder.fieldChildren` yields the value.
+Fixture `language/input/collection-statements.riddl` (TatSu `✓`).
+
+**Trap.** Three BAST suites pinned `FORMAT_REVISION` EXACTLY (`mustBe 24`) with names that
+already lagged ("should be 23"); every bump reddened them for nothing. Floored to `>= 23`, the
+form the other BAST suites use: a suite proves ITS feature's bump happened, not the current
+number.
+
 ## Messaging statements
 
 - **`tell` addresses an INSTANCE as well as a named processor (rc.21+).**

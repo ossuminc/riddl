@@ -400,3 +400,5 @@ entity-event-sourced-unread-history
 entity-crud-with-transitions-consumed
 entity-event-sourced-snapshot-events
 entity-event-sourced-prose-folds
+stmt-collection-field-not-collection
+stmt-collection-key-not-a-field

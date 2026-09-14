@@ -1514,11 +1514,12 @@ resolution and type-checking — in `checkStatementScopes`.
   declares no inlet"* — **Missing**, `???`'s kind, because it is the same fact:
   the author has not written something the definition owes. It absorbed the
   entity-only 4h/4i block. **One rule, TWO id spellings, on purpose**:
-  `entity-no-inlet`/`entity-no-outlet` stay for an Entity because synapify's
-  `EmitterConformanceTest` keys on them and a published code means the same thing
-  forever; everything else reports `stream-processor-no-inlet`/`-no-outlet`. Do
-  not "unify" by retiring the entity codes — that is the API break the compat
-  policy forbids.
+  `entity-no-inlet`/`entity-no-outlet` stay for an Entity because a published code
+  means the same thing forever (the compat policy); everything else reports
+  `stream-processor-no-inlet`/`-no-outlet`. Do not "unify" by retiring the entity
+  codes — that is the API break the compat policy forbids. (The consumer reason
+  once cited here — synapify keying on the codes — ended 2026-09-14 when its
+  harness dropped those pins; the policy reason stands alone.)
   **The abstention is the half that keeps this from being a second demand.**
   `missingInlet`/`missingOutlet` (private, `ValidationPass`) are consulted by:
   tell/ask reachability (a port-less SENDER is exempt, symmetric with the
@@ -1545,6 +1546,15 @@ resolution and type-checking — in `checkStatementScopes`.
   `showMissingWarnings` is off, and `pc.options` is global state other suites
   mutate, so every suite asserting one pins `pc.withOptions(CommonOptions.default)`
   — three suites went red in the full run and green alone before that was added.
+
+- **`append`/`remove` are `set`'s siblings, and every rule about `set` binds them (Reid,
+  2026-09-14; `docs/claude/language-constructs.md` § Collection statements).** Grep
+  `SetStatement` before adding a rule about state writes; the `CollectionStatement` trait is
+  there so one arm covers both. Their existence is rule 3's doing: 14 corpus folds had no
+  spelling but `prompt`. `FORMAT_REVISION` 25; a committed `.bast` fixture had to be
+  regenerated, and three BAST suites that pinned the revision EXACTLY were floored to `>=`.
+  **A `set` of a stated FIELD from a `prompt(…)` is a DERIVED fold** (arithmetic is a prompt
+  by the 2026-08-23 ruling); `set state S to prompt(…)` stays prose.
 
 - **`Advisory` is a MESSAGE KIND, not a warning class (Reid, 2026-09-12; CM § "two
   conformance bars").** *A structural fact consistent with the model as written and

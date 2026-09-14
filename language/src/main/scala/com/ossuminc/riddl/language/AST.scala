@@ -4074,6 +4074,57 @@ object AST:
     def format: String = s"set ${field.format} to ${value.format}"
   }
 
+  /** The two COLLECTION statements (Reid, 2026-09-14; CM §20): `append <value> to field F` and
+    * `remove … from field F`. They exist so an event-sourced entity's fold can SAY what it appends
+    * to and removes from a collection field, where before the only spelling was a `prompt(…)`:
+    * riddl-models drained `entity-event-sourced-prose-folds` from 111 folds to 14, and every one
+    * of the 14 was an append, a remove or arithmetic (arithmetic stays a prompt, by the 2026-08-23
+    * ruling that RIDDL does none).
+    *
+    * Both are LOCAL state transformations exactly like `set`: A23 effects, A26-banned in a
+    * function, R3/R4-bound in an event-sourced entity, legal only where `set` is. The field must
+    * be a collection field (`*`, `+` or a range) of the entity's current state, and the value must
+    * be assignment-compatible with the ELEMENT type. A fold containing either is Derived, not
+    * prose. The sealed trait is what lets every "is it an effect / executable / a mutation" match
+    * take ONE arm; only the parser, emitter, BAST, JSON and the typing check tell them apart.
+    */
+  sealed trait CollectionStatement extends Statement:
+    def field: FieldRef
+    def value: Value
+  end CollectionStatement
+
+  /** `append <value> to field F` -- adds the value at the END of the collection. Ordering is
+    * meaning for a sequence, so "at the end" is part of the contract.
+    */
+  @JSExportTopLevel("AppendStatement")
+  case class AppendStatement(
+    loc: At,
+    value: Value,
+    field: FieldRef
+  ) extends CollectionStatement {
+    override def kind: String = "Append Statement"
+    def format: String = s"append ${value.format} to ${field.format}"
+  }
+
+  /** `remove <value> from field F` removes EVERY element equal to the value; `remove from field F
+    * where <key> == <value>` removes every element whose field `key` equals the value -- the keyed
+    * form, for the corpus's folds that carry an item id while the collection holds records.
+    * `key` is `None` for the by-value form. TRAILING and defaulted (`@JSExportTopLevel` requires
+    * defaulted parameters last).
+    */
+  @JSExportTopLevel("RemoveStatement")
+  case class RemoveStatement(
+    loc: At,
+    field: FieldRef,
+    value: Value,
+    key: Option[Identifier] = None
+  ) extends CollectionStatement {
+    override def kind: String = "Remove Statement"
+    def format: String = key match
+      case Some(k) => s"remove from ${field.format} where ${k.format} == ${value.format}"
+      case None    => s"remove ${value.format} from ${field.format}"
+  }
+
   /** An action that sends a message to an [[Inlet]] or [[Outlet]].
     *
     * @param loc

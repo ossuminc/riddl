@@ -119,6 +119,15 @@ class EventSourcingAdvisoriesTest extends AbstractValidatingTest {
       of(diagnostics(single("event-sourced", snapshotFold, projectorReader), td.name),
         RuleId.EntityEventSourcedProseFolds) mustBe empty
     }
+
+    "NOT fire when a fold sets a STATED FIELD from a prompt -- the language's own arithmetic (ruled 2026-09-14)" in {
+      (td: TestData) =>
+        // `set field S.balance to prompt("balance + points")`: RIDDL does no arithmetic by design
+        // (2026-08-23), so this IS the intended spelling. The fold names what it changes; only the
+        // operation is prose. Derived, not prose. `set state S to prompt(...)` stays prose (above).
+        of(diagnostics(single("event-sourced", derivedFold, projectorReader), td.name),
+          RuleId.EntityEventSourcedProseFolds) mustBe empty
+    }
   }
 
   "rule 2, an event-sourced entity whose events are snapshots" should {

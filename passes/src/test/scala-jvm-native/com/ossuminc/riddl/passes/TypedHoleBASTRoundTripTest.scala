@@ -137,9 +137,12 @@ class TypedHoleBASTRoundTripTest extends AbstractValidatingTest {
   "the format revision" should {
     // See URLBASTRoundTripTest: "stay at 18" held only while 18 was unreleased. It shipped in
     // 2.0.0-rc.15, so `forward` bumped to 19.
-    "be 23 -- multi-line `do`/`prompt` bumped it; 22 has shipped and cannot be ridden again" in {
+    "be at least 23 -- multi-line `do`/`prompt` bumped it; 22 has shipped and cannot be ridden again" in {
       (td: TestData) =>
-        FORMAT_REVISION mustBe 24.toShort
+        // A FLOOR, not an exact pin: this case proves THIS feature's bump happened, and an exact
+        // pin failed on every later bump (24 -> 25 for `append`/`remove`, 2026-09-14) while its
+        // name went stale ("should be 23", asserting 24). The other BAST suites already use `>=`.
+        FORMAT_REVISION must be >= 23.toShort
     }
   }
 }

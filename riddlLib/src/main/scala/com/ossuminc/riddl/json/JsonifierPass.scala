@@ -1400,6 +1400,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       field match
         case fr: FieldRef => SetStmtDto(Some(path(fr.pathId)), None, serializeValue(value))
         case sr: StateRef => SetStmtDto(None, Some(path(sr.pathId)), serializeValue(value))
+    case AppendStatement(_, value, field) => AppendStmtDto(serializeValue(value), path(field.pathId))
+    case RemoveStatement(_, field, value, key) =>
+      RemoveStmtDto(path(field.pathId), serializeValue(value), key.map(_.value))
     case SendStatement(_, msg, portlet, instant) =>
       val (pp, pk) = portletRef(portlet)
       SendStmtDto(serializeDeliverableOperand(msg), pp, pk, instant.map(serializeValue))

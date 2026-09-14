@@ -108,6 +108,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     // Statement leaves holding a single Value/BooleanExpression/message operand in a field
     case rq: RequireStatement => Seq(rq.condition) ++ rq.argument.toSeq
     case st: SetStatement     => Seq(st.value)
+    case cs: CollectionStatement => Seq(cs.value)
     case lt: LetStatement     => Seq(lt.expression)
     case pt: PutStatement     => Seq(pt.value)
     case rt: ReturnStatement  => Seq(rt.value)

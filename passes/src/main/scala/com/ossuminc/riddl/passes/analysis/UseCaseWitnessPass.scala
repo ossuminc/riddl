@@ -183,6 +183,7 @@ case class UseCaseWitnessPass(
   private def collectGetInputRefs(stmts: Seq[RiddlValue]): Seq[InputRef] =
     stmts.flatMap {
       case SetStatement(_, _, value)  => getInputRefsIn(value)
+      case cs: CollectionStatement    => getInputRefsIn(cs.value)
       case PutStatement(_, value, _)  => getInputRefsIn(value)
       case LetStatement(_, _, _, exp) => getInputRefsIn(exp)
       case ReturnStatement(_, v)      => getInputRefsIn(v)

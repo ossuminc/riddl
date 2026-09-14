@@ -160,7 +160,8 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
       case _: DoStatement =>
         total += 1; prompts += 1
       case _: TellStatement | _: SendStatement | _: MorphStatement | _: SetStatement |
-          _: BecomeStatement | _: ErrorStatement | _: CodeStatement | _: TerminateStatement =>
+          _: CollectionStatement | _: BecomeStatement | _: ErrorStatement | _: CodeStatement |
+          _: TerminateStatement =>
         total += 1; executables += 1
       case _: Statement =>
         total += 1 // control flow: when, match, let

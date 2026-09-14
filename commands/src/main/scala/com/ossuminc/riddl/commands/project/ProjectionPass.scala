@@ -283,6 +283,7 @@ case class ProjectionPass(
           case c: Constructor => fromValue(c)
           case _              => Seq.empty
       case st: SetStatement  => fromValue(st.value)
+      case cs: CollectionStatement => fromValue(cs.value)
       case t: TellStatement  => operandRefs(t.msg)
       case sd: SendStatement => operandRefs(sd.msg)
       case y: YieldStatement => operandRefs(y.msg)
@@ -351,6 +352,12 @@ case class ProjectionPass(
     case st: SetStatement =>
       obj("target") = ujson.Str(st.field.pathId.format)
       obj("value") = valueOperand(st.value, parents)
+    case cs: CollectionStatement =>
+      obj("target") = ujson.Str(cs.field.pathId.format)
+      obj("value") = valueOperand(cs.value, parents)
+      cs match
+        case RemoveStatement(_, _, _, Some(key)) => obj("key") = ujson.Str(key.value)
+        case _                                   => ()
     case y: YieldStatement => messageOperand(y.msg, parents).foreach(m => obj("message") = m)
     case r: ReplyStatement => messageOperand(r.msg, parents).foreach(m => obj("message") = m)
     case l: LetStatement =>

@@ -351,6 +351,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
         operandRefOpt(msg).toSeq ++ targetRef
       case YieldStatement(_, msg)              => operandRefOpt(msg).toSeq
       case SetStatement(_, field, _)           => Seq(field)
+      case cs: CollectionStatement             => Seq(cs.field)
       case MorphStatement(_, entity, state, value) =>
         Seq(entity, state) ++ operandRefOpt(value).toSeq
       case BecomeStatement(_, entity, handler) => Seq(entity, handler)

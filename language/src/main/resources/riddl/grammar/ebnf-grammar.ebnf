@@ -277,7 +277,8 @@ message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 (* Core statements available in all contexts *)
 statement = when_statement | match_statement | foreach_statement | send_statement | tell_statement |
    forward_statement |
-    yield_statement | reply_statement | the_set_statement | let_statement | put_statement |
+    yield_statement | reply_statement | the_set_statement | append_statement | remove_statement |
+    let_statement | put_statement |
     return_statement | terminate_statement | prompt_statement | code_statement | error_statement |
     require_statement | morph_statement | become_statement | comment ;
 
@@ -351,6 +352,12 @@ reply_statement = "reply" deliverable_message_value ;
 
 (* Variable operations. A54: `set`/`let` operands are now full value expressions. *)
 the_set_statement = "set" (field_ref | state_ref) "to" value ;
+(* Collection statements (2026-09-14): a fold can SAY what it appends to and removes from a      *)
+(* collection field of the entity's state. `remove` has a by-value and a keyed form; `from` is   *)
+(* tried first, and a value can never begin with a reserved word, so no lookahead is needed.     *)
+append_statement = "append" value "to" field_ref ;
+remove_statement = "remove" ( "from" field_ref "where" identifier "==" value
+                            | value "from" field_ref ) ;
 let_statement = "let" identifier [":" type_ref] "=" value ;
 
 (* A54: value expressions. A value is pseudo-code text, an AI-computed `prompt(...)`, a message/record
@@ -379,7 +386,7 @@ empty_value = ( "empty" | "none" ) [ !statement_start type_expression ] ;
 statement_start = ( "set" | "tell" | "send" | "forward" | "yield" | "reply" | "morph" | "become"
                   | "do" | "prompt" | "let" | "call" | "foreach" | "when" | "match" | "error"
                   | "require" | "put" | "return" | "terminate" | "code" | "focus" | "stop"
-                  | "read" | "write" | "ask" | "initiate" | "if" | "else" ) ;
+                  | "read" | "write" | "ask" | "initiate" | "if" | "else" | "append" | "remove" ) ;
 prompt_value = "prompt" "(" literal_string_block ")" [ "as" type_expression ] ;
 (* Numeric literals - integers and reals, written directly. No digit separators and no radix     *)
 (* prefixes: declined deliberately, and pure additions later if wanted.                           *)
