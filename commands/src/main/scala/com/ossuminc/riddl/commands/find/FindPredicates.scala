@@ -46,6 +46,7 @@ object FindPredicates {
     "connector", "constant", "context", "correlation", "do-statement", "document", "domain",
     "entity", "enumerator", "epic", "error-statement", "event", "field", "flow",
     "focus-on-group", "foreach-statement", "form", "forward-statement", "function", "group",
+    "append-statement", "remove-statement", // collection statements (2026-09-14)
     "handler", "inlet", "input", "invariant", "item", "let-statement", "linecomment", "list",
     "match-statement", "method", "methodargument", "module", "morph-statement", "on-event",
     "on-init", "on-other", "on-quiescence", "on-term", "onmessageclause", "optional-interaction", "outlet",
