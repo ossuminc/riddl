@@ -3188,21 +3188,28 @@ case class ValidationPass(
           // The obligation must be settled on EVERY path, not merely somewhere in the clause: a
           // refusal buried in one branch of a `when` used to exempt the whole clause while the
           // other branch produced nothing. See `dischargesOnEveryPath`.
-          // EMITTING ANY MESSAGE settles a path, not just yielding the declared one or refusing
-          // with error/require. An event-sourced entity often declines by RECORDING the refusal:
+          // WHAT SETTLES A PATH, narrowed at rc.19 and unchanged since: `yield`/`reply`,
+          // `error`/`require`, and `forward` (delegation). A `send` or `tell` does NOT -- neither
+          // of the declared message nor of a different one. Until rc.19 this comment said the
+          // opposite ("EMITTING ANY MESSAGE settles a path") and defended it with the
+          // event-sourcing idiom of declining by recording a `*Rejected` event; that allowance was
+          // retired with the rule change, but the comment outlived it, and riddl-generator found
+          // the two disagreeing on 2026-09-16 while writing a fixture of exactly that shape. A
+          // transmission is not a decision about THIS command's obligation: the sender may be
+          // publishing to a third party, and the `yields` contract is about what the command
+          // records or refuses. So the shape that declines by publishing must ALSO refuse:
           //
           //   on command RedeemPoints is {           // declares `yields event PointsRedeemed`
-          //     when prompt("balance >= points") then
-          //       yield event PointsRedeemed
-          //     else
-          //       send event RedeemPointsRejected to outlet ...
-          //     end }
+          //     require invariant SufficientBalance   // the refusal settles the failing path
+          //     yield event PointsRedeemed
+          //   }
           //
-          // (riddl-models reactive-bbq LoyaltyAccount.riddl:579). That `else` has decided and
-          // recorded its decision; it has not fallen through. Which message is the RIGHT one is a
-          // modelling judgment validation cannot make -- the `yields` type conformance loop below
-          // still checks every `yield`. What this predicate exists to catch is a path that does
-          // nothing at all, and `set`/`do`/an empty branch still fail it.
+          // or, in a `when`, put an `error` in the `else` AFTER the `send` (`error` is terminal;
+          // a transmission is not an A23 effect, so it may precede the refusal). The
+          // reactive-bbq clause this comment used to cite (LoyaltyAccount `RedeemPoints`) is
+          // written the first way and validates BECAUSE of its `require`, not its `send`. What
+          // this predicate exists to catch is a path that does not decide at all; `set`/`do`/an
+          // empty branch fail it, and so does a lone `send`.
           val settled = dischargesOnEveryPath(omc.contents) { (stmt, _) =>
             stmt match
               case _: ErrorStatement | _: RequireStatement => true
