@@ -30,8 +30,8 @@ Line-number citations into CLAUDE.md from before this date are stale; two were r
 
 ### Build state — verified 2026-09-11 (afternoon) by running
 
-**`2.1.1` is released** (tag on `20e72732d`), Scala 3.9.0 final. **BAST `FORMAT_REVISION` 24**
-(unchanged by [1.25]: no AST-shape change).
+**`2.2.0` is released** (tag on `d4f11e348`, 2026-09-14), Scala 3.9.0 final. **BAST
+`FORMAT_REVISION` 25.** `../bin/riddlc` and ivy are at `2.2.0`.
 
 **`../bin/riddlc` is `2.1.1-33-dd3c2d80`, dated Sep 10 — now well behind HEAD and it contains
 NEITHER `handler-duplicate-special-clause` NOR the [1.25] port rules.** Nothing was published
@@ -73,7 +73,11 @@ exemption). The `Advisory` kind and the four event-sourcing rules landed 2026-09
 the derived-fold reading landed 2026-09-14 (entries below). `task/` is EMPTY. Consumer drops:
 riddl-models (three addenda on one file), synapify and riddl-vscode (new kind), riddl-generator,
 ossum.tech (language reference: implied ports, Advisory, `forward`, `append`/`remove`).
-**`/ship` was interrupted for these tasks and is the next step** — recommendation was 2.2.0. `../bin/riddlc` and ivy were restaged together at the
+**2.2.0 SHIPPED 2026-09-14** (tag on `d4f11e348`; release, npm, Homebrew all green). The
+`bump-consumers` step is still pending Reid's approval of the seven task files (riddl-models,
+riddl-generator, synapify, riddl-vscode, riddl-idea-plugin, ossum.tech, ossum.ai; riddlsim and
+riddl-mcp-server are not checked out). BACKLOG [2.11]–[2.18] hold riddlg's language proposals
+awaiting rulings. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -102,6 +106,24 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-18 — post-2.2.0: a stale comment, and eight proposals filed rather than built
+
+Three riddl-generator drops. One was a re-drop confirming what 2.2.0 already shipped (closed).
+One found the yields-conformance comment still claiming "emitting ANY message settles a path"
+— the pre-rc.19 allowance — while the code counts only yield/reply, error/require and forward.
+**The code is the ruling; the comment outlived it.** Rewritten with the two legal shapes
+(`require` first; or `send` THEN `error` in the `else`, since `error` is terminal and a
+transmission is not an A23 effect) and pinned by `YieldSettledBySendTest` so the two cannot
+drift apart in either direction. Lesson: a comment that argues for a rule is a second copy of
+the rule, and a rule change must update both.
+
+The third is riddlg's list of eight language features from its fill measurements (553 holes,
+4h37m). Reid approved riddlg's PLAN to file them, which is not approval of the features, so
+they went into BACKLOG § 2 as [2.11]–[2.18] with numbers and lowerings — smallest first. Two
+flags for the rulings: B4 (arithmetic) conflicts with the 2026-08-23 "WILL NEVER EXIST" ruling,
+reaffirmed on the 14th by the derived-fold reading; B1's binding already exists (A57), only
+`kind of m` and union-common field access are new.
 
 ## 2026-09-14 — `append` / `remove`: rule 3 asked the language a question it could not answer
 

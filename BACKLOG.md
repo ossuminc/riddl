@@ -1385,6 +1385,46 @@ verification is carried here so it is not repeated.**
 
 ### 2. Queued, needs a plan
 
+#### Language features riddl-generator asked for, 2026-09-17 — PROPOSALS awaiting rulings
+
+Source: `task/done/2026-09-17-language-features-for-generation.md` (riddlg, from nine fill
+measurements on reactive-bbq: 553 AI-filled holes, 4h37m, each hole a sentence RIDDL had no
+spelling for). Reid approved riddlg's PLAN to file these — not the features. Each needs a
+ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
+
+- **[2.11] B6 — a `prompt(…)` in a YIELD ARGUMENT should warn.** 14 in reactive-bbq; the hole
+  the AI fills worst and that nearly always names a field path or `system.now`. A Style or
+  Advisory: "state the value, or leave the field for the fold". **Small.** Cheapest first.
+- **[2.12] B8 — a lint for validation prose that could be a range type.** `do "validate X is
+  between 1 and 20"` on a command field → `partySize: Integer(1,20)`. A `[style]` warning when
+  prose matches "validate <field> is between/within/one of". **Small**; riddlg validates a
+  range type in the constructor for free.
+- **[2.13] B7 — an explicit `log`/`audit` statement**, "record this for humans", lowering to a
+  logger or B3's history table. 34 `do` statements under `on other` in reactive-bbq are this.
+  **Small–medium** (a new statement: the full reflective surface, see [1.25]'s `append`).
+- **[2.14] B1 — `kind of m` and union-common field access under `on other as m`.** The
+  BINDING already exists (A57, 2026-08-31); new are `kind of m` (the message's type name as a
+  String) and `m.<field>` resolving when EVERY member of the inlet's union carries the field
+  (else `ref-not-common-to-union`). Retires the 8 event-log flows, ≈114 holes. **Medium.**
+- **[2.15] B3 — schema `key on field …` (a UNIQUE natural key, distinct from `index on`) and
+  an optional `with history` table.** Gives `store` (B2) upsert semantics and a UNIQUE
+  constraint; NINE wrote three identical rows for one reservation. **Medium.**
+- **[2.16] B5 — collection expressions**: `all of xs where p`, `any of …`, a filter, `count of`,
+  `x in xs`, `map`. Every one is a prompt today; the kitchen fold's guard is the one the AI got
+  wrong twice. **Large** — a value-expression family with per-element scoping; touches the
+  `Value` union (8 sites minimum, CLAUDE.md).
+- **[2.17] B2 — repository statements**: `store record R(…) in Schema.table`, `update … set …
+  where …`, `delete from … where …`, `query … where … yield result …`, typed against the
+  schema. Retires 114 prose holes and the whole SQL error class riddlg measured. **Large** —
+  and it decides whether RIDDL models storage operations at all; a CM question before a
+  language one.
+- **[2.18] B4 — arithmetic and time in value expressions.** `+ - * /`, `now + 30 days`,
+  string concatenation; ≈25 prompts. **CONFLICTS with a standing ruling**: 2026-08-23, "RIDDL
+  does not do arithmetic — WILL NEVER EXIST; `pointBalance + accrualPoints` is what the AI
+  prompt is for" (riddl-models BACKLOG #21, which says "do not file this upstream again"), and
+  2026-09-14 reaffirmed it by making a prompt-valued field `set` a DERIVED fold. Filed here only
+  because riddlg's numbers reopen the question; **declined unless Reid reverses the ruling.**
+
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
 
 **RULINGS TAKEN 2026-08-14, before an unattended run.** Reid answered four questions
