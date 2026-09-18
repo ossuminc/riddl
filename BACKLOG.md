@@ -1406,6 +1406,7 @@ ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
   BINDING already exists (A57, 2026-08-31); new are `kind of m` (the message's type name as a
   String) and `m.<field>` resolving when EVERY member of the inlet's union carries the field
   (else `ref-not-common-to-union`). Retires the 8 event-log flows, ≈114 holes. **Medium.**
+  **APPROVED by Reid 2026-09-18.** In progress.
 - **[2.15] B3 — schema `key on field …` (a UNIQUE natural key, distinct from `index on`) and
   an optional `with history` table.** Gives `store` (B2) upsert semantics and a UNIQUE
   constraint; NINE wrote three identical rows for one reservation. **Medium.**
@@ -1418,12 +1419,13 @@ ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
   schema. Retires 114 prose holes and the whole SQL error class riddlg measured. **Large** —
   and it decides whether RIDDL models storage operations at all; a CM question before a
   language one.
-- **[2.18] B4 — arithmetic and time in value expressions.** `+ - * /`, `now + 30 days`,
-  string concatenation; ≈25 prompts. **CONFLICTS with a standing ruling**: 2026-08-23, "RIDDL
-  does not do arithmetic — WILL NEVER EXIST; `pointBalance + accrualPoints` is what the AI
-  prompt is for" (riddl-models BACKLOG #21, which says "do not file this upstream again"), and
-  2026-09-14 reaffirmed it by making a prompt-valued field `set` a DERIVED fold. Filed here only
-  because riddlg's numbers reopen the question; **declined unless Reid reverses the ruling.**
+- **[2.18] B4 — arithmetic and time in value expressions.** **REVERSED by Reid 2026-09-18**:
+  the 2026-08-23 "RIDDL does not do arithmetic" ruling is withdrawn, **strictly bounded to the
+  task's ask**: `+ - * /` on numerics, comparison, `now` and `now + <duration>` / `t < now` on
+  timestamps, string concatenation — **and constant value expressions** (a `constant` may be an
+  expression of these). **NOT power, roots, or any math-library function** — those are
+  system-dependent and stay `prompt("…")`. riddl-models BACKLOG #21 and the "derived fold"
+  reading of 2026-09-14 both need amending when this lands. Queued behind [2.14]. **Large.**
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
 
