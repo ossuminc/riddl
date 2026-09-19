@@ -102,6 +102,21 @@ decision.
   **The type is BARE after the colon** — no keyword. `message` would be untrue
   and `type` is correct only because it is vacuous; the colon already says a type
   follows.
+  **`x.<f>` resolves the ENVELOPE's field first, then a field COMMON to every
+  message that can reach the clause (B1, Reid 2026-09-18: *"Keep A57; m resolves
+  envelope fields first, then union-common message fields"*).** The residual set
+  is the processor's dataflow-inlet types (alternations expanded) minus what
+  sibling `on <message>` clauses take — `on other` is `case _`. Common means every
+  member carries `f` with the same type (aliases compared by identity, else by
+  `format`); the resolved definition is the first member's field. PARTIAL
+  coverage is `handler-on-other-field-not-common`, emitted directly from
+  `ResolutionPass.resolveUnionCommonField` (not via `notResolved`, which `quiet`
+  suppresses) and the ref is still resolved so `value-ref-unresolved` does not
+  pile on. Zero coverage / no inlets: today's `value-ref-unresolved`.
+  **`kind of m` is `m.type`** — the envelope's CloudEvents `type` attribute; no
+  syntax was added. **The `process` arm for `OnOtherClause` resolves the envelope
+  path under the CLAUSE** — it was `()` until B1, so `x.source` had never actually
+  resolved and no test had asked.
   **`OnOtherClause` must NOT join `OnMessageLikeClause`** — that is what keeps it
   out of `UseCaseWitnessPass`'s index; a clause matching every type would witness
   every step.

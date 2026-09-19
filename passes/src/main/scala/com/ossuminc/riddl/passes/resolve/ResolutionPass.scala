@@ -128,7 +128,14 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: OnTerminationClause    => ()
       case _: OnActivationClause     => ()
       case _: OnPassivationClause    => ()
-      case _: OnOtherClause          => ()
+      // A57: the envelope type an `on other as x` binding denotes -- the clause's ascription, else
+      // the type `option message_envelope` names. Recorded under the CLAUSE so `resolveValueRef`
+      // finds it there. Until B1 (2026-09-18) this arm was `()`, so `x.source` never resolved and
+      // no test had asked. `envelopePathFor` is None for a plain `on other`, which resolves nothing.
+      case ooc: OnOtherClause =>
+        envelopePathFor(ooc, parents).foreach { path =>
+          associateUsage[Type](ooc, resolveAPathId[Type](path, parents))
+        }
       // 2026-09-07: the quiescence window may name a Duration-typed constant or field. It is a
       // header value, not a statement, so no `let` scope exists; the ordinary ValueRef anchors
       // (state, handled message, `findAnchor`) apply and validation owns the type diagnostic.
@@ -716,8 +723,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                     if names.sizeIs == 1 then
                       refMap.add[Type](vr.path, parent, t)
                       associateUsage(parent, t)
-                    else
+                    else if aggregateFieldsOf(t).exists(_.id.value == names(1)) then
                       resolvePathFromAnchor[Definition](vr.path, parents, t, symbols.parentsOf(t))
+                    else
+                      // B1 (Reid, 2026-09-18): the envelope has no such field, so `x.f` falls
+                      // through to a field EVERY message that can reach this clause carries.
+                      resolveUnionCommonField(vr, parents, ooc, t)
                     end if
                 }
               // Task 3 / final review: an `on init(...)`/`on term(...)` PARAMETER. Like a `let`,
@@ -747,6 +758,123 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       }
     end if
   end resolveValueRef
+
+  /** The fields of `t`'s aggregate, following an alias chain with an `eq` visited list (the
+    * `type A is B` / `type B is A` cycle is a real StackOverflowError, and structural `equals`
+    * would fuse two distinct identical declarations — see CLAUDE.md on the alias walks).
+    */
+  private def aggregateFieldsOf(t: Type, visited: Seq[Type] = Nil): Seq[Field] =
+    if visited.exists(_ eq t) then Seq.empty
+    else
+      t.typEx match
+        case ate: AggregateTypeExpression => ate.fields
+        case a: AliasedTypeExpression =>
+          refMap.definitionOf[Type](a.pathId).toSeq.flatMap(aggregateFieldsOf(_, visited :+ t))
+        case _ => Seq.empty
+
+  /** The distinct message types an inlet's declared type admits — an alternation's members,
+    * recursively, aliases followed; a plain type is its own single member. Mirrors
+    * `ValidationPass.alternationMembers`, which is private there.
+    */
+  private def admittedMembers(t: Type, visited: Seq[Type] = Nil): Seq[Type] =
+    if visited.exists(_ eq t) then Seq.empty
+    else
+      val seen = visited :+ t
+      t.typEx match
+        case alt: Alternation =>
+          alt.of.toSeq.flatMap(a =>
+            refMap.definitionOf[Type](a.pathId).toSeq.flatMap(admittedMembers(_, seen))
+          )
+        case a: AliasedTypeExpression =>
+          refMap.definitionOf[Type](a.pathId).toSeq.flatMap(admittedMembers(_, seen))
+        case _ => Seq(t)
+
+  /** Two field type expressions agree when both are aliases naming the SAME Type (by identity)
+    * or, otherwise, when they are written the same way — the strict syntactic test A57's
+    * neighbours already use, never a loose assignment compatibility.
+    */
+  private def sameFieldType(a: TypeExpression, b: TypeExpression): Boolean =
+    (a, b) match
+      case (x: AliasedTypeExpression, y: AliasedTypeExpression) =>
+        (refMap.definitionOf[Type](x.pathId), refMap.definitionOf[Type](y.pathId)) match
+          case (Some(tx), Some(ty)) => tx eq ty
+          case _                    => x.format == y.format
+      case _ => a.format == b.format
+
+  /** B1 (Reid, 2026-09-18: *"Keep A57; m resolves envelope fields first, then union-common
+    * message fields"*). Under `on other as x`, `x.f` where the envelope has no field `f` denotes
+    * the field `f` of the message itself — legal only when EVERY message that can reach the
+    * clause carries an `f` of the same type, because `on other` is `case _` and cannot know which
+    * one arrived.
+    *
+    * The RESIDUAL set is what can reach the clause: every type admitted by the enclosing
+    * processor's dataflow inlets (alternations expanded) minus the types sibling `on <message>`
+    * clauses in the same handler already take. The resolved definition is the FIRST member's
+    * field — they are interchangeable by construction, so typing downstream needs nothing new.
+    *
+    * PARTIAL coverage — some members lack `f`, or carry it as a different type — is an Error
+    * emitted HERE and directly (not through `notResolved`, which `quiet` suppresses), and the
+    * reference is still resolved to a carrying member's field so `value-ref-unresolved` does not
+    * also fire with its misleading text: one defect, one message, the specific one. ZERO coverage
+    * (no inlets, or no member carries `f`) records nothing, and validation reports it as today.
+    */
+  private def resolveUnionCommonField(
+    vr: ValueRef,
+    parents: Parents,
+    ooc: OnOtherClause,
+    envelope: Type
+  ): Unit =
+    val names = vr.path.value
+    val fieldName = names(1)
+    val parent = parents.head
+    val admitted: Seq[Type] =
+      parents.collectFirst { case p: Processor[?] => p }.toSeq.flatMap { p =>
+        p.dataflowInlets.flatMap(in => refMap.definitionOf[Type](in.type_.pathId).toSeq)
+      }.flatMap(admittedMembers(_))
+    val handled: Seq[Type] =
+      parents.collectFirst { case h: Handler => h }.toSeq.flatMap { h =>
+        h.clauses.collect { case omc: OnMessageLikeClause if omc.msg.nonEmpty => omc }
+          .flatMap(omc => refMap.definitionOf[Type](omc.msg.pathId, omc).toSeq)
+      }
+    val residual: Seq[Type] = admitted
+      .foldLeft(Seq.empty[Type])((acc, t) => if acc.exists(_ eq t) then acc else acc :+ t)
+      .filterNot(t => handled.exists(_ eq t))
+    val carrying: Seq[(Type, Field)] =
+      residual.flatMap(m => aggregateFieldsOf(m).find(_.id.value == fieldName).map(m -> _))
+    carrying.headOption.foreach { case (_, first) =>
+      val lacking = residual.filterNot(m => carrying.exists(_._1 eq m))
+      val differing = carrying.collect {
+        case (m, f) if !sameFieldType(f.typeEx, first.typeEx) => m
+      }
+      if lacking.nonEmpty || differing.nonEmpty then
+        val members = residual.map(m => s"'${m.id.value}'").mkString(", ")
+        val why =
+          (if lacking.nonEmpty then
+             Seq(s"${lacking.map(m => s"'${m.id.value}'").mkString(", ")} lack it")
+           else Nil) ++
+            (if differing.nonEmpty then
+               Seq(
+                 s"${differing.map(m => s"'${m.id.value}'").mkString(", ")} " +
+                   s"carry it as a different type than '${carrying.head._1.id.value}' does"
+               )
+             else Nil)
+        messages.addError(
+          vr.loc,
+          s"'${vr.path.format}' is not a field of the envelope '${envelope.id.value}', and not " +
+            s"every message that can reach this 'on other' carries '$fieldName': ${why.mkString("; ")}",
+          suggestion = "Handle the differing messages in their own 'on <kind> <Message>' clause " +
+            s"so they never reach 'on other', add '$fieldName' to them with the same type, or " +
+            s"read only fields common to all of $members.",
+          ruleId = Some(RuleId.OnOtherFieldNotCommon)
+        )
+      end if
+      if names.sizeIs == 2 then
+        refMap.add[Field](vr.path, parent, first)
+        associateUsage(parent, first)
+      else resolvePathFromAnchor[Definition](vr.path, parents, first, symbols.parentsOf(first))
+      end if
+    }
+  end resolveUnionCommonField
 
   /** A55: the value-scope [[Field]] a [[ValueRef]]'s leading name may denote — a field of the
     * enclosing entity's state record(s), of the handled on-clause message, or of the enclosing

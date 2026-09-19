@@ -1402,11 +1402,6 @@ ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
 - **[2.13] B7 — an explicit `log`/`audit` statement**, "record this for humans", lowering to a
   logger or B3's history table. 34 `do` statements under `on other` in reactive-bbq are this.
   **Small–medium** (a new statement: the full reflective surface, see [1.25]'s `append`).
-- **[2.14] B1 — `kind of m` and union-common field access under `on other as m`.** The
-  BINDING already exists (A57, 2026-08-31); new are `kind of m` (the message's type name as a
-  String) and `m.<field>` resolving when EVERY member of the inlet's union carries the field
-  (else `ref-not-common-to-union`). Retires the 8 event-log flows, ≈114 holes. **Medium.**
-  **APPROVED by Reid 2026-09-18.** In progress.
 - **[2.15] B3 — schema `key on field …` (a UNIQUE natural key, distinct from `index on`) and
   an optional `with history` table.** Gives `store` (B2) upsert semantics and a UNIQUE
   constraint; NINE wrote three identical rows for one reservation. **Medium.**
@@ -1425,7 +1420,7 @@ ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
   timestamps, string concatenation — **and constant value expressions** (a `constant` may be an
   expression of these). **NOT power, roots, or any math-library function** — those are
   system-dependent and stay `prompt("…")`. riddl-models BACKLOG #21 and the "derived fold"
-  reading of 2026-09-14 both need amending when this lands. Queued behind [2.14]. **Large.**
+  reading of 2026-09-14 both need amending when this lands. **Large.** Next up.
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
 

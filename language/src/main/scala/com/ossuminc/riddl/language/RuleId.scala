@@ -232,6 +232,7 @@ enum RuleId(
   case OnOtherNoEnvelope extends RuleId("handler-on-other-no-envelope")
   case OnOtherUnbound extends RuleId("handler-on-other-unbound")
   case OnOtherEnvelopeConflict extends RuleId("handler-on-other-envelope-conflict")
+  case OnOtherFieldNotCommon extends RuleId("handler-on-other-field-not-common")
 
   // ---- stmt: statements and their operands -------------------------------------------------
   case ForwardWrongClause extends RuleId("stmt-forward-wrong-clause")

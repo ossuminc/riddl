@@ -36,6 +36,7 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `Type expression \`${typeEx}\` needs all elements to be a graph type for keyword \`graph\`` | Make every alternative a graph type, e.g. 'type X = graph of NodeType'. |
 | `Type expression \`${typEx}\` needs to be a table for keyword \`table\`` | Declare the referenced type as a table, e.g. 'type X = table of RowType'. |
 | `Path reference '${pid}' is ambiguous. Definitions are: …` | `Disambiguate '${pid}' with a more specific, fully-qualified path (e.g. 'Domain.Context.Entity.Name') so it matches exactly one definition.` |
+| `'${path}' is not a field of the envelope '${envelope}', and not every message that can reach this 'on other' carries '${field}': ${members} lack it / carry it as a different type` (Error, `handler-on-other-field-not-common`) | `Handle the differing messages in their own 'on <kind> <Message>' clause so they never reach 'on other', add '${field}' to them with the same type, or read only fields common to all of ${members}.` |
 
 ## Resolution — `ReferenceMap.scala` / `UsageResolution.scala` / `SymbolsPass.scala`
 

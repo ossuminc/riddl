@@ -458,7 +458,13 @@ fact from that file that you had no reason to look for, it belongs back here.
   `PredefinedModuleSourceTest` fails on drift.
 
 - **`on other as x [: <envelope>]` (A57)** — **the ascription RESTATES the
-  `option message_envelope` in scope; it never OVERRIDES it.** A per-clause
+  `option message_envelope` in scope; it never OVERRIDES it.** **`x.f` resolves
+  the ENVELOPE's field first, then a field COMMON to every message that can reach
+  the clause** (B1, 2026-09-18; partial coverage is
+  `handler-on-other-field-not-common`, emitted from the RESOLVER). `kind of m` is
+  `m.type` — build no syntax for it. The `process` arm for `OnOtherClause` must
+  resolve the envelope path under the clause; it was `()` for three weeks and
+  `x.source` silently never resolved. A per-clause
   override would mean reading one clause tells you nothing about its siblings —
   exactly what scope inheritance prevents. **Rendering lives in
   `Declaration.ascription`, NOT the clause's `format`**: `format` alone makes

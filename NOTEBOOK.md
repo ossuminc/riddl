@@ -76,8 +76,10 @@ ossum.tech (language reference: implied ports, Advisory, `forward`, `append`/`re
 **2.2.0 SHIPPED 2026-09-14** (tag on `d4f11e348`; release, npm, Homebrew all green). The
 `bump-consumers` step is still pending Reid's approval of the seven task files (riddl-models,
 riddl-generator, synapify, riddl-vscode, riddl-idea-plugin, ossum.tech, ossum.ai; riddlsim and
-riddl-mcp-server are not checked out). BACKLOG [2.11]–[2.18] hold riddlg's language proposals
-awaiting rulings. `../bin/riddlc` and ivy were restaged together at the
+riddl-mcp-server are not checked out). BACKLOG [2.11]–[2.18] held riddlg's language proposals;
+**Reid ruled 2026-09-18**: B4 reversed within bounds, B1 approved and LANDED (entry below,
+[2.14] closed), "proceed with those new language features and anything else in the backlog";
+the consumer-bump task files are CANCELLED until the next release. Next: [2.18] B4. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -106,6 +108,34 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-18 (later) — B1: `m.<field>` falls through from the envelope to the union
+
+riddlg asked for `on other as m` to bind the residual MESSAGE so an event-log flow could write
+`m.kitchenTicketId` and `kind of m`; A57 already binds `m` to the ENVELOPE. Reid: *"Keep A57;
+m resolves envelope fields first, then union-common message fields."* Two consequences fell
+out of that without any syntax: `kind of m` is `m.type` (the CloudEvents attribute the
+envelope already carries), and `m.f` for a non-envelope `f` resolves to the field every
+message that can reach the clause carries — the inlet's admitted types minus what sibling
+clauses take, because `on other` is `case _`. Partial coverage is
+`handler-on-other-field-not-common`, emitted from the resolver directly and the ref still
+resolved, so `value-ref-unresolved` does not pile a misleading second message on.
+
+**What building it found: A57's resolver route had never worked.** `process`'s arm for
+`OnOtherClause` was `()`, so the envelope path was never recorded under the clause and
+`resolveValueRef` looked it up there and found nothing — `env.source` had never resolved,
+and `OnOtherEnvelopeBindingTest` had never asked (every positive was `do "log it"`). The
+CLAUDE.md line "resolving to that Type makes both `x` and `x.source` work" was a description
+of the intent, not of a test. Same shape as the yields comment earlier today: a claim with no
+assertion behind it survives until someone builds on it. The first new test (`m.type`)
+reddened for that reason before the union route was even reached.
+
+Fixture trap, for the record: an event named `C` inside `context C` is ambiguous to a bare
+`event C` in an alternation; the resolver said so correctly and I renamed the context.
+
+`OnOtherUnionFieldTest`, six cases, canary-checked (stubbing the lookup reddens three). No
+grammar, BAST or JSON change. Corpus unmoved by construction — nothing writes the shape yet;
+riddl-models' eight flows need one `option message_envelope("Riddl.Envelope")` line each.
 
 ## 2026-09-18 — post-2.2.0: a stale comment, and eight proposals filed rather than built
 
