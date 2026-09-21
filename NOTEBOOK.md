@@ -80,10 +80,10 @@ riddl-mcp-server are not checked out). BACKLOG [2.11]–[2.18] held riddlg's lan
 **Reid ruled 2026-09-18**: B4 reversed within bounds, B1 approved and LANDED (entry below,
 [2.14] closed), "proceed with those new language features and anything else in the backlog";
 the consumer-bump task files are CANCELLED until the next release. **B4 landed 2026-09-21**
-(entry below; [2.18] closed, [2.19] filed for the duration windows); **B6, B8 and B7 landed the
-same day** ([2.11], [2.12], [2.13] closed). `../bin/riddlc` and ivy were restaged together at
-`2.2.0-6-7c2d1889` (before B7 — restage again after it). Next: [2.15] B3, [2.16] B5, then
-[2.17] B2 as a CM question for Reid. `../bin/riddlc` and ivy were restaged together at the
+(entry below; [2.18] closed, [2.19] filed for the duration windows); **B6, B8, B7 and B3 landed the
+same day** ([2.11], [2.12], [2.13], [2.15] closed); Reid ruled B2 IN (all four statements plus
+`upsert`) and B5 "plan it now". Restage `../bin/riddlc` + ivy after each batch (last at
+`2.2.0-7-5f57d5e0`, before B3). Next: [2.17] B2, then [2.16] B5. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -112,6 +112,22 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-21 (night) — B3: schema keys and history
+
+`key on field F` (a UNIQUE natural key; several keys are several constraints, no composite) and
+`of X as R with history` (an append-only history the generator maintains). Reid ruled both
+halves in; B2's `upsert` will identify its row by the key, so this went first. The corpus has
+334 `index on <…Id>` lines that are `key on` candidates and eight event-log repositories that
+are `with history` candidates; nothing moved (191/191 at 0/0).
+
+Design notes worth keeping: the new Schema fields went AFTER `metadata` so the three positional
+constructors kept compiling — a small rule, but it is why this took an hour and not an
+afternoon. And `with history` on the data line collides with the schema's own `with { }` on
+exactly the last data line; `NoCut` around the optional keyword pair is the third instance of
+the same idiom this month, so CLAUDE.md now states the rule rather than the instance: an
+optional keyword that shares a prefix with what may FOLLOW needs `NoCut`, or the keyword cut
+turns "not present" into "parse error".
 
 ## 2026-09-21 (evening) — B7: `log`, the twenty-second statement
 

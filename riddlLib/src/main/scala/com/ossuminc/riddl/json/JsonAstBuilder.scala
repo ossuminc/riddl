@@ -2011,7 +2011,9 @@ object JsonAstBuilder:
       data,
       links,
       indices,
-      meta(s.brief, s.metadata)
+      meta(s.brief, s.metadata),
+      s.keys.map(f => FieldRef(curAt, pathId(f))), // B3
+      s.history.map(h => Identifier(curAt, h))
     )
 
   private def buildRepository(r: RepositoryDto)(using Ctx): Repository =

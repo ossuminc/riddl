@@ -47,8 +47,15 @@ private[parsing] trait RepositoryParser {
     )
   }
 
-  private def data[u: P]: P[(Identifier, TypeRef)] = {
-    P(of ~ identifier ~ as ~ typeRef)./
+  /** `of <name> as <typeRef> [with history]` (B3, 2026-09-21). The `NoCut` is load-bearing:
+    * `Keywords.with` cuts after the keyword, and the schema's OWN `with { … }` follows the last
+    * data line -- without it, `with {` would fail inside this option instead of backtracking to
+    * `withMetaData` (the same idiom `refOrLookup` needs for `at`).
+    */
+  private def data[u: P]: P[(Identifier, TypeRef, Boolean)] = {
+    P(of ~ identifier ~ as ~ typeRef ~ NoCut(Keywords.`with` ~ Keywords.history).!.?)./.map {
+      case (id, tr, withHistory) => (id, tr, withHistory.nonEmpty)
+    }
   }
 
   private def link[u: P]: P[(Identifier, FieldRef, FieldRef)] =
@@ -57,15 +64,22 @@ private[parsing] trait RepositoryParser {
   private def index[u: P]: P[FieldRef] =
     P(Keywords.index ~ Keywords.on ~ fieldRef)./
 
+  /** B3: `key on field F` -- a UNIQUE natural key; `index on` stays an index. */
+  private def key[u: P]: P[FieldRef] =
+    P(Keywords.key ~ Keywords.on ~ fieldRef)./
+
   def schema[u: P]: P[Schema] = {
     P(
       Index ~ Keywords.schema ~ identifier ~ is ~ schemaKind ~
-        data.rep(1) ~ link.rep(0) ~ index.rep(0) ~ withMetaData ~ Index
-    )./.map { case (start, id, kind, data, links, indices, descriptives, end) =>
-      val dataMap = Map.from[Identifier, TypeRef](data)
+        data.rep(1) ~ link.rep(0) ~ key.rep(0) ~ index.rep(0) ~ withMetaData ~ Index
+    )./.map { case (start, id, kind, data, links, keys, indices, descriptives, end) =>
+      val dataMap = Map.from[Identifier, TypeRef](data.map(d => d._1 -> d._2))
+      val history = data.collect { case (id, _, true) => id }
       val linkMap =
         Map.from[Identifier, (FieldRef, FieldRef)](links.map(i => i._1 -> (i._2 -> i._3)))
-      Schema(at(start, end), id, kind, dataMap, linkMap, indices, descriptives.toContents)
+      Schema(
+        at(start, end), id, kind, dataMap, linkMap, indices, descriptives.toContents, keys, history
+      )
     }
   }
 

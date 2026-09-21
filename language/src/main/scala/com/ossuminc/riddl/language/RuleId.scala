@@ -314,6 +314,9 @@ enum RuleId(
   case RelationalNoLinks extends RuleId("repo-relational-no-links")
   case LinkTypeMismatch extends RuleId("repo-link-type-mismatch")
   case VectorManyNodes extends RuleId("repo-vector-many-nodes")
+  // B3 (2026-09-21): schema keys and history.
+  case SchemaKeyNotStoredField extends RuleId("repo-schema-key-not-stored-field")
+  case SchemaHistoryUnknownData extends RuleId("repo-schema-history-unknown-data")
   case RepositoryNoHandler extends RuleId("repo-no-handler")
   case RepositoryNoCommandsOrQueries extends RuleId("repo-no-commands-or-queries")
   case RepositoryInletCarriesEvent extends RuleId("repo-inlet-carries-event")

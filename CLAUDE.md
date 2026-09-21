@@ -1580,6 +1580,11 @@ resolution and type-checking — in `checkStatementScopes`.
   compiler names plus the catch-alls `append` needed (`statementValues`,
   `valueReferencedDefs`, `checkStatementScopes`, `Finder.fieldChildren`, the emitter), the
   `KeywordsTest` count, BAST sub-kind + revision, JSON, find kinds, EBNF + `statement_start`.
+  **Schema `key on` / `with history` (B3, 2026-09-21)**: `Schema.keys`/`.history` are trailing
+  defaulted fields AFTER `metadata` — keep new Schema fields there. The data line's
+  `NoCut(with ~ history)` is the third load-bearing `NoCut` (after `refOrLookup`'s `at` and
+  B4's `literalString`): any optional keyword that shares a prefix with what may FOLLOW the
+  rule needs one, or the cut in `Keywords.keyword` turns "not present" into "parse error".
   **Two traps that bit while building it**: `literalString` CUTS after its opening quote, so
   an atom of the expression ladder must be `NoCut(literalString)` or `when "prose"` fails
   behind the cut instead of backtracking to the deprecated-string arm; and identifiers may

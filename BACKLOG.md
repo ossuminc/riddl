@@ -1392,11 +1392,6 @@ measurements on reactive-bbq: 553 AI-filled holes, 4h37m, each hole a sentence R
 spelling for). Reid approved riddlg's PLAN to file these — not the features. Each needs a
 ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
 
-- **[2.15] B3 — schema `key on field …` (a UNIQUE natural key, distinct from `index on`) and
-  an optional `with history` table.** Gives `store` (B2) upsert semantics and a UNIQUE
-  constraint; NINE wrote three identical rows for one reservation. **Medium.**
-  **RULED by Reid 2026-09-21: BOTH halves land.** First of the three, since B2's `upsert`
-  needs the key.
 - **[2.16] B5 — collection expressions**: `all of xs where p`, `any of …`, a filter, `count of`,
   `x in xs`, `map`. Every one is a prompt today; the kitchen fold's guard is the one the AI got
   wrong twice. **Large** — a value-expression family with per-element scoping; touches the

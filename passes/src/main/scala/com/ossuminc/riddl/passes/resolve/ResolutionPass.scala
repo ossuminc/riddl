@@ -215,6 +215,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       // union, so a later case would shadow this one.
       case sc: Schema =>
         sc.data.values.foreach(tr => associateUsage(sc, resolveATypeRef(tr, parents)))
+        // B3 (2026-09-21): a `key on` field IS resolved -- the population starts at zero, so
+        // there is no corpus to surprise, and a key's target is exactly what B2's storage
+        // statements will identify a row by.
+        sc.keys.foreach(fr => associateUsage[Field](sc, resolveARef[Field](fr, parents)))
       // `links` and `indices` are deliberately NOT resolved here yet. They hold FieldRefs, and
       // resolving them surfaces references that have never been checked: `language/input/
       // everything_full.riddl` alone has `link relationship as field agg.time to field agg.ident`

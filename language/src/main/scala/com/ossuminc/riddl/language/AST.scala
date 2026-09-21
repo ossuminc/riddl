@@ -5593,6 +5593,17 @@ object AST:
     * @param indices
     *   A list of fields in the ((data)) or ((links) that are considered indexed for faster
     *   retrieval
+    * @param keys
+    *   B3 (2026-09-21): `key on field F` -- each a UNIQUE natural key of the stored record it
+    *   belongs to, distinct from an index (which only speeds retrieval). Several keys are several
+    *   independent uniqueness constraints, not a composite key. B2's storage statements identify
+    *   a row by its key. TRAILING and defaulted, after `metadata`, so every positional
+    *   construction of a Schema keeps compiling.
+    * @param history
+    *   B3: the names of the `data` entries marked `with history` -- the generator maintains an
+    *   append-only history of every stored version of that entry. A name list beside `data`
+    *   rather than a flag inside it, because `data` is an unordered map whose value is a bare
+    *   TypeRef and every reader of it would otherwise change.
     */
   @JSExportTopLevel("Schema")
   case class Schema(
@@ -5602,7 +5613,9 @@ object AST:
     data: Map[Identifier, TypeRef] = Map.empty[Identifier, TypeRef],
     links: Map[Identifier, (FieldRef, FieldRef)] = Map.empty[Identifier, (FieldRef, FieldRef)],
     indices: Seq[FieldRef] = Seq.empty[FieldRef],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+    metadata: Contents[MetaData] = Contents.empty[MetaData](),
+    keys: Seq[FieldRef] = Seq.empty[FieldRef],
+    history: Seq[Identifier] = Seq.empty[Identifier]
   ) extends Leaf:
     def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
   end Schema

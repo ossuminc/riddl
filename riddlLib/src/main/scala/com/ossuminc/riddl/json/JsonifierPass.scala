@@ -1168,7 +1168,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
           sc.links.map { case (id, (a, b)) => id.value -> Seq(path(a.pathId), path(b.pathId)) },
           sc.indices.map(fr => path(fr.pathId)),
           briefOf(sc.metadata),
-          metaOf(sc.metadata)
+          metaOf(sc.metadata),
+          sc.keys.map(fr => path(fr.pathId)), // B3
+          sc.history.map(_.value)
         )
       )
     case st: SagaStep =>

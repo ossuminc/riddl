@@ -909,9 +909,12 @@ class BASTReader(
 
     // Read indices
     val indices = readSeq(() => readFieldRef())
+    // B3 (revision 28): keys and history names, written after the indices
+    val keys = readSeq(() => readFieldRef())
+    val history = readSeq(() => readIdentifierInline())
     val metadata = readMetadataDeferred()
 
-    Schema(loc, id, schemaKind, data, links, indices, metadata)
+    Schema(loc, id, schemaKind, data, links, indices, metadata, keys, history)
   }
 
   private def readStreamletNode(): Streamlet = {

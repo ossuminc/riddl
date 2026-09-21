@@ -4289,7 +4289,45 @@ case class ValidationPass(
     schema.indices.foreach { fieldRef =>
       checkRef[Field](fieldRef, parents)
     }
+    checkSchemaKeysAndHistory(schema, parents)
   }
+
+  /** B3 (2026-09-21): a `key on field F` must name a field of one of the schema's STORED records
+    * -- a key on some other record's field is a modelling error, not an index the store cannot
+    * build. Checked for keys only; `index on` keeps its resolve-to-any-field check (551 corpus
+    * uses, not audited here). A `with history` name that is not a data entry can only arrive by
+    * JSON or BAST, and is reported rather than silently kept.
+    */
+  private def checkSchemaKeysAndHistory(schema: Schema, parents: Parents): Unit =
+    val storedFields: Seq[Field] = schema.data.values.toSeq.flatMap { tr =>
+      resolution.refMap.definitionOf[Type](tr.pathId, parents.head).toSeq.flatMap(t =>
+        aggregateFieldsOf(t.typEx)
+      )
+    }
+    val stored = schema.data.values.map(_.pathId.format).toSeq.distinct.mkString(", ")
+    schema.keys.foreach { fieldRef =>
+      checkRef[Field](fieldRef, parents).foreach { field =>
+        if !storedFields.exists(_ eq field) then
+          messages.addError(
+            fieldRef.loc,
+            s"Key '${fieldRef.pathId.format}' is not a field of a record this schema stores " +
+              s"($stored)",
+            suggestion = "A key names a field of one of the schema's 'of … as record …' entries; " +
+              "store the record, or key on a field it has.",
+            ruleId = Some(RuleId.SchemaKeyNotStoredField)
+          )
+      }
+    }
+    schema.history.foreach { name =>
+      if !schema.data.keys.exists(_.value == name.value) then
+        messages.addError(
+          name.loc,
+          s"'${name.value}' is marked 'with history' but is not a data entry of this schema",
+          suggestion = "Mark one of the schema's 'of <name> as …' entries.",
+          ruleId = Some(RuleId.SchemaHistoryUnknownData)
+        )
+    }
+  end checkSchemaKeysAndHistory
 
   private def validateRelationship(
     relationship: Relationship,
@@ -5565,7 +5603,8 @@ case class ValidationPass(
         .flatMap(_.clauses)
         .collect { case omc: OnMessageLikeClause if omc.msg.nonEmpty => omc }
         .exists(_.msg.messageKind == AggregateUseCase.QueryCase)
-      if answersQueries && schemas.nonEmpty && schemas.forall(_.indices.isEmpty) then
+      // B3: a key is an index too, so a keyed schema is not unindexed.
+      if answersQueries && schemas.nonEmpty && schemas.forall(s => s.indices.isEmpty && s.keys.isEmpty) then
         messages.addCompleteness(
           repository.errorLoc,
           s"${repository.identify} answers queries but its schema declares no index, so every " +

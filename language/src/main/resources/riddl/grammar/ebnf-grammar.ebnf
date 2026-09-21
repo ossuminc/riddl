@@ -615,11 +615,14 @@ repository = "repository" identifier [as_shape] is "{" repository_body "}" [with
 repository_body = {undefined | repository_definitions} ;
 repository_definitions = {processor_definition_contents | schema | repository_include} ;
 repository_include = "include" literal_string ;
-schema = "schema" identifier is schema_kind {data} {link} {index} [with_metadata] ;
+(* B3 (2026-09-21): `key on` is a UNIQUE natural key, distinct from an index; `with history`
+   on a data line asks the generator for an append-only history of that entry. *)
+schema = "schema" identifier is schema_kind {data} {link} {key} {index} [with_metadata] ;
 schema_kind = "flat" | "relational" | "time-series" | "graphical" | "hierarchical" | "star" | "document" | "columnar" | "vector" | "other" ;
-data = "of" identifier byAs type_ref ;
+data = "of" identifier byAs type_ref ["with" "history"] ;
 link = "link" identifier byAs field_ref "to" field_ref ;
 index = "index" "on" field_ref ;
+key = "key" "on" field_ref ;
 
 (* Adaptor-related *)
 adaptor = "adaptor" identifier adaptor_direction context_ref [as_shape] is "{" adaptor_body "}" [with_metadata] ;

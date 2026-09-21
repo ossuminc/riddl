@@ -1,0 +1,28 @@
+// Exercises B3 (2026-09-21): a schema's `key on field F` (a UNIQUE natural key, distinct from
+// `index on`) and `of X as R with history` (an append-only history of every stored version).
+domain Kitchen is {
+  context Tickets is {
+    record StoredKitchenTicket is { kitchenTicketId: String, stationId: String, status: String }
+      with { briefly "a stored ticket" }
+    record StoredStation is { stationId: String, name: String } with { briefly "a station" }
+    query FindTicket replies result TicketFound is { kitchenTicketId: String } with { briefly "q" }
+    result TicketFound is { kitchenTicketId: String, status: String } with { briefly "r" }
+
+    repository TicketStore is {
+      schema KitchenTicketSchema is relational
+        of tickets as record Tickets.StoredKitchenTicket with history
+        of stations as record Tickets.StoredStation
+        link ticketStation as field Tickets.StoredKitchenTicket.stationId to field Tickets.StoredStation.stationId
+        key on field Tickets.StoredKitchenTicket.kitchenTicketId
+        key on field Tickets.StoredStation.stationId
+        index on field Tickets.StoredKitchenTicket.status
+      with { briefly "keyed on the ticket id" }
+      inlet In is query Tickets.FindTicket with { briefly "i" }
+      outlet Out is result Tickets.TicketFound with { briefly "o" }
+      handler H is {
+        on q: query Tickets.FindTicket is { reply result Tickets.TicketFound(kitchenTicketId = q.kitchenTicketId, status = "open") }
+        on other is { error "unexpected" }
+      } with { briefly "h" }
+    } with { briefly "the store" }
+  } with { briefly "tickets" }
+} with { briefly "kitchen" }

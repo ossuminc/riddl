@@ -164,7 +164,11 @@ package object bast {
     // not optional even for a file holding no new node.
     // 27 (2026-09-21, B7) adds statement sub-kind 24 (`log <value>`). A revision-26 reader has no
     // arm for the tag and throws at the dispatch -- the honest failure.
-    27 // B7 `log` statement (sub-kind 24)
+    // 28 (2026-09-21, B3) appends two sequences to the schema node -- `key on` field refs and
+    // `with history` data names -- after the indices. A revision-27 reader would take the key
+    // count as the first byte of the deferred metadata and misalign: the failure the gate exists
+    // to make clean.
+    28 // B3 schema keys and history
     // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.

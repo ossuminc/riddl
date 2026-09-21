@@ -210,6 +210,10 @@ object Keywords {
 
   def index[u: P]: P[Unit] = keyword(Keyword.index)
 
+  def key[u: P]: P[Unit] = keyword(Keyword.key)
+
+  def history[u: P]: P[Unit] = keyword(Keyword.history)
+
   def init[u: P]: P[Unit] = keyword(Keyword.init)
 
   def initial[u: P]: P[Unit] = keyword(Keyword.initial)
@@ -499,6 +503,7 @@ object Keywords {
           Keyword.graph,
           Keyword.group,
           Keyword.handler,
+          Keyword.history,
           Keyword.if_,
           Keyword.import_,
           Keyword.include,
@@ -510,6 +515,7 @@ object Keywords {
           Keyword.input,
           Keyword.invariant,
           Keyword.items,
+          Keyword.key,
           Keyword.label,
           Keyword.link,
           Keyword.log,
@@ -683,6 +689,7 @@ object Keyword {
   final val graph = "graph"
   final val group = "group"
   final val handler = "handler"
+  final val history = "history"
   final val if_ = "if"
   final val import_ = "import"
   final val include = "include"
@@ -695,6 +702,7 @@ object Keyword {
   final val input = "input"
   final val invariant = "invariant"
   final val items = "items"
+  final val key = "key"
   final val label = "label"
   final val let = "let"
   final val link = "link"
@@ -860,6 +868,7 @@ object Keyword {
     graph,
     group,
     handler,
+    history,
     if_,
     import_,
     include,
@@ -871,6 +880,7 @@ object Keyword {
     input,
     invariant,
     items,
+    key,
     label,
     let,
     link,

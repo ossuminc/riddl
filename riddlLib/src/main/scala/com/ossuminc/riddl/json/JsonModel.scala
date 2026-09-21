@@ -1176,7 +1176,10 @@ object JsonModel:
   )
 
   /** A repository schema: `{ "name": "S", "kind"?: "Relational"|..., "data"?: {field->typePath},
-    * "links"?: {name->[fieldA,fieldB]}, "indices"?: [field], "brief"?: ... }`
+    * "links"?: {name->[fieldA,fieldB]}, "indices"?: [field], "keys"?: [field], "history"?:
+    * [dataName], "brief"?: ... }`. `keys` and `history` are B3 (2026-09-21): unique natural keys
+    * and the data entries kept with an append-only history; both default empty so files written
+    * before them read unchanged.
     */
   case class SchemaDto(
     name: String,
@@ -1185,7 +1188,9 @@ object JsonModel:
     links: Map[String, Seq[String]] = Map.empty,
     indices: Seq[String] = Nil,
     brief: Option[String] = None,
-    metadata: Option[MetaDto] = None
+    metadata: Option[MetaDto] = None,
+    keys: Seq[String] = Nil,
+    history: Seq[String] = Nil
   )
 
   /** `{ "name": "Repo", "schema"?: <schema>, ... }` */
@@ -2890,6 +2895,7 @@ object JsonModel:
     "isInitial",
     "items",
     "keys",
+    "history", // B3: SchemaDto
     "keyword",
     "kind",
     "label",

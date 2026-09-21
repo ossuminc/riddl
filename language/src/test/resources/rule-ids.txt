@@ -408,3 +408,5 @@ constant-operand-not-constant
 constant-expression-type-mismatch
 stmt-yield-argument-prompt
 stmt-do-validates-a-range
+repo-schema-key-not-stored-field
+repo-schema-history-unknown-data

@@ -65,6 +65,7 @@ is covered in that construct's phase. The builder emits references as
 | Version | ✅ A53 / A47 | `version` on root/module/domain + all six processors; `name` + `numeric` flag |
 | Copyright | ✅ A47 | `copyright` on root/module/domain + all six processors; `name` + verbatim `text` |
 | Enumerator | ✅ Phase 2 | names + explicit `value` |
+| Schema `keys` / `history` | ✅ B3 (2026-09-21) | `"keys": [<fieldPath>]`, `"history": [<dataName>]` on `SchemaDto`; both default empty so pre-B3 JSON reads unchanged |
 | Constant | ✅ Phase 2 / numeric-literals (2026-08-15) / B4 (2026-09-21) | in context/entity; `value` is a `ValueDto` (`ConstantValue = LiteralString \| NumericLiteral \| BooleanLiteral \| PromptValue \| ArithmeticExpression \| DurationLiteral \| ConstantRef \| ValueRef`), not a bare string; `buildConstant` narrows and errors on any other shape |
 | User | ✅ Phase 2 | at domain level |
 | Term | ✅ Phase 9 | glossary entry (metadata; see Metadata section) |

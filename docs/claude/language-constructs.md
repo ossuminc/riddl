@@ -550,6 +550,22 @@ decision.
   ResolutionPass resolves `c.value` (it resolved only the type before B4, which
   is why a constant's prompt ascription never resolved).
 
+- **B3 — schema `key on field F` and `of X as R with history` (landed 2026-09-21).**
+  `Schema` gained `keys: Seq[FieldRef]` and `history: Seq[Identifier]` as TRAILING defaulted
+  fields AFTER `metadata`, so every positional construction (`RepositoryTest`, the BAST
+  reader, `JsonAstBuilder`) kept compiling; `history` is a name list beside `data` because
+  `data` is an unordered map with a bare `TypeRef` value. Keywords `key` and `history`
+  (`allKeywords` 171), not definition keywords. The schema rule stays strictly ordered:
+  `data+ link* key* index*`. **The data line's `NoCut(with ~ history)` is load-bearing**:
+  `Keywords.with` cuts, and the schema's own `with { … }` follows the last data line, so
+  without it `with {` fails inside the option instead of backtracking to `withMetaData`.
+  Validation: a key must name a field of a STORED record (`repo-schema-key-not-stored-field`,
+  membership by `eq` through `aggregateFieldsOf`); a keyed schema satisfies
+  `repo-queried-without-index`; keys ARE resolved in ResolutionPass (population zero) while
+  `links`/`indices` stay unresolved as that arm's comment rules. BAST: two sequences after the
+  indices, `FORMAT_REVISION` 28. JSON: `keys`, `history` on `SchemaDto`. Prettify: `with
+  history` on the data line, `key on` lines between links and indices.
+
 - **B7 — the `log` statement (landed 2026-09-21).** `LogStatement(loc, value: Value)`,
   keyword `log` (registered in `allKeywords` and `statementStart`; NOT a definition keyword,
   so a field named `log` stays legal). `log <value>` for any value. Deterministic, not state

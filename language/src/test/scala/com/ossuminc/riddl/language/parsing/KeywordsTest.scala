@@ -39,7 +39,9 @@ class KeywordsTest extends AbstractTestingBasis {
       // allKeywords for tokenization but NOT in definitionKeywords, so it remains a legal identifier.
       // 169 as of 2026-09-21: `log`, for B7's `log <value>` statement. Registered for tokenization
       // and the statement lead; NOT a definitionKeyword (a field named `log` stays legal).
-      Keyword.allKeywords.size must be(169)
+      // 171 as of 2026-09-21: `key` and `history`, for B3's schema `key on field …` and
+      // `… with history`. Neither is a definitionKeyword.
+      Keyword.allKeywords.size must be(171)
     }
   }
 

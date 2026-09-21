@@ -900,7 +900,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   def writeSchema(s: Schema): Unit = {
     writeNodeTag(NODE_SCHEMA, s.metadata.nonEmpty)
-    writer.writeU8(s.schemaKind.ordinal) // Subtype: 0=Relational, 1=Document, 2=Graphical
+    writer.writeU8(s.schemaKind.ordinal) // Subtype: the RepositorySchemaKind ordinal (Other=0, Flat=1, Relational=2, ...)
     writeLocation(s.loc)
     writeIdentifierInline(s.id) // Inline - no tag needed
     // Write data map
@@ -918,6 +918,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     }
     // Write indices
     writeSeq(s.indices)(writeFieldRef)
+    // B3 (revision 28): keys, then the names of the data entries kept with history
+    writeSeq(s.keys)(writeFieldRef)
+    writeSeq(s.history)(writeIdentifierInline)
   }
 
   // ========== Epic/UseCase Component Serialization ==========

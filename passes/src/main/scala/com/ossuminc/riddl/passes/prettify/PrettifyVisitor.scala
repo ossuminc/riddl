@@ -364,7 +364,9 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         .nl
       rfe.incr
       schema.data.toSeq.sortBy(_._1.value).foreach { (id: Identifier, typeRef: TypeRef) =>
-        rfe.addIndent("of ").add(id.format).add(" as ").add(typeRef.format).nl
+        rfe.addIndent("of ").add(id.format).add(" as ").add(typeRef.format)
+        if schema.history.exists(_.value == id.value) then rfe.add(" with history") // B3
+        rfe.nl
       }
       rfe.incr
       schema.links.toSeq.sortBy(_._1.value).foreach { (id: Identifier, tr: (FieldRef, FieldRef)) =>
@@ -376,6 +378,9 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
           .add(" to ")
           .add(tr._2.format)
           .nl
+      }
+      schema.keys.foreach { fieldRef => // B3: keys sit between links and indices
+        rfe.addIndent("key on ").add(fieldRef.format).nl
       }
       schema.indices.foreach { fieldRef =>
         rfe.addIndent("index on ").add(fieldRef.format).nl
