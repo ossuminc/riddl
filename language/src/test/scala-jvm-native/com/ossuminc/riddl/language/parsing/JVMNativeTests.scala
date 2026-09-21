@@ -26,6 +26,7 @@ class JVMNativeMetaDataTest extends MetaDataTest
 class JVMNativeModuleTest extends ModuleTest
 class JVMNativeNebulaTest extends NebulaTest
 class JVMNativeNumericLiteralTest extends NumericLiteralTest
+class JVMNativeArithmeticExpressionParsingTest extends ArithmeticExpressionParsingTest
 class JVMNativeParsingTestTest extends ParsingTestTest
 class JVMNativeProjectorTest extends ProjectorTest
 class JVMNativeRepositoryTest extends RepositoryTest

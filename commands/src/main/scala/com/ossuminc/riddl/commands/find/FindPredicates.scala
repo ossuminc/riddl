@@ -47,6 +47,7 @@ object FindPredicates {
     "entity", "enumerator", "epic", "error-statement", "event", "field", "flow",
     "focus-on-group", "foreach-statement", "form", "forward-statement", "function", "group",
     "append-statement", "remove-statement", // collection statements (2026-09-14)
+    "arithmetic-expression", "duration-literal", // B4 value kinds (2026-09-21)
     "handler", "inlet", "input", "invariant", "item", "let-statement", "linecomment", "list",
     "match-statement", "method", "methodargument", "module", "morph-statement", "on-event",
     "on-init", "on-other", "on-quiescence", "on-term", "onmessageclause", "optional-interaction", "outlet",

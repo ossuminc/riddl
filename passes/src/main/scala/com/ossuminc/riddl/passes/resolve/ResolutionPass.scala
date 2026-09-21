@@ -165,6 +165,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage(c, resolveConnectorEnd[Inlet](c.to, parents))
       case c: Constant =>
         associateUsage(c, resolveTypeExpression(c, c.typeEx, parents))
+        // B4 (2026-09-21): a constant's value may be an EXPRESSION naming other constants, so it
+        // resolves like any value. Until now only the type expression resolved -- which also
+        // meant a constant's `prompt(...) as T` ascription never did.
+        resolveValue(c.value, parents)
       case a: Adaptor =>
         associateUsage(a, resolveARef[Context | Group](a.referent, parents))
       case s: Streamlet =>
@@ -581,11 +585,15 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: BooleanLiteral        => ()
       case _: NumericLiteral        => ()
       case ce: ComparisonExpression =>
-        // A28, widened 2026-08-14: operands are Comparands (refs, or a bare NumericLiteral);
-        // resolve each.
-        resolveComparand(ce.left, parents); resolveComparand(ce.right, parents)
+        // B4 (2026-09-21): operands are full Values now; `resolveComparand` serves match patterns.
+        resolveValue(ce.left, parents); resolveValue(ce.right, parents)
       case le: LogicalExpression => resolveValue(le.left, parents); resolveValue(le.right, parents)
       case ne: NotExpression     => resolveValue(ne.expr, parents)
+      // B4: arithmetic recurses; a duration literal holds no references; `constant X` resolves.
+      case ae: ArithmeticExpression =>
+        resolveValue(ae.left, parents); resolveValue(ae.right, parents)
+      case _: DurationLiteral => ()
+      case cr: ConstantRef    => associateUsage(parents.head, resolveARef[Constant](cr, parents))
 
   /** A28: resolve a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef |
     * NumericLiteral). A `ConstantRef` and a `GetValue` source resolve here (into the refMap); a

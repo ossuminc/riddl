@@ -79,7 +79,9 @@ riddl-generator, synapify, riddl-vscode, riddl-idea-plugin, ossum.tech, ossum.ai
 riddl-mcp-server are not checked out). BACKLOG [2.11]–[2.18] held riddlg's language proposals;
 **Reid ruled 2026-09-18**: B4 reversed within bounds, B1 approved and LANDED (entry below,
 [2.14] closed), "proceed with those new language features and anything else in the backlog";
-the consumer-bump task files are CANCELLED until the next release. Next: [2.18] B4. `../bin/riddlc` and ivy were restaged together at the
+the consumer-bump task files are CANCELLED until the next release. **B4 landed 2026-09-21**
+(entry below; [2.18] closed, [2.19] filed for the duration windows). Next: [2.11] B6, [2.12]
+B8, [2.13] B7, [2.15] B3, [2.16] B5, then [2.17] B2 as a CM question for Reid. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -108,6 +110,43 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-21 — B4: arithmetic, bounded, and every expression gets a real type
+
+Reid reversed the 2026-08-23 "RIDDL does no arithmetic" ruling on the 18th, strictly within
+riddlg's ask, and the plan review on the 21st sharpened the one thing the plan had wrong: I had
+written that a boolean expression's type "is None" and proposed typing arithmetic by category
+string. *Boolean expressions are `Boolean`; a numeric expression is the SMALLEST constrained
+numeric type its operands admit.* That became `combineArithmetic`'s lattice join (`Natural <
+Whole < Integer < Real < Number`, Decimal/Current/Range on the side) with two forced widenings
+(`-` on Natural gives Integer; `/` on Natural gives Whole) and one representation rule the CM
+now states: Integer / Integer is Integer, truncating. Memory file
+`feedback_expressions_get_real_types` records the correction.
+
+**What landed.** `ArithmeticExpression` and `DurationLiteral` as Value kinds, `ConstantRef`
+promoted into `Value`, and `ComparisonExpression`'s operands widened from `Comparand` to
+`Value` — so `a + b > c`, `"x" == name` and `count > true` all PARSE and validation decides
+(A28 s3's parse-time rejection is reversed; three tests moved from "parse error" to
+"validation Error"). The ladder is `or < and < not < comparison < additive < multiplicative <
+atom`. Constants may be expressions of literals, durations and other constants. BAST revision
+26; JSON `arithmetic`/`duration` kinds, and `buildValue`'s `ConstantRefDto` arm stopped
+degrading to a `ValueRef`. `typeExprCategory` learned `timestamp` and `duration`, so `t <
+system.now` is a CHECKED comparison for the first time — and the corpus census (191/191 entry
+points, 0 errors 0 warnings on both 2.2.0 and HEAD, calibrated on the summary line) shows the
+new category moved nothing.
+
+**Two traps.** `literalString` cuts after its opening quote; as an atom of the ladder it broke
+`when "prose"` in seven suites at once (the ladder took the string, `booleanExprOnly`'s filter
+refused it, the cut forbade the backtrack to the deprecated-string arm). `NoCut(literalString)`
+— the same load-bearing wrapper `refOrLookup` already carries for `at`. And identifiers may
+contain `-`, so `a-3` is one name; documented, asserted, not "fixed". The survey that preceded
+the plan counted 96 dispatch sites over `Value`, 12 compile-enforced — CLAUDE.md's "EIGHT
+sites" was an undercount by an order of magnitude, and the catch-alls (`Finder.fieldChildren`
+was also blind to `LookupValue.indices`, `EmptyValue.typeEx` and `Constant.value`) are where
+the next arm will go missing.
+
+**Not done, by ruling**: no bare `now` (`system.now` is the spelling, 87 corpus uses); the
+`on quiescence` / `times out after` windows keep their string durations ([2.19]).
 
 ## 2026-09-18 (later) — B1: `m.<field>` falls through from the envelope to the union
 

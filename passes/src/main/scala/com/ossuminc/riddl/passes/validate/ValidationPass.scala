@@ -399,12 +399,13 @@ case class ValidationPass(
       if stmts.isEmpty then Fold.Prose
       else
         // A `set` of a STATED FIELD from a `prompt(...)` is DERIVED, not prose (Reid, 2026-09-14,
-        // riddl-models' `prose-folds-append-and-arithmetic-have-no-other-spelling`): RIDDL does
-        // no arithmetic by design (ruled 2026-08-23), so `set field S.balance to prompt("balance +
-        // points")` is the language's own spelling of a computation -- the target and operands
-        // are stated, only the operation is prose. What the rule can honestly demand of a
-        // prompt-by-design language is that every fold NAMES WHAT IT CHANGES; `set state S to
-        // prompt(...)` names nothing and stays prose.
+        // riddl-models' `prose-folds-append-and-arithmetic-have-no-other-spelling`): the target
+        // and operands are stated, only the operation is prose, and what the rule demands is that
+        // every fold NAMES WHAT IT CHANGES. `set state S to prompt(...)` names nothing and stays
+        // prose. When this was ruled, RIDDL did no arithmetic (2026-08-23) and the prompt was the
+        // language's own spelling of `balance + points`; B4 (2026-09-21) gave arithmetic syntax,
+        // so the prompt is now the LEGACY spelling -- still derived, deliberately: the reading was
+        // never about the operation.
         val prose = stmts.forall {
           case _: DoStatement                            => true
           case SetStatement(_, _: StateRef, _: PromptValue) => true
@@ -3767,8 +3768,74 @@ case class ValidationPass(
       // so a Constant never draws the seam CompletenessWarning -- the constant itself supplies
       // the type, per the ruling's table.
       case pv: PromptValue => checkPromptAscription(pv, Some(c.typeEx))
-      case _               => ()
+      // B4 (2026-09-21): a constant may be an expression -- of literals, durations and OTHER
+      // constants only. Operands resolve and type like any value; then the operand walk refuses
+      // anything that is not constant, and the result type is held to the declaration.
+      case other =>
+        validateValue(other, parents, Seq.empty, Map.empty)
+        checkConstantExpression(c, other, parents)
   }
+
+  /** B4: every leaf of a constant's expression must itself be constant -- a literal, a duration
+    * literal, a typed hole, `constant X`, or a bare path that RESOLVES to a `constant`. A field, a
+    * `let` or anything else is `constant-operand-not-constant`. Then the expression's type must be
+    * assignable to the declared one (`constant-expression-type-mismatch`); a bare literal's
+    * conformance is judged by `checkNumericLiteralConformance` as before.
+    */
+  private def checkConstantExpression(c: Constant, v: Value, parents: Parents): Unit =
+    def walk(v: Value): Unit = v match
+      case _: LiteralString | _: NumericLiteral | _: BooleanLiteral | _: DurationLiteral |
+          _: PromptValue =>
+        ()
+      case _: ConstantRef => () // existence is `validateValue`'s check
+      case vr: ValueRef =>
+        val isConstant =
+          parents.headOption.flatMap(h => resolution.refMap.anyDefinitionOf(vr.path, h)).exists(_.isInstanceOf[Constant]) ||
+            resolution.refMap.definitionOf[Constant](vr.path).nonEmpty
+        if !isConstant then
+          messages.addError(
+            vr.loc,
+            s"Constant '${c.id.value}' cannot be computed from '${vr.path.format}', which is not " +
+              "a constant",
+            suggestion = "A constant's expression may use only literals, duration literals and " +
+              "other constants; move the computation to the handler that has the value.",
+            ruleId = Some(RuleId.ConstantOperandNotConstant)
+          )
+      case ae: ArithmeticExpression => walk(ae.left); walk(ae.right)
+      case other =>
+        messages.addError(
+          other.loc,
+          s"Constant '${c.id.value}' cannot hold a ${other.kind.toLowerCase}",
+          suggestion = "A constant's expression may use only literals, duration literals and " +
+            "other constants.",
+          ruleId = Some(RuleId.ConstantOperandNotConstant)
+        )
+    walk(v)
+    v match
+      case ae: ArithmeticExpression =>
+        arithmeticResultType(ae, parents, Seq.empty, Map.empty).foreach { actual =>
+          val e = underlyingTypeExpr(c.typeEx)
+          val a = underlyingTypeExpr(actual)
+          if !e.isAssignmentCompatible(a) then
+            messages.addError(
+              ae.loc,
+              s"Constant '${c.id.value}' is declared '${c.typeEx.format}' but its expression is " +
+                s"'${a.format}'",
+              suggestion = s"Declare the constant as '${a.format}', or change the expression.",
+              ruleId = Some(RuleId.ConstantExpressionTypeMismatch)
+            )
+        }
+      case dl: DurationLiteral =>
+        val e = underlyingTypeExpr(c.typeEx)
+        if !e.isInstanceOf[Duration] then
+          messages.addError(
+            dl.loc,
+            s"Constant '${c.id.value}' is declared '${c.typeEx.format}' but its value is a Duration",
+            suggestion = "Declare the constant as 'Duration', or write a value of the declared type.",
+            ruleId = Some(RuleId.ConstantExpressionTypeMismatch)
+          )
+      case _ => ()
+  end checkConstantExpression
 
   /** A literal's value is statically known where a reference's is not, so a literal is held to a
     * STRICTER standard than the surrounding assignment rules. `NumericType.isAssignmentCompatible`
@@ -6495,6 +6562,9 @@ case class ValidationPass(
     case le: LogicalExpression    => valueReferencedDefs(le.left) ++ valueReferencedDefs(le.right)
     case ne: NotExpression        => valueReferencedDefs(ne.expr)
     case ce: ComparisonExpression => valueReferencedDefs(ce.left) ++ valueReferencedDefs(ce.right)
+    case ae: ArithmeticExpression => valueReferencedDefs(ae.left) ++ valueReferencedDefs(ae.right)
+    case cr: ConstantRef =>
+      resolution.refMap.definitionOf[Constant](cr.pathId).map(cr.pathId -> _).toSeq
     case _                        => Seq.empty
   end valueReferencedDefs
 
@@ -7621,6 +7691,8 @@ case class ValidationPass(
     case le: LogicalExpression    => countValueFailPoints(le.left) + countValueFailPoints(le.right)
     case ne: NotExpression        => countValueFailPoints(ne.expr)
     case ce: ComparisonExpression => countValueFailPoints(ce.left) + countValueFailPoints(ce.right)
+    case ae: ArithmeticExpression => countValueFailPoints(ae.left) + countValueFailPoints(ae.right)
+    case _: DurationLiteral       => 0 // B4: a literal, like a NumericLiteral
     // A17's ASK form contributes NOTHING of its own -- consulting an invariant is a test, not an
     // action that can fail -- but its `with` operand is a full Value and is counted, exactly as a
     // comparison contributes nothing while its operands count.
@@ -7726,6 +7798,8 @@ case class ValidationPass(
     case le: LogicalExpression    => stateReadsIn(le.left) ++ stateReadsIn(le.right)
     case ne: NotExpression        => stateReadsIn(ne.expr)
     case ce: ComparisonExpression => stateReadsIn(ce.left) ++ stateReadsIn(ce.right)
+    case ae: ArithmeticExpression => stateReadsIn(ae.left) ++ stateReadsIn(ae.right)
+    case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
     // CAN hold a state read and this must recurse rather than stop. `ref` needs no arm -- an
     // InvariantRef is a Reference and the arm below covers it.
@@ -7782,6 +7856,8 @@ case class ValidationPass(
     case le: LogicalExpression    => initiatesIn(le.left) ++ initiatesIn(le.right)
     case ne: NotExpression        => initiatesIn(ne.expr)
     case ce: ComparisonExpression => initiatesIn(ce.left) ++ initiatesIn(ce.right)
+    case ae: ArithmeticExpression => initiatesIn(ae.left) ++ initiatesIn(ae.right)
+    case _: DurationLiteral       => Seq.empty // B4: a literal
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
     // A `get from state`/`get from input` holds only a StateRef/InputRef -- no nested value -- so
     // it cannot contain an `initiate`.
@@ -7836,6 +7912,8 @@ case class ValidationPass(
     case le: LogicalExpression    => asksIn(le.left) ++ asksIn(le.right)
     case ne: NotExpression        => asksIn(ne.expr)
     case ce: ComparisonExpression => asksIn(ce.left) ++ asksIn(ce.right)
+    case ae: ArithmeticExpression => asksIn(ae.left) ++ asksIn(ae.right)
+    case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
     // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
     case ic: InvariantCondition => ic.argument.toSeq.flatMap(asksIn)
@@ -9725,6 +9803,15 @@ case class ValidationPass(
               .definitionOf[State](sr.pathId)
               .flatMap(st => resolution.refMap.definitionOf[Type](st.typ.pathId))
       case _: BooleanExpression => None // A28: a boolean expression denotes no named Type
+      // B4: an arithmetic result and a duration literal are predefined types, never a named one
+      // (see `valueTypeExpr`); a `constant X` yields the Type its declaration names, if any.
+      case _: ArithmeticExpression | _: DurationLiteral => None
+      case cr: ConstantRef =>
+        resolution.refMap.definitionOf[Constant](cr.pathId).flatMap { k =>
+          k.typeEx match
+            case ate: AliasedTypeExpression => resolveTypeAlias(ate)
+            case _                          => None
+        }
       // `self`'s type is a SYNTHESIZED Aggregation, not a named Type -- there is no declaration to
       // return here. `valueTypeExpr` computes the real TypeExpression (see its `SelfValue` arm);
       // this arm exists only so the match stays exhaustive.
@@ -9751,16 +9838,162 @@ case class ValidationPass(
   ): Option[String] =
     v match
       case _: BooleanExpression => Some("boolean")
-      case _ => valueType(v, parents, lets, elements).flatMap(t => typeExprCategory(t.typEx))
+      // B4 (2026-09-21): classify the TypeExpression-level answer, which is a superset of the
+      // named-Type one (a `let` of a predefined type, `system.now`, a literal, an arithmetic
+      // result all have a TypeExpression and no named Type).
+      case _ => operandTypeExpr(v, parents, lets, elements).flatMap(typeExprCategory)
 
+  /** B4: the categories a comparison and an arithmetic check reason in. `"timestamp"` and
+    * `"duration"` are new with B4; before it a `TimeStamp` comparison had no category and was
+    * silently unchecked.
+    */
   private def typeExprCategory(te: TypeExpression): Option[String] =
     te match
       case _: Bool        => Some("boolean") // Bool <: NumericType, so it must precede NumericType
       case _: NumericType => Some("numeric")
       case _: String_     => Some("string")
+      case _: TimeStamp | _: DateTime | _: ZonedDateTime | _: Date | _: Time => Some("timestamp")
+      case _: Duration => Some("duration")
       case ate: AliasedTypeExpression =>
         resolveTypeAlias(ate).flatMap(t => typeExprCategory(t.typEx))
       case _ => None
+
+  /** B4: `valueTypeExpr` plus the one arm it deliberately lacks -- a bare numeric literal, typed
+    * here as the SMALLEST constrained numeric type its text admits (`5` Natural, `0` Whole, `-3`
+    * Integer, `1.5` Real), which is what arithmetic and comparison typing need and what
+    * `checkNumericLiteralConformance` must NOT see (it judges a literal against an expected type
+    * with a better message).
+    */
+  private def operandTypeExpr(
+    v: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[TypeExpression] =
+    v match
+      case nl: NumericLiteral => Some(literalNumericType(nl))
+      case other              => valueTypeExpr(other, parents, lets, elements)
+
+  private def literalNumericType(nl: NumericLiteral): TypeExpression =
+    if !nl.isInteger then Real(nl.loc)
+    else
+      val digits = nl.text.dropWhile(c => c == '+' || c == '-')
+      val isZero = digits.forall(_ == '0')
+      if isZero then Whole(nl.loc)
+      else if nl.text.startsWith("-") then Integer(nl.loc)
+      else Natural(nl.loc)
+
+  /** B4 (Reid, 2026-09-21): the type of `left op right`, or None when the operands cannot be
+    * combined (the caller reports) or cannot be typed (the caller stays silent).
+    *
+    * Numeric with numeric gives the SMALLEST constrained numeric type that contains both operands
+    * and the result -- the join on `Natural < Whole < Integer < Real < Number`, with `RangeType`
+    * joining as the narrowest of the three integer types that contains its bounds, `Decimal`
+    * with `Decimal` staying Decimal (the wider precision) and otherwise joining at Number, and
+    * `Current` with `Current` staying Current and otherwise joining at Number. Two widenings
+    * because "constrained" must still CONTAIN the result: `-` on Natural/Whole/Range gives
+    * Integer (`3 - 5`), and `/` on Natural gives Whole (`1 / 2` is `0`). Integer with Integer is
+    * Integer for all four operators -- integer division truncates toward zero, the one
+    * representation rule B4 adds to the CM.
+    *
+    * String `+` String is String. A timestamp plus or minus a duration is that timestamp's type;
+    * a duration plus a timestamp likewise; timestamp minus timestamp is a Duration; duration with
+    * duration under `+`/`-` is Duration; a duration scaled by a number (`*` either way, `/` by a
+    * number) is Duration. Nothing else combines.
+    */
+  private def arithmeticResultType(
+    ae: ArithmeticExpression,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[TypeExpression] =
+    for
+      l <- operandTypeExpr(ae.left, parents, lets, elements)
+      r <- operandTypeExpr(ae.right, parents, lets, elements)
+      t <- combineArithmetic(ae.op, underlyingTypeExpr(l), underlyingTypeExpr(r), ae.loc)
+    yield t
+
+  private def combineArithmetic(
+    op: ArithmeticOperator,
+    l: TypeExpression,
+    r: TypeExpression,
+    loc: At
+  ): Option[TypeExpression] =
+    import ArithmeticOperator.*
+    def rank(te: TypeExpression): Int = te match
+      case _: Natural => 0
+      case _: Whole   => 1
+      case rt: RangeType =>
+        if rt.min >= 1 then 0 else if rt.min >= 0 then 1 else 2
+      case _: Integer => 2
+      case _: Real    => 3
+      case _          => 4 // Number, Decimal, Current -- handled before rank is consulted
+    def ofRank(n: Int): TypeExpression = n match
+      case 0 => Natural(loc)
+      case 1 => Whole(loc)
+      case 2 => Integer(loc)
+      case 3 => Real(loc)
+      case _ => Number(loc)
+    def isPlainNumeric(te: TypeExpression): Boolean = te match
+      case _: Bool        => false // Bool <: IntegerTypeExpression; not a number here
+      case _: NumericType => true
+      case _              => false
+    def isTimestamp(te: TypeExpression): Boolean = te match
+      case _: TimeStamp | _: DateTime | _: ZonedDateTime | _: Date | _: Time => true
+      case _                                                                 => false
+    (l, r) match
+      // numeric with numeric
+      case (ld: Decimal, rd: Decimal) =>
+        Some(Decimal(loc, math.max(ld.whole, rd.whole), math.max(ld.fractional, rd.fractional)))
+      case (_: Current, _: Current) => Some(Current(loc))
+      case (_: Decimal | _: Current | _: Number, n) if isPlainNumeric(n) => Some(Number(loc))
+      case (n, _: Decimal | _: Current | _: Number) if isPlainNumeric(n) => Some(Number(loc))
+      case (ln, rn) if isPlainNumeric(ln) && isPlainNumeric(rn) =>
+        val joined = math.max(rank(ln), rank(rn))
+        op match
+          case Subtract if joined <= 1 => Some(Integer(loc)) // Natural/Whole minus may go negative
+          case Divide if joined == 0   => Some(Whole(loc)) // 1 / 2 is 0
+          case _                       => Some(ofRank(joined))
+      // string concatenation
+      case (_: String_, _: String_) if op == Add => Some(String_(loc))
+      // time
+      case (t, _: Duration) if isTimestamp(t) && (op == Add || op == Subtract) => Some(t)
+      case (_: Duration, t) if isTimestamp(t) && op == Add                   => Some(t)
+      case (lt, rt) if isTimestamp(lt) && isTimestamp(rt) && op == Subtract  => Some(Duration(loc))
+      case (_: Duration, _: Duration) if op == Add || op == Subtract         => Some(Duration(loc))
+      case (_: Duration, n) if isPlainNumeric(n) && (op == Multiply || op == Divide) =>
+        Some(Duration(loc))
+      case (n, _: Duration) if isPlainNumeric(n) && op == Multiply => Some(Duration(loc))
+      case _ => None
+  end combineArithmetic
+
+  /** B4: report an arithmetic expression whose operands are both typable and cannot be combined
+    * by its operator. Silent when either side is untypable -- the same best-effort stance as
+    * `checkComparison`; an unresolved operand is reported by `validateValue`.
+    */
+  private def checkArithmetic(
+    ae: ArithmeticExpression,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    for
+      l <- operandTypeExpr(ae.left, parents, lets, elements)
+      r <- operandTypeExpr(ae.right, parents, lets, elements)
+    do
+      val lu = underlyingTypeExpr(l)
+      val ru = underlyingTypeExpr(r)
+      if combineArithmetic(ae.op, lu, ru, ae.loc).isEmpty then
+        messages.addError(
+          ae.loc,
+          s"Cannot apply '${ae.op.symbol}' to a '${lu.format}' value and a '${ru.format}' value",
+          suggestion = "Arithmetic combines numbers with numbers, a String with a String " +
+            "under '+', a timestamp with a Duration under '+'/'-', two timestamps under '-', " +
+            "two Durations under '+'/'-', and a Duration with a number under '*'/'/'. " +
+            "Anything else -- including power, roots and math-library functions -- is " +
+            "'prompt(\"…\")'.",
+          ruleId = Some(RuleId.ArithmeticOperandMismatch)
+        )
 
   /** A9b: the four [[AggregateUseCase]]s that are actual MESSAGES — the same set [[MessageRef]]'s
     * four subtypes (`CommandRef`/`EventRef`/`QueryRef`/`ResultRef`) restrict a keyword-led operand
@@ -10072,6 +10305,14 @@ case class ValidationPass(
       // is often written directly (`to Integer`) and so has no named Type to return.
       case lv: LookupValue =>
         valueTypeExpr(lv.collection, parents, lets, elements).flatMap(lookupResultType).map(_._1)
+      // B4 (Reid, 2026-09-21): every expression has a REAL type. A boolean expression is the
+      // predefined Boolean (it used to fall through to `valueType` and answer None, so
+      // `let b = a > 3` was untyped); a duration literal is a Duration; `constant X` is what X
+      // declares; an arithmetic result is the lattice join computed in `arithmeticResultType`.
+      case _: BooleanExpression => Some(Bool(v.loc))
+      case _: DurationLiteral   => Some(Duration(v.loc))
+      case cr: ConstantRef => resolution.refMap.definitionOf[Constant](cr.pathId).map(_.typeEx)
+      case ae: ArithmeticExpression => arithmeticResultType(ae, parents, lets, elements)
       case _ => valueType(v, parents, lets, elements).map(_.typEx)
 
   /** A54/A55: the named [[Type]] a [[ValueRef]] resolves to, if determinable. A bare on-clause
@@ -10227,11 +10468,20 @@ case class ValidationPass(
       case _: BooleanLiteral        => ()
       case _: NumericLiteral        => ()
       case ce: ComparisonExpression =>
-        // A28, widened 2026-08-14: operands are Comparands (refs or a bare NumericLiteral);
-        // validate each resolves, then enforce type-safety.
-        validateComparand(ce.left, parents, lets, elements)
-        validateComparand(ce.right, parents, lets, elements)
+        // B4 (2026-09-21): operands are full Values. The old comparand family still validates the
+        // shapes it always did (its messages name constants; a literal draws the style warning);
+        // anything else is an ordinary value. Then enforce type-safety.
+        validateComparisonOperand(ce.left, parents, lets, elements)
+        validateComparisonOperand(ce.right, parents, lets, elements)
         checkComparison(ce, parents, lets, elements)
+      // B4: arithmetic validates its operands, then whether the operator may combine them; a
+      // duration literal names nothing; `constant X` must exist.
+      case ae: ArithmeticExpression =>
+        validateValue(ae.left, parents, lets, elements)
+        validateValue(ae.right, parents, lets, elements)
+        checkArithmetic(ae, parents, lets, elements)
+      case _: DurationLiteral => ()
+      case cr: ConstantRef    => checkRef[Constant](cr, parents)
       case le: LogicalExpression =>
         validateValue(le.left, parents, lets, elements)
         validateValue(le.right, parents, lets, elements)
@@ -10332,6 +10582,35 @@ case class ValidationPass(
           .orElse(whenValueRefCategory(vr, parents, lets, elements))
       case _: NumericLiteral => Some("numeric")
 
+  /** B4: a comparison operand is a full Value. The comparand-shaped ones keep the comparand
+    * family's checks and messages (a `ValueRef` message that mentions constants, the literal
+    * style warning); everything else is validated as the value it is.
+    */
+  private def validateComparisonOperand(
+    v: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    v match
+      case c: (ConstantRef | GetValue | LookupValue | SystemValue | ValueRef | NumericLiteral) =>
+        validateComparand(c, parents, lets, elements)
+      case other => validateValue(other, parents, lets, elements)
+
+  /** B4: the category of a comparison operand -- the comparand family's answer for the shapes it
+    * knows (it carries the `when`-value-ref fallback), `valueCategory` for everything else.
+    */
+  private def operandCategory(
+    v: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[String] =
+    v match
+      case c: (ConstantRef | GetValue | LookupValue | SystemValue | ValueRef | NumericLiteral) =>
+        comparandCategory(c, parents, lets, elements)
+      case other => valueCategory(other, parents, lets, elements)
+
   /** A28: validate a comparison operand ([[Comparand]]) resolves. A [[ConstantRef]]/[[GetValue]] is
     * checked via [[checkRef]]; a bare [[ValueRef]] must be a `let`-local, an in-scope field, or a
     * named [[Constant]]. A [[NumericLiteral]] always resolves (it names nothing), but draws a
@@ -10383,8 +10662,8 @@ case class ValidationPass(
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
   ): Unit =
-    val lc = comparandCategory(ce.left, parents, lets, elements)
-    val rc = comparandCategory(ce.right, parents, lets, elements)
+    val lc = operandCategory(ce.left, parents, lets, elements)
+    val rc = operandCategory(ce.right, parents, lets, elements)
     ce.op match
       case ComparisonOperator.EQ | ComparisonOperator.NE =>
         (lc, rc) match
@@ -10397,15 +10676,19 @@ case class ValidationPass(
             )
           case _ => ()
       case _ =>
-        def requireNumeric(cat: Option[String], operand: Comparand): Unit =
+        // B4 (2026-09-21): timestamps and durations are ORDERED too. Before, `t < system.now`
+        // had no category at all and was silently unchecked.
+        def requireNumeric(cat: Option[String], operand: Value): Unit =
           cat match
-            case Some("numeric") => ()
+            case Some("numeric") | Some("timestamp") | Some("duration") => ()
             case Some(other) =>
               messages.addError(
                 operand.loc,
-                s"Ordering operator '${ce.op.symbol}' requires a numeric operand but got a $other value",
+                s"Ordering operator '${ce.op.symbol}' requires a numeric, timestamp or duration " +
+                  s"operand but got a $other value",
                 suggestion =
-                  "Order only numeric operands; use '=='/'!=' for equality of non-numeric values.",
+                  "Order only numeric, timestamp or duration operands; use '=='/'!=' for " +
+                    "equality of other values.",
                 ruleId = Some(RuleId.OrderingNeedsNumeric)
               )
             case None => ()

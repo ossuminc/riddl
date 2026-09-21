@@ -247,6 +247,10 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${input} sending ${putIn} … is invalid because … can only receive Commands and Queries` | Send a Command or Query here; vital definitions can only receive commands and queries. |
 | `${c} has entities but no repository to persist them; entities are stateful and should be persisted` (Completeness) | `Add a repository to ${c}, e.g. 'repository ${c.id}Repository is { ??? }'.` |
 | `${repository} answers queries but its schema declares no index, so every query reads the whole collection` (Completeness) | `Add 'index on field <Record>.<field>' to the schema of ${repository} for the fields its queries filter on. A generator emits the access method from the field's type and the target dialect; the model states only that the field is queried.` |
+| `Cannot apply '${op}' to a '${leftType}' value and a '${rightType}' value` (Error, `value-arithmetic-operand-mismatch`, B4) | Arithmetic combines numbers with numbers, a String with a String under '+', a timestamp with a Duration under '+'/'-', two timestamps under '-', two Durations under '+'/'-', and a Duration with a number under '*'/'/'. Anything else -- including power, roots and math-library functions -- is 'prompt("…")'. |
+| `Ordering operator '${op}' requires a numeric, timestamp or duration operand but got a ${other} value` (Error, `value-ordering-needs-numeric`; widened by B4) | Order only numeric, timestamp or duration operands; use '=='/'!=' for equality of other values. |
+| `Constant '${c}' cannot be computed from '${path}', which is not a constant` / `Constant '${c}' cannot hold a ${kind}` (Error, `constant-operand-not-constant`, B4) | A constant's expression may use only literals, duration literals and other constants; move the computation to the handler that has the value. |
+| `Constant '${c}' is declared '${declared}' but its expression is '${actual}'` (Error, `constant-expression-type-mismatch`, B4) | `Declare the constant as '${actual}', or change the expression.` |
 
 The last row (context-with-entities-but-no-repository) is an **always-on**
 completeness check (gated only by `showCompletenessWarnings`): a context that

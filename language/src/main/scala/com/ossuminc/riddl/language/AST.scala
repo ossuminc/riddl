@@ -869,7 +869,8 @@ object AST:
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Initiate |
-    NumericLiteral | LookupValue | EmptyValue | Requires | Returns | InvariantBlock
+    NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral | Requires |
+    Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3192,8 +3193,15 @@ object AST:
     * constant. A [[PromptValue]] IS admitted and is a typed hole: the type is declared by the
     * constant and the computation is prose an AI fills in at generation time, so it needs no `as T`
     * ascription and is exempt from the conformance checks.
+    *
+    * B4 (Reid, 2026-09-18, reversing the 2026-08-23 "no arithmetic" ruling): a constant may be an
+    * EXPRESSION of these -- an [[ArithmeticExpression]] over literals and other constants, a
+    * [[DurationLiteral]], a [[ConstantRef]], or a [[ValueRef]] that RESOLVES to a constant. That
+    * last operand must be a constant is validation's check (`constant-operand-not-constant`), not
+    * the type's: the parser cannot know what a bare path names.
     */
-  type ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue
+  type ConstantValue = LiteralString | NumericLiteral | BooleanLiteral | PromptValue |
+    ArithmeticExpression | DurationLiteral | ConstantRef | ValueRef
 
   /** A definition that represents a constant value for reference in behaviors
     *
@@ -3247,10 +3255,15 @@ object AST:
     * named value in scope, or a [[GetValue]] that reads a UI input or entity state. Designed to be
     * extended: A28 adds a `BooleanExpression` arm. All arms are [[RiddlValue]]s so `.format` and
     * `.loc` are available on the union directly.
+    *
+    * B4 (2026-09-21) adds [[ArithmeticExpression]] and [[DurationLiteral]], and promotes
+    * [[ConstantRef]] from a comparison-only operand to a value in its own right, because a
+    * comparison's operands are now full Values (see [[ComparisonExpression]]). Seventeen kinds.
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
-      Ask | SelfValue | SystemValue | Initiate | NumericLiteral | LookupValue | EmptyValue
+      Ask | SelfValue | SystemValue | Initiate | NumericLiteral | LookupValue | EmptyValue |
+      ArithmeticExpression | DurationLiteral | ConstantRef
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -3833,6 +3846,9 @@ object AST:
     *
     * **Widening this union is its own family of work**, separate from widening `Value`:
     * `resolveComparand`, `serializeComparand`, `buildComparand`, and the BAST writer/reader pair.
+    *
+    * Since B4 (2026-09-21) this union types ONLY the match-case [[ComparisonPattern]]'s operand;
+    * a [[ComparisonExpression]]'s operands are full [[Value]]s.
     */
   type Comparand = ValueRef | GetValue | ConstantRef | NumericLiteral | LookupValue | SystemValue
 
@@ -3841,9 +3857,10 @@ object AST:
     * the union directly. Logical/`not` operands are typed as [[Value]] (not `BooleanExpression`)
     * because the layered precedence parser returns a bare `Value` atom — e.g. a [[ValueRef]] to a
     * boolean field — at any operand position; validation (not the type system) enforces that
-    * logical/`not` operands are boolean. Comparison operands, by contrast, are typed as
-    * [[Comparand]] — the refs plus a bare [[NumericLiteral]] (A28, widened 2026-08-14; see the doc
-    * on [[Comparand]] for why the original ref-only ban was reversed).
+    * logical/`not` operands are boolean. Comparison operands were typed as [[Comparand]] until B4
+    * (2026-09-21); they are full [[Value]]s now, so `a + b > c` and `"x" == name` parse, and what
+    * may be COMPARED is validation's question (`checkComparison`), exactly as for `and`/`or`.
+    * [[Comparand]] survives for the match-case [[ComparisonPattern]] only.
     */
   sealed trait BooleanExpression extends RiddlValue
 
@@ -3895,8 +3912,8 @@ object AST:
   case class ComparisonExpression(
     loc: At,
     op: ComparisonOperator,
-    left: Comparand,
-    right: Comparand
+    left: Value,
+    right: Value
   ) extends BooleanExpression:
     override def kind: String = "Comparison Expression"
     def format: String = s"${left.format} ${op.symbol} ${right.format}"
@@ -3930,6 +3947,80 @@ object AST:
       case _: LogicalExpression => s"not (${expr.format})"
       case _                    => s"not ${expr.format}"
   end NotExpression
+
+  /** B4: the four arithmetic operators. Nothing else -- no power, no roots, no math-library
+    * functions (Reid, 2026-09-18: those are system-dependent and stay `prompt("…")`).
+    */
+  enum ArithmeticOperator(val symbol: String):
+    case Add extends ArithmeticOperator("+")
+    case Subtract extends ArithmeticOperator("-")
+    case Multiply extends ArithmeticOperator("*")
+    case Divide extends ArithmeticOperator("/")
+  end ArithmeticOperator
+
+  object ArithmeticOperator:
+    def fromSymbol(s: String): Option[ArithmeticOperator] = values.find(_.symbol == s)
+    /** `*` and `/` bind tighter than `+` and `-`. */
+    def precedence(op: ArithmeticOperator): Int = op match
+      case Add | Subtract    => 1
+      case Multiply | Divide => 2
+  end ArithmeticOperator
+
+  /** B4 (Reid, 2026-09-18, reversing the 2026-08-23 ruling that RIDDL does no arithmetic): a
+    * binary arithmetic expression, `left op right`. Left-associative; the parser folds a `rep`
+    * left, `*`/`/` binding tighter than `+`/`-`.
+    *
+    * The operands are full [[Value]]s; what may be COMBINED is validation's question
+    * (`checkArithmetic`): numeric with numeric (result the smallest constrained numeric type that
+    * contains both operands and the result), string `+` string, a timestamp plus or minus a
+    * duration, a duration scaled by a number. Everything else is an Error, never a coercion.
+    *
+    * `format` re-parenthesizes what the parser's precedence would otherwise re-associate: a
+    * lower-precedence operand (`(a + b) * c`), and a same-precedence RIGHT operand of `-` or `/`
+    * (`a - (b - c)`). `RiddlFileEmitter.emitArithmeticOperand` is the SAME rule written a second
+    * time, and must move with this one.
+    */
+  @JSExportTopLevel("ArithmeticExpression")
+  case class ArithmeticExpression(
+    loc: At,
+    op: ArithmeticOperator,
+    left: Value,
+    right: Value
+  ) extends RiddlValue:
+    override def kind: String = "Arithmetic Expression"
+    private def paren(v: Value, isRight: Boolean): String = v match
+      case ae: ArithmeticExpression
+          if ArithmeticOperator.precedence(ae.op) < ArithmeticOperator.precedence(op) ||
+            (isRight && ArithmeticOperator.precedence(ae.op) == ArithmeticOperator.precedence(op)) =>
+        s"(${v.format})"
+      case _: LogicalExpression | _: ComparisonExpression => s"(${v.format})"
+      case _                                              => v.format
+    def format: String = s"${paren(left, isRight = false)} ${op.symbol} ${paren(right, isRight = true)}"
+  end ArithmeticExpression
+
+  /** B4: a duration written as a number and a unit word -- `30 days`, `1 hour`, `250
+    * milliseconds`. The amount is a [[NumericLiteral]] (its text kept as written, so `1.50 hours`
+    * round-trips) and the unit is the word the author wrote, singular or plural. Both spellings
+    * every unit accepts are what `scala.concurrent.duration.Duration` parses, so a literal that
+    * parsed needs no further validation; it types as [[Duration]].
+    *
+    * A value only. The `on quiescence` window and `times out after` keep their STRING duration
+    * (Reid, 2026-09-21; the widening is a BACKLOG item), where the ISO and abbreviated spellings
+    * also live.
+    */
+  @JSExportTopLevel("DurationLiteral")
+  case class DurationLiteral(loc: At, amount: NumericLiteral, unit: String) extends RiddlValue:
+    override def kind: String = "Duration Literal"
+    def format: String = s"${amount.format} $unit"
+  end DurationLiteral
+
+  object DurationLiteral:
+    /** The unit words the parser accepts, longest first so `StringIn` need not care about order. */
+    val units: Seq[String] = Seq(
+      "nanoseconds", "nanosecond", "microseconds", "microsecond", "milliseconds", "millisecond",
+      "seconds", "second", "minutes", "minute", "hours", "hour", "days", "day", "weeks", "week"
+    )
+  end DurationLiteral
 
   /** A54: accessors for a widened message/record operand (a bare ref, or a [[Constructor]] whose
     * ref names the constructed message/record). Used by send/tell/yield (message) and morph

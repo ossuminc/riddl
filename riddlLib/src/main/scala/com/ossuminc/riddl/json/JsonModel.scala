@@ -947,6 +947,16 @@ object JsonModel:
   /** `{ "value": "comparison", "op": "=="|..., "left": <value>, "right": <value> }` (A28). */
   case class ComparisonDto(op: String, left: ValueDto, right: ValueDto) extends ValueDto
 
+  /** B4 (2026-09-21): `{ "value": "arithmetic", "op": "+"|"-"|"*"|"/", "left": <value>, "right":
+    * <value> }`. Operands are full values, like `logical`'s.
+    */
+  case class ArithmeticDto(op: String, left: ValueDto, right: ValueDto) extends ValueDto
+
+  /** B4: `{ "value": "duration", "amount": "<numeric text as written>", "unit": "days" }`. The
+    * amount is a STRING for the same reason `numeric` is: `1.50 hours` must survive.
+    */
+  case class DurationLiteralDto(amount: String, unit: String) extends ValueDto
+
   /** `{ "value": "logical", "op": "and"|"or", "left": <value>, "right": <value> }` (A28). */
   case class LogicalDto(op: String, left: ValueDto, right: ValueDto) extends ValueDto
 
@@ -1818,6 +1828,8 @@ object JsonModel:
       case "get"         => GetValueDto(m("source").str, m.get("keyword").map(_.str), m("ref").str)
       case "boolLiteral" => BooleanLiteralDto(m("bool").bool)
       case "comparison"  => ComparisonDto(m("op").str, readValue(m("left")), readValue(m("right")))
+      case "arithmetic"  => ArithmeticDto(m("op").str, readValue(m("left")), readValue(m("right")))
+      case "duration"    => DurationLiteralDto(m("amount").str, m("unit").str)
       case "logical"     => LogicalDto(m("op").str, readValue(m("left")), readValue(m("right")))
       case "not"         => NotDto(readValue(m("expr")))
       case "invariantCondition" =>
@@ -1904,6 +1916,19 @@ object JsonModel:
           "op" -> ujson.Str(op),
           "left" -> writeValue(left),
           "right" -> writeValue(right)
+        )
+      case ArithmeticDto(op, left, right) =>
+        ujson.Obj(
+          "value" -> ujson.Str("arithmetic"),
+          "op" -> ujson.Str(op),
+          "left" -> writeValue(left),
+          "right" -> writeValue(right)
+        )
+      case DurationLiteralDto(amount, unit) =>
+        ujson.Obj(
+          "value" -> ujson.Str("duration"),
+          "amount" -> ujson.Str(amount),
+          "unit" -> ujson.Str(unit)
         )
       case LogicalDto(op, left, right) =>
         ujson.Obj(
@@ -2882,6 +2907,8 @@ object JsonModel:
     "of",
     "onClauses",
     "op",
+    "amount", // B4: DurationLiteralDto
+    "unit",
     "options",
     "organization",
     "origin",

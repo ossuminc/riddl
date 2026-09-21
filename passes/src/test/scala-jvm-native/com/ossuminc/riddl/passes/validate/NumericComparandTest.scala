@@ -8,7 +8,6 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{CommonOptions, pc}
 
 import org.scalatest.TestData
@@ -94,16 +93,14 @@ class NumericComparandTest extends AbstractValidatingTest {
   }
 
   "a boolean comparand" should {
-    // NOT `diagnostics`/`parseAndValidate`: those route a genuine PARSE failure through
-    // `AbstractValidatingTest.parseAndValidateInput`'s `Left` branch, which calls ScalaTest's
-    // `fail(...)` directly rather than handing control back to the assertion below -- so the
-    // deliberate-parse-error case has to be asserted the way `StatementsTest.parseLetExprFails`
-    // does it: call `TopLevelParser.parseInput` directly and match on `Left`.
-    "remain a parse error — true/false are atoms, not comparands" in { (td: TestData) =>
-      val input = RiddlParserInput(model("count > true"), td)
-      TopLevelParser.parseInput(input) match
-        case Left(messages) => messages.justErrors must not be empty
-        case Right(_)       => fail("expected a PARSE error for 'count > true'")
+    // B4 (2026-09-21) REVERSED the parse-time rejection: a comparison's operands are full
+    // Values, so `count > true` PARSES and validation refuses it -- an ordering operator wants a
+    // numeric, timestamp or duration operand and got a boolean.
+    "parse, and be refused by validation as an ordering on a boolean" in { (td: TestData) =>
+      val msgs = diagnostics(model("count > true"), "boolean-comparand")
+      withClue(msgs.map(_.message).mkString("\n")) {
+        msgs.justErrors.exists(_.message.contains("got a boolean value")) mustBe true
+      }
     }
   }
 }

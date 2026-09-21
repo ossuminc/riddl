@@ -157,7 +157,12 @@ package object bast {
     // 25 (2026-09-14) adds statement sub-kinds 22 (`append`) and 23 (`remove`, with a has-key byte
     // and an optional inline identifier). A revision-24 reader has no arm for either tag and
     // throws at the dispatch, which is the honest failure; nothing after the statement is misread.
-    25 // `append`/`remove` collection statements (sub-kinds 22, 23)
+    // 26 (2026-09-21, B4) adds value tags 14 (`ArithmeticExpression`: op byte, two values), 15
+    // (`DurationLiteral`: amount text, unit string) and 16 (`ConstantRef`: inline path), and
+    // CHANGES the comparison sub-tag 1's operands from `writeComparand` to `writeValue` -- a
+    // revision-25 reader would read a value tag as a comparand tag and misalign, so the bump is
+    // not optional even for a file holding no new node.
+    26 // B4 arithmetic: value tags 14-16, comparison operands are values
     // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.

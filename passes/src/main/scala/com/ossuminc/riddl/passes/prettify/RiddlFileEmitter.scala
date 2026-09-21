@@ -367,8 +367,38 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         expr match
           case _: LogicalExpression => add("not (").emitValue(expr).add(")")
           case _                    => add("not ").emitValue(expr)
+      // B4 (2026-09-21): a comparison's operands are full Values, so route them through this
+      // dispatch (an operand may hold a nested prompt ascription); before, `.format`.
+      case ComparisonExpression(_, op, left, right) =>
+        emitValue(left)
+        add(s" ${op.symbol} ")
+        emitValue(right)
+      case ae: ArithmeticExpression =>
+        emitArithmeticOperand(ae, ae.left, isRight = false)
+        add(s" ${ae.op.symbol} ")
+        emitArithmeticOperand(ae, ae.right, isRight = true)
       case other => add(other.format)
   end emitValue
+
+  /** B4: an arithmetic operand is parenthesized when it is an arithmetic expression of LOWER
+    * precedence, or of the same precedence on the RIGHT of `-`/`/` (`a - (b - c)`), or a logical
+    * or comparison expression -- the same rule as `ArithmeticExpression.format`'s private `paren`
+    * helper, kept in step by hand since this emitter cannot call it (it is private to
+    * `AST.scala`).
+    */
+  private def emitArithmeticOperand(
+    parent: ArithmeticExpression,
+    v: Value,
+    isRight: Boolean
+  ): this.type =
+    val pp = ArithmeticOperator.precedence(parent.op)
+    v match
+      case inner: ArithmeticExpression
+          if ArithmeticOperator.precedence(inner.op) < pp ||
+            (isRight && ArithmeticOperator.precedence(inner.op) == pp) =>
+        add("(").emitValue(inner).add(")")
+      case _: LogicalExpression | _: ComparisonExpression => add("(").emitValue(v).add(")")
+      case _                                              => emitValue(v)
 
   /** A `LogicalExpression` operand is parenthesized when it is itself a `LogicalExpression` — same
     * rule as `LogicalExpression.format`'s private `paren` helper, kept in step by hand since this

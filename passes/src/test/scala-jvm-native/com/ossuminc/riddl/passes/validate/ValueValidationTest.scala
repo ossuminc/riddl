@@ -376,7 +376,7 @@ class ValueValidationTest extends AbstractValidatingTest {
           |}
           |""".stripMargin
       parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-        assertValidationMessage(msgs, Error, "requires a numeric operand")
+        assertValidationMessage(msgs, Error, "requires a numeric, timestamp or duration operand")
       }
     }
 
@@ -396,7 +396,7 @@ class ValueValidationTest extends AbstractValidatingTest {
           |}
           |""".stripMargin
       parseAndValidate(model, td.name, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-        assertValidationMessage(msgs, Error, "requires a numeric operand")
+        assertValidationMessage(msgs, Error, "requires a numeric, timestamp or duration operand")
       }
     }
 

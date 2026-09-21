@@ -1,0 +1,63 @@
+// Exercises B4 (2026-09-21): `+ - * /` on numerics, string concatenation, timestamp and duration
+// arithmetic, comparisons whose operands are expressions, duration literals, and constant value
+// expressions. Every shape here is meant to VALIDATE clean under the typing table, so the file
+// doubles as a positive fixture for the typing suite. No power, roots or math functions -- those
+// stay `prompt("...")` by ruling.
+domain Ledger is {
+  context Accounts is {
+    constant PointsPerDollar: Natural = 10 with { briefly "points per dollar" }
+    constant Bonus: Natural = PointsPerDollar * 2 with { briefly "an expression of a constant" }
+    constant Window: Duration = 30 days with { briefly "a duration literal" }
+    constant Grace: Duration = Window + 1 day with { briefly "duration arithmetic" }
+    constant Label: String = "points" + " balance" with { briefly "string concatenation" }
+    constant Offset: Integer = 3 - 5 with { briefly "natural minus natural is integer" }
+
+    command Accrue yields event Accrued is { id: String, points: Natural, spend: Real } with { briefly "c" }
+    command Redeem yields event Redeemed is { id: String, points: Natural } with { briefly "c" }
+
+    entity Account is {
+      record Fields is {
+        id: String,
+        balance: Integer,
+        lifetime: Integer,
+        opened: TimeStamp,
+        note: String
+      } with { briefly "state" }
+      event Accrued is { id: String, points: Natural, spend: Real } with { briefly "e" }
+      event Redeemed is { id: String, points: Natural } with { briefly "e" }
+      state Live of record Account.Fields
+      inlet In is command Accounts.Accrue with { briefly "i" }
+      outlet Out is event Account.Accrued with { briefly "o" }
+      handler H is {
+        on init is { yield event Account.Accrued(id = "x", points = 0, spend = 0.0) }
+        on a: command Accounts.Accrue is {
+          // an expression as a comparison operand, and a literal on the right
+          when a.points * PointsPerDollar > 100 then {
+            yield event Account.Accrued(id = a.id, points = a.points + Bonus, spend = a.spend)
+          } else {
+            yield event Account.Accrued(id = a.id, points = a.points, spend = a.spend)
+          } end
+        }
+        on r: command Accounts.Redeem is {
+          // an expression compared with a state field; precedence and grouping
+          require Fields.balance >= r.points with r.points
+          let doubled: Integer = (Fields.balance + r.points) * 2 - Fields.balance / 2
+          yield event Account.Redeemed(id = r.id, points = r.points)
+        }
+        on ev: event Account.Accrued is {
+          set field Account.Fields.balance to Fields.balance + ev.points
+          set field Account.Fields.lifetime to Fields.lifetime + ev.points
+          set field Account.Fields.note to "accrued " + ev.id
+        }
+        on ev: event Account.Redeemed is {
+          set field Account.Fields.balance to Fields.balance - ev.points
+          // timestamp arithmetic and comparison: a deadline is an instant EXPRESSION
+          when Fields.opened + Window < system.now then {
+            send event Account.Redeemed(id = ev.id, points = ev.points) to outlet Account.Out at system.now + 1 hour
+          } end
+        }
+        on other is { error "unexpected" }
+      } with { briefly "h" }
+    } with { briefly "an account" }
+  } with { briefly "accounts" }
+} with { briefly "ledger" }

@@ -19,6 +19,8 @@ object Punctuation {
   final val equalsSign = "="
   final val exclamation = "!"
   final val plus = "+"
+  final val minus = "-"
+  final val slash = "/"
   final val question = "?"
   final val quote = "\""
   final val roundOpen = "("

@@ -65,7 +65,7 @@ is covered in that construct's phase. The builder emits references as
 | Version | ✅ A53 / A47 | `version` on root/module/domain + all six processors; `name` + `numeric` flag |
 | Copyright | ✅ A47 | `copyright` on root/module/domain + all six processors; `name` + verbatim `text` |
 | Enumerator | ✅ Phase 2 | names + explicit `value` |
-| Constant | ✅ Phase 2 / numeric-literals (2026-08-15) | in context/entity; `value` is a `ValueDto` (`ConstantValue = LiteralString \| NumericLiteral \| BooleanLiteral \| PromptValue`), not a bare string, so a constant can hold any of the four |
+| Constant | ✅ Phase 2 / numeric-literals (2026-08-15) / B4 (2026-09-21) | in context/entity; `value` is a `ValueDto` (`ConstantValue = LiteralString \| NumericLiteral \| BooleanLiteral \| PromptValue \| ArithmeticExpression \| DurationLiteral \| ConstantRef \| ValueRef`), not a bare string; `buildConstant` narrows and errors on any other shape |
 | User | ✅ Phase 2 | at domain level |
 | Term | ✅ Phase 9 | glossary entry (metadata; see Metadata section) |
 | Method | ✅ Phase 3 | aggregate method with args |
@@ -191,7 +191,14 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | ValueRef | ✅ A54 | `{ "value": "valueRef", "path": ... }` |
 | GetValue | ✅ A54 | `{ "value": "get", "source": "input"\|"state", "ref": ... }` |
 | BooleanLiteral | ✅ A28 | `{ "value": "boolLiteral", "bool": true\|false }` |
-| ComparisonExpression | ✅ A28 | `{ "value": "comparison", "op": "=="\|..., "left": <value>, "right": <value> }` |
+| ComparisonExpression | ✅ A28 / B4 (2026-09-21) | `{ "value": "comparison", "op": "=="\|..., "left": <value>, "right": <value> }` — since B4 the operands are full values (serialized by `serializeValue`, built by `buildValue`); the comparand family serves match patterns only |
+| ArithmeticExpression | ✅ B4 (2026-09-21) | `{ "value": "arithmetic", "op": "+"\|"-"\|"*"\|"/", "left": <value>, "right": <value> }` |
+| DurationLiteral | ✅ B4 (2026-09-21) | `{ "value": "duration", "amount": "<text as written>", "unit": "days" }` — `amount` is a JSON string for the same reason `numeric`'s `text` is |
+| ConstantRef (value) | ✅ A28 / B4 | `{ "value": "constantRef", "path": ... }` — `buildValue` builds a `ConstantRef` since B4; it DEGRADED to a `ValueRef` before, which formatted the same and lost the node |
+| LookupValue | ✅ 2.0 | `{ "value": "lookup", "collection": "<path>", "indices": [<value>] }` (row added 2026-09-21; the code was there) |
+| SystemValue | ✅ 2.0 | `{ "value": "system", "field"?: "now"\|"random" }` (row added 2026-09-21) |
+| EmptyValue | ✅ 2.0 | `{ "value": "empty", "type"?: <typeExpr> }` (row added 2026-09-21) |
+| InvariantCondition | ✅ A17 | `{ "value": "invariantCondition", "invariant": "<path>", "argument"?: <value> }` (row added 2026-09-21) |
 | LogicalExpression | ✅ A28 | `{ "value": "logical", "op": "and"\|"or", "left": <value>, "right": <value> }` |
 | NotExpression | ✅ A28 | `{ "value": "not", "expr": <value> }` |
 | SelfValue | ✅ 2.0 | `{ "value": "self", "field"?: "id"\|"version" }` — the running processor instance. The type is a SYNTHESIZED Aggregation (see `AST.SelfValue`), so nothing here names a path |

@@ -1534,7 +1534,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     // of a large integer). Storing text is the entire reason AST.NumericLiteral holds a String.
     case nl: NumericLiteral => NumericLiteralDto(nl.text)
     case ce: ComparisonExpression =>
-      ComparisonDto(ce.op.symbol, serializeComparand(ce.left), serializeComparand(ce.right))
+      // B4 (2026-09-21): operands are full Values; `serializeComparand` serves match patterns.
+      ComparisonDto(ce.op.symbol, serializeValue(ce.left), serializeValue(ce.right))
+    case ae: ArithmeticExpression =>
+      ArithmeticDto(ae.op.symbol, serializeValue(ae.left), serializeValue(ae.right))
+    case dl: DurationLiteral => DurationLiteralDto(dl.amount.text, dl.unit)
+    case cr: ConstantRef     => ConstantRefDto(path(cr.pathId))
     case le: LogicalExpression =>
       LogicalDto(le.op.symbol, serializeValue(le.left), serializeValue(le.right))
     case ne: NotExpression => NotDto(serializeValue(ne.expr))

@@ -1414,13 +1414,16 @@ ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
   schema. Retires 114 prose holes and the whole SQL error class riddlg measured. **Large** —
   and it decides whether RIDDL models storage operations at all; a CM question before a
   language one.
-- **[2.18] B4 — arithmetic and time in value expressions.** **REVERSED by Reid 2026-09-18**:
-  the 2026-08-23 "RIDDL does not do arithmetic" ruling is withdrawn, **strictly bounded to the
-  task's ask**: `+ - * /` on numerics, comparison, `now` and `now + <duration>` / `t < now` on
-  timestamps, string concatenation — **and constant value expressions** (a `constant` may be an
-  expression of these). **NOT power, roots, or any math-library function** — those are
-  system-dependent and stay `prompt("…")`. riddl-models BACKLOG #21 and the "derived fold"
-  reading of 2026-09-14 both need amending when this lands. **Large.** Next up.
+- **[2.19] Duration literals in the two string-duration windows.** B4 (landed 2026-09-21)
+  added the `30 days` / `1 hour` duration literal as a VALUE, and Reid ruled the same day that
+  `on quiescence "30 minutes"` and `times out after "6 hours"` keep their string form for now.
+  The inconsistency is recorded here: the literal should be accepted in both windows (the
+  string form staying legal — it carries the ISO and abbreviated spellings). Touches
+  `HandlerParser.quiescenceWindow` (`LiteralString | ValueRef` → add `DurationLiteral`),
+  `ProjectorParser.correlationTimeout` (`Correlation.timeout: LiteralString` — an AST field
+  type change, so BAST/JSON/prettify move with it), the EBNF, and `checkPreciseDuration`'s
+  callers. **Small–medium.** Verified: `AST.scala` `OnQuiescenceClause.window` and
+  `Correlation.timeout` as of B4.
 
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
 

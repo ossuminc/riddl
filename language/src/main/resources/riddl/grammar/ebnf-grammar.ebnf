@@ -360,16 +360,16 @@ remove_statement = "remove" ( "from" field_ref "where" identifier "==" value
                             | value "from" field_ref ) ;
 let_statement = "let" identifier [":" type_ref] "=" value ;
 
-(* A54: value expressions. A value is pseudo-code text, an AI-computed `prompt(...)`, a message/record
-   constructor, a `get from` read of a UI input or entity state, (A28) a boolean expression whose
-   bare atom is a value reference or literal, or a numeric literal (tried last, deliberately). This
-   ordering is LOAD-BEARING now that `comparand` (widened 2026-08-14) accepts numeric_literal:
-   trying boolean_expression first is what keeps `5 > 3` parsing as a comparison rather than
-   numeric_literal matching the bare `5` and leaving `> 3` dangling. *)
+(* A54: value expressions. A value is an AI-computed `prompt(...)`, a message/record constructor,
+   a `get from` read of a UI input or entity state, `empty`, or (A28 + B4) an EXPRESSION built by
+   the ladder below -- whose bare atom is a literal string, a numeric literal, a duration literal,
+   a reference, `self`, `system`, `true`/`false`. A literal with no operator after it IS the
+   value; that is why literal_string and numeric_literal no longer appear here directly
+   (B4, 2026-09-21: `"a" + b` and `5 * n` need them as operands). *)
 (* `empty_value` sits BEFORE boolean_expression: that rule's atom accepts a bare path and would
    otherwise swallow `empty` as a value_ref, leaving any ascription dangling. *)
-value = literal_string | prompt_value | call | ask | initiate | constructor | get_value
-      | empty_value | boolean_expression | numeric_literal ;
+value = prompt_value | call | ask | initiate | constructor | get_value
+      | empty_value | boolean_expression ;
 
 (* The minimum-cardinality inhabitant of a type. `none` is a SYNONYM, not a second construct: both
    spellings produce the identical AST and prettify converges them to `empty`. Legal exactly where
@@ -443,7 +443,22 @@ value_ref = path_identifier ;
 boolean_expression = and_expression {"or" and_expression} ;
 and_expression = not_expression {"and" not_expression} ;
 not_expression = ("not" | "!") not_expression | comparison ;
-comparison = comparand comparison_operator comparand | boolean_atom ;
+(* B4 (2026-09-21): a comparison's operands are additive expressions -- full values -- and two
+   arithmetic levels sit between comparison and the atom: or < and < not < comparison < additive
+   < multiplicative < atom. `*` and `/` bind tighter than `+` and `-`; all four fold left. A `/`
+   is never the start of a `//` comment because comments are stripped first. What may be
+   combined or compared is validation's question, not the grammar's. *)
+comparison = additive_expression [ comparison_operator additive_expression ] ;
+additive_expression = multiplicative_expression { ("+" | "-") multiplicative_expression } ;
+multiplicative_expression = arithmetic_atom { ("*" | "/") arithmetic_atom } ;
+arithmetic_atom = duration_literal | literal_string | constant_ref | numeric_literal | boolean_atom ;
+(* `30 days`, `1 hour`: a numeric literal and a unit word, singular or plural. The abbreviated and
+   ISO-8601 spellings stay in the STRING duration used by `on quiescence` and `times out after`. *)
+duration_literal = numeric_literal duration_unit ;
+duration_unit = "nanoseconds" | "nanosecond" | "microseconds" | "microsecond" | "milliseconds"
+              | "millisecond" | "seconds" | "second" | "minutes" | "minute" | "hours" | "hour"
+              | "days" | "day" | "weeks" | "week" ;
+(* `comparand` now types ONLY the match-case comparison pattern. *)
 (* system_value precedes ref_or_lookup for the same reason it does in boolean_atom: ordered
    choice means a bare `system` would otherwise be consumed as an ordinary path. *)
 comparand = get_value | constant_ref | numeric_literal | system_value | ref_or_lookup ;
@@ -515,7 +530,10 @@ pseudo_code_contents = [undefined] {statement} ;
 
 (* Constants and Invariants *)
 constant = "constant" identifier is type_expression "=" constant_value [with_metadata] ;
-constant_value = literal_string | numeric_literal | boolean_literal | prompt_value ;
+(* B4: a constant may be an expression of literals, durations and other constants (a bare path
+   must RESOLVE to a constant -- validation's check). The ladder also builds shapes a constant may
+   not hold (a comparison, `a and b`, a lookup); the parser refuses those. *)
+constant_value = prompt_value | additive_expression ;
 (* An invariant applies IMPLICITLY across every clause of its declaring scope, as a precondition.
    `requires state S` narrows an entity-level invariant to one state and stays implicit;
    `requires <type_ref>` makes it explicit-only (see require_statement). No `returns`: the

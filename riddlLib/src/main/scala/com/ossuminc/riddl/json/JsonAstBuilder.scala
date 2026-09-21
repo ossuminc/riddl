@@ -703,15 +703,14 @@ object JsonAstBuilder:
     User(curAt, ident(u.name), LiteralString(curAt, u.isA), meta(u.brief, u.metadata))
 
   private def buildConstant(c: ConstantDto)(using ctx: Ctx): Constant =
-    // `Constant.value: ConstantValue = LiteralString | NumericLiteral | BooleanLiteral |
-    // PromptValue` -- narrow what buildValue's general Value result actually is, rather than
-    // assuming LiteralString.
+    // `Constant.value: ConstantValue` (eight arms since B4, 2026-09-21) -- narrow what
+    // buildValue's general Value result actually is, rather than assuming LiteralString.
     val value: ConstantValue = buildValue(c.value) match
       case cv: ConstantValue => cv
       case other =>
         ctx.err(
-          s"constant value must be a literal string, numeric literal, boolean literal, or " +
-            s"prompt, got: ${other.getClass.getSimpleName}"
+          s"constant value must be a literal, a duration literal, a prompt, a constant " +
+            s"reference or an arithmetic expression, got: ${other.getClass.getSimpleName}"
         )
         LiteralString(curAt, "")
     Constant(
@@ -1590,8 +1589,18 @@ object JsonAstBuilder:
         val cop = ComparisonOperator.values
           .find(_.symbol == op)
           .getOrElse { ctx.err(s"unknown comparison operator '$op'"); ComparisonOperator.EQ }
-        ComparisonExpression(curAt, cop, buildComparand(left), buildComparand(right))
-      case ConstantRefDto(p) => ValueRef(curAt, pathId(p)) // A28: only valid as a comparand
+        // B4 (2026-09-21): operands are full Values; `buildComparand` serves match patterns.
+        ComparisonExpression(curAt, cop, buildValue(left), buildValue(right))
+      // B4: a `ConstantRef` is a Value in its own right. Until B4 this arm DEGRADED it to a
+      // ValueRef -- "only valid as a comparand" -- which formatted the same and lost the node.
+      case ConstantRefDto(p) => ConstantRef(curAt, pathId(p))
+      case ArithmeticDto(op, left, right) =>
+        val aop = ArithmeticOperator
+          .fromSymbol(op)
+          .getOrElse { ctx.err(s"unknown arithmetic operator '$op'"); ArithmeticOperator.Add }
+        ArithmeticExpression(curAt, aop, buildValue(left), buildValue(right))
+      case DurationLiteralDto(amount, unit) =>
+        DurationLiteral(curAt, NumericLiteral(curAt, amount), unit)
       case LogicalDto(op, left, right) =>
         val lop = LogicalOperator.values
           .find(_.symbol == op)

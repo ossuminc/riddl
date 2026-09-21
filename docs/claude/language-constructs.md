@@ -508,8 +508,8 @@ decision.
   at all" — reversed 2026-08-14 on the evidence that the whole 189-model corpus
   contained exactly ONE constant, so the rule had no uptake to protect (plausibly
   because naming a number meant quoting it). The intent survives as a
-  StyleWarning whose population started at zero. `count > true` is still a parse
-  error: booleans are atoms, not comparands.
+  StyleWarning whose population started at zero. `count > true` WAS still a
+  parse error until B4 (below); it parses now and validation refuses it.
   **`Integer` is signed (any whole number), `Whole` is `>= 0` (counting),
   `Natural` is `>= 1` (ordinal, excludes zero)** — Reid, 2026-08-14. Until then
   the three had NO definition anywhere: no scaladoc, no language reference, no CM
@@ -534,12 +534,79 @@ decision.
   `NumberFormatException` *inside the guard* and surfaces as `[severe] Exception
   Thrown` with no line number. Use `asBigDecimal` or test the text.
 
-- **`Constant` holds four kinds, and prettify emits `:`**. `ConstantValue =
-  LiteralString | NumericLiteral | BooleanLiteral | PromptValue` — a narrowing of
+- **`Constant` holds eight kinds since B4, and prettify emits `:`**. `ConstantValue =
+  LiteralString | NumericLiteral | BooleanLiteral | PromptValue |
+  ArithmeticExpression | DurationLiteral | ConstantRef | ValueRef` — a narrowing of
   `Value`, defined the way `Comparand` is. Deliberately NOT the full union, which
   would admit `Call`, `Ask` and `Initiate` in a constant. The `PromptValue` arm
   is a **typed hole**: the constant declares the type and the computation is
-  prose, so it needs no `as T` (A20 above).
+  prose, so it needs no `as T` (A20 above). **A `ValueRef` operand must RESOLVE
+  to a constant** — the parser cannot know what a bare path names, so
+  `checkConstantExpression` refuses a field or `let`
+  (`constant-operand-not-constant`) and holds the expression's type to the
+  declaration (`constant-expression-type-mismatch`). `TypeParser.constantValue`
+  is `promptValue | arithmeticExpression` narrowed by `isConstantShaped`, which is
+  what refuses a comparison, `a and b`, a lookup or `self` at PARSE time.
+  ResolutionPass resolves `c.value` (it resolved only the type before B4, which
+  is why a constant's prompt ascription never resolved).
+
+- **B4 — arithmetic, duration literals, comparison operands as values (Reid,
+  2026-09-18 ruling; landed 2026-09-21).** Nodes: `ArithmeticExpression(loc, op,
+  left: Value, right: Value)` with `enum ArithmeticOperator` (`+ - * /`, nothing
+  else — power, roots and math functions stay `prompt`), `DurationLiteral(loc,
+  amount: NumericLiteral, unit: String)` (`30 days`, `1.50 hours`; unit words are
+  the singular/plural English names, `DurationLiteral.units`), and `ConstantRef`
+  promoted into `Value`. **`ComparisonExpression.left/right` are `Value` now**
+  (binary-compatible: both unions erase to `RiddlValue`); `Comparand` types ONLY
+  `ComparisonPattern`, and its family (`resolveComparand`, `serializeComparand`,
+  `buildComparand`, `writeComparand`/`readComparand`, `validateComparand`,
+  `comparandCategory`) serves match patterns, plus — deliberately — the
+  comparand-SHAPED operands of an expression through `validateComparisonOperand`/
+  `operandCategory`, so the constant-naming message and the literal style warning
+  survived unchanged.
+  **Parser ladder** (`StatementParser`): `or < and < not < comparison < additive
+  < multiplicative < atom`; `comparison = additive ~ (op ~/ additive).?`;
+  arithmetic operators are NON-cutting (an alternation and `booleanExprOnly`'s
+  filter must backtrack out of the ladder); `arithAtom = durationLiteral |
+  NoCut(literalString) | constantRef | numericLiteral | booleanAtom`. **The
+  `NoCut` is load-bearing**: `literalString` cuts after its opening quote, and
+  `when "prose"` reaches the ladder first, fails the `booleanExprOnly` filter and
+  must fall back to the deprecated-string arm. `value` lost its leading
+  `literalString` and trailing `numericLiteral` branches — both are atoms now and
+  come back bare when no operator follows. `/` is `"/" ~~ !"/"` so a comment is
+  never eaten. **Trap:** identifiers may contain `-`, so `a-3` is ONE name; write
+  `a - 3`.
+  **Typing** (`ValidationPass`): every expression has a REAL `TypeExpression` —
+  `valueTypeExpr` answers `Bool` for any `BooleanExpression` (it answered None
+  before, so `let b = a > 3` was untyped), `Duration` for a duration literal, the
+  constant's type for `ConstantRef`, and `arithmeticResultType` for arithmetic.
+  `operandTypeExpr` adds the one arm `valueTypeExpr` deliberately lacks: a bare
+  numeric literal typed as the smallest type its text admits (`5` Natural, `0`
+  Whole, `-3` Integer, `1.5` Real). `combineArithmetic` is the table: numeric ∘
+  numeric joins on `Natural < Whole < Integer < Real < Number` (Range by its
+  bounds; Decimal∘Decimal Decimal else Number; Current∘Current Current else
+  Number; `-` on Natural/Whole/Range → Integer; `/` on Natural → Whole; **Integer
+  / Integer is Integer, truncating**); `String + String`; timestamp ± Duration;
+  Duration + timestamp; timestamp − timestamp → Duration; Duration ± Duration;
+  Duration ×/÷ number. Off the table → `value-arithmetic-operand-mismatch`, whose
+  message names both operand types (the typing test reads the lattice off it).
+  `typeExprCategory` gained `"timestamp"` and `"duration"`, and ordering accepts
+  them — `t < system.now` was silently unchecked before. `valueCategory` now
+  classifies `operandTypeExpr`'s answer (a superset of `valueType`'s).
+  **Prettify**: `emitArithmeticOperand` is `ArithmeticExpression.format`'s private
+  `paren` rule written a second time (lower precedence, or same precedence on the
+  RIGHT of `-`/`/`, or a logical/comparison operand) — keep them in step by hand.
+  `emitValue` routes a comparison's operands through itself now.
+  **BAST revision 26**: value tags 14 (arithmetic: op byte, two values), 15
+  (duration: amount location + text, unit), 16 (`ConstantRef`: inline path); the
+  comparison sub-tag 1's operands are written with `writeValue` (were
+  `writeComparand`), which is why the bump is needed even for a file with no new
+  node. **JSON**: `"value": "arithmetic"` / `"duration"` (`amount` is a string);
+  `buildValue`'s `ConstantRefDto` arm now builds a `ConstantRef` — it DEGRADED to
+  a `ValueRef` before ("only valid as a comparand") and formatted the same.
+  **Scope answers** (Reid, 2026-09-21): `system.now` is the only spelling of the
+  current instant (no bare `now`); the `on quiescence` window and `times out
+  after` keep their string duration (BACKLOG item for widening them).
   **There was never any parser work for the separator.** `CommonParser.is` (`:38`)
   is `StringIn("is","are",":","=").?` and has always accepted the colon, and
   omission. All spellings are legal, none warns, and prettify emits `: `.
@@ -615,9 +682,10 @@ reserved keywords, so taking them cost no model anything. The parser tries `from
 `statement_start` (the guard on `empty`'s optional trailing type) lists both.
 
 **Why.** Rule 3 (`entity-event-sourced-prose-folds`) drained riddl-models from 111 prose folds
-to 14; every one of the 14 was an append, a remove or arithmetic. Arithmetic stays a `prompt`
-(2026-08-23 ruling) and `set field F to prompt(…)` is *derived* for rule 3; the other two got
-syntax. Reid chose the keyed `remove` because the corpus's `ItemRemoved` folds carry an id while
+to 14; every one of the 14 was an append, a remove or arithmetic. Arithmetic then stayed a
+`prompt` (2026-08-23 ruling) and `set field F to prompt(…)` is *derived* for rule 3; the other
+two got syntax — and a week later arithmetic did too (B4, 2026-09-21), the prompt form staying
+derived as the legacy spelling. Reid chose the keyed `remove` because the corpus's `ItemRemoved` folds carry an id while
 the collection holds records.
 
 **AST.** `sealed trait CollectionStatement extends Statement { field: FieldRef; value: Value }`

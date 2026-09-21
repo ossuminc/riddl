@@ -1133,7 +1133,9 @@ validates clean and means something else.
   produced correct output on the released binary. **When you find two
   implementations of one dispatch, the tested one tells you nothing about the
   other — read both.** `Statement.format` and `RiddlFileEmitter.emitStatement`
-  are that pair; keep them in step.
+  are that pair; keep them in step. So are `ArithmeticExpression.format`'s private `paren`
+  and `RiddlFileEmitter.emitArithmeticOperand` (B4), and `LogicalExpression.paren` /
+  `emitLogicalOperand` before them.
 - **Fix the SHAPE of a dispatch/recursion defect, not the instance.** The
   alias-chain cycle guard was added to `fieldsWithOwner` in rc.14 and its sibling
   `aggregateFieldsOf` was left unguarded, so `type A is B` / `type B is A` still
@@ -1163,7 +1165,12 @@ kinds), `countValueFailPoints`, BASTWriter/BASTReader statement dispatch. The
 remaining ~140 catch-alls are unaudited — see BACKLOG § 2.
 
 **A new `Value` arm touches EIGHT sites, not five** (counted 2026-08-15 adding
-`NumericLiteral`; the plan said five and `-Werror` found three more). Beyond
+`NumericLiteral`; the plan said five and `-Werror` found three more) — **and a 2026-09-21
+survey for B4 counted 96 dispatch or wiring sites over `Value`, of which only 12 are
+compile-enforced exhaustive matches**; the rest are catch-alls (`emitValue`'s `.format`
+fallback, `Finder.fieldChildren`, `valueReferencedDefs`, `getInputRefsIn`,
+`TellTarget.processorOf`, `validateConstant`) and documentation (`knownKeys`, `knownKinds`,
+`JSON_COVERAGE.md`) that drift in silence. Beyond
 `ValidationPass`'s four walks (`countValueFailPoints`, `stateReadsIn`,
 `initiatesIn`, `asksIn`) and `validateValue`, there are:
 **`AST.NonDefinitionValues`** — a parallel union to `Value` that is easy to miss
@@ -1559,8 +1566,18 @@ resolution and type-checking — in `checkStatementScopes`.
   there so one arm covers both. Their existence is rule 3's doing: 14 corpus folds had no
   spelling but `prompt`. `FORMAT_REVISION` 25; a committed `.bast` fixture had to be
   regenerated, and three BAST suites that pinned the revision EXACTLY were floored to `>=`.
-  **A `set` of a stated FIELD from a `prompt(…)` is a DERIVED fold** (arithmetic is a prompt
-  by the 2026-08-23 ruling); `set state S to prompt(…)` stays prose.
+  **A `set` of a stated FIELD from a `prompt(…)` is a DERIVED fold**; `set state S to
+  prompt(…)` stays prose. Arithmetic WAS a prompt by the 2026-08-23 ruling; **B4 reversed that
+  on 2026-09-18 (landed 2026-09-21)** — `set field F to F + ev.points` is syntax now, the prompt
+  form is the legacy spelling and stays derived. Bounds: `+ - * /`, string `+`, timestamp ±
+  duration, comparisons on expressions, constant value expressions; **no power, roots or
+  math-library functions** (system-dependent, stay `prompt`); no bare `now` (`system.now`);
+  the two string-duration windows unchanged. `docs/claude/language-constructs.md` § B4 has
+  the ladder, the typing table and the reflective-surface details.
+  **Two traps that bit while building it**: `literalString` CUTS after its opening quote, so
+  an atom of the expression ladder must be `NoCut(literalString)` or `when "prose"` fails
+  behind the cut instead of backtracking to the deprecated-string arm; and identifiers may
+  contain `-`, so `a-3` is ONE name — binary minus wants whitespace on its left.
 
 - **`Advisory` is a MESSAGE KIND, not a warning class (Reid, 2026-09-12; CM § "two
   conformance bars").** *A structural fact consistent with the model as written and

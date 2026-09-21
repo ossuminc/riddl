@@ -503,6 +503,14 @@ enum RuleId(
   case PatternOrderingNumeric extends RuleId("value-pattern-ordering-numeric")
   case EmptyNotAllowed extends RuleId("value-empty-not-allowed")
   case ValueTypeMismatch extends RuleId("value-type-mismatch")
+  // B4 (2026-09-21): arithmetic. Which categories may be combined by which operator is the table
+  // in `ValidationPass.checkArithmetic`; anything off the table is this Error, never a coercion.
+  case ArithmeticOperandMismatch extends RuleId("value-arithmetic-operand-mismatch")
+
+  // ---- constant: constants and their value expressions -------------------------------------
+  // B4: a constant may be an expression, but only of literals and other constants.
+  case ConstantOperandNotConstant extends RuleId("constant-operand-not-constant")
+  case ConstantExpressionTypeMismatch extends RuleId("constant-expression-type-mismatch")
   case PromptAscriptionContradicts extends RuleId("value-prompt-ascription-contradicts")
   case ArgumentTypeMismatch extends RuleId("value-argument-type-mismatch")
   case ArgumentDuplicated extends RuleId("value-argument-duplicated")
@@ -667,7 +675,7 @@ object RuleId:
     * whose prefix is not here, which is what stops the vocabulary drifting one rule at a time.
     */
   val subjects: Set[String] = Set(
-    "adaptor", "app", "bast", "context",
+    "adaptor", "app", "bast", "constant", "context",
     // `def` is the generic bucket: a rule that applies to ANY definition rather than to one kind
     // of thing -- "this container should have content", "this is empty". Deliberately last resort;
     // a rule that can name its subject should.

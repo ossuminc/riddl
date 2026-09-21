@@ -403,3 +403,6 @@ entity-event-sourced-prose-folds
 stmt-collection-field-not-collection
 stmt-collection-key-not-a-field
 handler-on-other-field-not-common
+value-arithmetic-operand-mismatch
+constant-operand-not-constant
+constant-expression-type-mismatch

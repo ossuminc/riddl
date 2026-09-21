@@ -132,6 +132,14 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case in: Initiate             => in.args
     case ca: ConstructorArg       => Seq(ca.value)
     case gv: GetValue             => Seq(gv.source)
+    // B4 (2026-09-21): arithmetic composition, and the duration literal's amount. Found in the
+    // same survey, same defect class, one line each: a lookup's indices, an `empty` ascription and
+    // a constant's VALUE (a `Constant` is a Leaf whose value sits in a field) were unreachable too.
+    case ae: ArithmeticExpression => Seq(ae.left, ae.right)
+    case dl: DurationLiteral      => Seq(dl.amount)
+    case lv: LookupValue          => lv.collection +: lv.indices
+    case ev: EmptyValue           => ev.typeEx.toSeq
+    case c: Constant              => Seq(c.value)
 
     // Review round 1, fix 1: `PromptValue` (A20's `prompt("…") as T` typed hole) was the ONLY
     // arm of `Value` holding a non-trivial nested structure and had NO case at all — not the

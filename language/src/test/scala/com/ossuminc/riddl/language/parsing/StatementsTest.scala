@@ -633,12 +633,23 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
 
     // ---- A28 slice 3: comparison operands are type-safe (refs, or a bare numeric literal) ----
 
-    "reject a string-literal comparison operand at PARSE: count > \"5\" (A28 s3)" in {
-      (td: TestData) => parseLetExprFails("count > \"5\"", td)
+    // B4 (2026-09-21) REVERSED A28 s3's parse-time rejection: a comparison's operands are full
+    // Values now, so a string or boolean literal PARSES as an operand and validation's
+    // `checkComparison` decides whether the two sides may be compared (`count > "5"` is
+    // `value-incomparable-kinds`, `count > true` too). The grammar no longer knows about types.
+    "parse a string-literal comparison operand: count > \"5\" (B4 reversed A28 s3)" in {
+      (td: TestData) =>
+        parseLetExpr("count > \"5\"", td) match
+          case ComparisonExpression(_, ComparisonOperator.GT, _, ls: LiteralString) =>
+            ls.s must be("5")
+          case other => fail(s"expected a comparison with a string operand, got ${other.format}")
     }
 
-    "reject a boolean-literal comparison operand at PARSE: count > true (A28 s3)" in {
-      (td: TestData) => parseLetExprFails("count > true", td)
+    "parse a boolean-literal comparison operand: count > true (B4 reversed A28 s3)" in {
+      (td: TestData) =>
+        parseLetExpr("count > true", td) match
+          case ComparisonExpression(_, ComparisonOperator.GT, _, _: BooleanLiteral) => succeed
+          case other => fail(s"expected a comparison with a boolean operand, got ${other.format}")
     }
 
     // A28 was reversed 2026-08-14: a bare number is now a legal comparand (draws a StyleWarning in

@@ -683,9 +683,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(c.loc)
     writeIdentifierInline(c.id) // Inline - no tag needed
     writeTypeExpression(c.typeEx)
-    // `Constant.value: ConstantValue` (LiteralString | NumericLiteral | BooleanLiteral |
-    // PromptValue) is a subset of `Value`, so `writeValue` handles all four arms and the reader
-    // gains the discriminator byte it needs to tell them apart -- see FORMAT_REVISION 18.
+    // `Constant.value: ConstantValue` is a subset of `Value` (eight arms since B4, revision 26),
+    // so `writeValue` handles every arm and the reader gains the discriminator byte it needs to
+    // tell them apart -- see FORMAT_REVISION 18.
     writeValue(c.value)
   }
 
@@ -1525,8 +1525,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(1)
         writeLocation(ce.loc)
         writer.writeU8(ce.op.ordinal)
-        writeComparand(ce.left)
-        writeComparand(ce.right)
+        // Revision 26: the operands are full Values (B4). Before, `writeComparand`.
+        writeValue(ce.left)
+        writeValue(ce.right)
       case le: LogicalExpression =>
         writer.writeU8(5)
         writer.writeU8(2)
@@ -1565,6 +1566,23 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(10)
         writeLocation(nl.loc)
         writeString(nl.text)
+      // B4 (revision 26): tags 14-16.
+      case ae: ArithmeticExpression =>
+        writer.writeU8(14)
+        writeLocation(ae.loc)
+        writer.writeU8(ae.op.ordinal)
+        writeValue(ae.left)
+        writeValue(ae.right)
+      case dl: DurationLiteral =>
+        writer.writeU8(15)
+        writeLocation(dl.loc)
+        writeLocation(dl.amount.loc)
+        writeString(dl.amount.text)
+        writeString(dl.unit)
+      case cr: ConstantRef =>
+        writer.writeU8(16)
+        writeLocation(cr.loc)
+        writePathIdentifierInline(cr.pathId)
   }
 
   /** A70/instance-identity: a single [[ConstructorArg]] -- mirror of the inline arg-writing loop

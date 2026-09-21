@@ -742,7 +742,9 @@ class BASTReader(
     // here is corruption, not a rough edge -- throw rather than substitute a plausible value, the
     // same lesson the ShownBy and Constant/Method bugs taught.
     val value = readValue() match
-      case cv: (LiteralString | NumericLiteral | BooleanLiteral | PromptValue) => cv
+      case cv: (LiteralString | NumericLiteral | BooleanLiteral | PromptValue |
+            ArithmeticExpression | DurationLiteral | ConstantRef | ValueRef) =>
+        cv
       case other =>
         throw new RuntimeException(
           s"Constant value decoded as ${other.getClass.getSimpleName}, which is not a ConstantValue"
@@ -2672,8 +2674,9 @@ class BASTReader(
           case 1 => // ComparisonExpression
             val loc = readLocation()
             val op = ComparisonOperator.fromOrdinal(reader.readU8())
-            val left = readComparand()
-            val right = readComparand()
+            // Revision 26: operands are full Values (B4).
+            val left = readValue()
+            val right = readValue()
             ComparisonExpression(loc, op, left, right)
           case 2 => // LogicalExpression
             val loc = readLocation()
@@ -2705,6 +2708,20 @@ class BASTReader(
       case 10 => // NumericLiteral -- text as written
         val loc = readLocation()
         NumericLiteral(loc, readString())
+      case 14 => // B4: ArithmeticExpression (revision 26)
+        val loc = readLocation()
+        val op = ArithmeticOperator.fromOrdinal(reader.readU8())
+        val left = readValue()
+        val right = readValue()
+        ArithmeticExpression(loc, op, left, right)
+      case 15 => // B4: DurationLiteral (revision 26)
+        val loc = readLocation()
+        val amountLoc = readLocation()
+        val amount = NumericLiteral(amountLoc, readString())
+        DurationLiteral(loc, amount, readString())
+      case 16 => // B4: ConstantRef as a value (revision 26)
+        val loc = readLocation()
+        ConstantRef(loc, readPathIdentifierInline())
       case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
   }
 

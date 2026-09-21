@@ -225,6 +225,7 @@ case class UseCaseWitnessPass(
       case ce: ComparisonExpression  => getInputRefsIn(ce.left) ++ getInputRefsIn(ce.right)
       case le: LogicalExpression     => getInputRefsIn(le.left) ++ getInputRefsIn(le.right)
       case ne: NotExpression         => getInputRefsIn(ne.expr)
+      case ae: ArithmeticExpression  => getInputRefsIn(ae.left) ++ getInputRefsIn(ae.right)
       case _                         => Seq.empty
 
   // ============================================================

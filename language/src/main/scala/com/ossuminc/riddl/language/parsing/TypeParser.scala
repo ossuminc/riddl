@@ -896,17 +896,25 @@ private[parsing] trait TypeParser {
 
   def typeDef[u: P]: P[Type] = { defOfType | defOfTypeKindType }
 
-  // The four arms `Constant` may hold. Keyword-led (`promptValue`, `booleanLiteral`) and
-  // punctuation-led (`numericLiteral`) forms are tried before `literalString`, which is the
-  // permissive bare-quote fallback and must go last.
+  // What `Constant` may hold. `promptValue` is keyword-led and tried first; everything else is
+  // the arithmetic ladder (B4, 2026-09-21), which returns a bare literal unchanged when no
+  // operator follows and an `ArithmeticExpression` otherwise. The ladder can also build things a
+  // constant may NOT hold -- a comparison, `a and b`, a lookup, `self` -- and those are refused
+  // here by the narrowing, at parse time, exactly as `call`/`ask`/`initiate` always were. Whether
+  // a `ValueRef` operand names a CONSTANT is validation's check; the parser cannot know.
   private def constantValue[u: P]: P[ConstantValue] = {
     P(
       promptValue.map(pv => pv: ConstantValue) |
-        booleanLiteral.map(bl => bl: ConstantValue) |
-        numericLiteral.map(nl => nl: ConstantValue) |
-        literalString.map(ls => ls: ConstantValue)
+        arithmeticExpression.filter(isConstantShaped).map(_.asInstanceOf[ConstantValue])
     )
   }
+
+  private def isConstantShaped(v: Value): Boolean = v match
+    case _: LiteralString | _: NumericLiteral | _: BooleanLiteral | _: PromptValue |
+        _: DurationLiteral | _: ConstantRef | _: ValueRef =>
+      true
+    case ae: ArithmeticExpression => isConstantShaped(ae.left) && isConstantShaped(ae.right)
+    case _                        => false
 
   // True when `text` is what a NON-string arm of `constantValue` would have matched for `typeEx` --
   // i.e. the author quoted a value that need not have been quoted. `Bool` is itself a NumericType

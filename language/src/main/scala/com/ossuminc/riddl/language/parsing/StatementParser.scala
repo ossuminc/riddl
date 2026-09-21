@@ -597,14 +597,13 @@ private[parsing] trait StatementParser {
   }
 
   // A54/A28: a value expression. Keyword-led forms (`prompt(…)`, constructor, `get from`) are tried
-  // first; everything else flows through the boolean-expression sub-language (`booleanExpr`), which
-  // returns the bare atom unchanged when no comparison/logical operator is present — so a plain
+  // first; everything else flows through the expression ladder (`booleanExpr`), which returns
+  // the bare atom unchanged when no comparison/logical/arithmetic operator is present — so a plain
   // `let x = y` still yields exactly a `ValueRef`, not a wrapper. fastparse `|` unifies to the least
   // upper bound (RiddlValue), so each branch is widened to `Value` explicitly (mirror foreachCollection).
   def value[u: P]: P[Value] = {
     P(
-      literalString.map(ls => ls: Value) |
-        promptValue.map(pv => pv: Value) |
+      promptValue.map(pv => pv: Value) |
         callValue.map(c => c: Value) | // A24: `call function F(args)` (keyword-led)
         askValue.map(a => a: Value) | // `ask query Q of <processor>` (keyword-led)
         initiateValue.map(i => i: Value) | // `initiate <processor>[(args)]` (keyword-led)
@@ -613,20 +612,18 @@ private[parsing] trait StatementParser {
         // BEFORE `booleanExpr`: its atom accepts a bare path, which would swallow `empty` as a
         // ValueRef and leave any ascription dangling.
         emptyValue.map(ev => ev: Value) |
-        booleanExpr |
-        // LAST, and deliberately: `booleanExpr` must get first refusal. This ordering is now
-        // LOAD-BEARING (it was inert when written -- `comparand` accepted only
-        // `GetValue | ConstantRef | ValueRef` -- until `comparand` was widened to accept
-        // `NumericLiteral`). Trying `booleanExpr` first is what keeps `5 > 3` parsing as a
-        // comparison rather than `numericLiteral` matching the bare `5`, returning it as the whole
-        // value, and leaving `> 3` dangling: `comparison` cuts only AFTER its operator, so a bare
-        // `5` backtracks cleanly out of `booleanExpr` and lands here.
-        numericLiteral.map(nl => nl: Value)
+        // B4 (2026-09-21): the expression ladder is the LAST alternative and owns every literal.
+        // `literalString` used to lead this alternation and `numericLiteral` used to trail it;
+        // both are now atoms of the ladder (`arithAtom`), because `"a" + b` and `5 * n` need
+        // them as OPERANDS, and a literal with no operator after it comes back from the ladder
+        // unchanged -- the same node the old branches produced.
+        booleanExpr
     )
   }
 
   // A28: the boolean-expression sub-language — a layered left-fold, loosest to tightest:
-  //   or < and < not < comparison < atom.
+  //   or < and < not < comparison < additive < multiplicative < atom.
+  // The two arithmetic levels are B4 (2026-09-21).
   // CONTEXT-SENSITIVE OPERATORS: `and`/`or`/`not`/`true`/`false` are matched ONLY here (each with a
   // keyword word-boundary via `Keywords.keyword`, so `andrew`/`notify`/`truthy` stay identifiers).
   // They are NOT added to any global reserved-word filter, so they remain legal identifiers elsewhere.
@@ -681,23 +678,91 @@ private[parsing] trait StatementParser {
     )
   }
 
-  // comparison level (non-associative). A comparison's two operands are `comparand` — a TYPED ref
-  // OR a bare numeric literal (A28, widened 2026-08-14); a quoted string, a constructor and a
-  // boolean literal are still not comparands. So `count > "5"` / `count > true` / `count > R(1)`
-  // FAIL to parse (the `~/` cut after the operator commits, and the right operand must match
-  // `comparand`), while `count > 5` now parses -- and draws a StyleWarning in validation rather
-  // than a parse error. When there is NO operator the bare boolean ATOM is returned unchanged (NOT
-  // wrapped) — a comparand parsed as the left operand with no operator following backtracks (no cut
-  // before the operator) and re-parses via `booleanAtom`, so `true`, `(a and b)`, and a bare
-  // boolean-typed ref remain valid standalone atoms.
+  // comparison level (non-associative). B4 (2026-09-21): a comparison's operands are ADDITIVE
+  // expressions -- full Values -- so `a + b > c` and `"x" == name` parse; what may be compared is
+  // validation's question (`checkComparison`). The cut sits AFTER the operator, so an operand
+  // parsed with no operator following is returned unchanged as the bare atom (never wrapped),
+  // which is what keeps `true`, `(a and b)`, a bare ref and a bare literal valid standalone.
   private def comparison[u: P]: P[Value] = {
+    P(Index ~ additive ~ (comparisonOperator ~/ additive).? ~ Index).map {
+      case (_, left, None, _)                => left
+      case (start, left, Some((op, right)), end) =>
+        ComparisonExpression(at(start, end), op, left, right): Value
+    }
+  }
+
+  // B4: the two arithmetic levels, each a left fold. NO cut after an arithmetic operator: `value`
+  // is an alternation and `booleanExprOnly` a filter, and both need to backtrack cleanly out of
+  // the ladder when the text turns out not to be an expression at all. The operators are single
+  // characters, so a failed attempt costs nothing. `/` must not eat the start of a `//` comment.
+  //
+  // TRAP, documented rather than fixed: an identifier may contain `-`, so `a-3` is ONE identifier
+  // and never reaches this level. Binary minus wants whitespace on its left: `a - 3` (and `a -3`
+  // also works, since this operator consumes the `-` before the literal can claim it as a sign).
+  private def additiveOp[u: P]: P[ArithmeticOperator] =
+    P(StringIn("+", "-").!).map {
+      case "+" => ArithmeticOperator.Add
+      case _   => ArithmeticOperator.Subtract
+    }
+
+  private def multiplicativeOp[u: P]: P[ArithmeticOperator] =
+    P(("*" | ("/" ~~ !"/")).!).map {
+      case "*" => ArithmeticOperator.Multiply
+      case _   => ArithmeticOperator.Divide
+    }
+
+  private def additive[u: P]: P[Value] = {
+    P(Index ~ multiplicative ~ (additiveOp ~ multiplicative).rep ~ Index).map {
+      case (start, first, rest, end) =>
+        rest.foldLeft(first) { case (l, (op, r)) =>
+          ArithmeticExpression(at(start, end), op, l, r): Value
+        }
+    }
+  }
+
+  private[parsing] def multiplicative[u: P]: P[Value] = {
+    P(Index ~ arithAtom ~ (multiplicativeOp ~ arithAtom).rep ~ Index).map {
+      case (start, first, rest, end) =>
+        rest.foldLeft(first) { case (l, (op, r)) =>
+          ArithmeticExpression(at(start, end), op, l, r): Value
+        }
+    }
+  }
+
+  /** B4: the atoms of the arithmetic levels. A duration literal before a bare numeric literal
+    * (the latter has no cut, so `30` with no unit word after it backtracks); a literal string;
+    * `constant X`; then everything `booleanAtom` admits (parenthesized expressions, `true`/`false`,
+    * `get`, `invariant`, `self`, `system`, refs and lookups). `(a + b) * c` gets its grouping from
+    * `booleanAtom`'s parenthesized arm, which returns whatever the ladder built.
+    */
+  private def arithAtom[u: P]: P[Value] = {
     P(
-      (Index ~ comparand ~ comparisonOperator ~/ comparand ~ Index).map {
-        case (start, left, op, right, end) =>
-          ComparisonExpression(at(start, end), op, left, right): Value
-      } | booleanAtom
+      durationLiteral.map(dl => dl: Value) |
+        // `NoCut` is load-bearing: `literalString` cuts after its opening quote, and
+        // `booleanExprOnly` FILTERS the ladder's result -- so `when "prose"` would parse the
+        // string here, fail the filter behind the cut, and never reach the deprecated-string arm.
+        NoCut(literalString).map(ls => ls: Value) |
+        constantRef.map(cr => cr: Value) |
+        numericLiteral.map(nl => nl: Value) |
+        booleanAtom
     )
   }
+
+  /** B4: `30 days`, `1 hour` -- a numeric literal followed by a unit word, with a keyword-style
+    * word boundary so `5 daysOfWeek` is not a duration. Public within the package so
+    * `TypeParser.constant` reaches it.
+    */
+  private[parsing] def durationLiteral[u: P]: P[DurationLiteral] = {
+    P(
+      Index ~ numericLiteral ~ (StringIn(
+        "nanoseconds", "nanosecond", "microseconds", "microsecond", "milliseconds", "millisecond",
+        "seconds", "second", "minutes", "minute", "hours", "hour", "days", "day", "weeks", "week"
+      ).! ~~ &(Keywords.isNotKeywordChar)) ~ Index
+    ).map { case (start, amount, unit, end) => DurationLiteral(at(start, end), amount, unit) }
+  }
+
+  /** B4: the additive ladder, exposed for `TypeParser.constantValue`. */
+  private[parsing] def arithmeticExpression[u: P]: P[Value] = additive
 
   // A28, widened 2026-08-14: a comparison operand — a TYPED reference, OR a bare numeric literal.
   // `get from …` and `constant <path>` are keyword-led (tried first); `numericLiteral` goes next so
