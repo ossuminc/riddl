@@ -162,7 +162,9 @@ package object bast {
     // CHANGES the comparison sub-tag 1's operands from `writeComparand` to `writeValue` -- a
     // revision-25 reader would read a value tag as a comparand tag and misalign, so the bump is
     // not optional even for a file holding no new node.
-    26 // B4 arithmetic: value tags 14-16, comparison operands are values
+    // 27 (2026-09-21, B7) adds statement sub-kind 24 (`log <value>`). A revision-26 reader has no
+    // arm for the tag and throws at the dispatch -- the honest failure.
+    27 // B7 `log` statement (sub-kind 24)
     // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.

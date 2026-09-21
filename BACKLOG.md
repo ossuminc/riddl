@@ -1392,9 +1392,6 @@ measurements on reactive-bbq: 553 AI-filled holes, 4h37m, each hole a sentence R
 spelling for). Reid approved riddlg's PLAN to file these — not the features. Each needs a
 ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
 
-- **[2.13] B7 — an explicit `log`/`audit` statement**, "record this for humans", lowering to a
-  logger or B3's history table. 34 `do` statements under `on other` in reactive-bbq are this.
-  **Small–medium** (a new statement: the full reflective surface, see [1.25]'s `append`).
 - **[2.15] B3 — schema `key on field …` (a UNIQUE natural key, distinct from `index on`) and
   an optional `with history` table.** Gives `store` (B2) upsert semantics and a UNIQUE
   constraint; NINE wrote three identical rows for one reservation. **Medium.**

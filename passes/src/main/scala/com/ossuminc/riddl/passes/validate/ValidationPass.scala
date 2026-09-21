@@ -2859,6 +2859,10 @@ case class ValidationPass(
         checkWriteScope(keyword, cs.loc, parents)
         checkRef[Field](cs.field, parents)
         checkCollectionTarget(cs, parents)
+      // B7: nothing to check at statement level -- `log` is legal everywhere a statement is and
+      // constrains nothing; its operand is validated in `checkStatementScopes`, which threads the
+      // `let`/element scope a value needs.
+      case _: LogStatement => ()
       case SendStatement(_, msg, portlet, _) =>
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
         // checkStatementScopes (both need the threaded `let`/element scope — A56/message-value-source).
@@ -6528,6 +6532,7 @@ case class ValidationPass(
           valueReferencedDefs(put.value)
       case set: SetStatement    => valueReferencedDefs(set.value)
       case cs: CollectionStatement => valueReferencedDefs(cs.value)
+      case ls: LogStatement     => valueReferencedDefs(ls.value)
       case let: LetStatement    => valueReferencedDefs(let.expression)
       case ret: ReturnStatement => valueReferencedDefs(ret.value)
       // A70/instance-identity: the entity a `terminate` ends is exactly the kind of reference A8
@@ -7739,6 +7744,7 @@ case class ValidationPass(
     s match
       case set: SetStatement    => Seq(set.value)
       case cs: CollectionStatement => Seq(cs.value)
+      case ls: LogStatement     => Seq(ls.value) // B7
       case let: LetStatement    => Seq(let.expression)
       case put: PutStatement    => Seq(put.value)
       case ret: ReturnStatement => Seq(ret.value)
@@ -11677,6 +11683,7 @@ case class ValidationPass(
             ss.loc,
             s"'set ${ss.field.format}'"
           )
+        case ls: LogStatement => validateValue(ls.value, parents, lets, elements) // B7
         case cs: CollectionStatement =>
           // The value is typed against the ELEMENT type (by value) or the key field's type (keyed),
           // through the same `checkValueType` a `set` uses -- so, like `set`, a predefined element
@@ -11889,11 +11896,12 @@ case class ValidationPass(
           case _: TellStatement | _: SendStatement | _: ForwardStatement | _: YieldStatement |
               _: ReplyStatement | _: MorphStatement | _: SetStatement | _: CollectionStatement |
               _: BecomeStatement | _: ErrorStatement | _: CodeStatement | _: PutStatement |
-              _: TerminateStatement =>
+              _: TerminateStatement | _: LogStatement =>
             // A45: `put` publishes to a UI output — an executable effect. A70/instance-identity:
             // `terminate` ends an instance -- as executable an effect as `tell`. (ReturnStatement
             // is not added here: it only occurs in function bodies, which are classified by
-            // validateFunction's statement-non-empty check, not classifyHandlers.)
+            // validateFunction's statement-non-empty check, not classifyHandlers.) B7: `log` is
+            // deterministic work, so `on other is { log m }` is not a prompt-only handler.
             executableCount += 1
           case _: DoStatement =>
             promptCount += 1

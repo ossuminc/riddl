@@ -172,6 +172,7 @@ is covered in that construct's phase. The builder emits references as
 | ForeachStatement | ✅ A25 | field-ref or local collection; nested body statements |
 | PutStatement | ✅ A45 | value + OutputRef; value via ValueDto |
 | ReturnStatement | ✅ A57 | value via ValueDto |
+| LogStatement | ✅ B7 (2026-09-21) | `{ "kind": "log", "value": <value> }` — record a value for humans; deterministic, not state |
 | TerminateStatement | ✅ 2.0 | `{ "kind": "terminate", "target": <value>, "args": [<arg>] }` — end the instance denoted by `target`, invoking its `on term`. **`target` REPLACED the `processor`/`processorKind` pair on 2026-08-15**: it is a value whose type must be `Id(entity E)`, so it names WHICH INSTANCE ends rather than which kind. **No longer the same shape as `Initiate`**, which still names a type because the instance does not exist yet. A producer still emitting the old pair has it silently dropped and gets a null `target` — the reader diffs no keys |
 
 ## Values (A54)

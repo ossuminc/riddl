@@ -1457,6 +1457,7 @@ object JsonAstBuilder:
         SetStatement(curAt, target, buildValue(value))
       case AppendStmtDto(value, field) =>
         AppendStatement(curAt, buildValue(value), FieldRef(curAt, pathId(field)))
+      case LogStmtDto(value) => LogStatement(curAt, buildValue(value)) // B7
       case RemoveStmtDto(field, value, key) =>
         RemoveStatement(curAt, FieldRef(curAt, pathId(field)), buildValue(value), key.map(k => Identifier(curAt, k)))
       case SendStmtDto(message, to, portlet, at) =>

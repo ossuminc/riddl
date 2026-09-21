@@ -264,6 +264,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: SetStatement       => writeSetStatement(s)
       case s: AppendStatement    => writeAppendStatement(s)
       case s: RemoveStatement    => writeRemoveStatement(s)
+      case s: LogStatement       => writeLogStatement(s)
       case s: SendStatement      => writeSendStatement(s)
       case s: MorphStatement     => writeMorphStatement(s)
       case s: BecomeStatement    => writeBecomeStatement(s)
@@ -1227,6 +1228,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(1)
         writeIdentifierInline(k)
       case None => writer.writeU8(0)
+  }
+
+  /** B7: `log <value>` -- sub-kind 24 (revision 27): location, then the value. */
+  def writeLogStatement(s: LogStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(24) // Log statement
+    writeLocation(s.loc)
+    writeValue(s.value)
   }
 
   def writeForwardStatement(s: ForwardStatement): Unit = {

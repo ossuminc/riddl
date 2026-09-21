@@ -223,6 +223,15 @@ private[parsing] trait StatementParser {
     )./.map { case (start, v, ref, end) => AppendStatement(at(start, end), v, ref) }
   }
 
+  /** B7: `log <value>`. The cut sits after the keyword: nothing else begins with `log`, and the
+    * operand is any value.
+    */
+  private def logStatement[u: P]: P[LogStatement] = {
+    P(Index ~ Keywords.log ~/ value ~ Index).map { case (start, v, end) =>
+      LogStatement(at(start, end), v)
+    }
+  }
+
   private def removeStatement[u: P]: P[RemoveStatement] = {
     P(
       Index ~ Keywords.remove ~/ (
@@ -558,7 +567,8 @@ private[parsing] trait StatementParser {
       StringIn(
         "set", "tell", "send", "forward", "yield", "reply", "morph", "become", "do", "prompt",
         "let", "call", "foreach", "when", "match", "error", "require", "put", "return", "terminate",
-        "code", "focus", "stop", "read", "write", "ask", "initiate", "if", "else", "append", "remove"
+        "code", "focus", "stop", "read", "write", "ask", "initiate", "if", "else", "append", "remove",
+        "log"
       ) ~~ &(Keywords.isNotKeywordChar)
     )
   }
@@ -1111,8 +1121,9 @@ private[parsing] trait StatementParser {
         setStatements(set) | letStatement |
         // GROUP 3b: Boundary value operations, scope-gated (A45 put -> Context; A57 return -> Function)
         putStatements(set) | returnStatements(set) | terminateStatement |
-        // GROUP 4: General statements (`do` is canonical; `prompt` is a deprecated synonym)
-        doStatement | promptStatement | codeStatement |
+        // GROUP 4: General statements (`do` is canonical; `prompt` is a deprecated synonym); B7's
+        // `log` is deterministic, allowed everywhere, and sits here beside them.
+        doStatement | promptStatement | logStatement | codeStatement |
         // GROUP 5: Error handling and preconditions (suppressed under EventClause)
         guardStatements(set) | comment
     ).asInstanceOf[P[Statements]]

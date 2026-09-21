@@ -435,6 +435,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           case processor: ProcessorRef[?] =>
             associateUsage(parents.head, resolveARef[Processor[?]](processor, parents))
       case _: DoStatement => () // no references
+      case ls: LogStatement => resolveValue(ls.value, parents) // B7: the operand is any value
       case _: ErrorStatement  => () // no references
       case rs: RequireStatement =>
         rs.condition match {

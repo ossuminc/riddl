@@ -1574,6 +1574,12 @@ resolution and type-checking — in `checkStatementScopes`.
   math-library functions** (system-dependent, stay `prompt`); no bare `now` (`system.now`);
   the two string-duration windows unchanged. `docs/claude/language-constructs.md` § B4 has
   the ladder, the typing table and the reflective-surface details.
+  **`log <value>` (B7, 2026-09-21) is the twenty-second statement**: deterministic, not
+  state, not a message, legal everywhere including functions, executable for
+  `classifyHandlers`. Adding a statement touches the three exhaustive `Statement` matches the
+  compiler names plus the catch-alls `append` needed (`statementValues`,
+  `valueReferencedDefs`, `checkStatementScopes`, `Finder.fieldChildren`, the emitter), the
+  `KeywordsTest` count, BAST sub-kind + revision, JSON, find kinds, EBNF + `statement_start`.
   **Two traps that bit while building it**: `literalString` CUTS after its opening quote, so
   an atom of the expression ladder must be `NoCut(literalString)` or `when "prose"` fails
   behind the cut instead of backtracking to the deprecated-string arm; and identifiers may

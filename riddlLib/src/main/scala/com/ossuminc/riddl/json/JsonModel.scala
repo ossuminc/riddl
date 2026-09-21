@@ -755,6 +755,9 @@ object JsonModel:
   /** `{ "kind": "append", "value": <value>, "field": "<path>" }` (2026-09-14) */
   case class AppendStmtDto(value: ValueDto, field: String) extends StatementDto
 
+  /** `{ "kind": "log", "value": <value> }` -- B7 (2026-09-21): record a value for humans. */
+  case class LogStmtDto(value: ValueDto) extends StatementDto
+
   /** `{ "kind": "remove", "field": "<path>", "value": <value>, "key": "<name>"? }` -- `key`
     * present is the keyed form (`remove from field F where key == value`), absent the by-value one.
     */
@@ -2042,6 +2045,7 @@ object JsonModel:
           case "set" =>
             SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), readValue(m("value")))
           case "append" => AppendStmtDto(readValue(m("value")), m("field").str)
+          case "log"    => LogStmtDto(readValue(m("value")))
           case "remove" => RemoveStmtDto(m("field").str, readValue(m("value")), m.get("key").map(_.str))
           case "send" =>
             SendStmtDto(
@@ -2177,6 +2181,8 @@ object JsonModel:
         )
       case AppendStmtDto(value, field) =>
         ujson.Obj("kind" -> ujson.Str("append"), "value" -> writeValue(value), "field" -> ujson.Str(field))
+      case LogStmtDto(value) =>
+        ujson.Obj("kind" -> ujson.Str("log"), "value" -> writeValue(value))
       case RemoveStmtDto(field, value, key) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)](

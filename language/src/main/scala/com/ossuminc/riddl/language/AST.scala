@@ -4197,6 +4197,20 @@ object AST:
     def format: String = s"append ${value.format} to ${field.format}"
   }
 
+  /** B7 (riddl-generator, 2026-09-17; landed 2026-09-21): `log <value>` -- record the value for
+    * humans. Deterministic: a generator emits the rendered value to its logging facility (a
+    * logger, an audit table, stdout -- the generator's choice), never an AI FILL. NOT state (not
+    * an A23 effect, not an event-sourcing mutation), NOT a message (settles no `yields`, is no
+    * transmission, needs no outlet), legal everywhere a statement is -- a Function included,
+    * since A26's purity is about state and messaging and observability is neither. The operand is
+    * any Value: a literal, the bound message under `on other as m`, a field, an expression.
+    */
+  @JSExportTopLevel("LogStatement")
+  case class LogStatement(loc: At, value: Value) extends Statement {
+    override def kind: String = "Log Statement"
+    def format: String = s"log ${value.format}"
+  }
+
   /** `remove <value> from field F` removes EVERY element equal to the value; `remove from field F
     * where <key> == <value>` removes every element whose field `key` equals the value -- the keyed
     * form, for the corpus's folds that carry an item id while the collection holds records.

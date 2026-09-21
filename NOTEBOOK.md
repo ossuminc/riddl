@@ -80,9 +80,10 @@ riddl-mcp-server are not checked out). BACKLOG [2.11]–[2.18] held riddlg's lan
 **Reid ruled 2026-09-18**: B4 reversed within bounds, B1 approved and LANDED (entry below,
 [2.14] closed), "proceed with those new language features and anything else in the backlog";
 the consumer-bump task files are CANCELLED until the next release. **B4 landed 2026-09-21**
-(entry below; [2.18] closed, [2.19] filed for the duration windows); **B6 and B8 landed the
-same afternoon** ([2.11], [2.12] closed). Next: [2.13] B7, [2.15] B3, [2.16] B5, then [2.17]
-B2 as a CM question for Reid. `../bin/riddlc` and ivy were restaged together at the
+(entry below; [2.18] closed, [2.19] filed for the duration windows); **B6, B8 and B7 landed the
+same day** ([2.11], [2.12], [2.13] closed). `../bin/riddlc` and ivy were restaged together at
+`2.2.0-6-7c2d1889` (before B7 — restage again after it). Next: [2.15] B3, [2.16] B5, then
+[2.17] B2 as a CM question for Reid. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -111,6 +112,21 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-21 (evening) — B7: `log`, the twenty-second statement
+
+`log <value>` — record a value for humans. One keyword, one operand, no `audit` synonym (two
+spellings of one statement is the `do`/`prompt` situation the language is still deprecating its
+way out of). Deterministic, not state, not a message, legal everywhere including a function
+body, executable for `classifyHandlers` so `on other is { log m }` is not a prompt-only handler.
+BAST revision 27. The corpus is unmoved (191/191 at 0/0); riddlg's "34 `do` under `on other`"
+have since become deliberate `do "… change nothing here"` discards, and the 23 `do "log …"` /
+`do "record …"` statements corpus-wide are the migration candidates.
+
+Building a statement after building a value kind is instructive: the compiler names the three
+exhaustive `Statement` matches, and the catch-alls are exactly the ones `append` needed a week
+ago — the list is now in CLAUDE.md. The one thing nothing named was `KeywordsTest`'s
+hand-maintained count (169).
 
 ## 2026-09-21 (later) — B6 and B8: two lints, one afternoon
 

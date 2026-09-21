@@ -37,7 +37,9 @@ class KeywordsTest extends AbstractTestingBasis {
       // the next omission reddens by NAME instead of arriving as a count nobody can attribute.
       // 168 as of 2026-09-07: `quiescence`, for the `on quiescence <window>` clause. Registered in
       // allKeywords for tokenization but NOT in definitionKeywords, so it remains a legal identifier.
-      Keyword.allKeywords.size must be(168)
+      // 169 as of 2026-09-21: `log`, for B7's `log <value>` statement. Registered for tokenization
+      // and the statement lead; NOT a definitionKeyword (a field named `log` stays legal).
+      Keyword.allKeywords.size must be(169)
     }
   }
 

@@ -1,0 +1,49 @@
+// Exercises B7 (2026-09-21): `log <value>` -- record a value for humans. Deterministic, not
+// state, not a message; legal everywhere a statement is, a function and `on init` included. The
+// operand is any value: a literal, the bound message, a field, an expression.
+domain Ops is {
+  context Printing is {
+    command Print yields event Printed is { jobId: String, pages: Natural } with { briefly "c" }
+    event Printed is { jobId: String, pages: Natural } with { briefly "e" }
+    event Jammed is { jobId: String } with { briefly "e" }
+    type PrinterEvents is one of { event Printed or event Jammed } with { briefly "u" }
+
+    function PageCost is {
+      requires { pages: Natural }
+      returns { cost: Natural }
+      log "costing " + "a job"
+      return pages * 2
+    } with { briefly "f" }
+
+    entity Printer is {
+      record Fields is { id: String, printed: Natural } with { briefly "f" }
+      state Ready of record Printer.Fields
+      inlet In is command Printing.Print with { briefly "i" }
+      outlet Out is event Printer.Printed with { briefly "o" }
+      handler H is {
+        on init is {
+          log "printer created"
+          yield event Printer.Printed(jobId = "boot", pages = 0)
+        }
+        on p: command Printing.Print is {
+          log "printing job " + p.jobId
+          log p.pages
+          yield event Printer.Printed(jobId = p.jobId, pages = p.pages)
+        }
+        on ev: event Printer.Printed is {
+          set field Printer.Fields.printed to Fields.printed + ev.pages
+          log Fields.printed + 1
+        }
+        on other is { error "unexpected" }
+      } with { briefly "h" }
+      event Printed is { jobId: String, pages: Natural } with { briefly "e" }
+    } with { briefly "a printer" }
+
+    streamlet Journal as sink is {
+      inlet Events is type Printing.PrinterEvents with { briefly "i" }
+      handler J is {
+        on other as m is { log m }
+      } with { briefly "h" }
+    } with { briefly "the journal" }
+  } with { briefly "printing" option message_envelope("Riddl.Envelope") }
+} with { briefly "ops" }

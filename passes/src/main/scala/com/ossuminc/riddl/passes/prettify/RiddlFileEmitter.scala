@@ -727,6 +727,10 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         addIndent(s"set ${field.format} to ")
         emitValue(value)
         nl
+      case LogStatement(_, value) => // B7
+        addIndent("log ")
+        emitValue(value)
+        nl
       case AppendStatement(_, value, field) =>
         // Same `emitValue` routing as `set`, for the same A20 reason (a nested `prompt(...) as T`).
         addIndent("append ")

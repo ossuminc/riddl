@@ -1210,6 +1210,9 @@ class BASTReader(
             throw new IllegalStateException(s"Invalid remove-statement key marker: $other")
         RemoveStatement(loc, field, value, key)
 
+      case 24 => // B7: Log (revision 27): a single value
+        LogStatement(loc, readValue())
+
       case 21 => // Forward (delegation; discharges the yields/replies obligation)
         val msg = readMessageOperand()
         val shape = reader.readU8()

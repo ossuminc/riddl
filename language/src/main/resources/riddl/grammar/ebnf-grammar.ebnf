@@ -279,7 +279,8 @@ statement = when_statement | match_statement | foreach_statement | send_statemen
    forward_statement |
     yield_statement | reply_statement | the_set_statement | append_statement | remove_statement |
     let_statement | put_statement |
-    return_statement | terminate_statement | prompt_statement | code_statement | error_statement |
+    return_statement | terminate_statement | prompt_statement | log_statement | code_statement |
+    error_statement |
     require_statement | morph_statement | become_statement | comment ;
 
 (* Control flow *)
@@ -386,7 +387,8 @@ empty_value = ( "empty" | "none" ) [ !statement_start type_expression ] ;
 statement_start = ( "set" | "tell" | "send" | "forward" | "yield" | "reply" | "morph" | "become"
                   | "do" | "prompt" | "let" | "call" | "foreach" | "when" | "match" | "error"
                   | "require" | "put" | "return" | "terminate" | "code" | "focus" | "stop"
-                  | "read" | "write" | "ask" | "initiate" | "if" | "else" | "append" | "remove" ) ;
+                  | "read" | "write" | "ask" | "initiate" | "if" | "else" | "append" | "remove"
+                  | "log" ) ;
 prompt_value = "prompt" "(" literal_string_block ")" [ "as" type_expression ] ;
 (* Numeric literals - integers and reals, written directly. No digit separators and no radix     *)
 (* prefixes: declined deliberately, and pure additions later if wanted.                           *)
@@ -509,6 +511,8 @@ terminate_statement = "terminate" value [ "with" "(" [constructor_arg {"," const
 
 (* General statements. A54: `do` is canonical; the `prompt` statement is a deprecated synonym. *)
 prompt_statement = ("do" | "prompt") literal_string_block ;
+(* B7 (2026-09-21): record a value for humans -- deterministic, not state, not a message. *)
+log_statement = "log" value ;
 code_statement = "```" ("scala" | "java" | "python" | "mojo") code_contents "```" ;
 code_contents = {any_char_except_triple_backtick} ;
 error_statement = "error" literal_string ;

@@ -550,6 +550,18 @@ decision.
   ResolutionPass resolves `c.value` (it resolved only the type before B4, which
   is why a constant's prompt ascription never resolved).
 
+- **B7 — the `log` statement (landed 2026-09-21).** `LogStatement(loc, value: Value)`,
+  keyword `log` (registered in `allKeywords` and `statementStart`; NOT a definition keyword,
+  so a field named `log` stays legal). `log <value>` for any value. Deterministic, not state
+  (not an A23 effect; legal in an event-sourced `on init`), not a message (settles nothing,
+  needs no outlet), legal everywhere including a Function body; counts as EXECUTABLE in
+  `classifyHandlers`. BAST sub-kind 24, `FORMAT_REVISION` 27; JSON `"kind": "log"`; find kind
+  `log-statement`; prettify `log ` + `emitValue`. Sites: the compiler enumerates the three
+  exhaustive `Statement` matches (`ResolutionPass.resolveStatement`,
+  `ValidationPass.validateStatement`, `classifyHandlers`); the catch-alls that needed a hand
+  (`statementValues`, `valueReferencedDefs`, `checkStatementScopes`, `Finder.fieldChildren`,
+  the emitter) are the same list `append` needed. No `audit` synonym, deliberately.
+
 - **B4 — arithmetic, duration literals, comparison operands as values (Reid,
   2026-09-18 ruling; landed 2026-09-21).** Nodes: `ArithmeticExpression(loc, op,
   left: Value, right: Value)` with `enum ArithmeticOperator` (`+ - * /`, nothing

@@ -109,6 +109,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case rq: RequireStatement => Seq(rq.condition) ++ rq.argument.toSeq
     case st: SetStatement     => Seq(st.value)
     case cs: CollectionStatement => Seq(cs.value)
+    case ls: LogStatement     => Seq(ls.value) // B7
     case lt: LetStatement     => Seq(lt.expression)
     case pt: PutStatement     => Seq(pt.value)
     case rt: ReturnStatement  => Seq(rt.value)

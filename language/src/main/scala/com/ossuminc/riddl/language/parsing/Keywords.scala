@@ -87,6 +87,8 @@ object Keywords {
 
   def append[u: P]: P[Unit] = keyword(Keyword.append)
 
+  def log[u: P]: P[Unit] = keyword(Keyword.log)
+
   def attachment[u: P]: P[Unit] = keyword(Keyword.attachment)
 
   def author[u: P]: P[Unit] = keyword(Keyword.author)
@@ -510,6 +512,7 @@ object Keywords {
           Keyword.items,
           Keyword.label,
           Keyword.link,
+          Keyword.log,
           Keyword.many,
           Keyword.mapping,
           Keyword.merge,
@@ -695,6 +698,7 @@ object Keyword {
   final val label = "label"
   final val let = "let"
   final val link = "link"
+  final val log = "log"
   final val many = "many"
   final val match_ = "match"
   final val mapping = "mapping"
@@ -870,6 +874,7 @@ object Keyword {
     label,
     let,
     link,
+    log,
     many,
     mapping,
     match_,
