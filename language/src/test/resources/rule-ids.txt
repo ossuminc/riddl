@@ -406,3 +406,5 @@ handler-on-other-field-not-common
 value-arithmetic-operand-mismatch
 constant-operand-not-constant
 constant-expression-type-mismatch
+stmt-yield-argument-prompt
+stmt-do-validates-a-range

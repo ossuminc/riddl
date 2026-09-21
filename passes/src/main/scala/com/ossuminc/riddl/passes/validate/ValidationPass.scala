@@ -2797,6 +2797,7 @@ case class ValidationPass(
     checkStateReadScope(statement, parents)
     statement match
       case DoStatement(loc, what) =>
+        checkDoValidatesRange(loc, what)
         // The question is whether the block says ANYTHING, so it is asked of the joined prose:
         // `do { "" "" }` is as empty as `do ""`. A synthetic LiteralString carries that text to a
         // check whose contract is defined only for one (see CLAUDE.md on emptiness); `loc` for the
@@ -11472,6 +11473,58 @@ case class ValidationPass(
     parameters.map(a => a.name -> a.typeEx).toMap
   end clauseParameterScope
 
+  /** B6 (riddl-generator, 2026-09-17; landed 2026-09-21): a `prompt(...)` as a YIELD argument is
+    * the hole the AI fills worst -- it sits inside a builder chain -- and it nearly always names
+    * a value the handler already has: a message or state field, `system.now`, or (since B4) an
+    * expression. An ADVISORY, per argument: consistent with the model, inconsistent with what the
+    * shape usually means, dismissable -- a modeller may genuinely want the AI to compute it.
+    * Yield only: a yielded event is what a fold reads, which is the other remedy on offer.
+    */
+  private def checkYieldArgumentPrompts(c: Constructor): Unit =
+    c.args.zipWithIndex.foreach { case (arg, i) =>
+      arg.value match
+        case _: PromptValue =>
+          val which = arg.name.map(n => s"'${n.value}'").getOrElse(s"#${i + 1}")
+          messages.addAdvisory(
+            arg.loc,
+            s"Argument $which of this yield is a prompt; a yielded event's field is usually a " +
+              "value the handler already has",
+            suggestion = "State it -- a message or state field, 'system.now', or an expression " +
+              "-- or omit the field from the event and let the fold compute it.",
+            ruleId = Some(RuleId.YieldArgumentPrompt)
+          )
+        case _ => ()
+    }
+
+  /** B8 (riddl-generator, 2026-09-17; landed 2026-09-21): prose that validates a field against a
+    * range, a set or a bound -- `do "validate MakeReservation.partySize is between 1 and 20"` --
+    * where a range type (`Integer(1,20)`), an enumeration or a pattern on the FIELD would make the
+    * constructor validate it for free. A Style warning, as filed. One anchored regex, no
+    * lookahead (unavailable on Scala Native); the verb is REQUIRED so a `do` that merely mentions
+    * "between" in passing is not matched. "within" is deliberately NOT a bound: the corpus's one
+    * use is `deliveryAddress is within restaurant service area by ZIP code`, a membership test
+    * (B5 territory), where "declare a range type" would be wrong advice.
+    */
+  private val rangeProse =
+    ("(?i)^\\s*(validate|check|ensure|verify|require)\\s+(that\\s+)?([A-Za-z_][\\w.-]*)\\s+" +
+      "(is|are|must be|should be)\\s+(between|in the range|one of|at least|at most|" +
+      "no more than|no less than|greater than|less than)\\b").r
+
+  private def checkDoValidatesRange(loc: At, what: Seq[LiteralString]): Unit =
+    val text = what.map(_.s).mkString(" ")
+    rangeProse.findFirstMatchIn(text).foreach { m =>
+      val field = m.group(3)
+      messages.addStyle(
+        loc,
+        s"'$text' validates '$field' in prose; a range or enumeration TYPE on the field would " +
+          "make the constructor validate it",
+        suggestion = "Declare the field's type as a range ('Integer(1,20)'), an enumeration " +
+          "('any of { … }') or a pattern, and drop the prose -- a typed field is validated in " +
+          "the constructor for free.",
+        ruleId = Some(RuleId.DoValidatesARange)
+      )
+    }
+
   private def checkStatementScopes(
     stmts: Seq[Statement],
     inScopeLets: Seq[LetStatement],
@@ -11699,7 +11752,9 @@ case class ValidationPass(
         // silently accepted `yield garbage` -- the exact shape of fall-through this repo forbids.
         case s: YieldStatement =>
           s.msg match
-            case c: Constructor => validateValue(c, parents, lets, elements)
+            case c: Constructor =>
+              validateValue(c, parents, lets, elements)
+              checkYieldArgumentPrompts(c)
             case vr: ValueRef   => checkMessageOperandSource(vr, "yield", parents, lets, elements)
             case mr: MessageRef => checkBareMessageOperand(mr, "yield") // Task 4
           recordDeliverableType(s, s.msg, parents, lets, elements) // [1.2]

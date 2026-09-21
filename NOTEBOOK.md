@@ -80,8 +80,9 @@ riddl-mcp-server are not checked out). BACKLOG [2.11]–[2.18] held riddlg's lan
 **Reid ruled 2026-09-18**: B4 reversed within bounds, B1 approved and LANDED (entry below,
 [2.14] closed), "proceed with those new language features and anything else in the backlog";
 the consumer-bump task files are CANCELLED until the next release. **B4 landed 2026-09-21**
-(entry below; [2.18] closed, [2.19] filed for the duration windows). Next: [2.11] B6, [2.12]
-B8, [2.13] B7, [2.15] B3, [2.16] B5, then [2.17] B2 as a CM question for Reid. `../bin/riddlc` and ivy were restaged together at the
+(entry below; [2.18] closed, [2.19] filed for the duration windows); **B6 and B8 landed the
+same afternoon** ([2.11], [2.12] closed). Next: [2.13] B7, [2.15] B3, [2.16] B5, then [2.17]
+B2 as a CM question for Reid. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -110,6 +111,22 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-21 (later) — B6 and B8: two lints, one afternoon
+
+`stmt-yield-argument-prompt` (Advisory, per argument): a `prompt(...)` as a yield argument —
+267 in the corpus, and riddlg measured it as the hole the AI fills worst. `stmt-do-validates-
+a-range` (Style): `do "validate X is between 1 and 20"` is a range type in English; population
+exactly one (`Reservation.riddl`, `partySize`). The other 37 "greater than zero" prompts in the
+corpus are `when prompt(...)` VALUES, which B4 made expressible as comparisons and which the
+lint deliberately does not touch — the verb is required, so a `do` that mentions "between" in
+passing is not matched either.
+
+Small lesson: a canary cannot be `()` under `-Werror` ("a pure expression does nothing in
+statement position" is a warning, and warnings are errors in `passes`); delete the call
+instead. And `validateStatement` DOES reach a `do` nested in a `when` body (asserted), which
+narrows CLAUDE.md's "never sees statements held in a FIELD" to the effect bans that need the
+threaded `let` scope.
 
 ## 2026-09-21 — B4: arithmetic, bounded, and every expression gets a real type
 

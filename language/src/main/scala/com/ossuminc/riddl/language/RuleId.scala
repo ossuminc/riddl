@@ -484,6 +484,9 @@ enum RuleId(
   case ReplyAfterForward extends RuleId("stmt-reply-after-forward")
   case ForwardNotLast extends RuleId("stmt-forward-not-last")
   case SendAtNotInstant extends RuleId("stmt-send-at-not-instant")
+  // B6/B8 (riddl-generator's 2026-09-17 list; landed 2026-09-21): two lints on prose holes.
+  case YieldArgumentPrompt extends RuleId("stmt-yield-argument-prompt")
+  case DoValidatesARange extends RuleId("stmt-do-validates-a-range")
   case StateRecordOutOfScope extends RuleId("state-record-out-of-scope")
   case UnknownTypeCase extends RuleId("type-unknown-type-case")
   case PatternNotAMember extends RuleId("type-pattern-not-a-member")

@@ -251,6 +251,8 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `Ordering operator '${op}' requires a numeric, timestamp or duration operand but got a ${other} value` (Error, `value-ordering-needs-numeric`; widened by B4) | Order only numeric, timestamp or duration operands; use '=='/'!=' for equality of other values. |
 | `Constant '${c}' cannot be computed from '${path}', which is not a constant` / `Constant '${c}' cannot hold a ${kind}` (Error, `constant-operand-not-constant`, B4) | A constant's expression may use only literals, duration literals and other constants; move the computation to the handler that has the value. |
 | `Constant '${c}' is declared '${declared}' but its expression is '${actual}'` (Error, `constant-expression-type-mismatch`, B4) | `Declare the constant as '${actual}', or change the expression.` |
+| `Argument ${which} of this yield is a prompt; a yielded event's field is usually a value the handler already has` (Advisory, `stmt-yield-argument-prompt`, B6) | State it -- a message or state field, 'system.now', or an expression -- or omit the field from the event and let the fold compute it. |
+| `'${text}' validates '${field}' in prose; a range or enumeration TYPE on the field would make the constructor validate it` (Style, `stmt-do-validates-a-range`, B8) | Declare the field's type as a range ('Integer(1,20)'), an enumeration ('any of { … }') or a pattern, and drop the prose -- a typed field is validated in the constructor for free. |
 
 The last row (context-with-entities-but-no-repository) is an **always-on**
 completeness check (gated only by `showCompletenessWarnings`): a context that

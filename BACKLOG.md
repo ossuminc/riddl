@@ -1392,13 +1392,6 @@ measurements on reactive-bbq: 553 AI-filled holes, 4h37m, each hole a sentence R
 spelling for). Reid approved riddlg's PLAN to file these — not the features. Each needs a
 ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
 
-- **[2.11] B6 — a `prompt(…)` in a YIELD ARGUMENT should warn.** 14 in reactive-bbq; the hole
-  the AI fills worst and that nearly always names a field path or `system.now`. A Style or
-  Advisory: "state the value, or leave the field for the fold". **Small.** Cheapest first.
-- **[2.12] B8 — a lint for validation prose that could be a range type.** `do "validate X is
-  between 1 and 20"` on a command field → `partySize: Integer(1,20)`. A `[style]` warning when
-  prose matches "validate <field> is between/within/one of". **Small**; riddlg validates a
-  range type in the constructor for free.
 - **[2.13] B7 — an explicit `log`/`audit` statement**, "record this for humans", lowering to a
   logger or B3's history table. 34 `do` statements under `on other` in reactive-bbq are this.
   **Small–medium** (a new statement: the full reflective surface, see [1.25]'s `append`).
