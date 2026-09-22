@@ -280,7 +280,7 @@ statement = when_statement | match_statement | foreach_statement | send_statemen
     yield_statement | reply_statement | the_set_statement | append_statement | remove_statement |
     let_statement | put_statement |
     return_statement | terminate_statement | prompt_statement | log_statement | code_statement |
-    error_statement |
+    store_statement | upsert_statement | update_statement | delete_statement | error_statement |
     require_statement | morph_statement | become_statement | comment ;
 
 (* Control flow *)
@@ -369,8 +369,12 @@ let_statement = "let" identifier [":" type_ref] "=" value ;
    (B4, 2026-09-21: `"a" + b` and `5 * n` need them as operands). *)
 (* `empty_value` sits BEFORE boolean_expression: that rule's atom accepts a bare path and would
    otherwise swallow `empty` as a value_ref, leaving any ascription dangling. *)
-value = prompt_value | call | ask | initiate | constructor | get_value
+value = prompt_value | call | ask | initiate | query_value | constructor | get_value
       | empty_value | boolean_expression ;
+(* B2: reading the repository's own storage. `query one` is the first match or empty; without
+   `one` it is every match, in UNSPECIFIED order. Tried before `constructor`, whose `query Q(…)`
+   form shares the keyword. *)
+query_value = "query" ["one"] table_ref ["where" value] ;
 
 (* The minimum-cardinality inhabitant of a type. `none` is a SYNONYM, not a second construct: both
    spellings produce the identical AST and prettify converges them to `empty`. Legal exactly where
@@ -388,7 +392,7 @@ statement_start = ( "set" | "tell" | "send" | "forward" | "yield" | "reply" | "m
                   | "do" | "prompt" | "let" | "call" | "foreach" | "when" | "match" | "error"
                   | "require" | "put" | "return" | "terminate" | "code" | "focus" | "stop"
                   | "read" | "write" | "ask" | "initiate" | "if" | "else" | "append" | "remove"
-                  | "log" ) ;
+                  | "log" | "store" | "upsert" | "update" | "delete" ) ;
 prompt_value = "prompt" "(" literal_string_block ")" [ "as" type_expression ] ;
 (* Numeric literals - integers and reals, written directly. No digit separators and no radix     *)
 (* prefixes: declined deliberately, and pure additions later if wanted.                           *)
@@ -513,6 +517,15 @@ terminate_statement = "terminate" value [ "with" "(" [constructor_arg {"," const
 prompt_statement = ("do" | "prompt") literal_string_block ;
 (* B7 (2026-09-21): record a value for humans -- deterministic, not state, not a message. *)
 log_statement = "log" value ;
+(* B2 (2026-09-22): the four repository storage statements. A table is one path: the last
+   segment is the schema's data entry, the prefix is the schema (empty = the enclosing
+   repository's only schema). The assigned names in `set` are BARE row fields. *)
+table_ref = path_identifier ;
+store_statement = "store" value "in" table_ref ;
+upsert_statement = "upsert" value "in" table_ref ;
+update_statement = "update" table_ref "set" identifier "=" value {"," identifier "=" value}
+                   "where" value ;
+delete_statement = "delete" "from" table_ref "where" value ;
 code_statement = "```" ("scala" | "java" | "python" | "mojo") code_contents "```" ;
 code_contents = {any_char_except_triple_backtick} ;
 error_statement = "error" literal_string ;

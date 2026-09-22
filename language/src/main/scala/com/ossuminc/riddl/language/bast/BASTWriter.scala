@@ -278,6 +278,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: PutStatement       => writePutStatement(s)
       case s: ReturnStatement    => writeReturnStatement(s)
       case s: TerminateStatement => writeTerminateStatement(s)
+      case s: StoreStatement     => writeStoreStatement(s) // B2
+      case s: UpsertStatement    => writeUpsertStatement(s)
+      case s: UpdateStatement    => writeUpdateStatement(s)
+      case s: DeleteStatement    => writeDeleteStatement(s)
 
       // References
       case r: AuthorRef     => writeAuthorRef(r)
@@ -1233,6 +1237,55 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case None => writer.writeU8(0)
   }
 
+  /** B2 (revision 29): the four repository storage statements, sub-kinds 25-28. A `TableRef` is
+    * written inline -- schema path, then the table identifier -- because it is not a Reference.
+    */
+  def writeTableRef(tr: TableRef): Unit = {
+    writeLocation(tr.loc)
+    // ONE path (schema segments ++ table), not a path plus an identifier: an EMPTY path is
+    // indistinguishable from an INTERNED one on this wire -- `writePathIdentifierInline` emits
+    // count=0 for both, and the reader takes 0 as "table lookup" and consumes a varint that was
+    // never written. A bare table is a one-element path, which interning leaves alone.
+    writePathIdentifierInline(PathIdentifier(tr.loc, tr.schema.value :+ tr.table.value))
+  }
+
+  def writeStoreStatement(s: StoreStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(25)
+    writeLocation(s.loc)
+    writeValue(s.value)
+    writeTableRef(s.table)
+  }
+
+  def writeUpsertStatement(s: UpsertStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(26)
+    writeLocation(s.loc)
+    writeValue(s.value)
+    writeTableRef(s.table)
+  }
+
+  def writeUpdateStatement(s: UpdateStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(27)
+    writeLocation(s.loc)
+    writeTableRef(s.table)
+    writer.writeVarInt(s.assignments.size)
+    s.assignments.foreach { case (id, v) =>
+      writeIdentifierInline(id)
+      writeValue(v)
+    }
+    writeValue(s.where)
+  }
+
+  def writeDeleteStatement(s: DeleteStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(28)
+    writeLocation(s.loc)
+    writeTableRef(s.table)
+    writeValue(s.where)
+  }
+
   /** B7: `log <value>` -- sub-kind 24 (revision 27): location, then the value. */
   def writeLogStatement(s: LogStatement): Unit = {
     writer.writeU8(NODE_STATEMENT)
@@ -1595,6 +1648,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(16)
         writeLocation(cr.loc)
         writePathIdentifierInline(cr.pathId)
+      // B2 (revision 29): `query [one] <table> [where …]` -- value tag 17
+      case qv: QueryValue =>
+        writer.writeU8(17)
+        writeLocation(qv.loc)
+        writeTableRef(qv.table)
+        writer.writeU8(if qv.one then 1 else 0)
+        writeOption(qv.where)(writeValue)
   }
 
   /** A70/instance-identity: a single [[ConstructorArg]] -- mirror of the inline arg-writing loop

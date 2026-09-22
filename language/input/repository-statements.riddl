@@ -1,0 +1,58 @@
+// Exercises B2 (2026-09-22): the four repository storage statements and the `query` value,
+// typed against the schema's stored record. A bare name inside `where`/`set` is a ROW field.
+domain Booking is {
+  context Reservations is {
+    record StoredReservation is {
+      reservationId: String,
+      guestName: String,
+      assignedTable: String,
+      partySize: Integer
+    } with { briefly "a stored reservation" }
+
+    command Reserve yields event Reserved is { reservationId: String, guestName: String, partySize: Integer }
+      with { briefly "c" }
+    event Reserved is { reservationId: String, guestName: String, partySize: Integer } with { briefly "e" }
+    event Seated is { reservationId: String, confirmedTable: String } with { briefly "e" }
+    event Cancelled is { reservationId: String } with { briefly "e" }
+    query FindReservation replies result ReservationFound is { reservationId: String } with { briefly "q" }
+    result ReservationFound is { guestName: String } with { briefly "r" }
+
+    repository ReservationStore is {
+      schema ReservationSchema is relational
+        of reservations as record Reservations.StoredReservation with history
+        key on field Reservations.StoredReservation.reservationId
+        index on field Reservations.StoredReservation.guestName
+      with { briefly "the reservations" }
+      inlet Events is event Reservations.Reserved with { briefly "i" }
+      inlet Queries is query Reservations.FindReservation with { briefly "i" }
+      outlet Answers is result Reservations.ReservationFound with { briefly "o" }
+      handler H is {
+        on e: event Reservations.Reserved is {
+          store record Reservations.StoredReservation(
+            reservationId = e.reservationId,
+            guestName = e.guestName,
+            assignedTable = "",
+            partySize = e.partySize
+          ) in ReservationSchema.reservations
+        }
+        on s: event Reservations.Seated is {
+          // unqualified table: the repository has one schema
+          update reservations set assignedTable = s.confirmedTable where reservationId == s.reservationId
+        }
+        on c: event Reservations.Cancelled is {
+          delete from ReservationSchema.reservations where reservationId == c.reservationId
+        }
+        on q: query Reservations.FindReservation is {
+          let found: record Reservations.StoredReservation =
+            query one ReservationSchema.reservations where reservationId == q.reservationId
+          reply result Reservations.ReservationFound(guestName = found.guestName)
+        }
+        on other as m is {
+          upsert record Reservations.StoredReservation(
+            reservationId = "unknown", guestName = "", assignedTable = "", partySize = 0
+          ) in reservations
+        }
+      } with { briefly "h" }
+    } with { briefly "the store" }
+  } with { briefly "reservations" option message_envelope("Riddl.Envelope") }
+} with { briefly "booking" }

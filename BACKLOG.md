@@ -1397,24 +1397,6 @@ ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
   wrong twice. **Large** — a value-expression family with per-element scoping; touches the
   `Value` union (96 sites by the B4 survey, 12 compile-enforced). **RULED by Reid 2026-09-21:
   plan it now** (after B3 and B2).
-- **[2.17] B2 — repository statements**: `store record R(…) in Schema.table`, `update … set …
-  where …`, `delete from … where …`, `query … where … yield result …`, typed against the
-  schema. Retires 114 prose holes and the whole SQL error class riddlg measured. **Large** —
-  and it decides whether RIDDL models storage operations at all; a CM question before a
-  language one. **RULED by Reid 2026-09-21: YES — all four statements, PLUS `upsert`
-  ("update if the row exists, insert if it doesn't").** Sequenced after B3 (the key gives
-  `upsert` its identity).
-- **[2.19] Duration literals in the two string-duration windows.** B4 (landed 2026-09-21)
-  added the `30 days` / `1 hour` duration literal as a VALUE, and Reid ruled the same day that
-  `on quiescence "30 minutes"` and `times out after "6 hours"` keep their string form for now.
-  The inconsistency is recorded here: the literal should be accepted in both windows (the
-  string form staying legal — it carries the ISO and abbreviated spellings). Touches
-  `HandlerParser.quiescenceWindow` (`LiteralString | ValueRef` → add `DurationLiteral`),
-  `ProjectorParser.correlationTimeout` (`Correlation.timeout: LiteralString` — an AST field
-  type change, so BAST/JSON/prettify move with it), the EBNF, and `checkPreciseDuration`'s
-  callers. **Small–medium.** Verified: `AST.scala` `OnQuiescenceClause.window` and
-  `Correlation.timeout` as of B4.
-
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
 
 **RULINGS TAKEN 2026-08-14, before an unattended run.** Reid answered four questions

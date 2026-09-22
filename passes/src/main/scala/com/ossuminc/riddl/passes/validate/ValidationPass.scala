@@ -2863,6 +2863,10 @@ case class ValidationPass(
       // constrains nothing; its operand is validated in `checkStatementScopes`, which threads the
       // `let`/element scope a value needs.
       case _: LogStatement => ()
+      // B2: the storage statements constrain nothing at statement level -- their operands,
+      // the table and the row scope are checked in `checkStatementScopes`, which threads the
+      // `let`/element scope a row field needs. The repository-only rule is the PARSER's.
+      case _: StoreStatement | _: UpsertStatement | _: UpdateStatement | _: DeleteStatement => ()
       case SendStatement(_, msg, portlet, _) =>
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
         // checkStatementScopes (both need the threaded `let`/element scope — A56/message-value-source).
@@ -6572,6 +6576,11 @@ case class ValidationPass(
       case set: SetStatement    => valueReferencedDefs(set.value)
       case cs: CollectionStatement => valueReferencedDefs(cs.value)
       case ls: LogStatement     => valueReferencedDefs(ls.value)
+      case ss: StoreStatement   => valueReferencedDefs(ss.value) // B2
+      case us: UpsertStatement  => valueReferencedDefs(us.value)
+      case us: UpdateStatement  =>
+        us.assignments.flatMap { case (_, v) => valueReferencedDefs(v) } ++ valueReferencedDefs(us.where)
+      case ds: DeleteStatement  => valueReferencedDefs(ds.where)
       case let: LetStatement    => valueReferencedDefs(let.expression)
       case ret: ReturnStatement => valueReferencedDefs(ret.value)
       // A70/instance-identity: the entity a `terminate` ends is exactly the kind of reference A8
@@ -7737,6 +7746,8 @@ case class ValidationPass(
     case ne: NotExpression        => countValueFailPoints(ne.expr)
     case ce: ComparisonExpression => countValueFailPoints(ce.left) + countValueFailPoints(ce.right)
     case ae: ArithmeticExpression => countValueFailPoints(ae.left) + countValueFailPoints(ae.right)
+    // B2: a query READS the store and may fail, exactly as `get` does (1), plus its condition.
+    case qv: QueryValue => 1 + qv.where.map(countValueFailPoints).getOrElse(0)
     case _: DurationLiteral       => 0 // B4: a literal, like a NumericLiteral
     // A17's ASK form contributes NOTHING of its own -- consulting an invariant is a test, not an
     // action that can fail -- but its `with` operand is a full Value and is counted, exactly as a
@@ -7784,6 +7795,10 @@ case class ValidationPass(
       case set: SetStatement    => Seq(set.value)
       case cs: CollectionStatement => Seq(cs.value)
       case ls: LogStatement     => Seq(ls.value) // B7
+      case ss: StoreStatement   => Seq(ss.value) // B2
+      case us: UpsertStatement  => Seq(us.value)
+      case us: UpdateStatement  => us.assignments.map(_._2) :+ us.where
+      case ds: DeleteStatement  => Seq(ds.where)
       case let: LetStatement    => Seq(let.expression)
       case put: PutStatement    => Seq(put.value)
       case ret: ReturnStatement => Seq(ret.value)
@@ -7845,6 +7860,7 @@ case class ValidationPass(
     case ne: NotExpression        => stateReadsIn(ne.expr)
     case ce: ComparisonExpression => stateReadsIn(ce.left) ++ stateReadsIn(ce.right)
     case ae: ArithmeticExpression => stateReadsIn(ae.left) ++ stateReadsIn(ae.right)
+    case qv: QueryValue           => qv.where.toSeq.flatMap(stateReadsIn) // B2: reads the STORE
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
     // CAN hold a state read and this must recurse rather than stop. `ref` needs no arm -- an
@@ -7903,6 +7919,7 @@ case class ValidationPass(
     case ne: NotExpression        => initiatesIn(ne.expr)
     case ce: ComparisonExpression => initiatesIn(ce.left) ++ initiatesIn(ce.right)
     case ae: ArithmeticExpression => initiatesIn(ae.left) ++ initiatesIn(ae.right)
+    case qv: QueryValue           => qv.where.toSeq.flatMap(initiatesIn) // B2
     case _: DurationLiteral       => Seq.empty // B4: a literal
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
     // A `get from state`/`get from input` holds only a StateRef/InputRef -- no nested value -- so
@@ -7959,6 +7976,7 @@ case class ValidationPass(
     case ne: NotExpression        => asksIn(ne.expr)
     case ce: ComparisonExpression => asksIn(ce.left) ++ asksIn(ce.right)
     case ae: ArithmeticExpression => asksIn(ae.left) ++ asksIn(ae.right)
+    case qv: QueryValue           => qv.where.toSeq.flatMap(asksIn) // B2
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
     // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
@@ -8012,6 +8030,9 @@ case class ValidationPass(
     */
   private def isEffectStatement(s: Statement): Boolean = s match
     case _: SetStatement | _: CollectionStatement | _: MorphStatement | _: TerminateStatement => true
+    // B2: a storage write is a LOCAL effect in exactly A23's sense -- refusing after it leaves a
+    // partial change, which is what "refusals first" exists to prevent.
+    case _: StoreStatement | _: UpsertStatement | _: UpdateStatement | _: DeleteStatement => true
     case _                                                                                   => false
 
   /** What ended a block, and WHY.
@@ -9852,6 +9873,8 @@ case class ValidationPass(
       // B4: an arithmetic result and a duration literal are predefined types, never a named one
       // (see `valueTypeExpr`); a `constant X` yields the Type its declaration names, if any.
       case _: ArithmeticExpression | _: DurationLiteral => None
+      // B2: a query denotes the stored record's Type, cardinality aside (see `valueTypeExpr`).
+      case qv: QueryValue => queryRecordType(qv, parents)
       case cr: ConstantRef =>
         resolution.refMap.definitionOf[Constant](cr.pathId).flatMap { k =>
           k.typeEx match
@@ -10359,6 +10382,16 @@ case class ValidationPass(
       case _: DurationLiteral   => Some(Duration(v.loc))
       case cr: ConstantRef => resolution.refMap.definitionOf[Constant](cr.pathId).map(_.typeEx)
       case ae: ArithmeticExpression => arithmeticResultType(ae, parents, lets, elements)
+      // B2: `query one T` is `R?`, `query T` is `R*` -- the stored record with a cardinality.
+      // `checkAssignable` strips cardinality, so `let r: record R = query one T` types `r` as R
+      // and `r.f` walks as any other let does.
+      case qv: QueryValue =>
+        queryRecordType(qv, parents).map { t =>
+          // The record's own TypeExpression, wrapped in the cardinality the form implies. Using
+          // the aggregate directly (rather than an alias to a path) keeps `typeExprOfPath`
+          // working for a `let` that declares the record type and reads a field off it.
+          if qv.one then Optional(qv.loc, t.typEx) else ZeroOrMore(qv.loc, t.typEx)
+        }
       case _ => valueType(v, parents, lets, elements).map(_.typEx)
 
   /** A54/A55: the named [[Type]] a [[ValueRef]] resolves to, if determinable. A bare on-clause
@@ -10528,6 +10561,7 @@ case class ValidationPass(
         checkArithmetic(ae, parents, lets, elements)
       case _: DurationLiteral => ()
       case cr: ConstantRef    => checkRef[Constant](cr, parents)
+      case qv: QueryValue     => validateQueryValue(qv, parents, lets, elements) // B2
       case le: LogicalExpression =>
         validateValue(le.left, parents, lets, elements)
         validateValue(le.right, parents, lets, elements)
@@ -11570,6 +11604,173 @@ case class ValidationPass(
       )
     }
 
+  /** B2 (2026-09-22): the [[Schema]] a [[TableRef]] names -- the one its path identifies, or the
+    * enclosing repository's SINGLE schema when the reference is unqualified. None when there is
+    * no such schema, or when an unqualified reference is ambiguous because the repository has
+    * several; the caller reports.
+    */
+  private def schemaOf(table: TableRef, parents: Parents): Option[Schema] =
+    // A repository statement addresses THIS repository's storage -- that is what the statement
+    // means -- so the schema is looked up structurally among the enclosing repository's own
+    // schemas rather than through the refMap, which holds no Schema (a Schema is a Leaf whose
+    // references live in fields; ResolutionPass records nothing FOR it).
+    val schemas = parents.collectFirst { case r: Repository => r }.toSeq.flatMap(_.contents.filter[Schema])
+    if table.isQualified then
+      val wanted = table.schema.value.last
+      schemas.find(_.id.value == wanted)
+    else
+      schemas match
+        case Seq(one) => Some(one)
+        case _        => None
+
+  /** B2: the stored record [[Type]] of a table, and the schema it belongs to. */
+  private def tableRecordType(table: TableRef, parents: Parents): Option[(Schema, Type)] =
+    for
+      schema <- schemaOf(table, parents)
+      entry <- schema.data.find(_._1.value == table.table.value)
+      t <- resolution.refMap.definitionOf[Type](entry._2.pathId, schema)
+        .orElse(resolution.refMap.definitionOf[Type](entry._2.pathId))
+    yield (schema, t)
+
+  /** B2: the ROW scope -- the stored record's fields by name, for a `where` or a `set`. Threaded
+    * through `elements`, the same map a `foreach` element uses, so `valueRefTypeExpr` consults
+    * it BEFORE lets and the refMap and a row field shadows a same-named message field.
+    */
+  private def rowScope(table: TableRef, parents: Parents): Map[String, TypeExpression] =
+    tableRecordType(table, parents) match
+      case Some((_, t)) => aggregateFieldsOf(t.typEx).map(f => f.id.value -> f.typeEx).toMap
+      case None         => Map.empty
+
+  /** B2: report a table that is not a data entry of its schema (or an unqualified one the
+    * enclosing repository cannot disambiguate). Shared by every statement and the query value.
+    */
+  private def checkTable(table: TableRef, parents: Parents): Option[(Schema, Type)] =
+    val resolved = tableRecordType(table, parents)
+    if resolved.isEmpty then
+      val known = schemaOf(table, parents) match
+        case Some(schema) => schema.data.keys.map(_.value).toSeq.sorted.mkString(", ")
+        case None         => ""
+      val detail =
+        if known.nonEmpty then s"; that schema stores: $known"
+        else if table.isQualified then
+          s"; this repository declares no schema '${table.schema.value.last}'"
+        else "; name the schema, as this repository does not declare exactly one"
+      messages.addError(
+        table.loc,
+        s"'${table.format}' does not name a table of a schema in scope$detail",
+        suggestion = "Name a data entry the schema declares with 'of <name> as record <R>', " +
+          "qualified by the schema when the repository has more than one.",
+        ruleId = Some(RuleId.TableNotInSchema)
+      )
+    resolved
+  end checkTable
+
+  /** B2: a `store`/`upsert` value must BE the table's stored record. */
+  private def checkStoredValue(
+    v: Value,
+    table: TableRef,
+    keyword: String,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    checkTable(table, parents).foreach { case (_, recordType) =>
+      valueType(v, parents, lets, elements) match
+        case Some(actual) if !(actual eq recordType) =>
+          messages.addError(
+            v.loc,
+            s"'$keyword' into '${table.format}' needs a '${recordType.id.value}' but this is a " +
+              s"'${actual.id.value}'",
+            suggestion = s"Construct the record the schema stores: " +
+              s"'record ${recordType.id.value}(…)'.",
+            ruleId = Some(RuleId.StoreValueNotTableRecord)
+          )
+        case _ => () // untypable: reported elsewhere, or a match
+    }
+
+  /** B2: `upsert` needs a key to update BY. Without a `key on` a field of the stored record
+    * there is no identity, so the statement cannot mean what it says (Reid added `upsert`
+    * 2026-09-21; B3 landed the key the day before).
+    */
+  private def checkUpsertHasKey(us: UpsertStatement, parents: Parents): Unit =
+    tableRecordType(us.table, parents).foreach { case (schema, recordType) =>
+      val fields = aggregateFieldsOf(recordType.typEx)
+      val keyed = schema.keys.exists { kr =>
+        resolution.refMap.definitionOf[Field](kr.pathId, schema)
+          .orElse(resolution.refMap.definitionOf[Field](kr.pathId))
+          .exists(f => fields.exists(_ eq f))
+      }
+      if !keyed then
+        messages.addError(
+          us.loc,
+          s"'upsert' into '${us.table.format}' needs a key: the schema declares no 'key on' a " +
+            s"field of '${recordType.id.value}', so there is no row identity to update by",
+          suggestion = s"Add 'key on field ${recordType.id.value}.<idField>' to the schema, or " +
+            "use 'store' if every write is a new row.",
+          ruleId = Some(RuleId.UpsertNeedsKey)
+        )
+    }
+
+  /** B2: an `update … set f = v` names a field of the ROW and assigns a value of its type. */
+  private def checkUpdateAssignment(
+    table: TableRef,
+    field: Identifier,
+    v: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    tableRecordType(table, parents).foreach { case (_, recordType) =>
+      aggregateFieldsOf(recordType.typEx).find(_.id.value == field.value) match
+        case None =>
+          messages.addError(
+            field.loc,
+            s"'${field.value}' is not a field of '${recordType.id.value}', the record " +
+              s"'${table.format}' stores",
+            suggestion = s"Set one of: " +
+              aggregateFieldsOf(recordType.typEx).map(_.id.value).mkString(", "),
+            ruleId = Some(RuleId.UpdateFieldNotInRow)
+          )
+        case Some(f) =>
+          // `operandTypeExpr`, not `valueTypeExpr`: the latter deliberately has no arm for a bare
+          // numeric literal (B4), and `set size = 5` is exactly that.
+          operandTypeExpr(v, parents, lets, elements).foreach { actual =>
+            checkAssignable(
+              f.typeEx, actual, Some(recordType), parents, v.loc, s"Field '${field.value}'"
+            )
+          }
+    }
+
+  /** B2: a `query` reads the repository's OWN storage, so it is legal only inside one; its table
+    * must exist and its condition must be boolean.
+    */
+  private def validateQueryValue(
+    qv: QueryValue,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    if !parents.exists(_.isInstanceOf[Repository]) then
+      messages.addError(
+        qv.loc,
+        "'query' reads a repository's own storage and is only legal inside a repository",
+        suggestion = "Ask the repository for what you need ('ask query … of repository …'), or " +
+          "move the read into the repository's handler.",
+        ruleId = Some(RuleId.QueryOutsideRepository)
+      )
+    else
+      checkTable(qv.table, parents)
+      val row = rowScope(qv.table, parents)
+      qv.where.foreach { w =>
+        validateValue(w, parents, lets, elements ++ row)
+        checkBooleanOperand(w, "'where'", parents, lets, elements ++ row)
+      }
+  end validateQueryValue
+
+  /** B2: the stored record a [[QueryValue]] yields, when it can be determined. */
+  private def queryRecordType(qv: QueryValue, parents: Parents): Option[Type] =
+    tableRecordType(qv.table, parents).map(_._2)
+
   private def checkStatementScopes(
     stmts: Seq[Statement],
     inScopeLets: Seq[LetStatement],
@@ -11723,6 +11924,31 @@ case class ValidationPass(
             s"'set ${ss.field.format}'"
           )
         case ls: LogStatement => validateValue(ls.value, parents, lets, elements) // B7
+        // B2 (2026-09-22): the storage statements. The value is checked against the table's
+        // stored record; a `where`/`set` is evaluated in the ROW scope -- the table record's
+        // fields, threaded through `elements` exactly as a `foreach` element is, so a row field
+        // SHADOWS a same-named message field.
+        case ss: StoreStatement =>
+          validateValue(ss.value, parents, lets, elements)
+          checkStoredValue(ss.value, ss.table, "store", parents, lets, elements)
+        case us: UpsertStatement =>
+          validateValue(us.value, parents, lets, elements)
+          checkStoredValue(us.value, us.table, "upsert", parents, lets, elements)
+          checkUpsertHasKey(us, parents)
+        case us: UpdateStatement =>
+          checkTable(us.table, parents)
+          val row = rowScope(us.table, parents)
+          us.assignments.foreach { case (field, v) =>
+            validateValue(v, parents, lets, elements ++ row)
+            checkUpdateAssignment(us.table, field, v, parents, lets, elements ++ row)
+          }
+          validateValue(us.where, parents, lets, elements ++ row)
+          checkBooleanOperand(us.where, "'where'", parents, lets, elements ++ row)
+        case ds: DeleteStatement =>
+          checkTable(ds.table, parents)
+          val row = rowScope(ds.table, parents)
+          validateValue(ds.where, parents, lets, elements ++ row)
+          checkBooleanOperand(ds.where, "'where'", parents, lets, elements ++ row)
         case cs: CollectionStatement =>
           // The value is typed against the ELEMENT type (by value) or the key field's type (keyed),
           // through the same `checkValueType` a `set` uses -- so, like `set`, a predefined element
@@ -11935,7 +12161,8 @@ case class ValidationPass(
           case _: TellStatement | _: SendStatement | _: ForwardStatement | _: YieldStatement |
               _: ReplyStatement | _: MorphStatement | _: SetStatement | _: CollectionStatement |
               _: BecomeStatement | _: ErrorStatement | _: CodeStatement | _: PutStatement |
-              _: TerminateStatement | _: LogStatement =>
+              _: TerminateStatement | _: LogStatement | _: StoreStatement | _: UpsertStatement |
+              _: UpdateStatement | _: DeleteStatement =>
             // A45: `put` publishes to a UI output — an executable effect. A70/instance-identity:
             // `terminate` ends an instance -- as executable an effect as `tell`. (ReturnStatement
             // is not added here: it only occurs in function bodies, which are classified by

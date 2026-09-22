@@ -869,8 +869,8 @@ object AST:
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Initiate |
-    NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral | Requires |
-    Returns | InvariantBlock
+    NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
+    QueryValue | TableRef | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3258,12 +3258,13 @@ object AST:
     *
     * B4 (2026-09-21) adds [[ArithmeticExpression]] and [[DurationLiteral]], and promotes
     * [[ConstantRef]] from a comparison-only operand to a value in its own right, because a
-    * comparison's operands are now full Values (see [[ComparisonExpression]]). Seventeen kinds.
+    * comparison's operands are now full Values (see [[ComparisonExpression]]). B2 (2026-09-22)
+    * adds [[QueryValue]], the eighteenth.
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Initiate | NumericLiteral | LookupValue | EmptyValue |
-      ArithmeticExpression | DurationLiteral | ConstantRef
+      ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4187,6 +4188,80 @@ object AST:
   /** `append <value> to field F` -- adds the value at the END of the collection. Ordering is
     * meaning for a sequence, so "at the end" is part of the contract.
     */
+  /** B2 (2026-09-22): the table a repository statement reads or writes -- `Schema.table`, or a
+    * bare `table` meaning the enclosing repository's single schema. NOT a `Reference[?]`: a data
+    * entry is an `Identifier` KEY in `Schema.data`, not a Definition, so there is nothing for the
+    * refMap to point at. The schema path is empty for the unqualified form.
+    */
+  @JSExportTopLevel("TableRef")
+  case class TableRef(loc: At, schema: PathIdentifier, table: Identifier) extends RiddlValue:
+    override def kind: String = "Table Reference"
+    def format: String =
+      if schema.value.isEmpty then table.format else s"${schema.format}.${table.format}"
+    def isQualified: Boolean = schema.value.nonEmpty
+  end TableRef
+
+  /** B2: `store <record value> in <table>` -- INSERT one row. A duplicate key is a runtime
+    * failure, so it is an A12 failure point, like `send`/`put`.
+    */
+  @JSExportTopLevel("StoreStatement")
+  case class StoreStatement(loc: At, value: Value, table: TableRef) extends Statement {
+    override def kind: String = "Store Statement"
+    override def canFail: Boolean = true
+    def format: String = s"store ${value.format} in ${table.format}"
+  }
+
+  /** B2 (Reid added it 2026-09-21): `upsert <record value> in <table>` -- insert, or update the
+    * row with the same KEY. Requires the schema to declare a `key on` a field of that record
+    * (B3); without one there is no identity to update by.
+    */
+  @JSExportTopLevel("UpsertStatement")
+  case class UpsertStatement(loc: At, value: Value, table: TableRef) extends Statement {
+    override def kind: String = "Upsert Statement"
+    override def canFail: Boolean = true
+    def format: String = s"upsert ${value.format} in ${table.format}"
+  }
+
+  /** B2: `update <table> set f = v, … where <cond>` -- set the listed fields on every matching
+    * row. Zero matches is not a failure. `where` is required; an unconditional update says
+    * `where true`.
+    */
+  @JSExportTopLevel("UpdateStatement")
+  case class UpdateStatement(
+    loc: At,
+    table: TableRef,
+    assignments: Seq[(Identifier, Value)],
+    where: Value
+  ) extends Statement {
+    override def kind: String = "Update Statement"
+    def format: String =
+      val sets = assignments.map { case (f, v) => s"${f.format} = ${v.format}" }.mkString(", ")
+      s"update ${table.format} set $sets where ${where.format}"
+  }
+
+  /** B2: `delete from <table> where <cond>` -- remove every matching row. */
+  @JSExportTopLevel("DeleteStatement")
+  case class DeleteStatement(loc: At, table: TableRef, where: Value) extends Statement {
+    override def kind: String = "Delete Statement"
+    def format: String = s"delete from ${table.format} where ${where.format}"
+  }
+
+  /** B2: `query <table> [where <cond>]` reads the matching rows (the record type, zero or more,
+    * **order unspecified**); `query one <table> [where …]` reads the first match or empty.
+    *
+    * A VALUE, not a statement, so it composes with `let`, `reply` and `foreach` -- and with B5's
+    * collection expressions when they arrive. The find-by-key idiom is
+    * `let r: record R = query one T where k == v`.
+    */
+  @JSExportTopLevel("QueryValue")
+  case class QueryValue(loc: At, table: TableRef, one: Boolean, where: Option[Value])
+      extends RiddlValue:
+    override def kind: String = "Query Value"
+    def format: String =
+      val head = if one then "query one " else "query "
+      head + table.format + where.map(w => s" where ${w.format}").getOrElse("")
+  end QueryValue
+
   @JSExportTopLevel("AppendStatement")
   case class AppendStatement(
     loc: At,

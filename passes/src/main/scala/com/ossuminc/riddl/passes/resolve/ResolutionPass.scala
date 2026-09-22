@@ -440,6 +440,17 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             associateUsage(parents.head, resolveARef[Processor[?]](processor, parents))
       case _: DoStatement => () // no references
       case ls: LogStatement => resolveValue(ls.value, parents) // B7: the operand is any value
+      // B2 (2026-09-22): the storage statements. A TableRef names a data ENTRY, which is an
+      // Identifier key in `Schema.data` rather than a Definition, so there is nothing to put in
+      // the refMap for it -- validation resolves it structurally. The VALUES resolve as usual;
+      // a bare name in a `where`/`set` is a row field, lexical like a `foreach` element, and
+      // falls through `resolveValueRef` quietly exactly as those do.
+      case ss: StoreStatement  => resolveValue(ss.value, parents)
+      case us: UpsertStatement => resolveValue(us.value, parents)
+      case us: UpdateStatement =>
+        us.assignments.foreach { case (_, v) => resolveValue(v, parents) }
+        resolveValue(us.where, parents)
+      case ds: DeleteStatement => resolveValue(ds.where, parents)
       case _: ErrorStatement  => () // no references
       case rs: RequireStatement =>
         rs.condition match {
@@ -599,6 +610,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveValue(ae.left, parents); resolveValue(ae.right, parents)
       case _: DurationLiteral => ()
       case cr: ConstantRef    => associateUsage(parents.head, resolveARef[Constant](cr, parents))
+      case qv: QueryValue     => qv.where.foreach(w => resolveValue(w, parents)) // B2
 
   /** A28: resolve a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef |
     * NumericLiteral). A `ConstantRef` and a `GetValue` source resolve here (into the refMap); a

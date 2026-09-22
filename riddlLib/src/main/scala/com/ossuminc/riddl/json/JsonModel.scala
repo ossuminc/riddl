@@ -726,6 +726,14 @@ object JsonModel:
   case class ErrorStmtDto(message: String) extends StatementDto
 
   /** `{ "kind": "let", "name": "x", "type"?: "<typePath>", "expression": <value> }` */
+  /** `{ "kind": "let", "name": "x", "type"?: "<keyword> Path", "expression": <value> }`.
+    *
+    * **The KEYWORD is part of the reference**, exactly as it is for a schema's `data` entry
+    * (fixed there 2026-08-24, and here 2026-09-22 when a `let v: record R` came back as
+    * `let v: type R`): `record R` and `type R` are different references and prettify renders
+    * what the AST holds. Emitted only when it is NOT the default `type`, so every document
+    * written before this is byte-identical and still reads.
+    */
   case class LetStmtDto(name: String, `type`: Option[String], expression: ValueDto)
       extends StatementDto
 
@@ -757,6 +765,17 @@ object JsonModel:
 
   /** `{ "kind": "log", "value": <value> }` -- B7 (2026-09-21): record a value for humans. */
   case class LogStmtDto(value: ValueDto) extends StatementDto
+
+  /** B2 (2026-09-22): the repository storage statements. `table` is the reference AS WRITTEN --
+    * `"Schema.table"` qualified, `"table"` not -- because an unqualified table means "the
+    * enclosing repository's single schema" and rewriting it would change what the model says.
+    */
+  case class StoreStmtDto(value: ValueDto, table: String) extends StatementDto
+  case class UpsertStmtDto(value: ValueDto, table: String) extends StatementDto
+  case class AssignmentDto(field: String, value: ValueDto)
+  case class UpdateStmtDto(table: String, assignments: Seq[AssignmentDto], where: ValueDto)
+      extends StatementDto
+  case class DeleteStmtDto(table: String, where: ValueDto) extends StatementDto
 
   /** `{ "kind": "remove", "field": "<path>", "value": <value>, "key": "<name>"? }` -- `key`
     * present is the keyed form (`remove from field F where key == value`), absent the by-value one.
@@ -954,6 +973,12 @@ object JsonModel:
     * <value> }`. Operands are full values, like `logical`'s.
     */
   case class ArithmeticDto(op: String, left: ValueDto, right: ValueDto) extends ValueDto
+
+  /** B2 (2026-09-22): `{ "value": "query", "table": "Schema.table", "one"?: true, "where"?:
+    * <value> }` -- reading the repository's own storage.
+    */
+  case class QueryValueDto(table: String, one: Boolean = false, where: Option[ValueDto] = None)
+      extends ValueDto
 
   /** B4: `{ "value": "duration", "amount": "<numeric text as written>", "unit": "days" }`. The
     * amount is a STRING for the same reason `numeric` is: `1.50 hours` must survive.
@@ -1837,6 +1862,12 @@ object JsonModel:
       case "boolLiteral" => BooleanLiteralDto(m("bool").bool)
       case "comparison"  => ComparisonDto(m("op").str, readValue(m("left")), readValue(m("right")))
       case "arithmetic"  => ArithmeticDto(m("op").str, readValue(m("left")), readValue(m("right")))
+      case "query" => // B2
+        QueryValueDto(
+          m("table").str,
+          m.get("one").exists(_.bool),
+          m.get("where").map(readValue)
+        )
       case "duration"    => DurationLiteralDto(m("amount").str, m("unit").str)
       case "logical"     => LogicalDto(m("op").str, readValue(m("left")), readValue(m("right")))
       case "not"         => NotDto(readValue(m("expr")))
@@ -1931,6 +1962,12 @@ object JsonModel:
           "op" -> ujson.Str(op),
           "left" -> writeValue(left),
           "right" -> writeValue(right)
+        )
+      case QueryValueDto(table, one, where) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("value" -> ujson.Str("query"), "table" -> ujson.Str(table)) ++
+            (if one then Seq("one" -> ujson.Bool(true)) else Nil) ++
+            where.map(w => "where" -> writeValue(w)).toSeq
         )
       case DurationLiteralDto(amount, unit) =>
         ujson.Obj(
@@ -2051,6 +2088,17 @@ object JsonModel:
             SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), readValue(m("value")))
           case "append" => AppendStmtDto(readValue(m("value")), m("field").str)
           case "log"    => LogStmtDto(readValue(m("value")))
+          case "store"  => StoreStmtDto(readValue(m("value")), m("table").str)
+          case "upsert" => UpsertStmtDto(readValue(m("value")), m("table").str)
+          case "update" =>
+            UpdateStmtDto(
+              m("table").str,
+              m("assignments").arr
+                .map(a => AssignmentDto(a.obj("field").str, readValue(a.obj("value"))))
+                .toSeq,
+              readValue(m("where"))
+            )
+          case "delete" => DeleteStmtDto(m("table").str, readValue(m("where")))
           case "remove" => RemoveStmtDto(m("field").str, readValue(m("value")), m.get("key").map(_.str))
           case "send" =>
             SendStmtDto(
@@ -2188,6 +2236,21 @@ object JsonModel:
         ujson.Obj("kind" -> ujson.Str("append"), "value" -> writeValue(value), "field" -> ujson.Str(field))
       case LogStmtDto(value) =>
         ujson.Obj("kind" -> ujson.Str("log"), "value" -> writeValue(value))
+      case StoreStmtDto(value, table) =>
+        ujson.Obj("kind" -> ujson.Str("store"), "value" -> writeValue(value), "table" -> ujson.Str(table))
+      case UpsertStmtDto(value, table) =>
+        ujson.Obj("kind" -> ujson.Str("upsert"), "value" -> writeValue(value), "table" -> ujson.Str(table))
+      case UpdateStmtDto(table, assignments, where) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("update"),
+          "table" -> ujson.Str(table),
+          "assignments" -> ujson.Arr.from(assignments.map { a =>
+            ujson.Obj("field" -> ujson.Str(a.field), "value" -> writeValue(a.value))
+          }),
+          "where" -> writeValue(where)
+        )
+      case DeleteStmtDto(table, where) =>
+        ujson.Obj("kind" -> ujson.Str("delete"), "table" -> ujson.Str(table), "where" -> writeValue(where))
       case RemoveStmtDto(field, value, key) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)](
@@ -2921,6 +2984,10 @@ object JsonModel:
     "op",
     "amount", // B4: DurationLiteralDto
     "unit",
+    "table", // B2: the storage statements and the query value
+    "assignments",
+    "one",
+    "where",
     "options",
     "organization",
     "origin",

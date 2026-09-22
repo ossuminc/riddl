@@ -83,7 +83,7 @@ the consumer-bump task files are CANCELLED until the next release. **B4 landed 2
 (entry below; [2.18] closed, [2.19] filed for the duration windows); **B6, B8, B7 and B3 landed the
 same day** ([2.11], [2.12], [2.13], [2.15] closed); Reid ruled B2 IN (all four statements plus
 `upsert`) and B5 "plan it now". Restage `../bin/riddlc` + ivy after each batch (last at
-`2.2.0-7-5f57d5e0`, before B3). Next: [2.17] B2, then [2.16] B5. `../bin/riddlc` and ivy were restaged together at the
+`2.2.0-7-5f57d5e0`, before B3). **B2 landed 2026-09-22** ([2.17] closed). Next: [2.16] B5, the last of riddlg's eight. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -112,6 +112,32 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-22 — B2: the repository says what it DOES with its storage
+
+`store`, `upsert`, `update`, `delete` (repository-only statements) and `query [one] T [where …]`
+(a VALUE, so it composes with `let`/`reply`/`foreach` and, later, B5). Reid ruled B2 in with
+`upsert` added; B3's `key on` landed the day before and is what gives `upsert` its row identity
+— an upsert without a key is now an Error rather than an invented surrogate.
+
+Three things worth keeping:
+
+- **A repository statement addresses ITS OWN repository's storage**, so the schema is found
+  structurally among the enclosing repository's schemas, not through the refMap — which holds
+  no Schema at all, because ResolutionPass records nothing for a Leaf whose references live in
+  fields. The first draft went through `refMap.definitionOf[Schema]` and resolved nothing.
+- **The row scope is `foreach`'s mechanism, reused whole**: the stored record's fields threaded
+  through `elements`, so `where reservationId == e.reservationId` reads row-then-message and a
+  row field shadows a same-named message field by the same rule an element does.
+- **An EMPTY `PathIdentifier` cannot go through `writePathIdentifierInline`**: it writes
+  count=0, which the reader takes as "interned, read an index", and the stream derails one node
+  later. A bare table (empty schema path) hit it immediately; the fix is to write the table as
+  ONE path and split on read. The error named a node six statements away, as BAST errors do.
+
+Also found by a probe rather than by reading: `update`/`delete` never called `checkTable` in the
+first draft (only `store`/`upsert` did, via the value check), and `checkUpdateAssignment` used
+`valueTypeExpr`, which deliberately has no arm for a bare numeric literal — `set size = 5` was
+silently unchecked until it used B4's `operandTypeExpr`.
 
 ## 2026-09-21 (night) — B3: schema keys and history
 

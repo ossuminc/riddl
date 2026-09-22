@@ -1425,7 +1425,14 @@ object JsonAstBuilder:
         LetStatement(
           curAt,
           ident(name),
-          t.map(p => TypeRef(curAt, "type", pathId(p))),
+          // Accepts BOTH `"Path"` (keyword defaulted to `type`, every document written before
+          // 2026-09-22) and `"<keyword> Path"`; a path cannot contain a space.
+          t.map { p =>
+            p.split(' ').toList match
+              case kind :: rest if rest.nonEmpty && Keywords.contains(kind) =>
+                TypeRef(curAt, kind, pathId(rest.mkString(" ")))
+              case _ => TypeRef(curAt, "type", pathId(p))
+          },
           buildValue(expression)
         )
       case CodeStmtDto(language, body) => CodeStatement(curAt, LiteralString(curAt, language), body)
@@ -1458,6 +1465,16 @@ object JsonAstBuilder:
       case AppendStmtDto(value, field) =>
         AppendStatement(curAt, buildValue(value), FieldRef(curAt, pathId(field)))
       case LogStmtDto(value) => LogStatement(curAt, buildValue(value)) // B7
+      case StoreStmtDto(value, table)  => StoreStatement(curAt, buildValue(value), tableRef(table)) // B2
+      case UpsertStmtDto(value, table) => UpsertStatement(curAt, buildValue(value), tableRef(table))
+      case UpdateStmtDto(table, assignments, where) =>
+        UpdateStatement(
+          curAt,
+          tableRef(table),
+          assignments.map(a => (Identifier(curAt, a.field), buildValue(a.value))),
+          buildValue(where)
+        )
+      case DeleteStmtDto(table, where) => DeleteStatement(curAt, tableRef(table), buildValue(where))
       case RemoveStmtDto(field, value, key) =>
         RemoveStatement(curAt, FieldRef(curAt, pathId(field)), buildValue(value), key.map(k => Identifier(curAt, k)))
       case SendStmtDto(message, to, portlet, at) =>
@@ -1602,6 +1619,8 @@ object JsonAstBuilder:
         ArithmeticExpression(curAt, aop, buildValue(left), buildValue(right))
       case DurationLiteralDto(amount, unit) =>
         DurationLiteral(curAt, NumericLiteral(curAt, amount), unit)
+      case QueryValueDto(table, one, where) => // B2
+        QueryValue(curAt, tableRef(table), one, where.map(buildValue))
       case LogicalDto(op, left, right) =>
         val lop = LogicalOperator.values
           .find(_.symbol == op)
@@ -1980,6 +1999,17 @@ object JsonAstBuilder:
   private val Keywords: scala.collection.immutable.Set[String] =
     scala.collection.immutable
       .Set("type", "command", "query", "event", "result", "record", "graph", "table")
+
+  /** B2: a table reference written as `Schema.table` (or a bare `table` for the enclosing
+    * repository's single schema) -- the last segment is the data entry, the prefix the schema.
+    */
+  private def tableRef(text: String)(using ctx: Ctx): TableRef =
+    val parts = text.split('.').toSeq.filter(_.nonEmpty)
+    TableRef(
+      curAt,
+      PathIdentifier(curAt, parts.dropRight(1)),
+      Identifier(curAt, parts.lastOption.getOrElse(""))
+    )
 
   private def buildSchema(s: SchemaDto)(using ctx: Ctx): Schema =
     // Accepts BOTH `"Path"` (keyword defaulted to `type`, what every file written before

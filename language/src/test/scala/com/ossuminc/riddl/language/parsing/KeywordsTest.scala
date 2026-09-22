@@ -41,7 +41,10 @@ class KeywordsTest extends AbstractTestingBasis {
       // and the statement lead; NOT a definitionKeyword (a field named `log` stays legal).
       // 171 as of 2026-09-21: `key` and `history`, for B3's schema `key on field …` and
       // `… with history`. Neither is a definitionKeyword.
-      Keyword.allKeywords.size must be(171)
+      // 175 as of 2026-09-22: `store`, `upsert`, `update` and `delete`, for B2's repository
+      // storage statements. None is a definitionKeyword; the corpus's two fields named `update`
+      // stay legal, since only a statement-start position tries the keyword.
+      Keyword.allKeywords.size must be(175)
     }
   }
 

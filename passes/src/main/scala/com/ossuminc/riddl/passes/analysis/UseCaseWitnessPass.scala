@@ -226,6 +226,7 @@ case class UseCaseWitnessPass(
       case le: LogicalExpression     => getInputRefsIn(le.left) ++ getInputRefsIn(le.right)
       case ne: NotExpression         => getInputRefsIn(ne.expr)
       case ae: ArithmeticExpression  => getInputRefsIn(ae.left) ++ getInputRefsIn(ae.right)
+      case qv: QueryValue            => qv.where.toSeq.flatMap(getInputRefsIn) // B2
       case _                         => Seq.empty
 
   // ============================================================

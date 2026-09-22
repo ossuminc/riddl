@@ -232,6 +232,45 @@ private[parsing] trait StatementParser {
     }
   }
 
+  /** B2 (2026-09-22): the four repository storage statements and the `query` value.
+    *
+    * A table is named by ONE path: the last segment is the data entry, the prefix is the schema
+    * (`ReservationSchema.reservations`), and a bare name means the enclosing repository's single
+    * schema (`reservations`) -- the corpus shape, one schema per repository.
+    */
+  private[parsing] def tableRef[u: P]: P[TableRef] = {
+    P(Index ~ pathIdentifier ~ Index).map { case (start, pid, end) =>
+      val loc = at(start, end)
+      TableRef(loc, PathIdentifier(loc, pid.value.dropRight(1)), Identifier(loc, pid.value.last))
+    }
+  }
+
+  private def storeStatement[u: P]: P[StoreStatement] =
+    P(Index ~ Keywords.store ~/ value ~ in ~/ tableRef ~/ Index)./.map {
+      case (start, v, tr, end) => StoreStatement(at(start, end), v, tr)
+    }
+
+  private def upsertStatement[u: P]: P[UpsertStatement] =
+    P(Index ~ Keywords.upsert ~/ value ~ in ~/ tableRef ~/ Index)./.map {
+      case (start, v, tr, end) => UpsertStatement(at(start, end), v, tr)
+    }
+
+  /** `update <table> set f = v, … where <cond>`. The assigned names are BARE row fields -- the
+    * row scope, threaded like a `foreach` element -- not FieldRefs.
+    */
+  private def updateStatement[u: P]: P[UpdateStatement] =
+    P(
+      Index ~ Keywords.update ~/ tableRef ~ Keywords.set ~/
+        (identifier ~ Punctuation.equalsSign ~/ value).rep(1, Punctuation.comma) ~
+        Keywords.where ~/ booleanExprValue ~/ Index
+    )./.map { case (start, tr, assignments, cond, end) =>
+      UpdateStatement(at(start, end), tr, assignments.toSeq, cond)
+    }
+
+  private def deleteStatement[u: P]: P[DeleteStatement] =
+    P(Index ~ Keywords.delete ~/ from ~/ tableRef ~ Keywords.where ~/ booleanExprValue ~/ Index)./
+      .map { case (start, tr, cond, end) => DeleteStatement(at(start, end), tr, cond) }
+
   private def removeStatement[u: P]: P[RemoveStatement] = {
     P(
       Index ~ Keywords.remove ~/ (
@@ -568,7 +607,7 @@ private[parsing] trait StatementParser {
         "set", "tell", "send", "forward", "yield", "reply", "morph", "become", "do", "prompt",
         "let", "call", "foreach", "when", "match", "error", "require", "put", "return", "terminate",
         "code", "focus", "stop", "read", "write", "ask", "initiate", "if", "else", "append", "remove",
-        "log"
+        "log", "store", "upsert", "update", "delete"
       ) ~~ &(Keywords.isNotKeywordChar)
     )
   }
@@ -611,12 +650,35 @@ private[parsing] trait StatementParser {
   // the bare atom unchanged when no comparison/logical/arithmetic operator is present — so a plain
   // `let x = y` still yields exactly a `ValueRef`, not a wrapper. fastparse `|` unifies to the least
   // upper bound (RiddlValue), so each branch is widened to `Value` explicitly (mirror foreachCollection).
+  /** B2: `query [one] <table> [where <cond>]` -- a VALUE.
+    *
+    * **The `NoCut` is load-bearing**, for the reason `refOrLookup` records about `at`:
+    * `Keywords.query` CUTS, and `query Q(args)` is a constructor. Without it, a constructor in
+    * value position would commit here and fail at the `(`; with it, the negative lookahead on
+    * `(` backtracks cleanly and `constructor` gets its turn.
+    */
+  private def queryValue[u: P]: P[QueryValue] = {
+    P(
+      Index ~ NoCut(Keywords.query ~ Keywords.one.!.?) ~ tableRef ~ !Punctuation.roundOpen ~
+        NoCut(Keywords.where ~ booleanExprValue).? ~ Index
+    ).map { case (start, one, tr, cond, end) =>
+      QueryValue(at(start, end), tr, one.nonEmpty, cond)
+    }
+  }
+
+  /** The expression ladder, for the positions that want a condition: `update`/`delete`'s
+    * `where` and `query`'s. Any value may stand there; validation requires it to be boolean.
+    */
+  private def booleanExprValue[u: P]: P[Value] = booleanExpr
+
   def value[u: P]: P[Value] = {
     P(
       promptValue.map(pv => pv: Value) |
         callValue.map(c => c: Value) | // A24: `call function F(args)` (keyword-led)
         askValue.map(a => a: Value) | // `ask query Q of <processor>` (keyword-led)
         initiateValue.map(i => i: Value) | // `initiate <processor>[(args)]` (keyword-led)
+        // B2: BEFORE `constructor`, whose `queryRef` would cut on the `query` keyword.
+        queryValue.map(qv => qv: Value) |
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
         // BEFORE `booleanExpr`: its atom accepts a bare path, which would swallow `empty` as a
@@ -1095,6 +1157,19 @@ private[parsing] trait StatementParser {
 
   // A45: `put ... to output ...` is allowed only in a Context (application) handler; banned
   // elsewhere at the keyword with a clear message (inverse of A26's function bans).
+  /** B2: the four storage statements are REPOSITORY-only, banned elsewhere at the keyword with a
+    * message that says why -- `put`'s pattern (A45) and `return`'s (A57).
+    */
+  private def storageStatements[u: P](set: StatementsSet): P[Statements] =
+    if set.processor == ProcessorKind.Repository then
+      (storeStatement | upsertStatement | updateStatement | deleteStatement)
+        .asInstanceOf[P[Statements]]
+    else
+      (P(Keywords.store | Keywords.upsert | Keywords.update | Keywords.delete) ~/ Fail.opaque(
+        "'store'/'upsert'/'update'/'delete' are only allowed in a repository handler; they " +
+          "operate on the repository's schema, which only a repository has"
+      )).asInstanceOf[P[Statements]]
+
   private def putStatements[u: P](set: StatementsSet): P[Statements] =
     if set.processor == ProcessorKind.Context then putStatement.asInstanceOf[P[Statements]]
     else
@@ -1121,6 +1196,8 @@ private[parsing] trait StatementParser {
         setStatements(set) | letStatement |
         // GROUP 3b: Boundary value operations, scope-gated (A45 put -> Context; A57 return -> Function)
         putStatements(set) | returnStatements(set) | terminateStatement |
+        // GROUP 3c: B2's repository storage statements, scope-gated like `put` and `return`
+        storageStatements(set) |
         // GROUP 4: General statements (`do` is canonical; `prompt` is a deprecated synonym); B7's
         // `log` is deterministic, allowed everywhere, and sits here beside them.
         doStatement | promptStatement | logStatement | codeStatement |

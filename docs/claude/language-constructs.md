@@ -550,6 +550,32 @@ decision.
   ResolutionPass resolves `c.value` (it resolved only the type before B4, which
   is why a constant's prompt ascription never resolved).
 
+- **B2 — repository storage statements and the `query` value (landed 2026-09-22).**
+  `StoreStatement`/`UpsertStatement`/`UpdateStatement`/`DeleteStatement` (repository-only, gated
+  in the PARSER like `put`/`return` with `Fail.opaque`), and `QueryValue(table, one, where)` as
+  the eighteenth `Value`. `TableRef(loc, schema: PathIdentifier, table: Identifier)` is a
+  RiddlValue, not a `Reference[?]` — a data entry is an `Identifier` key in `Schema.data`, not a
+  Definition, so there is nothing for the refMap to hold. Keywords `store`, `upsert`, `update`,
+  `delete` (`allKeywords` 175, none a definition keyword).
+  **The schema is found STRUCTURALLY** (`schemaOf`: the enclosing `Repository`'s own schemas,
+  matched by the path's last segment; bare = its single schema) — a refMap lookup finds nothing,
+  because ResolutionPass records no Schema. A repository statement addresses its own storage,
+  so this is the rule, not a shortcut.
+  **The row scope** is `foreach`'s mechanism: `rowScope(table)` builds `Map[name,
+  TypeExpression]` from the stored record's fields and is passed through `elements`, so
+  `valueRefTypeExpr` consults it before lets and the refMap and a row field SHADOWS a same-named
+  message field. A bad row name in a comparison reports `value-comparand-unresolved` (the
+  comparand route), not `value-ref-unresolved`.
+  **`checkUpdateAssignment` uses `operandTypeExpr`, not `valueTypeExpr`** — the latter has no arm
+  for a bare numeric literal by design (B4), so `set size = 5` would have gone unchecked.
+  **Parser hazard**: `queryValue` sits BEFORE `constructor` in `value` and is
+  `NoCut(Keywords.query ~ Keywords.one.!.?) ~ tableRef ~ !Punctuation.roundOpen` — the `NoCut`
+  neutralises the keyword cut and the lookahead hands `query Q(args)` back to `constructor`.
+  **BAST trap, cost one red run**: a `TableRef` writes ONE path (schema ++ table), because
+  `writePathIdentifierInline` emits count=0 for an EMPTY path and the reader takes 0 as
+  "interned, read an index" — an empty component list is indistinguishable from an interned one
+  on that wire. Sub-kinds 25-28, value tag 17, `FORMAT_REVISION` 29.
+
 - **B3 — schema `key on field F` and `of X as R with history` (landed 2026-09-21).**
   `Schema` gained `keys: Seq[FieldRef]` and `history: Seq[Identifier]` as TRAILING defaulted
   fields AFTER `metadata`, so every positional construction (`RepositoryTest`, the BAST

@@ -410,3 +410,8 @@ stmt-yield-argument-prompt
 stmt-do-validates-a-range
 repo-schema-key-not-stored-field
 repo-schema-history-unknown-data
+repo-table-not-in-schema
+stmt-store-value-not-table-record
+stmt-upsert-needs-key
+stmt-update-field-not-in-row
+value-query-outside-repository

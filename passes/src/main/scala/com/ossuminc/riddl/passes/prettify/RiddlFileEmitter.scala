@@ -373,6 +373,14 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         emitValue(left)
         add(s" ${op.symbol} ")
         emitValue(right)
+      case qv: QueryValue => // B2
+        add(if qv.one then "query one " else "query ")
+        add(qv.table.format)
+        qv.where.foreach { w =>
+          add(" where ")
+          emitValue(w)
+        }
+        this
       case ae: ArithmeticExpression =>
         emitArithmeticOperand(ae, ae.left, isRight = false)
         add(s" ${ae.op.symbol} ")
@@ -726,6 +734,32 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         // `SetStatement.format` and therefore `PromptValue.ascriptionFormat` directly.
         addIndent(s"set ${field.format} to ")
         emitValue(value)
+        nl
+      // B2 (2026-09-22): the repository storage statements. Values route through `emitValue`
+      // for the usual A20 reason (a nested `prompt(...) as T`).
+      case StoreStatement(_, value, table) =>
+        addIndent("store ")
+        emitValue(value)
+        add(s" in ${table.format}")
+        nl
+      case UpsertStatement(_, value, table) =>
+        addIndent("upsert ")
+        emitValue(value)
+        add(s" in ${table.format}")
+        nl
+      case UpdateStatement(_, table, assignments, where) =>
+        addIndent(s"update ${table.format} set ")
+        assignments.zipWithIndex.foreach { case ((field, v), i) =>
+          if i > 0 then add(", ")
+          add(s"${field.format} = ")
+          emitValue(v)
+        }
+        add(" where ")
+        emitValue(where)
+        nl
+      case DeleteStatement(_, table, where) =>
+        addIndent(s"delete from ${table.format} where ")
+        emitValue(where)
         nl
       case LogStatement(_, value) => // B7
         addIndent("log ")

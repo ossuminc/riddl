@@ -1216,6 +1216,24 @@ class BASTReader(
       case 24 => // B7: Log (revision 27): a single value
         LogStatement(loc, readValue())
 
+      case 25 => // B2 (revision 29): store
+        val value = readValue()
+        StoreStatement(loc, value, readTableRef())
+      case 26 => // B2: upsert
+        val value = readValue()
+        UpsertStatement(loc, value, readTableRef())
+      case 27 => // B2: update
+        val table = readTableRef()
+        val count = reader.readVarInt()
+        val assignments = (0 until count).map { _ =>
+          val id = readIdentifierInline()
+          (id, readValue())
+        }.toSeq
+        UpdateStatement(loc, table, assignments, readValue())
+      case 28 => // B2: delete
+        val table = readTableRef()
+        DeleteStatement(loc, table, readValue())
+
       case 21 => // Forward (delegation; discharges the yields/replies obligation)
         val msg = readMessageOperand()
         val shape = reader.readU8()
@@ -2298,6 +2316,17 @@ class BASTReader(
     FieldRef(loc, pathId)
   }
 
+  /** B2 (revision 29): a `TableRef` written inline by `BASTWriter.writeTableRef`. */
+  private def readTableRef(): TableRef = {
+    val loc = readLocation()
+    val path = readPathIdentifierInline()
+    TableRef(
+      loc,
+      PathIdentifier(loc, path.value.dropRight(1)),
+      Identifier(loc, path.value.lastOption.getOrElse(""))
+    )
+  }
+
   private def readFieldRef(): FieldRef = {
     val tag = reader.readU8() // Read NODE_FIELD tag
     val loc = readLocation()
@@ -2728,6 +2757,11 @@ class BASTReader(
       case 16 => // B4: ConstantRef as a value (revision 26)
         val loc = readLocation()
         ConstantRef(loc, readPathIdentifierInline())
+      case 17 => // B2: QueryValue (revision 29)
+        val loc = readLocation()
+        val table = readTableRef()
+        val one = reader.readU8() != 0
+        QueryValue(loc, table, one, readOption(readValue()))
       case _ => throw new RuntimeException(s"Invalid value discriminator: $disc")
   }
 

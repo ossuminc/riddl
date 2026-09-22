@@ -1390,7 +1390,12 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case DoStatement(_, what) => DoStmtDto(what.map(_.s))
     case ErrorStatement(_, msg)   => ErrorStmtDto(msg.s)
     case LetStatement(_, id, tr, e) =>
-      LetStmtDto(id.value, tr.map(t => path(t.pathId)), serializeValue(e))
+      LetStmtDto(
+        id.value,
+        // The keyword travels with the path, or `let v: record R` reads back as `let v: type R`.
+        tr.map(t => if t.keyword == "type" then path(t.pathId) else s"${t.keyword} ${path(t.pathId)}"),
+        serializeValue(e)
+      )
     case CodeStatement(_, lang, body) => CodeStmtDto(lang.s, body)
     case RequireStatement(_, cond, arg) =>
       val a = arg.map(serializeValue)
@@ -1404,6 +1409,15 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         case sr: StateRef => SetStmtDto(None, Some(path(sr.pathId)), serializeValue(value))
     case AppendStatement(_, value, field) => AppendStmtDto(serializeValue(value), path(field.pathId))
     case LogStatement(_, value)           => LogStmtDto(serializeValue(value)) // B7
+    case StoreStatement(_, value, table)  => StoreStmtDto(serializeValue(value), table.format) // B2
+    case UpsertStatement(_, value, table) => UpsertStmtDto(serializeValue(value), table.format)
+    case UpdateStatement(_, table, assignments, where) =>
+      UpdateStmtDto(
+        table.format,
+        assignments.map { case (f, v) => AssignmentDto(f.value, serializeValue(v)) },
+        serializeValue(where)
+      )
+    case DeleteStatement(_, table, where) => DeleteStmtDto(table.format, serializeValue(where))
     case RemoveStatement(_, field, value, key) =>
       RemoveStmtDto(path(field.pathId), serializeValue(value), key.map(_.value))
     case SendStatement(_, msg, portlet, instant) =>
@@ -1542,6 +1556,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ae: ArithmeticExpression =>
       ArithmeticDto(ae.op.symbol, serializeValue(ae.left), serializeValue(ae.right))
     case dl: DurationLiteral => DurationLiteralDto(dl.amount.text, dl.unit)
+    case qv: QueryValue => QueryValueDto(qv.table.format, qv.one, qv.where.map(serializeValue)) // B2
     case cr: ConstantRef     => ConstantRefDto(path(cr.pathId))
     case le: LogicalExpression =>
       LogicalDto(le.op.symbol, serializeValue(le.left), serializeValue(le.right))

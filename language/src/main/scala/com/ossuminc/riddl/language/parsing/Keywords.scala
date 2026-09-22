@@ -212,6 +212,14 @@ object Keywords {
 
   def key[u: P]: P[Unit] = keyword(Keyword.key)
 
+  def store[u: P]: P[Unit] = keyword(Keyword.store)
+
+  def upsert[u: P]: P[Unit] = keyword(Keyword.upsert)
+
+  def update[u: P]: P[Unit] = keyword(Keyword.update)
+
+  def delete[u: P]: P[Unit] = keyword(Keyword.delete)
+
   def history[u: P]: P[Unit] = keyword(Keyword.history)
 
   def init[u: P]: P[Unit] = keyword(Keyword.init)
@@ -500,6 +508,7 @@ object Keywords {
           Keyword.from,
           Keyword.function,
           Keyword.get,
+          Keyword.delete,
           Keyword.graph,
           Keyword.group,
           Keyword.handler,
@@ -516,6 +525,9 @@ object Keywords {
           Keyword.invariant,
           Keyword.items,
           Keyword.key,
+          Keyword.store,
+          Keyword.update,
+          Keyword.upsert,
           Keyword.label,
           Keyword.link,
           Keyword.log,
@@ -686,6 +698,7 @@ object Keyword {
   final val fully = "fully"
   final val function = "function"
   final val get = "get"
+  final val delete = "delete"
   final val graph = "graph"
   final val group = "group"
   final val handler = "handler"
@@ -767,6 +780,7 @@ object Keyword {
   final val send = "send"
   final val sequence = "sequence"
   final val set = "set"
+  final val store = "store"
   final val show = "show"
   final val shown = "shown"
   final val sink = "sink"
@@ -787,7 +801,9 @@ object Keyword {
   final val title = "title"
   final val type_ = "type"
   final val url = "url"
+  final val update = "update"
   final val updates = "updates"
+  final val upsert = "upsert"
   final val user = "user"
   final val value = "final value"
   final val version = "version"
@@ -865,6 +881,7 @@ object Keyword {
     from,
     fully,
     function,
+    delete,
     graph,
     group,
     handler,
@@ -881,6 +898,9 @@ object Keyword {
     invariant,
     items,
     key,
+    store,
+    update,
+    upsert,
     label,
     let,
     link,

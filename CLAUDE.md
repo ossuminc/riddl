@@ -1580,6 +1580,13 @@ resolution and type-checking — in `checkStatementScopes`.
   compiler names plus the catch-alls `append` needed (`statementValues`,
   `valueReferencedDefs`, `checkStatementScopes`, `Finder.fieldChildren`, the emitter), the
   `KeywordsTest` count, BAST sub-kind + revision, JSON, find kinds, EBNF + `statement_start`.
+  **B2's storage statements (2026-09-22)** joined A23's effect set (`store`, `upsert`,
+  `update`, `delete` — a refusal after one leaves a partial change) and `classifyHandlers`'
+  executable set; `query` is a VALUE. Two traps recorded in
+  `docs/claude/language-constructs.md`: an EMPTY `PathIdentifier` written with
+  `writePathIdentifierInline` is indistinguishable from an INTERNED one (count=0 means both), so
+  never write a possibly-empty path that way; and `valueTypeExpr` has no bare-numeric-literal
+  arm, so a new "type this value against a declared type" check wants `operandTypeExpr`.
   **Schema `key on` / `with history` (B3, 2026-09-21)**: `Schema.keys`/`.history` are trailing
   defaulted fields AFTER `metadata` — keep new Schema fields there. The data line's
   `NoCut(with ~ history)` is the third load-bearing `NoCut` (after `refOrLookup`'s `at` and

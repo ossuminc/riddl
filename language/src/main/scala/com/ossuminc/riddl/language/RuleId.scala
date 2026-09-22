@@ -317,6 +317,12 @@ enum RuleId(
   // B3 (2026-09-21): schema keys and history.
   case SchemaKeyNotStoredField extends RuleId("repo-schema-key-not-stored-field")
   case SchemaHistoryUnknownData extends RuleId("repo-schema-history-unknown-data")
+  // B2 (2026-09-22): the repository storage statements.
+  case TableNotInSchema extends RuleId("repo-table-not-in-schema")
+  case StoreValueNotTableRecord extends RuleId("stmt-store-value-not-table-record")
+  case UpsertNeedsKey extends RuleId("stmt-upsert-needs-key")
+  case UpdateFieldNotInRow extends RuleId("stmt-update-field-not-in-row")
+  case QueryOutsideRepository extends RuleId("value-query-outside-repository")
   case RepositoryNoHandler extends RuleId("repo-no-handler")
   case RepositoryNoCommandsOrQueries extends RuleId("repo-no-commands-or-queries")
   case RepositoryInletCarriesEvent extends RuleId("repo-inlet-carries-event")

@@ -110,6 +110,12 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case st: SetStatement     => Seq(st.value)
     case cs: CollectionStatement => Seq(cs.value)
     case ls: LogStatement     => Seq(ls.value) // B7
+    // B2 (2026-09-22): the repository storage statements and the query value
+    case ss: StoreStatement   => Seq(ss.value, ss.table)
+    case us: UpsertStatement  => Seq(us.value, us.table)
+    case us: UpdateStatement  => (us.table +: us.assignments.map(_._2)) :+ us.where
+    case ds: DeleteStatement  => Seq(ds.table, ds.where)
+    case qv: QueryValue       => qv.table +: qv.where.toSeq
     case lt: LetStatement     => Seq(lt.expression)
     case pt: PutStatement     => Seq(pt.value)
     case rt: ReturnStatement  => Seq(rt.value)

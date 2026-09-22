@@ -168,7 +168,10 @@ package object bast {
     // `with history` data names -- after the indices. A revision-27 reader would take the key
     // count as the first byte of the deferred metadata and misalign: the failure the gate exists
     // to make clean.
-    28 // B3 schema keys and history
+    // 29 (2026-09-22, B2) adds statement sub-kinds 25-28 (store, upsert, update, delete) and
+    // value tag 17 (query). A revision-28 reader has no arm for any of them and throws at the
+    // dispatch -- the honest failure.
+    29 // B2 repository storage statements and the query value
     // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.

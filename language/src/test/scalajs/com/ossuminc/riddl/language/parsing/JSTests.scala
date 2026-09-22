@@ -17,6 +17,7 @@ class JSModuleTest extends ModuleTest
 class JSNebulaTest extends NebulaTest
 class JSNumericLiteralTest extends NumericLiteralTest
 class JSArithmeticExpressionParsingTest extends ArithmeticExpressionParsingTest
+class JSRepositoryStatementsParsingTest extends RepositoryStatementsParsingTest
 class JSParsingTestTest extends ParsingTestTest
 class JSProjectorTest extends ProjectorTest
 class JSRepositoryTest extends RepositoryTest
